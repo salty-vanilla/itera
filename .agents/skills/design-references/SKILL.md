@@ -10,10 +10,10 @@ Itera の UI の正本は `DESIGN.md`（トークン・部品・禁止事項）�
 ## 優先順位
 
 1. `docs/requirements/prd.md` と `docs/domain/domain-model.md` の意味論（何を表示・操作させるか）
-2. `DESIGN.md`（見た目・部品・レイアウト・文言のトーン）。v0.1 の食い違いは `docs/design/design-md-v0.1-gaps.md` で読み替える
+2. `DESIGN.md`（見た目・部品・レイアウト）と `docs/design/`（パターン、Agent UI、文言と用語、アクセシビリティ、アイコンと動き）
 3. DADS / HIG（上の 2 つが決めていない細部、または根拠の確認）
 
-DESIGN.md の「参照元と役割」の表で**取り入れない**とされたもの（DADS の行政配色や黄＋黒のフォーカス、HIG の Liquid Glass・Blur・Floating Toolbar・巨大な Navigation Title など）は、一次資料に書かれていても採用しない。DADS と HIG の意見が分かれたら、操作感は HIG、日本語フォームとアクセシビリティは DADS を優先する。
+`docs/design/design-context.md` の「参照元と役割」の表で**取り入れない**とされたもの（DADS の行政配色や黄＋黒のフォーカス、HIG の Liquid Glass・Blur・Floating Toolbar・巨大な Navigation Title など）は、一次資料に書かれていても採用しない。DADS と HIG の意見が分かれたら、操作感は HIG、日本語フォームとアクセシビリティは DADS を優先する。
 
 ## DADS（デジタル庁デザインシステム）
 

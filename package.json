@@ -22,10 +22,12 @@
     "lint": "node tooling/checks/names.mjs && eslint . --max-warnings 0",
     "typecheck": "tsc -p tsconfig.json && pnpm -r --if-present typecheck",
     "test": "vitest run",
-    "check": "pnpm agent:check && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
+    "check": "pnpm agent:check && pnpm design:lint && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "design:lint": "designmd lint DESIGN.md"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@google/design.md": "0.4.0",
     "@types/node": "26.6.3",
     "eslint": "10.11.0",
     "globals": "17.12.0",

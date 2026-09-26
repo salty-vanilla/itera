@@ -2,7 +2,7 @@
 
 1. Issue が実装の対象になるか（SKILL.md のオーナー条件）を確かめる。Issue と合意の根拠を読み、目的・範囲・観察できる受け入れ条件・重要な未決を短く確認する。既存の Issue / PR / ブランチを探し、重複を避ける。着手できるなら局所設計を自分で行う。
 2. `CONTRIBUTING.md` に沿った Issue 番号付きブランチを使う（Orca なら worktree を分ける）。他者や別セッションの未コミット変更を自分の成果として扱わない。実行記録と上限を設定する。
-3. 必要な領域の文書と共有 Skill だけを読む。UI なら `DESIGN.md`・`docs/design/design-md-v0.1-gaps.md`（DESIGN.md v0.1 の読み替え）・`docs/design/design-context.md`、必要に応じて `design-references` / `shadcn` / `impeccable` Skill。ドメインなら `docs/domain/domain-model.md` の該当する状態遷移と不変条件。重要な不確実性は論点を絞って `harness-planner` に相談する。
+3. 必要な領域の文書と共有 Skill だけを読む。UI なら `DESIGN.md` と `docs/design/` の該当する文書（パターン、文言と用語、アクセシビリティなど）、必要に応じて `design-references` / `shadcn` / `impeccable` Skill。ドメインなら `docs/domain/domain-model.md` の該当する状態遷移と不変条件。重要な不確実性は論点を絞って `harness-planner` に相談する。
 4. 変更に合った検証を実行し、コマンド・結果・対象・未実施の理由を記録する。UI は `pnpm agent:playwright` で実際に操作し、compact（768px 未満）・medium（768〜1199px）・wide（1200〜1439px と 1440px 以上）を確認する。要件を弱めたり既存の検査を無効化して合格させない。
 5. 編集を止め、条件とコードの対象を固定して `harness-reviewer` に実物と証拠を渡す（Agent tool で `subagent_type: harness-reviewer`）。会話の全文や「合格にしてほしい」という結論は渡さない。
 6. `changes_requested` なら同じセッションで修正する。製品判断や文書の矛盾は要件整理へ、環境不足は `blocked` へ分ける。修正後は対象と証拠を更新して再レビューする。
