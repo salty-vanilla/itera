@@ -1,0 +1,38 @@
+name: 不具合
+description: 再現手順と期待する挙動を記録する
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: 不具合の概要
+      description: どこで何が起き、誰にどのような影響がありますか。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 再現手順
+      description: 操作手順と発生条件。再現条件が不明な場合は、その旨を記載してください。
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待する挙動と根拠
+      description: PRD・ドメインモデル・合意済み Issue 等があればリンクしてください。
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 実際の挙動
+      description: エラーや画像など。個人情報・認証情報は除いてください。
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 発生環境
+      description: アプリの版またはコミット、OS、ブラウザ、端末など。未確認の項目は不明と記載してください。
+    validations:
+      required: true

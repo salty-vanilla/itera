@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "disableSkillShellExecution": true,
+  "permissions": {
+    "allow": [
+      "Bash(pnpm agent:check)",
+      "Bash(pnpm agent:doctor)",
+      "Bash(pnpm agent:hooks:test)",
+      "Bash(pnpm agent:playwright snapshot *)",
+      "Bash(pnpm agent:playwright screenshot *)",
+      "Bash(pnpm agent:shadcn info *)",
+      "Bash(pnpm agent:shadcn view *)",
+      "Bash(pnpm agent:shadcn search *)",
+      "Bash(pnpm agent:shadcn docs *)",
+      "Bash(pnpm agent:impeccable context *)",
+      "Bash(node .agents/skills/design-references/scripts/hig.mjs *)",
+      "Bash(gh issue view *)",
+      "Bash(gh issue list *)",
+      "Bash(gh pr view *)",
+      "Bash(gh pr diff *)",
+      "WebFetch(domain:design.digital.go.jp)",
+      "WebFetch(domain:developer.apple.com)",
+      "WebFetch(domain:github.com)"
+    ],
+    "ask": [
+      "Bash(npx *)",
+      "Bash(npm *)",
+      "Bash(pnpm agent:shadcn add *)",
+      "Bash(pnpm agent:playwright run-code *)",
+      "Bash(pnpm dlx *)",
+      "Bash(pnpx *)",
+      "Bash(bunx *)",
+      "Bash(playwright-cli *)",
+      "Bash(pnpm agent:playwright open *)",
+      "Bash(pnpm agent:playwright goto *)"
+    ],
+    "deny": [
+      "Bash(npx shadcn@latest *)",
+      "Read(**/.env)",
+      "Read(**/.env.local)",
+      "Read(**/.env.*.local)",
+      "Read(**/.env.development)",
+      "Read(**/.env.production)",
+      "Read(**/.env.test)",
+      "Read(**/.env.staging)",
+      "Bash(cat *.env)",
+      "Bash(cat *.env.local)",
+      "Bash(cat *.env.*.local)"
+    ]
+  }
+}

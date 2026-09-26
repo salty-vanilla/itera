@@ -1,0 +1,28 @@
+# Local environment values (templates remain versioned).
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Personal Claude Code overrides.
+CLAUDE.local.md
+.claude/settings.local.json
+
+# direnv / devbox caches are local to each checkout.
+.direnv/
+.devbox/
+
+# Build and tool outputs.
+node_modules/
+**/dist/
+**/build/
+playwright-report/
+test-results/
+.DS_Store
+
+# Per-checkout agent binaries, browsers, harness records and local-only references.
+.tools/
+
+# Agent browser artifacts may include page content and session state.
+.playwright-cli/
+.playwright/storage-state/

