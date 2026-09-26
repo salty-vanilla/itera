@@ -63,7 +63,7 @@ export const States: Story = {
           <TabsTab value="selected" count={3}>
             selected
           </TabsTab>
-          <TabsTab value="disabled" disabled count={0}>
+          <TabsTab value="disabled" disabled>
             disabled
           </TabsTab>
         </TabsList>

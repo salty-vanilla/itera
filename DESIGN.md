@@ -446,7 +446,7 @@ Area（領域）はユーザーが作る。駅の路線記号のように、色�
 | `target-min` / `target-touch` | 24 / 44px | 最小ターゲット（pointer / touch） |
 | `icon-s` / `icon-m` | 16 / 20px | 文字の横 / ボタン・ナビゲーション |
 | `area-badge` | 20px | Area の路線記号の一辺（compact でも同じ。当たり判定は行や Filter が持つ） |
-| `pane-nav` / `pane-rail` | 224 / 64px | ナビゲーション（1440px 以上 / 1200–1439px） |
+| `pane-nav` / `pane-rail` | 224 / 64px | ナビゲーション（1440px 以上 / 768–1439px） |
 | `pane-list` / `pane-side` | 384 / 336px | Planning の Backlog ペイン / 時間の見通しペイン |
 | `drawer` | 400px | 右 Drawer |
 
@@ -458,7 +458,7 @@ Desktop の Planning を中心に設計し、スマートフォンでは Today�
 | --- | --- | --- |
 | 1440px 以上（`bp-nav`） | wide | ナビ 224px ＋ Planning 3 ペイン（Backlog 384 / Sprint / 時間の見通し 336） |
 | 1200–1439px（`bp-wide`） | wide（rail） | ナビをアイコンだけの 64px にし、3 ペインを保つ |
-| 768–1199px（`bp-medium`） | medium | 2 ペイン（Backlog / Sprint）。Capacity は Sprint の上に要約 1 行を sticky で出し、クリックで右 Drawer。Agent 提案も Drawer の中 |
+| 768–1199px（`bp-medium`） | medium | ナビを 64px の rail にし、2 ペイン（Backlog / Sprint）。Capacity は Sprint の上に要約 1 行を sticky で出し、クリックで右 Drawer。Agent 提案も Drawer の中 |
 | 768px 未満 | compact | 1 カラム。下部タブバー（今日 / Sprint / Backlog / 振り返り） |
 
 compact の原則：
@@ -624,7 +624,7 @@ compact の原則：
 - 下部タブバーは `canvas-subtle`＋上に `border`。項目は等幅で、20px アイコンの下にラベル（`meta`）、高さ 56px。現在地は項目の上端の `here` の 4px の横線＋`ink` 700＋`aria-current`。件数は表示せず読み上げだけにする。
 - rail とタブバーでも件数は読み上げる（「Backlog 42件」）。Disabled の項目はフォーカスでき、`aria-disabled` で使えないことを伝える。
 
-**Tabs** — 同じ場所の表示を切り替える。タブ 40px、ラベルは `button`、選択は `ink` 700 の文字＋`stroke-strong` の下線（色面・Pill にしない）、件数は `ink-subtle`。タブは 5 個まで。段階を進めるフロー（→ Sprint Header）と絞り込み（→ Filter）には使わない。
+**Tabs** — 同じ場所の表示を切り替える。タブ 40px、ラベルは `button`、選択は `ink` 700 の文字＋`stroke-strong` の下線（色面・Pill にしない）、未選択は `ink-muted` 400（太さでも選択を示す。選んでも幅が変わらないよう 700 の幅を先に取る）、件数は `ink-subtle`。タブは 5 個まで。段階を進めるフロー（→ Sprint Header）と絞り込み（→ Filter）には使わない。
 
 **Filter** — リストを絞り込むトグル。Pill（28px、`border`）＋選択時のチェック＋任意の Area の路線記号（`area-badge` 20px。記号は読み上げず、ラベルの Area 名を読む）＋ラベル＋件数。Selected は `here-subtle` の地と `ink` の枠、`aria-pressed`。0 件は disabled（フォーカスでき、「0件」を読める）。ただし選択中の Filter は 0 件になっても外せるよう disabled にしない。compact 幅では見た目の 28px を保ったまま当たり判定を 44px にし、折り返した行の間を 16px 空けて当たり判定を重ねない。
 
