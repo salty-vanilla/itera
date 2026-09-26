@@ -1,0 +1,32 @@
+name: 提案・相談
+description: 未合意の案や判断が必要な事項を整理する
+body:
+  - type: markdown
+    attributes:
+      value: このIssueは提案です。採用時は判断と日付を記録し、製品要件は PRD・ドメインモデルへ反映してください。UI v0.1 のモックは当たり付けであり、自動採用しません。
+  - type: textarea
+    id: problem
+    attributes:
+      label: 課題・背景
+      description: 困っていることや、判断が必要な理由を記載してください。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 提案・相談したいこと
+      description: 案があれば記載し、まだ決められない点も明示してください。
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 根拠・参考資料・代替案
+      description: 確認した事実と仮説を区別してください。モックを参照する場合は参照目的を記載してください。
+  - type: textarea
+    id: decision
+    attributes:
+      label: 判断が必要な事項
+      description: 誰と何を決めたいか、採用を判断する条件を記載してください。合意後に判断・日付と PRD・ドメインモデルへの反映先を追記します。
+    validations:
+      required: true

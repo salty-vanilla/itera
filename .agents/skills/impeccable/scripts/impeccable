@@ -1,0 +1,9 @@
+#!/bin/sh
+# Modified from pbakaus/impeccable (commit cd12f86) for this project; see
+# tooling/agents/sources.json localAdaptations.
+# Project adapter: fixed engine and cache; no personal installation lookup.
+set -eu
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+node="$script_dir/../../../../.tools/agents/node"
+[ -x "$node" ] || { echo "Agent tools are not installed. Run bash tooling/setup.sh (or pnpm agent:setup)." >&2; exit 1; }
+exec "$node" "$script_dir/../../../../tooling/agents/run.mjs" impeccable "$@"

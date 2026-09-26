@@ -1,0 +1,4 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.17.2/.schema/devbox.schema.json",
+  "packages": ["nodejs@26.8.1", "gitleaks@8.30.1"]
+}

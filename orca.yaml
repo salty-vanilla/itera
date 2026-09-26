@@ -1,0 +1,11 @@
+scripts:
+  setup: |
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v direnv >/dev/null 2>&1; then
+      echo 'direnv is required. Install it first (macOS: brew install direnv).' >&2
+      exit 1
+    fi
+    direnv allow .
+    direnv exec . bash tooling/setup.sh
+setupAgentStartupPolicy: wait-for-setup

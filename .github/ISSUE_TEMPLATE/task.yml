@@ -1,0 +1,39 @@
+name: 開発タスク
+description: 機能・基盤・調査・文書の作業範囲と完了条件を記録する
+body:
+  - type: markdown
+    attributes:
+      value: 未合意の機能や方針は「提案・相談」で整理してください。Issueの作成だけで製品要件の採用とは扱いません。
+  - type: textarea
+    id: purpose
+    attributes:
+      label: 目的・背景
+      description: この作業で解決する課題を記載してください。
+    validations:
+      required: true
+  - type: textarea
+    id: basis
+    attributes:
+      label: 要件・作業の根拠
+      description: 製品機能は PRD・ドメインモデルの該当箇所、または合意した Issue（判断と日付）を参照してください。合意で要件が変わる場合は PRD・ドメインモデルにも反映します。基盤・調査・文書はその旨と作業の根拠を記載してください。
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: 作業範囲・対象外
+      description: 今回変更する範囲と、含めないものを記載してください。
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 完了条件・確認方法
+      description: 何を確認できれば完了か、検証方法とともに記載してください。
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: 依存・関連Issue
+      description: 先行作業や関連するIssueがあれば記載してください。
