@@ -89,6 +89,11 @@ describe('Toast', () => {
     await act(() => vi.advanceTimersByTimeAsync(0));
     // F6 moves focus to the Toasts, as a keyboard user would.
     fireEvent.keyDown(window, { key: 'F6' });
+    expect(
+      screen
+        .getByRole('region', { name: '通知' })
+        .contains(document.activeElement),
+    ).toBe(true);
     await act(() => vi.advanceTimersByTimeAsync(TOAST_TIMEOUT * 2));
     expect(visibleToasts()).toHaveLength(1);
   });
