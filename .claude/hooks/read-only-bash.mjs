@@ -12,7 +12,9 @@ const block = (reason) => {
   process.exit(2);
 };
 
-process.on('uncaughtException', (error) => block(`hook error: ${error.message}`));
+process.on('uncaughtException', (error) =>
+  block(`hook error: ${error.message}`),
+);
 
 let command;
 try {
@@ -39,7 +41,8 @@ const endWord = () => {
     // `> /dev/null`: the operator and its target were separate words.
     const raw = pendingRedirect + word.raw;
     pendingRedirect = null;
-    if (!DISCARD.test(raw)) block(`\`${raw}\`: redirecting output to a file is not allowed`);
+    if (!DISCARD.test(raw))
+      block(`\`${raw}\`: redirecting output to a file is not allowed`);
     word = null;
     return;
   }
@@ -55,14 +58,16 @@ const endWord = () => {
     pendingInput = false; // input file: read-only, but still checked below
     words.push(word.text);
   } else if (!DISCARD.test(word.raw)) {
-    if (word.redirect) block(`\`${word.raw}\`: redirecting output to a file is not allowed`);
+    if (word.redirect)
+      block(`\`${word.raw}\`: redirecting output to a file is not allowed`);
     words.push(word.text);
   }
   word = null;
 };
 const endCommand = () => {
   endWord();
-  if (pendingInput || pendingRedirect !== null) block('redirection without a target');
+  if (pendingInput || pendingRedirect !== null)
+    block('redirection without a target');
   if (words.length > 0) commands.push(words);
   words = [];
 };
@@ -107,7 +112,10 @@ for (let i = 0; i < command.length; i += 1) {
     endWord();
   } else if (char === '\n' || char === ';') {
     endCommand();
-  } else if (char === '&' && (command[i + 1] === '>' || word?.raw.endsWith('>'))) {
+  } else if (
+    char === '&' &&
+    (command[i + 1] === '>' || word?.raw.endsWith('>'))
+  ) {
     append(char); // part of &>/dev/null or N>&M
   } else if (char === '|' || char === '&') {
     endCommand();
@@ -121,7 +129,8 @@ for (let i = 0; i < command.length; i += 1) {
     }
     pendingInput = true;
   } else if (char === '$') {
-    if (command[i + 1] !== '?') block('variables and substitution are not allowed');
+    if (command[i + 1] !== '?')
+      block('variables and substitution are not allowed');
     append('$?');
     i += 1;
   } else if ('`()#!'.includes(char) || (char === '~' && word === null)) {
@@ -129,8 +138,12 @@ for (let i = 0; i < command.length; i += 1) {
   } else if (char === '{' || char === '}') {
     // Literal braces (HEAD@{0}, {owner}) are fine; brace expansion and groups are not.
     const close = command.indexOf('}', i);
-    const body = char === '{' && close !== -1 ? command.slice(i + 1, close) : '';
-    if (word === null && (command[i + 1] === ' ' || command[i + 1] === undefined)) {
+    const body =
+      char === '{' && close !== -1 ? command.slice(i + 1, close) : '';
+    if (
+      word === null &&
+      (command[i + 1] === ' ' || command[i + 1] === undefined)
+    ) {
       block('command groups are not allowed');
     }
     if (/,|\.\./.test(body)) block('brace expansion is not allowed');
@@ -146,7 +159,8 @@ endCommand();
 
 const flat = commands.flat();
 for (const arg of flat) {
-  if (/^\/dev\//.test(arg) && arg !== '/dev/null') block(`\`${arg}\`: device paths are not allowed`);
+  if (/^\/dev\//.test(arg) && arg !== '/dev/null')
+    block(`\`${arg}\`: device paths are not allowed`);
   if (/(^|\/)\.env(\.(?!example$)[^/]*)?$/.test(arg)) {
     block(`\`${arg}\`: reading .env files is not allowed`);
   }
@@ -156,16 +170,34 @@ const hasArg = (args, pattern) => args.some((arg) => pattern.test(arg));
 const noWeb = (args) => !hasArg(args, /^(--web|-w)$/);
 
 const gitReadOnly = new Set([
-  'diff', 'log', 'show', 'status', 'blame', 'ls-files', 'ls-tree', 'rev-parse',
-  'rev-list', 'merge-base', 'cat-file', 'describe', 'shortlog', 'grep',
-  'show-ref', 'for-each-ref',
+  'diff',
+  'log',
+  'show',
+  'status',
+  'blame',
+  'ls-files',
+  'ls-tree',
+  'rev-parse',
+  'rev-list',
+  'merge-base',
+  'cat-file',
+  'describe',
+  'shortlog',
+  'grep',
+  'show-ref',
+  'for-each-ref',
 ]);
 const git = (args) => {
   // `-C` only into this project (another directory could be a crafted repo
   // whose config runs programs); `--no-pager` is harmless; -c and others are not.
   const project = (process.env.CLAUDE_PROJECT_DIR ?? '').replace(/\/+$/, '');
   for (;;) {
-    if (args[0] === '-C' && ['.', project, `${project}/`].includes(args[1]) && args[1]) args = args.slice(2);
+    if (
+      args[0] === '-C' &&
+      ['.', project, `${project}/`].includes(args[1]) &&
+      args[1]
+    )
+      args = args.slice(2);
     else if (args[0] === '--no-pager') args = args.slice(1);
     else break;
   }
@@ -179,13 +211,15 @@ const git = (args) => {
   if (sub === 'reflog') return rest.length === 0 || rest[0] === 'show';
   if (sub === 'worktree') return rest[0] === 'list';
   if (sub === 'remote') return rest.every((arg) => arg === '-v');
-  if (sub === 'config') return ['--get', '--get-regexp', '--list'].includes(rest[0]);
+  if (sub === 'config')
+    return ['--get', '--get-regexp', '--list'].includes(rest[0]);
   if (sub === 'tag') return ['-l', '--list'].includes(rest[0]);
   if (sub === 'branch') {
     return rest.every(
       (arg, index) =>
-        /^(-a|-r|-v|-vv|--list|--show-current|--contains|--merged|--no-merged)$/.test(arg) ||
-        /^--(contains|merged|no-merged|list)$/.test(rest[index - 1] ?? ''),
+        /^(-a|-r|-v|-vv|--list|--show-current|--contains|--merged|--no-merged)$/.test(
+          arg,
+        ) || /^--(contains|merged|no-merged|list)$/.test(rest[index - 1] ?? ''),
     );
   }
   return false;
@@ -197,7 +231,10 @@ const gh = (args) => {
   if (args[0] === '--version') return args.length === 1;
   const [group, action, ...rest] = args;
   if (['issue', 'pr'].includes(group)) {
-    return ['view', 'list', 'diff', 'checks', 'status'].includes(action) && noWeb(rest);
+    return (
+      ['view', 'list', 'diff', 'checks', 'status'].includes(action) &&
+      noWeb(rest)
+    );
   }
   if (['repo', 'release', 'run', 'label'].includes(group)) {
     return ['view', 'list'].includes(action) && noWeb(rest);
@@ -226,26 +263,54 @@ const gh = (args) => {
       return false;
     }
     // One endpoint path on github.com; absolute URLs would reach other hosts.
-    return positionals.length === 1 && positionals[0] !== 'graphql' && !positionals[0].includes('://');
+    return (
+      positionals.length === 1 &&
+      positionals[0] !== 'graphql' &&
+      !positionals[0].includes('://')
+    );
   }
   return false;
 };
 
 const tools = new Set([
-  'cat', 'head', 'tail', 'grep', 'ls', 'wc', 'cut', 'diff', 'stat', 'echo',
-  'printf', 'test', 'pwd', 'tr', 'nl', 'column', 'basename', 'dirname',
-  'realpath', 'true', 'shasum', 'sha256sum', 'date', 'which', 'tree',
+  'cat',
+  'head',
+  'tail',
+  'grep',
+  'ls',
+  'wc',
+  'cut',
+  'diff',
+  'stat',
+  'echo',
+  'printf',
+  'test',
+  'pwd',
+  'tr',
+  'nl',
+  'column',
+  'basename',
+  'dirname',
+  'realpath',
+  'true',
+  'shasum',
+  'sha256sum',
+  'date',
+  'which',
+  'tree',
 ]);
 
 const allowed = ([name, ...args]) => {
   if (name === 'git') return git(args);
   if (name === 'gh') return gh(args);
-  if (name === 'find') return !hasArg(args, /^-(exec|execdir|delete|ok|okdir|fprint|fls)/);
+  if (name === 'find')
+    return !hasArg(args, /^-(exec|execdir|delete|ok|okdir|fprint|fls)/);
   // GNU-style tools accept unique prefixes of long options, so match prefixes.
   if (name === 'sort') return !hasArg(args, /^(-[^-]*o|--o|--c)/);
   if (name === 'rg') return !hasArg(args, /^(-[^-]*z|--(pre|search-zip))/);
   if (name === 'tree') return !hasArg(args, /^(-[^-]*o|--o)/);
-  if (name === 'uniq') return args.filter((arg) => !arg.startsWith('-')).length <= 1;
+  if (name === 'uniq')
+    return args.filter((arg) => !arg.startsWith('-')).length <= 1;
   if (name === 'jq') return !hasArg(args, /env|input_filename|\$__loc__/i);
   if (name === 'file') return !hasArg(args, /^(-[^-]*C|--c)/);
   if (name === 'sed') {
@@ -257,13 +322,17 @@ const allowed = ([name, ...args]) => {
     );
   }
   if (name === 'node') {
-    return args[0] === '--version' ? args.length === 1 : args[0] === '.agents/skills/design-references/scripts/hig.mjs';
+    return args[0] === '--version'
+      ? args.length === 1
+      : args[0] === '.agents/skills/design-references/scripts/hig.mjs';
   }
   if (name === 'pnpm') {
     const script = args.join(' ');
     return (
       /^(-s )?(agent:check|agent:doctor)$/.test(script) ||
-      /^(-s )?agent:shadcn (info|search|docs|view)( [\w@./-]+)*$/.test(script) ||
+      /^(-s )?agent:shadcn (info|search|docs|view)( [\w@./-]+)*$/.test(
+        script,
+      ) ||
       /^(-s )?agent:impeccable context( [\w@./-]+)*$/.test(script)
     );
   }
@@ -271,6 +340,7 @@ const allowed = ([name, ...args]) => {
 };
 
 for (const argv of commands) {
-  if (!allowed(argv)) block(`\`${argv.join(' ')}\` is not on the read-only allowlist`);
+  if (!allowed(argv))
+    block(`\`${argv.join(' ')}\` is not on the read-only allowlist`);
 }
 process.exit(0);

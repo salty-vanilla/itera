@@ -1,0 +1,7 @@
+# Resolve this checkout's runtime even when Git is launched by a GUI.
+lefthook: direnv exec . bash tooling/with-node.sh pnpm exec lefthook
+
+pre-commit:
+  commands:
+    staged-checks:
+      run: node tooling/checks/staged.mjs

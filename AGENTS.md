@@ -50,7 +50,15 @@ PRD §14 の「Frontend 実装を止めない未決定事項」3 件（＝ドメ
 
 ## 検証
 
-monorepo の土台（手順 2）を入れたときに、lint・typecheck・test・build のコマンドをここに書く。
+変更を渡す前に、ルートで `pnpm check` を実行する（CI も同じコマンド）。個別には次のとおり。
+
+- `pnpm format:check`（直すときは `pnpm format`）
+- `pnpm lint`（ESLint と React ファイル名の kebab-case）
+- `pnpm typecheck`
+- `pnpm test`（Vitest。パッケージごとの `vitest.config.ts` と `tooling` project）
+- `pnpm agent:check`（Skill の整合性）
+
+コミット時には lefthook がステージした内容を Prettier / ESLint で検査する。ツールと版の決定は `docs/architecture/adr/`。
 
 ## Agent ツール
 
