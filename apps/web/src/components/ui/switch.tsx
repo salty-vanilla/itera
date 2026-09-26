@@ -80,17 +80,19 @@ function Switch({
         </SwitchPrimitive.Root>
         {/*
           The state in words, as siblings of the switch so that they follow
-          its data-checked. role="switch" already announces the state.
+          its data-checked. role="switch" already announces the state. They
+          stay readable (ink-muted) when disabled: the words are what tells
+          on from off.
         */}
         <span
           aria-hidden
-          className="hidden text-body text-ink peer-data-checked/switch:inline peer-data-disabled/switch:text-ink-disabled"
+          className="hidden text-body text-ink peer-data-checked/switch:inline peer-data-disabled/switch:text-ink-muted"
         >
           オン
         </span>
         <span
           aria-hidden
-          className="text-body text-ink-muted peer-data-checked/switch:hidden peer-data-disabled/switch:text-ink-disabled"
+          className="text-body text-ink-muted peer-data-checked/switch:hidden"
         >
           オフ
         </span>
