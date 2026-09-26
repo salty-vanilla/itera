@@ -19,7 +19,8 @@
 | クラスの結合 | `cn`（shadcn 公式、tailwind-merge 互換）と class-variance-authority | 0.4.0 / 0.7.1 | shadcn の既定。DESIGN.md のトークン名（`text-body`・`shadow-overlay`・`h-control-md` など）を `apps/web/src/lib/utils.ts` で教えないと、文字色と取り違えて消される |
 | アイコン | lucide-react | 1.48.0 | docs/design/foundations.md が Lucide だけを使うと決めている |
 | 部品カタログ | Storybook（`@storybook/react-vite`、addon-docs・addon-a11y・addon-themes）＋ storybook-addon-pseudo-states | 10.6.0 | 画面を作る前に、トークンと部品の状態（Hover・Focus・Active・Disabled・Loading）を light / dark と compact / medium / wide で単体に確認できる。pseudo-states で Hover などを強制表示し、状態の一覧を 1 つの Story にまとめられる |
-| 部品のテスト | Vitest（jsdom）+ Testing Library | jsdom 30.1.1 / @testing-library/react 16.3.3 / user-event 14.6.7 | 役割・名前・`aria-*` とキーボード操作をブラウザなしで検査する |
+| 部品のテスト | Vitest（jsdom）+ Testing Library | vitest 5.0.2（ADR 0001 と同じ）/ jsdom 30.1.1 / @testing-library/react 16.3.3 / user-event 14.6.7 | 役割・名前・`aria-*` とキーボード操作をブラウザなしで検査する |
+| React の型 | @types/react・@types/react-dom | 19.3.0 | React と同じ版に揃える |
 | Lint | eslint-plugin-react-hooks・eslint-plugin-storybook | 7.1.1 / 10.6.0 | ルートの `eslint.config.js` に `files` 付きで足す（ADR 0001） |
 | トークンの照合 | yaml | 2.9.1 | `tokens.test.ts` が DESIGN.md の YAML を読むためだけに使う（devDependencies） |
 | 型 | TypeScript（apps/web の devDependencies） | 6.0.3 | ルートと同じ版。`typecheck` script が apps/web の `tsc` を使う |
