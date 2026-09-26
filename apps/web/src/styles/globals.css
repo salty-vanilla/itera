@@ -151,10 +151,18 @@
   --default-transition-duration: 100ms;
   --default-transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
   --animate-spin: spin 1s linear infinite;
+  /* Indeterminate Progress: opacity only, the line does not slide. */
+  --animate-progress-pulse: progress-pulse 1.6s ease-in-out infinite;
 
   @keyframes spin {
     to {
       transform: rotate(360deg);
+    }
+  }
+
+  @keyframes progress-pulse {
+    50% {
+      opacity: 1;
     }
   }
 }
