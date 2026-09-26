@@ -587,7 +587,7 @@ compact の原則：
 
 **Radio / RadioGroup** — 2〜5 個の排他的な選択肢をすべて見せる（Goal の自己判定、Sprint の長さ）。16px の円、選択時は `primary` の 4px 内枠。fieldset と legend で組む。自己判定には既定値を置かない。
 
-**Switch** — 即時に反映される設定のオン / オフ。トラック 36×20px（`rounded.sm`、Pill にしない）、つまみ 14px（`rounded.xs`）、「オン / オフ」の語を添える。On はトラック `primary`・つまみ `on-primary`、Off はトラック `surface`・枠とつまみ `border-strong`。説明で「オンにすると何が起きるか」を書く。ラベルと説明を左、トラックと語を右に置く。トラックは 20px なので、当たり判定をトラックの外へ広げて 24px 以上（compact 44px）にする。保存ボタンで確定するフォームには使わない（→ Checkbox）。
+**Switch** — 即時に反映される設定のオン / オフ。トラック 36×20px（`rounded.sm`、Pill にしない）、つまみ 14px（`rounded.xs`）、「オン / オフ」の語を添える。On はトラック `primary`・つまみ `on-primary`、Off はトラック `surface`・枠とつまみ `border-strong`。説明で「オンにすると何が起きるか」を書く。ラベルと説明を左、トラックと語を右に置く。トラックは 20px なので、当たり判定をトラックの外へ広げて 24px 以上（compact 44px）にする。Disabled でも「オン / オフ」の語は `ink-muted` のまま読めるようにする（オンとオフを区別する唯一の文字なので、共通の状態の `ink-disabled` の例外）。保存ボタンで確定するフォームには使わない（→ Checkbox）。
 
 ### 表示
 
