@@ -28,3 +28,7 @@ test-results/
 # Agent browser artifacts may include page content and session state.
 .playwright-cli/
 .playwright/storage-state/
+
+# Impeccable working files (decision pages, surface briefs, review captures).
+.impeccable/
+**/.impeccable/

@@ -50,9 +50,7 @@ function TypeRow({
       <Cell>
         <TokenName>{name}</TokenName>
       </Cell>
-      <Cell className="font-mono text-code whitespace-nowrap text-ink-muted">
-        {spec}
-      </Cell>
+      <Cell className="text-code whitespace-nowrap text-ink-muted">{spec}</Cell>
     </TokenRow>
   );
 }
@@ -66,11 +64,7 @@ function FontStatus() {
     void document.fonts.ready.then(() => {
       if (!active) return;
       setLoaded([
-        ['Noto Sans JP', document.fonts.check('400 14px "Noto Sans JP"', 'あ')],
-        [
-          'Zen Old Mincho',
-          document.fonts.check('500 18px "Zen Old Mincho"', 'あ'),
-        ],
+        ['LINE Seed JP', document.fonts.check('700 14px "LINE Seed JP"', 'あ')],
       ]);
     });
     return () => {
@@ -93,7 +87,7 @@ function TypographyPage() {
   return (
     <TokenPage
       title="タイポグラフィ"
-      lead="Sans で操作し、明朝で考える。右の列は見本が実際に描画された書体・サイズ/行送り・ウェイト・字間。トークンの値が DESIGN.md の YAML と一致することは tokens.test.ts が確かめている。"
+      lead="書体は LINE Seed JP の 1 系列。文字も数字も Kbd も同じ書体。右の列は見本が実際に描画された書体・サイズ/行送り・ウェイト・字間。トークンの値が DESIGN.md の YAML と一致することは tokens.test.ts が確かめている。"
     >
       <TokenSection title="書体の読み込み">
         <FontStatus />

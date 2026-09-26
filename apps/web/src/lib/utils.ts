@@ -38,7 +38,7 @@ export const cn = createCn({
         'target-touch',
         'icon-s',
         'icon-m',
-        'area-mark',
+        'area-badge',
         'pane-nav',
         'pane-rail',
         'pane-list',

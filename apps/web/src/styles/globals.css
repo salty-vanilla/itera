@@ -16,55 +16,49 @@
 @theme static {
   --*: initial;
 
-  /* Typography: families (DESIGN.md Typography) */
+  /* Typography: one family for text, figures and Kbd (DESIGN.md Typography). */
   --font-sans:
-    'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN',
+    'LINE Seed JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN',
     'Yu Gothic UI', Meiryo, system-ui, sans-serif;
-  --font-serif:
-    'Zen Old Mincho', 'Hiragino Mincho ProN', 'Yu Mincho', YuMincho, serif;
-  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
   --font-weight-normal: 400;
-  --font-weight-medium: 500;
-  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
 
   /*
    * Typography tokens. Each sets size, line height, letter spacing and
-   * weight. The family is not part of a Tailwind text utility: the Mincho
-   * tokens (display-l, display-m, goal, reflection) are used with font-serif,
-   * code with font-mono, and num-* with tabular-nums. Tokens without a
-   * letterSpacing in the YAML get 0em so they do not inherit the body's.
+   * weight. LINE Seed JP has proportional figures (tabular-nums has no
+   * effect): columns of numbers are right-aligned instead.
    */
   --text-display-l: 32px;
-  --text-display-l--line-height: 44px;
-  --text-display-l--letter-spacing: 0.02em;
-  --text-display-l--font-weight: 500;
+  --text-display-l--line-height: 40px;
+  --text-display-l--letter-spacing: 0em;
+  --text-display-l--font-weight: 700;
   --text-display-m: 24px;
-  --text-display-m--line-height: 36px;
-  --text-display-m--letter-spacing: 0.02em;
-  --text-display-m--font-weight: 500;
+  --text-display-m--line-height: 32px;
+  --text-display-m--letter-spacing: 0em;
+  --text-display-m--font-weight: 700;
   --text-goal: 18px;
-  --text-goal--line-height: 30px;
-  --text-goal--letter-spacing: 0.02em;
-  --text-goal--font-weight: 500;
+  --text-goal--line-height: 28px;
+  --text-goal--letter-spacing: 0.01em;
+  --text-goal--font-weight: 700;
   --text-reflection: 16px;
-  --text-reflection--line-height: 30px;
+  --text-reflection--line-height: 28px;
   --text-reflection--letter-spacing: 0.02em;
   --text-reflection--font-weight: 400;
   --text-button: 14px;
   --text-button--line-height: 20px;
   --text-button--letter-spacing: 0em;
-  --text-button--font-weight: 500;
+  --text-button--font-weight: 700;
   --text-heading: 16px;
   --text-heading--line-height: 24px;
   --text-heading--letter-spacing: 0em;
-  --text-heading--font-weight: 600;
+  --text-heading--font-weight: 700;
   --text-subheading: 14px;
   --text-subheading--line-height: 20px;
   --text-subheading--letter-spacing: 0em;
-  --text-subheading--font-weight: 600;
+  --text-subheading--font-weight: 700;
   --text-body-l: 16px;
-  --text-body-l--line-height: 28px;
+  --text-body-l--line-height: 26px;
   --text-body-l--letter-spacing: 0.02em;
   --text-body-l--font-weight: 400;
   --text-body: 14px;
@@ -78,7 +72,7 @@
   --text-label: 13px;
   --text-label--line-height: 20px;
   --text-label--letter-spacing: 0em;
-  --text-label--font-weight: 600;
+  --text-label--font-weight: 700;
   --text-help: 13px;
   --text-help--line-height: 20px;
   --text-help--letter-spacing: 0em;
@@ -89,20 +83,20 @@
   --text-meta--font-weight: 400;
   --text-kicker: 12px;
   --text-kicker--line-height: 16px;
-  --text-kicker--letter-spacing: 0.04em;
-  --text-kicker--font-weight: 500;
-  --text-num-l: 24px;
+  --text-kicker--letter-spacing: 0em;
+  --text-kicker--font-weight: 700;
+  --text-num-l: 28px;
   --text-num-l--line-height: 32px;
   --text-num-l--letter-spacing: 0em;
-  --text-num-l--font-weight: 500;
+  --text-num-l--font-weight: 700;
   --text-num-m: 16px;
   --text-num-m--line-height: 24px;
   --text-num-m--letter-spacing: 0em;
-  --text-num-m--font-weight: 500;
+  --text-num-m--font-weight: 700;
   --text-num-s: 12px;
   --text-num-s--line-height: 16px;
   --text-num-s--letter-spacing: 0em;
-  --text-num-s--font-weight: 500;
+  --text-num-s--font-weight: 700;
   --text-code: 12px;
   --text-code--line-height: 16px;
   --text-code--letter-spacing: 0em;
@@ -137,7 +131,7 @@
   --spacing-target-touch: 44px;
   --spacing-icon-s: 16px;
   --spacing-icon-m: 20px;
-  --spacing-area-mark: 8px;
+  --spacing-area-badge: 20px;
   --spacing-pane-nav: 224px;
   --spacing-pane-rail: 64px;
   --spacing-pane-list: 384px;
@@ -183,12 +177,12 @@
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-primary-active: var(--primary-active);
-  --color-primary-subtle: var(--primary-subtle);
   --color-on-primary: var(--on-primary);
+  --color-here: var(--here);
+  --color-here-subtle: var(--here-subtle);
+  --color-on-here: var(--on-here);
   --color-link: var(--link);
   --color-focus: var(--focus);
-  --color-success: var(--success);
-  --color-success-subtle: var(--success-subtle);
   --color-warning: var(--warning);
   --color-warning-subtle: var(--warning-subtle);
   --color-danger: var(--danger);
@@ -196,8 +190,6 @@
   --color-danger-active: var(--danger-active);
   --color-danger-subtle: var(--danger-subtle);
   --color-on-danger: var(--on-danger);
-  --color-info: var(--info);
-  --color-info-subtle: var(--info-subtle);
   --color-area-1: var(--area-1);
   --color-area-2: var(--area-2);
   --color-area-3: var(--area-3);
@@ -206,6 +198,7 @@
   --color-area-6: var(--area-6);
   --color-area-7: var(--area-7);
   --color-area-none: var(--area-none);
+  --color-on-area: var(--on-area);
   --color-proposal-border: var(--proposal-border);
   --color-scrim: var(--scrim);
 
@@ -246,6 +239,29 @@
   body {
     line-break: strict;
     overflow-wrap: break-word;
+  }
+
+  /*
+   * Browser surfaces follow the palette. Text selection stays neutral: yellow
+   * is reserved for where you are and always comes with a check or a word.
+   */
+  ::selection {
+    background-color: var(--surface-pressed);
+    color: var(--ink);
+  }
+
+  html {
+    caret-color: var(--ink);
+    accent-color: var(--primary);
+    scrollbar-color: var(--border-strong) transparent;
+  }
+
+  /* One family everywhere: code and kbd do not fall back to the UA monospace. */
+  code,
+  kbd,
+  samp,
+  pre {
+    font-family: inherit;
   }
 
   :focus-visible {

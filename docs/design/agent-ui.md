@@ -9,7 +9,7 @@ AI / Agent は **通常の Product UI の延長** として表現する。別世
 | 対象 | 表現 |
 | --- | --- |
 | Agent 提案（未確定） | 1px 破線 `proposal-border`、ラベル「Agent 提案」（`kicker`）、種類（Estimate / Goal / 計画案）、出所（製品内の見積もり支援 / 外部 Agent（MCP））と時刻 |
-| 提案された値 | suggestion の Estimate（破線枠＋「提案」）か Sans の文。明朝にしない |
+| 提案された値 | suggestion の Estimate（破線枠＋「提案」）か `body` の文。確定した言葉の `goal` / `reflection` で組まない |
 | 本人が採用した値 | 実線・ラベルなし。提案から採用したことは変更履歴に残す（Estimate の source） |
 | 過去の実績からコードが作った幅 | EstimateSuggestion として扱い、suggestion の見た目（破線＋「提案」）に出所「過去の実績から」を添える。4 つ目の値にしない |
 | 根拠 | 根拠 / 不確実な点 / 参照していない情報 |

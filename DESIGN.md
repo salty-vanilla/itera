@@ -1,198 +1,183 @@
 ---
 version: alpha
 name: Itera
-description: Quiet, precise personal planning tool. 紙面の「情報の秩序・余白・罫線・タイポグラフィ・静けさ」をプロダクト UI に翻訳する。
+description: Wayfinding for your week. 駅の公共サインの文法で、今どこにいて次に何をするかを一目で示す個人の計画の道具。
 colors:
   # Light theme. Dark theme values use the same name with a `-dark` suffix.
-  # Reference tokens (link, proposal-border) have no `-dark` twin: they follow
-  # the referenced token in each theme.
+  # Reference tokens (link, focus, proposal-border) and the area colors have
+  # no `-dark` twin: they follow the referenced token or stay the same.
   canvas: "#ffffff"
-  canvas-subtle: "#f6f6f4"
+  canvas-subtle: "#f2f3f4"
   surface: "#ffffff"
-  surface-hover: "#efefec"
-  surface-pressed: "#e6e6e2"
-  surface-inverse: "#2b2b29"
-  ink: "#2b2b29"
-  ink-muted: "#5b5b56"
-  ink-subtle: "#6a6a64"
-  ink-disabled: "#a8a8a2"
+  surface-hover: "#eceeef"
+  surface-pressed: "#e1e3e5"
+  surface-inverse: "#16181a"
+  ink: "#16181a"
+  ink-muted: "#4a4e53"
+  ink-subtle: "#5c6167"
+  ink-disabled: "#a3a7ac"
   ink-inverse: "#ffffff"
-  border: "#dcdcd7"
-  border-soft: "#ebebe7"
-  border-strong: "#8a8a84"
-  primary: "#2a4a6e"
-  primary-hover: "#223d5b"
-  primary-active: "#1b3149"
-  primary-subtle: "#edf1f6"
+  border: "#d3d6d9"
+  border-soft: "#e7e9eb"
+  border-strong: "#7a7f85"
+  primary: "#16181a"
+  primary-hover: "#2c3034"
+  primary-active: "#000000"
   on-primary: "#ffffff"
-  link: "{colors.primary}"
-  focus: "#3269b0"
-  success: "#2d6a45"
-  success-subtle: "#ebf3ed"
-  warning: "#855800"
-  warning-subtle: "#faf2de"
-  danger: "#b02a22"
-  danger-hover: "#962219"
-  danger-active: "#7d1c15"
-  danger-subtle: "#fbeceb"
+  here: "#ffd23f"
+  here-subtle: "#fff3c4"
+  on-here: "#16181a"
+  link: "{colors.ink}"
+  focus: "{colors.ink}"
+  warning: "#8a5200"
+  warning-subtle: "#fcebd9"
+  danger: "#c4161c"
+  danger-hover: "#a51217"
+  danger-active: "#870e12"
+  danger-subtle: "#fce8e8"
   on-danger: "#ffffff"
-  info: "#2f5f94"
-  info-subtle: "#ecf2f8"
-  area-1: "#a45f36"
-  area-2: "#2d7773"
-  area-3: "#7b5a8e"
-  area-4: "#687a2c"
-  area-5: "#a8526a"
-  area-6: "#5a6d88"
-  area-7: "#7a6a58"
-  area-none: "#8a8a84"
+  area-1: "#0a6fbd"
+  area-2: "#12844a"
+  area-3: "#5c7a00"
+  area-4: "#4a5bc4"
+  area-5: "#8a4fbf"
+  area-6: "#0b7f85"
+  area-7: "#a23c9c"
+  area-none: "#6b7076"
+  on-area: "#ffffff"
   proposal-border: "{colors.border-strong}"
-  scrim: "#1f1f1d52"
-  canvas-dark: "#1b1b1a"
-  canvas-subtle-dark: "#222221"
-  surface-dark: "#262625"
-  surface-hover-dark: "#2f2f2d"
-  surface-pressed-dark: "#383835"
-  surface-inverse-dark: "#e9e9e4"
-  ink-dark: "#ebebe6"
-  ink-muted-dark: "#b8b8b1"
-  ink-subtle-dark: "#a0a099"
-  ink-disabled-dark: "#696964"
-  ink-inverse-dark: "#1b1b1a"
-  border-dark: "#3b3b38"
-  border-soft-dark: "#2f2f2d"
-  border-strong-dark: "#7d7d77"
-  primary-dark: "#a3bfe2"
-  primary-hover-dark: "#b7cdea"
-  primary-active-dark: "#cad9ef"
-  primary-subtle-dark: "#233142"
-  on-primary-dark: "#14202d"
-  focus-dark: "#82b3f0"
-  success-dark: "#82c79a"
-  success-subtle-dark: "#1e2e24"
-  warning-dark: "#e3b95e"
-  warning-subtle-dark: "#322916"
-  danger-dark: "#f2918a"
-  danger-hover-dark: "#f5a7a1"
-  danger-active-dark: "#f8bdb8"
-  danger-subtle-dark: "#3a2321"
-  on-danger-dark: "#1b1b1a"
-  info-dark: "#94b9e6"
-  info-subtle-dark: "#1f2b3a"
-  area-1-dark: "#d69b74"
-  area-2-dark: "#6dbcb6"
-  area-3-dark: "#bd9dcd"
-  area-4-dark: "#abba6c"
-  area-5-dark: "#dc8fa3"
-  area-6-dark: "#9dafc6"
-  area-7-dark: "#b5a48f"
-  area-none-dark: "#8f8f89"
+  scrim: "#16181a66"
+  canvas-dark: "#121416"
+  canvas-subtle-dark: "#1a1d20"
+  surface-dark: "#1f2225"
+  surface-hover-dark: "#292d31"
+  surface-pressed-dark: "#33383d"
+  surface-inverse-dark: "#eef0f2"
+  ink-dark: "#eef0f2"
+  ink-muted-dark: "#b9bec4"
+  ink-subtle-dark: "#9aa0a7"
+  ink-disabled-dark: "#5d6268"
+  ink-inverse-dark: "#121416"
+  border-dark: "#33373c"
+  border-soft-dark: "#26292d"
+  border-strong-dark: "#7e848b"
+  primary-dark: "#eef0f2"
+  primary-hover-dark: "#ffffff"
+  primary-active-dark: "#d4d8dc"
+  on-primary-dark: "#121416"
+  here-dark: "#ffd23f"
+  here-subtle-dark: "#3b3312"
+  on-here-dark: "#121416"
+  warning-dark: "#f0b54a"
+  warning-subtle-dark: "#33240f"
+  danger-dark: "#ff8a80"
+  danger-hover-dark: "#ffa39b"
+  danger-active-dark: "#ffbcb6"
+  danger-subtle-dark: "#3a1c1b"
+  on-danger-dark: "#121416"
   scrim-dark: "#000000a3"
 typography:
   display-l:
-    fontFamily: Zen Old Mincho
+    fontFamily: LINE Seed JP
     fontSize: 32px
-    fontWeight: 500
-    lineHeight: 44px
-    letterSpacing: 0.02em
+    fontWeight: 700
+    lineHeight: 40px
+    letterSpacing: 0em
   display-m:
-    fontFamily: Zen Old Mincho
+    fontFamily: LINE Seed JP
     fontSize: 24px
-    fontWeight: 500
-    lineHeight: 36px
-    letterSpacing: 0.02em
+    fontWeight: 700
+    lineHeight: 32px
+    letterSpacing: 0em
   goal:
-    fontFamily: Zen Old Mincho
+    fontFamily: LINE Seed JP
     fontSize: 18px
-    fontWeight: 500
-    lineHeight: 30px
-    letterSpacing: 0.02em
+    fontWeight: 700
+    lineHeight: 28px
+    letterSpacing: 0.01em
   reflection:
-    fontFamily: Zen Old Mincho
-    fontSize: 16px
-    fontWeight: 400
-    lineHeight: 30px
-    letterSpacing: 0.02em
-  button:
-    fontFamily: Noto Sans JP
-    fontSize: 14px
-    fontWeight: 500
-    lineHeight: 20px
-    letterSpacing: 0em
-  heading:
-    fontFamily: Noto Sans JP
-    fontSize: 16px
-    fontWeight: 600
-    lineHeight: 24px
-    letterSpacing: 0em
-  subheading:
-    fontFamily: Noto Sans JP
-    fontSize: 14px
-    fontWeight: 600
-    lineHeight: 20px
-    letterSpacing: 0em
-  body-l:
-    fontFamily: Noto Sans JP
+    fontFamily: LINE Seed JP
     fontSize: 16px
     fontWeight: 400
     lineHeight: 28px
     letterSpacing: 0.02em
+  button:
+    fontFamily: LINE Seed JP
+    fontSize: 14px
+    fontWeight: 700
+    lineHeight: 20px
+    letterSpacing: 0em
+  heading:
+    fontFamily: LINE Seed JP
+    fontSize: 16px
+    fontWeight: 700
+    lineHeight: 24px
+    letterSpacing: 0em
+  subheading:
+    fontFamily: LINE Seed JP
+    fontSize: 14px
+    fontWeight: 700
+    lineHeight: 20px
+    letterSpacing: 0em
+  body-l:
+    fontFamily: LINE Seed JP
+    fontSize: 16px
+    fontWeight: 400
+    lineHeight: 26px
+    letterSpacing: 0.02em
   body:
-    fontFamily: Noto Sans JP
+    fontFamily: LINE Seed JP
     fontSize: 14px
     fontWeight: 400
     lineHeight: 22px
     letterSpacing: 0.01em
   task:
-    fontFamily: Noto Sans JP
+    fontFamily: LINE Seed JP
     fontSize: 14px
     fontWeight: 400
     lineHeight: 20px
     letterSpacing: 0em
   label:
-    fontFamily: Noto Sans JP
+    fontFamily: LINE Seed JP
     fontSize: 13px
-    fontWeight: 600
+    fontWeight: 700
     lineHeight: 20px
     letterSpacing: 0em
   help:
-    fontFamily: Noto Sans JP
+    fontFamily: LINE Seed JP
     fontSize: 13px
     fontWeight: 400
     lineHeight: 20px
     letterSpacing: 0em
   meta:
-    fontFamily: Noto Sans JP
+    fontFamily: LINE Seed JP
     fontSize: 12px
     fontWeight: 400
     lineHeight: 16px
     letterSpacing: 0em
   kicker:
-    fontFamily: Noto Sans JP
+    fontFamily: LINE Seed JP
     fontSize: 12px
-    fontWeight: 500
+    fontWeight: 700
     lineHeight: 16px
-    letterSpacing: 0.04em
+    letterSpacing: 0em
   num-l:
-    fontFamily: Noto Sans JP
-    fontSize: 24px
-    fontWeight: 500
+    fontFamily: LINE Seed JP
+    fontSize: 28px
+    fontWeight: 700
     lineHeight: 32px
-    fontFeature: '"tnum"'
   num-m:
-    fontFamily: Noto Sans JP
+    fontFamily: LINE Seed JP
     fontSize: 16px
-    fontWeight: 500
+    fontWeight: 700
     lineHeight: 24px
-    fontFeature: '"tnum"'
   num-s:
-    fontFamily: Noto Sans JP
+    fontFamily: LINE Seed JP
     fontSize: 12px
-    fontWeight: 500
+    fontWeight: 700
     lineHeight: 16px
-    fontFeature: '"tnum"'
   code:
-    fontFamily: ui-monospace
+    fontFamily: LINE Seed JP
     fontSize: 12px
     fontWeight: 400
     lineHeight: 16px
@@ -223,7 +208,7 @@ spacing:
   target-touch: 44px
   icon-s: 16px
   icon-m: 20px
-  area-mark: 8px
+  area-badge: 20px
   pane-nav: 224px
   pane-rail: 64px
   pane-list: 384px
@@ -264,7 +249,7 @@ components:
     typography: "{typography.task}"
     height: 40px # minimum; stacked rows with metadata are about 52px
   task-row-selected:
-    backgroundColor: "{colors.primary-subtle}"
+    backgroundColor: "{colors.here-subtle}"
   proposal:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
@@ -278,7 +263,7 @@ components:
     height: 20px
 ---
 
-# Itera DESIGN.md v0.2
+# Itera DESIGN.md v0.3
 
 仕事・研究・学習・生活を並行する個人が、1 週間の Sprint ごとに「何を達成するか」を決め、実行し、Retro で計画の立て方を改善するための道具のデザインシステム。人と Coding Agent の両方が読む前提で、曖昧な形容詞ではなくトークン名・数値・許可 / 禁止で判断できるように書く。
 
@@ -288,131 +273,139 @@ components:
 
 ## Overview
 
-方向は **Quiet, precise personal planning tool**。手帳の装飾ではなく、紙面が持つ情報の秩序・余白・罫線・タイポグラフィ・静けさを UI に翻訳する。白と無彩を中心に、罫線で構造を作り、影はほとんど使わない。情報が主役で、装飾はしない。
+方向は **Wayfinding for your week**。駅の公共サインが、初めての駅でも現在地・行き先・乗り換えを一目で分からせるのと同じ文法で、今週どこにいて、次に何を決めるかを示す。白と墨の 2 色を地にし、色は意味を持つ場所にだけ置く。Area は路線のように色と記号で呼び分け、現在地は黄で示す。手帳や紙の擬物、淡い色の雰囲気づくりはしない。
 
 迷ったら次の 3 つに戻る。
 
-1. **Border first → Divider first → Shadow last**
-2. **Sans で操作し、明朝で考える**
-3. **破線は「まだ本人が決めていない」**
+1. **現在地は黄、確定は墨、計画中は破線**
+2. **Area は路線記号（色の四角＋名前の先頭 1 文字）で呼ぶ**
+3. **Border first → Divider first → Shadow last**
 
 ### 原則
 
-1. **Clarity — 今何を決めているかが分かる。** 画面ごとに「決めていること」を 1 つだけ見出しにする（例：「今週、何を進めますか」）。選択は `primary-subtle` の背景 **と** チェックで示し、色だけにしない。幅がある時間は幅のまま出す（`−1 〜 1h`）。
+1. **Clarity — 今どこで何を決めているかが分かる。** 画面ごとに「決めていること」を 1 つだけ見出しにする（例：「今週、何を進めますか」）。現在地（今日、今の段階、選んだもの）は `here` の黄 **と** チェック・語で示し、色だけにしない。幅がある時間は幅のまま出す（`−1 〜 1h`）。
 2. **Agency — 決めるのは本人。** Agent・AI の値は破線と「提案」「Agent 提案」の語で区別し、本人の値は実線・ラベルなし。「採用」は Secondary、「編集して採用」「却下」は Quiet にし、Primary で採用を誘導しない。
-3. **Calmness — 注意を奪わない。** Primary Button は 1 画面に 1 つ。色面は状態と選択だけ。Area の色は 8px の印だけ。考える領域（Goal、Capacity、Retro）には意図的に余白を取る。
-4. **Precision — 小さな数値ほど丁寧に。** 数値は tabular-nums。1h 未満は `30m`、合計は常に h、範囲は en dash（`2–4h`）、負を含む範囲は `〜`。未見積は「0」ではなく「未見積」と書き、合計に含めないことを示す。
-5. **Continuity — Planning → Today → Retro → 次の Planning。** Task Row・Goal・Estimate・Area Indicator はすべての画面で同じ見た目。明朝は Sprint 見出し・Goal・改善策・Retro の振り返りに一貫して使い、「考えた言葉」の連続性を作る。
+3. **Calmness — 注意を奪わない。** Primary Button（墨の塗り）は 1 画面に 1 つ。色面は状態と現在地だけ。Area の色は路線記号と容量バーだけ。考える領域（Goal、Capacity、Retro）には意図的に余白を取る。
+4. **Precision — 小さな数値ほど丁寧に。** 数値は `num-*` で組み、並ぶ列は右揃え。1h 未満は `30m`、合計は常に h、範囲は en dash（`2–4h`）、負を含む範囲は `〜`。未見積は「0」ではなく「未見積」と書き、合計に含めないことを示す。
+5. **Continuity — Planning → Today → Retro → 次の Planning。** Task Row・Goal・Estimate・Area の路線記号はすべての画面で同じ見た目。本人が確定した言葉（Goal、改善策、振り返り）は `goal` / `reflection` で本文より一段大きく組み、確定したことを実線の罫の下に置いて示す。
 6. **Accessibility — 最初から設計に含める。** テキスト 4.5:1、操作部品の輪郭・フォーカス・意味のある印は 3:1。フォーカスリングを消さない。ターゲットは pointer 24px、compact 幅 44px。詳細は [アクセシビリティ](docs/design/accessibility.md)。
 
 ## Colors
 
-画面の 9 割は Neutral（`canvas` `canvas-subtle` `surface` `ink` `ink-muted` `border`）で成立させる。色は意味がある場所にだけ置く。
+画面の大半は白（dark は墨の地）と墨の文字で成立させる。色は予約語として扱い、1 つの色に 1 つの意味だけを持たせる。
 
-| 層 | トークン | 使う場所 | 使わない場所 |
+| 層 | トークン | 意味・使う場所 | 使わない場所 |
 | --- | --- | --- | --- |
-| 地 | `canvas` | 紙面：Sprint 本体、Today、Retro の本文 | — |
+| 地 | `canvas` | 本体の地：Sprint、Today、Retro | — |
 | 地 | `canvas-subtle` | Backlog ペイン、ナビゲーション、表ヘッダー、読み取り専用入力 | 考える領域の主面 |
 | 面 | `surface` | Dialog、Drawer、Popover、Menu、Toast、Agent 提案。必ず `border` と組む | 単なるグルーピング |
-| 状態 | `surface-hover` / `surface-pressed` | hover / 押下 | 選択（選択は `primary-subtle`） |
+| 状態 | `surface-hover` / `surface-pressed` | hover / 押下 | 選択（選択は `here-subtle`） |
 | 反転 | `surface-inverse` / `ink-inverse` | Tooltip とショートカット表示だけ | それ以外 |
 | 文字 | `ink` / `ink-muted` / `ink-subtle` | 本文 / 補足 / 三次（件数・完了済み・プレースホルダー）。これより薄い文字色を作らない | — |
 | 文字 | `ink-disabled` | 無効状態だけ | 情報を伝える文字 |
 | 罫 | `border` / `border-soft` | 構造の罫 / リスト内の行区切り | 操作部品の輪郭 |
 | 罫 | `border-strong` | 入力・Checkbox・Radio・Switch・Secondary Button の輪郭 | 装飾の罫 |
-| Primary | `primary` 系 | Primary Button、オン状態、選択の印、Progress、リンク | 大きな面、見出しの文字色 |
-| Focus | `focus` | フォーカスリングだけ | それ以外すべて |
-| Semantic | `success` `warning` `danger` `info` と `*-subtle` | 状態の文字・アイコン・Status Tag・Notice。必ずアイコンか語を伴う | Area の識別、装飾 |
-| Area | `area-1`〜`area-7`、`area-none` | 8px の Area Mark、Capacity バーのセグメント、Filter の印 | 文字色、面の塗り、枠線、左ボーダー |
-| 未確定 | `proposal-border` | Agent 提案・未確定値の 1px 破線 | 確定済みの値 |
+| 確定 | `primary`（墨）/ `on-primary` | Primary Button の塗り、オン状態、完了サークル、Progress、IconButton の pressed | 大きな面 |
+| 現在地 | `here`（黄）/ `here-subtle` / `on-here` | 今日の列・今の段階の印（`here`）、選んだ行・項目の地（`here-subtle`）。必ずチェックか語を伴う | 注意・警告（→ `warning`）、装飾、フォーカス |
+| Focus | `focus`（`ink` の別名） | フォーカスリングだけ。色相を持たず、墨の 2px の輪郭と 2px のアキで示す | それ以外すべて |
+| リンク | `link`（`ink` の別名） | 下線付きの文字リンク | — |
+| Semantic | `danger` `warning` と `*-subtle` | 危険と注意の文字・アイコン・Status Tag・Notice。必ずアイコンか語を伴う。成功と情報は色を持たず、墨の文字＋アイコン（`circle-check` / `info`）＋語で示す | Area の識別、装飾 |
+| Area | `area-1`〜`area-7`、`area-none` / `on-area` | 路線記号の地（文字は `on-area`）、Capacity バーのセグメント、Filter の路線記号 | 文字色、面の塗り、枠線、左ボーダー |
+| 未確定 | `proposal-border` | Agent 提案・計画中の値の 1px 破線 | 確定済みの値 |
 | 暗幕 | `scrim` | Dialog / モーダル Drawer の背後。Blur は使わない | — |
 
-### Primary は 1 色
+### Primary は墨
 
-`primary`（ブルーブラック）だけ。万年筆のインクの色として、選択・確定・進捗に使う。
+Primary は色ではなく墨（light は `#16181a` の塗りに白抜き、dark は明るい塗りに墨の文字）。確定の操作だけが塗りを持ち、ほかの操作は線と文字で示す。
 
 - Primary Button は 1 画面に 1 つ（Planning では「Sprint を確定」）。
-- 選択 = `primary-subtle` の背景 + チェック。Tabs の選択は `ink` の下線（ナビゲーションは色で示さない）。
-- 塗りの上の文字は必ず `on-primary`。dark では暗色になるので白を直書きしない。
-- `link` は `primary` の別名。下線を常に付け、色だけでリンクを示さない。
+- 塗りの上の文字は必ず `on-primary`。dark では反転するので白を直書きしない。
+- `link` は `ink` の別名。下線を常に付け、色だけでリンクを示さない。
 
-### Area の色
+### 現在地の黄
 
-Area（領域）はユーザーが作る。色は面ではなく **印** として使い、明度・彩度を揃えた 7 色と未設定の 1 色から割り当てる。
+`here` は駅の案内で現在地を示す黄に当たる。「今どこか」だけに使う。
 
-| トークン | 色見本 | 既定の割り当て |
+- 選択 = `here-subtle` の地＋チェック。今日の列・今の段階は `here` の印（太線や塗りの四角）＋語（「今日」「現在」）。
+- 注意・警告には使わない（→ `warning` とアイコン）。フォーカスにも使わない（→ `focus` の墨の輪郭）。
+- 黄の上の文字は `on-here`（墨）。
+
+### Area の路線記号
+
+Area（領域）はユーザーが作る。駅の路線記号のように、色の角丸の四角（`area-badge` 20px、`rounded.sm`）に Area 名の先頭 1 文字を `on-area` で白抜きにし、隣に名前を置く。
+
+| トークン | 色 | 既定の割り当て |
 | --- | --- | --- |
-| `area-1` | 弁柄 | 1 番目に作った Area |
-| `area-2` | 青磁の濃色 | 2 番目 |
-| `area-3` | 葡萄 | 3 番目（紫だが AI 表現には使わない） |
-| `area-4` | 苔 | 4 番目 |
-| `area-5` | 臙脂 | 5 番目 |
-| `area-6` | 鉄紺 | 6 番目 |
-| `area-7` | 煤竹 | 7 番目 |
-| `area-none` | 灰 | Area 未設定（「領域なし」）だけ。Goal に紐づかない Task は、その Task の Area の色に含める（goalLink は Area とは別の軸） |
+| `area-1` | 青 | 1 番目に作った Area |
+| `area-2` | 緑 | 2 番目 |
+| `area-3` | 若草 | 3 番目 |
+| `area-4` | 藍 | 4 番目 |
+| `area-5` | 紫 | 5 番目（AI の表現には使わない） |
+| `area-6` | 青緑 | 6 番目 |
+| `area-7` | 赤紫 | 7 番目 |
+| `area-none` | 灰 | Area 未設定（「領域なし」、記号の文字は「－」）だけ |
 
-- Area は **必ずラベルと併記**（Area Indicator）。四角（`rounded.xs`）で描き、Semantic の丸いアイコンと形で区別する。
-- 同じ画面に Area の色を 8 種類以上並べない。本人は Area の色を変えられる（ドメインモデル Area の「色」）。
+- 8 色は同じ明度に揃え、light / dark で同じ値を使う（白抜きの文字に 4.5:1、dark の `canvas` に 3:1）。暖色（赤・橙・琥珀・黄）は Semantic と現在地に取っておき、Area には使わない。本人は Area の色を変えられる（ドメインモデル Area の「色」）。
+- 記号の文字は Area 名の先頭 1 文字から作る（ドメインモデルは変えない。重複したときの扱いは未決）。
+- 必ず名前と併記する（記号だけにするのは凡例がある場所のみ。名前は読み上げる）。四角い路線記号の形で、Semantic の丸いアイコンと区別する。
+- 同じ画面に Area の色を 8 種類以上並べない。
 
 ### Semantic と Area を混同しない
 
 - Semantic はアイコン＋語とセットで、文字・アイコン・Status Tag・Notice にだけ使う。
-- Area は四角い印＋ラベル。Semantic の色で Area を塗らない。`area-1`（弁柄）を danger の代わりに使わない。
+- Area は路線記号＋ラベル。Semantic の色で Area を塗らない。Area の色相は Semantic（赤・琥珀）と現在地（黄）から離してある。
 - `danger` はエラー・期限超過・確定的な容量超過（下限でも超える）・破壊的操作だけ。持ち越し・見送り・「できなかった」・超過の可能性には使わない。持ち越しは `ink-muted`、3 回以上だけ `warning`。
 
 ### コントラスト
 
-- 文字のトークン（`ink` `ink-muted` `ink-subtle` `primary` `success` `warning` `danger` `info`）は light / dark とも `canvas` `canvas-subtle` `surface` `surface-hover` `primary-subtle` の上で 4.5:1 以上。Semantic は各 `*-subtle` の上でも 4.5:1 以上。
-- `on-primary` は `primary` / `primary-hover` / `primary-active` の上で、`on-danger` は `danger` / `danger-hover` / `danger-active` の上で 4.5:1 以上。
-- `border-strong` `focus` `primary` `area-*` は上の地で 3:1 以上。
-- 実測の例：`ink` は light の `canvas` 上で 14.2:1、`ink-subtle` は light の `canvas-subtle` 上で 5.0:1、`primary` を文字に使うと `canvas` 上で 9.1:1。
-- `focus` は選択（`primary-subtle`）と見分けられるよう、`primary` より明るい青にしている。
+- 文字のトークン（`ink` `ink-muted` `ink-subtle` `warning` `danger`）は light / dark とも `canvas` `canvas-subtle` `surface` `surface-hover` `here-subtle` の上で 4.5:1 以上。Semantic は各 `*-subtle` の上でも 4.5:1 以上。
+- `on-primary` は `primary` / `primary-hover` / `primary-active` の上で、`on-danger` は `danger` / `danger-hover` / `danger-active` の上で、`on-area` は各 `area-*` の上で、`on-here` は `here` の上で 4.5:1 以上。
+- `border-strong` `focus` `area-*` は上の地で 3:1 以上。
+- 実測の例：`ink` は light の `canvas` 上で 17.8:1、`ink-subtle` は light の `canvas-subtle` 上で 5.6:1、`on-area` は `area-1` 上で 5.2:1。
 - `ink-disabled` は無効状態の文字だけに使い、コントラストの要件の対象外とする。
 - 新しい色を足すときは、同じ表を light / dark で埋めてから使う。
 
 ### Dark theme
 
-`<html data-theme="dark">` で切り替える（未指定は light）。値は YAML の `-dark` のトークン。参照トークン（`link`、`proposal-border`）は参照先の変数を指すので `-dark` を持たない。地は `canvas-dark`（純黒にしない）、文字は `ink-dark`（純白にしない）。面の差は影ではなく `surface`（一段明るい）と `border` で作る。
+`<html data-theme="dark">` で切り替える（未指定は light。light と dark は同格で、利用者の設定に従う）。値は YAML の `-dark` のトークン。参照トークン（`link`、`proposal-border`）と Area の色は `-dark` を持たない。地は `canvas-dark`（純黒にしない）、文字は `ink-dark`（純白にしない）。Primary は反転し、明るい塗りに墨の文字になる。面の差は影ではなく `surface`（一段明るい）と `border` で作る。
 
 ## Typography
 
-**Sans で操作し、明朝で考える。** 書体は 2 ファミリーまで。
+**書体は LINE Seed JP の 1 系列。** 文字も数字も Kbd も同じ書体で組む。明朝やセリフ体、等幅の書体は使わない。階層は太さ（400 / 700）とサイズの差で作る。
 
 | 役割 | ファミリー（フォールバック） | 使う場所 |
 | --- | --- | --- |
-| 操作 | Noto Sans JP（Hiragino Sans → Hiragino Kaku Gothic ProN → Yu Gothic UI → Meiryo → system-ui） | Button、Input、Task、ナビゲーション、Estimate、数値、メタ情報、ラベル、Dialog |
-| 考える | Zen Old Mincho（Hiragino Mincho ProN → Yu Mincho → YuMincho → serif） | Sprint 見出し、Goal、改善策、Retro の振り返り |
-| 補助 | ui-monospace（SF Mono → Menlo → Consolas → monospace） | キーボードショートカット（Kbd）だけ |
+| すべて | LINE Seed JP（Hiragino Sans → Hiragino Kaku Gothic ProN → Yu Gothic UI → Meiryo → system-ui） | 文字、数字（`num-*`）、Kbd（`code`） |
 
-読み込み：`https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600&family=Zen+Old+Mincho:wght@400;500;600&display=swap`。ウェイトは 400 / 500 / 600 だけ。
+読み込み：`https://fonts.googleapis.com/css2?family=LINE+Seed+JP:wght@400;700&display=swap`。ウェイトは 400 / 700 だけ。LINE Seed JP の数字はプロポーショナルで `tabular-nums` が効かない。数字の列は右揃えにし、小数点まで縦に揃える必要がある表（Retro の Estimate / 計画値 / 実績）は単位と小数の桁数を揃えて書く。en dash（`–`）・負号（`−`）・`〜` はハイフンと見分けられるので、そのまま組む。
 
-| トークン | 書体 | 用途 |
+| トークン | 仕様 | 用途 |
 | --- | --- | --- |
-| `display-l` | 明朝 32/44 | Sprint Header のタイトル（1 画面に 1 つ） |
-| `display-m` | 明朝 24/36 | 考える領域のセクション見出し |
-| `goal` | 明朝 18/30 | 確定した Goal 文、改善策 |
-| `reflection` | 明朝 16/30 | Retro の振り返りの本文 |
-| `heading` / `subheading` | Sans 16/24・14/20 600 | ペイン・Dialog の見出し / グループ見出し |
-| `button` | Sans 14/20 500 | Button のラベル、タブ |
-| `body-l` | Sans 16/28 | 説明文、compact 幅の入力文字 |
-| `body` | Sans 14/22 | UI の標準 |
-| `task` | Sans 14/20 | Task Row のタイトル |
-| `label` / `help` | Sans 13/20 | フォームのラベル / Help・エラー |
-| `meta` | Sans 12/16 | メタ情報（最小サイズ） |
-| `kicker` | Sans 12/16 500 | 小見出し、「Agent 提案」ラベル、段階表示。欧文は大文字にしてよい（「SPRINT 14」）、和文はそのまま |
-| `num-l` / `num-m` / `num-s` | Sans + tabular | 残り時間・Sprint Summary の主要値 / 合計・Estimate の編集欄 / 行の Estimate・件数 |
-| `code` | mono 12/16 | Kbd だけ |
+| `display-l` | 32/40 700 | 画面の主見出し。Sprint Header の「Sprint 14」（1 画面に 1 つ） |
+| `display-m` | 24/32 700 | 考える領域のセクション見出し |
+| `goal` | 18/28 700 | 確定した Goal 文、改善策 |
+| `reflection` | 16/28 400 | Retro の振り返りの本文 |
+| `heading` / `subheading` | 16/24・14/20 700 | ペイン・Dialog の見出し / グループ見出し |
+| `button` | 14/20 700 | Button のラベル、タブ |
+| `body-l` | 16/26 | 説明文、compact 幅の入力文字 |
+| `body` | 14/22 | UI の標準 |
+| `task` | 14/20 | Task Row のタイトル |
+| `label` / `help` | 13/20 700・13/20 400 | フォームのラベル / Help・エラー |
+| `meta` | 12/16 | メタ情報（最小サイズ） |
+| `kicker` | 12/16 700 | 「Agent 提案」ラベル、段階表示の番号。見出しの上に飾りとして置かない |
+| `num-l` / `num-m` / `num-s` | 28/32・16/24・12/16 700 | 残り時間・Sprint Summary の主要値 / 合計・Estimate の編集欄 / 行の Estimate・件数 |
+| `code` | 12/16 400 | Kbd だけ |
 
 ### ルール
 
 - 12px 未満の文字を作らない（例外：EstimateRange の目盛り 11px。同じ値を 16px でも示す）。
-- 見出しを太くして階層を作らない。階層は書体・サイズ・余白・罫で作る。
+- 見出しの階層は 700 とサイズの差、余白、罫で作る。500 や 600 の中間の太さを使わない。
 - `font-feature-settings: "palt"` を使わない。素のメトリクスで組む。
-- 数値は tabular-nums。時間・件数・日付が並ぶ列は右揃え。
-- 明朝の本文は 1 行 38 字程度（`measure-read`）まで。Task タイトルは 1 行で省略し、詳細で全文を読める。
+- 数値は `num-*`。時間・件数・日付が並ぶ列は右揃え。
+- 確定した言葉（Goal、改善策、振り返り）は 1 行 38 字程度（`measure-read`）まで。Task タイトルは 1 行で省略し、詳細で全文を読める。
 - 本文は `line-break: strict`、`overflow-wrap: anywhere`。`anywhere` は表のセルや flex の子の最小幅も 1 文字まで縮めるので、段落（説明文・Goal・振り返り）にだけ付け、画面全体の既定は `break-word` にする。
-- **明朝 = 本人が確定した考え。** 編集中の Goal と未確定の Agent 提案は Sans。保存すると明朝で清書する。
-- ○ Sprint Header「Sprint 14」＝明朝 32、期間「9/28 (月) – 10/4 (日)」＝Sans 14 muted。× Button や Estimate・Capacity の数字を明朝にする。
+- **確定した言葉は大きく、編集中は本文のサイズ。** Goal は編集中は `body-l`、確定すると `goal` で組む。未確定の Agent 提案は `body` のまま破線の枠に入れる。
+- ○ Sprint Header「Sprint 14」＝`display-l`、期間「9/28 (月) – 10/4 (日)」＝`body` `ink-muted`。× Estimate・Capacity の数字を `num-*` 以外で組む、数字だけ別の書体にする。
 
 ## Layout
 
@@ -442,7 +435,7 @@ Area（領域）はユーザーが作る。色は面ではなく **印** とし�
 
 - ペイン padding `spacing.6`〜`spacing.8`、ブロック間 `spacing.8`、ブロック内 `spacing.2`〜`spacing.5`。
 - 見出しの上に `border`（またはセクション罫 `ink` 1px）を引き、罫と余白で区切る。
-- 明朝の本文は `measure-read` を超えて横に伸ばさない。Planning の Sprint ペインは最大 680px、Retro の読み物と desktop の Today は最大 720px。
+- 確定した言葉（Goal、改善策、振り返り）は `measure-read` を超えて横に伸ばさない。Planning の Sprint ペインは最大 680px、Retro の読み物と desktop の Today は最大 720px。
 
 ### 寸法
 
@@ -452,7 +445,7 @@ Area（領域）はユーザーが作る。色は面ではなく **印** とし�
 | `row-task` / `row-touch` | 40 / 48px | Task Row の最小高さ（desktop / compact） |
 | `target-min` / `target-touch` | 24 / 44px | 最小ターゲット（pointer / touch） |
 | `icon-s` / `icon-m` | 16 / 20px | 文字の横 / ボタン・ナビゲーション |
-| `area-mark` | 8px | Area Mark の一辺 |
+| `area-badge` | 20px | Area の路線記号の一辺（compact でも同じ。当たり判定は行や Filter が持つ） |
 | `pane-nav` / `pane-rail` | 224 / 64px | ナビゲーション（1440px 以上 / 1200–1439px） |
 | `pane-list` / `pane-side` | 384 / 336px | Planning の Backlog ペイン / 時間の見通しペイン |
 | `drawer` | 400px | 右 Drawer |
@@ -485,9 +478,9 @@ compact の原則：
 | トークン | light | dark | 用途 |
 | --- | --- | --- | --- |
 | `elevation-0` | none | none | 既定。行、Button、Input |
-| `elevation-overlay` | `0 1px 2px #1f1f1d14, 0 6px 16px #1f1f1d14` | `0 1px 2px #00000066, 0 6px 16px #00000066` | Menu、Popover、Toast、非モーダル Drawer。必ず `border` と併用 |
-| `elevation-modal` | `0 2px 6px #1f1f1d14, 0 16px 40px #1f1f1d24` | `0 2px 6px #00000080, 0 16px 40px #00000099` | Dialog、モーダル Drawer、Bottom Sheet。`scrim` と併用 |
-| `elevation-drag` | `0 2px 8px #1f1f1d24` | `0 2px 8px #000000a3` | ドラッグ中の Task Row だけ |
+| `elevation-overlay` | `0 1px 2px #16181a14, 0 6px 16px #16181a14` | `0 1px 2px #00000066, 0 6px 16px #00000066` | Menu、Popover、Toast、非モーダル Drawer。必ず `border` と併用 |
+| `elevation-modal` | `0 2px 6px #16181a14, 0 16px 40px #16181a24` | `0 2px 6px #00000080, 0 16px 40px #00000099` | Dialog、モーダル Drawer、Bottom Sheet。`scrim` と併用 |
+| `elevation-drag` | `0 2px 8px #16181a24` | `0 2px 8px #000000a3` | ドラッグ中の Task Row だけ |
 
 - 影で「押せそう」を表現しない。hover は背景色の変化だけ。
 - `scrim` は半透明の色だけで、背景をぼかさない。
@@ -499,8 +492,8 @@ compact の原則：
 
 | トークン | 値 | 使う場所 |
 | --- | --- | --- |
-| `rounded.xs` | 2px | Checkbox、Area Mark、Progress、Switch のつまみ、Estimate の提案枠 |
-| `rounded.sm` | 4px | Button、Icon Button、Input、Select、Textarea、Switch のトラック、Tooltip、メニュー項目、Notice |
+| `rounded.xs` | 2px | Checkbox、Progress、Switch のつまみ、Estimate の提案枠 |
+| `rounded.sm` | 4px | Button、Icon Button、Input、Select、Textarea、Switch のトラック、Tooltip、メニュー項目、Notice、Area の路線記号 |
 | `rounded.md` | 6px | Popover、Menu、Toast、Agent 提案 |
 | `rounded.lg` | 8px | Dialog（通常 UI の最大） |
 | `rounded.xl` | 12px | compact 幅の Bottom Sheet の上角だけ |
@@ -530,9 +523,9 @@ compact の原則：
 | 状態 | 表現 |
 | --- | --- |
 | Hover | 背景 `surface-hover`（Primary は `primary-hover`）、輪郭 `ink-muted`。影・拡大・移動はしない。情報を hover だけに置かない |
-| Focus | `focus` の 2px outline、offset 2px（リスト内・タブ・メニュー項目は −2px）。hover と同時でも両方見える |
+| Focus | `focus`（墨）の 2px outline、offset 2px（リスト内・タブ・メニュー項目は −2px）。hover と同時でも両方見える。黄（選択）や墨の塗り（Primary・pressed）の上でも、外側のアキで見分けられる |
 | Active | `surface-pressed` / `primary-active` |
-| Selected | `primary-subtle` の背景＋チェック（`aria-selected` / `aria-pressed`） |
+| Selected | リストの選択は `here-subtle` の地＋チェック（`aria-selected`）。トグルのオン（`aria-pressed`、IconButton の pressed）は墨の反転（`primary` の塗り＋`on-primary`） |
 | Disabled | 地 `canvas-subtle`、文字 `ink-disabled`、輪郭 `border`、`cursor: not-allowed`。理由を近くに書く。可能なら無効化しない |
 | Loading | スピナー＋文言、`aria-busy`、幅を変えない。300ms 未満の処理には出さない |
 | Error | `danger` の 2px 相当の輪郭＋アイコン＋文（`aria-invalid`）。入力内容を消さず、再試行の手段を示す |
@@ -556,20 +549,20 @@ compact の原則：
 ### 操作
 
 **Button** — 既定は Secondary。Primary は 1 画面に 1 つ。
-- 36px、`rounded.sm`、1px 枠、ラベルは `button`（Sans 14/20 500）で動詞で終える（「Sprint を確定」「差分を確認」）。先頭・末尾に 16px アイコン（任意）。
-- Variant：primary（塗り `primary`、文字 `on-primary`）/ secondary（`surface`＋`border-strong`）/ quiet（枠なし。キャンセル、編集して採用、却下）/ danger（`danger` の枠と文字。アーカイブの入口）/ danger-solid（破壊的操作の確認 Dialog の実行ボタンだけ）。サイズ sm 28 / md 36 / lg 44px（compact は lg）。
+- 36px、`rounded.sm`、1px 枠、ラベルは `button`（14/20 700）で動詞で終える（「Sprint を確定」「差分を確認」）。先頭・末尾に 16px アイコン（任意）。
+- Variant：primary（墨の塗り `primary`、文字 `on-primary`。hover `primary-hover`、押下 `primary-active`）/ secondary（`surface`＋`border-strong`）/ quiet（枠なし。キャンセル、編集して採用、却下）/ danger（`danger` の枠と文字。アーカイブの入口）/ danger-solid（破壊的操作の確認 Dialog の実行ボタンだけ）。サイズ sm 28 / md 36 / lg 44px（compact は lg）。
 - Hover / Active：secondary と danger は `surface-hover` / `surface-pressed`（secondary は輪郭も `ink-muted`）、quiet は枠なしのまま `surface-hover` / `surface-pressed`、danger-solid は `danger-hover` / `danger-active`。
 - Disabled は共通の状態どおり（quiet だけは地と枠を付けず、文字を `ink-disabled` にする）。無効にしてもフォーカスでき、近くに書いた理由を読み上げられる。
 - Loading は先頭にスピナー、ラベルを「確定中…」に、幅は保つ。Loading 中は押しても反応しないが、Disabled の見た目にはしない。
 - Primary は右端、Secondary / Quiet はその左。画面の移動にはリンクを使う。× Pill、影、グラデーション、「OK」「はい」、アイコンだけの Button（→ IconButton）。
 
 **IconButton** — アイコンだけの操作。ラベル必須で、hover / focus で Tooltip に出す。
-- 36px または 28px の正方形、`rounded.sm`、アイコン 20 / 16px `ink-muted`。Variant：quiet（既定）/ secondary / pressed（`primary-subtle` の地＋`primary` の 1px 枠とアイコン。地の差だけでは見分けにくいので枠を付ける。`aria-pressed`）。compact は 44px。
+- 36px または 28px の正方形、`rounded.sm`、アイコン 20 / 16px `ink-muted`。Variant：quiet（既定）/ secondary / pressed（墨の塗り `primary` に `on-primary` のアイコン。駅の案内の白抜きと同じく反転で示す。`aria-pressed`）。compact は 44px。
 - Disabled は共通の状態どおり（quiet は Button と同じく地と枠を付けない）。Loading はアイコンをスピナーに替え、名前と Tooltip を「保存中…」などにする。
 - 意味が広く共有されたアイコン（閉じる、…、編集、検索）だけ。同じ行に 3 つ以上並べず Menu にまとめる。
 
 **Menu** — 行やヘッダーの補助操作のドロップダウン。トリガーは `…` の IconButton か、Secondary の Button（「並び順: 期限 ⌄」）。
-- 面 `surface`＋`border`、`rounded.md`、`elevation-overlay`。項目 32px（アイコン・ラベル・Kbd）、区切り `border-soft`、危険な項目は `danger` で最後。Checked は チェック＋`primary-subtle`。
+- 面 `surface`＋`border`、`rounded.md`、`elevation-overlay`。項目 32px（アイコン・ラベル・Kbd）、区切り `border-soft`、危険な項目は `danger` で最後。Checked は チェック＋`here-subtle`。
 - 主要な操作を隠さない。サブメニューを入れ子にしない。キーボードは ↓ ↑ Home End、Enter で実行、Esc でトリガーに戻る、Tab で閉じる。
 
 **Kbd** — ショートカットの表示。`code` の書体で Tooltip とメニュー項目の右端に置く。キーを色で強調しない。
@@ -582,7 +575,7 @@ compact の原則：
 - help には単位や例を書く（「0.5時間単位」）。エラーは直し方まで書く（「数値で入力してください（例: 1.5）」）。
 - × プレースホルダーをラベルの代わりにする、入力中にエラーを出す（離脱時・送信時に出す）、入力内容を消す。
 
-**Textarea** — 複数行の入力（Goal の編集、Retro の振り返り）。最小 88px、縦方向だけリサイズ、上限があれば右下に文字数。明朝で入力させない。
+**Textarea** — 複数行の入力（Goal の編集、Retro の振り返り）。最小 88px、縦方向だけリサイズ、上限があれば右下に文字数。入力中は `body` / `body-l` のまま組み、確定後の `goal` / `reflection` の大きさにしない。
 
 **Select** — 5〜15 個の選択肢から 1 つ（Area、繰り返しルール）。ネイティブの `<select>`（36px、`border-strong`）と `chevron-down`。独自のドロップダウンで置き換えない。
 
@@ -597,8 +590,8 @@ compact の原則：
 ### 表示
 
 **Tag** — Status（Sprint の状態、Goal の自己判定）と本人のラベルだけに使う小さな Pill。
-- 20px、`rounded.full`、Status はアイコン必須、語は 1〜2 語。Variant：neutral / success / warning / danger / info / draft（破線。「計画中 · 未確定」）。
-- tone の使い分け：neutral = 本人のラベル・一部できた・できなかった・判断しない、success = できた・保存済み、warning = 超過の可能性、danger = 期限超過、info = 同期中・次の Sprint で試す、draft = 未確定。
+- 20px、`rounded.full`、Status はアイコン必須、語は 1〜2 語。Variant：neutral / done（墨の文字＋`circle-check`）/ warning / danger / draft（破線。「計画中 · 未確定」）。
+- tone の使い分け：neutral = 本人のラベル・一部できた・できなかった・判断しない・同期中・次の Sprint で試す、done = できた・保存済み、warning = 超過の可能性、danger = 期限超過、draft = 未確定。
 - 期限・Estimate・持ち越し・繰り返し・Area を Tag にしない（→ Task Metadata の文字）。1 行に 3 つ以上並べない。
 
 **Divider** — Card の代わりにグループを区切る、構造の主役。default（`border`）/ soft（`border-soft`、リスト内）/ rule（`ink` 1px、考える領域の上端、1 画面に 1〜2 本）/ label（ラベル付き。グループ見出し）。× 2px 以上の太い罫、二重線、点線。
@@ -609,16 +602,16 @@ compact の原則：
 
 **Progress** — 4px（thin は 2px）の線と数値（「7 / 18件」）。トラック `border-soft`、塗り `primary`。必ず数値を併記し、色を段階で変えない。Goal の達成度を数値化しない。
 
-**Notice** — 画面内に留まる説明・注意・エラー。地 `*-subtle`、`rounded.sm`、枠なし、アイコン＋タイトル（600）＋本文＋任意の操作。Variant：info（データ不足、同期状態、計画案の作成後に Backlog が変わった）/ warning（超過の可能性、未見積）/ danger（読み込みの失敗、`role="alert"`）/ success（反映済み）/ neutral（補足）。次にできることを書く。× 左に色の太線、同じ画面に 3 つ以上。
+**Notice** — 画面内に留まる説明・注意・エラー。地は warning / danger が各 `*-subtle`、ほかは `canvas-subtle`。`rounded.sm`、枠なし、アイコン＋タイトル（700）＋本文＋任意の操作。Variant：info（`info` アイコン。データ不足、同期状態、計画案の作成後に Backlog が変わった）/ warning（超過の可能性、未見積）/ danger（読み込みの失敗、`role="alert"`）/ done（`circle-check`。反映済み）/ neutral（補足）。次にできることを書く。× 左に色の太線、同じ画面に 3 つ以上。
 
-**Toast** — 操作の結果を短く伝え、元に戻す手段を添える。面 `surface`＋`border`、`rounded.md`、`elevation-overlay`。Variant：neutral（「3件を今週に入れました」＋元に戻す）/ success（「Sprint 14 を確定しました」）/ danger（「保存できませんでした。入力内容は残っています。」＋再試行、`role="alert"`）。表示 8 秒、hover / focus 中は止め、操作付きは閉じるまで残してよい。位置は desktop 左下、compact は下部タブバーの上。同時に 3 つ以上出さない。入力エラー・確認が必要なこと・タスク完了のたびの通知には使わない。祝福の演出をしない。
+**Toast** — 操作の結果を短く伝え、元に戻す手段を添える。面 `surface`＋`border`、`rounded.md`、`elevation-overlay`。Variant：neutral（「3件を今週に入れました」＋元に戻す）/ done（`circle-check`＋「Sprint 14 を確定しました」）/ danger（「保存できませんでした。入力内容は残っています。」＋再試行、`role="alert"`）。表示 8 秒、hover / focus 中は止め、操作付きは閉じるまで残してよい。位置は desktop 左下、compact は下部タブバーの上。同時に 3 つ以上出さない。入力エラー・確認が必要なこと・タスク完了のたびの通知には使わない。祝福の演出をしない。
 
 **Tooltip** — アイコンだけの操作と省略されたラベルに短い説明。`surface-inverse` の小さな面（`rounded.sm`、12px）、任意で Kbd。hover 400ms 後 / focus で即時に出て、pointer が離れる・blur・Esc で消える（pointer を Tooltip に載せても消えない）。1 行 20 字程度まで。矢印・影・アニメーションで飾らない。必須の情報・エラー・操作可能な内容を載せない。
 
 ### 面
 
 **Dialog** — 作業を止めて確認・決定を求めるモーダル。Sprint の確定と破壊的操作の確認だけ。
-- `scrim`（Blur なし）、面 sm 440 / md 560 / lg 720px、`rounded.lg`、`elevation-modal`。タイトルは問いの形（Sans 16 / 600）、フッターは `border-soft` の罫の下に右寄せで Secondary → Primary。
+- `scrim`（Blur なし）、面 sm 440 / md 560 / lg 720px、`rounded.lg`、`elevation-modal`。タイトルは問いの形（`heading` 16 / 700）、フッターは `border-soft` の罫の下に右寄せで Secondary → Primary。
 - 初期フォーカスは最も安全な操作（確定では「戻って調整」）。ボタンは結果を書く。× 「本当によろしいですか？」、Dialog を重ねる、操作のたびに確認する。
 
 **Drawer** — 文脈を残したまま詳細を編集する側面パネル。desktop は右 400px（左に `border`）、compact は Bottom Sheet（上角 `rounded.xl`、グリップ）。ヘッダー（タイトル＋閉じる、下に `border-soft`）、本文（スクロール）、フッター（キャンセル / 保存）。非モーダルが既定で、背後を操作させない場合だけ modal（`scrim` あり）。タスクの詳細、計画案の差分、medium 幅の Capacity に使う。Drawer の中に Drawer を開かない。
@@ -627,13 +620,13 @@ compact の原則：
 
 ### ナビゲーション
 
-**Navigation** — desktop の左サイドバー（`canvas-subtle`、右に `border`）。項目 36px（20px アイコン＋ラベル＋件数）、現在地は `surface-pressed` の地＋`ink` 600＋`aria-current`。1200–1439px は `pane-rail`（アイコンだけ＋Tooltip）、compact は下部タブバー（今日 / Sprint / Backlog / 振り返り）。項目は 8 個まで。
+**Navigation** — desktop の左サイドバー（`canvas-subtle`、右に `border`）。項目 36px（20px アイコン＋ラベル＋件数）、現在地は `here` の 4px の縦線＋`ink` 700＋`aria-current`（黄の印と太さで示し、地は塗らない）。1200–1439px は `pane-rail`（アイコンだけ＋Tooltip）、compact は下部タブバー（今日 / Sprint / Backlog / 振り返り）。項目は 8 個まで。
 
-**Tabs** — 同じ場所の表示を切り替える。タブ 40px、ラベルは `button`、選択は `ink` 600 の文字＋`stroke-strong` の下線（色面・Pill にしない）、件数は `ink-subtle`。タブは 5 個まで。段階を進めるフロー（→ Sprint Header）と絞り込み（→ Filter）には使わない。
+**Tabs** — 同じ場所の表示を切り替える。タブ 40px、ラベルは `button`、選択は `ink` 700 の文字＋`stroke-strong` の下線（色面・Pill にしない）、件数は `ink-subtle`。タブは 5 個まで。段階を進めるフロー（→ Sprint Header）と絞り込み（→ Filter）には使わない。
 
-**Filter** — リストを絞り込むトグル。Pill（28px、`border`）＋選択時のチェック＋任意の Area Mark＋ラベル＋件数。Selected は `primary-subtle` の地と `primary` の枠。0 件は disabled。
+**Filter** — リストを絞り込むトグル。Pill（28px、`border`）＋選択時のチェック＋任意の Area の路線記号＋ラベル＋件数。Selected は `here-subtle` の地と `ink` の枠。0 件は disabled。
 
-**Sprint Header** — Sprint の画面の見出し。kicker（「Sprint Planning」など）＋Status Tag、明朝のタイトル（`display-l`「Sprint 14」）、期間（Sans `ink-muted`）、右に操作（Primary は 1 つ）、段階表示（番号付き、`nav`＋`ol`、現在は `aria-current="step"`）。段階表示は目安で、どの段階にも戻れる。
+**Sprint Header** — Sprint の画面の見出し。Status Tag、タイトル（`display-l`「Sprint 14」）、期間（`body` `ink-muted`）、右に操作（Primary は 1 つ）、段階表示（路線図のように段階を線でつなぎ、番号付きの駅として並べる。`nav`＋`ol`、現在の段階は `here` の印＋「現在」、`aria-current="step"`）。段階表示は目安で、どの段階にも戻れる。
 - Planning：選ぶ / 整える / 確かめる（PRD §5.B の Pick / Shape / Check）
 - 実行中：Status「実行中」、段階なし
 - Retro：事実を見る / 振り返る / 引き継ぐ（PRD §5.D）
@@ -643,7 +636,7 @@ compact の原則：
 **Task Row** — タスク 1 件の行。Backlog・Sprint・Today で同じ構造。
 - 左から：ドラッグハンドル（hover / focus 時のみ、compact は非表示）、コントロール（□ 選ぶ / ○ 完了 / なし）、タイトル（`task`、1 行で省略）、Task Metadata、Estimate（右端 `num-s`）、行の操作 `…`（hover / focus 時、compact は常時）。
 - layout stacked（既定、約 52px）/ inline（40px、`row-task` は最小高さ）。区切りは `border-soft`、行間 0、角丸・影なし、Card で囲まない。
-- 状態：Selected（`primary-subtle`＋チェック）、Done（○ を `primary` で塗り、タイトル `ink-subtle`＋取り消し線）、Skipped（○ に「−」＋「スキップ」）、Dragging（`surface`＋`elevation-drag`＋`border`）、Loading（Estimate が「見積中」）、Error（行内に「保存できませんでした · 再試行」）、Disabled（アーカイブ済み、`ink-disabled`）。
+- 状態：Selected（`here-subtle`＋チェック）、Done（○ を `primary` で塗り、タイトル `ink-subtle`＋取り消し線）、Skipped（○ に「−」＋「スキップ」）、Dragging（`surface`＋`elevation-drag`＋`border`）、Loading（Estimate が「見積中」）、Error（行内に「保存できませんでした · 再試行」）、Disabled（アーカイブ済み、`ink-disabled`）。
 - Today の「今日やる」の行は、日次の操作（開始 / 完了 / 今日はここまで / 今日は見送る / 今日から外す / 繰り返しのスキップ）を持つ。強い操作を常時並べすぎず、完了（○）以外は行の操作 `…` と詳細から出す（PRD §12）。「今週の残り」「昨日の続き」の行は □ ではなく、行の先頭に常に見える「今日へ」のボタンで選ぶ（□ は今週へ選ぶ意味なので使わない）。
 - × メタ情報を Badge / Pill にする、□ と ○ を入れ替える、Goal に紐づかない行を薄くする。
 
@@ -666,7 +659,7 @@ compact の原則：
 - 計画値の元が幅（提案・サブタスク合計）のときは、元と計画値を並べる（「Estimate 提案 3–5h / 今回は 5h で計画」、ドメインモデル Scenario A）。点の Estimate には計画基準が効かない（不変条件 9）。確定後に本人が Estimate を変え、固定した計画値と違ったときも両方を並べる（不変条件 16・18）。
 - 読み上げは「見積もり 3時間」「Agent の提案（未確定）: 2〜4時間」。
 
-**EstimateRange** — 提案の幅を 0〜8h の目盛り上の帯で見せる。数値（「2–4h」「中央 3h」）、1h ごとの `border` の刻み、提案の帯（破線＋`primary-subtle`）、中央値のマーカー（`ink` 2px）、目盛りの数値（0 / 4h / 8h）。同じ値を必ず数値でも示す。行内では使わない（→ Estimate）。確率・confidence を % で出さない。
+**EstimateRange** — 提案の幅を 0〜8h の目盛り上の帯で見せる。数値（「2–4h」「中央 3h」）、1h ごとの `border` の刻み、提案の帯（破線＋`canvas-subtle`）、中央値のマーカー（`ink` 2px）、目盛りの数値（0 / 4h / 8h）。同じ値を必ず数値でも示す。行内では使わない（→ Estimate）。確率・confidence を % で出さない。
 
 **Deadline** — 日付＋曜日＋相対表現。upcoming（`calendar`＋「10/5 (月)」`ink-muted`）/ soon（2日以内）・today（`clock`＋「あと2日」「今日まで」`warning`）/ overdue（`circle-alert`＋「2日超過」`danger`）。色だけで超過を示さない。
 
@@ -674,34 +667,34 @@ compact の原則：
 
 **繰り返し（RecurringIndicator）** — `repeat`＋ルール（「毎週 土」「平日」）＋任意で今週の回（「今週 2/5」）。ルールと回を区別する（ルールを変えても生成済みの回は変わらない）。
 
-**Area Indicator** — Area を 8px の四角い印とラベルで示す。label（既定：印＋名前 12px / 500 `ink-muted`）/ mark（印だけ。凡例がある場所のみ、名前は読み上げる）/ heading（グループ見出し 14px / 600 `ink`＋件数）。Sprint の画面（Planning / Today / Retro）では Sprint 確定時の Area 名、Backlog では現在の名前を出す。× 印を 8px より大きくする、文字・背景・枠を Area の色にする。
+**Area Indicator** — Area を路線記号（`area-badge` 20px の `rounded.sm` の四角に、Area 名の先頭 1 文字を `on-area` の 12px / 700 で白抜き）とラベルで示す。label（既定：記号＋名前 12px / 700 `ink-muted`）/ badge（記号だけ。凡例がある場所のみ、名前は読み上げる）/ heading（グループ見出し：記号＋名前 14px / 700 `ink`＋件数）。Sprint の画面（Planning / Today / Retro）では Sprint 確定時の Area 名、Backlog では現在の名前を出す。× 記号を 20px 以外の大きさにする、文字・背景・枠を Area の色にする、記号に 2 文字以上入れる。
 
 ### 計画と振り返り
 
 **Goal** — Sprint × Area の「今週どんな状態にしたいか」。
-- 上端の罫（`border`）、見出し（Area Indicator heading＋タスク数と時間＋自己判定の Tag＋編集）、Goal 文（`goal` 明朝、`measure-read`）、その Area の選んだタスク。
-- set（確定）/ empty（「+ Goal を書く」＋「この領域の Goal は任意です。」）/ editing（Sans の Textarea＋保存 / キャンセル）/ 自己判定済み（できた = success の Tag、一部できた・できなかった・判断しない = neutral）。
+- 上端の罫（`border`）、見出し（Area Indicator heading＋タスク数と時間＋自己判定の Tag＋編集）、Goal 文（`goal`、`measure-read`）、その Area の選んだタスク。
+- set（確定）/ empty（「+ Goal を書く」＋「この領域の Goal は任意です。」）/ editing（`body-l` の Textarea＋保存 / キャンセル）/ 自己判定済み（できた = done の Tag、一部できた・できなかった・判断しない = neutral）。
 - Goal の間は `spacing.8`。× Card で囲む、Goal がない Area を警告色で示す、Goal 文を太字・大見出しにする、全体 Goal を作る。
 
 **Capacity Indicator** — 可用時間と計画値の合計の差を、幅のまま示す。
-- 最上段に残り（`num-l`。下限でも超える場合は「超過」`danger`）、可用時間（本人が入力）と計画値の合計（幅）、状態の文（アイコン＋語）、バー（Area ごとの 8px セグメント。Goal に紐づかない Task もその Area に含める＋提案の幅は破線＋残り `border-soft`＋可用時間マーカー `ink` 2px＋超過部分の下線 `danger`）、Area ごとの内訳、未見積の件数（合計に含めない）。
+- 最上段に残り（`num-l`。下限でも超える場合は「超過」`danger`）、可用時間（本人が入力）と計画値の合計（幅）、状態の文（アイコン＋語）、バー（Area ごとの 8px セグメント。セグメントの間には 2px の `canvas` のアキを入れ、似た色の Area が隣り合っても境目が分かるようにする。Goal に紐づかない Task もその Area に含める＋提案の幅は破線＋残り `border-soft`＋可用時間マーカー `ink` 2px＋超過部分の下線 `danger`）、Area ごとの内訳、未見積の件数（合計に含めない）。
 - 状態：ok（`ink-muted`「可用時間の範囲に収まっています。」）/ tight（上限側だけ超える：`warning`「上限側では 1h 超える可能性があります。」）/ over（下限でも超える：`danger`「超過 3 〜 5h」）/ unknown（「可用時間を入力すると、計画との差を表示します。」）。
 - バーは `aria-hidden`、数値と状態の文が正（`role="status"`）。超過でも確定を止めない。Today と Backlog には出さない。× ドーナツ・円グラフ・ゲージ、未見積を 0h として足す。
 
 **Sprint Summary** — Retro の「事実を見る」の最上部で、Sprint の結果を静かな表で示す。上端 `ink` 1px・下端 `border` の罫、項目（ラベル `meta`、値 `num-l`、単位、補足）、項目間の縦罫 `border-soft`。実績は入力済みのものだけを集計したと補足に書く。× 統計 Card を並べる、点数化、ランキング、Goal に紐づかないタスクの完了率を Goal 達成の代わりに置く。
 
-**改善策（Retro Improvement）** — Retro で決める「次の Sprint で 1 つだけ変えてみること」。上端 `ink` 1px・下端 `border` の罫、ラベル（「次に試す変更」/「前回決めた改善策」）と出所、本文（確定後は明朝 `goal`、下書きは Sans）。下書き（破線の Tag）→「改善策として確定」。次の Planning の最初（選ぶ段階の右ペインの上部）に表示だけで戻る。改善策そのものに判定や「反映した」の記録はない（ドメインモデル RetroImprovement）。× 複数並べる、達成率で評価する。
+**改善策（Retro Improvement）** — Retro で決める「次の Sprint で 1 つだけ変えてみること」。上端 `ink` 1px・下端 `border` の罫、ラベル（「次に試す変更」/「前回決めた改善策」）と出所、本文（確定後は `goal`、下書きは `body-l`）。下書き（破線の Tag）→「改善策として確定」。次の Planning の最初（選ぶ段階の右ペインの上部）に表示だけで戻る。改善策そのものに判定や「反映した」の記録はない（ドメインモデル RetroImprovement）。× 複数並べる、達成率で評価する。
 
-**計画基準（Planning Criterion）** — 改善策から作った「Estimate の幅を計画値のどこで使うか」のルール。前回の改善策の直下に、`info-subtle` の地、`info` のアイコン＋名前（「研究の推定幅 → 上限を計画値に」）＋「Estimate そのものは書き換えません。」で出す（UI v0.1 モック）。Planning の確かめる段階では、対象・幅の扱い・今回使うかの Switch と、効果（「研究の推定タスク 1 件を上限で計画値にしています（+2h）」）を同じ値から出す（不変条件 39）。確定後は Switch を読み取り専用にする（不変条件 37）。Retro では、CriterionUse がある Sprint（確定時に Active な基準があった Sprint）に「続ける / 終える / 置き換える」の RadioGroup を出し、選ぶまで Retro を完了できない（不変条件 36。理由は求めない）。
+**計画基準（Planning Criterion）** — 改善策から作った「Estimate の幅を計画値のどこで使うか」のルール。前回の改善策の直下に、`canvas-subtle` の地、`info` のアイコン＋名前（「研究の推定幅 → 上限を計画値に」）＋「Estimate そのものは書き換えません。」で出す（UI v0.1 モック）。Planning の確かめる段階では、対象・幅の扱い・今回使うかの Switch と、効果（「研究の推定タスク 1 件を上限で計画値にしています（+2h）」）を同じ値から出す（不変条件 39）。確定後は Switch を読み取り専用にする（不変条件 37）。Retro では、CriterionUse がある Sprint（確定時に Active な基準があった Sprint）に「続ける / 終える / 置き換える」の RadioGroup を出し、選ぶまで Retro を完了できない（不変条件 36。理由は求めない）。
 
-**振り返りの材料（RetroInsight）** — Retro の 1 つの気づき。fact（「事実」：記録から言えること、Sans＋根拠の列挙）/ reflection（本人の言葉、明朝 `reflection`）/ agent（Agent の見立て：破線枠＋折りたたみの根拠＋振り返りに加える / 編集して加える / 却下）。事実には「気になる」の印を付けられる。× Agent の見立てを本人が加える前に明朝で表示する、評価・点数。
+**振り返りの材料（RetroInsight）** — Retro の 1 つの気づき。fact（「事実」：記録から言えること、`body`＋根拠の列挙）/ reflection（本人の言葉、`reflection`）/ agent（Agent の見立て：破線枠＋折りたたみの根拠＋振り返りに加える / 編集して加える / 却下）。事実には「気になる」の印を付けられる。× Agent の見立てを本人が加える前に `reflection` で表示する、評価・点数。
 
 ### Agent
 
 破線・語・根拠の構造で区別し、別世界の見た目にしない。振る舞いと文言は [Agent UI](docs/design/agent-ui.md)。
 
 **Agent 提案（AgentSuggestion）** — Estimate の提案、Goal の文案、計画案の入口。
-- 破線の枠（`proposal-border`、`rounded.md`、`surface`）、ヘッダー（「Agent 提案」`kicker`＋種類＋出所と時刻）、対象、提案の値（EstimateRange / suggestion の Estimate / Sans の文）、根拠、操作。
+- 破線の枠（`proposal-border`、`rounded.md`、`surface`）、ヘッダー（「Agent 提案」`kicker`＋種類＋出所と時刻）、対象、提案の値（EstimateRange / suggestion の Estimate / `body` の文）、根拠、操作。
 - Estimate の提案は、下限・中央・上限のどれかを本人の Estimate として **採用** できる（PRD §5.A）。採用は Secondary、編集して採用・却下は Quiet。
 - 状態：pending / loading（「過去の類似タスクを調べています…」＋取り消す）/ insufficient（幅を広く、不確実な点に理由）/ error（「提案を作れませんでした。手入力でそのまま計画を続けられます。」＋もう一度試す）/ 採用・編集・却下の後（実線の `canvas-subtle` の 1 行＋元に戻す）。
 
@@ -715,7 +708,7 @@ compact の原則：
 
 - 構造は罫と余白で作る（Border first → Divider first → Shadow last）。
 - 選択・状態・Area・エラー・提案は、色に加えてチェック・アイコン・語・形・破線のどれかで示す。
-- 本人が確定した考え（Goal、改善策、振り返り）は明朝、操作と数値は Sans。
+- 現在地は黄、確定は墨、計画中は破線。本人が確定した言葉（Goal、改善策、振り返り）は `goal` / `reflection` で一段大きく組む。数値は `num-*`。
 - 幅のある時間は幅のまま示し、未見積は合計に含めないことを書く。
 - Agent の値は破線と「提案」で示し、採用は Secondary、編集して採用・却下は Quiet にして、Primary で誘導しない。
 - 持ち越し・見送り・未達は事実として中立に書く。
@@ -727,7 +720,8 @@ compact の原則：
 - 何でも Pill・何でも Badge（メタ情報は文字とアイコンで並べる）、過剰なアイコン。
 - Sparkle・魔法の杖・紫のグラデーションなど「AI は特別」という表現、チャットバブル、アバター。
 - Product 画面の Hero section、装飾イラスト、巨大な統計数字の Card 並び。
-- ベージュを敷くだけの「手帳風」、紙のテクスチャ、ノートのリング、手書きフォント、文具の擬物表現。
+- ベージュを敷くだけの「手帳風」、紙のテクスチャ、ノートのリング、手書きフォント、文具の擬物表現、駅の看板の擬物（金属の質感、照明、実在の路線名や路線記号の流用）。
+- 淡い地と低彩度の色だけで作る雰囲気、明朝やセリフ体、パステルの Area 色、500 / 600 の中間の太さ。
 - 色付きの左ボーダーで Card を飾ること（選択・Area・注意のどれにも使わない）。
 
 ### 条件付きで使う
@@ -735,5 +729,5 @@ compact の原則：
 - **Pill**：Filter / Tag / Status / Radio / 完了サークルだけ。Button・Tabs・入力には使わない。
 - **Card**（`border` で囲んだ独立面）：Dialog、Drawer、Popover、Menu、Toast、Agent 提案だけ。単なるグルーピングは余白・Divider・見出し・`canvas-subtle` の背景差で行う。
 - **Shadow**：浮いている・重なっている面だけ（`elevation-overlay` `elevation-modal` `elevation-drag`）。
-- **明朝**：Sprint 見出し、Goal、改善策、Retro の振り返り。編集中は Sans に戻す。
-- **Area の色**：8px の Area Mark、Capacity バーのセグメント、Filter の印だけ。
+- **Area の色**：路線記号の地、Capacity バーのセグメント、Filter の路線記号だけ。
+- **黄（`here`）**：現在地（今日・今の段階・選んだもの）だけ。

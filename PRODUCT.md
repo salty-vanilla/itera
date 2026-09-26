@@ -44,7 +44,7 @@ web
 
 ## Brand Commitments
 
-製品名は Itera（このリポジトリでの決め。PRD の「Personal Sprint」は仮称）。見た目・トークンは `DESIGN.md`（Quiet, precise personal planning tool）、語り口と用語は `docs/design/content.md`（丁寧体で短く、失敗を責めない）に従う。
+製品名は Itera（このリポジトリでの決め。PRD の「Personal Sprint」は仮称）。見た目・トークンは `DESIGN.md`（Wayfinding for your week：駅の公共サインの文法）、語り口と用語は `docs/design/content.md`（丁寧体で短く、失敗を責めない）に従う。
 
 ## Evidence on Hand
 

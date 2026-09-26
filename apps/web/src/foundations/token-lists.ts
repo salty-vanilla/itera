@@ -6,7 +6,7 @@ export const colorGroups = [
   {
     title: '地と面',
     description:
-      '画面の 9 割は Neutral で成立させる。surface は必ず border と組み、単なるグルーピングには使わない。',
+      '画面の大半は白（dark は墨の地）と墨の文字で成立させる。surface は必ず border と組み、単なるグルーピングには使わない。',
     tokens: [
       'canvas',
       'canvas-subtle',
@@ -20,26 +20,32 @@ export const colorGroups = [
   {
     title: '文字',
     description:
-      'ink → ink-muted → ink-subtle の 3 段まで。ink-disabled は無効状態だけで、コントラストの要件の対象外。',
-    tokens: ['ink', 'ink-muted', 'ink-subtle', 'ink-disabled', 'ink-inverse'],
+      'ink → ink-muted → ink-subtle の 3 段まで。ink-disabled は無効状態だけで、コントラストの要件の対象外。on-* は塗りの上の文字。',
+    tokens: [
+      'ink',
+      'ink-muted',
+      'ink-subtle',
+      'ink-disabled',
+      'ink-inverse',
+      'on-area',
+    ],
     contrastOn: 'canvas',
   },
   {
     title: '罫',
     description:
-      '構造は border、リスト内は border-soft、操作部品の輪郭は border-strong。proposal-border は Agent 提案・未確定の 1px 破線だけ。',
+      '構造は border、リスト内は border-soft、操作部品の輪郭は border-strong。proposal-border は Agent 提案・計画中の 1px 破線だけ。',
     tokens: ['border', 'border-soft', 'border-strong', 'proposal-border'],
     contrastOn: 'canvas',
   },
   {
-    title: 'Primary と Focus',
+    title: '確定（墨）とフォーカス',
     description:
-      'Primary はブルーブラックの 1 色。focus はフォーカスリングだけに使い、選択（primary-subtle）と見分けられる明るさにしている。',
+      'Primary は墨。確定の操作だけが塗りを持つ。dark では反転して明るい塗りに墨の文字になる。focus も墨で、2px の輪郭と 2px のアキで示し、色相を持たない。',
     tokens: [
       'primary',
       'primary-hover',
       'primary-active',
-      'primary-subtle',
       'on-primary',
       'link',
       'focus',
@@ -47,12 +53,17 @@ export const colorGroups = [
     contrastOn: 'canvas',
   },
   {
+    title: '現在地（黄）',
+    description:
+      '今日・今の段階・選んだものだけに使う予約色。必ずチェックか語を伴う。注意やフォーカスには使わない。',
+    tokens: ['here', 'here-subtle', 'on-here'],
+    contrastOn: 'canvas',
+  },
+  {
     title: 'Semantic',
     description:
-      '必ずアイコンか語と組む。danger はエラー・期限超過・確定的な容量超過・破壊的操作だけ。',
+      '色を持つのは危険（赤）と注意（琥珀）だけ。必ずアイコンか語と組む。成功と情報は墨の文字にアイコンと語を添える。',
     tokens: [
-      'success',
-      'success-subtle',
       'warning',
       'warning-subtle',
       'danger',
@@ -60,45 +71,44 @@ export const colorGroups = [
       'danger-active',
       'danger-subtle',
       'on-danger',
-      'info',
-      'info-subtle',
     ],
     contrastOn: 'canvas',
   },
 ] as const;
 
+// Example Area names; the badge shows the first character of the name.
 export const areaColors = [
-  ['area-1', '弁柄'],
-  ['area-2', '青磁の濃色'],
-  ['area-3', '葡萄'],
-  ['area-4', '苔'],
-  ['area-5', '臙脂'],
-  ['area-6', '鉄紺'],
-  ['area-7', '煤竹'],
-  ['area-none', '灰（領域なし）'],
+  ['area-1', '研究'],
+  ['area-2', '仕事'],
+  ['area-3', '学習'],
+  ['area-4', '生活'],
+  ['area-5', '創作'],
+  ['area-6', '健康'],
+  ['area-7', '家事'],
+  ['area-none', '領域なし'],
 ] as const;
 
 // Class names are written out in full so that Tailwind can find them.
 export const typographyGroups = [
   {
-    title: '考える（明朝）',
+    title: '見出しと確定した言葉',
     description:
-      '本人が確定した考えだけに使う：Sprint 見出し、Goal、改善策、Retro の振り返り。編集中と未確定の提案は Sans に戻す。',
+      '階層は 700 とサイズの差で作る。本人が確定した言葉（Goal、改善策、振り返り）は goal / reflection で本文より一段大きく組む。',
     samples: [
-      ['display-l', 'font-serif text-display-l', 'Sprint 14'],
-      ['display-m', 'font-serif text-display-m', '今週、何を進めますか'],
-      ['goal', 'font-serif text-goal', '論文の第 3 章の草稿を終える'],
+      ['display-l', 'text-display-l', 'Sprint 14'],
+      ['display-m', 'text-display-m', '今週、何を進めますか'],
+      ['goal', 'text-goal', '論文の第 3 章の草稿を終える'],
       [
         'reflection',
-        'font-serif text-reflection',
+        'text-reflection',
         '午前に集中する時間を取れた日は、研究のタスクが進んでいた。',
       ],
     ],
   },
   {
-    title: '操作する（Sans）',
+    title: '操作と本文',
     description:
-      '見出しを太くして階層を作らない。階層は書体・サイズ・余白・罫で作る。12px 未満の文字は作らない。',
+      '太さは 400 と 700 だけ。12px 未満の文字は作らない。kicker は「Agent 提案」などのラベルで、見出しの上の飾りにしない。',
     samples: [
       ['heading', 'text-heading', '時間の見通し'],
       ['subheading', 'text-subheading', '研究'],
@@ -117,18 +127,18 @@ export const typographyGroups = [
       ['label', 'text-label', '可用時間'],
       ['help', 'text-help', '0.5時間単位で入力します'],
       ['meta', 'text-meta', '10/5 (月) · 持ち越し 1回'],
-      ['kicker', 'text-kicker', 'SPRINT 14 · 2日目 / 7日'],
+      ['kicker', 'text-kicker', 'Agent 提案'],
     ],
   },
   {
-    title: '数値と Kbd',
+    title: '数字と Kbd',
     description:
-      '数値は tabular-nums。時間・件数・日付が並ぶ列は右揃え。mono は Kbd だけに使う。',
+      '数字も LINE Seed JP で組む。数字はプロポーショナルなので、並ぶ列は右揃えにする。–（範囲）と −（負号）はハイフンと見分けられる。',
     samples: [
-      ['num-l', 'text-num-l tabular-nums', '残り −1 〜 1h'],
-      ['num-m', 'text-num-m tabular-nums', '16.5–18.5h'],
-      ['num-s', 'text-num-s tabular-nums', '2–4h'],
-      ['code', 'font-mono text-code', '⌘ Enter'],
+      ['num-l', 'text-num-l', '残り −1 〜 1h'],
+      ['num-m', 'text-num-m', '16.5–18.5h'],
+      ['num-s', 'text-num-s', '2–4h / 2-4'],
+      ['code', 'text-code', '⌘ Enter'],
     ],
   },
 ] as const;
@@ -158,7 +168,7 @@ export const dimensions = [
   'target-touch',
   'icon-s',
   'icon-m',
-  'area-mark',
+  'area-badge',
   'pane-nav',
   'pane-rail',
   'pane-list',

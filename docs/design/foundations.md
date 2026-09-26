@@ -12,7 +12,7 @@
 ### いつ使うか
 
 - **使う**：ナビゲーション項目、状態（期限・持ち越し・繰り返し・警告）、操作の種類が一目で分かる場合（追加・編集・閉じる・元に戻す）。
-- **使わない**：見出しの飾り、すべてのボタンへの付与、Goal や明朝の本文の横、Area の代わり（Area は四角の印）。
+- **使わない**：見出しの飾り、すべてのボタンへの付与、Goal や振り返りの本文の横、Area の代わり（Area は路線記号）。
 - アイコンだけのボタンは IconButton（`aria-label` 必須、hover / focus で Tooltip にラベル）。
 
 ### 意味の固定
@@ -27,7 +27,7 @@
 | 変更履歴 | `history` |
 | Agent 提案・下書き | `circle-dashed`（破線の円 = 未確定） |
 | 計画基準 | `info` |
-| 成功 / 注意 / エラー / 情報 | `circle-check` / `triangle-alert` / `circle-alert` / `info` |
+| 成功 / 注意 / エラー / 情報 | `circle-check` / `triangle-alert` / `circle-alert` / `info`（成功と情報は墨、注意は `warning`、エラーは `danger`） |
 
 **使わない**：Sparkle、魔法の杖、ロボット、脳など「AI らしさ」を示すアイコン。Agent は語（「Agent 提案」）と破線で示す。絵文字を UI に使わない。
 
@@ -46,7 +46,7 @@
 | `easing-exit` | `cubic-bezier(0.4, 0, 1, 1)` | 退場 |
 
 - 動かしてよいプロパティは `opacity`、`transform`（8px 以内の移動）、`background-color`、`border-color`、`color`。サイズとレイアウトを動かさない。
-- Backlog から今週に入れたとき：行の背景が `primary-subtle` に変わる（`duration-fast`）＋ Toast「〜を今週に入れました · 元に戻す」。行を飛ばすアニメーションは作らない。
+- Backlog から今週に入れたとき：行の背景が `here-subtle` に変わり、チェックが付く（`duration-fast`）＋ Toast「〜を今週に入れました · 元に戻す」。行を飛ばすアニメーションは作らない。
 - 完了：サークルが塗られる（`duration-fast`）。紙吹雪・チェックの跳ねなどの祝福の演出を作らない。
 - Drawer は `duration-slow` で 16px スライドする。
 - Loading：300ms 未満で終わる処理にはスピナーを出さない。スピナーは必ず文言と一緒に（「見積中」「保存中…」）。

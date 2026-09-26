@@ -16,7 +16,7 @@ export function TokenPage({
   return (
     <div className="flex max-w-[960px] flex-col gap-10 pb-16">
       <header className="flex flex-col gap-1 border-b border-ink pb-6">
-        <h1 className="text-heading text-ink">{title}</h1>
+        <h1 className="text-display-m text-ink">{title}</h1>
         <p className="max-w-measure-read text-body wrap-anywhere text-ink-muted">
           {lead}
         </p>
@@ -53,9 +53,12 @@ export function TokenSection({
 /** Table with ruled rows; the header row sits on canvas-subtle. */
 export function TokenTable({
   columns,
+  compactHidden = [],
   children,
 }: {
   columns: string[];
+  /** Column indexes to hide under 768px; their cells use compactHiddenCell. */
+  compactHidden?: number[];
   children: ReactNode;
 }) {
   return (
@@ -63,11 +66,14 @@ export function TokenTable({
       <table className="w-full border-collapse text-left text-body">
         <thead>
           <tr className="border-y border-border bg-canvas-subtle">
-            {columns.map((column) => (
+            {columns.map((column, index) => (
               <th
                 key={column}
                 scope="col"
-                className="px-3 py-2 text-label whitespace-nowrap text-ink-muted"
+                className={cn(
+                  'px-3 py-2 text-label whitespace-nowrap text-ink-muted',
+                  compactHidden.includes(index) && compactHiddenCell,
+                )}
               >
                 {column}
               </th>
@@ -79,6 +85,9 @@ export function TokenTable({
     </div>
   );
 }
+
+/** Hides a cell under 768px, matching TokenTable's compactHidden. */
+export const compactHiddenCell = 'hidden medium:table-cell';
 
 export function TokenRow({ children }: { children: ReactNode }) {
   return (
@@ -98,8 +107,6 @@ export function Cell({
 
 export function TokenName({ children }: { children: ReactNode }) {
   return (
-    <code className="font-mono text-code whitespace-nowrap text-ink">
-      {children}
-    </code>
+    <code className="text-code whitespace-nowrap text-ink">{children}</code>
   );
 }

@@ -12,8 +12,8 @@ import { dimensions, radii, spacingScale } from './token-lists';
 import { useTheme } from './use-theme';
 
 const radiusUse: Record<(typeof radii)[number], string> = {
-  xs: 'Checkbox、Area Mark、Progress、Switch のつまみ',
-  sm: 'Button、IconButton、Input、Tooltip、Notice',
+  xs: 'Checkbox、Progress、Switch のつまみ',
+  sm: 'Button、IconButton、Input、Tooltip、Notice、Area の路線記号',
   md: 'Popover、Menu、Toast、Agent 提案',
   lg: 'Dialog（通常 UI の最大）',
   xl: 'compact 幅の Bottom Sheet の上角だけ',
@@ -54,7 +54,7 @@ const breakpoints = [
 
 function Value({ name }: { name: string }) {
   return (
-    <Cell className="font-mono text-code whitespace-nowrap text-ink-muted">
+    <Cell className="text-code whitespace-nowrap text-ink-muted">
       {cssVariable(`--${name}`)}
     </Cell>
   );
@@ -201,7 +201,7 @@ function ShapeAndSpacePage() {
               <Cell>
                 <TokenName>{name}</TokenName>
               </Cell>
-              <Cell className="text-num-s tabular-nums whitespace-nowrap text-ink-muted">
+              <Cell className="text-num-s whitespace-nowrap text-ink-muted">
                 {width}
               </Cell>
               <Cell className="w-full text-help text-ink-muted">{layout}</Cell>

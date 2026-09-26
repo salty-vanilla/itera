@@ -66,9 +66,16 @@ describe('colors', () => {
   it.each(colorNames)('%s matches in light and dark', (name) => {
     const value = tokens.colors[name]!;
     expect(light.get(`--${name}`)).toBe(cssValue(value));
-    // Reference tokens have no -dark twin and follow the referenced token.
-    const darkValue = tokens.colors[`${name}-dark`] ?? value;
-    expect(dark.get(`--${name}`)).toBe(cssValue(darkValue));
+    const darkValue = tokens.colors[`${name}-dark`];
+    if (darkValue !== undefined) {
+      expect(dark.get(`--${name}`)).toBe(cssValue(darkValue));
+    } else if (value.startsWith('{colors.')) {
+      // Reference tokens are repeated so that they resolve per theme.
+      expect(dark.get(`--${name}`)).toBe(cssValue(value));
+    } else {
+      // Same in both themes (the area colors): defined once on :root.
+      expect(dark.has(`--${name}`)).toBe(false);
+    }
     expect(themeInline.get(`--color-${name}`)).toBe(`var(--${name})`);
   });
 
@@ -90,16 +97,10 @@ describe('typography', () => {
     expect(theme.get(`--text-${name}--letter-spacing`)).toBe(
       token.letterSpacing ?? '0em',
     );
-    const family = token.fontFamily;
-    const variable = family.includes('Mincho')
-      ? '--font-serif'
-      : family === 'ui-monospace'
-        ? '--font-mono'
-        : '--font-sans';
-    expect(
-      theme.get(variable)?.startsWith(`'${family}'`) ||
-        theme.get(variable)?.startsWith(family),
-    ).toBe(true);
+    // One family for every token (DESIGN.md Typography).
+    expect(theme.get('--font-sans')?.startsWith(`'${token.fontFamily}'`)).toBe(
+      true,
+    );
   });
 });
 

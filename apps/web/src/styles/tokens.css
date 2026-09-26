@@ -5,8 +5,9 @@
  *   value under [data-theme="dark"]. tokens.test.ts compares both with the YAML.
  * - Elevation, layers, strokes and motion are defined in the DESIGN.md body
  *   (Elevation & Depth, Shapes) and docs/design/foundations.md, not in the YAML.
- * - Reference tokens (link, proposal-border) are repeated in the dark block so
+ * - Reference tokens (link, focus, proposal-border) are repeated in the dark block so
  *   that a subtree with data-theme="dark" resolves them against dark values.
+ *   The area colors are the same in both themes and are not repeated.
  *
  * Tailwind reads these through @theme inline in globals.css.
  */
@@ -15,52 +16,51 @@
   color-scheme: light;
 
   --canvas: #ffffff;
-  --canvas-subtle: #f6f6f4;
+  --canvas-subtle: #f2f3f4;
   --surface: #ffffff;
-  --surface-hover: #efefec;
-  --surface-pressed: #e6e6e2;
-  --surface-inverse: #2b2b29;
-  --ink: #2b2b29;
-  --ink-muted: #5b5b56;
-  --ink-subtle: #6a6a64;
-  --ink-disabled: #a8a8a2;
+  --surface-hover: #eceeef;
+  --surface-pressed: #e1e3e5;
+  --surface-inverse: #16181a;
+  --ink: #16181a;
+  --ink-muted: #4a4e53;
+  --ink-subtle: #5c6167;
+  --ink-disabled: #a3a7ac;
   --ink-inverse: #ffffff;
-  --border: #dcdcd7;
-  --border-soft: #ebebe7;
-  --border-strong: #8a8a84;
-  --primary: #2a4a6e;
-  --primary-hover: #223d5b;
-  --primary-active: #1b3149;
-  --primary-subtle: #edf1f6;
+  --border: #d3d6d9;
+  --border-soft: #e7e9eb;
+  --border-strong: #7a7f85;
+  --primary: #16181a;
+  --primary-hover: #2c3034;
+  --primary-active: #000000;
   --on-primary: #ffffff;
-  --link: var(--primary);
-  --focus: #3269b0;
-  --success: #2d6a45;
-  --success-subtle: #ebf3ed;
-  --warning: #855800;
-  --warning-subtle: #faf2de;
-  --danger: #b02a22;
-  --danger-hover: #962219;
-  --danger-active: #7d1c15;
-  --danger-subtle: #fbeceb;
+  --here: #ffd23f;
+  --here-subtle: #fff3c4;
+  --on-here: #16181a;
+  --link: var(--ink);
+  --focus: var(--ink);
+  --warning: #8a5200;
+  --warning-subtle: #fcebd9;
+  --danger: #c4161c;
+  --danger-hover: #a51217;
+  --danger-active: #870e12;
+  --danger-subtle: #fce8e8;
   --on-danger: #ffffff;
-  --info: #2f5f94;
-  --info-subtle: #ecf2f8;
-  --area-1: #a45f36;
-  --area-2: #2d7773;
-  --area-3: #7b5a8e;
-  --area-4: #687a2c;
-  --area-5: #a8526a;
-  --area-6: #5a6d88;
-  --area-7: #7a6a58;
-  --area-none: #8a8a84;
+  --area-1: #0a6fbd;
+  --area-2: #12844a;
+  --area-3: #5c7a00;
+  --area-4: #4a5bc4;
+  --area-5: #8a4fbf;
+  --area-6: #0b7f85;
+  --area-7: #a23c9c;
+  --area-none: #6b7076;
+  --on-area: #ffffff;
   --proposal-border: var(--border-strong);
-  --scrim: #1f1f1d52;
+  --scrim: #16181a66;
 
   /* Elevation & Depth */
-  --elevation-overlay: 0 1px 2px #1f1f1d14, 0 6px 16px #1f1f1d14;
-  --elevation-modal: 0 2px 6px #1f1f1d14, 0 16px 40px #1f1f1d24;
-  --elevation-drag: 0 2px 8px #1f1f1d24;
+  --elevation-overlay: 0 1px 2px #16181a14, 0 6px 16px #16181a14;
+  --elevation-modal: 0 2px 6px #16181a14, 0 16px 40px #16181a24;
+  --elevation-drag: 0 2px 8px #16181a24;
 
   /* Stacking order (Elevation & Depth). Use as z-(--layer-dialog). */
   --layer-sticky: 10;
@@ -89,46 +89,36 @@
 [data-theme='dark'] {
   color-scheme: dark;
 
-  --canvas: #1b1b1a;
-  --canvas-subtle: #222221;
-  --surface: #262625;
-  --surface-hover: #2f2f2d;
-  --surface-pressed: #383835;
-  --surface-inverse: #e9e9e4;
-  --ink: #ebebe6;
-  --ink-muted: #b8b8b1;
-  --ink-subtle: #a0a099;
-  --ink-disabled: #696964;
-  --ink-inverse: #1b1b1a;
-  --border: #3b3b38;
-  --border-soft: #2f2f2d;
-  --border-strong: #7d7d77;
-  --primary: #a3bfe2;
-  --primary-hover: #b7cdea;
-  --primary-active: #cad9ef;
-  --primary-subtle: #233142;
-  --on-primary: #14202d;
-  --link: var(--primary);
-  --focus: #82b3f0;
-  --success: #82c79a;
-  --success-subtle: #1e2e24;
-  --warning: #e3b95e;
-  --warning-subtle: #322916;
-  --danger: #f2918a;
-  --danger-hover: #f5a7a1;
-  --danger-active: #f8bdb8;
-  --danger-subtle: #3a2321;
-  --on-danger: #1b1b1a;
-  --info: #94b9e6;
-  --info-subtle: #1f2b3a;
-  --area-1: #d69b74;
-  --area-2: #6dbcb6;
-  --area-3: #bd9dcd;
-  --area-4: #abba6c;
-  --area-5: #dc8fa3;
-  --area-6: #9dafc6;
-  --area-7: #b5a48f;
-  --area-none: #8f8f89;
+  --canvas: #121416;
+  --canvas-subtle: #1a1d20;
+  --surface: #1f2225;
+  --surface-hover: #292d31;
+  --surface-pressed: #33383d;
+  --surface-inverse: #eef0f2;
+  --ink: #eef0f2;
+  --ink-muted: #b9bec4;
+  --ink-subtle: #9aa0a7;
+  --ink-disabled: #5d6268;
+  --ink-inverse: #121416;
+  --border: #33373c;
+  --border-soft: #26292d;
+  --border-strong: #7e848b;
+  --primary: #eef0f2;
+  --primary-hover: #ffffff;
+  --primary-active: #d4d8dc;
+  --on-primary: #121416;
+  --here: #ffd23f;
+  --here-subtle: #3b3312;
+  --on-here: #121416;
+  --link: var(--ink);
+  --focus: var(--ink);
+  --warning: #f0b54a;
+  --warning-subtle: #33240f;
+  --danger: #ff8a80;
+  --danger-hover: #ffa39b;
+  --danger-active: #ffbcb6;
+  --danger-subtle: #3a1c1b;
+  --on-danger: #121416;
   --proposal-border: var(--border-strong);
   --scrim: #000000a3;
 

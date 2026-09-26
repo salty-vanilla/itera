@@ -31,13 +31,13 @@ const iconButtonVariants = cva(
         md: 'size-control-lg medium:size-control-md [&_svg]:size-icon-m [&_svg]:[stroke-width:var(--icon-stroke-m)]',
         sm: 'size-control-lg medium:size-control-sm [&_svg]:size-icon-s [&_svg]:[stroke-width:var(--icon-stroke-s)]',
       },
-      // Pressed is shown by the fill, the primary outline and the icon color,
-      // not by the fill alone (primary-subtle is close to canvas).
+      // Pressed inverts, as white-on-black signage does: the icon is cut out
+      // of an ink fill, so the state never depends on a pale tint.
       pressed: {
         true: [
-          'border-primary bg-primary-subtle text-primary',
-          'not-data-disabled:hover:border-primary-hover not-data-disabled:hover:text-primary-hover',
-          'not-data-disabled:active:border-primary-active not-data-disabled:active:text-primary-active',
+          'border-primary bg-primary text-on-primary',
+          'not-data-disabled:hover:border-primary-hover not-data-disabled:hover:bg-primary-hover',
+          'not-data-disabled:active:border-primary-active not-data-disabled:active:bg-primary-active',
         ],
         false: [
           'not-data-disabled:hover:bg-surface-hover not-data-disabled:hover:text-ink',

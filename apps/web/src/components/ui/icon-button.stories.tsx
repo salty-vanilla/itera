@@ -56,7 +56,7 @@ export const Sizes: Story = {
 
 /**
  * pressed を渡すとトグルになる（aria-pressed）。押すと切り替わる。
- * 押した状態は primary-subtle の地だけでなく、primary の枠とアイコンの色でも示す。
+ * 押した状態は墨の塗りに白抜きのアイコン（反転）で示し、淡い色の差に頼らない。
  */
 export const Pressed: Story = {
   render: function PressedDemo() {
