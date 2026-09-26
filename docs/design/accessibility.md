@@ -23,7 +23,7 @@ DADS の品質基準（WCAG 2.2 AA）を下限にする。後から足すので�
 | 全体 | Tab / Shift+Tab で移動、Enter / Space で実行 |
 | Tabs | ← → で移動、Home / End |
 | Menu | ↓ ↑ で移動、Home / End、Enter で実行、Esc で閉じてトリガーに戻る |
-| Backlog / Today のリスト | Space：選ぶ（□）/ 完了（○）、Enter：詳細、E：Estimate の編集、Alt+↑↓：並べ替え、Delete：アーカイブ（元に戻せる） |
+| Backlog / Today のリスト | Space：選ぶ（□）/ 完了（○）、Enter：詳細、E：Estimate の編集、Alt+↑↓：並べ替え。Backlog では Delete：アーカイブ（元に戻せる） |
 | Planning | N：タスク追加欄へ、⌘/Ctrl+Enter：Sprint を確定（確認 Dialog を開く） |
 | Tooltip | focus で即表示、Esc で閉じる |
 

@@ -14,7 +14,10 @@ DESIGN.md v0.1 は Claude Design の Design System アーティファクトか�
 - `DESIGN.md` は公式の DESIGN.md format spec（google-labs-code/design.md、version alpha）に従う。先頭の YAML がトークン（colors・typography・rounded・spacing・components）の正で、本文は Overview / Colors / Typography / Layout / Elevation & Depth / Shapes / Components / Do's and Don'ts の順に書く。dark theme は同じ名前に `-dark` を付けたトークンで持つ。
 - spec に収まらない製品固有の指針は `docs/design/` に移す：`patterns.md`（Backlog / Planning / Today / Retro）、`agent-ui.md`、`content.md`（文言と用語）、`accessibility.md`、`foundations.md`（アイコンと動き）、`design-context.md`（参照元と一次資料）。
 - 食い違いは PRD / ドメインモデルに合わせて解消した。「このリポジトリの読み」とした 2 点も PRD を優先した（Retro に持ち越しの理由を入れない、compact の Planning で段階を必ず順に通らせない）。領域の概念は Area だけにし、色トークンを `area-1`〜`area-7` / `area-none` に改名した。
-- v0.1 の部品バンドルの API（`h(PersonalSprint.*)` の Props）と Screens は、存在しないものの説明なので削除した。部品の見た目・状態・使い方は Components に残した。
+- v0.1 の部品バンドルの API（`h(PersonalSprint.*)` の Props）と、Screens の bundle への参照は、存在しないものの説明なので削除した。部品の見た目・状態・使い方は Components に残し、基準画面の構成と確認点は `docs/design/patterns.md` に移した。
+- トークンの値は変えていない。名前だけ spec と Tailwind に合わせた：`text-*` → `typography.*`、`space-*` → `spacing.*`、`radius-xs/s/m/l/xl/pill` → `rounded.xs/sm/md/lg/xl/full`（`s` `l` は Tailwind の `rounded-s`（start）`rounded-l`（left）と衝突するため）、`domain-*` → `area-*`、`domain-mark` → `area-mark`。Button のラベル用に `typography.button`（14/20 500）を足した。
+- PRD に合わせて変えた見た目の構成：Backlog のグループ順を「持ち越し → 期限が近い → 今週発生する繰り返し → そのほか」に（PRD §5.B Pick）、Planning の段階名を「選ぶ / 整える / 確かめる」に、Retro の段階名を「事実を見る / 振り返る / 引き継ぐ」に、改善策の reminder から「この計画に反映した」の Checkbox を削除（ドメインモデルに記録がない）、`area-none` を「領域なし」だけに（Capacity のセグメントは Area ごと）。
+- PRD / ドメインモデルが見た目を決めていない点（Today の開始・今日はここまで・見送りの行の見た目、「済んだもの」の出し方、確定前の計画値のプレビューを実線にするか破線にするか）は、`docs/design/patterns.md` の「実装で決めること」に残し、最初の実装 Issue で決める。
 
 ## 検証
 

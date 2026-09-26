@@ -6,7 +6,7 @@ paths:
 # Web UI
 
 - 実装前に `DESIGN.md`（YAML のトークン、Components、Do's and Don'ts）と、該当する `docs/design/patterns.md` の画面のパターンを読む。文言は `docs/design/content.md`、アクセシビリティは `docs/design/accessibility.md`、Agent の表現は `docs/design/agent-ui.md`、アイコンと動きは `docs/design/foundations.md`。
-- トークンは DESIGN.md の YAML を CSS 変数に写す（dark は `-dark` の値を `data-theme="dark"` に）。色・余白・角丸・影はトークンで指定し、16 進値を直書きしない。数値の書式（tabular-nums、1h 未満は `30m`、合計は h、範囲は en dash、負を含む範囲は `〜`）は自前で実装する。
+- トークンは DESIGN.md の YAML を Tailwind 4 の `@theme` の CSS 変数に写す（dark は `-dark` の値を `data-theme="dark"` に）。`rounded.*` → `--radius-*`、`typography.*` → `--text-*`、`spacing` の数値と寸法 → `--spacing-*`、`bp-*` → `--breakpoint-*`、`measure-read` → `--container-measure-read`。YAML にない elevation・layer・stroke（DESIGN.md の Elevation & Depth と Shapes の表）と duration・easing（`docs/design/foundations.md`）は、表から `--shadow-*`・`--z-*`・`--duration-*`・`--ease-*` として写す。色・余白・角丸・影はトークンで指定し、16 進値を直書きしない。数値の書式（tabular-nums、1h 未満は `30m`、合計は h、範囲は en dash、負を含む範囲は `〜`）は自前で実装する。
 - 部品は shadcn（base-ui）+ Tailwind 4 で作り、見た目は DESIGN.md の Components に合わせる。shadcn は `pnpm agent:shadcn <command> --cwd apps/web` で追加する。
 - Primary Button は 1 画面に 1 つ。Agent 提案の「採用」系ボタンは Secondary / Quiet にし、Primary で誘導しない。Agent・AI の値は破線と「提案」の語で区別する。Card inside Card、装飾の Shadow / Gradient / Blur、AI を特別に見せる表現は使わない。
 - 状態は色だけで示さない（アイコンと語を添える）。フォーカスの outline を消さない。ターゲットは 24px 以上、compact 幅では 44px 以上。

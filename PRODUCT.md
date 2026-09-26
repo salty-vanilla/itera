@@ -44,7 +44,7 @@ web
 
 ## Brand Commitments
 
-製品名は Itera（このリポジトリでの決め。PRD の「Personal Sprint」は仮称）。見た目・トーン・トークンは `DESIGN.md`（Quiet, precise personal planning tool）に従う。語り口は丁寧体で短く、失敗を責めない。
+製品名は Itera（このリポジトリでの決め。PRD の「Personal Sprint」は仮称）。見た目・トークンは `DESIGN.md`（Quiet, precise personal planning tool）、語り口と用語は `docs/design/content.md`（丁寧体で短く、失敗を責めない）に従う。
 
 ## Evidence on Hand
 
@@ -63,4 +63,4 @@ web
 
 ## Accessibility & Inclusion
 
-DESIGN.md のアクセシビリティ基準に従う（DADS の品質基準・WCAG 2.2 AA を下限、状態を色だけに頼らない、compact 幅でターゲット 44px 以上）。
+`docs/design/accessibility.md` の基準に従う（DADS の品質基準・WCAG 2.2 AA を下限、状態を色だけに頼らない、compact 幅でターゲット 44px 以上）。

@@ -10,6 +10,7 @@
 - 本人を主語にする（「あなたが決めます」「本人が確定するまで反映されません」）。Agent は「Agent」と呼び、擬人化しない。
 - 失敗を責めない。持ち越しは「持ち越し」、自己判定は「できなかった」。「失敗」「遅れ」と書かない。
 - 結果を言い切る Toast（「3件を今週に入れました」「Sprint 14 を確定しました」）。次にできることを添える（「元に戻す」）。
+- 欧文の kicker は大文字にしてよい（「SPRINT 14 · 2日目 / 7日」）。本文と見出しでは「Sprint 14」。
 - 和文と欧文の間は半角スペース（「Goal を書く」）。数字と助数詞・単位は詰める（「3件」「2日」「1.5h」）。範囲は en dash でスペースなし（「2–4h」「9/28–10/4」）。曜日付き日付の範囲だけ前後にスペース（「9/28 (月) – 10/4 (日)」）。
 
 ## 用語
@@ -23,7 +24,7 @@
 | Goal に紐づく / 紐づかない | SprintTask.goalLink | 短く出すときは「Goal なし」でもよい。紐づかない Task も時間に含める |
 | Estimate | Estimate | 本人が確定した点の値。「3h」「30m」 |
 | 提案 | EstimateSuggestion | 製品が出す幅。「提案 2–4h」（破線） |
-| 採用 | Estimate.source | 提案の下限・中央・上限を本人の Estimate にすること。「上限 4h を採用」 |
+| 採用 | Estimate.source ほか | Agent の提案を本人の値にすること。Estimate では提案の下限・中央・上限のどれかを選ぶ（「上限 4h を採用」、source に記録）。Goal の文案や計画案の項目にも使う |
 | 計画値 | PlanningValue | この Sprint の時間の判断に使う値。「今回は 5h で計画」。Sprint 確定時（追加分は追加時）に固定 |
 | 計画基準 | PlanningCriterion | Estimate の幅を計画値のどこで使うかのルール。「研究の推定幅 → 上限を計画値に」 |
 | 適用 | CriterionUse.appliedAtConfirm | 計画基準を今回の計画値に使うこと。Estimate は変わらない |
@@ -32,6 +33,9 @@
 | 残り / 超過 | — | 可用時間 − 計画値の合計。「残り −1 〜 1h」「超過 3 〜 5h」 |
 | 持ち越し | SprintTask = CarriedOver | Sprint 終了時に未完了。「持ち越し 2回（Sprint 13から）」 |
 | 繰り返し | RecurrenceRule / Occurrence | ルールで発生する Task と、その回。「毎週 土」「平日 · 今週 2/5」 |
+| 未処理 | DailySelection = Unresolved / Occurrence = Missed | 選んだまま日付が変わった / 繰り返しの回が Sprint 終了時に未処理。見送りには数えない |
+| 昨日の続き | 前日の DailySelection = Paused（派生） | Today の候補の上に出す。自動では今日に入れない |
+| 未見積 | 計画値の元がない | 「未見積」。0h と書かず、合計に含めない |
 | 今日へ / 今日やる | DailySelection | 今日やると選ぶこと |
 | 開始 / 完了 | DailySelection = Started / Done | — |
 | 今日はここまで | DailySelection = Paused | 作業したが未完了。翌日「昨日の続き」 |
@@ -41,7 +45,7 @@
 | Sprint 中の追加 | SprintTask.origin = midSprint | 確定後に Sprint に入った Task |
 | 割り込み | InterruptNote | 予定外の出来事のメモ。Task ではない |
 | 確定 | Sprint = Active | 本人が Sprint を確定すること。「Sprint 14 を確定」。Agent には使わない |
-| Retro | Retro | 事実を見る → 振り返る → 引き継ぐ |
+| Retro | Retro / Sprint = review | 事実を見る → 振り返る → 引き継ぐ。Sprint Header の Status の語は Retro の最初の実装 Issue で決める |
 | できた / 一部できた / できなかった / 判断しない | SprintGoal.selfAssessment | Goal の自己判定。未選択は「未判定」 |
 | 改善策 | RetroImprovement | 次の Sprint で 1 つだけ変えてみること（自然文、1 件） |
 | 続ける / 終える / 置き換える | CriterionUse.retroDecision | 計画基準の Retro での決定 |
