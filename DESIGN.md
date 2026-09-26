@@ -529,7 +529,7 @@ compact の原則：
 | Focus | `focus` の 2px outline、offset 2px（リスト内・タブ・メニュー項目は −2px）。hover と同時でも両方見える |
 | Active | `surface-pressed` / `primary-active` |
 | Selected | `primary-subtle` の背景＋チェック（`aria-selected` / `aria-pressed`） |
-| Disabled | 地 `canvas-subtle`、文字 `ink-disabled`、輪郭 `border`。理由を近くに書く。可能なら無効化しない |
+| Disabled | 地 `canvas-subtle`、文字 `ink-disabled`、輪郭 `border`、`cursor: not-allowed`。理由を近くに書く。可能なら無効化しない |
 | Loading | スピナー＋文言、`aria-busy`、幅を変えない。300ms 未満の処理には出さない |
 | Error | `danger` の 2px 相当の輪郭＋アイコン＋文（`aria-invalid`）。入力内容を消さず、再試行の手段を示す |
 | Read-only | 地 `canvas-subtle`、輪郭 `border`。破線にしない |
@@ -561,7 +561,7 @@ compact の原則：
 - 36px または 28px の正方形、`rounded.sm`、アイコン 20 / 16px `ink-muted`。Variant：quiet（既定）/ secondary / pressed（`primary-subtle`＋`primary`）。
 - 意味が広く共有されたアイコン（閉じる、…、編集、検索）だけ。同じ行に 3 つ以上並べず Menu にまとめる。
 
-**Menu** — 行やヘッダーの補助操作のドロップダウン。
+**Menu** — 行やヘッダーの補助操作のドロップダウン。トリガーは `…` の IconButton か、Secondary の Button（「並び順: 期限 ⌄」）。
 - 面 `surface`＋`border`、`rounded.md`、`elevation-overlay`。項目 32px（アイコン・ラベル・Kbd）、区切り `border-soft`、危険な項目は `danger` で最後。Checked は チェック＋`primary-subtle`。
 - 主要な操作を隠さない。サブメニューを入れ子にしない。キーボードは ↓ ↑ Home End、Enter で実行、Esc でトリガーに戻る、Tab で閉じる。
 
@@ -585,7 +585,7 @@ compact の原則：
 
 **Radio / RadioGroup** — 2〜5 個の排他的な選択肢をすべて見せる（Goal の自己判定、Sprint の長さ）。16px の円、選択時は `primary` の 4px 内枠。fieldset と legend で組む。自己判定には既定値を置かない。
 
-**Switch** — 即時に反映される設定のオン / オフ。トラック 36×20px（`rounded.sm`、Pill にしない）、つまみ 14px（`rounded.xs`）、「オン / オフ」の語を添える。On はトラック `primary`・つまみ `on-primary`、Off はトラック `surface`・枠とつまみ `border-strong`。保存ボタンで確定するフォームには使わない（→ Checkbox）。
+**Switch** — 即時に反映される設定のオン / オフ。トラック 36×20px（`rounded.sm`、Pill にしない）、つまみ 14px（`rounded.xs`）、「オン / オフ」の語を添える。On はトラック `primary`・つまみ `on-primary`、Off はトラック `surface`・枠とつまみ `border-strong`。説明で「オンにすると何が起きるか」を書く。保存ボタンで確定するフォームには使わない（→ Checkbox）。
 
 ### 表示
 
@@ -637,7 +637,7 @@ compact の原則：
 - 左から：ドラッグハンドル（hover / focus 時のみ、compact は非表示）、コントロール（□ 選ぶ / ○ 完了 / なし）、タイトル（`task`、1 行で省略）、Task Metadata、Estimate（右端 `num-s`）、行の操作 `…`（hover / focus 時、compact は常時）。
 - layout stacked（既定、約 52px）/ inline（40px、`row-task` は最小高さ）。区切りは `border-soft`、行間 0、角丸・影なし、Card で囲まない。
 - 状態：Selected（`primary-subtle`＋チェック）、Done（○ を `primary` で塗り、タイトル `ink-subtle`＋取り消し線）、Skipped（○ に「−」＋「スキップ」）、Dragging（`surface`＋`elevation-drag`＋`border`）、Loading（Estimate が「見積中」）、Error（行内に「保存できませんでした · 再試行」）、Disabled（アーカイブ済み、`ink-disabled`）。
-- Today の「今日やる」の行は、日次の操作（開始 / 完了 / 今日はここまで / 今日は見送る / 今日から外す / 繰り返しのスキップ）を持つ。強い操作を常時並べすぎず、完了（○）以外は行の操作 `…` と詳細から出す（PRD §12）。「今週の残り」「昨日の続き」の行は □ ではなく行の操作「今日へ」で選ぶ（□ は今週へ選ぶ意味なので使わない）。
+- Today の「今日やる」の行は、日次の操作（開始 / 完了 / 今日はここまで / 今日は見送る / 今日から外す / 繰り返しのスキップ）を持つ。強い操作を常時並べすぎず、完了（○）以外は行の操作 `…` と詳細から出す（PRD §12）。「今週の残り」「昨日の続き」の行は □ ではなく、行の先頭に常に見える「今日へ」のボタンで選ぶ（□ は今週へ選ぶ意味なので使わない）。
 - × メタ情報を Badge / Pill にする、□ と ○ を入れ替える、Goal に紐づかない行を薄くする。
 
 **Task Metadata** — タスクの属性を Badge ではなく文字とアイコンで 1 行に並べる（`meta` 12px、要素間 `spacing.3`）。順に Area Indicator（グループ化していない一覧だけ）、Deadline、持ち越し、繰り返し、Goal（`target`＋Goal 文を省略）、注記（`ink-subtle`）。値がない属性は出さない（「—」で埋めない）。グループ見出しと同じ情報を行に重ねない。
@@ -651,12 +651,12 @@ compact の原則：
 | user（既定） | 「3h」実線・ラベルなし | 本人の Estimate（点の値） |
 | suggestion | 「提案 2–4h」破線枠（`rounded.xs`） | EstimateSuggestion（未確定の幅） |
 | planned | 「計画 5h」実線 | この Sprint の PlanningValue（確定時・追加時に固定。幅のこともある） |
-| history | 「参考 2.5h」実線なし | 実績からコードが計算した参考値。Agent 提案と混ぜない |
 | unset | 「未見積」 | 0h と書かない。合計に含めない |
 
 - 1h 未満は分（30m）、それ以上は h（1.5h）、範囲は en dash。「約」「〜くらい」と書かない。
 - 状態：Loading（スピナー＋「見積中」）/ Error（「推定できません」＋手入力を促す）。
-- 計画値の元が幅（提案・サブタスク合計）のときは、元と計画値を並べる（「Estimate 提案 3–5h / 今回は 5h で計画」、ドメインモデル Scenario A）。点の Estimate には計画基準が効かない（不変条件 9）。
+- 過去の実績からコードが作った幅も EstimateSuggestion として扱い、suggestion の見た目で出所（「過去の実績から」）を添える。4 つ目の時間の値を作らない（ドメインモデルの時間は Estimate・提案・計画値の 3 つ）。
+- 計画値の元が幅（提案・サブタスク合計）のときは、元と計画値を並べる（「Estimate 提案 3–5h / 今回は 5h で計画」、ドメインモデル Scenario A）。点の Estimate には計画基準が効かない（不変条件 9）。確定後に本人が Estimate を変え、固定した計画値と違ったときも両方を並べる（不変条件 16・18）。
 - 読み上げは「見積もり 3時間」「Agent の提案（未確定）: 2〜4時間」。
 
 **EstimateRange** — 提案の幅を 0〜8h の目盛り上の帯で見せる。数値（「2–4h」「中央 3h」）、1h ごとの `border` の刻み、提案の帯（破線＋`primary-subtle`）、中央値のマーカー（`ink` 2px）、目盛りの数値（0 / 4h / 8h）。同じ値を必ず数値でも示す。行内では使わない（→ Estimate）。確率・confidence を % で出さない。
@@ -710,7 +710,7 @@ compact の原則：
 - 選択・状態・Area・エラー・提案は、色に加えてチェック・アイコン・語・形・破線のどれかで示す。
 - 本人が確定した考え（Goal、改善策、振り返り）は明朝、操作と数値は Sans。
 - 幅のある時間は幅のまま示し、未見積は合計に含めないことを書く。
-- Agent の値は破線と「提案」で示し、採用・却下を同じ重さで並べる。
+- Agent の値は破線と「提案」で示し、採用は Secondary、編集して採用・却下は Quiet にして、Primary で誘導しない。
 - 持ち越し・見送り・未達は事実として中立に書く。
 
 ### Don't

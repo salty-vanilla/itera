@@ -23,7 +23,7 @@ DADS の品質基準（WCAG 2.2 AA）を下限にする。後から足すので�
 | 全体 | Tab / Shift+Tab で移動、Enter / Space で実行 |
 | Tabs | ← → で移動、Home / End |
 | Menu | ↓ ↑ で移動、Home / End、Enter で実行、Esc で閉じてトリガーに戻る |
-| Backlog / Today のリスト | Space：選ぶ（□）/ 完了（○）、Enter：詳細、E：Estimate の編集、Alt+↑↓：並べ替え。Backlog では Delete：アーカイブ（元に戻せる） |
+| Backlog / Today のリスト | Space：その行のコントロールを押す（Backlog は □ 今週へ、Today の今日やるは ○ 完了、今週の残り・昨日の続きは「今日へ」）、Enter：詳細、E：Estimate の編集、Alt+↑↓：並べ替え。Backlog では Delete：アーカイブ（元に戻せる） |
 | Planning | N：タスク追加欄へ、⌘/Ctrl+Enter：Sprint を確定（確認 Dialog を開く） |
 | Tooltip | focus で即表示、Esc で閉じる |
 
@@ -51,4 +51,5 @@ DADS の品質基準（WCAG 2.2 AA）を下限にする。後から足すので�
 - Agent 提案の値は「Agent の提案（未確定）: 2〜4時間」、Estimate は「見積もり 3時間」と読ませる。
 - 動的な結果（Toast、Capacity の状態、保存エラー）は `role="status"` / `role="alert"` で通知する。
 - 装飾のアイコンは `aria-hidden`。意味を持つアイコンだけに `aria-label`。
+- Menu の選べる項目は `menuitemcheckbox`、Filter の選択は `aria-pressed`、Navigation の現在地は `aria-current="page"`（フォーカスは内側のリング）。
 - 部品ごとの role：Dialog は `role="dialog"`（破壊的な確認は `alertdialog`）＋`aria-modal`、Tabs は `role="tablist"` と roving tabindex、Switch は `role="switch"`＋`aria-checked`、Progress は `role="progressbar"`＋`aria-valuetext`、Tooltip は `role="tooltip"` で、pointer を載せても消えない（WCAG 1.4.13）。
