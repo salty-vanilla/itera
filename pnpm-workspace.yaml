@@ -1,0 +1,7 @@
+packages:
+  - apps/*
+  - packages/*
+  - services/*
+# Hook installation is explicit in tooling/setup.sh, not a dependency side effect.
+ignoredBuiltDependencies:
+  - lefthook

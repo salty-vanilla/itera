@@ -1,0 +1,18 @@
+# Source-of-truth and prose documents keep their authored layout.
+*.md
+DESIGN.md
+docs/
+
+# Vendored upstream files are preserved byte for byte (hashes in tooling/agents/sources.json).
+.agents/skills/
+.claude/agents/impeccable-*.md
+
+# Generated or local.
+pnpm-lock.yaml
+tooling/agents/pnpm-lock.yaml
+node_modules/
+**/dist/
+**/build/
+.tools/
+playwright-report/
+test-results/

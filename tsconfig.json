@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "allowJs": true,
+    "checkJs": true,
+    "noImplicitAny": false
+  },
+  "include": [
+    "vitest.config.ts",
+    "eslint.config.js",
+    "tooling/**/*.mjs",
+    ".claude/hooks/**/*.mjs"
+  ]
+}

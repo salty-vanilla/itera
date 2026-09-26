@@ -1,0 +1,7 @@
+# Resolve this checkout's runtime even when Git is launched by a GUI.
+lefthook: bash tooling/lefthook.sh
+
+pre-commit:
+  commands:
+    staged-checks:
+      run: node tooling/checks/staged.mjs

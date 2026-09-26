@@ -16,6 +16,23 @@
     "agent:browser:install": "node tooling/agents/run.mjs browser-install",
     "agent:shadcn": "node tooling/agents/run.mjs shadcn",
     "agent:impeccable": "node tooling/agents/run.mjs impeccable",
-    "agent:hooks:test": "node .claude/hooks/read-only-bash.test.mjs"
+    "agent:hooks:test": "vitest run --project tooling .claude/hooks",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "node tooling/checks/names.mjs && eslint . --max-warnings 0",
+    "typecheck": "tsc -p tsconfig.json && pnpm -r --if-present typecheck",
+    "test": "vitest run",
+    "check": "pnpm agent:check && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "26.6.3",
+    "eslint": "10.11.0",
+    "globals": "17.12.0",
+    "lefthook": "2.1.14",
+    "prettier": "3.9.9",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.70.1",
+    "vitest": "5.0.2"
   }
 }

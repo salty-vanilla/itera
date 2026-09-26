@@ -24,3 +24,4 @@
 - [デザインの参照方針](design/design-context.md)：DADS / Apple HIG / UI v0.1 モックの扱い
 - [DESIGN.md v0.1 の食い違い](design/design-md-v0.1-gaps.md)：PRD / ドメインモデルとのずれと実装での読み替え
 - [Agent 環境](development/agent-setup.md)：Claude Code の設定、共有 Skill、ハーネス、更新手順
+- [ADR](architecture/adr/)：技術の決定（[0001 monorepo の土台](architecture/adr/0001-monorepo-foundation.md)）
