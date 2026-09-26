@@ -73,7 +73,8 @@ const itemClassName = [
   'outline-none focus-visible:focus-ring-inset',
   'not-data-checked:hover:bg-surface-hover not-data-checked:data-highlighted:bg-surface-hover',
   '[&_svg]:pointer-events-none [&_svg]:size-icon-s [&_svg]:shrink-0 [&_svg]:[stroke-width:var(--icon-stroke-s)]',
-  'data-disabled:cursor-not-allowed data-disabled:bg-transparent data-disabled:text-ink-disabled',
+  // Disabled follows the common state: canvas-subtle ground, ink-disabled.
+  'data-disabled:cursor-not-allowed data-disabled:bg-canvas-subtle data-disabled:text-ink-disabled',
 ];
 
 type MenuItemProps = Omit<MenuPrimitive.Item.Props, 'className'> & {

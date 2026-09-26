@@ -6,6 +6,7 @@ import {
   AlertDialog,
   AlertDialogTrigger,
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogDescription,
@@ -31,6 +32,12 @@ describe('Dialog', () => {
               確定すると計画値が固定されます。
             </DialogDescription>
           </DialogHeader>
+          <DialogBody>
+            <label>
+              <input type="checkbox" defaultChecked />
+              計画基準を使う
+            </label>
+          </DialogBody>
           <DialogFooter>
             <DialogClose render={<Button />}>戻って調整</DialogClose>
             <Button variant="primary">Sprint 14 を確定</Button>
