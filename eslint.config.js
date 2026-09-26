@@ -2,6 +2,8 @@ import js from '@eslint/js';
 import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 import globals from 'globals';
+import reactHooks from 'eslint-plugin-react-hooks';
+import storybook from 'eslint-plugin-storybook';
 
 // Keep ESLint configuration in this one file. ESLint 10 looks up the nearest
 // eslint.config.* per directory, so a nested config would replace this one
@@ -18,6 +20,7 @@ export default defineConfig(
       '.playwright/**',
       '.playwright-cli/**',
       '.agents/skills/**',
+      'apps/web/storybook-static/**',
       'playwright-report/**',
       'test-results/**',
     ],
@@ -29,4 +32,20 @@ export default defineConfig(
     files: ['tooling/**', '.claude/**', '*.{js,mjs,ts}'],
     languageOptions: { globals: globals.node },
   },
+  {
+    // apps/web: React in the browser. Its build configs run on Node.
+    files: ['apps/web/**/*.{ts,tsx}'],
+    extends: [reactHooks.configs.flat['recommended-latest']],
+    languageOptions: { globals: globals.browser },
+  },
+  {
+    files: ['apps/web/*.ts', 'apps/web/.storybook/main.ts'],
+    languageOptions: { globals: globals.node },
+  },
+  // Applies to *.stories.* and .storybook/main.* only. The cast is for the
+  // plugin's types, which declare `files: undefined` and `plugins: undefined`
+  // and so fail under exactOptionalPropertyTypes.
+  .../** @type {import('eslint').Linter.Config[]} */ (
+    /** @type {unknown} */ (storybook.configs['flat/recommended'])
+  ),
 );

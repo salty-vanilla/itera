@@ -1,0 +1,297 @@
+@import 'tailwindcss';
+@import 'shadcn/tailwind.css';
+@import './tokens.css';
+
+/* Theme switching follows DESIGN.md: <html data-theme="dark">. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/*
+ * Tailwind's default theme is cleared so that only DESIGN.md tokens exist as
+ * utilities: `bg-blue-500`, `p-7` or `rounded-2xl` produce nothing.
+ * Values that do not change with the theme are written here directly; the
+ * ones that do are mapped in the @theme inline block below. `static` emits
+ * every variable even when no utility uses it, so components and the
+ * Foundations stories can read them with var().
+ */
+@theme static {
+  --*: initial;
+
+  /* Typography: one family for text, figures and Kbd (DESIGN.md Typography). */
+  --font-sans:
+    'LINE Seed JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN',
+    'Yu Gothic UI', Meiryo, system-ui, sans-serif;
+
+  --font-weight-normal: 400;
+  --font-weight-bold: 700;
+
+  /*
+   * Typography tokens. Each sets size, line height, letter spacing and
+   * weight. LINE Seed JP has proportional figures (tabular-nums has no
+   * effect): columns of numbers are right-aligned instead.
+   */
+  --text-display-l: 32px;
+  --text-display-l--line-height: 40px;
+  --text-display-l--letter-spacing: 0em;
+  --text-display-l--font-weight: 700;
+  --text-display-m: 24px;
+  --text-display-m--line-height: 32px;
+  --text-display-m--letter-spacing: 0em;
+  --text-display-m--font-weight: 700;
+  --text-goal: 18px;
+  --text-goal--line-height: 28px;
+  --text-goal--letter-spacing: 0.01em;
+  --text-goal--font-weight: 700;
+  --text-reflection: 16px;
+  --text-reflection--line-height: 28px;
+  --text-reflection--letter-spacing: 0.02em;
+  --text-reflection--font-weight: 400;
+  --text-button: 14px;
+  --text-button--line-height: 20px;
+  --text-button--letter-spacing: 0em;
+  --text-button--font-weight: 700;
+  --text-heading: 16px;
+  --text-heading--line-height: 24px;
+  --text-heading--letter-spacing: 0em;
+  --text-heading--font-weight: 700;
+  --text-subheading: 14px;
+  --text-subheading--line-height: 20px;
+  --text-subheading--letter-spacing: 0em;
+  --text-subheading--font-weight: 700;
+  --text-body-l: 16px;
+  --text-body-l--line-height: 26px;
+  --text-body-l--letter-spacing: 0.02em;
+  --text-body-l--font-weight: 400;
+  --text-body: 14px;
+  --text-body--line-height: 22px;
+  --text-body--letter-spacing: 0.01em;
+  --text-body--font-weight: 400;
+  --text-task: 14px;
+  --text-task--line-height: 20px;
+  --text-task--letter-spacing: 0em;
+  --text-task--font-weight: 400;
+  --text-label: 13px;
+  --text-label--line-height: 20px;
+  --text-label--letter-spacing: 0em;
+  --text-label--font-weight: 700;
+  --text-help: 13px;
+  --text-help--line-height: 20px;
+  --text-help--letter-spacing: 0em;
+  --text-help--font-weight: 400;
+  --text-meta: 12px;
+  --text-meta--line-height: 16px;
+  --text-meta--letter-spacing: 0em;
+  --text-meta--font-weight: 400;
+  --text-kicker: 12px;
+  --text-kicker--line-height: 16px;
+  --text-kicker--letter-spacing: 0em;
+  --text-kicker--font-weight: 700;
+  --text-num-l: 28px;
+  --text-num-l--line-height: 32px;
+  --text-num-l--letter-spacing: 0em;
+  --text-num-l--font-weight: 700;
+  --text-num-m: 16px;
+  --text-num-m--line-height: 24px;
+  --text-num-m--letter-spacing: 0em;
+  --text-num-m--font-weight: 700;
+  --text-num-s: 12px;
+  --text-num-s--line-height: 16px;
+  --text-num-s--letter-spacing: 0em;
+  --text-num-s--font-weight: 700;
+  --text-code: 12px;
+  --text-code--line-height: 16px;
+  --text-code--letter-spacing: 0em;
+  --text-code--font-weight: 400;
+
+  /* Shapes (rounded.*) */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  /* Layout: spacing scale and dimensions (spacing.*) */
+  --spacing-0: 0px;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+  --spacing-12: 48px;
+  --spacing-16: 64px;
+  --spacing-control-sm: 28px;
+  --spacing-control-md: 36px;
+  --spacing-control-lg: 44px;
+  --spacing-row-task: 40px;
+  --spacing-row-touch: 48px;
+  --spacing-target-min: 24px;
+  --spacing-target-touch: 44px;
+  --spacing-icon-s: 16px;
+  --spacing-icon-m: 20px;
+  --spacing-area-badge: 20px;
+  --spacing-pane-nav: 224px;
+  --spacing-pane-rail: 64px;
+  --spacing-pane-list: 384px;
+  --spacing-pane-side: 336px;
+  --spacing-drawer: 400px;
+  --container-measure-read: 38em;
+
+  /* Responsive: medium 768px–, wide 1200px–, nav 1440px– */
+  --breakpoint-medium: 768px;
+  --breakpoint-wide: 1200px;
+  --breakpoint-nav: 1440px;
+
+  /* Motion (docs/design/foundations.md) */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --default-transition-duration: 100ms;
+  --default-transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  --animate-spin: spin 1s linear infinite;
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-canvas-subtle: var(--canvas-subtle);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-pressed: var(--surface-pressed);
+  --color-surface-inverse: var(--surface-inverse);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-subtle: var(--ink-subtle);
+  --color-ink-disabled: var(--ink-disabled);
+  --color-ink-inverse: var(--ink-inverse);
+  --color-border: var(--border);
+  --color-border-soft: var(--border-soft);
+  --color-border-strong: var(--border-strong);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-on-primary: var(--on-primary);
+  --color-here: var(--here);
+  --color-here-subtle: var(--here-subtle);
+  --color-on-here: var(--on-here);
+  --color-link: var(--link);
+  --color-focus: var(--focus);
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-active: var(--danger-active);
+  --color-danger-subtle: var(--danger-subtle);
+  --color-on-danger: var(--on-danger);
+  --color-area-1: var(--area-1);
+  --color-area-2: var(--area-2);
+  --color-area-3: var(--area-3);
+  --color-area-4: var(--area-4);
+  --color-area-5: var(--area-5);
+  --color-area-6: var(--area-6);
+  --color-area-7: var(--area-7);
+  --color-area-none: var(--area-none);
+  --color-on-area: var(--on-area);
+  --color-proposal-border: var(--proposal-border);
+  --color-scrim: var(--scrim);
+
+  --shadow-overlay: var(--elevation-overlay);
+  --shadow-modal: var(--elevation-modal);
+  --shadow-drag: var(--elevation-drag);
+}
+
+/* Focus ring: `focus` 2px, offset 2px (DESIGN.md Components, common states). */
+@utility focus-ring {
+  outline: var(--stroke-strong) solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Inside lists, tabs and menu items the ring sits inside the item. */
+@utility focus-ring-inset {
+  outline: var(--stroke-strong) solid var(--focus);
+  outline-offset: calc(var(--stroke-strong) * -1);
+}
+
+@layer base {
+  html {
+    background-color: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    letter-spacing: var(--text-body--letter-spacing);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /*
+   * DESIGN.md Typography: body text uses line-break: strict and
+   * overflow-wrap: anywhere. `anywhere` also lets tables and flex items shrink
+   * to one character wide, so the page default is break-word (same wrapping,
+   * no effect on minimum widths) and paragraphs add the wrap-anywhere utility.
+   */
+  body {
+    line-break: strict;
+    overflow-wrap: break-word;
+  }
+
+  /*
+   * Browser surfaces follow the palette. Text selection stays neutral: yellow
+   * is reserved for where you are and always comes with a check or a word.
+   */
+  ::selection {
+    background-color: var(--surface-pressed);
+    color: var(--ink);
+  }
+
+  html {
+    caret-color: var(--ink);
+    accent-color: var(--primary);
+    scrollbar-color: var(--border-strong) transparent;
+  }
+
+  /* One family everywhere: code and kbd do not fall back to the UA monospace. */
+  code,
+  kbd,
+  samp,
+  pre {
+    font-family: inherit;
+  }
+
+  :focus-visible {
+    outline: var(--stroke-strong) solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  /*
+   * docs/design/accessibility.md: in forced colors the outline of controls is
+   * CanvasText, so quiet buttons with a transparent border stay visible.
+   */
+  @media (forced-colors: active) {
+    [data-slot='button'],
+    [data-slot='icon-button'] {
+      border-color: CanvasText;
+    }
+    [data-slot='button'][data-disabled],
+    [data-slot='icon-button'][data-disabled] {
+      border-color: GrayText;
+      color: GrayText;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0ms !important;
+    }
+  }
+}

@@ -1,0 +1,128 @@
+/*
+ * Design tokens copied from DESIGN.md.
+ *
+ * - Colors come from the YAML front matter: the light value here, the `-dark`
+ *   value under [data-theme="dark"]. tokens.test.ts compares both with the YAML.
+ * - Elevation, layers, strokes and motion are defined in the DESIGN.md body
+ *   (Elevation & Depth, Shapes) and docs/design/foundations.md, not in the YAML.
+ * - Reference tokens (link, focus, proposal-border) are repeated in the dark block so
+ *   that a subtree with data-theme="dark" resolves them against dark values.
+ *   The area colors are the same in both themes and are not repeated.
+ *
+ * Tailwind reads these through @theme inline in globals.css.
+ */
+
+:root {
+  color-scheme: light;
+
+  --canvas: #ffffff;
+  --canvas-subtle: #f2f3f4;
+  --surface: #ffffff;
+  --surface-hover: #eceeef;
+  --surface-pressed: #e1e3e5;
+  --surface-inverse: #16181a;
+  --ink: #16181a;
+  --ink-muted: #4a4e53;
+  --ink-subtle: #5c6167;
+  --ink-disabled: #a3a7ac;
+  --ink-inverse: #ffffff;
+  --border: #d3d6d9;
+  --border-soft: #e7e9eb;
+  --border-strong: #7a7f85;
+  --primary: #16181a;
+  --primary-hover: #2c3034;
+  --primary-active: #000000;
+  --on-primary: #ffffff;
+  --here: #ffd23f;
+  --here-subtle: #fff3c4;
+  --on-here: #16181a;
+  --link: var(--ink);
+  --focus: var(--ink);
+  --warning: #8a5200;
+  --warning-subtle: #fcebd9;
+  --danger: #c4161c;
+  --danger-hover: #a51217;
+  --danger-active: #870e12;
+  --danger-subtle: #fce8e8;
+  --on-danger: #ffffff;
+  --area-1: #0a6fbd;
+  --area-2: #12844a;
+  --area-3: #5c7a00;
+  --area-4: #4a5bc4;
+  --area-5: #8a4fbf;
+  --area-6: #0b7f85;
+  --area-7: #a23c9c;
+  --area-none: #6b7076;
+  --on-area: #ffffff;
+  --proposal-border: var(--border-strong);
+  --scrim: #16181a66;
+
+  /* Elevation & Depth */
+  --elevation-overlay: 0 1px 2px #16181a14, 0 6px 16px #16181a14;
+  --elevation-modal: 0 2px 6px #16181a14, 0 16px 40px #16181a24;
+  --elevation-drag: 0 2px 8px #16181a24;
+
+  /* Stacking order (Elevation & Depth). Use as z-(--layer-dialog). */
+  --layer-sticky: 10;
+  --layer-drawer: 30;
+  --layer-popover: 40;
+  --layer-dialog: 50;
+  --layer-toast: 60;
+  --layer-tooltip: 70;
+
+  /* Shapes: lines */
+  --stroke-hairline: 1px;
+  --stroke-strong: 2px;
+
+  /* docs/design/foundations.md: icon stroke per size */
+  --icon-stroke-s: 1.75;
+  --icon-stroke-m: 1.5;
+
+  /* docs/design/foundations.md: motion. Use as duration-(--duration-fast). */
+  --duration-fast: 100ms;
+  --duration-base: 160ms;
+  --duration-slow: 240ms;
+  --duration-toast: 8000ms;
+  --tooltip-delay: 400ms;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --canvas: #121416;
+  --canvas-subtle: #1a1d20;
+  --surface: #1f2225;
+  --surface-hover: #292d31;
+  --surface-pressed: #33383d;
+  --surface-inverse: #eef0f2;
+  --ink: #eef0f2;
+  --ink-muted: #b9bec4;
+  --ink-subtle: #9aa0a7;
+  --ink-disabled: #5d6268;
+  --ink-inverse: #121416;
+  --border: #33373c;
+  --border-soft: #26292d;
+  --border-strong: #7e848b;
+  --primary: #eef0f2;
+  --primary-hover: #ffffff;
+  --primary-active: #d4d8dc;
+  --on-primary: #121416;
+  --here: #ffd23f;
+  --here-subtle: #3b3312;
+  --on-here: #121416;
+  --link: var(--ink);
+  --focus: var(--ink);
+  --warning: #f0b54a;
+  --warning-subtle: #33240f;
+  --danger: #ff8a80;
+  --danger-hover: #ffa39b;
+  --danger-active: #ffbcb6;
+  --danger-subtle: #3a1c1b;
+  --on-danger: #121416;
+  --proposal-border: var(--border-strong);
+  --scrim: #000000a3;
+
+  --elevation-overlay: 0 1px 2px #00000066, 0 6px 16px #00000066;
+  --elevation-modal: 0 2px 6px #00000080, 0 16px 40px #00000099;
+  --elevation-drag: 0 2px 8px #000000a3;
+}

@@ -16,6 +16,8 @@ CLAUDE.local.md
 node_modules/
 **/dist/
 **/build/
+**/storybook-static/
+*storybook.log
 playwright-report/
 test-results/
 .DS_Store
@@ -26,3 +28,7 @@ test-results/
 # Agent browser artifacts may include page content and session state.
 .playwright-cli/
 .playwright/storage-state/
+
+# Impeccable working files (decision pages, surface briefs, review captures).
+.impeccable/
+**/.impeccable/

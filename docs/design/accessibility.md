@@ -8,7 +8,7 @@ DADS の品質基準（WCAG 2.2 AA）を下限にする。後から足すので�
 
 - テキスト 4.5:1、24px 以上または 19px 太字は 3:1。操作部品の輪郭・フォーカス・意味のある印は 3:1。light / dark の両方で満たす。
 - **状態を色だけで伝えない**：選択 = 背景＋チェック、期限超過 = 色＋アイコン＋「2日超過」、Agent 提案 = 破線＋「提案」、Area = 印＋ラベル、エラー = 色＋アイコン＋文。
-- `forced-colors: active` では Area Mark と Capacity のセグメントの色を保ち、操作部品の輪郭は `CanvasText` にする。
+- `forced-colors: active` では Area の路線記号と Capacity のセグメントの色を保ち、操作部品の輪郭は `CanvasText` にする。
 
 ## フォーカス
 
