@@ -74,7 +74,7 @@
     }
   ],
   "skillFiles": {
-    ".agents/skills/design-references/SKILL.md": "d58aebb84b6570b146eb82bd18ba3dd2883549014e9319b8dc10159546ef66e2",
+    ".agents/skills/design-references/SKILL.md": "64bef7bfde91168bf5d46d658c9fe02fbde577f1392988519a6f8baa214b2a61",
     ".agents/skills/design-references/scripts/hig.mjs": "75f2c96df21f1558489402c437e37580da9f62adc1a52d166332d7511ccfbd4c",
     ".agents/skills/impeccable/LICENSE": "02bb8c3b4e70190e3986c0404ad2fd8d639b4f534252d82379cc1b502b6d1812",
     ".agents/skills/impeccable/NOTICE.md": "c60a093c2845fd9fb82f9c6f742ece31f379f8190b535309d32d66c45ccffdcb",
@@ -136,9 +136,9 @@
     ".agents/skills/impeccable/scripts/modern-screenshot.umd.js": "bb36665889124a0b6e15f16045265737449c3bdcf2712cdb08af3cfa01563e2b",
     ".agents/skills/issue-harness/SKILL.md": "9e9c64c4970d508ecb7a245c753d70164837772f673b83346ade8f82b2154586",
     ".agents/skills/issue-harness/assets/run.md": "a340a54f1f13afd1a257a35b8ea66e05ff995fcee3a7849d966f481718058cc1",
-    ".agents/skills/issue-harness/references/implement.md": "d943ba7195100916d19e9a2d51dd22495852b605db6d2f3bfb51a4a1b553406e",
+    ".agents/skills/issue-harness/references/implement.md": "d9344428dae421c757fbfd44f8a1adedaa2bde47af3fb382fecb83ba1573fb4d",
     ".agents/skills/issue-harness/references/plan.md": "c5e2630edbdd6272b70ce56075af20c65f618613d7a2851534dd8fff27ef8024",
-    ".agents/skills/issue-harness/references/review.md": "19e06746abc99e160d6a88155797d6b55072cc9e5401168cd9932da493602f9e",
+    ".agents/skills/issue-harness/references/review.md": "edc37c2ce015b8935491a44d8ae22008dfccba781a0cf11b1fa77053f3d78d5d",
     ".agents/skills/playwright-cli/LICENSE": "9a7110fc2d2f964038e5dc49128f908f29f47a574c961cba16085914e879cbda",
     ".agents/skills/playwright-cli/SKILL.md": "85ef187460f776a4e9b44ffbf4a0293e5585d4192d0858c23fb011c72784f347",
     ".agents/skills/playwright-cli/references/element-attributes.md": "bf19aa4671e0a50a0fefa9c790f39124e803060eefe395042b723c29fcb7faa2",

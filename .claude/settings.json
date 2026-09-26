@@ -6,6 +6,7 @@
       "Bash(pnpm agent:check)",
       "Bash(pnpm agent:doctor)",
       "Bash(pnpm agent:hooks:test)",
+      "Bash(pnpm design:lint)",
       "Bash(pnpm format:check)",
       "Bash(pnpm test)",
       "Bash(pnpm typecheck)",

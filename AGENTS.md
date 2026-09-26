@@ -10,12 +10,12 @@ Itera は、仕事・研究・学習・生活など複数の領域を並行す�
 | --- | --- |
 | `docs/domain/domain-model.md`（v0.2 Final） | 意味・状態・用語。Entity、状態遷移、41 の不変条件、シナリオ |
 | `docs/requirements/prd.md`（v0.2） | 何を成立させるか。原則、コア体験、MVP 完了条件、対象外、未決事項 |
-| `DESIGN.md`（v0.1） | 見た目と部品。トークン、部品の状態、禁止事項、レイアウト、文言のトーン |
+| `DESIGN.md`（v0.2） | 見た目と部品。公式の DESIGN.md spec（YAML のトークン＋ 8 セクション）。画面のパターン・Agent UI・文言・アクセシビリティは `docs/design/` |
 | UI v0.1 モック（PDF、ローカルのみ） | 情報構造と主要フローの当たり付け。見た目の細部は決めない |
 
 - **意味・状態・用語・画面の操作の種類**はドメインモデル → PRD の順に従う。**見た目・部品・トークン・レイアウト**は DESIGN.md に従う。
-- DESIGN.md v0.1 は PRD v0.2 / ドメインモデル v0.2 Final より古く、用語と操作の意味が食い違っている。既知の食い違いと実装での読み替えは `docs/design/design-md-v0.1-gaps.md` にまとめた（UI の作業前に読む）。特に、DESIGN.md の **Domain** はモデルの **Area**（コードは `Area`、画面の語は「領域」、`domain-*` トークンはそのまま）。
-- 一覧にない食い違いは、画面やコードで辻褄を合わせない。どの文書を更新するかをユーザーに確認し、一覧に追加する（PRD §15 の方針を DESIGN.md にも当てはめる）。
+- 領域の概念は **Area** だけ（コードは `Area`、画面の語は「領域」、色トークンは `area-1`〜`area-7` / `area-none`）。「Domain」という語は使わない。
+- 文書どうしの食い違いを見つけたら、画面やコードで辻褄を合わせない。どの文書を更新するかをユーザーに確認する（PRD §15 の方針を DESIGN.md と `docs/design/` にも当てはめる）。
 
 ## 進め方
 
@@ -56,6 +56,7 @@ PRD §14 の「Frontend 実装を止めない未決定事項」3 件（＝ドメ
 - `pnpm lint`（ESLint と React ファイル名の kebab-case）
 - `pnpm typecheck`
 - `pnpm test`（Vitest。パッケージごとの `vitest.config.ts` と `tooling` project）
+- `pnpm design:lint`（DESIGN.md のトークンを公式の linter で検査）
 - `pnpm agent:check`（Skill の整合性）
 
 コミット時には lefthook がステージした内容を Prettier / ESLint で検査する。パッケージを足すときの約束（`vitest.config.ts` と `typecheck` script を置く、ESLint の設定はルートにだけ書く）とツールの版の決定は `docs/architecture/adr/0001-monorepo-foundation.md`。
@@ -66,7 +67,7 @@ PRD §14 の「Frontend 実装を止めない未決定事項」3 件（＝ドメ
 
 - Skill の正本は `.agents/skills/`（`.claude/skills` はそこへのシンボリックリンク）。上流由来の Skill は `tooling/agents/sources.json` にハッシュを記録しており、`pnpm agent:check` で改変を検出する。直接編集しない。
 - CLI は共有コマンドで実行する：`pnpm agent:playwright`、`pnpm agent:shadcn <command> --cwd apps/web`、`pnpm agent:impeccable`。Skill 内の `npx ...@latest` は使わずに読み替える（shadcn Skill の文脈は `pnpm agent:shadcn info --json --cwd apps/web` で取る）。
-- Impeccable の製品文脈は `PRODUCT.md`（PRD の要約）、デザインは `DESIGN.md`。`init`・`document`・build 後の documenter 手順で PRODUCT.md・DESIGN.md・`.impeccable/design.json` を書き出さない。DESIGN.md の変更は Issue で扱う。
+- Impeccable の製品文脈は `PRODUCT.md`（PRD の要約）、デザインは `DESIGN.md`（spec 形式なので Impeccable がそのまま読める）。`init`・`document`・build 後の documenter 手順で PRODUCT.md・DESIGN.md・`.impeccable/design.json` を書き出さない。DESIGN.md の変更は Issue で扱う。
 - DADS / Apple HIG を参照するときは `design-references` Skill を使い、記憶で引用しない。
 - 要望の Issue 化、Issue の実装、独立した受け入れ、再開には `issue-harness` Skill を使う。
 
