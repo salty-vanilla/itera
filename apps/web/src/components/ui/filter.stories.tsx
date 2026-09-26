@@ -97,6 +97,7 @@ const states = ['default', 'hover', 'focus', 'hover-focus'] as const;
 /**
  * DESIGN.md「共通の状態」で Filter に必須の状態。Hover・Focus は
  * storybook-addon-pseudo-states で強制表示している。Disabled は 0件のとき。
+ * 選択中の Filter は 0件になっても外せるよう、disabled にしない。
  */
 export const States: Story = {
   parameters: {
@@ -119,7 +120,7 @@ export const States: Story = {
               </th>
             ))}
             <th scope="col" className="px-3 py-2">
-              disabled（0件）
+              0件
             </th>
           </tr>
         </thead>

@@ -54,3 +54,18 @@ describe('Filter', () => {
     expect(empty.getAttribute('aria-pressed')).toBe('false');
   });
 });
+
+describe('Filter with 0 items', () => {
+  it('stays removable while selected', async () => {
+    let pressed = true;
+    render(
+      <Filter count={0} pressed onPressedChange={(value) => (pressed = value)}>
+        期限超過
+      </Filter>,
+    );
+    const filter = screen.getByRole('button', { name: /^期限超過\s?0件$/ });
+    expect(filter.getAttribute('aria-disabled')).not.toBe('true');
+    await userEvent.click(filter);
+    expect(pressed).toBe(false);
+  });
+});

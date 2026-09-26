@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 // with `border`, a check when selected, an optional Area line symbol, a label
 // and a count. Selected is `here-subtle` with an `ink` outline and the check
 // (never the colour alone), exposed as aria-pressed. A filter with 0 items is
-// disabled. Put related filters in a FilterGroup.
+// disabled, unless it is selected so that it can still be removed. Put related filters in a FilterGroup.
 
 type AreaColor = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 'none';
 
@@ -30,7 +30,10 @@ type FilterProps = Omit<
   children: ReactNode;
   pressed: boolean;
   onPressedChange?: (pressed: boolean) => void;
-  /** Number of items the filter shows. 0 disables the filter. */
+  /**
+   * Number of items the filter shows. 0 disables the filter unless it is
+   * selected: a selected filter always stays removable.
+   */
   count?: number;
   /**
    * Adds the Area line symbol. `name` gives the letter; the filter's label
@@ -51,7 +54,7 @@ function Filter({
   type = 'button',
   ...props
 }: FilterProps) {
-  const isDisabled = disabled || count === 0;
+  const isDisabled = disabled || (count === 0 && !pressed);
   return (
     <ButtonPrimitive
       data-slot="filter"
@@ -70,6 +73,9 @@ function Filter({
         'not-data-disabled:hover:border-ink-muted not-data-disabled:hover:bg-surface-hover',
         'not-data-disabled:active:bg-surface-pressed',
         'not-data-disabled:aria-pressed:border-ink not-data-disabled:aria-pressed:bg-here-subtle',
+        // Hover on a selected filter still shows; the check and the ink
+        // outline keep telling that it is selected.
+        'not-data-disabled:aria-pressed:hover:bg-surface-hover',
         'data-disabled:cursor-not-allowed data-disabled:border-border data-disabled:bg-canvas-subtle data-disabled:text-ink-disabled',
         '[&_svg]:pointer-events-none [&_svg]:size-icon-s [&_svg]:shrink-0 [&_svg]:[stroke-width:var(--icon-stroke-s)]',
         area && 'pl-1',

@@ -28,7 +28,11 @@ type NavigationItem = {
   count?: number;
   /** The item stays focusable and is announced as unavailable. */
   disabled?: boolean;
-  /** Shown in the bottom tab bar. Defaults to true; the bar holds 4 items. */
+  /**
+   * Shown in the bottom tab bar. Defaults to true; the bar holds 4 items.
+   * Under 768px an item left out has no entry here: the screen must offer
+   * another way to reach it.
+   */
   inTabBar?: boolean;
 };
 
@@ -42,7 +46,10 @@ type NavigationProps = {
   /** Accessible name of the landmark. */
   label?: string;
   layout?: NavigationLayout;
+  /** Classes for the sidebar or rail. */
   className?: string | undefined;
+  /** Classes for the bottom tab bar, e.g. to fix it to the bottom. */
+  tabBarClassName?: string | undefined;
 };
 
 type SideLayout = 'responsive' | 'sidebar' | 'rail';
@@ -90,10 +97,11 @@ const itemBase = [
 function Navigation({
   layout = 'responsive',
   className,
+  tabBarClassName,
   ...props
 }: NavigationProps) {
   if (layout === 'tab-bar') {
-    return <NavigationTabBar className={className} {...props} />;
+    return <NavigationTabBar className={tabBarClassName} {...props} />;
   }
   if (layout !== 'responsive') {
     return <NavigationSide layout={layout} className={className} {...props} />;
@@ -101,7 +109,10 @@ function Navigation({
   return (
     <>
       <NavigationSide layout="responsive" className={className} {...props} />
-      <NavigationTabBar className={cn('medium:hidden', className)} {...props} />
+      <NavigationTabBar
+        className={cn('medium:hidden', tabBarClassName)}
+        {...props}
+      />
     </>
   );
 }
@@ -145,7 +156,9 @@ function NavigationSide({
   label = 'メイン',
   layout,
   className,
-}: Omit<NavigationProps, 'layout'> & { layout: SideLayout }) {
+}: Omit<NavigationProps, 'layout' | 'tabBarClassName'> & {
+  layout: SideLayout;
+}) {
   return (
     <nav
       aria-label={label}
@@ -210,7 +223,7 @@ function NavigationTabBar({
   onNavigate,
   label = 'メイン',
   className,
-}: Omit<NavigationProps, 'layout'>) {
+}: Omit<NavigationProps, 'layout' | 'tabBarClassName'>) {
   const tabs = items.filter((item) => item.inTabBar !== false);
   return (
     <nav

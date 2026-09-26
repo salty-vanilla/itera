@@ -626,7 +626,7 @@ compact の原則：
 
 **Tabs** — 同じ場所の表示を切り替える。タブ 40px、ラベルは `button`、選択は `ink` 700 の文字＋`stroke-strong` の下線（色面・Pill にしない）、件数は `ink-subtle`。タブは 5 個まで。段階を進めるフロー（→ Sprint Header）と絞り込み（→ Filter）には使わない。
 
-**Filter** — リストを絞り込むトグル。Pill（28px、`border`）＋選択時のチェック＋任意の Area の路線記号（`area-badge` 20px。記号は読み上げず、ラベルの Area 名を読む）＋ラベル＋件数。Selected は `here-subtle` の地と `ink` の枠、`aria-pressed`。0 件は disabled（フォーカスでき、「0件」を読める）。compact 幅では見た目の 28px を保ったまま当たり判定を 44px にし、折り返した行の間を 16px 空けて当たり判定を重ねない。
+**Filter** — リストを絞り込むトグル。Pill（28px、`border`）＋選択時のチェック＋任意の Area の路線記号（`area-badge` 20px。記号は読み上げず、ラベルの Area 名を読む）＋ラベル＋件数。Selected は `here-subtle` の地と `ink` の枠、`aria-pressed`。0 件は disabled（フォーカスでき、「0件」を読める）。ただし選択中の Filter は 0 件になっても外せるよう disabled にしない。compact 幅では見た目の 28px を保ったまま当たり判定を 44px にし、折り返した行の間を 16px 空けて当たり判定を重ねない。
 
 **Sprint Header** — Sprint の画面の見出し。Status Tag、タイトル（`display-l`「Sprint 14」）、期間（`body` `ink-muted`）、右に操作（Primary は 1 つ）、段階表示（路線図のように段階を線でつなぎ、番号付きの駅として並べる。`nav`＋`ol`、現在の段階は `here` の印＋「現在」、`aria-current="step"`）。段階表示は目安で、どの段階にも戻れる。
 - Planning：選ぶ / 整える / 確かめる（PRD §5.B の Pick / Shape / Check）
