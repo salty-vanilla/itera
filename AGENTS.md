@@ -58,7 +58,7 @@ PRD §14 の「Frontend 実装を止めない未決定事項」3 件（＝ドメ
 - `pnpm test`（Vitest。パッケージごとの `vitest.config.ts` と `tooling` project）
 - `pnpm agent:check`（Skill の整合性）
 
-コミット時には lefthook がステージした内容を Prettier / ESLint で検査する。ツールと版の決定は `docs/architecture/adr/`。
+コミット時には lefthook がステージした内容を Prettier / ESLint で検査する。パッケージを足すときの約束（`vitest.config.ts` と `typecheck` script を置く、ESLint の設定はルートにだけ書く）とツールの版の決定は `docs/architecture/adr/0001-monorepo-foundation.md`。
 
 ## Agent ツール
 

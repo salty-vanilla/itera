@@ -1,5 +1,5 @@
 # Resolve this checkout's runtime even when Git is launched by a GUI.
-lefthook: direnv exec . bash tooling/with-node.sh pnpm exec lefthook
+lefthook: bash tooling/lefthook.sh
 
 pre-commit:
   commands:

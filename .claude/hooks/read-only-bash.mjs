@@ -32,6 +32,7 @@ if (typeof command !== 'string') process.exit(0);
 const DISCARD = /^(\d*>>?\/dev\/null|&>\/dev\/null|\d*>&\d+)$/;
 const commands = [];
 let words = [];
+/** @type {{ text: string, raw: string, redirect?: boolean, glob?: boolean } | null} */
 let word = null;
 let pendingInput = false;
 let pendingRedirect = null;
@@ -71,14 +72,19 @@ const endCommand = () => {
   if (words.length > 0) commands.push(words);
   words = [];
 };
+// Read through a function: TypeScript does not track the closure's writes.
+const rawSoFar = () => word?.raw ?? '';
+/** @returns {{ text: string, raw: string, redirect?: boolean, glob?: boolean }} */
 const append = (text, raw = text) => {
   word ??= { text: '', raw: '' };
   word.text += text;
   word.raw += raw;
+  return word;
 };
 
 for (let i = 0; i < command.length; i += 1) {
-  const char = command[i];
+  const char = command.charAt(i);
+  const next = command.charAt(i + 1);
   if (char === "'") {
     const end = command.indexOf("'", i + 1);
     if (end === -1) block('unterminated quote');
@@ -103,34 +109,29 @@ for (let i = 0; i < command.length; i += 1) {
     append(text, 'Q');
     i = j;
   } else if (char === '\\') {
-    if (i + 1 >= command.length || command[i + 1] === '\n') {
+    if (i + 1 >= command.length || next === '\n') {
       block('line continuation is not allowed');
     }
-    append(command[i + 1], 'E');
+    append(next, 'E');
     i += 1;
   } else if (char === ' ' || char === '\t') {
     endWord();
   } else if (char === '\n' || char === ';') {
     endCommand();
-  } else if (
-    char === '&' &&
-    (command[i + 1] === '>' || word?.raw.endsWith('>'))
-  ) {
+  } else if (char === '&' && (next === '>' || rawSoFar().endsWith('>'))) {
     append(char); // part of &>/dev/null or N>&M
   } else if (char === '|' || char === '&') {
     endCommand();
-    if (command[i + 1] === char) i += 1;
+    if (next === char) i += 1;
   } else if (char === '>') {
-    append(char);
-    word.redirect = true;
+    append(char).redirect = true;
   } else if (char === '<') {
-    if (word !== null || pendingInput || '<('.includes(command[i + 1])) {
+    if (word !== null || pendingInput || (next !== '' && '<('.includes(next))) {
       block('only plain input redirection from a file is allowed');
     }
     pendingInput = true;
   } else if (char === '$') {
-    if (command[i + 1] !== '?')
-      block('variables and substitution are not allowed');
+    if (next !== '?') block('variables and substitution are not allowed');
     append('$?');
     i += 1;
   } else if ('`()#!'.includes(char) || (char === '~' && word === null)) {
@@ -140,10 +141,7 @@ for (let i = 0; i < command.length; i += 1) {
     const close = command.indexOf('}', i);
     const body =
       char === '{' && close !== -1 ? command.slice(i + 1, close) : '';
-    if (
-      word === null &&
-      (command[i + 1] === ' ' || command[i + 1] === undefined)
-    ) {
+    if (word === null && (next === ' ' || next === '')) {
       block('command groups are not allowed');
     }
     if (/,|\.\./.test(body)) block('brace expansion is not allowed');
@@ -151,8 +149,8 @@ for (let i = 0; i < command.length; i += 1) {
   } else if (char === '=' && word === null) {
     block('`=` at the start of a word is not allowed');
   } else {
-    append(char);
-    if ('*?['.includes(char)) word.glob = true;
+    const current = append(char);
+    if ('*?['.includes(char)) current.glob = true;
   }
 }
 endCommand();

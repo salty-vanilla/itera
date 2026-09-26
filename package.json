@@ -21,7 +21,7 @@
     "format:check": "prettier --check .",
     "lint": "node tooling/checks/names.mjs && eslint . --max-warnings 0",
     "typecheck": "tsc -p tsconfig.json && pnpm -r --if-present typecheck",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
     "check": "pnpm agent:check && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
   },
   "devDependencies": {

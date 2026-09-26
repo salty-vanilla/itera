@@ -43,7 +43,7 @@ Node は `.node-version` の 26 系、pnpm は `package.json` の固定版を使
 
 ```sh
 direnv allow .
-bash tooling/setup.sh          # pnpm agent:setup を実行する
+bash tooling/setup.sh          # 依存のインストール、lefthook の導入、pnpm agent:setup
 pnpm agent:doctor
 pnpm agent:browser:install     # 画面を実際に操作して確認する場合
 ```

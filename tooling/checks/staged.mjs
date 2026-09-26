@@ -11,7 +11,15 @@ function git(...args) {
 
 // NUL delimiters preserve spaces, newlines and Git pathspec characters.
 // Read blobs from the index: never stash, rewrite or stage the working tree.
-const paths = git('diff', '--cached', '--name-only', '--diff-filter=ACMR', '-z')
+// The checked content comes from the index; the checkers themselves (this
+// file, names.mjs, eslint.config.js, .prettierrc.json) come from the working tree.
+const paths = git(
+  'diff',
+  '--cached',
+  '--name-only',
+  '--diff-filter=ACMRT',
+  '-z',
+)
   .split('\0')
   .filter(Boolean);
 const entries = new Map(
@@ -24,6 +32,7 @@ const entries = new Map(
     }),
 );
 
+/** @type {import('eslint').ESLint | undefined} */
 let eslint;
 let failed = false;
 let formatted = 0;
@@ -49,7 +58,7 @@ for (const path of paths) {
     try {
       checkReactFileName(path);
     } catch (error) {
-      console.error(error.message);
+      console.error(error instanceof Error ? error.message : error);
       failed = true;
     }
   }
@@ -59,18 +68,23 @@ for (const path of paths) {
   if (format) {
     formatted++;
     try {
-      const options = await prettier.resolveConfig(path);
+      const options = await prettier.resolveConfig(path, {
+        editorconfig: true,
+      });
       if (!(await prettier.check(source, { ...options, filepath: path }))) {
         console.error(`Prettier: ${path}`);
         failed = true;
       }
     } catch (error) {
-      console.error(`Prettier: ${path}: ${error.message}`);
+      console.error(
+        `Prettier: ${path}: ${error instanceof Error ? error.message : error}`,
+      );
       failed = true;
     }
   }
   if (lint) {
     linted++;
+    eslint ??= new (await import('eslint')).ESLint();
     const results = await eslint.lintText(source, { filePath: path });
     if (results.some((result) => result.errorCount || result.warningCount)) {
       const formatter = await eslint.loadFormatter('stylish');
