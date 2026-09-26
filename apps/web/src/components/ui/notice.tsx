@@ -40,8 +40,14 @@ type NoticeProps = {
   title: ReactNode;
   /** What happened and what the person can do next. */
   children?: ReactNode;
-  /** Buttons or a link, e.g. a Quiet 「もう一度読み込む」. */
+  /** Secondary or Quiet sm Buttons, e.g. 「もう一度読み込む」. */
   action?: ReactNode;
+  /**
+   * Set when the Notice appears after the page has loaded (a sync state, a
+   * result that was applied): it is then announced politely with
+   * role="status". danger is always announced.
+   */
+  live?: boolean;
   className?: string;
 };
 
@@ -50,6 +56,7 @@ function Notice({
   title,
   children,
   action,
+  live = false,
   className,
 }: NoticeProps) {
   const { icon, className: iconClassName } = icons[tone];
@@ -57,9 +64,9 @@ function Notice({
     <div
       data-slot="notice"
       data-tone={tone}
-      // Only a failure interrupts the screen reader; the others are read in
-      // page order (DESIGN.md Notice).
-      role={tone === 'danger' ? 'alert' : undefined}
+      // Only a failure interrupts the screen reader (DESIGN.md Notice); a
+      // Notice that appears later is announced politely.
+      role={tone === 'danger' ? 'alert' : live ? 'status' : undefined}
       className={cn(noticeVariants({ tone }), className)}
     >
       {icon && (

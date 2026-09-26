@@ -99,7 +99,11 @@ function ToastList() {
           )}
           {/* compact buttons are 44px: the first line sits at their middle. */}
           <div className="flex min-w-0 grow flex-col pt-4 pb-2 medium:pt-2">
-            <ToastPrimitive.Title className="text-body text-ink" />
+            {/* A sentence, not a heading of the page. */}
+            <ToastPrimitive.Title
+              render={<p />}
+              className="text-body text-ink"
+            />
             {toast.description !== undefined && (
               <ToastPrimitive.Description className="text-help text-ink-muted" />
             )}
@@ -141,6 +145,9 @@ function useToast() {
           title,
           description,
           priority: tone === 'danger' ? 'high' : 'low',
+          // A failure stays until it is closed, so that 「再試行」 does not
+          // disappear with it (DESIGN.md common states › Error).
+          timeout: tone === 'danger' ? 0 : TOAST_TIMEOUT,
           actionProps: action && {
             children: action.label,
             onClick: () => {

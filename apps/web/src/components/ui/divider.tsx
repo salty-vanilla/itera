@@ -24,12 +24,19 @@ const dividerVariants = cva(
 
 type DividerProps = Omit<SeparatorPrimitive.Props, 'className' | 'render'> &
   VariantProps<typeof dividerVariants> & {
+    /**
+     * Hides it from assistive technology. Use it between rows of a list,
+     * where the list already groups the rows and a separator on every row
+     * would only be noise.
+     */
+    decorative?: boolean;
     className?: string;
   };
 
 function Divider({
   variant,
   orientation = 'horizontal',
+  decorative = false,
   className,
   ...props
 }: DividerProps) {
@@ -37,6 +44,8 @@ function Divider({
     <SeparatorPrimitive
       data-slot="divider"
       orientation={orientation}
+      // Only when decorative: an undefined role would drop Base UI's own.
+      {...(decorative && { role: 'none', 'aria-orientation': undefined })}
       className={cn(dividerVariants({ variant }), className)}
       {...props}
     />

@@ -50,5 +50,5 @@
 - 完了：サークルが塗られる（`duration-fast`）。紙吹雪・チェックの跳ねなどの祝福の演出を作らない。
 - Drawer は `duration-slow` で 16px スライドする。
 - Loading：300ms 未満で終わる処理にはスピナーを出さない。スピナーは必ず文言と一緒に（「見積中」「保存中…」）。
-- indeterminate の Progress は線を滑らせず、不透明度の明滅（40% ↔ 100%）で示す。
+- indeterminate の Progress は線を滑らせず、不透明度の明滅（40% ↔ 100%）で示す。reduced motion では線を隠す（全幅で止まると完了に見えるため）。
 - `prefers-reduced-motion: reduce` では、すべての transition / animation を 0ms にする。indeterminate の Progress は静止し、文言で状態を伝える。

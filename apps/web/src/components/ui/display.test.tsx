@@ -41,6 +41,9 @@ describe('Tag', () => {
   it('shows a label without an icon', () => {
     const { container } = render(<Tag>輪読</Tag>);
     expect(container.querySelector('svg')).toBeNull();
+    const tag = container.querySelector('[data-slot="tag"]');
+    expect(tag?.getAttribute('data-tone')).toBe('label');
+    expect(tag?.getAttribute('title')).toBe('輪読');
   });
 });
 
@@ -59,6 +62,13 @@ describe('Divider', () => {
   });
 });
 
+describe('Divider decorative', () => {
+  it('is hidden between rows of a list', () => {
+    render(<Divider variant="soft" decorative />);
+    expect(screen.queryByRole('separator')).toBeNull();
+  });
+});
+
 describe('Spinner', () => {
   it('announces its words as a status', () => {
     render(<Spinner label="見積中" />);
@@ -72,7 +82,7 @@ describe('Progress', () => {
     const bar = screen.getByRole('progressbar', { name: '完了' });
     expect(bar.getAttribute('aria-valuenow')).toBe('7');
     expect(bar.getAttribute('aria-valuemax')).toBe('18');
-    expect(bar.getAttribute('aria-valuetext')).toBe('7 / 18件');
+    expect(bar.getAttribute('aria-valuetext')).toBe('18件中 7件');
     expect(bar.textContent).toContain('7 / 18件');
   });
 
@@ -85,6 +95,11 @@ describe('Progress', () => {
 });
 
 describe('Notice', () => {
+  it('announces a later Notice politely when live', () => {
+    render(<Notice tone="done" title="反映しました" live />);
+    expect(screen.getByRole('status').textContent).toContain('反映しました');
+  });
+
   it('uses role="alert" for danger only', () => {
     render(
       <>

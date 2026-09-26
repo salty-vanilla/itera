@@ -68,7 +68,7 @@ export const InAList: Story = {
           <ul>
             {(tasks as string[]).map((task, index) => (
               <li key={task}>
-                {index > 0 && <Divider variant="soft" />}
+                {index > 0 && <Divider variant="soft" decorative />}
                 <div className="flex h-row-task items-center px-3 text-task">
                   {task}
                 </div>

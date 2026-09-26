@@ -78,6 +78,18 @@ describe('Toast', () => {
     expect(visibleToasts()).toHaveLength(1);
   });
 
+  it('keeps a danger Toast until it is closed', async () => {
+    vi.useFakeTimers();
+    render(
+      <ToastProvider>
+        <Trigger options={{ tone: 'danger', title: '保存できませんでした' }} />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: '出す' }));
+    await act(() => vi.advanceTimersByTimeAsync(TOAST_TIMEOUT * 2));
+    expect(visibleToasts()).toHaveLength(1);
+  });
+
   it('shows three at a time at most', async () => {
     const { show } = setup({ title: '3件を今週に入れました' });
     for (let i = 0; i < 4; i++) await show();

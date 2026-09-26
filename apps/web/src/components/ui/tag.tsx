@@ -12,16 +12,18 @@ import { Icon, semanticIcons } from './icon';
 // danger is for an overdue deadline only. Carry-overs, deferrals, 「できなかった」
 // and a possible overrun are never danger (DESIGN.md Colors).
 const tagVariants = cva(
-  'inline-flex h-5 shrink-0 items-center gap-1 rounded-full border px-2 text-meta whitespace-nowrap',
+  // A label the person typed can be long: it is cut at 12em and the full text
+  // is in the title (accessibility.md: nothing is lost at 320px).
+  'inline-flex h-5 max-w-[12em] shrink-0 items-center gap-1 rounded-full border px-2 text-meta whitespace-nowrap',
   {
     variants: {
       tone: {
         // A person's own label: outline only, no icon.
         label: 'border-border bg-transparent text-ink',
         // 一部できた・できなかった・判断しない・同期中・次の Sprint で試す.
-        neutral: 'border-transparent bg-canvas-subtle text-ink-muted',
+        neutral: 'border-border-soft bg-canvas-subtle text-ink-muted',
         // できた・保存済み. Success has no color of its own: ink and the icon.
-        done: 'border-transparent bg-canvas-subtle text-ink',
+        done: 'border-border-soft bg-canvas-subtle text-ink',
         // 超過の可能性.
         warning: 'border-transparent bg-warning-subtle text-warning',
         // 期限超過.
@@ -63,19 +65,17 @@ type TagProps = {
 
 function Tag({ tone = 'neutral', icon, children, className }: TagProps) {
   const statusIcon = tone === 'neutral' ? icon : statusIcons[tone];
+  const variant =
+    tone === 'neutral' && statusIcon === undefined ? 'label' : tone;
   return (
     <span
       data-slot="tag"
-      data-tone={tone}
-      className={cn(
-        tagVariants({
-          tone: tone === 'neutral' && statusIcon === undefined ? 'label' : tone,
-        }),
-        className,
-      )}
+      data-tone={variant}
+      title={typeof children === 'string' ? children : undefined}
+      className={cn(tagVariants({ tone: variant }), className)}
     >
       {statusIcon && <Icon icon={statusIcon} size="xs" />}
-      {children}
+      <span className="truncate">{children}</span>
     </span>
   );
 }

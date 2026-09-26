@@ -291,6 +291,26 @@
       border-color: GrayText;
       color: GrayText;
     }
+    /*
+     * Lines drawn with a background color disappear when backgrounds become
+     * Canvas: Divider, the Progress fill and track, and the Notice surface.
+     */
+    [data-slot='divider'],
+    [data-slot='divider-label'] > [aria-hidden] {
+      forced-color-adjust: none;
+      background-color: CanvasText;
+    }
+    /* An outline takes no room, so the 2px thin track keeps its inside. */
+    [data-slot='progress-track'] {
+      outline: var(--stroke-hairline) solid CanvasText;
+    }
+    [data-slot='progress-indicator'] {
+      forced-color-adjust: none;
+      background-color: CanvasText;
+    }
+    [data-slot='notice'] {
+      border: var(--stroke-hairline) solid CanvasText;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
