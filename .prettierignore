@@ -13,6 +13,7 @@ tooling/agents/pnpm-lock.yaml
 node_modules/
 **/dist/
 **/build/
+**/storybook-static/
 .tools/
 playwright-report/
 test-results/

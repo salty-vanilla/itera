@@ -1,0 +1,138 @@
+/*
+ * Design tokens copied from DESIGN.md.
+ *
+ * - Colors come from the YAML front matter: the light value here, the `-dark`
+ *   value under [data-theme="dark"]. tokens.test.ts compares both with the YAML.
+ * - Elevation, layers, strokes and motion are defined in the DESIGN.md body
+ *   (Elevation & Depth, Shapes) and docs/design/foundations.md, not in the YAML.
+ * - Reference tokens (link, proposal-border) are repeated in the dark block so
+ *   that a subtree with data-theme="dark" resolves them against dark values.
+ *
+ * Tailwind reads these through @theme inline in globals.css.
+ */
+
+:root {
+  color-scheme: light;
+
+  --canvas: #ffffff;
+  --canvas-subtle: #f6f6f4;
+  --surface: #ffffff;
+  --surface-hover: #efefec;
+  --surface-pressed: #e6e6e2;
+  --surface-inverse: #2b2b29;
+  --ink: #2b2b29;
+  --ink-muted: #5b5b56;
+  --ink-subtle: #6a6a64;
+  --ink-disabled: #a8a8a2;
+  --ink-inverse: #ffffff;
+  --border: #dcdcd7;
+  --border-soft: #ebebe7;
+  --border-strong: #8a8a84;
+  --primary: #2a4a6e;
+  --primary-hover: #223d5b;
+  --primary-active: #1b3149;
+  --primary-subtle: #edf1f6;
+  --on-primary: #ffffff;
+  --link: var(--primary);
+  --focus: #3269b0;
+  --success: #2d6a45;
+  --success-subtle: #ebf3ed;
+  --warning: #855800;
+  --warning-subtle: #faf2de;
+  --danger: #b02a22;
+  --danger-hover: #962219;
+  --danger-active: #7d1c15;
+  --danger-subtle: #fbeceb;
+  --on-danger: #ffffff;
+  --info: #2f5f94;
+  --info-subtle: #ecf2f8;
+  --area-1: #a45f36;
+  --area-2: #2d7773;
+  --area-3: #7b5a8e;
+  --area-4: #687a2c;
+  --area-5: #a8526a;
+  --area-6: #5a6d88;
+  --area-7: #7a6a58;
+  --area-none: #8a8a84;
+  --proposal-border: var(--border-strong);
+  --scrim: #1f1f1d52;
+
+  /* Elevation & Depth */
+  --elevation-overlay: 0 1px 2px #1f1f1d14, 0 6px 16px #1f1f1d14;
+  --elevation-modal: 0 2px 6px #1f1f1d14, 0 16px 40px #1f1f1d24;
+  --elevation-drag: 0 2px 8px #1f1f1d24;
+
+  /* Stacking order (Elevation & Depth). Use as z-(--layer-dialog). */
+  --layer-sticky: 10;
+  --layer-drawer: 30;
+  --layer-popover: 40;
+  --layer-dialog: 50;
+  --layer-toast: 60;
+  --layer-tooltip: 70;
+
+  /* Shapes: lines */
+  --stroke-hairline: 1px;
+  --stroke-strong: 2px;
+
+  /* docs/design/foundations.md: icon stroke per size */
+  --icon-stroke-s: 1.75;
+  --icon-stroke-m: 1.5;
+
+  /* docs/design/foundations.md: motion. Use as duration-(--duration-fast). */
+  --duration-fast: 100ms;
+  --duration-base: 160ms;
+  --duration-slow: 240ms;
+  --duration-toast: 8000ms;
+  --tooltip-delay: 400ms;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --canvas: #1b1b1a;
+  --canvas-subtle: #222221;
+  --surface: #262625;
+  --surface-hover: #2f2f2d;
+  --surface-pressed: #383835;
+  --surface-inverse: #e9e9e4;
+  --ink: #ebebe6;
+  --ink-muted: #b8b8b1;
+  --ink-subtle: #a0a099;
+  --ink-disabled: #696964;
+  --ink-inverse: #1b1b1a;
+  --border: #3b3b38;
+  --border-soft: #2f2f2d;
+  --border-strong: #7d7d77;
+  --primary: #a3bfe2;
+  --primary-hover: #b7cdea;
+  --primary-active: #cad9ef;
+  --primary-subtle: #233142;
+  --on-primary: #14202d;
+  --link: var(--primary);
+  --focus: #82b3f0;
+  --success: #82c79a;
+  --success-subtle: #1e2e24;
+  --warning: #e3b95e;
+  --warning-subtle: #322916;
+  --danger: #f2918a;
+  --danger-hover: #f5a7a1;
+  --danger-active: #f8bdb8;
+  --danger-subtle: #3a2321;
+  --on-danger: #1b1b1a;
+  --info: #94b9e6;
+  --info-subtle: #1f2b3a;
+  --area-1: #d69b74;
+  --area-2: #6dbcb6;
+  --area-3: #bd9dcd;
+  --area-4: #abba6c;
+  --area-5: #dc8fa3;
+  --area-6: #9dafc6;
+  --area-7: #b5a48f;
+  --area-none: #8f8f89;
+  --proposal-border: var(--border-strong);
+  --scrim: #000000a3;
+
+  --elevation-overlay: 0 1px 2px #00000066, 0 6px 16px #00000066;
+  --elevation-modal: 0 2px 6px #00000080, 0 16px 40px #00000099;
+  --elevation-drag: 0 2px 8px #000000a3;
+}

@@ -30,6 +30,8 @@
     "@google/design.md": "0.4.0",
     "@types/node": "26.6.3",
     "eslint": "10.11.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-storybook": "10.6.0",
     "globals": "17.12.0",
     "lefthook": "2.1.14",
     "prettier": "3.9.9",

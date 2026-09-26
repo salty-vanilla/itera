@@ -32,6 +32,8 @@ colors:
   warning: "#855800"
   warning-subtle: "#faf2de"
   danger: "#b02a22"
+  danger-hover: "#962219"
+  danger-active: "#7d1c15"
   danger-subtle: "#fbeceb"
   on-danger: "#ffffff"
   info: "#2f5f94"
@@ -71,6 +73,8 @@ colors:
   warning-dark: "#e3b95e"
   warning-subtle-dark: "#322916"
   danger-dark: "#f2918a"
+  danger-hover-dark: "#f5a7a1"
+  danger-active-dark: "#f8bdb8"
   danger-subtle-dark: "#3a2321"
   on-danger-dark: "#1b1b1a"
   info-dark: "#94b9e6"
@@ -359,7 +363,7 @@ Area（領域）はユーザーが作る。色は面ではなく **印** とし�
 ### コントラスト
 
 - 文字のトークン（`ink` `ink-muted` `ink-subtle` `primary` `success` `warning` `danger` `info`）は light / dark とも `canvas` `canvas-subtle` `surface` `surface-hover` `primary-subtle` の上で 4.5:1 以上。Semantic は各 `*-subtle` の上でも 4.5:1 以上。
-- `on-primary` は `primary` / `primary-hover` / `primary-active` の上で 4.5:1 以上。
+- `on-primary` は `primary` / `primary-hover` / `primary-active` の上で、`on-danger` は `danger` / `danger-hover` / `danger-active` の上で 4.5:1 以上。
 - `border-strong` `focus` `primary` `area-*` は上の地で 3:1 以上。
 - 実測の例：`ink` は light の `canvas` 上で 14.2:1、`ink-subtle` は light の `canvas-subtle` 上で 5.0:1、`primary` を文字に使うと `canvas` 上で 9.1:1。
 - `focus` は選択（`primary-subtle`）と見分けられるよう、`primary` より明るい青にしている。
@@ -406,7 +410,7 @@ Area（領域）はユーザーが作る。色は面ではなく **印** とし�
 - `font-feature-settings: "palt"` を使わない。素のメトリクスで組む。
 - 数値は tabular-nums。時間・件数・日付が並ぶ列は右揃え。
 - 明朝の本文は 1 行 38 字程度（`measure-read`）まで。Task タイトルは 1 行で省略し、詳細で全文を読める。
-- 本文は `line-break: strict`、`overflow-wrap: anywhere`。
+- 本文は `line-break: strict`、`overflow-wrap: anywhere`。`anywhere` は表のセルや flex の子の最小幅も 1 文字まで縮めるので、段落（説明文・Goal・振り返り）にだけ付け、画面全体の既定は `break-word` にする。
 - **明朝 = 本人が確定した考え。** 編集中の Goal と未確定の Agent 提案は Sans。保存すると明朝で清書する。
 - ○ Sprint Header「Sprint 14」＝明朝 32、期間「9/28 (月) – 10/4 (日)」＝Sans 14 muted。× Button や Estimate・Capacity の数字を明朝にする。
 
@@ -554,11 +558,14 @@ compact の原則：
 **Button** — 既定は Secondary。Primary は 1 画面に 1 つ。
 - 36px、`rounded.sm`、1px 枠、ラベルは `button`（Sans 14/20 500）で動詞で終える（「Sprint を確定」「差分を確認」）。先頭・末尾に 16px アイコン（任意）。
 - Variant：primary（塗り `primary`、文字 `on-primary`）/ secondary（`surface`＋`border-strong`）/ quiet（枠なし。キャンセル、編集して採用、却下）/ danger（`danger` の枠と文字。アーカイブの入口）/ danger-solid（破壊的操作の確認 Dialog の実行ボタンだけ）。サイズ sm 28 / md 36 / lg 44px（compact は lg）。
-- Loading は先頭にスピナー、ラベルを「確定中…」に、幅は保つ。
+- Hover / Active：secondary と danger は `surface-hover` / `surface-pressed`（secondary は輪郭も `ink-muted`）、quiet は枠なしのまま `surface-hover` / `surface-pressed`、danger-solid は `danger-hover` / `danger-active`。
+- Disabled は共通の状態どおり（quiet だけは地と枠を付けず、文字を `ink-disabled` にする）。無効にしてもフォーカスでき、近くに書いた理由を読み上げられる。
+- Loading は先頭にスピナー、ラベルを「確定中…」に、幅は保つ。Loading 中は押しても反応しないが、Disabled の見た目にはしない。
 - Primary は右端、Secondary / Quiet はその左。画面の移動にはリンクを使う。× Pill、影、グラデーション、「OK」「はい」、アイコンだけの Button（→ IconButton）。
 
 **IconButton** — アイコンだけの操作。ラベル必須で、hover / focus で Tooltip に出す。
-- 36px または 28px の正方形、`rounded.sm`、アイコン 20 / 16px `ink-muted`。Variant：quiet（既定）/ secondary / pressed（`primary-subtle`＋`primary`）。
+- 36px または 28px の正方形、`rounded.sm`、アイコン 20 / 16px `ink-muted`。Variant：quiet（既定）/ secondary / pressed（`primary-subtle` の地＋`primary` の 1px 枠とアイコン。地の差だけでは見分けにくいので枠を付ける。`aria-pressed`）。compact は 44px。
+- Disabled は共通の状態どおり（quiet は Button と同じく地と枠を付けない）。Loading はアイコンをスピナーに替え、名前と Tooltip を「保存中…」などにする。
 - 意味が広く共有されたアイコン（閉じる、…、編集、検索）だけ。同じ行に 3 つ以上並べず Menu にまとめる。
 
 **Menu** — 行やヘッダーの補助操作のドロップダウン。トリガーは `…` の IconButton か、Secondary の Button（「並び順: 期限 ⌄」）。
