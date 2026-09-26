@@ -43,7 +43,7 @@ export const Tones: Story = {
       </dd>
       <dt className="text-label text-ink-muted">danger</dt>
       <dd className="flex gap-2">
-        <Tag tone="danger">期限超過</Tag>
+        <Tag tone="danger">同期エラー</Tag>
       </dd>
       <dt className="text-label text-ink-muted">draft</dt>
       <dd className="flex gap-2">
@@ -59,28 +59,22 @@ export const Tones: Story = {
 };
 
 /**
- * danger は期限超過だけ。Goal の自己判定「できなかった」・持ち越し・見送りは
- * danger にも warning にもしない（DESIGN.md Colors）。持ち越し・繰り返し・期限・
- * Estimate・Area は Tag にせず、Task Metadata の文字で示す。1 行に 3 つ以上並べない。
+ * danger は保存・同期の失敗だけ。期限超過は Tag にせず、Task Metadata の文字
+ * （circle-alert＋「2日超過」）で示す。Goal の自己判定「できなかった」・持ち越し・
+ * 見送りは danger にも warning にもしない（DESIGN.md Colors）。自己判定の
+ * アイコンは Retro の最初の実装 Issue で決めるので、ここには例を置かない。
+ * 持ち越し・繰り返し・期限・Estimate・Area は Tag にしない。1 行に 3 つ以上並べない。
  */
-export const SelfAssessment: Story = {
+export const InARow: Story = {
   render: () => (
-    <ul className="flex flex-col gap-3">
-      {[
-        ['論文の関連研究を読み終える', <Tag tone="done">できた</Tag>],
-        ['実験環境を整える', <Tag icon={Info}>一部できた</Tag>],
-        ['英語の発表練習を 3 回する', <Tag icon={Info}>できなかった</Tag>],
-        ['部屋を片付ける', <Tag icon={Info}>判断しない</Tag>],
-      ].map(([goal, tag]) => (
-        <li
-          key={goal as string}
-          className="flex items-center justify-between gap-4 border-b border-border-soft pb-3"
-          style={{ maxWidth: '28em' }}
-        >
-          <span className="text-body">{goal}</span>
-          {tag}
-        </li>
-      ))}
-    </ul>
+    <div
+      className="flex items-center justify-between gap-4 border-b border-border-soft pb-3"
+      style={{ maxWidth: '28em' }}
+    >
+      <span className="text-body">Sprint 14</span>
+      <span className="flex gap-2">
+        <Tag icon={Info}>同期中</Tag>
+      </span>
+    </div>
   ),
 };

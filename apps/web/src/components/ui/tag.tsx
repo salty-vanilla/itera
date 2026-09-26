@@ -9,7 +9,8 @@ import { Icon, semanticIcons } from './icon';
 // never more than two in a row. Deadlines, Estimates, carry-overs, recurrence
 // and Areas are not Tags (they are Task Metadata text).
 //
-// danger is for an overdue deadline only. Carry-overs, deferrals, 「できなかった」
+// danger is for a failure to save or sync (「同期エラー」). An overdue
+// deadline is Task Metadata text, not a Tag. Carry-overs, deferrals, 「できなかった」
 // and a possible overrun are never danger (DESIGN.md Colors).
 const tagVariants = cva(
   // A label the person typed can be long: it is cut at 12em and the full text
@@ -26,7 +27,7 @@ const tagVariants = cva(
         done: 'border-border-soft bg-canvas-subtle text-ink',
         // 超過の可能性.
         warning: 'border-transparent bg-warning-subtle text-warning',
-        // 期限超過.
+        // 同期エラー: a failure to save or sync.
         danger: 'border-transparent bg-danger-subtle text-danger',
         // 計画中 · 未確定: dashed, as every undecided value.
         draft:

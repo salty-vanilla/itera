@@ -506,7 +506,7 @@ compact の原則：
 | トークン | 値 | 使う場所 |
 | --- | --- | --- |
 | `stroke-hairline` | 1px | すべての罫、枠、行区切り、Agent 提案の破線 |
-| `stroke-strong` | 2px | フォーカスリング、選択中タブの下線、可用時間マーカー、編集的なセクション罫 |
+| `stroke-strong` | 2px | フォーカスリング、選択中タブの下線、可用時間マーカー |
 
 - 構造の罫 = `border`、リスト内 = `border-soft`、操作部品 = `border-strong`、考える領域のセクション上端 = `ink` 1px（1 画面に 1〜2 本）。
 - **実線 = 確定、破線 = 未確定（Agent 提案・下書き）。** 破線を装飾や読み取り専用に使わない。確定した計画値は幅があっても実線。
@@ -591,7 +591,7 @@ compact の原則：
 
 **Tag** — Status（Sprint の状態、Goal の自己判定）と本人のラベルだけに使う小さな Pill。
 - 20px、`rounded.full`、Status はアイコン必須、語は 1〜2 語（本人のラベルは 12em で省略し、全文を title で読める）。Variant：neutral / done（墨の文字＋`circle-check`）/ warning（`triangle-alert`）/ danger（`circle-alert`）/ draft（破線＋`circle-dashed`。「計画中 · 未確定」）。neutral の Status は意味に合うアイコンを画面側で選ぶ（同期中・次の Sprint で試すは `info`）。アイコンのない neutral は本人のラベルで、`border` の輪郭だけにする。
-- tone の使い分け：neutral = 本人のラベル・一部できた・できなかった・判断しない・同期中・次の Sprint で試す、done = できた・保存済み、warning = 超過の可能性、danger = 期限超過、draft = 未確定。
+- tone の使い分け：neutral = 本人のラベル・一部できた・できなかった・判断しない・同期中・次の Sprint で試す、done = できた・保存済み、warning = 超過の可能性、danger = 同期エラーなど保存・同期の失敗、draft = 未確定。期限超過は Tag にせず、Task Metadata の文字（`circle-alert`＋「2日超過」）で示す。Goal の自己判定（一部できた・できなかった・判断しない）のアイコンは Retro の最初の実装 Issue で決める。
 - 期限・Estimate・持ち越し・繰り返し・Area を Tag にしない（→ Task Metadata の文字）。1 行に 3 つ以上並べない。
 
 **Divider** — Card の代わりにグループを区切る、構造の主役。default（`border`）/ soft（`border-soft`、リスト内）/ rule（`ink` 1px、考える領域の上端、1 画面に 1〜2 本）/ label（ラベル付き。グループ見出し）。× 2px 以上の太い罫、二重線、点線。

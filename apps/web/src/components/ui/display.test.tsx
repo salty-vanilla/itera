@@ -28,7 +28,7 @@ describe('Tag', () => {
       <>
         <Tag tone="done">できた</Tag>
         <Tag tone="warning">超過の可能性</Tag>
-        <Tag tone="danger">期限超過</Tag>
+        <Tag tone="danger">同期エラー</Tag>
         <Tag tone="draft">計画中 · 未確定</Tag>
         <Tag icon={Info}>同期中</Tag>
       </>,
