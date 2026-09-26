@@ -127,6 +127,7 @@
   --spacing-control-lg: 44px;
   --spacing-row-task: 40px;
   --spacing-row-touch: 48px;
+  --spacing-row-menu: 32px;
   --spacing-target-min: 24px;
   --spacing-target-touch: 44px;
   --spacing-icon-s: 16px;
@@ -137,6 +138,10 @@
   --spacing-pane-list: 384px;
   --spacing-pane-side: 336px;
   --spacing-drawer: 400px;
+  --spacing-popover: 320px;
+  --spacing-dialog-sm: 440px;
+  --spacing-dialog-md: 560px;
+  --spacing-dialog-lg: 720px;
   --container-measure-read: 38em;
 
   /* Responsive: medium 768px–, wide 1200px–, nav 1440px– */

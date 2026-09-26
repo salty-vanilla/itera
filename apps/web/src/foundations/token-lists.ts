@@ -164,6 +164,7 @@ export const dimensions = [
   'control-lg',
   'row-task',
   'row-touch',
+  'row-menu',
   'target-min',
   'target-touch',
   'icon-s',
@@ -174,4 +175,8 @@ export const dimensions = [
   'pane-list',
   'pane-side',
   'drawer',
+  'popover',
+  'dialog-sm',
+  'dialog-md',
+  'dialog-lg',
 ] as const;
