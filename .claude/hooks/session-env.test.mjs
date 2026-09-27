@@ -72,6 +72,30 @@ describe('session-env.sh', () => {
     expect(result.appended).toContain(`${bin}/pinned`);
   });
 
+  it('appends the full exports even when direnv state is inherited', () => {
+    // Real direnv prints nothing when DIRENV_DIFF says the .envrc is loaded.
+    tool('direnv', '[ -n "$DIRENV_DIFF" ] || echo "export ITERA_TEST=1"');
+    tool('node', 'echo v26.8.1');
+
+    const result = run({ DIRENV_DIR: `-${dir}`, DIRENV_DIFF: 'loaded' });
+    expect(result).toMatchObject({ status: 0, message: '' });
+    expect(result.appended).toContain('ITERA_TEST');
+  });
+
+  it('reports a pnpm other than the pinned version', () => {
+    writeFileSync(
+      join(dir, 'package.json'),
+      '{ "packageManager": "pnpm@10.32.1" }\n',
+    );
+    tool('direnv', 'echo "export ITERA_TEST=1"');
+    tool('node', 'echo v26.8.1');
+    tool('pnpm', 'echo 9.0.0');
+
+    const result = run();
+    expect(result.status).toBe(0);
+    expect(result.message).toContain('pnpm 9.0.0');
+  });
+
   it('reports a Node outside the pinned series without blocking', () => {
     tool('direnv', 'echo "export ITERA_TEST=1"');
     tool('node', 'echo v24.14.0');

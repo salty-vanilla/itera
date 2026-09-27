@@ -15,7 +15,7 @@
 | `.agents/skills/` | Skill の正本。`.claude/skills` はここへのシンボリックリンク |
 | `tooling/agents/` | Agent 用 CLI（Playwright CLI、shadcn）の固定版と専用 lockfile、Skill の出典台帳 `sources.json` |
 | `.tools/agents/` | checkout ごとに生成するバイナリとキャッシュ。Git 管理外 |
-| `~/Library/Caches/itera/ms-playwright`（Linux は `${XDG_CACHE_HOME:-~/.cache}/itera/ms-playwright`） | Agent 用ブラウザ。このリポジトリのすべての checkout で共有する。`PLAYWRIGHT_BROWSERS_PATH` で置き場を変えられる |
+| `~/Library/Caches/itera/ms-playwright`（Linux は `${XDG_CACHE_HOME:-~/.cache}/itera/ms-playwright`） | Agent 用ブラウザ。このリポジトリのすべての checkout で共有する。`PLAYWRIGHT_BROWSERS_PATH`（絶対パス）で置き場を変えられる |
 | `.playwright/cli.config.json` | Agent 用 Chromium の設定。個人の Chrome プロファイルを使わない |
 
 
@@ -56,7 +56,7 @@ Agent 用ブラウザ（Playwright の Chromium）は、リポジトリ専用の
 
 Orca で worktree を作ると、`orca.yaml` の setup が `tooling/setup.sh` を実行する。`.env.local` と UI v0.1 の PDF は `.worktreeinclude` で複製される。
 
-direnv のシェル hook は対話シェルのプロンプトでしか動かないので、Claude Code の Bash（非対話）には `.envrc` の環境が入らない。`.claude/settings.json` の SessionStart hook（`.claude/hooks/session-env.sh`）が `direnv export bash` の結果を `CLAUDE_ENV_FILE` に書き、以降の Bash が固定版の Node と pnpm を使う。direnv が無い、`.envrc` が未許可、Node が `.node-version` の系列でない場合は、セッションを止めずに理由を表示する。直したら Claude Code のセッションを開き直す。回帰テストは `pnpm agent:hooks:test`。Codex など Claude Code 以外の Agent には、この hook は効かない。
+direnv のシェル hook は対話シェルのプロンプトでしか動かないので、Claude Code の Bash（非対話）には `.envrc` の環境が入らない。`.claude/settings.json` の SessionStart hook（`.claude/hooks/session-env.sh`）が `direnv export bash` の結果を `CLAUDE_ENV_FILE` に書き、以降の Bash が固定版の Node と pnpm を使う。direnv が無い、`.envrc` が未許可、Node が `.node-version` の系列でない、pnpm が `package.json` の固定版でない場合は、セッションを止めずに理由を表示する。直したら Claude Code のセッションを開き直す。回帰テストは `pnpm agent:hooks:test`。Codex など Claude Code 以外の Agent には、この hook は効かない。
 
 ## MCP
 

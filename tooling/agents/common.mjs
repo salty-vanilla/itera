@@ -15,7 +15,7 @@ export const cache = join(root, '.tools', 'agents');
 // downloads without pruning browsers that other projects keep in Playwright's
 // default cache. PLAYWRIGHT_BROWSERS_PATH still overrides it.
 export const browsers =
-  process.env.PLAYWRIGHT_BROWSERS_PATH ??
+  process.env.PLAYWRIGHT_BROWSERS_PATH ||
   join(
     process.platform === 'darwin'
       ? join(homedir(), 'Library', 'Caches')

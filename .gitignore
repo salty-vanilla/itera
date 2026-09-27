@@ -22,7 +22,7 @@ playwright-report/
 test-results/
 .DS_Store
 
-# Per-checkout agent binaries, browsers, harness records and local-only references.
+# Per-checkout agent binaries, harness records and local-only references.
 .tools/
 
 # Agent browser artifacts may include page content and session state.
