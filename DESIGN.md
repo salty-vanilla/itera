@@ -204,6 +204,7 @@ spacing:
   control-lg: 44px
   row-task: 40px
   row-touch: 48px
+  row-menu: 32px
   target-min: 24px
   target-touch: 44px
   icon-s: 16px
@@ -214,6 +215,10 @@ spacing:
   pane-list: 384px
   pane-side: 336px
   drawer: 400px
+  popover: 320px
+  dialog-sm: 440px
+  dialog-md: 560px
+  dialog-lg: 720px
   measure-read: 38em
   bp-medium: 768px
   bp-wide: 1200px
@@ -443,12 +448,15 @@ Area（領域）はユーザーが作る。駅の路線記号のように、色�
 | --- | --- | --- |
 | `control-sm` / `control-md` / `control-lg` | 28 / 36 / 44px | コントロールの高さ（lg は compact 幅と確定ボタン） |
 | `row-task` / `row-touch` | 40 / 48px | Task Row の最小高さ（desktop / compact） |
+| `row-menu` | 32px | Menu の項目の高さ（compact は `control-lg` 44px） |
 | `target-min` / `target-touch` | 24 / 44px | 最小ターゲット（pointer / touch） |
 | `icon-s` / `icon-m` | 16 / 20px | 文字の横 / ボタン・ナビゲーション |
 | `area-badge` | 20px | Area の路線記号の一辺（compact でも同じ。当たり判定は行や Filter が持つ） |
 | `pane-nav` / `pane-rail` | 224 / 64px | ナビゲーション（1440px 以上 / 1200–1439px） |
 | `pane-list` / `pane-side` | 384 / 336px | Planning の Backlog ペイン / 時間の見通しペイン |
 | `drawer` | 400px | 右 Drawer |
+| `popover` | 320px | Popover の幅 |
+| `dialog-sm` / `dialog-md` / `dialog-lg` | 440 / 560 / 720px | Dialog の幅（compact は幅 100% − 32px） |
 
 ### Responsive
 
