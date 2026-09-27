@@ -41,3 +41,9 @@ export function formatTime(at: Instant, timeZone: TimeZone): string {
     hourCycle: 'h23',
   }).format(new Date(at));
 }
+
+/** Whole days from `from` to `to` (negative when `to` is earlier). */
+export function daysBetween(from: LocalDate, to: LocalDate): number {
+  const ms = Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`);
+  return Math.round(ms / 86_400_000);
+}

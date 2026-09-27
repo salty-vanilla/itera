@@ -1,6 +1,7 @@
 import { Button as ButtonPrimitive } from '@base-ui/react/button';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import { AreaMark, type AreaColor } from './area-indicator';
 
 // DESIGN.md Components › Filter. A toggle that narrows a list: a 28px Pill
 // with `border`, an optional Area line symbol, a label and a count. Selected
@@ -8,19 +9,6 @@ import { cn } from '@/lib/utils';
 // alone), exposed as aria-pressed. There is no check: selecting a filter does
 // not change its width, so the filters after it stay where they are. A filter with 0 items is
 // disabled, unless it is selected so that it can still be removed. Put related filters in a FilterGroup.
-
-type AreaColor = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 'none';
-
-const areaBackground = {
-  1: 'bg-area-1',
-  2: 'bg-area-2',
-  3: 'bg-area-3',
-  4: 'bg-area-4',
-  5: 'bg-area-5',
-  6: 'bg-area-6',
-  7: 'bg-area-7',
-  none: 'bg-area-none',
-} satisfies Record<AreaColor, string>;
 
 type FilterProps = Omit<
   ButtonPrimitive.Props,
@@ -110,25 +98,6 @@ function FilterLabel({ children }: { children: ReactNode }) {
       <span className="col-start-1 row-start-1 group-aria-pressed:font-bold">
         {children}
       </span>
-    </span>
-  );
-}
-
-// The Area line symbol (DESIGN.md Colors › Area の路線記号): a 20px square in
-// the Area colour with the first letter of the name cut out in `on-area`.
-// 「領域なし」 uses 「－」. The full Area Indicator is a separate component.
-function AreaMark({ name, color }: { name: string; color: AreaColor }) {
-  const letter = color === 'none' ? '－' : Array.from(name)[0];
-  return (
-    <span
-      aria-hidden
-      data-slot="area-mark"
-      className={cn(
-        'grid size-area-badge shrink-0 place-items-center rounded-sm text-kicker text-on-area',
-        areaBackground[color],
-      )}
-    >
-      {letter}
     </span>
   );
 }

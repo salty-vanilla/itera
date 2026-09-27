@@ -1,7 +1,6 @@
 import type { SprintState } from '@itera/domain';
 import { formatDateRange } from '@/lib/date-format';
-import { useStoreSnapshot } from '@/store/store-provider';
-import { openSprint } from './current-sprint';
+import { useAppOverview } from '@/store/use-app-overview';
 import { ScreenFrame } from './screen-frame';
 
 const stateLabel: Record<SprintState, string> = {
@@ -13,8 +12,7 @@ const stateLabel: Record<SprintState, string> = {
 
 // Sprint (#40): Planning while the Sprint is being planned.
 function SprintScreen() {
-  const { records } = useStoreSnapshot();
-  const sprint = openSprint(records);
+  const { openSprint: sprint } = useAppOverview();
   if (sprint === undefined) return <ScreenFrame heading="Sprint" />;
   return (
     <ScreenFrame

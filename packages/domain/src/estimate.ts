@@ -183,6 +183,72 @@ export function adoptSuggestion(
   ]);
 }
 
+export interface UndoAdoptionInput {
+  readonly suggestionId: EstimateSuggestionId;
+  /**
+   * The Estimate before the adoption, `null` if there was none. The Task
+   * keeps only its current Estimate, so the caller passes what it had
+   * (the Task before `adoptSuggestion`).
+   */
+  readonly previous: Estimate | null;
+}
+
+/**
+ * 採用を元に戻す (F27): right after adopting, the person takes it back. The
+ * Estimate returns to what it was and the suggestion is on show again.
+ * Only while the Estimate is still that adoption, and while no other
+ * suggestion is on show (at most one is presented).
+ */
+export function undoAdoption(
+  task: Task,
+  input: UndoAdoptionInput,
+  ctx: CommandContext,
+): CommandResult<Task> {
+  const { suggestionId, previous } = input;
+  const suggestion = task.suggestions.find((s) => s.id === suggestionId);
+  if (suggestion === undefined) {
+    return err('notFound', `Suggestion ${suggestionId} not found.`);
+  }
+  const source = task.estimate?.source;
+  if (
+    suggestion.state !== 'adopted' ||
+    source?.kind !== 'adopted' ||
+    source.suggestionId !== suggestionId
+  ) {
+    return err('invalidTransition', 'The Estimate is no longer this adoption.');
+  }
+  if (presentedSuggestion(task) !== undefined) {
+    return err('invalidTransition', 'Another suggestion is on show.');
+  }
+  if (previous !== null && !isPositiveHours(previous.hours)) {
+    return err('invalidInput', 'Estimate must be positive hours.');
+  }
+  const suggestions = task.suggestions.map((s) =>
+    s.id === suggestionId ? { ...s, state: 'presented' as const } : s,
+  );
+  const restored =
+    previous === null
+      ? omit({ ...task, suggestions }, 'estimate')
+      : { ...task, suggestions, estimate: previous };
+  return applied(restored, [
+    {
+      kind: 'estimateChanged',
+      at: ctx.now,
+      actor: ctx.actor,
+      taskId: task.id,
+      from: task.estimate?.hours ?? null,
+      to: previous?.hours ?? null,
+    },
+    {
+      kind: 'suggestionAdoptionUndone',
+      at: ctx.now,
+      actor: ctx.actor,
+      taskId: task.id,
+      suggestionId,
+    },
+  ]);
+}
+
 export function rejectSuggestion(
   task: Task,
   suggestionId: EstimateSuggestionId,

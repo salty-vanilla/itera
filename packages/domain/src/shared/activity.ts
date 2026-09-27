@@ -89,7 +89,10 @@ export type Activity =
       };
     })
   | (ActivityBase & {
-      readonly kind: 'suggestionPresented' | 'suggestionRejected';
+      readonly kind:
+        | 'suggestionPresented'
+        | 'suggestionRejected'
+        | 'suggestionAdoptionUndone';
       readonly taskId: TaskId;
       readonly suggestionId: EstimateSuggestionId;
     })

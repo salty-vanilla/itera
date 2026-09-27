@@ -17,7 +17,7 @@ import {
   type FixtureStateId,
 } from '@/fixtures/states';
 import { formatDate, formatTime } from '@/lib/date-format';
-import { useStoreSnapshot } from '@/store/store-provider';
+import { useAppOverview } from '@/store/use-app-overview';
 import { screens } from './screens';
 
 // Development only (root-layout.tsx keeps it out of production builds).
@@ -26,21 +26,24 @@ import { screens } from './screens';
 
 function DevMenu({ current }: { current: FixtureStateId }) {
   const navigate = useNavigate();
-  const { records, clock } = useStoreSnapshot();
+  const { today, now, timeZone } = useAppOverview();
   const state = fixtureStates.find((s) => s.id === current);
   const screenLabel = screens.find((s) => s.id === state?.screen)?.label;
-  const clockText = `${formatDate(clock.today)} ${formatTime(clock.now, records.user.timeZone)}`;
+  const clockText = `${formatDate(today)} ${formatTime(now, timeZone)}`;
 
   return (
-    // Bottom right, above the compact tab bar (56px), out of the headings.
-    <div className="fixed right-2 bottom-[calc(var(--spacing-16)+env(safe-area-inset-bottom))] z-(--layer-sticky) medium:bottom-2">
+    // Out of the headings and of the compact Quick Add: top right and
+    // icon-only under 768px, bottom right with its words from 768px.
+    <div className="fixed top-2 right-2 z-(--layer-sticky) medium:top-auto medium:bottom-2">
       <Menu>
         <MenuTrigger render={<Button size="sm" />}>
           <FlaskConical aria-hidden />
-          <span>
+          <span className="sr-only medium:not-sr-only">
             {screenLabel} {state?.label}
           </span>
-          <span className="text-ink-muted">{clockText}</span>
+          <span className="sr-only text-ink-muted medium:not-sr-only">
+            {clockText}
+          </span>
         </MenuTrigger>
         <MenuContent align="end">
           <MenuRadioGroup
@@ -49,10 +52,12 @@ function DevMenu({ current }: { current: FixtureStateId }) {
               if (!isFixtureStateId(value)) return;
               const next = fixtureStates.find((s) => s.id === value);
               const path = screens.find((s) => s.id === next?.screen)?.path;
-              void navigate({
-                to: path ?? '/today',
-                search: { fixture: value },
+              // The state's own screen parameters (an open Task, a 切り口).
+              const query = new URLSearchParams({
+                fixture: value,
+                ...next?.search,
               });
+              void navigate({ href: `${path ?? '/today'}?${query}` });
             }}
           >
             {screens.map((screen, index) => (

@@ -1,6 +1,7 @@
 import { instant, localDate, timeZone } from '@itera/domain';
 import { describe, expect, it } from 'vitest';
 import {
+  daysBetween,
   formatDate,
   formatDateHeading,
   formatDateRange,
@@ -30,6 +31,20 @@ describe('date format', () => {
     );
     expect(formatTime(instant('2026-09-30T15:05:00.000Z'), tokyo)).toBe(
       '00:05',
+    );
+  });
+});
+
+describe('daysBetween', () => {
+  it('counts whole days, negative into the past', () => {
+    expect(daysBetween(localDate('2026-09-29'), localDate('2026-10-01'))).toBe(
+      2,
+    );
+    expect(daysBetween(localDate('2026-09-29'), localDate('2026-09-25'))).toBe(
+      -4,
+    );
+    expect(daysBetween(localDate('2026-09-29'), localDate('2026-09-29'))).toBe(
+      0,
     );
   });
 });
