@@ -1,0 +1,24 @@
+{
+  "name": "@itera/api",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "typecheck": "wrangler types --env-interface CloudflareBindings --check && tsc -p tsconfig.json",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local"
+  },
+  "dependencies": {
+    "drizzle-orm": "0.45.3",
+    "hono": "4.13.9",
+    "jose": "6.2.12"
+  },
+  "devDependencies": {
+    "drizzle-kit": "0.31.11",
+    "typescript": "6.0.3",
+    "vitest": "5.0.2",
+    "wrangler": "4.141.0"
+  }
+}

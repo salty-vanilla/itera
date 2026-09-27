@@ -2,3 +2,4 @@
 # Orca requires literal repo-relative paths without a leading slash.
 .env.local
 .tools/references/ui-v0.1.pdf
+services/api/.dev.vars

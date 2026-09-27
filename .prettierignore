@@ -8,6 +8,9 @@ docs/
 .claude/agents/impeccable-*.md
 
 # Generated or local.
+services/api/worker-configuration.d.ts
+services/api/migrations/
+.wrangler/
 pnpm-lock.yaml
 tooling/agents/pnpm-lock.yaml
 node_modules/

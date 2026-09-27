@@ -1,0 +1,7 @@
+# Copy to .dev.vars (ignored by Git) for `pnpm dev`. Never commit real values.
+# Client ID of the WorkOS environment (starts with client_).
+WORKOS_CLIENT_ID=
+# Issuer of access tokens: https://api.workos.com/ or the custom auth domain.
+WORKOS_ISSUER=https://api.workos.com/
+# Audience added to access tokens by a WorkOS JWT template (the API's URI).
+WORKOS_AUDIENCE=
