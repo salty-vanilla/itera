@@ -1,11 +1,4 @@
-import {
-  backlogView,
-  id,
-  inBacklogSlice,
-  type AreaId,
-  type BacklogSlice,
-  type TaskId,
-} from '@itera/domain';
+import { id, type AreaId, type BacklogSlice, type TaskId } from '@itera/domain';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useState } from 'react';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
@@ -15,16 +8,9 @@ import { Select } from '@/components/ui/select';
 import { useToast } from '@/components/ui/toast';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
 import { cn } from '@/lib/utils';
-import { useStoreSnapshot } from '@/store/store-provider';
-import { useRun } from '@/store/use-run';
-import {
-  addTask,
-  archive,
-  complete,
-  restore,
-  toToday,
-} from './backlog-changes';
-import { BacklogRow, backlogFacts } from './backlog-row';
+import { useBacklog } from '@/store/use-backlog';
+import { useTaskActions } from '@/store/use-task-actions';
+import { BacklogRow } from './backlog-row';
 import { TaskDetail } from './task-detail';
 
 // Backlog (docs/design/patterns.md Backlog, PRD §5 A). The active Tasks in
@@ -65,35 +51,16 @@ export function validateBacklogSearch(
 }
 
 function BacklogScreen() {
-  const { records, clock } = useStoreSnapshot();
   const search = useSearch({ from: '/backlog' });
   const navigate = useNavigate({ from: '/backlog' });
-  const run = useRun();
+  const actions = useTaskActions();
   const toast = useToast();
   // The Area of the next Quick Add: the one used last, else the Area filter.
   const [quickArea, setQuickArea] = useState<string>();
-
-  const all = backlogView(records.tasks);
-  const context = {
-    user: records.user,
-    today: clock.today,
-    sprints: records.sprints,
-  };
-  const inView = (slice: BacklogSlice | 'all') =>
-    slice === 'all'
-      ? all
-      : all.filter((t) => inBacklogSlice(t, slice, context));
-  const bySlice = inView(search.view ?? 'all');
-  const shown =
-    search.area === undefined
-      ? bySlice
-      : bySlice.filter((t) => t.areaId === search.area);
-  const areas = records.areas
-    .filter((a) => !a.archived)
-    .toSorted((a, b) => a.order - b.order);
-  const open = records.tasks.find(
-    (t) => t.id === search.task && t.lifecycle === 'active',
-  );
+  const backlog = useBacklog({ view: search.view, area: search.area });
+  const { areas, items, today } = backlog;
+  const open =
+    search.task === undefined ? undefined : backlog.item(search.task);
 
   // `undefined` removes a parameter.
   const setSearch = (next: {
@@ -109,11 +76,14 @@ function BacklogScreen() {
     });
 
   const archiveWithUndo = (taskId: TaskId, title: string) => {
-    if (!run(archive(taskId))) return;
+    if (!actions.archiveTask(taskId)) return;
     if (search.task === taskId) setSearch({ task: undefined });
     toast.show({
       title: `「${title}」をアーカイブしました`,
-      action: { label: '元に戻す', onClick: () => run(restore(taskId)) },
+      action: {
+        label: '元に戻す',
+        onClick: () => actions.restoreTask(taskId),
+      },
     });
   };
 
@@ -130,7 +100,7 @@ function BacklogScreen() {
               <Filter
                 key={s.value}
                 pressed={pressed}
-                count={inView(s.value).length}
+                count={backlog.sliceCounts[s.value]}
                 onPressedChange={() =>
                   setSearch({ view: s.value === 'all' ? undefined : s.value })
                 }
@@ -147,7 +117,7 @@ function BacklogScreen() {
                 key={a.id}
                 area={{ name: a.name, color: a.color }}
                 pressed={search.area === a.id}
-                count={bySlice.filter((t) => t.areaId === a.id).length}
+                count={a.count}
                 onPressedChange={(pressed) =>
                   setSearch({ area: pressed ? a.id : undefined })
                 }
@@ -166,7 +136,7 @@ function BacklogScreen() {
           onAdd={(title) => {
             const chosen = quickArea ?? search.area ?? '';
             const areaId = chosen === '' ? undefined : id<'Area'>(chosen);
-            return run(addTask(title, areaId));
+            return actions.addTask(title, areaId);
           }}
           area={
             <Field label="追加する Task の領域" hideLabel className="shrink-0">
@@ -191,26 +161,25 @@ function BacklogScreen() {
           role="status"
           className="px-4 pb-2 text-meta text-ink-muted medium:px-6"
         >
-          {shown.length}件
+          {items.length}件
         </p>
-        {shown.length === 0 ? (
+        {items.length === 0 ? (
           <p className="px-4 py-6 text-body text-ink-muted medium:px-6">
             この切り口の Task はありません。
           </p>
         ) : (
           <ul className="border-t border-border-soft medium:mx-3">
-            {shown.map((task) => {
-              const facts = backlogFacts(task, records, clock);
+            {items.map((item) => {
+              const { task } = item;
               return (
                 <li key={task.id}>
                   <BacklogRow
-                    task={task}
-                    facts={facts}
-                    today={clock.today}
-                    current={task.id === open?.id}
+                    item={item}
+                    today={today}
+                    current={task.id === open?.task.id}
                     onOpen={() => setSearch({ task: task.id })}
-                    onComplete={() => run(complete(task.id))}
-                    onToday={() => run(toToday(task.id))}
+                    onComplete={() => actions.completeTask(task.id)}
+                    onToday={() => actions.addToToday(task.id)}
                     onArchive={() => archiveWithUndo(task.id, task.title)}
                   />
                 </li>
@@ -229,10 +198,10 @@ function BacklogScreen() {
         <DrawerContent>
           {open !== undefined && (
             <TaskDetail
-              key={open.id}
-              task={open}
-              facts={backlogFacts(open, records, clock)}
-              records={records}
+              key={open.task.id}
+              item={open}
+              areas={areas}
+              timeZone={backlog.timeZone}
               onClose={() => setSearch({ task: undefined })}
             />
           )}

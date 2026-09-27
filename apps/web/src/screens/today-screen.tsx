@@ -1,15 +1,13 @@
 import { formatDateHeading, formatDateRange } from '@/lib/date-format';
-import { useStoreSnapshot } from '@/store/store-provider';
-import { openSprint } from './current-sprint';
+import { useAppOverview } from '@/store/use-app-overview';
 import { ScreenFrame } from './screen-frame';
 
 // Today (#41). docs/design/patterns.md Today: the date is the heading.
 function TodayScreen() {
-  const { records, clock } = useStoreSnapshot();
-  const sprint = openSprint(records);
+  const { today, openSprint: sprint } = useAppOverview();
   return (
     <ScreenFrame
-      heading={formatDateHeading(clock.today)}
+      heading={formatDateHeading(today)}
       meta={
         sprint === undefined
           ? undefined

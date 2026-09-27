@@ -1,5 +1,6 @@
-// The Backlog's operations as store Changes. Each calls `@itera/domain`
-// commands only; nothing here computes a domain value itself.
+// Task operations as store Changes, one per operation the person makes.
+// Each calls `@itera/domain` commands only. Screens do not use these
+// directly: they go through `useTaskActions` (ADR 0005 API への移行).
 import {
   activeCriterion,
   addSubtask,
@@ -30,9 +31,9 @@ import {
   type TaskAttributeUpdate,
   type TaskId,
 } from '@itera/domain';
-import { find, onTask } from '@/store/changes';
-import { changed, type Change, type Changed } from '@/store/record-store';
-import type { Records } from '@/store/records';
+import { find, onTask } from './changes';
+import { changed, type Change, type Changed } from './record-store';
+import type { Records } from './records';
 
 /** The active Sprint, if any: 今日へ and 完了 act on it. */
 export function activeSprint(records: Records) {

@@ -1,11 +1,4 @@
-import {
-  isCounted,
-  versionOn,
-  type DayOfWeek,
-  type LocalDate,
-  type RecurrencePattern,
-  type Task,
-} from '@itera/domain';
+import type { DayOfWeek, LocalDate, RecurrencePattern } from '@itera/domain';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -17,15 +10,13 @@ import {
   WEEK_ORDER,
   WEEKDAY_NAMES,
 } from '@/lib/recurrence-text';
-import type { Records } from '@/store/records';
-import { useRun } from '@/store/use-run';
-import { useRecordStore, useStoreSnapshot } from '@/store/store-provider';
-import { setRule } from './backlog-changes';
+import type { BacklogItem } from '@/store/backlog-view';
+import { useTaskActions } from '@/store/use-task-actions';
 
 // 繰り返し (PRD §6 Recurrence, F1, F7, F12, F15). A rule takes effect from
 // the next Sprint not confirmed yet, so the confirmed Sprint never changes;
-// after setting it the screen says so (「次の Sprint から反映」). A
-// weekly rule may have several days.
+// after setting it the screen says so (「次の Sprint から反映」). A weekly
+// rule may have several days.
 
 type Freq = RecurrencePattern['freq'];
 
@@ -43,7 +34,6 @@ function patternOf(
 ): RecurrencePattern {
   switch (freq) {
     case 'daily':
-      return { freq };
     case 'weekdays':
       return { freq };
     case 'weekly':
@@ -53,35 +43,23 @@ function patternOf(
   }
 }
 
-function RecurrenceEditor({ task, records }: { task: Task; records: Records }) {
-  const run = useRun();
-  const store = useRecordStore();
-  const { clock } = useStoreSnapshot();
-  const rule = records.rules.find((r) => r.id === task.recurrenceRuleId);
-  // The latest version: what a change starts from (it may begin next Sprint).
-  const latestPattern = rule?.versions.at(-1)?.pattern;
-  const current =
-    rule === undefined
-      ? undefined
-      : (versionOn(rule, clock.today) ?? rule.versions.at(-1))?.pattern;
-  const [freq, setFreq] = useState<Freq>(latestPattern?.freq ?? 'weekly');
+type Result =
+  { kind: 'applied'; effectiveFrom: LocalDate } | { kind: 'unchanged' };
+
+function RecurrenceEditor({ item }: { item: BacklogItem }) {
+  const actions = useTaskActions();
+  const { task, rule } = item;
+  // A change starts from the latest version (it may begin next Sprint).
+  const latest = rule?.latest;
+  const [freq, setFreq] = useState<Freq>(latest?.freq ?? 'weekly');
   const [days, setDays] = useState<readonly DayOfWeek[]>(
-    latestPattern?.freq === 'weekly' ? latestPattern.daysOfWeek : [],
+    latest?.freq === 'weekly' ? latest.daysOfWeek : [],
   );
   const [dayOfMonth, setDayOfMonth] = useState(
-    latestPattern?.freq === 'monthly' ? latestPattern.dayOfMonth : 1,
+    latest?.freq === 'monthly' ? latest.dayOfMonth : 1,
   );
-  const [applied, setApplied] = useState<LocalDate>();
+  const [result, setResult] = useState<Result>();
   const [error, setError] = useState<string>();
-  // A Task in the current Sprint as a one-off stays so this week.
-  const inSprint = records.sprints.some(
-    (s) =>
-      s.state === 'active' &&
-      s.tasks.some(
-        (t) =>
-          t.taskId === task.id && isCounted(t) && t.occurrenceIds === undefined,
-      ),
-  );
 
   function submit() {
     if (freq === 'weekly' && days.length === 0) {
@@ -89,12 +67,16 @@ function RecurrenceEditor({ task, records }: { task: Task; records: Records }) {
       return;
     }
     setError(undefined);
-    if (!run(setRule(task.id, patternOf(freq, days, dayOfMonth)))) return;
-    // The version just added: its first day is 「次の Sprint から」.
-    const saved = store
-      .getSnapshot()
-      .records.rules.find((r) => r.taskId === task.id);
-    setApplied(saved?.versions.at(-1)?.effectiveFrom);
+    const outcome = actions.setRecurrence(
+      task.id,
+      patternOf(freq, days, dayOfMonth),
+    );
+    if (!outcome.ok) return;
+    setResult(
+      outcome.effectiveFrom === undefined
+        ? { kind: 'unchanged' }
+        : { kind: 'applied', effectiveFrom: outcome.effectiveFrom },
+    );
   }
 
   return (
@@ -105,12 +87,11 @@ function RecurrenceEditor({ task, records }: { task: Task; records: Records }) {
       <h3 id="recurrence-heading" className="text-subheading text-ink">
         繰り返し
       </h3>
-      {current !== undefined && (
+      {rule !== undefined && (
         <p className="text-body text-ink">
-          今のルール: {formatPattern(current)}
-          {latestPattern !== undefined &&
-            latestPattern !== current &&
-            `（次の Sprint から ${formatPattern(latestPattern)}）`}
+          今のルール: {formatPattern(rule.current)}
+          {rule.latest !== rule.current &&
+            `（次の Sprint から ${formatPattern(rule.latest)}）`}
         </p>
       )}
       <Field label="頻度">
@@ -162,22 +143,26 @@ function RecurrenceEditor({ task, records }: { task: Task; records: Records }) {
           </Select>
         </Field>
       )}
-      {inSprint && current === undefined && (
+      {/* A one-off in the running Sprint stays so this week (F1). While the
+          Sprint is still being planned, it becomes recurring there (F15). */}
+      {rule === undefined && item.thisWeek?.confirmed === true && (
         <p className="text-help text-ink-muted">
           今週の Sprint には、この Task は単発のまま残ります。
         </p>
       )}
       <div>
         <Button onClick={submit}>
-          {current === undefined ? '繰り返しにする' : 'ルールを変更'}
+          {rule === undefined ? '繰り返しにする' : 'ルールを変更'}
         </Button>
       </div>
-      {applied !== undefined && (
+      {result !== undefined && (
         <p
           role="status"
           className="rounded-sm bg-canvas-subtle px-3 py-2 text-body text-ink"
         >
-          次の Sprint から反映（{formatDate(applied)} から）
+          {result.kind === 'applied'
+            ? `次の Sprint から反映（${formatDate(result.effectiveFrom)} から）`
+            : '今のルールと同じなので、変わっていません'}
         </p>
       )}
     </section>

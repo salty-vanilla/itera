@@ -2,7 +2,7 @@ import { createArea, id } from '@itera/domain';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from '@/fixtures/states';
 import { changed, createMemoryStore } from '@/store/record-store';
-import { saveTask } from './backlog-changes';
+import { saveTask } from './task-changes';
 
 describe('saveTask', () => {
   it('F9: moving a Task of the active Sprint to a new Area notes its name in the Sprint', () => {

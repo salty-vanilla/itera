@@ -1,10 +1,9 @@
 import { useLocation, useNavigate, useRouter } from '@tanstack/react-router';
-import { backlogView } from '@itera/domain';
 import { Inbox, NotebookPen, Route, Sun } from 'lucide-react';
 import type { MouseEvent, ReactElement, ReactNode } from 'react';
 import { Navigation, type NavigationItem } from '@/components/ui/navigation';
 import type { ScreenId } from '@/fixtures/states';
-import { useStoreSnapshot } from '@/store/store-provider';
+import { useAppOverview } from '@/store/use-app-overview';
 import { screens } from './screens';
 
 const icons: Record<ScreenId, ReactElement> = {
@@ -34,7 +33,7 @@ function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const navigate = useNavigate();
   const pathname = useLocation({ select: (location) => location.pathname });
-  const { records } = useStoreSnapshot();
+  const { backlogCount } = useAppOverview();
 
   const items: NavigationItem[] = screens.map((screen) => ({
     id: screen.id,
@@ -42,9 +41,7 @@ function AppShell({ children }: { children: ReactNode }) {
     icon: icons[screen.id],
     // The fixture search parameter is kept (ADR 0005).
     href: router.buildLocation({ to: screen.path }).href,
-    ...(screen.id === 'backlog'
-      ? { count: backlogView(records.tasks).length }
-      : {}),
+    ...(screen.id === 'backlog' ? { count: backlogCount } : {}),
   }));
   const current =
     screens.find((screen) => pathname.startsWith(screen.path))?.id ?? '';

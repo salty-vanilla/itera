@@ -1,15 +1,10 @@
 import type { Subtask, Task } from '@itera/domain';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CheckboxControl } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
-import { useRun } from '@/store/use-run';
-import {
-  addTaskSubtask,
-  estimateSubtask,
-  toggleSubtask,
-} from './backlog-changes';
+import { useTaskActions } from '@/store/use-task-actions';
 
 // Subtasks (PRD §6): add, check off, and give each an Estimate. They take
 // effect at once. A subtask without an Estimate is counted, not added, in
@@ -22,10 +17,11 @@ function parseHours(text: string): number | null | 'invalid' {
 }
 
 function SubtaskList({ task }: { task: Task }) {
-  const run = useRun();
+  const actions = useTaskActions();
   const [title, setTitle] = useState('');
   const [hours, setHours] = useState('');
   const [error, setError] = useState<string>();
+  const hoursRef = useRef<HTMLInputElement>(null);
 
   return (
     <section aria-labelledby="subtasks-heading" className="flex flex-col gap-2">
@@ -48,11 +44,15 @@ function SubtaskList({ task }: { task: Task }) {
           if (title.trim() === '') return;
           if (parsed === 'invalid') {
             setError('0 より大きい数で入力してください（例: 0.5）');
+            // Focus goes to the field in error (accessibility.md).
+            hoursRef.current?.focus();
             return;
           }
           setError(undefined);
-          const ok = run(
-            addTaskSubtask(task.id, title.trim(), parsed ?? undefined),
+          const ok = actions.addSubtask(
+            task.id,
+            title.trim(),
+            parsed ?? undefined,
           );
           if (ok) {
             setTitle('');
@@ -76,6 +76,7 @@ function SubtaskList({ task }: { task: Task }) {
           <TextInput
             inputMode="decimal"
             suffix="h"
+            ref={hoursRef}
             placeholder="任意"
             value={hours}
             onChange={(e) => setHours(e.currentTarget.value)}
@@ -88,7 +89,7 @@ function SubtaskList({ task }: { task: Task }) {
 }
 
 function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
-  const run = useRun();
+  const actions = useTaskActions();
   const saved = subtask.estimate === undefined ? '' : String(subtask.estimate);
   const [hours, setHours] = useState(saved);
   const [error, setError] = useState<string>();
@@ -101,7 +102,8 @@ function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
     }
     setError(undefined);
     if ((parsed ?? undefined) === subtask.estimate) return;
-    if (!run(estimateSubtask(task.id, subtask.id, parsed))) setHours(saved);
+    if (!actions.setSubtaskEstimate(task.id, subtask.id, parsed))
+      setHours(saved);
   }
 
   return (
@@ -111,7 +113,7 @@ function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
           checked={subtask.done}
           aria-label={`完了: ${subtask.title}`}
           onCheckedChange={(done) =>
-            run(toggleSubtask(task.id, subtask.id, done))
+            actions.setSubtaskDone(task.id, subtask.id, done)
           }
         />
       </span>

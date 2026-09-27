@@ -17,7 +17,7 @@ import {
   type FixtureStateId,
 } from '@/fixtures/states';
 import { formatDate, formatTime } from '@/lib/date-format';
-import { useStoreSnapshot } from '@/store/store-provider';
+import { useAppOverview } from '@/store/use-app-overview';
 import { screens } from './screens';
 
 // Development only (root-layout.tsx keeps it out of production builds).
@@ -26,10 +26,10 @@ import { screens } from './screens';
 
 function DevMenu({ current }: { current: FixtureStateId }) {
   const navigate = useNavigate();
-  const { records, clock } = useStoreSnapshot();
+  const { today, now, timeZone } = useAppOverview();
   const state = fixtureStates.find((s) => s.id === current);
   const screenLabel = screens.find((s) => s.id === state?.screen)?.label;
-  const clockText = `${formatDate(clock.today)} ${formatTime(clock.now, records.user.timeZone)}`;
+  const clockText = `${formatDate(today)} ${formatTime(now, timeZone)}`;
 
   return (
     // Out of the headings and of the compact Quick Add: top right and

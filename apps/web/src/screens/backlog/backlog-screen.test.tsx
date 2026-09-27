@@ -229,6 +229,26 @@ describe('Backlog', () => {
     ).toMatchObject({ state: 'pending', ruleVersion: 1 });
   });
 
+  it('Recurrence: says so when the chosen rule is the one already set', async () => {
+    await renderAt(
+      '/backlog?fixture=backlog-recurrence&view=recurring&task=task-cleaning',
+    );
+    const detail = await screen.findByRole('dialog');
+    const section = within(detail).getByRole('region', { name: '繰り返し' });
+    const versions = records().rules.find((r) => r.taskId === 'task-cleaning')
+      ?.versions.length;
+    // The latest version is already 毎週 日, which the editor starts from.
+    await userEvent.click(
+      within(section).getByRole('button', { name: 'ルールを変更' }),
+    );
+    expect(within(section).getByRole('status').textContent).toBe(
+      '今のルールと同じなので、変わっていません',
+    );
+    expect(
+      records().rules.find((r) => r.taskId === 'task-cleaning')?.versions,
+    ).toHaveLength(versions ?? 0);
+  });
+
   it('archives with an undo in the Toast', async () => {
     await renderAt('/backlog?fixture=backlog-capture');
     await userEvent.click(

@@ -33,22 +33,11 @@ import {
 import { Estimate } from '@/components/task/estimate';
 import { formatDate, formatTime } from '@/lib/date-format';
 import { formatHours, formatRange } from '@/lib/time-format';
-import type { Records } from '@/store/records';
-import {
-  adopt,
-  archive,
-  complete,
-  reject,
-  restore,
-  saveTask,
-  toToday,
-  undoAdopt,
-} from './backlog-changes';
-import type { BacklogFacts } from './backlog-row';
+import type { BacklogData, BacklogItem } from '@/store/backlog-view';
+import { useTaskActions } from '@/store/use-task-actions';
 import { CarryOverText, RecurrenceText, SprintText } from './backlog-row';
 import { RecurrenceEditor } from './recurrence-editor';
 import { SubtaskList } from './subtask-list';
-import { useRun } from '@/store/use-run';
 
 const priorities: readonly { value: TaskPriority; label: string }[] = [
   { value: 'high', label: '高' },
@@ -93,17 +82,20 @@ type Outcome =
  * the actions take effect at once, each through its domain command.
  */
 function TaskDetail({
-  task,
-  facts,
-  records,
+  item,
+  areas,
+  timeZone,
   onClose,
 }: {
-  task: Task;
-  facts: BacklogFacts;
-  records: Records;
+  item: BacklogItem;
+  /** The Areas to choose from, in the person's order. */
+  areas: BacklogData['areas'];
+  timeZone: BacklogData['timeZone'];
   onClose: () => void;
 }) {
-  const run = useRun();
+  const actions = useTaskActions();
+  const { task } = item;
+  const facts = item;
   const toast = useToast();
   const [draft, setDraft] = useState(() => draftOf(task));
   const [errors, setErrors] = useState<{
@@ -140,19 +132,17 @@ function TaskDetail({
     setErrors(next);
     if (Object.keys(next).length > 0) return;
     const current = task.estimate?.hours ?? null;
-    const ok = run(
-      saveTask(
-        task.id,
-        {
-          title,
-          description: draft.description,
-          areaId: draft.areaId === '' ? null : id<'Area'>(draft.areaId),
-          due: due === undefined ? null : due,
-          priority: draft.priority,
-          timeBasis: draft.timeBasis,
-        },
-        hours === current ? undefined : hours,
-      ),
+    const ok = actions.saveTask(
+      task.id,
+      {
+        title,
+        description: draft.description,
+        areaId: draft.areaId === '' ? null : id<'Area'>(draft.areaId),
+        due: due === undefined ? null : due,
+        priority: draft.priority,
+        timeBasis: draft.timeBasis,
+      },
+      hours === current ? undefined : hours,
     );
     if (ok) onClose();
   }
@@ -161,7 +151,7 @@ function TaskDetail({
     if (suggestion === undefined) return;
     const previous = task.estimate ?? null;
     const hours = boundValue(suggestion, bound);
-    if (!run(adopt(task.id, suggestion.id, bound))) return;
+    if (!actions.adoptSuggestion(task.id, suggestion.id, bound)) return;
     set('estimate', String(hours));
     setOutcome({
       kind: 'adopted',
@@ -173,7 +163,7 @@ function TaskDetail({
 
   function onUndoAdopt() {
     if (outcome?.kind !== 'adopted') return;
-    if (!run(undoAdopt(task.id, outcome.suggestionId, outcome.previous)))
+    if (!actions.undoAdoption(task.id, outcome.suggestionId, outcome.previous))
       return;
     set(
       'estimate',
@@ -184,21 +174,20 @@ function TaskDetail({
 
   function onReject() {
     if (suggestion === undefined) return;
-    if (!run(reject(task.id, suggestion.id))) return;
+    if (!actions.rejectSuggestion(task.id, suggestion.id)) return;
     setOutcome({
       kind: 'rejected',
       text: `提案 ${formatRange(suggestion.lo, suggestion.hi)} を却下しました`,
     });
   }
 
-  const { user } = records;
   return (
     <>
       <DrawerHeader>
         <DrawerTitle>{task.title}</DrawerTitle>
-        {(facts.inSprint || facts.carry || facts.recurrence) && (
+        {(facts.thisWeek || facts.carry || facts.recurrence) && (
           <DrawerDescription className="flex flex-wrap gap-x-3 text-meta">
-            {facts.inSprint && <SprintText inSprint={facts.inSprint} />}
+            {facts.thisWeek && <SprintText {...facts.thisWeek} />}
             {facts.carry && <CarryOverText {...facts.carry} />}
             {facts.recurrence && (
               <RecurrenceText recurrence={facts.recurrence} />
@@ -236,14 +225,17 @@ function TaskDetail({
                 onChange={(e) => set('areaId', e.currentTarget.value)}
               >
                 <option value="">領域なし</option>
-                {records.areas
-                  .filter((a) => !a.archived || a.id === task.areaId)
-                  .toSorted((a, b) => a.order - b.order)
-                  .map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}
-                    </option>
-                  ))}
+                {/* An archived Area stays selectable while the Task is in it. */}
+                {task.areaId !== undefined &&
+                  facts.area !== undefined &&
+                  !areas.some((a) => a.id === task.areaId) && (
+                    <option value={task.areaId}>{facts.area.name}</option>
+                  )}
+                {areas.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
               </Select>
             </Field>
             <Field label="期限" necessity="optional" error={errors.due}>
@@ -304,7 +296,7 @@ function TaskDetail({
         {suggestion !== undefined && (
           <EstimateSuggestion
             suggestion={suggestion}
-            madeAt={`${formatDate(toLocalDate(suggestion.createdAt, user.timeZone))} ${formatTime(suggestion.createdAt, user.timeZone)}`}
+            madeAt={`${formatDate(toLocalDate(suggestion.createdAt, timeZone))} ${formatTime(suggestion.createdAt, timeZone)}`}
             onAdopt={onAdopt}
             onReject={onReject}
           />
@@ -318,7 +310,7 @@ function TaskDetail({
         )}
 
         <SubtaskList task={task} />
-        <RecurrenceEditor task={task} records={records} />
+        <RecurrenceEditor item={item} />
 
         {(facts.canAddToToday || facts.canComplete) && (
           <section
@@ -330,12 +322,14 @@ function TaskDetail({
             </h3>
             <div className="flex flex-wrap gap-2">
               {facts.canAddToToday && (
-                <Button onClick={() => run(toToday(task.id))}>今日へ</Button>
+                <Button onClick={() => actions.addToToday(task.id)}>
+                  今日へ
+                </Button>
               )}
               {facts.canComplete && (
                 <Button
                   onClick={() => {
-                    if (run(complete(task.id))) onClose();
+                    if (actions.completeTask(task.id)) onClose();
                   }}
                 >
                   完了にする
@@ -349,13 +343,13 @@ function TaskDetail({
           <Button
             variant="danger"
             onClick={() => {
-              if (!run(archive(task.id))) return;
+              if (!actions.archiveTask(task.id)) return;
               onClose();
               toast.show({
                 title: `「${task.title}」をアーカイブしました`,
                 action: {
                   label: '元に戻す',
-                  onClick: () => run(restore(task.id)),
+                  onClick: () => actions.restoreTask(task.id),
                 },
               });
             }}
