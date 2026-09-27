@@ -291,6 +291,7 @@ Planning で明示的に外した繰り返し Occurrence は通常の Retro 事�
 
 - Task は Subtask を持てる。
 - Planning の時間計算は `親 Task の Estimate` または `Subtask の Estimate 合計` のどちらか一方を使い、二重計上しない。
+- Subtask の Estimate は点の値とする。一部の Subtask が未見積なら、見積りのある分を合計し、未見積の件数を示す。Planning Criterion は Subtask の Estimate 合計には作用しない。
 - MVP では Subtask 単位で Sprint へ参加させない。
 
 ### Recurrence

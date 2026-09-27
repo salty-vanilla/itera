@@ -36,6 +36,7 @@
 | 未処理 | DailySelection = Unresolved / Occurrence = Missed | 選んだまま日付が変わった / 繰り返しの回が Sprint 終了時に未処理。見送りには数えない |
 | 昨日の続き | 前日の DailySelection = Paused（派生） | Today の候補の上に出す。自動では今日に入れない |
 | 未見積 | 計画値の元がない | 「未見積」。0h と書かず、合計に含めない |
+| 未見積のサブタスク | サブタスク合計で、見積りのないサブタスクがある | 見積りのある分の合計に件数を添える。「2.5h ＋ 未見積 1」 |
 | 今日へ / 今日やる | DailySelection | 今日やると選ぶこと |
 | 開始 / 完了 | DailySelection = Started / Done | — |
 | 今日はここまで | DailySelection = Paused | 作業したが未完了。翌日「昨日の続き」 |

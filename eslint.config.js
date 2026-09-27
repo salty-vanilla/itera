@@ -42,6 +42,79 @@ export default defineConfig(
     files: ['apps/web/*.ts', 'apps/web/.storybook/main.ts'],
     languageOptions: { globals: globals.node },
   },
+  {
+    // packages/domain product code: pure TypeScript. The current time,
+    // randomness and IDs come in as arguments (.claude/rules/domain.md).
+    // packages/domain/tsconfig.json also leaves out DOM and Node types, so
+    // those APIs are type errors; these rules are the second line.
+    files: ['packages/domain/src/**/*.ts'],
+    ignores: [
+      'packages/domain/src/**/*.test.ts',
+      'packages/domain/src/testing.ts',
+    ],
+    rules: {
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'Date',
+          property: 'now',
+          message: 'Take the current time as an argument.',
+        },
+        {
+          object: 'Math',
+          property: 'random',
+          message: 'Take IDs and random values as arguments.',
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "NewExpression[callee.name='Date'][arguments.length=0]",
+          message: 'Take the current time as an argument.',
+        },
+        {
+          selector: "CallExpression[callee.name='Date'][arguments.length=0]",
+          message: 'Take the current time as an argument.',
+        },
+      ],
+      'no-restricted-globals': [
+        'error',
+        ...[
+          'globalThis',
+          'window',
+          'self',
+          'document',
+          'navigator',
+          'localStorage',
+          'sessionStorage',
+          'fetch',
+          'process',
+          'Buffer',
+          'require',
+          'crypto',
+          'performance',
+          'setTimeout',
+          'setInterval',
+          'queueMicrotask',
+          'structuredClone',
+        ].map((name) => ({
+          name,
+          message: 'packages/domain is pure: take it as an argument.',
+        })),
+      ],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '^node:',
+              message: 'packages/domain must not depend on Node.',
+            },
+          ],
+        },
+      ],
+    },
+  },
   // Applies to *.stories.* and .storybook/main.* only. The cast is for the
   // plugin's types, which declare `files: undefined` and `plugins: undefined`
   // and so fail under exactOptionalPropertyTypes.

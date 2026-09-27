@@ -37,7 +37,7 @@ v0.2 Final は v0.1 の骨格（恒久的な **Task** と、「この Sprint で
 
 ### v0.2 Final で決めたこと
 
-F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。
+F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F11 は同じ日に、`packages/domain` の実装で見つかった食い違いについて決めた（Issue #20）。
 
 | # | 決定 | モデルへの反映 | UI への影響 |
 | --- | --- | --- | --- |
@@ -50,6 +50,8 @@ F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。
 | F7 | 次の Sprint の draft が回を生成した後の Rule 変更は、未確定の回を作り直す | 新しい版は、まだ確定していない次の Sprint から効く。draft がすでに回を生成していれば、その Task の回（Pending / Excluded）と SprintTask（Draft）を捨て、新しい版の回を既定どおり Sprint に含めて作り直す。draft で外した選択は引き継がない。確定済みの Sprint の回は変えない（不変条件 31） | Backlog の「次の Sprint から反映」がそのまま正しくなる |
 | F8 | 連続見送りは Unresolved を無視し、Skipped で途切れる | Unresolved は選ばなかった日と同じく、数えず途切れさせない。繰り返しの回の Skipped は本人の決定なので、Done・Removed と同じく連続を途切れさせる（不変条件 23） | なし |
 | F9 | Sprint 中に初めて現れた Area は、その時点の名前を写し取る | SprintAreaSnapshot にない Area が Sprint 中に初めて現れたとき（その Area の Task を Sprint に追加した、または Sprint 内の Task の Area にした）、その時点の名前を並び順の末尾に足して固定する（不変条件 18） | その Sprint の Today / Retro では、その Area も名前が固定される |
+| F10 | 計画基準はサブタスク合計に作用しない | Subtask の見積りは点の値なので、サブタスク合計も点になる。不変条件 9 の「幅のあるサブタスク合計」を削除 | なし |
+| F11 | 一部のサブタスクが未見積なら、その件数を示す | timeBasis がサブタスク合計のとき、見積りのあるサブタスクだけを足し、未見積のサブタスクの件数を PlanningValue に持つ。すべて未見積なら、その Task が未見積（不変条件 8） | Planning：「2.5h ＋ 未見積 1」のように合計と件数を並べる |
 
 ### 用語
 
@@ -98,7 +100,7 @@ Task は User に属し、Backlog はそのうち active なものを並べた�
 | SprintAreaSnapshot（VO） | その Sprint での Area の表示名。その Sprint の Planning / Today / Retro はこの名前を使う | area、name、order | Sprint | 確定時に固定。Sprint 中に初めて現れた Area は、その時点の名前を並び順の末尾に足して固定 |
 | SprintGoal（E） | Sprint × Area の「今週どうなっていたいか」 | area、plannedText（確定時）、text（現在）、selfAssessment（できた / 一部できた / できなかった / 判断しない / 未判定） | Sprint。Area を参照 | 確定後の文の変更履歴、自己判定 |
 | SprintTask（E） | Task をこの Sprint で扱うこと（参加レコード） | task、occurrences（繰り返しのみ）、origin（planning / midSprint）、addedAt、goalLink（linked / unlinked）、planSnapshot、outcome、carriedFrom | Sprint。Task・Occurrence を参照 | 追加の日時と経路、goalLink の変更、計画値、結果 |
-| PlanningValue（VO） | 今回の時間判断に使う値 | lo、hi、base（Estimate / 提案 / サブタスク合計 / なし）、criterionApplied、computedAt | SprintTask の planSnapshot | 作成時に固定（計画分は確定時、追加分は追加時） |
+| PlanningValue（VO） | 今回の時間判断に使う値 | lo、hi、base（Estimate / 提案 / サブタスク合計 / なし）、unestimatedSubtasks（サブタスク合計のとき、未見積のサブタスクの件数）、criterionApplied、computedAt | SprintTask の planSnapshot | 作成時に固定（計画分は確定時、追加分は追加時） |
 | DailySelection（E） | ある日に、ある SprintTask（またはその回）を「今日やる」と選んだこと | date、origin（手動 / 当日の繰り返し / Sprint 中の追加 / Backlog からの完了）、selectedAt、startedAt、resolution（Done / Paused / Deferred / Removed / Skipped / Unresolved）、resolvedAt | Sprint。SprintTask・Occurrence を参照 | すべて残す |
 | ActualTime（VO） | 任意の実績時間 | hours、date、via（完了時 / 今日はここまで / 後から）、recordedAt | SprintTask（繰り返しは Occurrence） | 追記のみ。合計がその Sprint の実績 |
 | InterruptNote（E） | 予定外の出来事のメモ。Task ではない | at、text、minutes（任意） | Sprint | そのまま残す |
@@ -237,7 +239,7 @@ stateDiagram-v2
 
 ## 不変条件（Invariants）
 
-実装のどの層でも崩してはいけないルールです。v0.2 で番号を振り直しました。v0.2 Final では番号を変えず、16・18・22・23・31・33 の内容を更新しました。F7〜F9 の決定で、番号を変えずに 18・23・31 を更新しました。
+実装のどの層でも崩してはいけないルールです。v0.2 で番号を振り直しました。v0.2 Final では番号を変えず、16・18・22・23・31・33 の内容を更新しました。F7〜F9 の決定で、番号を変えずに 18・23・31 を更新しました。F10・F11 の決定で 8・9 を更新しました。
 
 **Task / Backlog**
 
@@ -251,8 +253,8 @@ stateDiagram-v2
 
 6. Estimate は本人の点の値。提案が自動で Estimate になることはない。提案を Estimate にするのは本人の「採用」だけで、source に採用元（下限・中央・上限）を残す。
 7. 計画基準の「適用」は PlanningValue だけを作り、Estimate も提案も変えない。採用と適用は、画面でも別の言葉・別の場所で行う。
-8. 計画値の元は、Estimate → なければ提示中の提案 → なければ未見積（合計に含めず、件数を示す）の順。
-9. 計画基準は幅のある元（提案、幅のあるサブタスク合計）にだけ作用する。点の Estimate には作用しない。
+8. 計画値の元は、Estimate → なければ提示中の提案 → なければ未見積（合計に含めず、件数を示す）の順。timeBasis がサブタスク合計なら、見積りのあるサブタスクだけを足し、未見積のサブタスクの件数を示す（すべて未見積なら、その Task が未見積）。
+9. 計画基準は幅のある元（提案）にだけ作用する。点の Estimate とサブタスク合計（Subtask の見積りは点の値）には作用しない。
 10. 親 Task とサブタスクの時間は、timeBasis で選んだ一方だけを数える。
 
 **Sprint / Goal**
