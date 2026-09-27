@@ -50,6 +50,13 @@ function isRejectedToken(error: unknown): boolean {
 // (ADR 0004): signature against the JWKS, `iss`, `aud` and `exp`.
 export function requireAuth({ getKeySet = workosKeySet }: AuthOptions = {}) {
   return createMiddleware<AppEnv>(async (c, next) => {
+    const { WORKOS_CLIENT_ID, WORKOS_ISSUER, WORKOS_AUDIENCE } = c.env;
+    // jose skips the `iss` / `aud` checks when they are undefined, so a
+    // missing setting must fail closed instead of accepting any token.
+    if (!WORKOS_CLIENT_ID || !WORKOS_ISSUER || !WORKOS_AUDIENCE) {
+      throw new Error('WorkOS settings are missing (see .dev.vars.example).');
+    }
+
     const token = /^Bearer (\S+)$/i.exec(
       c.req.header('Authorization') ?? '',
     )?.[1];
@@ -57,16 +64,12 @@ export function requireAuth({ getKeySet = workosKeySet }: AuthOptions = {}) {
 
     let userId: string | undefined;
     try {
-      const { payload } = await jwtVerify(
-        token,
-        getKeySet(c.env.WORKOS_CLIENT_ID),
-        {
-          issuer: c.env.WORKOS_ISSUER,
-          audience: c.env.WORKOS_AUDIENCE,
-          // Absorbs clock skew between WorkOS and the Worker.
-          clockTolerance: 5,
-        },
-      );
+      const { payload } = await jwtVerify(token, getKeySet(WORKOS_CLIENT_ID), {
+        issuer: WORKOS_ISSUER,
+        audience: WORKOS_AUDIENCE,
+        // Absorbs clock skew between WorkOS and the Worker.
+        clockTolerance: 5,
+      });
       userId = payload.sub;
     } catch (error) {
       if (isRejectedToken(error)) return unauthorized();

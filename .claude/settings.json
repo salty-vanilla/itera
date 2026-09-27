@@ -64,6 +64,8 @@
       "Read(**/.env.production)",
       "Read(**/.env.test)",
       "Read(**/.env.staging)",
+      "Read(**/.dev.vars)",
+      "Read(**/.dev.vars.*)",
       "Bash(cat *.env)",
       "Bash(cat *.env.local)",
       "Bash(cat *.env.*.local)"

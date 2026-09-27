@@ -74,6 +74,18 @@ describe('GET /me (requireAuth)', () => {
     expect(await response.json()).toEqual({ userId: 'user_01' });
   });
 
+  it.each(['WORKOS_ISSUER', 'WORKOS_AUDIENCE', 'WORKOS_CLIENT_ID'] as const)(
+    'fails closed (500) when %s is not set',
+    async (name) => {
+      const response = await app.request(
+        '/me',
+        { headers: { Authorization: `Bearer ${await token()}` } },
+        { ...env, [name]: '' },
+      );
+      expect(response.status).toBe(500);
+    },
+  );
+
   it('rejects a request without a token', async () => {
     const response = await me();
     expect(response.status).toBe(401);

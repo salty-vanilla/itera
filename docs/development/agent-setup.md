@@ -42,7 +42,7 @@ commit・ライセンスの場所・各ファイルの SHA-256 は `tooling/agen
 - 読み取り系の共有コマンド、DADS / HIG / GitHub の取得、`gh` の読み取りは確認なしで実行できる。任意の URL を開ける `pnpm agent:playwright open` / `goto` は毎回確認する。
 - `npx`・`npm`・`pnpm dlx`・`pnpx`・`bunx`・グローバルの `playwright-cli`、`pnpm agent:shadcn add`、`pnpm agent:playwright run-code` は毎回確認する。上流 Skill の `allowed-tools` がこれらを許可していても、固定版を迂回させないため（ask / deny は `allowed-tools` より優先される）。
 - `disableSkillShellExecution` で、Skill の本文にある `!` コマンドを実行しない（プレースホルダーに置き換わる）。shadcn Skill が読み込み時に実行する `npx shadcn@latest info` が対象で、文脈は `pnpm agent:shadcn info --json --cwd apps/web` で取る。`npx shadcn@latest` 自体も拒否している。
-- `.env` 系（`.env`、`.env.local`、`.env.*.local`、`.env.development`、`.env.production`、`.env.test`、`.env.staging`）の読み取りは拒否している。`.env.example` は読める。これは誤操作を防ぐためのもので、セキュリティ境界ではない。
+- `.env` 系（`.env`、`.env.local`、`.env.*.local`、`.env.development`、`.env.production`、`.env.test`、`.env.staging`）の読み取りは拒否している。wrangler のローカル用シークレット（`.dev.vars`、`.dev.vars.*`）も同じく拒否している。`.env.example` と `.dev.vars.example` は読める。これは誤操作を防ぐためのもので、セキュリティ境界ではない。
 - 固定版を迂回させないため、`npx wrangler` と `npx hono` は拒否している。
 - wrangler のうちアカウントの資源を変えるもの（`deploy`、`secret put`、`d1 ... --remote` など）は許可リストに入れていない（毎回確認する）。
 
