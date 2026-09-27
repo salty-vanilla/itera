@@ -1,7 +1,8 @@
-// Scenario C of docs/domain/domain-model.md (部屋の掃除, weekly), steps
-// 1–5 and 8. Sprints are Monday–Sunday weeks of 2026. The Sprint records
-// themselves come with #22; here each Sprint is just its period, and the
-// Planning start is when its occurrences are generated.
+// Scenario C of docs/domain/domain-model.md (部屋の掃除, weekly). Sprints
+// are Monday–Sunday weeks of 2026. The first test follows the rule and its
+// occurrences alone (steps 1–5, 8; #21); the second runs steps 6–9 with
+// Sprint records (#22). Closing a Sprint comes with #24, so closed Sprints
+// are fixtures here.
 import { describe, expect, it } from 'vitest';
 import {
   completeOccurrence,
@@ -19,7 +20,10 @@ import {
 } from './recurrence';
 import { id } from './shared/ids';
 import { addDays, localDate } from './shared/time';
-import { at, newTask, unwrap } from './testing';
+import { confirmSprint, excludeFromPlan, startPlanning } from './planning';
+import { projectFrom, type Sprint } from './sprint';
+import { changeRuleForNextSprint } from './sprint-recurrence';
+import { at, ids, newTask, sprintFixture, unwrap, user } from './testing';
 
 const d = localDate;
 const saturday = { freq: 'weekly', daysOfWeek: [6] } as const;
@@ -176,6 +180,162 @@ describe('Scenario C — 部屋の掃除（毎週の繰り返し）', () => {
     // (9 — the 9/7 week's Planning generates 9/12 on v3.)
     expect(plan(rule, '2026-09-07', '2026-09-07T00:00:00.000Z')).toMatchObject([
       { scheduledDate: '2026-09-12', ruleVersion: 3, state: 'pending' },
+    ]);
+  });
+});
+
+describe('Scenario C — steps 6–9 with Sprint records', () => {
+  it('includes the week’s occurrence, excludes one in Planning, and a mid-Sprint change waits', () => {
+    const newOccurrenceId = ids<'Occurrence'>('occ');
+    const newSprintTaskId = ids<'SprintTask'>('st');
+    let occurrences: Occurrence[] = [];
+    const replace = (next: Occurrence) => {
+      occurrences = occurrences.map((o) => (o.id === next.id ? next : o));
+    };
+    const task = newTask('部屋の掃除');
+    // v1 (Saturdays) → v2 (Sundays from 8/24), as in steps 1–4.
+    const created = unwrap(
+      createRecurrenceRule(
+        task,
+        { id: id('rule-1'), pattern: saturday, effectiveFrom: d('2026-08-03') },
+        at('2026-08-02T00:00:00.000Z'),
+      ),
+    );
+    let rule = unwrap(
+      changeRecurrenceRule(
+        created.rule,
+        { pattern: sunday, effectiveFrom: d('2026-08-24') },
+        at('2026-08-24T00:00:00.000Z'),
+      ),
+    );
+    const recurringTask = created.task;
+    const closed = sprintFixture('2026-08-17', 'closed');
+
+    const planWeek = (
+      start: string,
+      sprints: readonly Sprint[],
+      when: string,
+    ) => {
+      const started = unwrap(
+        startPlanning(
+          {
+            sprintId: id(`sprint-${start}`),
+            user,
+            start: d(start),
+            sprints,
+            recurring: [{ task: recurringTask, rule }],
+            occurrences,
+            newOccurrenceId,
+            newSprintTaskId,
+          },
+          at(when),
+        ),
+      );
+      occurrences = [...occurrences, ...started.occurrences];
+      return started;
+    };
+    const confirm = (
+      sprint: Sprint,
+      sprints: readonly Sprint[],
+      when: string,
+    ) =>
+      unwrap(
+        confirmSprint(
+          sprint,
+          { sprints, tasks: [recurringTask], areas: [], applyCriterion: false },
+          at(when),
+        ),
+      );
+
+    // 6. The 8/24 week: 8/30 (Sun, v2) is generated and included by
+    //    default; after confirm it is planned (Today shows it on 8/30, #23).
+    const week24 = planWeek('2026-08-24', [closed], '2026-08-24T01:00:00.000Z');
+    expect(week24.occurrences).toMatchObject([
+      { scheduledDate: '2026-08-30', ruleVersion: 2, state: 'pending' },
+    ]);
+    const active24 = confirm(
+      week24.sprint,
+      [closed, week24.sprint],
+      '2026-08-24T02:00:00.000Z',
+    );
+    expect(active24.tasks).toMatchObject([
+      {
+        outcome: 'planned',
+        goalLink: 'unlinked',
+        planSnapshot: { occurrenceCount: 1 },
+      },
+    ]);
+
+    // 7. The 8/31 week: 9/6 is generated, then left out. The draft
+    //    SprintTask disappears before confirm; the occurrence stays excluded.
+    const closed24: Sprint = { ...active24, state: 'closed' };
+    const week31 = planWeek(
+      '2026-08-31',
+      [closed, closed24],
+      '2026-08-31T00:00:00.000Z',
+    );
+    const [sep6] = week31.occurrences;
+    if (sep6 === undefined) throw new Error('no 9/6');
+    const excluded = unwrap(
+      excludeFromPlan(week31.sprint, sep6, at('2026-08-31T00:05:00.000Z')),
+    );
+    replace(excluded.occurrence);
+    expect(excluded.sprint.tasks).toEqual([]);
+    const active31 = confirm(
+      excluded.sprint,
+      [closed, closed24, excluded.sprint],
+      '2026-08-31T00:10:00.000Z',
+    );
+    expect(occurrences.find((o) => o.id === sep6.id)?.state).toBe('excluded');
+
+    // 8. 9/2 (Wed), mid-Sprint: back to 毎週 土. It waits for the next
+    //    Sprint (9/7); the current Sprint and its occurrences stay as they are.
+    const before = JSON.stringify({ active31, occurrences });
+    const changed = unwrap(
+      changeRuleForNextSprint(
+        {
+          task: recurringTask,
+          rule,
+          pattern: saturday,
+          user,
+          today: d('2026-09-02'),
+          sprints: [closed, closed24, active31],
+          occurrences,
+          newOccurrenceId,
+          newSprintTaskId,
+        },
+        at('2026-09-02T00:00:00.000Z'),
+      ),
+    );
+    rule = changed.rule;
+    expect(rule.versions.at(-1)).toMatchObject({
+      version: 3,
+      effectiveFrom: '2026-09-07',
+    });
+    expect(changed).not.toHaveProperty('sprint');
+    expect(JSON.stringify({ active31, occurrences })).toBe(before);
+    expect(occurrences.some((o) => o.scheduledDate === '2026-09-05')).toBe(
+      false,
+    );
+    const sprints = [closed, closed24, active31];
+    expect(
+      nextOccurrence(rule, occurrences, {
+        today: d('2026-09-02'),
+        projectFrom: projectFrom(sprints, d('2026-09-02')),
+      }),
+    ).toMatchObject({ scheduledDate: '2026-09-12', ruleVersion: 3 });
+
+    // 9. The 9/7 week: 9/12 (Sat, v3) is generated and included by default.
+    const week7 = planWeek(
+      '2026-09-07',
+      [closed, closed24, { ...active31, state: 'review' }],
+      '2026-09-07T00:00:00.000Z',
+    );
+    expect(week7.occurrences).toMatchObject([
+      { scheduledDate: '2026-09-12', ruleVersion: 3, state: 'pending' },
+    ]);
+    expect(week7.sprint.tasks).toMatchObject([
+      { outcome: 'draft', occurrenceIds: [week7.occurrences[0]?.id] },
     ]);
   });
 });
