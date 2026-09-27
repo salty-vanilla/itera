@@ -245,6 +245,22 @@ describe('Backlog', () => {
     expect(task('task-bookshelf')?.lifecycle).toBe('active');
   });
 
+  it('gives the focus to the returned row once, not when it is shown again later', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    await userEvent.click(
+      screen.getByRole('button', { name: '完了にする: 本棚を整理する' }),
+    );
+    await userEvent.click(
+      within(list()).getByRole('button', { name: '元に戻す' }),
+    );
+    // Hide the row with a 切り口, then show it again.
+    await userEvent.click(screen.getByRole('button', { name: /^期限超過/ }));
+    const all = screen.getByRole('button', { name: /^すべて/ });
+    await userEvent.click(all);
+    expect(within(list()).getByText('本棚を整理する')).toBeTruthy();
+    expect(document.activeElement).toBe(all);
+  });
+
   it('puts the line at the end when the last row is completed', async () => {
     await renderAt('/backlog?fixture=backlog-capture');
     await userEvent.click(

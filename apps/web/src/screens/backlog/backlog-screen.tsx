@@ -70,13 +70,22 @@ function BacklogScreen() {
     title: string;
     before?: TaskId;
   }>();
+  // The row that came back by 元に戻す takes the focus on its ○, once: the
+  // next operation clears it, so a row shown again later does not take it.
+  const [refocus, setRefocus] = useState<TaskId>();
+  const undoRef = useRef<HTMLButtonElement>(null);
+  /** Another operation: the completed line and the pending focus go. */
+  const endUndo = () => {
+    setCompleted(undefined);
+    setRefocus(undefined);
+  };
 
   // `undefined` removes a parameter. Any change of view is another
   // operation, so the completed line goes.
   const setSearch = (next: {
     [K in keyof BacklogSearch]?: BacklogSearch[K] | undefined;
   }) => {
-    setCompleted(undefined);
+    endUndo();
     void navigate({
       search: (prev) => {
         const merged = { ...prev, ...next };
@@ -86,10 +95,6 @@ function BacklogScreen() {
       },
     });
   };
-
-  // The row that came back by 元に戻す takes the focus on its ○.
-  const [refocus, setRefocus] = useState<TaskId>();
-  const undoRef = useRef<HTMLButtonElement>(null);
 
   const completeWithUndo = (taskId: TaskId, title: string) => {
     const index = items.findIndex((i) => i.task.id === taskId);
@@ -114,7 +119,7 @@ function BacklogScreen() {
   };
 
   const archiveWithUndo = (taskId: TaskId, title: string) => {
-    setCompleted(undefined);
+    endUndo();
     if (!actions.archiveTask(taskId)) return;
     if (search.task === taskId) setSearch({ task: undefined });
     toast.show({
@@ -175,7 +180,7 @@ function BacklogScreen() {
           onAdd={(title) => {
             const chosen = quickArea ?? search.area ?? '';
             const areaId = chosen === '' ? undefined : id<'Area'>(chosen);
-            setCompleted(undefined);
+            endUndo();
             return actions.addTask(title, areaId);
           }}
           area={
@@ -229,7 +234,7 @@ function BacklogScreen() {
                       onOpen={() => setSearch({ task: task.id })}
                       onComplete={() => completeWithUndo(task.id, task.title)}
                       onToday={() => {
-                        setCompleted(undefined);
+                        endUndo();
                         actions.addToToday(task.id);
                       }}
                       onArchive={() => archiveWithUndo(task.id, task.title)}
