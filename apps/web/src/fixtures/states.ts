@@ -34,9 +34,24 @@ export const fixtureStates: readonly FixtureState[] = [
     // Scenario C's Task, its rule changed for the next Sprint.
     search: { view: 'recurring', task: 'task-cleaning' },
   },
-  { id: 'planning-pick', screen: 'sprint', label: '選ぶ（Pick）' },
-  { id: 'planning-shape', screen: 'sprint', label: '整える（Shape）' },
-  { id: 'planning-check', screen: 'sprint', label: '確かめる（Check）' },
+  {
+    id: 'planning-pick',
+    screen: 'sprint',
+    label: '選ぶ（Pick）',
+    search: { stage: 'pick' },
+  },
+  {
+    id: 'planning-shape',
+    screen: 'sprint',
+    label: '整える（Shape）',
+    search: { stage: 'shape' },
+  },
+  {
+    id: 'planning-check',
+    screen: 'sprint',
+    label: '確かめる（Check）',
+    search: { stage: 'check' },
+  },
   { id: 'today-morning', screen: 'today', label: '朝' },
   { id: 'today-daytime', screen: 'today', label: '日中' },
   { id: 'today-interrupt', screen: 'today', label: '割り込み' },

@@ -13,6 +13,7 @@ export * from './mid-sprint';
 export * from './occurrence';
 export * from './planning';
 export * from './planning-value';
+export * from './planning-view';
 export * from './recurrence';
 export * from './retro-facts';
 export * from './review';

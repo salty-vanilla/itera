@@ -1,0 +1,241 @@
+import type { TaskId } from '@itera/domain';
+import { Ellipsis, Target, Undo2 } from 'lucide-react';
+import { AreaIndicator } from '@/components/ui/area-indicator';
+import { IconButton } from '@/components/ui/icon-button';
+import { semanticIcons } from '@/components/ui/icon';
+import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
+import { useToast } from '@/components/ui/toast';
+import { GoalBlock } from '@/components/sprint/goal-block';
+import { Estimate } from '@/components/task/estimate';
+import { MetaItem, TaskMetadata } from '@/components/task/task-metadata';
+import { TaskRow } from '@/components/task/task-row';
+import { formatPlanningTotal } from '@/lib/time-format';
+import { cn } from '@/lib/utils';
+import type {
+  AreaPlan,
+  PlannedTask,
+  PlanningData,
+} from '@/store/planning-view';
+import { usePlanningActions } from '@/store/use-planning';
+
+// The Sprint pane of Planning (Thinking space, at most 680px). One
+// workspace that changes with the stage (PRD §5 B), never a forced wizard:
+// - 選ぶ: 「今週、何を進めますか」, the chosen Tasks per Area.
+// - 整える: 「今週、どんな状態にしたいか」, each Area's Goal (optional) with
+//   its Tasks; a Task is linked to the Goal or not, and both count.
+// - 確かめる: 「この計画で、進められそうか」, Goals, Tasks and their values.
+// Before confirm the values are a preview, drawn solid (owner decision in
+// #40): they come from the person's own choices.
+
+export type Stage = 'pick' | 'shape' | 'check';
+
+export const STAGE_HEADINGS: Readonly<Record<Stage, string>> = {
+  pick: '今週、何を進めますか',
+  shape: '今週、どんな状態にしたいか',
+  check: 'この計画で、進められそうか',
+};
+
+type PlanPaneProps = {
+  data: PlanningData;
+  stage: Stage;
+  onOpenTask: (taskId: TaskId) => void;
+  className?: string | undefined;
+};
+
+function PlanPane({ data, stage, onOpenTask, className }: PlanPaneProps) {
+  const actions = usePlanningActions();
+  const withTasks = data.plan.filter((p) => p.tasks.length > 0);
+  // 整える shows every Area (a Goal can be written before choosing Tasks);
+  // 領域なし has no Goal and shows only with Tasks.
+  const blocks =
+    stage === 'pick'
+      ? withTasks
+      : data.plan.filter(
+          (p) =>
+            p.tasks.length > 0 ||
+            (p.area.id !== null && (stage === 'shape' || p.goal !== undefined)),
+        );
+
+  return (
+    <div data-slot="plan-pane" className={cn('flex flex-col gap-8', className)}>
+      <h1 className="text-display-m text-ink">{STAGE_HEADINGS[stage]}</h1>
+      {stage === 'pick' && data.chosenCount === 0 && (
+        <p className="text-body text-ink-muted">
+          Backlog から □
+          で今週へ選びます。今週発生する繰り返しは最初から入っています。
+        </p>
+      )}
+      {blocks.map((block) =>
+        stage === 'pick' ? (
+          <section
+            key={block.area.id ?? 'none'}
+            aria-label={block.area.name}
+            className="flex flex-col gap-2"
+          >
+            <h2 className="flex items-center gap-2">
+              <AreaIndicator
+                name={block.area.name}
+                color={block.area.color}
+                variant="heading"
+              />
+              <span className="text-meta text-ink-muted">
+                {summaryOf(block)}
+              </span>
+            </h2>
+            <PlannedList block={block} stage={stage} onOpenTask={onOpenTask} />
+          </section>
+        ) : (
+          <GoalBlock
+            key={block.area.id ?? 'none'}
+            area={{ name: block.area.name, color: block.area.color }}
+            summary={block.tasks.length > 0 ? summaryOf(block) : undefined}
+            goal={block.goal?.text}
+            onSave={
+              block.area.id === null
+                ? undefined
+                : (text) =>
+                    actions.setGoal(
+                      block.area.id as NonNullable<typeof block.area.id>,
+                      text,
+                    )
+            }
+          >
+            {block.tasks.length > 0 && (
+              <PlannedList
+                block={block}
+                stage={stage}
+                onOpenTask={onOpenTask}
+              />
+            )}
+          </GoalBlock>
+        ),
+      )}
+    </div>
+  );
+}
+
+function summaryOf(block: AreaPlan): string {
+  const count = `${block.tasks.length}件`;
+  return block.total === undefined
+    ? count
+    : `${count} · ${formatPlanningTotal(block.total)}`;
+}
+
+function PlannedList({
+  block,
+  stage,
+  onOpenTask,
+}: {
+  block: AreaPlan;
+  stage: Stage;
+  onOpenTask: (taskId: TaskId) => void;
+}) {
+  return (
+    <ul className="flex flex-col border-t border-border-soft">
+      {block.tasks.map((planned) => (
+        <li key={planned.sprintTask.id}>
+          <PlannedRow
+            planned={planned}
+            stage={stage}
+            onOpen={() => onOpenTask(planned.task.id)}
+          />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function PlannedRow({
+  planned,
+  stage,
+  onOpen,
+}: {
+  planned: PlannedTask;
+  stage: Stage;
+  onOpen: () => void;
+}) {
+  const actions = usePlanningActions();
+  const toast = useToast();
+  const { sprintTask, task, value, occurrenceCount } = planned;
+  const recurring = occurrenceCount !== undefined;
+  const linked = sprintTask.goalLink === 'linked';
+  const Repeat = semanticIcons.recurrence;
+  const Carry = semanticIcons.carriedOver;
+  const meta = [
+    recurring && (
+      <MetaItem key="r" icon={<Repeat aria-hidden />}>
+        今週 {occurrenceCount}回
+      </MetaItem>
+    ),
+    sprintTask.carriedFrom !== undefined && (
+      <MetaItem key="c" icon={<Carry aria-hidden />}>
+        持ち越し
+      </MetaItem>
+    ),
+    stage !== 'pick' && !linked && (
+      <MetaItem key="g" className="text-ink-subtle">
+        Goal なし
+      </MetaItem>
+    ),
+  ].filter(Boolean);
+
+  const unchoose = () => {
+    if (!actions.unchooseTasks([sprintTask.id])) return;
+    toast.show({
+      title: `「${task.title}」を今週から外しました`,
+      action: {
+        label: '元に戻す',
+        onClick: () => actions.chooseTasks([task.id]),
+      },
+    });
+  };
+
+  const menuItems = [
+    !recurring && (
+      <MenuItem key="out" onClick={unchoose}>
+        <Undo2 aria-hidden />
+        今週から外す
+      </MenuItem>
+    ),
+    stage !== 'pick' && (
+      <MenuItem
+        key="link"
+        onClick={() =>
+          actions.setGoalLink(sprintTask.id, linked ? 'unlinked' : 'linked')
+        }
+      >
+        <Target aria-hidden />
+        {linked ? 'Goal に紐づけない' : 'Goal に紐づける'}
+      </MenuItem>
+    ),
+  ].filter(Boolean);
+
+  return (
+    <TaskRow
+      title={task.title}
+      onOpen={onOpen}
+      metadata={
+        meta.length > 0 ? <TaskMetadata>{meta}</TaskMetadata> : undefined
+      }
+      estimate={<Estimate value={value} planned={value.base !== 'none'} />}
+      actions={
+        menuItems.length > 0 ? (
+          <Menu>
+            <MenuTrigger
+              render={
+                <IconButton
+                  size="sm"
+                  label={`操作: ${task.title}`}
+                  icon={<Ellipsis />}
+                />
+              }
+            />
+            <MenuContent align="end">{menuItems}</MenuContent>
+          </Menu>
+        ) : undefined
+      }
+    />
+  );
+}
+
+export { PlanPane };

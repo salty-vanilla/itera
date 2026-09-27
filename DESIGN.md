@@ -213,6 +213,7 @@ spacing:
   pane-nav: 224px
   pane-rail: 64px
   pane-list: 384px
+  pane-list-slim: 240px
   pane-side: 336px
   drawer: 400px
   popover: 320px
@@ -454,6 +455,7 @@ Area（領域）はユーザーが作る。駅の路線記号のように、色�
 | `area-badge` | 20px | Area の路線記号の一辺（compact でも同じ。当たり判定は行や Filter が持つ） |
 | `pane-nav` / `pane-rail` | 224 / 64px | ナビゲーション（1440px 以上 / 768–1439px） |
 | `pane-list` / `pane-side` | 384 / 336px | Planning の Backlog ペイン / 時間の見通しペイン |
+| `pane-list-slim` | 240px | Planning の整える・確かめる段階の Backlog ペイン（タイトルだけ） |
 | `drawer` | 400px | 右 Drawer |
 | `popover` | 320px | Popover の幅 |
 | `dialog-sm` / `dialog-md` / `dialog-lg` | 440 / 560 / 720px | Dialog の幅（compact は幅 100% − 32px） |

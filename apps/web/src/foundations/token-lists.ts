@@ -173,6 +173,7 @@ export const dimensions = [
   'pane-nav',
   'pane-rail',
   'pane-list',
+  'pane-list-slim',
   'pane-side',
   'drawer',
   'popover',

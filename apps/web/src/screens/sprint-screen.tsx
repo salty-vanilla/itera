@@ -1,6 +1,9 @@
 import type { SprintState } from '@itera/domain';
 import { formatDateRange } from '@/lib/date-format';
+import { useSearch } from '@tanstack/react-router';
 import { useAppOverview } from '@/store/use-app-overview';
+import { usePlanning } from '@/store/use-planning';
+import { PlanningScreen } from './planning/planning-screen';
 import { ScreenFrame } from './screen-frame';
 
 const stateLabel: Record<SprintState, string> = {
@@ -10,9 +13,13 @@ const stateLabel: Record<SprintState, string> = {
   closed: '完了',
 };
 
-// Sprint (#40): Planning while the Sprint is being planned.
+// Sprint: Planning while a Sprint is being planned (#40). The running
+// Sprint's own view is not built yet.
 function SprintScreen() {
+  const search = useSearch({ from: '/sprint' });
+  const planning = usePlanning({ applyCriterion: search.criterion !== 'off' });
   const { openSprint: sprint } = useAppOverview();
+  if (planning !== undefined) return <PlanningScreen data={planning} />;
   if (sprint === undefined) return <ScreenFrame heading="Sprint" />;
   return (
     <ScreenFrame

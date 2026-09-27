@@ -12,6 +12,7 @@ import {
   validateBacklogSearch,
 } from '@/screens/backlog/backlog-screen';
 import { NotFoundScreen } from '@/screens/not-found-screen';
+import { validateSprintSearch } from '@/screens/planning/planning-screen';
 import { RetroScreen } from '@/screens/retro-screen';
 import { SprintScreen } from '@/screens/sprint-screen';
 import { TodayScreen } from '@/screens/today-screen';
@@ -51,6 +52,7 @@ const todayRoute = createRoute({
 const sprintRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'sprint',
+  validateSearch: validateSprintSearch,
   component: SprintScreen,
 });
 
