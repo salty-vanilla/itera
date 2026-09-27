@@ -29,7 +29,8 @@ function number(value: number): string {
 }
 
 function inMinutes(hours: number, options: HoursOptions): boolean {
-  return !options.total && hours >= 0 && hours < 1;
+  // A value that rounds to 60 minutes is written as 1h.
+  return !options.total && hours >= 0 && Math.round(hours * 60) < 60;
 }
 
 function minutes(hours: number): string {

@@ -43,6 +43,14 @@ describe('fixture states', () => {
     }
   });
 
+  it('appends Activity in the order of time', () => {
+    for (const { id } of fixtureStates) {
+      const { activities } = fixtureSnapshot(id).records;
+      const times = activities.map((a) => a.at);
+      expect(times).toEqual(times.toSorted());
+    }
+  });
+
   it('has the Sprint in Planning through Pick, Shape and Check', () => {
     expect(currentSprint('planning-pick').state).toBe('planning');
     expect(currentSprint('planning-pick').goals).toEqual([]);
@@ -53,6 +61,7 @@ describe('fixture states', () => {
       now: check.clock.now,
     });
     // Near the available hours, so the Check has something to show.
+    expect(totals.total).toMatchObject({ lo: 13.25, hi: 17.25 });
     expect(totals.capacity?.status).toBe('mayExceed');
   });
 
@@ -127,7 +136,19 @@ describe('fixture states', () => {
       occurrences: start.records.occurrences,
       sprints: start.records.sprints,
     });
-    expect(facts.carriedOver.map((t) => t.taskId)).toContain('task-paper');
+    // Scenario A step 13: 提案 3–5h · 計画値 5h · 実績 4.5h、2回続けて見送り
+    // （9/28・9/29）、9/30 は「今日はここまで」.
+    expect(
+      facts.carriedOver.find((t) => t.taskId === 'task-paper'),
+    ).toMatchObject({
+      plan: {
+        suggestion: { lo: 3, hi: 5 },
+        value: { lo: 5, hi: 5, criterionApplied: true },
+      },
+      actualHours: 4.5,
+      longestDeferralRun: ['2026-09-28', '2026-09-29'],
+      pausedDates: ['2026-09-30'],
+    });
     expect(currentSprint('retro-reflect').retro?.reflection).toBeDefined();
     const ready = currentSprint('retro-before-complete');
     expect(ready.retro?.improvement).toBeDefined();

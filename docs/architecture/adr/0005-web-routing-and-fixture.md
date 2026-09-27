@@ -40,7 +40,7 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
 
 - ストアは `packages/domain` の記録（User・Area・Task・RecurrenceRule・Occurrence・Sprint・PlanningCriterion・Activity）だけを持つ。SprintTask・DailySelection・Retro などは Sprint の集約の中にある（packages/domain README）。派生値は持たず、画面が domain の関数で計算する。
 - 変更は `Change`（記録と文脈を受け取り、domain のコマンドを呼んで、書き換える記録と Activity を返す関数）として `run` に渡す。成功したら記録を差し替えて Activity を追記し、失敗したら何も変えずに domain のエラーを返す。ID はストアが作って文脈で渡す（domain は ID を作らない）。
-- 画面が使うのは `RecordStore`（`getSnapshot`・`subscribe`・`run`）だけにする。fixture はメモリ上の実装（`createMemoryStore`）を使い、永続化しない（リロードすると fixture に戻る）。services/api とつなぐときは同じ境界の別の実装を作る。そのとき `run` を非同期にするかは、つなぎ込みの Issue で決める。
+- 画面が使うのは `RecordStore`（`getSnapshot`・`subscribe`・`run`）だけにする。fixture はメモリ上の実装（`createMemoryStore`）を使い、永続化しない（リロードすると fixture に戻る）。services/api とつなぐときは同じ境界の別の実装を作る。そのとき `run` を非同期にするか、`Change`（今はクライアントで全部の記録を読み、domain のコマンドを呼ぶ関数）をサーバーへ送れる形の操作に替えるかは、つなぎ込みの Issue で決める。画面側の `Change` を書き直すことになる可能性がある。
 
 ## 影響
 

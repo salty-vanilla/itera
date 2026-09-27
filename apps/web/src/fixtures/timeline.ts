@@ -7,7 +7,8 @@
 // - Sprint 9/21–9/27 is the previous week. Its Retro makes the criterion
 //   「研究の推定幅 → 上限」 active.
 // - Sprint 9/28–10/4 follows Scenario A (関連論文を 3 本読む: deferred twice,
-//   4.5h then 今日はここまで, 昨日の続き, carried over) and Scenario B
+//   4.5h then 今日はここまで, 昨日の続き, carried over; the available hours
+//   differ, see the Check) and Scenario B
 //   (顧客インタビューの設計 added to Today from the Backlog). Scenario C's
 //   weekly 部屋の掃除 is changed from Saturday to Sunday during the Sprint,
 //   which takes effect from the next Sprint.
@@ -166,7 +167,11 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
 
   /** Runs a change at a time. The fixture must be valid, so failure throws. */
   function at(time: string, change: Change, actor: Actor = 'user'): void {
-    now = jst(time);
+    const next = jst(time);
+    // Activity is appended in the order of the steps, so time never goes back.
+    if (next < now)
+      throw new Error(`Fixture step at ${time} goes back in time`);
+    now = next;
     const result = change(records, {
       now,
       today: toLocalDate(now, user.timeZone),
@@ -567,6 +572,8 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
     }),
   );
   at('09-24 12:50', newTask(task.bookshelf, '本棚を整理する'));
+  at('09-24 19:00', defer(previous, task.apiReview, '09-24'));
+
   at(
     '09-25 09:00',
     newTask(task.onboarding, '新メンバーのオンボーディング資料', {
@@ -594,8 +601,6 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
   );
   at('09-25 09:21', estimate(task.reading, 0.5));
   at('09-25 09:22', recurring(task.reading, monWedFri, '09-28'));
-
-  at('09-24 19:00', defer(previous, task.apiReview, '09-24'));
 
   at('09-26 06:00', day(previous), 'system');
   at('09-26 10:30', complete(previous, task.cleaning, '09-26', 1));
@@ -673,6 +678,8 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
 
   at(
     '09-27 20:40',
+    // 17h rather than Scenario A's 18h, so that the Check shows a total that
+    // may exceed the available hours (13.25–17.25h against 17h).
     onSprint(current, (s, ctx) => setAvailableHours(s, { hours: 17 }, ctx)),
   );
   snapshot('planning-check', '09-27 20:45');
@@ -734,11 +741,12 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
 
   at('10-01 06:00', day(current), 'system');
   snapshot('today-morning', '10-01 07:30');
-  at('10-01 09:00', toToday(current, task.paper));
+  // Scenario A step 11: the paper Task is only 「昨日の続き」 today; it is
+  // not chosen again.
+  at('10-01 09:00', toToday(current, task.dataset));
   at('10-01 09:01', toToday(current, task.apiReview));
-  at('10-01 09:05', start(current, task.paper, '10-01'));
+  at('10-01 09:05', start(current, task.dataset, '10-01'));
   at('10-01 11:30', complete(current, task.apiReview, '10-01', 2));
-  at('10-01 13:00', toToday(current, task.dataset));
   snapshot('today-daytime', '10-01 14:00');
 
   // Scenario B: 「今日へ」 from the Backlog detail, one operation.
@@ -798,7 +806,7 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
   );
   snapshot('backlog-detail', '10-01 16:30');
 
-  at('10-01 18:00', pause(current, task.paper, '10-01', 2));
+  at('10-01 18:00', pause(current, task.dataset, '10-01', 2));
   at('10-01 18:30', complete(current, task.interview, '10-01', 2.5));
 
   at('10-02 06:00', day(current), 'system');

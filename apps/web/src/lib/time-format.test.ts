@@ -19,6 +19,11 @@ describe('formatHours', () => {
     expect(formatHours(4.5)).toBe('4.5h');
   });
 
+  it('writes a value that rounds to 60 minutes as 1h', () => {
+    expect(formatHours(0.999)).toBe('1h');
+    expect(formatRange(0.5, 0.999)).toBe('30m–1h');
+  });
+
   it('writes a total in hours even under 1h', () => {
     expect(formatHours(0.5, { total: true })).toBe('0.5h');
     expect(formatHours(0, { total: true })).toBe('0h');

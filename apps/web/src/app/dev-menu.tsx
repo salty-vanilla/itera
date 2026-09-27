@@ -33,16 +33,9 @@ function DevMenu({ current }: { current: FixtureStateId }) {
 
   return (
     // Bottom right, above the compact tab bar (56px), out of the headings.
-    <div className="fixed right-2 bottom-[calc(64px+env(safe-area-inset-bottom))] z-(--layer-sticky) medium:bottom-2">
+    <div className="fixed right-2 bottom-[calc(var(--spacing-16)+env(safe-area-inset-bottom))] z-(--layer-sticky) medium:bottom-2">
       <Menu>
-        <MenuTrigger
-          render={
-            <Button
-              size="sm"
-              aria-label={`fixture: ${screenLabel} ${state?.label} · ${clockText}`}
-            />
-          }
-        >
+        <MenuTrigger render={<Button size="sm" />}>
           <FlaskConical aria-hidden />
           <span>
             {screenLabel} {state?.label}

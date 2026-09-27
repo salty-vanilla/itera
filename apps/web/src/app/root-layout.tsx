@@ -1,9 +1,10 @@
-import { lazy, Suspense, useMemo } from 'react';
+import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { Outlet, useSearch } from '@tanstack/react-router';
 import {
   defaultFixtureState,
   fixtureSnapshot,
   isFixtureStateId,
+  type FixtureStateId,
 } from '@/fixtures/states';
 import { createMemoryStore } from '@/store/record-store';
 import { StoreProvider } from '@/store/store-provider';
@@ -26,12 +27,9 @@ function RootLayout() {
   const fixture = isFixtureStateId(search.fixture)
     ? search.fixture
     : defaultFixtureState;
-  const store = useMemo(
-    () => createMemoryStore(fixtureSnapshot(fixture)),
-    [fixture],
-  );
   return (
-    <StoreProvider store={store}>
+    // Keyed by the state: another state mounts a new store.
+    <FixtureStore key={fixture} fixture={fixture}>
       <AppShell>
         <Outlet />
       </AppShell>
@@ -40,8 +38,20 @@ function RootLayout() {
           <DevMenu current={fixture} />
         </Suspense>
       )}
-    </StoreProvider>
+    </FixtureStore>
   );
+}
+
+/** Holds one store for the life of a fixture state (state, not a memo). */
+function FixtureStore({
+  fixture,
+  children,
+}: {
+  fixture: FixtureStateId;
+  children: ReactNode;
+}) {
+  const [store] = useState(() => createMemoryStore(fixtureSnapshot(fixture)));
+  return <StoreProvider store={store}>{children}</StoreProvider>;
 }
 
 export { RootLayout };
