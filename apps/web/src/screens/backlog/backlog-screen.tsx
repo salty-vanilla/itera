@@ -1,6 +1,6 @@
 import { id, type AreaId, type BacklogSlice, type TaskId } from '@itera/domain';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useId, useRef, useState, type Ref } from 'react';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Field } from '@/components/ui/field';
@@ -87,16 +87,30 @@ function BacklogScreen() {
     });
   };
 
+  // The row that came back by 元に戻す takes the focus on its ○.
+  const [refocus, setRefocus] = useState<TaskId>();
+  const undoRef = useRef<HTMLButtonElement>(null);
+
   const completeWithUndo = (taskId: TaskId, title: string) => {
     const index = items.findIndex((i) => i.task.id === taskId);
     const before = items[index + 1]?.task.id;
-    if (search.task === taskId) setSearch({ task: undefined });
+    setRefocus(undefined);
     if (!actions.completeTask(taskId)) return;
+    // From the detail: close it once the Task is done. Closing clears the
+    // line of an earlier completion, so the new one is set after it.
+    if (search.task === taskId) setSearch({ task: undefined });
     setCompleted({
       taskId,
       title,
       ...(before === undefined ? {} : { before }),
     });
+  };
+
+  const undoCompleted = () => {
+    if (completed === undefined) return;
+    if (!actions.undoCompleteTask(completed.taskId)) return;
+    setCompleted(undefined);
+    setRefocus(completed.taskId);
   };
 
   const archiveWithUndo = (taskId: TaskId, title: string) => {
@@ -201,12 +215,10 @@ function BacklogScreen() {
                 <Fragment key={task.id}>
                   {completed?.before === task.id && (
                     <CompletedLine
+                      key={completed.taskId}
+                      ref={undoRef}
                       title={completed.title}
-                      onUndo={() => {
-                        if (actions.undoCompleteTask(completed.taskId)) {
-                          setCompleted(undefined);
-                        }
-                      }}
+                      onUndo={undoCompleted}
                     />
                   )}
                   <li>
@@ -221,6 +233,7 @@ function BacklogScreen() {
                         actions.addToToday(task.id);
                       }}
                       onArchive={() => archiveWithUndo(task.id, task.title)}
+                      focusControl={refocus === task.id}
                     />
                   </li>
                 </Fragment>
@@ -230,12 +243,10 @@ function BacklogScreen() {
               (completed.before === undefined ||
                 !items.some((i) => i.task.id === completed.before)) && (
                 <CompletedLine
+                  key={completed.taskId}
+                  ref={undoRef}
                   title={completed.title}
-                  onUndo={() => {
-                    if (actions.undoCompleteTask(completed.taskId)) {
-                      setCompleted(undefined);
-                    }
-                  }}
+                  onUndo={undoCompleted}
                 />
               )}
           </ul>
@@ -248,7 +259,11 @@ function BacklogScreen() {
           if (!next) setSearch({ task: undefined });
         }}
       >
-        <DrawerContent>
+        <DrawerContent
+          // After 完了にする in the detail, focus goes to 元に戻す rather than
+          // back to the row, which is gone.
+          finalFocus={() => undoRef.current ?? true}
+        >
           {open !== undefined && (
             <TaskDetail
               key={open.task.id}
@@ -266,28 +281,44 @@ function BacklogScreen() {
 }
 
 /**
- * The line left where a completed row was (F29). Focus moves to 「元に戻す」
- * so that the row's ○, now gone, does not leave focus nowhere.
+ * The line left where a completed row was (F29). The `li` stays a list
+ * item; the status inside it announces the result. Focus moves to 元に戻す
+ * so that the row's ○, now gone, does not leave focus nowhere, and the
+ * button is described by the sentence so that it is read with it.
  */
 function CompletedLine({
   title,
   onUndo,
+  ref,
 }: {
   title: string;
   onUndo: () => void;
+  ref: Ref<HTMLButtonElement>;
 }) {
-  const undoRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => undoRef.current?.focus(), []);
+  const textId = useId();
+  const localRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => localRef.current?.focus(), []);
   return (
-    <li
-      role="status"
-      data-slot="completed-line"
-      className="flex min-h-row-touch flex-wrap items-center gap-x-2 border-b border-border-soft bg-canvas-subtle px-3 py-2 text-body text-ink medium:min-h-row-task"
-    >
-      「{title}」を完了にしました
-      <Button ref={undoRef} size="sm" variant="quiet" onClick={onUndo}>
-        元に戻す
-      </Button>
+    <li data-slot="completed-line">
+      <div
+        role="status"
+        className="flex min-h-row-touch flex-wrap items-center gap-x-2 border-b border-border-soft bg-canvas-subtle px-3 py-2 text-body text-ink medium:min-h-row-task"
+      >
+        <span id={textId}>「{title}」を完了にしました</span>
+        <Button
+          ref={(node) => {
+            localRef.current = node;
+            if (typeof ref === 'function') ref(node);
+            else if (ref) ref.current = node;
+          }}
+          size="sm"
+          variant="quiet"
+          aria-describedby={textId}
+          onClick={onUndo}
+        >
+          元に戻す
+        </Button>
+      </div>
     </li>
   );
 }

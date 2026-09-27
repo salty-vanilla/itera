@@ -151,7 +151,7 @@ type CommandResult<T> =
 ## Backlog の完了を元に戻す（#47）
 
 - **期限が近い**（F28）：今日を含む Sprint がない日は、その週の終わりまで（`dueSoonUntil`。実装は #39 のまま）。
-- **Backlog からの完了を元に戻す**（`undoCompleteFromBacklog`、F29）：Sprint 外の Task（または active な Sprint がないとき）は Task だけを戻す。今の Sprint の Task で、完了がその日の選択を作った（origin = backlogCompletion）ときは、Task と SprintTask を戻し、その選択を消す（`todayBacklogCompletionUndone`）。完了前からあった選択を完了にしたときは `undoCompleteSelection` と同じく戻す。取り消せるのは完了した日の選択だけ（`date` はその日を渡す）。
+- **Backlog からの完了を元に戻す**（`undoCompleteFromBacklog`、F29）：Sprint 外の Task（または active な Sprint がないとき）は Task だけを戻す。今の Sprint の Task で、完了がその日の選択を作った（origin = backlogCompletion）ときは、Task と SprintTask を戻し、その選択を消す（`todayBacklogCompletionUndone`）。完了前からあった選択を完了にしたときは `undoCompleteSelection` と同じく戻す。取り消せるのは完了した日の選択だけ（`date` はその日を渡す）。Today の完了の取り消し（`undoCompleteSelection`）には日付の制限がないが、Backlog の取り消しは完了した直後の操作なのでその日に限る。Sprint が active でない（Review に入った後など）ときは Task だけを戻し、SprintTask は変えない（`completeFromBacklog` も active な Sprint にだけ働くのと対称）。
 
 ## 対象外
 

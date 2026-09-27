@@ -588,7 +588,7 @@ describe('undo returns to where it was (F17, F19)', () => {
   });
 });
 
-describe('F29: undoing a completion from the Backlog', () => {
+describe('invariant 27 / F29: undoing a completion from the Backlog', () => {
   const date = d('2026-09-28');
 
   it('removes the selection the completion made, and reopens the Task and SprintTask', () => {
@@ -631,6 +631,31 @@ describe('F29: undoing a completion from the Backlog', () => {
     expect(undone.task.lifecycle).toBe('active');
     expect(undone.sprint?.dailySelections).toMatchObject([
       { id: 'sel-1', origin: 'manual', resolution: 'deferred' },
+    ]);
+  });
+
+  it('puts a selection chosen before back to selected', () => {
+    const done = unwrap(
+      completeFromBacklog(
+        chosen(),
+        { task: task1(), date, selectionId: id('sel-b') },
+        ctx,
+      ),
+    );
+    const result = undoCompleteFromBacklog(
+      done.sprint,
+      { task: done.task, date },
+      ctx,
+    );
+    const undone = unwrap(result);
+    expect(undone.sprint?.tasks[0]?.outcome).toBe('planned');
+    expect(undone.sprint?.dailySelections).toMatchObject([
+      { id: 'sel-1', origin: 'manual', resolution: 'selected' },
+    ]);
+    expect(result.ok && result.value.activities.map((a) => a.kind)).toEqual([
+      'taskCompletionUndone',
+      'sprintTaskDoneUndone',
+      'todayDoneUndone',
     ]);
   });
 

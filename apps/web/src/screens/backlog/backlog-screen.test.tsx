@@ -197,7 +197,7 @@ describe('Backlog', () => {
     expect(within(list()).queryByText('API 設計のレビュー')).toBeNull();
   });
 
-  it('完了の取り消し（F29）: a Task in the Sprint returns with its Sprint and today', async () => {
+  it('invariant 27 / F29: undoing a completion returns the Task, its Sprint and today', async () => {
     await renderAt('/backlog?fixture=backlog-capture');
     const before = records().sprints.find((s) => s.state === 'active');
     await userEvent.click(
@@ -212,7 +212,11 @@ describe('Backlog', () => {
     expect(line.nextElementSibling?.textContent).toContain(
       '関連論文を 3 本読む',
     );
+    // Still a list item; the status is inside it.
+    expect(line.tagName).toBe('LI');
+    expect(within(line).getByRole('status')).toBeTruthy();
     const undo = within(line).getByRole('button', { name: '元に戻す' });
+    expect(undo.getAttribute('aria-describedby')).not.toBeNull();
     expect(document.activeElement).toBe(undo);
 
     await userEvent.click(undo);
@@ -223,6 +227,10 @@ describe('Backlog', () => {
     expect(sprint?.dailySelections).toEqual(before?.dailySelections);
     expect(completedLine()).toBeNull();
     expect(within(list()).getByText('API 設計のレビュー')).toBeTruthy();
+    // Focus goes to the ○ of the row that came back.
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: '完了にする: API 設計のレビュー' }),
+    );
   });
 
   it('完了の取り消し: a Task outside the Sprint returns to the Backlog', async () => {
@@ -235,6 +243,17 @@ describe('Backlog', () => {
       within(list()).getByRole('button', { name: '元に戻す' }),
     );
     expect(task('task-bookshelf')?.lifecycle).toBe('active');
+  });
+
+  it('puts the line at the end when the last row is completed', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: '完了にする: 輪講の担当回を確認する',
+      }),
+    );
+    const rows = within(list()).getAllByRole('listitem');
+    expect(rows.at(-1)).toBe(completedLine());
   });
 
   it('the completed line goes with the next operation', async () => {
@@ -254,6 +273,9 @@ describe('Backlog', () => {
       within(detail).getByRole('button', { name: '完了にする' }),
     );
     expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(
+      within(list()).getByRole('button', { name: '元に戻す' }),
+    );
     expect(completedLine()?.textContent).toContain(
       '「本棚を整理する」を完了にしました',
     );

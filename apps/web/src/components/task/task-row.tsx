@@ -1,5 +1,5 @@
 import { Check } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 import { cn } from '@/lib/utils';
 
 // DESIGN.md Components › Task Row. One Task, the same structure in Backlog,
@@ -105,14 +105,17 @@ function CompletionCircle({
   done = false,
   onToggle,
   disabled = false,
+  ref,
 }: {
   title: string;
   done?: boolean;
   onToggle: () => void;
   disabled?: boolean;
+  ref?: Ref<HTMLButtonElement> | undefined;
 }) {
   return (
     <button
+      ref={ref}
       type="button"
       onClick={onToggle}
       disabled={disabled}
