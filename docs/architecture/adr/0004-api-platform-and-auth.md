@@ -21,7 +21,7 @@ Itera の初期利用者は作者自身で（PRD §0）、1 週間の Sprint を
 | DB | Cloudflare D1（SQLite） | Workers から binding で使える。上限（1 DB あたり Workers Paid で 10 GB、Free で 500 MB）に十分収まる |
 | ORM | Drizzle | AGENTS.md の候補。D1 に対応する |
 | バックアップ | D1 の Time Travel | 任意の分の時点へ戻せる（Workers Paid で 30 日、Free で 7 日）。追加の保存・復元の費用はかからない |
-| 認証 | WorkOS AuthKit（WorkOS がホストするログイン画面） | 無料枠（月 100 万 MAU）に、メール + パスワード・ソーシャルログイン・パスキー・MFA・Magic Auth が含まれる。ログイン画面は 90 言語に対応し、日本語で表示される。資格情報の保存と認証画面を外部に任せられる |
+| 認証 | WorkOS AuthKit（WorkOS がホストするログイン画面） | 無料枠（月 100 万 MAU）に、メール + パスワード・ソーシャルログイン・パスキー・MFA・Magic Auth が含まれる。ログイン画面は 90 以上の言語に対応し、日本語で表示される。資格情報の保存と認証画面を外部に任せられる |
 | トークンの検証 | `jose` で WorkOS のアクセストークン（JWT）を検証する | WorkOS に Hono 向けの公式 SDK は見当たらない。WorkOS は `jose` のようなライブラリでリクエストごとに検証する方法を示している |
 
 依存の版は、導入する Issue（#26）で ADR 0001 と同じく完全一致で固定し、ADR に記録する。
@@ -44,7 +44,7 @@ D1 は auto-commit で動き、複数の文を原子的に実行するには `ba
 | 案 | 見送った理由 |
 | --- | --- |
 | AWS（Lambda・RDS / DynamoDB・Cognito など） | この規模では、ネットワーク・権限・DB の運用の手間が利点を上回る |
-| Clerk | 無料プラン（Hobby、月 5 万 MRU）ではパスキーと MFA が使えない。日本語の表示文言は公式の保守対象外（コミュニティの翻訳） |
+| Clerk | 無料プラン（Hobby、月 5 万 MRU）ではパスキーと MFA が使えない。日本語の表示文言は利用者が提供した翻訳（customer-sourced） |
 | Better Auth（自前でホストする OSS） | 利用者のデータを D1 に一緒に置け、ログイン画面を DESIGN.md どおりに作れる。一方で、脆弱性への対応・メール送信・認証画面を自分で持つことになる |
 
 ## 既知の制約
