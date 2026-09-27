@@ -168,7 +168,8 @@ Planning は **ひとつの workspace が Pick → Shape → Check と自然に�
 
 #### 確定後の変更
 
-- Goal 文と可用時間は Sprint 中にも変更できる。
+- Goal 文と可用時間は Sprint 中にも変更できる。Sprint 中に Goal を新しく書くこともできるが、消すことはできない。
+- 確定後に Sprint から外した Task は、同じ Sprint に戻せる。繰り返し Task を外した場合、その Sprint の残りの Occurrence は外した回として扱い、Today にも Retro の未処理にも出さない。
 - 計画時の値は保持し、変更履歴を Retro で確認できる。
 - Planning Criterion の適用有無は Sprint 確定後には変更しない（MVP）。
 - Sprint 中の Area 改名はその Sprint の Planning / Today / Retro には反映せず、次 Sprint から反映する。
@@ -205,7 +206,10 @@ Today は毎日使う軽量画面であり、日次 Planning や詳細なタイ�
 - **今日はここまで**: 作業したが未完了。任意で実績時間を残せる。
 - **今日は見送る**: 今日やらないと本人が決めた。連続見送りの対象。
 - **今日から外す**: 選び直し。見送りには数えない。
-- 何も操作しないまま日付が変わった選択は未処理として記録し、見送りには数えない。
+- 何も操作しないまま日付が変わった選択は未処理として記録し、見送りには数えない。Retro を始めた時点で開いたままの選択も同じく未処理になる。
+- `今日はここまで` `今日は見送る` `今日から外す` にした Task も、その日のうちに終えたら完了として記録できる（Today・Backlog のどちらからでも）。同じ日に選び直すことはできない。
+- 繰り返し Occurrence は、同じ Sprint のほかの日にも `今日へ` 選べる（前倒し・後ろ倒し）。
+- 完了とスキップは取り消せる。見送りなどの後に完了した Task の完了を取り消すと、元の見送りなどに戻る。
 
 同じ Task を Today に選んだ機会で Deferred が連続した場合、`N回続けて見送り` と中立的に表示する。選ばなかった日と未処理（Unresolved）は無視し、Paused / Done / Removed / 繰り返しの Skipped が挟まると連続は途切れる。
 
@@ -230,6 +234,8 @@ Retro は反省文や成績表ではなく、**今週の事実から次の Sprin
 同じ workspace が `事実を見る → 振り返る → 引き継ぐ` と自然に変化する。
 
 #### 事実を見る
+
+Sprint の最終日から本人が Retro を始められ、終了日を過ぎるとシステムが Retro の状態にする。繰り返し Task は持ち越しにせず、回ごとの完了 / スキップ / 未処理で見せる。Retro 中（完了前）も実績時間を後から足せる。
 
 Area ごとに以下を確認できる。
 
@@ -291,16 +297,17 @@ Planning で明示的に外した繰り返し Occurrence は通常の Retro 事�
 
 - Task は Subtask を持てる。
 - Planning の時間計算は `親 Task の Estimate` または `Subtask の Estimate 合計` のどちらか一方を使い、二重計上しない。
+- Subtask の Estimate は点の値とする。一部の Subtask が未見積なら、見積りのある分を合計し、未見積の件数を示す。Planning Criterion は Subtask の Estimate 合計には作用しない。
 - MVP では Subtask 単位で Sprint へ参加させない。
 
 ### Recurrence
 
-- `毎日 / 平日 / 毎週 / 毎月` の基本ルールを扱う。
+- `毎日 / 平日 / 毎週 / 毎月` の基本ルールを扱う。毎週は曜日を複数指定できる（例：毎週 月・木）。
 - Rule と各 Occurrence を分ける。
 - 今週発生する Occurrence は Planning 開始時に生成し、既定で Sprint に含める。
 - Planning で外した Occurrence は Today に出さず、通常の Retro 事実にも含めないが、履歴としては残す。
 - Rule を変更しても確定済み Sprint の Occurrence は動かさない。
-- Active Sprint 中に Rule を変更した場合も、今 Sprint の計画は変えず、まだ確定していない次 Sprint から新 Rule を使う。次 Sprint の Planning draft がすでに Occurrence を生成していれば、その Occurrence を新 Rule で作り直す。
+- Active Sprint 中に Rule を変更した場合も、今 Sprint の計画は変えず、まだ確定していない次 Sprint から新 Rule を使う。次 Sprint の Planning draft がすでに Occurrence を生成していれば、その Occurrence を新 Rule で作り直す。Planning 中に新しく Rule を作った場合も、その draft の Occurrence を生成して既定で含める。
 - Backlog では Rule ごとに 1 行を表示し、未来の Occurrence を大量に並べない。
 
 ## 7. AI / Agent の役割
