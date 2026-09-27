@@ -457,14 +457,14 @@ describe('recurring details', () => {
 });
 
 describe('recordActualTime guards', () => {
-  it('needs the active Sprint, a day in it, and the right occurrence', () => {
+  it('needs an active (or, F22, reviewed) Sprint, a day in it, and the right occurrence', () => {
     const input = {
       sprintTaskId: id<'SprintTask'>('st-task-1'),
       hours: 1,
       date: d('2026-09-29'),
     };
     expect(
-      recordActualTime({ ...active(), state: 'review' }, input, ctx),
+      recordActualTime({ ...active(), state: 'closed' }, input, ctx),
     ).toMatchObject({ ok: false });
     expect(
       recordActualTime(active(), { ...input, date: d('2026-10-05') }, ctx),

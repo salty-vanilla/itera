@@ -207,6 +207,53 @@ export type Activity =
       readonly interruptId: InterruptNoteId;
     })
   | (ActivityBase & {
+      readonly kind:
+        | 'sprintReviewStarted'
+        | 'retroCompleted'
+        | 'reflectionChanged'
+        | 'improvementChanged';
+      readonly sprintId: SprintId;
+    })
+  | (ActivityBase & {
+      readonly kind: 'goalSelfAssessed';
+      readonly sprintId: SprintId;
+      readonly areaId: AreaId;
+      readonly assessment:
+        'achieved' | 'partly' | 'notAchieved' | 'notJudged' | null;
+    })
+  | (ActivityBase & {
+      readonly kind: 'retroPinned' | 'retroUnpinned';
+      readonly sprintId: SprintId;
+      readonly pin: {
+        readonly kind:
+          | 'sprintTask'
+          | 'dailySelection'
+          | 'occurrence'
+          | 'interrupt'
+          | 'goal'
+          | 'availableHours';
+        readonly id?: string;
+      };
+    })
+  | (ActivityBase & {
+      readonly kind:
+        'criterionDrafted' | 'criterionDraftDropped' | 'criterionDraftChanged';
+      readonly criterionId: PlanningCriterionId;
+    })
+  | (ActivityBase & {
+      /** 基準の Retro での決定（続ける / 終える / 置き換える）. */
+      readonly kind: 'criterionDecided';
+      readonly sprintId: SprintId;
+      readonly criterionId: PlanningCriterionId;
+      readonly decision: 'continue' | 'end' | 'replace';
+    })
+  | (ActivityBase & {
+      readonly kind: 'criterionStateChanged';
+      readonly criterionId: PlanningCriterionId;
+      readonly from: 'draft' | 'active' | 'ended' | 'replaced';
+      readonly to: 'draft' | 'active' | 'ended' | 'replaced';
+    })
+  | (ActivityBase & {
       /** F9: an Area first appearing in a confirmed Sprint. */
       readonly kind: 'areaSnapshotAdded';
       readonly sprintId: SprintId;

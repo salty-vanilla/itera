@@ -1,8 +1,9 @@
 // Scenario C of docs/domain/domain-model.md (部屋の掃除, weekly). Sprints
 // are Monday–Sunday weeks of 2026. The first test follows the rule and its
 // occurrences alone (steps 1–5, 8; #21); the second runs steps 6–9 with
-// Sprint records (#22); the third runs steps 2–3 through Today (#23). Closing a Sprint comes with #24, so closed Sprints
-// are fixtures here.
+// Sprint records (#22); the third runs steps 2–3 through Today (#23).
+// Sprints are closed with enterReview and completeRetro (#24); only the
+// week before step 6 is a closed fixture, as the third test runs it.
 import { describe, expect, it } from 'vitest';
 import {
   completeOccurrence,
@@ -22,6 +23,8 @@ import { id } from './shared/ids';
 import { addDays, localDate } from './shared/time';
 import { confirmSprint, excludeFromPlan, startPlanning } from './planning';
 import { projectFrom, type Sprint } from './sprint';
+import { retroFacts } from './retro-facts';
+import { completeRetro, enterReview } from './review';
 import { changeRuleForNextSprint } from './sprint-recurrence';
 import { completeSelection, skipSelection, startDay } from './today';
 import { at, ids, newTask, sprintFixture, unwrap, user } from './testing';
@@ -269,7 +272,26 @@ describe('Scenario C — steps 6–9 with Sprint records', () => {
 
     // 7. The 8/31 week: 9/6 is generated, then left out. The draft
     //    SprintTask disappears before confirm; the occurrence stays excluded.
-    const closed24: Sprint = { ...active24, state: 'closed' };
+    // The 8/24 week ends (8/30 was not done here, so it is missed) and its
+    // Retro completes.
+    const reviewed24 = unwrap(
+      enterReview(
+        active24,
+        { today: d('2026-08-31'), occurrences },
+        { ...at('2026-08-30T15:00:00.000Z'), actor: 'system' },
+      ),
+    );
+    occurrences = occurrences.map(
+      (o) => reviewed24.occurrences.find((m) => m.id === o.id) ?? o,
+    );
+    expect(reviewed24.sprint.tasks).toMatchObject([{ outcome: 'done' }]); // F20
+    const closed24: Sprint = unwrap(
+      completeRetro(
+        reviewed24.sprint,
+        { criteria: [] },
+        at('2026-08-31T00:00:00.000Z'),
+      ),
+    ).sprint;
     const week31 = planWeek(
       '2026-08-31',
       [closed, closed24],
@@ -288,6 +310,18 @@ describe('Scenario C — steps 6–9 with Sprint records', () => {
       '2026-08-31T00:10:00.000Z',
     );
     expect(occurrences.find((o) => o.id === sep6.id)?.state).toBe('excluded');
+    // F2: the week's Retro facts do not show the excluded 9/6.
+    const week31Facts = retroFacts(active31, {
+      tasks: [recurringTask],
+      areas: [],
+      occurrences,
+      sprints: [],
+    });
+    expect(week31Facts.occurrences).toEqual({
+      done: [],
+      skipped: [],
+      missed: [],
+    });
 
     // 8. 9/2 (Wed), mid-Sprint: back to 毎週 土. It waits for the next
     //    Sprint (9/7); the current Sprint and its occurrences stay as they are.
@@ -329,7 +363,18 @@ describe('Scenario C — steps 6–9 with Sprint records', () => {
     // 9. The 9/7 week: 9/12 (Sat, v3) is generated and included by default.
     const week7 = planWeek(
       '2026-09-07',
-      [closed, closed24, { ...active31, state: 'review' }],
+      // The 8/31 week is in Review (its Retro not done yet): Planning can start.
+      [
+        closed,
+        closed24,
+        unwrap(
+          enterReview(
+            active31,
+            { today: d('2026-09-07'), occurrences },
+            { ...at('2026-09-06T15:00:00.000Z'), actor: 'system' },
+          ),
+        ).sprint,
+      ],
       '2026-09-07T00:00:00.000Z',
     );
     expect(week7.occurrences).toMatchObject([
@@ -416,7 +461,25 @@ describe('Scenario C — steps 2–3 in Today', () => {
       occurrences = occurrences.map((o) =>
         o.id === change.occurrence?.id ? change.occurrence : o,
       );
-      sprints = [...sprints, { ...change.sprint, state: 'closed' }];
+      // The week ends and its Retro completes.
+      const reviewed = unwrap(
+        enterReview(
+          change.sprint,
+          { today: addDays(d(start), 7), occurrences },
+          { ...at(`${start}T00:00:00.000Z`), actor: 'system' },
+        ),
+      );
+      // F20: the recurring SprintTask is closed as done; results are per occurrence.
+      expect(reviewed.sprint.tasks).toMatchObject([{ outcome: 'done' }]);
+      const closedWeek = unwrap(
+        completeRetro(
+          reviewed.sprint,
+          { criteria: [] },
+          at(`${day}T12:00:00.000Z`),
+        ),
+      ).sprint;
+      expect(closedWeek.state).toBe('closed');
+      sprints = [...sprints, closedWeek];
       return change;
     };
 
@@ -442,6 +505,18 @@ describe('Scenario C — steps 2–3 in Today', () => {
       ['2026-08-08', 'done'],
       ['2026-08-15', 'done'],
       ['2026-08-22', 'skipped'],
+    ]);
+    // Retro of the 8/17 week: 「8/22 の回をスキップ」.
+    const week17 = sprints.at(-1);
+    if (week17 === undefined) throw new Error('no Sprint');
+    const facts = retroFacts(week17, {
+      tasks: [task],
+      areas: [],
+      occurrences,
+      sprints,
+    });
+    expect(facts.occurrences.skipped.map((o) => o.scheduledDate)).toEqual([
+      '2026-08-22',
     ]);
   });
 });

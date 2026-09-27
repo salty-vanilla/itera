@@ -5,7 +5,13 @@
 import { describe, expect, it } from 'vitest';
 import { sprintTotals } from './capacity';
 import { presentSuggestion } from './estimate';
-import { addToToday as addToTodayCommand, completeSelection } from './today';
+import { retroFacts } from './retro-facts';
+import { enterReview } from './review';
+import {
+  addToToday as addToTodayCommand,
+  completeSelection,
+  noteInterrupt,
+} from './today';
 import type { ActiveCriterion } from './planning';
 import { id, type AreaId } from './shared/ids';
 import { localDate } from './shared/time';
@@ -124,6 +130,35 @@ describe('Scenario B — Sprint 外の Task を「今日へ」', () => {
     expect(done.sprint.tasks[0]?.outcome).toBe('done');
     expect(done.task?.lifecycle).toBe('completed');
     expect(done.sprint.actualTimes).toEqual([]);
+
+    // 5. Retro: the mid-Sprint addition is counted (unlinked), apart from
+    //    interrupts, and is in the planned total next to the confirmed one.
+    const withInterrupt = unwrap(
+      noteInterrupt(
+        done.sprint,
+        { id: id('int-1'), text: '急な問い合わせ', minutes: 20 },
+        ctx,
+      ),
+    );
+    const reviewed = unwrap(
+      enterReview(
+        withInterrupt,
+        { today: localDate('2026-10-04'), occurrences: [] },
+        ctx,
+      ),
+    ).sprint;
+    const facts = retroFacts(reviewed, {
+      tasks: [done.task ?? interview],
+      areas: [research, work],
+      occurrences: [],
+      sprints: [reviewed],
+    });
+    expect(facts.midSprint).toMatchObject([
+      { taskId: 'task-interview', goalLink: 'unlinked' },
+    ]);
+    expect(facts.interrupts).toHaveLength(1);
+    expect(facts.plannedTotal.atConfirm).toMatchObject({ lo: 0, hi: 0 });
+    expect(facts.plannedTotal.withAdditions).toMatchObject({ lo: 2, hi: 3 });
   });
 
   it('a research Task gets the upper end when the Sprint applied the criterion', () => {
