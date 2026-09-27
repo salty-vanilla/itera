@@ -3,6 +3,7 @@
 - 状態：採用
 - 日付：2026-09-27
 - 関連：Issue #38、後続 Issue #39〜#42
+- 改訂：2026-09-27（API への移行と状態の置き場所を追記）
 
 ## 背景
 
@@ -40,7 +41,32 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
 
 - ストアは `packages/domain` の記録（User・Area・Task・RecurrenceRule・Occurrence・Sprint・PlanningCriterion・Activity）だけを持つ。SprintTask・DailySelection・Retro などは Sprint の集約の中にある（packages/domain README）。派生値は持たず、画面が domain の関数で計算する。
 - 変更は `Change`（記録と文脈を受け取り、domain のコマンドを呼んで、書き換える記録と Activity を返す関数）として `run` に渡す。成功したら記録を差し替えて Activity を追記し、失敗したら何も変えずに domain のエラーを返す。ID はストアが作って文脈で渡す（domain は ID を作らない）。
-- 画面が使うのは `RecordStore`（`getSnapshot`・`subscribe`・`run`）だけにする。fixture はメモリ上の実装（`createMemoryStore`）を使い、永続化しない（リロードすると fixture に戻る）。services/api とつなぐときは同じ境界の別の実装を作る。そのとき `run` を非同期にするか、`Change`（今はクライアントで全部の記録を読み、domain のコマンドを呼ぶ関数）をサーバーへ送れる形の操作に替えるかは、つなぎ込みの Issue で決める。画面側の `Change` を書き直すことになる可能性がある。
+- 画面が使うのは `RecordStore`（`getSnapshot`・`subscribe`・`run`）だけにする。fixture はメモリ上の実装（`createMemoryStore`）を使い、永続化しない（リロードすると fixture に戻る）。services/api とのつなぎ方は、次の「API への移行」に従う。
+- `RecordStore` はサーバー状態（将来は D1 にある記録）の仮の置き場で、クライアントの UI 状態を持つストア（Zustand など）とは役割が違う。移行後は TanStack Query（取得結果のキャッシュ）と API に置き換わる。
+
+### API への移行
+
+オーナーの決定（2026-09-27）：fixture で 4 つの画面（#39〜#42）を今の `RecordStore` と `Change` のまま作りきり、そのあとで OpenAPI を契約にした API 呼び出しへ移行する。
+
+- 理由：`Change` は関数なのでサーバーへ送れず、このままつなぐと判定がクライアントとサーバーに分かれる。操作を名前と入力で表す契約（OpenAPI）にすれば、判定はサーバーの `packages/domain` のコマンドだけになり、将来 Web 以外のクライアント（iOS など）もその契約からクライアントを生成できる。Hono RPC や tRPC は型が TypeScript の中に閉じるので採らない。先に画面を作りきるのは、PRD §12 の操作感の検証を先に済ませ、必要な操作を画面から洗い出してから契約を決めるため。
+- 移行先の方向：OpenAPI の仕様からクライアントを生成し（Hey API の候補）、TanStack Query で呼ぶ。fixture の段階の代わりに、ブラウザ内のモックが同じ operation を受けて `packages/domain` のコマンドを実行する。採用する依存・版・仕様の書き方（Hono から出すか、仕様を先に書くか）・派生値を API で返すかは、移行の Issue と ADR で決める。
+- `packages/domain` は移行後もそのまま使う。API のハンドラーは記録を D1 から読み、コマンドを呼び、`batch()` で書く（ADR 0004）。書き直すのは `apps/web/src/store/` の `Change`・`changes.ts`・`RecordStore` の実装と、それを呼ぶフックの中身に限る。
+
+移行の範囲をフックの中に閉じ込めるため、#39〜#42 では次を守る。
+
+- 画面の部品から `store.run`・`Change`・`Records` を直接使わない。読み取りは画面ごとのフック（例：`useBacklog()`）、変更は操作ごとのフック（例：`useTaskActions().updateTask(id, input)`）を通す。
+- 利用者の 1 操作を 1 つの名前つき関数にする（例：`updateTask`、`selectForToday`）。この一覧が、移行時の OpenAPI の operation の元になる。
+- 表示の部品はデータと操作を props で受け取り、取得の方法を知らない。送信中と失敗を表せる形にしておく（fixture では同期なので送信中は起きない）。
+
+### 状態の置き場所
+
+グローバルな UI 状態のストアは入れない。
+
+- 記録：`RecordStore`（移行後は TanStack Query）。
+- 画面の状態（fixture の状態、絞り込み、開いている詳細など）：ルートの検索パラメータ。
+- 部品の中だけの状態（開閉、入力途中の値）：React の state。
+
+どれにも当てはまらない状態が出てきたら、そのとき改めて決める。
 
 ## 影響
 
