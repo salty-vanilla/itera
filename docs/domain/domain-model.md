@@ -37,7 +37,7 @@ v0.2 Final は v0.1 の骨格（恒久的な **Task** と、「この Sprint で
 
 ### v0.2 Final で決めたこと
 
-F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F11 は同じ日に、`packages/domain` の実装で見つかった食い違いについて決めた（Issue #20）。
+F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F11 は同じ日に、`packages/domain` の実装で見つかった食い違いについて決めた（Issue #20）。F12 も同じ日に決めた（Issue #21）。
 
 | # | 決定 | モデルへの反映 | UI への影響 |
 | --- | --- | --- | --- |
@@ -52,6 +52,7 @@ F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F
 | F9 | Sprint 中に初めて現れた Area は、その時点の名前を写し取る | SprintAreaSnapshot にない Area が Sprint 中に初めて現れたとき（その Area の Task を Sprint に追加した、または Sprint 内の Task の Area にした）、その時点の名前を並び順の末尾に足して固定する（不変条件 18） | その Sprint の Today / Retro では、その Area も名前が固定される |
 | F10 | 計画基準はサブタスク合計に作用しない | Subtask の見積りは点の値なので、サブタスク合計も点になる。不変条件 9 の「幅のあるサブタスク合計」を削除 | なし |
 | F11 | 一部のサブタスクが未見積なら、その件数を示す | timeBasis がサブタスク合計のとき、見積りのあるサブタスクだけを足し、未見積のサブタスクの件数を PlanningValue に持つ。すべて未見積なら、その Task が未見積（不変条件 8） | Planning：「2.5h ＋ 未見積 1」のように合計と件数を並べる |
+| F12 | 毎週の繰り返しは曜日を複数指定できる | RecurrenceRule の版の曜日は 1 つ以上（例：毎週 月・木）。その Sprint で発生する回は指定した曜日の数（1〜7 回） | Backlog・Planning：「毎週 月・木」のように曜日を並べる |
 
 ### 用語
 
@@ -94,7 +95,7 @@ Task は User に属し、Backlog はそのうち active なものを並べた�
 | Subtask（E） | Task の中の手順 | title、estimate（任意）、done | Task | 完了日時 |
 | Estimate（VO） | 本人が確定した点の値 | hours、setAt、source（手入力 / 提案を採用：下限・中央・上限） | Task（現在値は 1 つ） | 値の変更履歴 |
 | EstimateSuggestion（E） | 製品側の提案（幅） | lo–hi、根拠、不確実な点、createdAt、state（提示中 / 採用 / 却下 / 置換） | Task | すべて残す |
-| RecurrenceRule（E・版つき） | 繰り返しの決まり | 版ごとに freq（毎日 / 平日 / 毎週 / 毎月）、曜日・日付、effectiveFrom、effectiveTo | Task（0..1） | 版そのもの。新しい版は、まだ確定していない次の Sprint から効く（effectiveFrom = その Sprint の開始日）。その Sprint の Planning（draft）がすでに回を生成していれば、その回を作り直す |
+| RecurrenceRule（E・版つき） | 繰り返しの決まり | 版ごとに freq（毎日 / 平日 / 毎週 / 毎月）、曜日（毎週は 1 つ以上）・日付、effectiveFrom、effectiveTo | Task（0..1） | 版そのもの。新しい版は、まだ確定していない次の Sprint から効く（effectiveFrom = その Sprint の開始日）。その Sprint の Planning（draft）がすでに回を生成していれば、その回を作り直す |
 | Occurrence（E） | ルールから発生した 1 回 | scheduledDate、ruleVersion、materializedAt、state（Pending / Excluded / Done / Skipped / Missed） | Task（Rule の版を参照） | 状態と日時。Sprint の確定後は Rule 変更の影響を受けない（未確定の draft の回は作り直す）。Excluded は記録に残すが、通常の Retro 事実には出さない |
 | Sprint（E・集約の根） | 期間の計画単位（MVP は 1 週） | start、end、state、confirmedAt、availableHours（確定時 / 現在）、previousSprint | User | 可用時間の変更履歴、確定日時、状態遷移 |
 | SprintAreaSnapshot（VO） | その Sprint での Area の表示名。その Sprint の Planning / Today / Retro はこの名前を使う | area、name、order | Sprint | 確定時に固定。Sprint 中に初めて現れた Area は、その時点の名前を並び順の末尾に足して固定 |
@@ -115,7 +116,7 @@ Task は User に属し、Backlog はそのうち active なものを並べた�
 
 - 「今日へ追加」は Task の状態変更ではなく、DailySelection の作成。`today = true` のようなフラグは持たない。
 - Subtask の時間の数え方（timeBasis）は **Task に属する**。Planning 確定時にその値を SprintTask の planSnapshot に写し取る。
-- 繰り返し Task の SprintTask は、その Sprint 期間に発生する回（Occurrence）を束ねたもの。毎週なら 1 回、毎日なら最大 7 回。計画値は 1 回の値 × 回数。
+- 繰り返し Task の SprintTask は、その Sprint 期間に発生する回（Occurrence）を束ねたもの。毎週なら指定した曜日の数（1〜7 回）、毎日なら最大 7 回。計画値は 1 回の値 × 回数。
 
 * v0.2：今週発生する回は Planning 開始時に生成し、既定で SprintTask（Draft）に入る。Planning で外した回は Occurrence = Excluded として記録に残るが、Today にも通常の Retro 事実にも出ない。
 

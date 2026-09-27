@@ -296,7 +296,7 @@ Planning で明示的に外した繰り返し Occurrence は通常の Retro 事�
 
 ### Recurrence
 
-- `毎日 / 平日 / 毎週 / 毎月` の基本ルールを扱う。
+- `毎日 / 平日 / 毎週 / 毎月` の基本ルールを扱う。毎週は曜日を複数指定できる（例：毎週 月・木）。
 - Rule と各 Occurrence を分ける。
 - 今週発生する Occurrence は Planning 開始時に生成し、既定で Sprint に含める。
 - Planning で外した Occurrence は Today に出さず、通常の Retro 事実にも含めないが、履歴としては残す。

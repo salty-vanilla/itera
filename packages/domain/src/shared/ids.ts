@@ -15,6 +15,7 @@ export type TaskId = Id<'Task'>;
 export type SubtaskId = Id<'Subtask'>;
 export type EstimateSuggestionId = Id<'EstimateSuggestion'>;
 export type RecurrenceRuleId = Id<'RecurrenceRule'>;
+export type OccurrenceId = Id<'Occurrence'>;
 
 /** Brands a string as an ID. Use at the boundary (fixtures, API, UI). */
 export function id<Kind extends string>(value: string): Id<Kind> {

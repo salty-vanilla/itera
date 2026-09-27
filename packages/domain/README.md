@@ -71,7 +71,7 @@ type CommandResult<T> =
 - ドメインモデルが「履歴として残す」とし、専用の記録がないもの（Area 名の変更、Task の属性の変更、Estimate の変更）は Activity に残す。Activity は追記だけで、種類ごとに型のある union（`kind` で区別）。
 - 派生値（Backlog、計画値の合計、後の Issue の連続見送りや Retro の事実など）は記録から計算する関数にし、保存しない。
 
-## この段階で決めた細部
+## この段階で決めた細部（#20）
 
 - **Backlog の既定の並び**は作成順（同時刻なら ID 順）。優先度は既定の並びにしない（不変条件 5）。
 - **提示中の提案**は Task に 1 つまで。新しい提案を出すと、前の提案は `replaced` になる。
@@ -81,7 +81,22 @@ type CommandResult<T> =
 - **サブタスク合計**は見積りのあるサブタスクだけを足し、未見積のサブタスクの件数を `unestimatedSubtasks` に持つ（ドメインモデル F11、不変条件 8）。1 つも見積りがなければ、その Task が未見積。完了したサブタスクも足す。Subtask の見積りは点の値なので合計も点になり、計画基準は当たらない（F10、不変条件 9）。
 - **計画基準**はこのパッケージでは `CriterionPolicy`（対象と `rangePolicy`）として受け取る。状態遷移と CriterionUse は #22・#24。
 
-## 対象外（この Issue）
+## 繰り返しで決めた細部（#21）
+
+- **Rule の版**：`effectiveTo` はその日を含む。変更すると、最新の版の `effectiveTo` を新しい版の `effectiveFrom` の前日にする。新しい版の `effectiveFrom` は、最新の版の `effectiveFrom` より前にできない（版の順序を保つ）。
+- **effectiveFrom の値と不変条件 31**：作成・変更の入力で受け取る。この関数が守るのは版の順序だけで、「確定済みの Sprint の日を新しい版で上書きしない」ことは、呼び出し側（#22 の Sprint の側）が「まだ確定していない次の Sprint の開始日」を渡すことで保つ。生成済みの回は `ruleVersion` を持つので、どちらにしても動かない。
+- **同じ日から効く変更を 2 回したとき**：前の変更の版は `effectiveTo < effectiveFrom` になり、どの日にも当たらない。版そのものは履歴として残す。
+- **同じパターンへの変更**：最新の版と同じパターンなら、版も Activity も作らない（曜日の順序は問わない）。
+- **毎月**：`dayOfMonth` が 29〜31 で、その月にその日がないときは、その月の末日にする（31 日指定は 2 月 28 日、4 月 30 日）。毎月必ず 1 回ある。
+- **毎週**：曜日を 1 つ以上指定できる（`daysOfWeek`、0 = 日曜）。週の始まり（`User.weekStartsOn`）には依存しない。複数の曜日を許すことはオーナーが決めた（ドメインモデル F12）。
+- **平日**：月〜金。祝日は考えない。
+- **回の生成**：`generateOccurrences` は与えた期間（両端を含む）だけを作り、`existing` に同じ Rule の回がある日は飛ばす（状態や版は見ない。同じ期間で呼び直しても重複しない）。ID は `newOccurrenceId` で受け取る。いつ呼ぶか（Planning の開始時）は #22。
+- **F7 で draft の回を作り直すとき（#22）**：捨てる回（draft の Pending / Excluded）を `existing` から除いてから `generateOccurrences` を呼ぶ。除き忘れると、その日は古い版の回のまま残る。捨てたことを表す Activity は #22 で足す。
+- **Occurrence の日時**：`materializedAt`（生成した日時）と `stateChangedAt`（今の状態になった日時）を持つ。状態の変化はすべて Activity に残る。
+- **次の回**：`nextOccurrence` は、今日以降の Pending の回があればその日を返す。なければ `projectFrom`（まだ回を生成していない最初の日）から Rule で計算し、すでに回がある日（Done・Skipped・Excluded・Missed）は飛ばす。計算した日は保存しない。`projectFrom` は Sprint の記録から求める（毎月のように生成済みの期間に回が 0 件のこともあるので、回からは求められない）。
+- **Backlog の 1 行**：`recurrenceSummary` は、今日の版のパターン（Rule が始まる前なら最初に効く版）、今日より後に効く変更（`upcoming`）、次の回を構造化した値で返す。変更した当日にその版が効き始める場合は `upcoming` にならないので、変更直後の「次の Sprint から反映」は変更コマンドの結果から出す。「毎週 土」「次は 10/4 (日)」などの文言は `apps/web` が `docs/design/content.md` に従って作る。
+
+## 対象外
 
 PlanProposal（不変条件 41）は、外部 Agent を MVP に含めるかが PRD §14 で未決のため作らない。提案の中身を作る処理と、永続化も対象外。
 
@@ -95,8 +110,10 @@ PlanProposal（不変条件 41）は、外部 Agent を MVP に含めるかが P
 | `src/estimate.ts` | Estimate、EstimateSuggestion（提示・採用・却下） |
 | `src/planning-value.ts` | 計画値の計算と合計 |
 | `src/backlog.ts` | Backlog のビュー |
+| `src/recurrence.ts` | RecurrenceRule と版、パターン、次の回、Backlog の 1 行の値 |
+| `src/occurrence.ts` | Occurrence の生成と状態遷移 |
 
-テストは同じ場所の `*.test.ts`。不変条件のテストは名前に番号を入れる（`invariant 7: ...`）。Scenario A〜C のシナリオテストは Sprint と Today が必要なので、#22〜#24 で書く。
+テストは同じ場所の `*.test.ts`。不変条件のテストは名前に番号を入れる（`invariant 7: ...`）。Scenario C の手順 1〜5・8 は `scenario-c.test.ts`（#21）。Scenario A〜C の残りは Sprint と Today が必要なので、#22〜#24 で書く。
 
 ## 純粋さの検査
 
