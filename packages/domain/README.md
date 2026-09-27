@@ -96,6 +96,23 @@ type CommandResult<T> =
 - **次の回**：`nextOccurrence` は、今日以降の Pending の回があればその日を返す。なければ `projectFrom`（まだ回を生成していない最初の日）から Rule で計算し、すでに回がある日（Done・Skipped・Excluded・Missed）は飛ばす。計算した日は保存しない。`projectFrom` は Sprint の記録から求める（毎月のように生成済みの期間に回が 0 件のこともあるので、回からは求められない）。
 - **Backlog の 1 行**：`recurrenceSummary` は、今日の版のパターン（Rule が始まる前なら最初に効く版）、今日より後に効く変更（`upcoming`）、次の回を構造化した値で返す。変更した当日にその版が効き始める場合は `upcoming` にならないので、変更直後の「次の Sprint から反映」は変更コマンドの結果から出す。「毎週 土」「次は 10/4 (日)」などの文言は `apps/web` が `docs/design/content.md` に従って作る。
 
+## Sprint と Planning で決めた細部（#22）
+
+- **集約**：Sprint が根で、SprintGoal・SprintTask・SprintAreaSnapshot・CriterionUse を中に持つ。Occurrence は Task 側の記録で、SprintTask は `occurrenceIds` で参照する。コマンドは Sprint と、変えた Occurrence を一緒に返す。
+- **期間**：1 週（開始日は `User.weekStartsOn`、両端を含む）。新しい Sprint は既存のどの Sprint よりも後に始まり、Planning 中の Sprint は同時に 1 つまで。前の Sprint（`previousSprintId`）は、開始日より前で最後の Sprint。
+- **繰り返しの SprintTask**：`occurrenceIds` は Sprint に含めた（外していない）回。Planning で最後の回を外すと、draft の SprintTask はなくなる。Sprint 中に外した回を戻すと、その回だけの SprintTask（origin = midSprint）を新しく作る。
+- **planSnapshot**：計画値に加えて、その時点の Estimate・提示中の提案・timeBasis・回数（繰り返しのとき）を写し取る（Retro の「計画時の Estimate」用）。繰り返しの計画値は 1 回の値 × 回数。 未見積のサブタスクの件数は回数倍にしない（毎回同じサブタスクなので）。
+- **Goal**：Planning では空の文で Goal を消せる。確定後は文を変えられるが消せない。確定後に新しく書いた Goal には `plannedText` がない。（F16）
+- **Area のスナップショット**：確定時の、アーカイブしていないすべての Area と、Sprint の Task が使っているアーカイブ済みの Area。F9 で足すのは Sprint が active の間だけで、並び順は末尾。Task の Area を Sprint 中に変えたときは、呼び出し側が `noteAreaInSprint` を呼ぶ。
+- **容量**：`sprintTotals` は draft を今の値（Planning の Check の基準を当てたプレビュー）で、確定後の SprintTask を planSnapshot で数える。`CapacityStatus` は `within`（上限でも収まる）/ `mayExceed`（下限は収まるが上限は超える）/ `exceeds`（下限でも超える）。色や文言は画面が決める。
+- **計画に数える SprintTask**：`isCounted` は Planning と Sprint 中の合計用で、removed と carriedOver を数えない。Retro の「計画時の合計」（#24）は持ち越した SprintTask も数えるので、別の規則にする。
+- **確定の前提**：draft の Task が Planning 中に完了・アーカイブされていたら確定しない（外してから確定する）。持ち越し候補（`carryOverCandidates`）は、直前の Sprint の、active で繰り返しでない Task だけ。
+- **Rule の変更（F1・F7）**：Backlog からの変更は `changeRuleForNextSprint` を使う。効き始める日は `nextUnconfirmedSprintStart`（最新の版がそれより後に始まるなら、その日）で、確定済みの Sprint は変わらない。結果の `effectiveFrom` で「次の Sprint から反映」を出す。Planning 中の Sprint があれば（その期間の生成は済んでいるので）、その Rule の回と draft の SprintTask を作り直し、捨てた回は `occurrenceDiscarded` として記録する（呼び出し側は `discarded` の記録を消す）。生成が 0 件だった draft にも、新しい版の回が入る。
+- **次の回の `projectFrom`**：`projectFrom(sprints, today)` で求める。
+- **Sprint から外す・戻す（F13・F14）**：`removeFromSprint` は planned → removed。繰り返しなら、その SprintTask の Pending の回を Excluded にする（完了・スキップ済みはそのまま）。`restoreToSprint` は同じ SprintTask を removed → planned に戻し、繰り返しなら Excluded の回を Pending に戻す。外した Task を `addTaskMidSprint` でもう一度足すことはできない（不変条件 14。戻すときは `restoreToSprint`）。 `occurrences` には、その SprintTask の回を漏れなく渡すのは呼び出し側の責任（渡さなかった回は変わらない）。外した繰り返しの回は `addOccurrenceMidSprint` で足せない（1 つの回は 1 つの SprintTask に属する。戻すときは `restoreToSprint`）。
+- **Planning 中に作った Rule（F15）**：Backlog から繰り返しにするときは `createRuleForNextSprint` を使う。Planning 中の Sprint があれば、その期間の回をそのとき作って含める。 その draft で同じ Task を単発として選んでいたら、繰り返しの SprintTask に置き換える（`carriedFrom` と goalLink は引き継がない。その週に回がなければ、Task は今週の計画から外れる）。
+- **Goal に紐づく / 紐づかない**：`setGoalLink` で切り替える（PRD §5 B）。Planning 中の draft は Goal を書く前でも linked にでき、確定時に Area に Goal がなければ unlinked になる。Sprint 中に linked にできるのは Area に Goal があるときだけ。変更は `goalLinkChanged` として残す。
+
 ## 対象外
 
 PlanProposal（不変条件 41）は、外部 Agent を MVP に含めるかが PRD §14 で未決のため作らない。提案の中身を作る処理と、永続化も対象外。
@@ -112,8 +129,13 @@ PlanProposal（不変条件 41）は、外部 Agent を MVP に含めるかが P
 | `src/backlog.ts` | Backlog のビュー |
 | `src/recurrence.ts` | RecurrenceRule と版、パターン、次の回、Backlog の 1 行の値 |
 | `src/occurrence.ts` | Occurrence の生成と状態遷移 |
+| `src/sprint.ts` | Sprint・SprintTask・SprintGoal などの型、Area 名、次の Sprint の開始日、`projectFrom` |
+| `src/planning.ts` | Planning の開始、選択、回の除外、Goal、可用時間、確定 |
+| `src/mid-sprint.ts` | Sprint 中の追加、Sprint から外す・戻す、F9 |
+| `src/sprint-recurrence.ts` | 次の Sprint からの Rule の作成と変更（F1・F7・F15） |
+| `src/capacity.ts` | 計画値の合計と可用時間との比較 |
 
-テストは同じ場所の `*.test.ts`。不変条件のテストは名前に番号を入れる（`invariant 7: ...`）。Scenario C の手順 1〜5・8 は `scenario-c.test.ts`（#21）。Scenario A〜C の残りは Sprint と Today が必要なので、#22〜#24 で書く。
+テストは同じ場所の `*.test.ts`。不変条件のテストは名前に番号を入れる（`invariant 7: ...`）。Scenario A の手順 3〜5 は `scenario-a.test.ts`、Scenario B の手順 1〜3 は `scenario-b.test.ts`、Scenario C の手順 1〜9 は `scenario-c.test.ts`（#21・#22）。残りの手順は #23・#24 で書く。
 
 ## 純粋さの検査
 

@@ -37,7 +37,7 @@ v0.2 Final は v0.1 の骨格（恒久的な **Task** と、「この Sprint で
 
 ### v0.2 Final で決めたこと
 
-F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F11 は同じ日に、`packages/domain` の実装で見つかった食い違いについて決めた（Issue #20）。F12 も同じ日に決めた（Issue #21）。
+F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F11 は同じ日に、`packages/domain` の実装で見つかった食い違いについて決めた（Issue #20）。F12 も同じ日に決めた（Issue #21）。F13〜F16 も同じ日に、Sprint と Planning の実装で出た境界の場合について決めた（Issue #22）。
 
 | # | 決定 | モデルへの反映 | UI への影響 |
 | --- | --- | --- | --- |
@@ -53,6 +53,10 @@ F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F
 | F10 | 計画基準はサブタスク合計に作用しない | Subtask の見積りは点の値なので、サブタスク合計も点になる。不変条件 9 の「幅のあるサブタスク合計」を削除 | なし |
 | F11 | 一部のサブタスクが未見積なら、その件数を示す | timeBasis がサブタスク合計のとき、見積りのあるサブタスクだけを足し、未見積のサブタスクの件数を PlanningValue に持つ。すべて未見積なら、その Task が未見積（不変条件 8） | Planning：「2.5h ＋ 未見積 1」のように合計と件数を並べる |
 | F12 | 毎週の繰り返しは曜日を複数指定できる | RecurrenceRule の版の曜日は 1 つ以上（例：毎週 月・木）。その Sprint で発生する回は指定した曜日の数（1〜7 回） | Backlog・Planning：「毎週 月・木」のように曜日を並べる |
+| F13 | Sprint から外した Task は同じ Sprint に戻せる | SprintTask に Removed → Planned（Sprint に戻す）を足す。同じ SprintTask を戻すので「同じ Sprint に 1 件まで」（不変条件 14）は保たれ、origin と planSnapshot は変わらない | 確定後に外した Task を元に戻せる |
+| F14 | 繰り返しの SprintTask を外すと、残りの回は外した回になる | Sprint 中に Removed にすると、その SprintTask の Pending の回を Excluded にする（完了・スキップ済みの回はそのまま）。Today に出ず、Retro の事実（未処理）にも出ない（F2）。F13 で戻すと Pending に戻る | なし |
+| F15 | Planning 中に作った Rule は、その draft の週にも回を作る | まだ確定していない次の Sprint が Planning 中なら、Rule を作ったときにその期間の回を生成し、既定で Sprint に含める（F7 と同じ考え方）。その draft で同じ Task を単発として選んでいたら、繰り返しの SprintTask に置き換える（持ち越しのつながりと Goal への紐づけは引き継がない） | Planning：作った繰り返しがすぐに「今週発生する繰り返し」に出る |
+| F16 | 確定後の Goal は、文を変えることと新しく書くことができ、消すことはできない | 確定後に新しく書いた Goal は plannedText を持たない（計画時にはなかった）。確定後は Goal を消さない | Retro：確定後に書いた Goal は「計画時にはなかった」として差分に出る |
 
 ### 用語
 
@@ -160,6 +164,7 @@ stateDiagram-v2
   Planned --> Done: 完了（Today / Backlog）
   Done --> Planned: 完了を取り消す
   Planned --> Removed: 確定後に Sprint から外す
+  Removed --> Planned: Sprint に戻す（F13）
   Planned --> CarriedOver: Sprint 終了時に未完了
 ```
 
@@ -196,8 +201,8 @@ stateDiagram-v2
 stateDiagram-v2
   [*] --> Projected: Rule から計算（保存しない）
   Projected --> Pending: Planning 開始時に生成（既定で Sprint に含める）
-  Pending --> Excluded: Planning で外す
-  Excluded --> Pending: Planning で戻す / Sprint 中に追加
+  Pending --> Excluded: Planning で外す / Sprint から外す（F14）
+  Excluded --> Pending: Planning で戻す / Sprint 中に追加 / Sprint に戻す（F13）
   Pending --> Done: 完了
   Pending --> Skipped: スキップ
   Done --> Pending: 取り消す
@@ -235,12 +240,12 @@ stateDiagram-v2
 ```
 
 - 確定時に写し取るもの：各 SprintTask の planSnapshot、SprintGoal.plannedText、可用時間（確定時）、SprintAreaSnapshot、CriterionUse。SprintAreaSnapshot はその Sprint の Planning / Today / Retro での Area 名になり、Sprint 中の改名は反映しない。確定前の Planning は現在の名前を使う。スナップショットにない Area が Sprint 中に初めて現れたとき（その Area の Task を Sprint に追加した、または Sprint 内の Task の Area にした）は、その時点の名前を末尾に足して固定する（F9）。
-- Active の間も Goal の文と可用時間は変えられる。変更は履歴に残り、Retro で確定時との差分を見せる。
+- Active の間も Goal の文と可用時間は変えられる。変更は履歴に残り、Retro で確定時との差分を見せる。確定後に Goal を新しく書くことはできるが、消すことはできない（F16）。
 - Review に入った時点で、未完了の SprintTask を CarriedOver、未処理の Occurrence を Missed にする。
 
 ## 不変条件（Invariants）
 
-実装のどの層でも崩してはいけないルールです。v0.2 で番号を振り直しました。v0.2 Final では番号を変えず、16・18・22・23・31・33 の内容を更新しました。F7〜F9 の決定で、番号を変えずに 18・23・31 を更新しました。F10・F11 の決定で 8・9 を更新しました。
+実装のどの層でも崩してはいけないルールです。v0.2 で番号を振り直しました。v0.2 Final では番号を変えず、16・18・22・23・31・33 の内容を更新しました。F7〜F9 の決定で、番号を変えずに 18・23・31 を更新しました。F10・F11 の決定で 8・9 を、F15 の決定で 32 を更新しました。
 
 **Task / Backlog**
 
@@ -287,7 +292,7 @@ stateDiagram-v2
 
 30. 完了・スキップは Occurrence に記録し、Rule には記録しない。スキップしても Rule は残る。
 31. 確定済みの Sprint の Occurrence と SprintTask は Rule 変更で動かない。新しい版は、まだ確定していない次の Sprint から使う。その Sprint の Planning（draft）がすでに回を生成していれば、その Task の回（Pending / Excluded）と SprintTask（Draft）を新しい版で作り直す。Active な Sprint の途中で変えても同じ。
-32. 未来の回は事前に生成しない。生成するのは Sprint の Planning 開始時（その期間分）。
+32. 未来の回は事前に生成しない。生成するのは Sprint の Planning 開始時（その期間分）。Planning 中に Rule を作ったり変えたりしたときは、その draft の期間分をそのとき生成する（F7・F15）。
 33. 今週の回は既定で Sprint に含まれる。Planning で外した回は Excluded として記録に残り、Today にも通常の Retro 事実にも出ない。
 34. Backlog には Rule ごとに 1 行。未来の回を並べない。
 

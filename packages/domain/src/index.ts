@@ -6,9 +6,14 @@ export * from './shared/time';
 
 export * from './area';
 export * from './backlog';
+export * from './capacity';
 export * from './estimate';
+export * from './mid-sprint';
 export * from './occurrence';
+export * from './planning';
 export * from './planning-value';
 export * from './recurrence';
+export * from './sprint';
+export * from './sprint-recurrence';
 export * from './task';
 export * from './user';

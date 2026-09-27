@@ -168,7 +168,8 @@ Planning は **ひとつの workspace が Pick → Shape → Check と自然に�
 
 #### 確定後の変更
 
-- Goal 文と可用時間は Sprint 中にも変更できる。
+- Goal 文と可用時間は Sprint 中にも変更できる。Sprint 中に Goal を新しく書くこともできるが、消すことはできない。
+- 確定後に Sprint から外した Task は、同じ Sprint に戻せる。繰り返し Task を外した場合、その Sprint の残りの Occurrence は外した回として扱い、Today にも Retro の未処理にも出さない。
 - 計画時の値は保持し、変更履歴を Retro で確認できる。
 - Planning Criterion の適用有無は Sprint 確定後には変更しない（MVP）。
 - Sprint 中の Area 改名はその Sprint の Planning / Today / Retro には反映せず、次 Sprint から反映する。
@@ -301,7 +302,7 @@ Planning で明示的に外した繰り返し Occurrence は通常の Retro 事�
 - 今週発生する Occurrence は Planning 開始時に生成し、既定で Sprint に含める。
 - Planning で外した Occurrence は Today に出さず、通常の Retro 事実にも含めないが、履歴としては残す。
 - Rule を変更しても確定済み Sprint の Occurrence は動かさない。
-- Active Sprint 中に Rule を変更した場合も、今 Sprint の計画は変えず、まだ確定していない次 Sprint から新 Rule を使う。次 Sprint の Planning draft がすでに Occurrence を生成していれば、その Occurrence を新 Rule で作り直す。
+- Active Sprint 中に Rule を変更した場合も、今 Sprint の計画は変えず、まだ確定していない次 Sprint から新 Rule を使う。次 Sprint の Planning draft がすでに Occurrence を生成していれば、その Occurrence を新 Rule で作り直す。Planning 中に新しく Rule を作った場合も、その draft の Occurrence を生成して既定で含める。
 - Backlog では Rule ごとに 1 行を表示し、未来の Occurrence を大量に並べない。
 
 ## 7. AI / Agent の役割

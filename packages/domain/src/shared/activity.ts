@@ -2,7 +2,10 @@ import type {
   AreaId,
   EstimateSuggestionId,
   OccurrenceId,
+  PlanningCriterionId,
   RecurrenceRuleId,
+  SprintId,
+  SprintTaskId,
   SubtaskId,
   TaskId,
 } from './ids';
@@ -104,11 +107,85 @@ export type Activity =
         | 'occurrenceDone'
         | 'occurrenceSkipped'
         | 'occurrenceReopened'
-        | 'occurrenceMissed';
+        | 'occurrenceMissed'
+        /** F7: a draft occurrence thrown away to be regenerated. */
+        | 'occurrenceDiscarded';
       readonly taskId: TaskId;
       readonly occurrenceId: OccurrenceId;
       readonly scheduledDate: LocalDate;
+    })
+  | (ActivityBase & {
+      readonly kind: 'sprintPlanningStarted';
+      readonly sprintId: SprintId;
+      readonly start: LocalDate;
+      readonly end: LocalDate;
+    })
+  | (ActivityBase & {
+      readonly kind: 'sprintConfirmed';
+      readonly sprintId: SprintId;
+      /** The criterion the Sprint applied or not, if one was active. */
+      readonly criterion?: {
+        readonly criterionId: PlanningCriterionId;
+        readonly appliedAtConfirm: boolean;
+      };
+    })
+  | (ActivityBase & {
+      /** Sprint への追加（経路つき）. */
+      readonly kind: 'sprintTaskAdded';
+      readonly sprintId: SprintId;
+      readonly sprintTaskId: SprintTaskId;
+      readonly taskId: TaskId;
+      readonly via: SprintTaskAddedVia;
+    })
+  | (ActivityBase & {
+      /** Unselected in Planning (draft), removed after confirm, or restored (F13). */
+      readonly kind:
+        'sprintTaskUnselected' | 'sprintTaskRemoved' | 'sprintTaskRestored';
+      readonly sprintId: SprintId;
+      readonly sprintTaskId: SprintTaskId;
+      readonly taskId: TaskId;
+    })
+  | (ActivityBase & {
+      readonly kind: 'goalTextChanged';
+      readonly sprintId: SprintId;
+      readonly areaId: AreaId;
+      /** `null` when there was / is no Goal. */
+      readonly from: string | null;
+      readonly to: string | null;
+    })
+  | (ActivityBase & {
+      readonly kind: 'goalLinkChanged';
+      readonly sprintId: SprintId;
+      readonly sprintTaskId: SprintTaskId;
+      readonly taskId: TaskId;
+      readonly from: 'linked' | 'unlinked';
+      readonly to: 'linked' | 'unlinked';
+    })
+  | (ActivityBase & {
+      readonly kind: 'availableHoursChanged';
+      readonly sprintId: SprintId;
+      readonly from: number | null;
+      readonly to: number | null;
+    })
+  | (ActivityBase & {
+      /** F9: an Area first appearing in a confirmed Sprint. */
+      readonly kind: 'areaSnapshotAdded';
+      readonly sprintId: SprintId;
+      readonly areaId: AreaId;
+      readonly name: string;
     });
+
+/**
+ * How a Task entered a Sprint. `planning` and `carryOver` happen in
+ * Planning; the others are additions during the Sprint.
+ */
+export type SprintTaskAddedVia =
+  | 'planning'
+  | 'carryOver'
+  | 'recurring'
+  | 'backlog'
+  | 'today'
+  | 'backlogToToday';
 
 export type ActivityKind = Activity['kind'];
 
