@@ -21,6 +21,8 @@ export default defineConfig(
       '.playwright-cli/**',
       '.agents/skills/**',
       'apps/web/storybook-static/**',
+      'services/api/worker-configuration.d.ts',
+      'services/api/.wrangler/**',
       'playwright-report/**',
       'test-results/**',
     ],
@@ -40,6 +42,12 @@ export default defineConfig(
   },
   {
     files: ['apps/web/*.ts', 'apps/web/.storybook/main.ts'],
+    languageOptions: { globals: globals.node },
+  },
+  {
+    // services/api: its build and tool configs run on Node. The Worker code
+    // gets its globals from the generated worker-configuration.d.ts.
+    files: ['services/api/*.ts'],
     languageOptions: { globals: globals.node },
   },
   // Applies to *.stories.* and .storybook/main.* only. The cast is for the

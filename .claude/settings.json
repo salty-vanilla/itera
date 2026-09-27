@@ -55,6 +55,8 @@
     ],
     "deny": [
       "Bash(npx shadcn@latest *)",
+      "Bash(npx wrangler *)",
+      "Bash(npx hono *)",
       "Read(**/.env)",
       "Read(**/.env.local)",
       "Read(**/.env.*.local)",

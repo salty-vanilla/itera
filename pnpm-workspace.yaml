@@ -4,4 +4,8 @@ packages:
   - services/*
 # Hook installation is explicit in tooling/setup.sh, not a dependency side effect.
 ignoredBuiltDependencies:
+  # wrangler's esbuild and workerd ship prebuilt binaries as optional
+  # dependencies, so `wrangler dev` works without their install scripts.
+  - esbuild
   - lefthook
+  - workerd

@@ -12,6 +12,7 @@
 | `.claude/agents/` | ハーネスの subagent（`harness-reviewer`、`harness-planner`）と、Impeccable の上流が同梱する subagent（`impeccable-asset-producer`、`impeccable-finish-reviewer`、`impeccable-manual-edit-applier`） |
 | `.claude/hooks/` | セッション開始時に direnv の環境を Bash へ読み込む hook（`session-env.sh`）と、読み取り専用の subagent の Bash を、読み取り用コマンドの許可リストに限る hook（`read-only-bash.mjs`）。`read-only-bash.mjs` はシェルの小さな部分集合だけを字句解析し、それ以外は止める。完全な隔離ではない。回帰テストは `pnpm agent:hooks:test`。subagent の frontmatter の hook は、このフォルダを信頼（workspace trust）してから有効になる |
 | `.claude/settings.json` | 共有の permission 設定と SessionStart hook |
+| `.mcp.json` | リポジトリで共有する MCP（下の「MCP」の基準を満たすものだけ） |
 | `.agents/skills/` | Skill の正本。`.claude/skills` はここへのシンボリックリンク |
 | `tooling/agents/` | Agent 用 CLI（Playwright CLI、shadcn）の固定版と専用 lockfile、Skill の出典台帳 `sources.json` |
 | `.tools/agents/` | checkout ごとに生成するバイナリとキャッシュ。Git 管理外 |
@@ -28,8 +29,13 @@
 | `playwright-cli` | microsoft/playwright-cli（0.1.21） | 実ブラウザでの操作・確認。`pnpm agent:playwright <command>` |
 | `design-references` | このリポジトリで作成 | DADS / Apple HIG の一次資料の取得 |
 | `issue-harness` | このリポジトリで作成 | Issue 駆動の実装と独立した受け入れ |
+| `wrangler` | cloudflare/skills（Apache-2.0） | wrangler の設定とコマンド。`services/api` の固定版を `pnpm --filter @itera/api exec wrangler <command>` か package の script で使う |
+| `workers-best-practices` | cloudflare/skills（Apache-2.0） | Workers のコードと設定の作法・レビュー観点 |
+| `hono` | honojs/skills（MIT） | Hono の API の参照 |
 
 commit・ライセンスの場所・各ファイルの SHA-256 は `tooling/agents/sources.json` にある。Impeccable の上流が同梱する Claude Code 用 subagent のうち 3 つ（`.claude/agents/impeccable-*.md`）と第三者表示（`.agents/skills/impeccable/NOTICE.md`。記載のパスは上流のもので、ここでは `.agents/skills/impeccable/reference/`）も同じ commit から取り込んだ。NOTICE.md は `skillFiles`、subagent 3 つは `vendoredFiles` でハッシュを管理している。Impeccable のランチャー 2 ファイルは、固定版の engine を使うようにプロジェクトのランナーへ転送する形に置き換えている（`localAdaptations`。ファイル先頭に変更の旨を記載）。上流の Claude Code 用 `impeccable-documenter`（build 後に DESIGN.md を書き出す）は、DESIGN.md を Issue で変える方針と合わないので取り込んでいない（Skill に同梱の Codex 用 toml は残っているが使わない）。`impeccable-finish-reviewer` が前提にする documenter の手順と DESIGN.md の永続化の確認は、このリポジトリでは対象外。
+
+`wrangler`・`workers-best-practices`（cloudflare/skills）と `hono`（honojs/skills）は、それぞれのフォルダだけを取り込み、上流のリポジトリ直下の LICENSE を各フォルダに置いた。Skill の本文にある `npx wrangler ...` は `pnpm --filter @itera/api exec wrangler ...`（`services/api` で `pnpm exec wrangler ...`）に読み替える。型の生成は `pnpm --filter @itera/api cf-typegen`（`wrangler types --env-interface CloudflareBindings`）。`hono` Skill が勧める Hono CLI（`@hono/cli@next`、プレリリース）は入れていない。CLI の節（`hono request`・`batch`・`snapshot`）は使わず、動作の確認は Vitest の `app.request()` と `pnpm --filter @itera/api dev` で行う。`workers-best-practices` が参照する `durable-objects` Skill は取り込んでいない。
 
 ## 権限（`.claude/settings.json`）
 
@@ -37,6 +43,8 @@ commit・ライセンスの場所・各ファイルの SHA-256 は `tooling/agen
 - `npx`・`npm`・`pnpm dlx`・`pnpx`・`bunx`・グローバルの `playwright-cli`、`pnpm agent:shadcn add`、`pnpm agent:playwright run-code` は毎回確認する。上流 Skill の `allowed-tools` がこれらを許可していても、固定版を迂回させないため（ask / deny は `allowed-tools` より優先される）。
 - `disableSkillShellExecution` で、Skill の本文にある `!` コマンドを実行しない（プレースホルダーに置き換わる）。shadcn Skill が読み込み時に実行する `npx shadcn@latest info` が対象で、文脈は `pnpm agent:shadcn info --json --cwd apps/web` で取る。`npx shadcn@latest` 自体も拒否している。
 - `.env` 系（`.env`、`.env.local`、`.env.*.local`、`.env.development`、`.env.production`、`.env.test`、`.env.staging`）の読み取りは拒否している。`.env.example` は読める。これは誤操作を防ぐためのもので、セキュリティ境界ではない。
+- 固定版を迂回させないため、`npx wrangler` と `npx hono` は拒否している。
+- wrangler のうちアカウントの資源を変えるもの（`deploy`、`secret put`、`d1 ... --remote` など）は許可リストに入れていない（毎回確認する）。
 
 ## 初回セットアップ
 
@@ -60,7 +68,17 @@ direnv のシェル hook は対話シェルのプロンプトでしか動かな�
 
 ## MCP
 
-Context7 などの MCP はリポジトリで共有していない。各自のユーザー設定で接続する。
+`.mcp.json` で共有するのは、**読み取り専用で、ファイルに秘密情報を書かずに使える（認証なし、または OAuth）MCP** だけ（2026-09-27 オーナー決定、Issue #26）。URL だけで接続でき、秘密情報がリポジトリに入らない。読み取り専用なので、サーバー側の変更でリポジトリの状態が壊れない。Claude Code は、プロジェクトの MCP を使う前に利用者ごとに承認を求める。
+
+| MCP | URL | 用途 |
+| --- | --- | --- |
+| `cloudflare-docs` | `https://docs.mcp.cloudflare.com/mcp` | Cloudflare の文書の検索（`wrangler` Skill が参照する `docs` ツール） |
+
+共有しないもの：
+
+- アカウントの資源やデータを変更できる MCP（Cloudflare の bindings 用、WorkOS の MCP など）。
+- API キーが必要な MCP（Context7 など）。各自のユーザー設定で接続する。
+- Cloudflare の observability 用 MCP は、デプロイ先ができる Issue で追加を判断する。
 
 ## ハーネス
 
