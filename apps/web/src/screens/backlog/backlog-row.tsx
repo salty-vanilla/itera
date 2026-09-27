@@ -47,12 +47,14 @@ export function backlogFacts(task: Task, records: Records, clock: Clock) {
           today: clock.today,
           projectFrom: projectFrom(records.sprints, clock.today),
         });
-  // 「今週」: in the Sprint being planned or run, and still counted in it.
-  const inSprint = records.sprints
-    .filter((s) => s.state === 'planning' || s.state === 'active')
-    .flatMap((s) => s.tasks)
-    .find((t) => t.taskId === task.id && isCounted(t));
+  // 「今週」: in the active Sprint, or, before one is confirmed, in the
+  // Sprint being planned (Scenario A step 3). A draft for next week while
+  // this week is still running is not 「今週」.
   const active = activeSprint(records);
+  const week = active ?? records.sprints.find((s) => s.state === 'planning');
+  const inSprint = week?.tasks.find(
+    (t) => t.taskId === task.id && isCounted(t),
+  );
   return {
     area,
     carry:

@@ -65,7 +65,7 @@ F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F
 | F22 | Review 中も実績時間を後から足せる | ActualTime は Sprint が Active か Review の間に追記できる。Closed になったら足せない | Retro：事実を見ながら実績を足せる |
 | F23 | Review に入るときの未処理・Missed はシステムが付ける | 本人が最終日に Retro を始めた場合も、開いたままの DailySelection の Unresolved と、未処理の Occurrence の Missed は、システムの記録（actor = システム）として付ける。不変条件 24 に Review への移行を加える | なし |
 | F24 | Sprint から外した繰り返しの、外す前に済ませた回も Retro の事実に出す | 外す前に完了・スキップした回は Retro の事実（完了・スキップ）に出す。外したときに Excluded になった残りの回は出さない（F2・F14） | Retro：途中で外した繰り返しも、やった回は見える |
-| F25 | Sprint の番号は開始日の順の通し番号 | 「Sprint 14」の番号は保存せず、本人の Sprint を開始日の順に並べた位置（1 から）として派生させる。Sprint は重ならず消さないので、番号は変わらない | 持ち越し「（Sprint 13から）」、Sprint Header の「Sprint 14」 |
+| F25 | Sprint の番号は作成順の通し番号 | 「Sprint 14」の番号は保存せず、本人の Sprint を作成順に並べた位置（1 から）として派生させる。Sprint は重ならず、新しい Sprint はそれまでのどの Sprint よりも後に始まる（不変条件 11）ので、作成順は開始日の順と同じで、番号は変わらない | 持ち越し「（Sprint 13から）」、Sprint Header の「Sprint 14」 |
 | F26 | 持ち越し回数は、持ち越しから選び直した後も数える | Task の持ち越し回数は、最新の SprintTask の carriedFrom の連なりの数に、その SprintTask 自身が CarriedOver なら 1 を足したもの（派生）。持ち越しから選び直して今の Sprint にある間も回数を保つ。持ち越しを使わずに選び直すと 0 から数え直す | Backlog：切り口「持ち越し」は回数が 1 以上の Task。行に「持ち越し N回（Sprint M から）」 |
 | F27 | 提案の採用は、直後に元に戻せる | EstimateSuggestion に 採用 → 提示中（採用を元に戻す）を足す。Estimate を採用前の値（なければ空）に戻し、Activity に残す。Estimate がその採用のままで、ほかに提示中の提案がないときだけ（提示中は 1 つまで） | Backlog・Planning の Task 詳細：採用後の 1 行に「元に戻す」 |
 

@@ -51,7 +51,10 @@ function TaskQuickAdd({
             aria-describedby={hintId}
             onChange={(event) => setTitle(event.currentTarget.value)}
             onKeyDown={(event) => {
-              if (event.key === 'Escape') setTitle('');
+              // Esc while converting Japanese input only closes the IME.
+              if (event.key === 'Escape' && !event.nativeEvent.isComposing) {
+                setTitle('');
+              }
             }}
           />
         </Field>

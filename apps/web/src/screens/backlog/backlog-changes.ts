@@ -11,6 +11,7 @@ import {
   completeTask,
   createRuleForNextSprint,
   createTask,
+  noteAreaInSprint,
   rejectSuggestion,
   restoreTask,
   setEstimate,
@@ -55,25 +56,44 @@ export function addTask(title: string, areaId: AreaId | undefined): Change {
   };
 }
 
-/** The detail's form: attributes and the Estimate, saved together. */
+/**
+ * The detail's form: attributes and the Estimate, saved together. When the
+ * Area of a Task in the active Sprint changes, the Sprint notes the Area's
+ * name if it is new to it (F9, invariant 18).
+ */
 export function saveTask(
   taskId: TaskId,
   update: TaskAttributeUpdate,
   estimate: number | null | undefined,
 ): Change {
-  return onTask(taskId, (task, ctx) => {
-    const updated = updateTask(task, update, ctx);
-    if (!updated.ok || estimate === undefined) return updated;
-    const next = setEstimate(updated.value.record, estimate, ctx);
-    if (!next.ok) return next;
-    return {
-      ok: true,
-      value: {
-        record: next.value.record,
-        activities: [...updated.value.activities, ...next.value.activities],
-      },
-    };
-  });
+  return (records, ctx) => {
+    const task = find(records.tasks, taskId, 'Task');
+    if (!task.ok) return task;
+    const updated = updateTask(task.value, update, ctx);
+    if (!updated.ok) return updated;
+    let next = updated.value.record;
+    const activities = [...updated.value.activities];
+    if (estimate !== undefined) {
+      const estimated = setEstimate(next, estimate, ctx);
+      if (!estimated.ok) return estimated;
+      next = estimated.value.record;
+      activities.push(...estimated.value.activities);
+    }
+    const sprint = activeSprint(records);
+    const areaChanged = next.areaId !== task.value.areaId;
+    if (
+      sprint === undefined ||
+      !areaChanged ||
+      !sprint.tasks.some((t) => t.taskId === taskId)
+    ) {
+      return { ok: true, value: { changes: { tasks: [next] }, activities } };
+    }
+    return chain(
+      activities,
+      noteAreaInSprint(sprint, next.areaId, records.areas, ctx),
+      (noted) => ({ tasks: [next], sprints: [noted] }),
+    );
+  };
 }
 
 export const adopt = (

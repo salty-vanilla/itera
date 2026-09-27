@@ -133,6 +133,8 @@ describe('Backlog', () => {
       within(detail).getByText('0 より大きい数で入力してください（例: 1.5）'),
     ).toBeTruthy();
     expect(task('task-bookshelf')).not.toHaveProperty('estimate');
+    // Focus moves to the field in error.
+    expect(document.activeElement).toBe(estimate);
 
     await userEvent.clear(estimate);
     await userEvent.type(estimate, '1.5');

@@ -1,4 +1,5 @@
 import {
+  boundValue,
   id,
   parseLocalDate,
   presentedSuggestion,
@@ -10,7 +11,7 @@ import {
   type TaskPriority,
   type TimeBasis,
 } from '@itera/domain';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   DrawerBody,
@@ -111,6 +112,13 @@ function TaskDetail({
     due?: string;
   }>({});
   const [outcome, setOutcome] = useState<Outcome>();
+  const formRef = useRef<HTMLFormElement>(null);
+  // After a failed save, focus goes to the first field in error.
+  useEffect(() => {
+    formRef.current
+      ?.querySelector<HTMLElement>('[aria-invalid="true"]')
+      ?.focus();
+  }, [errors]);
   const suggestion = presentedSuggestion(task);
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
@@ -152,12 +160,7 @@ function TaskDetail({
   function onAdopt(bound: SuggestionBound) {
     if (suggestion === undefined) return;
     const previous = task.estimate ?? null;
-    const hours =
-      bound === 'lo'
-        ? suggestion.lo
-        : bound === 'hi'
-          ? suggestion.hi
-          : (suggestion.lo + suggestion.hi) / 2;
+    const hours = boundValue(suggestion, bound);
     if (!run(adopt(task.id, suggestion.id, bound))) return;
     set('estimate', String(hours));
     setOutcome({
@@ -206,6 +209,7 @@ function TaskDetail({
       <DrawerBody className="flex flex-col gap-6">
         <form
           id="task-detail-form"
+          ref={formRef}
           className="flex flex-col gap-4"
           noValidate
           onSubmit={(event) => {

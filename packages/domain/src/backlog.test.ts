@@ -175,6 +175,9 @@ describe('inBacklogSlice', () => {
 
   it('期限が近い: to the end of this week when no Sprint holds today', () => {
     expect(dueSoonUntil({ ...context, sprints: [] })).toBe('2026-10-04');
+    // A Sprint that holds today wins over the calendar week.
+    const holding = sprintFixture('2026-09-24', 'active');
+    expect(dueSoonUntil({ ...context, sprints: [holding] })).toBe('2026-09-30');
   });
 
   it('期限超過: before today', () => {
