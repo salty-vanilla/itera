@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Drawer,
@@ -28,6 +28,7 @@ function InterruptSheet({ open, onOpenChange, onSubmit }: InterruptSheetProps) {
   const [text, setText] = useState('');
   const [minutes, setMinutes] = useState('');
   const [errors, setErrors] = useState<{ text?: string; minutes?: string }>({});
+  const formRef = useRef<HTMLFormElement>(null);
   const change = (next: boolean) => {
     if (!next) {
       setText('');
@@ -47,13 +48,22 @@ function InterruptSheet({ open, onOpenChange, onSubmit }: InterruptSheetProps) {
         : {}),
     };
     setErrors(next);
-    if (Object.keys(next).length > 0) return;
+    if (Object.keys(next).length > 0) {
+      // Focus goes to the first field in error (accessibility.md).
+      requestAnimationFrame(() =>
+        formRef.current
+          ?.querySelector<HTMLElement>('[aria-invalid="true"]')
+          ?.focus(),
+      );
+      return;
+    }
     if (onSubmit(note, m)) change(false);
   };
   return (
     <Drawer open={open} onOpenChange={change}>
       <DrawerContent>
         <form
+          ref={formRef}
           noValidate
           onSubmit={save}
           className="flex min-h-0 flex-1 flex-col"
@@ -78,7 +88,7 @@ function InterruptSheet({ open, onOpenChange, onSubmit }: InterruptSheetProps) {
               error={errors.minutes}
             >
               <TextInput
-                inputMode="numeric"
+                inputMode="decimal"
                 suffix="分"
                 value={minutes}
                 onChange={(e) => setMinutes(e.currentTarget.value)}

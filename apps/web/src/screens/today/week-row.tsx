@@ -22,7 +22,7 @@ function WeekRow({ item, onOpen, onChoose }: WeekRowProps) {
       title={item.task.title}
       onOpen={onOpen}
       control={
-        <Button size="sm" onClick={onChoose}>
+        <Button size="sm" data-action="choose" onClick={onChoose}>
           <ArrowUp aria-hidden />
           今日へ
           <span className="sr-only">: {item.task.title}</span>

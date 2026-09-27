@@ -34,7 +34,8 @@ import type { TodayItem, TodayRow as TodayRowData } from '@/store/today-view';
 type TodayRowProps = {
   row: TodayRowData;
   timeZone: TimeZone;
-  onOpen: () => void;
+  /** Opens the Task's detail; absent for a completed Task. */
+  onOpen: (() => void) | undefined;
   onComplete: () => void;
   onUndoComplete: () => void;
   onStart: () => void;
@@ -48,7 +49,6 @@ type TodayRowProps = {
   onRecord: () => void;
   /** The `…`, for the actual time surface to sit by. */
   actionsRef?: Ref<HTMLButtonElement> | undefined;
-  circleRef?: Ref<HTMLButtonElement> | undefined;
 };
 
 function TodayRow({
@@ -65,7 +65,6 @@ function TodayRow({
   onPause,
   onRecord,
   actionsRef,
-  circleRef,
 }: TodayRowProps) {
   const { selection, task, occurrence } = row;
   const state = selection.resolution;
@@ -131,7 +130,6 @@ function TodayRow({
           </span>
         ) : (
           <CompletionCircle
-            ref={circleRef}
             title={task.title}
             done={done}
             onToggle={done ? onUndoComplete : onComplete}
@@ -146,7 +144,12 @@ function TodayRow({
       }
       actions={
         skipped ? (
-          <Button size="sm" variant="quiet" onClick={onUndoSkip}>
+          <Button
+            size="sm"
+            variant="quiet"
+            data-action="undo-skip"
+            onClick={onUndoSkip}
+          >
             <Undo2 aria-hidden />
             取り消す
             <span className="sr-only">（スキップ: {task.title}）</span>
@@ -193,7 +196,13 @@ function RowMetadata({
       case 'paused':
         return (
           <MetaItem wrap icon={<Pause aria-hidden />}>
-            今日はここまで{actual !== undefined && ` · ${actual}`}
+            <span>
+              今日はここまで
+              {actual !== undefined && (
+                // The value stays with its separator when the line wraps.
+                <span className="whitespace-nowrap"> · {actual}</span>
+              )}
+            </span>
           </MetaItem>
         );
       case 'deferred':

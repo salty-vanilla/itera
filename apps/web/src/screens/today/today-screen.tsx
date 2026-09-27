@@ -111,9 +111,15 @@ function TodayView({ data }: { data: TodayData }) {
   const [quickArea, setQuickArea] = useState('');
   // The `…` of each row, for the actual time surface to sit by.
   const triggers = useRef(new Map<DailySelectionId, HTMLButtonElement>());
-  // A row that moved (to 今日やる or to the closed ones) gets the focus.
-  const refocus = useRef<DailySelectionId | undefined>(undefined);
-  const pendingChosen = useRef<Set<DailySelectionId> | undefined>(undefined);
+  // Where the focus goes once the records have changed: the row that
+  // moved (its ○, or 「取り消す」 once skipped), the row just chosen, or the
+  // Task's 「今日へ」 when its row left today.
+  const focusNext = useRef<
+    | { selection: DailySelectionId }
+    | { chosenAfter: ReadonlySet<DailySelectionId> }
+    | { rest: TodayRowData['sprintTask']['id'] }
+    | undefined
+  >(undefined);
 
   const openTask = (taskId: TaskId | undefined) =>
     void navigate({
@@ -128,16 +134,31 @@ function TodayView({ data }: { data: TodayData }) {
     search.task === undefined ? undefined : backlog.item(search.task);
 
   const moved = (selectionId: DailySelectionId, done: boolean) => {
-    if (done) refocus.current = selectionId;
+    if (done) focusNext.current = { selection: selectionId };
   };
-  const circleRef =
-    (selectionId: DailySelectionId) => (el: HTMLButtonElement | null) => {
-      if (el !== null && refocus.current === selectionId) {
-        refocus.current = undefined;
-        // After the Menu has closed and returned its focus.
-        requestAnimationFrame(() => el.focus());
+  useEffect(() => {
+    const next = focusNext.current;
+    if (next === undefined) return;
+    focusNext.current = undefined;
+    let selector: string | undefined;
+    if ('selection' in next) {
+      selector = `[data-selection="${next.selection}"] :is([data-slot="completion-circle"], [data-action="undo-skip"])`;
+    } else if ('rest' in next) {
+      selector = `[data-item="${next.rest}"] [data-action="choose"]`;
+    } else {
+      const added = data.rows.find(
+        (r) => !next.chosenAfter.has(r.selection.id),
+      );
+      if (added !== undefined) {
+        selector = `[data-selection="${added.selection.id}"] [data-slot="completion-circle"]`;
       }
-    };
+    }
+    if (selector === undefined) return;
+    // After a Menu or surface has closed and returned its focus.
+    requestAnimationFrame(() =>
+      document.querySelector<HTMLElement>(selector)?.focus(),
+    );
+  }, [data]);
   const editingRow = [...data.rows, ...data.closed].find(
     (r) => r.selection.id === editing?.selectionId,
   );
@@ -147,10 +168,23 @@ function TodayView({ data }: { data: TodayData }) {
     return {
       row,
       timeZone: data.timeZone,
-      onOpen: () => openTask(row.task.id),
+      // A completed Task is no longer in the Backlog's detail.
+      onOpen:
+        row.task.lifecycle === 'active'
+          ? () => openTask(row.task.id)
+          : undefined,
       onComplete: () => moved(selectionId, actions.complete(selectionId)),
-      onUndoComplete: () =>
-        moved(selectionId, actions.undoComplete(selectionId)),
+      onUndoComplete: () => {
+        // Completed from the Backlog: undone as the Backlog does (F29), so
+        // the choice it made for today goes away with it.
+        if (row.selection.origin === 'backlogCompletion') {
+          if (taskActions.undoCompleteTask(row.task.id)) {
+            focusNext.current = { rest: row.sprintTask.id };
+          }
+          return;
+        }
+        moved(selectionId, actions.undoComplete(selectionId));
+      },
       onStart: () => actions.start(selectionId),
       onDefer: () => moved(selectionId, actions.defer(selectionId)),
       onRemove: () => moved(selectionId, actions.removeFromToday(selectionId)),
@@ -172,7 +206,6 @@ function TodayView({ data }: { data: TodayData }) {
         if (el === null) triggers.current.delete(selectionId);
         else triggers.current.set(selectionId, el);
       },
-      circleRef: circleRef(selectionId),
     };
   };
 
@@ -180,42 +213,31 @@ function TodayView({ data }: { data: TodayData }) {
   const choose = (item: TodayData['rest'][number]) => {
     const before = new Set(data.rows.map((r) => r.selection.id));
     if (actions.chooseForToday(item.sprintTask.id, item.occurrence?.id)) {
-      pendingChosen.current = before;
+      focusNext.current = { chosenAfter: before };
     }
   };
-  useEffect(() => {
-    const before = pendingChosen.current;
-    if (before === undefined) return;
-    pendingChosen.current = undefined;
-    const added = data.rows.find((r) => !before.has(r.selection.id));
-    if (added === undefined) return;
-    document
-      .querySelector<HTMLButtonElement>(
-        `[data-selection="${added.selection.id}"] [data-slot="completion-circle"]`,
-      )
-      ?.focus();
-  }, [data.rows]);
 
   const remaining = data.remaining;
-  const goals = data.goals.length > 0 && (
-    <section aria-labelledby="today-goals" className="flex flex-col gap-3">
-      <h2 id="today-goals" className="text-subheading text-ink-muted">
-        今週の Goal
-      </h2>
-      <ul className="flex flex-col gap-3">
-        {data.goals.map((g) => (
-          <li key={g.area.id} className="flex flex-col gap-1">
-            <AreaIndicator name={g.area.name} color={g.area.color} />
-            <p className="text-reflection text-ink">{g.text}</p>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
+  const goals = (headingId: string) =>
+    data.goals.length > 0 && (
+      <section aria-labelledby={headingId} className="flex flex-col gap-3">
+        <h2 id={headingId} className="text-subheading text-ink-muted">
+          今週の Goal
+        </h2>
+        <ul className="flex flex-col gap-3">
+          {data.goals.map((g) => (
+            <li key={g.area.id} className="flex flex-col gap-1">
+              <AreaIndicator name={g.area.name} color={g.area.color} />
+              <p className="text-reflection text-ink">{g.text}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+    );
 
   return (
     <div className="mx-auto flex min-h-full w-full max-w-[calc(var(--spacing-pane-today)+var(--spacing-pane-side)+var(--spacing-12))] gap-12 wide:px-6">
-      <div className="flex min-w-0 flex-1 flex-col gap-8 px-4 pt-6 medium:px-6 medium:pt-8 wide:max-w-pane-today wide:px-0">
+      <div className="flex min-w-0 flex-1 flex-col gap-8 px-4 pt-6 medium:mx-auto medium:max-w-pane-today medium:px-6 medium:pt-8 wide:mx-0 wide:px-0">
         <header className="flex flex-col gap-3">
           <p className="text-meta text-ink-muted">
             Sprint {data.number} · {data.day.index}日目 / {data.day.count}日
@@ -251,7 +273,7 @@ function TodayView({ data }: { data: TodayData }) {
           )}
         </header>
 
-        <div className="wide:hidden">{goals}</div>
+        <div className="wide:hidden">{goals('today-goals')}</div>
 
         <section aria-labelledby="today-rows" className="flex flex-col gap-2">
           <h2 id="today-rows" className="text-heading text-ink">
@@ -281,7 +303,7 @@ function TodayView({ data }: { data: TodayData }) {
               今日はここまでにしたもの
             </h2>
             <p className="text-help text-ink-muted">
-              今週の残りに戻っています。今日のうちに終わったら ○
+              明日から今週の残りに出ます。今日のうちに終わったら ○
               で完了にできます。
             </p>
             <ul className="flex flex-col border-t border-border-soft">
@@ -304,7 +326,10 @@ function TodayView({ data }: { data: TodayData }) {
             </h2>
             <ul className="flex flex-col border-t border-border-soft">
               {data.continuation.map((item) => (
-                <li key={`${item.sprintTask.id}-${item.occurrence?.id ?? ''}`}>
+                <li
+                  key={`${item.sprintTask.id}-${item.occurrence?.id ?? ''}`}
+                  data-item={item.sprintTask.id}
+                >
                   <WeekRow
                     item={item}
                     onOpen={() => openTask(item.task.id)}
@@ -325,7 +350,10 @@ function TodayView({ data }: { data: TodayData }) {
           ) : (
             <ul className="flex flex-col border-t border-border-soft">
               {data.rest.map((item) => (
-                <li key={`${item.sprintTask.id}-${item.occurrence?.id ?? ''}`}>
+                <li
+                  key={`${item.sprintTask.id}-${item.occurrence?.id ?? ''}`}
+                  data-item={item.sprintTask.id}
+                >
                   <WeekRow
                     item={item}
                     onOpen={() => openTask(item.task.id)}
@@ -418,7 +446,7 @@ function TodayView({ data }: { data: TodayData }) {
         aria-label="今週の Goal の要約"
         className="hidden w-pane-side shrink-0 pt-8 wide:block"
       >
-        <div className="sticky top-8">{goals}</div>
+        <div className="sticky top-8">{goals('today-goals-side')}</div>
       </aside>
 
       {editingRow !== undefined && editing !== undefined && (

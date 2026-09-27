@@ -150,10 +150,16 @@ describe('Today — 今日へ', () => {
     expect(selectionOf('task-reading')?.resolution).toBe('skipped');
     const skipped = row('今日やる', '英語の多読 30 分');
     expect(within(skipped).getByText('スキップ')).toBeTruthy();
-    await userEvent.click(
-      within(skipped).getByRole('button', { name: /取り消す/ }),
-    );
+    // The Menu's trigger is gone; 「取り消す」 takes the focus.
+    const undo = within(skipped).getByRole('button', { name: /取り消す/ });
+    await waitFor(() => expect(document.activeElement).toBe(undo));
+    await userEvent.click(undo);
     expect(selectionOf('task-reading')?.resolution).toBe('selected');
+    await waitFor(() =>
+      expect(document.activeElement?.getAttribute('aria-label')).toBe(
+        '完了にする: 英語の多読 30 分',
+      ),
+    );
   });
 });
 
@@ -200,10 +206,14 @@ describe('Today — the daily operations', () => {
       ),
     ).toBe(true);
     expect(
-      within(
-        row('今日はここまでにしたもの', '顧客インタビューの設計'),
-      ).getByText('今日はここまで · 1.5h'),
-    ).toBeTruthy();
+      row('今日はここまでにしたもの', '顧客インタビューの設計').textContent,
+    ).toContain('今日はここまで · 1.5h');
+    // The moved row's ○ takes the focus.
+    await waitFor(() =>
+      expect(document.activeElement?.getAttribute('aria-label')).toBe(
+        '完了にする: 顧客インタビューの設計',
+      ),
+    );
   });
 
   it('defers, shows the row closed, and still completes it that day (F17)', async () => {
@@ -263,6 +273,12 @@ describe('Today — the daily operations', () => {
     await menu('API 設計のレビュー', '実績を残す');
     await userEvent.click(await screen.findByRole('button', { name: '残す' }));
     expect(screen.getByText(/0 より大きい時間/)).toBeTruthy();
+    // The field in error takes the focus (accessibility.md).
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole('textbox', { name: /実績時間/ }),
+      ),
+    );
     expect(sprint().actualTimes.filter((a) => a.via === 'later')).toEqual([]);
   });
 
@@ -280,6 +296,48 @@ describe('Today — the daily operations', () => {
     ).getByText('2回続けて見送り');
     expect(streak.className).not.toContain('danger');
     expect(streak.className).not.toContain('warning');
+  });
+});
+
+describe('Today — completed from the Backlog', () => {
+  it('shows it last, and ○ undoes it as the Backlog does (F29)', async () => {
+    await renderAt('/today?fixture=today-interrupt');
+    // The Task detail's 完了にする is the Backlog's completion.
+    await userEvent.click(
+      within(region('今週の残り')).getByRole('button', {
+        name: '新メンバーのオンボーディング資料',
+      }),
+    );
+    await userEvent.click(
+      await screen.findByRole('button', { name: '完了にする' }),
+    );
+    expect(selectionOf('task-onboarding')).toMatchObject({
+      origin: 'backlogCompletion',
+      resolution: 'done',
+    });
+    const last = within(region('今日やる')).getAllByRole('listitem').at(-1)!;
+    expect(within(last).getByText('Backlog から完了')).toBeTruthy();
+    // A completed Task has no detail to open here.
+    expect(
+      within(last).queryByRole('button', {
+        name: '新メンバーのオンボーディング資料',
+      }),
+    ).toBeNull();
+    await userEvent.click(
+      within(last).getByRole('button', {
+        name: '完了を取り消す: 新メンバーのオンボーディング資料',
+      }),
+    );
+    // The choice the completion made is gone; the Task is back in the week.
+    expect(selectionOf('task-onboarding')).toBeUndefined();
+    expect(
+      lastSnapshot().records.tasks.find((t) => t.id === 'task-onboarding')
+        ?.lifecycle,
+    ).toBe('active');
+    const back = within(
+      row('今週の残り', '新メンバーのオンボーディング資料'),
+    ).getByRole('button', { name: /今日へ/ });
+    await waitFor(() => expect(document.activeElement).toBe(back));
   });
 });
 
@@ -323,6 +381,25 @@ describe('Today — adding and interrupts', () => {
     });
     expect(sprint().dailySelections).toEqual(before);
     expect(within(region('割り込み')).getByText('来客対応')).toBeTruthy();
+  });
+});
+
+describe('Today — errors', () => {
+  it('focuses the note when an interrupt is recorded empty', async () => {
+    await renderAt('/today?fixture=today-daytime');
+    await userEvent.click(
+      screen.getByRole('button', { name: '割り込みを記録' }),
+    );
+    await userEvent.click(
+      await screen.findByRole('button', { name: '記録する' }),
+    );
+    expect(screen.getByText(/何があったか/)).toBeTruthy();
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole('textbox', { name: /メモ/ }),
+      ),
+    );
+    expect(sprint().interrupts).toHaveLength(0);
   });
 });
 

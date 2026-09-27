@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Drawer,
@@ -75,6 +75,14 @@ function ActualTime({
   const [error, setError] = useState<string | undefined>(undefined);
   const { title, description, submit } = words[mode];
   const optional = mode === 'pause';
+  const formRef = useRef<HTMLFormElement>(null);
+  // After a failed save, focus goes to the field in error (accessibility.md).
+  const focusError = () =>
+    requestAnimationFrame(() =>
+      formRef.current
+        ?.querySelector<HTMLElement>('[aria-invalid="true"]')
+        ?.focus(),
+    );
 
   const change = (next: boolean) => {
     if (!next) {
@@ -93,6 +101,7 @@ function ActualTime({
     const hours = Number(trimmed);
     if (trimmed === '' || !Number.isFinite(hours) || hours <= 0) {
       setError('0 より大きい時間を数字で入れてください（例: 1.5）');
+      focusError();
       return;
     }
     if (onSubmit(hours)) change(false);
@@ -119,7 +128,12 @@ function ActualTime({
     return (
       <Drawer open={open} onOpenChange={change}>
         <DrawerContent finalFocus={() => anchor ?? true}>
-          <form noValidate onSubmit={save} className="flex flex-col">
+          <form
+            ref={formRef}
+            noValidate
+            onSubmit={save}
+            className="flex flex-col"
+          >
             <DrawerHeader>
               <DrawerTitle>{heading}</DrawerTitle>
               <DrawerDescription>{description}</DrawerDescription>
@@ -143,7 +157,12 @@ function ActualTime({
         anchor={anchor}
         finalFocus={() => anchor ?? true}
       >
-        <form noValidate onSubmit={save} className="flex flex-col">
+        <form
+          ref={formRef}
+          noValidate
+          onSubmit={save}
+          className="flex flex-col"
+        >
           <PopoverHeader>
             <PopoverTitle>{heading}</PopoverTitle>
             <PopoverDescription>{description}</PopoverDescription>
