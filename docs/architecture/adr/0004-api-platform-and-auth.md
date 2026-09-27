@@ -55,8 +55,19 @@ D1 は auto-commit で動き、複数の文を原子的に実行するには `ba
 - Workers の実行時の型と binding の型（`CloudflareBindings`）は `wrangler types` で `worker-configuration.d.ts` に生成し、コミットする。手で書かない。`@cloudflare/workers-types` は入れない（`wrangler types` がこれに代わる）。`typecheck` script が `wrangler types --check` で生成物が設定と一致することを確かめる。
 - WorkOS の設定値（`WORKOS_CLIENT_ID`・`WORKOS_ISSUER`・`WORKOS_AUDIENCE`）は `wrangler.jsonc` の `secrets.required` で宣言し、ローカルでは `.dev.vars`（Git 管理外。例は `.dev.vars.example`）、デプロイ先では wrangler の secret で渡す。
 - D1 の `database_id` は、データベースを作るまで仮の値を置く。ローカルの実行（`wrangler dev`、`--local`）はこの値を使わない。
-- テストは Node 上の Vitest で、Hono の `app.request()` にテスト用の env を渡して実行する。Workers の実行環境（workerd）でテストする `@cloudflare/vitest-pool-workers`（0.22.0）は Vitest 4 にしか対応しておらず、ADR 0001 の Vitest 5 と合わないため使わない。D1 に触れる動作は `wrangler dev` で確かめる。Vitest 5 に対応したら見直す。
+- テストは Node 上の Vitest で、Hono の `app.request()` に依存を注入して実行する（下の「依存の組み立て方」）。Workers の実行環境（workerd）でテストする `@cloudflare/vitest-pool-workers`（0.22.0）は Vitest 4 にしか対応しておらず、ADR 0001 の Vitest 5 と合わないため使わない。D1 そのものに触れる動作は `wrangler dev` で確かめる。Vitest 5 に対応したら見直す。
 - `esbuild` と `workerd` のインストールスクリプトは実行しない（`pnpm-workspace.yaml` の `ignoredBuiltDependencies`）。バイナリは optional dependencies で入り、`wrangler dev` はスクリプトなしで動く。
+
+### 依存の組み立て方（Issue #30）
+
+2026-09-27、オーナーが「DB・認証など実装の選択肢がある依存は、ハンドラーや middleware に直接書かず、構成時（合成ルート）に注入する」と決めた。以後 `services/api` に足す依存（メール送信、外部 API など）も同じ扱いにする。ルールは `.claude/rules/api.md`。
+
+- `createApp(dependencies)` が依存を 1 つの引数で受け取る。Workers の env はリクエストの中でしか得られないので、依存は env から実装を作る関数（`Dependencies`：`database`・`authenticator`）にする。本番の構成（D1、WorkOS）は `src/default-dependencies.ts` にあり、それを選ぶのは `src/index.ts` だけ。
+- DB：ハンドラーは `c.var.db`（型は `Database`）だけを使う。`Database` は Drizzle の非同期の SQLite の型に `batch()` を加えたもので、D1・libSQL・sqlite-proxy のどれでも満たせる（`src/db/database.test.ts` で型を確かめる。libSQL は `@libsql/client` を入れていないので、非同期であることと `batch()` を持つことまでを確かめている）。同期の API の better-sqlite3 は満たさない。`drizzle-orm/d1` を使うのは既定の構成だけ。
+- 認証：`requireAuth` は `Authenticator`（トークンを受け取り、利用者を返すか、受け付けないなら `null` を返す。サーバー側の失敗は例外）だけを使い、Bearer の読み取り・401 の応答・`c.var.userId` の設定を受け持つ。WorkOS の検証（JWKS、`iss`・`aud`・`exp`、設定の欠落で失敗）は `src/auth/workos.ts` の実装の 1 つ。
+- テストでは、DB に sqlite-proxy の Drizzle（実行した SQL を記録し、行を返さない）を、認証に仮の `Authenticator` を渡す。WorkOS の実装は、テスト用の鍵と JWKS を渡して `requireAuth` 越しに確かめる。
+- DI コンテナのライブラリは使わない。関数の引数と Hono の context で足りる範囲にする。
+- 別の DB ドライバ（想定は libSQL）、別の認証サービス、Node でのローカル実行は、必要になったときに別の Issue で足す。
 
 ## 検討した代替案
 

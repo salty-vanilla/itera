@@ -29,7 +29,7 @@ MVP は Web のみ。PC を基準にし、スマートフォンは DESIGN.md の
 
 手順 4 のうち、ドメインの型に依存しない土台（トークン、基底部品、Storybook）は手順 3 と並行して先に作ってよい（Issue #6、ADR 0003）。画面と fixture は `packages/domain` の型と関数ができてから作る。
 
-`packages/domain` と `apps/web` で作業するときは、ファイルを作る前に `.claude/rules/domain.md` / `.claude/rules/web-ui.md` を読む。
+`packages/domain`・`apps/web`・`services/api` で作業するときは、ファイルを作る前に `.claude/rules/domain.md` / `.claude/rules/web-ui.md` / `.claude/rules/api.md` を読む。
 
 技術スタックの候補：Vite、React 19、Tailwind 4、shadcn（base-ui）、TanStack Query、Valibot、Hono、Drizzle、OpenAPI + Hey API、vitest、Playwright。導入するときに ADR で決め、バージョンを固定する。まだ入っていないものを、入っている前提で使わない。導入済みの Web 側の依存（Vite、React、Tailwind、shadcn / base-ui、lucide-react、Storybook）は ADR 0003。API 側（Hono + Cloudflare Workers、D1 + Drizzle、WorkOS AuthKit、`jose`、wrangler）の方式と版は ADR 0004。
 
