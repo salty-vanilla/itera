@@ -33,7 +33,7 @@ const areas: { name: string; color: AreaColor; count: number }[] = [
 
 /**
  * Backlog を領域で絞り込む。押すと選択が切り替わる（aria-pressed）。選択中は
- * `here-subtle` の地、`ink` の枠、チェック。0件の「学習」は disabled。
+ * `here-subtle` の地、`ink` の枠、太字のラベル。選んでも幅は変わらない。0件の「学習」は disabled。
  * 路線記号は Area 名の先頭 1 文字（「領域なし」は「－」）。
  */
 export const Areas: Story = {

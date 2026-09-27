@@ -1,12 +1,12 @@
 import { Button as ButtonPrimitive } from '@base-ui/react/button';
-import { Check } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 // DESIGN.md Components › Filter. A toggle that narrows a list: a 28px Pill
-// with `border`, a check when selected, an optional Area line symbol, a label
-// and a count. Selected is `here-subtle` with an `ink` outline and the check
-// (never the colour alone), exposed as aria-pressed. A filter with 0 items is
+// with `border`, an optional Area line symbol, a label and a count. Selected
+// is `here-subtle` with a 2px `ink` outline and a 700 label (never the colour
+// alone), exposed as aria-pressed. There is no check: selecting a filter does
+// not change its width, so the filters after it stay where they are. A filter with 0 items is
 // disabled, unless it is selected so that it can still be removed. Put related filters in a FilterGroup.
 
 type AreaColor = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 'none';
@@ -72,21 +72,21 @@ function Filter({
         'before:absolute before:inset-x-0 before:-inset-y-2 medium:before:hidden',
         'not-data-disabled:hover:border-ink-muted not-data-disabled:hover:bg-surface-hover',
         'not-data-disabled:active:bg-surface-pressed',
-        'not-data-disabled:aria-pressed:border-ink not-data-disabled:aria-pressed:bg-here-subtle',
-        // Hover on a selected filter still shows; the check and the ink
-        // outline keep telling that it is selected.
+        // Selected: a 2px `ink` outline (`stroke-strong`, the border plus an
+        // inset ring so the size stays) on `here-subtle`, and a bold label.
+        'not-data-disabled:aria-pressed:border-ink not-data-disabled:aria-pressed:bg-here-subtle not-data-disabled:aria-pressed:inset-ring-1 not-data-disabled:aria-pressed:inset-ring-ink',
+        // Hover on a selected filter still shows; the ink outline and the
+        // bold label keep telling that it is selected.
         'not-data-disabled:aria-pressed:hover:bg-surface-hover',
         'data-disabled:cursor-not-allowed data-disabled:border-border data-disabled:bg-canvas-subtle data-disabled:text-ink-disabled',
         '[&_svg]:pointer-events-none [&_svg]:size-icon-s [&_svg]:shrink-0 [&_svg]:[stroke-width:var(--icon-stroke-s)]',
         area && 'pl-1',
-        pressed && 'pl-2',
         className,
       )}
       {...props}
     >
-      {pressed && <Check aria-hidden />}
       {area && <AreaMark {...area} />}
-      <span>{children}</span>
+      <FilterLabel>{children}</FilterLabel>
       {count !== undefined && (
         <span className="text-num-s text-ink-subtle group-data-disabled:text-ink-disabled">
           {count}
@@ -94,6 +94,21 @@ function Filter({
         </span>
       )}
     </ButtonPrimitive>
+  );
+}
+
+// The bold and regular labels share one grid cell so that selecting a filter
+// keeps its width.
+function FilterLabel({ children }: { children: ReactNode }) {
+  return (
+    <span className="grid">
+      <span aria-hidden className="invisible col-start-1 row-start-1 font-bold">
+        {children}
+      </span>
+      <span className="col-start-1 row-start-1 group-aria-pressed:font-bold">
+        {children}
+      </span>
+    </span>
   );
 }
 

@@ -306,7 +306,7 @@ components:
 | 罫 | `border` / `border-soft` | 構造の罫 / リスト内の行区切り | 操作部品の輪郭 |
 | 罫 | `border-strong` | 入力・Checkbox・Radio・Switch・Secondary Button の輪郭 | 装飾の罫 |
 | 確定 | `primary`（墨）/ `on-primary` | Primary Button の塗り、オン状態、完了サークル、Progress、IconButton の pressed | 大きな面 |
-| 現在地 | `here`（黄）/ `here-subtle` / `on-here` | 今日の列・今の段階の印（`here`）、選んだ行・項目の地（`here-subtle`）。必ずチェックか語を伴う | 注意・警告（→ `warning`）、装飾、フォーカス |
+| 現在地 | `here`（黄）/ `here-subtle` / `on-here` | 今日の列・今の段階の印（`here`）、選んだ行・項目の地（`here-subtle`）。必ずチェックか語を伴う（Filter だけは `ink` の 2px の枠と太字） | 注意・警告（→ `warning`）、装飾、フォーカス |
 | Focus | `focus`（`ink` の別名） | フォーカスリングだけ。色相を持たず、墨の 2px の輪郭と 2px のアキで示す | それ以外すべて |
 | リンク | `link`（`ink` の別名） | 下線付きの文字リンク | — |
 | Semantic | `danger` `warning` と `*-subtle` | 危険と注意の文字・アイコン・Status Tag・Notice。必ずアイコンか語を伴う。成功と情報は色を持たず、墨の文字＋アイコン（`circle-check` / `info`）＋語で示す | Area の識別、装飾 |
@@ -326,7 +326,7 @@ Primary は色ではなく墨（light は `#16181a` の塗りに白抜き、dark
 
 `here` は駅の案内で現在地を示す黄に当たる。「今どこか」だけに使う。
 
-- 選択 = `here-subtle` の地＋チェック。今日の列・今の段階は `here` の印（太線や塗りの四角）＋語（「今日」「現在」）。
+- 選択 = `here-subtle` の地＋チェック（Filter は幅を変えないため、チェックの代わりに `ink` の 2px の枠と太字）。今日の列・今の段階は `here` の印（太線や塗りの四角）＋語（「今日」「現在」）。
 - 注意・警告には使わない（→ `warning` とアイコン）。フォーカスにも使わない（→ `focus` の墨の輪郭）。
 - 黄の上の文字は `on-here`（墨）。
 
@@ -626,7 +626,7 @@ compact の原則：
 
 **Tabs** — 同じ場所の表示を切り替える。タブ 40px、ラベルは `button`、選択は `ink` 700 の文字＋`stroke-strong` の下線（色面・Pill にしない）、未選択は `ink-muted` 400（太さでも選択を示す。選んでも幅が変わらないよう 700 の幅を先に取る）、件数は `ink-subtle`。タブは 5 個まで。段階を進めるフロー（→ Sprint Header）と絞り込み（→ Filter）には使わない。
 
-**Filter** — リストを絞り込むトグル。Pill（28px、`border`）＋選択時のチェック＋任意の Area の路線記号（`area-badge` 20px。記号は読み上げず、ラベルの Area 名を読む）＋ラベル＋件数。Selected は `here-subtle` の地と `ink` の枠、`aria-pressed`。0 件は disabled（フォーカスでき、「0件」を読める）。ただし選択中の Filter は 0 件になっても外せるよう disabled にしない。compact 幅では見た目の 28px を保ったまま当たり判定を 44px にし、折り返した行の間を 16px 空けて当たり判定を重ねない。
+**Filter** — リストを絞り込むトグル。Pill（28px、`border`）＋任意の Area の路線記号（`area-badge` 20px。記号は読み上げず、ラベルの Area 名を読む）＋ラベル＋件数。Selected は `here-subtle` の地、`ink` の 2px の枠（`stroke-strong`。内側に取り、大きさを変えない）、ラベルの 700、`aria-pressed`。チェックは付けない（選んでも幅を変えず、後ろの Filter を動かさないため。太字の幅は先に取る）。0 件は disabled（フォーカスでき、「0件」を読める）。ただし選択中の Filter は 0 件になっても外せるよう disabled にしない。compact 幅では見た目の 28px を保ったまま当たり判定を 44px にし、折り返した行の間を 16px 空けて当たり判定を重ねない。
 
 **Sprint Header** — Sprint の画面の見出し。Status Tag、タイトル（`display-l`「Sprint 14」）、期間（`body` `ink-muted`）、右に操作（Primary は 1 つ）、段階表示（路線図のように段階を線でつなぎ、番号付きの駅として並べる。`nav`＋`ol`、現在の段階は `here` の印＋「現在」、`aria-current="step"`）。段階表示は目安で、どの段階にも戻れる。
 - Planning：選ぶ / 整える / 確かめる（PRD §5.B の Pick / Shape / Check）
