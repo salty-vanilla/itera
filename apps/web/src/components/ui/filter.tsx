@@ -81,7 +81,8 @@ function Filter({
         'not-data-disabled:aria-pressed:hover:bg-surface-hover',
         'data-disabled:cursor-not-allowed data-disabled:border-border data-disabled:bg-canvas-subtle data-disabled:text-ink-disabled',
         '[&_svg]:pointer-events-none [&_svg]:size-icon-s [&_svg]:shrink-0 [&_svg]:[stroke-width:var(--icon-stroke-s)]',
-        area && 'pl-1',
+        // The square symbol sits clear of the Pill's rounded end.
+        area && 'pl-2',
         className,
       )}
       {...props}
