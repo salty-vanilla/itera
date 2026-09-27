@@ -1,0 +1,25 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "itera-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-27",
+  "observability": {
+    "enabled": true,
+    "traces": { "enabled": true },
+  },
+  // WorkOS settings come from .dev.vars locally and from `wrangler secret`
+  // when deployed. Never put their values here (see .dev.vars.example).
+  "secrets": {
+    "required": ["WORKOS_CLIENT_ID", "WORKOS_ISSUER", "WORKOS_AUDIENCE"],
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "itera",
+      // Placeholder until the D1 database is created (a later Issue).
+      // Local development (`wrangler dev`, `--local`) does not use it.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations",
+    },
+  ],
+}

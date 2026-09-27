@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "reviewedAt": "2026-09-26",
+  "reviewedAt": "2026-09-27",
   "sources": [
     {
       "repo": "shadcn/ui",
@@ -32,6 +32,27 @@
       "omitted": {
         ".claude/agents/impeccable-documenter.md": "Writes DESIGN.md after a build; DESIGN.md changes go through Issues in this repository."
       }
+    },
+    {
+      "repo": "cloudflare/skills",
+      "commit": "626547c06881a20b3322bdc2ed6e6451b33a4fb6",
+      "path": "skills/wrangler",
+      "destination": ".agents/skills/wrangler",
+      "licenseFile": "LICENSE"
+    },
+    {
+      "repo": "cloudflare/skills",
+      "commit": "626547c06881a20b3322bdc2ed6e6451b33a4fb6",
+      "path": "skills/workers-best-practices",
+      "destination": ".agents/skills/workers-best-practices",
+      "licenseFile": "LICENSE"
+    },
+    {
+      "repo": "honojs/skills",
+      "commit": "8b1938be37331c68a02c3b75896b2ea3839d7d09",
+      "path": "skills/hono",
+      "destination": ".agents/skills/hono",
+      "licenseFile": "LICENSE"
     }
   ],
   "binaries": {
@@ -76,6 +97,8 @@
   "skillFiles": {
     ".agents/skills/design-references/SKILL.md": "874133903f9517d5e8d82a826e05c66734d729b42c40f35eab94a670ecfe251f",
     ".agents/skills/design-references/scripts/hig.mjs": "75f2c96df21f1558489402c437e37580da9f62adc1a52d166332d7511ccfbd4c",
+    ".agents/skills/hono/LICENSE": "5cddf05ab7955c91818508831a233df4df502bd9fcdd1d8c9c01f53bba095d4b",
+    ".agents/skills/hono/SKILL.md": "a355e4b58b7509744fb80a05027a8611f16373dd7ee84fa9f621f8d9cb95a84d",
     ".agents/skills/impeccable/LICENSE": "02bb8c3b4e70190e3986c0404ad2fd8d639b4f534252d82379cc1b502b6d1812",
     ".agents/skills/impeccable/NOTICE.md": "c60a093c2845fd9fb82f9c6f742ece31f379f8190b535309d32d66c45ccffdcb",
     ".agents/skills/impeccable/SKILL.md": "38c2e839e130008b6da814ab9c16f3fcbbedfdf721a9638eebd31a9e65341a7a",
@@ -166,7 +189,14 @@
     ".agents/skills/shadcn/rules/composition.md": "f282df828d83a91132a846ddb62eea149a7c7c94822e9ca88cfddf85af01aa41",
     ".agents/skills/shadcn/rules/forms.md": "29593e14381e34626f8e0e9c15c59f3394b92a0623af6a6ec94585400123853c",
     ".agents/skills/shadcn/rules/icons.md": "d4a58266648872d9ee07d0c2368843a1cb88b8253b7f528dd7bda9d68b6c2535",
-    ".agents/skills/shadcn/rules/styling.md": "f88fbd72dff862805b786dc7d7e4c74c83030fc278c5b97c993e4e665001798c"
+    ".agents/skills/shadcn/rules/styling.md": "f88fbd72dff862805b786dc7d7e4c74c83030fc278c5b97c993e4e665001798c",
+    ".agents/skills/workers-best-practices/LICENSE": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+    ".agents/skills/workers-best-practices/SKILL.md": "8406eabf6375a3e79c77b951d00f3996f4c703c1a852579c38b171188bd19f1f",
+    ".agents/skills/workers-best-practices/references/configuration.md": "a9ae6018d514324159aabd25004e7f80b69df694c850bce97f7b68e30a72a73e",
+    ".agents/skills/workers-best-practices/references/platform-apis.md": "85b9d24b2870767f9875fb148dbeb153ef61f89030bc55043c279fe584501240",
+    ".agents/skills/workers-best-practices/references/runtime-patterns.md": "152cb5456359755ebaf0ff5343e60daed8e8fdc056453c430a1e9120e37da870",
+    ".agents/skills/wrangler/LICENSE": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+    ".agents/skills/wrangler/SKILL.md": "40a6802d3bf62c6cab203278eeb0b4d547b2e6f6bf281155aba5fc22b8aaee98"
   },
   "localSkills": [
     {

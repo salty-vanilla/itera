@@ -24,7 +24,7 @@ Itera の初期利用者は作者自身で（PRD §0）、1 週間の Sprint を
 | 認証 | WorkOS AuthKit（WorkOS がホストするログイン画面） | 無料枠（月 100 万 MAU）に、メール + パスワード・ソーシャルログイン・パスキー・MFA・Magic Auth が含まれる。ログイン画面は 90 以上の言語に対応し、日本語で表示される。資格情報の保存と認証画面を外部に任せられる |
 | トークンの検証 | `jose` で WorkOS のアクセストークン（JWT）を検証する | WorkOS に Hono 向けの公式 SDK は見当たらない。WorkOS は `jose` のようなライブラリでリクエストごとに検証する方法を示している |
 
-依存の版は、導入する Issue（#26）で ADR 0001 と同じく完全一致で固定し、ADR に記録する。
+依存の版は、下の「導入した依存と版」に ADR 0001 と同じく完全一致で固定する（Issue #26）。
 
 ### トランザクション
 
@@ -35,9 +35,28 @@ D1 は auto-commit で動き、複数の文を原子的に実行するには `ba
 ### 認証の構成
 
 - ログイン画面は WorkOS がホストする画面を使い、WorkOS の既定のドメイン（`<ランダムな語>.authkit.app`）で表示する。独自ドメインは有料（月 $99）なので、今回は使わない。一般公開の方針（PRD §14）を決めるときに見直す。
-- API は、リクエストのアクセストークンを WorkOS の JWKS（`https://api.workos.com/sso/jwks/<clientId>`）で署名検証し、`iss`（設定から読む）と `exp` を確かめる。WorkOS のセッションのアクセストークンは既定では `aud` を持たない。JWT テンプレートで `aud` を付けて検証するかは #26 で決める。
+- API は、リクエストのアクセストークンを WorkOS の JWKS（`https://api.workos.com/sso/jwks/<clientId>`）で署名検証し、`iss`（設定から読む）と `exp` を確かめる。WorkOS のセッションのアクセストークンは既定では `aud` を持たないので、WorkOS の JWT テンプレートで API の URI を `aud` に付け、API はそれを必ず検証する（Issue #26 で決定）。同じ WorkOS の環境で別の用途に発行されたトークンを受け付けないため。JWT テンプレートで変えられないのは `iss`・`sub`・`exp`・`iat`・`nbf`・`jti` で、`aud` は付けられる。WorkOS の環境の設定（JWT テンプレートを含む）は、アカウントを作る Issue で行う。
 - 利用者の識別子にはトークンの `sub`（WorkOS のユーザー ID）を使う。
 - WorkOS の client ID などの設定値は、環境変数と wrangler の secret で渡し、リポジトリに書かない。
+
+### 導入した依存と版（Issue #26）
+
+| 対象 | 採用 | 版 | 理由 |
+| --- | --- | --- | --- |
+| API | hono | 4.13.9 | 上の決定 |
+| ORM | drizzle-orm / drizzle-kit | 0.45.3 / 0.31.11 | 上の決定。drizzle-kit は SQL のマイグレーションを生成するだけで、適用は wrangler（`wrangler d1 migrations apply`）が行う |
+| トークンの検証 | jose | 6.2.12 | 上の決定 |
+| 実行・開発 | wrangler（devDependencies） | 4.141.0 | ローカルの実行（workerd とローカルの D1）、型の生成、D1 のマイグレーションの適用 |
+| 型 | TypeScript・Vitest | 6.0.3 / 5.0.2 | ADR 0001 と同じ版 |
+
+`services/api` の構成：
+
+- 設定は `wrangler.jsonc`。`compatibility_date` は作った日（2026-09-27）。Workers Logs と Traces を有効にしておく（`observability`）。
+- Workers の実行時の型と binding の型（`CloudflareBindings`）は `wrangler types` で `worker-configuration.d.ts` に生成し、コミットする。手で書かない。`@cloudflare/workers-types` は入れない（`wrangler types` がこれに代わる）。`typecheck` script が `wrangler types --check` で生成物が設定と一致することを確かめる。
+- WorkOS の設定値（`WORKOS_CLIENT_ID`・`WORKOS_ISSUER`・`WORKOS_AUDIENCE`）は `wrangler.jsonc` の `secrets.required` で宣言し、ローカルでは `.dev.vars`（Git 管理外。例は `.dev.vars.example`）、デプロイ先では wrangler の secret で渡す。
+- D1 の `database_id` は、データベースを作るまで仮の値を置く。ローカルの実行（`wrangler dev`、`--local`）はこの値を使わない。
+- テストは Node 上の Vitest で、Hono の `app.request()` にテスト用の env を渡して実行する。Workers の実行環境（workerd）でテストする `@cloudflare/vitest-pool-workers`（0.22.0）は Vitest 4 にしか対応しておらず、ADR 0001 の Vitest 5 と合わないため使わない。D1 に触れる動作は `wrangler dev` で確かめる。Vitest 5 に対応したら見直す。
+- `esbuild` と `workerd` のインストールスクリプトは実行しない（`pnpm-workspace.yaml` の `ignoredBuiltDependencies`）。バイナリは optional dependencies で入り、`wrangler dev` はスクリプトなしで動く。
 
 ## 検討した代替案
 
@@ -52,7 +71,7 @@ D1 は auto-commit で動き、複数の文を原子的に実行するには `ba
 - D1 は対話型のトランザクションを持たない（上の「トランザクション」）。
 - ログイン画面が `authkit.app` のドメインになり、見た目は WorkOS の画面の範囲でしか変えられない。
 - Time Travel は障害・誤操作からの復元用で、利用者向けのエクスポートにはならない。データの削除・エクスポートの方式は PRD §14 に残る。
-- WorkOS をこの構成（Workers 上の Hono と `jose`）で使う公式の例はない。#26 でテスト用の鍵と JWKS を使って検証の挙動を確かめる。
+- WorkOS をこの構成（Workers 上の Hono と `jose`）で使う公式の例はない。検証の挙動は、テスト用の鍵と JWKS を使ったテストで確かめている（#26）。実際の WorkOS のトークンでの確認は、アカウントを作る Issue で行う。
 
 ## 影響
 
@@ -70,6 +89,9 @@ D1 は auto-commit で動き、複数の文を原子的に実行するには `ba
 - WorkOS AuthKit のドメイン：https://workos.com/docs/custom-domains/authkit
 - WorkOS AuthKit のセッションとアクセストークン：https://workos.com/docs/authkit/sessions
 - WorkOS のアクセストークンを自前の API で検証する方法：https://workos.com/blog/verify-workos-access-tokens-in-your-own-api
+- WorkOS の JWT テンプレート：https://workos.com/docs/authkit/jwt-templates
+- Workers のシークレットと `.dev.vars`：https://developers.cloudflare.com/workers/configuration/secrets/
+- `wrangler types`：https://developers.cloudflare.com/workers/wrangler/commands/workers/
 - AuthKit の多言語対応：https://workos.com/blog/localization-in-authkit
 - Clerk の料金：https://clerk.com/pricing
 - Clerk の多言語対応：https://clerk.com/docs/guides/customizing-clerk/localization

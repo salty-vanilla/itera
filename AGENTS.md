@@ -31,7 +31,7 @@ MVP は Web のみ。PC を基準にし、スマートフォンは DESIGN.md の
 
 `packages/domain` と `apps/web` で作業するときは、ファイルを作る前に `.claude/rules/domain.md` / `.claude/rules/web-ui.md` を読む。
 
-技術スタックの候補：Vite、React 19、Tailwind 4、shadcn（base-ui）、TanStack Query、Valibot、Hono、Drizzle、OpenAPI + Hey API、vitest、Playwright。導入するときに ADR で決め、バージョンを固定する。まだ入っていないものを、入っている前提で使わない。導入済みの Web 側の依存（Vite、React、Tailwind、shadcn / base-ui、lucide-react、Storybook）は ADR 0003。API 側の方式（Hono + Cloudflare Workers、D1 + Drizzle、WorkOS AuthKit）は ADR 0004 で決めたが、依存はまだ入っていない（版は導入する Issue #26 で固定する）。
+技術スタックの候補：Vite、React 19、Tailwind 4、shadcn（base-ui）、TanStack Query、Valibot、Hono、Drizzle、OpenAPI + Hey API、vitest、Playwright。導入するときに ADR で決め、バージョンを固定する。まだ入っていないものを、入っている前提で使わない。導入済みの Web 側の依存（Vite、React、Tailwind、shadcn / base-ui、lucide-react、Storybook）は ADR 0003。API 側（Hono + Cloudflare Workers、D1 + Drizzle、WorkOS AuthKit、`jose`、wrangler）の方式と版は ADR 0004。
 
 ### 未決事項の扱い
 

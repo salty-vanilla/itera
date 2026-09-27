@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Workers runtime and binding types come from worker-configuration.d.ts.
+    "types": []
+  },
+  "include": [
+    "src",
+    "worker-configuration.d.ts",
+    "drizzle.config.ts",
+    "vitest.config.ts"
+  ]
+}
