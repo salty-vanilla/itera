@@ -40,6 +40,7 @@ export interface EnterReviewInput {
  *   its occurrences, and the next Sprint generates its own;
  * - its occurrences still pending become missed;
  * - selections still open become unresolved (as at a change of date).
+ * The missed and unresolved marks are the system's (F23, invariant 24).
  * The Retro starts empty.
  */
 export function enterReview(
@@ -77,13 +78,17 @@ export function enterReview(
     };
   });
 
+  // Wrapping up is the system's bookkeeping, even when the person starts
+  // the Retro (F23): missed and unresolved are recorded by the system, as
+  // at a change of date (invariant 24).
+  const system: CommandContext = { ...ctx, actor: 'system' };
   const inSprint = new Set(planned.flatMap((t) => t.occurrenceIds ?? []));
   const missed: Occurrence[] = [];
   for (const occurrence of input.occurrences) {
     if (!inSprint.has(occurrence.id) || occurrence.state !== 'pending') {
       continue;
     }
-    const result = missOccurrence(occurrence, ctx);
+    const result = missOccurrence(occurrence, system);
     if (!result.ok) return result;
     missed.push(result.value.record);
     activities.push(...result.value.activities);
@@ -99,7 +104,7 @@ export function enterReview(
     activities.push({
       kind: 'todayUnresolved',
       at: ctx.now,
-      actor: ctx.actor,
+      actor: 'system',
       sprintId: sprint.id,
       selectionId: s.id,
       sprintTaskId: s.sprintTaskId,
@@ -147,8 +152,14 @@ export function assessGoal(
 ): CommandResult<Sprint> {
   const retro = inRetro(sprint);
   if (!retro.ok) return retro;
+  if (ctx.actor !== 'user') {
+    return err('invalidInput', 'Only the person judges a Goal.');
+  }
   const goal = sprint.goals.find((g) => g.areaId === input.areaId);
   if (goal === undefined) return err('notFound', 'No Goal for the Area.');
+  if ((goal.selfAssessment ?? null) === input.assessment) {
+    return applied(sprint, []);
+  }
   const next =
     input.assessment === null
       ? omit(goal, 'selfAssessment')
@@ -365,10 +376,14 @@ export function decideCriterion(
 ): CommandResult<Sprint> {
   const retro = inRetro(sprint);
   if (!retro.ok) return retro;
+  if (ctx.actor !== 'user') {
+    return err('invalidInput', 'Only the person decides on the criterion.');
+  }
   const use = sprint.criterionUse;
   if (use === undefined) {
     return err('invalidInput', 'This Sprint had no criterion.');
   }
+  if (use.retroDecision === input.decision) return applied(sprint, []);
   if (
     input.decision === 'replace' &&
     retro.value.improvement?.criterionId === undefined

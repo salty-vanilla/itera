@@ -23,6 +23,8 @@ import {
   enterReview,
   previousImprovement,
   setImprovement,
+  setReflection,
+  togglePin,
 } from './review';
 import { sprintAreaName } from './sprint';
 import {
@@ -324,6 +326,16 @@ describe('Scenario A — 関連論文を 3 本読む（Planning と確定）', (
     // 14. Retro: 「1 本ずつに分ける」, the criterion continues, Retro complete → Closed.
     const retroAt = at('2026-10-05T01:00:00.000Z');
     sprint = unwrap(
+      togglePin(
+        sprint,
+        { pin: { kind: 'sprintTask', id: 'st-paper' } },
+        retroAt,
+      ),
+    );
+    sprint = unwrap(
+      setReflection(sprint, { text: '3 本まとめてだと手が止まる' }, retroAt),
+    );
+    sprint = unwrap(
       setImprovement(sprint, { text: '1 本ずつに分ける' }, retroAt),
     );
     sprint = unwrap(decideCriterion(sprint, { decision: 'continue' }, retroAt));
@@ -340,6 +352,11 @@ describe('Scenario A — 関連論文を 3 本読む（Planning と確定）', (
     );
     sprint = completed.sprint;
     expect(sprint.state).toBe('closed');
+    expect(sprint.retro).toMatchObject({
+      pins: [{ kind: 'sprintTask', id: 'st-paper' }],
+      reflection: '3 本まとめてだと手が止まる',
+      improvement: { text: '1 本ずつに分ける' },
+    });
     expect(completed.criteria).toEqual([]); // continues, still active
 
     // 15. The next Planning: the Task is only a carry-over candidate, the
@@ -382,5 +399,20 @@ describe('Scenario A — 関連論文を 3 本読む（Planning と確定）', (
     });
     // Splitting the Task is the person's call; nothing splits it automatically.
     expect(chosen.tasks).toHaveLength(1);
+    // With the Retro complete, the next Sprint can be confirmed (invariant 12).
+    const confirmedNext = unwrap(
+      confirmSprint(
+        chosen,
+        {
+          sprints: [previous, sprint, chosen],
+          tasks: [task],
+          areas: [research, work],
+          criterion,
+          applyCriterion: true,
+        },
+        at('2026-10-05T02:10:00.000Z'),
+      ),
+    );
+    expect(confirmedNext.state).toBe('active');
   });
 });

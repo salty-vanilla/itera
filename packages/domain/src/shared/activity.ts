@@ -218,12 +218,22 @@ export type Activity =
       readonly kind: 'goalSelfAssessed';
       readonly sprintId: SprintId;
       readonly areaId: AreaId;
-      readonly assessment: string | null;
+      readonly assessment:
+        'achieved' | 'partly' | 'notAchieved' | 'notJudged' | null;
     })
   | (ActivityBase & {
       readonly kind: 'retroPinned' | 'retroUnpinned';
       readonly sprintId: SprintId;
-      readonly pin: { readonly kind: string; readonly id?: string };
+      readonly pin: {
+        readonly kind:
+          | 'sprintTask'
+          | 'dailySelection'
+          | 'occurrence'
+          | 'interrupt'
+          | 'goal'
+          | 'availableHours';
+        readonly id?: string;
+      };
     })
   | (ActivityBase & {
       readonly kind:
@@ -240,8 +250,8 @@ export type Activity =
   | (ActivityBase & {
       readonly kind: 'criterionStateChanged';
       readonly criterionId: PlanningCriterionId;
-      readonly from: string;
-      readonly to: string;
+      readonly from: 'draft' | 'active' | 'ended' | 'replaced';
+      readonly to: 'draft' | 'active' | 'ended' | 'replaced';
     })
   | (ActivityBase & {
       /** F9: an Area first appearing in a confirmed Sprint. */

@@ -132,13 +132,13 @@ type CommandResult<T> =
 
 ## Review と Retro で決めた細部（#24）
 
-- **Review への移行**（`enterReview`）：本人は最終日から、システムは終了日の翌日から（F21）。planned の単発の SprintTask は carriedOver、繰り返しの SprintTask は done で閉じる（F20）。Sprint に含めた Pending の回は missed、開いた選択は unresolved にする。Retro はこのとき空で始まる。
-- **Retro**：Sprint の中に 1 つ（`sprint.retro`）。印（`togglePin`）、気になったこと（`setReflection`）、次に 1 つ変えること（`setImprovement`、1 件の自然文。不変条件 38）。自己判定（`assessGoal`）は本人だけが付け、`null` で未判定に戻す（不変条件 19）。
-- **計画基準**：PlanningCriterion は User の記録（`criterion.ts`）。Improvement から `draftCriterion` で 0..1 件の下書きを作り、`dropCriterionDraft` で捨てる（記録は呼び出し側が消す）。この Sprint に CriterionUse があれば、`decideCriterion` で続ける / 終える / 置き換えるを選ぶまで `completeRetro` はできない（不変条件 36。理由は求めない）。置き換えるには、この Retro の下書きが要る。
+- **Review への移行**（`enterReview`）：本人は最終日から、システムは終了日の翌日から（F21）。planned の単発の SprintTask は carriedOver、繰り返しの SprintTask は done で閉じる（F20）。Sprint に含めた Pending の回は missed、開いた選択は unresolved にする。この 2 つは本人が始めた場合もシステムの記録（actor = system、F23）。`occurrences` には Sprint の回を漏れなく渡すのは呼び出し側の責任（渡さなかった Pending の回は残る）。Retro はこのとき空で始まる。
+- **Retro**：Sprint の中に 1 つ（`sprint.retro`）。印（`togglePin`）、気になったこと（`setReflection`）、次に 1 つ変えること（`setImprovement`、1 件の自然文。不変条件 38）。自己判定（`assessGoal`）は本人（actor = user）だけが付け、`null` で未判定に戻す（不変条件 19）。同じ値を入れ直しても Activity は残さない。
+- **計画基準**：PlanningCriterion は User の記録（`criterion.ts`）。Improvement から `draftCriterion` で 0..1 件の下書きを作り、`dropCriterionDraft` で捨てる（記録は呼び出し側が消す）。この Sprint に CriterionUse があれば、`decideCriterion`（本人だけ）で続ける / 終える / 置き換えるを選ぶまで `completeRetro` はできない（不変条件 36。理由は求めない）。置き換えるには、この Retro の下書きが要る。
 - **Retro の完了**（`completeRetro`）：Review → Closed。続けるなら Active のまま、終えるなら Ended、置き換えるなら Replaced（`replacedBy` = 下書き）にして下書きを Active にする。下書きは、Active が続く場合を除いて Active になる（続けるのに下書きがあると Active が 2 つになるので拒否する。不変条件 35）。変わった基準の記録を返す。
 - **次の Planning の入口**：`previousImprovement` で前の Sprint の Improvement を出す。
 - **不変条件 39**：`criterionView(policy, tasks, now)` が、設定値・効果（どちらの端か、どこに効くか）・次の Planning のプレビューを同じ 1 つの `CriterionPolicy` から作る。文言は画面が作る。
-- **Retro の事実**（`retroFacts`）：記録から毎回計算し、保存も編集もしない。点数は作らない（不変条件 40）。Area ごとの Goal（計画時と今、自己判定）、Goal に紐づく / 紐づかない Task、完了・持ち越し・外した Task、Sprint 中の追加、繰り返しの回（Sprint に含めた回だけ。F2・F14）、見送り・今日はここまで（F17 で完了になった選択も数える）、割り込み、可用時間の計画時と今、計画値の合計（確定時の分と、Sprint 中の追加を含めた分）、実績。Task ごとに持ち越し回数（`carryCount`）と最長の連続見送りを返す。
+- **Retro の事実**（`retroFacts`）：記録から毎回計算し、保存も編集もしない。点数は作らない（不変条件 40）。Area ごとの Goal（計画時と今、自己判定。Area は Sprint の並び順で、Area のない Task は最後）、Goal に紐づく / 紐づかない Task、完了・持ち越し・外した Task、Sprint 中の追加、繰り返しの回（Sprint に含めた回。途中で外した繰り返しの、外す前に済ませた回も出す：F24。Excluded は出さない：F2・F14）、見送り・今日はここまで（F17 で完了になった選択も数える）、割り込み、可用時間の計画時と今、計画値の合計（確定時の分と、Sprint 中の追加を含めた分）、実績。Task ごとに持ち越し回数（`carryCount`：この SprintTask より前に続いた持ち越しの数。この Sprint での持ち越しは含まない）と最長の連続見送り（Today の `deferralStreak` と同じ規則。F17 で完了した日はそこで区切り、見送りの日の一覧には含める）を返す。
 - **実績**：Review 中も `recordActualTime` で足せる（F22）。
 
 ## 対象外

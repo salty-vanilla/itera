@@ -37,7 +37,7 @@ v0.2 Final は v0.1 の骨格（恒久的な **Task** と、「この Sprint で
 
 ### v0.2 Final で決めたこと
 
-F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F11 は同じ日に、`packages/domain` の実装で見つかった食い違いについて決めた（Issue #20）。F12 も同じ日に決めた（Issue #21）。F13〜F16 も同じ日に、Sprint と Planning の実装で出た境界の場合について決めた（Issue #22）。F17〜F19 も同じ日に、Today の実装で出た境界の場合について決めた（Issue #23）。F20〜F22 も同じ日に、Review と Retro の実装で出た境界の場合について決めた（Issue #24）。
+F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F11 は同じ日に、`packages/domain` の実装で見つかった食い違いについて決めた（Issue #20）。F12 も同じ日に決めた（Issue #21）。F13〜F16 も同じ日に、Sprint と Planning の実装で出た境界の場合について決めた（Issue #22）。F17〜F19 も同じ日に、Today の実装で出た境界の場合について決めた（Issue #23）。F20〜F24 も同じ日に、Review と Retro の実装で出た境界の場合について決めた（Issue #24）。
 
 | # | 決定 | モデルへの反映 | UI への影響 |
 | --- | --- | --- | --- |
@@ -63,6 +63,8 @@ F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F
 | F20 | 繰り返しの SprintTask は Review で Done として閉じる | 回を束ねた SprintTask は、Review に入ると Done にする（持ち越しにしない。結果は回ごとの Done / Skipped / Missed に残る）。次の Sprint は自分の回を生成する | Retro：繰り返しは「完了・持ち越し」ではなく、回の数で見せる |
 | F21 | Retro は最終日から始められる | 本人は Sprint の最終日から「Retro を始める」で Review に入れる。終了日を過ぎたら、システムが Review にする | Today：最終日に「Retro を始める」を出す |
 | F22 | Review 中も実績時間を後から足せる | ActualTime は Sprint が Active か Review の間に追記できる。Closed になったら足せない | Retro：事実を見ながら実績を足せる |
+| F23 | Review に入るときの未処理・Missed はシステムが付ける | 本人が最終日に Retro を始めた場合も、開いたままの DailySelection の Unresolved と、未処理の Occurrence の Missed は、システムの記録（actor = システム）として付ける。不変条件 24 に Review への移行を加える | なし |
+| F24 | Sprint から外した繰り返しの、外す前に済ませた回も Retro の事実に出す | 外す前に完了・スキップした回は Retro の事実（完了・スキップ）に出す。外したときに Excluded になった残りの回は出さない（F2・F14） | Retro：途中で外した繰り返しも、やった回は見える |
 
 ### 用語
 
@@ -171,7 +173,8 @@ stateDiagram-v2
   Done --> Planned: 完了を取り消す
   Planned --> Removed: 確定後に Sprint から外す
   Removed --> Planned: Sprint に戻す（F13）
-  Planned --> CarriedOver: Sprint 終了時に未完了
+  Planned --> CarriedOver: Sprint 終了時に未完了（単発）
+  Planned --> Done: Review に入る（繰り返し、F20）
 ```
 
 - 「進行中」「今日はここまで」は SprintTask の状態にしない。その日の DailySelection が持つ。未完了のまま実績がある SprintTask は Planned のまま。
@@ -192,8 +195,8 @@ stateDiagram-v2
   Started --> Deferred: 今日は見送る
   Selected --> Removed: 今日から外す
   Selected --> Skipped: 今日はスキップ（繰り返しの回のみ）
-  Selected --> Unresolved: 日付が変わる（システム）
-  Started --> Unresolved: 日付が変わる（システム）
+  Selected --> Unresolved: 日付が変わる / Review に入る（システム、F23）
+  Started --> Unresolved: 日付が変わる / Review に入る（システム、F23）
   Done --> Selected: 完了を取り消す（F17 で閉じた後に完了した選択は、元の閉じた状態に戻る）
   Skipped --> Selected: スキップを取り消す（F19）
   Paused --> Done: その日のうちに完了（F17）
@@ -255,7 +258,7 @@ stateDiagram-v2
 
 ## 不変条件（Invariants）
 
-実装のどの層でも崩してはいけないルールです。v0.2 で番号を振り直しました。v0.2 Final では番号を変えず、16・18・22・23・31・33 の内容を更新しました。F7〜F9 の決定で、番号を変えずに 18・23・31 を更新しました。F10・F11 の決定で 8・9 を、F15 の決定で 32 を更新しました。
+実装のどの層でも崩してはいけないルールです。v0.2 で番号を振り直しました。v0.2 Final では番号を変えず、16・18・22・23・31・33 の内容を更新しました。F7〜F9 の決定で、番号を変えずに 18・23・31 を更新しました。F10・F11 の決定で 8・9 を、F15 の決定で 32 を、F23 の決定で 24 を更新しました。
 
 **Task / Backlog**
 
@@ -291,7 +294,7 @@ stateDiagram-v2
 21. DailySelection は日付 × SprintTask（繰り返しは × Occurrence）に 0..1。
 22. Paused・Deferred・Removed・Unresolved のどれでも、SprintTask は Sprint に残る。翌日の DailySelection は自動で作らない（Paused は翌日「昨日の続き」として候補に出すだけ）。
 23. 連続見送りは、同じ Task を Today に選んだ機会の連続で数え、数えるのは Deferred だけ。選ばなかった日と Unresolved は無視し、Paused・Done・Removed・Skipped で途切れる。表示は「N回続けて見送り」。
-24. Unresolved は日付変更時にシステムだけが付ける。
+24. Unresolved は日付変更時、または Review への移行時にシステムだけが付ける（本人が Retro を始めた場合も、記録はシステムのもの：F23）。
 25. Today は Goal・計画基準・可用時間を変えない。Today と Backlog では容量超過を表示しない。
 26. Sprint 外の Task を今日へ入れる操作は、SprintTask（midSprint）と DailySelection を同時に作る。片方だけが残ることはない。
 27. Backlog から今の Sprint の Task を完了すると、Task = Completed、SprintTask = Done、その日の DailySelection（Done）が同時にできる。

@@ -418,3 +418,105 @@ describe('F22: actual time in Review', () => {
     expect(recordActualTime(closed, input, ctx)).toMatchObject({ ok: false });
   });
 });
+
+describe('fixes from acceptance (#24)', () => {
+  const activeCriterion: PlanningCriterion = {
+    id: id('crit-1'),
+    userId,
+    policy,
+    sourceSprintId: id('sprint-2026-09-21'),
+    state: 'active',
+    createdAt: ctx.now,
+  };
+
+  it('F23: when the person starts the Retro, missed and unresolved are the system’s marks', () => {
+    const occurrences = recurringOccurrences();
+    const result = enterReview(
+      active(),
+      { today: d('2026-10-04'), occurrences },
+      ctx,
+    );
+    const kinds = result.ok
+      ? result.value.activities.map((a) => [a.kind, a.actor])
+      : [];
+    expect(kinds).toEqual([
+      ['occurrenceMissed', 'system'],
+      ['occurrenceMissed', 'system'],
+      ['todayUnresolved', 'system'],
+      ['sprintReviewStarted', 'user'],
+    ]);
+  });
+
+  it('invariants 19 and 36: only the person judges a Goal and decides on the criterion', () => {
+    const sprint = reviewed({
+      criterionUse: { criterionId: activeCriterion.id, appliedAtConfirm: true },
+    }).sprint;
+    for (const actor of ['system', 'agent'] as const) {
+      const other = { ...ctx, actor };
+      expect(
+        assessGoal(
+          sprint,
+          { areaId: researchId, assessment: 'achieved' },
+          other,
+        ),
+      ).toMatchObject({ ok: false });
+      expect(decideCriterion(sprint, { decision: 'end' }, other)).toMatchObject(
+        { ok: false },
+      );
+    }
+  });
+
+  it('the same judgement or decision again appends nothing', () => {
+    let sprint = reviewed({
+      criterionUse: { criterionId: activeCriterion.id, appliedAtConfirm: true },
+    }).sprint;
+    sprint = unwrap(
+      assessGoal(sprint, { areaId: researchId, assessment: 'partly' }, ctx),
+    );
+    sprint = unwrap(decideCriterion(sprint, { decision: 'end' }, ctx));
+    const again = assessGoal(
+      sprint,
+      { areaId: researchId, assessment: 'partly' },
+      ctx,
+    );
+    expect(again.ok && again.value.activities).toEqual([]);
+    const decided = decideCriterion(sprint, { decision: 'end' }, ctx);
+    expect(decided.ok && decided.value.activities).toEqual([]);
+  });
+
+  it('end with a draft: the old one ends and the draft becomes active', () => {
+    let sprint = reviewed({
+      criterionUse: { criterionId: activeCriterion.id, appliedAtConfirm: true },
+    }).sprint;
+    sprint = unwrap(setImprovement(sprint, { text: 'x' }, ctx));
+    const drafted = unwrap(
+      draftCriterion(sprint, { criterionId: id('crit-2'), policy }, ctx),
+    );
+    sprint = unwrap(decideCriterion(drafted.sprint, { decision: 'end' }, ctx));
+    const done = unwrap(
+      completeRetro(
+        sprint,
+        { criteria: [activeCriterion, drafted.criterion] },
+        ctx,
+      ),
+    );
+    expect(done.criteria).toEqual([
+      { ...activeCriterion, state: 'ended' },
+      { ...drafted.criterion, state: 'active' },
+    ]);
+  });
+
+  it('the Sprint’s criterion must be the active one', () => {
+    let sprint = reviewed({
+      criterionUse: { criterionId: activeCriterion.id, appliedAtConfirm: true },
+    }).sprint;
+    sprint = unwrap(decideCriterion(sprint, { decision: 'continue' }, ctx));
+    expect(
+      completeRetro(
+        sprint,
+        { criteria: [{ ...activeCriterion, state: 'ended' }] },
+        ctx,
+      ),
+    ).toMatchObject({ ok: false, error: { code: 'notFound' } });
+  });
+});

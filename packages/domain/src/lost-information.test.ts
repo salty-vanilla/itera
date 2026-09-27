@@ -31,6 +31,7 @@ import {
   deferSelection,
   noteInterrupt,
   pauseSelection,
+  removeFromToday,
   selectForToday,
   startDay,
   startSelection,
@@ -264,6 +265,39 @@ describe('現在状態だけでは失われる情報', () => {
         at('2026-09-30T09:00:00.000Z'),
       ),
     );
+    // (7 is read here, before the later choices.)
+    const streakAfterDeferral = deferralStreak([previous, sprint], paper.id);
+    // 10/1: chosen and taken off again (今日から外す). 10/2: chosen and left
+    // open; the next day's start marks it unresolved.
+    sprint = run(
+      selectForToday(
+        sprint,
+        {
+          selectionId: id('sel-p3'),
+          date: d('2026-10-01'),
+          sprintTaskId: id('st-paper'),
+        },
+        at('2026-10-01T00:00:00.000Z'),
+      ),
+    );
+    sprint = run(
+      removeFromToday(
+        sprint,
+        { selectionId: id('sel-p3') },
+        at('2026-10-01T00:10:00.000Z'),
+      ),
+    );
+    sprint = run(
+      selectForToday(
+        sprint,
+        {
+          selectionId: id('sel-p4'),
+          date: d('2026-10-02'),
+          sprintTaskId: id('st-paper'),
+        },
+        at('2026-10-02T00:00:00.000Z'),
+      ),
+    );
     const memoDone = run(
       completeSelection(
         sprint,
@@ -399,20 +433,27 @@ describe('現在状態だけでは失われる情報', () => {
       [null, 2],
       [2, 1.5],
     ]);
-    // 5. 今日へ選んだこと / 6. 見送った・ここまでにした・未処理の違い / 8. 開始したこと
+    // 5. 今日へ選んだこと / 6. 見送った・外した・ここまでにした・未処理の違い / 8. 開始したこと
     expect(
       sprint.dailySelections.map((s) => [s.date, s.sprintTaskId, s.resolution]),
     ).toEqual([
       ['2026-09-29', 'st-memo', 'done'],
       ['2026-09-29', 'st-paper', 'paused'],
       ['2026-09-30', 'st-paper', 'deferred'],
+      ['2026-10-01', 'st-paper', 'removed'],
+      ['2026-10-02', 'st-paper', 'unresolved'],
       ['2026-10-03', sprint.tasks[0]?.id, 'done'],
     ]);
+    // Unresolved is only ever the system's mark (invariant 24).
+    expect(
+      log.filter((a) => a.kind === 'todayUnresolved').map((a) => a.actor),
+    ).toEqual(['system']);
     expect(sprint.dailySelections[1]?.startedAt).toBe(
       '2026-09-29T00:05:00.000Z',
     );
-    // 7. 連続見送りの回数
-    expect(deferralStreak([previous, sprint], paper.id)).toBe(1);
+    // 7. 連続見送りの回数: 1 after 9/30; 外す on 10/1 then breaks the run.
+    expect(streakAfterDeferral).toBe(1);
+    expect(deferralStreak([previous, sprint], paper.id)).toBe(0);
     // 9. いつ・どの Sprint で・どこから完了したか
     expect(stMemo.outcome).toBe('done');
     expect(sprint.dailySelections[0]).toMatchObject({

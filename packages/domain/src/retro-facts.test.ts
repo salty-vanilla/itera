@@ -274,3 +274,70 @@ describe('retroFacts', () => {
     expect(carryCount(st('b'), [s1, s2])).toBe(0);
   });
 });
+
+describe('retroFacts — fixes from acceptance (#24)', () => {
+  it('F17: a deferral completed the same day breaks the longest run, as in Today', () => {
+    const sprint = sprintFixture('2026-09-28', 'review', {
+      tasks: [st('task-paper')],
+      dailySelections: [
+        selection('a', 'st-task-paper', '2026-09-28', 'deferred'),
+        {
+          ...selection('b', 'st-task-paper', '2026-09-29', 'done'),
+          closedBefore: { resolution: 'deferred', at: ctx.now },
+        },
+        selection('c', 'st-task-paper', '2026-09-30', 'deferred'),
+      ],
+    });
+    const fact = retroFacts(sprint, {
+      tasks: tasks(),
+      areas: [],
+      occurrences: [],
+      sprints: [],
+    }).tasks[0];
+    expect(fact?.deferredDates).toEqual([
+      '2026-09-28',
+      '2026-09-29',
+      '2026-09-30',
+    ]);
+    expect(fact?.longestDeferralRun).toEqual(['2026-09-28']);
+  });
+
+  it('F24: occurrences done or skipped before their Task was removed stay facts', () => {
+    const sprint = sprintFixture('2026-09-28', 'review', {
+      tasks: [
+        st('task-clean', {
+          outcome: 'removed',
+          goalLink: 'unlinked',
+          occurrenceIds: [id('occ-1'), id('occ-2'), id('occ-x')],
+        }),
+      ],
+    });
+    const facts = retroFacts(sprint, {
+      tasks: tasks(),
+      areas: [],
+      occurrences: [
+        occurrence('occ-1', 'done', '2026-09-29'),
+        occurrence('occ-2', 'skipped', '2026-10-01'),
+        occurrence('occ-x', 'excluded', '2026-10-03'), // left out at removal (F14)
+      ],
+      sprints: [],
+    });
+    expect(facts.occurrences.done.map((o) => o.id)).toEqual(['occ-1']);
+    expect(facts.occurrences.skipped.map((o) => o.id)).toEqual(['occ-2']);
+    expect(facts.occurrences.missed).toEqual([]);
+  });
+
+  it('lists Areas in the Sprint’s order, Tasks without an Area last', () => {
+    const facts = retroFacts(reviewSprint(), {
+      tasks: tasks(),
+      areas: [research, work],
+      occurrences,
+      sprints: [],
+    });
+    expect(facts.areas.map((a) => a.areaId)).toEqual([
+      workId,
+      researchId,
+      null,
+    ]);
+  });
+});

@@ -114,12 +114,19 @@ export function retroFacts(sprint: Sprint, input: RetroFactsInput): RetroFacts {
     .filter((t) => t.outcome !== 'draft')
     .map((t) => taskFact(sprint, t, input));
 
+  // In the Sprint's Area order (SprintAreaSnapshot), Tasks without an
+  // Area last.
+  const order = (areaId: AreaId | null) =>
+    areaId === null
+      ? Number.POSITIVE_INFINITY
+      : (sprint.areaSnapshot.find((e) => e.areaId === areaId)?.order ??
+        Number.MAX_SAFE_INTEGER);
   const areaIds = [
     ...new Set<AreaId | null>([
       ...sprint.goals.map((g) => g.areaId),
       ...facts.map((f) => f.areaId),
     ]),
-  ];
+  ].toSorted((a, b) => order(a) - order(b));
   const areas: AreaFacts[] = areaIds.map((areaId) => {
     const goal =
       areaId === null
@@ -152,9 +159,13 @@ export function retroFacts(sprint: Sprint, input: RetroFactsInput): RetroFacts {
     };
   });
 
+  // Every occurrence the Sprint took in, including those of a SprintTask
+  // removed later: what was done or skipped before removing stays a fact
+  // (F24). Excluded ones (left out in Planning, F2, or at removal, F14)
+  // are not shown, as only done / skipped / missed are listed.
   const inSprint = new Set(
     sprint.tasks
-      .filter((t) => t.outcome !== 'removed' && t.outcome !== 'draft')
+      .filter((t) => t.outcome !== 'draft')
       .flatMap((t) => t.occurrenceIds ?? []),
   );
   const occurrences = input.occurrences.filter((o) => inSprint.has(o.id));
@@ -242,8 +253,8 @@ function taskFact(
 
 /**
  * The longest run of deferrals, counted like 「N回続けて見送り」 (F4, F8):
- * unresolved choices are skipped; paused, removed, skipped and done break.
- * A deferral completed later the same day (F17) ends the run with it.
+ * unresolved choices are skipped; paused, removed, skipped and done break,
+ * the same rule as `deferralStreak`.
  */
 function longestRun(
   selections: readonly DailySelection[],
@@ -260,7 +271,8 @@ function longestRun(
     ) {
       continue;
     } else {
-      if (s.closedBefore?.resolution === 'deferred') run = [...run, s.date];
+      // Paused, removed, skipped and done break the run — including a
+      // deferral completed later the same day (F17), as in Today.
       if (run.length > best.length) best = run;
       run = [];
     }
