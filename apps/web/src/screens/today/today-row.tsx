@@ -200,8 +200,12 @@ function RowMetadata({
               {/* Breaks only at the separator in a narrow row. */}
               <span className="whitespace-nowrap">今日はここまで</span>
               {actual !== undefined && (
-                // The value stays with its separator when the line wraps.
-                <span className="whitespace-nowrap"> · {actual}</span>
+                // The value stays with its separator when the line wraps;
+                // the space before it is where the line may break.
+                <>
+                  {' '}
+                  <span className="whitespace-nowrap">· {actual}</span>
+                </>
               )}
             </span>
           </MetaItem>
