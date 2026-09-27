@@ -330,9 +330,10 @@ export function projectFrom(
 }
 
 /**
- * 「Sprint 14」: the Sprint's place among the user's Sprints in order of
- * start, from 1 (F25). Derived, never stored; Sprints never overlap and are
- * not deleted, so the number does not change.
+ * 「Sprint 14」: the Sprint's place among the user's Sprints in the order
+ * they were made, from 1 (F25). A new Sprint starts after every existing
+ * one (invariant 11), so counting by start is counting by creation.
+ * Derived, never stored; Sprints are not deleted, so it does not change.
  */
 export function sprintNumber(
   sprint: Sprint,

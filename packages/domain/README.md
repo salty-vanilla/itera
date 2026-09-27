@@ -143,7 +143,7 @@ type CommandResult<T> =
 
 ## Backlog の画面で決めた細部（#39）
 
-- **Sprint の番号**（`sprintNumber`、F25）：開始日の順の通し番号（1 から）。保存しない。
+- **Sprint の番号**（`sprintNumber`、F25）：作成順の通し番号（1 から）。新しい Sprint はそれまでのどの Sprint よりも後に始まる（不変条件 11）ので、開始日の順に数えれば作成順になる。保存しない。
 - **持ち越し回数**（`carryOverOf`、F26）：Task の最新の SprintTask から、`carryCount`（carriedFrom の連なり）に、その SprintTask 自身が carriedOver なら 1 を足す。持ち越しから選び直して今の Sprint にある間も回数を保ち、持ち越しを使わずに選び直すと数え直す。`fromSprintId` は連なりの最初の Sprint（「Sprint 13から」）。
 - **切り口**（`inBacklogSlice`）：期限が近い（今日から、今日を含む Sprint の終わりまで。Sprint がなければその週の終わりまで。オーナー決定）/ 期限超過（今日より前）/ 持ち越し（F26 の回数が 1 以上）/ 繰り返し / 領域なし。期限のない Task は期限の切り口に入らない。
 - **採用を元に戻す**（`undoAdoption`、F27）：Task は今の Estimate しか持たないので、採用前の Estimate（`adoptSuggestion` に渡した Task の値、なければ `null`）を呼び出し側が渡す。Estimate がその採用のままで、ほかに提示中の提案がないときだけ戻せる。`estimateChanged` と `suggestionAdoptionUndone` を残す。
