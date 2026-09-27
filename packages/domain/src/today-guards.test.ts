@@ -24,6 +24,7 @@ import {
   startDay,
   startSelection,
   undoCompleteSelection,
+  undoSkipSelection,
 } from './today';
 import {
   deferralStreak,
@@ -504,5 +505,84 @@ describe('deferralStreak ordering', () => {
     });
     // a-deferred comes first, b-paused last → the run is broken.
     expect(deferralStreak([sprint], id('task-1'))).toBe(0);
+  });
+});
+
+describe('undo returns to where it was (F17, F19)', () => {
+  it('F17: undoing a completion made after a deferral returns to the deferral', () => {
+    const deferredAt = {
+      now: instant('2026-09-28T01:00:00.000Z'),
+      actor: 'user' as const,
+    };
+    const deferred = unwrap(deferSelection(chosen(), sel, deferredAt));
+    const done = unwrap(complete(deferred));
+    expect(done.sprint.dailySelections[0]).toMatchObject({
+      resolution: 'done',
+      closedBefore: { resolution: 'deferred', at: '2026-09-28T01:00:00.000Z' },
+    });
+    const undone = unwrap(
+      undoCompleteSelection(
+        done.sprint,
+        { ...sel, task: done.task as Task },
+        ctx,
+      ),
+    );
+    const selection = undone.sprint.dailySelections[0];
+    expect(selection).toMatchObject({
+      resolution: 'deferred',
+      resolvedAt: '2026-09-28T01:00:00.000Z',
+    });
+    expect(selection).not.toHaveProperty('closedBefore');
+    expect(undone.task?.lifecycle).toBe('active');
+    expect(undone.sprint.tasks[0]?.outcome).toBe('planned');
+    // The deferral counts again.
+    expect(deferralStreak([undone.sprint], id('task-1'))).toBe(1);
+  });
+
+  it('F19: undoing a skip returns the selection to selected and the occurrence to pending', () => {
+    const { sprint, occurrences } = recurring();
+    const today = unwrap(
+      startDay(
+        sprint,
+        { today: d('2026-09-28'), occurrences, newSelectionId: ids('sel') },
+        system,
+      ),
+    );
+    const [first] = occurrences;
+    if (first === undefined) throw new Error('no occurrence');
+    const skipped = unwrap(
+      skipSelection(
+        today,
+        { selectionId: id('sel-1'), occurrence: first },
+        ctx,
+      ),
+    );
+    const result = undoSkipSelection(
+      skipped.sprint,
+      {
+        selectionId: id('sel-1'),
+        occurrence: skipped.occurrence as Occurrence,
+      },
+      ctx,
+    );
+    const undone = unwrap(result);
+    expect(undone.occurrence?.state).toBe('pending');
+    expect(undone.sprint.dailySelections[0]?.resolution).toBe('selected');
+    expect(undone.sprint.dailySelections[0]).not.toHaveProperty('resolvedAt');
+    expect(result.ok && result.value.activities.map((a) => a.kind)).toEqual([
+      'occurrenceReopened',
+      'todaySkipUndone',
+    ]);
+    // Only a skipped selection can be restored.
+    expect(
+      undoSkipSelection(
+        undone.sprint,
+        {
+          selectionId: id('sel-1'),
+          occurrence: undone.occurrence as Occurrence,
+        },
+        ctx,
+      ),
+    ).toMatchObject({ ok: false, error: { code: 'invalidTransition' } });
   });
 });

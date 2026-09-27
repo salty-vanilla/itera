@@ -120,7 +120,8 @@ type CommandResult<T> =
 - **ほかの日の回（F18）**：繰り返しの回は、同じ Sprint のほかの日にも選べる。
 - **Today が触れる範囲**：Today のコマンドは active な Sprint の、planned の SprintTask の選択だけに働く（完了の取り消しは、単発なら done、繰り返しなら planned）。Sprint から外した SprintTask の開いた選択はそのまま残るが、Today のコマンドも「今日の残り」も扱わず、日付が変わると未処理になる。Sprint に戻せば（F13）また使える。
 - **当日の繰り返し**：`startDay`（actor = system だけ）で作る。Today を開いたとき・日付が変わったときに呼び、繰り返しても変わらない。前の日に開いたままの選択（selected / started）を unresolved にし（不変条件 24）、その日の Pending の回で、planned の SprintTask に含まれるものを `recurringToday` の選択にする。「昨日の続き」も含め、ほかは自動で選ばない（不変条件 22）。
-- **完了**：単発の Task は Task = completed と SprintTask = done を同時に変える。繰り返しは Occurrence = done だけで、SprintTask は planned のまま（束ねた SprintTask の締めは #24）。取り消すと元に戻り、記録した実績は残る（追記のみ）。
+- **完了**：単発の Task は Task = completed と SprintTask = done を同時に変える。繰り返しは Occurrence = done だけで、SprintTask は planned のまま（束ねた SprintTask の締めは #24）。取り消すと元に戻り、記録した実績は残る（追記のみ）。 F17 で閉じた後に完了した選択は `closedBefore` に閉じた状態を覚えておき、取り消すとその状態に戻す。
+- **スキップの取り消し（F19）**：`undoSkipSelection` で、選択を selected に、回を pending に戻す。
 - **Backlog からの完了**：今の Sprint で planned なら、Task・SprintTask・その日の選択（`backlogCompletion`、done）を同時に作る（不変条件 27）。その日にすでに選択があれば（開いていても、F17 でその日に閉じたものでも）、それを完了にする（2 件目は作らない）。その場合 origin は元のままで、Backlog から完了したことは Activity の並び（`taskCompleted` に続く `todayDone`）から分かる。繰り返しの Task は Backlog から完了にしない（`recurringTaskCannotComplete`）。
 - **実績**：`pauseSelection` / `completeSelection` の `actualHours` か、後から `recordActualTime`（active な Sprint の期間内の日で、繰り返しなら SprintTask の回を指定）。どれも任意（不変条件 28）。
 - **#24 への引き継ぎ**：`startDay` は active な Sprint にだけ働く。Review に入るときに開いたままの選択（最終日など）を Unresolved にする処理は #24 の Review への移行で行う。
@@ -149,7 +150,7 @@ PlanProposal（不変条件 41）は、外部 Agent を MVP に含めるかが P
 | `src/mid-sprint.ts` | Sprint 中の追加、Sprint から外す・戻す、F9 |
 | `src/sprint-recurrence.ts` | 次の Sprint からの Rule の作成と変更（F1・F7・F15） |
 | `src/capacity.ts` | 計画値の合計と可用時間との比較 |
-| `src/today.ts` | 今日へ、開始・完了・今日はここまで・見送り・外す・スキップ、日付の変更、Backlog からの完了、実績、割り込み |
+| `src/today.ts` | 今日へ、開始・完了・今日はここまで・見送り・外す・スキップ（と取り消し）、日付の変更、Backlog からの完了、実績、割り込み |
 | `src/today-view.ts` | 連続見送り、昨日の続き、今日の残り |
 
 テストは同じ場所の `*.test.ts`。不変条件のテストは名前に番号を入れる（`invariant 7: ...`）。Scenario A の手順 3〜12 は `scenario-a.test.ts`、Scenario B の手順 1〜4 は `scenario-b.test.ts`、Scenario C の手順 1〜9 は `scenario-c.test.ts`（#21〜#23）。残りの手順は #24 で書く。

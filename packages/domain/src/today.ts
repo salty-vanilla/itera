@@ -313,10 +313,20 @@ export function completeSelection(
   }
   const effect = completionEffect(sprint, sprintTask, selection, input, ctx);
   if (!effect.ok) return effect;
+  const closedBefore =
+    selection.resolution === 'paused' ||
+    selection.resolution === 'deferred' ||
+    selection.resolution === 'removed'
+      ? {
+          resolution: selection.resolution,
+          at: selection.resolvedAt ?? ctx.now,
+        }
+      : undefined;
   const resolved: DailySelection = {
     ...selection,
     resolution: 'done',
     resolvedAt: ctx.now,
+    ...(closedBefore === undefined ? {} : { closedBefore }),
   };
   const result = applied<TodayChange>(
     {
@@ -339,8 +349,10 @@ export function completeSelection(
 }
 
 /**
- * 完了を取り消す: done → selected, and the Task / SprintTask / occurrence
- * return to where they were. Recorded actual time stays (append-only).
+ * 完了を取り消す: done → selected (or, for a selection completed after
+ * being closed the same day, back to that paused / deferred / removed:
+ * F17), and the Task / SprintTask / occurrence return to where they were.
+ * Recorded actual time stays (append-only).
  */
 export function undoCompleteSelection(
   sprint: Sprint,
@@ -387,10 +399,16 @@ export function undoCompleteSelection(
       task: reopened.value.record,
     };
   }
-  const reselected: DailySelection = {
-    ...omit(selection, 'resolvedAt'),
-    resolution: 'selected',
-  };
+  // Back to where it was: selected, or — for a selection closed earlier
+  // that day and completed later (F17) — the way it had been closed.
+  const reselected: DailySelection =
+    selection.closedBefore === undefined
+      ? { ...omit(selection, 'resolvedAt'), resolution: 'selected' }
+      : {
+          ...omit(selection, 'closedBefore'),
+          resolution: selection.closedBefore.resolution,
+          resolvedAt: selection.closedBefore.at,
+        };
   return applied(
     { ...change, sprint: replaceSelection(change.sprint, reselected) },
     [
@@ -441,6 +459,50 @@ export function skipSelection(
     [
       ...skipped.value.activities,
       selectionActivity('todaySkipped', sprint, resolved, ctx),
+    ],
+  );
+}
+
+/**
+ * スキップを取り消す (F19): skipped → selected, and the occurrence goes back
+ * to pending, like undoing a completion.
+ */
+export function undoSkipSelection(
+  sprint: Sprint,
+  input: SelectionActionInput & { readonly occurrence: Occurrence },
+  ctx: CommandContext,
+): CommandResult<TodayChange> {
+  const found = selectionAndTask(sprint, input.selectionId);
+  if (!found.ok) return found;
+  const { selection } = found.value;
+  if (
+    selection.resolution !== 'skipped' ||
+    selection.occurrenceId === undefined
+  ) {
+    return err(
+      'invalidTransition',
+      'Only a skipped occurrence can be restored.',
+    );
+  }
+  const occurrence = matchingOccurrence(
+    input.occurrence,
+    selection.occurrenceId,
+  );
+  if (!occurrence.ok) return occurrence;
+  const reopened = reopenOccurrence(occurrence.value, ctx);
+  if (!reopened.ok) return reopened;
+  const reselected: DailySelection = {
+    ...omit(selection, 'resolvedAt'),
+    resolution: 'selected',
+  };
+  return applied(
+    {
+      sprint: replaceSelection(sprint, reselected),
+      occurrence: reopened.value.record,
+    },
+    [
+      ...reopened.value.activities,
+      selectionActivity('todaySkipUndone', sprint, reselected, ctx),
     ],
   );
 }

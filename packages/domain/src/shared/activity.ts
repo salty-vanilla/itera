@@ -180,6 +180,7 @@ export type Activity =
         | 'todayDeferred'
         | 'todayRemoved'
         | 'todaySkipped'
+        | 'todaySkipUndone'
         | 'todayUnresolved';
       readonly sprintId: SprintId;
       readonly selectionId: DailySelectionId;

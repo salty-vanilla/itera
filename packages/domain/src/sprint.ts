@@ -166,6 +166,15 @@ export interface DailySelection {
   /** Kept even if the selection is later deferred or paused. */
   readonly startedAt?: Instant;
   readonly resolvedAt?: Instant;
+  /**
+   * F17: how the selection had been closed earlier the same day before it
+   * was completed. Undoing the completion returns it to this (F17), so the
+   * deferral or pause is not lost.
+   */
+  readonly closedBefore?: {
+    readonly resolution: 'paused' | 'deferred' | 'removed';
+    readonly at: Instant;
+  };
 }
 
 export type ActualTimeVia = 'completion' | 'pause' | 'later';
