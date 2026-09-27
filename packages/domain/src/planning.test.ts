@@ -10,6 +10,7 @@ import {
   includeInPlan,
   selectTask,
   setAvailableHours,
+  setGoalLink,
   setGoalText,
   startPlanning,
   unselectTask,
@@ -496,6 +497,55 @@ describe('confirmSprint', () => {
       estimateHours: 1.5,
       occurrenceCount: 2,
     });
+  });
+
+  it('F16: a Goal written after confirm has no planned text', () => {
+    const confirmed = unwrap(confirm(readySprint()));
+    const added = unwrap(
+      setGoalText(confirmed, { areaId: workId, text: '面談を設計する' }, ctx),
+    );
+    expect(added.goals.find((g) => g.areaId === workId)).toEqual({
+      areaId: workId,
+      text: '面談を設計する',
+    });
+  });
+
+  it('Goal に紐づく / 紐づかない can be switched, with history', () => {
+    const planning = readySprint();
+    const unlinked = setGoalLink(
+      planning,
+      { sprintTaskId: id('st-1'), task: paperTask(), goalLink: 'unlinked' },
+      ctx,
+    );
+    expect(unwrap(unlinked).tasks[0]?.goalLink).toBe('unlinked');
+    expect(unlinked.ok && unlinked.value.activities[0]).toMatchObject({
+      kind: 'goalLinkChanged',
+      from: 'linked',
+      to: 'unlinked',
+    });
+
+    // During the Sprint, linking needs a Goal for the Task's Area.
+    const active = unwrap(confirm(unwrap(unlinked)));
+    const relinked = setGoalLink(
+      active,
+      { sprintTaskId: id('st-1'), task: paperTask(), goalLink: 'linked' },
+      ctx,
+    );
+    expect(unwrap(relinked).tasks[0]?.goalLink).toBe('linked');
+    const noGoal = unwrap(
+      confirm(
+        unwrap(
+          setGoalText(unwrap(unlinked), { areaId: researchId, text: '' }, ctx),
+        ),
+      ),
+    );
+    expect(
+      setGoalLink(
+        noGoal,
+        { sprintTaskId: id('st-1'), task: paperTask(), goalLink: 'linked' },
+        ctx,
+      ),
+    ).toMatchObject({ ok: false, error: { code: 'invalidInput' } });
   });
 
   it('invariant 18: Goal text and hours change later, the confirmed copies stay', () => {

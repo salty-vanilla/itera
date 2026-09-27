@@ -383,6 +383,50 @@ describe('createRuleForNextSprint (F15)', () => {
     expect(applied.generated).toEqual([]);
     expect(applied).not.toHaveProperty('sprint');
   });
+
+  it('replaces a one-off draft of the same Task with the recurring one (F15)', () => {
+    const task = newTask('ジムに行く', 'task-gym');
+    const draft = sprintFixture('2026-10-05', 'planning', {
+      tasks: [
+        {
+          id: id('st-gym'),
+          taskId: task.id,
+          origin: 'planning',
+          addedAt: ctx.now,
+          goalLink: 'linked',
+          outcome: 'draft',
+          carriedFrom: id('st-last-week'),
+        },
+      ],
+    });
+    const applied = unwrap(
+      createRuleForNextSprint(
+        {
+          task,
+          ruleId: id('rule-gym'),
+          pattern: { freq: 'weekly', daysOfWeek: [2, 4] },
+          user,
+          today: d('2026-10-04'),
+          sprints: [sprintFixture('2026-09-28', 'review'), draft],
+          occurrences: [],
+          newOccurrenceId: ids('occ'),
+          newSprintTaskId: ids('st'),
+        },
+        ctx,
+      ),
+    );
+    // The carry-over link and the Goal link of the one-off draft are not
+    // kept: the Task now joins as a recurring one.
+    expect(applied.sprint?.tasks).toEqual([
+      expect.objectContaining({
+        taskId: 'task-gym',
+        occurrenceIds: ['occ-1', 'occ-2'],
+        goalLink: 'unlinked',
+        outcome: 'draft',
+      }),
+    ]);
+    expect(applied.sprint?.tasks[0]).not.toHaveProperty('carriedFrom');
+  });
 });
 
 describe('sprintFixture', () => {

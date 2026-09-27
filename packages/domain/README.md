@@ -109,8 +109,9 @@ type CommandResult<T> =
 - **確定の前提**：draft の Task が Planning 中に完了・アーカイブされていたら確定しない（外してから確定する）。持ち越し候補（`carryOverCandidates`）は、直前の Sprint の、active で繰り返しでない Task だけ。
 - **Rule の変更（F1・F7）**：Backlog からの変更は `changeRuleForNextSprint` を使う。効き始める日は `nextUnconfirmedSprintStart`（最新の版がそれより後に始まるなら、その日）で、確定済みの Sprint は変わらない。結果の `effectiveFrom` で「次の Sprint から反映」を出す。Planning 中の Sprint があれば（その期間の生成は済んでいるので）、その Rule の回と draft の SprintTask を作り直し、捨てた回は `occurrenceDiscarded` として記録する（呼び出し側は `discarded` の記録を消す）。生成が 0 件だった draft にも、新しい版の回が入る。
 - **次の回の `projectFrom`**：`projectFrom(sprints, today)` で求める。
-- **Sprint から外す・戻す（F13・F14）**：`removeFromSprint` は planned → removed。繰り返しなら、その SprintTask の Pending の回を Excluded にする（完了・スキップ済みはそのまま）。`restoreToSprint` は同じ SprintTask を removed → planned に戻し、繰り返しなら Excluded の回を Pending に戻す。外した Task を `addTaskMidSprint` でもう一度足すことはできない（不変条件 14。戻すときは `restoreToSprint`）。
-- **Planning 中に作った Rule（F15）**：Backlog から繰り返しにするときは `createRuleForNextSprint` を使う。Planning 中の Sprint があれば、その期間の回をそのとき作って含める。
+- **Sprint から外す・戻す（F13・F14）**：`removeFromSprint` は planned → removed。繰り返しなら、その SprintTask の Pending の回を Excluded にする（完了・スキップ済みはそのまま）。`restoreToSprint` は同じ SprintTask を removed → planned に戻し、繰り返しなら Excluded の回を Pending に戻す。外した Task を `addTaskMidSprint` でもう一度足すことはできない（不変条件 14。戻すときは `restoreToSprint`）。 `occurrences` には、その SprintTask の回を漏れなく渡すのは呼び出し側の責任（渡さなかった回は変わらない）。外した繰り返しの回は `addOccurrenceMidSprint` で足せない（1 つの回は 1 つの SprintTask に属する。戻すときは `restoreToSprint`）。
+- **Planning 中に作った Rule（F15）**：Backlog から繰り返しにするときは `createRuleForNextSprint` を使う。Planning 中の Sprint があれば、その期間の回をそのとき作って含める。 その draft で同じ Task を単発として選んでいたら、繰り返しの SprintTask に置き換える（`carriedFrom` と goalLink は引き継がない。その週に回がなければ、Task は今週の計画から外れる）。
+- **Goal に紐づく / 紐づかない**：`setGoalLink` で切り替える（PRD §5 B）。Planning 中の draft は Goal を書く前でも linked にでき、確定時に Area に Goal がなければ unlinked になる。Sprint 中に linked にできるのは Area に Goal があるときだけ。変更は `goalLinkChanged` として残す。
 
 ## 対象外
 

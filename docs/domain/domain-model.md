@@ -55,7 +55,7 @@ F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F
 | F12 | 毎週の繰り返しは曜日を複数指定できる | RecurrenceRule の版の曜日は 1 つ以上（例：毎週 月・木）。その Sprint で発生する回は指定した曜日の数（1〜7 回） | Backlog・Planning：「毎週 月・木」のように曜日を並べる |
 | F13 | Sprint から外した Task は同じ Sprint に戻せる | SprintTask に Removed → Planned（Sprint に戻す）を足す。同じ SprintTask を戻すので「同じ Sprint に 1 件まで」（不変条件 14）は保たれ、origin と planSnapshot は変わらない | 確定後に外した Task を元に戻せる |
 | F14 | 繰り返しの SprintTask を外すと、残りの回は外した回になる | Sprint 中に Removed にすると、その SprintTask の Pending の回を Excluded にする（完了・スキップ済みの回はそのまま）。Today に出ず、Retro の事実（未処理）にも出ない（F2）。F13 で戻すと Pending に戻る | なし |
-| F15 | Planning 中に作った Rule は、その draft の週にも回を作る | まだ確定していない次の Sprint が Planning 中なら、Rule を作ったときにその期間の回を生成し、既定で Sprint に含める（F7 と同じ考え方） | Planning：作った繰り返しがすぐに「今週発生する繰り返し」に出る |
+| F15 | Planning 中に作った Rule は、その draft の週にも回を作る | まだ確定していない次の Sprint が Planning 中なら、Rule を作ったときにその期間の回を生成し、既定で Sprint に含める（F7 と同じ考え方）。その draft で同じ Task を単発として選んでいたら、繰り返しの SprintTask に置き換える（持ち越しのつながりと Goal への紐づけは引き継がない） | Planning：作った繰り返しがすぐに「今週発生する繰り返し」に出る |
 | F16 | 確定後の Goal は、文を変えることと新しく書くことができ、消すことはできない | 確定後に新しく書いた Goal は plannedText を持たない（計画時にはなかった）。確定後は Goal を消さない | Retro：確定後に書いた Goal は「計画時にはなかった」として差分に出る |
 
 ### 用語

@@ -154,6 +154,14 @@ export type Activity =
       readonly to: string | null;
     })
   | (ActivityBase & {
+      readonly kind: 'goalLinkChanged';
+      readonly sprintId: SprintId;
+      readonly sprintTaskId: SprintTaskId;
+      readonly taskId: TaskId;
+      readonly from: 'linked' | 'unlinked';
+      readonly to: 'linked' | 'unlinked';
+    })
+  | (ActivityBase & {
       readonly kind: 'availableHoursChanged';
       readonly sprintId: SprintId;
       readonly from: number | null;

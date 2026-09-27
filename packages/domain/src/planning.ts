@@ -31,6 +31,7 @@ import { err } from './shared/result';
 import { dayOfWeek, type LocalDate } from './shared/time';
 import {
   sprintEnd,
+  type GoalLink,
   type PlanSnapshot,
   type Sprint,
   type SprintAreaSnapshotEntry,
@@ -392,6 +393,66 @@ export function setGoalText(
       to: trimmed === '' ? null : trimmed,
     },
   ]);
+}
+
+/**
+ * Goal に紐づく / 紐づかない (PRD §5 B). In Planning a draft may be linked
+ * before its Goal is written (confirm unlinks it if the Area still has no
+ * Goal). During the Sprint only a Task whose Area has a Goal can be
+ * linked. Changes are kept in Activity.
+ */
+export function setGoalLink(
+  sprint: Sprint,
+  input: {
+    readonly sprintTaskId: SprintTaskId;
+    readonly task: Task;
+    readonly goalLink: GoalLink;
+  },
+  ctx: CommandContext,
+): CommandResult<Sprint> {
+  const { task, goalLink } = input;
+  if (sprint.state !== 'planning' && sprint.state !== 'active') {
+    return err('invalidTransition', `Cannot change a link in ${sprint.state}.`);
+  }
+  const target = sprint.tasks.find((t) => t.id === input.sprintTaskId);
+  if (target === undefined) return err('notFound', 'No such SprintTask.');
+  if (target.taskId !== task.id) {
+    return err('invalidInput', 'The Task does not match the SprintTask.');
+  }
+  if (target.outcome === 'removed' || target.outcome === 'carriedOver') {
+    return err(
+      'invalidTransition',
+      `Cannot link a ${target.outcome} SprintTask.`,
+    );
+  }
+  if (target.goalLink === goalLink) return applied(sprint, []);
+  if (
+    goalLink === 'linked' &&
+    sprint.state === 'active' &&
+    !sprint.goals.some((g) => g.areaId === task.areaId)
+  ) {
+    return err('invalidInput', 'The Task’s Area has no Goal in this Sprint.');
+  }
+  return applied(
+    {
+      ...sprint,
+      tasks: sprint.tasks.map((t) =>
+        t.id === target.id ? { ...t, goalLink } : t,
+      ),
+    },
+    [
+      {
+        kind: 'goalLinkChanged',
+        at: ctx.now,
+        actor: ctx.actor,
+        sprintId: sprint.id,
+        sprintTaskId: target.id,
+        taskId: task.id,
+        from: target.goalLink,
+        to: goalLink,
+      },
+    ],
+  );
 }
 
 /**

@@ -115,6 +115,14 @@ export function addOccurrenceMidSprint(
   ) {
     return err('invalidInput', 'The occurrence is not in this Sprint period.');
   }
+  // An occurrence belongs to one SprintTask. One left out by removing its
+  // SprintTask (F14) comes back with restoreToSprint (F13), not as a second.
+  if (sprint.tasks.some((t) => t.occurrenceIds?.includes(occurrence.id))) {
+    return err(
+      'invalidInput',
+      'The occurrence belongs to a SprintTask; restore that SprintTask instead.',
+    );
+  }
   const criterion = criterionForAddition(sprint, input.criterion);
   if (!criterion.ok) return criterion;
   const included = includeOccurrence(occurrence, ctx);

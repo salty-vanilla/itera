@@ -259,6 +259,23 @@ describe('removeFromSprint and restoreToSprint', () => {
       'pending',
     ]);
     expect(restored.sprint.tasks[0]?.outcome).toBe('planned');
+
+    // An occurrence left out by the removal cannot come back as a second
+    // SprintTask; restoring is the way back.
+    const [sep29] = removed.occurrences;
+    if (sep29 === undefined) throw new Error('no occurrence');
+    expect(
+      addOccurrenceMidSprint(
+        removed.sprint,
+        {
+          sprintTaskId: id('st-extra'),
+          task,
+          occurrence: sep29,
+          areas: [research, work],
+        },
+        ctx,
+      ),
+    ).toMatchObject({ ok: false, error: { code: 'invalidInput' } });
   });
 });
 
