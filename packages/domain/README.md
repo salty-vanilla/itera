@@ -148,6 +148,11 @@ type CommandResult<T> =
 - **切り口**（`inBacklogSlice`）：期限が近い（今日から、今日を含む Sprint の終わりまで。Sprint がなければその週の終わりまで。オーナー決定）/ 期限超過（今日より前）/ 持ち越し（F26 の回数が 1 以上）/ 繰り返し / 領域なし。期限のない Task は期限の切り口に入らない。
 - **採用を元に戻す**（`undoAdoption`、F27）：Task は今の Estimate しか持たないので、採用前の Estimate（`adoptSuggestion` に渡した Task の値、なければ `null`）を呼び出し側が渡す。Estimate がその採用のままで、ほかに提示中の提案がないときだけ戻せる。`estimateChanged` と `suggestionAdoptionUndone` を残す。
 
+## Agent 提案の操作（#40、決定 4A）
+
+- **編集して採用**（`adoptEditedSuggestion`、F31）：提示中の提案から、本人が直した値を Estimate にする。`source` は `{ kind: 'edited', suggestionId }`。値は幅の外でもよい。`estimateChanged` の `adoptedFrom` は `bound` を持たない。`undoAdoption`（F27）で同じように戻せる。
+- **却下を元に戻す**（`undoRejection`、F30）：却下 → 提示中。ほかに提示中の提案がないときだけ。`suggestionRejectionUndone` を残す。
+
 ## Backlog の完了を元に戻す（#47）
 
 - **期限が近い**（F28）：今日を含む Sprint がない日は、その週の終わりまで（`dueSoonUntil`。実装は #39 のまま）。

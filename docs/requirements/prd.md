@@ -114,7 +114,7 @@ PC は一覧を見失わないサイドパネル、スマートフォンは下�
 
 - 本人が確定した点の値を **Estimate** とする。
 - 製品が出す幅付き候補を **Estimate Suggestion** とし、本人の Estimate を自動で上書きしない。
-- Suggestion の下限 / 中央 / 上限を本人の Estimate として**採用**できる。
+- Suggestion の下限 / 中央 / 上限を本人の Estimate として**採用**できる。値を直してから採用する（**編集して採用**）こともでき、その Estimate は元の提案を覚えておく。
 - Suggestion には必要に応じて根拠と不確実な点を表示する。
 - Estimate がなくても Task は正常であり、Planning で必要になった時点で補える。
 

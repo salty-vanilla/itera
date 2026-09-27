@@ -22,7 +22,7 @@ web
 
 ## Positioning
 
-見積もりを 3 つに分けて扱う：本人の Estimate、製品の Estimate Suggestion（幅）、今回の Planning Value。提案を Estimate に「採用」する操作と、計画基準を「適用」して計画値を作る操作を分ける。Retro Improvement（自然文）と Planning Criterion（機械適用できるルール）を分け、次の Planning に引き継ぐ。持ち越し・見送り・割り込み・Sprint 中の追加を失敗として消さず、次の判断材料として残す。
+見積もりを 3 つに分けて扱う：本人の Estimate、製品の Estimate Suggestion（幅）、今回の Planning Value。提案を Estimate に「採用」する操作（下限・中央・上限のどれか、または値を直して「編集して採用」）と、計画基準を「適用」して計画値を作る操作を分ける。Retro Improvement（自然文）と Planning Criterion（機械適用できるルール）を分け、次の Planning に引き継ぐ。持ち越し・見送り・割り込み・Sprint 中の追加を失敗として消さず、次の判断材料として残す。
 
 ## Operating Context
 

@@ -74,7 +74,7 @@ type Outcome =
       previous: EstimateRecord | null;
       text: string;
     }
-  | { kind: 'rejected'; text: string };
+  | { kind: 'rejected'; suggestionId: EstimateSuggestionId; text: string };
 
 /**
  * The Task detail (PRD §5 A Organize): the attributes and the Estimate are a
@@ -164,6 +164,22 @@ function TaskDetail({
     });
   }
 
+  function onAdoptEdited(hours: number): boolean {
+    if (suggestion === undefined) return false;
+    const previous = task.estimate ?? null;
+    if (!actions.adoptEditedSuggestion(task.id, suggestion.id, hours)) {
+      return false;
+    }
+    set('estimate', String(hours));
+    setOutcome({
+      kind: 'adopted',
+      suggestionId: suggestion.id,
+      previous,
+      text: `Estimate ${formatHours(hours)} を採用しました（Agent 提案 ${formatRange(suggestion.lo, suggestion.hi)} を編集）`,
+    });
+    return true;
+  }
+
   function onUndoAdopt() {
     if (outcome?.kind !== 'adopted') return;
     if (!actions.undoAdoption(task.id, outcome.suggestionId, outcome.previous))
@@ -180,8 +196,15 @@ function TaskDetail({
     if (!actions.rejectSuggestion(task.id, suggestion.id)) return;
     setOutcome({
       kind: 'rejected',
+      suggestionId: suggestion.id,
       text: `提案 ${formatRange(suggestion.lo, suggestion.hi)} を却下しました`,
     });
+  }
+
+  function onUndoReject() {
+    if (outcome?.kind !== 'rejected') return;
+    if (!actions.undoRejection(task.id, outcome.suggestionId)) return;
+    setOutcome(undefined);
   }
 
   return (
@@ -301,12 +324,13 @@ function TaskDetail({
             suggestion={suggestion}
             madeAt={`${formatDate(toLocalDate(suggestion.createdAt, timeZone))} ${formatTime(suggestion.createdAt, timeZone)}`}
             onAdopt={onAdopt}
+            onAdoptEdited={onAdoptEdited}
             onReject={onReject}
           />
         )}
         {outcome !== undefined && (
           <SuggestionOutcome
-            onUndo={outcome.kind === 'adopted' ? onUndoAdopt : undefined}
+            onUndo={outcome.kind === 'adopted' ? onUndoAdopt : onUndoReject}
           >
             {outcome.text}
           </SuggestionOutcome>

@@ -82,17 +82,21 @@ export type Activity =
       /** Hours before and after; `null` means no Estimate. */
       readonly from: number | null;
       readonly to: number | null;
-      /** Set when the change is the adoption of a suggestion. */
+      /**
+       * Set when the change is the adoption of a suggestion. `bound` is the
+       * end adopted; it is absent for 編集して採用 (F31).
+       */
       readonly adoptedFrom?: {
         readonly suggestionId: EstimateSuggestionId;
-        readonly bound: SuggestionBound;
+        readonly bound?: SuggestionBound;
       };
     })
   | (ActivityBase & {
       readonly kind:
         | 'suggestionPresented'
         | 'suggestionRejected'
-        | 'suggestionAdoptionUndone';
+        | 'suggestionAdoptionUndone'
+        | 'suggestionRejectionUndone';
       readonly taskId: TaskId;
       readonly suggestionId: EstimateSuggestionId;
     })

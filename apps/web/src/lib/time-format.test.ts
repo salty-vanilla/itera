@@ -1,6 +1,7 @@
 import { instant } from '@itera/domain';
 import { describe, expect, it } from 'vitest';
 import {
+  formatDifference,
   formatEstimate,
   formatHours,
   formatPlanningTotal,
@@ -154,5 +155,18 @@ describe('spokenHours', () => {
     expect(spokenHours(0.5)).toBe('30分');
     expect(spokenHours(2, 4)).toBe('2〜4時間');
     expect(spokenHours(0.5, 1.5)).toBe('30分〜1.5時間');
+  });
+});
+
+describe('formatDifference', () => {
+  it('always uses 〜 for a difference from the available hours', () => {
+    expect(formatDifference(1, 3)).toBe('1 〜 3h');
+    expect(formatDifference(-1, 1)).toBe('−1 〜 1h');
+    expect(formatDifference(3, 5)).toBe('3 〜 5h');
+  });
+
+  it('writes an exact difference in hours, even under 1h', () => {
+    expect(formatDifference(0.5, 0.5)).toBe('0.5h');
+    expect(formatDifference(2, 2)).toBe('2h');
   });
 });

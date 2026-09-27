@@ -41,8 +41,15 @@ export function useTaskActions() {
         suggestionId: EstimateSuggestionId,
         previous: Estimate | null,
       ) => run(changes.undoAdopt(taskId, suggestionId, previous)),
+      adoptEditedSuggestion: (
+        taskId: TaskId,
+        suggestionId: EstimateSuggestionId,
+        hours: number,
+      ) => run(changes.adoptEdited(taskId, suggestionId, hours)),
       rejectSuggestion: (taskId: TaskId, suggestionId: EstimateSuggestionId) =>
         run(changes.reject(taskId, suggestionId)),
+      undoRejection: (taskId: TaskId, suggestionId: EstimateSuggestionId) =>
+        run(changes.undoReject(taskId, suggestionId)),
       addSubtask: (taskId: TaskId, title: string, hours?: number) =>
         run(changes.addTaskSubtask(taskId, title, hours)),
       setSubtaskDone: (taskId: TaskId, subtaskId: SubtaskId, done: boolean) =>
