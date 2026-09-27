@@ -72,8 +72,9 @@ function Filter({
         'before:absolute before:inset-x-0 before:-inset-y-2 medium:before:hidden',
         'not-data-disabled:hover:border-ink-muted not-data-disabled:hover:bg-surface-hover',
         'not-data-disabled:active:bg-surface-pressed',
-        // Selected: a 2px `ink` outline (`stroke-strong`, the border plus an
-        // inset ring so the size stays) on `here-subtle`, and a bold label.
+        // Selected: a 2px `ink` outline on `here-subtle`, and a bold label.
+        // The 1px border plus a 1px inset ring make `stroke-strong` without
+        // changing the size.
         'not-data-disabled:aria-pressed:border-ink not-data-disabled:aria-pressed:bg-here-subtle not-data-disabled:aria-pressed:inset-ring-1 not-data-disabled:aria-pressed:inset-ring-ink',
         // Hover on a selected filter still shows; the ink outline and the
         // bold label keep telling that it is selected.

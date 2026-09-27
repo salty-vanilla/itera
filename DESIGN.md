@@ -283,7 +283,7 @@ components:
 
 ### 原則
 
-1. **Clarity — 今どこで何を決めているかが分かる。** 画面ごとに「決めていること」を 1 つだけ見出しにする（例：「今週、何を進めますか」）。現在地（今日、今の段階、選んだもの）は `here` の黄 **と** チェック・語で示し、色だけにしない。幅がある時間は幅のまま出す（`−1 〜 1h`）。
+1. **Clarity — 今どこで何を決めているかが分かる。** 画面ごとに「決めていること」を 1 つだけ見出しにする（例：「今週、何を進めますか」）。現在地（今日、今の段階、選んだもの）は `here` の黄 **と** チェック・語で示し、色だけにしない（Filter の選択は幅を変えないため、チェックの代わりに `ink` の 2px の枠と太字）。幅がある時間は幅のまま出す（`−1 〜 1h`）。
 2. **Agency — 決めるのは本人。** Agent・AI の値は破線と「提案」「Agent 提案」の語で区別し、本人の値は実線・ラベルなし。「採用」は Secondary、「編集して採用」「却下」は Quiet にし、Primary で採用を誘導しない。
 3. **Calmness — 注意を奪わない。** Primary Button（墨の塗り）は 1 画面に 1 つ。色面は状態と現在地だけ。Area の色は路線記号と容量バーだけ。考える領域（Goal、Capacity、Retro）には意図的に余白を取る。
 4. **Precision — 小さな数値ほど丁寧に。** 数値は `num-*` で組み、並ぶ列は右揃え。1h 未満は `30m`、合計は常に h、範囲は en dash（`2–4h`）、負を含む範囲は `〜`。未見積は「0」ではなく「未見積」と書き、合計に含めないことを示す。
@@ -525,7 +525,7 @@ compact の原則：
 | Hover | 背景 `surface-hover`（Primary は `primary-hover`）、輪郭 `ink-muted`。影・拡大・移動はしない。情報を hover だけに置かない |
 | Focus | `focus`（墨）の 2px outline、offset 2px（リスト内・タブ・メニュー項目は −2px）。hover と同時でも両方見える。黄（選択）や墨の塗り（Primary・pressed）の上でも、外側のアキで見分けられる |
 | Active | `surface-pressed` / `primary-active` |
-| Selected | リストの選択は `here-subtle` の地＋チェック（`aria-selected`）。トグルのオン（`aria-pressed`、IconButton の pressed）は墨の反転（`primary` の塗り＋`on-primary`） |
+| Selected | リストの選択は `here-subtle` の地＋チェック（`aria-selected`）。Filter のオン（`aria-pressed`）は `here-subtle` の地＋`ink` の 2px の枠＋太字。トグルのオン（`aria-pressed`、IconButton の pressed）は墨の反転（`primary` の塗り＋`on-primary`） |
 | Disabled | 地 `canvas-subtle`、文字 `ink-disabled`、輪郭 `border`、`cursor: not-allowed`。理由を近くに書く。可能なら無効化しない |
 | Loading | スピナー＋文言、`aria-busy`、幅を変えない。300ms 未満の処理には出さない |
 | Error | `danger` の 2px 相当の輪郭＋アイコン＋文（`aria-invalid`）。入力内容を消さず、再試行の手段を示す |
