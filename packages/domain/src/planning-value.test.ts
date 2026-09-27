@@ -198,6 +198,7 @@ describe('PlanningValue', () => {
       lo: 5,
       hi: 7,
       unestimated: 1,
+      unestimatedSubtasks: 0,
     });
   });
 
@@ -301,9 +302,39 @@ describe('PlanningValue', () => {
       base: 'subtasks',
       lo: 3.5,
       hi: 3.5,
+      unestimatedSubtasks: 1,
       criterionApplied: false,
       computedAt: ctx.now,
     });
+  });
+
+  it('invariant 8 (F11): unestimated subtasks are counted, not added, in the value and the total', () => {
+    let task = unwrap(updateTask(newTask(), { timeBasis: 'subtasks' }, ctx));
+    task = unwrap(
+      addSubtask(task, { id: id('s1'), title: '1 本目', estimate: 1 }, ctx),
+    );
+    task = unwrap(
+      addSubtask(task, { id: id('s2'), title: '2 本目', estimate: 1.5 }, ctx),
+    );
+    task = unwrap(addSubtask(task, { id: id('s3'), title: '3 本目' }, ctx));
+
+    const value = planningValueOf(task, { now: ctx.now });
+    expect(value).toMatchObject({
+      base: 'subtasks',
+      lo: 2.5,
+      hi: 2.5,
+      unestimatedSubtasks: 1,
+    });
+
+    const fullyEstimated = unwrap(
+      setEstimate(newTask('別の Task', 'task-2'), 3, ctx),
+    );
+    expect(
+      totalPlanningValues([
+        value,
+        planningValueOf(fullyEstimated, { now: ctx.now }),
+      ]),
+    ).toEqual({ lo: 5.5, hi: 5.5, unestimated: 0, unestimatedSubtasks: 1 });
   });
 
   it('invariant 10: subtasks without estimates leave the Task unestimated', () => {

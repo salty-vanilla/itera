@@ -25,10 +25,23 @@ export type PlanningValueBase = 'estimate' | 'suggestion' | 'subtasks';
  */
 export type PlanningValue =
   | {
-      readonly base: PlanningValueBase;
+      readonly base: 'estimate' | 'suggestion';
       readonly lo: number;
       readonly hi: number;
       readonly criterionApplied: boolean;
+      readonly computedAt: Instant;
+    }
+  | {
+      /**
+       * The sum of the estimated subtasks. It is a point, so no criterion
+       * acts on it (invariant 9, F10).
+       */
+      readonly base: 'subtasks';
+      readonly lo: number;
+      readonly hi: number;
+      /** Subtasks without an estimate, left out of the sum (invariant 8, F11). */
+      readonly unestimatedSubtasks: number;
+      readonly criterionApplied: false;
       readonly computedAt: Instant;
     }
   | {
@@ -63,13 +76,12 @@ export function planningValueOf(
     if (estimated.length === 0) {
       return { base: 'none', criterionApplied: false, computedAt };
     }
-    // Subtask estimates are points, so the sum is a point too and the
-    // criterion has nothing to act on.
     const sum = estimated.reduce((a, b) => a + b, 0);
     return {
       base: 'subtasks',
       lo: sum,
       hi: sum,
+      unestimatedSubtasks: task.subtasks.length - estimated.length,
       criterionApplied: false,
       computedAt,
     };
@@ -131,6 +143,8 @@ export interface PlanningTotal {
   readonly hi: number;
   /** How many values were unestimated and left out of lo / hi. */
   readonly unestimated: number;
+  /** Unestimated subtasks inside subtask sums, also left out of lo / hi. */
+  readonly unestimatedSubtasks: number;
 }
 
 /** Sums planning values; unestimated ones are counted, not added (invariant 8). */
@@ -140,13 +154,17 @@ export function totalPlanningValues(
   let lo = 0;
   let hi = 0;
   let unestimated = 0;
+  let unestimatedSubtasks = 0;
   for (const value of values) {
     if (value.base === 'none') {
       unestimated += 1;
     } else {
       lo += value.lo;
       hi += value.hi;
+      if (value.base === 'subtasks') {
+        unestimatedSubtasks += value.unestimatedSubtasks;
+      }
     }
   }
-  return { lo, hi, unestimated };
+  return { lo, hi, unestimated, unestimatedSubtasks };
 }
