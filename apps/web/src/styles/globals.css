@@ -296,6 +296,26 @@
       border-color: GrayText;
       color: GrayText;
     }
+    [data-slot='filter'] {
+      border-color: CanvasText;
+    }
+    [data-slot='filter'][aria-pressed='true'] {
+      outline: var(--stroke-hairline) solid CanvasText;
+    }
+    [data-slot='filter'][data-disabled],
+    [data-slot='navigation-item'][aria-disabled='true'] {
+      border-color: GrayText;
+      color: GrayText;
+    }
+    /* The current screen keeps its bar and the selected tab its underline. */
+    [data-slot='navigation-item']::before,
+    [data-slot='tabs-tab']::after {
+      background-color: CanvasText;
+    }
+    /* Area line symbols keep their colour (docs/design/accessibility.md). */
+    [data-slot='area-mark'] {
+      forced-color-adjust: none;
+    }
     /*
      * Lines drawn with a background color disappear when backgrounds become
      * Canvas: Divider, the Progress fill and track, and the Notice surface.

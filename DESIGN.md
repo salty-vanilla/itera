@@ -288,7 +288,7 @@ components:
 
 ### 原則
 
-1. **Clarity — 今どこで何を決めているかが分かる。** 画面ごとに「決めていること」を 1 つだけ見出しにする（例：「今週、何を進めますか」）。現在地（今日、今の段階、選んだもの）は `here` の黄 **と** チェック・語で示し、色だけにしない。幅がある時間は幅のまま出す（`−1 〜 1h`）。
+1. **Clarity — 今どこで何を決めているかが分かる。** 画面ごとに「決めていること」を 1 つだけ見出しにする（例：「今週、何を進めますか」）。現在地（今日、今の段階、選んだもの）は `here` の黄 **と** チェック・語で示し、色だけにしない（Filter の選択は幅を変えないため、チェックの代わりに `ink` の 2px の枠と太字）。幅がある時間は幅のまま出す（`−1 〜 1h`）。
 2. **Agency — 決めるのは本人。** Agent・AI の値は破線と「提案」「Agent 提案」の語で区別し、本人の値は実線・ラベルなし。「採用」は Secondary、「編集して採用」「却下」は Quiet にし、Primary で採用を誘導しない。
 3. **Calmness — 注意を奪わない。** Primary Button（墨の塗り）は 1 画面に 1 つ。色面は状態と現在地だけ。Area の色は路線記号と容量バーだけ。考える領域（Goal、Capacity、Retro）には意図的に余白を取る。
 4. **Precision — 小さな数値ほど丁寧に。** 数値は `num-*` で組み、並ぶ列は右揃え。1h 未満は `30m`、合計は常に h、範囲は en dash（`2–4h`）、負を含む範囲は `〜`。未見積は「0」ではなく「未見積」と書き、合計に含めないことを示す。
@@ -311,7 +311,7 @@ components:
 | 罫 | `border` / `border-soft` | 構造の罫 / リスト内の行区切り | 操作部品の輪郭 |
 | 罫 | `border-strong` | 入力・Checkbox・Radio・Switch・Secondary Button の輪郭 | 装飾の罫 |
 | 確定 | `primary`（墨）/ `on-primary` | Primary Button の塗り、オン状態、完了サークル、Progress、IconButton の pressed | 大きな面 |
-| 現在地 | `here`（黄）/ `here-subtle` / `on-here` | 今日の列・今の段階の印（`here`）、選んだ行・項目の地（`here-subtle`）。必ずチェックか語を伴う | 注意・警告（→ `warning`）、装飾、フォーカス |
+| 現在地 | `here`（黄）/ `here-subtle` / `on-here` | 今日の列・今の段階の印（`here`）、選んだ行・項目の地（`here-subtle`）。必ずチェックか語を伴う（Filter だけは `ink` の 2px の枠と太字） | 注意・警告（→ `warning`）、装飾、フォーカス |
 | Focus | `focus`（`ink` の別名） | フォーカスリングだけ。色相を持たず、墨の 2px の輪郭と 2px のアキで示す | それ以外すべて |
 | リンク | `link`（`ink` の別名） | 下線付きの文字リンク | — |
 | Semantic | `danger` `warning` と `*-subtle` | 危険と注意の文字・アイコン・Status Tag・Notice。必ずアイコンか語を伴う。成功と情報は色を持たず、墨の文字＋アイコン（`circle-check` / `info`）＋語で示す | Area の識別、装飾 |
@@ -331,7 +331,7 @@ Primary は色ではなく墨（light は `#16181a` の塗りに白抜き、dark
 
 `here` は駅の案内で現在地を示す黄に当たる。「今どこか」だけに使う。
 
-- 選択 = `here-subtle` の地＋チェック。今日の列・今の段階は `here` の印（太線や塗りの四角）＋語（「今日」「現在」）。
+- 選択 = `here-subtle` の地＋チェック（Filter は幅を変えないため、チェックの代わりに `ink` の 2px の枠と太字）。今日の列・今の段階は `here` の印（太線や塗りの四角）＋語（「今日」「現在」）。
 - 注意・警告には使わない（→ `warning` とアイコン）。フォーカスにも使わない（→ `focus` の墨の輪郭）。
 - 黄の上の文字は `on-here`（墨）。
 
@@ -452,7 +452,7 @@ Area（領域）はユーザーが作る。駅の路線記号のように、色�
 | `target-min` / `target-touch` | 24 / 44px | 最小ターゲット（pointer / touch） |
 | `icon-s` / `icon-m` | 16 / 20px | 文字の横 / ボタン・ナビゲーション |
 | `area-badge` | 20px | Area の路線記号の一辺（compact でも同じ。当たり判定は行や Filter が持つ） |
-| `pane-nav` / `pane-rail` | 224 / 64px | ナビゲーション（1440px 以上 / 1200–1439px） |
+| `pane-nav` / `pane-rail` | 224 / 64px | ナビゲーション（1440px 以上 / 768–1439px） |
 | `pane-list` / `pane-side` | 384 / 336px | Planning の Backlog ペイン / 時間の見通しペイン |
 | `drawer` | 400px | 右 Drawer |
 | `popover` | 320px | Popover の幅 |
@@ -466,7 +466,7 @@ Desktop の Planning を中心に設計し、スマートフォンでは Today�
 | --- | --- | --- |
 | 1440px 以上（`bp-nav`） | wide | ナビ 224px ＋ Planning 3 ペイン（Backlog 384 / Sprint / 時間の見通し 336） |
 | 1200–1439px（`bp-wide`） | wide（rail） | ナビをアイコンだけの 64px にし、3 ペインを保つ |
-| 768–1199px（`bp-medium`） | medium | 2 ペイン（Backlog / Sprint）。Capacity は Sprint の上に要約 1 行を sticky で出し、クリックで右 Drawer。Agent 提案も Drawer の中 |
+| 768–1199px（`bp-medium`） | medium | ナビを 64px の rail にし、2 ペイン（Backlog / Sprint）。Capacity は Sprint の上に要約 1 行を sticky で出し、クリックで右 Drawer。Agent 提案も Drawer の中 |
 | 768px 未満 | compact | 1 カラム。下部タブバー（今日 / Sprint / Backlog / 振り返り） |
 
 compact の原則：
@@ -533,7 +533,7 @@ compact の原則：
 | Hover | 背景 `surface-hover`（Primary は `primary-hover`）、輪郭 `ink-muted`。影・拡大・移動はしない。情報を hover だけに置かない |
 | Focus | `focus`（墨）の 2px outline、offset 2px（リスト内・タブ・メニュー項目は −2px）。hover と同時でも両方見える。黄（選択）や墨の塗り（Primary・pressed）の上でも、外側のアキで見分けられる |
 | Active | `surface-pressed` / `primary-active` |
-| Selected | リストの選択は `here-subtle` の地＋チェック（`aria-selected`）。トグルのオン（`aria-pressed`、IconButton の pressed）は墨の反転（`primary` の塗り＋`on-primary`） |
+| Selected | リストの選択は `here-subtle` の地＋チェック（`aria-selected`）。Filter のオン（`aria-pressed`）は `here-subtle` の地＋`ink` の 2px の枠＋太字。トグルのオン（`aria-pressed`、IconButton の pressed）は墨の反転（`primary` の塗り＋`on-primary`） |
 | Disabled | 地 `canvas-subtle`、文字 `ink-disabled`、輪郭 `border`、`cursor: not-allowed`。理由を近くに書く。可能なら無効化しない |
 | Loading | スピナー＋文言、`aria-busy`、幅を変えない。300ms 未満の処理には出さない |
 | Error | `danger` の 2px 相当の輪郭＋アイコン＋文（`aria-invalid`）。入力内容を消さず、再試行の手段を示す |
@@ -630,11 +630,13 @@ compact の原則：
 
 ### ナビゲーション
 
-**Navigation** — desktop の左サイドバー（`canvas-subtle`、右に `border`）。項目 36px（20px アイコン＋ラベル＋件数）、現在地は `here` の 4px の縦線＋`ink` 700＋`aria-current`（黄の印と太さで示し、地は塗らない）。1200–1439px は `pane-rail`（アイコンだけ＋Tooltip）、compact は下部タブバー（今日 / Sprint / Backlog / 振り返り）。項目は 8 個まで。
+**Navigation** — desktop の左サイドバー（`canvas-subtle`、右に `border`）。項目 36px（20px アイコン＋ラベル＋件数）、現在地は `here` の 4px の縦線＋`ink` 700＋`aria-current`（黄の印と太さで示し、地は塗らない）。768–1439px は `pane-rail`（アイコンだけ＋Tooltip、項目 44px。medium の 2 ペインを保つため medium も rail にする）、compact は下部タブバー（今日 / Sprint / Backlog / 振り返り）。項目は 8 個まで。
+- 下部タブバーは `canvas-subtle`＋上に `border`。項目は等幅で、20px アイコンの下にラベル（`meta`）、高さ 56px。現在地は項目の上端の `here` の 4px の横線＋`ink` 700＋`aria-current`。件数は表示せず読み上げだけにする。
+- rail とタブバーでも件数は読み上げる（「Backlog 42件」）。Disabled の項目はフォーカスでき、`aria-disabled` で使えないことを伝える。
 
-**Tabs** — 同じ場所の表示を切り替える。タブ 40px、ラベルは `button`、選択は `ink` 700 の文字＋`stroke-strong` の下線（色面・Pill にしない）、件数は `ink-subtle`。タブは 5 個まで。段階を進めるフロー（→ Sprint Header）と絞り込み（→ Filter）には使わない。
+**Tabs** — 同じ場所の表示を切り替える。タブ 40px、ラベルは `button`、選択は `ink` 700 の文字＋`stroke-strong` の下線（色面・Pill にしない）、未選択は `ink-muted` 400（太さでも選択を示す。選んでも幅が変わらないよう 700 の幅を先に取る）、件数は `ink-subtle`。タブは 5 個まで。段階を進めるフロー（→ Sprint Header）と絞り込み（→ Filter）には使わない。
 
-**Filter** — リストを絞り込むトグル。Pill（28px、`border`）＋選択時のチェック＋任意の Area の路線記号＋ラベル＋件数。Selected は `here-subtle` の地と `ink` の枠。0 件は disabled。
+**Filter** — リストを絞り込むトグル。Pill（28px、`border`）＋任意の Area の路線記号（`area-badge` 20px。記号は読み上げず、ラベルの Area 名を読む）＋ラベル＋件数。Selected は `here-subtle` の地、`ink` の 2px の枠（`stroke-strong`。内側に取り、大きさを変えない）、ラベルの 700、`aria-pressed`。チェックは付けない（選んでも幅を変えず、後ろの Filter を動かさないため。太字の幅は先に取る）。0 件は disabled（フォーカスでき、「0件」を読める）。ただし選択中の Filter は 0 件になっても外せるよう disabled にしない。compact 幅では見た目の 28px を保ったまま当たり判定を 44px にし、折り返した行の間を 16px 空けて当たり判定を重ねない。
 
 **Sprint Header** — Sprint の画面の見出し。Status Tag、タイトル（`display-l`「Sprint 14」）、期間（`body` `ink-muted`）、右に操作（Primary は 1 つ）、段階表示（路線図のように段階を線でつなぎ、番号付きの駅として並べる。`nav`＋`ol`、現在の段階は `here` の印＋「現在」、`aria-current="step"`）。段階表示は目安で、どの段階にも戻れる。
 - Planning：選ぶ / 整える / 確かめる（PRD §5.B の Pick / Shape / Check）
