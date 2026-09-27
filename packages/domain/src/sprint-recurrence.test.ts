@@ -5,7 +5,10 @@ import { createRecurrenceRule } from './recurrence';
 import { id } from './shared/ids';
 import { localDate } from './shared/time';
 import type { Sprint } from './sprint';
-import { changeRuleForNextSprint } from './sprint-recurrence';
+import {
+  changeRuleForNextSprint,
+  createRuleForNextSprint,
+} from './sprint-recurrence';
 import { at, ctx, ids, newTask, sprintFixture, unwrap, user } from './testing';
 
 const d = localDate;
@@ -231,13 +234,42 @@ describe('changeRuleForNextSprint — guards and edges', () => {
     expect(applied.effectiveFrom).toBe('2026-10-05');
   });
 
-  it('leaves a draft alone when it has not generated this rule’s occurrences', () => {
-    const base = setUp();
-    const noOccurrences = unwrap(
-      change({ occurrences: [base.occurrences[0] as Occurrence] }, base),
+  it('F7: a draft whose generation made none of the old version still gets the new one', () => {
+    // A monthly rule on the 15th has no date in the 10/5 week.
+    const { task, rule } = unwrap(
+      createRecurrenceRule(
+        newTask('請求書', 'task-bill'),
+        {
+          id: id('rule-bill'),
+          pattern: { freq: 'monthly', dayOfMonth: 15 },
+          effectiveFrom: d('2026-09-28'),
+        },
+        ctx,
+      ),
     );
-    expect(noOccurrences).not.toHaveProperty('sprint');
-    expect(noOccurrences.generated).toEqual([]);
+    const draft = sprintFixture('2026-10-05', 'planning');
+    const applied = unwrap(
+      changeRuleForNextSprint(
+        {
+          task,
+          rule,
+          pattern: { freq: 'weekly', daysOfWeek: [1] },
+          user,
+          today: d('2026-10-04'),
+          sprints: [sprintFixture('2026-09-28', 'review'), draft],
+          occurrences: [],
+          newOccurrenceId: ids('occ'),
+          newSprintTaskId: ids('st'),
+        },
+        ctx,
+      ),
+    );
+    expect(
+      applied.generated.map((o) => [o.scheduledDate, o.ruleVersion]),
+    ).toEqual([['2026-10-05', 2]]);
+    expect(applied.sprint?.tasks).toMatchObject([
+      { taskId: 'task-bill', outcome: 'draft' },
+    ]);
   });
 
   it('refuses a rule of another Task or a Task that is not active', () => {
@@ -296,6 +328,60 @@ describe('changeRuleForNextSprint — guards and edges', () => {
       [1, '2026-10-12', '2026-10-11'],
       [2, '2026-10-12', undefined],
     ]);
+  });
+});
+
+describe('createRuleForNextSprint (F15)', () => {
+  function create(sprints: readonly Sprint[], today: string) {
+    return createRuleForNextSprint(
+      {
+        task: newTask('ストレッチ', 'task-stretch'),
+        ruleId: id('rule-s'),
+        pattern: { freq: 'weekly', daysOfWeek: [1, 3] },
+        user,
+        today: d(today),
+        sprints,
+        occurrences: [],
+        newOccurrenceId: ids('occ'),
+        newSprintTaskId: ids('st'),
+      },
+      ctx,
+    );
+  }
+
+  it('while a draft is open, generates its period and includes it', () => {
+    const result = create(
+      [
+        sprintFixture('2026-09-28', 'active'),
+        sprintFixture('2026-10-05', 'planning'),
+      ],
+      '2026-10-02',
+    );
+    const applied = unwrap(result);
+    expect(applied.task.recurrenceRuleId).toBe('rule-s');
+    expect(applied.effectiveFrom).toBe('2026-10-05');
+    expect(applied.generated.map((o) => o.scheduledDate)).toEqual([
+      '2026-10-05',
+      '2026-10-07',
+    ]);
+    expect(applied.sprint?.tasks).toMatchObject([
+      { taskId: 'task-stretch', outcome: 'draft', goalLink: 'unlinked' },
+    ]);
+    expect(result.ok && result.value.activities.map((a) => a.kind)).toEqual([
+      'recurrenceRuleCreated',
+      'occurrenceGenerated',
+      'occurrenceGenerated',
+      'sprintTaskAdded',
+    ]);
+  });
+
+  it('without a draft, only makes the rule, starting after the active Sprint', () => {
+    const applied = unwrap(
+      create([sprintFixture('2026-09-28', 'active')], '2026-09-30'),
+    );
+    expect(applied.effectiveFrom).toBe('2026-10-05');
+    expect(applied.generated).toEqual([]);
+    expect(applied).not.toHaveProperty('sprint');
   });
 });
 

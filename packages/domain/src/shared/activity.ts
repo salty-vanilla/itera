@@ -138,8 +138,9 @@ export type Activity =
       readonly via: SprintTaskAddedVia;
     })
   | (ActivityBase & {
-      /** Unselected in Planning (draft) or removed after confirm. */
-      readonly kind: 'sprintTaskUnselected' | 'sprintTaskRemoved';
+      /** Unselected in Planning (draft), removed after confirm, or restored (F13). */
+      readonly kind:
+        'sprintTaskUnselected' | 'sprintTaskRemoved' | 'sprintTaskRestored';
       readonly sprintId: SprintId;
       readonly sprintTaskId: SprintTaskId;
       readonly taskId: TaskId;

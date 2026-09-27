@@ -6,8 +6,13 @@ import {
   addTaskMidSprint,
   noteAreaInSprint,
   removeFromSprint,
+  restoreToSprint,
 } from './mid-sprint';
-import { excludeOccurrence, generateOccurrences } from './occurrence';
+import {
+  completeOccurrence,
+  excludeOccurrence,
+  generateOccurrences,
+} from './occurrence';
 import type { ActiveCriterion } from './planning';
 import { createRecurrenceRule } from './recurrence';
 import { id, type AreaId } from './shared/ids';
@@ -135,8 +140,13 @@ describe('addTaskMidSprint', () => {
     const added = unwrap(add(activeSprint(false), task));
     expect(add(added, task)).toMatchObject({ ok: false });
     const removed = unwrap(
-      removeFromSprint(added, id('st-task-interview'), ctx),
-    );
+      removeFromSprint(
+        added,
+        { sprintTaskId: id('st-task-interview'), occurrences: [] },
+        ctx,
+      ),
+    ).sprint;
+    // A removed Task comes back with restoreToSprint (F13), not as a second one.
     expect(add(removed, task)).toMatchObject({ ok: false });
   });
 
@@ -149,20 +159,106 @@ describe('addTaskMidSprint', () => {
   });
 });
 
-describe('removeFromSprint', () => {
-  it('planned → removed; the record stays', () => {
+describe('removeFromSprint and restoreToSprint', () => {
+  it('planned → removed → planned (F13): the same record, origin and snapshot', () => {
     const task = withSuggestion(workId, 2, 3, 'task-interview');
     const sprint = unwrap(add(activeSprint(false), task));
-    const result = removeFromSprint(sprint, id('st-task-interview'), ctx);
-    expect(unwrap(result).tasks.map((t) => t.outcome)).toEqual(['removed']);
-    expect(result.ok && result.value.activities[0]?.kind).toBe(
+    const input = {
+      sprintTaskId: id<'SprintTask'>('st-task-interview'),
+      occurrences: [],
+    };
+    const removed = removeFromSprint(sprint, input, ctx);
+    expect(unwrap(removed).sprint.tasks.map((t) => t.outcome)).toEqual([
+      'removed',
+    ]);
+    expect(removed.ok && removed.value.activities[0]?.kind).toBe(
       'sprintTaskRemoved',
     );
-    expect(
-      removeFromSprint(unwrap(result), id('st-task-interview'), ctx),
-    ).toMatchObject({
+    expect(removeFromSprint(unwrap(removed).sprint, input, ctx)).toMatchObject({
       ok: false,
     });
+
+    const restored = restoreToSprint(unwrap(removed).sprint, input, ctx);
+    const back = unwrap(restored).sprint.tasks[0];
+    expect(back).toEqual({ ...sprint.tasks[0], outcome: 'planned' });
+    expect(restored.ok && restored.value.activities[0]?.kind).toBe(
+      'sprintTaskRestored',
+    );
+    expect(restoreToSprint(sprint, input, ctx)).toMatchObject({
+      ok: false,
+      error: { code: 'invalidTransition' },
+    });
+  });
+
+  it('F14: removing a recurring Task excludes its pending occurrences; restoring brings them back', () => {
+    const { task, rule } = unwrap(
+      createRecurrenceRule(
+        newTask('ストレッチ', 'task-stretch'),
+        {
+          id: id('rule-s'),
+          pattern: { freq: 'daily' },
+          effectiveFrom: d('2026-09-28'),
+        },
+        ctx,
+      ),
+    );
+    const generated = unwrap(
+      generateOccurrences(
+        rule,
+        {
+          start: d('2026-09-28'),
+          end: d('2026-09-30'),
+          existing: [],
+          newOccurrenceId: ids('occ'),
+        },
+        ctx,
+      ),
+    );
+    const [first, ...rest] = generated;
+    if (first === undefined) throw new Error('no occurrence');
+    const done = unwrap(completeOccurrence(first, ctx));
+    const sprint = sprintFixture('2026-09-28', 'active', {
+      tasks: [
+        {
+          id: id('st-stretch'),
+          taskId: task.id,
+          occurrenceIds: generated.map((o) => o.id),
+          origin: 'planning',
+          addedAt: ctx.now,
+          goalLink: 'unlinked',
+          outcome: 'planned',
+        },
+      ],
+    });
+    const occurrences = [done, ...rest];
+    const removed = unwrap(
+      removeFromSprint(
+        sprint,
+        { sprintTaskId: id('st-stretch'), occurrences },
+        ctx,
+      ),
+    );
+    // The done one stays done; only the pending ones are left out.
+    expect(removed.occurrences.map((o) => [o.scheduledDate, o.state])).toEqual([
+      ['2026-09-29', 'excluded'],
+      ['2026-09-30', 'excluded'],
+    ]);
+
+    const restored = unwrap(
+      restoreToSprint(
+        removed.sprint,
+        {
+          sprintTaskId: id('st-stretch'),
+          occurrences: [done, ...removed.occurrences],
+        },
+        ctx,
+      ),
+    );
+    expect(restored.occurrences.map((o) => o.state)).toEqual([
+      'pending',
+      'pending',
+    ]);
+    expect(restored.sprint.tasks[0]?.outcome).toBe('planned');
   });
 });
 

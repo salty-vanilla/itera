@@ -1,5 +1,9 @@
 import type { Area } from './area';
-import { includeOccurrence, type Occurrence } from './occurrence';
+import {
+  excludeOccurrence,
+  includeOccurrence,
+  type Occurrence,
+} from './occurrence';
 import {
   addedActivity,
   planSnapshotOf,
@@ -146,19 +150,33 @@ export function addOccurrenceMidSprint(
   );
 }
 
-/** 確定後に Sprint から外す: planned → removed. The record stays. */
+export interface SprintTaskChangeInput {
+  readonly sprintTaskId: SprintTaskId;
+  /** The SprintTask's occurrences, for a recurring Task. */
+  readonly occurrences: readonly Occurrence[];
+}
+
+/**
+ * 確定後に Sprint から外す: planned → removed. The record stays. For a
+ * recurring Task the occurrences still pending become excluded (F14), so
+ * they leave Today and are not "missed" in Retro (F2); done and skipped
+ * ones stay as they are.
+ */
 export function removeFromSprint(
   sprint: Sprint,
-  sprintTaskId: SprintTaskId,
+  input: SprintTaskChangeInput,
   ctx: CommandContext,
-): CommandResult<Sprint> {
+): CommandResult<{
+  readonly sprint: Sprint;
+  readonly occurrences: readonly Occurrence[];
+}> {
   if (sprint.state !== 'active') {
     return err(
       'invalidTransition',
       'Only an active Sprint’s Tasks are removed.',
     );
   }
-  const target = sprint.tasks.find((t) => t.id === sprintTaskId);
+  const target = sprint.tasks.find((t) => t.id === input.sprintTaskId);
   if (target === undefined) return err('notFound', 'No such SprintTask.');
   if (target.outcome !== 'planned') {
     return err(
@@ -166,24 +184,120 @@ export function removeFromSprint(
       `Cannot remove a ${target.outcome} SprintTask.`,
     );
   }
+  const changed = changeOccurrences(
+    target,
+    input.occurrences,
+    'pending',
+    excludeOccurrence,
+    ctx,
+  );
+  if (!changed.ok) return changed;
   return applied(
     {
-      ...sprint,
-      tasks: sprint.tasks.map((t) =>
-        t.id === sprintTaskId ? { ...t, outcome: 'removed' as const } : t,
-      ),
+      sprint: withOutcome(sprint, target.id, 'removed'),
+      occurrences: changed.value.record,
     },
     [
+      ...changed.value.activities,
       {
         kind: 'sprintTaskRemoved',
         at: ctx.now,
         actor: ctx.actor,
         sprintId: sprint.id,
-        sprintTaskId,
+        sprintTaskId: target.id,
         taskId: target.taskId,
       },
     ],
   );
+}
+
+/**
+ * Sprint に戻す: removed → planned (F13). The same SprintTask comes back,
+ * so the Task still joins the Sprint once (invariant 14), and its origin
+ * and plan snapshot stay as they were (invariants 16, 17). For a recurring
+ * Task the occurrences excluded by the removal become pending again.
+ */
+export function restoreToSprint(
+  sprint: Sprint,
+  input: SprintTaskChangeInput,
+  ctx: CommandContext,
+): CommandResult<{
+  readonly sprint: Sprint;
+  readonly occurrences: readonly Occurrence[];
+}> {
+  if (sprint.state !== 'active') {
+    return err(
+      'invalidTransition',
+      'Only an active Sprint’s Tasks are restored.',
+    );
+  }
+  const target = sprint.tasks.find((t) => t.id === input.sprintTaskId);
+  if (target === undefined) return err('notFound', 'No such SprintTask.');
+  if (target.outcome !== 'removed') {
+    return err(
+      'invalidTransition',
+      `Cannot restore a ${target.outcome} SprintTask.`,
+    );
+  }
+  const changed = changeOccurrences(
+    target,
+    input.occurrences,
+    'excluded',
+    includeOccurrence,
+    ctx,
+  );
+  if (!changed.ok) return changed;
+  return applied(
+    {
+      sprint: withOutcome(sprint, target.id, 'planned'),
+      occurrences: changed.value.record,
+    },
+    [
+      ...changed.value.activities,
+      {
+        kind: 'sprintTaskRestored',
+        at: ctx.now,
+        actor: ctx.actor,
+        sprintId: sprint.id,
+        sprintTaskId: target.id,
+        taskId: target.taskId,
+      },
+    ],
+  );
+}
+
+function withOutcome(
+  sprint: Sprint,
+  sprintTaskId: SprintTaskId,
+  outcome: SprintTask['outcome'],
+): Sprint {
+  return {
+    ...sprint,
+    tasks: sprint.tasks.map((t) =>
+      t.id === sprintTaskId ? { ...t, outcome } : t,
+    ),
+  };
+}
+
+/** Applies `change` to the SprintTask's occurrences that are in `state`. */
+function changeOccurrences(
+  sprintTask: SprintTask,
+  occurrences: readonly Occurrence[],
+  state: Occurrence['state'],
+  change: (o: Occurrence, ctx: CommandContext) => CommandResult<Occurrence>,
+  ctx: CommandContext,
+): CommandResult<readonly Occurrence[]> {
+  const ids = sprintTask.occurrenceIds ?? [];
+  const changed: Occurrence[] = [];
+  const activities: Activity[] = [];
+  for (const occurrence of occurrences) {
+    if (!ids.includes(occurrence.id) || occurrence.state !== state) continue;
+    const result = change(occurrence, ctx);
+    if (!result.ok) return result;
+    changed.push(result.value.record);
+    activities.push(...result.value.activities);
+  }
+  return applied(changed, activities);
 }
 
 /**
