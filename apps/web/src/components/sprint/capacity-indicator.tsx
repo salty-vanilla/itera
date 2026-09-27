@@ -1,5 +1,5 @@
 import type { Capacity, PlanningTotal } from '@itera/domain';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { AreaIndicator, type AreaColor } from '@/components/ui/area-indicator';
 import { Field } from '@/components/ui/field';
 import { semanticIcons } from '@/components/ui/icon';
@@ -124,43 +124,47 @@ function CapacityIndicator({
   const statement = capacityStatement(capacity);
   const Icon = toneIcon[statement.tone];
   const unestimated = total.unestimated + total.unestimatedSubtasks;
+  const headingId = useId();
   return (
     <section
-      aria-labelledby="capacity-heading"
+      aria-labelledby={headingId}
       data-slot="capacity-indicator"
       className={cn('flex flex-col gap-4', className)}
     >
-      <h2 id="capacity-heading" className="text-subheading text-ink">
+      <h2 id={headingId} className="text-subheading text-ink">
         時間の見通し
       </h2>
-      <div role="status" className="flex flex-col gap-2">
-        {capacity !== undefined && (
-          <p className="flex items-baseline gap-2">
-            <span className="text-label text-ink-muted">
-              {capacityHeadline(capacity).label}
-            </span>
-            <span
-              className={cn(
-                'text-num-l',
-                capacity.status === 'exceeds' ? 'text-danger' : 'text-ink',
-              )}
-            >
-              {capacityHeadline(capacity).value}
-            </span>
-          </p>
-        )}
-        <p
-          className={cn(
-            'flex items-center gap-1 text-body',
-            toneClass[statement.tone],
+      <div className="flex flex-col gap-2">
+        {/* Read out when it changes: the headline and the state only. */}
+        <div role="status" className="flex flex-col gap-2">
+          {capacity !== undefined && (
+            <p className="flex items-baseline gap-2">
+              <span className="text-label text-ink-muted">
+                {capacityHeadline(capacity).label}
+              </span>
+              <span
+                className={cn(
+                  'text-num-l',
+                  capacity.status === 'exceeds' ? 'text-danger' : 'text-ink',
+                )}
+              >
+                {capacityHeadline(capacity).value}
+              </span>
+            </p>
           )}
-        >
-          <Icon
-            aria-hidden
-            className="size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
-          />
-          {statement.text}
-        </p>
+          <p
+            className={cn(
+              'flex items-center gap-1 text-body',
+              toneClass[statement.tone],
+            )}
+          >
+            <Icon
+              aria-hidden
+              className="size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
+            />
+            {statement.text}
+          </p>
+        </div>
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 text-body">
           <dt className="whitespace-nowrap text-ink-muted">計画値の合計</dt>
           <dd className="text-right text-num-m text-ink">
@@ -270,8 +274,10 @@ function AvailableHoursField({
 /**
  * The bar: one 8px segment per Area (solid to the lower end, dashed for the
  * rest of the range), a 2px `canvas` gap between segments, the rest of the
- * available hours in `border-soft`, the available-hours marker in `ink`,
- * and a `danger` underline under what is over.
+ * available hours in `border-soft`, the available-hours marker in `ink`
+ * (`stroke-strong`). Under what goes past the available hours: a `danger`
+ * line only when even the lower end is over (exceeds); a dashed `warning`
+ * line when only the upper end may go over (owner decision in #40).
  */
 function CapacityBar({
   total,
@@ -285,8 +291,10 @@ function CapacityBar({
   const available = capacity?.availableHours ?? 0;
   const scale = Math.max(available, total.hi, 1);
   const pct = (hours: number) => `${(hours / scale) * 100}%`;
-  const overFrom =
-    capacity !== undefined && total.hi > available ? available : undefined;
+  const over =
+    capacity === undefined || capacity.status === 'within'
+      ? undefined
+      : capacity.status;
   return (
     <div aria-hidden data-slot="capacity-bar" className="relative pb-2">
       <div className="flex h-2 w-full overflow-hidden bg-border-soft">
@@ -299,26 +307,34 @@ function CapacityBar({
             {a.hi > a.lo && (
               <div
                 className={cn(
-                  'h-full flex-1 border-2 border-dashed bg-canvas',
+                  // The range still open: a dashed hairline (the dashes of a
+                  // value not decided yet), not a fill.
+                  'h-full flex-1 border-(length:--stroke-hairline) border-dashed bg-canvas',
                   areaLine[a.color],
                 )}
               />
             )}
             {/* The 2px gap between Areas (DESIGN.md Capacity Indicator). */}
-            <div className="h-full w-[2px] shrink-0 bg-canvas" />
+            <div className="h-full w-(--stroke-strong) shrink-0 bg-canvas" />
           </div>
         ))}
       </div>
       {capacity !== undefined && (
         <div
-          className="absolute -top-1 h-4 w-[2px] bg-ink"
+          className="absolute -top-1 h-4 w-(--stroke-strong) bg-ink"
           style={{ left: `calc(${pct(available)} - 1px)` }}
         />
       )}
-      {overFrom !== undefined && (
+      {over !== undefined && (
         <div
-          className="absolute bottom-0 h-[2px] bg-danger"
-          style={{ left: pct(overFrom), width: pct(total.hi - overFrom) }}
+          data-over={over}
+          className={cn(
+            'absolute bottom-0 h-0 border-b-(length:--stroke-strong)',
+            over === 'exceeds'
+              ? 'border-solid border-danger'
+              : 'border-dashed border-warning',
+          )}
+          style={{ left: pct(available), width: pct(total.hi - available) }}
         />
       )}
     </div>

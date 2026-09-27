@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { presentSuggestion, setEstimate } from './estimate';
 import type { Occurrence } from './occurrence';
-import { capacityDrivers, planningCandidates } from './planning-view';
+import {
+  capacityDrivers,
+  criterionEffect,
+  planningCandidates,
+} from './planning-view';
+import { carryOverCandidates, goalLinkAtConfirm } from './planning';
 import { id } from './shared/ids';
 import { instant, localDate } from './shared/time';
 import type { SprintTask } from './sprint';
@@ -126,7 +131,8 @@ describe('capacityDrivers', () => {
       st('gone', { outcome: 'removed' }),
     ],
   });
-  const tasks = [point, narrow, wide, paper];
+  // 'gone' has a range too; it is left out because it was removed.
+  const tasks = [point, narrow, wide, paper, suggested('gone', 1, 9, false)];
 
   it('lists the ranges, widest first, and leaves points out', () => {
     const drivers = capacityDrivers(sprint, { tasks, now });
@@ -177,5 +183,117 @@ describe('capacityDrivers', () => {
       fromRange: { lo: 3, hi: 5 },
       spread: 2,
     });
+  });
+});
+
+describe('criterionEffect (invariant 39)', () => {
+  const now = ctx.now;
+  const hi = {
+    id: id<'PlanningCriterion'>('crit'),
+    policy: { scope: { kind: 'area', areaId: researchId }, rangePolicy: 'hi' },
+  } as const;
+  const lo = { ...hi, policy: { ...hi.policy, rangePolicy: 'lo' } } as const;
+  const suggested = (taskId: string, from: number, to: number) =>
+    unwrap(
+      updateTask(
+        unwrap(
+          presentSuggestion(
+            newTask(taskId, taskId),
+            {
+              id: id(`sug-${taskId}`),
+              lo: from,
+              hi: to,
+              rationale: '',
+              uncertainties: [],
+            },
+            ctx,
+          ),
+        ),
+        { areaId: researchId },
+        ctx,
+      ),
+    );
+  const paper = suggested('paper', 3, 5);
+  const recurring: Task = {
+    ...suggested('reading', 0.5, 1),
+    recurrenceRuleId: id('rule-reading'),
+  };
+  const sprint = sprintFixture('2026-09-28', 'planning', {
+    tasks: [
+      st('paper'),
+      st('reading', {
+        occurrenceIds: [id('o1'), id('o2'), id('o3')],
+        goalLink: 'unlinked',
+      }),
+    ],
+  });
+
+  it('counts recurring Tasks with their occurrences', () => {
+    const effect = criterionEffect(sprint, {
+      tasks: [paper, recurring],
+      now,
+      criterion: hi,
+    });
+    // paper 3–5 → 5 (+2 on the lower end); reading 1.5–3 → 3 (+1.5).
+    expect(effect).toEqual({ count: 2, delta: { lo: 3.5, hi: 0 } });
+  });
+
+  it('a criterion on the lower end lowers the upper end of the total', () => {
+    const effect = criterionEffect(sprint, {
+      tasks: [paper, recurring],
+      now,
+      criterion: lo,
+    });
+    expect(effect).toEqual({ count: 2, delta: { lo: 0, hi: -3.5 } });
+  });
+});
+
+describe('goalLinkAtConfirm (the same rule confirmSprint uses)', () => {
+  const inResearch = unwrap(
+    updateTask(newTask('t', 't'), { areaId: researchId }, ctx),
+  );
+  const noArea = newTask('n', 'n');
+  const linked = st('t');
+  it('stays linked only when the Area has a Goal', () => {
+    const withGoal = sprintFixture('2026-09-28', 'planning', {
+      goals: [{ areaId: researchId, text: 'g' }],
+    });
+    const withoutGoal = sprintFixture('2026-09-28', 'planning');
+    expect(goalLinkAtConfirm(withGoal, linked, inResearch)).toBe('linked');
+    expect(goalLinkAtConfirm(withoutGoal, linked, inResearch)).toBe('unlinked');
+    expect(goalLinkAtConfirm(withGoal, linked, noArea)).toBe('unlinked');
+    expect(
+      goalLinkAtConfirm(
+        withGoal,
+        st('t', { goalLink: 'unlinked' }),
+        inResearch,
+      ),
+    ).toBe('unlinked');
+  });
+});
+
+describe('planningCandidates and carryOverCandidates agree (invariant 20)', () => {
+  it('the carried-over group holds the candidates and the ones chosen again', () => {
+    const previous = sprintFixture('2026-09-21', 'closed', {
+      tasks: [
+        st('a', { outcome: 'carriedOver' }),
+        st('b', { outcome: 'carriedOver' }),
+      ],
+    });
+    const sprint = sprintFixture('2026-09-28', 'planning', {
+      previousSprintId: previous.id,
+      tasks: [st('a', { carriedFrom: id('st-a') })],
+    });
+    const tasks = [newTask('a', 'a'), newTask('b', 'b')];
+    const candidates = carryOverCandidates(previous, sprint, tasks).map(
+      (t) => t.taskId,
+    );
+    const group = planningCandidates(sprint, {
+      tasks,
+      sprints: [previous, sprint],
+      occurrences: [],
+    }).carriedOver.map((t) => t.id);
+    expect(candidates).toEqual(['b']);
+    expect(group).toEqual(['a', 'b']);
   });
 });

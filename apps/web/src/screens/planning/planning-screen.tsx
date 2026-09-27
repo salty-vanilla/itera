@@ -5,7 +5,7 @@ import {
   useRouter,
   useSearch,
 } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Drawer,
@@ -120,8 +120,8 @@ function PlanningScreen({ data }: PlanningScreenProps) {
     setSearch({ stage: undefined, criterion: undefined });
   };
 
-  const blocked = data.blockedBy === 'previousRetroOpen';
-  const reasonId = 'confirm-blocked-reason';
+  const blocked = data.blockers.length > 0;
+  const reasonId = useId();
 
   return (
     <div className="flex min-h-full flex-col">
@@ -163,15 +163,27 @@ function PlanningScreen({ data }: PlanningScreenProps) {
                 Sprint {data.number} を確定
               </Button>
               {blocked && (
-                <p id={reasonId} className="text-help text-ink-muted">
-                  前の Sprint の Retro を完了すると確定できます。
-                  <Link
-                    to="/retro"
-                    className="ms-1 text-link underline focus-visible:focus-ring"
-                  >
-                    振り返りを開く
-                  </Link>
-                </p>
+                <div
+                  id={reasonId}
+                  className="flex flex-col items-end gap-1 text-help text-ink-muted"
+                >
+                  {data.blockers.includes('previousRetroOpen') && (
+                    <p>
+                      前の Sprint の Retro を完了すると確定できます。
+                      <Link
+                        to="/retro"
+                        className="ms-1 text-link underline focus-visible:focus-ring"
+                      >
+                        振り返りを開く
+                      </Link>
+                    </p>
+                  )}
+                  {data.blockers.includes('inactiveTasks') && (
+                    <p>
+                      完了・アーカイブした Task を今週から外すと確定できます。
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           }
@@ -221,10 +233,10 @@ function PlanningScreen({ data }: PlanningScreenProps) {
             data={data}
             stage={stage}
             onOpenTask={openTask}
-            className="w-full max-w-[680px]"
+            className="w-full max-w-pane-sprint"
           />
           {stage === 'check' && (
-            <div className="max-w-[680px] wide:hidden">{outlook}</div>
+            <div className="max-w-pane-sprint wide:hidden">{outlook}</div>
           )}
         </div>
         <aside

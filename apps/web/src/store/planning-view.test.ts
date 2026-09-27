@@ -15,7 +15,7 @@ describe('planningData', () => {
   it('can be confirmed once the previous Retro is complete (invariant 12)', () => {
     const { records, clock } = fixtureSnapshot('planning-pick');
     const data = planningData(records, clock, { applyCriterion: true });
-    expect(data?.blockedBy).toBeUndefined();
+    expect(data?.blockers).toEqual([]);
     expect(data?.number).toBe(2);
   });
 
@@ -43,7 +43,7 @@ describe('planningData', () => {
     expect(result.ok).toBe(true);
     const { records, clock } = store.getSnapshot();
     const data = planningData(records, clock, { applyCriterion: true });
-    expect(data?.blockedBy).toBe('previousRetroOpen');
+    expect(data?.blockers).toEqual(['previousRetroOpen']);
     expect(data?.number).toBe(3);
   });
 

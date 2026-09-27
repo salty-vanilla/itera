@@ -37,9 +37,9 @@ function ConfirmDialog({
 }: ConfirmDialogProps) {
   const { totals, criterion, number } = data;
   const tasks = data.plan.flatMap((p) => p.tasks);
-  const unlinked = tasks.filter(
-    (t) => t.sprintTask.goalLink === 'unlinked',
-  ).length;
+  // As confirming will set it: an Area without a Goal leaves its Tasks
+  // unlinked (goalLinkAtConfirm).
+  const unlinked = tasks.filter((t) => t.linkAtConfirm === 'unlinked').length;
   const goals = data.plan.filter((p) => p.goal !== undefined);
   const statement = capacityStatement(totals.capacity);
   const Warning =

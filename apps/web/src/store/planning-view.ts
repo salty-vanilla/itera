@@ -4,6 +4,9 @@
 import {
   activeCriterion,
   capacityDrivers,
+  criterionEffect,
+  goalLinkAtConfirm,
+  presentedSuggestion,
   carryOverOf,
   criterionView,
   isCounted,
@@ -17,6 +20,8 @@ import {
   type AreaColor,
   type AreaId,
   type CapacityDriver,
+  type CriterionEffect,
+  type GoalLink,
   type CriterionView,
   type LocalDate,
   type Occurrence,
@@ -44,6 +49,18 @@ export interface PlannedTask {
   readonly value: PlanningValue;
   /** Recurring: the occurrences included this week. */
   readonly occurrenceCount?: number;
+  /**
+   * The suggestion the value comes from, when it does (「提案 3–5h / 今回は 5h
+   * で計画」): one occurrence's range for a recurring Task.
+   */
+  readonly suggestion?: { readonly lo: number; readonly hi: number };
+  /** The goalLink the Task will have once confirmed (`goalLinkAtConfirm`). */
+  readonly linkAtConfirm: GoalLink;
+  /**
+   * Completed or archived during Planning: it cannot be planned, and the
+   * Sprint cannot be confirmed until it leaves the week.
+   */
+  readonly inactive?: 'completed' | 'archived';
 }
 
 export interface AreaPlan {
@@ -102,12 +119,16 @@ export interface PlanningData {
     readonly areaName?: string;
     /** Whether the Check applies it this time (the screen's choice). */
     readonly applied: boolean;
+    /** What applying it does to the chosen Tasks (`criterionEffect`). */
+    readonly effect: CriterionEffect;
   };
   /**
-   * Why 確定 is not possible yet, if it is not: the previous Sprint's
-   * Retro is open (invariant 12). Editing the draft stays possible.
+   * Why 確定 is not possible yet, if it is not. Editing the draft stays
+   * possible. `previousRetroOpen`: the previous Sprint's Retro is open
+   * (invariant 12). `inactiveTasks`: a chosen Task was completed or
+   * archived and must leave the week first.
    */
-  readonly blockedBy?: 'previousRetroOpen';
+  readonly blockers: readonly ('previousRetroOpen' | 'inactiveTasks')[];
 }
 
 const NO_AREA: PlanningArea = { id: null, name: '領域なし', color: 'none' };
@@ -126,8 +147,15 @@ export function planningData(
   if (sprint === undefined) return undefined;
   const { tasks } = records;
   const now = clock.now;
+  // An archived Area still shows while a chosen Task is in it.
+  const chosenAreas = new Set(
+    sprint.tasks.flatMap((t) => {
+      const areaId = tasks.find((task) => task.id === t.taskId)?.areaId;
+      return areaId === undefined ? [] : [areaId];
+    }),
+  );
   const areas: PlanningArea[] = records.areas
-    .filter((a) => !a.archived)
+    .filter((a) => !a.archived || chosenAreas.has(a.id))
     .toSorted((a, b) => a.order - b.order)
     .map((a) => ({ id: a.id, name: a.name, color: a.color }));
   const areaOf = (task: Task): PlanningArea | undefined => {
@@ -192,12 +220,20 @@ export function planningData(
       const task = tasks.find((t) => t.id === sprintTask.taskId);
       if (task === undefined) return [];
       const count = sprintTask.occurrenceIds?.length;
+      const value = sprintTaskValue(task, sprintTask, preview, { now });
+      const suggestion =
+        value.base === 'suggestion' ? presentedSuggestion(task) : undefined;
       return [
         {
           sprintTask,
           task,
-          value: sprintTaskValue(task, sprintTask, preview, { now }),
+          value,
           ...(count === undefined ? {} : { occurrenceCount: count }),
+          ...(suggestion === undefined
+            ? {}
+            : { suggestion: { lo: suggestion.lo, hi: suggestion.hi } }),
+          linkAtConfirm: goalLinkAtConfirm(sprint, sprintTask, task),
+          ...(task.lifecycle === 'active' ? {} : { inactive: task.lifecycle }),
         },
       ];
     });
@@ -250,10 +286,16 @@ export function planningData(
             view: criterionView(criterion.policy, tasks, now),
             ...(scopeArea === undefined ? {} : { areaName: scopeArea }),
             applied: options.applyCriterion,
+            effect: criterionEffect(sprint, { tasks, now, criterion }),
           },
         }),
-    ...(previous !== undefined && previous.state !== 'closed'
-      ? { blockedBy: 'previousRetroOpen' as const }
-      : {}),
+    blockers: [
+      ...(previous !== undefined && previous.state !== 'closed'
+        ? (['previousRetroOpen'] as const)
+        : []),
+      ...(planned.some((p) => p.task.lifecycle !== 'active')
+        ? (['inactiveTasks'] as const)
+        : []),
+    ],
   };
 }

@@ -123,7 +123,11 @@ export function capacityDrivers(
       sprintTask.planSnapshot?.value ??
       sprintTaskValue(task, sprintTask, options.previewCriterion, options);
     if (value.base !== 'estimate' && value.base !== 'suggestion') continue;
-    const count = sprintTask.occurrenceIds?.length ?? 1;
+    // A confirmed plan keeps the count it was valued with (invariant 16).
+    const count =
+      sprintTask.planSnapshot?.occurrenceCount ??
+      sprintTask.occurrenceIds?.length ??
+      1;
     const source =
       sprintTask.planSnapshot?.suggestion ??
       task.suggestions.find((s) => s.state === 'presented');
@@ -145,4 +149,50 @@ export function capacityDrivers(
     });
   }
   return drivers.toSorted((a, b) => b.spread - a.spread);
+}
+
+export interface CriterionEffect {
+  /** How many counted SprintTasks the criterion changes. */
+  readonly count: number;
+  /**
+   * How the Sprint's total moves with the criterion, compared with the
+   * same Tasks valued without it: a criterion using the upper end raises
+   * the lower end of the total (`lo` > 0), one using the lower end lowers
+   * its upper end (`hi` < 0).
+   */
+  readonly delta: { readonly lo: number; readonly hi: number };
+}
+
+/**
+ * The effect of applying a criterion to the drafts, for 確かめる (「研究の推定
+ * タスク 1 件を上限で計画値にしています」). Recurring Tasks count with their
+ * occurrences, as in `sprintTotals`. Comes from the same policy as the
+ * preview (invariant 39).
+ */
+export function criterionEffect(
+  sprint: Sprint,
+  input: {
+    readonly tasks: readonly Task[];
+    readonly now: Instant;
+    readonly criterion: ActiveCriterion;
+  },
+): CriterionEffect {
+  let count = 0;
+  let lo = 0;
+  let hi = 0;
+  for (const sprintTask of sprint.tasks) {
+    if (!isCounted(sprintTask) || sprintTask.planSnapshot !== undefined) {
+      continue;
+    }
+    const task = input.tasks.find((t) => t.id === sprintTask.taskId);
+    if (task === undefined) continue;
+    const withIt = sprintTaskValue(task, sprintTask, input.criterion, input);
+    if (!withIt.criterionApplied) continue;
+    const without = sprintTaskValue(task, sprintTask, undefined, input);
+    if (without.base === 'none') continue;
+    count += 1;
+    lo += withIt.lo - without.lo;
+    hi += withIt.hi - without.hi;
+  }
+  return { count, delta: { lo, hi } };
 }

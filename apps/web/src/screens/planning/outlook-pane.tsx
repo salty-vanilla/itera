@@ -1,4 +1,5 @@
 import { Info } from 'lucide-react';
+import { useId } from 'react';
 import { Divider } from '@/components/ui/divider';
 import { Switch } from '@/components/ui/switch';
 import { CapacityIndicator } from '@/components/sprint/capacity-indicator';
@@ -29,6 +30,9 @@ function OutlookPane({
   className,
 }: OutlookPaneProps) {
   const { improvement, criterion, totals } = data;
+  // The pane can be drawn twice (the right pane and a Drawer), so ids are
+  // made per instance.
+  const ids = useId();
   const areas = data.plan.flatMap((p) =>
     p.total === undefined || (p.total.lo === 0 && p.total.hi === 0)
       ? []
@@ -49,10 +53,10 @@ function OutlookPane({
     >
       {improvement !== undefined && (
         <section
-          aria-labelledby="improvement-heading"
+          aria-labelledby={`${ids}-improvement`}
           className="flex flex-col gap-2 border-t border-ink pt-3"
         >
-          <h2 id="improvement-heading" className="text-label text-ink-muted">
+          <h2 id={`${ids}-improvement`} className="text-label text-ink-muted">
             前回決めた改善策
           </h2>
           <p className="text-goal text-ink">{improvement.text}</p>
@@ -61,11 +65,11 @@ function OutlookPane({
 
       {criterion !== undefined && (
         <section
-          aria-labelledby="criterion-heading"
+          aria-labelledby={`${ids}-criterion`}
           className="flex flex-col gap-3 rounded-sm bg-canvas-subtle p-4"
         >
           <h2
-            id="criterion-heading"
+            id={`${ids}-criterion`}
             className="flex items-center gap-2 text-subheading text-ink"
           >
             <Info
@@ -110,26 +114,29 @@ function OutlookPane({
 function CriterionEffect({ data }: { data: PlanningData }) {
   const { criterion } = data;
   if (criterion === undefined) return null;
-  const chosen = new Set(
-    data.plan.flatMap((p) => p.tasks.map((t) => t.task.id)),
-  );
-  const rows = criterion.view.preview.filter((r) => chosen.has(r.taskId));
+  const { count, delta } = criterion.effect;
   const bound = BOUND_WORDS[criterion.active.policy.rangePolicy];
   const scope =
     criterion.areaName === undefined ? '' : `${criterion.areaName}の`;
-  if (rows.length === 0) {
+  if (count === 0) {
     return (
       <p className="text-body text-ink-muted">
         今週選んだタスクに、この基準の対象はありません。
       </p>
     );
   }
-  const delta = rows.reduce((sum, r) => sum + (r.to - r.from.lo), 0);
+  // How the total moves: the lower end rises, the upper end falls, or both.
+  const moves = [
+    delta.lo !== 0 &&
+      `合計の下限 ${delta.lo > 0 ? '+' : '−'}${formatHours(Math.abs(delta.lo), { total: true })}`,
+    delta.hi !== 0 &&
+      `合計の上限 ${delta.hi > 0 ? '+' : '−'}${formatHours(Math.abs(delta.hi), { total: true })}`,
+  ].filter(Boolean);
   return (
     <p className="text-body text-ink">
       {criterion.applied
-        ? `${scope}推定タスク ${rows.length}件を${bound}で計画値にしています（下限との差 +${formatHours(delta, { total: true })}）。`
-        : `使わない場合、${scope}推定タスク ${rows.length}件は提案の幅のまま計画値になります。`}
+        ? `${scope}推定タスク ${count}件を${bound}で計画値にしています${moves.length > 0 ? `（${moves.join('、')}）` : ''}。`
+        : `使わない場合、${scope}推定タスク ${count}件は提案の幅のまま計画値になります。`}
     </p>
   );
 }
@@ -137,11 +144,12 @@ function CriterionEffect({ data }: { data: PlanningData }) {
 /** 「何が上振れすると超過するか」. */
 function Drivers({ data }: { data: PlanningData }) {
   const { drivers, totals } = data;
+  const headingId = useId();
   if (drivers.length === 0) return null;
   const capacity = totals.capacity;
   return (
-    <section aria-labelledby="drivers-heading" className="flex flex-col gap-2">
-      <h2 id="drivers-heading" className="text-subheading text-ink">
+    <section aria-labelledby={headingId} className="flex flex-col gap-2">
+      <h2 id={headingId} className="text-subheading text-ink">
         幅のある計画値
       </h2>
       <ul className="flex flex-col gap-1 text-body text-ink">

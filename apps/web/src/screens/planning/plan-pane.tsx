@@ -156,12 +156,21 @@ function PlannedRow({
 }) {
   const actions = usePlanningActions();
   const toast = useToast();
-  const { sprintTask, task, value, occurrenceCount } = planned;
+  const { sprintTask, task, value, occurrenceCount, suggestion, inactive } =
+    planned;
   const recurring = occurrenceCount !== undefined;
   const linked = sprintTask.goalLink === 'linked';
+  // A Task without an Area has no Goal to link to.
+  const canLink = task.areaId !== undefined;
   const Repeat = semanticIcons.recurrence;
   const Carry = semanticIcons.carriedOver;
   const meta = [
+    inactive !== undefined && (
+      <MetaItem key="i" className="text-ink">
+        {inactive === 'completed' ? '完了済み' : 'アーカイブ済み'} ·
+        今週から外すと確定できます
+      </MetaItem>
+    ),
     recurring && (
       <MetaItem key="r" icon={<Repeat aria-hidden />}>
         今週 {occurrenceCount}回
@@ -172,7 +181,9 @@ function PlannedRow({
         持ち越し
       </MetaItem>
     ),
-    stage !== 'pick' && !linked && (
+    // 「Goal なし」 as confirming will set it (goalLinkAtConfirm): also for
+    // a linked Task whose Area has no Goal yet.
+    stage !== 'pick' && planned.linkAtConfirm === 'unlinked' && (
       <MetaItem key="g" className="text-ink-subtle">
         Goal なし
       </MetaItem>
@@ -197,7 +208,7 @@ function PlannedRow({
         今週から外す
       </MenuItem>
     ),
-    stage !== 'pick' && (
+    stage !== 'pick' && canLink && (
       <MenuItem
         key="link"
         onClick={() =>
@@ -217,7 +228,28 @@ function PlannedRow({
       metadata={
         meta.length > 0 ? <TaskMetadata>{meta}</TaskMetadata> : undefined
       }
-      estimate={<Estimate value={value} planned={value.base !== 'none'} />}
+      estimate={
+        // A value from a suggestion shows where it came from (DESIGN.md
+        // Estimate: 「提案 3–5h / 今回は 5h で計画」). The preview is solid.
+        <span className="flex flex-wrap items-center justify-end gap-2">
+          {value.base === 'suggestion' &&
+            suggestion !== undefined &&
+            (suggestion.lo !== value.lo ||
+              suggestion.hi !== value.hi ||
+              recurring) && (
+              <Estimate
+                value={{
+                  base: 'suggestion',
+                  lo: suggestion.lo,
+                  hi: suggestion.hi,
+                  criterionApplied: false,
+                  computedAt: value.computedAt,
+                }}
+              />
+            )}
+          <Estimate value={value} planned={value.base !== 'none'} />
+        </span>
+      }
       actions={
         menuItems.length > 0 ? (
           <Menu>

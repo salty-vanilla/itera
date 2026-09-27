@@ -293,3 +293,123 @@ describe('Planning — 確定', () => {
     ).toBeTruthy();
   });
 });
+
+describe('Planning — review fixes', () => {
+  it('danger only when even the lower end is over; a possible overrun is a warning', async () => {
+    await renderAt('/sprint?fixture=planning-check&stage=check');
+    const outlook = screen.getByRole('complementary', { name: '時間の見通し' });
+    const line = () =>
+      outlook.querySelector<HTMLElement>(
+        '[data-slot="capacity-bar"] [data-over]',
+      );
+    expect(line()?.dataset.over).toBe('mayExceed');
+    expect(line()?.className).toContain('border-warning');
+    expect(line()?.className).not.toContain('danger');
+    const hours = within(outlook).getByRole('textbox', { name: /可用時間/ });
+    await userEvent.clear(hours);
+    await userEvent.type(hours, '14{Enter}');
+    expect(line()?.dataset.over).toBe('exceeds');
+    expect(line()?.className).toContain('border-danger');
+  });
+
+  it('counts a linked Task in an Area without a Goal as not linked, as confirming will', async () => {
+    await renderAt('/sprint?fixture=planning-shape&stage=shape');
+    await userEvent.click(
+      within(backlogPane()).getByRole('checkbox', {
+        name: '今週に入れる: TypeScript 6 の変更点を読む',
+      }),
+    );
+    const study = within(planPane()).getByRole('region', { name: /学習/ });
+    const row = within(study)
+      .getByText('TypeScript 6 の変更点を読む')
+      .closest('[data-slot="task-row"]');
+    expect(row?.textContent).toContain('Goal なし');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Sprint 2 を確定' }),
+    );
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Sprint 2 を確定しますか？',
+    });
+    // 住民税 (unlinked), 英語の多読・部屋の掃除 (recurring, unlinked) and
+    // TypeScript (linked, but 学習 has no Goal).
+    expect(dialog.textContent).toContain('（うち Goal に紐づかない 4件）');
+  });
+
+  it('shows the suggestion a planned value came from', async () => {
+    await renderAt('/sprint?fixture=planning-check&stage=check');
+    const research = within(planPane()).getByRole('region', { name: /研究/ });
+    const row = within(research)
+      .getByText('関連論文を 3 本読む')
+      .closest('[data-slot="task-row"]');
+    expect(row?.textContent).toContain('提案 3–5h');
+    expect(row?.textContent).toContain('計画 5h');
+  });
+
+  it('explains the criterion’s effect from the domain (invariant 39)', async () => {
+    await renderAt('/sprint?fixture=planning-check&stage=check');
+    const outlook = screen.getByRole('complementary', { name: '時間の見通し' });
+    expect(
+      within(outlook).getByText(
+        '研究の推定タスク 1件を上限で計画値にしています（合計の下限 +2h）。',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('a Task completed during Planning blocks 確定 with a reason until it leaves the week', async () => {
+    await renderAt(
+      '/sprint?fixture=planning-check&stage=check&task=task-onboarding',
+    );
+    const detail = await screen.findByRole('dialog');
+    await userEvent.click(
+      within(detail).getByRole('button', { name: '完了にする' }),
+    );
+    const confirm = screen.getByRole('button', { name: 'Sprint 2 を確定' });
+    expect(
+      confirm.getAttribute('aria-disabled') ??
+        confirm.getAttribute('data-disabled'),
+    ).not.toBeNull();
+    expect(
+      screen.getByText(
+        '完了・アーカイブした Task を今週から外すと確定できます。',
+      ),
+    ).toBeTruthy();
+    const work = within(planPane()).getByRole('region', { name: /仕事/ });
+    expect(work.textContent).toContain('完了済み');
+    await userEvent.click(
+      within(work).getByRole('button', {
+        name: '操作: 新メンバーのオンボーディング資料',
+      }),
+    );
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: '今週から外す' }),
+    );
+    expect(
+      screen.queryByText(
+        '完了・アーカイブした Task を今週から外すと確定できます。',
+      ),
+    ).toBeNull();
+  });
+
+  it('confirming copies what may change later (invariants 16, 18; MVP 16)', async () => {
+    await renderAt('/sprint?fixture=planning-check&stage=check');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Sprint 2 を確定' }),
+    );
+    const dialog = await screen.findByRole('dialog');
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: 'Sprint 2 を確定' }),
+    );
+    const sprint = lastSnapshot().records.sprints.find(
+      (s) => s.id === 'sprint-2026-09-28',
+    );
+    expect(sprint).toMatchObject({
+      state: 'active',
+      plannedAvailableHours: 17,
+    });
+    expect(sprint?.goals.map((g) => [g.text, g.plannedText])).toEqual([
+      ['先行研究を押さえる', '先行研究を押さえる'],
+      ['API 設計のレビューを終える', 'API 設計のレビューを終える'],
+    ]);
+    expect(sprint?.tasks.every((t) => t.planSnapshot !== undefined)).toBe(true);
+  });
+});

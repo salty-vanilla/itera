@@ -18,6 +18,8 @@ type GoalBlockProps = {
   /** 「3件 · 8–10h」 */
   summary?: string | undefined;
   goal?: string | undefined;
+  /** The heading level; the screen's h1 is followed by h2 by default. */
+  level?: 2 | 3 | undefined;
   /** Saves the text; an empty text removes the Goal. Returns success. */
   onSave?: ((text: string) => boolean) | undefined;
   children?: ReactNode;
@@ -28,10 +30,12 @@ function GoalBlock({
   area,
   summary,
   goal,
+  level = 2,
   onSave,
   children,
   className,
 }: GoalBlockProps) {
+  const Heading = level === 2 ? 'h2' : 'h3';
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(goal ?? '');
   const headingId = useId();
@@ -58,7 +62,7 @@ function GoalBlock({
       )}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 id={headingId} className="flex items-center gap-2">
+        <Heading id={headingId} className="flex items-center gap-2">
           <AreaIndicator
             name={area.name}
             color={area.color}
@@ -67,7 +71,7 @@ function GoalBlock({
           {summary !== undefined && (
             <span className="text-meta text-ink-muted">{summary}</span>
           )}
-        </h3>
+        </Heading>
         {onSave !== undefined && !editing && goal !== undefined && (
           <Button
             ref={openRef}

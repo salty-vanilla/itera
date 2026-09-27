@@ -562,14 +562,10 @@ export function confirmSprint(
         `Task ${task.id} is ${task.lifecycle}; unselect it before confirming.`,
       );
     }
-    const hasGoal =
-      task.areaId !== undefined &&
-      sprint.goals.some((g) => g.areaId === task.areaId);
     planned.push({
       ...sprintTask,
       outcome: 'planned',
-      goalLink:
-        sprintTask.goalLink === 'linked' && hasGoal ? 'linked' : 'unlinked',
+      goalLink: goalLinkAtConfirm(sprint, sprintTask, task),
       planSnapshot: planSnapshotOf(task, sprintTask, criterion, ctx),
     });
   }
@@ -614,6 +610,23 @@ export function confirmSprint(
       ...(criterionUse === undefined ? {} : { criterion: criterionUse }),
     },
   ]);
+}
+
+/**
+ * The goalLink a draft will have once the Sprint is confirmed: linked only
+ * if it is linked now and its Area has a Goal; a Task without an Area, or
+ * in an Area without a Goal, becomes unlinked. `confirmSprint` uses this,
+ * and so should anything that tells the person what confirming will do.
+ */
+export function goalLinkAtConfirm(
+  sprint: Sprint,
+  sprintTask: SprintTask,
+  task: Task,
+): GoalLink {
+  const hasGoal =
+    task.areaId !== undefined &&
+    sprint.goals.some((g) => g.areaId === task.areaId);
+  return sprintTask.goalLink === 'linked' && hasGoal ? 'linked' : 'unlinked';
 }
 
 /**
