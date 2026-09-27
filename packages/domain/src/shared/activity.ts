@@ -179,6 +179,8 @@ export type Activity =
         | 'todayStarted'
         | 'todayDone'
         | 'todayDoneUndone'
+        /** The selection a Backlog completion made, removed by its undo (F29). */
+        | 'todayBacklogCompletionUndone'
         | 'todayPaused'
         | 'todayDeferred'
         | 'todayRemoved'

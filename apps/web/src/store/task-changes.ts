@@ -10,6 +10,7 @@ import {
   changeRuleForNextSprint,
   completeFromBacklog,
   completeTask,
+  undoCompleteFromBacklog,
   createRuleForNextSprint,
   createTask,
   noteAreaInSprint,
@@ -176,6 +177,28 @@ export function complete(taskId: TaskId): Change {
         ctx,
       ),
       (next) => ({ sprints: [next.sprint], tasks: [next.task] }),
+    );
+  };
+}
+
+/**
+ * 完了を元に戻す, right after 完了にする in the Backlog (F29): back to how
+ * it was, including the Sprint and today's selection.
+ */
+export function undoComplete(taskId: TaskId): Change {
+  return (records, ctx) => {
+    const task = find(records.tasks, taskId, 'Task');
+    if (!task.ok) return task;
+    return changed(
+      undoCompleteFromBacklog(
+        activeSprint(records),
+        { task: task.value, date: ctx.today },
+        ctx,
+      ),
+      (next) => ({
+        tasks: [next.task],
+        ...(next.sprint === undefined ? {} : { sprints: [next.sprint] }),
+      }),
     );
   };
 }

@@ -86,12 +86,15 @@ function TaskDetail({
   areas,
   timeZone,
   onClose,
+  onComplete,
 }: {
   item: BacklogItem;
   /** The Areas to choose from, in the person's order. */
   areas: BacklogData['areas'];
   timeZone: BacklogData['timeZone'];
   onClose: () => void;
+  /** 完了にする: the screen closes the detail and leaves the undo line. */
+  onComplete: () => void;
 }) {
   const actions = useTaskActions();
   const { task } = item;
@@ -329,7 +332,7 @@ function TaskDetail({
               {facts.canComplete && (
                 <Button
                   onClick={() => {
-                    if (actions.completeTask(task.id)) onClose();
+                    onComplete();
                   }}
                 >
                   完了にする

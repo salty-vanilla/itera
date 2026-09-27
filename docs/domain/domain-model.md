@@ -37,7 +37,7 @@ v0.2 Final は v0.1 の骨格（恒久的な **Task** と、「この Sprint で
 
 ### v0.2 Final で決めたこと
 
-F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F11 は同じ日に、`packages/domain` の実装で見つかった食い違いについて決めた（Issue #20）。F12 も同じ日に決めた（Issue #21）。F13〜F16 も同じ日に、Sprint と Planning の実装で出た境界の場合について決めた（Issue #22）。F17〜F19 も同じ日に、Today の実装で出た境界の場合について決めた（Issue #23）。F20〜F24 も同じ日に、Review と Retro の実装で出た境界の場合について決めた（Issue #24）。F25〜F27 も同じ日に、Backlog の画面の実装で出た表示と操作について決めた（Issue #39）。
+F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F11 は同じ日に、`packages/domain` の実装で見つかった食い違いについて決めた（Issue #20）。F12 も同じ日に決めた（Issue #21）。F13〜F16 も同じ日に、Sprint と Planning の実装で出た境界の場合について決めた（Issue #22）。F17〜F19 も同じ日に、Today の実装で出た境界の場合について決めた（Issue #23）。F20〜F24 も同じ日に、Review と Retro の実装で出た境界の場合について決めた（Issue #24）。F25〜F27 も同じ日に、Backlog の画面の実装で出た表示と操作について決めた（Issue #39）。F28・F29 も同じ日に、Backlog の実装の後に残った点について決めた（Issue #47）。
 
 | # | 決定 | モデルへの反映 | UI への影響 |
 | --- | --- | --- | --- |
@@ -68,6 +68,8 @@ F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F
 | F25 | Sprint の番号は作成順の通し番号 | 「Sprint 14」の番号は保存せず、本人の Sprint を作成順に並べた位置（1 から）として派生させる。Sprint は重ならず、新しい Sprint はそれまでのどの Sprint よりも後に始まる（不変条件 11）ので、作成順は開始日の順と同じで、番号は変わらない | 持ち越し「（Sprint 13から）」、Sprint Header の「Sprint 14」 |
 | F26 | 持ち越し回数は、持ち越しから選び直した後も数える | Task の持ち越し回数は、最新の SprintTask の carriedFrom の連なりの数に、その SprintTask 自身が CarriedOver なら 1 を足したもの（派生）。持ち越しから選び直して今の Sprint にある間も回数を保つ。持ち越しを使わずに選び直すと 0 から数え直す | Backlog：切り口「持ち越し」は回数が 1 以上の Task。行に「持ち越し N回（Sprint M から）」 |
 | F27 | 提案の採用は、直後に元に戻せる | EstimateSuggestion に 採用 → 提示中（採用を元に戻す）を足す。Estimate を採用前の値（なければ空）に戻し、Activity に残す。Estimate がその採用のままで、ほかに提示中の提案がないときだけ（提示中は 1 つまで） | Backlog・Planning の Task 詳細：採用後の 1 行に「元に戻す」 |
+| F28 | 今日を含む Sprint がない日の「期限が近い」は、その週の終わりまで | 「期限が近い」は今日から今日を含む Sprint の終わりまで（#39 のオーナー決定）。Review に入った日や最初の Sprint の前など、今日を含む Sprint がない日は、User の週の始まりから数えたその週の終わりまでとする（派生） | Backlog：Retro の日にも「期限が近い」が空にならない |
+| F29 | Backlog からの完了は、直後に元に戻せる | Backlog の「完了にする」を取り消すと、完了前の状態に戻す。Task は Active に、今の Sprint の SprintTask は Planned に戻る。完了の操作で作った今日の選択（origin = Backlog からの完了）は、完了前には無かったので記録ごと消す。完了前からあった選択は、完了の取り消しと同じく元の状態（Selected、または F17 で閉じていた状態）に戻す。完了と取り消しは Activity に残る | Backlog：完了した行の位置に「完了にしました」の 1 行と「元に戻す」を残す（Toast にはしない） |
 
 ### 用語
 
@@ -117,7 +119,7 @@ Task は User に属し、Backlog はそのうち active なものを並べた�
 | SprintGoal（E） | Sprint × Area の「今週どうなっていたいか」 | area、plannedText（確定時）、text（現在）、selfAssessment（できた / 一部できた / できなかった / 判断しない / 未判定） | Sprint。Area を参照 | 確定後の文の変更履歴、自己判定 |
 | SprintTask（E） | Task をこの Sprint で扱うこと（参加レコード） | task、occurrences（繰り返しのみ）、origin（planning / midSprint）、addedAt、goalLink（linked / unlinked）、planSnapshot、outcome、carriedFrom | Sprint。Task・Occurrence を参照 | 追加の日時と経路、goalLink の変更、計画値、結果 |
 | PlanningValue（VO） | 今回の時間判断に使う値 | lo、hi、base（Estimate / 提案 / サブタスク合計 / なし）、unestimatedSubtasks（サブタスク合計のとき、未見積のサブタスクの件数）、criterionApplied、computedAt | SprintTask の planSnapshot | 作成時に固定（計画分は確定時、追加分は追加時） |
-| DailySelection（E） | ある日に、ある SprintTask（またはその回）を「今日やる」と選んだこと | date、origin（手動 / 当日の繰り返し / Sprint 中の追加 / Backlog からの完了）、selectedAt、startedAt、resolution（Done / Paused / Deferred / Removed / Skipped / Unresolved）、resolvedAt、closedBefore（F17：その日に閉じた後に完了したとき、元の閉じた状態と日時） | Sprint。SprintTask・Occurrence を参照 | すべて残す |
+| DailySelection（E） | ある日に、ある SprintTask（またはその回）を「今日やる」と選んだこと | date、origin（手動 / 当日の繰り返し / Sprint 中の追加 / Backlog からの完了）、selectedAt、startedAt、resolution（Done / Paused / Deferred / Removed / Skipped / Unresolved）、resolvedAt、closedBefore（F17：その日に閉じた後に完了したとき、元の閉じた状態と日時） | Sprint。SprintTask・Occurrence を参照 | すべて残す（例外：Backlog からの完了で作った選択は、その完了を取り消すと消える。F29。完了と取り消しは Activity に残る） |
 | ActualTime（VO） | 任意の実績時間 | hours、date、via（完了時 / 今日はここまで / 後から）、recordedAt | SprintTask（繰り返しは Occurrence） | 追記のみ。合計がその Sprint の実績 |
 | InterruptNote（E） | 予定外の出来事のメモ。Task ではない | at、text、minutes（任意） | Sprint | そのまま残す |
 | PlanningCriterion（E） | Estimate の幅を計画値にするルール | scope（すべて / 特定の Area）、rangePolicy（下限 / 中央 / 上限）、sourceImprovement、state（Draft / Active / Ended / Replaced）、replacedBy | User。Improvement を参照 | 作成・継続・終了・置換 |
@@ -205,6 +207,7 @@ stateDiagram-v2
   Paused --> Done: その日のうちに完了（F17）
   Deferred --> Done: その日のうちに完了（F17）
   Removed --> Done: その日のうちに完了（F17）
+  Done --> [*]: Backlog からの完了を取り消す（F29。origin = Backlog からの完了のときだけ、記録ごと消す）
 ```
 
 - 1 日 × 1 SprintTask（繰り返しは × 1 Occurrence）に 1 件。翌日に選び直すと新しい DailySelection になる。

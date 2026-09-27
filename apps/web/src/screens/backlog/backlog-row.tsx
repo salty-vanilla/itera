@@ -1,4 +1,5 @@
 import type { LocalDate } from '@itera/domain';
+import { useEffect, useRef } from 'react';
 import { Archive, CircleCheck, Ellipsis, Sun } from 'lucide-react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { IconButton } from '@/components/ui/icon-button';
@@ -69,6 +70,8 @@ type BacklogRowProps = {
   onComplete: () => void;
   onToday: () => void;
   onArchive: () => void;
+  /** Moves focus to the ○, e.g. when the row comes back by 元に戻す. */
+  focusControl?: boolean | undefined;
 };
 
 function BacklogRow({
@@ -79,7 +82,12 @@ function BacklogRow({
   onComplete,
   onToday,
   onArchive,
+  focusControl = false,
 }: BacklogRowProps) {
+  const circleRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (focusControl) circleRef.current?.focus();
+  }, [focusControl]);
   const { task, area, carry, recurrence, thisWeek, value } = item;
   const hasMeta =
     area !== undefined ||
@@ -94,7 +102,11 @@ function BacklogRow({
       onOpen={onOpen}
       control={
         item.canComplete ? (
-          <CompletionCircle title={task.title} onToggle={onComplete} />
+          <CompletionCircle
+            ref={circleRef}
+            title={task.title}
+            onToggle={onComplete}
+          />
         ) : (
           // Keeps the titles aligned; a recurring Task is done in Today.
           <span
