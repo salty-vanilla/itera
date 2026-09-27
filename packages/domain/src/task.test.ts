@@ -24,7 +24,7 @@ describe('Task', () => {
     );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    const task = result.value.value;
+    const task = result.value.record;
     expect(task).toEqual({
       id: 'task-1',
       userId,
@@ -98,6 +98,53 @@ describe('Task', () => {
     expectTypeOf<Task>().not.toHaveProperty('goal');
     expectTypeOf<Task>().not.toHaveProperty('goalId');
     expectTypeOf<Task>().not.toHaveProperty('goalLink');
+  });
+
+  it('invariant 2: Sprint and Today membership are not Task attributes', () => {
+    expectTypeOf<Task>().not.toHaveProperty('today');
+    expectTypeOf<Task>().not.toHaveProperty('sprintId');
+    expectTypeOf<Task>().not.toHaveProperty('inSprint');
+  });
+
+  it('restoring a Task archived from completed makes it active again', () => {
+    const completed = unwrap(completeTask(newTask(), ctx));
+    const archived = unwrap(archiveTask(completed, ctx));
+    const restored = unwrap(restoreTask(archived, ctx));
+    expect(restored.lifecycle).toBe('active');
+    expect(restored).not.toHaveProperty('completedAt');
+    expect(restored).not.toHaveProperty('archivedAt');
+  });
+
+  it('records subtask estimate changes as Activity', () => {
+    const subtaskId = id<'Subtask'>('sub-1');
+    const task = unwrap(
+      addSubtask(newTask(), { id: subtaskId, title: 'a' }, ctx),
+    );
+    const set = setSubtaskEstimate(task, subtaskId, 2, ctx);
+    expect(set.ok && set.value.activities).toEqual([
+      {
+        kind: 'subtaskEstimateChanged',
+        at: ctx.now,
+        actor: 'user',
+        taskId: task.id,
+        subtaskId,
+        from: null,
+        to: 2,
+      },
+    ]);
+    const same = setSubtaskEstimate(unwrap(set), subtaskId, 2, ctx);
+    expect(same.ok && same.value.activities).toEqual([]);
+  });
+
+  it('marking a subtask with its current state changes nothing', () => {
+    const subtaskId = id<'Subtask'>('sub-1');
+    const task = unwrap(
+      addSubtask(newTask(), { id: subtaskId, title: 'a' }, ctx),
+    );
+    expect(setSubtaskDone(task, subtaskId, false, ctx)).toEqual({
+      ok: true,
+      value: { record: task, activities: [] },
+    });
   });
 
   it('completes, undoes completion and archives from completed', () => {
@@ -178,7 +225,7 @@ describe('Task', () => {
     );
     expect(result).toEqual({
       ok: true,
-      value: { value: task, activities: [] },
+      value: { record: task, activities: [] },
     });
   });
 
@@ -187,7 +234,7 @@ describe('Task', () => {
     let task = unwrap(
       addSubtask(newTask(), { id: subtaskId, title: '1 本目' }, ctx),
     );
-    task = unwrap(setSubtaskEstimate(task, subtaskId, 1.5));
+    task = unwrap(setSubtaskEstimate(task, subtaskId, 1.5, ctx));
     expect(task.subtasks[0]).toEqual({
       id: subtaskId,
       title: '1 本目',
@@ -203,7 +250,7 @@ describe('Task', () => {
     task = unwrap(setSubtaskDone(task, subtaskId, false, ctx));
     expect(task.subtasks[0]).not.toHaveProperty('doneAt');
 
-    task = unwrap(setSubtaskEstimate(task, subtaskId, null));
+    task = unwrap(setSubtaskEstimate(task, subtaskId, null, ctx));
     expect(task.subtasks[0]).not.toHaveProperty('estimate');
   });
 
@@ -215,7 +262,7 @@ describe('Task', () => {
     expect(
       addSubtask(task, { id: id('s'), title: 'x', estimate: 0 }, ctx),
     ).toMatchObject({ ok: false });
-    expect(setSubtaskEstimate(task, id('missing'), 1)).toMatchObject({
+    expect(setSubtaskEstimate(task, id('missing'), 1, ctx)).toMatchObject({
       ok: false,
       error: { code: 'notFound' },
     });

@@ -57,6 +57,14 @@ export type Activity =
       readonly subtaskId: SubtaskId;
     })
   | (ActivityBase & {
+      readonly kind: 'subtaskEstimateChanged';
+      readonly taskId: TaskId;
+      readonly subtaskId: SubtaskId;
+      /** Hours before and after; `null` means no estimate. */
+      readonly from: number | null;
+      readonly to: number | null;
+    })
+  | (ActivityBase & {
       readonly kind: 'estimateChanged';
       readonly taskId: TaskId;
       /** Hours before and after; `null` means no Estimate. */

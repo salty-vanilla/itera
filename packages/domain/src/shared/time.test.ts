@@ -6,6 +6,8 @@ import {
   localDate,
   parseInstant,
   parseLocalDate,
+  parseTimeZone,
+  timeZone,
   toLocalDate,
 } from './time';
 
@@ -40,8 +42,37 @@ describe('Instant', () => {
   it('maps to the LocalDate of the user time zone', () => {
     // 23:30 UTC on 9/27 is already 9/28 in Tokyo.
     const at = instant('2026-09-27T23:30:00.000Z');
-    expect(toLocalDate(at, 'Asia/Tokyo')).toBe('2026-09-28');
-    expect(toLocalDate(at, 'UTC')).toBe('2026-09-27');
-    expect(toLocalDate(at, 'America/Los_Angeles')).toBe('2026-09-27');
+    expect(toLocalDate(at, timeZone('Asia/Tokyo'))).toBe('2026-09-28');
+    expect(toLocalDate(at, timeZone('UTC'))).toBe('2026-09-27');
+    expect(toLocalDate(at, timeZone('America/Los_Angeles'))).toBe('2026-09-27');
+  });
+
+  it('maps across a daylight saving change', () => {
+    // US DST starts 2026-03-08 at 02:00 local; 09:30 UTC is 01:30 PST and
+    // 10:30 UTC is 03:30 PDT, the same local day.
+    const la = timeZone('America/Los_Angeles');
+    expect(toLocalDate(instant('2026-03-08T09:30:00.000Z'), la)).toBe(
+      '2026-03-08',
+    );
+    expect(toLocalDate(instant('2026-03-08T10:30:00.000Z'), la)).toBe(
+      '2026-03-08',
+    );
+    expect(toLocalDate(instant('2026-03-09T06:59:59.999Z'), la)).toBe(
+      '2026-03-08',
+    );
+    expect(toLocalDate(instant('2026-03-09T07:00:00.000Z'), la)).toBe(
+      '2026-03-09',
+    );
+  });
+});
+
+describe('TimeZone', () => {
+  it('accepts IANA names and returns an error for unknown ones', () => {
+    expect(parseTimeZone('Asia/Tokyo').ok).toBe(true);
+    expect(parseTimeZone('UTC').ok).toBe(true);
+    expect(parseTimeZone('Mars/Olympus')).toMatchObject({
+      ok: false,
+      error: { code: 'invalidInput' },
+    });
   });
 });

@@ -8,7 +8,7 @@
 export function withOptional<T extends object, K extends keyof T>(
   record: T,
   key: K,
-  value: T[K] | null,
+  value: Exclude<T[K], undefined> | null,
 ): T {
   if (value !== null) return { ...record, [key]: value };
   return omit(record, key);

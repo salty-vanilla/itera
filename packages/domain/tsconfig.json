@@ -1,8 +1,11 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    // No DOM and no Node types: the domain must not reach for either.
+    // Product code only. No DOM (lib ES2023) and no Node types, so browser
+    // and Node APIs are type errors here. Tests are checked separately by
+    // tsconfig.test.json, because vitest's types pull in @types/node.
     "types": []
   },
-  "include": ["src", "vitest.config.ts"]
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts", "src/testing.ts"]
 }

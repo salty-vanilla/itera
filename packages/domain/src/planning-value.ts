@@ -47,7 +47,7 @@ export interface PlanningValueOptions {
 /**
  * The source order is Estimate → presented suggestion → unestimated
  * (invariant 8). A criterion only acts on a range, never on a point
- * Estimate (invariant 9). With `timeBasis = 'subtasks'` only the subtask sum
+ * Estimate or a point suggestion (invariant 9). With `timeBasis = 'subtasks'` only the subtask sum
  * counts and the Task's own Estimate is ignored (invariant 10).
  */
 export function planningValueOf(
@@ -92,7 +92,13 @@ export function planningValueOf(
   }
 
   const criterion = options.criterion;
-  if (criterion !== undefined && criterionCovers(criterion, task)) {
+  // A criterion only acts on a real range; a suggestion with lo = hi is a
+  // point (invariant 9).
+  if (
+    criterion !== undefined &&
+    suggestion.lo < suggestion.hi &&
+    criterionCovers(criterion, task)
+  ) {
     const value = boundValue(suggestion, criterion.rangePolicy);
     return {
       base: 'suggestion',

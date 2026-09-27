@@ -294,14 +294,29 @@ export function setSubtaskEstimate(
   task: Task,
   subtaskId: SubtaskId,
   hours: number | null,
+  ctx: CommandContext,
 ): CommandResult<Task> {
   if (hours !== null && !isPositiveHours(hours)) {
     return err('invalidInput', 'Subtask estimate must be positive hours.');
   }
-  return mapSubtask(task, subtaskId, (s) => [
-    withOptional(s, 'estimate', hours),
-    [],
-  ]);
+  return mapSubtask(task, subtaskId, (s) => {
+    const from = s.estimate ?? null;
+    if (from === hours) return [s, []];
+    return [
+      withOptional(s, 'estimate', hours),
+      [
+        {
+          kind: 'subtaskEstimateChanged',
+          at: ctx.now,
+          actor: ctx.actor,
+          taskId: task.id,
+          subtaskId,
+          from,
+          to: hours,
+        },
+      ],
+    ];
+  });
 }
 
 export function setSubtaskDone(

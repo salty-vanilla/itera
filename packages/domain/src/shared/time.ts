@@ -2,6 +2,7 @@ import { err, ok, type Result } from './result';
 
 declare const localDateBrand: unique symbol;
 declare const instantBrand: unique symbol;
+declare const timeZoneBrand: unique symbol;
 
 /**
  * A calendar day in the user's time zone, as `YYYY-MM-DD`. Sprint days,
@@ -15,8 +16,8 @@ export type LocalDate = string & { readonly [localDateBrand]: true };
  */
 export type Instant = string & { readonly [instantBrand]: true };
 
-/** An IANA time zone name such as `Asia/Tokyo`. */
-export type TimeZone = string;
+/** A valid IANA time zone name such as `Asia/Tokyo`. */
+export type TimeZone = string & { readonly [timeZoneBrand]: true };
 
 /** 0 = Sunday … 6 = Saturday (same as `Date#getUTCDay`). */
 export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -50,6 +51,22 @@ export function parseInstant(value: string): Result<Instant> {
     return err('invalidInput', `No such instant: ${value}`);
   }
   return ok(value as Instant);
+}
+
+export function parseTimeZone(value: string): Result<TimeZone> {
+  try {
+    new Intl.DateTimeFormat('en', { timeZone: value });
+  } catch {
+    return err('invalidInput', `Unknown time zone: ${value}`);
+  }
+  return ok(value as TimeZone);
+}
+
+/** For literals in tests and fixtures. Throws on a malformed value. */
+export function timeZone(value: string): TimeZone {
+  const result = parseTimeZone(value);
+  if (!result.ok) throw new Error(result.error.message);
+  return result.value;
 }
 
 /** For literals in tests and fixtures. Throws on a malformed value. */

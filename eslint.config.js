@@ -43,10 +43,15 @@ export default defineConfig(
     languageOptions: { globals: globals.node },
   },
   {
-    // packages/domain: pure TypeScript. The current time and randomness come
-    // in as arguments (.claude/rules/domain.md). No browser or Node globals
-    // are declared, so `no-undef`-style type errors also catch those APIs.
+    // packages/domain product code: pure TypeScript. The current time,
+    // randomness and IDs come in as arguments (.claude/rules/domain.md).
+    // packages/domain/tsconfig.json also leaves out DOM and Node types, so
+    // those APIs are type errors; these rules are the second line.
     files: ['packages/domain/src/**/*.ts'],
+    ignores: [
+      'packages/domain/src/**/*.test.ts',
+      'packages/domain/src/testing.ts',
+    ],
     rules: {
       'no-restricted-properties': [
         'error',
@@ -70,6 +75,42 @@ export default defineConfig(
         {
           selector: "CallExpression[callee.name='Date'][arguments.length=0]",
           message: 'Take the current time as an argument.',
+        },
+      ],
+      'no-restricted-globals': [
+        'error',
+        ...[
+          'globalThis',
+          'window',
+          'self',
+          'document',
+          'navigator',
+          'localStorage',
+          'sessionStorage',
+          'fetch',
+          'process',
+          'Buffer',
+          'require',
+          'crypto',
+          'performance',
+          'setTimeout',
+          'setInterval',
+          'queueMicrotask',
+          'structuredClone',
+        ].map((name) => ({
+          name,
+          message: 'packages/domain is pure: take it as an argument.',
+        })),
+      ],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '^node:',
+              message: 'packages/domain must not depend on Node.',
+            },
+          ],
         },
       ],
     },

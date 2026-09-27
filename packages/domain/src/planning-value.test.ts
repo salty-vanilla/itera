@@ -232,6 +232,54 @@ describe('PlanningValue', () => {
     expect(value).toMatchObject({ lo: 3, hi: 3, criterionApplied: true });
   });
 
+  it('invariant 9: an Area-scoped criterion does not cover a Task without an Area', () => {
+    const task = unwrap(updateTask(withSuggestion(), { areaId: null }, ctx));
+    const value = planningValueOf(task, {
+      now: ctx.now,
+      criterion: researchToHi,
+    });
+    expect(value).toMatchObject({ lo: 3, hi: 5, criterionApplied: false });
+  });
+
+  it('invariant 9: a suggestion with lo = hi is a point, so the criterion does not act', () => {
+    const task = unwrap(
+      presentSuggestion(
+        unwrap(updateTask(newTask(), { areaId: research }, ctx)),
+        { id: id('sug-p'), lo: 2, hi: 2, rationale: '', uncertainties: [] },
+        ctx,
+      ),
+    );
+    const value = planningValueOf(task, {
+      now: ctx.now,
+      criterion: researchToHi,
+    });
+    expect(value).toMatchObject({
+      base: 'suggestion',
+      lo: 2,
+      hi: 2,
+      criterionApplied: false,
+    });
+  });
+
+  it('invariants 9 and 10: the subtask sum is a point, so the criterion does not act', () => {
+    let task = unwrap(
+      updateTask(newTask(), { areaId: research, timeBasis: 'subtasks' }, ctx),
+    );
+    task = unwrap(
+      addSubtask(task, { id: id('s1'), title: 'a', estimate: 2 }, ctx),
+    );
+    const value = planningValueOf(task, {
+      now: ctx.now,
+      criterion: researchToHi,
+    });
+    expect(value).toMatchObject({
+      base: 'subtasks',
+      lo: 2,
+      hi: 2,
+      criterionApplied: false,
+    });
+  });
+
   it('invariant 10: with timeBasis = subtasks only the subtask sum counts', () => {
     let task = unwrap(setEstimate(newTask(), 10, ctx));
     task = unwrap(

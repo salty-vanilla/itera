@@ -31,10 +31,10 @@ Itera のドメインロジック。`docs/domain/domain-model.md`（v0.2 Final�
 | --- | --- | --- |
 | `LocalDate` | `YYYY-MM-DD`（利用者のタイムゾーンでの暦日） | Sprint の日、Today、期限、回の予定日 |
 | `Instant` | UTC の ISO 8601、ミリ秒つき（`2026-09-28T00:30:00.000Z`） | 作成・変更・完了などの日時、Activity の `at` |
-| `TimeZone` | IANA 名（`Asia/Tokyo`） | `User.timeZone` |
+| `TimeZone` | IANA 名（`Asia/Tokyo`） | `User.timeZone`（`parseTimeZone` で検証してから使う） |
 
 - どちらも型を区別した文字列。文字列の比較がそのまま時間の前後になる。JSON にそのまま入り、fixture で読める。
-- 外から来た値は `parseLocalDate` / `parseInstant` で検証する。テストと fixture のリテラルは `localDate()` / `instant()`（不正なら例外）。
+- 外から来た値は `parseLocalDate` / `parseInstant` / `parseTimeZone` で検証する。テストと fixture のリテラルは `localDate()` / `instant()` / `timeZone()`（不正なら例外）。
 - 日時から「どの日か」は `toLocalDate(instant, timeZone)` で求める（`Intl.DateTimeFormat` を使う）。日付の加算は `addDays`、曜日は `dayOfWeek`（0 = 日曜、`User.weekStartsOn` と同じ）。
 - Temporal は使わない。TypeScript 6.0 の `lib: ES2023` に型がなく、対応ブラウザも揃っていないため。
 
@@ -42,6 +42,7 @@ Itera のドメインロジック。`docs/domain/domain-model.md`（v0.2 Final�
 
 - ID は型を区別した文字列（`TaskId`、`AreaId` など。`Id<'Task'>`）。
 - ID はパッケージの外（UI・API・fixture）で作り、コマンドの入力で渡す。パッケージは乱数に依存しない。境界では `id()` で型をつける。
+- 作る記録の数が入力だけでは決まらない操作（#21 の回の生成など）は、ID を作る関数を入力で受け取る（例：`newOccurrenceId: () => OccurrenceId`）。
 
 ### コマンド
 
@@ -54,13 +55,14 @@ interface CommandContext {
 }
 
 type CommandResult<T> =
-  | { ok: true; value: { value: T; activities: readonly Activity[] } }
+  | { ok: true; value: { record: T; activities: readonly Activity[] } }
   | { ok: false; error: { code: DomainErrorCode; message: string } };
 ```
 
 - ルール違反（不正な入力、状態図にない遷移、繰り返しの Task の完了など）は例外にせず、`ok: false` と安定した `code` で返す。`message` は開発者向けで、画面の文言には使わない。
 - 成功したときは新しい記録と、追記する Activity を返す。何も変わらない操作は Activity を返さない。
 - 渡された記録は書き換えない。新しいオブジェクトを返す。
+- 複数の記録を同時に変える操作（#22 の確定、#23 の Backlog からの完了など）は、`T` を変えた記録をまとめたオブジェクトにする（例：`CommandResult<{ task: Task; sprintTask: SprintTask; dailySelection: DailySelection }>`）。途中の状態は返さない。
 
 ### 記録と履歴
 
@@ -74,7 +76,9 @@ type CommandResult<T> =
 - **Backlog の既定の並び**は作成順（同時刻なら ID 順）。優先度は既定の並びにしない（不変条件 5）。
 - **提示中の提案**は Task に 1 つまで。新しい提案を出すと、前の提案は `replaced` になる。
 - **中央で採用**したときの Estimate は下限と上限の平均。
-- **サブタスク合計**は見積りのあるサブタスクだけを足す。1 つもなければ未見積。完了したサブタスクも足す。Subtask の見積りは点の値なので、合計も点になり、計画基準は当たらない（不変条件 9 の「幅のあるサブタスク合計」は、今のモデルでは生じない）。
+- **Estimate を同じ時間で入れ直した**ときは何も変えない（採用で 5h になったあとに手で 5h と入れても、`source` は採用のまま）。値が変わったときだけ記録する。
+- **下限と上限が同じ提案**は点として扱い、計画基準を当てない（不変条件 9）。
+- **サブタスク合計**は見積りのあるサブタスクだけを足す。1 つもなければ未見積。完了したサブタスクも足す。Subtask の見積りは点の値なので、合計も点になり、計画基準は当たらない（不変条件 9 の「幅のあるサブタスク合計」は、今のモデルでは生じない）。一部のサブタスクが未見積のときの見せ方と、不変条件 9 の文言は、オーナーに確認中（#20 の PR）。
 - **計画基準**はこのパッケージでは `CriterionPolicy`（対象と `rangePolicy`）として受け取る。状態遷移と CriterionUse は #22・#24。
 
 ## 対象外（この Issue）
@@ -92,4 +96,9 @@ PlanProposal（不変条件 41）は、外部 Agent を MVP に含めるかが P
 | `src/planning-value.ts` | 計画値の計算と合計 |
 | `src/backlog.ts` | Backlog のビュー |
 
-テストは同じ場所の `*.test.ts`。不変条件のテストは名前に番号を入れる（`invariant 7: ...`）。
+テストは同じ場所の `*.test.ts`。不変条件のテストは名前に番号を入れる（`invariant 7: ...`）。Scenario A〜C のシナリオテストは Sprint と Today が必要なので、#22〜#24 で書く。
+
+## 純粋さの検査
+
+- `tsconfig.json` は本体のコードだけを対象にし、`types: []` と `lib: ES2023` で Node と DOM の型を入れない。テスト（vitest の型が `@types/node` を読み込む）は `tsconfig.test.json` で別に検査する。`typecheck` script は両方を実行する。
+- ルートの `eslint.config.js` が、本体のコードで `Date.now()`・引数なしの `Date`・`Math.random()`・Node やブラウザのグローバル・`node:` の import を禁止する。

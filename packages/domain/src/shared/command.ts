@@ -11,15 +11,15 @@ export interface CommandContext {
 
 /** The new record plus the Activity entries to append. */
 export interface Applied<T> {
-  readonly value: T;
+  readonly record: T;
   readonly activities: readonly Activity[];
 }
 
 export type CommandResult<T> = Result<Applied<T>>;
 
 export function applied<T>(
-  value: T,
+  record: T,
   activities: readonly Activity[],
 ): CommandResult<T> {
-  return ok({ value, activities });
+  return ok({ record, activities });
 }
