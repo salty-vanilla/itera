@@ -1,6 +1,6 @@
 # Agent 環境
 
-更新：2026-09-26。対象：macOS / Linux（arm64・x64）。Claude Code を主に使う。
+更新：2026-09-27。対象：macOS / Linux（arm64・x64）。Claude Code を主に使う。
 
 ## 構成
 
@@ -10,11 +10,12 @@
 | `CLAUDE.md` | `@AGENTS.md` を読み込み、Claude Code 固有の事項だけを足す |
 | `.claude/rules/` | ファイルの場所ごとのルール（`apps/web/**`、`packages/domain/**`、正本文書） |
 | `.claude/agents/` | ハーネスの subagent（`harness-reviewer`、`harness-planner`）と、Impeccable の上流が同梱する subagent（`impeccable-asset-producer`、`impeccable-finish-reviewer`、`impeccable-manual-edit-applier`） |
-| `.claude/hooks/` | 読み取り専用の subagent の Bash を、読み取り用コマンドの許可リストに限る hook（`read-only-bash.mjs`）。シェルの小さな部分集合だけを字句解析し、それ以外は止める。完全な隔離ではない。回帰テストは `pnpm agent:hooks:test`。subagent の frontmatter の hook は、このフォルダを信頼（workspace trust）してから有効になる |
-| `.claude/settings.json` | 共有の permission 設定 |
+| `.claude/hooks/` | セッション開始時に direnv の環境を Bash へ読み込む hook（`session-env.sh`）と、読み取り専用の subagent の Bash を、読み取り用コマンドの許可リストに限る hook（`read-only-bash.mjs`）。`read-only-bash.mjs` はシェルの小さな部分集合だけを字句解析し、それ以外は止める。完全な隔離ではない。回帰テストは `pnpm agent:hooks:test`。subagent の frontmatter の hook は、このフォルダを信頼（workspace trust）してから有効になる |
+| `.claude/settings.json` | 共有の permission 設定と SessionStart hook |
 | `.agents/skills/` | Skill の正本。`.claude/skills` はここへのシンボリックリンク |
 | `tooling/agents/` | Agent 用 CLI（Playwright CLI、shadcn）の固定版と専用 lockfile、Skill の出典台帳 `sources.json` |
-| `.tools/agents/` | checkout ごとに生成するバイナリ・ブラウザ・キャッシュ。Git 管理外 |
+| `.tools/agents/` | checkout ごとに生成するバイナリとキャッシュ。Git 管理外 |
+| `~/Library/Caches/itera/ms-playwright`（Linux は `${XDG_CACHE_HOME:-~/.cache}/itera/ms-playwright`） | Agent 用ブラウザ。このリポジトリのすべての checkout で共有する。`PLAYWRIGHT_BROWSERS_PATH`（絶対パス）で置き場を変えられる |
 | `.playwright/cli.config.json` | Agent 用 Chromium の設定。個人の Chrome プロファイルを使わない |
 
 
@@ -43,16 +44,19 @@ Node は `.node-version` の 26 系、pnpm は `package.json` の固定版を使
 
 ```sh
 direnv allow .
-bash tooling/setup.sh          # 依存のインストール、lefthook の導入、pnpm agent:setup
+bash tooling/setup.sh          # 依存のインストール、lefthook の導入、pnpm agent:setup、Agent 用ブラウザの導入
 pnpm agent:doctor
-pnpm agent:browser:install     # 画面を実際に操作して確認する場合
 ```
 
 `agent:setup` は Agent 用 CLI を専用 lockfile から復元し、Impeccable engine を公式リリースから取得して SHA-256 を検証する。書き込み先は `.tools/agents/` だけ。
 
 Devbox を使わない端末では、`.env.local` に `ITERA_NODE_BIN` で Node 26 系の bin ディレクトリを指定する。Devbox を読み込まずにホストの Node を使う場合は `ITERA_SKIP_DEVBOX=1` を設定する。
 
+Agent 用ブラウザ（Playwright の Chromium）は、リポジトリ専用のユーザー単位のキャッシュに置き、すべての checkout で共有する。ブラウザは revision ごとのディレクトリに分かれるので、Playwright の版が違う checkout が同居しても衝突しない。導入済みなら `pnpm agent:browser:install` はダウンロードせずに終わる。Playwright の既定の置き場（`~/Library/Caches/ms-playwright`）を使わないのは、Playwright が導入時に、どの Playwright からも参照されていない revision を削除するため。既定の置き場を共有すると、ほかのプロジェクトが使うブラウザを消してしまう。ブラウザの導入に失敗しても（オフラインなど）setup は警告だけで続ける。画面の確認の前に `pnpm agent:browser:install` を再実行する。
+
 Orca で worktree を作ると、`orca.yaml` の setup が `tooling/setup.sh` を実行する。`.env.local` と UI v0.1 の PDF は `.worktreeinclude` で複製される。
+
+direnv のシェル hook は対話シェルのプロンプトでしか動かないので、Claude Code の Bash（非対話）には `.envrc` の環境が入らない。`.claude/settings.json` の SessionStart hook（`.claude/hooks/session-env.sh`）が `direnv export bash` の結果を `CLAUDE_ENV_FILE` に書き、以降の Bash が固定版の Node と pnpm を使う。direnv が無い、`.envrc` が未許可、Node が `.node-version` の系列でない、pnpm が `package.json` の固定版でない場合は、セッションを止めずに理由を表示する。直したら Claude Code のセッションを開き直す。回帰テストは `pnpm agent:hooks:test`。Codex など Claude Code 以外の Agent には、この hook は効かない。
 
 ## MCP
 

@@ -73,4 +73,3 @@ for (const [name, entry] of Object.entries(manifest.binaries)) {
     await rm(staging, { recursive: true, force: true });
   }
 }
-console.log('Optional browser setup: pnpm agent:browser:install');
