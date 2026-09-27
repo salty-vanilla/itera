@@ -44,6 +44,9 @@ async function renderAt(url: string) {
 const records = () => lastSnapshot().records;
 const task = (id: string) => records().tasks.find((t) => t.id === id);
 const list = () => screen.getByRole('region', { name: 'Task の一覧' });
+// The line left where a completed row was (it has role="status").
+const completedLine = () =>
+  list().querySelector<HTMLElement>('[data-slot="completed-line"]');
 
 describe('Backlog', () => {
   it('Capture: adds a Task by its title alone and keeps the field for the next', async () => {
@@ -192,6 +195,68 @@ describe('Backlog', () => {
       ),
     ).toMatchObject({ resolution: 'done', origin: 'backlogCompletion' });
     expect(within(list()).queryByText('API 設計のレビュー')).toBeNull();
+  });
+
+  it('完了の取り消し（F29）: a Task in the Sprint returns with its Sprint and today', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    const before = records().sprints.find((s) => s.state === 'active');
+    await userEvent.click(
+      screen.getByRole('button', { name: '完了にする: API 設計のレビュー' }),
+    );
+    const line = completedLine();
+    if (line === null) throw new Error('no completed line');
+    expect(line.textContent).toContain(
+      '「API 設計のレビュー」を完了にしました',
+    );
+    // The line sits where the row was: just above the next Task.
+    expect(line.nextElementSibling?.textContent).toContain(
+      '関連論文を 3 本読む',
+    );
+    const undo = within(line).getByRole('button', { name: '元に戻す' });
+    expect(document.activeElement).toBe(undo);
+
+    await userEvent.click(undo);
+    expect(task('task-api-review')?.lifecycle).toBe('active');
+    const sprint = records().sprints.find((s) => s.state === 'active');
+    expect(sprint?.tasks).toEqual(before?.tasks);
+    // The selection the completion made is gone again.
+    expect(sprint?.dailySelections).toEqual(before?.dailySelections);
+    expect(completedLine()).toBeNull();
+    expect(within(list()).getByText('API 設計のレビュー')).toBeTruthy();
+  });
+
+  it('完了の取り消し: a Task outside the Sprint returns to the Backlog', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    await userEvent.click(
+      screen.getByRole('button', { name: '完了にする: 本棚を整理する' }),
+    );
+    expect(task('task-bookshelf')?.lifecycle).toBe('completed');
+    await userEvent.click(
+      within(list()).getByRole('button', { name: '元に戻す' }),
+    );
+    expect(task('task-bookshelf')?.lifecycle).toBe('active');
+  });
+
+  it('the completed line goes with the next operation', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    await userEvent.click(
+      screen.getByRole('button', { name: '完了にする: 本棚を整理する' }),
+    );
+    expect(completedLine()).not.toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: /^期限超過/ }));
+    expect(completedLine()).toBeNull();
+  });
+
+  it('完了 from the detail closes it and leaves the undo line', async () => {
+    await renderAt('/backlog?fixture=backlog-capture&task=task-bookshelf');
+    const detail = await screen.findByRole('dialog');
+    await userEvent.click(
+      within(detail).getByRole('button', { name: '完了にする' }),
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(completedLine()?.textContent).toContain(
+      '「本棚を整理する」を完了にしました',
+    );
   });
 
   it('Recurrence: one row per rule, and a change takes effect from the next Sprint', async () => {

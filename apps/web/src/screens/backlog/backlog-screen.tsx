@@ -1,6 +1,7 @@
 import { id, type AreaId, type BacklogSlice, type TaskId } from '@itera/domain';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Field } from '@/components/ui/field';
 import { Filter, FilterGroup } from '@/components/ui/filter';
@@ -61,11 +62,21 @@ function BacklogScreen() {
   const { areas, items, today } = backlog;
   const open =
     search.task === undefined ? undefined : backlog.item(search.task);
+  // The Task just completed, kept as one line where its row was until the
+  // next operation (patterns.md Backlog › 完了, F29). `before` is the row
+  // it sat above, if any.
+  const [completed, setCompleted] = useState<{
+    taskId: TaskId;
+    title: string;
+    before?: TaskId;
+  }>();
 
-  // `undefined` removes a parameter.
+  // `undefined` removes a parameter. Any change of view is another
+  // operation, so the completed line goes.
   const setSearch = (next: {
     [K in keyof BacklogSearch]?: BacklogSearch[K] | undefined;
-  }) =>
+  }) => {
+    setCompleted(undefined);
     void navigate({
       search: (prev) => {
         const merged = { ...prev, ...next };
@@ -74,8 +85,22 @@ function BacklogScreen() {
         );
       },
     });
+  };
+
+  const completeWithUndo = (taskId: TaskId, title: string) => {
+    const index = items.findIndex((i) => i.task.id === taskId);
+    const before = items[index + 1]?.task.id;
+    if (search.task === taskId) setSearch({ task: undefined });
+    if (!actions.completeTask(taskId)) return;
+    setCompleted({
+      taskId,
+      title,
+      ...(before === undefined ? {} : { before }),
+    });
+  };
 
   const archiveWithUndo = (taskId: TaskId, title: string) => {
+    setCompleted(undefined);
     if (!actions.archiveTask(taskId)) return;
     if (search.task === taskId) setSearch({ task: undefined });
     toast.show({
@@ -136,6 +161,7 @@ function BacklogScreen() {
           onAdd={(title) => {
             const chosen = quickArea ?? search.area ?? '';
             const areaId = chosen === '' ? undefined : id<'Area'>(chosen);
+            setCompleted(undefined);
             return actions.addTask(title, areaId);
           }}
           area={
@@ -163,7 +189,7 @@ function BacklogScreen() {
         >
           {items.length}件
         </p>
-        {items.length === 0 ? (
+        {items.length === 0 && completed === undefined ? (
           <p className="px-4 py-6 text-body text-ink-muted medium:px-6">
             この切り口の Task はありません。
           </p>
@@ -172,19 +198,46 @@ function BacklogScreen() {
             {items.map((item) => {
               const { task } = item;
               return (
-                <li key={task.id}>
-                  <BacklogRow
-                    item={item}
-                    today={today}
-                    current={task.id === open?.task.id}
-                    onOpen={() => setSearch({ task: task.id })}
-                    onComplete={() => actions.completeTask(task.id)}
-                    onToday={() => actions.addToToday(task.id)}
-                    onArchive={() => archiveWithUndo(task.id, task.title)}
-                  />
-                </li>
+                <Fragment key={task.id}>
+                  {completed?.before === task.id && (
+                    <CompletedLine
+                      title={completed.title}
+                      onUndo={() => {
+                        if (actions.undoCompleteTask(completed.taskId)) {
+                          setCompleted(undefined);
+                        }
+                      }}
+                    />
+                  )}
+                  <li>
+                    <BacklogRow
+                      item={item}
+                      today={today}
+                      current={task.id === open?.task.id}
+                      onOpen={() => setSearch({ task: task.id })}
+                      onComplete={() => completeWithUndo(task.id, task.title)}
+                      onToday={() => {
+                        setCompleted(undefined);
+                        actions.addToToday(task.id);
+                      }}
+                      onArchive={() => archiveWithUndo(task.id, task.title)}
+                    />
+                  </li>
+                </Fragment>
               );
             })}
+            {completed !== undefined &&
+              (completed.before === undefined ||
+                !items.some((i) => i.task.id === completed.before)) && (
+                <CompletedLine
+                  title={completed.title}
+                  onUndo={() => {
+                    if (actions.undoCompleteTask(completed.taskId)) {
+                      setCompleted(undefined);
+                    }
+                  }}
+                />
+              )}
           </ul>
         )}
       </section>
@@ -203,11 +256,39 @@ function BacklogScreen() {
               areas={areas}
               timeZone={backlog.timeZone}
               onClose={() => setSearch({ task: undefined })}
+              onComplete={() => completeWithUndo(open.task.id, open.task.title)}
             />
           )}
         </DrawerContent>
       </Drawer>
     </div>
+  );
+}
+
+/**
+ * The line left where a completed row was (F29). Focus moves to 「元に戻す」
+ * so that the row's ○, now gone, does not leave focus nowhere.
+ */
+function CompletedLine({
+  title,
+  onUndo,
+}: {
+  title: string;
+  onUndo: () => void;
+}) {
+  const undoRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => undoRef.current?.focus(), []);
+  return (
+    <li
+      role="status"
+      data-slot="completed-line"
+      className="flex min-h-row-touch flex-wrap items-center gap-x-2 border-b border-border-soft bg-canvas-subtle px-3 py-2 text-body text-ink medium:min-h-row-task"
+    >
+      「{title}」を完了にしました
+      <Button ref={undoRef} size="sm" variant="quiet" onClick={onUndo}>
+        元に戻す
+      </Button>
+    </li>
   );
 }
 

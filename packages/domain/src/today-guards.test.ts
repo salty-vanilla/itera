@@ -23,6 +23,7 @@ import {
   skipSelection,
   startDay,
   startSelection,
+  undoCompleteFromBacklog,
   undoCompleteSelection,
   undoSkipSelection,
 } from './today';
@@ -581,6 +582,93 @@ describe('undo returns to where it was (F17, F19)', () => {
           selectionId: id('sel-1'),
           occurrence: undone.occurrence as Occurrence,
         },
+        ctx,
+      ),
+    ).toMatchObject({ ok: false, error: { code: 'invalidTransition' } });
+  });
+});
+
+describe('F29: undoing a completion from the Backlog', () => {
+  const date = d('2026-09-28');
+
+  it('removes the selection the completion made, and reopens the Task and SprintTask', () => {
+    const before = active();
+    const done = unwrap(
+      completeFromBacklog(
+        before,
+        { task: task1(), date, selectionId: id('sel-b') },
+        ctx,
+      ),
+    );
+    const result = undoCompleteFromBacklog(
+      done.sprint,
+      { task: done.task, date },
+      ctx,
+    );
+    const undone = unwrap(result);
+    expect(undone.task.lifecycle).toBe('active');
+    expect(undone.sprint?.tasks[0]?.outcome).toBe('planned');
+    expect(undone.sprint?.dailySelections).toEqual([]);
+    expect(result.ok && result.value.activities.map((a) => a.kind)).toEqual([
+      'taskCompletionUndone',
+      'sprintTaskDoneUndone',
+      'todayBacklogCompletionUndone',
+    ]);
+  });
+
+  it('puts a selection that was there before back as it was (F17)', () => {
+    const deferred = unwrap(deferSelection(chosen(), sel, ctx));
+    const done = unwrap(
+      completeFromBacklog(
+        deferred,
+        { task: task1(), date, selectionId: id('sel-b') },
+        ctx,
+      ),
+    );
+    const undone = unwrap(
+      undoCompleteFromBacklog(done.sprint, { task: done.task, date }, ctx),
+    );
+    expect(undone.task.lifecycle).toBe('active');
+    expect(undone.sprint?.dailySelections).toMatchObject([
+      { id: 'sel-1', origin: 'manual', resolution: 'deferred' },
+    ]);
+  });
+
+  it('reopens a Task outside the Sprint, and leaves the Sprint alone', () => {
+    const sprint = active([]);
+    const done = unwrap(
+      completeFromBacklog(
+        sprint,
+        { task: task1(), date, selectionId: id('sel-b') },
+        ctx,
+      ),
+    );
+    const undone = unwrap(
+      undoCompleteFromBacklog(done.sprint, { task: done.task, date }, ctx),
+    );
+    expect(undone.task.lifecycle).toBe('active');
+    expect(undone.sprint).toBe(done.sprint);
+    const noSprint = unwrap(
+      undoCompleteFromBacklog(undefined, { task: done.task, date }, ctx),
+    );
+    expect(noSprint).not.toHaveProperty('sprint');
+  });
+
+  it('refuses a Task that is not completed, and a day with no completion', () => {
+    expect(
+      undoCompleteFromBacklog(undefined, { task: task1(), date }, ctx),
+    ).toMatchObject({ ok: false, error: { code: 'invalidTransition' } });
+    const done = unwrap(
+      completeFromBacklog(
+        active(),
+        { task: task1(), date, selectionId: id('sel-b') },
+        ctx,
+      ),
+    );
+    expect(
+      undoCompleteFromBacklog(
+        done.sprint,
+        { task: done.task, date: d('2026-09-29') },
         ctx,
       ),
     ).toMatchObject({ ok: false, error: { code: 'invalidTransition' } });

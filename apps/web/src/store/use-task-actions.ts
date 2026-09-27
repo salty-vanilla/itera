@@ -55,6 +55,7 @@ export function useTaskActions() {
       archiveTask: (taskId: TaskId) => run(changes.archive(taskId)),
       restoreTask: (taskId: TaskId) => run(changes.restore(taskId)),
       completeTask: (taskId: TaskId) => run(changes.complete(taskId)),
+      undoCompleteTask: (taskId: TaskId) => run(changes.undoComplete(taskId)),
       addToToday: (taskId: TaskId) => run(changes.toToday(taskId)),
       /**
        * Makes the Task recurring or changes its rule. `effectiveFrom` is the

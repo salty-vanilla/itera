@@ -601,6 +601,84 @@ export function completeFromBacklog(
   );
 }
 
+export interface UndoCompleteFromBacklogInput {
+  /** The Task completed from the Backlog. */
+  readonly task: Task;
+  /** The day it was completed on, in the user's time zone. */
+  readonly date: LocalDate;
+}
+
+/**
+ * Backlog の「完了にする」を元に戻す (F29). Everything returns to how it
+ * was before the completion:
+ * - a Task outside the Sprint (or with no active Sprint) just reopens;
+ * - if the completion made that day's selection (origin
+ *   backlogCompletion), the Task reopens, the SprintTask is planned again
+ *   and that selection is removed, as it did not exist before;
+ * - if it completed a selection that was already there, that selection
+ *   goes back as 完了を取り消す does (selected, or how it was closed: F17).
+ * The Activity keeps both the completion and its undo.
+ */
+export function undoCompleteFromBacklog(
+  sprint: Sprint | undefined,
+  input: UndoCompleteFromBacklogInput,
+  ctx: CommandContext,
+): CommandResult<{ readonly sprint?: Sprint; readonly task: Task }> {
+  const { task } = input;
+  const sprintTask =
+    sprint?.state === 'active'
+      ? sprint.tasks.find((t) => t.taskId === task.id && t.outcome === 'done')
+      : undefined;
+  if (sprint === undefined || sprintTask === undefined) {
+    const reopened = undoTaskCompletion(task, ctx);
+    if (!reopened.ok) return reopened;
+    return applied(
+      {
+        ...(sprint === undefined ? {} : { sprint }),
+        task: reopened.value.record,
+      },
+      reopened.value.activities,
+    );
+  }
+  const selection = findSelection(sprint, input.date, sprintTask.id, undefined);
+  if (selection === undefined || selection.resolution !== 'done') {
+    return err(
+      'invalidTransition',
+      'No completion from the Backlog on that day to undo.',
+    );
+  }
+  if (selection.origin !== 'backlogCompletion') {
+    const undone = undoCompleteSelection(
+      sprint,
+      { selectionId: selection.id, task },
+      ctx,
+    );
+    if (!undone.ok) return undone;
+    const { sprint: next, task: reopened } = undone.value.record;
+    if (reopened === undefined) return err('invalidInput', 'Task missing.');
+    return applied({ sprint: next, task: reopened }, undone.value.activities);
+  }
+  const reopened = undoTaskCompletion(task, ctx);
+  if (!reopened.ok) return reopened;
+  const planned = withOutcome(sprint, sprintTask.id, 'planned');
+  return applied(
+    {
+      sprint: {
+        ...planned,
+        dailySelections: planned.dailySelections.filter(
+          (s) => s.id !== selection.id,
+        ),
+      },
+      task: reopened.value.record,
+    },
+    [
+      ...reopened.value.activities,
+      sprintTaskActivity('sprintTaskDoneUndone', sprint, sprintTask, ctx),
+      selectionActivity('todayBacklogCompletionUndone', sprint, selection, ctx),
+    ],
+  );
+}
+
 // ---------------------------------------------------------------- records
 
 export interface RecordActualTimeInput {
