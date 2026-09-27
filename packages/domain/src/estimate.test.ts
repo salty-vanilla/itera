@@ -8,6 +8,7 @@ import {
   undoAdoption,
   undoRejection,
 } from './estimate';
+import { planningValueOf } from './planning-value';
 import { id } from './shared/ids';
 import { at, newTask, unwrap } from './testing';
 
@@ -228,5 +229,74 @@ describe('undoRejection (F30)', () => {
     expect(
       undoRejection(again, sug, at('2026-09-28T00:03:00.000Z')),
     ).toMatchObject({ ok: false, error: { code: 'invalidTransition' } });
+  });
+});
+
+describe('F30・F31 boundaries', () => {
+  it('returns notFound for a suggestion the Task does not have', () => {
+    const task = withSuggestion();
+    const other = id<'EstimateSuggestion'>('sug-x');
+    expect(
+      adoptEditedSuggestion(
+        task,
+        { suggestionId: other, hours: 2 },
+        at('2026-09-28T00:01:00.000Z'),
+      ),
+    ).toMatchObject({ ok: false, error: { code: 'notFound' } });
+    expect(
+      undoRejection(task, other, at('2026-09-28T00:01:00.000Z')),
+    ).toMatchObject({ ok: false, error: { code: 'notFound' } });
+  });
+
+  it('F27: an edited adoption is no longer undone once the Estimate is typed over', () => {
+    const edited = unwrap(
+      adoptEditedSuggestion(
+        withSuggestion(),
+        { suggestionId: sug, hours: 2.5 },
+        at('2026-09-28T00:01:00.000Z'),
+      ),
+    );
+    const typed = unwrap(
+      setEstimate(edited, 5, at('2026-09-28T00:02:00.000Z')),
+    );
+    expect(
+      undoAdoption(
+        typed,
+        { suggestionId: sug, previous: null },
+        at('2026-09-28T00:03:00.000Z'),
+      ),
+    ).toMatchObject({ ok: false, error: { code: 'invalidTransition' } });
+  });
+
+  it('invariant 8: after undoing a rejection the suggestion is the planning value again', () => {
+    const now = at('2026-09-28T00:03:00.000Z').now;
+    const rejected = unwrap(
+      rejectSuggestion(withSuggestion(), sug, at('2026-09-28T00:01:00.000Z')),
+    );
+    expect(planningValueOf(rejected, { now }).base).toBe('none');
+    const back = unwrap(
+      undoRejection(rejected, sug, at('2026-09-28T00:02:00.000Z')),
+    );
+    expect(planningValueOf(back, { now })).toMatchObject({
+      base: 'suggestion',
+      lo: 2,
+      hi: 4,
+    });
+  });
+
+  it('invariant 8: an edited adoption makes the Estimate the planning value', () => {
+    const now = at('2026-09-28T00:03:00.000Z').now;
+    const edited = unwrap(
+      adoptEditedSuggestion(
+        withSuggestion(),
+        { suggestionId: sug, hours: 2.5 },
+        at('2026-09-28T00:01:00.000Z'),
+      ),
+    );
+    expect(planningValueOf(edited, { now })).toMatchObject({
+      base: 'estimate',
+      lo: 2.5,
+      hi: 2.5,
+    });
   });
 });

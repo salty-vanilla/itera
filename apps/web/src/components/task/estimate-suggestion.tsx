@@ -3,7 +3,7 @@ import type {
   SuggestionBound,
 } from '@itera/domain';
 import { boundValue } from '@itera/domain';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
@@ -33,6 +33,11 @@ type EstimateSuggestionProps = {
   /** 編集して採用: the person's hours. Returns whether it went through. */
   onAdoptEdited: (hours: number) => boolean;
   onReject: () => void;
+  /**
+   * Focuses the first 採用 button when it appears, e.g. when the suggestion
+   * comes back by 元に戻す, so that focus is not lost.
+   */
+  autoFocus?: boolean | undefined;
   className?: string | undefined;
 };
 
@@ -42,6 +47,7 @@ function EstimateSuggestion({
   onAdopt,
   onAdoptEdited,
   onReject,
+  autoFocus = false,
   className,
 }: EstimateSuggestionProps) {
   const mid = boundValue(suggestion, 'mid');
@@ -50,6 +56,19 @@ function EstimateSuggestion({
   const [hours, setHours] = useState(String(mid));
   const [error, setError] = useState<string>();
   const fieldRef = useRef<HTMLInputElement>(null);
+  const firstRef = useRef<HTMLButtonElement>(null);
+  const editRef = useRef<HTMLButtonElement>(null);
+  // Where focus goes when the inline field closes by キャンセル.
+  const backToEdit = useRef(false);
+  useEffect(() => {
+    if (autoFocus) firstRef.current?.focus();
+  }, [autoFocus]);
+  useEffect(() => {
+    if (!editing && backToEdit.current) {
+      backToEdit.current = false;
+      editRef.current?.focus();
+    }
+  }, [editing]);
 
   function adoptEdited() {
     const value = Number(hours);
@@ -106,7 +125,7 @@ function EstimateSuggestion({
       {editing ? (
         <form
           noValidate
-          className="flex flex-wrap items-start gap-2"
+          className="flex flex-col gap-2"
           onSubmit={(event) => {
             event.preventDefault();
             adoptEdited();
@@ -116,7 +135,6 @@ function EstimateSuggestion({
             label="採用する Estimate（時間）"
             description="提案の値を直して、本人の Estimate にします"
             error={error}
-            className="min-w-0 flex-1"
           >
             <TextInput
               ref={fieldRef}
@@ -128,7 +146,7 @@ function EstimateSuggestion({
               onChange={(e) => setHours(e.currentTarget.value)}
             />
           </Field>
-          <div className="flex gap-2 self-end">
+          <div className="flex gap-2">
             <Button size="sm" type="submit">
               採用
             </Button>
@@ -138,6 +156,7 @@ function EstimateSuggestion({
               onClick={() => {
                 setEditing(false);
                 setError(undefined);
+                backToEdit.current = true;
               }}
             >
               キャンセル
@@ -146,12 +165,27 @@ function EstimateSuggestion({
         </form>
       ) : (
         <div className="flex flex-wrap gap-2">
-          {bounds.map(({ bound, word }) => (
-            <Button key={bound} size="sm" onClick={() => onAdopt(bound)}>
+          {bounds.map(({ bound, word }, index) => (
+            <Button
+              key={bound}
+              ref={index === 0 ? firstRef : undefined}
+              size="sm"
+              onClick={() => onAdopt(bound)}
+            >
               {word} {formatHours(boundValue(suggestion, bound))} を採用
             </Button>
           ))}
-          <Button size="sm" variant="quiet" onClick={() => setEditing(true)}>
+          <Button
+            ref={editRef}
+            size="sm"
+            variant="quiet"
+            onClick={() => {
+              // Always start from the middle of this suggestion.
+              setHours(String(mid));
+              setError(undefined);
+              setEditing(true);
+            }}
+          >
             編集して採用
           </Button>
           <Button size="sm" variant="quiet" onClick={onReject}>
@@ -174,6 +208,9 @@ function SuggestionOutcome({
   children: string;
   onUndo?: (() => void) | undefined;
 }) {
+  // The button that was pressed (採用, 却下) is gone; focus goes to 元に戻す.
+  const undoRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => undoRef.current?.focus(), []);
   return (
     <p
       role="status"
@@ -182,7 +219,7 @@ function SuggestionOutcome({
     >
       {children}
       {onUndo && (
-        <Button size="sm" variant="quiet" onClick={onUndo}>
+        <Button ref={undoRef} size="sm" variant="quiet" onClick={onUndo}>
           元に戻す
         </Button>
       )}

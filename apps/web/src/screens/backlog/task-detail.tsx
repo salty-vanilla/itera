@@ -107,6 +107,8 @@ function TaskDetail({
     due?: string;
   }>({});
   const [outcome, setOutcome] = useState<Outcome>();
+  // After 元に戻す the suggestion comes back and takes the focus.
+  const [suggestionBack, setSuggestionBack] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   // After a failed save, focus goes to the first field in error.
   useEffect(() => {
@@ -189,6 +191,7 @@ function TaskDetail({
       outcome.previous === null ? '' : String(outcome.previous.hours),
     );
     setOutcome(undefined);
+    setSuggestionBack(true);
   }
 
   function onReject() {
@@ -205,6 +208,7 @@ function TaskDetail({
     if (outcome?.kind !== 'rejected') return;
     if (!actions.undoRejection(task.id, outcome.suggestionId)) return;
     setOutcome(undefined);
+    setSuggestionBack(true);
   }
 
   return (
@@ -321,7 +325,9 @@ function TaskDetail({
 
         {suggestion !== undefined && (
           <EstimateSuggestion
+            key={suggestion.id}
             suggestion={suggestion}
+            autoFocus={suggestionBack}
             madeAt={`${formatDate(toLocalDate(suggestion.createdAt, timeZone))} ${formatTime(suggestion.createdAt, timeZone)}`}
             onAdopt={onAdopt}
             onAdoptEdited={onAdoptEdited}

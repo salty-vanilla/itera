@@ -159,6 +159,57 @@ describe('Backlog', () => {
     expect(task('task-interview')?.suggestions.at(-1)?.state).toBe('presented');
   });
 
+  it('編集して採用: checks the value, and focus follows the operation', async () => {
+    await renderAt('/backlog?fixture=backlog-detail&task=task-interview');
+    const detail = await screen.findByRole('dialog');
+    const proposal = () =>
+      within(detail).getByRole('region', { name: 'Agent 提案 · Estimate' });
+    const edit = within(proposal()).getByRole('button', {
+      name: '編集して採用',
+    });
+    await userEvent.click(edit);
+    const field = within(proposal()).getByRole('textbox', {
+      name: /採用する Estimate（時間）/,
+    });
+    expect(document.activeElement).toBe(field);
+    await userEvent.clear(field);
+    await userEvent.type(field, '0');
+    await userEvent.click(
+      within(proposal()).getByRole('button', { name: '採用' }),
+    );
+    expect(
+      within(proposal()).getByText(
+        '0 より大きい数で入力してください（例: 2.5）',
+      ),
+    ).toBeTruthy();
+    expect(document.activeElement).toBe(field);
+    expect(task('task-interview')).not.toHaveProperty('estimate');
+    // キャンセル returns to 編集して採用.
+    await userEvent.click(
+      within(proposal()).getByRole('button', { name: 'キャンセル' }),
+    );
+    expect(document.activeElement).toBe(
+      within(proposal()).getByRole('button', { name: '編集して採用' }),
+    );
+    // Opening again starts from the middle once more.
+    await userEvent.click(
+      within(proposal()).getByRole('button', { name: '編集して採用' }),
+    );
+    expect(
+      within(proposal()).getByRole('textbox', { name: /採用する Estimate/ }),
+    ).toHaveProperty('value', '2.5');
+    await userEvent.click(
+      within(proposal()).getByRole('button', { name: '採用' }),
+    );
+    // Focus moves to 元に戻す, then back to the suggestion after undoing.
+    const undo = within(detail).getByRole('button', { name: '元に戻す' });
+    expect(document.activeElement).toBe(undo);
+    await userEvent.click(undo);
+    expect(document.activeElement).toBe(
+      within(proposal()).getByRole('button', { name: '下限 2h を採用' }),
+    );
+  });
+
   it('F30: a rejection can be undone, and the suggestion is on show again', async () => {
     await renderAt('/backlog?fixture=backlog-detail&task=task-interview');
     const detail = await screen.findByRole('dialog');

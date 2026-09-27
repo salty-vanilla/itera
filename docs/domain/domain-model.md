@@ -149,6 +149,7 @@ Task は User に属し、Backlog はそのうち active なものを並べた�
 | Sprint への参加 | SprintTask.outcome | draft / planned / done / removed / carriedOver |
 | 今日の選択 | DailySelection.resolution | selected / started / done / paused / deferred / removed / skipped / unresolved |
 | 繰り返しの回 | Occurrence.state | projected（保存しない）/ pending / excluded / done / skipped / missed |
+| Estimate の提案 | EstimateSuggestion.state | presented（提示中）/ adopted（採用）/ rejected（却下）/ replaced（置換） |
 | 計画基準 | PlanningCriterion.state | draft / active / ended / replaced |
 | Sprint | Sprint.state | planning / active / review / closed |
 
@@ -234,6 +235,21 @@ stateDiagram-v2
 - Projected は「次は 10/4 (日)」の表示のための計算結果で、保存しない。
 - 生成（Pending 以降）の時点で ruleVersion を固定する。Rule を変えても、確定済みの Sprint の回と SprintTask は動かない。新しい版は、まだ確定していない次の Sprint から効く。その Sprint の Planning（draft）がすでに回を生成していれば、その Task の回（Pending / Excluded）と SprintTask（Draft）を捨てて新しい版で作り直す（F7）。Active な Sprint の途中で変えても、その Sprint の残りの日に新しい版の回は生まれない。
 - Excluded は Planning で外した記録として残るが、通常の Retro 事実（発生した回・完了・スキップ・未処理）には出さない。
+
+### EstimateSuggestion
+
+```mermaid
+stateDiagram-v2
+  [*] --> Presented: 提案を提示（提示中の提案があれば、それは Replaced になる）
+  Presented --> Adopted: 採用（下限・中央・上限）/ 編集して採用（F31）
+  Presented --> Rejected: 却下
+  Presented --> Replaced: 新しい提案の提示
+  Adopted --> Presented: 採用を元に戻す（F27。Estimate がその採用のままのときだけ）
+  Rejected --> Presented: 却下を元に戻す（F30）
+```
+
+- 提示中（Presented）は Task に 1 つまで。元に戻す（F27・F30）は、ほかに提示中の提案がないときだけ。
+- 採用だけが Estimate を変える（不変条件 6）。却下と置換は Estimate を変えない。どの状態でも提案の記録は残す。
 
 ### PlanningCriterion
 
