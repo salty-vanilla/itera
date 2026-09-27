@@ -413,3 +413,51 @@ describe('Planning — review fixes', () => {
     expect(sprint?.tasks.every((t) => t.planSnapshot !== undefined)).toBe(true);
   });
 });
+
+describe('Planning — review fixes (2)', () => {
+  it('a recurring Task archived during Planning can leave the week, and then 確定 is possible', async () => {
+    await renderAt(
+      '/sprint?fixture=planning-check&stage=check&task=task-reading',
+    );
+    const detail = await screen.findByRole('dialog');
+    await userEvent.click(
+      within(detail).getByRole('button', { name: 'アーカイブ' }),
+    );
+    expect(
+      screen.getByText(
+        '完了・アーカイブした Task を今週から外すと確定できます。',
+      ),
+    ).toBeTruthy();
+    const study = within(planPane()).getByRole('region', { name: /学習/ });
+    await userEvent.click(
+      within(study).getByRole('button', { name: '操作: 英語の多読 30 分' }),
+    );
+    await userEvent.click(
+      await screen.findByRole('menuitem', {
+        name: '今週から外す（3回すべて）',
+      }),
+    );
+    expect(draft().tasks.some((t) => t.taskId === 'task-reading')).toBe(false);
+    expect(
+      lastSnapshot()
+        .records.occurrences.filter((o) => o.taskId === 'task-reading')
+        .filter((o) => o.scheduledDate >= '2026-09-28')
+        .map((o) => o.state),
+    ).toEqual(['excluded', 'excluded', 'excluded']);
+    expect(
+      screen.queryByText(
+        '完了・アーカイブした Task を今週から外すと確定できます。',
+      ),
+    ).toBeNull();
+  });
+
+  it('shows the suggestion even when the plan uses its whole range', async () => {
+    await renderAt('/sprint?fixture=planning-check&stage=check');
+    const work = within(planPane()).getByRole('region', { name: /仕事/ });
+    const row = within(work)
+      .getByText('新メンバーのオンボーディング資料')
+      .closest('[data-slot="task-row"]');
+    expect(row?.textContent).toContain('提案 3–5h');
+    expect(row?.textContent).toContain('計画 3–5h');
+  });
+});

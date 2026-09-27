@@ -37,6 +37,12 @@ export function usePlanningActions() {
         run(changes.unchooseByTask(taskIds)),
       setOccurrenceIncluded: (occurrenceId: OccurrenceId, included: boolean) =>
         run(changes.setOccurrenceIncluded(occurrenceId, included)),
+      excludeAllOccurrences: (sprintTaskId: SprintTaskId) =>
+        run(changes.excludeAllOccurrences(sprintTaskId)),
+      includeOccurrences: (occurrenceIds: readonly OccurrenceId[]) =>
+        occurrenceIds.every((id) =>
+          run(changes.setOccurrenceIncluded(id, true)),
+        ),
       addAndChoose: (title: string, areaId?: AreaId) =>
         run(changes.addAndChoose(title, areaId)),
       setGoal: (areaId: AreaId, text: string) =>

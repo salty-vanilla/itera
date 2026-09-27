@@ -191,23 +191,36 @@ function PlannedRow({
   ].filter(Boolean);
 
   const unchoose = () => {
-    if (!actions.unchooseTasks([sprintTask.id])) return;
+    const occurrenceIds = sprintTask.occurrenceIds ?? [];
+    const done = recurring
+      ? actions.excludeAllOccurrences(sprintTask.id)
+      : actions.unchooseTasks([sprintTask.id]);
+    if (!done) return;
     toast.show({
       title: `「${task.title}」を今週から外しました`,
-      action: {
-        label: '元に戻す',
-        onClick: () => actions.chooseTasks([task.id]),
-      },
+      // A completed or archived Task cannot be chosen again, so there is
+      // nothing to undo.
+      ...(inactive === undefined
+        ? {
+            action: {
+              label: '元に戻す',
+              onClick: () =>
+                recurring
+                  ? actions.includeOccurrences(occurrenceIds)
+                  : actions.chooseTasks([task.id]),
+            },
+          }
+        : {}),
     });
   };
 
   const menuItems = [
-    !recurring && (
-      <MenuItem key="out" onClick={unchoose}>
-        <Undo2 aria-hidden />
-        今週から外す
-      </MenuItem>
-    ),
+    <MenuItem key="out" onClick={unchoose}>
+      <Undo2 aria-hidden />
+      {recurring
+        ? `今週から外す（${occurrenceCount}回すべて）`
+        : '今週から外す'}
+    </MenuItem>,
     stage !== 'pick' && canLink && (
       <MenuItem
         key="link"
@@ -232,11 +245,11 @@ function PlannedRow({
         // A value from a suggestion shows where it came from (DESIGN.md
         // Estimate: 「提案 3–5h / 今回は 5h で計画」). The preview is solid.
         <span className="flex flex-wrap items-center justify-end gap-2">
-          {value.base === 'suggestion' &&
-            suggestion !== undefined &&
-            (suggestion.lo !== value.lo ||
-              suggestion.hi !== value.hi ||
-              recurring) && (
+          {/* Always, when the value comes from a suggestion: it is not the
+              person's Estimate yet (invariant 7, patterns.md Planning). For
+              a recurring Task the suggestion is one occurrence's. */}
+          {value.base === 'suggestion' && suggestion !== undefined && (
+            <span className="inline-flex items-center gap-1">
               <Estimate
                 value={{
                   base: 'suggestion',
@@ -246,7 +259,11 @@ function PlannedRow({
                   computedAt: value.computedAt,
                 }}
               />
-            )}
+              {recurring && (
+                <span className="text-meta text-ink-muted">/ 1回</span>
+              )}
+            </span>
+          )}
           <Estimate value={value} planned={value.base !== 'none'} />
         </span>
       }

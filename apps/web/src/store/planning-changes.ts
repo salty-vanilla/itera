@@ -16,6 +16,7 @@ import {
   type Activity,
   type AreaId,
   type GoalLink,
+  type Occurrence,
   type OccurrenceId,
   type Result,
   type Sprint,
@@ -118,6 +119,39 @@ export const unchooseByTask = (taskIds: readonly TaskId[]) =>
         }
       : unselectTask(sprint, draft.id, ctx);
   });
+
+/**
+ * 今週から外す for a recurring Task: every occurrence it has this week is
+ * excluded (invariant 33); with the last one the draft leaves the Sprint.
+ * Also the way out for a recurring Task archived during Planning.
+ */
+export function excludeAllOccurrences(sprintTaskId: SprintTaskId): Change {
+  return (records, ctx) => {
+    const start = inPlanning(records);
+    if (!start.ok) return start;
+    let sprint = start.value;
+    const owner = find(sprint.tasks, sprintTaskId, 'SprintTask');
+    if (!owner.ok) return owner;
+    const excluded: Occurrence[] = [];
+    const activities: Activity[] = [];
+    for (const occurrenceId of owner.value.occurrenceIds ?? []) {
+      const occurrence = find(records.occurrences, occurrenceId, 'Occurrence');
+      if (!occurrence.ok) return occurrence;
+      const result = excludeFromPlan(sprint, occurrence.value, ctx);
+      if (!result.ok) return result;
+      sprint = result.value.record.sprint;
+      excluded.push(result.value.record.occurrence);
+      activities.push(...result.value.activities);
+    }
+    return {
+      ok: true,
+      value: {
+        changes: { sprints: [sprint], occurrences: excluded },
+        activities,
+      },
+    };
+  };
+}
 
 /** 繰り返しの回を外す / 戻す (invariant 33). */
 export function setOccurrenceIncluded(
