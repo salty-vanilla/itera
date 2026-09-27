@@ -572,6 +572,7 @@ compact の原則：
 **TextInput** — 1 行の入力。
 - 36px、`border-strong`、`rounded.sm`。ラベルは `label`（必須なら「必須」、任意なら「任意」）、サポートテキストは `help` で入力の上、エラーはアイコン＋直し方の文で入力の下。接頭アイコン・接尾の単位（「h」）は任意。
 - サイズ sm / md / lg（28 / 36 / 44px）、compact では自動で 44px・16px 文字。視覚ラベルの省略は検索とクイック追加だけ。フォーカスリングの offset は 1px。
+- Hover は輪郭を `ink-muted` にするだけで、地は `surface` のまま（`canvas-subtle` の地は Disabled と Read-only の印なので、入力欄では hover に使わない）。Select と Textarea も同じ。
 - help には単位や例を書く（「0.5時間単位」）。エラーは直し方まで書く（「数値で入力してください（例: 1.5）」）。
 - × プレースホルダーをラベルの代わりにする、入力中にエラーを出す（離脱時・送信時に出す）、入力内容を消す。
 
@@ -580,12 +581,13 @@ compact の原則：
 **Select** — 5〜15 個の選択肢から 1 つ（Area、繰り返しルール）。ネイティブの `<select>`（36px、`border-strong`）と `chevron-down`。独自のドロップダウンで置き換えない。
 
 **Checkbox（□ = 選ぶ）** — Backlog のタスクを今週へ選ぶ、差分の行を反映する、設定のオプション。
-- 当たり判定 24px（compact 44px）、16px の四角（`rounded.xs`、`border-strong`）。Checked は `primary` の塗り＋`on-primary` のチェック、Indeterminate は横線。
+- 当たり判定 24px（compact 44px）、16px の四角（`rounded.xs`、`border-strong`）。Checked は `primary` の塗り＋`on-primary` のチェック、Indeterminate は横線。フォーカスリングは当たり判定ではなく 16px の四角を囲む（Radio も同じ）。
+- ラベルは四角の右。ラベルを押しても切り替わる。行の中など横にラベルを置かない場所では、`aria-label` で「今週に入れる: タスク名」と読ませる。
 - タスクの完了には使わない（→ 完了サークル ○）。□ と ○ の意味を入れ替えない。
 
 **Radio / RadioGroup** — 2〜5 個の排他的な選択肢をすべて見せる（Goal の自己判定、Sprint の長さ）。16px の円、選択時は `primary` の 4px 内枠。fieldset と legend で組む。自己判定には既定値を置かない。
 
-**Switch** — 即時に反映される設定のオン / オフ。トラック 36×20px（`rounded.sm`、Pill にしない）、つまみ 14px（`rounded.xs`）、「オン / オフ」の語を添える。On はトラック `primary`・つまみ `on-primary`、Off はトラック `surface`・枠とつまみ `border-strong`。説明で「オンにすると何が起きるか」を書く。保存ボタンで確定するフォームには使わない（→ Checkbox）。
+**Switch** — 即時に反映される設定のオン / オフ。トラック 36×20px（`rounded.sm`、Pill にしない）、つまみ 14px（`rounded.xs`）、「オン / オフ」の語を添える。On はトラック `primary`・つまみ `on-primary`、Off はトラック `surface`・枠とつまみ `border-strong`。説明で「オンにすると何が起きるか」を書く。ラベルと説明を左、トラックと語を右に置く。トラックは 20px なので、当たり判定をトラックの外へ広げて 24px 以上（compact 44px）にする。Disabled でも「オン / オフ」の語は `ink-muted` のまま読めるようにする（オンとオフを区別する唯一の文字なので、共通の状態の `ink-disabled` の例外）。保存ボタンで確定するフォームには使わない（→ Checkbox）。
 
 ### 表示
 
