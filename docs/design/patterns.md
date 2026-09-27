@@ -1,6 +1,6 @@
 # 画面のパターン
 
-更新：2026-09-27（Backlog の完了を元に戻す、Issue #47）。2026-09-26 に DESIGN.md v0.2 から分離。
+更新：2026-09-28（Backlog の編集して採用、Issue #40）。2026-09-27（Backlog の完了を元に戻す、Issue #47）。2026-09-26 に DESIGN.md v0.2 から分離。
 
 Backlog・Planning・Today・Retro の画面の組み立て方。見た目と部品は [DESIGN.md](../../DESIGN.md)、意味と操作の種類は [PRD](../requirements/prd.md) と [ドメインモデル](../domain/domain-model.md) が正。UI v0.1 モックは当たり付けで、ここに書いた構成を実装して触りながら削る（PRD §12）。
 
@@ -17,7 +17,7 @@ active な Task を眺めるビュー。Sprint や Today に入れても消え�
 
 - **Capture**：上部の Task Quick Add で、タイトルだけですぐ追加し、続けて入力できる。Area・期限・Estimate・優先度は後から。未設定でも正常で、空欄を「—」で埋めない。
 - **Browse**：Area の Filter と、切り口「すべて / 期限が近い / 期限超過 / 持ち越し / 繰り返し / 領域なし」。優先度だけで既定の並び順を決めない。今の Sprint に入っている Task には「今週」と出す。繰り返し Task は Rule ごとに 1 行（「毎週 土 · 次は 10/3 (土)」）で、未来の回を並べない。
-- **Organize**：行を開くと、desktop は一覧を見失わない右 Drawer、compact は Bottom Sheet。タイトル、説明、Area、期限、優先度、Estimate、繰り返し、Subtask、アーカイブを編集する。Estimate の提案があれば Agent 提案で出し、下限・中央・上限のどれかを採用できる。繰り返しの Rule を変えたら「次の Sprint から反映」と書く。
+- **Organize**：行を開くと、desktop は一覧を見失わない右 Drawer、compact は Bottom Sheet。タイトル、説明、Area、期限、優先度、Estimate、繰り返し、Subtask、アーカイブを編集する。Estimate の提案があれば Agent 提案で出し、下限・中央・上限のどれかを採用するか、値を直して採用（編集して採用）できる。採用・編集して採用・却下の後は 1 行と「元に戻す」を残す（agent-ui.md）。繰り返しの Rule を変えたら「次の Sprint から反映」と書く。
 - **今日へ**：Sprint 外の Task を「今日へ」入れると、1 操作で今の Sprint に Sprint 中の追加として入り、今日の選択にもなる。確認 Dialog も容量の警告も出さない。行に「今週」「Sprint 中に追加」。
 - **完了**：今の Sprint の Task を Backlog から完了すると、その Sprint と今日の完了にも反映する（Today の「済んだもの」に出る）。完了した行は一覧から消え、その位置に「「タイトル」を完了にしました」の 1 行と「元に戻す」ボタンを残す（Toast にはしない。ほかの操作をするか画面を離れると消える）。元に戻すと完了前の状態に戻る（ドメインモデル F29）。
 

@@ -37,7 +37,7 @@ v0.2 Final は v0.1 の骨格（恒久的な **Task** と、「この Sprint で
 
 ### v0.2 Final で決めたこと
 
-F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F11 は同じ日に、`packages/domain` の実装で見つかった食い違いについて決めた（Issue #20）。F12 も同じ日に決めた（Issue #21）。F13〜F16 も同じ日に、Sprint と Planning の実装で出た境界の場合について決めた（Issue #22）。F17〜F19 も同じ日に、Today の実装で出た境界の場合について決めた（Issue #23）。F20〜F24 も同じ日に、Review と Retro の実装で出た境界の場合について決めた（Issue #24）。F25〜F27 も同じ日に、Backlog の画面の実装で出た表示と操作について決めた（Issue #39）。F28・F29 も同じ日に、Backlog の実装の後に残った点について決めた（Issue #47）。
+F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F11 は同じ日に、`packages/domain` の実装で見つかった食い違いについて決めた（Issue #20）。F12 も同じ日に決めた（Issue #21）。F13〜F16 も同じ日に、Sprint と Planning の実装で出た境界の場合について決めた（Issue #22）。F17〜F19 も同じ日に、Today の実装で出た境界の場合について決めた（Issue #23）。F20〜F24 も同じ日に、Review と Retro の実装で出た境界の場合について決めた（Issue #24）。F25〜F27 も同じ日に、Backlog の画面の実装で出た表示と操作について決めた（Issue #39）。F28・F29 も同じ日に、Backlog の実装の後に残った点について決めた（Issue #47）。F30・F31 は 2026-09-28 に、Agent 提案の操作について決めた（Issue #40、決定 4A）。
 
 | # | 決定 | モデルへの反映 | UI への影響 |
 | --- | --- | --- | --- |
@@ -70,6 +70,8 @@ F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F
 | F27 | 提案の採用は、直後に元に戻せる | EstimateSuggestion に 採用 → 提示中（採用を元に戻す）を足す。Estimate を採用前の値（なければ空）に戻し、Activity に残す。Estimate がその採用のままで、ほかに提示中の提案がないときだけ（提示中は 1 つまで） | Backlog・Planning の Task 詳細：採用後の 1 行に「元に戻す」 |
 | F28 | 今日を含む Sprint がない日の「期限が近い」は、その週の終わりまで | 「期限が近い」は今日から今日を含む Sprint の終わりまで（#39 のオーナー決定）。Review に入った日や最初の Sprint の前など、今日を含む Sprint がない日は、User の週の始まりから数えたその週の終わりまでとする（派生） | Backlog：Retro の日にも「期限が近い」が空にならない |
 | F29 | Backlog からの完了は、直後に元に戻せる | Backlog の「完了にする」を取り消すと、完了前の状態に戻す。Task は Active に、今の Sprint の SprintTask は Planned に戻る。完了の操作で作った今日の選択（origin = Backlog からの完了）は、完了前には無かったので記録ごと消す。完了前からあった選択は、完了の取り消しと同じく元の状態（Selected、または F17 で閉じていた状態）に戻す。完了と取り消しは Activity に残る | Backlog：完了した行の位置に「完了にしました」の 1 行と「元に戻す」を残す（Toast にはしない） |
+| F30 | 提案の却下は、直後に元に戻せる | EstimateSuggestion に 却下 → 提示中（却下を元に戻す）を足す。ほかに提示中の提案がないときだけ（提示中は 1 つまで）。Estimate は却下で変わらないので、戻しても変わらない。Activity に残す | Backlog・Planning の Task 詳細：却下後の 1 行に「元に戻す」 |
+| F31 | 提案は、値を直してから採用できる（編集して採用） | 提示中の提案から、本人が直した値を Estimate にする。Estimate.source は「提案を編集して採用」で、元の提案を指す（下限・中央・上限のどれでもない）。提案は採用になる。値は幅の外でもよい（本人の値なので）。F27 と同じく直後に元に戻せる | Backlog・Planning の Task 詳細：Agent 提案に「編集して採用」（Quiet） |
 
 ### 用語
 
@@ -77,7 +79,7 @@ F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F
 | --- | --- | --- |
 | Estimate（本人） | Estimate | 本人が確定した点の値。Task に残り、次の Sprint でも使う |
 | 提案 | EstimateSuggestion | 製品側の幅。未確定 |
-| 提案を**採用**する | Estimate.source = 提案から採用 | 「上限 5h を Estimate にする」。Task の値が永続的に変わる。Backlog と Planning のタスク詳細で行う |
+| 提案を**採用**する | Estimate.source = 提案から採用（または提案を編集して採用、F31） | 「上限 5h を Estimate にする」。提案の値を直してから Estimate にするのが「編集して採用」。Task の値が永続的に変わる。Backlog と Planning のタスク詳細で行う |
 | 計画値 | PlanningValue | この Sprint の時間判断に使う値。Task は変わらない |
 | 計画基準を**適用**する | CriterionUse.appliedAtConfirm | 「今回は上限で計画する」。提案の幅から計画値を作る。Planning の Check で行う |
 | 今日は見送る | DailySelection = Deferred | 今日はやらないと決めた。「N回続けて見送り」に数える |
@@ -110,7 +112,7 @@ Task は User に属し、Backlog はそのうち active なものを並べた�
 | Task（E） | 恒久的な「やること」 | title、description、area（任意）、due（任意）、priority（高 / 通常 / 低）、lifecycle（active / completed / archived）、timeBasis（親 / サブタスク合計） | User。Area を参照。Subtask・Estimate・Suggestion・Rule を所有 | 作成日時と作成元（Backlog / Today / Agent）、属性の変更、完了・アーカイブ |
 | Backlog（ビュー） | lifecycle = active の Task の一覧 | 領域の絞り込み、切り口、検索 | 保存しない | — |
 | Subtask（E） | Task の中の手順 | title、estimate（任意）、done | Task | 完了日時 |
-| Estimate（VO） | 本人が確定した点の値 | hours、setAt、source（手入力 / 提案を採用：下限・中央・上限） | Task（現在値は 1 つ） | 値の変更履歴 |
+| Estimate（VO） | 本人が確定した点の値 | hours、setAt、source（手入力 / 提案を採用：下限・中央・上限 / 提案を編集して採用：元の提案、F31） | Task（現在値は 1 つ） | 値の変更履歴 |
 | EstimateSuggestion（E） | 製品側の提案（幅） | lo–hi、根拠、不確実な点、createdAt、state（提示中 / 採用 / 却下 / 置換） | Task | すべて残す |
 | RecurrenceRule（E・版つき） | 繰り返しの決まり | 版ごとに freq（毎日 / 平日 / 毎週 / 毎月）、曜日（毎週は 1 つ以上）・日付、effectiveFrom、effectiveTo | Task（0..1） | 版そのもの。新しい版は、まだ確定していない次の Sprint から効く（effectiveFrom = その Sprint の開始日）。その Sprint の Planning（draft）がすでに回を生成していれば、その回を作り直す |
 | Occurrence（E） | ルールから発生した 1 回 | scheduledDate、ruleVersion、materializedAt、state（Pending / Excluded / Done / Skipped / Missed） | Task（Rule の版を参照） | 状態と日時。Sprint の確定後は Rule 変更の影響を受けない（未確定の draft の回は作り直す）。Excluded は記録に残すが、通常の Retro 事実には出さない |
@@ -147,6 +149,7 @@ Task は User に属し、Backlog はそのうち active なものを並べた�
 | Sprint への参加 | SprintTask.outcome | draft / planned / done / removed / carriedOver |
 | 今日の選択 | DailySelection.resolution | selected / started / done / paused / deferred / removed / skipped / unresolved |
 | 繰り返しの回 | Occurrence.state | projected（保存しない）/ pending / excluded / done / skipped / missed |
+| Estimate の提案 | EstimateSuggestion.state | presented（提示中）/ adopted（採用）/ rejected（却下）/ replaced（置換） |
 | 計画基準 | PlanningCriterion.state | draft / active / ended / replaced |
 | Sprint | Sprint.state | planning / active / review / closed |
 
@@ -233,6 +236,21 @@ stateDiagram-v2
 - 生成（Pending 以降）の時点で ruleVersion を固定する。Rule を変えても、確定済みの Sprint の回と SprintTask は動かない。新しい版は、まだ確定していない次の Sprint から効く。その Sprint の Planning（draft）がすでに回を生成していれば、その Task の回（Pending / Excluded）と SprintTask（Draft）を捨てて新しい版で作り直す（F7）。Active な Sprint の途中で変えても、その Sprint の残りの日に新しい版の回は生まれない。
 - Excluded は Planning で外した記録として残るが、通常の Retro 事実（発生した回・完了・スキップ・未処理）には出さない。
 
+### EstimateSuggestion
+
+```mermaid
+stateDiagram-v2
+  [*] --> Presented: 提案を提示（提示中の提案があれば、それは Replaced になる）
+  Presented --> Adopted: 採用（下限・中央・上限）/ 編集して採用（F31）
+  Presented --> Rejected: 却下
+  Presented --> Replaced: 新しい提案の提示
+  Adopted --> Presented: 採用を元に戻す（F27。Estimate がその採用のままのときだけ）
+  Rejected --> Presented: 却下を元に戻す（F30）
+```
+
+- 提示中（Presented）は Task に 1 つまで。元に戻す（F27・F30）は、ほかに提示中の提案がないときだけ。
+- 採用だけが Estimate を変える（不変条件 6）。却下と置換は Estimate を変えない。どの状態でも提案の記録は残す。
+
 ### PlanningCriterion
 
 ```mermaid
@@ -264,7 +282,7 @@ stateDiagram-v2
 
 ## 不変条件（Invariants）
 
-実装のどの層でも崩してはいけないルールです。v0.2 で番号を振り直しました。v0.2 Final では番号を変えず、16・18・22・23・31・33 の内容を更新しました。F7〜F9 の決定で、番号を変えずに 18・23・31 を更新しました。F10・F11 の決定で 8・9 を、F15 の決定で 32 を、F23 の決定で 24 を更新しました。
+実装のどの層でも崩してはいけないルールです。v0.2 で番号を振り直しました。v0.2 Final では番号を変えず、16・18・22・23・31・33 の内容を更新しました。F7〜F9 の決定で、番号を変えずに 18・23・31 を更新しました。F10・F11 の決定で 8・9 を、F15 の決定で 32 を、F23 の決定で 24 を、F31 の決定で 6 を更新しました。
 
 **Task / Backlog**
 
@@ -276,7 +294,7 @@ stateDiagram-v2
 
 **Estimate と計画値**
 
-6. Estimate は本人の点の値。提案が自動で Estimate になることはない。提案を Estimate にするのは本人の「採用」だけで、source に採用元（下限・中央・上限）を残す。
+6. Estimate は本人の点の値。提案が自動で Estimate になることはない。提案を Estimate にするのは本人の「採用」だけで、source に採用元（下限・中央・上限。編集して採用なら元の提案：F31）を残す。
 7. 計画基準の「適用」は PlanningValue だけを作り、Estimate も提案も変えない。採用と適用は、画面でも別の言葉・別の場所で行う。
 8. 計画値の元は、Estimate → なければ提示中の提案 → なければ未見積（合計に含めず、件数を示す）の順。timeBasis がサブタスク合計なら、見積りのあるサブタスクだけを足し、未見積のサブタスクの件数を示す（すべて未見積なら、その Task が未見積）。
 9. 計画基準は幅のある元（提案）にだけ作用する。点の Estimate とサブタスク合計（Subtask の見積りは点の値）には作用しない。

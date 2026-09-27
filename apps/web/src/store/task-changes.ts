@@ -5,6 +5,7 @@ import {
   activeCriterion,
   addSubtask,
   addToToday,
+  adoptEditedSuggestion,
   adoptSuggestion,
   archiveTask,
   changeRuleForNextSprint,
@@ -20,6 +21,7 @@ import {
   setSubtaskDone,
   setSubtaskEstimate,
   undoAdoption,
+  undoRejection,
   updateTask,
   type Activity,
   type AreaId,
@@ -115,6 +117,20 @@ export const undoAdopt = (
   onTask(taskId, (task, ctx) =>
     undoAdoption(task, { suggestionId, previous }, ctx),
   );
+
+export const adoptEdited = (
+  taskId: TaskId,
+  suggestionId: EstimateSuggestionId,
+  hours: number,
+) =>
+  onTask(taskId, (task, ctx) =>
+    adoptEditedSuggestion(task, { suggestionId, hours }, ctx),
+  );
+
+export const undoReject = (
+  taskId: TaskId,
+  suggestionId: EstimateSuggestionId,
+) => onTask(taskId, (task, ctx) => undoRejection(task, suggestionId, ctx));
 
 export const reject = (taskId: TaskId, suggestionId: EstimateSuggestionId) =>
   onTask(taskId, (task, ctx) => rejectSuggestion(task, suggestionId, ctx));

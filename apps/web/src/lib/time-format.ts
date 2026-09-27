@@ -4,8 +4,9 @@
 // - under 1h in minutes (`30m`), otherwise in hours (`1.5h`);
 // - a total is always in hours (`0.5h`);
 // - a range uses an en dash without spaces (`2–4h`);
-// - a range that includes a negative value uses `〜` with spaces and the
-//   minus sign U+2212 (`−1 〜 1h`);
+// - a range that includes a negative value, and any difference from the
+//   available hours (残り・超過), uses `〜` with spaces and the minus sign
+//   U+2212 (`−1 〜 1h`, `残り 1 〜 3h`, `超過 3 〜 5h`);
 // - no value is 「未見積」, never 0h, and unestimated parts left out of a sum
 //   are counted after it (`2.5h ＋ 未見積 1`).
 // The words around a value (「提案」「計画」「残り」「超過」) belong to the screen.
@@ -62,6 +63,15 @@ export function formatRange(
   }
   if (loInMinutes) return `${minutes(lo)}m${EN_DASH}${number(hi)}h`;
   return `${number(lo)}${EN_DASH}${number(hi)}h`;
+}
+
+/**
+ * A difference from the available hours (残り, 超過), in hours. Its sign can
+ * flip within the range, so it always uses `〜` (DESIGN.md 原則 4).
+ */
+export function formatDifference(lo: number, hi: number): string {
+  if (lo === hi) return formatHours(lo, { total: true });
+  return `${number(lo)} 〜 ${number(hi)}h`;
 }
 
 /** An Estimate or a planning value that may be missing: 「未見積」 then. */

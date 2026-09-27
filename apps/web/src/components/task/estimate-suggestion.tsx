@@ -3,15 +3,19 @@ import type {
   SuggestionBound,
 } from '@itera/domain';
 import { boundValue } from '@itera/domain';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Field } from '@/components/ui/field';
+import { TextInput } from '@/components/ui/text-input';
 import { formatHours, formatRange, spokenHours } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
 
 // DESIGN.md Components › Agent 提案 and docs/design/agent-ui.md, for an
 // Estimate suggestion. A dashed box with 「Agent 提案 · Estimate」, the
 // source and time, the range with its middle, the rationale and the
-// uncertain points. The person adopts (採用) one end as their Estimate:
-// adopting is Secondary, rejecting is Quiet, never Primary. Nothing changes
+// uncertain points. The person adopts (採用) one end as their Estimate, or
+// edits the value first (編集して採用, F31): adopting is Secondary, editing
+// and rejecting are Quiet, never Primary. Nothing changes
 // until they choose. This is 採用 (the Task's Estimate changes), never 適用
 // of a planning criterion (invariant 7).
 
@@ -26,7 +30,14 @@ type EstimateSuggestionProps = {
   /** When it was made, as text (「9/24 (木) 12:01」). */
   madeAt: string;
   onAdopt: (bound: SuggestionBound) => void;
+  /** 編集して採用: the person's hours. Returns whether it went through. */
+  onAdoptEdited: (hours: number) => boolean;
   onReject: () => void;
+  /**
+   * Focuses the first 採用 button when it appears, e.g. when the suggestion
+   * comes back by 元に戻す, so that focus is not lost.
+   */
+  autoFocus?: boolean | undefined;
   className?: string | undefined;
 };
 
@@ -34,10 +45,42 @@ function EstimateSuggestion({
   suggestion,
   madeAt,
   onAdopt,
+  onAdoptEdited,
   onReject,
+  autoFocus = false,
   className,
 }: EstimateSuggestionProps) {
   const mid = boundValue(suggestion, 'mid');
+  // 編集して採用: an inline field that starts from the middle value.
+  const [editing, setEditing] = useState(false);
+  const [hours, setHours] = useState(String(mid));
+  const [error, setError] = useState<string>();
+  const fieldRef = useRef<HTMLInputElement>(null);
+  const firstRef = useRef<HTMLButtonElement>(null);
+  const editRef = useRef<HTMLButtonElement>(null);
+  // Where focus goes when the inline field closes by キャンセル.
+  const backToEdit = useRef(false);
+  useEffect(() => {
+    if (autoFocus) firstRef.current?.focus();
+  }, [autoFocus]);
+  useEffect(() => {
+    if (!editing && backToEdit.current) {
+      backToEdit.current = false;
+      editRef.current?.focus();
+    }
+  }, [editing]);
+
+  function adoptEdited() {
+    const value = Number(hours);
+    if (hours.trim() === '' || !Number.isFinite(value) || value <= 0) {
+      setError('0 より大きい数で入力してください（例: 2.5）');
+      fieldRef.current?.focus();
+      return;
+    }
+    setError(undefined);
+    if (onAdoptEdited(value)) setEditing(false);
+  }
+
   return (
     <section
       aria-label="Agent 提案 · Estimate"
@@ -79,22 +122,83 @@ function EstimateSuggestion({
           </>
         )}
       </dl>
-      <div className="flex flex-wrap gap-2">
-        {bounds.map(({ bound, word }) => (
-          <Button key={bound} size="sm" onClick={() => onAdopt(bound)}>
-            {word} {formatHours(boundValue(suggestion, bound))} を採用
+      {editing ? (
+        <form
+          noValidate
+          className="flex flex-col gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            adoptEdited();
+          }}
+        >
+          <Field
+            label="採用する Estimate（時間）"
+            description="提案の値を直して、本人の Estimate にします"
+            error={error}
+          >
+            <TextInput
+              ref={fieldRef}
+              size="sm"
+              inputMode="decimal"
+              suffix="h"
+              value={hours}
+              autoFocus
+              onChange={(e) => setHours(e.currentTarget.value)}
+            />
+          </Field>
+          <div className="flex gap-2">
+            <Button size="sm" type="submit">
+              採用
+            </Button>
+            <Button
+              size="sm"
+              variant="quiet"
+              onClick={() => {
+                setEditing(false);
+                setError(undefined);
+                backToEdit.current = true;
+              }}
+            >
+              キャンセル
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {bounds.map(({ bound, word }, index) => (
+            <Button
+              key={bound}
+              ref={index === 0 ? firstRef : undefined}
+              size="sm"
+              onClick={() => onAdopt(bound)}
+            >
+              {word} {formatHours(boundValue(suggestion, bound))} を採用
+            </Button>
+          ))}
+          <Button
+            ref={editRef}
+            size="sm"
+            variant="quiet"
+            onClick={() => {
+              // Always start from the middle of this suggestion.
+              setHours(String(mid));
+              setError(undefined);
+              setEditing(true);
+            }}
+          >
+            編集して採用
           </Button>
-        ))}
-        <Button size="sm" variant="quiet" onClick={onReject}>
-          却下
-        </Button>
-      </div>
+          <Button size="sm" variant="quiet" onClick={onReject}>
+            却下
+          </Button>
+        </div>
+      )}
     </section>
   );
 }
 
 /**
- * The one line left after adopting or rejecting (agent-ui.md): solid,
+ * The one line left after adopting, editing or rejecting (agent-ui.md): solid,
  * `canvas-subtle`, with 「元に戻す」 when it can be undone.
  */
 function SuggestionOutcome({
@@ -104,6 +208,9 @@ function SuggestionOutcome({
   children: string;
   onUndo?: (() => void) | undefined;
 }) {
+  // The button that was pressed (採用, 却下) is gone; focus goes to 元に戻す.
+  const undoRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => undoRef.current?.focus(), []);
   return (
     <p
       role="status"
@@ -112,7 +219,7 @@ function SuggestionOutcome({
     >
       {children}
       {onUndo && (
-        <Button size="sm" variant="quiet" onClick={onUndo}>
+        <Button ref={undoRef} size="sm" variant="quiet" onClick={onUndo}>
           元に戻す
         </Button>
       )}

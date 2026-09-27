@@ -20,6 +20,7 @@ const meta = {
     suggestion,
     madeAt: '9/29 (火) 12:00',
     onAdopt: () => {},
+    onAdoptEdited: () => true,
     onReject: () => {},
   },
 } satisfies Meta<typeof EstimateSuggestion>;
@@ -27,7 +28,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** 提示中：破線の枠。採用（下限・中央・上限）は Secondary、却下は Quiet。 */
+/** 提示中：破線の枠。採用（下限・中央・上限）は Secondary、編集して採用と却下は Quiet。 */
 export const Pending: Story = {};
 
 /** 根拠がないとき。 */
@@ -42,7 +43,12 @@ export const Outcome: Story = {
       <SuggestionOutcome onUndo={() => {}}>
         Estimate 3h を採用しました（Agent 提案 2–4h）
       </SuggestionOutcome>
-      <SuggestionOutcome>提案 2–4h を却下しました</SuggestionOutcome>
+      <SuggestionOutcome onUndo={() => {}}>
+        Estimate 2.5h を採用しました（Agent 提案 2–4h を編集）
+      </SuggestionOutcome>
+      <SuggestionOutcome onUndo={() => {}}>
+        提案 2–4h を却下しました
+      </SuggestionOutcome>
     </div>
   ),
 };
