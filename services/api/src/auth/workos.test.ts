@@ -7,15 +7,13 @@ import {
   type JWTPayload,
 } from 'jose';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { createApp } from './app';
+import { createApp } from '../app';
+import { createRecordingDatabase } from '../db/recording-database';
+import { testEnv as env } from '../test-env';
+import { workosAuthenticator } from './workos';
 
-const env = {
-  // /me does not touch D1.
-  DB: {} as D1Database,
-  WORKOS_CLIENT_ID: 'client_test',
-  WORKOS_ISSUER: 'https://api.workos.com/',
-  WORKOS_AUDIENCE: 'https://api.itera.test',
-};
+// Runs the WorkOS authenticator behind requireAuth, as the default
+// composition does, with a local key set instead of WorkOS's JWKS.
 
 let signingKey: CryptoKey;
 let otherKey: CryptoKey;
@@ -31,7 +29,10 @@ beforeAll(async () => {
     alg: 'RS256',
   };
   const keySet = createLocalJWKSet({ keys: [jwk] });
-  app = createApp({ getKeySet: () => keySet });
+  app = createApp({
+    database: () => createRecordingDatabase().db,
+    authenticator: workosAuthenticator({ getKeySet: () => keySet }),
+  });
 });
 
 type TokenOptions = {
@@ -67,7 +68,7 @@ function me(authorization?: string) {
   return app.request('/me', { headers }, env);
 }
 
-describe('GET /me (requireAuth)', () => {
+describe('WorkOS authenticator (GET /me)', () => {
   it('returns the WorkOS user ID for a valid access token', async () => {
     const response = await me(`Bearer ${await token()}`);
     expect(response.status).toBe(200);

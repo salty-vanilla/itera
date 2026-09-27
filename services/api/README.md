@@ -13,6 +13,19 @@ pnpm --filter @itera/api dev                                  # http://localhost
 - `GET /health`：認証なし。ローカルの D1 に問い合わせて `{"status":"ok"}` を返す。
 - `GET /me`：`Authorization: Bearer <WorkOS のアクセストークン>` を検証し、`{"userId": "<WorkOS のユーザー ID>"}` を返す。トークンがない・不正・期限切れ・`iss` / `aud` の不一致は 401。
 
+## 構成
+
+DB と認証は `createApp` に注入する（ADR 0004「依存の組み立て方」、`.claude/rules/api.md`）。
+
+| ファイル | 役割 |
+| --- | --- |
+| `src/index.ts` | 本番の構成（`default-dependencies.ts`）で `createApp` を呼ぶ |
+| `src/dependencies.ts` | 注入する依存の型（`database`・`authenticator`） |
+| `src/default-dependencies.ts` | 本番の構成：D1 と WorkOS |
+| `src/app.ts` | ルート。`c.var.db` と `requireAuth` だけを使う |
+| `src/db/database.ts` | ハンドラーが使う DB の型（D1・libSQL・sqlite-proxy で満たせる） |
+| `src/auth/` | `Authenticator` の型、`requireAuth`、WorkOS の実装 |
+
 ## よく使うコマンド
 
 | コマンド | 内容 |
