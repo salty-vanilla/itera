@@ -15,7 +15,7 @@ import { NotFoundScreen } from '@/screens/not-found-screen';
 import { validateSprintSearch } from '@/screens/planning/planning-screen';
 import { RetroScreen } from '@/screens/retro-screen';
 import { SprintScreen } from '@/screens/sprint-screen';
-import { TodayScreen } from '@/screens/today-screen';
+import { TodayScreen, validateTodaySearch } from '@/screens/today/today-screen';
 import { RootLayout } from './root-layout';
 
 // Routes (ADR 0005). One path per screen; the fixture state is a search
@@ -46,6 +46,7 @@ const indexRoute = createRoute({
 const todayRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'today',
+  validateSearch: validateTodaySearch,
   component: TodayScreen,
 });
 

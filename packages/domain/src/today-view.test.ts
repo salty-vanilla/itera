@@ -10,8 +10,10 @@ import type {
 import {
   deferralStreak,
   todayRemaining,
+  weekProgress,
   yesterdaysContinuation,
 } from './today-view';
+import type { Occurrence, OccurrenceState } from './occurrence';
 import { ctx, sprintFixture } from './testing';
 
 const taskId = id<'Task'>('task-1');
@@ -209,5 +211,50 @@ describe('todayRemaining', () => {
       hi: 4,
       unestimated: 1,
     });
+  });
+});
+
+describe('weekProgress (F32)', () => {
+  function occurrence(n: number, state: OccurrenceState): Occurrence {
+    return {
+      id: id(`occ-${n}`),
+      taskId: id('task-r'),
+      ruleId: id('rule-r'),
+      scheduledDate: localDate(`2026-09-2${8 + (n % 2)}`),
+      ruleVersion: 1,
+      materializedAt: ctx.now,
+      state,
+      stateChangedAt: ctx.now,
+    };
+  }
+
+  it('counts a Task once and a recurring Task per occurrence', () => {
+    const occurrences = [
+      occurrence(1, 'done'),
+      occurrence(2, 'pending'),
+      occurrence(3, 'missed'),
+      occurrence(4, 'skipped'),
+      occurrence(5, 'excluded'),
+    ];
+    const sprint = sprintFixture('2026-09-28', 'active', {
+      tasks: [
+        sprintTask('st-1', { outcome: 'done' }),
+        sprintTask('st-2'),
+        sprintTask('st-3', { outcome: 'removed' }),
+        sprintTask('st-4', {
+          taskId: id('task-r'),
+          occurrenceIds: occurrences.map((o) => o.id),
+        }),
+      ],
+    });
+    // 2 Tasks (removed not counted) + 3 occurrences (skipped and excluded
+    // not counted); done: 1 Task + 1 occurrence.
+    expect(weekProgress(sprint, occurrences)).toEqual({ done: 2, total: 5 });
+  });
+
+  it('is empty for an empty week', () => {
+    expect(weekProgress(sprintFixture('2026-09-28', 'active', {}), [])).toEqual(
+      { done: 0, total: 0 },
+    );
   });
 });

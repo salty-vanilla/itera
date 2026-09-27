@@ -215,6 +215,7 @@ spacing:
   pane-list: 384px
   pane-list-slim: 240px
   pane-sprint: 680px
+  pane-today: 720px
   pane-side: 336px
   drawer: 400px
   popover: 320px
@@ -458,6 +459,7 @@ Area（領域）はユーザーが作る。駅の路線記号のように、色�
 | `pane-list` / `pane-side` | 384 / 336px | Planning の Backlog ペイン / 時間の見通しペイン |
 | `pane-list-slim` | 240px | Planning の整える・確かめる段階の Backlog ペイン（タイトルだけ） |
 | `pane-sprint` | 680px | Planning の Sprint ペインの最大幅 |
+| `pane-today` | 720px | Today の 1 カラムの最大幅 |
 | `drawer` | 400px | 右 Drawer |
 | `popover` | 320px | Popover の幅 |
 | `dialog-sm` / `dialog-md` / `dialog-lg` | 440 / 560 / 720px | Dialog の幅（compact は幅 100% − 32px） |
