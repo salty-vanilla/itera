@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { backlogView } from './backlog';
-import { generateOccurrences, type Occurrence } from './occurrence';
+import {
+  excludeOccurrence,
+  generateOccurrences,
+  type Occurrence,
+} from './occurrence';
 import {
   changeRecurrenceRule,
   createRecurrenceRule,
+  nextOccurrence,
   recurrenceSummary,
   scheduledDates,
   versionOn,
@@ -86,9 +91,12 @@ describe('RecurrenceRule', () => {
     for (const pattern of [
       { freq: 'weekly', daysOfWeek: [] },
       { freq: 'weekly', daysOfWeek: [1, 1] },
+      { freq: 'weekly', daysOfWeek: [7] },
+      { freq: 'weekly', daysOfWeek: [1.5] },
       { freq: 'monthly', dayOfMonth: 0 },
       { freq: 'monthly', dayOfMonth: 32 },
-    ] as const) {
+      // Values the type forbids but untyped input (JSON, forms) can carry.
+    ] as unknown as RecurrencePattern[]) {
       expect(
         createRecurrenceRule(newTask(), { ...input, pattern }, ctx),
       ).toMatchObject({ ok: false, error: { code: 'invalidInput' } });
@@ -162,8 +170,10 @@ describe('RecurrenceRule', () => {
     );
     const result = changeRecurrenceRule(
       rule,
-      { freq: 'weekly', daysOfWeek: [0] },
-      d('2026-08-24'),
+      {
+        pattern: { freq: 'weekly', daysOfWeek: [0] },
+        effectiveFrom: d('2026-08-24'),
+      },
       ctx,
     );
     const changed = unwrap(result);
@@ -197,13 +207,19 @@ describe('RecurrenceRule', () => {
   it('a second change for the same day supersedes the first, which stays as history', () => {
     const { rule } = recurring({ freq: 'daily' }, '2026-08-03');
     const once = unwrap(
-      changeRecurrenceRule(rule, { freq: 'weekdays' }, d('2026-08-24'), ctx),
+      changeRecurrenceRule(
+        rule,
+        { pattern: { freq: 'weekdays' }, effectiveFrom: d('2026-08-24') },
+        ctx,
+      ),
     );
     const twice = unwrap(
       changeRecurrenceRule(
         once,
-        { freq: 'weekly', daysOfWeek: [3] },
-        d('2026-08-24'),
+        {
+          pattern: { freq: 'weekly', daysOfWeek: [3] },
+          effectiveFrom: d('2026-08-24'),
+        },
         ctx,
       ),
     );
@@ -220,7 +236,11 @@ describe('RecurrenceRule', () => {
   it('rejects a version that would start before the latest one', () => {
     const { rule } = recurring({ freq: 'daily' }, '2026-08-24');
     expect(
-      changeRecurrenceRule(rule, { freq: 'weekdays' }, d('2026-08-17'), ctx),
+      changeRecurrenceRule(
+        rule,
+        { pattern: { freq: 'weekdays' }, effectiveFrom: d('2026-08-17') },
+        ctx,
+      ),
     ).toMatchObject({ ok: false, error: { code: 'invalidInput' } });
   });
 
@@ -258,8 +278,10 @@ describe('RecurrenceRule', () => {
     const changed = unwrap(
       changeRecurrenceRule(
         rule,
-        { freq: 'weekly', daysOfWeek: [0] },
-        d('2026-09-07'),
+        {
+          pattern: { freq: 'weekly', daysOfWeek: [0] },
+          effectiveFrom: d('2026-09-07'),
+        },
         ctx,
       ),
     );
@@ -276,6 +298,112 @@ describe('RecurrenceRule', () => {
         effectiveFrom: '2026-09-07',
       },
       next: { scheduledDate: '2026-09-13', ruleVersion: 2, generated: false },
+    });
+  });
+
+  it('changing to the pattern already in place adds no version and no Activity', () => {
+    const { rule } = recurring({ freq: 'weekly', daysOfWeek: [6, 0] });
+    const result = changeRecurrenceRule(
+      rule,
+      {
+        pattern: { freq: 'weekly', daysOfWeek: [0, 6] },
+        effectiveFrom: d('2026-09-07'),
+      },
+      ctx,
+    );
+    expect(result).toEqual({
+      ok: true,
+      value: { record: rule, activities: [] },
+    });
+  });
+
+  it('never projects a day that already has an occurrence, even from an early projectFrom', () => {
+    const { rule } = recurring(
+      { freq: 'weekly', daysOfWeek: [0] },
+      '2026-08-31',
+    );
+    const [sep6] = unwrap(
+      generateOccurrences(
+        rule,
+        {
+          start: d('2026-08-31'),
+          end: d('2026-09-06'),
+          existing: [],
+          newOccurrenceId,
+        },
+        ctx,
+      ),
+    );
+    if (sep6 === undefined) throw new Error('no occurrence');
+    const excluded = unwrap(excludeOccurrence(sep6, ctx));
+    expect(
+      nextOccurrence(rule, [excluded], {
+        today: d('2026-09-02'),
+        projectFrom: d('2026-09-02'),
+      }),
+    ).toEqual({
+      scheduledDate: '2026-09-13',
+      ruleVersion: 1,
+      generated: false,
+    });
+  });
+
+  it('a pending occurrence before today is not "next"', () => {
+    const { rule } = recurring(
+      { freq: 'weekly', daysOfWeek: [1] },
+      '2026-09-28',
+    );
+    const occurrences = unwrap(
+      generateOccurrences(
+        rule,
+        {
+          start: d('2026-09-28'),
+          end: d('2026-10-04'),
+          existing: [],
+          newOccurrenceId,
+        },
+        ctx,
+      ),
+    );
+    expect(
+      nextOccurrence(rule, occurrences, {
+        today: d('2026-09-30'),
+        projectFrom: d('2026-10-05'),
+      }),
+    ).toEqual({
+      scheduledDate: '2026-10-05',
+      ruleVersion: 1,
+      generated: false,
+    });
+  });
+
+  it('before the rule starts, the summary shows the first version and a later change', () => {
+    const { rule } = recurring(
+      { freq: 'weekly', daysOfWeek: [6] },
+      '2026-09-07',
+    );
+    const changed = unwrap(
+      changeRecurrenceRule(
+        rule,
+        {
+          pattern: { freq: 'weekly', daysOfWeek: [0] },
+          effectiveFrom: d('2026-09-14'),
+        },
+        ctx,
+      ),
+    );
+    expect(
+      recurrenceSummary(changed, [], {
+        today: d('2026-09-06'),
+        projectFrom: d('2026-09-07'),
+      }),
+    ).toEqual({
+      pattern: { freq: 'weekly', daysOfWeek: [6] },
+      upcoming: {
+        pattern: { freq: 'weekly', daysOfWeek: [0] },
+        effectiveFrom: '2026-09-14',
+      },
+      next: { scheduledDate: '2026-09-12', ruleVersion: 1, generated: false },
     });
   });
 });

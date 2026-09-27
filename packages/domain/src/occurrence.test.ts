@@ -130,8 +130,10 @@ describe('Occurrence generation', () => {
     const changed = unwrap(
       changeRecurrenceRule(
         rule,
-        { freq: 'weekly', daysOfWeek: [0] },
-        d('2026-08-24'),
+        {
+          pattern: { freq: 'weekly', daysOfWeek: [0] },
+          effectiveFrom: d('2026-08-24'),
+        },
         ctx,
       ),
     );

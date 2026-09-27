@@ -102,8 +102,7 @@ describe('Scenario C — 部屋の掃除（毎週の繰り返し）', () => {
     //    The next unconfirmed Sprint is the 8/24 week.
     const change = changeRecurrenceRule(
       rule,
-      sunday,
-      d('2026-08-24'),
+      { pattern: sunday, effectiveFrom: d('2026-08-24') },
       at('2026-08-24T00:00:00.000Z'),
     );
     rule = unwrap(change);
@@ -145,12 +144,21 @@ describe('Scenario C — 部屋の掃除（毎週の繰り返し）', () => {
     rule = unwrap(
       changeRecurrenceRule(
         rule,
-        saturday,
-        d('2026-09-07'),
+        { pattern: saturday, effectiveFrom: d('2026-09-07') },
         at('2026-09-02T00:00:00.000Z'),
       ),
     );
     expect(JSON.stringify(occurrences)).toBe(snapshot);
+    expect(
+      rule.versions.map((v) => [v.version, v.effectiveFrom, v.effectiveTo]),
+    ).toEqual([
+      [1, '2026-08-03', '2026-08-23'],
+      [2, '2026-08-24', '2026-09-06'],
+      [3, '2026-09-07', undefined],
+    ]);
+    // Generating the current Sprint (8/31–9/6) again adds nothing: 9/5 is
+    // still v2 (Sundays), so no Saturday occurrence appears.
+    expect(plan(rule, '2026-08-31', '2026-09-02T00:01:00.000Z')).toEqual([]);
     expect(occurrences.some((o) => o.scheduledDate === '2026-09-05')).toBe(
       false,
     );

@@ -83,16 +83,18 @@ type CommandResult<T> =
 
 ## 繰り返しで決めた細部（#21）
 
-- **Rule の版**：`effectiveTo` はその日を含む。変更すると、最新の版の `effectiveTo` を新しい版の `effectiveFrom` の前日にする。新しい版の `effectiveFrom` は、最新の版の `effectiveFrom` より前にできない（過去の意味を書き換えない）。
+- **Rule の版**：`effectiveTo` はその日を含む。変更すると、最新の版の `effectiveTo` を新しい版の `effectiveFrom` の前日にする。新しい版の `effectiveFrom` は、最新の版の `effectiveFrom` より前にできない（版の順序を保つ）。
+- **effectiveFrom の値と不変条件 31**：作成・変更の入力で受け取る。この関数が守るのは版の順序だけで、「確定済みの Sprint の日を新しい版で上書きしない」ことは、呼び出し側（#22 の Sprint の側）が「まだ確定していない次の Sprint の開始日」を渡すことで保つ。生成済みの回は `ruleVersion` を持つので、どちらにしても動かない。
 - **同じ日から効く変更を 2 回したとき**：前の変更の版は `effectiveTo < effectiveFrom` になり、どの日にも当たらない。版そのものは履歴として残す。
-- **effectiveFrom の値**：作成・変更の入力で受け取る。「まだ確定していない次の Sprint の開始日」を決めるのは #22 の Sprint の側。
+- **同じパターンへの変更**：最新の版と同じパターンなら、版も Activity も作らない（曜日の順序は問わない）。
 - **毎月**：`dayOfMonth` が 29〜31 で、その月にその日がないときは、その月の末日にする（31 日指定は 2 月 28 日、4 月 30 日）。毎月必ず 1 回ある。
-- **毎週**：曜日を 1 つ以上指定できる（`daysOfWeek`、0 = 日曜）。週の始まり（`User.weekStartsOn`）には依存しない。
+- **毎週**：曜日を 1 つ以上指定できる（`daysOfWeek`、0 = 日曜）。週の始まり（`User.weekStartsOn`）には依存しない。複数の曜日を製品として許すかは、オーナーに確認中（#21 の PR）。
 - **平日**：月〜金。祝日は考えない。
-- **回の生成**：`generateOccurrences` は与えた期間（両端を含む）だけを作り、すでに回がある日は飛ばす（同じ期間で呼び直しても重複しない）。ID は `newOccurrenceId` で受け取る。いつ呼ぶか（Planning の開始時）は #22。
+- **回の生成**：`generateOccurrences` は与えた期間（両端を含む）だけを作り、`existing` に同じ Rule の回がある日は飛ばす（状態や版は見ない。同じ期間で呼び直しても重複しない）。ID は `newOccurrenceId` で受け取る。いつ呼ぶか（Planning の開始時）は #22。
+- **F7 で draft の回を作り直すとき（#22）**：捨てる回（draft の Pending / Excluded）を `existing` から除いてから `generateOccurrences` を呼ぶ。除き忘れると、その日は古い版の回のまま残る。捨てたことを表す Activity は #22 で足す。
 - **Occurrence の日時**：`materializedAt`（生成した日時）と `stateChangedAt`（今の状態になった日時）を持つ。状態の変化はすべて Activity に残る。
-- **次の回**：`nextOccurrence` は、今日以降の Pending の回があればその日を返す。なければ `projectFrom`（まだ回を生成していない最初の日）から Rule で計算する。Planning で外した（Excluded）回は「次」にしない。計算した日は保存しない。
-- **Backlog の 1 行**：`recurrenceSummary` は、今日の版のパターン、後から効く変更（「次の Sprint から反映」用）、次の回を構造化した値で返す。「毎週 土」「次は 10/4 (日)」などの文言は `apps/web` が `docs/design/content.md` に従って作る。
+- **次の回**：`nextOccurrence` は、今日以降の Pending の回があればその日を返す。なければ `projectFrom`（まだ回を生成していない最初の日）から Rule で計算し、すでに回がある日（Done・Skipped・Excluded・Missed）は飛ばす。計算した日は保存しない。`projectFrom` は Sprint の記録から求める（毎月のように生成済みの期間に回が 0 件のこともあるので、回からは求められない）。
+- **Backlog の 1 行**：`recurrenceSummary` は、今日の版のパターン（Rule が始まる前なら最初に効く版）、今日より後に効く変更（`upcoming`）、次の回を構造化した値で返す。変更した当日にその版が効き始める場合は `upcoming` にならないので、変更直後の「次の Sprint から反映」は変更コマンドの結果から出す。「毎週 土」「次は 10/4 (日)」などの文言は `apps/web` が `docs/design/content.md` に従って作る。
 
 ## 対象外
 

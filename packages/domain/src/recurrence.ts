@@ -139,15 +139,27 @@ export function createRecurrenceRule(
  * Days before `effectiveFrom` keep their version, so generated occurrences
  * and the current Sprint are untouched (invariant 31).
  */
+export interface ChangeRecurrenceRuleInput {
+  readonly pattern: RecurrencePattern;
+  /**
+   * The start of the next Sprint not yet confirmed. This function only
+   * checks that versions stay in order; choosing a day that leaves
+   * confirmed Sprints untouched is the Sprint code's job (#22).
+   */
+  readonly effectiveFrom: LocalDate;
+}
+
 export function changeRecurrenceRule(
   rule: RecurrenceRule,
-  pattern: RecurrencePattern,
-  effectiveFrom: LocalDate,
+  input: ChangeRecurrenceRuleInput,
   ctx: CommandContext,
 ): CommandResult<RecurrenceRule> {
+  const { pattern, effectiveFrom } = input;
   const problem = validatePattern(pattern);
   if (problem !== null) return err('invalidInput', problem);
   const latest = latestVersion(rule);
+  // Changing to the pattern already in place changes nothing.
+  if (samePattern(latest.pattern, pattern)) return applied(rule, []);
   if (effectiveFrom < latest.effectiveFrom) {
     return err(
       'invalidInput',
@@ -171,6 +183,25 @@ export function changeRecurrenceRule(
       effectiveFrom,
     },
   ]);
+}
+
+export function samePattern(
+  a: RecurrencePattern,
+  b: RecurrencePattern,
+): boolean {
+  switch (a.freq) {
+    case 'daily':
+    case 'weekdays':
+      return b.freq === a.freq;
+    case 'weekly':
+      return (
+        b.freq === 'weekly' &&
+        a.daysOfWeek.length === b.daysOfWeek.length &&
+        a.daysOfWeek.every((day) => b.daysOfWeek.includes(day))
+      );
+    case 'monthly':
+      return b.freq === 'monthly' && a.dayOfMonth === b.dayOfMonth;
+  }
 }
 
 export function latestVersion(rule: RecurrenceRule): RecurrenceRuleVersion {
@@ -292,23 +323,33 @@ export function nextOccurrence(
     };
   }
 
+  // A day that already has an occurrence (done, skipped, excluded, missed)
+  // is never projected again, whatever `projectFrom` says.
+  const taken = new Set(
+    occurrences.filter((o) => o.ruleId === rule.id).map((o) => o.scheduledDate),
+  );
   const from =
     options.projectFrom > options.today ? options.projectFrom : options.today;
-  const [first] = scheduledDates(
+  const first = scheduledDates(
     rule,
     from,
     addDays(from, PROJECTION_HORIZON_DAYS),
-  );
+  ).find((s) => !taken.has(s.scheduledDate));
   return first === undefined ? undefined : { ...first, generated: false };
 }
 
 /** What the Backlog row of a recurring Task shows (one row per rule, invariant 34). */
 export interface RecurrenceSummary {
-  /** The pattern in effect on `today`. */
+  /**
+   * The pattern in effect on `today`, or, before the rule starts, the first
+   * version that will take effect.
+   */
   readonly pattern: RecurrencePattern;
   /**
-   * A change that takes effect later (「次の Sprint から反映」), if the
-   * latest version starts after `today`.
+   * A change that takes effect after `today` (「次の Sprint から反映」 on the
+   * Backlog row). On the very day a change takes effect it is already the
+   * current pattern; the confirmation right after changing comes from the
+   * change command's result, not from this summary.
    */
   readonly upcoming?: {
     readonly pattern: RecurrencePattern;
@@ -327,7 +368,14 @@ export function recurrenceSummary(
   options: NextOccurrenceOptions,
 ): RecurrenceSummary {
   const latest = latestVersion(rule);
-  const current = versionOn(rule, options.today) ?? latest;
+  const current =
+    versionOn(rule, options.today) ??
+    rule.versions.find(
+      (v) =>
+        v.effectiveFrom > options.today &&
+        (v.effectiveTo === undefined || v.effectiveFrom <= v.effectiveTo),
+    ) ??
+    latest;
   const next = nextOccurrence(rule, occurrences, options);
   return {
     pattern: current.pattern,
