@@ -25,17 +25,17 @@ MVP は Web のみ。PC を基準にし、スマートフォンは DESIGN.md の
 2. monorepo の土台（pnpm workspace、TypeScript、ESLint、Prettier、lefthook、vitest）
 3. `packages/domain`：ドメインロジックを UI・DB から独立した純粋な TypeScript で書き、不変条件をテストで固める
 4. `apps/web`：fixture だけで Backlog・Planning・Today・Retro の操作感を検証する（PRD §12）
-5. `services/api`：API・DB・認証・データ保存。方針は PRD §14 で未決なので、この段階の前に ADR で決める
+5. `services/api`：API・DB・認証・データ保存。実行基盤は Cloudflare Workers、DB は D1、認証は WorkOS AuthKit（ADR 0004）
 
 手順 4 のうち、ドメインの型に依存しない土台（トークン、基底部品、Storybook）は手順 3 と並行して先に作ってよい（Issue #6、ADR 0003）。画面と fixture は `packages/domain` の型と関数ができてから作る。
 
 `packages/domain` と `apps/web` で作業するときは、ファイルを作る前に `.claude/rules/domain.md` / `.claude/rules/web-ui.md` を読む。
 
-技術スタックの候補：Vite、React 19、Tailwind 4、shadcn（base-ui）、TanStack Query、Valibot、Hono、Drizzle、OpenAPI + Hey API、vitest、Playwright。PRD §14 では未決なので、導入するときに ADR で決め、バージョンを固定する。まだ入っていないものを、入っている前提で使わない。導入済みの Web 側の依存（Vite、React、Tailwind、shadcn / base-ui、lucide-react、Storybook）は ADR 0003。
+技術スタックの候補：Vite、React 19、Tailwind 4、shadcn（base-ui）、TanStack Query、Valibot、Hono、Drizzle、OpenAPI + Hey API、vitest、Playwright。導入するときに ADR で決め、バージョンを固定する。まだ入っていないものを、入っている前提で使わない。導入済みの Web 側の依存（Vite、React、Tailwind、shadcn / base-ui、lucide-react、Storybook）は ADR 0003。API 側の方式（Hono + Cloudflare Workers、D1 + Drizzle、WorkOS AuthKit）は ADR 0004 で決めたが、依存はまだ入っていない（版は導入する Issue #26 で固定する）。
 
 ### 未決事項の扱い
 
-PRD §14 の「Frontend 実装を止めない未決定事項」3 件（＝ドメインモデル末尾の未決事項 1〜3）について、PRD は「fixture 上では代表ケースを一つに固定し、Backend / domain service 実装前に最終決定する」としている。このリポジトリは `packages/domain` を先に作るので、3 件とも Issue #18 で決め、ドメインモデルの F7〜F9 に記録した。UI の fixture は、決まった挙動を domain の関数経由で使う。PRD §14 の「プロダクトとして後続で決める事項」（認証、DB、公開範囲など）は fixture で仮決めしない。
+PRD §14 の「Frontend 実装を止めない未決定事項」3 件（＝ドメインモデル末尾の未決事項 1〜3）について、PRD は「fixture 上では代表ケースを一つに固定し、Backend / domain service 実装前に最終決定する」としている。このリポジトリは `packages/domain` を先に作るので、3 件とも Issue #18 で決め、ドメインモデルの F7〜F9 に記録した。UI の fixture は、決まった挙動を domain の関数経由で使う。PRD §14 の「プロダクトとして後続で決める事項」（データの同期・削除・エクスポート、公開範囲など）は fixture で仮決めしない。
 
 ## ドメインの扱い
 
