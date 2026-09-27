@@ -677,7 +677,7 @@ compact の原則：
 
 **持ち越し（CarryOverIndicator）** — `corner-down-right`＋「持ち越し 1回（Sprint 13から）」`ink-muted`。3 回以上は `warning`＋「持ち越し 3回 · 分割を検討」。`danger` と「遅れ」「失敗」の語を使わない。
 
-**繰り返し（RecurringIndicator）** — `repeat`＋ルール（「毎週 土」「平日」）＋任意で今週の回（「今週 2/5」）。ルールと回を区別する（ルールを変えても生成済みの回は変わらない）。
+**繰り返し（RecurringIndicator）** — `repeat`＋ルール（「毎週 土」「平日」）＋任意で今週の回（「今週 2/5」）。ルールと回を区別する（ルールを変えても確定済みの Sprint の回は変わらない）。
 
 **Area Indicator** — Area を路線記号（`area-badge` 20px の `rounded.sm` の四角に、Area 名の先頭 1 文字を `on-area` の 12px / 700 で白抜き）とラベルで示す。label（既定：記号＋名前 12px / 700 `ink-muted`）/ badge（記号だけ。凡例がある場所のみ、名前は読み上げる）/ heading（グループ見出し：記号＋名前 14px / 700 `ink`＋件数）。Sprint の画面（Planning / Today / Retro）では Sprint 確定時の Area 名、Backlog では現在の名前を出す。× 記号を 20px 以外の大きさにする、文字・背景・枠を Area の色にする、記号に 2 文字以上入れる。
 
