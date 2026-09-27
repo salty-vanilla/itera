@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // No DOM and no Node types: the domain must not reach for either.
+    "types": []
+  },
+  "include": ["src", "vitest.config.ts"]
+}

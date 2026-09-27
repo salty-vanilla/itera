@@ -42,6 +42,38 @@ export default defineConfig(
     files: ['apps/web/*.ts', 'apps/web/.storybook/main.ts'],
     languageOptions: { globals: globals.node },
   },
+  {
+    // packages/domain: pure TypeScript. The current time and randomness come
+    // in as arguments (.claude/rules/domain.md). No browser or Node globals
+    // are declared, so `no-undef`-style type errors also catch those APIs.
+    files: ['packages/domain/src/**/*.ts'],
+    rules: {
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'Date',
+          property: 'now',
+          message: 'Take the current time as an argument.',
+        },
+        {
+          object: 'Math',
+          property: 'random',
+          message: 'Take IDs and random values as arguments.',
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "NewExpression[callee.name='Date'][arguments.length=0]",
+          message: 'Take the current time as an argument.',
+        },
+        {
+          selector: "CallExpression[callee.name='Date'][arguments.length=0]",
+          message: 'Take the current time as an argument.',
+        },
+      ],
+    },
+  },
   // Applies to *.stories.* and .storybook/main.* only. The cast is for the
   // plugin's types, which declare `files: undefined` and `plugins: undefined`
   // and so fail under exactOptionalPropertyTypes.
