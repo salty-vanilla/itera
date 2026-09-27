@@ -101,11 +101,13 @@ type CommandResult<T> =
 - **集約**：Sprint が根で、SprintGoal・SprintTask・SprintAreaSnapshot・CriterionUse を中に持つ。Occurrence は Task 側の記録で、SprintTask は `occurrenceIds` で参照する。コマンドは Sprint と、変えた Occurrence を一緒に返す。
 - **期間**：1 週（開始日は `User.weekStartsOn`、両端を含む）。新しい Sprint は既存のどの Sprint よりも後に始まり、Planning 中の Sprint は同時に 1 つまで。前の Sprint（`previousSprintId`）は、開始日より前で最後の Sprint。
 - **繰り返しの SprintTask**：`occurrenceIds` は Sprint に含めた（外していない）回。Planning で最後の回を外すと、draft の SprintTask はなくなる。Sprint 中に外した回を戻すと、その回だけの SprintTask（origin = midSprint）を新しく作る。
-- **planSnapshot**：計画値に加えて、その時点の Estimate・提示中の提案・timeBasis・回数（繰り返しのとき）を写し取る（Retro の「計画時の Estimate」用）。繰り返しの計画値は 1 回の値 × 回数。
+- **planSnapshot**：計画値に加えて、その時点の Estimate・提示中の提案・timeBasis・回数（繰り返しのとき）を写し取る（Retro の「計画時の Estimate」用）。繰り返しの計画値は 1 回の値 × 回数。 未見積のサブタスクの件数は回数倍にしない（毎回同じサブタスクなので）。
 - **Goal**：Planning では空の文で Goal を消せる。確定後は文を変えられるが消せない。確定後に新しく書いた Goal には `plannedText` がない。
-- **Area のスナップショット**：確定時の、アーカイブしていないすべての Area と、Sprint の Task が使っているアーカイブ済みの Area。F9 で足す Area の並び順は末尾。Task の Area を Sprint 中に変えたときは、呼び出し側が `noteAreaInSprint` を呼ぶ。
+- **Area のスナップショット**：確定時の、アーカイブしていないすべての Area と、Sprint の Task が使っているアーカイブ済みの Area。F9 で足すのは Sprint が active の間だけで、並び順は末尾。Task の Area を Sprint 中に変えたときは、呼び出し側が `noteAreaInSprint` を呼ぶ。
 - **容量**：`sprintTotals` は draft を今の値（Planning の Check の基準を当てたプレビュー）で、確定後の SprintTask を planSnapshot で数える。`CapacityStatus` は `within`（上限でも収まる）/ `mayExceed`（下限は収まるが上限は超える）/ `exceeds`（下限でも超える）。色や文言は画面が決める。
-- **Rule の変更（F1・F7）**：Backlog からの変更は `changeRuleForNextSprint` を使う。`nextUnconfirmedSprintStart` で効き始める日を決めるので、確定済みの Sprint は変わらない。Planning 中の Sprint があれば、その回と draft の SprintTask を作り直し、捨てた回は `occurrenceDiscarded` として記録する（呼び出し側は `discarded` の記録を消す）。
+- **計画に数える SprintTask**：`isCounted` は Planning と Sprint 中の合計用で、removed と carriedOver を数えない。Retro の「計画時の合計」（#24）は持ち越した SprintTask も数えるので、別の規則にする。
+- **確定の前提**：draft の Task が Planning 中に完了・アーカイブされていたら確定しない（外してから確定する）。持ち越し候補（`carryOverCandidates`）は、直前の Sprint の、active で繰り返しでない Task だけ。
+- **Rule の変更（F1・F7）**：Backlog からの変更は `changeRuleForNextSprint` を使う。効き始める日は `nextUnconfirmedSprintStart`（最新の版がそれより後に始まるなら、その日）で、確定済みの Sprint は変わらない。結果の `effectiveFrom` で「次の Sprint から反映」を出す。Planning 中の Sprint がその Rule の回を生成していれば、その回と draft の SprintTask を作り直し、捨てた回は `occurrenceDiscarded` として記録する（呼び出し側は `discarded` の記録を消す）。生成していなければ draft には触れない。
 - **次の回の `projectFrom`**：`projectFrom(sprints, today)` で求める。
 - **Sprint から外した Task**：同じ Sprint にもう一度入れることはできない（不変条件 14、状態遷移に Removed → Planned がない）。オーナーに確認中（#22 の PR）。
 

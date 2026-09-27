@@ -237,12 +237,19 @@ export function unselectTask(
 export function carryOverCandidates(
   previous: Sprint,
   sprint: Sprint,
+  tasks: readonly Task[],
 ): readonly SprintTask[] {
-  return previous.tasks.filter(
-    (t) =>
+  if (sprint.previousSprintId !== previous.id) return [];
+  return previous.tasks.filter((t) => {
+    const task = tasks.find((x) => x.id === t.taskId);
+    return (
       t.outcome === 'carriedOver' &&
-      !sprint.tasks.some((s) => s.taskId === t.taskId),
-  );
+      task !== undefined &&
+      task.lifecycle === 'active' &&
+      !isRecurring(task) &&
+      !sprint.tasks.some((s) => s.taskId === t.taskId)
+    );
+  });
 }
 
 /**
@@ -349,10 +356,10 @@ export function includeInPlan(
  */
 export function setGoalText(
   sprint: Sprint,
-  areaId: AreaId,
-  text: string,
+  input: { readonly areaId: AreaId; readonly text: string },
   ctx: CommandContext,
 ): CommandResult<Sprint> {
+  const { areaId, text } = input;
   if (sprint.state !== 'planning' && sprint.state !== 'active') {
     return err('invalidTransition', `Cannot change a Goal in ${sprint.state}.`);
   }
@@ -393,9 +400,10 @@ export function setGoalText(
  */
 export function setAvailableHours(
   sprint: Sprint,
-  hours: number | null,
+  input: { readonly hours: number | null },
   ctx: CommandContext,
 ): CommandResult<Sprint> {
+  const { hours } = input;
   if (sprint.state !== 'planning' && sprint.state !== 'active') {
     return err(
       'invalidTransition',
@@ -483,6 +491,13 @@ export function confirmSprint(
     if (task === undefined) {
       return err('notFound', `Task ${sprintTask.taskId} missing.`);
     }
+    // A Task completed or archived during Planning cannot be planned.
+    if (task.lifecycle !== 'active') {
+      return err(
+        'invalidTransition',
+        `Task ${task.id} is ${task.lifecycle}; unselect it before confirming.`,
+      );
+    }
     const hasGoal =
       task.areaId !== undefined &&
       sprint.goals.some((g) => g.areaId === task.areaId);
@@ -558,14 +573,8 @@ export function sprintTaskValue(
   });
   const count = sprintTask.occurrenceIds?.length;
   if (count === undefined || one.base === 'none') return one;
-  if (one.base === 'subtasks') {
-    return {
-      ...one,
-      lo: one.lo * count,
-      hi: one.hi * count,
-      unestimatedSubtasks: one.unestimatedSubtasks * count,
-    };
-  }
+  // Hours scale with the count; the number of unestimated subtasks does
+  // not (they are the same subtasks every time).
   return { ...one, lo: one.lo * count, hi: one.hi * count };
 }
 

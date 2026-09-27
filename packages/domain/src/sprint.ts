@@ -130,7 +130,12 @@ export function weekStartOf(date: LocalDate, user: User): LocalDate {
   return addDays(date, -back);
 }
 
-/** SprintTasks that take part in the plan (not removed, not carried over). */
+/**
+ * SprintTasks that count toward the Sprint's plan now: in Planning and
+ * during the Sprint. Removed and carried-over ones do not. Retro's
+ * "planned total" (#24) must also count carried-over ones, so it needs its
+ * own rule rather than this one.
+ */
 export function isCounted(task: SprintTask): boolean {
   return (
     task.outcome === 'draft' ||

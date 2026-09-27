@@ -2,6 +2,7 @@ import { generateOccurrences, type Occurrence } from './occurrence';
 import { addedActivity, recurringDraft } from './planning';
 import {
   changeRecurrenceRule,
+  latestVersion,
   type RecurrencePattern,
   type RecurrenceRule,
 } from './recurrence';
@@ -12,6 +13,7 @@ import {
   type CommandResult,
 } from './shared/command';
 import type { OccurrenceId, SprintTaskId } from './shared/ids';
+import { err } from './shared/result';
 import type { LocalDate } from './shared/time';
 import { nextUnconfirmedSprintStart, type Sprint } from './sprint';
 import type { Task } from './task';
@@ -33,6 +35,8 @@ export interface ChangeRuleForNextSprintInput {
 
 export interface RuleChangeApplied {
   readonly rule: RecurrenceRule;
+  /** The day the change takes effect (「次の Sprint から反映」). */
+  readonly effectiveFrom: LocalDate;
   /** The draft Sprint, rebuilt (F7), if there is one. */
   readonly sprint?: Sprint;
   /** Draft occurrences thrown away; delete these records. */
@@ -48,18 +52,32 @@ export interface RuleChangeApplied {
  * in Planning and has generated this rule's occurrences, they are rebuilt:
  * the draft's pending / excluded occurrences are discarded, and the new
  * version's occurrences are generated and included by default (so choices
- * to leave some out are not carried over).
+ * to leave some out are not carried over). A draft that has not generated
+ * this rule's occurrences is left alone.
  */
 export function changeRuleForNextSprint(
   input: ChangeRuleForNextSprintInput,
   ctx: CommandContext,
 ): CommandResult<RuleChangeApplied> {
   const { rule, task } = input;
-  const effectiveFrom = nextUnconfirmedSprintStart(
+  if (rule.taskId !== task.id || task.recurrenceRuleId !== rule.id) {
+    return err('invalidInput', 'The rule does not belong to the Task.');
+  }
+  if (task.lifecycle !== 'active') {
+    return err(
+      'invalidTransition',
+      `Cannot change the rule of a ${task.lifecycle} Task.`,
+    );
+  }
+  // A rule whose latest version starts later (created for a future
+  // Sprint) is replaced from that day instead.
+  const next = nextUnconfirmedSprintStart(
     input.sprints,
     input.user,
     input.today,
   );
+  const latestFrom = latestVersion(rule).effectiveFrom;
+  const effectiveFrom = latestFrom > next ? latestFrom : next;
   const changed = changeRecurrenceRule(
     rule,
     { pattern: input.pattern, effectiveFrom },
@@ -69,14 +87,22 @@ export function changeRuleForNextSprint(
   const newRule = changed.value.record;
   const activities: Activity[] = [...changed.value.activities];
   const draft = input.sprints.find((s) => s.state === 'planning');
+  const unchanged = {
+    rule: newRule,
+    effectiveFrom,
+    discarded: [],
+    generated: [],
+  };
   if (changed.value.activities.length === 0 || draft === undefined) {
-    return applied({ rule: newRule, discarded: [], generated: [] }, activities);
+    return applied(unchanged, activities);
   }
 
   const inDraft = (o: Occurrence) =>
     o.ruleId === rule.id &&
     o.scheduledDate >= draft.start &&
     o.scheduledDate <= draft.end;
+  // F7 applies only when the draft has generated this rule's occurrences.
+  if (!input.occurrences.some(inDraft)) return applied(unchanged, activities);
   const toDiscard = input.occurrences.filter(
     (o) => inDraft(o) && (o.state === 'pending' || o.state === 'excluded'),
   );
@@ -137,6 +163,7 @@ export function changeRuleForNextSprint(
   return applied(
     {
       rule: newRule,
+      effectiveFrom,
       sprint: { ...draft, tasks },
       discarded: [...discardedIds],
       generated: occurrences,

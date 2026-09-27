@@ -110,8 +110,7 @@ describe('Scenario A — 関連論文を 3 本読む（Planning と確定）', (
     sprint = unwrap(
       setGoalText(
         sprint,
-        researchId,
-        '先行研究を押さえる',
+        { areaId: researchId, text: '先行研究を押さえる' },
         at('2026-09-27T12:03:00.000Z'),
       ),
     );
@@ -119,7 +118,7 @@ describe('Scenario A — 関連論文を 3 本読む（Planning と確定）', (
 
     // 5. 基準を適用して確定 with 18h available.
     sprint = unwrap(
-      setAvailableHours(sprint, 18, at('2026-09-27T12:04:00.000Z')),
+      setAvailableHours(sprint, { hours: 18 }, at('2026-09-27T12:04:00.000Z')),
     );
     const confirmed = confirmSprint(
       sprint,

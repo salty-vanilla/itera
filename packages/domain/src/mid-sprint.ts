@@ -187,8 +187,8 @@ export function removeFromSprint(
 }
 
 /**
- * F9: when an Area not in the SprintAreaSnapshot first appears in a
- * confirmed Sprint (a Task of it was added, or a Task in the Sprint moved to
+ * F9: when an Area not in the SprintAreaSnapshot first appears in an
+ * active Sprint (a Task of it was added, or a Task in the Sprint moved to
  * it), its name at that moment is appended and then fixed. Call this after
  * changing the Area of a Task that is in the Sprint.
  */
@@ -210,7 +210,7 @@ function withArea(
 ): CommandResult<Sprint> {
   if (
     areaId === undefined ||
-    sprint.state === 'planning' ||
+    sprint.state !== 'active' ||
     sprint.areaSnapshot.some((e) => e.areaId === areaId)
   ) {
     return applied(sprint, activities);

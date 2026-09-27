@@ -1,5 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import * as domain from './index';
+import { sprintTotals } from './capacity';
 import { presentSuggestion, setEstimate } from './estimate';
 import type { Occurrence } from './occurrence';
 import {
@@ -211,7 +212,9 @@ describe('startPlanning', () => {
     });
     const { sprint } = plan([previous]);
     expect(sprint.tasks).toEqual([]);
-    expect(carryOverCandidates(previous, sprint)).toEqual([carried]);
+    expect(carryOverCandidates(previous, sprint, [paperTask()])).toEqual([
+      carried,
+    ]);
 
     const chosen = unwrap(
       selectTask(
@@ -224,7 +227,7 @@ describe('startPlanning', () => {
       carriedFrom: 'st-old',
       outcome: 'draft',
     });
-    expect(carryOverCandidates(previous, chosen)).toEqual([]);
+    expect(carryOverCandidates(previous, chosen, [paperTask()])).toEqual([]);
   });
 });
 
@@ -316,16 +319,30 @@ describe('selecting Tasks in Planning', () => {
 describe('Goals and available hours', () => {
   it('invariant 13: one Goal per Area and no Sprint-wide Goal', () => {
     let sprint = plan().sprint;
-    sprint = unwrap(setGoalText(sprint, researchId, '先行研究を押さえる', ctx));
-    sprint = unwrap(setGoalText(sprint, researchId, '先行研究を整理する', ctx));
-    sprint = unwrap(setGoalText(sprint, workId, '面談を設計する', ctx));
+    sprint = unwrap(
+      setGoalText(
+        sprint,
+        { areaId: researchId, text: '先行研究を押さえる' },
+        ctx,
+      ),
+    );
+    sprint = unwrap(
+      setGoalText(
+        sprint,
+        { areaId: researchId, text: '先行研究を整理する' },
+        ctx,
+      ),
+    );
+    sprint = unwrap(
+      setGoalText(sprint, { areaId: workId, text: '面談を設計する' }, ctx),
+    );
     expect(sprint.goals).toEqual([
       { areaId: researchId, text: '先行研究を整理する' },
       { areaId: workId, text: '面談を設計する' },
     ]);
     expectTypeOf<Sprint>().not.toHaveProperty('goal');
     // In Planning an empty text removes the Goal.
-    sprint = unwrap(setGoalText(sprint, workId, ' ', ctx));
+    sprint = unwrap(setGoalText(sprint, { areaId: workId, text: ' ' }, ctx));
     expect(sprint.goals.map((g) => g.areaId)).toEqual([researchId]);
   });
 
@@ -337,7 +354,7 @@ describe('Goals and available hours', () => {
   });
 
   it('rejects negative available hours', () => {
-    expect(setAvailableHours(plan().sprint, -1, ctx)).toMatchObject({
+    expect(setAvailableHours(plan().sprint, { hours: -1 }, ctx)).toMatchObject({
       ok: false,
     });
   });
@@ -346,8 +363,14 @@ describe('Goals and available hours', () => {
 describe('confirmSprint', () => {
   function readySprint(): Sprint {
     let sprint = withTask(plan().sprint, paperTask());
-    sprint = unwrap(setGoalText(sprint, researchId, '先行研究を押さえる', ctx));
-    return unwrap(setAvailableHours(sprint, 18, ctx));
+    sprint = unwrap(
+      setGoalText(
+        sprint,
+        { areaId: researchId, text: '先行研究を押さえる' },
+        ctx,
+      ),
+    );
+    return unwrap(setAvailableHours(sprint, { hours: 18 }, ctx));
   }
 
   function confirm(
@@ -423,18 +446,67 @@ describe('confirmSprint', () => {
     });
   });
 
-  it('invariant 16: a later Estimate change does not rewrite the snapshot', () => {
+  it('invariant 16: a later Estimate change does not change the planned total', () => {
     const confirmed = unwrap(confirm(readySprint()));
-    const snapshot = confirmed.tasks[0]?.planSnapshot;
-    unwrap(setEstimate(paperTask(), 8, ctx));
-    expect(confirmed.tasks[0]?.planSnapshot).toBe(snapshot);
+    const estimated = unwrap(setEstimate(paperTask(), 8, ctx));
+    expect(
+      sprintTotals(confirmed, { tasks: [estimated], now: ctx.now }).total,
+    ).toMatchObject({ lo: 5, hi: 5 });
+  });
+
+  it('refuses a draft whose Task was completed or archived during Planning', () => {
+    const archived = unwrap(archiveTask(paperTask(), ctx));
+    expect(confirm(readySprint(), { tasks: [archived] })).toMatchObject({
+      ok: false,
+      error: { code: 'invalidTransition' },
+    });
+  });
+
+  it('a recurring Task is planned as one occurrence’s value × the count', () => {
+    const created = unwrap(
+      createRecurrenceRule(
+        newTask('ジム', 'task-gym'),
+        {
+          id: id('rule-gym'),
+          pattern: { freq: 'weekly', daysOfWeek: [2, 4] },
+          effectiveFrom: d('2026-09-28'),
+        },
+        ctx,
+      ),
+    );
+    const gym = unwrap(setEstimate(created.task, 1.5, ctx));
+    const { sprint } = plan(
+      [closedPrevious],
+      [{ task: gym, rule: created.rule }],
+    );
+    const confirmed = unwrap(
+      confirmSprint(
+        sprint,
+        {
+          sprints: [closedPrevious],
+          tasks: [gym],
+          areas: [],
+          applyCriterion: false,
+        },
+        ctx,
+      ),
+    );
+    expect(confirmed.tasks[0]?.planSnapshot).toMatchObject({
+      value: { base: 'estimate', lo: 3, hi: 3 },
+      estimateHours: 1.5,
+      occurrenceCount: 2,
+    });
   });
 
   it('invariant 18: Goal text and hours change later, the confirmed copies stay', () => {
     let sprint = unwrap(confirm(readySprint()));
-    const changed = setGoalText(sprint, researchId, '2 本だけ読む', ctx);
+    const changed = setGoalText(
+      sprint,
+      { areaId: researchId, text: '2 本だけ読む' },
+      ctx,
+    );
     sprint = unwrap(changed);
-    sprint = unwrap(setAvailableHours(sprint, 12, ctx));
+    sprint = unwrap(setAvailableHours(sprint, { hours: 12 }, ctx));
     expect(sprint.goals[0]).toEqual({
       areaId: researchId,
       text: '2 本だけ読む',
@@ -449,13 +521,17 @@ describe('confirmSprint', () => {
       from: '先行研究を押さえる',
       to: '2 本だけ読む',
     });
-    expect(setGoalText(sprint, researchId, '', ctx)).toMatchObject({
+    expect(
+      setGoalText(sprint, { areaId: researchId, text: '' }, ctx),
+    ).toMatchObject({
       ok: false,
     });
   });
 
   it('a linked SprintTask whose Area has no Goal becomes unlinked', () => {
-    const noGoal = unwrap(setGoalText(readySprint(), researchId, '', ctx));
+    const noGoal = unwrap(
+      setGoalText(readySprint(), { areaId: researchId, text: '' }, ctx),
+    );
     expect(unwrap(confirm(noGoal)).tasks[0]?.goalLink).toBe('unlinked');
   });
 
@@ -534,5 +610,98 @@ describe('confirmSprint', () => {
       confirm(readySprint(), { areas: [research, archivedWork] }),
     );
     expect(confirmed.areaSnapshot.map((e) => e.name)).toEqual(['研究']);
+  });
+});
+
+describe('guards', () => {
+  it('selectTask refuses a carriedFrom of another Task or not carried over', () => {
+    const other: SprintTask = {
+      id: id('st-old'),
+      taskId: id('task-other'),
+      origin: 'planning',
+      addedAt: ctx.now,
+      goalLink: 'linked',
+      outcome: 'carriedOver',
+    };
+    const input = { sprintTaskId: id<'SprintTask'>('st'), task: paperTask() };
+    expect(
+      selectTask(plan().sprint, { ...input, carriedFrom: other }, ctx),
+    ).toMatchObject({
+      ok: false,
+    });
+    expect(
+      selectTask(
+        plan().sprint,
+        {
+          ...input,
+          carriedFrom: { ...other, taskId: id('task-paper'), outcome: 'done' },
+        },
+        ctx,
+      ),
+    ).toMatchObject({ ok: false });
+  });
+
+  it('carryOverCandidates only lists the previous Sprint’s active, non-recurring Tasks', () => {
+    const carried = (taskId: string): SprintTask => ({
+      id: id(`st-${taskId}`),
+      taskId: id(taskId),
+      origin: 'planning',
+      addedAt: ctx.now,
+      goalLink: 'linked',
+      outcome: 'carriedOver',
+    });
+    const previous = sprintFixture('2026-09-21', 'closed', {
+      tasks: [
+        carried('task-paper'),
+        carried('task-gone'),
+        carried('task-clean'),
+      ],
+    });
+    const { sprint } = plan([previous]);
+    const gone = unwrap(archiveTask(newTask('x', 'task-gone'), ctx));
+    const clean: Task = {
+      ...newTask('y', 'task-clean'),
+      recurrenceRuleId: id('r'),
+    };
+    expect(
+      carryOverCandidates(previous, sprint, [paperTask(), gone, clean]).map(
+        (t) => t.taskId,
+      ),
+    ).toEqual(['task-paper']);
+    const unrelated = sprintFixture('2026-09-14', 'closed', {
+      tasks: [carried('task-paper')],
+    });
+    expect(carryOverCandidates(unrelated, sprint, [paperTask()])).toEqual([]);
+  });
+
+  it('includeInPlan refuses an occurrence outside the Sprint period', () => {
+    const { task, rule } = unwrap(
+      createRecurrenceRule(
+        newTask('部屋の掃除', 'task-clean'),
+        {
+          id: id('rule-1'),
+          pattern: { freq: 'daily' },
+          effectiveFrom: d('2026-09-28'),
+        },
+        ctx,
+      ),
+    );
+    const outside: Occurrence = {
+      id: id('occ-x'),
+      taskId: task.id,
+      ruleId: rule.id,
+      scheduledDate: d('2026-10-05'),
+      ruleVersion: 1,
+      materializedAt: ctx.now,
+      state: 'excluded',
+      stateChangedAt: ctx.now,
+    };
+    expect(
+      includeInPlan(
+        plan().sprint,
+        { occurrence: outside, task, sprintTaskId: id('st') },
+        ctx,
+      ),
+    ).toMatchObject({ ok: false, error: { code: 'invalidInput' } });
   });
 });

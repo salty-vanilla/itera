@@ -58,6 +58,12 @@ function draft(taskId: string, extra: Partial<SprintTask> = {}): SprintTask {
 }
 
 describe('capacityOf', () => {
+  it('at exactly the available hours: the upper end fits, the lower end does not exceed', () => {
+    expect(capacityOf({ lo: 16, hi: 18 }, 18).status).toBe('within');
+    expect(capacityOf({ lo: 18, hi: 20 }, 18).status).toBe('mayExceed');
+    expect(capacityOf({ lo: 18.5, hi: 20 }, 18).status).toBe('exceeds');
+  });
+
   it('within, may exceed, and exceeds', () => {
     expect(capacityOf({ lo: 10, hi: 16 }, 18)).toEqual({
       availableHours: 18,

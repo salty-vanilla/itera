@@ -16,7 +16,7 @@ const sunday = { freq: 'weekly', daysOfWeek: [0] } as const;
  * 9/28 week is active with its Saturday done; the 10/5 week is already in
  * Planning (the previous Retro is still open) with its Saturday generated.
  */
-function setUp() {
+function setUp(options: { completeOct3?: boolean } = {}) {
   const { task, rule } = unwrap(
     createRecurrenceRule(
       newTask('部屋の掃除', 'task-clean'),
@@ -42,7 +42,10 @@ function setUp() {
   );
   const [oct3] = current.occurrences;
   if (oct3 === undefined) throw new Error('no occurrence');
-  const done = unwrap(completeOccurrence(oct3, ctx));
+  const done =
+    options.completeOct3 === false
+      ? oct3
+      : unwrap(completeOccurrence(oct3, ctx));
   const active: Sprint = { ...current.sprint, state: 'review' };
   const next = unwrap(
     startPlanning(
@@ -184,9 +187,115 @@ describe('changeRuleForNextSprint (F1, F7)', () => {
       ctx,
     );
     expect(result.ok && result.value).toEqual({
-      record: { rule, discarded: [], generated: [] },
+      record: {
+        rule,
+        effectiveFrom: '2026-10-05',
+        discarded: [],
+        generated: [],
+      },
       activities: [],
     });
+  });
+});
+
+describe('changeRuleForNextSprint — guards and edges', () => {
+  function change(
+    input: Partial<Parameters<typeof changeRuleForNextSprint>[0]>,
+    base = setUp(),
+  ) {
+    return changeRuleForNextSprint(
+      {
+        task: base.task,
+        rule: base.rule,
+        pattern: sunday,
+        user,
+        today: d('2026-10-04'),
+        sprints: [base.active, base.draft],
+        occurrences: base.occurrences,
+        newOccurrenceId: base.newOccurrenceId,
+        newSprintTaskId: ids('st-new'),
+        ...input,
+      },
+      ctx,
+    );
+  }
+
+  it('invariant 31: a pending occurrence of the confirmed Sprint is neither discarded nor moved', () => {
+    const base = setUp({ completeOct3: false });
+    const applied = unwrap(change({}, base));
+    expect(base.occurrences[0]).toMatchObject({
+      state: 'pending',
+      ruleVersion: 1,
+    });
+    expect(applied.discarded).toEqual(['occ-2']);
+    expect(applied.effectiveFrom).toBe('2026-10-05');
+  });
+
+  it('leaves a draft alone when it has not generated this rule’s occurrences', () => {
+    const base = setUp();
+    const noOccurrences = unwrap(
+      change({ occurrences: [base.occurrences[0] as Occurrence] }, base),
+    );
+    expect(noOccurrences).not.toHaveProperty('sprint');
+    expect(noOccurrences.generated).toEqual([]);
+  });
+
+  it('refuses a rule of another Task or a Task that is not active', () => {
+    const base = setUp();
+    const other = {
+      ...newTask('別', 'task-other'),
+      recurrenceRuleId: base.rule.id,
+    };
+    expect(change({ task: other }, base)).toMatchObject({
+      ok: false,
+      error: { code: 'invalidInput' },
+    });
+    const archived = { ...base.task, lifecycle: 'archived' as const };
+    expect(change({ task: archived }, base)).toMatchObject({
+      ok: false,
+      error: { code: 'invalidTransition' },
+    });
+  });
+
+  it('a rule created for a later Sprint is changed from its own start', () => {
+    const { task, rule } = unwrap(
+      createRecurrenceRule(
+        newTask('読書', 'task-read'),
+        {
+          id: id('rule-read'),
+          pattern: saturday,
+          effectiveFrom: d('2026-10-12'),
+        },
+        ctx,
+      ),
+    );
+    const applied = unwrap(
+      changeRuleForNextSprint(
+        {
+          task,
+          rule,
+          pattern: sunday,
+          user,
+          today: d('2026-10-01'),
+          sprints: [sprintFixture('2026-09-28', 'active')],
+          occurrences: [],
+          newOccurrenceId: ids('occ'),
+          newSprintTaskId: ids('st'),
+        },
+        ctx,
+      ),
+    );
+    expect(applied.effectiveFrom).toBe('2026-10-12');
+    expect(
+      applied.rule.versions.map((v) => [
+        v.version,
+        v.effectiveFrom,
+        v.effectiveTo,
+      ]),
+    ).toEqual([
+      [1, '2026-10-12', '2026-10-11'],
+      [2, '2026-10-12', undefined],
+    ]);
   });
 });
 

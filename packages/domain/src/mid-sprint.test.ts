@@ -204,6 +204,18 @@ describe('F9: an Area new to a confirmed Sprint', () => {
     expect(sprintAreaName(sprint, hobby.id, [renamed])).toBe('趣味');
   });
 
+  it('only while the Sprint is active, and only for a known Area', () => {
+    const inReview = { ...activeSprint(false), state: 'review' as const };
+    const result = noteAreaInSprint(inReview, hobby.id, [hobby], ctx);
+    expect(unwrap(result)).toBe(inReview);
+    expect(
+      noteAreaInSprint(activeSprint(false), hobby.id, [], ctx),
+    ).toMatchObject({
+      ok: false,
+      error: { code: 'notFound' },
+    });
+  });
+
   it('also when a Task in the Sprint moves to a new Area', () => {
     const noted = noteAreaInSprint(activeSprint(false), hobby.id, [hobby], ctx);
     expect(unwrap(noted).areaSnapshot.map((e) => e.name)).toEqual([
