@@ -1,6 +1,6 @@
 # Agent UI
 
-更新：2026-09-26（DESIGN.md v0.2 から分離）。
+更新：2026-09-28（編集して採用と、採用・却下を元に戻す、Issue #40）。2026-09-26 に DESIGN.md v0.2 から分離。
 
 AI / Agent は **通常の Product UI の延長** として表現する。別世界（Gradient、Sparkle、紫、Glow、チャットバブル）にしない。区別は **破線・語・根拠の構造** で行う。部品の見た目は [DESIGN.md](../../DESIGN.md) の Components（Agent 提案、根拠、計画案の差分）。
 

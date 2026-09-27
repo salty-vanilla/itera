@@ -1,6 +1,6 @@
 # 画面のパターン
 
-更新：2026-09-27（Backlog の完了を元に戻す、Issue #47）。2026-09-26 に DESIGN.md v0.2 から分離。
+更新：2026-09-28（Backlog の編集して採用、Issue #40）。2026-09-27（Backlog の完了を元に戻す、Issue #47）。2026-09-26 に DESIGN.md v0.2 から分離。
 
 Backlog・Planning・Today・Retro の画面の組み立て方。見た目と部品は [DESIGN.md](../../DESIGN.md)、意味と操作の種類は [PRD](../requirements/prd.md) と [ドメインモデル](../domain/domain-model.md) が正。UI v0.1 モックは当たり付けで、ここに書いた構成を実装して触りながら削る（PRD §12）。
 
