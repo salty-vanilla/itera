@@ -50,6 +50,19 @@ export interface TodayChange {
 }
 
 const OPEN: readonly DailyResolution[] = ['selected', 'started'];
+/** Closed the same day, and still completable that day (F17). */
+const CLOSED_TODAY: readonly DailyResolution[] = [
+  'paused',
+  'deferred',
+  'removed',
+];
+
+function canComplete(selection: DailySelection, today: LocalDate): boolean {
+  return (
+    OPEN.includes(selection.resolution) ||
+    (CLOSED_TODAY.includes(selection.resolution) && selection.date === today)
+  );
+}
 
 // ---------------------------------------------------------------- choosing
 
@@ -265,6 +278,11 @@ export function pauseSelection(
 }
 
 export interface CompleteInput extends SelectionActionInput {
+  /**
+   * Today, in the user's time zone. A selection closed earlier the same day
+   * (paused, deferred or removed) can still be completed that day (F17).
+   */
+  readonly today: LocalDate;
   /** The Task, for a non-recurring SprintTask. */
   readonly task?: Task;
   /** The occurrence, for a recurring one. */
@@ -274,9 +292,10 @@ export interface CompleteInput extends SelectionActionInput {
 }
 
 /**
- * 完了: selected / started → done. A non-recurring Task completes and its
- * SprintTask is done; a recurring one's occurrence is done instead
- * (invariant 30).
+ * 完了: selected / started → done, or, the same day, paused / deferred /
+ * removed → done (F17: 「朝は見送ったが夜にやった」). A non-recurring Task
+ * completes and its SprintTask is done; a recurring one's occurrence is
+ * done instead (invariant 30).
  */
 export function completeSelection(
   sprint: Sprint,
@@ -286,10 +305,10 @@ export function completeSelection(
   const found = selectionAndTask(sprint, input.selectionId);
   if (!found.ok) return found;
   const { selection, sprintTask } = found.value;
-  if (!OPEN.includes(selection.resolution)) {
+  if (!canComplete(selection, input.today)) {
     return err(
       'invalidTransition',
-      `Cannot complete a ${selection.resolution} selection.`,
+      `Cannot complete a ${selection.resolution} selection of ${selection.date}.`,
     );
   }
   const effect = completionEffect(sprint, sprintTask, selection, input, ctx);
@@ -325,14 +344,22 @@ export function completeSelection(
  */
 export function undoCompleteSelection(
   sprint: Sprint,
-  input: Omit<CompleteInput, 'actualHours'>,
+  input: Omit<CompleteInput, 'actualHours' | 'today'>,
   ctx: CommandContext,
 ): CommandResult<TodayChange> {
-  const found = selectionAndTask(sprint, input.selectionId);
+  const found = selectionAndTask(sprint, input.selectionId, [
+    'planned',
+    'done',
+  ]);
   if (!found.ok) return found;
   const { selection, sprintTask } = found.value;
   if (selection.resolution !== 'done') {
     return err('invalidTransition', 'Only a done selection can be undone.');
+  }
+  // A recurring SprintTask stays planned; a non-recurring one is done.
+  const expected = selection.occurrenceId === undefined ? 'done' : 'planned';
+  if (sprintTask.outcome !== expected) {
+    return err('invalidTransition', `The SprintTask is ${sprintTask.outcome}.`);
   }
   const activities: Activity[] = [];
   let change: TodayChange;
@@ -429,8 +456,10 @@ export interface CompleteFromBacklogInput {
 /**
  * Backlog で「完了にする」. The Task completes. If it is in the Sprint, its
  * SprintTask is done and the day gets a done DailySelection (origin
- * backlogCompletion), all at once (invariant 27); an open selection of the
- * day is completed instead of adding a second one (invariant 21).
+ * backlogCompletion), all at once (invariant 27). If the day already has
+ * a selection, that one is completed instead of adding a second
+ * (invariant 21) — also when it was closed earlier that day (F17). Such a
+ * selection keeps its origin; the Activity tells it came from the Backlog.
  */
 export function completeFromBacklog(
   sprint: Sprint,
@@ -438,6 +467,12 @@ export function completeFromBacklog(
   ctx: CommandContext,
 ): CommandResult<{ readonly sprint: Sprint; readonly task: Task }> {
   const { task } = input;
+  if (isRecurring(task)) {
+    return err(
+      'recurringTaskCannotComplete',
+      'A recurring Task is completed per occurrence, not from the Backlog.',
+    );
+  }
   const sprintTask =
     sprint.state === 'active'
       ? sprint.tasks.find(
@@ -453,10 +488,10 @@ export function completeFromBacklog(
     );
   }
   const existing = findSelection(sprint, input.date, sprintTask.id, undefined);
-  if (existing !== undefined && OPEN.includes(existing.resolution)) {
+  if (existing !== undefined && canComplete(existing, input.date)) {
     const done = completeSelection(
       sprint,
-      { selectionId: existing.id, task },
+      { selectionId: existing.id, task, today: input.date },
       ctx,
     );
     if (!done.ok) return done;
@@ -486,7 +521,7 @@ export function completeFromBacklog(
     sprint,
     sprintTask,
     selection.value,
-    { selectionId: selection.value.id, task },
+    { selectionId: selection.value.id, task, today: input.date },
     ctx,
   );
   if (!effect.ok) return effect;
@@ -519,8 +554,24 @@ export function recordActualTime(
   input: RecordActualTimeInput,
   ctx: CommandContext,
 ): CommandResult<Sprint> {
-  if (!sprint.tasks.some((t) => t.id === input.sprintTaskId)) {
-    return err('notFound', 'No such SprintTask.');
+  if (sprint.state !== 'active') {
+    return err(
+      'invalidTransition',
+      'Actual time is recorded during the Sprint.',
+    );
+  }
+  const sprintTask = sprint.tasks.find((t) => t.id === input.sprintTaskId);
+  if (sprintTask === undefined) return err('notFound', 'No such SprintTask.');
+  if (input.date < sprint.start || input.date > sprint.end) {
+    return err('invalidInput', 'The day is outside the Sprint.');
+  }
+  const recurring = sprintTask.occurrenceIds !== undefined;
+  if (
+    recurring !== (input.occurrenceId !== undefined) ||
+    (input.occurrenceId !== undefined &&
+      !(sprintTask.occurrenceIds ?? []).includes(input.occurrenceId))
+  ) {
+    return err('invalidInput', 'The occurrence does not match the SprintTask.');
   }
   return appendActual(sprint, { ...input, via: 'later' }, ctx);
 }
@@ -636,14 +687,27 @@ function findSelection(
   );
 }
 
+/**
+ * Finds a selection for a Today action. Today acts on the active Sprint
+ * only, and on a SprintTask in `outcomes` (planned, or done for undoing a
+ * completion): a SprintTask removed from the Sprint keeps its open
+ * selection, but Today leaves it alone until it is restored (F13).
+ */
 function selectionAndTask(
   sprint: Sprint,
   selectionId: DailySelectionId,
+  outcomes: readonly SprintTask['outcome'][] = ['planned'],
 ): Result<{ selection: DailySelection; sprintTask: SprintTask }> {
+  if (sprint.state !== 'active') {
+    return err('invalidTransition', 'Today works on the active Sprint.');
+  }
   const selection = sprint.dailySelections.find((s) => s.id === selectionId);
   if (selection === undefined) return err('notFound', 'No such selection.');
   const sprintTask = sprint.tasks.find((t) => t.id === selection.sprintTaskId);
   if (sprintTask === undefined) return err('notFound', 'No such SprintTask.');
+  if (!outcomes.includes(sprintTask.outcome)) {
+    return err('invalidTransition', `The SprintTask is ${sprintTask.outcome}.`);
+  }
   return { ok: true, value: { selection, sprintTask } };
 }
 
@@ -715,8 +779,9 @@ function move(
   kind: Extract<Activity['kind'], `today${string}`>,
   ctx: CommandContext,
 ): CommandResult<Sprint> {
-  const selection = sprint.dailySelections.find((s) => s.id === selectionId);
-  if (selection === undefined) return err('notFound', 'No such selection.');
+  const found = selectionAndTask(sprint, selectionId);
+  if (!found.ok) return found;
+  const { selection } = found.value;
   if (!from.includes(selection.resolution)) {
     return err(
       'invalidTransition',

@@ -257,7 +257,7 @@ describe('Scenario A — 関連論文を 3 本読む（Planning と確定）', (
         sprint,
         [previous, sprint],
         localDate('2026-10-01'),
-      ).map((t) => t.id),
+      ).map((c) => c.sprintTask.id),
     ).toEqual(['st-paper']);
 
     // 12. 10/2–10/4: not chosen. No DailySelection, no effect on the run,

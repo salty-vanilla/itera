@@ -404,7 +404,7 @@ describe('Scenario C — steps 2–3 in Today', () => {
         action === 'complete'
           ? completeSelection(
               sprint,
-              { selectionId: selection.id, occurrence },
+              { selectionId: selection.id, occurrence, today: d(day) },
               at(`${day}T01:00:00.000Z`),
             )
           : skipSelection(
@@ -432,11 +432,12 @@ describe('Scenario C — steps 2–3 in Today', () => {
     }
 
     // 3. 8/22 is skipped; the rule does not change.
-    const ruleBefore = JSON.stringify(rule);
     const skipped = runWeek('2026-08-17', '2026-08-22', 'skip');
     expect(skipped.occurrence?.state).toBe('skipped');
     expect(skipped.sprint.dailySelections[0]?.resolution).toBe('skipped');
-    expect(JSON.stringify(rule)).toBe(ruleBefore);
+    // The rule is not an input of skipping at all: skip changes only the
+    // occurrence and the selection (invariant 30).
+    expect(skipped).not.toHaveProperty('rule');
     expect(occurrences.map((o) => [o.scheduledDate, o.state])).toEqual([
       ['2026-08-08', 'done'],
       ['2026-08-15', 'done'],

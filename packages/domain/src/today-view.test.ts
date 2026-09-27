@@ -128,7 +128,7 @@ describe('yesterdaysContinuation (F6)', () => {
     const sprint = withSelections([['2026-09-30', 'paused']]);
     expect(
       yesterdaysContinuation(sprint, [sprint], localDate('2026-10-01')).map(
-        (t) => t.id,
+        (c) => c.sprintTask.id,
       ),
     ).toEqual(['st-1']);
     // Not the day after.
@@ -169,7 +169,7 @@ describe('yesterdaysContinuation (F6)', () => {
     });
     expect(
       yesterdaysContinuation(now, [last, now], localDate('2026-09-28')).map(
-        (t) => t.id,
+        (c) => c.sprintTask.id,
       ),
     ).toEqual(['st-new']);
   });

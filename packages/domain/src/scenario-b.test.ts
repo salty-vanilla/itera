@@ -112,7 +112,11 @@ describe('Scenario B — Sprint 外の Task を「今日へ」', () => {
     const done = unwrap(
       completeSelection(
         added,
-        { selectionId: id('sel-task-interview'), task: interview },
+        {
+          selectionId: id('sel-task-interview'),
+          task: interview,
+          today: localDate('2026-09-30'),
+        },
         ctx,
       ),
     );

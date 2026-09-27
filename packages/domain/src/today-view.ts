@@ -1,6 +1,10 @@
-import type { TaskId } from './shared/ids';
+import type { OccurrenceId, TaskId } from './shared/ids';
 import { addDays, type LocalDate } from './shared/time';
 import type { DailySelection, Sprint, SprintTask } from './sprint';
+
+function compare(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
 
 /** All of a Task's selections across Sprints, oldest first. */
 function selectionsOf(
@@ -15,14 +19,11 @@ function selectionsOf(
         ),
       ),
     )
-    .toSorted((a, b) =>
-      a.date === b.date
-        ? a.selectedAt < b.selectedAt
-          ? -1
-          : 1
-        : a.date < b.date
-          ? -1
-          : 1,
+    .toSorted(
+      (a, b) =>
+        compare(a.date, b.date) ||
+        compare(a.selectedAt, b.selectedAt) ||
+        compare(a.id, b.id),
     );
 }
 
@@ -64,30 +65,50 @@ export function deferralStreak(
  * the previous one), not yet chosen today. Shown at the top of Today's
  * candidates; nothing is chosen automatically.
  */
+export interface Continuation {
+  readonly sprintTask: SprintTask;
+  /** For a recurring Task: the occurrence paused yesterday, to choose again. */
+  readonly occurrenceId?: OccurrenceId;
+}
+
 export function yesterdaysContinuation(
   sprint: Sprint,
   sprints: readonly Sprint[],
   today: LocalDate,
-): readonly SprintTask[] {
+): readonly Continuation[] {
   const yesterday = addDays(today, -1);
-  const pausedTaskIds = new Set(
-    sprints.flatMap((s) =>
-      s.dailySelections
-        .filter((d) => d.date === yesterday && d.resolution === 'paused')
-        .flatMap((d) => {
-          const taskId = s.tasks.find((t) => t.id === d.sprintTaskId)?.taskId;
-          return taskId === undefined ? [] : [taskId];
-        }),
-    ),
+  const paused = sprints.flatMap((s) =>
+    s.dailySelections
+      .filter((d) => d.date === yesterday && d.resolution === 'paused')
+      .flatMap((d) => {
+        const taskId = s.tasks.find((t) => t.id === d.sprintTaskId)?.taskId;
+        return taskId === undefined
+          ? []
+          : [{ taskId, occurrenceId: d.occurrenceId }];
+      }),
   );
-  return sprint.tasks.filter(
-    (t) =>
-      t.outcome === 'planned' &&
-      pausedTaskIds.has(t.taskId) &&
-      !sprint.dailySelections.some(
-        (d) => d.date === today && d.sprintTaskId === t.id,
-      ),
-  );
+  return sprint.tasks.flatMap((t) => {
+    if (t.outcome !== 'planned') return [];
+    const found = paused.find(
+      (p) =>
+        p.taskId === t.taskId &&
+        (p.occurrenceId === undefined ||
+          (t.occurrenceIds ?? []).includes(p.occurrenceId)),
+    );
+    if (found === undefined) return [];
+    const chosenToday = sprint.dailySelections.some(
+      (d) =>
+        d.date === today &&
+        d.sprintTaskId === t.id &&
+        d.occurrenceId === found.occurrenceId,
+    );
+    if (chosenToday) return [];
+    return [
+      found.occurrenceId === undefined
+        ? { sprintTask: t }
+        : { sprintTask: t, occurrenceId: found.occurrenceId },
+    ];
+  });
 }
 
 export interface TodayRemaining {
@@ -122,10 +143,14 @@ export function todayRemaining(
     ) {
       continue;
     }
-    count += 1;
-    const snapshot = sprint.tasks.find(
+    const sprintTask = sprint.tasks.find(
       (t) => t.id === selection.sprintTaskId,
-    )?.planSnapshot;
+    );
+    // A SprintTask removed from the Sprint keeps its selection but is not
+    // in Today.
+    if (sprintTask?.outcome !== 'planned') continue;
+    count += 1;
+    const snapshot = sprintTask.planSnapshot;
     const value = snapshot?.value;
     if (value === undefined || value.base === 'none') {
       unestimated += 1;

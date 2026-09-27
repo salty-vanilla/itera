@@ -198,7 +198,13 @@ describe('the day’s actions', () => {
 
   it('invariant 28: actual time is optional and never a condition', () => {
     const task = newTask('x', 'task-1');
-    const result = unwrap(completeSelection(chosen(), { ...sel, task }, ctx));
+    const result = unwrap(
+      completeSelection(
+        chosen(),
+        { ...sel, task, today: d('2026-09-28') },
+        ctx,
+      ),
+    );
     expect(result.sprint.actualTimes).toEqual([]);
     expect(
       pauseSelection(unwrap(startSelection(chosen(), sel, ctx)), sel, ctx),
@@ -220,7 +226,7 @@ describe('the day’s actions', () => {
     const task = newTask('x', 'task-1');
     const done = completeSelection(
       chosen(),
-      { ...sel, task, actualHours: 1 },
+      { ...sel, task, actualHours: 1, today: d('2026-09-28') },
       ctx,
     );
     const record = unwrap(done);
@@ -371,7 +377,11 @@ describe('recurring occurrences in Today', () => {
     const [first] = occurrences;
     if (first === undefined) throw new Error('no occurrence');
     const done = unwrap(
-      completeSelection(today, { ...sel, occurrence: first }, ctx),
+      completeSelection(
+        today,
+        { ...sel, occurrence: first, today: d('2026-09-28') },
+        ctx,
+      ),
     );
     expect(done.occurrence?.state).toBe('done');
     expect(done.sprint.tasks[0]?.outcome).toBe('planned');
