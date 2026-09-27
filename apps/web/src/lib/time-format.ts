@@ -102,3 +102,22 @@ export function formatPlanningTotal(total: PlanningTotal): string {
     unestimated,
   );
 }
+
+function spokenOne(hours: number): string {
+  const minutes = Math.round(hours * 60);
+  return minutes < 60 ? `${minutes}分` : `${Math.round(hours * 100) / 100}時間`;
+}
+
+/**
+ * The value as it is read out (DESIGN.md Estimate: 「見積もり 3時間」
+ * 「2〜4時間」): the symbols and units are spelled as words.
+ */
+export function spokenHours(lo: number, hi: number = lo): string {
+  if (lo === hi) return spokenOne(lo);
+  const loText = spokenOne(lo);
+  const hiText = spokenOne(hi);
+  if (loText.endsWith('時間') && hiText.endsWith('時間')) {
+    return `${loText.replace('時間', '')}〜${hiText}`;
+  }
+  return `${loText}〜${hiText}`;
+}

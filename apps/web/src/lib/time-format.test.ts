@@ -6,6 +6,7 @@ import {
   formatPlanningTotal,
   formatPlanningValue,
   formatRange,
+  spokenHours,
 } from './time-format';
 
 const computedAt = instant('2026-09-28T00:00:00.000Z');
@@ -144,5 +145,14 @@ describe('formatPlanningTotal', () => {
         unestimatedSubtasks: 0,
       }),
     ).toBe('未見積 3');
+  });
+});
+
+describe('spokenHours', () => {
+  it('spells the unit and the range as words', () => {
+    expect(spokenHours(3)).toBe('3時間');
+    expect(spokenHours(0.5)).toBe('30分');
+    expect(spokenHours(2, 4)).toBe('2〜4時間');
+    expect(spokenHours(0.5, 1.5)).toBe('30分〜1.5時間');
   });
 });

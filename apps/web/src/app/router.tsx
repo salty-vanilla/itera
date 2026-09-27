@@ -7,7 +7,10 @@ import {
   type RouterHistory,
 } from '@tanstack/react-router';
 import { isFixtureStateId, type FixtureStateId } from '@/fixtures/states';
-import { BacklogScreen } from '@/screens/backlog-screen';
+import {
+  BacklogScreen,
+  validateBacklogSearch,
+} from '@/screens/backlog/backlog-screen';
 import { NotFoundScreen } from '@/screens/not-found-screen';
 import { RetroScreen } from '@/screens/retro-screen';
 import { SprintScreen } from '@/screens/sprint-screen';
@@ -54,6 +57,7 @@ const sprintRoute = createRoute({
 const backlogRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'backlog',
+  validateSearch: validateBacklogSearch,
   component: BacklogScreen,
 });
 

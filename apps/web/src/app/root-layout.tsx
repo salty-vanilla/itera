@@ -6,6 +6,7 @@ import {
   isFixtureStateId,
   type FixtureStateId,
 } from '@/fixtures/states';
+import { ToastProvider } from '@/components/ui/toast';
 import { createMemoryStore } from '@/store/record-store';
 import { StoreProvider } from '@/store/store-provider';
 import { AppShell } from './app-shell';
@@ -30,14 +31,16 @@ function RootLayout() {
   return (
     // Keyed by the state: another state mounts a new store.
     <FixtureStore key={fixture} fixture={fixture}>
-      <AppShell>
-        <Outlet />
-      </AppShell>
-      {DevMenu !== null && (
-        <Suspense>
-          <DevMenu current={fixture} />
-        </Suspense>
-      )}
+      <ToastProvider>
+        <AppShell>
+          <Outlet />
+        </AppShell>
+        {DevMenu !== null && (
+          <Suspense>
+            <DevMenu current={fixture} />
+          </Suspense>
+        )}
+      </ToastProvider>
     </FixtureStore>
   );
 }

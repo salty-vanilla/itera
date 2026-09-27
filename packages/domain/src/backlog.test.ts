@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { backlogView } from './backlog';
+import {
+  backlogView,
+  carryOverOf,
+  dueSoonUntil,
+  inBacklogSlice,
+} from './backlog';
+import type { SprintTask } from './sprint';
 import { id, type AreaId } from './shared/ids';
 import { archiveTask, completeTask, createTask, updateTask } from './task';
-import { at, ctx, unwrap, userId } from './testing';
+import { localDate } from './shared/time';
+import { at, ctx, sprintFixture, unwrap, user, userId } from './testing';
 
 const research = id('area-research') as AreaId;
 
@@ -74,5 +81,113 @@ describe('backlogView', () => {
     ]);
     backlogView(tasks);
     expect(tasks.map((t) => t.id)).toEqual(['b', 'a']);
+  });
+});
+
+describe('carryOverOf (F26)', () => {
+  const taskId = id<'Task'>('task-1');
+  const st = (
+    stId: string,
+    outcome: SprintTask['outcome'],
+    carriedFrom?: string,
+  ): SprintTask => ({
+    id: id(stId),
+    taskId,
+    origin: 'planning',
+    addedAt: ctx.now,
+    goalLink: 'linked',
+    outcome,
+    ...(carriedFrom === undefined ? {} : { carriedFrom: id(carriedFrom) }),
+  });
+
+  it('has none for a Task never carried over', () => {
+    expect(carryOverOf(taskId, [])).toBeUndefined();
+    const s = sprintFixture('2026-09-21', 'active', {
+      tasks: [st('st-1', 'planned')],
+    });
+    expect(carryOverOf(taskId, [s])).toBeUndefined();
+  });
+
+  it('counts the latest SprintTask when it was carried over', () => {
+    const s1 = sprintFixture('2026-09-21', 'closed', {
+      tasks: [st('st-1', 'carriedOver')],
+    });
+    expect(carryOverOf(taskId, [s1])).toEqual({
+      count: 1,
+      fromSprintId: s1.id,
+    });
+  });
+
+  it('keeps the count while the Task is chosen again, and adds each carry-over', () => {
+    const s1 = sprintFixture('2026-09-14', 'closed', {
+      tasks: [st('st-1', 'carriedOver')],
+    });
+    const s2 = sprintFixture('2026-09-21', 'closed', {
+      tasks: [st('st-2', 'carriedOver', 'st-1')],
+    });
+    const s3 = sprintFixture('2026-09-28', 'active', {
+      tasks: [st('st-3', 'planned', 'st-2')],
+    });
+    expect(carryOverOf(taskId, [s3, s1, s2])).toEqual({
+      count: 2,
+      fromSprintId: s1.id,
+    });
+    expect(carryOverOf(taskId, [s1, s2])).toEqual({
+      count: 2,
+      fromSprintId: s1.id,
+    });
+  });
+
+  it('starts over when the Task is chosen without the carry-over', () => {
+    const s1 = sprintFixture('2026-09-21', 'closed', {
+      tasks: [st('st-1', 'carriedOver')],
+    });
+    const s2 = sprintFixture('2026-09-28', 'active', {
+      tasks: [st('st-2', 'planned')],
+    });
+    expect(carryOverOf(taskId, [s1, s2])).toBeUndefined();
+  });
+});
+
+describe('inBacklogSlice', () => {
+  const sprint = sprintFixture('2026-09-28', 'active');
+  const context = {
+    user,
+    today: localDate('2026-09-29'),
+    sprints: [sprint],
+  };
+  const due = (date: string) =>
+    unwrap(
+      updateTask(
+        task('t', '2026-09-20T00:00:00.000Z'),
+        { due: localDate(date) },
+        ctx,
+      ),
+    );
+
+  it('期限が近い: from today to the end of the current Sprint (#39)', () => {
+    expect(dueSoonUntil(context)).toBe('2026-10-04');
+    expect(inBacklogSlice(due('2026-09-29'), 'dueSoon', context)).toBe(true);
+    expect(inBacklogSlice(due('2026-10-04'), 'dueSoon', context)).toBe(true);
+    expect(inBacklogSlice(due('2026-10-05'), 'dueSoon', context)).toBe(false);
+    expect(inBacklogSlice(due('2026-09-28'), 'dueSoon', context)).toBe(false);
+  });
+
+  it('期限が近い: to the end of this week when no Sprint holds today', () => {
+    expect(dueSoonUntil({ ...context, sprints: [] })).toBe('2026-10-04');
+  });
+
+  it('期限超過: before today', () => {
+    expect(inBacklogSlice(due('2026-09-28'), 'overdue', context)).toBe(true);
+    expect(inBacklogSlice(due('2026-09-29'), 'overdue', context)).toBe(false);
+  });
+
+  it('a Task without a due date or an Area', () => {
+    const plain = task('p', '2026-09-20T00:00:00.000Z');
+    expect(inBacklogSlice(plain, 'dueSoon', context)).toBe(false);
+    expect(inBacklogSlice(plain, 'overdue', context)).toBe(false);
+    expect(inBacklogSlice(plain, 'noArea', context)).toBe(true);
+    expect(inBacklogSlice(plain, 'recurring', context)).toBe(false);
+    expect(inBacklogSlice(plain, 'carriedOver', context)).toBe(false);
   });
 });

@@ -141,6 +141,13 @@ type CommandResult<T> =
 - **Retro の事実**（`retroFacts`）：記録から毎回計算し、保存も編集もしない。点数は作らない（不変条件 40）。Area ごとの Goal（計画時と今、自己判定。Area は Sprint の並び順で、Area のない Task は最後）、Goal に紐づく / 紐づかない Task、完了・持ち越し・外した Task、Sprint 中の追加、繰り返しの回（Sprint に含めた回。途中で外した繰り返しの、外す前に済ませた回も出す：F24。Excluded は出さない：F2・F14）、見送り・今日はここまで（F17 で完了になった選択も数える）、割り込み、可用時間の計画時と今、計画値の合計（確定時の分と、Sprint 中の追加を含めた分）、実績。Task ごとに持ち越し回数（`carryCount`：この SprintTask より前に続いた持ち越しの数。この Sprint での持ち越しは含まない）と最長の連続見送り（Today の `deferralStreak` と同じ規則。F17 で完了した日はそこで区切り、見送りの日の一覧には含める）を返す。
 - **実績**：Review 中も `recordActualTime` で足せる（F22）。
 
+## Backlog の画面で決めた細部（#39）
+
+- **Sprint の番号**（`sprintNumber`、F25）：開始日の順の通し番号（1 から）。保存しない。
+- **持ち越し回数**（`carryOverOf`、F26）：Task の最新の SprintTask から、`carryCount`（carriedFrom の連なり）に、その SprintTask 自身が carriedOver なら 1 を足す。持ち越しから選び直して今の Sprint にある間も回数を保ち、持ち越しを使わずに選び直すと数え直す。`fromSprintId` は連なりの最初の Sprint（「Sprint 13から」）。
+- **切り口**（`inBacklogSlice`）：期限が近い（今日から、今日を含む Sprint の終わりまで。Sprint がなければその週の終わりまで。オーナー決定）/ 期限超過（今日より前）/ 持ち越し（F26 の回数が 1 以上）/ 繰り返し / 領域なし。期限のない Task は期限の切り口に入らない。
+- **採用を元に戻す**（`undoAdoption`、F27）：Task は今の Estimate しか持たないので、採用前の Estimate（`adoptSuggestion` に渡した Task の値、なければ `null`）を呼び出し側が渡す。Estimate がその採用のままで、ほかに提示中の提案がないときだけ戻せる。`estimateChanged` と `suggestionAdoptionUndone` を残す。
+
 ## 対象外
 
 PlanProposal（不変条件 41）は、外部 Agent を MVP に含めるかが PRD §14 で未決のため作らない。提案の中身を作る処理と、永続化も対象外。
@@ -152,9 +159,9 @@ PlanProposal（不変条件 41）は、外部 Agent を MVP に含めるかが P
 | `src/shared/` | ID、日付と日時、Result、コマンドの形、Activity |
 | `src/user.ts`、`src/area.ts` | User、Area（改名・アーカイブ） |
 | `src/task.ts` | Task、Subtask、ライフサイクル、属性の変更 |
-| `src/estimate.ts` | Estimate、EstimateSuggestion（提示・採用・却下） |
+| `src/estimate.ts` | Estimate、EstimateSuggestion（提示・採用・却下・採用を元に戻す） |
 | `src/planning-value.ts` | 計画値の計算と合計 |
-| `src/backlog.ts` | Backlog のビュー |
+| `src/backlog.ts` | Backlog のビュー、持ち越し回数 |
 | `src/recurrence.ts` | RecurrenceRule と版、パターン、次の回、Backlog の 1 行の値 |
 | `src/occurrence.ts` | Occurrence の生成と状態遷移 |
 | `src/sprint.ts` | Sprint・SprintTask・SprintGoal などの型、Area 名、次の Sprint の開始日、`projectFrom` |

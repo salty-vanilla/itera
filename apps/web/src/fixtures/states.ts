@@ -14,12 +14,26 @@ export interface FixtureState {
   readonly screen: ScreenId;
   /** The name in the dev menu. */
   readonly label: string;
+  /** The screen's search parameters the dev menu opens it with. */
+  readonly search?: Readonly<Record<string, string>>;
 }
 
 export const fixtureStates: readonly FixtureState[] = [
   { id: 'backlog-capture', screen: 'backlog', label: 'Capture' },
-  { id: 'backlog-detail', screen: 'backlog', label: 'Detail' },
-  { id: 'backlog-recurrence', screen: 'backlog', label: 'Recurrence' },
+  {
+    id: 'backlog-detail',
+    screen: 'backlog',
+    label: 'Detail',
+    // Scenario B's Task: a suggestion, subtasks, a due date, added mid-Sprint.
+    search: { task: 'task-interview' },
+  },
+  {
+    id: 'backlog-recurrence',
+    screen: 'backlog',
+    label: 'Recurrence',
+    // Scenario C's Task, its rule changed for the next Sprint.
+    search: { view: 'recurring', task: 'task-cleaning' },
+  },
   { id: 'planning-pick', screen: 'sprint', label: '選ぶ（Pick）' },
   { id: 'planning-shape', screen: 'sprint', label: '整える（Shape）' },
   { id: 'planning-check', screen: 'sprint', label: '確かめる（Check）' },

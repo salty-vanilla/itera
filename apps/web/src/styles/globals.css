@@ -233,6 +233,14 @@
 }
 
 @layer base {
+  /*
+   * The compact Toast sits above the bottom tab bar (56px: 8 + 20 + 4 + 16
+   * + 8, components/ui/navigation.tsx) and the safe area.
+   */
+  :root {
+    --toast-offset-bottom: calc(56px + env(safe-area-inset-bottom));
+  }
+
   html {
     background-color: var(--canvas);
     color: var(--ink);

@@ -328,3 +328,15 @@ export function projectFrom(
   const after = addDays(last.end, 1);
   return after > today ? after : today;
 }
+
+/**
+ * 「Sprint 14」: the Sprint's place among the user's Sprints in order of
+ * start, from 1 (F25). Derived, never stored; Sprints never overlap and are
+ * not deleted, so the number does not change.
+ */
+export function sprintNumber(
+  sprint: Sprint,
+  sprints: readonly Sprint[],
+): number {
+  return sprints.filter((s) => s.start < sprint.start).length + 1;
+}
