@@ -22,6 +22,7 @@ import { id } from './shared/ids';
 import { addDays, localDate } from './shared/time';
 import { confirmSprint, excludeFromPlan, startPlanning } from './planning';
 import { projectFrom, type Sprint } from './sprint';
+import { retroFacts } from './retro-facts';
 import { changeRuleForNextSprint } from './sprint-recurrence';
 import { completeSelection, skipSelection, startDay } from './today';
 import { at, ids, newTask, sprintFixture, unwrap, user } from './testing';
@@ -288,6 +289,18 @@ describe('Scenario C — steps 6–9 with Sprint records', () => {
       '2026-08-31T00:10:00.000Z',
     );
     expect(occurrences.find((o) => o.id === sep6.id)?.state).toBe('excluded');
+    // F2: the week's Retro facts do not show the excluded 9/6.
+    const week31Facts = retroFacts(active31, {
+      tasks: [recurringTask],
+      areas: [],
+      occurrences,
+      sprints: [],
+    });
+    expect(week31Facts.occurrences).toEqual({
+      done: [],
+      skipped: [],
+      missed: [],
+    });
 
     // 8. 9/2 (Wed), mid-Sprint: back to 毎週 土. It waits for the next
     //    Sprint (9/7); the current Sprint and its occurrences stay as they are.
@@ -442,6 +455,18 @@ describe('Scenario C — steps 2–3 in Today', () => {
       ['2026-08-08', 'done'],
       ['2026-08-15', 'done'],
       ['2026-08-22', 'skipped'],
+    ]);
+    // Retro of the 8/17 week: 「8/22 の回をスキップ」.
+    const week17 = sprints.at(-1);
+    if (week17 === undefined) throw new Error('no Sprint');
+    const facts = retroFacts(week17, {
+      tasks: [task],
+      areas: [],
+      occurrences,
+      sprints,
+    });
+    expect(facts.occurrences.skipped.map((o) => o.scheduledDate)).toEqual([
+      '2026-08-22',
     ]);
   });
 });

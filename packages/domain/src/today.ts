@@ -610,16 +610,17 @@ export interface RecordActualTimeInput {
   readonly date: LocalDate;
 }
 
-/** 実績を後から残す (via = later). Append-only. */
+/** 実績を後から残す (via = later), also in Review (F22). Append-only. */
 export function recordActualTime(
   sprint: Sprint,
   input: RecordActualTimeInput,
   ctx: CommandContext,
 ): CommandResult<Sprint> {
-  if (sprint.state !== 'active') {
+  // During the Sprint, and in Review before the Retro completes (F22).
+  if (sprint.state !== 'active' && sprint.state !== 'review') {
     return err(
       'invalidTransition',
-      'Actual time is recorded during the Sprint.',
+      'Actual time is recorded during the Sprint or its Review.',
     );
   }
   const sprintTask = sprint.tasks.find((t) => t.id === input.sprintTaskId);

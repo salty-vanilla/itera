@@ -207,6 +207,43 @@ export type Activity =
       readonly interruptId: InterruptNoteId;
     })
   | (ActivityBase & {
+      readonly kind:
+        | 'sprintReviewStarted'
+        | 'retroCompleted'
+        | 'reflectionChanged'
+        | 'improvementChanged';
+      readonly sprintId: SprintId;
+    })
+  | (ActivityBase & {
+      readonly kind: 'goalSelfAssessed';
+      readonly sprintId: SprintId;
+      readonly areaId: AreaId;
+      readonly assessment: string | null;
+    })
+  | (ActivityBase & {
+      readonly kind: 'retroPinned' | 'retroUnpinned';
+      readonly sprintId: SprintId;
+      readonly pin: { readonly kind: string; readonly id?: string };
+    })
+  | (ActivityBase & {
+      readonly kind:
+        'criterionDrafted' | 'criterionDraftDropped' | 'criterionDraftChanged';
+      readonly criterionId: PlanningCriterionId;
+    })
+  | (ActivityBase & {
+      /** 基準の Retro での決定（続ける / 終える / 置き換える）. */
+      readonly kind: 'criterionDecided';
+      readonly sprintId: SprintId;
+      readonly criterionId: PlanningCriterionId;
+      readonly decision: 'continue' | 'end' | 'replace';
+    })
+  | (ActivityBase & {
+      readonly kind: 'criterionStateChanged';
+      readonly criterionId: PlanningCriterionId;
+      readonly from: string;
+      readonly to: string;
+    })
+  | (ActivityBase & {
       /** F9: an Area first appearing in a confirmed Sprint. */
       readonly kind: 'areaSnapshotAdded';
       readonly sprintId: SprintId;

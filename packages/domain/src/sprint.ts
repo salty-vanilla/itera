@@ -81,7 +81,16 @@ export interface SprintGoal {
   readonly text: string;
   /** The text at confirm. Written once (invariant 18). */
   readonly plannedText?: string;
+  /**
+   * The person's own judgement in Retro. Absent means 未判定. The system
+   * never sets it (invariant 19).
+   */
+  readonly selfAssessment?: SelfAssessment;
 }
+
+/** できた / 一部できた / できなかった / 判断しない. */
+export type SelfAssessment =
+  'achieved' | 'partly' | 'notAchieved' | 'notJudged';
 
 /** An Area's name as this Sprint shows it (F5, F9). */
 export interface SprintAreaSnapshotEntry {
@@ -95,6 +104,44 @@ export interface CriterionUse {
   readonly criterionId: PlanningCriterionId;
   /** Fixed at confirm; there is no way to change it later (invariant 37). */
   readonly appliedAtConfirm: boolean;
+  /**
+   * 続ける / 終える / 置き換える, chosen in Retro whether or not it was
+   * applied. The Retro cannot complete without it (invariant 36).
+   */
+  readonly retroDecision?: RetroDecision;
+}
+
+export type RetroDecision = 'continue' | 'end' | 'replace';
+
+/** A fact the person marked in Retro (気になる印). */
+export interface RetroPin {
+  readonly kind:
+    | 'sprintTask'
+    | 'dailySelection'
+    | 'occurrence'
+    | 'interrupt'
+    | 'goal'
+    | 'availableHours';
+  /** The record's ID (the Area's for a Goal); absent for available hours. */
+  readonly id?: string;
+}
+
+/** 次の Sprint で 1 つ変えてみること. One natural-language text (invariant 38). */
+export interface RetroImprovement {
+  readonly text: string;
+  /** The PlanningCriterion made from it, if any (0..1). */
+  readonly criterionId?: PlanningCriterionId;
+}
+
+/** The Sprint's look back. One per Sprint. */
+export interface Retro {
+  readonly startedAt: Instant;
+  /** Set when the Retro completes; the Sprint is then closed. */
+  readonly completedAt?: Instant;
+  readonly pins: readonly RetroPin[];
+  /** 気になったこと (optional, free text). */
+  readonly reflection: string;
+  readonly improvement?: RetroImprovement;
 }
 
 /**
@@ -125,6 +172,8 @@ export interface Sprint {
   readonly actualTimes: readonly ActualTime[];
   /** 割り込み. Not Tasks, and not counted as mid-Sprint additions. */
   readonly interrupts: readonly InterruptNote[];
+  /** Present from Review on. */
+  readonly retro?: Retro;
 }
 
 /** 今日の選択. `selected` and `started` are open; the rest are resolved. */

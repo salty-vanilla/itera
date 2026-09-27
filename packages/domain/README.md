@@ -130,6 +130,17 @@ type CommandResult<T> =
 - **昨日の続き**（`yesterdaysContinuation`）：前日に paused だった Task のうち、今の Sprint で planned で、今日まだ選んでいないもの。週をまたぐ持ち越しも拾う（F6）。繰り返しなら、paused だった回（`occurrenceId`）も返す。
 - **今日の残り**（`todayRemaining`）：その日の開いている選択の件数と、planSnapshot から出した見込み時間（繰り返しは 1 回分）。日次の容量や超過の判定はしない（不変条件 25）。
 
+## Review と Retro で決めた細部（#24）
+
+- **Review への移行**（`enterReview`）：本人は最終日から、システムは終了日の翌日から（F21）。planned の単発の SprintTask は carriedOver、繰り返しの SprintTask は done で閉じる（F20）。Sprint に含めた Pending の回は missed、開いた選択は unresolved にする。Retro はこのとき空で始まる。
+- **Retro**：Sprint の中に 1 つ（`sprint.retro`）。印（`togglePin`）、気になったこと（`setReflection`）、次に 1 つ変えること（`setImprovement`、1 件の自然文。不変条件 38）。自己判定（`assessGoal`）は本人だけが付け、`null` で未判定に戻す（不変条件 19）。
+- **計画基準**：PlanningCriterion は User の記録（`criterion.ts`）。Improvement から `draftCriterion` で 0..1 件の下書きを作り、`dropCriterionDraft` で捨てる（記録は呼び出し側が消す）。この Sprint に CriterionUse があれば、`decideCriterion` で続ける / 終える / 置き換えるを選ぶまで `completeRetro` はできない（不変条件 36。理由は求めない）。置き換えるには、この Retro の下書きが要る。
+- **Retro の完了**（`completeRetro`）：Review → Closed。続けるなら Active のまま、終えるなら Ended、置き換えるなら Replaced（`replacedBy` = 下書き）にして下書きを Active にする。下書きは、Active が続く場合を除いて Active になる（続けるのに下書きがあると Active が 2 つになるので拒否する。不変条件 35）。変わった基準の記録を返す。
+- **次の Planning の入口**：`previousImprovement` で前の Sprint の Improvement を出す。
+- **不変条件 39**：`criterionView(policy, tasks, now)` が、設定値・効果（どちらの端か、どこに効くか）・次の Planning のプレビューを同じ 1 つの `CriterionPolicy` から作る。文言は画面が作る。
+- **Retro の事実**（`retroFacts`）：記録から毎回計算し、保存も編集もしない。点数は作らない（不変条件 40）。Area ごとの Goal（計画時と今、自己判定）、Goal に紐づく / 紐づかない Task、完了・持ち越し・外した Task、Sprint 中の追加、繰り返しの回（Sprint に含めた回だけ。F2・F14）、見送り・今日はここまで（F17 で完了になった選択も数える）、割り込み、可用時間の計画時と今、計画値の合計（確定時の分と、Sprint 中の追加を含めた分）、実績。Task ごとに持ち越し回数（`carryCount`）と最長の連続見送りを返す。
+- **実績**：Review 中も `recordActualTime` で足せる（F22）。
+
 ## 対象外
 
 PlanProposal（不変条件 41）は、外部 Agent を MVP に含めるかが PRD §14 で未決のため作らない。提案の中身を作る処理と、永続化も対象外。
@@ -153,8 +164,11 @@ PlanProposal（不変条件 41）は、外部 Agent を MVP に含めるかが P
 | `src/capacity.ts` | 計画値の合計と可用時間との比較 |
 | `src/today.ts` | 今日へ、開始・完了・今日はここまで・見送り・外す・スキップ（と取り消し）、日付の変更、Backlog からの完了、実績、割り込み |
 | `src/today-view.ts` | 連続見送り、昨日の続き、今日の残り |
+| `src/review.ts` | Review への移行、Retro（印・気になったこと・Improvement・自己判定）、計画基準の下書きと決定、Retro の完了 |
+| `src/criterion.ts` | PlanningCriterion、下書きの設定、`criterionView`（不変条件 39） |
+| `src/retro-facts.ts` | Retro の事実、持ち越し回数 |
 
-テストは同じ場所の `*.test.ts`。不変条件のテストは名前に番号を入れる（`invariant 7: ...`）。Scenario A の手順 3〜12 は `scenario-a.test.ts`、Scenario B の手順 1〜4 は `scenario-b.test.ts`、Scenario C の手順 1〜9 は `scenario-c.test.ts`（#21〜#23）。残りの手順は #24 で書く。
+テストは同じ場所の `*.test.ts`。不変条件のテストは名前に番号を入れる（`invariant 7: ...`）。Scenario A〜C の全手順は `scenario-a.test.ts`・`scenario-b.test.ts`・`scenario-c.test.ts`（#21〜#24）。「現在状態だけでは失われる情報」は `lost-information.test.ts`。
 
 ## 純粋さの検査
 

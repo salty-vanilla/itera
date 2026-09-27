@@ -37,7 +37,7 @@ v0.2 Final は v0.1 の骨格（恒久的な **Task** と、「この Sprint で
 
 ### v0.2 Final で決めたこと
 
-F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F11 は同じ日に、`packages/domain` の実装で見つかった食い違いについて決めた（Issue #20）。F12 も同じ日に決めた（Issue #21）。F13〜F16 も同じ日に、Sprint と Planning の実装で出た境界の場合について決めた（Issue #22）。F17〜F19 も同じ日に、Today の実装で出た境界の場合について決めた（Issue #23）。
+F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F11 は同じ日に、`packages/domain` の実装で見つかった食い違いについて決めた（Issue #20）。F12 も同じ日に決めた（Issue #21）。F13〜F16 も同じ日に、Sprint と Planning の実装で出た境界の場合について決めた（Issue #22）。F17〜F19 も同じ日に、Today の実装で出た境界の場合について決めた（Issue #23）。F20〜F22 も同じ日に、Review と Retro の実装で出た境界の場合について決めた（Issue #24）。
 
 | # | 決定 | モデルへの反映 | UI への影響 |
 | --- | --- | --- | --- |
@@ -60,6 +60,9 @@ F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F
 | F17 | 「今日はここまで」「見送り」「外す」にした選択も、その日のうちなら完了にできる | DailySelection に Paused / Deferred / Removed → Done（同じ日のうち）を足す。Today でも Backlog からの完了でも、その日の選択を Done にする（2 件目は作らない。不変条件 21・27）。見送りだった選択が Done になると、連続見送りはそこで途切れる（見送った事実は Activity に残る）。同じ日に選び直す（→ Selected）ことはできない。この完了を取り消すと、元の閉じた状態（見送りなど）に戻る | Today：閉じた行にも「完了」を出せる。Backlog の「完了にする」がその日も通る |
 | F18 | 繰り返しの回は、同じ Sprint のほかの日にも「今日へ」選べる | 予定日と違う日の DailySelection を作れる（前倒し・後ろ倒し）。前倒しで済ませた回は予定日に Done なので、当日の繰り返しとして Today に出ない | Today：今週の残りの繰り返しから選べる |
 | F19 | 繰り返しの回のスキップは取り消せる | DailySelection に Skipped → Selected（スキップを取り消す）を足す。回は Skipped → Pending に戻る（完了の取り消しと同じ扱い） | Today：スキップした行に「取り消す」を出す |
+| F20 | 繰り返しの SprintTask は Review で Done として閉じる | 回を束ねた SprintTask は、Review に入ると Done にする（持ち越しにしない。結果は回ごとの Done / Skipped / Missed に残る）。次の Sprint は自分の回を生成する | Retro：繰り返しは「完了・持ち越し」ではなく、回の数で見せる |
+| F21 | Retro は最終日から始められる | 本人は Sprint の最終日から「Retro を始める」で Review に入れる。終了日を過ぎたら、システムが Review にする | Today：最終日に「Retro を始める」を出す |
+| F22 | Review 中も実績時間を後から足せる | ActualTime は Sprint が Active か Review の間に追記できる。Closed になったら足せない | Retro：事実を見ながら実績を足せる |
 
 ### 用語
 
@@ -248,7 +251,7 @@ stateDiagram-v2
 
 - 確定時に写し取るもの：各 SprintTask の planSnapshot、SprintGoal.plannedText、可用時間（確定時）、SprintAreaSnapshot、CriterionUse。SprintAreaSnapshot はその Sprint の Planning / Today / Retro での Area 名になり、Sprint 中の改名は反映しない。確定前の Planning は現在の名前を使う。スナップショットにない Area が Sprint 中に初めて現れたとき（その Area の Task を Sprint に追加した、または Sprint 内の Task の Area にした）は、その時点の名前を末尾に足して固定する（F9）。
 - Active の間も Goal の文と可用時間は変えられる。変更は履歴に残り、Retro で確定時との差分を見せる。確定後に Goal を新しく書くことはできるが、消すことはできない（F16）。
-- Review に入った時点で、未完了の SprintTask を CarriedOver、未処理の Occurrence を Missed にする。
+- Review に入った時点で、未完了の SprintTask を CarriedOver（繰り返しの SprintTask は Done で閉じる：F20）、未処理の Occurrence を Missed、開いたままの DailySelection を Unresolved にする。本人は最終日から、システムは終了日を過ぎたら Review に入れる（F21）。
 
 ## 不変条件（Invariants）
 

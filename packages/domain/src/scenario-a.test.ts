@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { renameArea } from './area';
 import { presentSuggestion } from './estimate';
 import {
+  carryOverCandidates,
   confirmSprint,
   selectTask,
   setAvailableHours,
@@ -15,6 +16,14 @@ import {
 } from './planning';
 import { id } from './shared/ids';
 import { localDate } from './shared/time';
+import { retroFacts } from './retro-facts';
+import {
+  completeRetro,
+  decideCriterion,
+  enterReview,
+  previousImprovement,
+  setImprovement,
+} from './review';
 import { sprintAreaName } from './sprint';
 import {
   deferSelection,
@@ -278,5 +287,100 @@ describe('Scenario A — 関連論文を 3 本読む（Planning と確定）', (
       ['2026-09-30', 'paused'],
     ]);
     expect(deferralStreak([previous, sprint], task.id)).toBe(0);
+
+    // --- Review, Retro and the next Planning (steps 13–15, #24) ---
+    // 13. 10/5: the system moves the Sprint to Review; the Task is carried
+    //     over and stays active in the Backlog.
+    const reviewed = unwrap(
+      enterReview(
+        sprint,
+        { today: localDate('2026-10-05'), occurrences: [] },
+        { ...at('2026-10-04T15:00:00.000Z'), actor: 'system' },
+      ),
+    );
+    sprint = reviewed.sprint;
+    expect(sprint.state).toBe('review');
+    expect(sprint.tasks[0]?.outcome).toBe('carriedOver');
+    expect(task.lifecycle).toBe('active');
+    // Retro facts: 持ち越し、提案 3–5h · 計画値 5h · 実績 4.5h、2回続けて見送り
+    // （9/28・9/29）、9/30 は「今日はここまで」.
+    const facts = retroFacts(sprint, {
+      tasks: [task],
+      areas: [research, work],
+      occurrences: [],
+      sprints: [previous, sprint],
+    });
+    expect(facts.carriedOver).toHaveLength(1);
+    expect(facts.carriedOver[0]).toMatchObject({
+      plan: {
+        suggestion: { lo: 3, hi: 5 },
+        value: { lo: 5, hi: 5, criterionApplied: true },
+      },
+      actualHours: 4.5,
+      longestDeferralRun: ['2026-09-28', '2026-09-29'],
+      pausedDates: ['2026-09-30'],
+    });
+
+    // 14. Retro: 「1 本ずつに分ける」, the criterion continues, Retro complete → Closed.
+    const retroAt = at('2026-10-05T01:00:00.000Z');
+    sprint = unwrap(
+      setImprovement(sprint, { text: '1 本ずつに分ける' }, retroAt),
+    );
+    sprint = unwrap(decideCriterion(sprint, { decision: 'continue' }, retroAt));
+    const activeCrit = {
+      id: criterion.id,
+      userId,
+      policy: criterion.policy,
+      sourceSprintId: previous.id,
+      state: 'active' as const,
+      createdAt: at('2026-09-27T00:00:00.000Z').now,
+    };
+    const completed = unwrap(
+      completeRetro(sprint, { criteria: [activeCrit] }, retroAt),
+    );
+    sprint = completed.sprint;
+    expect(sprint.state).toBe('closed');
+    expect(completed.criteria).toEqual([]); // continues, still active
+
+    // 15. The next Planning: the Task is only a carry-over candidate, the
+    //     improvement is shown at the entrance, and choosing it links back.
+    const next = unwrap(
+      startPlanning(
+        {
+          sprintId: id('sprint-2026-10-05'),
+          user,
+          start: localDate('2026-10-05'),
+          sprints: [previous, sprint],
+          recurring: [],
+          occurrences: [],
+          newOccurrenceId: ids('occ-n'),
+          newSprintTaskId: ids('st-n'),
+        },
+        at('2026-10-05T02:00:00.000Z'),
+      ),
+    ).sprint;
+    expect(next.tasks).toEqual([]);
+    expect(previousImprovement(next, [previous, sprint, next])?.text).toBe(
+      '1 本ずつに分ける',
+    );
+    const [candidate] = carryOverCandidates(sprint, next, [task]);
+    expect(candidate?.taskId).toBe(task.id);
+    const chosen = unwrap(
+      selectTask(
+        next,
+        {
+          sprintTaskId: id('st-paper-2'),
+          task,
+          ...(candidate === undefined ? {} : { carriedFrom: candidate }),
+        },
+        at('2026-10-05T02:05:00.000Z'),
+      ),
+    );
+    expect(chosen.tasks[0]).toMatchObject({
+      carriedFrom: 'st-paper',
+      outcome: 'draft',
+    });
+    // Splitting the Task is the person's call; nothing splits it automatically.
+    expect(chosen.tasks).toHaveLength(1);
   });
 });
