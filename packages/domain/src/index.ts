@@ -16,4 +16,6 @@ export * from './recurrence';
 export * from './sprint';
 export * from './sprint-recurrence';
 export * from './task';
+export * from './today';
+export * from './today-view';
 export * from './user';

@@ -113,6 +113,18 @@ type CommandResult<T> =
 - **Planning 中に作った Rule（F15）**：Backlog から繰り返しにするときは `createRuleForNextSprint` を使う。Planning 中の Sprint があれば、その期間の回をそのとき作って含める。 その draft で同じ Task を単発として選んでいたら、繰り返しの SprintTask に置き換える（`carriedFrom` と goalLink は引き継がない。その週に回がなければ、Task は今週の計画から外れる）。
 - **Goal に紐づく / 紐づかない**：`setGoalLink` で切り替える（PRD §5 B）。Planning 中の draft は Goal を書く前でも linked にでき、確定時に Area に Goal がなければ unlinked になる。Sprint 中に linked にできるのは Area に Goal があるときだけ。変更は `goalLinkChanged` として残す。
 
+## Today で決めた細部（#23）
+
+- **置き場所**：DailySelection・ActualTime・InterruptNote は Sprint の集約の中（`dailySelections`・`actualTimes`・`interrupts`）。Today のコマンドは Sprint と、変えた Task・Occurrence を返し、Goal・計画基準・可用時間には触れない（不変条件 25）。
+- **1 日 1 件**：日付 × SprintTask（繰り返しは × Occurrence）に 1 件（不変条件 21）。同じ日に「今日から外す」「見送る」をした後、同じ日にもう一度選ぶことはできない（状態遷移に戻る道がない）。
+- **当日の繰り返し**：`startDay`（actor = system だけ）で作る。Today を開いたとき・日付が変わったときに呼び、繰り返しても変わらない。前の日に開いたままの選択（selected / started）を unresolved にし（不変条件 24）、その日の Pending の回で、planned の SprintTask に含まれるものを `recurringToday` の選択にする。「昨日の続き」も含め、ほかは自動で選ばない（不変条件 22）。
+- **完了**：単発の Task は Task = completed と SprintTask = done を同時に変える。繰り返しは Occurrence = done だけで、SprintTask は planned のまま（束ねた SprintTask の締めは #24）。取り消すと元に戻り、記録した実績は残る（追記のみ）。
+- **Backlog からの完了**：今の Sprint で planned なら、Task・SprintTask・その日の選択（`backlogCompletion`、done）を同時に作る（不変条件 27）。その日にまだ開いている選択があれば、それを完了にする（2 件目は作らない）。その日の選択が見送り・外す・今日はここまでで閉じていると完了にできない（オーナーに確認中、#23 の PR）。繰り返しの Task は Backlog から完了にしない。
+- **実績**：`pauseSelection` / `completeSelection` の `actualHours` か、後から `recordActualTime`。どれも任意（不変条件 28）。
+- **連続見送り**（`deferralStreak`）：同じ Task の選択を Sprint をまたいで日付順に並べ、最後から数える。deferred を数え、unresolved とまだ開いている選択は飛ばし、paused・done・removed・skipped で止める（F4・F8）。
+- **昨日の続き**（`yesterdaysContinuation`）：前日に paused だった Task のうち、今の Sprint で planned で、今日まだ選んでいないもの。週をまたぐ持ち越しも拾う（F6）。
+- **今日の残り**（`todayRemaining`）：その日の開いている選択の件数と、planSnapshot から出した見込み時間（繰り返しは 1 回分）。日次の容量や超過の判定はしない（不変条件 25）。
+
 ## 対象外
 
 PlanProposal（不変条件 41）は、外部 Agent を MVP に含めるかが PRD §14 で未決のため作らない。提案の中身を作る処理と、永続化も対象外。
@@ -134,8 +146,10 @@ PlanProposal（不変条件 41）は、外部 Agent を MVP に含めるかが P
 | `src/mid-sprint.ts` | Sprint 中の追加、Sprint から外す・戻す、F9 |
 | `src/sprint-recurrence.ts` | 次の Sprint からの Rule の作成と変更（F1・F7・F15） |
 | `src/capacity.ts` | 計画値の合計と可用時間との比較 |
+| `src/today.ts` | 今日へ、開始・完了・今日はここまで・見送り・外す・スキップ、日付の変更、Backlog からの完了、実績、割り込み |
+| `src/today-view.ts` | 連続見送り、昨日の続き、今日の残り |
 
-テストは同じ場所の `*.test.ts`。不変条件のテストは名前に番号を入れる（`invariant 7: ...`）。Scenario A の手順 3〜5 は `scenario-a.test.ts`、Scenario B の手順 1〜3 は `scenario-b.test.ts`、Scenario C の手順 1〜9 は `scenario-c.test.ts`（#21・#22）。残りの手順は #23・#24 で書く。
+テストは同じ場所の `*.test.ts`。不変条件のテストは名前に番号を入れる（`invariant 7: ...`）。Scenario A の手順 3〜12 は `scenario-a.test.ts`、Scenario B の手順 1〜4 は `scenario-b.test.ts`、Scenario C の手順 1〜9 は `scenario-c.test.ts`（#21〜#23）。残りの手順は #24 で書く。
 
 ## 純粋さの検査
 

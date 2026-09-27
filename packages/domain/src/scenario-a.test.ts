@@ -16,6 +16,14 @@ import {
 import { id } from './shared/ids';
 import { localDate } from './shared/time';
 import { sprintAreaName } from './sprint';
+import {
+  deferSelection,
+  pauseSelection,
+  selectForToday,
+  startDay,
+  startSelection,
+} from './today';
+import { deferralStreak, yesterdaysContinuation } from './today-view';
 import { createTask, updateTask } from './task';
 import {
   at,
@@ -159,5 +167,116 @@ describe('Scenario A — 関連論文を 3 本読む（Planning と確定）', (
       renameArea(research, '研究・論文', at('2026-09-29T00:00:00.000Z')),
     );
     expect(sprintAreaName(sprint, researchId, [renamedAfter])).toBe('研究');
+
+    // --- Today (steps 6–12, #23) ---
+    const system = (iso: string) => ({ ...at(iso), actor: 'system' as const });
+    const day = (date: string, iso: string) =>
+      unwrap(
+        startDay(
+          sprint,
+          {
+            today: localDate(date),
+            occurrences: [],
+            newSelectionId: ids('sys'),
+          },
+          system(iso),
+        ),
+      );
+    const pick = (selId: string, date: string, iso: string) =>
+      unwrap(
+        selectForToday(
+          sprint,
+          {
+            selectionId: id(selId),
+            date: localDate(date),
+            sprintTaskId: id('st-paper'),
+          },
+          at(iso),
+        ),
+      );
+
+    // 6–7. 9/28 (Mon): 今日へ, then 今日は見送る. The SprintTask stays planned.
+    sprint = day('2026-09-28', '2026-09-27T15:00:00.000Z');
+    sprint = pick('sel-0928', '2026-09-28', '2026-09-28T00:00:00.000Z');
+    sprint = unwrap(
+      deferSelection(
+        sprint,
+        { selectionId: id('sel-0928') },
+        at('2026-09-28T09:00:00.000Z'),
+      ),
+    );
+    expect(sprint.tasks[0]?.outcome).toBe('planned');
+
+    // 8. 9/29 (Tue): chosen again (a new DailySelection) and deferred → 「2回続けて見送り」.
+    sprint = day('2026-09-29', '2026-09-28T15:00:00.000Z');
+    sprint = pick('sel-0929', '2026-09-29', '2026-09-29T00:00:00.000Z');
+    sprint = unwrap(
+      deferSelection(
+        sprint,
+        { selectionId: id('sel-0929') },
+        at('2026-09-29T09:00:00.000Z'),
+      ),
+    );
+    expect(deferralStreak([previous, sprint], task.id)).toBe(2);
+
+    // 9–10. 9/30 (Wed): start, 4.5h, 今日はここまで. Still planned; the run is broken.
+    sprint = day('2026-09-30', '2026-09-29T15:00:00.000Z');
+    sprint = pick('sel-0930', '2026-09-30', '2026-09-30T00:00:00.000Z');
+    sprint = unwrap(
+      startSelection(
+        sprint,
+        { selectionId: id('sel-0930') },
+        at('2026-09-30T00:10:00.000Z'),
+      ),
+    );
+    sprint = unwrap(
+      pauseSelection(
+        sprint,
+        { selectionId: id('sel-0930'), actualHours: 4.5 },
+        at('2026-09-30T05:00:00.000Z'),
+      ),
+    );
+    expect(sprint.tasks[0]?.outcome).toBe('planned');
+    expect(sprint.actualTimes).toMatchObject([
+      {
+        sprintTaskId: 'st-paper',
+        hours: 4.5,
+        date: '2026-09-30',
+        via: 'pause',
+      },
+    ]);
+    expect(deferralStreak([previous, sprint], task.id)).toBe(0);
+
+    // 11. 10/1 (Thu) morning: no DailySelection is made; 「昨日の続き」 on top.
+    sprint = day('2026-10-01', '2026-09-30T15:00:00.000Z');
+    expect(
+      sprint.dailySelections.filter((s) => s.date === '2026-10-01'),
+    ).toEqual([]);
+    expect(
+      yesterdaysContinuation(
+        sprint,
+        [previous, sprint],
+        localDate('2026-10-01'),
+      ).map((t) => t.id),
+    ).toEqual(['st-paper']);
+
+    // 12. 10/2–10/4: not chosen. No DailySelection, no effect on the run,
+    //     and no 「昨日の続き」 without a pause the day before.
+    for (const [date, iso] of [
+      ['2026-10-02', '2026-10-01T15:00:00.000Z'],
+      ['2026-10-03', '2026-10-02T15:00:00.000Z'],
+      ['2026-10-04', '2026-10-03T15:00:00.000Z'],
+    ] as const) {
+      sprint = day(date, iso);
+      expect(
+        yesterdaysContinuation(sprint, [previous, sprint], localDate(date)),
+      ).toEqual([]);
+    }
+    expect(sprint.dailySelections.map((s) => [s.date, s.resolution])).toEqual([
+      ['2026-09-28', 'deferred'],
+      ['2026-09-29', 'deferred'],
+      ['2026-09-30', 'paused'],
+    ]);
+    expect(deferralStreak([previous, sprint], task.id)).toBe(0);
   });
 });

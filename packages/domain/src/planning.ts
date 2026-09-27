@@ -148,6 +148,9 @@ export function startPlanning(
     goals: [],
     tasks,
     areaSnapshot: [],
+    dailySelections: [],
+    actualTimes: [],
+    interrupts: [],
   };
   return applied({ sprint, occurrences: generated }, activities);
 }

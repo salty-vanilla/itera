@@ -19,6 +19,8 @@ export type OccurrenceId = Id<'Occurrence'>;
 export type SprintId = Id<'Sprint'>;
 export type SprintTaskId = Id<'SprintTask'>;
 export type PlanningCriterionId = Id<'PlanningCriterion'>;
+export type DailySelectionId = Id<'DailySelection'>;
+export type InterruptNoteId = Id<'InterruptNote'>;
 
 /** Brands a string as an ID. Use at the boundary (fixtures, API, UI). */
 export function id<Kind extends string>(value: string): Id<Kind> {

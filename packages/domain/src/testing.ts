@@ -90,6 +90,9 @@ export function sprintFixture(
     goals: [],
     tasks: [],
     areaSnapshot: [],
+    dailySelections: [],
+    actualTimes: [],
+    interrupts: [],
     ...extra,
   };
 }

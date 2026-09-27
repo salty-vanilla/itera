@@ -1,7 +1,7 @@
 // Scenario C of docs/domain/domain-model.md (部屋の掃除, weekly). Sprints
 // are Monday–Sunday weeks of 2026. The first test follows the rule and its
 // occurrences alone (steps 1–5, 8; #21); the second runs steps 6–9 with
-// Sprint records (#22). Closing a Sprint comes with #24, so closed Sprints
+// Sprint records (#22); the third runs steps 2–3 through Today (#23). Closing a Sprint comes with #24, so closed Sprints
 // are fixtures here.
 import { describe, expect, it } from 'vitest';
 import {
@@ -23,6 +23,7 @@ import { addDays, localDate } from './shared/time';
 import { confirmSprint, excludeFromPlan, startPlanning } from './planning';
 import { projectFrom, type Sprint } from './sprint';
 import { changeRuleForNextSprint } from './sprint-recurrence';
+import { completeSelection, skipSelection, startDay } from './today';
 import { at, ids, newTask, sprintFixture, unwrap, user } from './testing';
 
 const d = localDate;
@@ -336,6 +337,110 @@ describe('Scenario C — steps 6–9 with Sprint records', () => {
     ]);
     expect(week7.sprint.tasks).toMatchObject([
       { outcome: 'draft', occurrenceIds: [week7.occurrences[0]?.id] },
+    ]);
+  });
+});
+
+describe('Scenario C — steps 2–3 in Today', () => {
+  it('each week’s occurrence appears in Today on its day; done and skipped go to the occurrence', () => {
+    const newOccurrenceId = ids<'Occurrence'>('occ');
+    const created = unwrap(
+      createRecurrenceRule(
+        newTask('部屋の掃除'),
+        { id: id('rule-1'), pattern: saturday, effectiveFrom: d('2026-08-03') },
+        at('2026-08-02T00:00:00.000Z'),
+      ),
+    );
+    const task = created.task;
+    const rule = created.rule;
+    let occurrences: Occurrence[] = [];
+    let sprints: Sprint[] = [];
+
+    const runWeek = (
+      start: string,
+      day: string,
+      action: 'complete' | 'skip',
+    ) => {
+      const started = unwrap(
+        startPlanning(
+          {
+            sprintId: id(`sprint-${start}`),
+            user,
+            start: d(start),
+            sprints,
+            recurring: [{ task, rule }],
+            occurrences,
+            newOccurrenceId,
+            newSprintTaskId: ids(`st-${start}`),
+          },
+          at(`${start}T00:00:00.000Z`),
+        ),
+      );
+      occurrences = [...occurrences, ...started.occurrences];
+      let sprint = unwrap(
+        confirmSprint(
+          started.sprint,
+          { sprints, tasks: [task], areas: [], applyCriterion: false },
+          at(`${start}T00:10:00.000Z`),
+        ),
+      );
+      // On the day, the system puts the occurrence into Today (当日の繰り返し).
+      sprint = unwrap(
+        startDay(
+          sprint,
+          { today: d(day), occurrences, newSelectionId: ids(`sel-${day}`) },
+          { ...at(`${day}T00:00:00.000Z`), actor: 'system' },
+        ),
+      );
+      const [selection] = sprint.dailySelections;
+      expect(selection).toMatchObject({ date: day, origin: 'recurringToday' });
+      const occurrence = occurrences.find(
+        (o) => o.id === selection?.occurrenceId,
+      );
+      if (selection === undefined || occurrence === undefined) {
+        throw new Error('no selection');
+      }
+      const change = unwrap(
+        action === 'complete'
+          ? completeSelection(
+              sprint,
+              { selectionId: selection.id, occurrence },
+              at(`${day}T01:00:00.000Z`),
+            )
+          : skipSelection(
+              sprint,
+              { selectionId: selection.id, occurrence },
+              at(`${day}T01:00:00.000Z`),
+            ),
+      );
+      occurrences = occurrences.map((o) =>
+        o.id === change.occurrence?.id ? change.occurrence : o,
+      );
+      sprints = [...sprints, { ...change.sprint, state: 'closed' }];
+      return change;
+    };
+
+    // 2. 8/8 and 8/15 are done (occurrence and DailySelection).
+    for (const [start, day] of [
+      ['2026-08-03', '2026-08-08'],
+      ['2026-08-10', '2026-08-15'],
+    ] as const) {
+      const change = runWeek(start, day, 'complete');
+      expect(change.occurrence?.state).toBe('done');
+      expect(change.sprint.dailySelections[0]?.resolution).toBe('done');
+      expect(change).not.toHaveProperty('task');
+    }
+
+    // 3. 8/22 is skipped; the rule does not change.
+    const ruleBefore = JSON.stringify(rule);
+    const skipped = runWeek('2026-08-17', '2026-08-22', 'skip');
+    expect(skipped.occurrence?.state).toBe('skipped');
+    expect(skipped.sprint.dailySelections[0]?.resolution).toBe('skipped');
+    expect(JSON.stringify(rule)).toBe(ruleBefore);
+    expect(occurrences.map((o) => [o.scheduledDate, o.state])).toEqual([
+      ['2026-08-08', 'done'],
+      ['2026-08-15', 'done'],
+      ['2026-08-22', 'skipped'],
     ]);
   });
 });
