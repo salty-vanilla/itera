@@ -1,6 +1,6 @@
 # アクセシビリティ
 
-更新：2026-09-26（DESIGN.md v0.2 から分離）。
+更新：2026-09-27（Dialog の初期フォーカスと `menuitemradio`、Issue #9）。2026-09-26 に DESIGN.md v0.2 から分離。
 
 DADS の品質基準（WCAG 2.2 AA）を下限にする。後から足すのではなく、部品の仕様に含める。色のコントラストと状態の見た目は [DESIGN.md](../../DESIGN.md) の Colors と Components。一次資料の引き方は `design-references` Skill。
 
@@ -8,13 +8,13 @@ DADS の品質基準（WCAG 2.2 AA）を下限にする。後から足すので�
 
 - テキスト 4.5:1、24px 以上または 19px 太字は 3:1。操作部品の輪郭・フォーカス・意味のある印は 3:1。light / dark の両方で満たす。
 - **状態を色だけで伝えない**：選択 = 背景＋チェック（Filter は背景＋`ink` の 2px の枠＋太字）、期限超過 = 色＋アイコン＋「2日超過」、Agent 提案 = 破線＋「提案」、Area = 印＋ラベル、エラー = 色＋アイコン＋文。
-- `forced-colors: active` では Area の路線記号と Capacity のセグメントの色を保ち、操作部品の輪郭は `CanvasText` にする。
+- `forced-colors: active` では Area の路線記号と Capacity のセグメントの色を保ち、操作部品の輪郭は `CanvasText` にする。背景色で描く線（Divider、Progress の塗りとトラック）と Notice の面の境界も `CanvasText` で描く。
 
 ## フォーカス
 
 - 全要素共通：`outline: 2px solid var(--focus); outline-offset: 2px`（`:focus-visible`）。リスト内・タブ・メニュー項目は `outline-offset: -2px`。
 - フォーカスを消すスタイル（`outline: none` だけ）を書かない。
-- Dialog とモーダル Drawer は、開いたらフォーカスを中に移し（最初の入力、なければ最も安全な操作）、Tab を閉じ込め、閉じたら呼び出し元に戻す。Esc で閉じる。
+- Dialog とモーダル Drawer は、開いたらフォーカスを中に移し、Tab を閉じ込め、閉じたら呼び出し元に戻す。Esc で閉じる。移す先は、Dialog は入力があっても最も安全な操作（[DESIGN.md](../../DESIGN.md) の Dialog。確定では「戻って調整」）、Drawer と Popover は最初の入力（なければ最も安全な操作）。
 
 ## キーボード
 
@@ -51,5 +51,5 @@ DADS の品質基準（WCAG 2.2 AA）を下限にする。後から足すので�
 - Agent 提案の値は「Agent の提案（未確定）: 2〜4時間」、Estimate は「見積もり 3時間」と読ませる。
 - 動的な結果（Toast、Capacity の状態、保存エラー）は `role="status"` / `role="alert"` で通知する。
 - 装飾のアイコンは `aria-hidden`。意味を持つアイコンだけに `aria-label`。
-- Menu の選べる項目は `menuitemcheckbox`、Filter の選択は `aria-pressed`、Navigation の現在地は `aria-current="page"`（フォーカスは内側のリング）。
+- Menu の選べる項目は `menuitemcheckbox`（並び順のように 1 つだけ選ぶものは `menuitemradio`）、Filter の選択は `aria-pressed`、Navigation の現在地は `aria-current="page"`（フォーカスは内側のリング）。
 - 部品ごとの role：Dialog は `role="dialog"`（破壊的な確認は `alertdialog`）＋`aria-modal`、Tabs は `role="tablist"` と roving tabindex、Switch は `role="switch"`＋`aria-checked`、Progress は `role="progressbar"`＋`aria-valuetext`、Tooltip は `role="tooltip"` で、pointer を載せても消えない（WCAG 1.4.13）。

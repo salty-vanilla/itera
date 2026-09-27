@@ -204,6 +204,7 @@ spacing:
   control-lg: 44px
   row-task: 40px
   row-touch: 48px
+  row-menu: 32px
   target-min: 24px
   target-touch: 44px
   icon-s: 16px
@@ -214,6 +215,10 @@ spacing:
   pane-list: 384px
   pane-side: 336px
   drawer: 400px
+  popover: 320px
+  dialog-sm: 440px
+  dialog-md: 560px
+  dialog-lg: 720px
   measure-read: 38em
   bp-medium: 768px
   bp-wide: 1200px
@@ -443,12 +448,15 @@ Area（領域）はユーザーが作る。駅の路線記号のように、色�
 | --- | --- | --- |
 | `control-sm` / `control-md` / `control-lg` | 28 / 36 / 44px | コントロールの高さ（lg は compact 幅と確定ボタン） |
 | `row-task` / `row-touch` | 40 / 48px | Task Row の最小高さ（desktop / compact） |
+| `row-menu` | 32px | Menu の項目の高さ（compact は `control-lg` 44px） |
 | `target-min` / `target-touch` | 24 / 44px | 最小ターゲット（pointer / touch） |
 | `icon-s` / `icon-m` | 16 / 20px | 文字の横 / ボタン・ナビゲーション |
 | `area-badge` | 20px | Area の路線記号の一辺（compact でも同じ。当たり判定は行や Filter が持つ） |
 | `pane-nav` / `pane-rail` | 224 / 64px | ナビゲーション（1440px 以上 / 768–1439px） |
 | `pane-list` / `pane-side` | 384 / 336px | Planning の Backlog ペイン / 時間の見通しペイン |
 | `drawer` | 400px | 右 Drawer |
+| `popover` | 320px | Popover の幅 |
+| `dialog-sm` / `dialog-md` / `dialog-lg` | 440 / 560 / 720px | Dialog の幅（compact は幅 100% − 32px） |
 
 ### Responsive
 
@@ -506,7 +514,7 @@ compact の原則：
 | トークン | 値 | 使う場所 |
 | --- | --- | --- |
 | `stroke-hairline` | 1px | すべての罫、枠、行区切り、Agent 提案の破線 |
-| `stroke-strong` | 2px | フォーカスリング、選択中タブの下線、可用時間マーカー、編集的なセクション罫 |
+| `stroke-strong` | 2px | フォーカスリング、選択中タブの下線、可用時間マーカー |
 
 - 構造の罫 = `border`、リスト内 = `border-soft`、操作部品 = `border-strong`、考える領域のセクション上端 = `ink` 1px（1 画面に 1〜2 本）。
 - **実線 = 確定、破線 = 未確定（Agent 提案・下書き）。** 破線を装飾や読み取り専用に使わない。確定した計画値は幅があっても実線。
@@ -572,6 +580,7 @@ compact の原則：
 **TextInput** — 1 行の入力。
 - 36px、`border-strong`、`rounded.sm`。ラベルは `label`（必須なら「必須」、任意なら「任意」）、サポートテキストは `help` で入力の上、エラーはアイコン＋直し方の文で入力の下。接頭アイコン・接尾の単位（「h」）は任意。
 - サイズ sm / md / lg（28 / 36 / 44px）、compact では自動で 44px・16px 文字。視覚ラベルの省略は検索とクイック追加だけ。フォーカスリングの offset は 1px。
+- Hover は輪郭を `ink-muted` にするだけで、地は `surface` のまま（`canvas-subtle` の地は Disabled と Read-only の印なので、入力欄では hover に使わない）。Select と Textarea も同じ。
 - help には単位や例を書く（「0.5時間単位」）。エラーは直し方まで書く（「数値で入力してください（例: 1.5）」）。
 - × プレースホルダーをラベルの代わりにする、入力中にエラーを出す（離脱時・送信時に出す）、入力内容を消す。
 
@@ -580,18 +589,19 @@ compact の原則：
 **Select** — 5〜15 個の選択肢から 1 つ（Area、繰り返しルール）。ネイティブの `<select>`（36px、`border-strong`）と `chevron-down`。独自のドロップダウンで置き換えない。
 
 **Checkbox（□ = 選ぶ）** — Backlog のタスクを今週へ選ぶ、差分の行を反映する、設定のオプション。
-- 当たり判定 24px（compact 44px）、16px の四角（`rounded.xs`、`border-strong`）。Checked は `primary` の塗り＋`on-primary` のチェック、Indeterminate は横線。
+- 当たり判定 24px（compact 44px）、16px の四角（`rounded.xs`、`border-strong`）。Checked は `primary` の塗り＋`on-primary` のチェック、Indeterminate は横線。フォーカスリングは当たり判定ではなく 16px の四角を囲む（Radio も同じ）。
+- ラベルは四角の右。ラベルを押しても切り替わる。行の中など横にラベルを置かない場所では、`aria-label` で「今週に入れる: タスク名」と読ませる。
 - タスクの完了には使わない（→ 完了サークル ○）。□ と ○ の意味を入れ替えない。
 
 **Radio / RadioGroup** — 2〜5 個の排他的な選択肢をすべて見せる（Goal の自己判定、Sprint の長さ）。16px の円、選択時は `primary` の 4px 内枠。fieldset と legend で組む。自己判定には既定値を置かない。
 
-**Switch** — 即時に反映される設定のオン / オフ。トラック 36×20px（`rounded.sm`、Pill にしない）、つまみ 14px（`rounded.xs`）、「オン / オフ」の語を添える。On はトラック `primary`・つまみ `on-primary`、Off はトラック `surface`・枠とつまみ `border-strong`。説明で「オンにすると何が起きるか」を書く。保存ボタンで確定するフォームには使わない（→ Checkbox）。
+**Switch** — 即時に反映される設定のオン / オフ。トラック 36×20px（`rounded.sm`、Pill にしない）、つまみ 14px（`rounded.xs`）、「オン / オフ」の語を添える。On はトラック `primary`・つまみ `on-primary`、Off はトラック `surface`・枠とつまみ `border-strong`。説明で「オンにすると何が起きるか」を書く。ラベルと説明を左、トラックと語を右に置く。トラックは 20px なので、当たり判定をトラックの外へ広げて 24px 以上（compact 44px）にする。Disabled でも「オン / オフ」の語は `ink-muted` のまま読めるようにする（オンとオフを区別する唯一の文字なので、共通の状態の `ink-disabled` の例外）。保存ボタンで確定するフォームには使わない（→ Checkbox）。
 
 ### 表示
 
 **Tag** — Status（Sprint の状態、Goal の自己判定）と本人のラベルだけに使う小さな Pill。
-- 20px、`rounded.full`、Status はアイコン必須、語は 1〜2 語。Variant：neutral / done（墨の文字＋`circle-check`）/ warning / danger / draft（破線。「計画中 · 未確定」）。
-- tone の使い分け：neutral = 本人のラベル・一部できた・できなかった・判断しない・同期中・次の Sprint で試す、done = できた・保存済み、warning = 超過の可能性、danger = 期限超過、draft = 未確定。
+- 20px、`rounded.full`、Status はアイコン必須、語は 1〜2 語（本人のラベルは 12em で省略し、全文を title で読める）。Variant：neutral / done（墨の文字＋`circle-check`）/ warning（`triangle-alert`）/ danger（`circle-alert`）/ draft（破線＋`circle-dashed`。「計画中 · 未確定」）。neutral の Status は意味に合うアイコンを画面側で選ぶ（同期中・次の Sprint で試すは `info`）。アイコンのない neutral は本人のラベルで、`border` の輪郭だけにする。
+- tone の使い分け：neutral = 本人のラベル・一部できた・できなかった・判断しない・同期中・次の Sprint で試す、done = できた・保存済み、warning = 超過の可能性、danger = 同期エラーなど保存・同期の失敗、draft = 未確定。期限超過は Tag にせず、Task Metadata の文字（`circle-alert`＋「2日超過」）で示す。Goal の自己判定（一部できた・できなかった・判断しない）のアイコンは Retro の最初の実装 Issue で決める。
 - 期限・Estimate・持ち越し・繰り返し・Area を Tag にしない（→ Task Metadata の文字）。1 行に 3 つ以上並べない。
 
 **Divider** — Card の代わりにグループを区切る、構造の主役。default（`border`）/ soft（`border-soft`、リスト内）/ rule（`ink` 1px、考える領域の上端、1 画面に 1〜2 本）/ label（ラベル付き。グループ見出し）。× 2px 以上の太い罫、二重線、点線。
@@ -600,11 +610,11 @@ compact の原則：
 
 **Spinner** — 必ず文言と一緒に使う（「見積中」「保存中…」）。300ms 未満の処理と画面全体のローディングには使わない。
 
-**Progress** — 4px（thin は 2px）の線と数値（「7 / 18件」）。トラック `border-soft`、塗り `primary`。必ず数値を併記し、色を段階で変えない。Goal の達成度を数値化しない。
+**Progress** — 4px（thin は 2px）の線と数値（「7 / 18件」）。トラック `border-soft`、塗り `primary`。必ず数値を併記し、色を段階で変えない。Goal の達成度を数値化しない。件数が分からない間（indeterminate）は数値の代わりに文言（「読み込み中…」）を出し、線は動かさず不透明度だけを変える（reduced motion では線を隠し、文言だけにする）。読み上げは「18件中 7件」。
 
-**Notice** — 画面内に留まる説明・注意・エラー。地は warning / danger が各 `*-subtle`、ほかは `canvas-subtle`。`rounded.sm`、枠なし、アイコン＋タイトル（700）＋本文＋任意の操作。Variant：info（`info` アイコン。データ不足、同期状態、計画案の作成後に Backlog が変わった）/ warning（超過の可能性、未見積）/ danger（読み込みの失敗、`role="alert"`）/ done（`circle-check`。反映済み）/ neutral（補足）。次にできることを書く。× 左に色の太線、同じ画面に 3 つ以上。
+**Notice** — 画面内に留まる説明・注意・エラー。地は warning / danger が各 `*-subtle`、ほかは `canvas-subtle`。`rounded.sm`、枠なし、アイコン＋タイトル（700）＋本文＋任意の操作。Variant：info（`info` アイコン。データ不足、同期状態、計画案の作成後に Backlog が変わった）/ warning（超過の可能性、未見積）/ danger（読み込みの失敗、`role="alert"`）/ done（`circle-check`。反映済み）/ neutral（補足。状態を示さないのでアイコンなし）。次にできることを書く。読み込み後に現れる Notice は `role="status"` で知らせる。× 左に色の太線、同じ画面に 3 つ以上。
 
-**Toast** — 操作の結果を短く伝え、元に戻す手段を添える。面 `surface`＋`border`、`rounded.md`、`elevation-overlay`。Variant：neutral（「3件を今週に入れました」＋元に戻す）/ done（`circle-check`＋「Sprint 14 を確定しました」）/ danger（「保存できませんでした。入力内容は残っています。」＋再試行、`role="alert"`）。表示 8 秒、hover / focus 中は止め、操作付きは閉じるまで残してよい。位置は desktop 左下、compact は下部タブバーの上。同時に 3 つ以上出さない。入力エラー・確認が必要なこと・タスク完了のたびの通知には使わない。祝福の演出をしない。
+**Toast** — 操作の結果を短く伝え、元に戻す手段を添える。面 `surface`＋`border`、`rounded.md`、`elevation-overlay`。Variant：neutral（「3件を今週に入れました」＋元に戻す）/ done（`circle-check`＋「Sprint 14 を確定しました」）/ danger（「保存できませんでした。入力内容は残っています。」＋再試行、`role="alert"`）。表示 8 秒、hover / focus 中は止め、操作付きは閉じるまで残してよい。danger は再試行を失わないよう閉じるまで残す。位置は desktop 左下、compact は下部タブバーの上。同時に 3 つまで（4 つ目を出すと最も古いものを隠す）。操作と閉じるボタンは Quiet。入力エラー・確認が必要なこと・タスク完了のたびの通知には使わない。祝福の演出をしない。
 
 **Tooltip** — アイコンだけの操作と省略されたラベルに短い説明。`surface-inverse` の小さな面（`rounded.sm`、12px）、任意で Kbd。hover 400ms 後 / focus で即時に出て、pointer が離れる・blur・Esc で消える（pointer を Tooltip に載せても消えない）。1 行 20 字程度まで。矢印・影・アニメーションで飾らない。必須の情報・エラー・操作可能な内容を載せない。
 

@@ -127,6 +127,7 @@
   --spacing-control-lg: 44px;
   --spacing-row-task: 40px;
   --spacing-row-touch: 48px;
+  --spacing-row-menu: 32px;
   --spacing-target-min: 24px;
   --spacing-target-touch: 44px;
   --spacing-icon-s: 16px;
@@ -137,6 +138,10 @@
   --spacing-pane-list: 384px;
   --spacing-pane-side: 336px;
   --spacing-drawer: 400px;
+  --spacing-popover: 320px;
+  --spacing-dialog-sm: 440px;
+  --spacing-dialog-md: 560px;
+  --spacing-dialog-lg: 720px;
   --container-measure-read: 38em;
 
   /* Responsive: medium 768px–, wide 1200px–, nav 1440px– */
@@ -151,10 +156,18 @@
   --default-transition-duration: 100ms;
   --default-transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
   --animate-spin: spin 1s linear infinite;
+  /* Indeterminate Progress: opacity only, the line does not slide. */
+  --animate-progress-pulse: progress-pulse 1.6s ease-in-out infinite;
 
   @keyframes spin {
     to {
       transform: rotate(360deg);
+    }
+  }
+
+  @keyframes progress-pulse {
+    50% {
+      opacity: 1;
     }
   }
 }
@@ -302,6 +315,26 @@
     /* Area line symbols keep their colour (docs/design/accessibility.md). */
     [data-slot='area-mark'] {
       forced-color-adjust: none;
+    }
+    /*
+     * Lines drawn with a background color disappear when backgrounds become
+     * Canvas: Divider, the Progress fill and track, and the Notice surface.
+     */
+    [data-slot='divider'],
+    [data-slot='divider-label'] > [aria-hidden] {
+      forced-color-adjust: none;
+      background-color: CanvasText;
+    }
+    /* An outline takes no room, so the 2px thin track keeps its inside. */
+    [data-slot='progress-track'] {
+      outline: var(--stroke-hairline) solid CanvasText;
+    }
+    [data-slot='progress-indicator'] {
+      forced-color-adjust: none;
+      background-color: CanvasText;
+    }
+    [data-slot='notice'] {
+      border: var(--stroke-hairline) solid CanvasText;
     }
   }
 

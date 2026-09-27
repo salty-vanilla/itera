@@ -123,7 +123,7 @@ function ShapeAndSpacePage() {
             </Cell>
             <Value name="stroke-strong" />
             <Cell className="w-full text-help text-ink-muted">
-              フォーカスリング、選択中タブの下線、編集的なセクション罫
+              フォーカスリング、選択中タブの下線、可用時間マーカー
             </Cell>
           </TokenRow>
           <TokenRow>
