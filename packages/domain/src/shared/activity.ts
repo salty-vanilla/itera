@@ -1,5 +1,12 @@
-import type { AreaId, EstimateSuggestionId, SubtaskId, TaskId } from './ids';
-import type { Instant } from './time';
+import type {
+  AreaId,
+  EstimateSuggestionId,
+  OccurrenceId,
+  RecurrenceRuleId,
+  SubtaskId,
+  TaskId,
+} from './ids';
+import type { Instant, LocalDate } from './time';
 
 /** Who performed an operation: the person, an external Agent, or the system. */
 export type Actor = 'user' | 'agent' | 'system';
@@ -80,6 +87,27 @@ export type Activity =
       readonly kind: 'suggestionPresented' | 'suggestionRejected';
       readonly taskId: TaskId;
       readonly suggestionId: EstimateSuggestionId;
+    })
+  | (ActivityBase & {
+      readonly kind: 'recurrenceRuleCreated' | 'recurrenceRuleChanged';
+      readonly taskId: TaskId;
+      readonly ruleId: RecurrenceRuleId;
+      /** The version this entry added and the day it takes effect. */
+      readonly version: number;
+      readonly effectiveFrom: LocalDate;
+    })
+  | (ActivityBase & {
+      readonly kind:
+        | 'occurrenceGenerated'
+        | 'occurrenceExcluded'
+        | 'occurrenceIncluded'
+        | 'occurrenceDone'
+        | 'occurrenceSkipped'
+        | 'occurrenceReopened'
+        | 'occurrenceMissed';
+      readonly taskId: TaskId;
+      readonly occurrenceId: OccurrenceId;
+      readonly scheduledDate: LocalDate;
     });
 
 export type ActivityKind = Activity['kind'];

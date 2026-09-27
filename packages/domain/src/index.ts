@@ -7,6 +7,8 @@ export * from './shared/time';
 export * from './area';
 export * from './backlog';
 export * from './estimate';
+export * from './occurrence';
 export * from './planning-value';
+export * from './recurrence';
 export * from './task';
 export * from './user';
