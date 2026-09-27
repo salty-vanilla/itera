@@ -448,13 +448,21 @@ v0.2 で残した 3 件は、2026-09-27 に次のとおり決めた（Issue #18�
 3. **Active Sprint 中に新しい Area を作った場合**
    SprintAreaSnapshot にない Area が Sprint 中に初めて現れた時点の名前を、SprintAreaSnapshot に足して固定する。
 
+### API の実行基盤・DB・認証（決定済み）
+
+2026-09-27 に次のとおり決めた（Issue #25、`docs/architecture/adr/0004-api-platform-and-auth.md`）。
+
+- API は Hono で書き、Cloudflare Workers で動かす。
+- DB は Cloudflare D1、ORM は Drizzle。障害・誤操作からの復元は D1 の Time Travel に任せる。
+- 認証は WorkOS AuthKit。ログイン画面は WorkOS がホストする画面を使う。
+
 ### プロダクトとして後続で決める事項
 
 - 一般公開の時期と対象範囲。
 - 外部 Agent / MCP を MVP の初回リリースへ含めるか。
 - Jev を Estimate Suggestion のどの判断に採用するか。
-- データ保存・同期・バックアップ・削除・エクスポートの方式。
-- 認証方式、技術スタック、DB / API 設計。
+- データ同期・削除・エクスポートの方式。
+- API の契約とテーブル設計。
 - 価格・収益化・公開日。
 
 ## 15. 関連設計文書

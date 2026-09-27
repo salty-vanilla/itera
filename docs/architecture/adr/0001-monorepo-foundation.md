@@ -28,5 +28,5 @@
 - ルートの `pnpm check` が、Skill の整合性・整形・lint（React ファイル名の kebab-case を含む）・型検査・テストをまとめて実行する。CI も同じコマンドを使う。
 - パッケージを足すときは、そのパッケージに `vitest.config.ts`（ないとテストが実行されない）と `typecheck` script（`tsc -p tsconfig.json`）を置く。ルートの `vitest.config.ts` と `pnpm typecheck` はそれらを自動で拾う。
 - ESLint の設定はルートの `eslint.config.js` だけに書く。ESLint 10 はディレクトリごとに最も近い設定ファイルを使うので、パッケージに `eslint.config.js` を置くとルートの設定を置き換えてしまう。パッケージ固有の規則はルートに `files` 付きで足す（手順 4 の React / ブラウザの globals も同じ）。
-- `tsconfig.base.json` は bundler 前提（`moduleResolution: Bundler`、`noEmit`）。Node で直接動かして出力する `services/api` は、自分の tsconfig でこれを上書きする。
+- `tsconfig.base.json` は bundler 前提（`moduleResolution: Bundler`、`noEmit`）。Node で直接動かして出力する `services/api` は、自分の tsconfig でこれを上書きする（ADR 0004 で `services/api` は Cloudflare Workers で動かし wrangler が束ねることにしたため、この前提は置き換わった）。
 - React / Vite / Tailwind など Web 側の依存は、手順 4 で別の ADR として決める。
