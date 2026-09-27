@@ -1,6 +1,12 @@
 import type { OccurrenceId, TaskId } from './shared/ids';
 import { addDays, type LocalDate } from './shared/time';
-import type { DailySelection, Sprint, SprintTask } from './sprint';
+import type { Occurrence } from './occurrence';
+import {
+  isCounted,
+  type DailySelection,
+  type Sprint,
+  type SprintTask,
+} from './sprint';
 
 function compare(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
@@ -161,4 +167,46 @@ export function todayRemaining(
     hi += value.hi / share;
   }
   return { count, lo, hi, unestimated };
+}
+
+export interface WeekProgress {
+  /** Done: non-recurring Tasks done, and occurrences done. */
+  readonly done: number;
+  /** Everything the week holds now (see `weekProgress`). */
+  readonly total: number;
+}
+
+/**
+ * 「今週の完了 N / M件」 (F32). A non-recurring Task counts once; a
+ * recurring one counts per occurrence this week, as each is done on its own
+ * day (invariant 30). Tasks removed from the week and occurrences left out
+ * in Planning (excluded) or skipped are not counted; a missed occurrence
+ * stays in the total. Only a count to show, never a score.
+ */
+export function weekProgress(
+  sprint: Sprint,
+  occurrences: readonly Occurrence[],
+): WeekProgress {
+  let done = 0;
+  let total = 0;
+  for (const sprintTask of sprint.tasks.filter(isCounted)) {
+    if (sprintTask.occurrenceIds === undefined) {
+      total += 1;
+      if (sprintTask.outcome === 'done') done += 1;
+      continue;
+    }
+    for (const occurrenceId of sprintTask.occurrenceIds) {
+      const occurrence = occurrences.find((o) => o.id === occurrenceId);
+      if (
+        occurrence === undefined ||
+        occurrence.state === 'excluded' ||
+        occurrence.state === 'skipped'
+      ) {
+        continue;
+      }
+      total += 1;
+      if (occurrence.state === 'done') done += 1;
+    }
+  }
+  return { done, total };
 }

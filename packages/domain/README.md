@@ -128,6 +128,7 @@ type CommandResult<T> =
 - **#24 への引き継ぎ**：`startDay` は active な Sprint にだけ働く。Review に入るときに開いたままの選択（最終日など）を Unresolved にする処理は #24 の Review への移行で行う。
 - **連続見送り**（`deferralStreak`）：同じ Task の選択を Sprint をまたいで日付順（同じなら選んだ日時、ID の順）に並べ、最後から数える。deferred を数え、unresolved とまだ開いている選択は飛ばし、paused・done・removed・skipped で止める（F4・F8）。
 - **昨日の続き**（`yesterdaysContinuation`）：前日に paused だった Task のうち、今の Sprint で planned で、今日まだ選んでいないもの。週をまたぐ持ち越しも拾う（F6）。繰り返しなら、paused だった回（`occurrenceId`）も返す。
+- **今週の完了**（`weekProgress`）：繰り返しでない Task は 1 件、繰り返しは今週の回ごとに 1 件と数え、完了した数と合わせて返す。今週から外した Task、Planning で外した回、スキップした回は数えない（F32）。
 - **今日の残り**（`todayRemaining`）：その日の開いている選択の件数と、planSnapshot から出した見込み時間（繰り返しは 1 回分）。日次の容量や超過の判定はしない（不変条件 25）。
 
 ## Review と Retro で決めた細部（#24）

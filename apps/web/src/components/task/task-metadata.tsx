@@ -29,10 +29,13 @@ function TaskMetadata({
 /** One attribute: an optional 12px icon and its words. */
 function MetaItem({
   icon,
+  wrap = false,
   children,
   className,
 }: {
   icon?: ReactNode;
+  /** Lets longer words wrap in a narrow row instead of running under the Estimate. */
+  wrap?: boolean;
   children: ReactNode;
   className?: string | undefined;
 }) {
@@ -40,7 +43,8 @@ function MetaItem({
     <span
       data-slot="meta-item"
       className={cn(
-        'inline-flex min-w-0 items-center gap-1 whitespace-nowrap',
+        'inline-flex min-w-0 items-center gap-1',
+        wrap ? 'whitespace-normal' : 'whitespace-nowrap',
         '[&_svg]:size-3 [&_svg]:shrink-0 [&_svg]:[stroke-width:var(--icon-stroke-s)]',
         className,
       )}

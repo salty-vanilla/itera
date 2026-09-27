@@ -25,7 +25,7 @@ function PopoverTrigger(props: PopoverPrimitive.Trigger.Props) {
 type PopoverContentProps = Omit<PopoverPrimitive.Popup.Props, 'className'> &
   Pick<
     PopoverPrimitive.Positioner.Props,
-    'align' | 'alignOffset' | 'side' | 'sideOffset'
+    'align' | 'alignOffset' | 'side' | 'sideOffset' | 'anchor'
   > & {
     className?: string;
   };
@@ -36,6 +36,7 @@ function PopoverContent({
   alignOffset = 0,
   side = 'bottom',
   sideOffset = 4,
+  anchor,
   initialFocus,
   ...props
 }: PopoverContentProps) {
@@ -47,6 +48,8 @@ function PopoverContent({
         alignOffset={alignOffset}
         side={side}
         sideOffset={sideOffset}
+        // Without a Trigger (opened from a Menu), the element to sit by.
+        anchor={anchor}
         // Keep 16px from the edges of a compact screen.
         collisionPadding={16}
         className="z-(--layer-popover)"
