@@ -213,6 +213,8 @@ spacing:
   pane-nav: 224px
   pane-rail: 64px
   pane-list: 384px
+  pane-list-slim: 240px
+  pane-sprint: 680px
   pane-side: 336px
   drawer: 400px
   popover: 320px
@@ -454,6 +456,8 @@ Area（領域）はユーザーが作る。駅の路線記号のように、色�
 | `area-badge` | 20px | Area の路線記号の一辺（compact でも同じ。当たり判定は行や Filter が持つ） |
 | `pane-nav` / `pane-rail` | 224 / 64px | ナビゲーション（1440px 以上 / 768–1439px） |
 | `pane-list` / `pane-side` | 384 / 336px | Planning の Backlog ペイン / 時間の見通しペイン |
+| `pane-list-slim` | 240px | Planning の整える・確かめる段階の Backlog ペイン（タイトルだけ） |
+| `pane-sprint` | 680px | Planning の Sprint ペインの最大幅 |
 | `drawer` | 400px | 右 Drawer |
 | `popover` | 320px | Popover の幅 |
 | `dialog-sm` / `dialog-md` / `dialog-lg` | 440 / 560 / 720px | Dialog の幅（compact は幅 100% − 32px） |
@@ -689,7 +693,7 @@ compact の原則：
 - Goal の間は `spacing.8`。× Card で囲む、Goal がない Area を警告色で示す、Goal 文を太字・大見出しにする、全体 Goal を作る。
 
 **Capacity Indicator** — 可用時間と計画値の合計の差を、幅のまま示す。
-- 最上段に残り（`num-l`。下限でも超える場合は「超過」`danger`）、可用時間（本人が入力）と計画値の合計（幅）、状態の文（アイコン＋語）、バー（Area ごとの 8px セグメント。セグメントの間には 2px の `canvas` のアキを入れ、似た色の Area が隣り合っても境目が分かるようにする。Goal に紐づかない Task もその Area に含める＋提案の幅は破線＋残り `border-soft`＋可用時間マーカー `ink` 2px＋超過部分の下線 `danger`）、Area ごとの内訳、未見積の件数（合計に含めない）。
+- 最上段に残り（`num-l`。下限でも超える場合は「超過」`danger`）、可用時間（本人が入力）と計画値の合計（幅）、状態の文（アイコン＋語）、バー（Area ごとの 8px セグメント。セグメントの間には 2px の `canvas` のアキを入れ、似た色の Area が隣り合っても境目が分かるようにする。Goal に紐づかない Task もその Area に含める＋提案の幅は破線＋残り `border-soft`＋可用時間マーカー `ink` 2px＋可用時間を超える部分の下線：下限でも超える場合は `danger` の実線、上限側だけ超える可能性がある場合は `warning` の破線）、Area ごとの内訳、未見積の件数（合計に含めない）。
 - 状態：ok（`ink-muted`「可用時間の範囲に収まっています。」）/ tight（上限側だけ超える：`warning`「上限側では 1h 超える可能性があります。」）/ over（下限でも超える：`danger`「超過 3 〜 5h」）/ unknown（「可用時間を入力すると、計画との差を表示します。」）。
 - バーは `aria-hidden`、数値と状態の文が正（`role="status"`）。超過でも確定を止めない。Today と Backlog には出さない。× ドーナツ・円グラフ・ゲージ、未見積を 0h として足す。
 
