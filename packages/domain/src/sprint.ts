@@ -2,7 +2,9 @@ import type { Area } from './area';
 import type { PlanningValue } from './planning-value';
 import type {
   AreaId,
+  DailySelectionId,
   EstimateSuggestionId,
+  InterruptNoteId,
   OccurrenceId,
   PlanningCriterionId,
   SprintId,
@@ -117,6 +119,83 @@ export interface Sprint {
   readonly areaSnapshot: readonly SprintAreaSnapshotEntry[];
   /** Present when a criterion was active at confirm (invariant 36). */
   readonly criterionUse?: CriterionUse;
+  /** Today's choices, one record per day and SprintTask (occurrence). */
+  readonly dailySelections: readonly DailySelection[];
+  /** Optional actual time, append-only. Its sum is the Sprint's actual. */
+  readonly actualTimes: readonly ActualTime[];
+  /** 割り込み. Not Tasks, and not counted as mid-Sprint additions. */
+  readonly interrupts: readonly InterruptNote[];
+}
+
+/** 今日の選択. `selected` and `started` are open; the rest are resolved. */
+export type DailyResolution =
+  | 'selected'
+  | 'started'
+  | 'done'
+  | 'paused'
+  | 'deferred'
+  | 'removed'
+  | 'skipped'
+  | 'unresolved';
+
+/** How a DailySelection came about. */
+export type DailySelectionOrigin =
+  /** 本人が「今日へ」. */
+  | 'manual'
+  /** 当日の繰り返し（startDay）. */
+  | 'recurringToday'
+  /** Sprint 外の Task を「今日へ」（Sprint 中の追加）. */
+  | 'midSprint'
+  /** Backlog で「完了にする」. */
+  | 'backlogCompletion';
+
+/**
+ * Choosing a SprintTask (or one occurrence of it) for one day. At most one
+ * per day and SprintTask / occurrence (invariant 21); choosing again on a
+ * later day is a new record.
+ */
+export interface DailySelection {
+  readonly id: DailySelectionId;
+  readonly date: LocalDate;
+  readonly sprintTaskId: SprintTaskId;
+  /** Recurring only: the occurrence chosen. */
+  readonly occurrenceId?: OccurrenceId;
+  readonly origin: DailySelectionOrigin;
+  readonly resolution: DailyResolution;
+  readonly selectedAt: Instant;
+  /** Kept even if the selection is later deferred or paused. */
+  readonly startedAt?: Instant;
+  readonly resolvedAt?: Instant;
+  /**
+   * F17: how the selection had been closed earlier the same day before it
+   * was completed. Undoing the completion returns it to this (F17), so the
+   * deferral or pause is not lost.
+   */
+  readonly closedBefore?: {
+    readonly resolution: 'paused' | 'deferred' | 'removed';
+    readonly at: Instant;
+  };
+}
+
+export type ActualTimeVia = 'completion' | 'pause' | 'later';
+
+/** Optional actual hours (実績時間). Never a condition for anything. */
+export interface ActualTime {
+  readonly sprintTaskId: SprintTaskId;
+  /** Recurring only. */
+  readonly occurrenceId?: OccurrenceId;
+  readonly hours: number;
+  readonly date: LocalDate;
+  readonly via: ActualTimeVia;
+  readonly recordedAt: Instant;
+}
+
+/** 予定外の出来事のメモ. */
+export interface InterruptNote {
+  readonly id: InterruptNoteId;
+  readonly at: Instant;
+  readonly text: string;
+  readonly minutes?: number;
 }
 
 /** The Sprint period that starts on `start` (one week, both ends inclusive). */

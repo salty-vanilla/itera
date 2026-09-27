@@ -1,6 +1,8 @@
 import type {
   AreaId,
+  DailySelectionId,
   EstimateSuggestionId,
+  InterruptNoteId,
   OccurrenceId,
   PlanningCriterionId,
   RecurrenceRuleId,
@@ -166,6 +168,43 @@ export type Activity =
       readonly sprintId: SprintId;
       readonly from: number | null;
       readonly to: number | null;
+    })
+  | (ActivityBase & {
+      /** 今日へ / 開始 / 完了 / 今日はここまで / 見送り / 外す / スキップ / 未処理. */
+      readonly kind:
+        | 'todaySelected'
+        | 'todayStarted'
+        | 'todayDone'
+        | 'todayDoneUndone'
+        | 'todayPaused'
+        | 'todayDeferred'
+        | 'todayRemoved'
+        | 'todaySkipped'
+        | 'todaySkipUndone'
+        | 'todayUnresolved';
+      readonly sprintId: SprintId;
+      readonly selectionId: DailySelectionId;
+      readonly sprintTaskId: SprintTaskId;
+      readonly date: LocalDate;
+    })
+  | (ActivityBase & {
+      /** A non-recurring SprintTask done / undone (Today or Backlog). */
+      readonly kind: 'sprintTaskDone' | 'sprintTaskDoneUndone';
+      readonly sprintId: SprintId;
+      readonly sprintTaskId: SprintTaskId;
+      readonly taskId: TaskId;
+    })
+  | (ActivityBase & {
+      readonly kind: 'actualTimeRecorded';
+      readonly sprintId: SprintId;
+      readonly sprintTaskId: SprintTaskId;
+      readonly hours: number;
+      readonly date: LocalDate;
+    })
+  | (ActivityBase & {
+      readonly kind: 'interruptNoted';
+      readonly sprintId: SprintId;
+      readonly interruptId: InterruptNoteId;
     })
   | (ActivityBase & {
       /** F9: an Area first appearing in a confirmed Sprint. */
