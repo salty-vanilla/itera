@@ -37,14 +37,19 @@ v0.2 Final は v0.1 の骨格（恒久的な **Task** と、「この Sprint で
 
 ### v0.2 Final で決めたこと
 
+F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。
+
 | # | 決定 | モデルへの反映 | UI への影響 |
 | --- | --- | --- | --- |
-| F1 | Active な Sprint 中の Rule 変更は次の Sprint から | 新しい版は、まだ回を生成していない次の Sprint の Planning から効く（effectiveFrom = その Sprint の開始日）。生成済みの回と今の Sprint の SprintTask は変えない | Backlog：変更時に「次の Sprint から反映」 |
+| F1 | Active な Sprint 中の Rule 変更は次の Sprint から | 新しい版は、まだ確定していない次の Sprint から効く（effectiveFrom = その Sprint の開始日）。確定済みの Sprint の回と SprintTask は変えない（draft が生成済みの回は F7） | Backlog：変更時に「次の Sprint から反映」 |
 | F2 | Excluded は通常の Retro 事実に出さない | Occurrence = Excluded は記録に残す。Retro の事実は Sprint に含めた回だけから派生させる | Retro：外した回は表示しない |
 | F3 | Sprint 中の追加への基準は確定時の適用に従う | 追加時の planSnapshot は、CriterionUse.appliedAtConfirm = true のときだけ基準を当てる | なし |
 | F4 | 連続見送りは選んだ機会で数える | 同じ Task の DailySelection を日付順に並べ、Deferred の連続を数える。選ばなかった日は無視し、Paused / Done / Removed で途切れる | Today：「N回続けて見送り」 |
 | F5 | Sprint の画面は確定時の Area 名 | Planning / Today / Retro は SprintAreaSnapshot の名前、Backlog など恒久側は現在の名前 | 改名は次の Sprint から Sprint の画面に反映 |
 | F6 | Paused は翌日に自動で入れない | 「昨日の続き」は派生（前日の DailySelection = Paused）。DailySelection は本人の「今日へ」で作る | Today：「昨日の続き」として候補の上に出す |
+| F7 | 次の Sprint の draft が回を生成した後の Rule 変更は、未確定の回を作り直す | 新しい版は、まだ確定していない次の Sprint から効く。draft がすでに回を生成していれば、その Task の回（Pending / Excluded）と SprintTask（Draft）を捨て、新しい版の回を既定どおり Sprint に含めて作り直す。draft で外した選択は引き継がない。確定済みの Sprint の回は変えない（不変条件 31） | Backlog の「次の Sprint から反映」がそのまま正しくなる |
+| F8 | 連続見送りは Unresolved を無視し、Skipped で途切れる | Unresolved は選ばなかった日と同じく、数えず途切れさせない。繰り返しの回の Skipped は本人の決定なので、Done・Removed と同じく連続を途切れさせる（不変条件 23） | なし |
+| F9 | Sprint 中に初めて現れた Area は、その時点の名前を写し取る | SprintAreaSnapshot にない Area が Sprint 中に初めて現れたとき（その Area の Task を Sprint に追加した、または Sprint 内の Task の Area にした）、その時点の名前を並び順の末尾に足して固定する（不変条件 18） | その Sprint の Today / Retro では、その Area も名前が固定される |
 
 ### 用語
 
@@ -69,8 +74,8 @@ Task は User に属し、Backlog はそのうち active なものを並べた�
 
 &#91;embedded content: ドメインマップ · 恒久（Backlog）・期間（Sprint / Today）・学び（Retro）\]
 
-- **恒久（User の持ち物）**：Area、Task とその持ち物（Subtask、Estimate / Suggestion、RecurrenceRule、Occurrence）、PlanningCriterion。Sprint が終わっても残る。Backlog は lifecycle = active の Task のビューで、独立した入れ物ではなく、Area は現在の名前で表示する。RecurrenceRule の変更は、次の Sprint の Planning で生成する回から効く。
-- **期間（Sprint）**：Sprint が SprintGoal、SprintTask、DailySelection、InterruptNote、SprintAreaSnapshot（確定時の Area 名）を持つ。Planning / Today / Retro はその Sprint の間、SprintAreaSnapshot の名前で Area を表示する。可用時間と Goal の文は、確定時の値と現在の値の両方を持つ。
+- **恒久（User の持ち物）**：Area、Task とその持ち物（Subtask、Estimate / Suggestion、RecurrenceRule、Occurrence）、PlanningCriterion。Sprint が終わっても残る。Backlog は lifecycle = active の Task のビューで、独立した入れ物ではなく、Area は現在の名前で表示する。RecurrenceRule の変更は、まだ確定していない次の Sprint から効く。
+- **期間（Sprint）**：Sprint が SprintGoal、SprintTask、DailySelection、InterruptNote、SprintAreaSnapshot（確定時の Area 名。Sprint 中に初めて現れた Area はその時点の名前）を持つ。Planning / Today / Retro はその Sprint の間、SprintAreaSnapshot の名前で Area を表示する。可用時間と Goal の文は、確定時の値と現在の値の両方を持つ。
 - **学び（Retro）**：Retro は 1 つの Sprint を振り返り、ReflectionNote と RetroImprovement を持つ。Improvement から任意で PlanningCriterion を作り、次の Sprint での扱いが CriterionUse になる。Retro が完了するまで、次の Sprint は確定できない。
 - 図にはないが、すべての操作は **Activity**（いつ・誰が・何を）として追記される。外部 Agent の計画案は **PlanProposal** として Sprint の Planning 中だけ存在する。
 
@@ -87,10 +92,10 @@ Task は User に属し、Backlog はそのうち active なものを並べた�
 | Subtask（E） | Task の中の手順 | title、estimate（任意）、done | Task | 完了日時 |
 | Estimate（VO） | 本人が確定した点の値 | hours、setAt、source（手入力 / 提案を採用：下限・中央・上限） | Task（現在値は 1 つ） | 値の変更履歴 |
 | EstimateSuggestion（E） | 製品側の提案（幅） | lo–hi、根拠、不確実な点、createdAt、state（提示中 / 採用 / 却下 / 置換） | Task | すべて残す |
-| RecurrenceRule（E・版つき） | 繰り返しの決まり | 版ごとに freq（毎日 / 平日 / 毎週 / 毎月）、曜日・日付、effectiveFrom、effectiveTo | Task（0..1） | 版そのもの。新しい版は、まだ回を生成していない次の Sprint の Planning から効く（effectiveFrom = その Sprint の開始日） |
-| Occurrence（E） | ルールから発生した 1 回 | scheduledDate、ruleVersion、materializedAt、state（Pending / Excluded / Done / Skipped / Missed） | Task（Rule の版を参照） | 状態と日時。生成後は Rule 変更の影響を受けない。Excluded は記録に残すが、通常の Retro 事実には出さない |
+| RecurrenceRule（E・版つき） | 繰り返しの決まり | 版ごとに freq（毎日 / 平日 / 毎週 / 毎月）、曜日・日付、effectiveFrom、effectiveTo | Task（0..1） | 版そのもの。新しい版は、まだ確定していない次の Sprint から効く（effectiveFrom = その Sprint の開始日）。その Sprint の Planning（draft）がすでに回を生成していれば、その回を作り直す |
+| Occurrence（E） | ルールから発生した 1 回 | scheduledDate、ruleVersion、materializedAt、state（Pending / Excluded / Done / Skipped / Missed） | Task（Rule の版を参照） | 状態と日時。Sprint の確定後は Rule 変更の影響を受けない（未確定の draft の回は作り直す）。Excluded は記録に残すが、通常の Retro 事実には出さない |
 | Sprint（E・集約の根） | 期間の計画単位（MVP は 1 週） | start、end、state、confirmedAt、availableHours（確定時 / 現在）、previousSprint | User | 可用時間の変更履歴、確定日時、状態遷移 |
-| SprintAreaSnapshot（VO） | 確定時の Area の表示名。その Sprint の Planning / Today / Retro はこの名前を使う | area、name、order | Sprint | 確定時に固定 |
+| SprintAreaSnapshot（VO） | その Sprint での Area の表示名。その Sprint の Planning / Today / Retro はこの名前を使う | area、name、order | Sprint | 確定時に固定。Sprint 中に初めて現れた Area は、その時点の名前を並び順の末尾に足して固定 |
 | SprintGoal（E） | Sprint × Area の「今週どうなっていたいか」 | area、plannedText（確定時）、text（現在）、selfAssessment（できた / 一部できた / できなかった / 判断しない / 未判定） | Sprint。Area を参照 | 確定後の文の変更履歴、自己判定 |
 | SprintTask（E） | Task をこの Sprint で扱うこと（参加レコード） | task、occurrences（繰り返しのみ）、origin（planning / midSprint）、addedAt、goalLink（linked / unlinked）、planSnapshot、outcome、carriedFrom | Sprint。Task・Occurrence を参照 | 追加の日時と経路、goalLink の変更、計画値、結果 |
 | PlanningValue（VO） | 今回の時間判断に使う値 | lo、hi、base（Estimate / 提案 / サブタスク合計 / なし）、criterionApplied、computedAt | SprintTask の planSnapshot | 作成時に固定（計画分は確定時、追加分は追加時） |
@@ -180,7 +185,7 @@ stateDiagram-v2
 
 - 1 日 × 1 SprintTask（繰り返しは × 1 Occurrence）に 1 件。翌日に選び直すと新しい DailySelection になる。
 - Paused / Deferred / Removed / Unresolved のどれでも SprintTask は Planned のまま。「今週の残り」に戻る。Paused の翌日も DailySelection は自動で作らない。前日の DailySelection が Paused で、その Task が今の Sprint で Planned なら、Today で「昨日の続き」として候補の上に出す（派生）。本人が「今日へ」を押したときだけ新しい DailySelection を作る。
-- 「N回続けて見送り」は、同じ Task を Today に選んだ機会（DailySelection）を日付順に並べ、**Deferred** が連続する回数（派生）。選ばなかった日は無視し、Paused・Done・Removed が挟まると途切れる。Unresolved は数えない（途切れさせるかは最後の章の未決事項 2）。
+- 「N回続けて見送り」は、同じ Task を Today に選んだ機会（DailySelection）を日付順に並べ、**Deferred** が連続する回数（派生）。選ばなかった日と Unresolved は無視し（数えず、途切れさせない）、Paused・Done・Removed・Skipped（繰り返しの回）が挟まると途切れる（F8）。
 
 ### Occurrence
 
@@ -198,7 +203,7 @@ stateDiagram-v2
 ```
 
 - Projected は「次は 10/4 (日)」の表示のための計算結果で、保存しない。
-- 生成（Pending 以降）の時点で ruleVersion を固定する。Rule を変えても、生成済みの回と今の Sprint の SprintTask は動かない。新しい版は、まだ回を生成していない次の Sprint の Planning から効く。Active な Sprint の途中で変えても、その Sprint の残りの日に新しい版の回は生まれない。
+- 生成（Pending 以降）の時点で ruleVersion を固定する。Rule を変えても、確定済みの Sprint の回と SprintTask は動かない。新しい版は、まだ確定していない次の Sprint から効く。その Sprint の Planning（draft）がすでに回を生成していれば、その Task の回（Pending / Excluded）と SprintTask（Draft）を捨てて新しい版で作り直す（F7）。Active な Sprint の途中で変えても、その Sprint の残りの日に新しい版の回は生まれない。
 - Excluded は Planning で外した記録として残るが、通常の Retro 事実（発生した回・完了・スキップ・未処理）には出さない。
 
 ### PlanningCriterion
@@ -226,13 +231,13 @@ stateDiagram-v2
   Review --> Closed: 次回に引き継いで Retro を完了
 ```
 
-- 確定時に写し取るもの：各 SprintTask の planSnapshot、SprintGoal.plannedText、可用時間（確定時）、SprintAreaSnapshot、CriterionUse。SprintAreaSnapshot はその Sprint の Planning / Today / Retro での Area 名になり、Sprint 中の改名は反映しない。確定前の Planning は現在の名前を使う。
+- 確定時に写し取るもの：各 SprintTask の planSnapshot、SprintGoal.plannedText、可用時間（確定時）、SprintAreaSnapshot、CriterionUse。SprintAreaSnapshot はその Sprint の Planning / Today / Retro での Area 名になり、Sprint 中の改名は反映しない。確定前の Planning は現在の名前を使う。スナップショットにない Area が Sprint 中に初めて現れたとき（その Area の Task を Sprint に追加した、または Sprint 内の Task の Area にした）は、その時点の名前を末尾に足して固定する（F9）。
 - Active の間も Goal の文と可用時間は変えられる。変更は履歴に残り、Retro で確定時との差分を見せる。
 - Review に入った時点で、未完了の SprintTask を CarriedOver、未処理の Occurrence を Missed にする。
 
 ## 不変条件（Invariants）
 
-実装のどの層でも崩してはいけないルールです。v0.2 で番号を振り直しました。v0.2 Final では番号を変えず、16・18・22・23・31・33 の内容を更新しました。
+実装のどの層でも崩してはいけないルールです。v0.2 で番号を振り直しました。v0.2 Final では番号を変えず、16・18・22・23・31・33 の内容を更新しました。F7〜F9 の決定で、番号を変えずに 18・23・31 を更新しました。
 
 **Task / Backlog**
 
@@ -259,7 +264,7 @@ stateDiagram-v2
 15. goalLink = unlinked の SprintTask も時間の合計に含める。Sprint 中の追加は unlinked で作られ、自動で Goal に紐付かない。
 16. planSnapshot は作成時に固定する：計画分は確定時、Sprint 中の追加は追加時。Sprint 中の追加に基準を当てるのは、その Sprint の CriterionUse.appliedAtConfirm = true のときだけ（false や CriterionUse がなければ当てない）。
 17. SprintTask.origin（planning / midSprint）は作成時に決まり変わらない。
-18. 確定時に Goal の文・可用時間・Area 名を写し取る。確定後の Goal の文と可用時間の変更は履歴に残し、写し取った値は書き換えない。Sprint に属する画面（Planning / Today / Retro）はその Sprint の間 SprintAreaSnapshot の名前で固定し、Backlog など恒久側は現在の Area 名を使う。
+18. 確定時に Goal の文・可用時間・Area 名を写し取る。確定後の Goal の文と可用時間の変更は履歴に残し、写し取った値は書き換えない。Sprint に属する画面（Planning / Today / Retro）はその Sprint の間 SprintAreaSnapshot の名前で固定し、Backlog など恒久側は現在の Area 名を使う。確定後に Sprint へ初めて現れた Area は、その時点の名前をスナップショットに足して固定する。
 19. Goal の達成はシステムが判定しない。Chore の完了率を代わりにしない。
 20. CarriedOver は次の Sprint に自動で入らない。
 
@@ -267,7 +272,7 @@ stateDiagram-v2
 
 21. DailySelection は日付 × SprintTask（繰り返しは × Occurrence）に 0..1。
 22. Paused・Deferred・Removed・Unresolved のどれでも、SprintTask は Sprint に残る。翌日の DailySelection は自動で作らない（Paused は翌日「昨日の続き」として候補に出すだけ）。
-23. 連続見送りは、同じ Task を Today に選んだ機会の連続で数え、数えるのは Deferred だけ。選ばなかった日は無視し、Paused・Done・Removed で途切れる。表示は「N回続けて見送り」。
+23. 連続見送りは、同じ Task を Today に選んだ機会の連続で数え、数えるのは Deferred だけ。選ばなかった日と Unresolved は無視し、Paused・Done・Removed・Skipped で途切れる。表示は「N回続けて見送り」。
 24. Unresolved は日付変更時にシステムだけが付ける。
 25. Today は Goal・計画基準・可用時間を変えない。Today と Backlog では容量超過を表示しない。
 26. Sprint 外の Task を今日へ入れる操作は、SprintTask（midSprint）と DailySelection を同時に作る。片方だけが残ることはない。
@@ -278,7 +283,7 @@ stateDiagram-v2
 **繰り返し**
 
 30. 完了・スキップは Occurrence に記録し、Rule には記録しない。スキップしても Rule は残る。
-31. 生成済みの Occurrence と今の Sprint の SprintTask は Rule 変更で動かない。新しい版は次の Sprint の Planning で生成する回から使う。Active な Sprint の途中で変えても同じ。
+31. 確定済みの Sprint の Occurrence と SprintTask は Rule 変更で動かない。新しい版は、まだ確定していない次の Sprint から使う。その Sprint の Planning（draft）がすでに回を生成していれば、その Task の回（Pending / Excluded）と SprintTask（Draft）を新しい版で作り直す。Active な Sprint の途中で変えても同じ。
 32. 未来の回は事前に生成しない。生成するのは Sprint の Planning 開始時（その期間分）。
 33. 今週の回は既定で Sprint に含まれる。Planning で外した回は Excluded として記録に残り、Today にも通常の Retro 事実にも出ない。
 34. Backlog には Rule ごとに 1 行。未来の回を並べない。
@@ -367,7 +372,7 @@ v0.2 Final でも 3 つとも、UI に入口のない操作を使わずに最後
 | 1 | 毎週土曜で作成 | Task + RecurrenceRule v1（毎週 土、effectiveFrom）。Occurrence はまだ作らない | Backlog に 1 行「毎週 土 · 次は 8/8 (土)」 |
 | 2 | 2 回完了 | 8/3 週・8/10 週の Planning 開始時に Occurrence（8/8、8/15、v1）を生成し、既定で SprintTask（goalLink = unlinked）に。当日 Today に自動で出て、完了 → Occurrence・DailySelection が Done | 発生した回：完了 × 2 |
 | 3 | 1 回スキップ | 8/17 週の Occurrence（8/22）→ Skipped、DailySelection → Skipped。Rule は変化なし | Retro：「8/22 の回をスキップ」 |
-| 4 | 毎週日曜へ変更（8/24 朝、8/17 週の Retro 完了後、8/24 週の Planning 前） | v1 に effectiveTo、v2（毎週 日、effectiveFrom = 8/24）を追加。まだ回を生成していない次の Sprint は 8/24 週。Activity：Rule の変更 | Backlog：「次の Sprint から反映」 |
+| 4 | 毎週日曜へ変更（8/24 朝、8/17 週の Retro 完了後、8/24 週の Planning 前） | v1 に effectiveTo、v2（毎週 日、effectiveFrom = 8/24）を追加。まだ確定していない次の Sprint は 8/24 週。Activity：Rule の変更 | Backlog：「次の Sprint から反映」 |
 | 5 | 過去の回はそのまま | 生成済みの 8/8・8/15・8/22 は v1・土曜のまま動かない | 「変更前のルール「毎週 土」の回」 |
 | 6 | 8/24 週の Planning | Occurrence（8/30 日、v2、Pending）を生成し、既定で SprintTask（Draft）に。確定後、8/30 に Today へ自動で出る（DailySelection origin = 当日の繰り返し） | 「今週発生する繰り返し」に選択済みで出る |
 | 7 | 8/31 週の Planning で今週の回を外す | Occurrence（9/6 日、v2）を生成 → Excluded。SprintTask（Draft）は確定前になくなる | Today に出ない。8/31 週の Retro の事実にも出ない（記録には残る） |
@@ -376,10 +381,6 @@ v0.2 Final でも 3 つとも、UI に入口のない操作を使わずに最後
 
 Excluded の回は Occurrence の記録として残るが、通常の Retro 事実（発生した回・完了・スキップ・未処理）には数えず、表示もしない。手順 8 のように Sprint の途中で Rule を変えても、その Sprint の計画は変わらない。
 
-## v0.2 Final で新しく出た未決事項
+## 未決事項
 
-v0.2 の 6 論点はすべて決定しました（F1〜F6）。以下は、その決定を当てはめたときに新しく出た境界の場合だけです。どれも新しい画面は要らず、モデルの決めだけで閉じられます。
-
-1. **次の Sprint の Planning（draft）がすでに回を生成した後の Rule 変更**。前の Retro が未完了でも draft は作れるので起こりうる。draft の回を「生成済み」として旧い版のままにすると、「次の Sprint から反映」が実際にはその次の Sprint になる。未確定の draft の回だけは作り直すか。
-2. **連続見送りの間に Unresolved や Skipped（繰り返しの回）が挟まった場合**。F4 が途切れる結末として挙げたのは Paused / Done / Removed。Unresolved と Skipped は数えないが、選ばなかった日と同じく無視するか、途切れさせるか。
-3. **Sprint 中に新しく作った Area の表示名**。SprintAreaSnapshot にはないので、その Area の Task を Sprint 中に追加したとき、Today / Retro で現在の名前を出すか、追加時の名前をスナップショットに足すか。
+現在はありません。v0.2 Final で残った境界の場合 3 件（次の Sprint の draft が回を生成した後の Rule 変更、連続見送りの間の Unresolved / Skipped、Sprint 中に新しく作った Area の表示名）は、2026-09-27 に F7〜F9 として決めました（Issue #18）。

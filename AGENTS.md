@@ -35,7 +35,7 @@ MVP は Web のみ。PC を基準にし、スマートフォンは DESIGN.md の
 
 ### 未決事項の扱い
 
-PRD §14 の「Frontend 実装を止めない未決定事項」3 件（＝ドメインモデル末尾の未決事項 1〜3）について、PRD は「fixture 上では代表ケースを一つに固定し、Backend / domain service 実装前に最終決定する」としている。このリポジトリは `packages/domain` を先に作るので、該当する関数を書く前に Issue で決める。UI の fixture は、決まった挙動を domain の関数経由で使う。PRD §14 の「プロダクトとして後続で決める事項」（認証、DB、公開範囲など）は fixture で仮決めしない。
+PRD §14 の「Frontend 実装を止めない未決定事項」3 件（＝ドメインモデル末尾の未決事項 1〜3）について、PRD は「fixture 上では代表ケースを一つに固定し、Backend / domain service 実装前に最終決定する」としている。このリポジトリは `packages/domain` を先に作るので、3 件とも Issue #18 で決め、ドメインモデルの F7〜F9 に記録した。UI の fixture は、決まった挙動を domain の関数経由で使う。PRD §14 の「プロダクトとして後続で決める事項」（認証、DB、公開範囲など）は fixture で仮決めしない。
 
 ## ドメインの扱い
 

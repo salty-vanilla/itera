@@ -207,7 +207,7 @@ Today は毎日使う軽量画面であり、日次 Planning や詳細なタイ�
 - **今日から外す**: 選び直し。見送りには数えない。
 - 何も操作しないまま日付が変わった選択は未処理として記録し、見送りには数えない。
 
-同じ Task を Today に選んだ機会で Deferred が連続した場合、`N回続けて見送り` と中立的に表示する。選ばなかった日は無視し、Paused / Done / Removed が挟まると連続は途切れる。
+同じ Task を Today に選んだ機会で Deferred が連続した場合、`N回続けて見送り` と中立的に表示する。選ばなかった日と未処理（Unresolved）は無視し、Paused / Done / Removed / 繰り返しの Skipped が挟まると連続は途切れる。
 
 #### 実績時間
 
@@ -299,8 +299,8 @@ Planning で明示的に外した繰り返し Occurrence は通常の Retro 事�
 - Rule と各 Occurrence を分ける。
 - 今週発生する Occurrence は Planning 開始時に生成し、既定で Sprint に含める。
 - Planning で外した Occurrence は Today に出さず、通常の Retro 事実にも含めないが、履歴としては残す。
-- Rule を変更しても生成済み Occurrence は動かさない。
-- Active Sprint 中に Rule を変更した場合も、今 Sprint の計画は変えず、次 Sprint の Planning から新 Rule を使う。
+- Rule を変更しても確定済み Sprint の Occurrence は動かさない。
+- Active Sprint 中に Rule を変更した場合も、今 Sprint の計画は変えず、まだ確定していない次 Sprint から新 Rule を使う。次 Sprint の Planning draft がすでに Occurrence を生成していれば、その Occurrence を新 Rule で作り直す。
 - Backlog では Rule ごとに 1 行を表示し、未来の Occurrence を大量に並べない。
 
 ## 7. AI / Agent の役割
@@ -435,18 +435,18 @@ Actual Time が入力された Task だけを対象に、以下を比較する�
 
 ## 14. 未決定・後続判断
 
-### Frontend 実装を止めない未決定事項
+### Frontend 実装を止めない未決定事項（決定済み）
 
-1. **Recurrence Rule と次 Sprint draft の境界**  
-   次 Sprint の Planning draft ですでに Occurrence を生成した後に Rule を変更した場合、未確定 draft の Occurrence を再生成するか。
+v0.2 で残した 3 件は、2026-09-27 に次のとおり決めた（Issue #18、ドメインモデル F7〜F9）。
 
-2. **連続見送りと Unresolved / Skipped**  
-   Deferred の間に Unresolved または繰り返しの Skipped が挟まった場合、連続見送りを途切れさせるか。
+1. **Recurrence Rule と次 Sprint draft の境界**
+   未確定の次 Sprint の Planning draft がすでに Occurrence を生成していれば、新 Rule で作り直す。draft で外した選択は引き継がない。確定済み Sprint の Occurrence は動かさない。
 
-3. **Active Sprint 中に新しい Area を作った場合**  
-   SprintAreaSnapshot に存在しない Area の Task を Sprint 中追加したとき、追加時点の Area 名を Sprint 側へ snapshot するか。
+2. **連続見送りと Unresolved / Skipped**
+   Unresolved は選ばなかった日と同じく無視する（数えず、途切れさせない）。繰り返しの Skipped は連続を途切れさせる。
 
-これらは主要 UI の Frontend 実装開始を妨げない。fixture 上では代表ケースを一つに固定し、Backend / domain service 実装前に最終決定する。
+3. **Active Sprint 中に新しい Area を作った場合**
+   SprintAreaSnapshot にない Area が Sprint 中に初めて現れた時点の名前を、SprintAreaSnapshot に足して固定する。
 
 ### プロダクトとして後続で決める事項
 
