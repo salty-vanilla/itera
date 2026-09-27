@@ -67,6 +67,7 @@ PRD §14 の「Frontend 実装を止めない未決定事項」3 件（＝ドメ
 
 共有の Skill と CLI はリポジトリ内で固定している。個人の Skill やグローバル CLI を前提にしない。セットアップと更新手順は `docs/development/agent-setup.md`。
 
+- Node は `.node-version` の系列を使う（Claude Code では SessionStart hook が direnv の環境を Bash に読み込む）。`node -v` がその系列でなければ、別の Node を入れたり回避策を探したりせず、その旨を報告する。
 - Skill の正本は `.agents/skills/`（`.claude/skills` はそこへのシンボリックリンク）。上流由来の Skill は `tooling/agents/sources.json` にハッシュを記録しており、`pnpm agent:check` で改変を検出する。直接編集しない。
 - CLI は共有コマンドで実行する：`pnpm agent:playwright`、`pnpm agent:shadcn <command> --cwd apps/web`、`pnpm agent:impeccable`。Skill 内の `npx ...@latest` は使わずに読み替える（shadcn Skill の文脈は `pnpm agent:shadcn info --json --cwd apps/web` で取る）。
 - Impeccable の製品文脈は `PRODUCT.md`（PRD の要約）、デザインは `DESIGN.md`（spec 形式なので Impeccable がそのまま読める）。`init`・`document`・build 後の documenter 手順で PRODUCT.md・DESIGN.md・`.impeccable/design.json` を書き出さない。DESIGN.md の変更は Issue で扱う。

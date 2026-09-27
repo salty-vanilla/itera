@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { delimiter, join } from 'node:path';
 import { spawn } from 'node:child_process';
-import { binaryPath, cache, requireNode, root } from './common.mjs';
+import { binaryPath, browsers, cache, requireNode, root } from './common.mjs';
 
 requireNode();
 const [tool, ...args] = process.argv.slice(2);
@@ -28,12 +28,12 @@ switch (tool) {
     break;
   case 'playwright':
     executable = join(root, 'tooling/agents/node_modules/.bin/playwright-cli');
-    env.PLAYWRIGHT_BROWSERS_PATH = join(cache, 'browsers');
+    env.PLAYWRIGHT_BROWSERS_PATH = browsers;
     parameters = args;
     break;
   case 'browser-install':
     executable = join(root, 'tooling/agents/node_modules/.bin/playwright-cli');
-    env.PLAYWRIGHT_BROWSERS_PATH = join(cache, 'browsers');
+    env.PLAYWRIGHT_BROWSERS_PATH = browsers;
     parameters = ['install-browser', 'chromium'];
     break;
   default:
