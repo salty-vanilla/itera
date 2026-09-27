@@ -19,7 +19,7 @@ export const browsers =
   join(
     process.platform === 'darwin'
       ? join(homedir(), 'Library', 'Caches')
-      : (process.env.XDG_CACHE_HOME ?? join(homedir(), '.cache')),
+      : process.env.XDG_CACHE_HOME || join(homedir(), '.cache'),
     'itera',
     'ms-playwright',
   );
