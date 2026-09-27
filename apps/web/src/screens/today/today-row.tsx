@@ -197,7 +197,8 @@ function RowMetadata({
         return (
           <MetaItem wrap icon={<Pause aria-hidden />}>
             <span>
-              今日はここまで
+              {/* Breaks only at the separator in a narrow row. */}
+              <span className="whitespace-nowrap">今日はここまで</span>
               {actual !== undefined && (
                 // The value stays with its separator when the line wraps.
                 <span className="whitespace-nowrap"> · {actual}</span>
