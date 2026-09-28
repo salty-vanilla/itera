@@ -72,7 +72,7 @@ PRD §14 の「Frontend 実装を止めない未決定事項」3 件（＝ドメ
 - CLI は共有コマンドで実行する：`pnpm agent:playwright`、`pnpm agent:shadcn <command> --cwd apps/web`、`pnpm agent:impeccable`。Skill 内の `npx ...@latest` は使わずに読み替える（shadcn Skill の文脈は `pnpm agent:shadcn info --json --cwd apps/web` で取る）。
 - Impeccable の製品文脈は `PRODUCT.md`（PRD の要約）、デザインは `DESIGN.md`（spec 形式なので Impeccable がそのまま読める）。`init`・`document`・build 後の documenter 手順で PRODUCT.md・DESIGN.md・`.impeccable/design.json` を書き出さない。DESIGN.md の変更は Issue で扱う。
 - DADS / Apple HIG を参照するときは `design-references` Skill を使い、記憶で引用しない。
-- 要望の Issue 化、Issue の実装、独立した受け入れ、再開には `issue-harness` Skill を使う。
+- 要望の Issue 化、Issue の実装、独立したレビュー（受け入れと品質）、再開には `issue-harness` Skill を使う。
 
 ## 外部への操作
 
