@@ -66,11 +66,12 @@ Specialist 条件：
 - `MUST`：merge 前に必ず解決する。修正するか、理由を書いて却下する。却下したら同じ Reviewer に 1 回だけ再確認させ、なお意見が分かれたら Owner が判断する。
 - `SHOULD`：原則として修正する。修正しない場合、category が architecture / layering、責務の配置、重複と再利用、公開 API、結合のいずれかのものだけ、PR に短い理由を残す。それ以外は個別の記録を求めない。
 - `NOTE`：対応不要。再レビューの条件にしない。
+- Reviewer が `maxTurns` に達して partial で返ったら、pass として扱わない。`SendMessage` で 1 回だけ続けさせ、それでも終わらなければ、確認できなかった範囲を未実施として報告する。
 - 同じ観点の再レビューは、`SendMessage` で同じ Reviewer を再開する。新しい Reviewer を起動しない。HEAD が変わったら以前の pass は無効にし、`MUST` の解消と、前の head から新しい head までの差分を確認させる。
 
 ## 引き継ぎと実行記録
 
-Reviewer に渡すもの：観点、Issue URL と確認した条件、base / head、変更ファイルの一覧と関連文書の入口、実行した検証のコマンドと終了結果、未確認事項。PR 説明と実装理由の説明は渡さない。差分や Issue の本文は Reviewer が自分で取得する。
+Reviewer に渡すもの：観点、Issue URL と確認した条件、base / head、変更ファイルの一覧と関連文書の入口、実行した検証のコマンドと終了結果、証拠の場所（PR に添付した画像・動画の URL、`.tools/harness/` のパス）、未確認事項。PR 説明と実装理由の説明は渡さない。差分や Issue の本文は Reviewer が自分で取得する。
 
 - コミット済みの差分は base / head SHA で固定する。
 - 未コミットなら staged / unstaged の全差分と未追跡ファイルの一覧・内容を渡す。HEAD だけでは対象を固定できない。レビュー中は編集しない。
