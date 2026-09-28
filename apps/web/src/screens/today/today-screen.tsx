@@ -13,7 +13,7 @@ import { Field } from '@/components/ui/field';
 import { Progress } from '@/components/ui/progress';
 import { Select } from '@/components/ui/select';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
-import { formatDateHeading, formatTime } from '@/lib/date-format';
+import { formatDate, formatDateHeading, formatTime } from '@/lib/date-format';
 import { formatHours, formatPlanningTotal } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
 import type { TodayData, TodayRow as TodayRowData } from '@/store/today-view';
@@ -51,17 +51,44 @@ export function validateTodaySearch(
 
 function TodayScreen() {
   const data = useToday();
-  const actions = useTodayActions();
-  const sprintId = data?.sprint.id;
-  const today = data?.today;
-  // The system's start of the day when Today opens (startDay): earlier
-  // days' open choices close as unresolved, today's recurring ones appear.
-  useEffect(() => {
-    if (sprintId !== undefined) actions.beginDay();
-  }, [actions, sprintId, today]);
-
+  // The day itself is started by the app (useSystemDay, #54).
   if (data === undefined) return <NoActiveSprint />;
+  if (data.today < data.sprint.start) return <BeforeStart data={data} />;
   return <TodayView data={data} />;
+}
+
+/**
+ * Before the Sprint's first day (confirmed on Sunday evening, say): the
+ * date, when it starts, and the week's Goals. Choosing and adding wait for
+ * the first day, as the domain keeps them within the period (owner
+ * decision in #54).
+ */
+function BeforeStart({ data }: { data: TodayData }) {
+  return (
+    <ScreenFrame heading={formatDateHeading(data.today)}>
+      <p className="text-body text-ink-muted">
+        Sprint {data.number} は {formatDate(data.sprint.start)} から始まります。
+      </p>
+      {data.goals.length > 0 && (
+        <section
+          aria-labelledby="before-goals"
+          className="mt-6 flex flex-col gap-3"
+        >
+          <h2 id="before-goals" className="text-subheading text-ink-muted">
+            今週の Goal
+          </h2>
+          <ul className="flex flex-col gap-3">
+            {data.goals.map((g) => (
+              <li key={g.area.id} className="flex flex-col gap-1">
+                <AreaIndicator name={g.area.name} color={g.area.color} />
+                <p className="text-reflection text-ink">{g.text}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </ScreenFrame>
+  );
 }
 
 /** Today without an active Sprint: the date, and where the week is. */

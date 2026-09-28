@@ -5,7 +5,7 @@ import type {
   SprintTaskId,
 } from '@itera/domain';
 import { useMemo } from 'react';
-import { useRecordStore, useStoreSnapshot } from './store-provider';
+import { useStoreSnapshot } from './store-provider';
 import * as changes from './today-changes';
 import { todayData } from './today-view';
 import { useRun } from './use-run';
@@ -18,16 +18,13 @@ export function useToday() {
 
 /**
  * The person's operations in Today, one named function each (the list
- * becomes the API's operations), and the system's start of the day. Each
- * returns whether it went through.
+ * becomes the API's operations). Each returns whether it went through.
+ * The day's start is the system's (useSystemDay).
  */
 export function useTodayActions() {
   const run = useRun();
-  const store = useRecordStore();
   return useMemo(
     () => ({
-      /** The system's, when Today opens; a failure is not the person's. */
-      beginDay: () => store.run(changes.beginDay(), { actor: 'system' }).ok,
       chooseForToday: (
         sprintTaskId: SprintTaskId,
         occurrenceId?: OccurrenceId,
@@ -53,6 +50,6 @@ export function useTodayActions() {
         run(changes.addAndChoose(title, areaId)),
       beginRetro: () => run(changes.beginRetro()),
     }),
-    [run, store],
+    [run],
   );
 }

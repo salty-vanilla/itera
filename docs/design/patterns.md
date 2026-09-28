@@ -1,6 +1,6 @@
 # 画面のパターン
 
-更新：2026-09-28（Retro の最初の実装で決めたこと、Issue #42。Today の最初の実装で決めたこと、Issue #41。Backlog の編集して採用と、Planning の最初の実装で決めたこと、Issue #40）。2026-09-27（Backlog の完了を元に戻す、Issue #47）。2026-09-26 に DESIGN.md v0.2 から分離。
+更新：2026-09-28（期間外の Today とシステムの Review 移行、Issue #54。Retro の最初の実装で決めたこと、Issue #42。Today の最初の実装で決めたこと、Issue #41。Backlog の編集して採用と、Planning の最初の実装で決めたこと、Issue #40）。2026-09-27（Backlog の完了を元に戻す、Issue #47）。2026-09-26 に DESIGN.md v0.2 から分離。
 
 Backlog・Planning・Today・Retro の画面の組み立て方。見た目と部品は [DESIGN.md](../../DESIGN.md)、意味と操作の種類は [PRD](../requirements/prd.md) と [ドメインモデル](../domain/domain-model.md) が正。UI v0.1 モックは当たり付けで、ここに書いた構成を実装して触りながら削る（PRD §12）。
 
@@ -127,6 +127,13 @@ Issue #41 でオーナーが決めた（2026-09-28）。
 - 1 カラムは medium 以上で `pane-today`（720px）に収める。desktop（1200px 以上）は右に今週の Goal の要約を置き、それより狭い幅では Goal を Progress の下に出す。
 - 最終日には上部に「今日はこの Sprint の最終日です。」と「Retro を始める」を出す（F21）。押すと Review に入り、振り返りの画面へ移る。
 - Backlog から完了した行を Today の ○ で取り消すと、Backlog の「元に戻す」と同じく完了前の状態に戻す（F29。その完了で作った今日の選択は消え、Task は今週の残りに戻る）。
+
+### 期間外の Today（Issue #54）
+
+Issue #54 でオーナーが決めた（2026-09-28）。
+
+- Sprint の開始日より前（日曜の夜に確定した直後など）の Today は、日付の見出しに「Sprint N は M/D (曜) から始まります。」と今週の Goal だけを出す。今日やる・今週の残り・クイック追加・割り込みは出さない（ドメインが期間外の選択と追加を受け付けないため）。
+- 終了日を過ぎた Sprint は、アプリを開いたとき（どの画面でも、日付が変わったときも）にシステムが Review にする（F21・F23）。その日の始まり（startDay）も同じときにシステムが行い、Today を開くことを前提にしない。
 
 ### 基準画面（compact、390px）
 

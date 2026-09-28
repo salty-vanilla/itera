@@ -430,3 +430,52 @@ describe('Today — the days', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/retro'));
   });
 });
+
+describe('Today — outside the period (#54)', () => {
+  it('says when a confirmed Sprint starts, with its Goals, and nothing to choose', async () => {
+    await renderAt('/sprint?fixture=planning-check&stage=check');
+    await userEvent.click(
+      screen.getAllByRole('button', { name: 'Sprint 2 を確定' })[0]!,
+    );
+    await userEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', {
+        name: 'Sprint 2 を確定',
+      }),
+    );
+    await userEvent.click(screen.getAllByRole('link', { name: '今日' })[0]!);
+    expect(
+      await screen.findByText('Sprint 2 は 9/28 (月) から始まります。'),
+    ).toBeTruthy();
+    expect(screen.getByText('先行研究を押さえる')).toBeTruthy();
+    // Choosing and adding wait for the first day.
+    expect(screen.queryByRole('button', { name: /今日へ/ })).toBeNull();
+    expect(
+      screen.queryByRole('textbox', { name: '今日やるタスクを追加' }),
+    ).toBeNull();
+    expect(screen.queryByText(/日目/)).toBeNull();
+  });
+
+  it('puts a Sprint past its end into Review when the app opens (F21, F23)', async () => {
+    clockOverride = at('2026-10-05', '07:00');
+    await renderAt('/today?fixture=today-interrupt');
+    // No active Sprint is left once the system has moved it to Review.
+    await waitFor(() => expect(sprint).toThrow());
+    const reviewed = lastSnapshot().records.sprints.find(
+      (s) => s.id === 'sprint-2026-09-28',
+    );
+    expect(reviewed?.state).toBe('review');
+    // Open choices are closed by the system, not the person (F23).
+    expect(
+      reviewed?.dailySelections.find(
+        (d) => d.date === '2026-10-01' && d.resolution === 'unresolved',
+      ),
+    ).toBeDefined();
+    const started = lastSnapshot().records.activities.findLast(
+      (a) => a.kind === 'sprintReviewStarted',
+    );
+    expect(started?.actor).toBe('system');
+    expect(
+      await screen.findByText(/今週の Sprint は振り返り中です/),
+    ).toBeTruthy();
+  });
+});
