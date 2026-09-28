@@ -10,7 +10,7 @@
 | `CLAUDE.md` | `@AGENTS.md` を読み込み、Claude Code 固有の事項だけを足す |
 | `.claude/rules/` | ファイルの場所ごとのルール（`apps/web/**`、`packages/domain/**`、正本文書） |
 | `.claude/agents/` | ハーネスの subagent（`harness-reviewer`、`harness-planner`）と、Impeccable の上流が同梱する subagent（`impeccable-asset-producer`、`impeccable-finish-reviewer`、`impeccable-manual-edit-applier`） |
-| `.claude/hooks/` | セッション開始時に direnv の環境を Bash へ読み込む hook（`session-env.sh`）と、読み取り専用の subagent の Bash を、読み取り用コマンドの許可リストに限る hook（`read-only-bash.mjs`）。`read-only-bash.mjs` はシェルの小さな部分集合だけを字句解析し、それ以外は止める。完全な隔離ではない。回帰テストは `pnpm agent:hooks:test`。subagent の frontmatter の hook は、このフォルダを信頼（workspace trust）してから有効になる |
+| `.claude/hooks/` | セッション開始時に direnv の環境を Bash へ読み込む hook（`session-env.sh`）、読み取り専用の subagent の Bash を、読み取り用コマンドの許可リストに限る hook（`read-only-bash.mjs`）、編集したファイルを Prettier で整形する hook（`format-edited.mjs`）、応答を終える前に未検査の変更があれば `pnpm check` を実行し、失敗したら終了を止める hook（`stop-check.mjs`）。`read-only-bash.mjs` はシェルの小さな部分集合だけを字句解析し、それ以外は止める。完全な隔離ではない。回帰テストは `pnpm agent:hooks:test`。subagent の frontmatter の hook は、このフォルダを信頼（workspace trust）してから有効になる |
 | `.claude/settings.json` | 共有の permission 設定と SessionStart hook |
 | `.mcp.json` | リポジトリで共有する MCP（下の「MCP」の基準を満たすものだけ） |
 | `.agents/skills/` | Skill の正本。`.claude/skills` はここへのシンボリックリンク |
@@ -65,6 +65,8 @@ Agent 用ブラウザ（Playwright の Chromium）は、リポジトリ専用の
 Orca で worktree を作ると、`orca.yaml` の setup が `tooling/setup.sh` を実行する。`.env.local` と UI v0.1 の PDF は `.worktreeinclude` で複製される。
 
 direnv のシェル hook は対話シェルのプロンプトでしか動かないので、Claude Code の Bash（非対話）には `.envrc` の環境が入らない。`.claude/settings.json` の SessionStart hook（`.claude/hooks/session-env.sh`）が `direnv export bash` の結果を `CLAUDE_ENV_FILE` に書き、以降の Bash が固定版の Node と pnpm を使う。direnv が無い、`.envrc` が未許可、Node が `.node-version` の系列でない、pnpm が `package.json` の固定版でない場合は、セッションを止めずに理由を表示する。直したら Claude Code のセッションを開き直す。回帰テストは `pnpm agent:hooks:test`。Codex など Claude Code 以外の Agent には、この hook は効かない。
+
+`stop-check.mjs` は応答のたびに呼ばれるため、変更がないとき、変更が Markdown だけ（`DESIGN.md` と `.agents/` を除く）のとき、同じ作業ツリーを検査済みのとき（指紋を `.tools/hooks/` に記録）、直前にこの hook が終了を止めたときは何もしない。Node が `.node-version` の系列でないなど環境の問題は、止めずに表示する。
 
 ## MCP
 
