@@ -82,14 +82,14 @@ direnv のシェル hook は対話シェルのプロンプトでしか動かな�
 
 ## ハーネス
 
-`issue-harness` Skill を使う。通常はメインセッションが実装し、受け入れだけを `harness-reviewer` subagent に新しいコンテキストで任せる。曖昧な要望や重要な設計判断だけ `harness-planner` に相談する。手順・上限・返す形式は `.agents/skills/issue-harness/` を参照する。
+`issue-harness` Skill を使う。メインセッションが調査から修正までを担当し、レビューだけを `harness-reviewer` subagent に新しいコンテキストで任せる。レビューの観点（`general` / `acceptance` / `quality` / `specialist:<領域>`）は変更の区分で決める。曖昧な要望や重要な設計判断だけ `harness-planner` に相談する。区分・手順・上限・返す形式は `.agents/skills/issue-harness/` を参照する。
 
 ```text
 /issue-harness この要望を Issue に整理してください。まだ実装は始めないでください。
-/issue-harness Issue #12 を実装し、harness-reviewer で受け入れてください。push と PR 作成はしないでください。
+/issue-harness Issue #12 を実装し、harness-reviewer でレビューしてください。push と PR 作成はしないでください。
 ```
 
-実行記録は `.tools/harness/issue-<番号>/<実行ID>/run.md` に置く（Git 管理外）。
+経過と結果は Issue・PR・CI に残す。中断したときと上限に達したときだけ、実行記録を `.tools/harness/issue-<番号>/<実行ID>/run.md` に置く（Git 管理外）。
 
 ## 確認と更新
 
