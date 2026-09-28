@@ -477,5 +477,30 @@ describe('Today — outside the period (#54)', () => {
     expect(
       await screen.findByText(/今週の Sprint は振り返り中です/),
     ).toBeTruthy();
+    // The system's work is not the person's: no error Toast.
+    expect(screen.queryByText('保存できませんでした')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('starts the day at once for a Sprint confirmed on its first day', async () => {
+    // 10/5 (Mon): Sprint 2's Retro completes and Sprint 3, starting today,
+    // is planned and confirmed.
+    await renderAt('/retro?fixture=retro-before-complete&stage=handoff');
+    await userEvent.click(screen.getByRole('button', { name: 'Retro を完了' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Sprint 3 の計画を始める' }),
+    );
+    await userEvent.click(
+      (await screen.findAllByRole('button', { name: 'Sprint 3 を確定' }))[0]!,
+    );
+    await userEvent.click(
+      within(
+        await screen.findByRole('dialog', { name: /Sprint 3 を確定しますか/ }),
+      ).getByRole('button', { name: 'Sprint 3 を確定' }),
+    );
+    await userEvent.click(screen.getAllByRole('link', { name: '今日' })[0]!);
+    // Today's recurring occurrence is there without reopening the app.
+    expect(await screen.findByText('Sprint 3 · 1日目 / 7日')).toBeTruthy();
+    expect(row('今日やる', '英語の多読 30 分')).toBeTruthy();
   });
 });

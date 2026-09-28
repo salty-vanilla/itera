@@ -136,8 +136,8 @@ export interface StartDayInput {
 }
 
 /**
- * The system's start of a day (call when Today is opened or the date
- * changes; repeating it changes nothing). Selections of earlier days still
+ * The system's start of a day (call when the app opens, the date changes
+ * or the running Sprint changes; repeating it changes nothing). Selections of earlier days still
  * open become unresolved (invariant 24), and today's pending occurrences of
  * planned recurring SprintTasks appear in Today (当日の繰り返し). Nothing
  * else is chosen automatically, not even yesterday's paused Task
