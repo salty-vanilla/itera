@@ -1,10 +1,9 @@
 import { Link } from '@tanstack/react-router';
 import { Info, Route } from 'lucide-react';
-import { useId, useState } from 'react';
+import { useId } from 'react';
 import { buttonVariants } from '@/components/ui/button';
-import { Field } from '@/components/ui/field';
-import { TextInput } from '@/components/ui/text-input';
 import { Tag } from '@/components/ui/tag';
+import { AvailableHoursField } from '@/components/sprint/capacity-indicator';
 import { GoalBlock } from '@/components/sprint/goal-block';
 import { SprintHeader } from '@/components/sprint/sprint-header';
 import { Estimate } from '@/components/task/estimate';
@@ -108,10 +107,10 @@ function RunningSprint({ data }: { data: RunningData }) {
               </GoalBlock>
             );
           })}
-          <div className="wide:hidden">{outlook}</div>
         </div>
-        <aside aria-label="時間と計画基準" className="hidden wide:block">
-          <div className="sticky top-8">{outlook}</div>
+        {/* One Outlook: beside the plan from 1200px, under it below. */}
+        <aside aria-label="時間と計画基準">
+          <div className="wide:sticky wide:top-8">{outlook}</div>
         </aside>
       </div>
     </div>
@@ -129,25 +128,26 @@ function RunningRow({
   const Repeat = semanticIcons.recurrence;
   const Carry = semanticIcons.carriedOver;
   const count = sprintTask.planSnapshot?.occurrenceCount;
+  // DESIGN.md Task Metadata order: carry-over, recurrence, Goal, notes.
   const meta = [
     sprintTask.outcome === 'done' && <MetaItem key="d">完了</MetaItem>,
-    count !== undefined && (
-      <MetaItem key="r" icon={<Repeat aria-hidden />}>
-        今週 {count}回
-      </MetaItem>
-    ),
     sprintTask.carriedFrom !== undefined && (
       <MetaItem key="c" icon={<Carry aria-hidden />}>
         持ち越し
       </MetaItem>
     ),
-    sprintTask.origin === 'midSprint' && (
-      <MetaItem key="m">Sprint 中に追加</MetaItem>
+    count !== undefined && (
+      <MetaItem key="r" icon={<Repeat aria-hidden />}>
+        今週 {count}回
+      </MetaItem>
     ),
     hasGoal && sprintTask.goalLink === 'unlinked' && (
       <MetaItem key="g" className="text-ink-subtle">
         Goal なし
       </MetaItem>
+    ),
+    sprintTask.origin === 'midSprint' && (
+      <MetaItem key="m">Sprint 中に追加</MetaItem>
     ),
   ].filter(Boolean);
   return (
@@ -179,20 +179,6 @@ function Outlook({
 }) {
   const ids = useId();
   const { planned, current } = data.availableHours;
-  const [text, setText] = useState(
-    current === undefined ? '' : String(current),
-  );
-  const [error, setError] = useState<string | undefined>(undefined);
-  const save = () => {
-    const trimmed = text.trim();
-    const hours = trimmed === '' ? null : Number(trimmed);
-    if (hours !== null && (!Number.isFinite(hours) || hours < 0)) {
-      setError('0 以上の時間を数字で入れてください（例: 18）');
-      return;
-    }
-    setError(undefined);
-    if ((hours ?? undefined) !== current) onHours(hours);
-  };
   return (
     <div className="flex flex-col gap-6">
       <section aria-labelledby={`${ids}-hours`} className="flex flex-col gap-3">
@@ -211,27 +197,12 @@ function Outlook({
               : formatHours(planned, { total: true })}
           </dd>
         </dl>
-        <form
-          noValidate
-          onSubmit={(event) => {
-            event.preventDefault();
-            save();
-          }}
-        >
-          <Field
-            label="今の可用時間（時間）"
-            description="確定した後も変えられます。計画時の値は残ります。"
-            error={error}
-          >
-            <TextInput
-              inputMode="decimal"
-              suffix="h"
-              value={text}
-              onChange={(e) => setText(e.currentTarget.value)}
-              onBlur={save}
-            />
-          </Field>
-        </form>
+        <AvailableHoursField
+          value={current}
+          onChange={onHours}
+          label="今の可用時間（時間）"
+          description="確定した後も変えられます。計画時の値は残ります。"
+        />
       </section>
       {data.criterion !== undefined && (
         <section

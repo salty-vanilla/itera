@@ -221,12 +221,21 @@ function CapacityIndicator({
   );
 }
 
+/**
+ * The available hours, saved on blur or Enter. It follows a value changed
+ * elsewhere and goes back to the saved value when saving fails. Also used
+ * on the running Sprint's screen (#51).
+ */
 function AvailableHoursField({
   value,
   onChange,
+  label = '可用時間（時間）',
+  description = '今週、計画に使える時間。本人が決めます',
 }: {
   value: number | undefined;
   onChange: (hours: number | null) => boolean;
+  label?: string;
+  description?: string;
 }) {
   const saved = value === undefined ? '' : String(value);
   const [text, setText] = useState(saved);
@@ -249,11 +258,7 @@ function AvailableHoursField({
     if (!onChange(hours)) setText(saved);
   }
   return (
-    <Field
-      label="可用時間（時間）"
-      description="今週、計画に使える時間。本人が決めます"
-      error={error}
-    >
+    <Field label={label} description={description} error={error}>
       <TextInput
         inputMode="decimal"
         suffix="h"
@@ -341,5 +346,5 @@ function CapacityBar({
   );
 }
 
-export { CapacityIndicator };
+export { AvailableHoursField, CapacityIndicator };
 export type { AreaSegment, CapacityIndicatorProps };

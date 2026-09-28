@@ -111,6 +111,11 @@ function GoalBlock({
           className="flex max-w-measure-read flex-col gap-2"
           onSubmit={(event) => {
             event.preventDefault();
+            // Nothing written for an Area without a Goal: nothing to save.
+            if (goal === undefined && text.trim() === '') {
+              close();
+              return;
+            }
             if (!removable && text.trim() === '') {
               setError(
                 '確定した後の Goal は消せません。文を書いて保存してください',

@@ -128,7 +128,8 @@ describe('Sprint — running (#51)', () => {
 
   it('changes the available hours and keeps the planned hours (invariant 18)', async () => {
     await renderAt('/sprint?fixture=today-interrupt');
-    const hours = screen.getAllByRole('textbox', { name: /今の可用時間/ })[0]!;
+    // One field, whatever the width (it follows the saved value).
+    const hours = screen.getByRole('textbox', { name: /今の可用時間/ });
     await userEvent.clear(hours);
     await userEvent.type(hours, '14');
     await userEvent.tab();
@@ -137,5 +138,28 @@ describe('Sprint — running (#51)', () => {
     expect(lastSnapshot().records.activities.at(-1)?.kind).toBe(
       'availableHoursChanged',
     );
+  });
+
+  it('closes an empty new Goal without an error', async () => {
+    await renderAt('/sprint?fixture=today-interrupt');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Goal を書く: 学習' }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: '保存' }));
+    expect(screen.queryByText(/消せません/)).toBeNull();
+    expect(goalOf('area-study')).toBeUndefined();
+    expect(
+      screen.getByRole('button', { name: 'Goal を書く: 学習' }),
+    ).toBeTruthy();
+  });
+
+  it('clears the available hours and says so beside the planned hours', async () => {
+    await renderAt('/sprint?fixture=today-interrupt');
+    const hours = screen.getByRole('textbox', { name: /今の可用時間/ });
+    await userEvent.clear(hours);
+    await userEvent.tab();
+    expect(running().availableHours).toBeUndefined();
+    expect(running().plannedAvailableHours).toBe(17);
+    expect((hours as HTMLInputElement).value).toBe('');
   });
 });
