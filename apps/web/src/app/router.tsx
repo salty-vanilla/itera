@@ -13,7 +13,7 @@ import {
 } from '@/screens/backlog/backlog-screen';
 import { NotFoundScreen } from '@/screens/not-found-screen';
 import { validateSprintSearch } from '@/screens/planning/planning-screen';
-import { RetroScreen } from '@/screens/retro-screen';
+import { RetroScreen, validateRetroSearch } from '@/screens/retro/retro-screen';
 import { SprintScreen } from '@/screens/sprint-screen';
 import { TodayScreen, validateTodaySearch } from '@/screens/today/today-screen';
 import { RootLayout } from './root-layout';
@@ -67,6 +67,7 @@ const backlogRoute = createRoute({
 const retroRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'retro',
+  validateSearch: validateRetroSearch,
   component: RetroScreen,
 });
 

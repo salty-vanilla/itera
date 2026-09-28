@@ -607,7 +607,7 @@ compact の原則：
 
 **Tag** — Status（Sprint の状態、Goal の自己判定）と本人のラベルだけに使う小さな Pill。
 - 20px、`rounded.full`、Status はアイコン必須、語は 1〜2 語（本人のラベルは 12em で省略し、全文を title で読める）。Variant：neutral / done（墨の文字＋`circle-check`）/ warning（`triangle-alert`）/ danger（`circle-alert`）/ draft（破線＋`circle-dashed`。「計画中 · 未確定」）。neutral の Status は意味に合うアイコンを画面側で選ぶ（同期中・次の Sprint で試すは `info`）。アイコンのない neutral は本人のラベルで、`border` の輪郭だけにする。
-- tone の使い分け：neutral = 本人のラベル・一部できた・できなかった・判断しない・同期中・次の Sprint で試す、done = できた・保存済み、warning = 超過の可能性、danger = 同期エラーなど保存・同期の失敗、draft = 未確定。期限超過は Tag にせず、Task Metadata の文字（`circle-alert`＋「2日超過」）で示す。Goal の自己判定（一部できた・できなかった・判断しない）のアイコンは Retro の最初の実装 Issue で決める。
+- tone の使い分け：neutral = 本人のラベル・一部できた・できなかった・判断しない・同期中・次の Sprint で試す、done = できた・保存済み、warning = 超過の可能性、danger = 同期エラーなど保存・同期の失敗、draft = 未確定。期限超過は Tag にせず、Task Metadata の文字（`circle-alert`＋「2日超過」）で示す。Goal の自己判定は円の形と語で区別し、色で区別しない（Issue #42）：できた `circle-check`（done）/ 一部できた `contrast`（半分を描いた円、neutral）/ できなかった `circle`（空の円、neutral）/ 判断しない `circle-minus`（neutral）。できなかったに赤や × を使わない。
 - 期限・Estimate・持ち越し・繰り返し・Area を Tag にしない（→ Task Metadata の文字）。1 行に 3 つ以上並べない。
 
 **Divider** — Card の代わりにグループを区切る、構造の主役。default（`border`）/ soft（`border-soft`、リスト内）/ rule（`ink` 1px、考える領域の上端、1 画面に 1〜2 本）/ label（ラベル付き。グループ見出し）。× 2px 以上の太い罫、二重線、点線。

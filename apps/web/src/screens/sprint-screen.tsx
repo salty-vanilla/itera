@@ -4,6 +4,7 @@ import { useSearch } from '@tanstack/react-router';
 import { useAppOverview } from '@/store/use-app-overview';
 import { usePlanning } from '@/store/use-planning';
 import { PlanningScreen } from './planning/planning-screen';
+import { BeginPlanning } from './begin-planning';
 import { ScreenFrame } from './screen-frame';
 
 const stateLabel: Record<SprintState, string> = {
@@ -20,12 +21,21 @@ function SprintScreen() {
   const planning = usePlanning({ applyCriterion: search.criterion !== 'off' });
   const { openSprint: sprint } = useAppOverview();
   if (planning !== undefined) return <PlanningScreen data={planning} />;
-  if (sprint === undefined) return <ScreenFrame heading="Sprint" />;
+  // No week being planned: its Planning starts here, also while this week
+  // runs or is in Retro (owner decision in #42).
   return (
     <ScreenFrame
-      heading={sprint.state === 'planning' ? '今週、何を進めますか' : 'Sprint'}
-      meta={`${formatDateRange(sprint.start, sprint.end)} · ${stateLabel[sprint.state]}`}
-    />
+      heading="Sprint"
+      meta={
+        sprint === undefined
+          ? undefined
+          : `Sprint ${formatDateRange(sprint.start, sprint.end)} · ${stateLabel[sprint.state]}`
+      }
+    >
+      <div className="mt-4">
+        <BeginPlanning />
+      </div>
+    </ScreenFrame>
   );
 }
 
