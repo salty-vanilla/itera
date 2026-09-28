@@ -24,25 +24,25 @@ const git = (root, ...args) => {
 };
 const list = (buffer) => buffer.toString('utf8').split('\0').filter(Boolean);
 
+const untracked = (root) =>
+  list(git(root, 'ls-files', '--others', '--exclude-standard', '-z'));
+
 /** Tracked files changed against HEAD, plus untracked files not ignored. */
 export function changedFiles(root) {
   return [
     ...new Set([
       ...list(git(root, 'diff', 'HEAD', '--name-only', '-z')),
-      ...list(git(root, 'ls-files', '--others', '--exclude-standard', '-z')),
+      ...untracked(root),
     ]),
   ].sort();
 }
 
 /** Identifies HEAD plus every uncommitted change, untracked content included. */
-export function fingerprint(root, files) {
+export function fingerprint(root) {
   const hash = createHash('sha256');
   hash.update(git(root, 'rev-parse', 'HEAD'));
   hash.update(git(root, 'diff', 'HEAD', '--binary', '--no-ext-diff'));
-  for (const file of list(
-    git(root, 'ls-files', '--others', '--exclude-standard', '-z'),
-  )) {
-    if (!files.includes(file)) continue;
+  for (const file of untracked(root)) {
     hash.update(`\0${file}\0`);
     try {
       hash.update(readFileSync(join(root, file)));
@@ -121,7 +121,7 @@ export function main({ input, root, run = defaultRun }) {
   } catch {
     return null; // Not a Git work tree, or no commit yet.
   }
-  const current = files.length ? fingerprint(root, files) : '';
+  const current = files.length ? fingerprint(root) : '';
   let last;
   try {
     last = JSON.parse(readFileSync(statePath, 'utf8'));

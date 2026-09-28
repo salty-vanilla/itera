@@ -11,7 +11,7 @@
 | `.claude/rules/` | ファイルの場所ごとのルール（`apps/web/**`、`packages/domain/**`、正本文書） |
 | `.claude/agents/` | ハーネスの subagent（`harness-reviewer`、`harness-planner`）と、Impeccable の上流が同梱する subagent（`impeccable-asset-producer`、`impeccable-finish-reviewer`、`impeccable-manual-edit-applier`） |
 | `.claude/hooks/` | セッション開始時に direnv の環境を Bash へ読み込む hook（`session-env.sh`）、読み取り専用の subagent の Bash を、読み取り用コマンドの許可リストに限る hook（`read-only-bash.mjs`）、編集したファイルを Prettier で整形する hook（`format-edited.mjs`）、応答を終える前に未検査の変更があれば `pnpm check` を実行し、失敗したら終了を止める hook（`stop-check.mjs`）。`read-only-bash.mjs` はシェルの小さな部分集合だけを字句解析し、それ以外は止める。完全な隔離ではない。回帰テストは `pnpm agent:hooks:test`。subagent の frontmatter の hook は、このフォルダを信頼（workspace trust）してから有効になる |
-| `.claude/settings.json` | 共有の permission 設定と SessionStart hook |
+| `.claude/settings.json` | 共有の permission 設定と hook の登録（SessionStart・PostToolUse・Stop） |
 | `.mcp.json` | リポジトリで共有する MCP（下の「MCP」の基準を満たすものだけ） |
 | `.agents/skills/` | Skill の正本。`.claude/skills` はここへのシンボリックリンク |
 | `tooling/agents/` | Agent 用 CLI（Playwright CLI、shadcn）の固定版と専用 lockfile、Skill の出典台帳 `sources.json` |
