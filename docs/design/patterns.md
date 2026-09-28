@@ -1,6 +1,6 @@
 # 画面のパターン
 
-更新：2026-09-28（期間外の Today とシステムの Review 移行、Issue #54。Retro の最初の実装で決めたこと、Issue #42。Today の最初の実装で決めたこと、Issue #41。Backlog の編集して採用と、Planning の最初の実装で決めたこと、Issue #40）。2026-09-27（Backlog の完了を元に戻す、Issue #47）。2026-09-26 に DESIGN.md v0.2 から分離。
+更新：2026-09-28（実行中の Sprint の画面、Issue #51。期間外の Today とシステムの Review 移行、Issue #54。Retro の最初の実装で決めたこと、Issue #42。Today の最初の実装で決めたこと、Issue #41。Backlog の編集して採用と、Planning の最初の実装で決めたこと、Issue #40）。2026-09-27（Backlog の完了を元に戻す、Issue #47）。2026-09-26 に DESIGN.md v0.2 から分離。
 
 Backlog・Planning・Today・Retro の画面の組み立て方。見た目と部品は [DESIGN.md](../../DESIGN.md)、意味と操作の種類は [PRD](../requirements/prd.md) と [ドメインモデル](../domain/domain-model.md) が正。UI v0.1 モックは当たり付けで、ここに書いた構成を実装して触りながら削る（PRD §12）。
 
@@ -67,6 +67,14 @@ active な Task を眺めるビュー。Sprint や Today に入れても消え�
 - 「Agent に計画案を依頼」または外部 Agent から届いた計画案は、ヘッダーの 1 行「Agent 提案 · 外部 Agent の計画案が 1件あります · 現在の計画との差分を見る」（UI v0.1 モック）と、右ペインの Agent 提案（要約＋「差分を確認」）で知らせる。ヘッダーの表示は破線の小さな「Agent 提案」の印と `ink-muted` の文字にし、「現在の計画との差分を見る」だけをリンクにする。目立たせない（PRD §12）。
 - 「差分を確認」で右 Drawer（compact は全画面）に計画案の差分。行ごとに選び「選んだ N件を計画に反映」。反映しても Sprint は確定しない。Capacity は反映後の値で出す。
 - 計画案の作成後に Backlog が変わったら、Notice（info）「計画案の作成後に Backlog が変わりました。差分を再確認してください」。
+
+### 実行中の Sprint（Issue #51 の実装で決めたこと。オーナーの確認は PR で取る）
+
+- Sprint の画面は、計画中の Sprint がなければ実行中の Sprint を出す。Sprint Header は Status「実行中」（実線の Tag）、タイトル、期間と「N日目 / 7日」で、段階表示はない。右に「今日を開く」（Primary）と「Sprint N の計画を始める」（Secondary）。
+- 見出しは「今週の計画」。Area ごとに Goal（確定時の Area 名、F5）と選んだ Task を並べる。Task の値は確定時の計画値（planSnapshot、繰り返しは今週の回の分）。完了・持ち越し・今週 N回・Sprint 中に追加・Goal なし をメタデータに出す。
+- Goal は確定後も文を変えられ、新しく書ける。消すことはできず、空で保存すると理由を出して入力欄にフォーカスを戻す（F16）。計画時の文と違えば「計画時：「…」」、確定後に書いた Goal には「確定した後に書いた Goal です（計画時にはありませんでした）」を添える（不変条件 18、MVP 完了条件 16）。
+- 可用時間は確定後も変えられる。計画値の合計と計画時の可用時間を並べ、今の可用時間を入力欄で変える。実行中の画面では容量の超過を判定しない（容量の判定は Planning だけ。Sprint 中の追加でも警告しない）。
+- 計画基準は、確定時に使ったかどうかを読み取り専用で出す（不変条件 37）。
 
 ### Planning の最初の実装で決めたこと
 

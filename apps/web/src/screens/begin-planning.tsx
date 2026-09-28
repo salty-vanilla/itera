@@ -8,7 +8,12 @@ import { useNextPlanning, useRetroActions } from '@/store/use-retro';
  * confirming waits for it (invariant 12) — and opens the Sprint screen.
  * With a Planning already started, it links there instead.
  */
-function BeginPlanning() {
+function BeginPlanning({
+  variant = 'primary',
+}: {
+  /** Secondary where the screen has its own Primary (the running Sprint). */
+  variant?: 'primary' | 'secondary';
+}) {
   const next = useNextPlanning();
   const actions = useRetroActions();
   const navigate = useNavigate();
@@ -26,7 +31,7 @@ function BeginPlanning() {
   return (
     <Button
       data-slot="begin-planning"
-      variant="primary"
+      variant={variant}
       onClick={() => {
         if (actions.beginPlanning()) void navigate({ to: '/sprint' });
       }}
