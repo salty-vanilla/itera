@@ -20,3 +20,21 @@ export const Set: Story = { args: { goal: '先行研究を押さえる' } };
 
 /** empty：「+ Goal を書く」と、Goal は任意であること。警告色にしない。 */
 export const Empty: Story = {};
+
+/** 確定後に文を変えた：今の文と、計画時の文を並べる（不変条件 18、F16）。 */
+export const ChangedAfterConfirm: Story = {
+  args: {
+    goal: '先行研究を 2 本押さえる',
+    planned: '先行研究を押さえる',
+    removable: false,
+  },
+};
+
+/** 確定後に新しく書いた：計画時にはなかったことを添える（F16）。 */
+export const WrittenAfterConfirm: Story = {
+  args: {
+    goal: 'オンボーディング資料を仕上げる',
+    planned: null,
+    removable: false,
+  },
+};

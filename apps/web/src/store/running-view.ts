@@ -1,0 +1,169 @@
+// What the running Sprint's screen shows (#51), derived from the records by
+// `@itera/domain`. The values are the plan fixed at confirm (planSnapshot,
+// invariant 16); Goals and available hours may change after confirm and
+// their planned values stay beside them (invariant 18, F16).
+import {
+  isCounted,
+  sprintAreaName,
+  sprintNumber,
+  sprintTotals,
+  type AreaColor,
+  type AreaId,
+  type CriterionPolicy,
+  type LocalDate,
+  type PlanningValue,
+  type Sprint,
+  type SprintGoal,
+  type SprintTask,
+  type SprintTotals,
+  type Task,
+} from '@itera/domain';
+import { daysBetween } from '@/lib/date-format';
+import type { Clock, Records } from './records';
+
+export interface RunningArea {
+  /** `null` for Tasks without an Area (「領域なし」). */
+  readonly id: AreaId | null;
+  readonly name: string;
+  readonly color: AreaColor | 'none';
+}
+
+export interface RunningTask {
+  readonly sprintTask: SprintTask;
+  readonly task: Task;
+  /** The planning value fixed for this Sprint (the whole week for a recurring Task). */
+  readonly value: PlanningValue;
+}
+
+export interface RunningAreaPlan {
+  readonly area: RunningArea;
+  readonly goal?: SprintGoal;
+  readonly tasks: readonly RunningTask[];
+}
+
+export interface RunningData {
+  readonly sprint: Sprint;
+  /** 「Sprint 14」 (F25). */
+  readonly number: number;
+  readonly today: LocalDate;
+  /** 「2日目 / 7日」, absent before the first day. */
+  readonly day?: { readonly index: number; readonly count: number };
+  /** Areas with a Goal or chosen Tasks, in the Sprint's order, then 領域なし. */
+  readonly plan: readonly RunningAreaPlan[];
+  readonly totals: SprintTotals;
+  readonly availableHours: {
+    readonly planned?: number;
+    readonly current?: number;
+  };
+  /** The criterion as this Sprint treated it at confirm (read only, invariant 37). */
+  readonly criterion?: {
+    readonly policy: CriterionPolicy;
+    /** The Area it covers, when its scope is an Area. */
+    readonly areaName?: string;
+    readonly applied: boolean;
+  };
+}
+
+const NO_AREA: RunningArea = { id: null, name: '領域なし', color: 'none' };
+
+export function runningData(
+  records: Records,
+  clock: Clock,
+): RunningData | undefined {
+  const sprint = records.sprints.find((s) => s.state === 'active');
+  if (sprint === undefined) return undefined;
+  const { tasks, areas } = records;
+
+  const areaOf = (areaId: AreaId): RunningArea => {
+    const area = areas.find((a) => a.id === areaId);
+    return {
+      id: areaId,
+      name: sprintAreaName(sprint, areaId, areas) ?? area?.name ?? '',
+      color: area?.color ?? 'none',
+    };
+  };
+  const counted: RunningTask[] = sprint.tasks
+    .filter(isCounted)
+    .flatMap((sprintTask) => {
+      const task = tasks.find((t) => t.id === sprintTask.taskId);
+      const value = sprintTask.planSnapshot?.value;
+      return task === undefined || value === undefined
+        ? []
+        : [{ sprintTask, task, value }];
+    });
+
+  // The Sprint's Area order (snapshot), then Areas first seen later (F9).
+  const order = [
+    ...sprint.areaSnapshot
+      .toSorted((a, b) => a.order - b.order)
+      .map((e) => e.areaId),
+    ...areas
+      .toSorted((a, b) => a.order - b.order)
+      .map((a) => a.id)
+      .filter((id) => !sprint.areaSnapshot.some((e) => e.areaId === id)),
+  ];
+  const plan: RunningAreaPlan[] = [
+    ...order.flatMap((areaId) => {
+      const goal = sprint.goals.find((g) => g.areaId === areaId);
+      const inArea = counted.filter((t) => t.task.areaId === areaId);
+      // A Goal can be written for any Area of the Sprint, even without
+      // Tasks (F16: it has no planned text then).
+      const archived = areas.find((a) => a.id === areaId)?.archived ?? false;
+      if (goal === undefined && inArea.length === 0 && archived) return [];
+      return [
+        {
+          area: areaOf(areaId),
+          ...(goal === undefined ? {} : { goal }),
+          tasks: inArea,
+        },
+      ];
+    }),
+    ...(counted.some((t) => t.task.areaId === undefined)
+      ? [
+          {
+            area: NO_AREA,
+            tasks: counted.filter((t) => t.task.areaId === undefined),
+          },
+        ]
+      : []),
+  ];
+
+  const use = sprint.criterionUse;
+  const criterion = records.criteria.find((c) => c.id === use?.criterionId);
+  const scope = criterion?.policy.scope;
+
+  return {
+    sprint,
+    number: sprintNumber(sprint, records.sprints),
+    today: clock.today,
+    ...(clock.today < sprint.start
+      ? {}
+      : {
+          day: {
+            index: daysBetween(sprint.start, clock.today) + 1,
+            count: daysBetween(sprint.start, sprint.end) + 1,
+          },
+        }),
+    plan,
+    totals: sprintTotals(sprint, { tasks, now: clock.now }),
+    availableHours: {
+      ...(sprint.plannedAvailableHours === undefined
+        ? {}
+        : { planned: sprint.plannedAvailableHours }),
+      ...(sprint.availableHours === undefined
+        ? {}
+        : { current: sprint.availableHours }),
+    },
+    ...(use === undefined || criterion === undefined
+      ? {}
+      : {
+          criterion: {
+            policy: criterion.policy,
+            ...(scope?.kind === 'area'
+              ? { areaName: areaOf(scope.areaId).name }
+              : {}),
+            applied: use.appliedAtConfirm,
+          },
+        }),
+  };
+}

@@ -22,6 +22,17 @@ type GoalBlockProps = {
   level?: 2 | 3 | undefined;
   /** Saves the text; an empty text removes the Goal. Returns success. */
   onSave?: ((text: string) => boolean) | undefined;
+  /**
+   * After confirm a Goal can be reworded but not removed (F16): an empty
+   * text is then refused in the form.
+   */
+  removable?: boolean | undefined;
+  /**
+   * After confirm: the text at confirm (plannedText), shown beside the
+   * current one when they differ; `null` when the Goal was written after
+   * confirm (「計画時にはなかった」).
+   */
+  planned?: string | null | undefined;
   children?: ReactNode;
   className?: string | undefined;
 };
@@ -32,14 +43,18 @@ function GoalBlock({
   goal,
   level = 2,
   onSave,
+  removable = true,
+  planned,
   children,
   className,
 }: GoalBlockProps) {
   const Heading = level === 2 ? 'h2' : 'h3';
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(goal ?? '');
+  const [error, setError] = useState<string | undefined>(undefined);
   const headingId = useId();
   const openRef = useRef<HTMLButtonElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const backToOpen = useRef(false);
   useEffect(() => {
     if (!editing && backToOpen.current) {
@@ -49,6 +64,7 @@ function GoalBlock({
   }, [editing]);
   const close = () => {
     backToOpen.current = true;
+    setError(undefined);
     setEditing(false);
   };
 
@@ -90,17 +106,40 @@ function GoalBlock({
 
       {editing ? (
         <form
+          ref={formRef}
           noValidate
           className="flex max-w-measure-read flex-col gap-2"
           onSubmit={(event) => {
             event.preventDefault();
+            // Nothing written for an Area without a Goal: nothing to save.
+            if (goal === undefined && text.trim() === '') {
+              close();
+              return;
+            }
+            if (!removable && text.trim() === '') {
+              setError(
+                '確定した後の Goal は消せません。文を書いて保存してください',
+              );
+              // The field in error takes the focus (accessibility.md).
+              requestAnimationFrame(() =>
+                formRef.current
+                  ?.querySelector<HTMLElement>('[aria-invalid="true"]')
+                  ?.focus(),
+              );
+              return;
+            }
             if (onSave?.(text.trim())) close();
           }}
         >
           <Field
             label="Goal（今週の終わりにどんな状態にしたいか）"
             necessity="optional"
-            description="「〜な状態にする」「〜を終える」の形がおすすめです。空にすると Goal はなくなります"
+            description={
+              removable
+                ? '「〜な状態にする」「〜を終える」の形がおすすめです。空にすると Goal はなくなります'
+                : '「〜な状態にする」「〜を終える」の形がおすすめです。確定した後は文を変えられますが、消せません'
+            }
+            error={error}
           >
             <Textarea
               text="body-l"
@@ -119,7 +158,19 @@ function GoalBlock({
           </div>
         </form>
       ) : goal !== undefined ? (
-        <p className="max-w-measure-read text-goal text-ink">{goal}</p>
+        <div className="flex flex-col gap-1">
+          <p className="max-w-measure-read text-goal text-ink">{goal}</p>
+          {planned === null && (
+            <p className="text-meta text-ink-muted">
+              確定した後に書いた Goal です（計画時にはありませんでした）
+            </p>
+          )}
+          {planned !== undefined && planned !== null && planned !== goal && (
+            <p className="max-w-measure-read text-meta text-ink-muted">
+              計画時：「{planned}」
+            </p>
+          )}
+        </div>
       ) : (
         <div className="flex flex-col items-start gap-1">
           {onSave !== undefined && (
