@@ -391,6 +391,21 @@ describe('criterionResult', () => {
     expect(result.actualHours).toBe(4.5);
   });
 
+  it('leaves recurring Tasks out: they are counted by occurrence (F20)', () => {
+    const result = criterionResult(
+      facts([
+        st('a', {
+          outcome: 'done',
+          occurrenceIds: [id('occ-1')],
+          planSnapshot: applied(1, 1),
+        }),
+        st('b', { outcome: 'done', planSnapshot: applied(3, 3) }),
+      ]),
+    );
+    expect(result.tasks.map((t) => t.taskId)).toEqual(['b']);
+    expect(result.done.map((t) => t.taskId)).toEqual(['b']);
+  });
+
   it('is empty when the criterion set no value', () => {
     const result = criterionResult(facts([st('c', { outcome: 'done' })]));
     expect(result.tasks).toEqual([]);

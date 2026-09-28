@@ -59,8 +59,8 @@ function FactsPane({
   const changedGoals = facts.areas.filter(
     (a) => a.goal !== undefined && a.goal.changedSinceConfirm,
   );
-  const hoursChanged =
-    plannedHours !== undefined && currentHours !== plannedHours;
+  // Also when the hours were first entered after confirming.
+  const hoursChanged = currentHours !== plannedHours;
 
   return (
     <div
@@ -77,10 +77,10 @@ function FactsPane({
               unit: '件',
             },
             {
-              label: '繰り返しの回',
-              value: facts.occurrences.done.length,
-              unit: '回完了',
-              note: `スキップ ${facts.occurrences.skipped.length} · 未処理 ${facts.occurrences.missed.length}`,
+              label: 'スキップ',
+              value: facts.occurrences.skipped.length,
+              unit: '回',
+              note: `繰り返しの回：完了 ${facts.occurrences.done.length} · 未処理 ${facts.occurrences.missed.length}`,
             },
             {
               label: 'Sprint 中の追加',
@@ -161,7 +161,11 @@ function FactsPane({
                 action={toggle({ kind: 'availableHours' }, '可用時間の変更')}
               >
                 <span className="text-ink-muted">可用時間：</span>
-                計画時 {formatHours(plannedHours, { total: true })} → 今{' '}
+                計画時{' '}
+                {plannedHours === undefined
+                  ? '未入力'
+                  : formatHours(plannedHours, { total: true })}{' '}
+                → 今{' '}
                 {currentHours === undefined
                   ? '未入力'
                   : formatHours(currentHours, { total: true })}

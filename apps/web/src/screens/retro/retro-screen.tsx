@@ -1,10 +1,5 @@
 import type { TaskFact } from '@itera/domain';
-import {
-  Link,
-  useNavigate,
-  useRouter,
-  useSearch,
-} from '@tanstack/react-router';
+import { useNavigate, useRouter, useSearch } from '@tanstack/react-router';
 import { NotebookPen } from 'lucide-react';
 import { useId, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -16,6 +11,7 @@ import type { RetroBlocker, RetroData } from '@/store/retro-view';
 import { useAppOverview } from '@/store/use-app-overview';
 import { useAfterRetro, useRetro, useRetroActions } from '@/store/use-retro';
 import { ActualTime } from '../today/actual-time';
+import { BeginPlanning } from '../begin-planning';
 import { ScreenFrame } from '../screen-frame';
 import { FactsPane } from './facts-pane';
 import { HandoffPane } from './handoff-pane';
@@ -89,6 +85,12 @@ function RetroView({ data }: { data: RetroData }) {
       tone: 'done',
       title: `Sprint ${data.number} の振り返りを完了しました`,
     });
+    // This view goes; the focus moves to what comes next.
+    requestAnimationFrame(() =>
+      document
+        .querySelector<HTMLElement>('[data-slot="begin-planning"]')
+        ?.focus(),
+    );
   };
 
   return (
@@ -194,7 +196,7 @@ function RetroView({ data }: { data: RetroData }) {
             )}
           </nav>
         </div>
-        <aside aria-label="振り返りの材料（横）" className="hidden wide:block">
+        <aside className="hidden wide:block">
           <div className="sticky top-8">
             <Materials data={data} onPin={actions.togglePin} />
           </div>
@@ -234,7 +236,6 @@ function NoRetro() {
   const { today, openSprint } = useAppOverview();
   const after = useAfterRetro();
   const actions = useRetroActions();
-  const navigate = useNavigate();
   if (openSprint?.state === 'active') {
     const lastDay = today >= openSprint.end;
     return (
@@ -271,23 +272,7 @@ function NoRetro() {
         </section>
       )}
       <div className="mt-6">
-        {after.planning === undefined ? (
-          <Button
-            variant="primary"
-            onClick={() => {
-              if (actions.beginPlanning()) void navigate({ to: '/sprint' });
-            }}
-          >
-            Sprint {after.next.number} の計画を始める
-          </Button>
-        ) : (
-          <Link
-            to="/sprint"
-            className="text-link underline focus-visible:focus-ring"
-          >
-            Sprint {after.next.number} の計画を開く
-          </Link>
-        )}
+        <BeginPlanning />
       </div>
     </ScreenFrame>
   );

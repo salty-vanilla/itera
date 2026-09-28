@@ -127,9 +127,13 @@ function Improvement({
           }}
         >
           <Field
-            label="改善策"
+            label="次の Sprint で 1 つだけ変えてみること"
             hideLabel
-            description="自然文で 1 件。次の Planning の最初に、そのまま表示されます。書かなくても Retro は完了できます。"
+            description={
+              data.draft === undefined
+                ? '自然文で 1 件。次の Planning の最初に、そのまま表示されます。書かなくても Retro は完了できます。'
+                : 'この改善策から計画基準を作っています。改善策を消すときは、先に引き継ぐで「計画基準にもする」をオフにしてください。'
+            }
           >
             <Textarea
               text="body-l"

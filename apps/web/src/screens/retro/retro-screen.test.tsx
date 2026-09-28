@@ -81,7 +81,7 @@ describe('Retro — 事実を見る', () => {
     for (const [label, value] of [
       ['完了', '4'],
       ['持ち越し', '2'],
-      ['繰り返しの回', '3'],
+      ['スキップ', '1'],
       ['Sprint 中の追加', '1'],
       ['計画値の合計', '17.25–20.25h'],
     ]) {
@@ -200,7 +200,9 @@ describe('Retro — 振り返る', () => {
     await userEvent.tab();
     expect(reviewed().retro?.reflection).toBe('午後が崩れた');
     await userEvent.type(
-      screen.getByRole('textbox', { name: '改善策' }),
+      screen.getByRole('textbox', {
+        name: '次の Sprint で 1 つだけ変えてみること',
+      }),
       '論文は 1 本ずつ',
     );
     await userEvent.tab();
@@ -286,6 +288,12 @@ describe('Retro — 引き継ぐ and 完了', () => {
       }),
     ).toBeTruthy();
     expect(screen.getByText('論文は 1 本ずつ Task に分ける')).toBeTruthy();
+    // The completed view's next step takes the focus.
+    await waitFor(() =>
+      expect(document.activeElement?.textContent).toBe(
+        'Sprint 3 の計画を始める',
+      ),
+    );
 
     await userEvent.click(
       screen.getByRole('button', { name: 'Sprint 3 の計画を始める' }),
@@ -310,5 +318,102 @@ describe('Retro — before Review', () => {
       ),
     ).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Retro を始める' })).toBeNull();
+  });
+});
+
+describe('Retro — boundaries', () => {
+  it('completes a Sprint that had no criterion without a decision', async () => {
+    change = (snapshot) => ({
+      ...snapshot,
+      records: {
+        ...snapshot.records,
+        sprints: snapshot.records.sprints.map((s) => {
+          if (s.state !== 'review') return s;
+          // Without a CriterionUse: no criterion was active at confirm.
+          return Object.fromEntries(
+            Object.entries(s).filter(([key]) => key !== 'criterionUse'),
+          ) as typeof s;
+        }),
+      },
+    });
+    await renderAt('/retro?fixture=retro-start&stage=handoff');
+    expect(screen.queryByRole('radiogroup', { name: /計画基準/ })).toBeNull();
+    expect(screen.queryByText(/から選ぶと完了できます/)).toBeNull();
+    expect(screen.queryByText(/今回の計画基準/)).toBeNull();
+    await userEvent.click(completeButton());
+    expect(reviewed().state).toBe('closed');
+  });
+
+  it('clears 置き換える when the draft is turned off, and waits again', async () => {
+    await renderAt('/retro?fixture=retro-before-complete&stage=handoff');
+    const draftSwitch = screen.getByRole('switch', {
+      name: /計画基準にもする/,
+    });
+    await userEvent.click(draftSwitch);
+    await userEvent.click(screen.getByRole('radio', { name: '置き換える' }));
+    expect(reviewed().criterionUse?.retroDecision).toBe('replace');
+    await userEvent.click(draftSwitch);
+    expect(reviewed().retro?.improvement?.criterionId).toBeUndefined();
+    expect(reviewed().criterionUse?.retroDecision).toBeUndefined();
+    expect(
+      screen.getByText(
+        '今回の計画基準を「続ける・終える・置き換える」から選ぶと完了できます。',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('says why the improvement stays while a criterion is made from it', async () => {
+    await renderAt('/retro?fixture=retro-before-complete&stage=handoff');
+    await userEvent.click(
+      screen.getByRole('switch', { name: /計画基準にもする/ }),
+    );
+    await userEvent.click(screen.getByRole('link', { name: /振り返る/ }));
+    await userEvent.click(await screen.findByRole('button', { name: '編集' }));
+    expect(
+      screen.getByText(
+        /先に引き継ぐで「計画基準にもする」をオフにしてください/,
+      ),
+    ).toBeTruthy();
+  });
+
+  it('offers 「Retro を始める」 on /retro on the last day (F21)', async () => {
+    change = (snapshot) => ({
+      ...snapshot,
+      clock: {
+        today: '2026-10-04' as never,
+        now: '2026-10-04T00:00:00.000Z' as never,
+      },
+    });
+    await renderAt('/retro?fixture=today-interrupt');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Retro を始める' }),
+    );
+    expect(reviewed().state).toBe('review');
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: '今週、何が起きたか',
+      }),
+    ).toBeTruthy();
+  });
+
+  it('starts the next Planning from the Sprint screen while the Retro is open', async () => {
+    const router = await renderAt('/sprint?fixture=retro-start');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Sprint 3 の計画を始める' }),
+    );
+    expect(
+      lastSnapshot().records.sprints.find((s) => s.state === 'planning')?.start,
+    ).toBe('2026-10-05');
+    // Its confirm waits for the Retro (invariant 12).
+    expect(
+      await screen.findByText(
+        '前の Sprint の Retro を完了すると確定できます。',
+        {
+          exact: false,
+        },
+      ),
+    ).toBeTruthy();
+    expect(router.state.location.pathname).toBe('/sprint');
   });
 });

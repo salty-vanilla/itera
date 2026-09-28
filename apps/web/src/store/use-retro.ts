@@ -10,7 +10,7 @@ import type {
 } from '@itera/domain';
 import { useMemo } from 'react';
 import * as changes from './retro-changes';
-import { afterRetro, retroData } from './retro-view';
+import { afterRetro, nextPlanningOf, retroData } from './retro-view';
 import { useStoreSnapshot } from './store-provider';
 import { beginRetro } from './today-changes';
 import { useRun } from './use-run';
@@ -21,10 +21,16 @@ export function useRetro() {
   return useMemo(() => retroData(records, clock), [records, clock]);
 }
 
-/** The closed Sprint and the next week's Planning, once the Retro is done. */
+/** The Sprint whose Retro was completed last. */
 export function useAfterRetro() {
+  const { records } = useStoreSnapshot();
+  return useMemo(() => afterRetro(records), [records]);
+}
+
+/** The next week's Planning: being planned, or where one would start. */
+export function useNextPlanning() {
   const { records, clock } = useStoreSnapshot();
-  return useMemo(() => afterRetro(records, clock), [records, clock]);
+  return useMemo(() => nextPlanningOf(records, clock), [records, clock]);
 }
 
 /**

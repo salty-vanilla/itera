@@ -106,12 +106,10 @@ export function retroData(
       color: area?.color ?? 'none',
     };
   };
+  // The Area's name as this Sprint shows it (F5), as everywhere in Retro.
   const nameOf = (c: PlanningCriterion) =>
     c.policy.scope.kind === 'area'
-      ? allAreas.find(
-          (a) =>
-            c.policy.scope.kind === 'area' && a.id === c.policy.scope.areaId,
-        )?.name
+      ? areaOf(c.policy.scope.areaId).name
       : undefined;
   const described = (c: PlanningCriterion): RetroCriterion => {
     const areaName = nameOf(c);
@@ -132,6 +130,7 @@ export function retroData(
   const draft =
     draftId === undefined ? undefined : criteria.find((c) => c.id === draftId);
   const decision = use?.retroDecision;
+  const used = use === undefined ? undefined : usedCriterion;
 
   return {
     sprint,
@@ -164,7 +163,8 @@ export function retroData(
       ? {}
       : { improvement: retro.improvement.text }),
     blockers: [
-      ...(use !== undefined && decision === undefined
+      // Only when the criterion is there to decide on (its record exists).
+      ...(used !== undefined && decision === undefined
         ? (['decisionMissing'] as const)
         : []),
       ...(decision === 'continue' && draft !== undefined
@@ -175,28 +175,16 @@ export function retroData(
   };
 }
 
-/**
- * After the Retro: the Sprint just closed, and where the next week stands —
- * its Planning, or the start of one to begin (owner decision in #42).
- */
-export interface AfterRetro {
-  readonly closed: Sprint;
-  readonly number: number;
-  readonly improvement?: string;
+/** Where the next Planning stands: the Sprint being planned, or a new one. */
+export interface NextPlanning {
   /** The Sprint being planned, if Planning has started. */
   readonly planning?: SprintId;
-  /** Where a new Planning would start, and its number. */
-  readonly next: { readonly start: LocalDate; readonly number: number };
+  /** Where a new Planning would start, and its number (F25). */
+  readonly start: LocalDate;
+  readonly number: number;
 }
 
-export function afterRetro(
-  records: Records,
-  clock: Clock,
-): AfterRetro | undefined {
-  const closed = records.sprints
-    .filter((s) => s.state === 'closed')
-    .toSorted((a, b) => (a.start < b.start ? 1 : -1))[0];
-  if (closed === undefined) return undefined;
+export function nextPlanningOf(records: Records, clock: Clock): NextPlanning {
   const planning = records.sprints.find((s) => s.state === 'planning');
   const start = nextUnconfirmedSprintStart(
     records.sprints,
@@ -204,16 +192,30 @@ export function afterRetro(
     clock.today,
   );
   return {
+    ...(planning === undefined ? {} : { planning: planning.id }),
+    start,
+    // Its number as F25 counts it: one after every Sprint before it.
+    number: records.sprints.filter((s) => s.start < start).length + 1,
+  };
+}
+
+/** After the Retro: the Sprint just closed (owner decision in #42). */
+export interface AfterRetro {
+  readonly closed: Sprint;
+  readonly number: number;
+  readonly improvement?: string;
+}
+
+export function afterRetro(records: Records): AfterRetro | undefined {
+  const closed = records.sprints
+    .filter((s) => s.state === 'closed')
+    .toSorted((a, b) => (a.start < b.start ? 1 : -1))[0];
+  if (closed === undefined) return undefined;
+  return {
     closed,
     number: sprintNumber(closed, records.sprints),
     ...(closed.retro?.improvement === undefined
       ? {}
       : { improvement: closed.retro.improvement.text }),
-    ...(planning === undefined ? {} : { planning: planning.id }),
-    next: {
-      start,
-      // Its number as F25 counts it: one after every Sprint before it.
-      number: records.sprints.filter((s) => s.start < start).length + 1,
-    },
   };
 }

@@ -208,7 +208,11 @@ export function retroFacts(sprint: Sprint, input: RetroFactsInput): RetroFacts {
 }
 
 export interface CriterionResult {
-  /** The Tasks whose planning value the criterion set (removed ones left out). */
+  /**
+   * The Tasks whose planning value the criterion set. Removed ones are left
+   * out, and so are recurring ones: they are counted by their occurrences,
+   * never as done or carried over (F20).
+   */
   readonly tasks: readonly TaskFact[];
   readonly done: readonly TaskFact[];
   readonly carriedOver: readonly TaskFact[];
@@ -226,7 +230,10 @@ export interface CriterionResult {
  */
 export function criterionResult(facts: RetroFacts): CriterionResult {
   const tasks = facts.tasks.filter(
-    (f) => f.outcome !== 'removed' && f.plan?.value.criterionApplied === true,
+    (f) =>
+      f.outcome !== 'removed' &&
+      !f.recurring &&
+      f.plan?.value.criterionApplied === true,
   );
   return {
     tasks,

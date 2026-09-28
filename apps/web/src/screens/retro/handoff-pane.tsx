@@ -9,6 +9,7 @@ import { Field } from '@/components/ui/field';
 import { Radio, RadioGroup } from '@/components/ui/radio-group';
 import { Select } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Tag } from '@/components/ui/tag';
 import { BOUND_WORDS, criterionName } from '@/lib/criterion-text';
 import { formatHours, formatRange } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
@@ -178,6 +179,7 @@ function DraftCriterion({
           className="size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
         />
         {criterionName(policy, draft.areaName)}
+        <Tag tone="draft">下書き</Tag>
       </p>
       <p className="text-help text-ink-muted">
         Estimate そのものは書き換えません。
