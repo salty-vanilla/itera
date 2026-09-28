@@ -109,6 +109,11 @@ export function createMemoryStore(
       });
       if (!result.ok) return fail(result.error);
       const { changes, activities } = result.value;
+      // Nothing to write (a system check that found nothing): no new
+      // snapshot, so the screens are not drawn again.
+      if (Object.keys(changes).length === 0 && activities.length === 0) {
+        return { ok: true, value: undefined };
+      }
       snapshot = {
         ...snapshot,
         records: applyChanges(snapshot.records, changes, activities),

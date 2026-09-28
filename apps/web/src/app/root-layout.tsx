@@ -9,6 +9,7 @@ import {
 import { ToastProvider } from '@/components/ui/toast';
 import { createMemoryStore } from '@/store/record-store';
 import { StoreProvider } from '@/store/store-provider';
+import { useSystemDay } from '@/store/use-system-day';
 import { AppShell } from './app-shell';
 
 // The dev menu is left out of production builds: with `import.meta.env.DEV`
@@ -32,6 +33,7 @@ function RootLayout() {
     // Keyed by the state: another state mounts a new store.
     <FixtureStore key={fixture} fixture={fixture}>
       <ToastProvider>
+        <SystemDay />
         <AppShell>
           <Outlet />
         </AppShell>
@@ -43,6 +45,12 @@ function RootLayout() {
       </ToastProvider>
     </FixtureStore>
   );
+}
+
+/** The system's start of the day, whatever screen is open (#54). */
+function SystemDay() {
+  useSystemDay();
+  return null;
 }
 
 /** Holds one store for the life of a fixture state (state, not a memo). */

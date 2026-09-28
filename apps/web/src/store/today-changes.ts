@@ -113,7 +113,8 @@ function subjectOf(
 }
 
 /**
- * The system's start of the day, when Today is opened (startDay): earlier
+ * The system's start of the day, when the app opens (startDay, run by
+ * useSystemDay): earlier
  * days' open selections become unresolved and today's recurring
  * occurrences appear. Repeating it changes nothing.
  */
