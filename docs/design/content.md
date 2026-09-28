@@ -1,6 +1,6 @@
 # 文言と用語
 
-更新：2026-09-28（可用時間との差の表記、Issue #40）。2026-09-26 に DESIGN.md v0.2 から分離し、PRD v0.2 / ドメインモデル v0.2 Final の用語に合わせた。
+更新：2026-09-28（Retro の Status の語と、完了できない理由の文言、Issue #42。可用時間との差の表記、Issue #40）。2026-09-26 に DESIGN.md v0.2 から分離し、PRD v0.2 / ドメインモデル v0.2 Final の用語に合わせた。
 
 用語の意味の正本は [ドメインモデル](../domain/domain-model.md) の「用語」表。ここは画面での書き方を決める。
 
@@ -46,7 +46,7 @@
 | Sprint 中の追加 | SprintTask.origin = midSprint | 確定後に Sprint に入った Task |
 | 割り込み | InterruptNote | 予定外の出来事のメモ。Task ではない |
 | 確定 | Sprint = Active | 本人が Sprint を確定すること。「Sprint 14 を確定」。Agent には使わない |
-| Retro | Retro / Sprint = review | 事実を見る → 振り返る → 引き継ぐ。Sprint Header の Status の語は Retro の最初の実装 Issue で決める |
+| Retro | Retro / Sprint = review | 事実を見る → 振り返る → 引き継ぐ。Sprint Header の Status は「振り返り中」（ナビの「振り返り」に揃える。Issue #42） |
 | できた / 一部できた / できなかった / 判断しない | SprintGoal.selfAssessment | Goal の自己判定。未選択は「未判定」 |
 | 改善策 | RetroImprovement | 次の Sprint で 1 つだけ変えてみること（自然文、1 件） |
 | 続ける / 終える / 置き換える | CriterionUse.retroDecision | 計画基準の Retro での決定 |
@@ -62,3 +62,16 @@
 
 - 動詞で終える（「Sprint 14 を確定」「追加」「保存」「差分を確認」「元に戻す」）。
 - 「OK」「はい / いいえ」を使わない。確認 Dialog のボタンは結果を書く（「戻って調整」「Sprint 14 を確定」）。
+
+## 操作できない理由
+
+ボタンを無効にするときは、近くに「何をすれば押せるか」を書く。責める言い方や「エラー」を使わない。
+
+| 場面 | 文言 |
+| --- | --- |
+| Planning の確定（前の Retro が未完了） | 前の Sprint の Retro を完了すると確定できます。 |
+| Planning の確定（完了・アーカイブした Task が残っている） | 完了・アーカイブした Task を今週から外すと確定できます。 |
+| Retro の完了（計画基準の決定がまだ。不変条件 36） | 今回の計画基準を「続ける・終える・置き換える」から選ぶと完了できます。 |
+| Retro の完了（「続ける」のまま新しい基準の下書きがある。不変条件 35） | 「続ける」ときは、新しい基準の下書きを外すか、「置き換える」を選ぶと完了できます。 |
+
+改善策が空でも Retro は完了できる（Issue #42 のオーナー決定）。そのときは完了ボタンの近くに「改善策がないまま完了します。次の Planning には何も出ません。」と中立に添える。

@@ -1,7 +1,9 @@
 import type { SprintState } from '@itera/domain';
 import { formatDateRange } from '@/lib/date-format';
 import { useSearch } from '@tanstack/react-router';
+import { Button } from '@/components/ui/button';
 import { useAppOverview } from '@/store/use-app-overview';
+import { useAfterRetro, useRetroActions } from '@/store/use-retro';
 import { usePlanning } from '@/store/use-planning';
 import { PlanningScreen } from './planning/planning-screen';
 import { ScreenFrame } from './screen-frame';
@@ -19,8 +21,23 @@ function SprintScreen() {
   const search = useSearch({ from: '/sprint' });
   const planning = usePlanning({ applyCriterion: search.criterion !== 'off' });
   const { openSprint: sprint } = useAppOverview();
+  const after = useAfterRetro();
+  const actions = useRetroActions();
   if (planning !== undefined) return <PlanningScreen data={planning} />;
-  if (sprint === undefined) return <ScreenFrame heading="Sprint" />;
+  if (sprint === undefined) {
+    // No week open: its Planning starts here (owner decision in #42).
+    return (
+      <ScreenFrame heading="Sprint">
+        {after !== undefined && (
+          <div className="mt-4">
+            <Button variant="primary" onClick={() => actions.beginPlanning()}>
+              Sprint {after.next.number} の計画を始める
+            </Button>
+          </div>
+        )}
+      </ScreenFrame>
+    );
+  }
   return (
     <ScreenFrame
       heading={sprint.state === 'planning' ? '今週、何を進めますか' : 'Sprint'}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Occurrence } from './occurrence';
-import { carryCount, retroFacts } from './retro-facts';
+import { carryCount, criterionResult, retroFacts } from './retro-facts';
 import { id } from './shared/ids';
 import { localDate } from './shared/time';
 import type { DailySelection, Sprint, SprintTask } from './sprint';
@@ -339,5 +339,61 @@ describe('retroFacts — fixes from acceptance (#24)', () => {
       researchId,
       null,
     ]);
+  });
+});
+
+describe('criterionResult', () => {
+  const applied = (lo: number, hi: number) => ({
+    value: {
+      base: 'suggestion' as const,
+      lo,
+      hi,
+      criterionApplied: true,
+      computedAt: ctx.now,
+    },
+    timeBasis: 'task' as const,
+  });
+
+  function facts(tasks: SprintTask[]) {
+    const sprint = sprintFixture('2026-09-28', 'review', {
+      tasks,
+      actualTimes: [
+        {
+          sprintTaskId: id('st-a'),
+          hours: 4.5,
+          date: d('2026-09-30'),
+          via: 'pause',
+          recordedAt: ctx.now,
+        },
+      ],
+    });
+    return retroFacts(sprint, {
+      tasks: [newTask('a'), newTask('b'), newTask('c'), newTask('r')],
+      areas: [research, work],
+      occurrences: [],
+      sprints: [sprint],
+    });
+  }
+
+  it('collects the Tasks the criterion set, and what became of them', () => {
+    const result = criterionResult(
+      facts([
+        st('a', { outcome: 'carriedOver', planSnapshot: applied(5, 5) }),
+        st('b', { outcome: 'done', planSnapshot: applied(3, 3) }),
+        st('c', { outcome: 'done' }),
+        st('r', { outcome: 'removed', planSnapshot: applied(2, 2) }),
+      ]),
+    );
+    expect(result.tasks.map((t) => t.taskId)).toEqual(['a', 'b']);
+    expect(result.carriedOver.map((t) => t.taskId)).toEqual(['a']);
+    expect(result.done.map((t) => t.taskId)).toEqual(['b']);
+    expect(result.planned).toMatchObject({ lo: 8, hi: 8 });
+    expect(result.actualHours).toBe(4.5);
+  });
+
+  it('is empty when the criterion set no value', () => {
+    const result = criterionResult(facts([st('c', { outcome: 'done' })]));
+    expect(result.tasks).toEqual([]);
+    expect(result.actualHours).toBe(0);
   });
 });

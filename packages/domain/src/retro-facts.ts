@@ -207,6 +207,38 @@ export function retroFacts(sprint: Sprint, input: RetroFactsInput): RetroFacts {
   };
 }
 
+export interface CriterionResult {
+  /** The Tasks whose planning value the criterion set (removed ones left out). */
+  readonly tasks: readonly TaskFact[];
+  readonly done: readonly TaskFact[];
+  readonly carriedOver: readonly TaskFact[];
+  /** Their planning values, as fixed in the plan. */
+  readonly planned: PlanningTotal;
+  /** Their recorded actual time (optional records). */
+  readonly actualHours: number;
+}
+
+/**
+ * 今回の計画基準の結果 (Retro, patterns.md): what happened to the Tasks
+ * whose planning value the criterion set — 「研究 2 件のうち 1 件を持ち越し
+ * （計画値 5h・実績 4.5h）」. Empty when the criterion was not applied.
+ * Derived from the facts; no score (invariant 40).
+ */
+export function criterionResult(facts: RetroFacts): CriterionResult {
+  const tasks = facts.tasks.filter(
+    (f) => f.outcome !== 'removed' && f.plan?.value.criterionApplied === true,
+  );
+  return {
+    tasks,
+    done: tasks.filter((f) => f.outcome === 'done'),
+    carriedOver: tasks.filter((f) => f.outcome === 'carriedOver'),
+    planned: totalPlanningValues(
+      tasks.flatMap((f) => (f.plan === undefined ? [] : [f.plan.value])),
+    ),
+    actualHours: tasks.reduce((sum, f) => sum + f.actualHours, 0),
+  };
+}
+
 function isDeferral(s: DailySelection): boolean {
   return (
     s.resolution === 'deferred' || s.closedBefore?.resolution === 'deferred'
