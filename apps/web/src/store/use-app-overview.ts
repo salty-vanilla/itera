@@ -30,6 +30,8 @@ export function useAppOverview() {
       backlogCount: backlogView(records.tasks).length,
       openSprint: summary(openSprint(records)),
       reviewSprint: summary(records.sprints.find((s) => s.state === 'review')),
+      /** The running week, even while the next one is being planned. */
+      activeSprint: summary(records.sprints.find((s) => s.state === 'active')),
     }),
     [records, clock],
   );

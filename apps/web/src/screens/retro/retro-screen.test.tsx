@@ -416,4 +416,32 @@ describe('Retro — boundaries', () => {
     ).toBeTruthy();
     expect(router.state.location.pathname).toBe('/sprint');
   });
+
+  it('keeps the running week on /retro and /today after the next Planning starts', async () => {
+    await renderAt('/sprint?fixture=today-daytime');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Sprint 3 の計画を始める' }),
+    );
+    await userEvent.click(
+      screen.getAllByRole('link', { name: '振り返り' })[0]!,
+    );
+    expect(
+      await screen.findByText(
+        'この Sprint の振り返りは、最終日（10/4 (日)）から始められます。',
+      ),
+    ).toBeTruthy();
+    await userEvent.click(screen.getAllByRole('link', { name: '今日' })[0]!);
+    expect(await screen.findByText('Sprint 2 · 4日目 / 7日')).toBeTruthy();
+  });
+
+  it('tells Today the week is in Retro even when the next is being planned', async () => {
+    await renderAt('/sprint?fixture=retro-start');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Sprint 3 の計画を始める' }),
+    );
+    await userEvent.click(screen.getAllByRole('link', { name: '今日' })[0]!);
+    expect(
+      await screen.findByText(/今週の Sprint は振り返り中です/),
+    ).toBeTruthy();
+  });
 });

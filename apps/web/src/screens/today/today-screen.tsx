@@ -66,7 +66,9 @@ function TodayScreen() {
 
 /** Today without an active Sprint: the date, and where the week is. */
 function NoActiveSprint() {
-  const { today, openSprint } = useAppOverview();
+  const { today, openSprint: latest, reviewSprint } = useAppOverview();
+  // A week in Retro comes first, even when the next is being planned.
+  const openSprint = reviewSprint ?? latest;
   const link = 'ms-1 text-link underline focus-visible:focus-ring';
   return (
     <ScreenFrame heading={formatDateHeading(today)}>

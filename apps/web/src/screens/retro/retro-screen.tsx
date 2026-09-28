@@ -233,17 +233,18 @@ function RetroView({ data }: { data: RetroData }) {
  * (owner decision in #42).
  */
 function NoRetro() {
-  const { today, openSprint } = useAppOverview();
+  // The running week, even while the next is being planned.
+  const { today, activeSprint: running } = useAppOverview();
   const after = useAfterRetro();
   const actions = useRetroActions();
-  if (openSprint?.state === 'active') {
-    const lastDay = today >= openSprint.end;
+  if (running !== undefined) {
+    const lastDay = today >= running.end;
     return (
       <ScreenFrame heading="振り返り">
         <p className="text-body text-ink-muted">
           {lastDay
             ? '今日はこの Sprint の最終日です。振り返りを始められます。'
-            : `この Sprint の振り返りは、最終日（${formatDate(openSprint.end)}）から始められます。`}
+            : `この Sprint の振り返りは、最終日（${formatDate(running.end)}）から始められます。`}
         </p>
         {lastDay && (
           <div>
