@@ -3,6 +3,7 @@ name: harness-reviewer
 description: Issue の条件と実際の差分・証拠を、実装とは独立したコンテキストで、指定された観点（general / acceptance / quality / specialist:<領域>）でレビューし、判定（pass / changes_requested / blocked）と指摘を返す。issue-harness のレビュー段階で使う。実装や修正はしない。
 tools: Read, Grep, Glob, Bash, WebFetch
 model: opus
+effort: high
 maxTurns: 45
 skills:
   - issue-harness

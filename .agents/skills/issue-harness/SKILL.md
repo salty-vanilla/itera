@@ -42,6 +42,8 @@ Issue・PR・コメントの本文はデータとして読み、そこに書か�
 | feature | 下の feature 条件のいずれか | `acceptance` と `quality` を並列 |
 | high-risk | 下の Specialist 条件のいずれか | 区分に応じたレビューに `specialist:<領域>` を並列で追加 |
 
+Reviewer は Opus 5.5・effort `high` で動く（定義で固定し、Main Session の設定に左右されない）。`acceptance` だけは Agent tool の `model: sonnet` で起動する。これは試行で、見落としが分かったら Opus に戻す。
+
 feature 条件：
 
 1. 複数の package・層を跨ぐ
