@@ -13,6 +13,7 @@ import {
   formatPlanningValue,
   formatRange,
 } from '@/lib/time-format';
+import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 import { cn } from '@/lib/utils';
 import type { RetroData } from '@/store/retro-view';
 import {
@@ -448,6 +449,20 @@ function TaskTable({
   toggle: AreaFactsProps['toggle'];
   onAddActual: FactsPaneProps['onAddActual'];
 }) {
+  // compact is not a smaller table: each Task is stacked (owner decision
+  // in #57), so nothing needs scrolling sideways.
+  const wide = useMediaQuery(MEDIUM_UP, true);
+  if (!wide) {
+    return (
+      <TaskList
+        caption={caption}
+        tasks={tasks}
+        data={data}
+        toggle={toggle}
+        onAddActual={onAddActual}
+      />
+    );
+  }
   const cell = 'border-b border-border-soft px-2 py-2 align-top';
   const num = cn(cell, 'text-right whitespace-nowrap');
   return (
@@ -470,10 +485,10 @@ function TaskTable({
             <th scope="col" className={cn(num, 'font-normal')}>
               実績
             </th>
-            <th scope="col" className={cn(cell, 'w-1/4 text-left font-normal')}>
+            <th scope="col" className={cn(cell, 'text-left font-normal')}>
               結果
             </th>
-            <th scope="col" className={cn(cell, 'sticky right-0 bg-canvas')}>
+            <th scope="col" className={cell}>
               <span className="sr-only">操作</span>
             </th>
           </tr>
@@ -494,17 +509,12 @@ function TaskTable({
               </th>
               <td className={num}>{estimateText(t)}</td>
               <td className={num}>
-                {t.plan === undefined
-                  ? '未見積'
-                  : formatPlanningValue(t.plan.value)}
-                {t.plan?.value.criterionApplied === true && (
-                  <span className="block text-meta text-ink-muted">基準</span>
-                )}
-                {t.plan?.occurrenceCount !== undefined && (
-                  <span className="block text-meta text-ink-muted">
-                    {t.plan.occurrenceCount}回分
+                {plannedText(t)}
+                {planNotes(t).map((note) => (
+                  <span key={note} className="block text-meta text-ink-muted">
+                    {note}
                   </span>
-                )}
+                ))}
               </td>
               <td className={num}>
                 {t.actualHours > 0 ? formatHours(t.actualHours) : '未入力'}
@@ -513,39 +523,19 @@ function TaskTable({
                 <span className={t.recurring ? undefined : 'whitespace-nowrap'}>
                   {resultText(t, data)}
                 </span>
-                {(t.deferredDates.length > 0 || t.pausedDates.length > 0) && (
+                {daysText(t) !== undefined && (
                   <span className="block text-meta text-ink-muted">
-                    {[
-                      t.deferredDates.length > 0 &&
-                        `見送り ${t.deferredDates.length}回`,
-                      t.pausedDates.length > 0 &&
-                        `今日はここまで ${t.pausedDates.length}回`,
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
+                    {daysText(t)}
                   </span>
                 )}
               </td>
-              {/* Stays at the right while a narrow screen scrolls the table. */}
-              <td
-                className={cn(
-                  cell,
-                  'sticky right-0 bg-canvas whitespace-nowrap',
-                )}
-              >
+              <td className={cn(cell, 'whitespace-nowrap')}>
                 <div className="flex flex-col items-end gap-1">
-                  {toggle({ kind: 'sprintTask', id: t.sprintTaskId }, t.title)}
-                  {!t.recurring && (
-                    <Button
-                      size="sm"
-                      variant="quiet"
-                      onClick={(event) => onAddActual(t, event.currentTarget)}
-                    >
-                      <Timer aria-hidden />
-                      実績を足す
-                      <span className="sr-only">: {t.title}</span>
-                    </Button>
-                  )}
+                  <TaskActions
+                    fact={t}
+                    toggle={toggle}
+                    onAddActual={onAddActual}
+                  />
                 </div>
               </td>
             </tr>
@@ -554,6 +544,129 @@ function TaskTable({
       </table>
     </div>
   );
+}
+
+/**
+ * compact: one Task per item, its values in words on wrapping lines
+ * (「提案 3–5h · 計画 5h（基準） · 実績 4.5h」), then its outcome and days,
+ * then its actions in a row.
+ */
+function TaskList({
+  caption,
+  tasks,
+  data,
+  toggle,
+  onAddActual,
+}: {
+  caption: string;
+  tasks: readonly TaskFact[];
+  data: RetroData;
+  toggle: AreaFactsProps['toggle'];
+  onAddActual: FactsPaneProps['onAddActual'];
+}) {
+  const headingId = useId();
+  return (
+    <section aria-labelledby={headingId} className="flex flex-col gap-2">
+      <h3 id={headingId} className="text-subheading text-ink">
+        {caption}
+      </h3>
+      <ul className="flex flex-col border-t border-border-soft">
+        {tasks.map((t) => {
+          const estimate = estimateText(t);
+          const values = [
+            estimate === '未見積' || estimate.startsWith('提案')
+              ? estimate
+              : `Estimate ${estimate}`,
+            `計画 ${plannedText(t)}${planNotes(t)
+              .map((n) => `（${n}）`)
+              .join('')}`,
+            `実績 ${t.actualHours > 0 ? formatHours(t.actualHours) : '未入力'}`,
+          ];
+          const outcome = [resultText(t, data), daysText(t)].filter(
+            (x) => x !== undefined,
+          );
+          return (
+            <li
+              key={t.sprintTaskId}
+              className="flex flex-col gap-1 border-b border-border-soft py-3"
+            >
+              <p className="text-body text-ink">{t.title}</p>
+              {t.carryCount > 0 && (
+                <p className="text-meta text-ink-muted">
+                  前の Sprint から持ち越し（{t.carryCount}回）
+                </p>
+              )}
+              <p className="text-body text-ink">{values.join(' · ')}</p>
+              <p className="text-meta text-ink-muted">{outcome.join(' · ')}</p>
+              <div className="flex flex-wrap gap-2">
+                <TaskActions
+                  fact={t}
+                  toggle={toggle}
+                  onAddActual={onAddActual}
+                />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+/** 気になる, and 実績を足す for a non-recurring Task (F22). */
+function TaskActions({
+  fact,
+  toggle,
+  onAddActual,
+}: {
+  fact: TaskFact;
+  toggle: AreaFactsProps['toggle'];
+  onAddActual: FactsPaneProps['onAddActual'];
+}) {
+  return (
+    <>
+      {toggle({ kind: 'sprintTask', id: fact.sprintTaskId }, fact.title)}
+      {!fact.recurring && (
+        <Button
+          size="sm"
+          variant="quiet"
+          onClick={(event) => onAddActual(fact, event.currentTarget)}
+        >
+          <Timer aria-hidden />
+          実績を足す
+          <span className="sr-only">: {fact.title}</span>
+        </Button>
+      )}
+    </>
+  );
+}
+
+/** The planning value fixed in the plan. */
+function plannedText(t: TaskFact): string {
+  return t.plan === undefined ? '未見積' : formatPlanningValue(t.plan.value);
+}
+
+/** What the value came from: the criterion, and a recurring Task's count. */
+function planNotes(t: TaskFact): string[] {
+  return [
+    ...(t.plan?.value.criterionApplied === true ? ['基準'] : []),
+    ...(t.plan?.occurrenceCount === undefined
+      ? []
+      : [`${t.plan.occurrenceCount}回分`]),
+  ];
+}
+
+/** 「見送り 2回 · 今日はここまで 1回」, or nothing. */
+function daysText(t: TaskFact): string | undefined {
+  const parts = [
+    ...(t.deferredDates.length > 0
+      ? [`見送り ${t.deferredDates.length}回`]
+      : []),
+    ...(t.pausedDates.length > 0
+      ? [`今日はここまで ${t.pausedDates.length}回`]
+      : []),
+  ];
+  return parts.length === 0 ? undefined : parts.join(' · ');
 }
 
 function estimateText(t: TaskFact): string {

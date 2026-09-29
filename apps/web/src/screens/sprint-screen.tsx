@@ -21,19 +21,19 @@ const stateLabel: Record<SprintState, string> = {
 function SprintScreen() {
   const search = useSearch({ from: '/sprint' });
   const planning = usePlanning({ applyCriterion: search.criterion !== 'off' });
-  const { openSprint: sprint } = useAppOverview();
+  const { reviewSprint } = useAppOverview();
   const running = useRunningSprint();
   if (planning !== undefined) return <PlanningScreen data={planning} />;
   if (running !== undefined) return <RunningSprint data={running} />;
-  // No week being planned: its Planning starts here, also while this week
-  // runs or is in Retro (owner decision in #42).
+  // No week planned or running: its Planning starts here, also while the
+  // last week is in Retro (owner decision in #42).
   return (
     <ScreenFrame
       heading="Sprint"
       meta={
-        sprint === undefined
+        reviewSprint === undefined
           ? undefined
-          : `Sprint ${formatDateRange(sprint.start, sprint.end)} · ${stateLabel[sprint.state]}`
+          : `Sprint ${reviewSprint.number} · ${formatDateRange(reviewSprint.start, reviewSprint.end)} · ${stateLabel[reviewSprint.state]}`
       }
     >
       <div className="mt-4">

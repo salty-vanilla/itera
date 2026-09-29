@@ -399,6 +399,10 @@ describe('Retro — boundaries', () => {
 
   it('starts the next Planning from the Sprint screen while the Retro is open', async () => {
     const router = await renderAt('/sprint?fixture=retro-start');
+    // The week in Retro, named with its number (#57).
+    expect(
+      screen.getByText('Sprint 2 · 9/28 (月) – 10/4 (日) · 振り返り中'),
+    ).toBeTruthy();
     await userEvent.click(
       screen.getByRole('button', { name: 'Sprint 3 の計画を始める' }),
     );
@@ -443,5 +447,43 @@ describe('Retro — boundaries', () => {
     expect(
       await screen.findByText(/今週の Sprint は振り返り中です/),
     ).toBeTruthy();
+  });
+});
+
+describe('Retro — compact (#57)', () => {
+  it('stacks each Task instead of a table, with its values in words', async () => {
+    // Under 768px: matchMedia says the medium query does not match.
+    vi.stubGlobal(
+      'matchMedia',
+      (query: string) =>
+        ({
+          matches: false,
+          media: query,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+        }) as unknown as MediaQueryList,
+    );
+    try {
+      await renderAt('/retro?fixture=retro-start');
+      expect(document.querySelector('table')).toBeNull();
+      // Each Area's list is a region named by its caption.
+      expect(
+        screen.getAllByRole('region', { name: 'Goal に紐づくタスク' }).length,
+      ).toBeGreaterThan(0);
+      const paper = screen
+        .getAllByRole('listitem')
+        .find((li) => li.textContent?.startsWith('関連論文を 3 本読む'));
+      expect(paper?.textContent).toContain(
+        '提案 3–5h · 計画 5h（基準） · 実績 4.5h',
+      );
+      expect(paper?.textContent).toContain(
+        '持ち越し · 見送り 2回 · 今日はここまで 1回',
+      );
+      expect(
+        within(paper!).getByRole('button', { name: /実績を足す.*関連論文/ }),
+      ).toBeTruthy();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
