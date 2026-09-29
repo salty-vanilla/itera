@@ -486,7 +486,8 @@ function TaskFacts({
  * Typography). Every table has the same columns, so they line up from one
  * Goal to the next (#73); the title takes what is left. From 1200px the
  * actions sit side by side. From 1920px (bp-xl) the columns share the whole
- * width in proportion, so the title does not take all of it (#81).
+ * width in proportion (the three numbers equal), so the title does not take
+ * all of it and the result stays clear of 実績 (#81).
  */
 function TaskTable({
   caption,
@@ -501,11 +502,11 @@ function TaskTable({
     <div className="overflow-x-auto">
       <table className="w-full min-w-[53rem] table-fixed border-collapse text-body">
         <colgroup>
-          <col className="xl:w-[24%]" />
-          <col className="w-[7rem] xl:w-[12%]" />
-          <col className="w-[9rem] xl:w-[14%]" />
-          <col className="w-[5rem] xl:w-[9%]" />
-          <col className="w-[13rem] wide:w-[18rem] xl:w-[26%]" />
+          <col className="xl:w-[32%]" />
+          <col className="w-[7rem] xl:w-[11%]" />
+          <col className="w-[9rem] xl:w-[11%]" />
+          <col className="w-[5rem] xl:w-[11%]" />
+          <col className="w-[13rem] wide:w-[18rem] xl:w-[20%]" />
           <col className="w-[9rem] wide:w-[13rem] xl:w-[15%]" />
         </colgroup>
         <caption className="pb-2 text-left text-subheading text-ink">
@@ -525,7 +526,10 @@ function TaskTable({
             <th scope="col" className={cn(num, 'font-normal')}>
               実績
             </th>
-            <th scope="col" className={cn(cell, 'text-left font-normal')}>
+            <th
+              scope="col"
+              className={cn(cell, 'text-left font-normal xl:ps-8')}
+            >
               結果
             </th>
             <th scope="col" className={cell}>
@@ -556,7 +560,7 @@ function TaskTable({
               <td className={num}>
                 {t.actualHours > 0 ? formatHours(t.actualHours) : '未入力'}
               </td>
-              <td className={cell}>
+              <td className={cn(cell, 'xl:ps-8')}>
                 {/* Breaks only between its parts (「回：完了 2 · スキップ 1」). */}
                 {resultText(t, data)
                   .split(' · ')

@@ -77,7 +77,9 @@ function GoalBlock({
         className,
       )}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      {/* From 1920px the blocks sit side by side: the row is as high as the
+          button, so that one without 編集 (no Goal) lines up with the rest. */}
+      <div className="flex flex-wrap items-center justify-between gap-2 xl:min-h-control-sm">
         <Heading id={headingId} className="flex items-center gap-2">
           <AreaIndicator
             name={area.name}
