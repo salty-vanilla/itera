@@ -54,6 +54,9 @@ function FactsPane({
       onToggle={() => onPin(pin)}
     />
   );
+  // compact is not a smaller table: each Task is stacked (owner decision
+  // in #57), so nothing needs scrolling sideways.
+  const compact = !useMediaQuery(MEDIUM_UP, true);
   const entered = facts.tasks.filter((t) => t.actualHours > 0).length;
   const total = facts.plannedTotal.withAdditions;
   const { planned: plannedHours, current: currentHours } = facts.availableHours;
@@ -181,6 +184,7 @@ function FactsPane({
           key={area.areaId ?? 'none'}
           data={data}
           area={area}
+          compact={compact}
           toggle={toggle}
           onAssess={onAssess}
           onAddActual={onAddActual}
@@ -353,6 +357,8 @@ function CriterionOutcome({ data }: { data: RetroData }) {
 type AreaFactsProps = {
   data: RetroData;
   area: RetroData['facts']['areas'][number];
+  /** Under 768px: Tasks stacked rather than in a table. */
+  compact: boolean;
   toggle: (pin: RetroPin, subject: string) => ReactNode;
   onAssess: FactsPaneProps['onAssess'];
   onAddActual: FactsPaneProps['onAddActual'];
@@ -361,6 +367,7 @@ type AreaFactsProps = {
 function AreaFacts({
   data,
   area,
+  compact,
   toggle,
   onAssess,
   onAddActual,
@@ -412,7 +419,8 @@ function AreaFacts({
         </div>
       )}
       {area.linked.length > 0 && (
-        <TaskTable
+        <TaskFacts
+          compact={compact}
           caption={goal === undefined ? 'タスク' : 'Goal に紐づくタスク'}
           tasks={area.linked}
           data={data}
@@ -421,7 +429,8 @@ function AreaFacts({
         />
       )}
       {area.unlinked.length > 0 && (
-        <TaskTable
+        <TaskFacts
+          compact={compact}
           caption={
             goal === undefined ? 'タスク' : 'Goal に紐づかなかったタスク'
           }
@@ -435,6 +444,22 @@ function AreaFacts({
   );
 }
 
+type TaskFactsProps = {
+  caption: string;
+  tasks: readonly TaskFact[];
+  data: RetroData;
+  toggle: AreaFactsProps['toggle'];
+  onAddActual: FactsPaneProps['onAddActual'];
+};
+
+/** A group of Tasks: a table from 768px, stacked under it. */
+function TaskFacts({
+  compact,
+  ...props
+}: TaskFactsProps & { compact: boolean }) {
+  return compact ? <TaskList {...props} /> : <TaskTable {...props} />;
+}
+
 /** Estimate / 計画値 / 実績 / 結果, numbers right-aligned (DESIGN.md Typography). */
 function TaskTable({
   caption,
@@ -442,27 +467,7 @@ function TaskTable({
   data,
   toggle,
   onAddActual,
-}: {
-  caption: string;
-  tasks: readonly TaskFact[];
-  data: RetroData;
-  toggle: AreaFactsProps['toggle'];
-  onAddActual: FactsPaneProps['onAddActual'];
-}) {
-  // compact is not a smaller table: each Task is stacked (owner decision
-  // in #57), so nothing needs scrolling sideways.
-  const wide = useMediaQuery(MEDIUM_UP, true);
-  if (!wide) {
-    return (
-      <TaskList
-        caption={caption}
-        tasks={tasks}
-        data={data}
-        toggle={toggle}
-        onAddActual={onAddActual}
-      />
-    );
-  }
+}: TaskFactsProps) {
   const cell = 'border-b border-border-soft px-2 py-2 align-top';
   const num = cn(cell, 'text-right whitespace-nowrap');
   return (
@@ -507,7 +512,7 @@ function TaskTable({
                   </span>
                 )}
               </th>
-              <td className={num}>{estimateText(t)}</td>
+              <td className={num}>{estimateOf(t).text}</td>
               <td className={num}>
                 {plannedText(t)}
                 {planNotes(t).map((note) => (
@@ -523,11 +528,7 @@ function TaskTable({
                 <span className={t.recurring ? undefined : 'whitespace-nowrap'}>
                   {resultText(t, data)}
                 </span>
-                {daysText(t) !== undefined && (
-                  <span className="block text-meta text-ink-muted">
-                    {daysText(t)}
-                  </span>
-                )}
+                <DaysNote fact={t} />
               </td>
               <td className={cn(cell, 'whitespace-nowrap')}>
                 <div className="flex flex-col items-end gap-1">
@@ -557,13 +558,7 @@ function TaskList({
   data,
   toggle,
   onAddActual,
-}: {
-  caption: string;
-  tasks: readonly TaskFact[];
-  data: RetroData;
-  toggle: AreaFactsProps['toggle'];
-  onAddActual: FactsPaneProps['onAddActual'];
-}) {
+}: TaskFactsProps) {
   const headingId = useId();
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-2">
@@ -572,11 +567,12 @@ function TaskList({
       </h3>
       <ul className="flex flex-col border-t border-border-soft">
         {tasks.map((t) => {
-          const estimate = estimateText(t);
+          const estimate = estimateOf(t);
           const values = [
-            estimate === '未見積' || estimate.startsWith('提案')
-              ? estimate
-              : `Estimate ${estimate}`,
+            // A suggestion and 未見積 say what they are; a number needs its name.
+            estimate.kind === 'estimate'
+              ? `Estimate ${estimate.text}`
+              : estimate.text,
             `計画 ${plannedText(t)}${planNotes(t)
               .map((n) => `（${n}）`)
               .join('')}`,
@@ -669,13 +665,30 @@ function daysText(t: TaskFact): string | undefined {
   return parts.length === 0 ? undefined : parts.join(' · ');
 }
 
-function estimateText(t: TaskFact): string {
+/** The Estimate in the plan: the person's, the suggestion shown, or none. */
+function estimateOf(t: TaskFact): {
+  kind: 'estimate' | 'suggestion' | 'none';
+  text: string;
+} {
   const plan = t.plan;
-  if (plan?.estimateHours !== undefined) return formatHours(plan.estimateHours);
-  if (plan?.suggestion !== undefined) {
-    return `提案 ${formatRange(plan.suggestion.lo, plan.suggestion.hi)}`;
+  if (plan?.estimateHours !== undefined) {
+    return { kind: 'estimate', text: formatHours(plan.estimateHours) };
   }
-  return '未見積';
+  if (plan?.suggestion !== undefined) {
+    return {
+      kind: 'suggestion',
+      text: `提案 ${formatRange(plan.suggestion.lo, plan.suggestion.hi)}`,
+    };
+  }
+  return { kind: 'none', text: '未見積' };
+}
+
+/** 「見送り 2回 · 今日はここまで 1回」 under the outcome, if any. */
+function DaysNote({ fact }: { fact: TaskFact }) {
+  const text = daysText(fact);
+  return text === undefined ? null : (
+    <span className="block text-meta text-ink-muted">{text}</span>
+  );
 }
 
 function resultText(t: TaskFact, data: RetroData): string {
