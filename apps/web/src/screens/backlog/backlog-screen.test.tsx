@@ -68,7 +68,7 @@ describe('Backlog', () => {
     expect(records().activities.at(-1)).toMatchObject({ kind: 'taskCreated' });
   });
 
-  it('Capture: the new Task is the first row, marked for a moment, and a Toast says so (#86)', async () => {
+  it('Capture: the new Task is the first row, flashes for a moment, and a Toast says so (#86)', async () => {
     await renderAt('/backlog?fixture=backlog-capture');
     await userEvent.type(
       screen.getByRole('textbox', { name: 'タスクを追加' }),
@@ -78,8 +78,6 @@ describe('Backlog', () => {
     const first = within(list()).getAllByRole('listitem')[0]!;
     expect(first.textContent).toContain('請求書を送る');
     expect(first.hasAttribute('data-added')).toBe(true);
-    // Said in words, not by a colour that means selected.
-    expect(within(first).getByText('追加しました')).toBeTruthy();
     const toast = await screen.findByText('「請求書を送る」を追加しました');
     // No 元に戻す: a wrong Task is archived from its row.
     expect(
@@ -88,11 +86,10 @@ describe('Backlog', () => {
         { name: '元に戻す' },
       ),
     ).toBeNull();
-    // The mark goes after 2 seconds.
+    // The flash is over after 2.5 seconds.
     await waitFor(() => expect(first.hasAttribute('data-added')).toBe(false), {
-      timeout: 3000,
+      timeout: 4000,
     });
-    expect(within(first).queryByText('追加しました')).toBeNull();
   });
 
   it('Capture: a Task the 切り口 does not show is not in the list, and the Toast says why (#86)', async () => {

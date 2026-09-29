@@ -351,6 +351,20 @@
     }
   }
 
+  /*
+   * The row just added in the Backlog flashes `here-subtle` and fades out
+   * (docs/design/foundations.md, Issue #86). Once, over the 2.5s the screen
+   * keeps it (backlog-screen.tsx).
+   */
+  @keyframes added-flash {
+    from {
+      background-color: var(--here-subtle);
+    }
+    to {
+      background-color: transparent;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *,
     ::before,

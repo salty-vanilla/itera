@@ -21,6 +21,9 @@ import { TaskDetail } from './task-detail';
 // 切り口 and an Area. The 切り口, the Area and the open Task are search
 // parameters, so a state opens from its URL (ADR 0005).
 
+/** How long the row just added flashes; the same as `added-flash` in the CSS. */
+const ADDED_MS = 2500;
+
 export const slices: readonly { value: BacklogSlice | 'all'; label: string }[] =
   [
     { value: 'all', label: 'すべて' },
@@ -79,7 +82,7 @@ function BacklogScreen() {
   // Under 768px the Quick Add sticks to the bottom: the Toast goes above it.
   const quickAddRef = useRef<HTMLDivElement>(null);
   useToastOffsetAbove(quickAddRef, !useMediaQuery(MEDIUM_UP, true));
-  // The Task just added: its row is marked for 2 seconds, and a Toast says
+  // The Task just added: its row flashes for a moment (ADDED_MS), and a Toast says
   // so (Issue #86). A Task the current 切り口 or Area does not show has no
   // row to mark: the Toast says why it is not in the list.
   const [justAdded, setJustAdded] = useState<{ id: TaskId; title: string }>();
@@ -101,7 +104,7 @@ function BacklogScreen() {
   }, [justAdded, items, toast]);
   useEffect(() => {
     if (justAdded === undefined) return;
-    const timer = window.setTimeout(() => setJustAdded(undefined), 2000);
+    const timer = window.setTimeout(() => setJustAdded(undefined), ADDED_MS);
     return () => window.clearTimeout(timer);
   }, [justAdded]);
   const estimateFocus = useEstimateFocus(search.task);

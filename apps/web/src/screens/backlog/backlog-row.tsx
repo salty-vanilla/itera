@@ -1,9 +1,8 @@
 import type { LocalDate } from '@itera/domain';
 import { useEffect, useRef } from 'react';
-import { Archive, CircleCheck, Ellipsis, Plus, Sun } from 'lucide-react';
+import { Archive, CircleCheck, Ellipsis, Sun } from 'lucide-react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { IconButton } from '@/components/ui/icon-button';
-import { Tag } from '@/components/ui/tag';
 import { semanticIcons } from '@/components/ui/icon';
 import {
   Menu,
@@ -67,7 +66,7 @@ type BacklogRowProps = {
   item: BacklogItem;
   today: LocalDate;
   current: boolean;
-  /** Just added: says so for a moment (Issue #86). */
+  /** Just added: the row flashes for a moment (Issue #86). */
   added?: boolean | undefined;
   onOpen: () => void;
   onComplete: () => void;
@@ -106,6 +105,11 @@ function BacklogRow({
     <TaskRow
       title={task.title}
       current={current}
+      // Flashes `here-subtle` once and fades (2.5s: ADDED_MS in
+      // backlog-screen.tsx keeps `added` as long).
+      className={
+        added ? 'animate-[added-flash_2.5s_ease-out_forwards]' : undefined
+      }
       onOpen={onOpen}
       keys={{ onEstimate, onArchive }}
       control={
@@ -135,17 +139,7 @@ function BacklogRow({
         ) : undefined
       }
       // Only what exists: an unestimated Task shows nothing here (PRD §5 A).
-      estimate={
-        added ? (
-          // A new Task has no Estimate: its place tells, for a moment, that it
-          // is the one just added. Not `here-subtle`, which means selected.
-          <Tag tone="neutral" icon={Plus}>
-            追加しました
-          </Tag>
-        ) : value.base === 'none' ? undefined : (
-          <Estimate value={value} />
-        )
-      }
+      estimate={value.base === 'none' ? undefined : <Estimate value={value} />}
       actions={
         <Menu>
           <MenuTrigger
