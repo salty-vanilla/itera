@@ -1,4 +1,10 @@
-import type { AreaId, RetroPin, SelfAssessment, TaskFact } from '@itera/domain';
+import type {
+  AreaId,
+  Occurrence,
+  RetroPin,
+  SelfAssessment,
+  TaskFact,
+} from '@itera/domain';
 import { Info, Timer } from 'lucide-react';
 import { useId, type ReactNode } from 'react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
@@ -15,7 +21,7 @@ import {
 } from '@/lib/time-format';
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 import { cn } from '@/lib/utils';
-import type { RetroData } from '@/store/retro-view';
+import type { ActualTarget, RetroData } from '@/store/retro-view';
 import {
   ASSESSMENTS,
   AssessmentTag,
@@ -34,7 +40,7 @@ type FactsPaneProps = {
   onPin: (pin: RetroPin) => void;
   onAssess: (areaId: AreaId, assessment: SelfAssessment | null) => void;
   /** 実績を足す: opens the actual time surface by the pressed button. */
-  onAddActual: (fact: TaskFact, anchor: HTMLElement) => void;
+  onAddActual: (target: ActualTarget, anchor: HTMLElement) => void;
   className?: string | undefined;
 };
 
@@ -200,38 +206,45 @@ function FactsPane({
             繰り返しの回
           </h2>
           <ul className="flex flex-col border-t border-border-soft">
-            {[
-              ...facts.occurrences.done.map((o) => ({ o, word: '完了' })),
-              ...facts.occurrences.skipped.map((o) => ({
-                o,
-                word: 'スキップ',
-              })),
-              ...facts.occurrences.missed.map((o) => ({
-                o,
-                word: '未処理',
-              })),
-            ]
-              .toSorted((a, b) =>
-                a.o.scheduledDate < b.o.scheduledDate ? -1 : 1,
-              )
-              .map(({ o, word }) => {
-                const title =
-                  facts.tasks.find((t) => t.taskId === o.taskId)?.title ?? '';
+            {data.occurrences.map(
+              ({ occurrence: o, title, actualHours, target }) => {
+                const subject = `${formatDate(o.scheduledDate)} ${title}`;
                 return (
                   <FactRow
                     key={o.id}
-                    action={toggle(
-                      { kind: 'occurrence', id: o.id },
-                      `${formatDate(o.scheduledDate)} ${title}`,
-                    )}
+                    action={
+                      <span className="flex flex-wrap justify-end gap-1">
+                        {toggle({ kind: 'occurrence', id: o.id }, subject)}
+                        {/* Per occurrence (#56): the time goes to its day. */}
+                        <AddActualButton
+                          subject={subject}
+                          onClick={(anchor) =>
+                            onAddActual(
+                              {
+                                ...target,
+                                title: `${title}（${formatDate(o.scheduledDate)} の回）`,
+                              },
+                              anchor,
+                            )
+                          }
+                        />
+                      </span>
+                    }
                   >
                     <span className="text-ink-muted">
                       {formatDate(o.scheduledDate)}
                     </span>{' '}
-                    {title} · {word}
+                    {title} · {OCCURRENCE_WORDS[o.state]}
+                    {actualHours > 0 && (
+                      <span className="text-ink-muted">
+                        {' '}
+                        · 実績 {formatHours(actualHours)}
+                      </span>
+                    )}
                   </FactRow>
                 );
-              })}
+              },
+            )}
           </ul>
         </section>
       )}
@@ -534,6 +547,7 @@ function TaskTable({
                 <div className="flex flex-col items-end gap-1">
                   <TaskActions
                     fact={t}
+                    actualDate={data.actualDate}
                     toggle={toggle}
                     onAddActual={onAddActual}
                   />
@@ -597,6 +611,7 @@ function TaskList({
               <div className="flex flex-wrap gap-2">
                 <TaskActions
                   fact={t}
+                  actualDate={data.actualDate}
                   toggle={toggle}
                   onAddActual={onAddActual}
                 />
@@ -612,30 +627,67 @@ function TaskList({
 /** 気になる, and 実績を足す for a non-recurring Task (F22). */
 function TaskActions({
   fact,
+  actualDate,
   toggle,
   onAddActual,
 }: {
   fact: TaskFact;
+  /** The day a Task's actual time goes to (RetroData.actualDate). */
+  actualDate: RetroData['actualDate'];
   toggle: AreaFactsProps['toggle'];
   onAddActual: FactsPaneProps['onAddActual'];
 }) {
   return (
     <>
       {toggle({ kind: 'sprintTask', id: fact.sprintTaskId }, fact.title)}
+      {/* A recurring Task's time goes to one occurrence (繰り返しの回). */}
       {!fact.recurring && (
-        <Button
-          size="sm"
-          variant="quiet"
-          onClick={(event) => onAddActual(fact, event.currentTarget)}
-        >
-          <Timer aria-hidden />
-          実績を足す
-          <span className="sr-only">: {fact.title}</span>
-        </Button>
+        <AddActualButton
+          subject={fact.title}
+          onClick={(anchor) =>
+            onAddActual(
+              {
+                sprintTaskId: fact.sprintTaskId,
+                date: actualDate,
+                title: fact.title,
+              },
+              anchor,
+            )
+          }
+        />
       )}
     </>
   );
 }
+
+/** 実績を足す, named with what it adds to. */
+function AddActualButton({
+  subject,
+  onClick,
+}: {
+  subject: string;
+  onClick: (anchor: HTMLElement) => void;
+}) {
+  return (
+    <Button
+      size="sm"
+      variant="quiet"
+      onClick={(event) => onClick(event.currentTarget)}
+    >
+      <Timer aria-hidden />
+      実績を足す
+      <span className="sr-only">: {subject}</span>
+    </Button>
+  );
+}
+
+const OCCURRENCE_WORDS: Readonly<Record<Occurrence['state'], string>> = {
+  pending: '未処理',
+  excluded: '外した',
+  done: '完了',
+  skipped: 'スキップ',
+  missed: '未処理',
+};
 
 /** The planning value fixed in the plan. */
 function plannedText(t: TaskFact): string {
@@ -709,9 +761,11 @@ function FactRow({
   action: ReactNode;
 }) {
   return (
-    <li className="flex min-h-row-touch items-center justify-between gap-3 border-b border-border-soft py-1 text-body text-ink medium:min-h-row-task">
-      <span className="min-w-0">{children}</span>
-      <span className="shrink-0">{action}</span>
+    // The actions go under the words when both do not fit (a narrow screen
+    // with two actions), rather than squeezing the words.
+    <li className="flex min-h-row-touch flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-border-soft py-1 text-body text-ink medium:min-h-row-task">
+      <span className="min-w-0 grow basis-[12rem]">{children}</span>
+      <span className="ms-auto shrink-0">{action}</span>
     </li>
   );
 }

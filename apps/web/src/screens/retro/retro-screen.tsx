@@ -1,4 +1,3 @@
-import type { TaskFact } from '@itera/domain';
 import { useNavigate, useRouter, useSearch } from '@tanstack/react-router';
 import { NotebookPen } from 'lucide-react';
 import { useId, useState } from 'react';
@@ -7,7 +6,7 @@ import { Tag } from '@/components/ui/tag';
 import { useToast } from '@/components/ui/toast';
 import { SprintHeader } from '@/components/sprint/sprint-header';
 import { formatDate, formatDateRange } from '@/lib/date-format';
-import type { RetroBlocker, RetroData } from '@/store/retro-view';
+import type { ActualTarget, RetroBlocker, RetroData } from '@/store/retro-view';
 import { useAppOverview } from '@/store/use-app-overview';
 import { useAfterRetro, useRetro, useRetroActions } from '@/store/use-retro';
 import { ActualTime } from '../today/actual-time';
@@ -64,7 +63,7 @@ function RetroScreen() {
   return <NoRetro />;
 }
 
-type Editing = { fact: TaskFact; anchor: HTMLElement };
+type Editing = { target: ActualTarget; anchor: HTMLElement };
 
 function RetroView({ data }: { data: RetroData }) {
   const search = useSearch({ from: '/retro' });
@@ -164,7 +163,7 @@ function RetroView({ data }: { data: RetroData }) {
               data={data}
               onPin={actions.togglePin}
               onAssess={actions.assessGoal}
-              onAddActual={(fact, anchor) => setEditing({ fact, anchor })}
+              onAddActual={(target, anchor) => setEditing({ target, anchor })}
             />
           )}
           {stage === 'reflect' && (
@@ -205,9 +204,9 @@ function RetroView({ data }: { data: RetroData }) {
 
       {editing !== undefined && (
         <ActualTime
-          key={editing.fact.sprintTaskId}
+          key={`${editing.target.sprintTaskId}-${editing.target.occurrenceId ?? ''}`}
           mode="record"
-          taskTitle={editing.fact.title}
+          taskTitle={editing.target.title}
           open
           onOpenChange={(open) => {
             if (!open) setEditing(undefined);
@@ -216,9 +215,10 @@ function RetroView({ data }: { data: RetroData }) {
           onSubmit={(hours) =>
             hours !== undefined &&
             actions.recordActual(
-              editing.fact.sprintTaskId,
+              editing.target.sprintTaskId,
               hours,
-              data.actualDate,
+              editing.target.date,
+              editing.target.occurrenceId,
             )
           }
         />

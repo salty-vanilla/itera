@@ -487,3 +487,56 @@ describe('Retro — compact (#57)', () => {
     }
   });
 });
+
+describe('Retro — actual time per occurrence (#56)', () => {
+  it('adds to one occurrence, on the day it was done, and shows it on its row', async () => {
+    await renderAt('/retro?fixture=retro-start');
+    const list = screen.getByRole('region', { name: '繰り返しの回' });
+    const row = within(list)
+      .getAllByRole('listitem')
+      .find((li) => li.textContent?.startsWith('9/28 (月) 英語の多読 30 分'))!;
+    expect(row.textContent).toContain('実績 30m');
+    await userEvent.click(
+      within(row).getByRole('button', { name: /実績を足す/ }),
+    );
+    await userEvent.type(
+      await screen.findByRole('textbox', { name: /実績時間/ }),
+      '0.25',
+    );
+    await userEvent.click(screen.getByRole('button', { name: '残す' }));
+    const occurrence = lastSnapshot().records.occurrences.find(
+      (o) => o.taskId === 'task-reading' && o.scheduledDate === '2026-09-28',
+    );
+    expect(reviewed().actualTimes.at(-1)).toMatchObject({
+      occurrenceId: occurrence?.id,
+      date: '2026-09-28',
+      hours: 0.25,
+      via: 'later',
+    });
+    expect(
+      within(screen.getByRole('region', { name: '繰り返しの回' }))
+        .getAllByRole('listitem')
+        .find((li) => li.textContent?.startsWith('9/28 (月) 英語の多読 30 分'))
+        ?.textContent,
+    ).toContain('実績 45m');
+  });
+
+  it('adds to a skipped occurrence on its own day', async () => {
+    await renderAt('/retro?fixture=retro-start');
+    const row = within(screen.getByRole('region', { name: '繰り返しの回' }))
+      .getAllByRole('listitem')
+      .find((li) => li.textContent?.includes('スキップ'))!;
+    await userEvent.click(
+      within(row).getByRole('button', { name: /実績を足す/ }),
+    );
+    await userEvent.type(
+      await screen.findByRole('textbox', { name: /実績時間/ }),
+      '0.5',
+    );
+    await userEvent.click(screen.getByRole('button', { name: '残す' }));
+    expect(reviewed().actualTimes.at(-1)).toMatchObject({
+      date: '2026-10-02',
+      hours: 0.5,
+    });
+  });
+});
