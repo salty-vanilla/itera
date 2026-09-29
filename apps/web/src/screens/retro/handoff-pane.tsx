@@ -58,7 +58,10 @@ function HandoffPane({
   return (
     <div
       data-slot="handoff-pane"
-      className={cn('flex flex-col gap-12', className)}
+      className={cn(
+        'flex flex-col gap-12 xl:grid xl:grid-cols-2 xl:items-start xl:gap-x-12',
+        className,
+      )}
     >
       <section
         aria-labelledby="handoff-improvement"
@@ -90,7 +93,11 @@ function HandoffPane({
         )}
       </section>
 
-      <section aria-labelledby="handoff-draft" className="flex flex-col gap-4">
+      {/* Beside 次に試す変更 from 1920px, whose rule and padding it lines up with. */}
+      <section
+        aria-labelledby="handoff-draft"
+        className="flex flex-col gap-4 xl:pt-4"
+      >
         <h2 id="handoff-draft" className="text-heading text-ink">
           計画基準
         </h2>
@@ -118,7 +125,7 @@ function HandoffPane({
       </section>
 
       {used !== undefined && (
-        <section aria-label="今回の計画基準の扱い">
+        <section aria-label="今回の計画基準の扱い" className="xl:col-span-2">
           <RadioGroup<RetroDecision | null>
             legend={`今回の計画基準「${criterionName(used.criterion.policy, used.areaName)}」を、次の Sprint でどうしますか`}
             description="使った・使わなかったにかかわらず選びます。理由は要りません。"

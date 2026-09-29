@@ -35,12 +35,17 @@ function ReflectPane({
   return (
     <div
       data-slot="reflect-pane"
-      className={cn('flex flex-col gap-12', className)}
+      className={cn(
+        'flex flex-col gap-12 xl:grid xl:grid-cols-2 xl:items-start xl:gap-x-12',
+        className,
+      )}
     >
       {showMaterials && (
         <Materials data={data} onPin={onPin} className="wide:hidden" />
       )}
+      {/* Beside 改善策 from 1920px, whose rule and padding it lines up with. */}
       <Field
+        className="xl:pt-4"
         label="気になったこと"
         necessity="optional"
         description="事実を見て思ったことを、そのまま書きます。原因を突き止めなくて構いません。"

@@ -82,113 +82,115 @@ function FactsPane({
         className,
       )}
     >
-      <section aria-label="Sprint の結果" className="flex flex-col gap-3">
-        <SprintSummary
-          items={[
-            { label: '完了', value: facts.completed.length, unit: '件' },
-            {
-              label: '持ち越し',
-              value: facts.carriedOver.length,
-              unit: '件',
-            },
-            {
-              label: 'スキップ',
-              value: facts.occurrences.skipped.length,
-              unit: '回',
-              note: `繰り返しの回：完了 ${facts.occurrences.done.length} · 未処理 ${facts.occurrences.missed.length}`,
-            },
-            {
-              label: 'Sprint 中の追加',
-              value: facts.midSprint.length,
-              unit: '件',
-            },
-            {
-              label: '計画値の合計',
-              value: formatRange(total.lo, total.hi, { total: true }),
-              note: [
-                total.unestimated + total.unestimatedSubtasks > 0 &&
-                  `未見積 ${total.unestimated + total.unestimatedSubtasks}`,
-                plannedHours === undefined
-                  ? '可用時間は未入力'
-                  : `可用時間 ${formatHours(plannedHours, { total: true })}`,
-              ]
-                .filter(Boolean)
-                .join(' · '),
-            },
-          ]}
-        />
-        <p className="text-body text-ink">
-          計画 {formatPlanningTotal(total)} → 実績{' '}
-          {formatHours(facts.actualHours, { total: true })}
-          <span className="text-ink-muted">
-            （入力済み {entered}件。実績は入力したものだけを数えています）
-          </span>
-        </p>
-      </section>
-
-      {used !== undefined && (
-        <section
-          aria-labelledby="retro-criterion"
-          className="flex flex-col gap-2 rounded-sm bg-canvas-subtle p-4"
-        >
-          <h2
-            id="retro-criterion"
-            className="flex items-center gap-2 text-subheading text-ink"
-          >
-            <Info
-              aria-hidden
-              className="size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
-            />
-            今回の計画基準：
-            {criterionName(used.criterion.policy, used.areaName)}
-          </h2>
+      <Columns>
+        <section aria-label="Sprint の結果" className="flex flex-col gap-3">
+          <SprintSummary
+            items={[
+              { label: '完了', value: facts.completed.length, unit: '件' },
+              {
+                label: '持ち越し',
+                value: facts.carriedOver.length,
+                unit: '件',
+              },
+              {
+                label: 'スキップ',
+                value: facts.occurrences.skipped.length,
+                unit: '回',
+                note: `繰り返しの回：完了 ${facts.occurrences.done.length} · 未処理 ${facts.occurrences.missed.length}`,
+              },
+              {
+                label: 'Sprint 中の追加',
+                value: facts.midSprint.length,
+                unit: '件',
+              },
+              {
+                label: '計画値の合計',
+                value: formatRange(total.lo, total.hi, { total: true }),
+                note: [
+                  total.unestimated + total.unestimatedSubtasks > 0 &&
+                    `未見積 ${total.unestimated + total.unestimatedSubtasks}`,
+                  plannedHours === undefined
+                    ? '可用時間は未入力'
+                    : `可用時間 ${formatHours(plannedHours, { total: true })}`,
+                ]
+                  .filter(Boolean)
+                  .join(' · '),
+              },
+            ]}
+          />
           <p className="text-body text-ink">
-            {used.appliedAtConfirm
-              ? '確定したときに、今回の計画値に使いました。'
-              : '確定したときに、今回の計画値には使いませんでした。'}
+            計画 {formatPlanningTotal(total)} → 実績{' '}
+            {formatHours(facts.actualHours, { total: true })}
+            <span className="text-ink-muted">
+              （入力済み {entered}件。実績は入力したものだけを数えています）
+            </span>
           </p>
-          {used.appliedAtConfirm && <CriterionOutcome data={data} />}
         </section>
-      )}
 
-      {(changedGoals.length > 0 || hoursChanged) && (
-        <section aria-labelledby="retro-diff" className="flex flex-col gap-3">
-          <h2 id="retro-diff" className="text-heading text-ink">
-            計画時との差
-          </h2>
-          <ul className="flex flex-col border-t border-border-soft">
-            {changedGoals.map((a) => (
-              <FactRow
-                key={a.areaId ?? 'none'}
-                action={toggle(
-                  { kind: 'goal', id: a.areaId ?? '' },
-                  `${a.name ?? ''}の Goal`,
-                )}
-              >
-                <span className="text-ink-muted">{a.name} の Goal：</span>
-                {a.goal?.plannedText === undefined
-                  ? `計画時にはなかった → 「${a.goal?.text ?? ''}」`
-                  : `「${a.goal.plannedText}」 → 「${a.goal.text}」`}
-              </FactRow>
-            ))}
-            {hoursChanged && (
-              <FactRow
-                action={toggle({ kind: 'availableHours' }, '可用時間の変更')}
-              >
-                <span className="text-ink-muted">可用時間：</span>
-                計画時{' '}
-                {plannedHours === undefined
-                  ? '未入力'
-                  : formatHours(plannedHours, { total: true })}{' '}
-                → 今{' '}
-                {currentHours === undefined
-                  ? '未入力'
-                  : formatHours(currentHours, { total: true })}
-              </FactRow>
-            )}
-          </ul>
-        </section>
-      )}
+        {used !== undefined && (
+          <section
+            aria-labelledby="retro-criterion"
+            className="flex flex-col gap-2 rounded-sm bg-canvas-subtle p-4"
+          >
+            <h2
+              id="retro-criterion"
+              className="flex items-center gap-2 text-subheading text-ink"
+            >
+              <Info
+                aria-hidden
+                className="size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
+              />
+              今回の計画基準：
+              {criterionName(used.criterion.policy, used.areaName)}
+            </h2>
+            <p className="text-body text-ink">
+              {used.appliedAtConfirm
+                ? '確定したときに、今回の計画値に使いました。'
+                : '確定したときに、今回の計画値には使いませんでした。'}
+            </p>
+            {used.appliedAtConfirm && <CriterionOutcome data={data} />}
+          </section>
+        )}
+
+        {(changedGoals.length > 0 || hoursChanged) && (
+          <section aria-labelledby="retro-diff" className="flex flex-col gap-3">
+            <h2 id="retro-diff" className="text-heading text-ink">
+              計画時との差
+            </h2>
+            <ul className="flex flex-col border-t border-border-soft">
+              {changedGoals.map((a) => (
+                <FactRow
+                  key={a.areaId ?? 'none'}
+                  action={toggle(
+                    { kind: 'goal', id: a.areaId ?? '' },
+                    `${a.name ?? ''}の Goal`,
+                  )}
+                >
+                  <span className="text-ink-muted">{a.name} の Goal：</span>
+                  {a.goal?.plannedText === undefined
+                    ? `計画時にはなかった → 「${a.goal?.text ?? ''}」`
+                    : `「${a.goal.plannedText}」 → 「${a.goal.text}」`}
+                </FactRow>
+              ))}
+              {hoursChanged && (
+                <FactRow
+                  action={toggle({ kind: 'availableHours' }, '可用時間の変更')}
+                >
+                  <span className="text-ink-muted">可用時間：</span>
+                  計画時{' '}
+                  {plannedHours === undefined
+                    ? '未入力'
+                    : formatHours(plannedHours, { total: true })}{' '}
+                  → 今{' '}
+                  {currentHours === undefined
+                    ? '未入力'
+                    : formatHours(currentHours, { total: true })}
+                </FactRow>
+              )}
+            </ul>
+          </section>
+        )}
+      </Columns>
 
       {facts.areas.map((area) => (
         <AreaFacts
@@ -253,91 +255,122 @@ function FactsPane({
         </section>
       )}
 
-      {facts.midSprint.length > 0 && (
-        <section aria-labelledby="retro-mid" className="flex flex-col gap-3">
-          <h2 id="retro-mid" className="text-heading text-ink">
-            Sprint 中の追加
-          </h2>
-          <ul className="flex flex-col border-t border-border-soft">
-            {facts.midSprint.map((t) => (
-              <FactRow
-                key={t.sprintTaskId}
-                action={toggle(
-                  { kind: 'sprintTask', id: t.sprintTaskId },
-                  t.title,
-                )}
-              >
-                {t.title} · {OUTCOME_WORDS[t.outcome]}
-              </FactRow>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {(facts.deferrals.length > 0 || facts.pauses.length > 0) && (
-        <section aria-labelledby="retro-days" className="flex flex-col gap-3">
-          <h2 id="retro-days" className="text-heading text-ink">
-            Today での見送り・今日はここまで
-          </h2>
-          <ul className="flex flex-col border-t border-border-soft">
-            {[
-              ...facts.deferrals.map((s) => ({ s, word: '見送り' })),
-              ...facts.pauses.map((s) => ({ s, word: '今日はここまで' })),
-            ]
-              .toSorted((a, b) => (a.s.date < b.s.date ? -1 : 1))
-              .map(({ s, word }) => {
-                const title = data.titleOf(s.sprintTaskId);
-                return (
+      {(facts.midSprint.length > 0 ||
+        facts.deferrals.length > 0 ||
+        facts.pauses.length > 0 ||
+        facts.interrupts.length > 0) && (
+        <Columns>
+          {facts.midSprint.length > 0 && (
+            <section
+              aria-labelledby="retro-mid"
+              className="flex flex-col gap-3"
+            >
+              <h2 id="retro-mid" className="text-heading text-ink">
+                Sprint 中の追加
+              </h2>
+              <ul className="flex flex-col border-t border-border-soft">
+                {facts.midSprint.map((t) => (
                   <FactRow
-                    key={`${s.id}-${word}`}
+                    key={t.sprintTaskId}
                     action={toggle(
-                      { kind: 'dailySelection', id: s.id },
-                      `${formatDate(s.date)} ${word} ${title}`,
+                      { kind: 'sprintTask', id: t.sprintTaskId },
+                      t.title,
                     )}
                   >
-                    <span className="text-ink-muted">{formatDate(s.date)}</span>{' '}
-                    {word} · {title}
-                    {s.resolution === 'done' && (
+                    {t.title} · {OUTCOME_WORDS[t.outcome]}
+                  </FactRow>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {(facts.deferrals.length > 0 || facts.pauses.length > 0) && (
+            <section
+              aria-labelledby="retro-days"
+              className="flex flex-col gap-3"
+            >
+              <h2 id="retro-days" className="text-heading text-ink">
+                Today での見送り・今日はここまで
+              </h2>
+              <ul className="flex flex-col border-t border-border-soft">
+                {[
+                  ...facts.deferrals.map((s) => ({ s, word: '見送り' })),
+                  ...facts.pauses.map((s) => ({ s, word: '今日はここまで' })),
+                ]
+                  .toSorted((a, b) => (a.s.date < b.s.date ? -1 : 1))
+                  .map(({ s, word }) => {
+                    const title = data.titleOf(s.sprintTaskId);
+                    return (
+                      <FactRow
+                        key={`${s.id}-${word}`}
+                        action={toggle(
+                          { kind: 'dailySelection', id: s.id },
+                          `${formatDate(s.date)} ${word} ${title}`,
+                        )}
+                      >
+                        <span className="text-ink-muted">
+                          {formatDate(s.date)}
+                        </span>{' '}
+                        {word} · {title}
+                        {s.resolution === 'done' && (
+                          <span className="text-ink-muted">
+                            （その日のうちに完了）
+                          </span>
+                        )}
+                      </FactRow>
+                    );
+                  })}
+              </ul>
+            </section>
+          )}
+
+          {facts.interrupts.length > 0 && (
+            <section
+              aria-labelledby="retro-interrupts"
+              className="flex flex-col gap-3"
+            >
+              <h2 id="retro-interrupts" className="text-heading text-ink">
+                割り込み
+              </h2>
+              <ul className="flex flex-col border-t border-border-soft">
+                {facts.interrupts.map((n) => (
+                  <FactRow
+                    key={n.id}
+                    action={toggle({ kind: 'interrupt', id: n.id }, n.text)}
+                  >
+                    <span className="text-ink-muted">
+                      {formatTime(n.at, data.timeZone)}
+                    </span>{' '}
+                    {n.text}
+                    {n.minutes !== undefined && (
                       <span className="text-ink-muted">
-                        （その日のうちに完了）
+                        {' '}
+                        · {formatHours(n.minutes / 60)}
                       </span>
                     )}
                   </FactRow>
-                );
-              })}
-          </ul>
-        </section>
+                ))}
+              </ul>
+            </section>
+          )}
+        </Columns>
       )}
+    </div>
+  );
+}
 
-      {facts.interrupts.length > 0 && (
-        <section
-          aria-labelledby="retro-interrupts"
-          className="flex flex-col gap-3"
-        >
-          <h2 id="retro-interrupts" className="text-heading text-ink">
-            割り込み
-          </h2>
-          <ul className="flex flex-col border-t border-border-soft">
-            {facts.interrupts.map((n) => (
-              <FactRow
-                key={n.id}
-                action={toggle({ kind: 'interrupt', id: n.id }, n.text)}
-              >
-                <span className="text-ink-muted">
-                  {formatTime(n.at, data.timeZone)}
-                </span>{' '}
-                {n.text}
-                {n.minutes !== undefined && (
-                  <span className="text-ink-muted">
-                    {' '}
-                    · {formatHours(n.minutes / 60)}
-                  </span>
-                )}
-              </FactRow>
-            ))}
-          </ul>
-        </section>
-      )}
+/**
+ * Sections side by side from 1920px (bp-xl), as many as fit, each as wide as
+ * the reading column; under it they are stacked in that column, as before
+ * (owner decision in #83). `data-wide` keeps the pane's 720px cap off it.
+ */
+function Columns({ children }: { children: ReactNode }) {
+  return (
+    <div
+      data-wide
+      className="flex max-w-pane-today flex-col gap-12 xl:grid xl:max-w-none xl:grid-cols-[repeat(auto-fit,minmax(min(100%,32rem),var(--spacing-pane-today)))] xl:items-start"
+    >
+      {children}
     </div>
   );
 }

@@ -166,7 +166,7 @@ function RetroView({ data }: { data: RetroData }) {
         className={cn(
           'grid grid-cols-1 gap-12',
           stage !== 'facts' &&
-            'wide:grid-cols-[minmax(0,var(--spacing-pane-today))_var(--spacing-pane-side)]',
+            'wide:grid-cols-[minmax(0,var(--spacing-pane-today))_var(--spacing-pane-side)] xl:grid-cols-[minmax(0,calc(var(--spacing-pane-today)*2+var(--spacing-12)))_var(--spacing-pane-side)]',
         )}
       >
         <div className="flex min-w-0 flex-col gap-8">
