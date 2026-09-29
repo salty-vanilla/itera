@@ -318,6 +318,7 @@ describe('Scenario C — steps 6–9 with Sprint records', () => {
       sprints: [],
     });
     expect(week31Facts.occurrences).toEqual({
+      all: [],
       done: [],
       skipped: [],
       missed: [],

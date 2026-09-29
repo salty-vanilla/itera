@@ -58,10 +58,23 @@ export interface AreaFacts {
   readonly unlinked: readonly TaskFact[];
 }
 
+/** One occurrence the Sprint took in, as a fact of the week (#56). */
+export interface OccurrenceFact {
+  readonly occurrence: Occurrence;
+  /** The SprintTask it belongs to (for adding actual time to it, F22). */
+  readonly sprintTaskId: SprintTaskId;
+  /** Sum of the actual time recorded for it (optional records). */
+  readonly actualHours: number;
+  /** The day it was done, which may differ from its scheduled day (F18). */
+  readonly doneOn?: LocalDate;
+}
+
 export interface OccurrenceFacts {
   readonly done: readonly Occurrence[];
   readonly skipped: readonly Occurrence[];
   readonly missed: readonly Occurrence[];
+  /** Done, skipped and missed occurrences with their facts, by date. */
+  readonly all: readonly OccurrenceFact[];
 }
 
 export interface RetroFacts {
@@ -187,6 +200,39 @@ export function retroFacts(sprint: Sprint, input: RetroFactsInput): RetroFacts {
       done: occurrences.filter((o) => o.state === 'done'),
       skipped: occurrences.filter((o) => o.state === 'skipped'),
       missed: occurrences.filter((o) => o.state === 'missed'),
+      all: occurrences
+        .filter(
+          (o) =>
+            o.state === 'done' || o.state === 'skipped' || o.state === 'missed',
+        )
+        .toSorted((a, b) =>
+          a.scheduledDate < b.scheduledDate
+            ? -1
+            : a.scheduledDate > b.scheduledDate
+              ? 1
+              : 0,
+        )
+        .flatMap((occurrence) => {
+          const sprintTask = sprint.tasks.find(
+            (t) =>
+              t.outcome !== 'draft' &&
+              (t.occurrenceIds ?? []).includes(occurrence.id),
+          );
+          if (sprintTask === undefined) return [];
+          const doneOn = sprint.dailySelections.find(
+            (d) => d.occurrenceId === occurrence.id && d.resolution === 'done',
+          )?.date;
+          return [
+            {
+              occurrence,
+              sprintTaskId: sprintTask.id,
+              actualHours: sprint.actualTimes
+                .filter((a) => a.occurrenceId === occurrence.id)
+                .reduce((sum, a) => sum + a.hours, 0),
+              ...(doneOn === undefined ? {} : { doneOn }),
+            },
+          ];
+        }),
     },
     deferrals: sprint.dailySelections.filter(isDeferral),
     pauses: sprint.dailySelections.filter(isPause),

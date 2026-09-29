@@ -3,7 +3,7 @@ import { formatDate, formatTime } from '@/lib/date-format';
 import { formatHours } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
 import type { RetroData } from '@/store/retro-view';
-import { OUTCOME_WORDS, PinToggle } from './retro-words';
+import { OUTCOME_WORDS, occurrenceWord, PinToggle } from './retro-words';
 
 // 振り返りの材料 (DESIGN.md RetroInsight, fact): the facts marked 気になる,
 // gathered at the side. Facts in `body`; the person's own words are
@@ -30,16 +30,11 @@ function pinText(pin: RetroPin, data: RetroData): string | undefined {
       return `${formatDate(s.date)} ${word} · ${data.titleOf(s.sprintTaskId)}`;
     }
     case 'occurrence': {
-      const all = [
-        ...facts.occurrences.done.map((o) => ({ o, w: '完了' })),
-        ...facts.occurrences.skipped.map((o) => ({ o, w: 'スキップ' })),
-        ...facts.occurrences.missed.map((o) => ({ o, w: '未処理' })),
-      ];
-      const found = all.find((x) => x.o.id === pin.id);
-      if (found === undefined) return undefined;
-      const title =
-        facts.tasks.find((t) => t.taskId === found.o.taskId)?.title ?? '';
-      return `${formatDate(found.o.scheduledDate)} ${title} · ${found.w}`;
+      const found = data.occurrences.find((x) => x.occurrence.id === pin.id);
+      return (
+        found &&
+        `${formatDate(found.occurrence.scheduledDate)} ${found.title} · ${occurrenceWord(found.occurrence.state)}`
+      );
     }
     case 'interrupt': {
       const n = facts.interrupts.find((x) => x.id === pin.id);

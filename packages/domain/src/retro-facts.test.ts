@@ -412,3 +412,51 @@ describe('criterionResult', () => {
     expect(result.actualHours).toBe(0);
   });
 });
+
+describe('retroFacts — occurrences as facts (#56)', () => {
+  it('gives each occurrence its SprintTask, actual time and the day it was done', () => {
+    const base = reviewSprint();
+    const sprint: Sprint = {
+      ...base,
+      // Done a day early (F18), with 30 minutes recorded.
+      dailySelections: [
+        ...base.dailySelections,
+        {
+          ...selection('s-occ', 'st-task-clean', '2026-09-28', 'done'),
+          occurrenceId: id('occ-1'),
+        },
+      ],
+      actualTimes: [
+        ...base.actualTimes,
+        {
+          sprintTaskId: id('st-task-clean'),
+          occurrenceId: id('occ-1'),
+          hours: 0.5,
+          date: d('2026-09-28'),
+          via: 'completion',
+          recordedAt: ctx.now,
+        },
+      ],
+    };
+    const facts = retroFacts(sprint, {
+      tasks: tasks(),
+      areas: [research, work],
+      occurrences,
+      sprints: [sprint],
+    });
+    const all = facts.occurrences.all;
+    // Excluded ones stay out (F2).
+    expect(all.map((f) => f.occurrence.id)).toEqual([
+      'occ-1',
+      'occ-2',
+      'occ-3',
+    ]);
+    expect(all[0]).toMatchObject({
+      sprintTaskId: 'st-task-clean',
+      actualHours: 0.5,
+      doneOn: '2026-09-28',
+    });
+    expect(all[1]?.doneOn).toBeUndefined();
+    expect(all[1]?.actualHours).toBe(0);
+  });
+});
