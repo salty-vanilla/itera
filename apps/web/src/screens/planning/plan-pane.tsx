@@ -18,7 +18,9 @@ import type {
 } from '@/store/planning-view';
 import { usePlanningActions } from '@/store/use-planning';
 
-// The Sprint pane of Planning (Thinking space, at most 680px). One
+// The Sprint pane of Planning (Thinking space, at most 680px; from 1920px
+// (bp-xl) it takes the width that is left, and the Area blocks sit in
+// columns). It holds both limits, so the caller sets no width. One
 // workspace that changes with the stage (PRD §5 B), never a forced wizard:
 // - 選ぶ: 「今週、何を進めますか」, the chosen Tasks per Area.
 // - 整える: 「今週、どんな状態にしたいか」, each Area's Goal (optional) with
@@ -65,7 +67,13 @@ function PlanPane({
         );
 
   return (
-    <div data-slot="plan-pane" className={cn('flex flex-col gap-8', className)}>
+    <div
+      data-slot="plan-pane"
+      className={cn(
+        'flex w-full max-w-pane-sprint flex-col gap-8 xl:max-w-none',
+        className,
+      )}
+    >
       <h1 className="text-display-m text-ink">{STAGE_HEADINGS[stage]}</h1>
       {stage === 'pick' && data.chosenCount === 0 && (
         <p className="text-body text-ink-muted">
@@ -75,12 +83,12 @@ function PlanPane({
       )}
       {/*
         From 1920px (bp-xl) the Area blocks sit in 1 to 3 columns, as many as
-        fit (a column is at least 26rem, never narrower than a third of the
-        row, less 1px so that three fit exactly); the pane stops at three
-        columns of pane-sprint. Under it they
-        are one column, as before (DESIGN.md Layout, Issue #81).
+        fit: a column is at least 26rem and at least a third of the row (less
+        1px, so that three fit exactly). The blocks stop at three columns of
+        pane-sprint. Under 1920px they are one column, as before (DESIGN.md
+        Layout, Issue #81). --gap is the space between the columns and rows.
       */}
-      <div className="flex flex-col gap-8 xl:grid xl:max-w-[calc(var(--spacing-pane-sprint)*3+var(--spacing-8)*2)] xl:grid-cols-[repeat(auto-fill,minmax(max(26rem,calc((100%-var(--spacing-8)*2)/3-1px)),1fr))] xl:items-start xl:gap-x-8">
+      <div className="flex flex-col gap-(--gap) [--gap:var(--spacing-8)] xl:grid xl:max-w-[calc(var(--spacing-pane-sprint)*3+var(--gap)*2)] xl:grid-cols-[repeat(auto-fill,minmax(max(26rem,calc((100%-var(--gap)*2)/3-1px)),1fr))] xl:items-start">
         {blocks.map((block) =>
           stage === 'pick' ? (
             <section

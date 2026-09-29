@@ -206,7 +206,7 @@ function FactsPane({
         <section
           aria-labelledby="retro-occurrences"
           data-wide
-          className="flex max-w-pane-rows flex-col gap-3"
+          className="flex flex-col gap-3 xl:max-w-pane-rows"
         >
           <h2 id="retro-occurrences" className="text-heading text-ink">
             繰り返しの回
