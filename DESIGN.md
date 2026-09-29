@@ -443,7 +443,7 @@ Area（領域）はユーザーが作る。駅の路線記号のように、色�
 
 - ペイン padding `spacing.6`〜`spacing.8`、ブロック間 `spacing.8`、ブロック内 `spacing.2`〜`spacing.5`。
 - 見出しの上に `border`（またはセクション罫 `ink` 1px）を引き、罫と余白で区切る。
-- 確定した言葉（Goal、改善策、振り返り）は `measure-read` を超えて横に伸ばさない。Planning の Sprint ペインは最大 680px、Retro の読み物と desktop の Today は最大 720px。
+- 確定した言葉（Goal、改善策、振り返り）は `measure-read` を超えて横に伸ばさない。Planning の Sprint ペインは最大 680px、Retro の読み物と desktop の Today は最大 720px。ただし Retro の「事実を見る」の Task の表と繰り返しの回は一覧なので、振り返りの材料のペインを出さず、その分まで広げる（`pane-today`＋`pane-side`＋間隔）。どの表も同じ列幅にして、Goal をまたいで列を揃える。
 
 ### 寸法
 

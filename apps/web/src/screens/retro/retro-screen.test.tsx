@@ -136,10 +136,22 @@ describe('Retro — 事実を見る', () => {
     expect(reviewed().retro?.pins).toEqual([
       { kind: 'interrupt', id: expect.any(String) },
     ]);
+    // 事実を見る has no materials beside it (#73); 振り返る gathers them.
+    expect(screen.queryByRole('region', { name: '振り返りの材料' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: '振り返るへ' }));
     const materials = screen.getAllByRole('region', {
       name: '振り返りの材料',
     })[0]!;
     expect(materials.textContent).toContain('障害の問い合わせに対応');
+  });
+
+  it('lines up the columns of every table of Tasks (#73)', async () => {
+    await renderAt('/retro?fixture=retro-start');
+    const columns = [...document.querySelectorAll('table')].map((table) =>
+      [...table.querySelectorAll('col')].map((col) => col.className).join('|'),
+    );
+    expect(columns.length).toBeGreaterThan(1);
+    expect(new Set(columns).size).toBe(1);
   });
 
   it('adds actual time during Review (F22)', async () => {
