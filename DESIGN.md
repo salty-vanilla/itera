@@ -451,6 +451,7 @@ Area（領域）はユーザーが作る。駅の路線記号のように、色�
   - 表（Retro の事実を見る）：幅いっぱい。
   - 1 行 1 Task の一覧（Backlog、Retro の繰り返しの回）：行は最大 `pane-rows` 1280px。
   - 文章（Goal、改善策、振り返り）：`measure-read` のまま。
+  - Retro：3 段階とも本文を左に揃え（切り替えても左端が動かない）、縦に積まれていた欄を横に並べる（事実を見るの上部と下部の一覧、振り返るの気づきと改善策、引き継ぐの改善策と計画基準）。1 つの欄の幅は `pane-today` まで。
 
 ### 寸法
 
@@ -480,7 +481,7 @@ Desktop の Planning を中心に設計し、スマートフォンでは Today�
 | --- | --- | --- |
 | 1440px 以上（`bp-nav`） | wide | ナビ 224px ＋ Planning 3 ペイン（Backlog 384 / Sprint / 時間の見通し 336） |
 | 1200–1439px（`bp-wide`） | wide（rail） | ナビをアイコンだけの 64px にし、3 ペインを保つ |
-| 1920px 以上（`bp-xl`） | xl | wide のペインの数と役割は変えず、中央のペインを広げる。Planning は Area のブロックを 1〜3 列に並べ、Retro の事実を見るの表は幅いっぱい、Backlog の行は最大 `pane-rows`。Today・実行中の Sprint は変えない |
+| 1920px 以上（`bp-xl`） | xl | wide のペインの数と役割は変えず、中央のペインを広げる。Planning は Area のブロックを 1〜3 列に並べ、Retro は 3 段階とも左に揃えて欄を横に並べ、事実を見るの表は幅いっぱい、Backlog の行は最大 `pane-rows`。Today・実行中の Sprint は変えない |
 | 768–1199px（`bp-medium`） | medium | ナビを 64px の rail にし、2 ペイン（Backlog / Sprint）。Capacity は Sprint の上に要約 1 行を sticky で出し、クリックで右 Drawer。Agent 提案も Drawer の中 |
 | 768px 未満 | compact | 1 カラム。下部タブバー（今日 / Sprint / Backlog / 振り返り） |
 
