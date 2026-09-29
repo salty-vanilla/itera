@@ -43,6 +43,8 @@ type ActualTimeProps = {
   anchor: HTMLElement | null;
   /** Returns whether it went through; the surface then closes. */
   onSubmit: (hours: number | undefined) => boolean;
+  /** Replaces the mode's description, e.g. which day it goes to in Retro. */
+  description?: string | undefined;
 };
 
 const words: Record<
@@ -69,11 +71,13 @@ function ActualTime({
   onOpenChange,
   anchor,
   onSubmit,
+  description: descriptionOverride,
 }: ActualTimeProps) {
   const sheet = !useMediaQuery(MEDIUM_UP, true);
   const [text, setText] = useState('');
   const [error, setError] = useState<string | undefined>(undefined);
-  const { title, description, submit } = words[mode];
+  const { title, submit } = words[mode];
+  const description = descriptionOverride ?? words[mode].description;
   const optional = mode === 'pause';
   const formRef = useRef<HTMLFormElement>(null);
   // After a failed save, focus goes to the field in error (accessibility.md).

@@ -53,6 +53,22 @@ export const OUTCOME_WORDS: Readonly<Record<SprintTaskOutcome, string>> = {
   removed: '外した',
 };
 
+/** The states an occurrence shows in Retro (done / skipped / missed). */
+export const OCCURRENCE_WORDS: Readonly<
+  Record<'done' | 'skipped' | 'missed', string>
+> = {
+  done: '完了',
+  skipped: 'スキップ',
+  missed: '未処理',
+};
+
+/** An occurrence's state in words; Retro lists only these three. */
+export function occurrenceWord(state: string): string {
+  return state in OCCURRENCE_WORDS
+    ? OCCURRENCE_WORDS[state as keyof typeof OCCURRENCE_WORDS]
+    : '';
+}
+
 export const samePin = (a: RetroPin, b: RetroPin) =>
   a.kind === b.kind && a.id === b.id;
 

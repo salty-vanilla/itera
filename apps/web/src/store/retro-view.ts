@@ -46,8 +46,6 @@ export interface ActualTarget {
   readonly sprintTaskId: SprintTaskId;
   readonly occurrenceId?: OccurrenceId;
   readonly date: LocalDate;
-  /** What it is, for the surface's title. */
-  readonly title: string;
 }
 
 /** An occurrence the Sprint took in, with its actual time (#56). */
@@ -199,47 +197,18 @@ export function retroData(
         : []),
     ],
     actualDate: clock.today < sprint.end ? clock.today : sprint.end,
-    occurrences: [
-      ...facts.occurrences.done,
-      ...facts.occurrences.skipped,
-      ...facts.occurrences.missed,
-    ]
-      .toSorted((a, b) =>
-        a.scheduledDate < b.scheduledDate
-          ? -1
-          : a.scheduledDate > b.scheduledDate
-            ? 1
-            : 0,
-      )
-      .flatMap((occurrence) => {
-        const sprintTask = sprint.tasks.find(
-          (t) =>
-            t.outcome !== 'draft' &&
-            (t.occurrenceIds ?? []).includes(occurrence.id),
-        );
-        if (sprintTask === undefined) return [];
-        const title =
-          tasks.find((t) => t.id === occurrence.taskId)?.title ?? '';
-        // The day it was done (it may be chosen on another day, F18).
-        const doneOn = sprint.dailySelections.find(
-          (d) => d.occurrenceId === occurrence.id && d.resolution === 'done',
-        )?.date;
-        return [
-          {
-            occurrence,
-            title,
-            actualHours: sprint.actualTimes
-              .filter((a) => a.occurrenceId === occurrence.id)
-              .reduce((sum, a) => sum + a.hours, 0),
-            target: {
-              sprintTaskId: sprintTask.id,
-              occurrenceId: occurrence.id,
-              date: doneOn ?? occurrence.scheduledDate,
-              title,
-            },
-          },
-        ];
-      }),
+    // Per occurrence: the facts come from retroFacts (#56).
+    occurrences: facts.occurrences.all.map((f) => ({
+      occurrence: f.occurrence,
+      title: tasks.find((t) => t.id === f.occurrence.taskId)?.title ?? '',
+      actualHours: f.actualHours,
+      target: {
+        sprintTaskId: f.sprintTaskId,
+        occurrenceId: f.occurrence.id,
+        // The day it was done, else its own day.
+        date: f.doneOn ?? f.occurrence.scheduledDate,
+      },
+    })),
   };
 }
 

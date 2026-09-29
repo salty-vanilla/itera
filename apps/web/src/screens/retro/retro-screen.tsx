@@ -63,7 +63,7 @@ function RetroScreen() {
   return <NoRetro />;
 }
 
-type Editing = { target: ActualTarget; anchor: HTMLElement };
+type Editing = { target: ActualTarget; title: string; anchor: HTMLElement };
 
 function RetroView({ data }: { data: RetroData }) {
   const search = useSearch({ from: '/retro' });
@@ -163,7 +163,9 @@ function RetroView({ data }: { data: RetroData }) {
               data={data}
               onPin={actions.togglePin}
               onAssess={actions.assessGoal}
-              onAddActual={(target, anchor) => setEditing({ target, anchor })}
+              onAddActual={(target, title, anchor) =>
+                setEditing({ target, title, anchor })
+              }
             />
           )}
           {stage === 'reflect' && (
@@ -206,7 +208,9 @@ function RetroView({ data }: { data: RetroData }) {
         <ActualTime
           key={`${editing.target.sprintTaskId}-${editing.target.occurrenceId ?? ''}`}
           mode="record"
-          taskTitle={editing.target.title}
+          taskTitle={editing.title}
+          // The day it goes to, which is not always today in Retro (F22).
+          description={`${formatDate(editing.target.date)} の実績として足します。`}
           open
           onOpenChange={(open) => {
             if (!open) setEditing(undefined);

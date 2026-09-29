@@ -499,11 +499,21 @@ describe('Retro — actual time per occurrence (#56)', () => {
     await userEvent.click(
       within(row).getByRole('button', { name: /実績を足す/ }),
     );
+    // It says which day it goes to (not today in Retro).
+    expect(
+      await screen.findByText('9/28 (月) の実績として足します。'),
+    ).toBeTruthy();
     await userEvent.type(
       await screen.findByRole('textbox', { name: /実績時間/ }),
       '0.25',
     );
     await userEvent.click(screen.getByRole('button', { name: '残す' }));
+    // The Task's row and the week's total follow (Issue #56).
+    expect(
+      screen.getByRole('rowheader', { name: '英語の多読 30 分' }).parentElement
+        ?.textContent,
+    ).toContain('1.25h');
+    expect(document.body.textContent).toContain('実績 18h');
     const occurrence = lastSnapshot().records.occurrences.find(
       (o) => o.taskId === 'task-reading' && o.scheduledDate === '2026-09-28',
     );

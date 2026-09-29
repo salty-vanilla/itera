@@ -1,10 +1,4 @@
-import type {
-  AreaId,
-  Occurrence,
-  RetroPin,
-  SelfAssessment,
-  TaskFact,
-} from '@itera/domain';
+import type { AreaId, RetroPin, SelfAssessment, TaskFact } from '@itera/domain';
 import { Info, Timer } from 'lucide-react';
 import { useId, type ReactNode } from 'react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
@@ -26,6 +20,7 @@ import {
   ASSESSMENTS,
   AssessmentTag,
   OUTCOME_WORDS,
+  occurrenceWord,
   PinToggle,
   samePin,
 } from './retro-words';
@@ -40,7 +35,12 @@ type FactsPaneProps = {
   onPin: (pin: RetroPin) => void;
   onAssess: (areaId: AreaId, assessment: SelfAssessment | null) => void;
   /** 実績を足す: opens the actual time surface by the pressed button. */
-  onAddActual: (target: ActualTarget, anchor: HTMLElement) => void;
+  /** 実績を足す: `title` names it on the surface. */
+  onAddActual: (
+    target: ActualTarget,
+    title: string,
+    anchor: HTMLElement,
+  ) => void;
   className?: string | undefined;
 };
 
@@ -220,10 +220,8 @@ function FactsPane({
                           subject={subject}
                           onClick={(anchor) =>
                             onAddActual(
-                              {
-                                ...target,
-                                title: `${title}（${formatDate(o.scheduledDate)} の回）`,
-                              },
+                              target,
+                              `${title}（${formatDate(o.scheduledDate)} の回）`,
                               anchor,
                             )
                           }
@@ -234,7 +232,7 @@ function FactsPane({
                     <span className="text-ink-muted">
                       {formatDate(o.scheduledDate)}
                     </span>{' '}
-                    {title} · {OCCURRENCE_WORDS[o.state]}
+                    {title} · {occurrenceWord(o.state)}
                     {actualHours > 0 && (
                       <span className="text-ink-muted">
                         {' '}
@@ -646,11 +644,8 @@ function TaskActions({
           subject={fact.title}
           onClick={(anchor) =>
             onAddActual(
-              {
-                sprintTaskId: fact.sprintTaskId,
-                date: actualDate,
-                title: fact.title,
-              },
+              { sprintTaskId: fact.sprintTaskId, date: actualDate },
+              fact.title,
               anchor,
             )
           }
@@ -680,14 +675,6 @@ function AddActualButton({
     </Button>
   );
 }
-
-const OCCURRENCE_WORDS: Readonly<Record<Occurrence['state'], string>> = {
-  pending: '未処理',
-  excluded: '外した',
-  done: '完了',
-  skipped: 'スキップ',
-  missed: '未処理',
-};
 
 /** The planning value fixed in the plan. */
 function plannedText(t: TaskFact): string {
