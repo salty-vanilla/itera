@@ -103,7 +103,7 @@ function PlanningScreen({ data }: PlanningScreenProps) {
   };
   const openItem =
     search.task === undefined ? undefined : backlog.item(search.task);
-  const estimateFocus = useEstimateFocus();
+  const estimateFocus = useEstimateFocus(search.task);
   const openEstimate = (taskId: TaskId) => {
     estimateFocus.request(taskId);
     openTask(taskId);
@@ -164,7 +164,8 @@ function PlanningScreen({ data }: PlanningScreenProps) {
         !event.altKey &&
         !isTyping(target)
       ) {
-        // Hidden under 768px outside 選ぶ, where nothing takes the focus.
+        // Under 768px outside 選ぶ the pane is hidden (display: none), so the
+        // field does not take the focus and nothing happens.
         const field = root.querySelector<HTMLInputElement>(
           '[data-slot="planning-backlog"] [data-slot="task-quick-add"] input',
         );

@@ -492,11 +492,36 @@ describe('Planning — keys (#48)', () => {
   });
 
   it('⌘/Ctrl+Enter opens the confirm Dialog, also from a field', async () => {
-    await renderAt('/sprint?fixture=planning-check&stage=check');
-    await userEvent.keyboard('{Meta>}{Enter}{/Meta}');
+    await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    const field = within(backlogPane()).getByRole('textbox', {
+      name: 'タスクを追加して今週に入れる',
+    });
+    const tasks = lastSnapshot().records.tasks.length;
+    await userEvent.type(field, '発表資料を見直す');
+    await userEvent.keyboard('{Control>}{Enter}{/Control}');
     expect(
       await screen.findByRole('dialog', { name: /Sprint 2 を確定しますか/ }),
     ).toBeTruthy();
+    // The field's Enter did not add the Task.
+    expect(lastSnapshot().records.tasks).toHaveLength(tasks);
     expect(draft().state).toBe('planning');
+  });
+
+  it('⌘/Ctrl+Enter while 確定 is not possible moves to the button and its reason', async () => {
+    await renderAt(
+      '/sprint?fixture=planning-check&stage=check&task=task-onboarding',
+    );
+    const detail = await screen.findByRole('dialog');
+    await userEvent.click(
+      within(detail).getByRole('button', { name: '完了にする' }),
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await userEvent.keyboard('{Meta>}{Enter}{/Meta}');
+    const confirm = screen.getByRole('button', { name: 'Sprint 2 を確定' });
+    expect(document.activeElement).toBe(confirm);
+    expect(confirm.getAttribute('aria-describedby')).not.toBeNull();
+    expect(
+      screen.queryByRole('dialog', { name: /Sprint 2 を確定しますか/ }),
+    ).toBeNull();
   });
 });

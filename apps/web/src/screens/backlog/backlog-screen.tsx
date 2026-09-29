@@ -75,7 +75,7 @@ function BacklogScreen() {
   // next operation clears it, so a row shown again later does not take it.
   const [refocus, setRefocus] = useState<TaskId>();
   const undoRef = useRef<HTMLButtonElement>(null);
-  const estimateFocus = useEstimateFocus();
+  const estimateFocus = useEstimateFocus(search.task);
   /** Another operation: the completed line and the pending focus go. */
   const endUndo = () => {
     setCompleted(undefined);

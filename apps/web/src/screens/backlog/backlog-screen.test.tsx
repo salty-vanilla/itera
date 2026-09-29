@@ -575,6 +575,13 @@ describe('Backlog — keys of the list (#48)', () => {
       name: /^Estimate（時間）(?!:)/,
     });
     await waitFor(() => expect(document.activeElement).toBe(estimate));
+    // Only that time: opened again with Enter, it starts at the first field.
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    rowTitle('本棚を整理する').focus();
+    await userEvent.keyboard('{Enter}');
+    const title = await screen.findByRole('textbox', { name: /^タイトル/ });
+    await waitFor(() => expect(document.activeElement).toBe(title));
   });
 
   it('Delete archives with an undo, and the focus goes to the next row', async () => {

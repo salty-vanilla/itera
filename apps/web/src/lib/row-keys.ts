@@ -10,10 +10,9 @@ import type { KeyboardEvent } from 'react';
 // Single-letter keys stay off while typing. Keys from a Menu or surface
 // opened from the row are theirs: React lets them bubble through portals.
 
-/** The row's title: the element that stands for the whole row. */
-export const ROW_FOCUS = 'data-row-focus';
-/** Wraps the row's control, which Space presses. */
-export const ROW_CONTROL = 'data-row-control';
+// The row marks its title, the element that stands for the whole row, with
+// `data-row-focus`, and wraps its control, which Space presses, in
+// `data-row-control`.
 
 const PRESSABLE = ':is(button, [role="checkbox"]):not(:disabled)';
 
@@ -52,8 +51,8 @@ function ownKey(event: KeyboardEvent<HTMLElement>): boolean {
 /** Space on the row's title, in a row that has a control. */
 function spaceOnRow(event: KeyboardEvent<HTMLElement>): HTMLElement | null {
   if (event.key !== ' ' || !(event.target instanceof HTMLElement)) return null;
-  if (!event.target.hasAttribute(ROW_FOCUS)) return null;
-  return event.currentTarget.querySelector<HTMLElement>(`[${ROW_CONTROL}]`);
+  if (!event.target.hasAttribute('data-row-focus')) return null;
+  return event.currentTarget.querySelector<HTMLElement>('[data-row-control]');
 }
 
 /** The handlers to spread on the row's element. */

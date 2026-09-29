@@ -9,7 +9,7 @@ import { Estimate } from '@/components/task/estimate';
 import { MetaItem, TaskMetadata } from '@/components/task/task-metadata';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
 import { formatDate } from '@/lib/date-format';
-import { ROW_CONTROL, ROW_FOCUS, rowKeyHandlers } from '@/lib/row-keys';
+import { rowKeyHandlers } from '@/lib/row-keys';
 import { cn } from '@/lib/utils';
 import type { CandidateRow, PlanningData } from '@/store/planning-view';
 import { usePlanningActions } from '@/store/use-planning';
@@ -111,7 +111,7 @@ function BacklogPane({
               >
                 <button
                   type="button"
-                  {...{ [ROW_FOCUS]: true }}
+                  data-row-focus
                   className="self-start text-left text-task text-ink focus-visible:focus-ring"
                   onClick={() => onOpenTask(task.id)}
                 >
@@ -251,7 +251,7 @@ function CandidateItem({
       {...rowKeyHandlers({ onEstimate })}
     >
       <span
-        {...{ [ROW_CONTROL]: true }}
+        data-row-control
         className="grid size-target-touch shrink-0 place-items-center medium:size-target-min"
       >
         <CheckboxControl
@@ -264,7 +264,7 @@ function CandidateItem({
         <button
           type="button"
           onClick={onOpen}
-          {...{ [ROW_FOCUS]: true }}
+          data-row-focus
           className="min-w-0 truncate text-left text-task text-ink focus-visible:focus-ring"
         >
           {task.title}

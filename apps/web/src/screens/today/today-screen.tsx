@@ -161,7 +161,7 @@ function TodayView({ data }: { data: TodayData }) {
     });
   const openItem =
     search.task === undefined ? undefined : backlog.item(search.task);
-  const estimateFocus = useEstimateFocus();
+  const estimateFocus = useEstimateFocus(search.task);
   const openEstimate = (taskId: TaskId) => {
     estimateFocus.request(taskId);
     openTask(taskId);
