@@ -93,21 +93,20 @@ function BeforeStart({ data }: { data: TodayData }) {
 
 /** Today without an active Sprint: the date, and where the week is. */
 function NoActiveSprint() {
-  const { today, openSprint: latest, reviewSprint } = useAppOverview();
-  // A week in Retro comes first, even when the next is being planned.
-  const openSprint = reviewSprint ?? latest;
+  const { today, reviewSprint, planningSprint } = useAppOverview();
   const link = 'ms-1 text-link underline focus-visible:focus-ring';
   return (
     <ScreenFrame heading={formatDateHeading(today)}>
       <p className="text-body text-ink-muted">
-        {openSprint?.state === 'review' ? (
+        {/* A week in Retro comes first, even when the next is being planned. */}
+        {reviewSprint !== undefined ? (
           <>
             今週の Sprint は振り返り中です。
             <Link to="/retro" className={link}>
               振り返りを開く
             </Link>
           </>
-        ) : openSprint?.state === 'planning' ? (
+        ) : planningSprint !== undefined ? (
           <>
             今週の計画を確定すると、ここで今日やることを選べます。
             <Link to="/sprint" className={link}>
