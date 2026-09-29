@@ -6,6 +6,7 @@ import { Tag } from '@/components/ui/tag';
 import { useToast } from '@/components/ui/toast';
 import { SprintHeader } from '@/components/sprint/sprint-header';
 import { formatDate, formatDateRange } from '@/lib/date-format';
+import { cn } from '@/lib/utils';
 import type { ActualTarget, RetroBlocker, RetroData } from '@/store/retro-view';
 import { useAppOverview } from '@/store/use-app-overview';
 import { useAfterRetro, useRetro, useRetroActions } from '@/store/use-retro';
@@ -22,7 +23,9 @@ import { ReflectPane } from './reflect-pane';
 // change to try next Sprint. One workspace that changes from 事実を見る to
 // 振り返る to 引き継ぐ; the stage is a search parameter (ADR 0005) and any
 // stage can be opened at any time. Thinking space: the reading column is at
-// most 720px, and from 1200px 振り返りの材料 sits at its right.
+// most 720px, and from 1200px 振り返りの材料 sits at its right. 事実を見る
+// has no materials beside it: its tables of Tasks take the whole width,
+// while its text keeps to 720px (owner decision in #73).
 
 export type RetroStage = 'facts' | 'reflect' | 'handoff';
 
@@ -155,7 +158,13 @@ function RetroView({ data }: { data: RetroData }) {
         </p>
       </SprintHeader>
 
-      <div className="grid grid-cols-1 gap-12 wide:grid-cols-[minmax(0,var(--spacing-pane-today))_var(--spacing-pane-side)]">
+      <div
+        className={cn(
+          'grid grid-cols-1 gap-12',
+          stage !== 'facts' &&
+            'wide:grid-cols-[minmax(0,var(--spacing-pane-today))_var(--spacing-pane-side)]',
+        )}
+      >
         <div className="flex min-w-0 flex-col gap-8">
           <h1 className="text-display-m text-ink">{HEADINGS[stage]}</h1>
           {stage === 'facts' && (
@@ -197,11 +206,13 @@ function RetroView({ data }: { data: RetroData }) {
             )}
           </nav>
         </div>
-        <aside className="hidden wide:block">
-          <div className="sticky top-8">
-            <Materials data={data} onPin={actions.togglePin} />
-          </div>
-        </aside>
+        {stage !== 'facts' && (
+          <aside className="hidden wide:block">
+            <div className="sticky top-8">
+              <Materials data={data} onPin={actions.togglePin} />
+            </div>
+          </aside>
+        )}
       </div>
 
       {editing !== undefined && (

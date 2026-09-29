@@ -1,6 +1,6 @@
 import type { AreaId, RetroPin, SelfAssessment, TaskFact } from '@itera/domain';
 import { Info, Timer } from 'lucide-react';
-import { useId, type ReactNode } from 'react';
+import { Fragment, useId, type ReactNode } from 'react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { Button } from '@/components/ui/button';
 import { Radio, RadioGroup } from '@/components/ui/radio-group';
@@ -75,7 +75,12 @@ function FactsPane({
   return (
     <div
       data-slot="facts-pane"
-      className={cn('flex flex-col gap-12', className)}
+      // The tables of Tasks and occurrences take the whole width; the rest
+      // is text and keeps to the reading column (owner decision in #73).
+      className={cn(
+        'flex flex-col gap-12 [&>*:not([data-wide])]:max-w-pane-today',
+        className,
+      )}
     >
       <section aria-label="Sprint の結果" className="flex flex-col gap-3">
         <SprintSummary
@@ -200,6 +205,7 @@ function FactsPane({
       {facts.tasks.some((t) => t.recurring) && (
         <section
           aria-labelledby="retro-occurrences"
+          data-wide
           className="flex flex-col gap-3"
         >
           <h2 id="retro-occurrences" className="text-heading text-ink">
@@ -389,6 +395,7 @@ function AreaFacts({
   return (
     <section
       aria-labelledby={headingId}
+      data-wide
       className="flex flex-col gap-4 border-t border-border pt-4"
     >
       <div className="flex flex-wrap items-center gap-2">
@@ -405,7 +412,7 @@ function AreaFacts({
         )}
       </div>
       {goal !== undefined && areaId !== null && (
-        <div className="flex flex-col gap-3">
+        <div className="flex max-w-pane-today flex-col gap-3">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <p className="max-w-measure-read text-goal text-ink">{goal.text}</p>
             {toggle({ kind: 'goal', id: areaId }, `${shown.name}の Goal`)}
@@ -471,7 +478,12 @@ function TaskFacts({
   return compact ? <TaskList {...props} /> : <TaskTable {...props} />;
 }
 
-/** Estimate / 計画値 / 実績 / 結果, numbers right-aligned (DESIGN.md Typography). */
+/**
+ * Estimate / 計画値 / 実績 / 結果, numbers right-aligned (DESIGN.md
+ * Typography). Every table has the same columns, so they line up from one
+ * Goal to the next (#73); the title takes what is left. From 1200px the
+ * actions sit side by side.
+ */
 function TaskTable({
   caption,
   tasks,
@@ -483,7 +495,15 @@ function TaskTable({
   const num = cn(cell, 'text-right whitespace-nowrap');
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[40rem] border-collapse text-body">
+      <table className="w-full min-w-[53rem] table-fixed border-collapse text-body">
+        <colgroup>
+          <col />
+          <col className="w-[7rem]" />
+          <col className="w-[9rem]" />
+          <col className="w-[5rem]" />
+          <col className="w-[13rem] wide:w-[18rem]" />
+          <col className="w-[9rem] wide:w-[13rem]" />
+        </colgroup>
         <caption className="pb-2 text-left text-subheading text-ink">
           {caption}
         </caption>
@@ -512,10 +532,7 @@ function TaskTable({
         <tbody>
           {tasks.map((t) => (
             <tr key={t.sprintTaskId}>
-              <th
-                scope="row"
-                className={cn(cell, 'min-w-[9rem] text-left font-normal')}
-              >
+              <th scope="row" className={cn(cell, 'text-left font-normal')}>
                 <span className="text-ink">{t.title}</span>
                 {t.carryCount > 0 && (
                   <span className="block text-meta text-ink-muted">
@@ -536,13 +553,19 @@ function TaskTable({
                 {t.actualHours > 0 ? formatHours(t.actualHours) : '未入力'}
               </td>
               <td className={cell}>
-                <span className={t.recurring ? undefined : 'whitespace-nowrap'}>
-                  {resultText(t, data)}
-                </span>
+                {/* Breaks only between its parts (「回：完了 2 · スキップ 1」). */}
+                {resultText(t, data)
+                  .split(' · ')
+                  .map((part, i) => (
+                    <Fragment key={part}>
+                      {i > 0 && ' · '}
+                      <span className="whitespace-nowrap">{part}</span>
+                    </Fragment>
+                  ))}
                 <DaysNote fact={t} />
               </td>
               <td className={cn(cell, 'whitespace-nowrap')}>
-                <div className="flex flex-col items-end gap-1">
+                <div className="flex flex-col items-end gap-1 wide:flex-row wide:justify-end">
                   <TaskActions
                     fact={t}
                     actualDate={data.actualDate}
