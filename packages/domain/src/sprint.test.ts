@@ -5,6 +5,7 @@ import {
   nextUnconfirmedSprintStart,
   projectFrom,
   sprintAreaName,
+  sprintNumber,
   weekStartOf,
 } from './sprint';
 import {
@@ -86,5 +87,15 @@ describe('projectFrom', () => {
       projectFrom([sprintFixture('2026-09-07', 'closed')], d('2026-10-01')),
     ).toBe('2026-10-01');
     expect(projectFrom([], d('2026-10-01'))).toBe('2026-10-01');
+  });
+});
+
+describe('sprintNumber (F25)', () => {
+  it('numbers Sprints by start, from 1, whatever their order in the list', () => {
+    const a = sprintFixture('2026-09-14', 'closed');
+    const b = sprintFixture('2026-09-21', 'closed');
+    const c = sprintFixture('2026-09-28', 'planning');
+    const all = [c, a, b];
+    expect([a, b, c].map((s) => sprintNumber(s, all))).toEqual([1, 2, 3]);
   });
 });

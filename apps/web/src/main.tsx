@@ -1,14 +1,16 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { RouterProvider } from '@tanstack/react-router';
+import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import './styles/globals.css';
 
-// Screens are built after packages/domain (AGENTS.md, ADR 0003). Until then
-// the app renders nothing; the design system is reviewed in Storybook.
+const router = createAppRouter();
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <TooltipProvider>
-      <main />
+      <RouterProvider router={router} />
     </TooltipProvider>
   </StrictMode>,
 );

@@ -136,8 +136,8 @@ export interface StartDayInput {
 }
 
 /**
- * The system's start of a day (call when Today is opened or the date
- * changes; repeating it changes nothing). Selections of earlier days still
+ * The system's start of a day (call when the app opens, the date changes
+ * or the running Sprint changes; repeating it changes nothing). Selections of earlier days still
  * open become unresolved (invariant 24), and today's pending occurrences of
  * planned recurring SprintTasks appear in Today (当日の繰り返し). Nothing
  * else is chosen automatically, not even yesterday's paused Task
@@ -388,16 +388,10 @@ export function undoCompleteSelection(
   } else {
     const task = matchingTask(input.task, sprintTask);
     if (!task.ok) return task;
-    const reopened = undoTaskCompletion(task.value, ctx);
+    const reopened = reopenWithSprintTask(sprint, sprintTask, task.value, ctx);
     if (!reopened.ok) return reopened;
-    activities.push(
-      ...reopened.value.activities,
-      sprintTaskActivity('sprintTaskDoneUndone', sprint, sprintTask, ctx),
-    );
-    change = {
-      sprint: withOutcome(sprint, sprintTask.id, 'planned'),
-      task: reopened.value.record,
-    };
+    activities.push(...reopened.value.activities);
+    change = reopened.value.record;
   }
   // Back to where it was: selected, or — for a selection closed earlier
   // that day and completed later (F17) — the way it had been closed.
@@ -522,6 +516,8 @@ export interface CompleteFromBacklogInput {
  * a selection, that one is completed instead of adding a second
  * (invariant 21) — also when it was closed earlier that day (F17). Such a
  * selection keeps its origin; the Activity tells it came from the Backlog.
+ * Before the Sprint's first day there is no day to choose on: the Task and
+ * its SprintTask are done without a selection (F34).
  */
 export function completeFromBacklog(
   sprint: Sprint,
@@ -548,6 +544,12 @@ export function completeFromBacklog(
       { sprint, task: completed.value.record },
       completed.value.activities,
     );
+  }
+  if (input.date < sprint.start) {
+    // Before the first day (confirmed on Sunday evening, say): the Task and
+    // this week's SprintTask are done, but there is no day to record a
+    // choice on (F34).
+    return completeWithSprintTask(sprint, sprintTask, task, ctx);
   }
   const existing = findSelection(sprint, input.date, sprintTask.id, undefined);
   if (existing !== undefined && canComplete(existing, input.date)) {
@@ -597,6 +599,89 @@ export function completeFromBacklog(
     [
       ...effect.value.activities,
       selectionActivity('todayDone', sprint, selection.value, ctx),
+    ],
+  );
+}
+
+export interface UndoCompleteFromBacklogInput {
+  /** The Task completed from the Backlog. */
+  readonly task: Task;
+  /** The day it was completed on, in the user's time zone. */
+  readonly date: LocalDate;
+}
+
+/**
+ * Backlog の「完了にする」を元に戻す (F29). Everything returns to how it
+ * was before the completion:
+ * - a Task outside the Sprint (or with no active Sprint) just reopens;
+ * - if the completion made that day's selection (origin
+ *   backlogCompletion), the Task reopens, the SprintTask is planned again
+ *   and that selection is removed, as it did not exist before;
+ * - if it completed a selection that was already there, that selection
+ *   goes back as 完了を取り消す does (selected, or how it was closed: F17).
+ * The Activity keeps both the completion and its undo.
+ */
+export function undoCompleteFromBacklog(
+  sprint: Sprint | undefined,
+  input: UndoCompleteFromBacklogInput,
+  ctx: CommandContext,
+): CommandResult<{ readonly sprint?: Sprint; readonly task: Task }> {
+  const { task } = input;
+  const sprintTask =
+    sprint?.state === 'active'
+      ? sprint.tasks.find((t) => t.taskId === task.id && t.outcome === 'done')
+      : undefined;
+  if (sprint === undefined || sprintTask === undefined) {
+    const reopened = undoTaskCompletion(task, ctx);
+    if (!reopened.ok) return reopened;
+    return applied(
+      {
+        ...(sprint === undefined ? {} : { sprint }),
+        task: reopened.value.record,
+      },
+      reopened.value.activities,
+    );
+  }
+  if (input.date < sprint.start) {
+    // Completed before the first day (F34): no choice was made; the Task
+    // and the SprintTask go back.
+    return reopenWithSprintTask(sprint, sprintTask, task, ctx);
+  }
+  const selection = findSelection(sprint, input.date, sprintTask.id, undefined);
+  if (selection === undefined || selection.resolution !== 'done') {
+    return err(
+      'invalidTransition',
+      'No completion from the Backlog on that day to undo.',
+    );
+  }
+  if (selection.origin !== 'backlogCompletion') {
+    const undone = undoCompleteSelection(
+      sprint,
+      { selectionId: selection.id, task },
+      ctx,
+    );
+    if (!undone.ok) return undone;
+    const { sprint: next, task: reopened } = undone.value.record;
+    if (reopened === undefined) return err('invalidInput', 'Task missing.');
+    return applied({ sprint: next, task: reopened }, undone.value.activities);
+  }
+  // The choice the completion made goes with it.
+  const reopened = reopenWithSprintTask(sprint, sprintTask, task, ctx);
+  if (!reopened.ok) return reopened;
+  const { sprint: planned, task: back } = reopened.value.record;
+  return applied(
+    {
+      sprint: {
+        ...planned,
+        dailySelections: planned.dailySelections.filter(
+          (s) => s.id !== selection.id,
+        ),
+      },
+      task: back,
+    },
+    [
+      ...reopened.value.activities,
+      selectionActivity('todayBacklogCompletionUndone', sprint, selection, ctx),
     ],
   );
 }
@@ -797,7 +882,17 @@ function completionEffect(
   }
   const task = matchingTask(input.task, sprintTask);
   if (!task.ok) return task;
-  const completed = completeTask(task.value, ctx);
+  return completeWithSprintTask(sprint, sprintTask, task.value, ctx);
+}
+
+/** A non-recurring Task and its SprintTask done together (invariant 27, F34). */
+function completeWithSprintTask(
+  sprint: Sprint,
+  sprintTask: SprintTask,
+  task: Task,
+  ctx: CommandContext,
+): CommandResult<{ readonly sprint: Sprint; readonly task: Task }> {
+  const completed = completeTask(task, ctx);
   if (!completed.ok) return completed;
   return applied(
     {
@@ -807,6 +902,27 @@ function completionEffect(
     [
       ...completed.value.activities,
       sprintTaskActivity('sprintTaskDone', sprint, sprintTask, ctx),
+    ],
+  );
+}
+
+/** Back again: the Task active and its SprintTask planned (F29, F34). */
+function reopenWithSprintTask(
+  sprint: Sprint,
+  sprintTask: SprintTask,
+  task: Task,
+  ctx: CommandContext,
+): CommandResult<{ readonly sprint: Sprint; readonly task: Task }> {
+  const reopened = undoTaskCompletion(task, ctx);
+  if (!reopened.ok) return reopened;
+  return applied(
+    {
+      sprint: withOutcome(sprint, sprintTask.id, 'planned'),
+      task: reopened.value.record,
+    },
+    [
+      ...reopened.value.activities,
+      sprintTaskActivity('sprintTaskDoneUndone', sprint, sprintTask, ctx),
     ],
   );
 }

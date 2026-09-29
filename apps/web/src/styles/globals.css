@@ -136,6 +136,10 @@
   --spacing-pane-nav: 224px;
   --spacing-pane-rail: 64px;
   --spacing-pane-list: 384px;
+  --spacing-pane-list-slim: 240px;
+  --spacing-pane-sprint: 680px;
+  --spacing-pane-today: 720px;
+  --spacing-pane-rows: 1280px;
   --spacing-pane-side: 336px;
   --spacing-drawer: 400px;
   --spacing-popover: 320px;
@@ -144,10 +148,11 @@
   --spacing-dialog-lg: 720px;
   --container-measure-read: 38em;
 
-  /* Responsive: medium 768px–, wide 1200px–, nav 1440px– */
+  /* Responsive: medium 768px–, wide 1200px–, nav 1440px–, xl 1920px– */
   --breakpoint-medium: 768px;
   --breakpoint-wide: 1200px;
   --breakpoint-nav: 1440px;
+  --breakpoint-xl: 1920px;
 
   /* Motion (docs/design/foundations.md) */
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
@@ -233,6 +238,14 @@
 }
 
 @layer base {
+  /*
+   * The compact Toast sits above the bottom tab bar (56px: 8 + 20 + 4 + 16
+   * + 8, components/ui/navigation.tsx) and the safe area.
+   */
+  :root {
+    --toast-offset-bottom: calc(56px + env(safe-area-inset-bottom));
+  }
+
   html {
     background-color: var(--canvas);
     color: var(--ink);

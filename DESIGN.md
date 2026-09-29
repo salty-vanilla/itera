@@ -213,6 +213,10 @@ spacing:
   pane-nav: 224px
   pane-rail: 64px
   pane-list: 384px
+  pane-list-slim: 240px
+  pane-sprint: 680px
+  pane-today: 720px
+  pane-rows: 1280px
   pane-side: 336px
   drawer: 400px
   popover: 320px
@@ -223,6 +227,7 @@ spacing:
   bp-medium: 768px
   bp-wide: 1200px
   bp-nav: 1440px
+  bp-xl: 1920px
 components:
   button-primary:
     backgroundColor: "{colors.primary}"
@@ -291,7 +296,7 @@ components:
 1. **Clarity — 今どこで何を決めているかが分かる。** 画面ごとに「決めていること」を 1 つだけ見出しにする（例：「今週、何を進めますか」）。現在地（今日、今の段階、選んだもの）は `here` の黄 **と** チェック・語で示し、色だけにしない（Filter の選択は幅を変えないため、チェックの代わりに `ink` の 2px の枠と太字）。幅がある時間は幅のまま出す（`−1 〜 1h`）。
 2. **Agency — 決めるのは本人。** Agent・AI の値は破線と「提案」「Agent 提案」の語で区別し、本人の値は実線・ラベルなし。「採用」は Secondary、「編集して採用」「却下」は Quiet にし、Primary で採用を誘導しない。
 3. **Calmness — 注意を奪わない。** Primary Button（墨の塗り）は 1 画面に 1 つ。色面は状態と現在地だけ。Area の色は路線記号と容量バーだけ。考える領域（Goal、Capacity、Retro）には意図的に余白を取る。
-4. **Precision — 小さな数値ほど丁寧に。** 数値は `num-*` で組み、並ぶ列は右揃え。1h 未満は `30m`、合計は常に h、範囲は en dash（`2–4h`）、負を含む範囲は `〜`。未見積は「0」ではなく「未見積」と書き、合計に含めないことを示す。
+4. **Precision — 小さな数値ほど丁寧に。** 数値は `num-*` で組み、並ぶ列は右揃え。1h 未満は `30m`、合計は常に h、範囲は en dash（`2–4h`）、負を含む範囲と、可用時間との差（残り・超過）は `〜`（`残り 1 〜 3h`、`超過 3 〜 5h`）。未見積は「0」ではなく「未見積」と書き、合計に含めないことを示す。
 5. **Continuity — Planning → Today → Retro → 次の Planning。** Task Row・Goal・Estimate・Area の路線記号はすべての画面で同じ見た目。本人が確定した言葉（Goal、改善策、振り返り）は `goal` / `reflection` で本文より一段大きく組み、確定したことを実線の罫の下に置いて示す。
 6. **Accessibility — 最初から設計に含める。** テキスト 4.5:1、操作部品の輪郭・フォーカス・意味のある印は 3:1。フォーカスリングを消さない。ターゲットは pointer 24px、compact 幅 44px。詳細は [アクセシビリティ](docs/design/accessibility.md)。
 
@@ -440,7 +445,12 @@ Area（領域）はユーザーが作る。駅の路線記号のように、色�
 
 - ペイン padding `spacing.6`〜`spacing.8`、ブロック間 `spacing.8`、ブロック内 `spacing.2`〜`spacing.5`。
 - 見出しの上に `border`（またはセクション罫 `ink` 1px）を引き、罫と余白で区切る。
-- 確定した言葉（Goal、改善策、振り返り）は `measure-read` を超えて横に伸ばさない。Planning の Sprint ペインは最大 680px、Retro の読み物と desktop の Today は最大 720px。
+- 確定した言葉（Goal、改善策、振り返り）は `measure-read` を超えて横に伸ばさない。Planning の Sprint ペインは最大 680px、Retro の読み物と desktop の Today は最大 720px。ただし Retro の「事実を見る」の Task の表は一覧なので、振り返りの材料のペインを出さず、その分まで広げる（`pane-today`＋`pane-side`＋間隔。`bp-xl` 以上では、画面の幅いっぱい）。どの表も同じ列幅にして、Goal をまたいで列を揃える。
+- 大きい画面（`bp-xl` 1920px 以上）で変えてよいのは、ペインの広さと、その中に並ぶ数だけ。どのペインに何があるかは、画面の大きさで変えない。中央のペインは固定幅にせず、左右のペインを除いた幅を使い、上限は中身の種類で決める。
+  - ブロック（Planning の Area）：幅に応じて 1〜3 列に並べる（1 列は `pane-sprint` まで）。
+  - 表（Retro の事実を見る）：幅いっぱい。
+  - 1 行 1 Task の一覧（Backlog、Retro の繰り返しの回）：行は最大 `pane-rows` 1280px。
+  - 文章（Goal、改善策、振り返り）：`measure-read` のまま。
 
 ### 寸法
 
@@ -454,6 +464,10 @@ Area（領域）はユーザーが作る。駅の路線記号のように、色�
 | `area-badge` | 20px | Area の路線記号の一辺（compact でも同じ。当たり判定は行や Filter が持つ） |
 | `pane-nav` / `pane-rail` | 224 / 64px | ナビゲーション（1440px 以上 / 768–1439px） |
 | `pane-list` / `pane-side` | 384 / 336px | Planning の Backlog ペイン / 時間の見通しペイン |
+| `pane-list-slim` | 240px | Planning の整える・確かめる段階の Backlog ペイン（タイトルだけ） |
+| `pane-sprint` | 680px | Planning の Sprint ペインの最大幅 |
+| `pane-today` | 720px | Today の 1 カラムの最大幅 |
+| `pane-rows` | 1280px | 1 行 1 Task の一覧（Backlog、Retro の繰り返しの回）の行の最大幅 |
 | `drawer` | 400px | 右 Drawer |
 | `popover` | 320px | Popover の幅 |
 | `dialog-sm` / `dialog-md` / `dialog-lg` | 440 / 560 / 720px | Dialog の幅（compact は幅 100% − 32px） |
@@ -466,6 +480,7 @@ Desktop の Planning を中心に設計し、スマートフォンでは Today�
 | --- | --- | --- |
 | 1440px 以上（`bp-nav`） | wide | ナビ 224px ＋ Planning 3 ペイン（Backlog 384 / Sprint / 時間の見通し 336） |
 | 1200–1439px（`bp-wide`） | wide（rail） | ナビをアイコンだけの 64px にし、3 ペインを保つ |
+| 1920px 以上（`bp-xl`） | xl | wide のペインの数と役割は変えず、中央のペインを広げる。Planning は Area のブロックを 1〜3 列に並べ、Retro の事実を見るの表は幅いっぱい、Backlog の行は最大 `pane-rows`。Today・実行中の Sprint は変えない |
 | 768–1199px（`bp-medium`） | medium | ナビを 64px の rail にし、2 ペイン（Backlog / Sprint）。Capacity は Sprint の上に要約 1 行を sticky で出し、クリックで右 Drawer。Agent 提案も Drawer の中 |
 | 768px 未満 | compact | 1 カラム。下部タブバー（今日 / Sprint / Backlog / 振り返り） |
 
@@ -601,7 +616,7 @@ compact の原則：
 
 **Tag** — Status（Sprint の状態、Goal の自己判定）と本人のラベルだけに使う小さな Pill。
 - 20px、`rounded.full`、Status はアイコン必須、語は 1〜2 語（本人のラベルは 12em で省略し、全文を title で読める）。Variant：neutral / done（墨の文字＋`circle-check`）/ warning（`triangle-alert`）/ danger（`circle-alert`）/ draft（破線＋`circle-dashed`。「計画中 · 未確定」）。neutral の Status は意味に合うアイコンを画面側で選ぶ（同期中・次の Sprint で試すは `info`）。アイコンのない neutral は本人のラベルで、`border` の輪郭だけにする。
-- tone の使い分け：neutral = 本人のラベル・一部できた・できなかった・判断しない・同期中・次の Sprint で試す、done = できた・保存済み、warning = 超過の可能性、danger = 同期エラーなど保存・同期の失敗、draft = 未確定。期限超過は Tag にせず、Task Metadata の文字（`circle-alert`＋「2日超過」）で示す。Goal の自己判定（一部できた・できなかった・判断しない）のアイコンは Retro の最初の実装 Issue で決める。
+- tone の使い分け：neutral = 本人のラベル・一部できた・できなかった・判断しない・同期中・次の Sprint で試す、done = できた・保存済み、warning = 超過の可能性、danger = 同期エラーなど保存・同期の失敗、draft = 未確定。期限超過は Tag にせず、Task Metadata の文字（`circle-alert`＋「2日超過」）で示す。Goal の自己判定は円の形と語で区別し、色で区別しない（Issue #42）：できた `circle-check`（done）/ 一部できた `contrast`（半分を描いた円、neutral）/ できなかった `circle`（空の円、neutral）/ 判断しない `circle-minus`（neutral）。できなかったに赤や × を使わない。
 - 期限・Estimate・持ち越し・繰り返し・Area を Tag にしない（→ Task Metadata の文字）。1 行に 3 つ以上並べない。
 
 **Divider** — Card の代わりにグループを区切る、構造の主役。default（`border`）/ soft（`border-soft`、リスト内）/ rule（`ink` 1px、考える領域の上端、1 画面に 1〜2 本）/ label（ラベル付き。グループ見出し）。× 2px 以上の太い罫、二重線、点線。
@@ -689,7 +704,7 @@ compact の原則：
 - Goal の間は `spacing.8`。× Card で囲む、Goal がない Area を警告色で示す、Goal 文を太字・大見出しにする、全体 Goal を作る。
 
 **Capacity Indicator** — 可用時間と計画値の合計の差を、幅のまま示す。
-- 最上段に残り（`num-l`。下限でも超える場合は「超過」`danger`）、可用時間（本人が入力）と計画値の合計（幅）、状態の文（アイコン＋語）、バー（Area ごとの 8px セグメント。セグメントの間には 2px の `canvas` のアキを入れ、似た色の Area が隣り合っても境目が分かるようにする。Goal に紐づかない Task もその Area に含める＋提案の幅は破線＋残り `border-soft`＋可用時間マーカー `ink` 2px＋超過部分の下線 `danger`）、Area ごとの内訳、未見積の件数（合計に含めない）。
+- 最上段に残り（`num-l`。下限でも超える場合は「超過」`danger`）、可用時間（本人が入力）と計画値の合計（幅）、状態の文（アイコン＋語）、バー（Area ごとの 8px セグメント。セグメントの間には 2px の `canvas` のアキを入れ、似た色の Area が隣り合っても境目が分かるようにする。Goal に紐づかない Task もその Area に含める＋提案の幅は破線＋残り `border-soft`＋可用時間マーカー `ink` 2px＋可用時間を超える部分の下線：下限でも超える場合は `danger` の実線、上限側だけ超える可能性がある場合は `warning` の破線）、Area ごとの内訳、未見積の件数（合計に含めない）。
 - 状態：ok（`ink-muted`「可用時間の範囲に収まっています。」）/ tight（上限側だけ超える：`warning`「上限側では 1h 超える可能性があります。」）/ over（下限でも超える：`danger`「超過 3 〜 5h」）/ unknown（「可用時間を入力すると、計画との差を表示します。」）。
 - バーは `aria-hidden`、数値と状態の文が正（`role="status"`）。超過でも確定を止めない。Today と Backlog には出さない。× ドーナツ・円グラフ・ゲージ、未見積を 0h として足す。
 

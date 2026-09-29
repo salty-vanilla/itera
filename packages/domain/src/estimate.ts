@@ -26,6 +26,11 @@ export type EstimateSource =
       readonly kind: 'adopted';
       readonly suggestionId: EstimateSuggestionId;
       readonly bound: SuggestionBound;
+    }
+  /** 編集して採用 (F31): the person's own hours, starting from a suggestion. */
+  | {
+      readonly kind: 'edited';
+      readonly suggestionId: EstimateSuggestionId;
     };
 
 export type SuggestionState = 'presented' | 'adopted' | 'rejected' | 'replaced';
@@ -183,6 +188,122 @@ export function adoptSuggestion(
   ]);
 }
 
+/**
+ * 編集して採用 (F31): the person starts from a presented suggestion and
+ * makes their own hours the Estimate. The Estimate remembers the suggestion
+ * it came from, so that suggestions and results can be compared later; the
+ * suggestion is adopted.
+ */
+export function adoptEditedSuggestion(
+  task: Task,
+  input: {
+    readonly suggestionId: EstimateSuggestionId;
+    readonly hours: number;
+  },
+  ctx: CommandContext,
+): CommandResult<Task> {
+  const { suggestionId, hours } = input;
+  const suggestion = task.suggestions.find((s) => s.id === suggestionId);
+  if (suggestion === undefined) {
+    return err('notFound', `Suggestion ${suggestionId} not found.`);
+  }
+  if (suggestion.state !== 'presented') {
+    return err(
+      'invalidTransition',
+      `Cannot adopt a ${suggestion.state} suggestion.`,
+    );
+  }
+  if (!isPositiveHours(hours)) {
+    return err('invalidInput', 'Estimate must be positive hours.');
+  }
+  const estimate: Estimate = {
+    hours,
+    setAt: ctx.now,
+    source: { kind: 'edited', suggestionId },
+  };
+  const suggestions = task.suggestions.map((s) =>
+    s.id === suggestionId ? { ...s, state: 'adopted' as const } : s,
+  );
+  return applied({ ...task, estimate, suggestions }, [
+    {
+      kind: 'estimateChanged',
+      at: ctx.now,
+      actor: ctx.actor,
+      taskId: task.id,
+      from: task.estimate?.hours ?? null,
+      to: hours,
+      adoptedFrom: { suggestionId },
+    },
+  ]);
+}
+
+export interface UndoAdoptionInput {
+  readonly suggestionId: EstimateSuggestionId;
+  /**
+   * The Estimate before the adoption, `null` if there was none. The Task
+   * keeps only its current Estimate, so the caller passes what it had
+   * (the Task before `adoptSuggestion`).
+   */
+  readonly previous: Estimate | null;
+}
+
+/**
+ * 採用を元に戻す (F27): right after adopting (or 編集して採用, F31), the
+ * person takes it back. The
+ * Estimate returns to what it was and the suggestion is on show again.
+ * Only while the Estimate is still that adoption, and while no other
+ * suggestion is on show (at most one is presented).
+ */
+export function undoAdoption(
+  task: Task,
+  input: UndoAdoptionInput,
+  ctx: CommandContext,
+): CommandResult<Task> {
+  const { suggestionId, previous } = input;
+  const suggestion = task.suggestions.find((s) => s.id === suggestionId);
+  if (suggestion === undefined) {
+    return err('notFound', `Suggestion ${suggestionId} not found.`);
+  }
+  const source = task.estimate?.source;
+  if (
+    suggestion.state !== 'adopted' ||
+    (source?.kind !== 'adopted' && source?.kind !== 'edited') ||
+    source.suggestionId !== suggestionId
+  ) {
+    return err('invalidTransition', 'The Estimate is no longer this adoption.');
+  }
+  if (presentedSuggestion(task) !== undefined) {
+    return err('invalidTransition', 'Another suggestion is on show.');
+  }
+  if (previous !== null && !isPositiveHours(previous.hours)) {
+    return err('invalidInput', 'Estimate must be positive hours.');
+  }
+  const suggestions = task.suggestions.map((s) =>
+    s.id === suggestionId ? { ...s, state: 'presented' as const } : s,
+  );
+  const restored =
+    previous === null
+      ? omit({ ...task, suggestions }, 'estimate')
+      : { ...task, suggestions, estimate: previous };
+  return applied(restored, [
+    {
+      kind: 'estimateChanged',
+      at: ctx.now,
+      actor: ctx.actor,
+      taskId: task.id,
+      from: task.estimate?.hours ?? null,
+      to: previous?.hours ?? null,
+    },
+    {
+      kind: 'suggestionAdoptionUndone',
+      at: ctx.now,
+      actor: ctx.actor,
+      taskId: task.id,
+      suggestionId,
+    },
+  ]);
+}
+
 export function rejectSuggestion(
   task: Task,
   suggestionId: EstimateSuggestionId,
@@ -204,6 +325,43 @@ export function rejectSuggestion(
   return applied({ ...task, suggestions }, [
     {
       kind: 'suggestionRejected',
+      at: ctx.now,
+      actor: ctx.actor,
+      taskId: task.id,
+      suggestionId,
+    },
+  ]);
+}
+
+/**
+ * 却下を元に戻す (F30): right after rejecting, the suggestion is on show
+ * again. Only while no other suggestion is on show (at most one is
+ * presented). The Estimate was never touched by rejecting, so it stays.
+ */
+export function undoRejection(
+  task: Task,
+  suggestionId: EstimateSuggestionId,
+  ctx: CommandContext,
+): CommandResult<Task> {
+  const suggestion = task.suggestions.find((s) => s.id === suggestionId);
+  if (suggestion === undefined) {
+    return err('notFound', `Suggestion ${suggestionId} not found.`);
+  }
+  if (suggestion.state !== 'rejected') {
+    return err(
+      'invalidTransition',
+      `Cannot undo the rejection of a ${suggestion.state} suggestion.`,
+    );
+  }
+  if (presentedSuggestion(task) !== undefined) {
+    return err('invalidTransition', 'Another suggestion is on show.');
+  }
+  const suggestions = task.suggestions.map((s) =>
+    s.id === suggestionId ? { ...s, state: 'presented' as const } : s,
+  );
+  return applied({ ...task, suggestions }, [
+    {
+      kind: 'suggestionRejectionUndone',
       at: ctx.now,
       actor: ctx.actor,
       taskId: task.id,

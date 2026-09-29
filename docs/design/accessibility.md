@@ -1,6 +1,6 @@
 # アクセシビリティ
 
-更新：2026-09-27（Dialog の初期フォーカスと `menuitemradio`、Issue #9）。2026-09-26 に DESIGN.md v0.2 から分離。
+更新：2026-09-27（Dialog の初期フォーカスと `menuitemradio`、Issue #9。リストの Space の対象を Backlog 画面と Planning で分けた、Issue #47）。2026-09-26 に DESIGN.md v0.2 から分離。
 
 DADS の品質基準（WCAG 2.2 AA）を下限にする。後から足すのではなく、部品の仕様に含める。色のコントラストと状態の見た目は [DESIGN.md](../../DESIGN.md) の Colors と Components。一次資料の引き方は `design-references` Skill。
 
@@ -23,7 +23,7 @@ DADS の品質基準（WCAG 2.2 AA）を下限にする。後から足すので�
 | 全体 | Tab / Shift+Tab で移動、Enter / Space で実行 |
 | Tabs | ← → で移動、Home / End |
 | Menu | ↓ ↑ で移動、Home / End、Enter で実行、Esc で閉じてトリガーに戻る |
-| Backlog / Today のリスト | Space：その行のコントロールを押す（Backlog は □ 今週へ、Today の今日やるは ○ 完了、今週の残り・昨日の続きは「今日へ」）、Enter：詳細、E：Estimate の編集、Alt+↑↓：並べ替え。Backlog では Delete：アーカイブ（元に戻せる） |
+| Backlog / Today のリスト | Space：その行のコントロールを押す（Backlog は ○ 完了、Planning の Backlog ペインは □ 今週へ、Today の今日やるは ○ 完了、今週の残り・昨日の続きは「今日へ」）、Enter：詳細、E：Estimate の編集、Alt+↑↓：並べ替え。Backlog では Delete：アーカイブ（元に戻せる） |
 | Planning | N：タスク追加欄へ、⌘/Ctrl+Enter：Sprint を確定（確認 Dialog を開く） |
 | Tooltip | focus で即表示、Esc で閉じる |
 

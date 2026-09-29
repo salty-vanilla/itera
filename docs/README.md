@@ -24,4 +24,4 @@
 - [デザインの参照方針](design/design-context.md)：DESIGN.md の位置づけ、参照元、DADS / Apple HIG、UI v0.1 モックの扱い
 - [画面のパターン](design/patterns.md) / [Agent UI](design/agent-ui.md) / [文言と用語](design/content.md) / [アクセシビリティ](design/accessibility.md) / [アイコンと動き](design/foundations.md)
 - [Agent 環境](development/agent-setup.md)：Claude Code の設定、共有 Skill、ハーネス、更新手順
-- [ADR](architecture/adr/)：決定の記録（[0001 monorepo の土台](architecture/adr/0001-monorepo-foundation.md)、[0002 DESIGN.md の形式](architecture/adr/0002-design-md-format.md)、[0003 Web の土台とデザインシステム](architecture/adr/0003-web-foundation.md)、[0004 API の実行基盤・DB・認証](architecture/adr/0004-api-platform-and-auth.md)）
+- [ADR](architecture/adr/)：決定の記録（[0001 monorepo の土台](architecture/adr/0001-monorepo-foundation.md)、[0002 DESIGN.md の形式](architecture/adr/0002-design-md-format.md)、[0003 Web の土台とデザインシステム](architecture/adr/0003-web-foundation.md)、[0004 API の実行基盤・DB・認証](architecture/adr/0004-api-platform-and-auth.md)、[0005 Web のルーティングと fixture](architecture/adr/0005-web-routing-and-fixture.md)）

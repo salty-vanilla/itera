@@ -1,0 +1,179 @@
+import { retroFacts, type Instant, type LocalDate } from '@itera/domain';
+import { describe, expect, it } from 'vitest';
+import { fixtureSnapshot } from '@/fixtures/states';
+import { createMemoryStore, type StoreSnapshot } from './record-store';
+import { undoPastDay } from './running-changes';
+import { reviewEnded } from './system-changes';
+import * as today from './today-changes';
+import * as task from './task-changes';
+
+const at = (date: string, time = '09:00'): StoreSnapshot['clock'] => ({
+  today: date as LocalDate,
+  now: `${date}T${time}:00.000Z` as Instant,
+});
+
+const active = (store: ReturnType<typeof createMemoryStore>) => {
+  const s = store
+    .getSnapshot()
+    .records.sprints.find((x) => x.state === 'active');
+  if (s === undefined) throw new Error('no active Sprint');
+  return s;
+};
+const selectionOf = (
+  store: ReturnType<typeof createMemoryStore>,
+  taskId: string,
+  date: string,
+) => {
+  const s = active(store);
+  const st = s.tasks.find((t) => t.taskId === taskId);
+  return s.dailySelections.find(
+    (d) => d.sprintTaskId === st?.id && d.date === date,
+  );
+};
+
+describe('undoPastDay (#53, F33)', () => {
+  it('undoes a past completion; the system leaves that day unresolved', () => {
+    const store = createMemoryStore(fixtureSnapshot('today-interrupt'));
+    const done = selectionOf(store, 'task-tax', '2026-09-29')!;
+    expect(done.resolution).toBe('done');
+    expect(store.run(undoPastDay(done.id)).ok).toBe(true);
+
+    expect(selectionOf(store, 'task-tax', '2026-09-29')?.resolution).toBe(
+      'unresolved',
+    );
+    const records = store.getSnapshot().records;
+    expect(records.tasks.find((t) => t.id === 'task-tax')?.lifecycle).toBe(
+      'active',
+    );
+    expect(
+      active(store).tasks.find((t) => t.taskId === 'task-tax')?.outcome,
+    ).toBe('planned');
+    // The person's undo, then the system's mark (invariant 24).
+    const last = records.activities.slice(-2);
+    expect(last.map((a) => [a.kind, a.actor])).toEqual([
+      ['todayDoneUndone', 'user'],
+      ['todayUnresolved', 'system'],
+    ]);
+  });
+
+  it('puts a past occurrence back to pending', () => {
+    const store = createMemoryStore(fixtureSnapshot('today-interrupt'));
+    const done = selectionOf(store, 'task-reading', '2026-09-28')!;
+    expect(store.run(undoPastDay(done.id)).ok).toBe(true);
+    const occurrence = store
+      .getSnapshot()
+      .records.occurrences.find((o) => o.id === done.occurrenceId);
+    expect(occurrence?.state).toBe('pending');
+    expect(selectionOf(store, 'task-reading', '2026-09-28')?.resolution).toBe(
+      'unresolved',
+    );
+  });
+
+  it('undoes a past skip', () => {
+    // 10/1: an occurrence is chosen and skipped; the next day it is undone.
+    const first = createMemoryStore(fixtureSnapshot('today-interrupt'));
+    const st = active(first).tasks.find((t) => t.taskId === 'task-reading')!;
+    const occurrenceId = st.occurrenceIds!.find((id) =>
+      first
+        .getSnapshot()
+        .records.occurrences.some(
+          (o) => o.id === id && o.scheduledDate === '2026-10-02',
+        ),
+    )!;
+    expect(first.run(today.choose(st.id, occurrenceId)).ok).toBe(true);
+    const chosen = selectionOf(first, 'task-reading', '2026-10-01')!;
+    expect(first.run(today.skip(chosen.id)).ok).toBe(true);
+
+    const store = createMemoryStore(
+      { ...first.getSnapshot(), clock: at('2026-10-02') },
+      { idPrefix: 'next' },
+    );
+    expect(store.run(undoPastDay(chosen.id)).ok).toBe(true);
+    expect(selectionOf(store, 'task-reading', '2026-10-01')?.resolution).toBe(
+      'unresolved',
+    );
+    expect(
+      store.getSnapshot().records.occurrences.find((o) => o.id === occurrenceId)
+        ?.state,
+    ).toBe('pending');
+  });
+
+  it('removes a past choice made by a completion from the Backlog (F29)', () => {
+    const first = createMemoryStore(fixtureSnapshot('today-interrupt'));
+    expect(first.run(task.complete('task-onboarding' as never)).ok).toBe(true);
+    const made = selectionOf(first, 'task-onboarding', '2026-10-01')!;
+    expect(made.origin).toBe('backlogCompletion');
+
+    const store = createMemoryStore(
+      { ...first.getSnapshot(), clock: at('2026-10-02') },
+      { idPrefix: 'next' },
+    );
+    expect(store.run(undoPastDay(made.id)).ok).toBe(true);
+    expect(selectionOf(store, 'task-onboarding', '2026-10-01')).toBeUndefined();
+    expect(
+      store.getSnapshot().records.tasks.find((t) => t.id === 'task-onboarding')
+        ?.lifecycle,
+    ).toBe('active');
+  });
+
+  it("refuses today's choice (Today undoes that)", () => {
+    const store = createMemoryStore(fixtureSnapshot('today-interrupt'));
+    const todays = selectionOf(store, 'task-api-review', '2026-10-01')!;
+    const result = store.run(undoPastDay(todays.id));
+    expect(result.ok).toBe(false);
+    expect(
+      selectionOf(store, 'task-api-review', '2026-10-01')?.resolution,
+    ).toBe('done');
+  });
+
+  it('leaves the Retro facts as the domain derives them', () => {
+    const store = createMemoryStore(fixtureSnapshot('today-interrupt'));
+    const done = selectionOf(store, 'task-tax', '2026-09-29')!;
+    store.run(undoPastDay(done.id));
+    // After the end the system moves the Sprint to Review.
+    const later = createMemoryStore(
+      { ...store.getSnapshot(), clock: at('2026-10-05') },
+      { idPrefix: 'later' },
+    );
+    expect(later.run(reviewEnded(), { actor: 'system' }).ok).toBe(true);
+    const { records } = later.getSnapshot();
+    const sprint = records.sprints.find((s) => s.state === 'review')!;
+    const facts = retroFacts(sprint, {
+      tasks: records.tasks,
+      areas: records.areas,
+      occurrences: records.occurrences,
+      sprints: records.sprints,
+    });
+    expect(facts.completed.map((t) => t.taskId)).not.toContain('task-tax');
+    expect(facts.carriedOver.map((t) => t.taskId)).toContain('task-tax');
+  });
+
+  it('puts a completion made after closing that day back to how it was closed (F17)', () => {
+    // 10/1: the started Task is deferred, then completed the same day.
+    const first = createMemoryStore(fixtureSnapshot('today-interrupt'));
+    const chosen = selectionOf(first, 'task-dataset', '2026-10-01')!;
+    expect(first.run(today.defer(chosen.id)).ok).toBe(true);
+    expect(first.run(today.complete(chosen.id)).ok).toBe(true);
+    const done = selectionOf(first, 'task-dataset', '2026-10-01')!;
+    expect(done.closedBefore?.resolution).toBe('deferred');
+
+    const store = createMemoryStore(
+      { ...first.getSnapshot(), clock: at('2026-10-02') },
+      { idPrefix: 'next' },
+    );
+    expect(store.run(undoPastDay(done.id)).ok).toBe(true);
+    const back = selectionOf(store, 'task-dataset', '2026-10-01');
+    // Deferred again, as it had been: not unresolved.
+    expect(back?.resolution).toBe('deferred');
+    expect(back?.resolvedAt).toBe(done.closedBefore?.at);
+    const marked = store
+      .getSnapshot()
+      .records.activities.filter(
+        (a) =>
+          a.kind === 'todayUnresolved' &&
+          'selectionId' in a &&
+          a.selectionId === done.id,
+      );
+    expect(marked).toEqual([]);
+  });
+});

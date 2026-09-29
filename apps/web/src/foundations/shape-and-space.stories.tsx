@@ -50,6 +50,7 @@ const breakpoints = [
   ['breakpoint-medium', '768px', '2 ペイン（Backlog / Sprint）'],
   ['breakpoint-wide', '1200px', 'ナビを 64px の rail にし 3 ペインを保つ'],
   ['breakpoint-nav', '1440px', 'ナビ 224px ＋ 3 ペイン'],
+  ['breakpoint-xl', '1920px', '3 ペインを保ち、中央のペインを広げる'],
 ] as const;
 
 function Value({ name }: { name: string }) {

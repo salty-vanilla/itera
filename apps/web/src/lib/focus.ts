@@ -5,15 +5,21 @@ const FIELD =
 
 // Chooses where focus lands when a Base UI popup opens. Spread `scopeProps`
 // on the popup and pass `initialFocus` to it. Without a match, returning true
-// keeps Base UI's default (the first tabbable element).
+// keeps Base UI's default (the first tabbable element). An element marked
+// `data-autofocus` inside comes first: the content asked for it (e.g. E on a
+// row opens the Task at its Estimate).
 function useInitialFocus(selector: string) {
   const scope = useId();
   return {
     scopeProps: { 'data-focus-scope': scope },
-    initialFocus: () =>
-      document
-        .querySelector(`[data-focus-scope="${scope}"]`)
-        ?.querySelector<HTMLElement>(selector) ?? true,
+    initialFocus: () => {
+      const popup = document.querySelector(`[data-focus-scope="${scope}"]`);
+      return (
+        popup?.querySelector<HTMLElement>('[data-autofocus]') ??
+        popup?.querySelector<HTMLElement>(selector) ??
+        true
+      );
+    },
   };
 }
 
