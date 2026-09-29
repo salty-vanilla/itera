@@ -73,57 +73,66 @@ function PlanPane({
           で今週へ選びます。今週発生する繰り返しは最初から入っています。
         </p>
       )}
-      {blocks.map((block) =>
-        stage === 'pick' ? (
-          <section
-            key={block.area.id ?? 'none'}
-            aria-label={block.area.name}
-            className="flex flex-col gap-2"
-          >
-            <h2 className="flex items-center gap-2">
-              <AreaIndicator
-                name={block.area.name}
-                color={block.area.color}
-                variant="heading"
-              />
-              <span className="text-meta text-ink-muted">
-                {summaryOf(block)}
-              </span>
-            </h2>
-            <PlannedList
-              block={block}
-              stage={stage}
-              onOpenTask={onOpenTask}
-              onEstimateTask={onEstimateTask}
-            />
-          </section>
-        ) : (
-          <GoalBlock
-            key={block.area.id ?? 'none'}
-            area={{ name: block.area.name, color: block.area.color }}
-            summary={block.tasks.length > 0 ? summaryOf(block) : undefined}
-            goal={block.goal?.text}
-            onSave={
-              block.area.id === null
-                ? undefined
-                : (text) =>
-                    actions.setGoal(
-                      block.area.id as NonNullable<typeof block.area.id>,
-                      text,
-                    )
-            }
-          >
-            {block.tasks.length > 0 && (
+      {/*
+        From 1920px (bp-xl) the Area blocks sit in 1 to 3 columns, as many as
+        fit (a column is at least 26rem, never narrower than a third of the
+        row, less 1px so that three fit exactly); the pane stops at three
+        columns of pane-sprint. Under it they
+        are one column, as before (DESIGN.md Layout, Issue #81).
+      */}
+      <div className="flex flex-col gap-8 xl:grid xl:max-w-[calc(var(--spacing-pane-sprint)*3+var(--spacing-8)*2)] xl:grid-cols-[repeat(auto-fill,minmax(max(26rem,calc((100%-var(--spacing-8)*2)/3-1px)),1fr))] xl:items-start xl:gap-x-8">
+        {blocks.map((block) =>
+          stage === 'pick' ? (
+            <section
+              key={block.area.id ?? 'none'}
+              aria-label={block.area.name}
+              className="flex flex-col gap-2"
+            >
+              <h2 className="flex items-center gap-2">
+                <AreaIndicator
+                  name={block.area.name}
+                  color={block.area.color}
+                  variant="heading"
+                />
+                <span className="text-meta text-ink-muted">
+                  {summaryOf(block)}
+                </span>
+              </h2>
               <PlannedList
                 block={block}
                 stage={stage}
                 onOpenTask={onOpenTask}
                 onEstimateTask={onEstimateTask}
               />
-            )}
-          </GoalBlock>
-        ),
-      )}
+            </section>
+          ) : (
+            <GoalBlock
+              key={block.area.id ?? 'none'}
+              area={{ name: block.area.name, color: block.area.color }}
+              summary={block.tasks.length > 0 ? summaryOf(block) : undefined}
+              goal={block.goal?.text}
+              onSave={
+                block.area.id === null
+                  ? undefined
+                  : (text) =>
+                      actions.setGoal(
+                        block.area.id as NonNullable<typeof block.area.id>,
+                        text,
+                      )
+              }
+            >
+              {block.tasks.length > 0 && (
+                <PlannedList
+                  block={block}
+                  stage={stage}
+                  onOpenTask={onOpenTask}
+                  onEstimateTask={onEstimateTask}
+                />
+              )}
+            </GoalBlock>
+          ),
+        )}
+      </div>
     </div>
   );
 }

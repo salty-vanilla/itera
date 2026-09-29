@@ -291,7 +291,7 @@ function PlanningScreen({ data }: PlanningScreenProps) {
             stage={stage}
             onOpenTask={openTask}
             onEstimateTask={openEstimate}
-            className="w-full max-w-pane-sprint"
+            className="w-full max-w-pane-sprint xl:max-w-none"
           />
           {stage === 'check' && (
             <div className="max-w-pane-sprint wide:hidden">{outlook}</div>

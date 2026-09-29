@@ -148,9 +148,10 @@ function BacklogScreen() {
 
   return (
     // With the detail open from 1200px, the list keeps clear of the Drawer so
-    // that it stays readable beside it (patterns.md Backlog › Organize).
+    // that it stays readable beside it (patterns.md Backlog › Organize). On a
+    // big screen the rows stop at pane-rows, at the left (Issue #81).
     <div className={cn('flex min-h-full flex-col', open && 'wide:pr-drawer')}>
-      <div className="flex flex-col gap-4 px-4 pt-10 pb-4 medium:px-6">
+      <div className="flex max-w-pane-rows flex-col gap-4 px-4 pt-10 pb-4 medium:px-6">
         <h1 className="text-display-m text-ink">Backlog</h1>
         <FilterGroup label="切り口">
           {slices.map((s) => {
@@ -190,7 +191,7 @@ function BacklogScreen() {
 
       {/* Quick Add: at the top from 768px; under it, sticky at the bottom
           above the tab bar (DESIGN.md Responsive › compact). */}
-      <div className="sticky bottom-0 z-(--layer-sticky) order-last border-t border-border bg-canvas px-4 py-3 medium:static medium:order-none medium:border-t-0 medium:px-6 medium:py-0 medium:pb-4">
+      <div className="sticky bottom-0 z-(--layer-sticky) order-last max-w-pane-rows border-t border-border bg-canvas px-4 py-3 medium:static medium:order-none medium:border-t-0 medium:px-6 medium:py-0 medium:pb-4">
         <TaskQuickAdd
           onAdd={(title) => {
             const chosen = quickArea ?? search.area ?? '';
@@ -216,7 +217,10 @@ function BacklogScreen() {
         />
       </div>
 
-      <section aria-label="Task の一覧" className="flex-1 pb-10">
+      <section
+        aria-label="Task の一覧"
+        className="max-w-pane-rows flex-1 pb-10"
+      >
         <p
           role="status"
           className="px-4 pb-2 text-meta text-ink-muted medium:px-6"

@@ -116,6 +116,7 @@ describe('spacing', () => {
     'bp-medium': '--breakpoint-medium',
     'bp-wide': '--breakpoint-wide',
     'bp-nav': '--breakpoint-nav',
+    'bp-xl': '--breakpoint-xl',
   };
   it.each(Object.entries(tokens.spacing))('%s', (name, value) => {
     expect(theme.get(special[name] ?? `--spacing-${name}`)).toBe(value);

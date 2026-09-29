@@ -96,7 +96,11 @@ function RetroView({ data }: { data: RetroData }) {
   };
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-[calc(var(--spacing-pane-today)+var(--spacing-pane-side)+var(--spacing-12))] flex-col gap-8 px-4 pt-6 pb-16 medium:px-6 medium:pt-8">
+    // From 1920px (bp-xl) every stage is at the left and as wide as the
+    // screen: 事実を見る fills it with its tables, the others keep their
+    // 720px text and 336px materials; so the left edge stays where it is
+    // when the stage changes (owner decision in #81).
+    <div className="mx-auto flex min-h-full w-full max-w-[calc(var(--spacing-pane-today)+var(--spacing-pane-side)+var(--spacing-12))] flex-col gap-8 px-4 pt-6 pb-16 medium:px-6 medium:pt-8 xl:mx-0 xl:max-w-none">
       <SprintHeader
         status={
           <Tag tone="neutral" icon={NotebookPen}>

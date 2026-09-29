@@ -46,6 +46,7 @@ export const cn = createCn({
         'pane-list-slim',
         'pane-sprint',
         'pane-today',
+        'pane-rows',
         'pane-side',
         'drawer',
         'popover',
