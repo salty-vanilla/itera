@@ -412,8 +412,11 @@ function AreaFacts({
         )}
       </div>
       {goal !== undefined && areaId !== null && (
-        <div className="flex max-w-pane-today flex-col gap-3">
-          <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="flex flex-col gap-3">
+          {/* The Goal's 「気になる」 sits at the right end, over the rows'
+              ones (#73); the Goal text keeps to measure-read. The end
+              padding matches the table cells'. */}
+          <div className="flex flex-wrap items-start justify-between gap-2 medium:pe-2">
             <p className="max-w-measure-read text-goal text-ink">{goal.text}</p>
             {toggle({ kind: 'goal', id: areaId }, `${shown.name}の Goal`)}
           </div>
