@@ -1,8 +1,9 @@
 import type { LocalDate } from '@itera/domain';
 import { useEffect, useRef } from 'react';
-import { Archive, CircleCheck, Ellipsis, Sun } from 'lucide-react';
+import { Archive, CircleCheck, Ellipsis, Plus, Sun } from 'lucide-react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { IconButton } from '@/components/ui/icon-button';
+import { Tag } from '@/components/ui/tag';
 import { semanticIcons } from '@/components/ui/icon';
 import {
   Menu,
@@ -66,7 +67,7 @@ type BacklogRowProps = {
   item: BacklogItem;
   today: LocalDate;
   current: boolean;
-  /** Just added: marked for a moment (Issue #86). */
+  /** Just added: says so for a moment (Issue #86). */
   added?: boolean | undefined;
   onOpen: () => void;
   onComplete: () => void;
@@ -105,7 +106,6 @@ function BacklogRow({
     <TaskRow
       title={task.title}
       current={current}
-      className={added ? 'bg-here-subtle' : undefined}
       onOpen={onOpen}
       keys={{ onEstimate, onArchive }}
       control={
@@ -135,7 +135,17 @@ function BacklogRow({
         ) : undefined
       }
       // Only what exists: an unestimated Task shows nothing here (PRD §5 A).
-      estimate={value.base === 'none' ? undefined : <Estimate value={value} />}
+      estimate={
+        added ? (
+          // A new Task has no Estimate: its place tells, for a moment, that it
+          // is the one just added. Not `here-subtle`, which means selected.
+          <Tag tone="neutral" icon={Plus}>
+            追加しました
+          </Tag>
+        ) : value.base === 'none' ? undefined : (
+          <Estimate value={value} />
+        )
+      }
       actions={
         <Menu>
           <MenuTrigger

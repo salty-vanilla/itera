@@ -44,8 +44,8 @@ function Select({ size, prefix, className, children, ...props }: SelectProps) {
               // Room for the chevron, which does not take pointer events.
               'pr-8 pl-3',
               size === 'sm' && 'medium:pl-2',
-              // Room for the mark: 8px, the 20px symbol and 12px.
-              prefix !== undefined && 'pl-10 medium:pl-10',
+              // Room for the mark: 8px, the 20px symbol and 4px (as in a Filter).
+              prefix !== undefined && 'pl-8 medium:pl-8',
               'outline-none disabled:cursor-not-allowed',
             )}
             {...props}

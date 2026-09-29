@@ -8,14 +8,16 @@ import { useToast } from '@/components/ui/toast';
 import { AreaSelect } from '@/components/task/area-select';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
+import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
+import { useToastOffsetAbove } from '@/lib/use-toast-offset';
 import { cn } from '@/lib/utils';
 import { useBacklog } from '@/store/use-backlog';
 import { useTaskActions } from '@/store/use-task-actions';
 import { BacklogRow } from './backlog-row';
 import { TaskDetail } from './task-detail';
 
-// Backlog (docs/design/patterns.md Backlog, PRD §5 A). The active Tasks in
-// the order they were made (never by priority, invariant 5), narrowed by a
+// Backlog (docs/design/patterns.md Backlog, PRD §5 A). The active Tasks,
+// newest first (Issue #86; never by priority, invariant 5), narrowed by a
 // 切り口 and an Area. The 切り口, the Area and the open Task are search
 // parameters, so a state opens from its URL (ADR 0005).
 
@@ -74,6 +76,9 @@ function BacklogScreen() {
   // next operation clears it, so a row shown again later does not take it.
   const [refocus, setRefocus] = useState<TaskId>();
   const undoRef = useRef<HTMLButtonElement>(null);
+  // Under 768px the Quick Add sticks to the bottom: the Toast goes above it.
+  const quickAddRef = useRef<HTMLDivElement>(null);
+  useToastOffsetAbove(quickAddRef, !useMediaQuery(MEDIUM_UP, true));
   // The Task just added: its row is marked for 2 seconds, and a Toast says
   // so (Issue #86). A Task the current 切り口 or Area does not show has no
   // row to mark: the Toast says why it is not in the list.
@@ -216,7 +221,10 @@ function BacklogScreen() {
 
       {/* Quick Add: at the top from 768px; under it, sticky at the bottom
           above the tab bar (DESIGN.md Responsive › compact). */}
-      <div className="sticky bottom-0 z-(--layer-sticky) order-last border-t border-border bg-canvas px-4 py-3 medium:static medium:order-none medium:border-t-0 medium:px-6 medium:py-0 medium:pb-4 xl:max-w-pane-rows">
+      <div
+        ref={quickAddRef}
+        className="sticky bottom-0 z-(--layer-sticky) order-last border-t border-border bg-canvas px-4 py-3 medium:static medium:order-none medium:border-t-0 medium:px-6 medium:py-0 medium:pb-4 xl:max-w-pane-rows"
+      >
         <TaskQuickAdd
           onAdd={(title) => {
             const chosen = quickArea ?? search.area ?? '';

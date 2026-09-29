@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Field } from './field';
+import { AreaMark } from './area-indicator';
 import { Select } from './select';
 
 const areaOptions = (
@@ -89,6 +90,30 @@ export const States: Story = {
           </option>
           <option value="weekly">毎週</option>
           <option value="weekdays">平日</option>
+        </Select>
+      </Field>
+    </div>
+  ),
+};
+
+/**
+ * 値の前に印を置ける（`prefix`）。Area の路線記号など。印は読み上げず、
+ * 値を読む。印と値の間は Filter と同じ 4px。
+ */
+export const WithPrefix: Story = {
+  render: () => (
+    <div className="flex max-w-drawer flex-col gap-4">
+      <Field label="領域なし" hideLabel>
+        <Select prefix={<AreaMark name="領域なし" color="none" />}>
+          {areaOptions}
+        </Select>
+      </Field>
+      <Field label="研究" hideLabel>
+        <Select
+          defaultValue="research"
+          prefix={<AreaMark name="研究" color={2} />}
+        >
+          {areaOptions}
         </Select>
       </Field>
     </div>

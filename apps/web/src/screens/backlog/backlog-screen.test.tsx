@@ -78,6 +78,8 @@ describe('Backlog', () => {
     const first = within(list()).getAllByRole('listitem')[0]!;
     expect(first.textContent).toContain('請求書を送る');
     expect(first.hasAttribute('data-added')).toBe(true);
+    // Said in words, not by a colour that means selected.
+    expect(within(first).getByText('追加しました')).toBeTruthy();
     const toast = await screen.findByText('「請求書を送る」を追加しました');
     // No 元に戻す: a wrong Task is archived from its row.
     expect(
@@ -90,6 +92,7 @@ describe('Backlog', () => {
     await waitFor(() => expect(first.hasAttribute('data-added')).toBe(false), {
       timeout: 3000,
     });
+    expect(within(first).queryByText('追加しました')).toBeNull();
   });
 
   it('Capture: a Task the 切り口 does not show is not in the list, and the Toast says why (#86)', async () => {
