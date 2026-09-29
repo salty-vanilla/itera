@@ -147,4 +147,33 @@ describe('undoPastDay (#53, F33)', () => {
     expect(facts.completed.map((t) => t.taskId)).not.toContain('task-tax');
     expect(facts.carriedOver.map((t) => t.taskId)).toContain('task-tax');
   });
+
+  it('puts a completion made after closing that day back to how it was closed (F17)', () => {
+    // 10/1: the started Task is deferred, then completed the same day.
+    const first = createMemoryStore(fixtureSnapshot('today-interrupt'));
+    const chosen = selectionOf(first, 'task-dataset', '2026-10-01')!;
+    expect(first.run(today.defer(chosen.id)).ok).toBe(true);
+    expect(first.run(today.complete(chosen.id)).ok).toBe(true);
+    const done = selectionOf(first, 'task-dataset', '2026-10-01')!;
+    expect(done.closedBefore?.resolution).toBe('deferred');
+
+    const store = createMemoryStore(
+      { ...first.getSnapshot(), clock: at('2026-10-02') },
+      { idPrefix: 'next' },
+    );
+    expect(store.run(undoPastDay(done.id)).ok).toBe(true);
+    const back = selectionOf(store, 'task-dataset', '2026-10-01');
+    // Deferred again, as it had been: not unresolved.
+    expect(back?.resolution).toBe('deferred');
+    expect(back?.resolvedAt).toBe(done.closedBefore?.at);
+    const marked = store
+      .getSnapshot()
+      .records.activities.filter(
+        (a) =>
+          a.kind === 'todayUnresolved' &&
+          'selectionId' in a &&
+          a.selectionId === done.id,
+      );
+    expect(marked).toEqual([]);
+  });
 });

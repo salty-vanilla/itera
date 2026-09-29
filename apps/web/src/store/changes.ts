@@ -117,34 +117,62 @@ export function andThen(
   };
 }
 
+/** The list fields of RecordChanges; adding a field without listing it here fails to compile. */
+const LIST_FIELDS = [
+  'areas',
+  'tasks',
+  'rules',
+  'occurrences',
+  'sprints',
+  'criteria',
+] as const satisfies readonly (keyof RecordChanges)[];
+type Unlisted = Exclude<
+  keyof RecordChanges,
+  (typeof LIST_FIELDS)[number] | 'user' | 'deleted'
+>;
+type UnlistedDeletion = Exclude<
+  keyof NonNullable<RecordChanges['deleted']>,
+  'occurrences' | 'criteria'
+>;
+const everyFieldListed: [Unlisted | UnlistedDeletion] extends [never]
+  ? true
+  : never = true;
+void everyFieldListed;
+
+/** `b` after `a`: later records replace earlier ones by ID; deletions add up. */
 function mergeChanges(a: RecordChanges, b: RecordChanges): RecordChanges {
-  const list = <T extends { readonly id: string }>(
-    x: readonly T[] | undefined,
-    y: readonly T[] | undefined,
-  ) =>
-    x === undefined && y === undefined ? undefined : upsert(x ?? [], y ?? []);
-  const merged = {
-    ...((b.user ?? a.user) ? { user: (b.user ?? a.user)! } : {}),
-    areas: list(a.areas, b.areas),
-    tasks: list(a.tasks, b.tasks),
-    rules: list(a.rules, b.rules),
-    occurrences: list(a.occurrences, b.occurrences),
-    sprints: list(a.sprints, b.sprints),
-    criteria: list(a.criteria, b.criteria),
+  const lists = <K extends (typeof LIST_FIELDS)[number]>(key: K) => {
+    const x = a[key];
+    const y = b[key];
+    if (x === undefined && y === undefined) return {};
+    // Each field's records have their own type; upsert keeps it.
+    return { [key]: upsert<{ readonly id: string }>(x ?? [], y ?? []) };
   };
-  const deleted = {
-    occurrences: [
-      ...(a.deleted?.occurrences ?? []),
-      ...(b.deleted?.occurrences ?? []),
-    ],
-    criteria: [...(a.deleted?.criteria ?? []), ...(b.deleted?.criteria ?? [])],
-  };
-  return {
-    ...Object.fromEntries(
-      Object.entries(merged).filter(([, v]) => v !== undefined),
-    ),
-    ...(deleted.occurrences.length + deleted.criteria.length > 0
-      ? { deleted }
-      : {}),
-  } as RecordChanges;
+  const user = b.user ?? a.user;
+  const deletedOccurrences = [
+    ...(a.deleted?.occurrences ?? []),
+    ...(b.deleted?.occurrences ?? []),
+  ];
+  const deletedCriteria = [
+    ...(a.deleted?.criteria ?? []),
+    ...(b.deleted?.criteria ?? []),
+  ];
+  const merged: RecordChanges = Object.assign(
+    {},
+    ...LIST_FIELDS.map((key) => lists(key)),
+    user === undefined ? {} : { user },
+    deletedOccurrences.length + deletedCriteria.length === 0
+      ? {}
+      : {
+          deleted: {
+            ...(deletedOccurrences.length === 0
+              ? {}
+              : { occurrences: deletedOccurrences }),
+            ...(deletedCriteria.length === 0
+              ? {}
+              : { criteria: deletedCriteria }),
+          },
+        },
+  ) as RecordChanges;
+  return merged;
 }

@@ -5,7 +5,6 @@
 import {
   setAvailableHours,
   setGoalText,
-  undoCompleteFromBacklog,
   type AreaId,
   type CommandResult,
   type DailySelection,
@@ -15,6 +14,7 @@ import {
 import { andThen } from './changes';
 import { changed, type Change, type ChangeContext } from './record-store';
 import type { Records } from './records';
+import * as task from './task-changes';
 import * as today from './today-changes';
 
 function onRunning(
@@ -69,7 +69,7 @@ export const undoPastDay =
         ? today.undoSkip(selectionId)
         : selection.resolution === 'done' &&
             selection.origin === 'backlogCompletion'
-          ? undoBacklogCompletion(sprint, selection)
+          ? backlogUndo(sprint, selection)
           : selection.resolution === 'done'
             ? today.undoComplete(selectionId)
             : undefined;
@@ -85,24 +85,15 @@ export const undoPastDay =
     return andThen(undo, today.beginDay(), 'system')(records, ctx);
   };
 
-function undoBacklogCompletion(
+/** F29 for that day: the Backlog's own undo, on the selection's date. */
+function backlogUndo(
   sprint: Sprint,
   selection: DailySelection,
-): Change {
-  return (records, ctx) => {
-    const taskId = sprint.tasks.find(
-      (t) => t.id === selection.sprintTaskId,
-    )?.taskId;
-    const task = records.tasks.find((t) => t.id === taskId);
-    if (task === undefined) {
-      return { ok: false, error: { code: 'notFound', message: 'Task' } };
-    }
-    return changed(
-      undoCompleteFromBacklog(sprint, { task, date: selection.date }, ctx),
-      (next) => ({
-        tasks: [next.task],
-        ...(next.sprint === undefined ? {} : { sprints: [next.sprint] }),
-      }),
-    );
-  };
+): Change | undefined {
+  const taskId = sprint.tasks.find(
+    (t) => t.id === selection.sprintTaskId,
+  )?.taskId;
+  return taskId === undefined
+    ? undefined
+    : task.undoComplete(taskId, selection.date);
 }

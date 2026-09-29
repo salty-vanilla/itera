@@ -47,6 +47,18 @@ export interface PastDayRecord {
   readonly selection: DailySelection;
   readonly title: string;
   readonly recurring: boolean;
+  /**
+   * What undoing leaves on that day (F33): unresolved; or, completed after
+   * being closed that day, the way it had been closed (F17); or nothing,
+   * for a choice made by a completion from the Backlog (F29).
+   */
+  readonly after:
+    | { readonly kind: 'unresolved' }
+    | {
+        readonly kind: 'closed';
+        readonly resolution: 'paused' | 'deferred' | 'removed';
+      }
+    | { readonly kind: 'gone' };
 }
 
 export interface PastDay {
@@ -207,6 +219,17 @@ function pastDaysOf(
               selection,
               title: task.title,
               recurring: selection.occurrenceId !== undefined,
+              after:
+                selection.resolution === 'done' &&
+                selection.origin === 'backlogCompletion'
+                  ? { kind: 'gone' as const }
+                  : selection.resolution === 'done' &&
+                      selection.closedBefore !== undefined
+                    ? {
+                        kind: 'closed' as const,
+                        resolution: selection.closedBefore.resolution,
+                      }
+                    : { kind: 'unresolved' as const },
             },
           ];
     });

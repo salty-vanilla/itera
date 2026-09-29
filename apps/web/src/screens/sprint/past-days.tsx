@@ -57,7 +57,7 @@ function PastDays({ days, onUndo }: PastDaysProps) {
           日ごとの記録
         </h2>
         <p className="text-help text-ink-muted">
-          昨日までの完了とスキップです。取り消すと、その日は未処理になります。
+          昨日までの完了とスキップです。取り消すと、その日は未処理になります（見送りなどの後に完了した日は、元の状態に戻ります）。
         </p>
       </div>
       {days.map((day) => (
@@ -121,12 +121,7 @@ function PastDays({ days, onUndo }: PastDaysProps) {
                   {formatDate(asking.selection.date)} の「{asking.title}」の
                   {word(asking)}を取り消しますか？
                 </DialogTitle>
-                <DialogDescription>
-                  {asking.recurring
-                    ? 'その日の記録は未処理になり、この回は未完了に戻ります。'
-                    : 'その日の記録は未処理になり、タスクは今週の残りに戻ります。'}
-                  過ぎた日を完了に戻すことはできません。
-                </DialogDescription>
+                <DialogDescription>{consequence(asking)}</DialogDescription>
               </DialogHeader>
               <DialogFooter>
                 <DialogClose render={<Button />}>やめる</DialogClose>
@@ -138,6 +133,30 @@ function PastDays({ days, onUndo }: PastDaysProps) {
       </Dialog>
     </section>
   );
+}
+
+const CLOSED_WORDS = {
+  paused: '今日はここまで',
+  deferred: '見送り',
+  removed: '今日から外した',
+} as const;
+
+/** What undoing leaves, in words (F33, F17, F29). */
+function consequence(r: PastDayRecord): string {
+  const back = r.recurring
+    ? 'この回は未完了に戻ります。'
+    : 'タスクは今週の残りに戻ります。';
+  const day =
+    r.after.kind === 'gone'
+      ? 'Backlog から完了した記録なので、その日の記録ごと消え、'
+      : r.after.kind === 'closed'
+        ? `その日の記録は、完了にする前の「${CLOSED_WORDS[r.after.resolution]}」に戻り、`
+        : 'その日の記録は未処理になり、';
+  const noWayBack =
+    r.selection.resolution === 'skipped'
+      ? '過ぎた日をスキップに戻すことはできません。'
+      : '過ぎた日を完了に戻すことはできません。';
+  return `${day}${back}${noWayBack}`;
 }
 
 export { PastDays };
