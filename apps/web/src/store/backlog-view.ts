@@ -50,6 +50,14 @@ export interface BacklogItem {
   readonly subtaskValue: PlanningValue;
   /** 今日へ: only for a Task outside the active Sprint (invariant 26). */
   readonly canAddToToday: boolean;
+  /**
+   * 今日へ waits for the Sprint's first day (#59): the Sprint is confirmed
+   * but has not started, so there is no day to choose on yet.
+   */
+  readonly todayOpensOn?: {
+    readonly number: number;
+    readonly start: LocalDate;
+  };
   /** A recurring Task is completed per occurrence, in Today. */
   readonly canComplete: boolean;
 }
@@ -80,6 +88,11 @@ export function backlogItem(
   );
   const active = activeSprint(records);
   const latest = rule?.versions.at(-1);
+  const canChoose =
+    active !== undefined &&
+    !isRecurring(task) &&
+    !active.tasks.some((t) => t.taskId === task.id);
+  const beforeStart = active !== undefined && clock.today < active.start;
   return {
     task,
     ...(area === undefined
@@ -118,10 +131,15 @@ export function backlogItem(
       { ...task, timeBasis: 'subtasks' },
       { now: clock.now },
     ),
-    canAddToToday:
-      active !== undefined &&
-      !isRecurring(task) &&
-      !active.tasks.some((t) => t.taskId === task.id),
+    canAddToToday: canChoose && !beforeStart,
+    ...(canChoose && beforeStart && active !== undefined
+      ? {
+          todayOpensOn: {
+            number: sprintNumber(active, records.sprints),
+            start: active.start,
+          },
+        }
+      : {}),
     canComplete: !isRecurring(task),
   };
 }

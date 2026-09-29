@@ -470,3 +470,73 @@ describe('Backlog', () => {
     expect(task('task-dentist')?.lifecycle).toBe('active');
   });
 });
+
+describe('Backlog — before the Sprint starts (#59)', () => {
+  // 9/27 (Sun) evening: Sprint 2 is confirmed; it starts on 9/28 (Mon).
+  async function confirmedOnSunday() {
+    const router = createAppRouter({
+      history: createMemoryHistory({
+        initialEntries: ['/sprint?fixture=planning-check&stage=check'],
+      }),
+    });
+    render(
+      <TooltipProvider>
+        <RouterProvider router={router} />
+      </TooltipProvider>,
+    );
+    await userEvent.click(
+      (await screen.findAllByRole('button', { name: 'Sprint 2 を確定' }))[0]!,
+    );
+    await userEvent.click(
+      within(
+        await screen.findByRole('dialog', { name: /Sprint 2 を確定しますか/ }),
+      ).getByRole('button', { name: 'Sprint 2 を確定' }),
+    );
+    await userEvent.click(screen.getAllByRole('link', { name: /Backlog/ })[0]!);
+    await screen.findByRole('heading', { level: 1, name: 'Backlog' });
+  }
+
+  it('completes a Task of the week without a day, and undoes it (F34)', async () => {
+    await confirmedOnSunday();
+    await userEvent.click(
+      screen.getByRole('button', { name: '完了にする: 関連論文を 3 本読む' }),
+    );
+    expect(screen.queryByText('保存できませんでした')).toBeNull();
+    const sprint = () => records().sprints.find((s) => s.state === 'active')!;
+    const st = () => sprint().tasks.find((t) => t.taskId === 'task-paper');
+    expect(task('task-paper')?.lifecycle).toBe('completed');
+    expect(st()?.outcome).toBe('done');
+    expect(sprint().dailySelections).toEqual([]);
+
+    const line = completedLine();
+    if (line === null) throw new Error('no completed line');
+    await userEvent.click(
+      within(line).getByRole('button', { name: '元に戻す' }),
+    );
+    expect(task('task-paper')?.lifecycle).toBe('active');
+    expect(st()?.outcome).toBe('planned');
+  });
+
+  it('shows 今日へ disabled with the day it opens', async () => {
+    await confirmedOnSunday();
+    await userEvent.click(
+      screen.getByRole('button', { name: '操作: 顧客インタビューの設計' }),
+    );
+    const item = await screen.findByRole('menuitem', {
+      name: /今日へ（9\/28 \(月\) から）/,
+    });
+    expect(item.getAttribute('aria-disabled')).toBe('true');
+    await userEvent.keyboard('{Escape}');
+
+    await userEvent.click(
+      within(list()).getByRole('button', { name: '顧客インタビューの設計' }),
+    );
+    const today = await screen.findByRole('button', { name: '今日へ' });
+    expect(today.getAttribute('aria-disabled')).toBe('true');
+    expect(
+      screen.getByText('Sprint 2 が始まる 9/28 (月) から選べます。'),
+    ).toBeTruthy();
+    await userEvent.click(today);
+    expect(screen.queryByText('保存できませんでした')).toBeNull();
+  });
+});
