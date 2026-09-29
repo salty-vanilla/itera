@@ -114,6 +114,24 @@ describe('Today — the top', () => {
   });
 });
 
+describe('Today — the top, when nothing is chosen (#99)', () => {
+  it('shows no 今日の残り line in the morning before choosing, and shows it once all are done', async () => {
+    await renderAt('/today?fixture=today-morning');
+    expect(within(region('今日やる')).getByText(/まだありません/)).toBeTruthy();
+    expect(screen.queryByText(/今日の残り/)).toBeNull();
+    await userEvent.click(
+      within(region('昨日の続き')).getByRole('button', {
+        name: '今日へ: 関連論文を 3 本読む',
+      }),
+    );
+    expect(screen.getByText(/今日の残り 1件/)).toBeTruthy();
+    await userEvent.click(
+      screen.getByRole('button', { name: '完了にする: 関連論文を 3 本読む' }),
+    );
+    expect(screen.getByText('今日の残りはありません')).toBeTruthy();
+  });
+});
+
 describe('Today — 今日へ', () => {
   it('shows 昨日の続き above the rest and chooses it only with 今日へ (F6)', async () => {
     await renderAt('/today?fixture=today-morning');
