@@ -31,6 +31,7 @@
 | 可用時間 | Sprint.availableHours | 今週、計画に使える時間（本人が入力）。「可用時間 18h」 |
 | 計画値の合計 | — | 計画値の合計（幅のまま）。「16.5–18.5h」 |
 | 残り / 超過 | — | 可用時間 − 計画値の合計。「残り −1 〜 1h」「超過 3 〜 5h」 |
+| 優先度 | Task.priority | 「高 / 通常 / 低」（「普通」と書かない）。行の Task Metadata には高と低だけ「優先度 高」「優先度 低」と出し、通常は出さない。並び・絞り込みには使わない（不変条件 5。Issue #97） |
 | 持ち越し | SprintTask = CarriedOver | Sprint 終了時に未完了。「持ち越し 2回（Sprint 13から）」 |
 | 繰り返し | RecurrenceRule / Occurrence | ルールで発生する Task と、その回。「毎週 土」「毎週 月・木」「平日 · 今週 2/5」 |
 | 未処理 | DailySelection = Unresolved / Occurrence = Missed | 選んだまま日付が変わった / 繰り返しの回が Sprint 終了時に未処理。見送りには数えない |

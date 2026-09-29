@@ -6,7 +6,11 @@ import { DividerLabel } from '@/components/ui/divider';
 import { useToast } from '@/components/ui/toast';
 import { Deadline } from '@/components/task/deadline';
 import { Estimate } from '@/components/task/estimate';
-import { MetaItem, TaskMetadata } from '@/components/task/task-metadata';
+import {
+  MetaItem,
+  PriorityText,
+  TaskMetadata,
+} from '@/components/task/task-metadata';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
 import { formatDate } from '@/lib/date-format';
 import { rowKeyHandlers } from '@/lib/row-keys';
@@ -233,6 +237,8 @@ function CandidateItem({
     if (area)
       meta.push(<AreaIndicator key="a" name={area.name} color={area.color} />);
     if (task.due) meta.push(<Deadline key="d" due={task.due} today={today} />);
+    if (task.priority !== 'normal')
+      meta.push(<PriorityText key="p" priority={task.priority} />);
     if (carry) meta.push(<CarryOverText key="c" {...carry} />);
     if (chosen)
       meta.push(

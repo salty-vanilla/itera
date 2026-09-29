@@ -299,6 +299,22 @@ describe('Today — the daily operations', () => {
   });
 });
 
+describe('Today — 優先度 (#97)', () => {
+  it('tells 高 in words on a row, and not 通常', async () => {
+    await renderAt('/today?fixture=today-interrupt');
+    const rest = region('今週の残り');
+    const row = within(rest)
+      .getByRole('button', { name: '新メンバーのオンボーディング資料' })
+      .closest('li') as HTMLElement;
+    expect(row.textContent).toContain('優先度 高');
+    const others = within(rest)
+      .getAllByRole('listitem')
+      .filter((li) => li !== row);
+    expect(others.length).toBeGreaterThan(0);
+    for (const li of others) expect(li.textContent).not.toContain('優先度');
+  });
+});
+
 describe('Today — completed from the Backlog', () => {
   it('shows it last, and ○ undoes it as the Backlog does (F29)', async () => {
     await renderAt('/today?fixture=today-interrupt');
