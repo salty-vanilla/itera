@@ -14,7 +14,7 @@
 ## 確認結果
 
 <!-- 実行したコマンド・手動確認と結果。未実施の確認は理由も記載。 -->
-<!-- レビュー（harness-reviewer）：区分と理由 / 観点 / verdict と対象コミット / MUST・SHOULD・NOTE の件数 / 修正・却下の件数。 -->
+<!-- レビュー（harness-reviewer）：区分と理由 / 観点（acceptance を Sonnet で起動したらその旨） / verdict と対象コミット / MUST・SHOULD・NOTE の件数 / 修正・却下の件数。 -->
 <!-- 修正しなかった SHOULD のうち、architecture・責務の配置・重複と再利用・公開 API・結合に当たるものは理由を 1 行ずつ。tiny でレビューを省いた場合はその理由。 -->
 
 ## UI 変更の画像

@@ -84,7 +84,7 @@ direnv のシェル hook は対話シェルのプロンプトでしか動かな�
 
 ## ハーネス
 
-`issue-harness` Skill を使う。メインセッションが調査から修正までを担当し、レビューだけを `harness-reviewer` subagent に新しいコンテキストで任せる。レビューの観点（`general` / `acceptance` / `quality` / `specialist:<領域>`）は変更の区分で決める。曖昧な要望や重要な設計判断だけ `harness-planner` に相談する。区分・手順・上限・返す形式は `.agents/skills/issue-harness/` を参照する。
+`issue-harness` Skill を使う。メインセッションが調査から修正までを担当し、レビューだけを `harness-reviewer` subagent に新しいコンテキストで任せる。レビューの観点（`general` / `acceptance` / `quality` / `specialist:<領域>`）は変更の区分で決め、apps/web の見た目が変わるときは `visual` を加える。曖昧な要望や重要な設計判断だけ `harness-planner` に相談する。区分・手順・上限・返す形式は `.agents/skills/issue-harness/` を参照する。
 
 ```text
 /issue-harness この要望を Issue に整理してください。まだ実装は始めないでください。
