@@ -86,9 +86,9 @@ function PlanPane({
         fit: a column is at least 26rem and at least a third of the row (less
         1px, so that three fit exactly). The blocks stop at three columns of
         pane-sprint. Under 1920px they are one column, as before (DESIGN.md
-        Layout, Issue #81). --gap is the space between the columns and rows.
+        Layout, Issue #81). --plan-gap is the space between the columns and rows.
       */}
-      <div className="flex flex-col gap-(--gap) [--gap:var(--spacing-8)] xl:grid xl:max-w-[calc(var(--spacing-pane-sprint)*3+var(--gap)*2)] xl:grid-cols-[repeat(auto-fill,minmax(max(26rem,calc((100%-var(--gap)*2)/3-1px)),1fr))] xl:items-start">
+      <div className="flex flex-col gap-(--plan-gap) [--plan-gap:var(--spacing-8)] xl:grid xl:max-w-[calc(var(--spacing-pane-sprint)*3+var(--plan-gap)*2)] xl:grid-cols-[repeat(auto-fill,minmax(max(26rem,calc((100%-var(--plan-gap)*2)/3-1px)),1fr))] xl:items-start">
         {blocks.map((block) =>
           stage === 'pick' ? (
             <section
@@ -116,6 +116,8 @@ function PlanPane({
           ) : (
             <GoalBlock
               key={block.area.id ?? 'none'}
+              // From 1920px the blocks sit side by side (see above).
+              headingRowClassName="xl:min-h-control-sm"
               area={{ name: block.area.name, color: block.area.color }}
               summary={block.tasks.length > 0 ? summaryOf(block) : undefined}
               goal={block.goal?.text}

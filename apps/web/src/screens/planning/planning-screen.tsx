@@ -40,7 +40,8 @@ import { PlanPane, type Stage } from './plan-pane';
 //
 // Layout (DESIGN.md Layout › Responsive):
 // - wide (1200px and up): Backlog / Sprint (at most 680px; from 1920px it
-//   takes the width that is left) / 時間の見通し (336px). The Backlog is 384px in 選ぶ and 240px, titles only, later.
+//   takes the width that is left) / 時間の見通し (336px). The Backlog is
+//   384px in 選ぶ and 240px, titles only, later.
 // - medium: Backlog / Sprint. The Capacity is one sticky line above the
 //   Sprint that opens a right Drawer.
 // - compact: one column. The Backlog shows in 選ぶ only; the Capacity is
