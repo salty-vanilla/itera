@@ -5,7 +5,7 @@ import {
   useRouter,
   useSearch,
 } from '@tanstack/react-router';
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Drawer,
@@ -19,7 +19,9 @@ import { useToast } from '@/components/ui/toast';
 import { capacityHeadline } from '@/components/sprint/capacity-indicator';
 import { SprintHeader } from '@/components/sprint/sprint-header';
 import { formatDateRange } from '@/lib/date-format';
+import { isTyping } from '@/lib/row-keys';
 import { formatPlanningTotal } from '@/lib/time-format';
+import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { cn } from '@/lib/utils';
 import type { PlanningData } from '@/store/planning-view';
 import { useBacklog } from '@/store/use-backlog';
@@ -101,6 +103,11 @@ function PlanningScreen({ data }: PlanningScreenProps) {
   };
   const openItem =
     search.task === undefined ? undefined : backlog.item(search.task);
+  const estimateFocus = useEstimateFocus();
+  const openEstimate = (taskId: TaskId) => {
+    estimateFocus.request(taskId);
+    openTask(taskId);
+  };
 
   const outlook = (
     <OutlookPane
@@ -122,9 +129,56 @@ function PlanningScreen({ data }: PlanningScreenProps) {
 
   const blocked = data.blockers.length > 0;
   const reasonId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const confirmRef = useRef<HTMLButtonElement>(null);
+
+  // docs/design/accessibility.md Planning: N goes to the Quick Add and
+  // ⌘/Ctrl+Enter confirms (it opens the Dialog; while confirming is not
+  // possible, the focus goes to the button, which reads out why). Keys
+  // pressed in a Drawer, Dialog or Menu are theirs.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const root = rootRef.current;
+      const { target } = event;
+      if (event.defaultPrevented || event.isComposing || root === null) return;
+      if (
+        !(target instanceof Node) ||
+        !(target === document.body || root.contains(target))
+      )
+        return;
+      if (
+        event.key === 'Enter' &&
+        (event.metaKey || event.ctrlKey) &&
+        !event.altKey &&
+        !event.shiftKey
+      ) {
+        event.preventDefault();
+        if (blocked) confirmRef.current?.focus();
+        else setConfirming(true);
+        return;
+      }
+      if (
+        (event.key === 'n' || event.key === 'N') &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        !isTyping(target)
+      ) {
+        // Hidden under 768px outside 選ぶ, where nothing takes the focus.
+        const field = root.querySelector<HTMLInputElement>(
+          '[data-slot="planning-backlog"] [data-slot="task-quick-add"] input',
+        );
+        if (field === null) return;
+        event.preventDefault();
+        field.focus();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [blocked]);
 
   return (
-    <div className="flex min-h-full flex-col">
+    <div ref={rootRef} className="flex min-h-full flex-col">
       <div className="px-4 pt-6 medium:px-6">
         <SprintHeader
           status={<Tag tone="draft">計画中 · 未確定</Tag>}
@@ -154,6 +208,7 @@ function PlanningScreen({ data }: PlanningScreenProps) {
           actions={
             <div className="flex flex-col items-end gap-1">
               <Button
+                ref={confirmRef}
                 variant="primary"
                 disabled={blocked}
                 focusableWhenDisabled
@@ -222,6 +277,7 @@ function PlanningScreen({ data }: PlanningScreenProps) {
           data={data}
           slim={stage !== 'pick'}
           onOpenTask={openTask}
+          onEstimateTask={openEstimate}
           className={cn(
             'order-2 medium:order-none',
             // compact: the Backlog belongs to 選ぶ only.
@@ -233,6 +289,7 @@ function PlanningScreen({ data }: PlanningScreenProps) {
             data={data}
             stage={stage}
             onOpenTask={openTask}
+            onEstimateTask={openEstimate}
             className="w-full max-w-pane-sprint"
           />
           {stage === 'check' && (
@@ -275,6 +332,7 @@ function PlanningScreen({ data }: PlanningScreenProps) {
                   setSearch({ task: undefined });
                 }
               }}
+              focusEstimate={estimateFocus.of(openItem.task.id)}
             />
           )}
         </DrawerContent>

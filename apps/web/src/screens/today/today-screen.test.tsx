@@ -504,3 +504,35 @@ describe('Today — outside the period (#54)', () => {
     expect(row('今日やる', '英語の多読 30 分')).toBeTruthy();
   });
 });
+
+describe('Today — keys of the lists (#48)', () => {
+  // docs/design/accessibility.md キーボード, with the focus on a row.
+  const rowTitle = (name: string, title: string) =>
+    within(region(name)).getByRole('button', { name: title });
+
+  it('Space on a row of 今日やる completes it with ○', async () => {
+    const router = await renderAt('/today?fixture=today-interrupt');
+    rowTitle('今日やる', '顧客インタビューの設計').focus();
+    await userEvent.keyboard(' ');
+    expect(selectionOf('task-interview')?.resolution).toBe('done');
+    expect(router.state.location.search).not.toHaveProperty('task');
+  });
+
+  it('Space on a row of 昨日の続き chooses it for today', async () => {
+    await renderAt('/today?fixture=today-morning');
+    rowTitle('昨日の続き', '関連論文を 3 本読む').focus();
+    await userEvent.keyboard(' ');
+    expect(selectionOf('task-paper')?.resolution).toBe('selected');
+  });
+
+  it('E opens the Task at its Estimate', async () => {
+    await renderAt('/today?fixture=today-interrupt');
+    rowTitle('今日やる', '顧客インタビューの設計').focus();
+    await userEvent.keyboard('e');
+    // The Task's own, not a subtask's (「Estimate（時間）: …」).
+    const estimate = await screen.findByRole('textbox', {
+      name: /^Estimate（時間）(?!:)/,
+    });
+    await waitFor(() => expect(document.activeElement).toBe(estimate));
+  });
+});

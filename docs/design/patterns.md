@@ -1,6 +1,6 @@
 # 画面のパターン
 
-更新：2026-09-28（実行中の Sprint の画面、Issue #51。期間外の Today とシステムの Review 移行、Issue #54。Retro の最初の実装で決めたこと、Issue #42。Today の最初の実装で決めたこと、Issue #41。Backlog の編集して採用と、Planning の最初の実装で決めたこと、Issue #40）。2026-09-27（Backlog の完了を元に戻す、Issue #47）。2026-09-26 に DESIGN.md v0.2 から分離。
+更新：2026-09-29（リストのキー操作、Issue #48）。2026-09-28（実行中の Sprint の画面、Issue #51。期間外の Today とシステムの Review 移行、Issue #54。Retro の最初の実装で決めたこと、Issue #42。Today の最初の実装で決めたこと、Issue #41。Backlog の編集して採用と、Planning の最初の実装で決めたこと、Issue #40）。2026-09-27（Backlog の完了を元に戻す、Issue #47）。2026-09-26 に DESIGN.md v0.2 から分離。
 
 Backlog・Planning・Today・Retro の画面の組み立て方。見た目と部品は [DESIGN.md](../../DESIGN.md)、意味と操作の種類は [PRD](../requirements/prd.md) と [ドメインモデル](../domain/domain-model.md) が正。UI v0.1 モックは当たり付けで、ここに書いた構成を実装して触りながら削る（PRD §12）。
 
@@ -10,6 +10,17 @@ Backlog・Planning・Today・Retro の画面の組み立て方。見た目と部
 - Sprint の画面（Planning / Today / Retro）の Area 名は Sprint 確定時の名前で固定し、Backlog は現在の名前を出す（ドメインモデル F5）。確定前の Planning は現在の名前。
 - 容量の超過は Planning だけで扱う。Today と Backlog では超過を表示しない（不変条件 25）。
 - 持ち越し・見送り・超過・「できなかった」は事実として中立に書き、人格評価のように見せない。
+
+### リストのキー操作（Issue #48 の実装で決めたこと。オーナーの確認は PR で取る）
+
+キーの割り当ては [accessibility.md](accessibility.md) の「キーボード」が正。ここには、表から読めない振る舞いを書く。
+
+- 「行にフォーカスがある」は、行のタイトル（行全体で詳細を開くボタン）にフォーカスがあるとき。Space はそこで行のコントロール（○・□・「今日へ」）を押し、詳細は開かない。コントロール自身や `…` にフォーカスがあるときは、それぞれのボタンの操作になる。押せるコントロールのない行（スキップした回、Backlog の繰り返しの Task）では何もしない。コントロールを持たない行（Planning の今週の側）では、Space も Enter と同じく詳細を開く。
+- E と Delete は、行の中のどこにフォーカスがあっても効く。E は Task の詳細を開き、Estimate の欄にフォーカスを置く（Backlog・Today・Planning の両方のペイン）。詳細を開けない行（Today の完了した Task）では効かない。
+- Delete は Mac の delete キー（Backspace）でも効く。アーカイブしたら、フォーカスは次の行へ移す（なければ前の行、それもなければクイック追加）。`…` のアーカイブも同じ。
+- Alt+↑↓ の並べ替えは作っていない。今は並べ替えを持つリストがない（Backlog は作成順、不変条件 5）。
+- Planning の ⌘/Ctrl+Enter は 1 文字ではないので、入力欄の中でも効く。確定できないときは Dialog を開かず、確定ボタンへフォーカスを移して、理由を読み上げさせる。N は、compact の「整える」「確かめる」（Backlog のペインがない）では何もしない。
+- どのキーも、Drawer・Dialog・Menu の中では効かない（そちらのキー操作が優先）。1 文字のキーと Delete は、入力欄の中と、日本語の変換中は効かない。
 
 ## Backlog
 

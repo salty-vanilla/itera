@@ -461,3 +461,42 @@ describe('Planning — review fixes (2)', () => {
     expect(row?.textContent).toContain('計画 3–5h');
   });
 });
+
+describe('Planning — keys (#48)', () => {
+  // docs/design/accessibility.md キーボード.
+  it('Space on a Backlog row chooses it with □; E opens it at its Estimate', async () => {
+    await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    within(backlogPane())
+      .getByRole('button', { name: '顧客インタビューの設計' })
+      .focus();
+    await userEvent.keyboard(' ');
+    expect(draft().tasks.some((t) => t.taskId === 'task-interview')).toBe(true);
+    await userEvent.keyboard('e');
+    // The Task's own, not a subtask's (「Estimate（時間）: …」).
+    const estimate = await screen.findByRole('textbox', {
+      name: /^Estimate（時間）(?!:)/,
+    });
+    await waitFor(() => expect(document.activeElement).toBe(estimate));
+  });
+
+  it('N goes to the Quick Add, where it is typed', async () => {
+    await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    const field = within(backlogPane()).getByRole('textbox', {
+      name: 'タスクを追加して今週に入れる',
+    });
+    await userEvent.keyboard('n');
+    expect(document.activeElement).toBe(field);
+    expect(field).toHaveProperty('value', '');
+    await userEvent.keyboard('n');
+    expect(field).toHaveProperty('value', 'n');
+  });
+
+  it('⌘/Ctrl+Enter opens the confirm Dialog, also from a field', async () => {
+    await renderAt('/sprint?fixture=planning-check&stage=check');
+    await userEvent.keyboard('{Meta>}{Enter}{/Meta}');
+    expect(
+      await screen.findByRole('dialog', { name: /Sprint 2 を確定しますか/ }),
+    ).toBeTruthy();
+    expect(draft().state).toBe('planning');
+  });
+});

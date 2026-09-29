@@ -15,6 +15,7 @@ import { Select } from '@/components/ui/select';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
 import { formatDate, formatDateHeading, formatTime } from '@/lib/date-format';
 import { formatHours, formatPlanningTotal } from '@/lib/time-format';
+import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { cn } from '@/lib/utils';
 import type { TodayData, TodayRow as TodayRowData } from '@/store/today-view';
 import { useAppOverview } from '@/store/use-app-overview';
@@ -160,6 +161,11 @@ function TodayView({ data }: { data: TodayData }) {
     });
   const openItem =
     search.task === undefined ? undefined : backlog.item(search.task);
+  const estimateFocus = useEstimateFocus();
+  const openEstimate = (taskId: TaskId) => {
+    estimateFocus.request(taskId);
+    openTask(taskId);
+  };
 
   const moved = (selectionId: DailySelectionId, done: boolean) => {
     if (done) focusNext.current = { selection: selectionId };
@@ -200,6 +206,10 @@ function TodayView({ data }: { data: TodayData }) {
       onOpen:
         row.task.lifecycle === 'active'
           ? () => openTask(row.task.id)
+          : undefined,
+      onEstimate:
+        row.task.lifecycle === 'active'
+          ? () => openEstimate(row.task.id)
           : undefined,
       onComplete: () => moved(selectionId, actions.complete(selectionId)),
       onUndoComplete: () => {
@@ -361,6 +371,7 @@ function TodayView({ data }: { data: TodayData }) {
                   <WeekRow
                     item={item}
                     onOpen={() => openTask(item.task.id)}
+                    onEstimate={() => openEstimate(item.task.id)}
                     onChoose={() => choose(item)}
                   />
                 </li>
@@ -385,6 +396,7 @@ function TodayView({ data }: { data: TodayData }) {
                   <WeekRow
                     item={item}
                     onOpen={() => openTask(item.task.id)}
+                    onEstimate={() => openEstimate(item.task.id)}
                     onChoose={() => choose(item)}
                   />
                 </li>
@@ -526,6 +538,7 @@ function TodayView({ data }: { data: TodayData }) {
                   openTask(undefined);
                 }
               }}
+              focusEstimate={estimateFocus.of(openItem.task.id)}
             />
           )}
         </DrawerContent>

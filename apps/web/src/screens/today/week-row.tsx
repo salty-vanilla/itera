@@ -13,14 +13,17 @@ import { ItemMetadata } from './today-row';
 type WeekRowProps = {
   item: TodayItem;
   onOpen: () => void;
+  /** E on the row: the detail, at its Estimate. */
+  onEstimate: () => void;
   onChoose: () => void;
 };
 
-function WeekRow({ item, onOpen, onChoose }: WeekRowProps) {
+function WeekRow({ item, onOpen, onEstimate, onChoose }: WeekRowProps) {
   return (
     <TaskRow
       title={item.task.title}
       onOpen={onOpen}
+      keys={{ onEstimate }}
       control={
         <Button size="sm" data-action="choose" onClick={onChoose}>
           <ArrowUp aria-hidden />

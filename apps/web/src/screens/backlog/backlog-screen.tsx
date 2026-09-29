@@ -8,6 +8,7 @@ import { Filter, FilterGroup } from '@/components/ui/filter';
 import { Select } from '@/components/ui/select';
 import { useToast } from '@/components/ui/toast';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
+import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { cn } from '@/lib/utils';
 import { useBacklog } from '@/store/use-backlog';
 import { useTaskActions } from '@/store/use-task-actions';
@@ -74,6 +75,7 @@ function BacklogScreen() {
   // next operation clears it, so a row shown again later does not take it.
   const [refocus, setRefocus] = useState<TaskId>();
   const undoRef = useRef<HTMLButtonElement>(null);
+  const estimateFocus = useEstimateFocus();
   /** Another operation: the completed line and the pending focus go. */
   const endUndo = () => {
     setCompleted(undefined);
@@ -119,9 +121,22 @@ function BacklogScreen() {
   };
 
   const archiveWithUndo = (taskId: TaskId, title: string) => {
+    // The row goes: the focus moves to the next row (or the one before it,
+    // or the Quick Add) rather than nowhere.
+    const index = items.findIndex((i) => i.task.id === taskId);
+    const next = items[index + 1] ?? items[index - 1];
     endUndo();
     if (!actions.archiveTask(taskId)) return;
     if (search.task === taskId) setSearch({ task: undefined });
+    requestAnimationFrame(() =>
+      document
+        .querySelector<HTMLElement>(
+          next === undefined
+            ? '[data-slot="task-quick-add"] input'
+            : `[data-task="${next.task.id}"] [data-row-focus]`,
+        )
+        ?.focus(),
+    );
     toast.show({
       title: `「${title}」をアーカイブしました`,
       action: {
@@ -226,7 +241,7 @@ function BacklogScreen() {
                       onUndo={undoCompleted}
                     />
                   )}
-                  <li>
+                  <li data-task={task.id}>
                     <BacklogRow
                       item={item}
                       today={today}
@@ -238,6 +253,10 @@ function BacklogScreen() {
                         actions.addToToday(task.id);
                       }}
                       onArchive={() => archiveWithUndo(task.id, task.title)}
+                      onEstimate={() => {
+                        estimateFocus.request(task.id);
+                        setSearch({ task: task.id });
+                      }}
                       focusControl={refocus === task.id}
                     />
                   </li>
@@ -277,6 +296,7 @@ function BacklogScreen() {
               timeZone={backlog.timeZone}
               onClose={() => setSearch({ task: undefined })}
               onComplete={() => completeWithUndo(open.task.id, open.task.title)}
+              focusEstimate={estimateFocus.of(open.task.id)}
             />
           )}
         </DrawerContent>

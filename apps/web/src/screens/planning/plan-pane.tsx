@@ -39,10 +39,18 @@ type PlanPaneProps = {
   data: PlanningData;
   stage: Stage;
   onOpenTask: (taskId: TaskId) => void;
+  /** E on a row: the Task's detail, at its Estimate. */
+  onEstimateTask: (taskId: TaskId) => void;
   className?: string | undefined;
 };
 
-function PlanPane({ data, stage, onOpenTask, className }: PlanPaneProps) {
+function PlanPane({
+  data,
+  stage,
+  onOpenTask,
+  onEstimateTask,
+  className,
+}: PlanPaneProps) {
   const actions = usePlanningActions();
   const withTasks = data.plan.filter((p) => p.tasks.length > 0);
   // 整える shows every Area (a Goal can be written before choosing Tasks);
@@ -82,7 +90,12 @@ function PlanPane({ data, stage, onOpenTask, className }: PlanPaneProps) {
                 {summaryOf(block)}
               </span>
             </h2>
-            <PlannedList block={block} stage={stage} onOpenTask={onOpenTask} />
+            <PlannedList
+              block={block}
+              stage={stage}
+              onOpenTask={onOpenTask}
+              onEstimateTask={onEstimateTask}
+            />
           </section>
         ) : (
           <GoalBlock
@@ -105,6 +118,7 @@ function PlanPane({ data, stage, onOpenTask, className }: PlanPaneProps) {
                 block={block}
                 stage={stage}
                 onOpenTask={onOpenTask}
+                onEstimateTask={onEstimateTask}
               />
             )}
           </GoalBlock>
@@ -125,10 +139,12 @@ function PlannedList({
   block,
   stage,
   onOpenTask,
+  onEstimateTask,
 }: {
   block: AreaPlan;
   stage: Stage;
   onOpenTask: (taskId: TaskId) => void;
+  onEstimateTask: (taskId: TaskId) => void;
 }) {
   return (
     <ul className="flex flex-col border-t border-border-soft">
@@ -138,6 +154,7 @@ function PlannedList({
             planned={planned}
             stage={stage}
             onOpen={() => onOpenTask(planned.task.id)}
+            onEstimate={() => onEstimateTask(planned.task.id)}
           />
         </li>
       ))}
@@ -149,10 +166,12 @@ function PlannedRow({
   planned,
   stage,
   onOpen,
+  onEstimate,
 }: {
   planned: PlannedTask;
   stage: Stage;
   onOpen: () => void;
+  onEstimate: () => void;
 }) {
   const actions = usePlanningActions();
   const toast = useToast();
@@ -238,6 +257,7 @@ function PlannedRow({
     <TaskRow
       title={task.title}
       onOpen={onOpen}
+      keys={{ onEstimate }}
       metadata={
         meta.length > 0 ? <TaskMetadata>{meta}</TaskMetadata> : undefined
       }

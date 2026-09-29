@@ -36,6 +36,8 @@ type TodayRowProps = {
   timeZone: TimeZone;
   /** Opens the Task's detail; absent for a completed Task. */
   onOpen: (() => void) | undefined;
+  /** E on the row: the detail, at its Estimate; absent with `onOpen`. */
+  onEstimate: (() => void) | undefined;
   onComplete: () => void;
   onUndoComplete: () => void;
   onStart: () => void;
@@ -55,6 +57,7 @@ function TodayRow({
   row,
   timeZone,
   onOpen,
+  onEstimate,
   onComplete,
   onUndoComplete,
   onStart,
@@ -115,6 +118,7 @@ function TodayRow({
     <TaskRow
       title={task.title}
       onOpen={onOpen}
+      keys={{ onEstimate }}
       done={done}
       control={
         skipped ? (

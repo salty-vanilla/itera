@@ -1,5 +1,6 @@
 import { Check } from 'lucide-react';
 import type { ReactNode, Ref } from 'react';
+import { rowKeyHandlers, type RowKeys } from '@/lib/row-keys';
 import { cn } from '@/lib/utils';
 
 // DESIGN.md Components › Task Row. One Task, the same structure in Backlog,
@@ -12,6 +13,10 @@ import { cn } from '@/lib/utils';
 // that the whole row opens it, while the control and the actions sit above
 // it. The actions show on hover and focus, and always under 768px (no
 // hover there).
+//
+// The row takes the list keys of docs/design/accessibility.md while the
+// focus is in it (`@/lib/row-keys`): Space presses the control, Enter opens
+// the Task, and E / Delete as the screen gives them.
 
 type TaskRowProps = {
   title: string;
@@ -26,6 +31,8 @@ type TaskRowProps = {
   /** Read out with the title, e.g. that the detail is open. */
   current?: boolean | undefined;
   done?: boolean | undefined;
+  /** E and Delete on the row; Space and Enter need nothing. */
+  keys?: RowKeys | undefined;
   className?: string | undefined;
 };
 
@@ -38,6 +45,7 @@ function TaskRow({
   onOpen,
   current = false,
   done = false,
+  keys,
   className,
 }: TaskRowProps) {
   const titleClass = cn(
@@ -48,6 +56,7 @@ function TaskRow({
     <div
       data-slot="task-row"
       data-current={current || undefined}
+      {...rowKeyHandlers(keys)}
       className={cn(
         'group/row relative flex min-h-row-touch items-center gap-2 border-b border-border-soft px-2 py-2 medium:min-h-row-task medium:px-3',
         'transition-colors duration-(--duration-fast) ease-standard',
@@ -57,13 +66,16 @@ function TaskRow({
       )}
     >
       {control !== undefined && (
-        <div className="relative z-1 flex">{control}</div>
+        <div data-row-control className="relative z-1 flex">
+          {control}
+        </div>
       )}
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         {onOpen ? (
           <button
             type="button"
             onClick={onOpen}
+            data-row-focus
             aria-current={current || undefined}
             className={cn(
               titleClass,
