@@ -27,6 +27,7 @@ import {
   type AreaId,
   type Estimate,
   type EstimateSuggestionId,
+  type LocalDate,
   type RecurrencePattern,
   type Result,
   type SubtaskId,
@@ -201,14 +202,15 @@ export function complete(taskId: TaskId): Change {
  * 完了を元に戻す, right after 完了にする in the Backlog (F29): back to how
  * it was, including the Sprint and today's selection.
  */
-export function undoComplete(taskId: TaskId): Change {
+export function undoComplete(taskId: TaskId, date?: LocalDate): Change {
   return (records, ctx) => {
     const task = find(records.tasks, taskId, 'Task');
     if (!task.ok) return task;
     return changed(
       undoCompleteFromBacklog(
         activeSprint(records),
-        { task: task.value, date: ctx.today },
+        // The day it was completed on: today, or a past day (#53).
+        { task: task.value, date: date ?? ctx.today },
         ctx,
       ),
       (next) => ({

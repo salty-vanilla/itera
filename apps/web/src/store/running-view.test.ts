@@ -64,4 +64,39 @@ describe('runningData', () => {
     ]);
     expect(data?.criterion).toBeUndefined();
   });
+
+  it('tells what undoing a past day leaves (F33, F17, F29)', () => {
+    const { records } = fixtureSnapshot('today-interrupt');
+    const withKinds = withActive(records, (s) => ({
+      ...s,
+      dailySelections: s.dailySelections.map((d) =>
+        d.date === '2026-09-29' && d.resolution === 'done'
+          ? {
+              ...d,
+              closedBefore: {
+                resolution: 'deferred' as const,
+                at: '2026-09-29T01:00:00.000Z' as Instant,
+              },
+            }
+          : d.date === '2026-09-30' && d.resolution === 'done'
+            ? { ...d, origin: 'backlogCompletion' as const }
+            : d,
+      ),
+    }));
+    const data = runningData(withKinds, {
+      today: '2026-10-01' as LocalDate,
+      now: '2026-10-01T05:00:00.000Z' as Instant,
+    });
+    const kinds = Object.fromEntries(
+      (data?.pastDays ?? []).map((d) => [
+        d.date,
+        d.records.map((r) => r.after.kind),
+      ]),
+    );
+    expect(kinds).toEqual({
+      '2026-09-30': ['gone'],
+      '2026-09-29': ['closed'],
+      '2026-09-28': ['unresolved'],
+    });
+  });
 });

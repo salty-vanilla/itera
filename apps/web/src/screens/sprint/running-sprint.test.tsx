@@ -1,5 +1,11 @@
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppRouter } from '@/app/router';
@@ -161,5 +167,61 @@ describe('Sprint — running (#51)', () => {
     expect(running().availableHours).toBeUndefined();
     expect(running().plannedAvailableHours).toBe(17);
     expect((hours as HTMLInputElement).value).toBe('');
+  });
+});
+
+describe('Sprint — 日ごとの記録 (#53)', () => {
+  it('lists past completions by day and undoes one after asking', async () => {
+    await renderAt('/sprint?fixture=today-interrupt');
+    const section = screen.getByRole('region', { name: '日ごとの記録' });
+    // Newest first; today (10/1) is Today's.
+    const days = within(section)
+      .getAllByRole('heading', { level: 3 })
+      .map((h) => h.textContent);
+    expect(days).toEqual(['9/30 (水)', '9/29 (火)', '9/28 (月)']);
+    const tax = within(
+      within(section).getByRole('region', { name: '9/29 (火)' }),
+    ).getByRole('button', { name: /取り消す.*住民税の支払い/ });
+    await userEvent.click(tax);
+    const dialog = await screen.findByRole('dialog', {
+      name: /9\/29 \(火\) の「住民税の支払い」の完了を取り消しますか/,
+    });
+    expect(within(dialog).getByText(/未処理になり/)).toBeTruthy();
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: '取り消す' }),
+    );
+    const s = running();
+    const st = s.tasks.find((t) => t.taskId === 'task-tax');
+    expect(
+      s.dailySelections.find(
+        (d) => d.sprintTaskId === st?.id && d.date === '2026-09-29',
+      )?.resolution,
+    ).toBe('unresolved');
+    expect(st?.outcome).toBe('planned');
+    // The day has nothing left; focus comes back to the section.
+    expect(
+      within(screen.getByRole('region', { name: '日ごとの記録' })).queryByRole(
+        'region',
+        { name: '9/29 (火)' },
+      ),
+    ).toBeNull();
+    await waitFor(() =>
+      expect(document.activeElement?.textContent).toBe('日ごとの記録'),
+    );
+  });
+
+  it('keeps everything when the question is declined', async () => {
+    await renderAt('/sprint?fixture=today-interrupt');
+    await userEvent.click(
+      screen.getAllByRole('button', { name: /取り消す.*住民税の支払い/ })[0]!,
+    );
+    const dialog = await screen.findByRole('dialog', {
+      name: /取り消しますか/,
+    });
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: 'やめる' }),
+    );
+    const s = running();
+    expect(s.tasks.find((t) => t.taskId === 'task-tax')?.outcome).toBe('done');
   });
 });
