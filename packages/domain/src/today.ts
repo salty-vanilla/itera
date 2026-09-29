@@ -522,6 +522,8 @@ export interface CompleteFromBacklogInput {
  * a selection, that one is completed instead of adding a second
  * (invariant 21) — also when it was closed earlier that day (F17). Such a
  * selection keeps its origin; the Activity tells it came from the Backlog.
+ * Before the Sprint's first day there is no day to choose on: the Task and
+ * its SprintTask are done without a selection (F34).
  */
 export function completeFromBacklog(
   sprint: Sprint,
@@ -547,6 +549,23 @@ export function completeFromBacklog(
     return applied(
       { sprint, task: completed.value.record },
       completed.value.activities,
+    );
+  }
+  if (input.date < sprint.start) {
+    // Before the first day (confirmed on Sunday evening, say): the Task and
+    // this week's SprintTask are done, but there is no day to record a
+    // choice on (F34).
+    const completed = completeTask(task, ctx);
+    if (!completed.ok) return completed;
+    return applied(
+      {
+        sprint: withOutcome(sprint, sprintTask.id, 'done'),
+        task: completed.value.record,
+      },
+      [
+        ...completed.value.activities,
+        sprintTaskActivity('sprintTaskDone', sprint, sprintTask, ctx),
+      ],
     );
   }
   const existing = findSelection(sprint, input.date, sprintTask.id, undefined);
@@ -638,6 +657,22 @@ export function undoCompleteFromBacklog(
         task: reopened.value.record,
       },
       reopened.value.activities,
+    );
+  }
+  if (input.date < sprint.start) {
+    // Completed before the first day (F34): no choice was made; the Task
+    // and the SprintTask go back.
+    const reopened = undoTaskCompletion(task, ctx);
+    if (!reopened.ok) return reopened;
+    return applied(
+      {
+        sprint: withOutcome(sprint, sprintTask.id, 'planned'),
+        task: reopened.value.record,
+      },
+      [
+        ...reopened.value.activities,
+        sprintTaskActivity('sprintTaskDoneUndone', sprint, sprintTask, ctx),
+      ],
     );
   }
   const selection = findSelection(sprint, input.date, sprintTask.id, undefined);

@@ -8,6 +8,7 @@ import type { Sprint, SprintTask } from './sprint';
 import {
   addToToday,
   completeFromBacklog,
+  undoCompleteFromBacklog,
   completeSelection,
   deferSelection,
   noteInterrupt,
@@ -517,6 +518,28 @@ describe('invariant 27: completing from the Backlog', () => {
     expect(sprint.dailySelections).toMatchObject([
       { id: 'sel-1', origin: 'manual', resolution: 'done' },
     ]);
+  });
+
+  it('before the first day, completes Task and SprintTask without a selection (F34)', () => {
+    const sunday = { ...input, date: d('2026-09-27') };
+    const { sprint, task: completed } = unwrap(
+      completeFromBacklog(active(), { ...sunday, task: task() }, ctx),
+    );
+    expect(completed.lifecycle).toBe('completed');
+    expect(sprint.tasks[0]?.outcome).toBe('done');
+    expect(sprint.dailySelections).toEqual([]);
+
+    // Undone right after, as the Backlog does (F29): back to planned.
+    const undone = unwrap(
+      undoCompleteFromBacklog(
+        sprint,
+        { task: completed, date: d('2026-09-27') },
+        ctx,
+      ),
+    );
+    expect(undone.task.lifecycle).toBe('active');
+    expect(undone.sprint?.tasks[0]?.outcome).toBe('planned');
+    expect(undone.sprint?.dailySelections).toEqual([]);
   });
 
   it('a Task outside the Sprint only completes', () => {

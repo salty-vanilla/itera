@@ -37,7 +37,7 @@ v0.2 Final は v0.1 の骨格（恒久的な **Task** と、「この Sprint で
 
 ### v0.2 Final で決めたこと
 
-F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F11 は同じ日に、`packages/domain` の実装で見つかった食い違いについて決めた（Issue #20）。F12 も同じ日に決めた（Issue #21）。F13〜F16 も同じ日に、Sprint と Planning の実装で出た境界の場合について決めた（Issue #22）。F17〜F19 も同じ日に、Today の実装で出た境界の場合について決めた（Issue #23）。F20〜F24 も同じ日に、Review と Retro の実装で出た境界の場合について決めた（Issue #24）。F25〜F27 も同じ日に、Backlog の画面の実装で出た表示と操作について決めた（Issue #39）。F28・F29 も同じ日に、Backlog の実装の後に残った点について決めた（Issue #47）。F30・F31 は 2026-09-28 に、Agent 提案の操作について決めた（Issue #40、決定 4A）。F32 も同じ日に、Today の画面の実装で出た数え方について決めた（Issue #41）。F33 は 2026-09-29 に、過去の日の取り消しについて決めた（Issue #53）。
+F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F11 は同じ日に、`packages/domain` の実装で見つかった食い違いについて決めた（Issue #20）。F12 も同じ日に決めた（Issue #21）。F13〜F16 も同じ日に、Sprint と Planning の実装で出た境界の場合について決めた（Issue #22）。F17〜F19 も同じ日に、Today の実装で出た境界の場合について決めた（Issue #23）。F20〜F24 も同じ日に、Review と Retro の実装で出た境界の場合について決めた（Issue #24）。F25〜F27 も同じ日に、Backlog の画面の実装で出た表示と操作について決めた（Issue #39）。F28・F29 も同じ日に、Backlog の実装の後に残った点について決めた（Issue #47）。F30・F31 は 2026-09-28 に、Agent 提案の操作について決めた（Issue #40、決定 4A）。F32 も同じ日に、Today の画面の実装で出た数え方について決めた（Issue #41）。F33 は 2026-09-29 に、過去の日の取り消しについて決めた（Issue #53）。F34 も同じ日に、Sprint の開始日より前の Backlog からの完了について決めた（Issue #59）。
 
 | # | 決定 | モデルへの反映 | UI への影響 |
 | --- | --- | --- | --- |
@@ -74,6 +74,7 @@ F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F
 | F31 | 提案は、値を直してから採用できる（編集して採用） | 提示中の提案から、本人が直した値を Estimate にする。Estimate.source は「提案を編集して採用」で、元の提案を指す（下限・中央・上限のどれでもない）。提案は採用になる。値は幅の外でもよい（本人の値なので）。F27 と同じく直後に元に戻せる | Backlog・Planning の Task 詳細：Agent 提案に「編集して採用」（Quiet） |
 | F32 | 「今週の完了」は、繰り返しを回で数える | 派生（`weekProgress`）。繰り返しでない Task は 1 件（今週から外したものと持ち越しは数えない）、繰り返しは今週の回を 1 件ずつ数える（Planning で外した回とスキップした回は数えない。Missed は数える）。完了は Done の Task と Done の回。保存しない。点数にしない | Today：上部の Progress「今週の完了 N / M件」 |
 | F33 | 過去の日の完了・スキップは、Sprint 中なら取り消せる。取り消した日は未処理になる（F17・F29 の場合を除く） | 本人が完了の取り消し（Done → Selected、F17 で閉じていた選択は元の閉じた状態）かスキップの取り消し（Skipped → Selected、F19）をし、同じ操作の中でシステムが、過ぎた日の開いた選択を Unresolved にする（不変条件 24）。Backlog からの完了で作った選択は、F29 と同じく記録ごと消す。Task は Active・SprintTask は Planned に、回は Pending に戻る。Sprint が Review に入った後は取り消せない。取り消しと Unresolved は Activity に残る | Sprint（実行中）：「日ごとの記録」に昨日までの完了・スキップと「取り消す」 |
+| F34 | Sprint の開始日より前でも、今週の Task は Backlog から完了にできる | 確定済みで開始日前の Sprint にある Task を Backlog で完了にすると、Task は Completed、SprintTask は Done になる。選ぶ日がまだないので DailySelection は作らない（不変条件 27 の例外）。直後の取り消しでは Task は Active、SprintTask は Planned に戻る（F29）。Sprint 外の Task を「今日へ」入れるのは開始日から | Backlog：開始日前は「今日へ」を無効にし、始まる日を添える |
 
 ### 用語
 

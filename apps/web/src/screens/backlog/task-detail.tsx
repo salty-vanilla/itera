@@ -345,7 +345,9 @@ function TaskDetail({
         <SubtaskList task={task} />
         <RecurrenceEditor item={item} />
 
-        {(facts.canAddToToday || facts.canComplete) && (
+        {(facts.canAddToToday ||
+          facts.todayOpensOn !== undefined ||
+          facts.canComplete) && (
           <section
             aria-labelledby="task-detail-now"
             className="flex flex-col gap-2"
@@ -359,6 +361,15 @@ function TaskDetail({
                   今日へ
                 </Button>
               )}
+              {facts.todayOpensOn !== undefined && (
+                <Button
+                  disabled
+                  focusableWhenDisabled
+                  aria-describedby="task-detail-today-opens"
+                >
+                  今日へ
+                </Button>
+              )}
               {facts.canComplete && (
                 <Button
                   onClick={() => {
@@ -369,6 +380,15 @@ function TaskDetail({
                 </Button>
               )}
             </div>
+            {facts.todayOpensOn !== undefined && (
+              <p
+                id="task-detail-today-opens"
+                className="text-help text-ink-muted"
+              >
+                Sprint {facts.todayOpensOn.number} が始まる{' '}
+                {formatDate(facts.todayOpensOn.start)} から選べます。
+              </p>
+            )}
           </section>
         )}
 

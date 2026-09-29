@@ -123,7 +123,7 @@ type CommandResult<T> =
 - **完了**：単発の Task は Task = completed と SprintTask = done を同時に変える。繰り返しは Occurrence = done だけで、SprintTask は planned のまま（束ねた SprintTask の締めは #24）。取り消すと元に戻り、記録した実績は残る（追記のみ）。 F17 で閉じた後に完了した選択は `closedBefore` に閉じた状態を覚えておき、取り消すとその状態に戻す。
 - **スキップの取り消し（F19）**：`undoSkipSelection` で、選択を selected に、回を pending に戻す。
 - **取り消しの日付**：完了・スキップの取り消しに日付の制限はない。前の日の選択を取り消すと selected に戻り、次の `startDay` で unresolved になる。過去の日の取り消しを画面に出すかは `apps/web` で決める。
-- **Backlog からの完了**：今の Sprint で planned なら、Task・SprintTask・その日の選択（`backlogCompletion`、done）を同時に作る（不変条件 27）。その日にすでに選択があれば（開いていても、F17 でその日に閉じたものでも）、それを完了にする（2 件目は作らない）。その場合 origin は元のままで、Backlog から完了したことは Activity の並び（`taskCompleted` に続く `todayDone`）から分かる。繰り返しの Task は Backlog から完了にしない（`recurringTaskCannotComplete`）。
+- **Backlog からの完了**：今の Sprint で planned なら、Task・SprintTask・その日の選択（`backlogCompletion`、done）を同時に作る（不変条件 27）。その日にすでに選択があれば（開いていても、F17 でその日に閉じたものでも）、それを完了にする（2 件目は作らない）。その場合 origin は元のままで、Backlog から完了したことは Activity の並び（`taskCompleted` に続く `todayDone`）から分かる。繰り返しの Task は Backlog から完了にしない（`recurringTaskCannotComplete`）。Sprint の開始日より前（確定済み）なら、選ぶ日がないので選択は作らず、Task と SprintTask だけを完了にする（F34）。
 - **実績**：`pauseSelection` / `completeSelection` の `actualHours` か、後から `recordActualTime`（active な Sprint の期間内の日で、繰り返しなら SprintTask の回を指定）。どれも任意（不変条件 28）。
 - **#24 への引き継ぎ**：`startDay` は active な Sprint にだけ働く。Review に入るときに開いたままの選択（最終日など）を Unresolved にする処理は #24 の Review への移行で行う。
 - **連続見送り**（`deferralStreak`）：同じ Task の選択を Sprint をまたいで日付順（同じなら選んだ日時、ID の順）に並べ、最後から数える。deferred を数え、unresolved とまだ開いている選択は飛ばし、paused・done・removed・skipped で止める（F4・F8）。
@@ -157,7 +157,7 @@ type CommandResult<T> =
 ## Backlog の完了を元に戻す（#47）
 
 - **期限が近い**（F28）：今日を含む Sprint がない日は、その週の終わりまで（`dueSoonUntil`。実装は #39 のまま）。
-- **Backlog からの完了を元に戻す**（`undoCompleteFromBacklog`、F29）：Sprint 外の Task（または active な Sprint がないとき）は Task だけを戻す。今の Sprint の Task で、完了がその日の選択を作った（origin = backlogCompletion）ときは、Task と SprintTask を戻し、その選択を消す（`todayBacklogCompletionUndone`）。完了前からあった選択を完了にしたときは `undoCompleteSelection` と同じく戻す。取り消せるのは完了した日の選択だけ（`date` はその日を渡す）。Today の完了の取り消し（`undoCompleteSelection`）には日付の制限がないが、Backlog の取り消しは完了した直後の操作なのでその日に限る。Sprint が active でない（Review に入った後など）ときは Task だけを戻し、SprintTask は変えない（`completeFromBacklog` も active な Sprint にだけ働くのと対称）。
+- **Backlog からの完了を元に戻す**（`undoCompleteFromBacklog`、F29）：Sprint 外の Task（または active な Sprint がないとき）は Task だけを戻す。今の Sprint の Task で、完了がその日の選択を作った（origin = backlogCompletion）ときは、Task と SprintTask を戻し、その選択を消す（`todayBacklogCompletionUndone`）。完了前からあった選択を完了にしたときは `undoCompleteSelection` と同じく戻す。取り消せるのは完了した日の選択だけ（`date` はその日を渡す）。Today の完了の取り消し（`undoCompleteSelection`）には日付の制限がないが、Backlog の取り消しは完了した直後の操作なのでその日に限る。Sprint が active でない（Review に入った後など）ときは Task だけを戻し、SprintTask は変えない（`completeFromBacklog` も active な Sprint にだけ働くのと対称）。開始日より前に完了した分は、選択がないので Task と SprintTask だけを戻す（F34）。
 
 ## 対象外
 

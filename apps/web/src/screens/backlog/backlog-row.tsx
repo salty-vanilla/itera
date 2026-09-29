@@ -146,13 +146,22 @@ function BacklogRow({
                 今日へ
               </MenuItem>
             )}
+            {/* Before the Sprint starts: shown, with when it opens (#59). */}
+            {item.todayOpensOn !== undefined && (
+              <MenuItem disabled>
+                <Sun aria-hidden />
+                今日へ（{formatDate(item.todayOpensOn.start)} から）
+              </MenuItem>
+            )}
             {item.canComplete && (
               <MenuItem onClick={onComplete}>
                 <CircleCheck aria-hidden />
                 完了にする
               </MenuItem>
             )}
-            {(item.canAddToToday || item.canComplete) && <MenuSeparator />}
+            {(item.canAddToToday ||
+              item.todayOpensOn !== undefined ||
+              item.canComplete) && <MenuSeparator />}
             <MenuItem variant="danger" onClick={onArchive}>
               <Archive aria-hidden />
               アーカイブ
