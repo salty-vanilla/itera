@@ -316,7 +316,7 @@ components:
 | 罫 | `border` / `border-soft` | 構造の罫 / リスト内の行区切り | 操作部品の輪郭 |
 | 罫 | `border-strong` | 入力・Checkbox・Radio・Switch・Secondary Button の輪郭 | 装飾の罫 |
 | 確定 | `primary`（墨）/ `on-primary` | Primary Button の塗り、オン状態、完了サークル、Progress、IconButton の pressed | 大きな面 |
-| 現在地 | `here`（黄）/ `here-subtle` / `on-here` | 今日の列・今の段階の印（`here`）、選んだ行・項目の地（`here-subtle`）。必ずチェックか語を伴う（Filter だけは `ink` の 2px の枠と太字） | 注意・警告（→ `warning`）、装飾、フォーカス |
+| 現在地 | `here`（黄）/ `here-subtle` / `on-here` | 今日の列・今の段階の印（`here`）、選んだ行・項目の地（`here-subtle`）。必ずチェックか語を伴う（Filter だけは `ink` の 2px の枠と太字。もう 1 つの例外は、Backlog で追加した直後の行の点滅で、2.5 秒でこの地から透明に消える。docs/design/foundations.md） | 注意・警告（→ `warning`）、装飾、フォーカス |
 | Focus | `focus`（`ink` の別名） | フォーカスリングだけ。色相を持たず、墨の 2px の輪郭と 2px のアキで示す | それ以外すべて |
 | リンク | `link`（`ink` の別名） | 下線付きの文字リンク | — |
 | Semantic | `danger` `warning` と `*-subtle` | 危険と注意の文字・アイコン・Status Tag・Notice。必ずアイコンか語を伴う。成功と情報は色を持たず、墨の文字＋アイコン（`circle-check` / `info`）＋語で示す | Area の識別、装飾 |
@@ -629,7 +629,7 @@ compact の原則：
 
 **Notice** — 画面内に留まる説明・注意・エラー。地は warning / danger が各 `*-subtle`、ほかは `canvas-subtle`。`rounded.sm`、枠なし、アイコン＋タイトル（700）＋本文＋任意の操作。Variant：info（`info` アイコン。データ不足、同期状態、計画案の作成後に Backlog が変わった）/ warning（超過の可能性、未見積）/ danger（読み込みの失敗、`role="alert"`）/ done（`circle-check`。反映済み）/ neutral（補足。状態を示さないのでアイコンなし）。次にできることを書く。読み込み後に現れる Notice は `role="status"` で知らせる。× 左に色の太線、同じ画面に 3 つ以上。
 
-**Toast** — 操作の結果を短く伝え、元に戻す手段を添える。面 `surface`＋`border`、`rounded.md`、`elevation-overlay`。Variant：neutral（「3件を今週に入れました」＋元に戻す）/ done（`circle-check`＋「Sprint 14 を確定しました」）/ danger（「保存できませんでした。入力内容は残っています。」＋再試行、`role="alert"`）。表示 8 秒、hover / focus 中は止め、操作付きは閉じるまで残してよい。danger は再試行を失わないよう閉じるまで残す。位置は desktop 左下、compact は下部タブバーの上。同時に 3 つまで（4 つ目を出すと最も古いものを隠す）。操作と閉じるボタンは Quiet。入力エラー・確認が必要なこと・タスク完了のたびの通知には使わない。祝福の演出をしない。
+**Toast** — 操作の結果を短く伝え、元に戻す手段を添える。面 `surface`＋`border`、`rounded.md`、`elevation-overlay`。Variant：neutral（「3件を今週に入れました」＋元に戻す）/ done（`circle-check`＋「Sprint 14 を確定しました」）/ danger（「保存できませんでした。入力内容は残っています。」＋再試行、`role="alert"`）。表示 8 秒、hover / focus 中は止め、操作付きは閉じるまで残してよい。danger は再試行を失わないよう閉じるまで残す。位置は desktop 左下、compact は下部タブバーの上（下端に固定した追加欄がある画面では、その上）。同時に 3 つまで（4 つ目を出すと最も古いものを隠す）。操作と閉じるボタンは Quiet。入力エラー・確認が必要なこと・タスク完了のたびの通知には使わない。祝福の演出をしない。
 
 **Tooltip** — アイコンだけの操作と省略されたラベルに短い説明。`surface-inverse` の小さな面（`rounded.sm`、12px）、任意で Kbd。hover 400ms 後 / focus で即時に出て、pointer が離れる・blur・Esc で消える（pointer を Tooltip に載せても消えない）。1 行 20 字程度まで。矢印・影・アニメーションで飾らない。必須の情報・エラー・操作可能な内容を載せない。
 

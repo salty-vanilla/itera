@@ -9,9 +9,8 @@ import { useEffect, useRef, useState } from 'react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
-import { Field } from '@/components/ui/field';
 import { Progress } from '@/components/ui/progress';
-import { Select } from '@/components/ui/select';
+import { AreaSelect } from '@/components/task/area-select';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
 import { formatDate, formatDateHeading, formatTime } from '@/lib/date-format';
 import { formatHours, formatPlanningTotal } from '@/lib/time-format';
@@ -460,23 +459,11 @@ function TodayView({ data }: { data: TodayData }) {
               )
             }
             area={
-              <Field
-                label="追加する Task の領域"
-                hideLabel
-                className="shrink-0"
-              >
-                <Select
-                  value={quickArea}
-                  onChange={(e) => setQuickArea(e.currentTarget.value)}
-                >
-                  <option value="">領域なし</option>
-                  {data.areas.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
+              <AreaSelect
+                areas={data.areas}
+                value={quickArea}
+                onChange={setQuickArea}
+              />
             }
           />
         </div>

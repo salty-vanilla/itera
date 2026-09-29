@@ -66,6 +66,8 @@ type BacklogRowProps = {
   item: BacklogItem;
   today: LocalDate;
   current: boolean;
+  /** Just added: the row flashes for a moment (Issue #86). */
+  added?: boolean | undefined;
   onOpen: () => void;
   onComplete: () => void;
   onToday: () => void;
@@ -80,6 +82,7 @@ function BacklogRow({
   item,
   today,
   current,
+  added = false,
   onOpen,
   onComplete,
   onToday,
@@ -102,6 +105,14 @@ function BacklogRow({
     <TaskRow
       title={task.title}
       current={current}
+      // Flashes `here-subtle` once and fades (2.5s: ADDED_MS in
+      // backlog-screen.tsx keeps `added` as long). Not on the open row, whose
+      // `here-subtle` means it is selected.
+      className={
+        added && !current
+          ? 'animate-[added-flash_2.5s_ease-in-out_forwards]'
+          : undefined
+      }
       onOpen={onOpen}
       keys={{ onEstimate, onArchive }}
       control={

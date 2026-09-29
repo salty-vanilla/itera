@@ -68,7 +68,61 @@ describe('Backlog', () => {
     expect(records().activities.at(-1)).toMatchObject({ kind: 'taskCreated' });
   });
 
-  it('Browse: 切り口 and Area narrow the list, kept in the URL, in creation order', async () => {
+  it('Capture: the new Task is the first row, flashes for a moment, and a Toast says so (#86)', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'タスクを追加' }),
+      '請求書を送る{Enter}',
+    );
+    // Newest first: right under the Quick Add, not at the bottom.
+    const first = within(list()).getAllByRole('listitem')[0]!;
+    expect(first.textContent).toContain('請求書を送る');
+    expect(first.hasAttribute('data-added')).toBe(true);
+    const toast = await screen.findByText('「請求書を送る」を追加しました');
+    // No 元に戻す: a wrong Task is archived from its row.
+    expect(
+      within(toast.closest('[role="dialog"]') as HTMLElement).queryByRole(
+        'button',
+        { name: '元に戻す' },
+      ),
+    ).toBeNull();
+    // The flash is over after 2.5 seconds.
+    await waitFor(() => expect(first.hasAttribute('data-added')).toBe(false), {
+      timeout: 4000,
+    });
+  });
+
+  it('Capture: a Task the 切り口 does not show is not in the list, and the Toast says why (#86)', async () => {
+    await renderAt('/backlog?fixture=backlog-capture&view=carriedOver');
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'タスクを追加' }),
+      '請求書を送る{Enter}',
+    );
+    expect(
+      await screen.findByText('「請求書を送る」を追加しました'),
+    ).toBeTruthy();
+    expect(
+      screen.getByText('今の絞り込みでは、一覧に表示されません。'),
+    ).toBeTruthy();
+    expect(within(list()).queryByText('請求書を送る')).toBeNull();
+    expect(task(records().tasks.at(-1)!.id)?.title).toBe('請求書を送る');
+  });
+
+  it('Capture: the Area Select shows the chosen Area’s symbol (#86)', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    const select = screen.getByRole('combobox', {
+      name: '追加する Task の領域',
+    });
+    const mark = () =>
+      select
+        .closest('[data-slot="select"]')
+        ?.querySelector('[data-slot="area-mark"]')?.textContent;
+    expect(mark()).toBe('－');
+    await userEvent.selectOptions(select, '研究');
+    expect(mark()).toBe('研');
+  });
+
+  it('Browse: 切り口 and Area narrow the list, kept in the URL, newest first', async () => {
     const router = await renderAt('/backlog?fixture=backlog-capture');
     await userEvent.click(screen.getByRole('button', { name: /^持ち越し/ }));
     expect(router.state.location.search).toMatchObject({ view: 'carriedOver' });
@@ -78,14 +132,14 @@ describe('Backlog', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /^すべて/ }));
     await userEvent.click(screen.getByRole('button', { name: /^研究/ }));
-    // Creation order, not priority (invariant 5).
+    // Newest first (#86), never by priority (invariant 5).
     const researchRows = within(list()).getAllByRole('listitem');
     const title = (li: HTMLElement) =>
       li.querySelector('button:not([aria-label])')?.textContent;
     expect(researchRows.map(title)).toEqual([
-      '関連論文を 3 本読む',
-      '実験データの前処理',
       '輪講の担当回を確認する',
+      '実験データの前処理',
+      '関連論文を 3 本読む',
     ]);
     expect(router.state.location.search).toMatchObject({
       area: 'area-research',
@@ -318,9 +372,7 @@ describe('Backlog', () => {
       '「API 設計のレビュー」を完了にしました',
     );
     // The line sits where the row was: just above the next Task.
-    expect(line.nextElementSibling?.textContent).toContain(
-      '関連論文を 3 本読む',
-    );
+    expect(line.nextElementSibling?.textContent).toContain('部屋の掃除');
     // Still a list item; the status is inside it.
     expect(line.tagName).toBe('LI');
     expect(within(line).getByRole('status')).toBeTruthy();
@@ -372,10 +424,10 @@ describe('Backlog', () => {
 
   it('puts the line at the end when the last row is completed', async () => {
     await renderAt('/backlog?fixture=backlog-capture');
+    // 仕事: the last row, the oldest, is API 設計のレビュー.
+    await userEvent.click(screen.getByRole('button', { name: /^仕事/ }));
     await userEvent.click(
-      screen.getByRole('button', {
-        name: '完了にする: 輪講の担当回を確認する',
-      }),
+      screen.getByRole('button', { name: '完了にする: API 設計のレビュー' }),
     );
     const rows = within(list()).getAllByRole('listitem');
     expect(rows.at(-1)).toBe(completedLine());
