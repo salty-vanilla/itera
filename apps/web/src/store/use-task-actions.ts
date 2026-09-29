@@ -24,8 +24,11 @@ export function useTaskActions() {
   const store = useRecordStore();
   return useMemo(
     () => ({
-      addTask: (title: string, areaId?: AreaId) =>
-        run(changes.addTask(title, areaId)),
+      /** The new Task's ID, or `undefined` when it did not go through. */
+      addTask: (title: string, areaId?: AreaId): TaskId | undefined =>
+        run(changes.addTask(title, areaId))
+          ? store.getSnapshot().records.tasks.at(-1)?.id
+          : undefined,
       saveTask: (
         taskId: TaskId,
         update: TaskAttributeUpdate,

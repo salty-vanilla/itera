@@ -1,7 +1,7 @@
 import { Field as FieldPrimitive } from '@base-ui/react/field';
 import type { VariantProps } from 'class-variance-authority';
 import { ChevronDown } from 'lucide-react';
-import type { ComponentProps } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { controlBoxStyles, controlSizeVariants } from './text-input';
 
@@ -11,12 +11,20 @@ import { controlBoxStyles, controlSizeVariants } from './text-input';
 // with a custom dropdown. Use it inside Field. For 2–5 choices that should
 // all be visible, use RadioGroup.
 
-type SelectProps = Omit<ComponentProps<'select'>, 'className' | 'size'> &
+type SelectProps = Omit<
+  ComponentProps<'select'>,
+  'className' | 'size' | 'prefix'
+> &
   VariantProps<typeof controlSizeVariants> & {
+    /**
+     * A decorative mark shown inside the box before the value, e.g. the Area
+     * symbol of the chosen Area. It is not read out: the value is.
+     */
+    prefix?: ReactNode | undefined;
     className?: string | undefined;
   };
 
-function Select({ size, className, children, ...props }: SelectProps) {
+function Select({ size, prefix, className, children, ...props }: SelectProps) {
   return (
     <div
       data-slot="select"
@@ -36,6 +44,8 @@ function Select({ size, className, children, ...props }: SelectProps) {
               // Room for the chevron, which does not take pointer events.
               'pr-8 pl-3',
               size === 'sm' && 'medium:pl-2',
+              // Room for the mark: 8px, the 20px symbol and 12px.
+              prefix !== undefined && 'pl-10 medium:pl-10',
               'outline-none disabled:cursor-not-allowed',
             )}
             {...props}
@@ -44,6 +54,14 @@ function Select({ size, className, children, ...props }: SelectProps) {
           </select>
         }
       />
+      {prefix !== undefined && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute left-2 flex items-center"
+        >
+          {prefix}
+        </span>
+      )}
       <ChevronDown
         aria-hidden
         className="absolute right-2 text-ink-muted group-has-[select:disabled]:text-ink-disabled"

@@ -170,7 +170,12 @@ export interface BacklogData {
     readonly count: number;
   }[];
   readonly sliceCounts: Readonly<Record<BacklogSlice | 'all', number>>;
-  /** The Tasks shown, in creation order (invariant 5). */
+  /**
+   * The Tasks shown, newest first (Issue #86). The domain's `backlogView` is
+   * in creation order; the newest first is the screen's choice, so that a
+   * Task just added is right under the Quick Add. Never by priority
+   * (invariant 5).
+   */
   readonly items: readonly BacklogItem[];
   /** Any active Task by ID, for the detail (even when filtered out). */
   readonly item: (taskId: string) => BacklogItem | undefined;
@@ -211,7 +216,7 @@ export function backlogData(
     sliceCounts: Object.fromEntries(
       SLICES.map((slice) => [slice, inSlice(slice).length]),
     ) as Record<BacklogSlice | 'all', number>,
-    items: shown.map((task) => backlogItem(task, records, clock)),
+    items: shown.toReversed().map((task) => backlogItem(task, records, clock)),
     item: (taskId) => {
       const task = all.find((t) => t.id === taskId);
       return task === undefined ? undefined : backlogItem(task, records, clock);

@@ -66,6 +66,8 @@ type BacklogRowProps = {
   item: BacklogItem;
   today: LocalDate;
   current: boolean;
+  /** Just added: marked for a moment (Issue #86). */
+  added?: boolean | undefined;
   onOpen: () => void;
   onComplete: () => void;
   onToday: () => void;
@@ -80,6 +82,7 @@ function BacklogRow({
   item,
   today,
   current,
+  added = false,
   onOpen,
   onComplete,
   onToday,
@@ -102,6 +105,7 @@ function BacklogRow({
     <TaskRow
       title={task.title}
       current={current}
+      className={added ? 'bg-here-subtle' : undefined}
       onOpen={onOpen}
       keys={{ onEstimate, onArchive }}
       control={

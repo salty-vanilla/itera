@@ -3,10 +3,9 @@ import { useNavigate, useSearch } from '@tanstack/react-router';
 import { Fragment, useEffect, useId, useRef, useState, type Ref } from 'react';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
-import { Field } from '@/components/ui/field';
 import { Filter, FilterGroup } from '@/components/ui/filter';
-import { Select } from '@/components/ui/select';
 import { useToast } from '@/components/ui/toast';
+import { AreaSelect } from '@/components/task/area-select';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { cn } from '@/lib/utils';
@@ -75,6 +74,31 @@ function BacklogScreen() {
   // next operation clears it, so a row shown again later does not take it.
   const [refocus, setRefocus] = useState<TaskId>();
   const undoRef = useRef<HTMLButtonElement>(null);
+  // The Task just added: its row is marked for 2 seconds, and a Toast says
+  // so (Issue #86). A Task the current 切り口 or Area does not show has no
+  // row to mark: the Toast says why it is not in the list.
+  const [justAdded, setJustAdded] = useState<{ id: TaskId; title: string }>();
+  const announced = useRef<TaskId>(undefined);
+  useEffect(() => {
+    if (justAdded === undefined || announced.current === justAdded.id) return;
+    announced.current = justAdded.id;
+    const shown = items.some((i) => i.task.id === justAdded.id);
+    toast.show({
+      title: `「${justAdded.title}」を追加しました`,
+      ...(shown
+        ? {}
+        : { description: '今の絞り込みでは、一覧に表示されません。' }),
+    });
+    // Under 768px the Quick Add is at the bottom and the list may be scrolled.
+    document
+      .querySelector(`[data-task="${justAdded.id}"]`)
+      ?.scrollIntoView?.({ block: 'nearest' });
+  }, [justAdded, items, toast]);
+  useEffect(() => {
+    if (justAdded === undefined) return;
+    const timer = window.setTimeout(() => setJustAdded(undefined), 2000);
+    return () => window.clearTimeout(timer);
+  }, [justAdded]);
   const estimateFocus = useEstimateFocus(search.task);
   /** Another operation: the completed line and the pending focus go. */
   const endUndo = () => {
@@ -198,22 +222,17 @@ function BacklogScreen() {
             const chosen = quickArea ?? search.area ?? '';
             const areaId = chosen === '' ? undefined : id<'Area'>(chosen);
             endUndo();
-            return actions.addTask(title, areaId);
+            const created = actions.addTask(title, areaId);
+            if (created === undefined) return false;
+            setJustAdded({ id: created, title });
+            return true;
           }}
           area={
-            <Field label="追加する Task の領域" hideLabel className="shrink-0">
-              <Select
-                value={quickArea ?? search.area ?? ''}
-                onChange={(e) => setQuickArea(e.currentTarget.value)}
-              >
-                <option value="">領域なし</option>
-                {areas.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
+            <AreaSelect
+              areas={areas}
+              value={quickArea ?? search.area ?? ''}
+              onChange={setQuickArea}
+            />
           }
         />
       </div>
@@ -246,8 +265,12 @@ function BacklogScreen() {
                       onUndo={undoCompleted}
                     />
                   )}
-                  <li data-task={task.id}>
+                  <li
+                    data-task={task.id}
+                    data-added={task.id === justAdded?.id || undefined}
+                  >
                     <BacklogRow
+                      added={task.id === justAdded?.id}
                       item={item}
                       today={today}
                       current={task.id === open?.task.id}
