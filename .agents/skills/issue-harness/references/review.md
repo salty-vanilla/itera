@@ -12,6 +12,7 @@
 | `acceptance` | A |
 | `quality` | B |
 | `specialist:<領域>` | C の該当する領域 |
+| `visual` | D |
 
 ## 入力と探索
 
@@ -53,15 +54,32 @@
 - **Concurrency**：競合・二重実行・順序の前提、失敗時の途中状態。
 - **Performance**：処理量が入力に対して不必要に増えないか、不要な往復・再計算・再描画。
 
+## D. Visual
+
+apps/web のスクリーンショットで、要素があるかではなく、見た目として良いか・DESIGN.md の意図に合っているかを見る。根拠は `DESIGN.md`（トークン、Components、Layout、Do's and Don'ts）、`docs/design/patterns.md`、`docs/design/accessibility.md`。コードは、画像の原因を確かめるときだけ読む。
+
+- 視覚的な階層：主要な情報と操作が最初に目に入るか。補助の操作が事実より目立っていないか。
+- 余白とリズム：間隔がトークンに沿って一貫しているか。
+- 揃い：左端・列・右端・ベースラインが、同じ画面の中や複数の表・一覧のあいだで揃っているか。
+- 密度と幅：窮屈・詰め込み・スカスカになっていないか。列やテキストが不自然に縮んだり、積まれたりしていないか。
+- 色の意味：`danger` はエラー・期限超過・確定的な容量超過・破壊的操作だけ。持ち越し・見送り・未達・超過の可能性（`warning` を使う）に使っていないか。領域の色の使い方。
+- タイポグラフィ：大きさと太さの使い分けが一貫しているか。
+- compact：PC 画面の縮小になっていないか。情報を幅で消さずに畳んでいるか。横スクロールに頼っていないか。
+- 状態の見え方：選択・フォーカス・無効・空・エラーが、DESIGN.md の状態の表現に合っているか。
+- 画面間の一貫性：同じ部品が同じ見え方をしているか。状態が変わったときに主要な要素の位置が跳ばないか。
+- 重なり・省略・折り返し：Toast やメニューが主要な操作を隠していないか。文言が不自然に切れたり 1〜2 字で折れたりしていないか。
+
+画像のファイル名は `<画面>-<状態>-<幅>[-dark].png`。開発用メニュー（DevMenu）など検証用の要素が写っていても評価しない。画像から判断できない点は、欲しい画面・状態・幅を `unverified` に書く。
+
 ## 返す形式
 
 - `verdict`: `pass` / `changes_requested` / `blocked`
 - `target`: 観点、Issue の条件版、base / head、未コミットなら差分と追加ファイル
 - `acceptance`（`general` と `acceptance` のみ）: 条件ごとの充足・根拠（パス:行、再現結果、ログ）
 - `findings`: 指摘ごとに次を書く。コードの修正そのものは書かない。
-  - `category`: 例 `acceptance` / `architecture` / `responsibility` / `duplication` / `public-api` / `coupling` / `error-handling` / `testability` / `readability` / `security` など
+  - `category`: 例 `acceptance` / `architecture` / `responsibility` / `duplication` / `public-api` / `coupling` / `error-handling` / `testability` / `readability` / `security` / `visual` など
   - `severity`: `MUST` / `SHOULD` / `NOTE`
-  - `location`: パス:行、シンボル
+  - `location`: パス:行、シンボル（`visual` では画像ファイル名と画面上の場所）
   - `problem` / `why`（起こること・影響） / `direction`（修正の方向）
 - `unverified`: 確認できなかった点と理由
 - `next`: 次の担当と具体的な作業
