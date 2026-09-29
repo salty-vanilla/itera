@@ -315,6 +315,38 @@ describe('Backlog', () => {
     });
   });
 
+  it('優先度 (#97): 高 and 低 show in the row in words, 通常 does not, and the order stays', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    const rowOf = (name: string) =>
+      within(list()).getByText(name).closest('li') as HTMLElement;
+    const titles = () =>
+      within(list())
+        .getAllByRole('listitem')
+        .map((li) => li.querySelector('button:not([aria-label])')?.textContent);
+    expect(rowOf('新メンバーのオンボーディング資料').textContent).toContain(
+      '優先度 高',
+    );
+    expect(rowOf('本棚を整理する').textContent).not.toContain('優先度');
+    const before = titles();
+
+    await userEvent.click(
+      within(rowOf('本棚を整理する')).getByText('本棚を整理する'),
+    );
+    const detail = await screen.findByRole('dialog');
+    const select = within(detail).getByRole('combobox', { name: '優先度' });
+    expect(
+      within(select)
+        .getAllByRole('option')
+        .map((o) => o.textContent),
+    ).toEqual(['高', '通常', '低']);
+    await userEvent.selectOptions(select, '低');
+    await userEvent.click(within(detail).getByRole('button', { name: '保存' }));
+    expect(task('task-bookshelf')?.priority).toBe('low');
+    expect(rowOf('本棚を整理する').textContent).toContain('優先度 低');
+    // Never an order (invariant 5).
+    expect(titles()).toEqual(before);
+  });
+
   it('今日へ: adds a Task outside the Sprint to it and to today, in one operation', async () => {
     await renderAt('/backlog?fixture=backlog-capture');
     await userEvent.click(
