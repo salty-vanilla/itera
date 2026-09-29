@@ -11,7 +11,12 @@ import type {
   TodayChange,
 } from '@itera/domain';
 import { changed, type Change, type ChangeContext } from './record-store';
-import type { Records } from './records';
+import {
+  applyChanges,
+  upsert,
+  type RecordChanges,
+  type Records,
+} from './records';
 
 /** A record by ID, or a `notFound` error. */
 export function find<T extends { readonly id: string }>(
@@ -81,4 +86,65 @@ export function onToday(
         : { occurrences: [next.occurrence] }),
     }));
   };
+}
+
+/**
+ * Runs `second` on the records `first` leaves, as one change: both are
+ * written together or not at all. `second` may run as another actor (the
+ * system closing what the person's change left open, invariant 24).
+ */
+export function andThen(
+  first: Change,
+  second: Change,
+  secondActor?: ChangeContext['actor'],
+): Change {
+  return (records, ctx) => {
+    const a = first(records, ctx);
+    if (!a.ok) return a;
+    const between = applyChanges(records, a.value.changes, []);
+    const b = second(
+      between,
+      secondActor === undefined ? ctx : { ...ctx, actor: secondActor },
+    );
+    if (!b.ok) return b;
+    return {
+      ok: true,
+      value: {
+        changes: mergeChanges(a.value.changes, b.value.changes),
+        activities: [...a.value.activities, ...b.value.activities],
+      },
+    };
+  };
+}
+
+function mergeChanges(a: RecordChanges, b: RecordChanges): RecordChanges {
+  const list = <T extends { readonly id: string }>(
+    x: readonly T[] | undefined,
+    y: readonly T[] | undefined,
+  ) =>
+    x === undefined && y === undefined ? undefined : upsert(x ?? [], y ?? []);
+  const merged = {
+    ...((b.user ?? a.user) ? { user: (b.user ?? a.user)! } : {}),
+    areas: list(a.areas, b.areas),
+    tasks: list(a.tasks, b.tasks),
+    rules: list(a.rules, b.rules),
+    occurrences: list(a.occurrences, b.occurrences),
+    sprints: list(a.sprints, b.sprints),
+    criteria: list(a.criteria, b.criteria),
+  };
+  const deleted = {
+    occurrences: [
+      ...(a.deleted?.occurrences ?? []),
+      ...(b.deleted?.occurrences ?? []),
+    ],
+    criteria: [...(a.deleted?.criteria ?? []), ...(b.deleted?.criteria ?? [])],
+  };
+  return {
+    ...Object.fromEntries(
+      Object.entries(merged).filter(([, v]) => v !== undefined),
+    ),
+    ...(deleted.occurrences.length + deleted.criteria.length > 0
+      ? { deleted }
+      : {}),
+  } as RecordChanges;
 }

@@ -10,6 +10,7 @@ import {
   type AreaColor,
   type AreaId,
   type CriterionPolicy,
+  type DailySelection,
   type LocalDate,
   type PlanningValue,
   type Sprint,
@@ -41,6 +42,18 @@ export interface RunningAreaPlan {
   readonly tasks: readonly RunningTask[];
 }
 
+/** A past day's completion or skip, which can be undone (#53). */
+export interface PastDayRecord {
+  readonly selection: DailySelection;
+  readonly title: string;
+  readonly recurring: boolean;
+}
+
+export interface PastDay {
+  readonly date: LocalDate;
+  readonly records: readonly PastDayRecord[];
+}
+
 export interface RunningData {
   readonly sprint: Sprint;
   /** 「Sprint 14」 (F25). */
@@ -55,6 +68,8 @@ export interface RunningData {
     readonly planned?: number;
     readonly current?: number;
   };
+  /** Before today, newest first: the days' completions and skips (#53). */
+  readonly pastDays: readonly PastDay[];
   /** The criterion as this Sprint treated it at confirm (read only, invariant 37). */
   readonly criterion?: {
     readonly policy: CriterionPolicy;
@@ -145,6 +160,7 @@ export function runningData(
           },
         }),
     plan,
+    pastDays: pastDaysOf(sprint, tasks, clock.today),
     totals: sprintTotals(sprint, { tasks, now: clock.now }),
     availableHours: {
       ...(sprint.plannedAvailableHours === undefined
@@ -166,4 +182,45 @@ export function runningData(
           },
         }),
   };
+}
+
+function pastDaysOf(
+  sprint: Sprint,
+  tasks: readonly Task[],
+  today: LocalDate,
+): readonly PastDay[] {
+  const records = sprint.dailySelections
+    .filter(
+      (s) =>
+        s.date < today &&
+        (s.resolution === 'done' || s.resolution === 'skipped'),
+    )
+    .flatMap((selection) => {
+      const sprintTask = sprint.tasks.find(
+        (t) => t.id === selection.sprintTaskId,
+      );
+      const task = tasks.find((t) => t.id === sprintTask?.taskId);
+      return task === undefined
+        ? []
+        : [
+            {
+              selection,
+              title: task.title,
+              recurring: selection.occurrenceId !== undefined,
+            },
+          ];
+    });
+  const dates = [...new Set(records.map((r) => r.selection.date))].toSorted(
+    (a, b) => (a < b ? 1 : -1),
+  );
+  return dates.map((date) => ({
+    date,
+    records: records
+      .filter((r) => r.selection.date === date)
+      .toSorted((a, b) =>
+        (a.selection.resolvedAt ?? '') < (b.selection.resolvedAt ?? '')
+          ? -1
+          : 1,
+      ),
+  }));
 }

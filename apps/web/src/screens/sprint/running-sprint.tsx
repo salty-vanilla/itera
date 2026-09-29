@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import type { RunningData, RunningTask } from '@/store/running-view';
 import { useRunningSprintActions } from '@/store/use-running-sprint';
 import { BeginPlanning } from '../begin-planning';
+import { PastDays } from './past-days';
 
 // The running Sprint (#51, patterns.md Sprint Planning › 確定). After
 // confirm: Status 「実行中」 (solid) with no stages, the way to Today, and
@@ -107,6 +108,10 @@ function RunningSprint({ data }: { data: RunningData }) {
               </GoalBlock>
             );
           })}
+          <PastDays
+            days={data.pastDays}
+            onUndo={(r) => actions.undoPastDay(r.selection.id)}
+          />
         </div>
         {/* One Outlook: beside the plan from 1200px, under it below. */}
         <aside aria-label="時間と計画基準">
