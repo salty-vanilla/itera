@@ -132,6 +132,20 @@ describe('Today — the top, when nothing is chosen (#99)', () => {
   });
 });
 
+describe('Today — the top, when all chosen are closed (#99)', () => {
+  it('shows 今日の残りはありません when the only chosen Task is deferred', async () => {
+    await renderAt('/today?fixture=today-morning');
+    await userEvent.click(
+      within(region('昨日の続き')).getByRole('button', {
+        name: '今日へ: 関連論文を 3 本読む',
+      }),
+    );
+    await menu('関連論文を 3 本読む', '今日は見送る');
+    expect(selectionOf('task-paper')?.resolution).toBe('deferred');
+    expect(screen.getByText('今日の残りはありません')).toBeTruthy();
+  });
+});
+
 describe('Today — 今日へ', () => {
   it('shows 昨日の続き above the rest and chooses it only with 今日へ (F6)', async () => {
     await renderAt('/today?fixture=today-morning');
