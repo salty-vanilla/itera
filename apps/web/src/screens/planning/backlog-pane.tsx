@@ -9,6 +9,7 @@ import { Estimate } from '@/components/task/estimate';
 import { MetaItem, TaskMetadata } from '@/components/task/task-metadata';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
 import { formatDate } from '@/lib/date-format';
+import { rowKeyHandlers } from '@/lib/row-keys';
 import { cn } from '@/lib/utils';
 import type { CandidateRow, PlanningData } from '@/store/planning-view';
 import { usePlanningActions } from '@/store/use-planning';
@@ -26,6 +27,8 @@ type BacklogPaneProps = {
   data: PlanningData;
   slim?: boolean;
   onOpenTask: (taskId: TaskId) => void;
+  /** E on a row: the Task's detail, at its Estimate. */
+  onEstimateTask: (taskId: TaskId) => void;
   className?: string | undefined;
 };
 
@@ -33,6 +36,7 @@ function BacklogPane({
   data,
   slim = false,
   onOpenTask,
+  onEstimateTask,
   className,
 }: BacklogPaneProps) {
   const actions = usePlanningActions();
@@ -85,13 +89,13 @@ function BacklogPane({
         title="持ち越し"
         rows={candidates.carriedOver}
         slim={slim}
-        {...{ choose, unchoose, onOpenTask, today: data.today }}
+        {...{ choose, unchoose, onOpenTask, onEstimateTask, today: data.today }}
       />
       <Group
         title="期限が近い"
         rows={candidates.dueSoon}
         slim={slim}
-        {...{ choose, unchoose, onOpenTask, today: data.today }}
+        {...{ choose, unchoose, onOpenTask, onEstimateTask, today: data.today }}
       />
       {candidates.recurring.length > 0 && (
         <section className="flex flex-col gap-2">
@@ -101,9 +105,13 @@ function BacklogPane({
               <li
                 key={task.id}
                 className="flex flex-col gap-1 border-b border-border-soft py-2"
+                {...rowKeyHandlers({
+                  onEstimate: () => onEstimateTask(task.id),
+                })}
               >
                 <button
                   type="button"
+                  data-row-focus
                   className="self-start text-left text-task text-ink focus-visible:focus-ring"
                   onClick={() => onOpenTask(task.id)}
                 >
@@ -135,7 +143,7 @@ function BacklogPane({
         title="そのほか"
         rows={candidates.others}
         slim={slim}
-        {...{ choose, unchoose, onOpenTask, today: data.today }}
+        {...{ choose, unchoose, onOpenTask, onEstimateTask, today: data.today }}
       />
     </div>
   );
@@ -148,6 +156,7 @@ function Group({
   choose,
   unchoose,
   onOpenTask,
+  onEstimateTask,
   today,
 }: {
   title: string;
@@ -156,6 +165,7 @@ function Group({
   choose: (rows: readonly CandidateRow[]) => void;
   unchoose: (rows: readonly CandidateRow[]) => void;
   onOpenTask: (taskId: TaskId) => void;
+  onEstimateTask: (taskId: TaskId) => void;
   today: PlanningData['today'];
 }) {
   if (rows.length === 0) return null;
@@ -193,6 +203,7 @@ function Group({
             today={today}
             onToggle={(checked) => (checked ? choose([row]) : unchoose([row]))}
             onOpen={() => onOpenTask(row.task.id)}
+            onEstimate={() => onEstimateTask(row.task.id)}
           />
         ))}
       </ul>
@@ -206,12 +217,14 @@ function CandidateItem({
   today,
   onToggle,
   onOpen,
+  onEstimate,
 }: {
   row: CandidateRow;
   slim: boolean;
   today: PlanningData['today'];
   onToggle: (checked: boolean) => void;
   onOpen: () => void;
+  onEstimate: () => void;
 }) {
   const { task, area, carry, value } = row;
   const chosen = row.chosen !== undefined;
@@ -235,8 +248,12 @@ function CandidateItem({
         'flex min-h-row-touch items-center gap-2 border-b border-border-soft py-1 medium:min-h-row-task',
         chosen && 'bg-here-subtle',
       )}
+      {...rowKeyHandlers({ onEstimate })}
     >
-      <span className="grid size-target-touch shrink-0 place-items-center medium:size-target-min">
+      <span
+        data-row-control
+        className="grid size-target-touch shrink-0 place-items-center medium:size-target-min"
+      >
         <CheckboxControl
           aria-label={`今週に入れる: ${task.title}`}
           checked={chosen}
@@ -247,6 +264,7 @@ function CandidateItem({
         <button
           type="button"
           onClick={onOpen}
+          data-row-focus
           className="min-w-0 truncate text-left text-task text-ink focus-visible:focus-ring"
         >
           {task.title}

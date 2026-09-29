@@ -70,6 +70,8 @@ type BacklogRowProps = {
   onComplete: () => void;
   onToday: () => void;
   onArchive: () => void;
+  /** E on the row: the detail, at its Estimate. */
+  onEstimate: () => void;
   /** Moves focus to the ○, e.g. when the row comes back by 元に戻す. */
   focusControl?: boolean | undefined;
 };
@@ -82,6 +84,7 @@ function BacklogRow({
   onComplete,
   onToday,
   onArchive,
+  onEstimate,
   focusControl = false,
 }: BacklogRowProps) {
   const circleRef = useRef<HTMLButtonElement>(null);
@@ -100,6 +103,7 @@ function BacklogRow({
       title={task.title}
       current={current}
       onOpen={onOpen}
+      keys={{ onEstimate, onArchive }}
       control={
         item.canComplete ? (
           <CompletionCircle

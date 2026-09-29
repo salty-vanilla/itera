@@ -461,3 +461,67 @@ describe('Planning — review fixes (2)', () => {
     expect(row?.textContent).toContain('計画 3–5h');
   });
 });
+
+describe('Planning — keys (#48)', () => {
+  // docs/design/accessibility.md キーボード.
+  it('Space on a Backlog row chooses it with □; E opens it at its Estimate', async () => {
+    await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    within(backlogPane())
+      .getByRole('button', { name: '顧客インタビューの設計' })
+      .focus();
+    await userEvent.keyboard(' ');
+    expect(draft().tasks.some((t) => t.taskId === 'task-interview')).toBe(true);
+    await userEvent.keyboard('e');
+    // The Task's own, not a subtask's (「Estimate（時間）: …」).
+    const estimate = await screen.findByRole('textbox', {
+      name: /^Estimate（時間）(?!:)/,
+    });
+    await waitFor(() => expect(document.activeElement).toBe(estimate));
+  });
+
+  it('N goes to the Quick Add, where it is typed', async () => {
+    await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    const field = within(backlogPane()).getByRole('textbox', {
+      name: 'タスクを追加して今週に入れる',
+    });
+    await userEvent.keyboard('n');
+    expect(document.activeElement).toBe(field);
+    expect(field).toHaveProperty('value', '');
+    await userEvent.keyboard('n');
+    expect(field).toHaveProperty('value', 'n');
+  });
+
+  it('⌘/Ctrl+Enter opens the confirm Dialog, also from a field', async () => {
+    await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    const field = within(backlogPane()).getByRole('textbox', {
+      name: 'タスクを追加して今週に入れる',
+    });
+    const tasks = lastSnapshot().records.tasks.length;
+    await userEvent.type(field, '発表資料を見直す');
+    await userEvent.keyboard('{Control>}{Enter}{/Control}');
+    expect(
+      await screen.findByRole('dialog', { name: /Sprint 2 を確定しますか/ }),
+    ).toBeTruthy();
+    // The field's Enter did not add the Task.
+    expect(lastSnapshot().records.tasks).toHaveLength(tasks);
+    expect(draft().state).toBe('planning');
+  });
+
+  it('⌘/Ctrl+Enter while 確定 is not possible moves to the button and its reason', async () => {
+    await renderAt(
+      '/sprint?fixture=planning-check&stage=check&task=task-onboarding',
+    );
+    const detail = await screen.findByRole('dialog');
+    await userEvent.click(
+      within(detail).getByRole('button', { name: '完了にする' }),
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await userEvent.keyboard('{Meta>}{Enter}{/Meta}');
+    const confirm = screen.getByRole('button', { name: 'Sprint 2 を確定' });
+    expect(document.activeElement).toBe(confirm);
+    expect(confirm.getAttribute('aria-describedby')).not.toBeNull();
+    expect(
+      screen.queryByRole('dialog', { name: /Sprint 2 を確定しますか/ }),
+    ).toBeNull();
+  });
+});

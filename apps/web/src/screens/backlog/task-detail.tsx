@@ -87,6 +87,7 @@ function TaskDetail({
   timeZone,
   onClose,
   onComplete,
+  focusEstimate,
 }: {
   item: BacklogItem;
   /** The Areas to choose from, in the person's order. */
@@ -95,6 +96,11 @@ function TaskDetail({
   onClose: () => void;
   /** 完了にする: the screen closes the detail and leaves the undo line. */
   onComplete: () => void;
+  /**
+   * E on the row: the focus goes to the Estimate. A new value moves it
+   * there again (`useEstimateFocus`).
+   */
+  focusEstimate?: number | undefined;
 }) {
   const actions = useTaskActions();
   const { task } = item;
@@ -110,6 +116,11 @@ function TaskDetail({
   // After 元に戻す the suggestion comes back and takes the focus.
   const [suggestionBack, setSuggestionBack] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const estimateRef = useRef<HTMLInputElement>(null);
+  // Opening, the Drawer finds it by `data-autofocus`; already open, this.
+  useEffect(() => {
+    if (focusEstimate !== undefined) estimateRef.current?.focus();
+  }, [focusEstimate]);
   // After a failed save, focus goes to the first field in error.
   useEffect(() => {
     formRef.current
@@ -296,6 +307,8 @@ function TaskDetail({
               error={errors.estimate}
             >
               <TextInput
+                ref={estimateRef}
+                data-autofocus={focusEstimate !== undefined || undefined}
                 inputMode="decimal"
                 suffix="h"
                 value={draft.estimate}

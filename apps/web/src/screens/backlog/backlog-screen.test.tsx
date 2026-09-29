@@ -1,5 +1,11 @@
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppRouter } from '@/app/router';
@@ -538,5 +544,74 @@ describe('Backlog — before the Sprint starts (#59)', () => {
     ).toBeTruthy();
     await userEvent.click(today);
     expect(screen.queryByText('保存できませんでした')).toBeNull();
+  });
+});
+
+describe('Backlog — keys of the list (#48)', () => {
+  // docs/design/accessibility.md キーボード, with the focus on a row.
+  const rowTitle = (title: string) =>
+    within(list()).getByRole('button', { name: title });
+
+  it('Space completes with ○, Enter opens the Task', async () => {
+    const router = await renderAt('/backlog?fixture=backlog-capture');
+    rowTitle('本棚を整理する').focus();
+    await userEvent.keyboard(' ');
+    expect(task('task-bookshelf')?.lifecycle).toBe('completed');
+    // Not opened by the same key.
+    expect(router.state.location.search).not.toHaveProperty('task');
+    rowTitle('歯医者の予約').focus();
+    await userEvent.keyboard('{Enter}');
+    expect(router.state.location.search).toMatchObject({
+      task: 'task-dentist',
+    });
+  });
+
+  it('E opens the Task at its Estimate', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    rowTitle('本棚を整理する').focus();
+    await userEvent.keyboard('e');
+    // The Task's own, not a subtask's (「Estimate（時間）: …」).
+    const estimate = await screen.findByRole('textbox', {
+      name: /^Estimate（時間）(?!:)/,
+    });
+    await waitFor(() => expect(document.activeElement).toBe(estimate));
+    // Only that time: opened again with Enter, it starts at the first field.
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    rowTitle('本棚を整理する').focus();
+    await userEvent.keyboard('{Enter}');
+    const title = await screen.findByRole('textbox', { name: /^タイトル/ });
+    await waitFor(() => expect(document.activeElement).toBe(title));
+  });
+
+  it('Delete archives with an undo, and the focus goes to the next row', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    rowTitle('歯医者の予約').focus();
+    await userEvent.keyboard('{Delete}');
+    expect(task('task-dentist')?.lifecycle).toBe('archived');
+    await waitFor(() =>
+      expect(
+        (document.activeElement as HTMLElement | null)?.hasAttribute(
+          'data-row-focus',
+        ),
+      ).toBe(true),
+    );
+    expect(document.activeElement?.textContent).not.toBe('歯医者の予約');
+    await userEvent.click(
+      await screen.findByRole('button', { name: '元に戻す' }),
+    );
+    expect(task('task-dentist')?.lifecycle).toBe('active');
+  });
+
+  it('single-letter keys and Delete type in the Quick Add', async () => {
+    const router = await renderAt('/backlog?fixture=backlog-capture');
+    const archived = () =>
+      records().tasks.filter((t) => t.lifecycle === 'archived').length;
+    const before = archived();
+    const field = screen.getByRole('textbox', { name: 'タスクを追加' });
+    await userEvent.type(field, 'ex{Backspace}{Delete} ');
+    expect(field).toHaveProperty('value', 'e ');
+    expect(router.state.location.search).not.toHaveProperty('task');
+    expect(archived()).toBe(before);
   });
 });
