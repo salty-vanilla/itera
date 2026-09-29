@@ -106,9 +106,12 @@ function BacklogRow({
       title={task.title}
       current={current}
       // Flashes `here-subtle` once and fades (2.5s: ADDED_MS in
-      // backlog-screen.tsx keeps `added` as long).
+      // backlog-screen.tsx keeps `added` as long). Not on the open row, whose
+      // `here-subtle` means it is selected.
       className={
-        added ? 'animate-[added-flash_2.5s_ease-out_forwards]' : undefined
+        added && !current
+          ? 'animate-[added-flash_2.5s_ease-in-out_forwards]'
+          : undefined
       }
       onOpen={onOpen}
       keys={{ onEstimate, onArchive }}

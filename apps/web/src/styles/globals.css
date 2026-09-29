@@ -354,13 +354,15 @@
   /*
    * The row just added in the Backlog flashes `here-subtle` and fades out
    * (docs/design/foundations.md, Issue #86). Once, over the 2.5s the screen
-   * keeps it (backlog-screen.tsx).
+   * keeps it (backlog-screen.tsx): it holds for the first second, so that the
+   * row can be found, and then fades.
    */
   @keyframes added-flash {
-    from {
+    0%,
+    40% {
       background-color: var(--here-subtle);
     }
-    to {
+    100% {
       background-color: transparent;
     }
   }
