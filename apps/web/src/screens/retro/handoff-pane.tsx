@@ -124,8 +124,10 @@ function HandoffPane({
         )}
       </section>
 
+      {/* Under 計画基準 from 1920px: the two are about one criterion, and the
+          text says 「上で」. */}
       {used !== undefined && (
-        <section aria-label="今回の計画基準の扱い" className="xl:col-span-2">
+        <section aria-label="今回の計画基準の扱い" className="xl:col-start-2">
           <RadioGroup<RetroDecision | null>
             legend={`今回の計画基準「${criterionName(used.criterion.policy, used.areaName)}」を、次の Sprint でどうしますか`}
             description="使った・使わなかったにかかわらず選びます。理由は要りません。"
