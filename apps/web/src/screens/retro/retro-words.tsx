@@ -97,7 +97,7 @@ export function PinToggle({
       className={pinned ? 'bg-surface-pressed text-ink' : 'text-ink-muted'}
     >
       {pinned ? <Check aria-hidden /> : <Pin aria-hidden />}
-      気になる
+      振り返りに使う
       <span className="sr-only">: {subject}</span>
     </Button>
   );

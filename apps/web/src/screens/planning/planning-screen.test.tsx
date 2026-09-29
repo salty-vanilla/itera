@@ -18,14 +18,24 @@ beforeEach(() => {
 });
 
 let lastSnapshot: () => StoreSnapshot;
+// For the state a first-time person is in: no planning criterion yet.
+let withoutCriteria = false;
+afterEach(() => {
+  withoutCriteria = false;
+});
 vi.mock('@/store/record-store', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/store/record-store')>();
   return {
     ...actual,
     createMemoryStore: (
-      ...args: Parameters<typeof actual.createMemoryStore>
+      ...[initial, options]: Parameters<typeof actual.createMemoryStore>
     ) => {
-      const store = actual.createMemoryStore(...args);
+      const store = actual.createMemoryStore(
+        withoutCriteria
+          ? { ...initial, records: { ...initial.records, criteria: [] } }
+          : initial,
+        options,
+      );
       lastSnapshot = () => store.getSnapshot();
       return store;
     },
@@ -157,10 +167,10 @@ describe('Planning — 整える', () => {
     await renderAt('/sprint?fixture=planning-shape&stage=shape');
     const study = within(planPane()).getByRole('region', { name: /学習/ });
     await userEvent.click(
-      within(study).getByRole('button', { name: 'Goal を書く: 学習' }),
+      within(study).getByRole('button', { name: '目標を書く: 学習' }),
     );
     await userEvent.type(
-      within(study).getByRole('textbox', { name: /Goal（今週の終わりに/ }),
+      within(study).getByRole('textbox', { name: /目標（今週の終わりに/ }),
       '英語を毎日読む状態にする',
     );
     await userEvent.click(within(study).getByRole('button', { name: '保存' }));
@@ -170,9 +180,9 @@ describe('Planning — 整える', () => {
     expect(within(study).getByText('英語を毎日読む状態にする')).toBeTruthy();
 
     await userEvent.click(
-      within(study).getByRole('button', { name: 'Goal を編集: 学習' }),
+      within(study).getByRole('button', { name: '目標を編集: 学習' }),
     );
-    await userEvent.clear(within(study).getByRole('textbox', { name: /Goal/ }));
+    await userEvent.clear(within(study).getByRole('textbox', { name: /目標/ }));
     await userEvent.click(within(study).getByRole('button', { name: '保存' }));
     expect(draft().goals.some((g) => g.areaId === 'area-study')).toBe(false);
   });
@@ -186,13 +196,73 @@ describe('Planning — 整える', () => {
       }),
     );
     await userEvent.click(
-      await screen.findByRole('menuitem', { name: 'Goal に紐づけない' }),
+      await screen.findByRole('menuitem', { name: '目標に紐づけない' }),
     );
     expect(draft().tasks.find((t) => t.taskId === 'task-paper')?.goalLink).toBe(
       'unlinked',
     );
-    expect(within(research).getByText('Goal なし')).toBeTruthy();
+    expect(within(research).getByText('目標なし')).toBeTruthy();
     expect(within(research).getByText(/2件/)).toBeTruthy();
+  });
+});
+
+describe('Planning — 計画基準の見せ方 (#105)', () => {
+  const outlook = () =>
+    screen.getByRole('complementary', { name: '時間の見通し' });
+
+  it.each(['pick', 'shape'])(
+    'shows only the criterion’s name on one line in %s',
+    async (stage) => {
+      await renderAt(`/sprint?fixture=planning-pick&stage=${stage}`);
+      const line = outlook().querySelector('[data-slot="criterion-line"]');
+      expect(line?.textContent).toBe('研究：提案の幅の上限で計画する');
+      // It sits under the previous improvement.
+      expect(
+        within(outlook())
+          .getByRole('region', { name: '前回決めた改善策' })
+          .contains(line),
+      ).toBe(true);
+      expect(within(outlook()).queryByRole('switch')).toBeNull();
+      expect(
+        within(outlook()).queryByRole('region', { name: '計画基準' }),
+      ).toBeNull();
+    },
+  );
+
+  it('shows the frame, the Switch and the effect in check', async () => {
+    await renderAt('/sprint?fixture=planning-check&stage=check');
+    const frame = within(outlook()).getByRole('region', { name: '計画基準' });
+    expect(
+      within(frame).getByText(
+        '前の振り返りで決めた、提案の幅のどこで計画するかのルール。',
+      ),
+    ).toBeTruthy();
+    expect(
+      within(frame).getByRole('switch', { name: /今回の計画に使う/ }),
+    ).toBeTruthy();
+    expect(within(frame).getByText(/幅のあるタスク 1件を上限で/)).toBeTruthy();
+    // 適用 happens here; 採用 (the Estimate) stays in the Task’s detail (invariant 7).
+    expect(frame.textContent).not.toMatch(/採用/);
+    expect(outlook().querySelector('[data-slot="criterion-line"]')).toBeNull();
+  });
+
+  it.each(['pick', 'shape', 'check'])(
+    'shows nothing of a criterion in %s when there is none',
+    async (stage) => {
+      withoutCriteria = true;
+      await renderAt(`/sprint?fixture=planning-check&stage=${stage}`);
+      expect(outlook().textContent).not.toMatch(/計画基準|提案の幅の/);
+      expect(within(outlook()).queryByRole('switch')).toBeNull();
+    },
+  );
+
+  it('explains 計画値 next to the Capacity', async () => {
+    await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    expect(
+      within(outlook()).getByText(
+        '計画値：今回の計画に使う時間。見積もりは変わりません。',
+      ),
+    ).toBeTruthy();
   });
 });
 
@@ -205,7 +275,7 @@ describe('Planning — 確かめる', () => {
     expect(
       within(outlook).getByText('上限側では 0.25h 超える可能性があります。'),
     ).toBeTruthy();
-    const hours = within(outlook).getByRole('textbox', { name: /可用時間/ });
+    const hours = within(outlook).getByRole('textbox', { name: /使える時間/ });
     await userEvent.clear(hours);
     await userEvent.type(hours, '14{Enter}');
     expect(draft().availableHours).toBe(14);
@@ -220,7 +290,7 @@ describe('Planning — 確かめる', () => {
       (t) => t.id === 'task-paper',
     );
     await userEvent.click(
-      within(outlook).getByRole('switch', { name: /今回の時間の判断に使う/ }),
+      within(outlook).getByRole('switch', { name: /今回の計画に使う/ }),
     );
     expect(router.state.location.search).toMatchObject({ criterion: 'off' });
     const research = within(planPane()).getByRole('region', { name: /研究/ });
@@ -235,7 +305,7 @@ describe('Planning — 確かめる', () => {
     const outlook = screen.getByRole('complementary', { name: '時間の見通し' });
     expect(
       within(outlook).getByText(
-        '計画基準で「関連論文を 3 本読む」を 5h で計算しています（提案 3–5h）。',
+        '計画基準で「関連論文を 3 本読む」を 5h で計算しています（Agent の提案 3–5h）。',
       ),
     ).toBeTruthy();
   });
@@ -305,7 +375,7 @@ describe('Planning — review fixes', () => {
     expect(line()?.dataset.over).toBe('mayExceed');
     expect(line()?.className).toContain('border-warning');
     expect(line()?.className).not.toContain('danger');
-    const hours = within(outlook).getByRole('textbox', { name: /可用時間/ });
+    const hours = within(outlook).getByRole('textbox', { name: /使える時間/ });
     await userEvent.clear(hours);
     await userEvent.type(hours, '14{Enter}');
     expect(line()?.dataset.over).toBe('exceeds');
@@ -323,7 +393,7 @@ describe('Planning — review fixes', () => {
     const row = within(study)
       .getByText('TypeScript 6 の変更点を読む')
       .closest('[data-slot="task-row"]');
-    expect(row?.textContent).toContain('Goal なし');
+    expect(row?.textContent).toContain('目標なし');
     await userEvent.click(
       screen.getByRole('button', { name: 'Sprint 2 を確定' }),
     );
@@ -332,7 +402,7 @@ describe('Planning — review fixes', () => {
     });
     // 住民税 (unlinked), 英語の多読・部屋の掃除 (recurring, unlinked) and
     // TypeScript (linked, but 学習 has no Goal).
-    expect(dialog.textContent).toContain('（うち Goal に紐づかない 4件）');
+    expect(dialog.textContent).toContain('（うち目標に紐づかない 4件）');
   });
 
   it('shows the suggestion a planned value came from', async () => {
@@ -341,7 +411,7 @@ describe('Planning — review fixes', () => {
     const row = within(research)
       .getByText('関連論文を 3 本読む')
       .closest('[data-slot="task-row"]');
-    expect(row?.textContent).toContain('提案 3–5h');
+    expect(row?.textContent).toContain('Agent の提案 3–5h');
     expect(row?.textContent).toContain('計画 5h');
   });
 
@@ -350,7 +420,7 @@ describe('Planning — review fixes', () => {
     const outlook = screen.getByRole('complementary', { name: '時間の見通し' });
     expect(
       within(outlook).getByText(
-        '研究の推定タスク 1件を上限で計画値にしています（合計の下限 +2h）。',
+        '研究の幅のあるタスク 1件を上限で計画しています（合計の下限 +2h）。',
       ),
     ).toBeTruthy();
   });
@@ -457,7 +527,7 @@ describe('Planning — review fixes (2)', () => {
     const row = within(work)
       .getByText('新メンバーのオンボーディング資料')
       .closest('[data-slot="task-row"]');
-    expect(row?.textContent).toContain('提案 3–5h');
+    expect(row?.textContent).toContain('Agent の提案 3–5h');
     expect(row?.textContent).toContain('計画 3–5h');
   });
 });
@@ -474,7 +544,7 @@ describe('Planning — keys (#48)', () => {
     await userEvent.keyboard('e');
     // The Task's own, not a subtask's (「Estimate（時間）: …」).
     const estimate = await screen.findByRole('textbox', {
-      name: /^Estimate（時間）(?!:)/,
+      name: /^見積もり（時間）(?!:)/,
     });
     await waitFor(() => expect(document.activeElement).toBe(estimate));
   });

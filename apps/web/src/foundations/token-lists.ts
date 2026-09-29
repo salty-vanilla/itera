@@ -116,15 +116,15 @@ export const typographyGroups = [
       [
         'body-l',
         'text-body-l',
-        'Estimate の幅を計画値のどこで使うかを決めます。',
+        '見積もりの幅を計画値のどこで使うかを決めます。',
       ],
       [
         'body',
         'text-body',
-        '可用時間から計画値の合計を引いた残りを、幅のまま示します。',
+        '使える時間から計画値の合計を引いた残りを、幅のまま示します。',
       ],
       ['task', 'text-task', '関連研究のメモを整理する'],
-      ['label', 'text-label', '可用時間'],
+      ['label', 'text-label', '使える時間'],
       ['help', 'text-help', '0.5時間単位で入力します'],
       ['meta', 'text-meta', '10/5 (月) · 持ち越し 1回'],
       ['kicker', 'text-kicker', 'Agent 提案'],

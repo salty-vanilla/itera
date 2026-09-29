@@ -226,7 +226,7 @@ function PlanningScreen({ data }: PlanningScreenProps) {
                 >
                   {data.blockers.includes('previousRetroOpen') && (
                     <p>
-                      前の Sprint の Retro を完了すると確定できます。
+                      前の Sprint の振り返りを完了すると確定できます。
                       <Link
                         to="/retro"
                         className="ms-1 text-link underline focus-visible:focus-ring"
@@ -355,7 +355,8 @@ function CapacitySummary({ data }: { data: PlanningData }) {
   if (capacity === undefined) {
     return (
       <span>
-        計画値の合計 {formatPlanningTotal(data.totals.total)} · 可用時間は未入力
+        計画値の合計 {formatPlanningTotal(data.totals.total)} ·
+        使える時間は未入力
       </span>
     );
   }

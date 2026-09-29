@@ -280,7 +280,7 @@ function ItemMetadata({
         <MetaItem icon={<Carry aria-hidden />}>持ち越し</MetaItem>
       )}
       {item.sprintTask.origin === 'midSprint' && (
-        <MetaItem>Sprint 中に追加</MetaItem>
+        <MetaItem>週の途中で追加</MetaItem>
       )}
       {/* F4: neutral, never a warning (PRD §5 C). From two in a row. */}
       {item.streak >= 2 && <MetaItem>{item.streak}回続けて見送り</MetaItem>}

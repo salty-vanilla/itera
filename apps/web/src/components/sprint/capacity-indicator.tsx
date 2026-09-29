@@ -69,7 +69,7 @@ export function capacityStatement(capacity: Capacity | undefined): {
   if (capacity === undefined) {
     return {
       tone: 'unknown',
-      text: '可用時間を入力すると、計画との差を表示します。',
+      text: '使える時間を入力すると、計画との差を表示します。',
     };
   }
   const { remaining, status } = capacity;
@@ -85,7 +85,7 @@ export function capacityStatement(capacity: Capacity | undefined): {
       text: `上限側では ${formatHours(-remaining.lo, { total: true })} 超える可能性があります。`,
     };
   }
-  return { tone: 'ok', text: '可用時間の範囲に収まっています。' };
+  return { tone: 'ok', text: '使える時間の範囲に収まっています。' };
 }
 
 /** The headline number: 残り or, when even the lower end is over, 超過. */
@@ -168,24 +168,32 @@ function CapacityIndicator({
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 text-body">
           <dt className="whitespace-nowrap text-ink-muted">計画値の合計</dt>
           <dd className="text-right text-num-m text-ink">
-            {formatPlanningTotal(total)}
+            {/* The count left out is its own sentence below, so the sum
+                stays one range here (only 「見積もりなし 3件」 when nothing
+                is estimated). */}
+            {total.lo === 0 && total.hi === 0
+              ? formatPlanningTotal(total)
+              : formatRange(total.lo, total.hi, { total: true })}
           </dd>
           {capacity !== undefined && (
             <>
-              <dt className="whitespace-nowrap text-ink-muted">可用時間</dt>
+              <dt className="whitespace-nowrap text-ink-muted">使える時間</dt>
               <dd className="text-right text-num-m text-ink">
                 {formatHours(capacity.availableHours, { total: true })}
               </dd>
             </>
           )}
         </dl>
+        <p className="text-help text-ink-muted">
+          計画値：今回の計画に使う時間。見積もりは変わりません。
+        </p>
         {unestimated > 0 && (
           <p className="text-help text-ink-muted">
             {[
               total.unestimated > 0 &&
-                `未見積 ${total.unestimated}件は合計に含まれていません。`,
+                `見積もりのないタスク ${total.unestimated}件は合計に含まれていません。`,
               total.unestimatedSubtasks > 0 &&
-                `見積りのないサブタスク ${total.unestimatedSubtasks}件は合計に含まれていません。`,
+                `見積もりのないサブタスク ${total.unestimatedSubtasks}件は合計に含まれていません。`,
             ]
               .filter(Boolean)
               .join(' ')}
@@ -229,7 +237,7 @@ function CapacityIndicator({
 function AvailableHoursField({
   value,
   onChange,
-  label = '可用時間（時間）',
+  label = '使える時間（時間）',
   description = '今週、計画に使える時間。本人が決めます',
 }: {
   value: number | undefined;

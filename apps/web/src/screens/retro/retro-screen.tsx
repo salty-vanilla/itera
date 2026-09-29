@@ -139,7 +139,7 @@ function RetroView({ data }: { data: RetroData }) {
               aria-describedby={reasonId}
               onClick={complete}
             >
-              Retro を完了
+              振り返りを完了
             </Button>
             <div
               id={reasonId}
@@ -267,7 +267,9 @@ function NoRetro() {
         </p>
         {lastDay && (
           <div>
-            <Button onClick={() => actions.beginRetro()}>Retro を始める</Button>
+            <Button onClick={() => actions.beginRetro()}>
+              振り返りを始める
+            </Button>
           </div>
         )}
       </ScreenFrame>

@@ -173,7 +173,7 @@ function TaskDetail({
       kind: 'adopted',
       suggestionId: suggestion.id,
       previous,
-      text: `Estimate ${formatHours(hours)} を採用しました（Agent 提案 ${formatRange(suggestion.lo, suggestion.hi)}）`,
+      text: `見積もり ${formatHours(hours)} を採用しました（Agent 提案 ${formatRange(suggestion.lo, suggestion.hi)}）`,
     });
   }
 
@@ -188,7 +188,7 @@ function TaskDetail({
       kind: 'adopted',
       suggestionId: suggestion.id,
       previous,
-      text: `Estimate ${formatHours(hours)} を採用しました（Agent 提案 ${formatRange(suggestion.lo, suggestion.hi)} を編集）`,
+      text: `見積もり ${formatHours(hours)} を採用しました（Agent 提案 ${formatRange(suggestion.lo, suggestion.hi)} を編集）`,
     });
     return true;
   }
@@ -211,7 +211,7 @@ function TaskDetail({
     setOutcome({
       kind: 'rejected',
       suggestionId: suggestion.id,
-      text: `提案 ${formatRange(suggestion.lo, suggestion.hi)} を却下しました`,
+      text: `Agent の提案 ${formatRange(suggestion.lo, suggestion.hi)} を却下しました`,
     });
   }
 
@@ -301,7 +301,7 @@ function TaskDetail({
               </Select>
             </Field>
             <Field
-              label="Estimate（時間）"
+              label="見積もり（時間）"
               necessity="optional"
               description="本人の見積もり。0.25時間単位など（例: 1.5）"
               error={errors.estimate}
@@ -322,7 +322,7 @@ function TaskDetail({
               value={draft.timeBasis}
               onValueChange={(value) => set('timeBasis', value)}
             >
-              <Radio<TimeBasis> value="task" label="この Task の Estimate" />
+              <Radio<TimeBasis> value="task" label="この Task の見積もり" />
               <Radio<TimeBasis>
                 value="subtasks"
                 label={

@@ -54,7 +54,7 @@ export const WithSupportTextAndUnit: Story = {
   render: () => (
     <div className="flex max-w-drawer flex-col gap-6">
       <Field
-        label="可用時間"
+        label="使える時間"
         necessity="required"
         description="今週、計画に使える時間。0.5時間単位"
       >

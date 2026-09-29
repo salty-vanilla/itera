@@ -31,7 +31,7 @@ export const Default: Story = {
         サブタスク 3件の一覧がここに入る。
       </TabsPanel>
       <TabsPanel value="history" className="py-4 text-body">
-        Estimate の変更と、どの Sprint に入ったかの記録がここに入る。
+        見積もりの変更と、どの Sprint に入ったかの記録がここに入る。
       </TabsPanel>
     </Tabs>
   ),

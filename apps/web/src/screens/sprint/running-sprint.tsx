@@ -148,11 +148,11 @@ function RunningRow({
     ),
     hasGoal && sprintTask.goalLink === 'unlinked' && (
       <MetaItem key="g" className="text-ink-subtle">
-        Goal なし
+        目標なし
       </MetaItem>
     ),
     sprintTask.origin === 'midSprint' && (
-      <MetaItem key="m">Sprint 中に追加</MetaItem>
+      <MetaItem key="m">週の途中で追加</MetaItem>
     ),
   ].filter(Boolean);
   return (
@@ -195,7 +195,7 @@ function Outlook({
           <dd className="text-right text-num-m text-ink">
             {formatPlanningTotal(data.totals.total)}
           </dd>
-          <dt className="text-ink-muted">計画時の可用時間</dt>
+          <dt className="text-ink-muted">計画したときの使える時間</dt>
           <dd className="text-right text-ink">
             {planned === undefined
               ? '未入力'
@@ -205,7 +205,7 @@ function Outlook({
         <AvailableHoursField
           value={current}
           onChange={onHours}
-          label="今の可用時間（時間）"
+          label="今の使える時間（時間）"
           description="確定した後も変えられます。計画時の値は残ります。"
         />
       </section>
@@ -230,7 +230,7 @@ function Outlook({
               : '確定したときに、今回の計画値には使いませんでした。'}
           </p>
           <p className="text-help text-ink-muted">
-            確定した後は変えられません。Retro で続けるかを決めます。
+            確定した後は変えられません。振り返りで続けるかを決めます。
           </p>
         </section>
       )}

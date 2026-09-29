@@ -52,15 +52,15 @@ function ConfirmDialog({
           <DialogTitle>Sprint {number} を確定しますか？</DialogTitle>
           <DialogDescription>
             確定すると、各タスクの計画値がこの Sprint
-            の値として固定されます。確定後も Goal と可用時間は変更できます。
+            の値として固定されます。確定後も目標と使える時間は変更できます。
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">
-          <section aria-label="Goal" className="flex flex-col gap-1">
-            <h3 className="text-label text-ink-muted">Goal</h3>
+          <section aria-label="目標" className="flex flex-col gap-1">
+            <h3 className="text-label text-ink-muted">目標</h3>
             {goals.length === 0 ? (
               <p className="text-body text-ink">
-                Goal はありません（領域ごとに任意です）。
+                目標はありません（領域ごとに任意です）。
               </p>
             ) : (
               <ul className="flex flex-col gap-1 text-body text-ink">
@@ -77,13 +77,13 @@ function ConfirmDialog({
             <dt className="text-ink-muted">タスク</dt>
             <dd className="text-ink">
               {tasks.length}件
-              {unlinked > 0 && `（うち Goal に紐づかない ${unlinked}件）`}
+              {unlinked > 0 && `（うち目標に紐づかない ${unlinked}件）`}
             </dd>
             <dt className="text-ink-muted">計画値の合計</dt>
             <dd className="text-num-m text-ink">
               {formatPlanningTotal(totals.total)}
             </dd>
-            <dt className="text-ink-muted">可用時間</dt>
+            <dt className="text-ink-muted">使える時間</dt>
             <dd className="text-ink">
               {totals.capacity === undefined
                 ? '未入力'
@@ -93,8 +93,11 @@ function ConfirmDialog({
               <>
                 <dt className="text-ink-muted">計画基準</dt>
                 <dd className="text-ink">
-                  {criterionName(criterion.active.policy, criterion.areaName)}：
-                  {criterion.applied ? '今回の計画値に使う' : '今回は使わない'}
+                  {`「${criterionName(criterion.active.policy, criterion.areaName)}」${
+                    criterion.applied
+                      ? 'を今回の計画に使う'
+                      : 'は今回は使わない'
+                  }`}
                 </dd>
               </>
             )}
@@ -120,7 +123,7 @@ function ConfirmDialog({
               )}
               {unestimated > 0 && (
                 <li className="text-ink-muted">
-                  未見積 {unestimated}件は合計に含まれていません。
+                  見積もりのないタスク {unestimated}件は合計に含まれていません。
                 </li>
               )}
             </ul>

@@ -17,11 +17,11 @@ export const Default: Story = {
       { label: '完了', value: 4, unit: '件' },
       { label: '持ち越し', value: 2, unit: '件' },
       { label: 'スキップ', value: 1, unit: '回' },
-      { label: 'Sprint 中の追加', value: 1, unit: '件' },
+      { label: '週の途中の追加', value: 1, unit: '件' },
       {
         label: '計画値の合計',
         value: '17.25–20.25h',
-        note: '可用時間 17h',
+        note: '使える時間 17h',
       },
     ],
   },

@@ -10,7 +10,7 @@ const meta = {
   title: 'Components/Switch',
   component: Switch,
   args: {
-    label: 'Retro の前日に通知',
+    label: '振り返りの前日に通知',
     description: 'オンにすると、Sprint の最終日の前日 18:00 に通知します。',
     disabled: false,
   },

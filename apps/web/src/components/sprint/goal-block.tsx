@@ -105,7 +105,7 @@ function GoalBlock({
             ref={openRef}
             size="sm"
             variant="quiet"
-            aria-label={`Goal を編集: ${area.name}`}
+            aria-label={`目標を編集: ${area.name}`}
             onClick={() => {
               setText(goal);
               setEditing(true);
@@ -130,7 +130,7 @@ function GoalBlock({
             }
             if (!removable && text.trim() === '') {
               setError(
-                '確定した後の Goal は消せません。文を書いて保存してください',
+                '確定した後の目標は消せません。文を書いて保存してください',
               );
               // The field in error takes the focus (accessibility.md).
               requestAnimationFrame(() =>
@@ -144,11 +144,11 @@ function GoalBlock({
           }}
         >
           <Field
-            label="Goal（今週の終わりにどんな状態にしたいか）"
+            label="目標（今週の終わりにどんな状態にしたいか）"
             necessity="optional"
             description={
               removable
-                ? '「〜な状態にする」「〜を終える」の形がおすすめです。空にすると Goal はなくなります'
+                ? '「〜な状態にする」「〜を終える」の形がおすすめです。空にすると目標はなくなります'
                 : '「〜な状態にする」「〜を終える」の形がおすすめです。確定した後は文を変えられますが、消せません'
             }
             error={error}
@@ -174,7 +174,7 @@ function GoalBlock({
           <p className="max-w-measure-read text-goal text-ink">{goal}</p>
           {planned === null && (
             <p className="text-meta text-ink-muted">
-              確定した後に書いた Goal です（計画時にはありませんでした）
+              確定した後に書いた目標です（計画時にはありませんでした）
             </p>
           )}
           {planned !== undefined && planned !== null && planned !== goal && (
@@ -190,17 +190,17 @@ function GoalBlock({
               ref={openRef}
               size="sm"
               variant="quiet"
-              aria-label={`Goal を書く: ${area.name}`}
+              aria-label={`目標を書く: ${area.name}`}
               onClick={() => {
                 setText('');
                 setEditing(true);
               }}
             >
-              + Goal を書く
+              + 目標を書く
             </Button>
           )}
           <p className="text-help text-ink-muted">
-            この領域の Goal は任意です。タスクだけでも計画できます。
+            この領域の目標は任意です。タスクだけでも計画できます。
           </p>
         </div>
       )}

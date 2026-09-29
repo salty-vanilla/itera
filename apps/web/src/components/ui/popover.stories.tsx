@@ -42,12 +42,12 @@ function EstimatePopover({ defaultOpen }: { defaultOpen?: boolean }) {
       </PopoverTrigger>
       <PopoverContent>
         <PopoverHeader>
-          <PopoverTitle>Estimate を編集</PopoverTitle>
+          <PopoverTitle>見積もりを編集</PopoverTitle>
         </PopoverHeader>
         <PopoverBody>
           <div className="flex flex-col gap-1">
             <label htmlFor={id} className="text-label text-ink">
-              Estimate
+              見積もり
             </label>
             <p id={`${id}-help`} className="text-help text-ink-muted">
               0.5時間単位
@@ -104,9 +104,9 @@ export const FocusFlow: Story = {
   play: async ({ canvas }) => {
     const trigger = canvas.getByRole('button', { name: /見積もり 3時間/ });
     await userEvent.click(trigger);
-    await screen.findByRole('dialog', { name: 'Estimate を編集' });
+    await screen.findByRole('dialog', { name: '見積もりを編集' });
     await waitFor(() =>
-      expect(screen.getByRole('textbox', { name: 'Estimate' })).toHaveFocus(),
+      expect(screen.getByRole('textbox', { name: '見積もり' })).toHaveFocus(),
     );
     await userEvent.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());

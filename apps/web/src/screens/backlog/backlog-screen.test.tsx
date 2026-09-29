@@ -156,7 +156,7 @@ describe('Backlog', () => {
     await renderAt('/backlog?fixture=backlog-detail&task=task-interview');
     const detail = await screen.findByRole('dialog');
     const proposal = within(detail).getByRole('region', {
-      name: 'Agent 提案 · Estimate',
+      name: 'Agent 提案 · 見積もり',
     });
     // 採用 only: no word of 適用 or of a planning criterion here (invariant 7).
     expect(proposal.textContent).not.toMatch(/適用|計画基準/);
@@ -169,7 +169,7 @@ describe('Backlog', () => {
     });
     const outcome = within(detail).getByRole('status');
     expect(outcome.textContent).toContain(
-      'Estimate 2.5h を採用しました（Agent 提案 2–3h）',
+      '見積もり 2.5h を採用しました（Agent 提案 2–3h）',
     );
     // The Sprint's plan snapshot is not touched by adopting (invariant 16).
     const sprintTask = records()
@@ -188,13 +188,13 @@ describe('Backlog', () => {
     await renderAt('/backlog?fixture=backlog-detail&task=task-interview');
     const detail = await screen.findByRole('dialog');
     const proposal = within(detail).getByRole('region', {
-      name: 'Agent 提案 · Estimate',
+      name: 'Agent 提案 · 見積もり',
     });
     await userEvent.click(
       within(proposal).getByRole('button', { name: '編集して採用' }),
     );
     const field = within(proposal).getByRole('textbox', {
-      name: /採用する Estimate（時間）/,
+      name: /採用する見積もり（時間）/,
     });
     // Starts from the middle of the range.
     expect(field).toHaveProperty('value', '2.5');
@@ -208,7 +208,7 @@ describe('Backlog', () => {
       source: { kind: 'edited' },
     });
     const outcome = within(detail).getByText(
-      'Estimate 4h を採用しました（Agent 提案 2–3h を編集）',
+      '見積もり 4h を採用しました（Agent 提案 2–3h を編集）',
     );
     await userEvent.click(
       within(outcome.closest('p') as HTMLElement).getByRole('button', {
@@ -223,13 +223,13 @@ describe('Backlog', () => {
     await renderAt('/backlog?fixture=backlog-detail&task=task-interview');
     const detail = await screen.findByRole('dialog');
     const proposal = () =>
-      within(detail).getByRole('region', { name: 'Agent 提案 · Estimate' });
+      within(detail).getByRole('region', { name: 'Agent 提案 · 見積もり' });
     const edit = within(proposal()).getByRole('button', {
       name: '編集して採用',
     });
     await userEvent.click(edit);
     const field = within(proposal()).getByRole('textbox', {
-      name: /採用する Estimate（時間）/,
+      name: /採用する見積もり（時間）/,
     });
     expect(document.activeElement).toBe(field);
     await userEvent.clear(field);
@@ -256,7 +256,7 @@ describe('Backlog', () => {
       within(proposal()).getByRole('button', { name: '編集して採用' }),
     );
     expect(
-      within(proposal()).getByRole('textbox', { name: /採用する Estimate/ }),
+      within(proposal()).getByRole('textbox', { name: /採用する見積もり/ }),
     ).toHaveProperty('value', '2.5');
     await userEvent.click(
       within(proposal()).getByRole('button', { name: '採用' }),
@@ -276,14 +276,14 @@ describe('Backlog', () => {
     await userEvent.click(within(detail).getByRole('button', { name: '却下' }));
     expect(task('task-interview')?.suggestions.at(-1)?.state).toBe('rejected');
     expect(
-      within(detail).queryByRole('region', { name: 'Agent 提案 · Estimate' }),
+      within(detail).queryByRole('region', { name: 'Agent 提案 · 見積もり' }),
     ).toBeNull();
     await userEvent.click(
       within(detail).getByRole('button', { name: '元に戻す' }),
     );
     expect(task('task-interview')?.suggestions.at(-1)?.state).toBe('presented');
     expect(
-      within(detail).getByRole('region', { name: 'Agent 提案 · Estimate' }),
+      within(detail).getByRole('region', { name: 'Agent 提案 · 見積もり' }),
     ).toBeTruthy();
   });
 
@@ -291,7 +291,7 @@ describe('Backlog', () => {
     await renderAt('/backlog?fixture=backlog-capture&task=task-bookshelf');
     const detail = await screen.findByRole('dialog');
     const estimate = within(detail).getByRole('textbox', {
-      name: /Estimate（時間）/,
+      name: /見積もり（時間）/,
     });
     await userEvent.type(estimate, 'abc');
     await userEvent.click(within(detail).getByRole('button', { name: '保存' }));
@@ -338,7 +338,7 @@ describe('Backlog', () => {
       resolution: 'selected',
     });
     const row = within(list()).getByText('本棚を整理する').closest('li');
-    expect(row?.textContent).toContain('今週 · Sprint 中に追加');
+    expect(row?.textContent).toContain('今週 · 週の途中で追加');
   });
 
   it('完了: a Task in the Sprint completes there and today too', async () => {
@@ -624,7 +624,7 @@ describe('Backlog — keys of the list (#48)', () => {
     await userEvent.keyboard('e');
     // The Task's own, not a subtask's (「Estimate（時間）: …」).
     const estimate = await screen.findByRole('textbox', {
-      name: /^Estimate（時間）(?!:)/,
+      name: /^見積もり（時間）(?!:)/,
     });
     await waitFor(() => expect(document.activeElement).toBe(estimate));
     // Only that time: opened again with Enter, it starts at the first field.

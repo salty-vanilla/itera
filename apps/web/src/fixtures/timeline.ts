@@ -627,7 +627,7 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
   at(
     '09-27 18:20',
     onSprint(previous, (s, ctx) =>
-      setImprovement(s, { text: '研究の見積りは幅の上限で計画する' }, ctx),
+      setImprovement(s, { text: '研究の見積もりは幅の上限で計画する' }, ctx),
     ),
   );
   at('09-27 18:21', (r, ctx) =>

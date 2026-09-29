@@ -16,7 +16,7 @@ import type { PlanningTotal, PlanningValue } from '@itera/domain';
 const MINUS = '−';
 const EN_DASH = '–';
 
-export const UNESTIMATED = '未見積';
+export const UNESTIMATED = '見積もりなし';
 
 type HoursOptions = {
   /** A total (合計): always in hours, even under 1h. */
@@ -85,7 +85,7 @@ export function formatEstimate(
 }
 
 function withUnestimated(text: string, count: number): string {
-  return count === 0 ? text : `${text} ＋ ${UNESTIMATED} ${count}`;
+  return count === 0 ? text : `${text}（${UNESTIMATED}が ${count}件）`;
 }
 
 /** A planning value (計画値), with the subtasks left out of a subtask sum. */
@@ -105,7 +105,7 @@ export function formatPlanningValue(value: PlanningValue): string {
 export function formatPlanningTotal(total: PlanningTotal): string {
   const unestimated = total.unestimated + total.unestimatedSubtasks;
   if (total.lo === 0 && total.hi === 0 && unestimated > 0) {
-    return `${UNESTIMATED} ${unestimated}`;
+    return `${UNESTIMATED} ${unestimated}件`;
   }
   return withUnestimated(
     formatRange(total.lo, total.hi, { total: true }),

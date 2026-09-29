@@ -18,7 +18,7 @@ function pinText(pin: RetroPin, data: RetroData): string | undefined {
     }
     case 'goal': {
       const area = facts.areas.find((a) => a.areaId === pin.id);
-      return area?.goal && `${area.name ?? ''}の Goal「${area.goal.text}」`;
+      return area?.goal && `${area.name ?? ''}の目標「${area.goal.text}」`;
     }
     case 'dailySelection': {
       const s = data.sprint.dailySelections.find((x) => x.id === pin.id);
@@ -47,7 +47,7 @@ function pinText(pin: RetroPin, data: RetroData): string | undefined {
     }
     case 'availableHours': {
       const { planned, current } = facts.availableHours;
-      return `可用時間 計画時 ${planned === undefined ? '未入力' : formatHours(planned, { total: true })} → 今 ${current === undefined ? '未入力' : formatHours(current, { total: true })}`;
+      return `使える時間 計画時 ${planned === undefined ? '未入力' : formatHours(planned, { total: true })} → 今 ${current === undefined ? '未入力' : formatHours(current, { total: true })}`;
     }
   }
 }
@@ -77,7 +77,7 @@ function Materials({
       <Heading className="text-subheading text-ink">振り返りの材料</Heading>
       {items.length === 0 ? (
         <p className="text-help text-ink-muted">
-          事実に「気になる」の印を付けると、ここに集まります。付けなくても先へ進めます。
+          事実に「振り返りに使う」の印を付けると、ここに集まります。付けなくても先へ進めます。
         </p>
       ) : (
         <ul className="flex flex-col border-t border-border-soft">

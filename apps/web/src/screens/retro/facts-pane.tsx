@@ -12,6 +12,7 @@ import {
   formatPlanningTotal,
   formatPlanningValue,
   formatRange,
+  UNESTIMATED,
 } from '@/lib/time-format';
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 import { cn } from '@/lib/utils';
@@ -98,7 +99,7 @@ function FactsPane({
               note: `繰り返しの回：完了 ${facts.occurrences.done.length} · 未処理 ${facts.occurrences.missed.length}`,
             },
             {
-              label: 'Sprint 中の追加',
+              label: '週の途中の追加',
               value: facts.midSprint.length,
               unit: '件',
             },
@@ -107,10 +108,10 @@ function FactsPane({
               value: formatRange(total.lo, total.hi, { total: true }),
               note: [
                 total.unestimated + total.unestimatedSubtasks > 0 &&
-                  `未見積 ${total.unestimated + total.unestimatedSubtasks}`,
+                  `見積もりなし ${total.unestimated + total.unestimatedSubtasks}件`,
                 plannedHours === undefined
-                  ? '可用時間は未入力'
-                  : `可用時間 ${formatHours(plannedHours, { total: true })}`,
+                  ? '使える時間は未入力'
+                  : `使える時間 ${formatHours(plannedHours, { total: true })}`,
               ]
                 .filter(Boolean)
                 .join(' · '),
@@ -139,8 +140,7 @@ function FactsPane({
               aria-hidden
               className="size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
             />
-            今回の計画基準：
-            {criterionName(used.criterion.policy, used.areaName)}
+            {`今回の計画基準「${criterionName(used.criterion.policy, used.areaName)}」`}
           </h2>
           <p className="text-body text-ink">
             {used.appliedAtConfirm
@@ -162,10 +162,10 @@ function FactsPane({
                 key={a.areaId ?? 'none'}
                 action={toggle(
                   { kind: 'goal', id: a.areaId ?? '' },
-                  `${a.name ?? ''}の Goal`,
+                  `${a.name ?? ''}の目標`,
                 )}
               >
-                <span className="text-ink-muted">{a.name} の Goal：</span>
+                <span className="text-ink-muted">{a.name} の目標：</span>
                 {a.goal?.plannedText === undefined
                   ? `計画時にはなかった → 「${a.goal?.text ?? ''}」`
                   : `「${a.goal.plannedText}」 → 「${a.goal.text}」`}
@@ -173,9 +173,9 @@ function FactsPane({
             ))}
             {hoursChanged && (
               <FactRow
-                action={toggle({ kind: 'availableHours' }, '可用時間の変更')}
+                action={toggle({ kind: 'availableHours' }, '使える時間の変更')}
               >
-                <span className="text-ink-muted">可用時間：</span>
+                <span className="text-ink-muted">使える時間：</span>
                 計画時{' '}
                 {plannedHours === undefined
                   ? '未入力'
@@ -256,7 +256,7 @@ function FactsPane({
       {facts.midSprint.length > 0 && (
         <section aria-labelledby="retro-mid" className="flex flex-col gap-3">
           <h2 id="retro-mid" className="text-heading text-ink">
-            Sprint 中の追加
+            週の途中の追加
           </h2>
           <ul className="flex flex-col border-t border-border-soft">
             {facts.midSprint.map((t) => (
@@ -342,7 +342,7 @@ function FactsPane({
   );
 }
 
-/** 「研究の推定 1 件のうち 1 件を持ち越し（計画値 5h・実績 4.5h）」. */
+/** 「研究の幅のあるタスク 1件のうち 1 件を持ち越し（計画値 5h・実績 4.5h）」. */
 function CriterionOutcome({ data }: { data: RetroData }) {
   const used = data.used;
   if (used === undefined) return null;
@@ -361,7 +361,7 @@ function CriterionOutcome({ data }: { data: RetroData }) {
   ].filter(Boolean);
   return (
     <p className="text-body text-ink">
-      {scope}推定タスク {result.tasks.length}件のうち {parts.join('、')}
+      {scope}幅のあるタスク {result.tasks.length}件のうち {parts.join('、')}
       （計画値 {formatPlanningTotal(result.planned)}・実績{' '}
       {result.actualHours > 0
         ? formatHours(result.actualHours, { total: true })
@@ -418,10 +418,10 @@ function AreaFacts({
               padding matches the table cells'. */}
           <div className="flex flex-wrap items-start justify-between gap-2 medium:pe-2">
             <p className="max-w-measure-read text-goal text-ink">{goal.text}</p>
-            {toggle({ kind: 'goal', id: areaId }, `${shown.name}の Goal`)}
+            {toggle({ kind: 'goal', id: areaId }, `${shown.name}の目標`)}
           </div>
           <RadioGroup<SelfAssessment | null>
-            legend="この Goal を自分でどう見ますか"
+            legend="この目標を自分でどう見ますか"
             description="システムは判定しません。選ばなくても次へ進めます。"
             value={goal.selfAssessment ?? null}
             onValueChange={(value) => onAssess(areaId, value)}
@@ -442,7 +442,7 @@ function AreaFacts({
       {area.linked.length > 0 && (
         <TaskFacts
           compact={compact}
-          caption={goal === undefined ? 'タスク' : 'Goal に紐づくタスク'}
+          caption={goal === undefined ? 'タスク' : '目標に紐づくタスク'}
           tasks={area.linked}
           data={data}
           toggle={toggle}
@@ -452,9 +452,7 @@ function AreaFacts({
       {area.unlinked.length > 0 && (
         <TaskFacts
           compact={compact}
-          caption={
-            goal === undefined ? 'タスク' : 'Goal に紐づかなかったタスク'
-          }
+          caption={goal === undefined ? 'タスク' : '目標に紐づかなかったタスク'}
           tasks={area.unlinked}
           data={data}
           toggle={toggle}
@@ -518,7 +516,7 @@ function TaskTable({
               タスク
             </th>
             <th scope="col" className={cn(num, 'font-normal')}>
-              Estimate
+              見積もり
             </th>
             <th scope="col" className={cn(num, 'font-normal')}>
               計画値
@@ -550,8 +548,8 @@ function TaskTable({
               </th>
               <td className={num}>{estimateOf(t).text}</td>
               <td className={num}>
-                {plannedText(t)}
-                {planNotes(t).map((note) => (
+                {plannedCellText(t)}
+                {[...unestimatedNote(t), ...planNotes(t)].map((note) => (
                   <span key={note} className="block text-meta text-ink-muted">
                     {note}
                   </span>
@@ -709,7 +707,26 @@ function AddActualButton({
 
 /** The planning value fixed in the plan. */
 function plannedText(t: TaskFact): string {
-  return t.plan === undefined ? '未見積' : formatPlanningValue(t.plan.value);
+  return t.plan === undefined ? UNESTIMATED : formatPlanningValue(t.plan.value);
+}
+
+/**
+ * The planning value in the table's narrow column: a subtask sum without
+ * its count, which goes under it (`unestimatedNote`).
+ */
+function plannedCellText(t: TaskFact): string {
+  const value = t.plan?.value;
+  return value?.base === 'subtasks'
+    ? formatRange(value.lo, value.hi)
+    : plannedText(t);
+}
+
+/** 「見積もりなしが 1件」 for the subtasks left out of a subtask sum. */
+function unestimatedNote(t: TaskFact): string[] {
+  const value = t.plan?.value;
+  return value?.base === 'subtasks' && value.unestimatedSubtasks > 0
+    ? [`${UNESTIMATED}が ${value.unestimatedSubtasks}件`]
+    : [];
 }
 
 /** What the value came from: the criterion, and a recurring Task's count. */
@@ -747,10 +764,10 @@ function estimateOf(t: TaskFact): {
   if (plan?.suggestion !== undefined) {
     return {
       kind: 'suggestion',
-      text: `提案 ${formatRange(plan.suggestion.lo, plan.suggestion.hi)}`,
+      text: `Agent の提案 ${formatRange(plan.suggestion.lo, plan.suggestion.hi)}`,
     };
   }
-  return { kind: 'none', text: '未見積' };
+  return { kind: 'none', text: UNESTIMATED };
 }
 
 /** 「見送り 2回 · 今日はここまで 1回」 under the outcome, if any. */

@@ -223,7 +223,7 @@ function PlannedRow({
     // a linked Task whose Area has no Goal yet.
     stage !== 'pick' && planned.linkAtConfirm === 'unlinked' && (
       <MetaItem key="g" className="text-ink-subtle">
-        Goal なし
+        目標なし
       </MetaItem>
     ),
   ].filter(Boolean);
@@ -267,7 +267,7 @@ function PlannedRow({
         }
       >
         <Target aria-hidden />
-        {linked ? 'Goal に紐づけない' : 'Goal に紐づける'}
+        {linked ? '目標に紐づけない' : '目標に紐づける'}
       </MenuItem>
     ),
   ].filter(Boolean);

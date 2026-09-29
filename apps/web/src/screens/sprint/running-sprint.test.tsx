@@ -87,9 +87,9 @@ describe('Sprint — running (#51)', () => {
   it('rewords a Goal and keeps the planned text beside it (invariant 18, MVP 16)', async () => {
     await renderAt('/sprint?fixture=today-interrupt');
     await userEvent.click(
-      screen.getByRole('button', { name: 'Goal を編集: 研究' }),
+      screen.getByRole('button', { name: '目標を編集: 研究' }),
     );
-    const field = screen.getByRole('textbox', { name: /Goal/ });
+    const field = screen.getByRole('textbox', { name: /目標/ });
     await userEvent.clear(field);
     await userEvent.type(field, '先行研究を 2 本押さえる');
     await userEvent.click(screen.getByRole('button', { name: '保存' }));
@@ -103,15 +103,15 @@ describe('Sprint — running (#51)', () => {
   it('does not remove a Goal after confirm (F16)', async () => {
     await renderAt('/sprint?fixture=today-interrupt');
     await userEvent.click(
-      screen.getByRole('button', { name: 'Goal を編集: 研究' }),
+      screen.getByRole('button', { name: '目標を編集: 研究' }),
     );
-    await userEvent.clear(screen.getByRole('textbox', { name: /Goal/ }));
+    await userEvent.clear(screen.getByRole('textbox', { name: /目標/ }));
     await userEvent.click(screen.getByRole('button', { name: '保存' }));
-    expect(screen.getByText(/確定した後の Goal は消せません/)).toBeTruthy();
+    expect(screen.getByText(/確定した後の目標は消せません/)).toBeTruthy();
     expect(goalOf('area-research')?.text).toBe('先行研究を押さえる');
     await waitFor(() =>
       expect(document.activeElement).toBe(
-        screen.getByRole('textbox', { name: /Goal/ }),
+        screen.getByRole('textbox', { name: /目標/ }),
       ),
     );
   });
@@ -119,23 +119,23 @@ describe('Sprint — running (#51)', () => {
   it('writes a new Goal after confirm, without a planned text (F16)', async () => {
     await renderAt('/sprint?fixture=today-interrupt');
     await userEvent.click(
-      screen.getByRole('button', { name: 'Goal を書く: 学習' }),
+      screen.getByRole('button', { name: '目標を書く: 学習' }),
     );
     await userEvent.type(
-      screen.getByRole('textbox', { name: /Goal/ }),
+      screen.getByRole('textbox', { name: /目標/ }),
       '多読を毎回続ける',
     );
     await userEvent.click(screen.getByRole('button', { name: '保存' }));
     const goal = goalOf('area-study');
     expect(goal?.text).toBe('多読を毎回続ける');
     expect(goal?.plannedText).toBeUndefined();
-    expect(screen.getByText(/確定した後に書いた Goal です/)).toBeTruthy();
+    expect(screen.getByText(/確定した後に書いた目標です/)).toBeTruthy();
   });
 
   it('changes the available hours and keeps the planned hours (invariant 18)', async () => {
     await renderAt('/sprint?fixture=today-interrupt');
     // One field, whatever the width (it follows the saved value).
-    const hours = screen.getByRole('textbox', { name: /今の可用時間/ });
+    const hours = screen.getByRole('textbox', { name: /今の使える時間/ });
     await userEvent.clear(hours);
     await userEvent.type(hours, '14');
     await userEvent.tab();
@@ -149,19 +149,19 @@ describe('Sprint — running (#51)', () => {
   it('closes an empty new Goal without an error', async () => {
     await renderAt('/sprint?fixture=today-interrupt');
     await userEvent.click(
-      screen.getByRole('button', { name: 'Goal を書く: 学習' }),
+      screen.getByRole('button', { name: '目標を書く: 学習' }),
     );
     await userEvent.click(screen.getByRole('button', { name: '保存' }));
     expect(screen.queryByText(/消せません/)).toBeNull();
     expect(goalOf('area-study')).toBeUndefined();
     expect(
-      screen.getByRole('button', { name: 'Goal を書く: 学習' }),
+      screen.getByRole('button', { name: '目標を書く: 学習' }),
     ).toBeTruthy();
   });
 
   it('clears the available hours and says so beside the planned hours', async () => {
     await renderAt('/sprint?fixture=today-interrupt');
-    const hours = screen.getByRole('textbox', { name: /今の可用時間/ });
+    const hours = screen.getByRole('textbox', { name: /今の使える時間/ });
     await userEvent.clear(hours);
     await userEvent.tab();
     expect(running().availableHours).toBeUndefined();
