@@ -170,7 +170,7 @@ stateDiagram-v2
 
 - Backlog に出るのは Active だけ。Sprint や Today に入っているかは Task の状態ではない。
 - 繰り返し Task は Completed にならない。完了とスキップは Occurrence が持つ。
-- Completed になる操作は 2 つ。Today での完了（SprintTask と DailySelection から）と、Backlog での「完了にする」。後者も今の Sprint に入っていれば SprintTask = Done とし、その日の DailySelection（origin = Backlog からの完了、Done）を作る。
+- Completed になる操作は 2 つ。Today での完了（SprintTask と DailySelection から）と、Backlog での「完了にする」。後者も今の Sprint に入っていれば SprintTask = Done とし、その日の DailySelection（origin = Backlog からの完了、Done）を作る。Sprint の開始日より前は選ぶ日がないので、DailySelection は作らない（F34）。
 
 ### SprintTask
 
@@ -285,7 +285,7 @@ stateDiagram-v2
 
 ## 不変条件（Invariants）
 
-実装のどの層でも崩してはいけないルールです。v0.2 で番号を振り直しました。v0.2 Final では番号を変えず、16・18・22・23・31・33 の内容を更新しました。F7〜F9 の決定で、番号を変えずに 18・23・31 を更新しました。F10・F11 の決定で 8・9 を、F15 の決定で 32 を、F23 の決定で 24 を、F31 の決定で 6 を更新しました。
+実装のどの層でも崩してはいけないルールです。v0.2 で番号を振り直しました。v0.2 Final では番号を変えず、16・18・22・23・31・33 の内容を更新しました。F7〜F9 の決定で、番号を変えずに 18・23・31 を更新しました。F10・F11 の決定で 8・9 を、F15 の決定で 32 を、F23 の決定で 24 を、F31 の決定で 6 を、F34 の決定で 27 を更新しました。
 
 **Task / Backlog**
 
@@ -324,7 +324,7 @@ stateDiagram-v2
 24. Unresolved は日付変更時、または Review への移行時にシステムだけが付ける（本人が Retro を始めた場合も、記録はシステムのもの：F23）。
 25. Today は Goal・計画基準・可用時間を変えない。Today と Backlog では容量超過を表示しない。
 26. Sprint 外の Task を今日へ入れる操作は、SprintTask（midSprint）と DailySelection を同時に作る。片方だけが残ることはない。
-27. Backlog から今の Sprint の Task を完了すると、Task = Completed、SprintTask = Done、その日の DailySelection（Done）が同時にできる。
+27. Backlog から今の Sprint の Task を完了すると、Task = Completed、SprintTask = Done、その日の DailySelection（Done）が同時にできる。Sprint の開始日より前は、DailySelection を作らずに Task と SprintTask だけが同時に変わる（F34）。
 28. 実績時間は任意で、完了の条件にしない。未完了でも「今日はここまで」で残せる。
 29. InterruptNote は Task ではない。Sprint 中の追加とは別に数える。
 
