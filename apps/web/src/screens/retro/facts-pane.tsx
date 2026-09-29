@@ -206,7 +206,7 @@ function FactsPane({
         <section
           aria-labelledby="retro-occurrences"
           data-wide
-          className="flex flex-col gap-3"
+          className="flex flex-col gap-3 xl:max-w-pane-rows"
         >
           <h2 id="retro-occurrences" className="text-heading text-ink">
             繰り返しの回
@@ -485,7 +485,9 @@ function TaskFacts({
  * Estimate / 計画値 / 実績 / 結果, numbers right-aligned (DESIGN.md
  * Typography). Every table has the same columns, so they line up from one
  * Goal to the next (#73); the title takes what is left. From 1200px the
- * actions sit side by side.
+ * actions sit side by side. From 1920px (bp-xl) the columns share the whole
+ * width in proportion (the three numbers equal), so the title does not take
+ * all of it and the result stays clear of 実績 (#81).
  */
 function TaskTable({
   caption,
@@ -500,12 +502,12 @@ function TaskTable({
     <div className="overflow-x-auto">
       <table className="w-full min-w-[53rem] table-fixed border-collapse text-body">
         <colgroup>
-          <col />
-          <col className="w-[7rem]" />
-          <col className="w-[9rem]" />
-          <col className="w-[5rem]" />
-          <col className="w-[13rem] wide:w-[18rem]" />
-          <col className="w-[9rem] wide:w-[13rem]" />
+          <col className="xl:w-[32%]" />
+          <col className="w-[7rem] xl:w-[11%]" />
+          <col className="w-[9rem] xl:w-[11%]" />
+          <col className="w-[5rem] xl:w-[11%]" />
+          <col className="w-[13rem] wide:w-[18rem] xl:w-[20%]" />
+          <col className="w-[9rem] wide:w-[13rem] xl:w-[15%]" />
         </colgroup>
         <caption className="pb-2 text-left text-subheading text-ink">
           {caption}
@@ -524,7 +526,10 @@ function TaskTable({
             <th scope="col" className={cn(num, 'font-normal')}>
               実績
             </th>
-            <th scope="col" className={cn(cell, 'text-left font-normal')}>
+            <th
+              scope="col"
+              className={cn(cell, 'text-left font-normal xl:ps-8')}
+            >
               結果
             </th>
             <th scope="col" className={cell}>
@@ -555,7 +560,7 @@ function TaskTable({
               <td className={num}>
                 {t.actualHours > 0 ? formatHours(t.actualHours) : '未入力'}
               </td>
-              <td className={cell}>
+              <td className={cn(cell, 'xl:ps-8')}>
                 {/* Breaks only between its parts (「回：完了 2 · スキップ 1」). */}
                 {resultText(t, data)
                   .split(' · ')

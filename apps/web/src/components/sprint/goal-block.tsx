@@ -35,6 +35,12 @@ type GoalBlockProps = {
   planned?: string | null | undefined;
   children?: ReactNode;
   className?: string | undefined;
+  /**
+   * The heading row's own classes. Where blocks sit side by side, the caller
+   * gives it the button's height, so that a block without 編集 (no Goal) lines
+   * up with the rest.
+   */
+  headingRowClassName?: string | undefined;
 };
 
 function GoalBlock({
@@ -47,6 +53,7 @@ function GoalBlock({
   planned,
   children,
   className,
+  headingRowClassName,
 }: GoalBlockProps) {
   const Heading = level === 2 ? 'h2' : 'h3';
   const [editing, setEditing] = useState(false);
@@ -77,7 +84,12 @@ function GoalBlock({
         className,
       )}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div
+        className={cn(
+          'flex flex-wrap items-center justify-between gap-2',
+          headingRowClassName,
+        )}
+      >
         <Heading id={headingId} className="flex items-center gap-2">
           <AreaIndicator
             name={area.name}

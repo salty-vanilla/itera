@@ -1,6 +1,6 @@
 # 画面のパターン
 
-更新：2026-09-29（リストのキー操作、Issue #48。Retro の事実を見るの表、Issue #73）。2026-09-28（実行中の Sprint の画面、Issue #51。期間外の Today とシステムの Review 移行、Issue #54。Retro の最初の実装で決めたこと、Issue #42。Today の最初の実装で決めたこと、Issue #41。Backlog の編集して採用と、Planning の最初の実装で決めたこと、Issue #40）。2026-09-27（Backlog の完了を元に戻す、Issue #47）。2026-09-26 に DESIGN.md v0.2 から分離。
+更新：2026-09-29（大きい画面の幅の使い方、Issue #81。リストのキー操作、Issue #48。Retro の事実を見るの表、Issue #73）。2026-09-28（実行中の Sprint の画面、Issue #51。期間外の Today とシステムの Review 移行、Issue #54。Retro の最初の実装で決めたこと、Issue #42。Today の最初の実装で決めたこと、Issue #41。Backlog の編集して採用と、Planning の最初の実装で決めたこと、Issue #40）。2026-09-27（Backlog の完了を元に戻す、Issue #47）。2026-09-26 に DESIGN.md v0.2 から分離。
 
 Backlog・Planning・Today・Retro の画面の組み立て方。見た目と部品は [DESIGN.md](../../DESIGN.md)、意味と操作の種類は [PRD](../requirements/prd.md) と [ドメインモデル](../domain/domain-model.md) が正。UI v0.1 モックは当たり付けで、ここに書いた構成を実装して触りながら削る（PRD §12）。
 
@@ -10,6 +10,16 @@ Backlog・Planning・Today・Retro の画面の組み立て方。見た目と部
 - Sprint の画面（Planning / Today / Retro）の Area 名は Sprint 確定時の名前で固定し、Backlog は現在の名前を出す（ドメインモデル F5）。確定前の Planning は現在の名前。
 - 容量の超過は Planning だけで扱う。Today と Backlog では超過を表示しない（不変条件 25）。
 - 持ち越し・見送り・超過・「できなかった」は事実として中立に書き、人格評価のように見せない。
+
+### 大きい画面（1920px 以上、Issue #81）
+
+Issue #81 でオーナーが決めた（2026-09-29）。DESIGN.md の Layout（`bp-xl`、`pane-rows`）が正。
+
+- 画面の大きさで変えてよいのは、ペインの広さと、その中に並ぶ数だけ。どのペインに何があるかは変えない。中央のペインは、左右のペインを除いた幅を使い、上限は中身の種類で決める（ブロックは列を増やす、表は幅いっぱい、1 行 1 Task の一覧は最大 1280px、文章は `measure-read`）。
+- Planning：Sprint ペインを広げ、Area のブロックを幅に応じて 1〜3 列に並べる（列は 26rem 以上、3 列まで）。Backlog ペインと時間の見通しの幅は今のまま。1 列のときは今どおり最大 680px。
+- Backlog：一覧の行は最大 1280px で止め、左に置く。詳細の Drawer は今と同じ（右に重ねる）。絞り込みと Quick Add も同じ幅で止める。
+- Retro：3 段階とも本文を左に揃える（段階を切り替えても左端が動かない）。事実を見るの表は幅いっぱい（列は割合で分け、タイトルが幅を取りすぎない）。繰り返しの回は最大 1280px。文は 720px、振り返る・引き継ぐの材料は 336px のまま。
+- Today と実行中の Sprint は変えない（1 列の読み物として、左右が空くことを受け入れる）。
 
 ### リストのキー操作（Issue #48 の実装で決めたこと。オーナーの確認は PR で取る）
 
