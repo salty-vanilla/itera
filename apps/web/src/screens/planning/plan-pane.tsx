@@ -53,6 +53,8 @@ export function stageHeading(stage: Stage, week: string): string {
 type PlanPaneProps = {
   data: PlanningData;
   stage: Stage;
+  /** The Task just added in the Quick Add: its row flashes (Issue #92). */
+  addedTaskId?: TaskId | undefined;
   onOpenTask: (taskId: TaskId) => void;
   /** E on a row: the Task's detail, at its Estimate. */
   onEstimateTask: (taskId: TaskId) => void;
@@ -62,6 +64,7 @@ type PlanPaneProps = {
 function PlanPane({
   data,
   stage,
+  addedTaskId,
   onOpenTask,
   onEstimateTask,
   className,
@@ -89,10 +92,9 @@ function PlanPane({
       )}
     >
       <h1 className="text-display-m text-ink">{stageHeading(stage, week)}</h1>
-      {stage === 'pick' && data.chosenCount === 0 && (
-        <p className="text-body text-ink-muted">
-          Backlog から □ で{weekText(week, 'へ選びます。')}
-          {weekText(week, '発生する繰り返しは最初から入っています。')}
+      {stage === 'pick' && (
+        <p className="max-w-measure-read text-body text-ink-muted [text-wrap:pretty] [word-break:auto-phrase]">
+          {pickGuide(week, data.candidates.recurring.length > 0)}
         </p>
       )}
       {/*
@@ -124,6 +126,7 @@ function PlanPane({
                 block={block}
                 stage={stage}
                 week={week}
+                addedTaskId={addedTaskId}
                 onOpenTask={onOpenTask}
                 onEstimateTask={onEstimateTask}
               />
@@ -152,6 +155,7 @@ function PlanPane({
                   block={block}
                   stage={stage}
                   week={week}
+                  addedTaskId={addedTaskId}
                   onOpenTask={onOpenTask}
                   onEstimateTask={onEstimateTask}
                 />
@@ -162,6 +166,21 @@ function PlanPane({
       </div>
     </div>
   );
+}
+
+/**
+ * What the 選ぶ stage says under its heading, chosen Tasks or not: why the
+ * occurrences are in already, and what choosing does (Issue #92).
+ */
+function pickGuide(week: string, hasRecurring: boolean): string {
+  const choosing =
+    'Backlog の □ で選ぶと、行が黄色の地とチェックになり、この下に領域ごとに並びます。';
+  return hasRecurring
+    ? weekText(
+        week,
+        '発生する繰り返しは最初から入っています。外すと今日の画面にも出ません。',
+      ) + choosing
+    : choosing;
 }
 
 function summaryOf(block: AreaPlan): string {
@@ -175,23 +194,26 @@ function PlannedList({
   block,
   stage,
   week,
+  addedTaskId,
   onOpenTask,
   onEstimateTask,
 }: {
   block: AreaPlan;
   stage: Stage;
   week: string;
+  addedTaskId: TaskId | undefined;
   onOpenTask: (taskId: TaskId) => void;
   onEstimateTask: (taskId: TaskId) => void;
 }) {
   return (
     <ul className="flex flex-col border-t border-border-soft">
       {block.tasks.map((planned) => (
-        <li key={planned.sprintTask.id}>
+        <li key={planned.sprintTask.id} data-task={planned.task.id}>
           <PlannedRow
             planned={planned}
             stage={stage}
             week={week}
+            added={planned.task.id === addedTaskId}
             onOpen={() => onOpenTask(planned.task.id)}
             onEstimate={() => onEstimateTask(planned.task.id)}
           />
@@ -205,6 +227,7 @@ function PlannedRow({
   planned,
   stage,
   week,
+  added,
   onOpen,
   onEstimate,
 }: {
@@ -212,6 +235,8 @@ function PlannedRow({
   stage: Stage;
   /** 「今週」「来週」 (#90). */
   week: string;
+  /** Just added in the Quick Add: the row flashes for a moment (Issue #92). */
+  added: boolean;
   onOpen: () => void;
   onEstimate: () => void;
 }) {
@@ -302,6 +327,12 @@ function PlannedRow({
   return (
     <TaskRow
       title={task.title}
+      // Flashes `here-subtle` once and fades, as the Backlog does (#86;
+      // 2.5s: ADDED_MS in planning-screen.tsx). These rows have no ground of
+      // their own, so the flash shows.
+      className={
+        added ? 'animate-[added-flash_2.5s_ease-in-out_forwards]' : undefined
+      }
       onOpen={onOpen}
       keys={{ onEstimate }}
       metadata={

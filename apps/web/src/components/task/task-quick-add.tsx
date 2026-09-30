@@ -7,8 +7,9 @@ import { cn } from '@/lib/utils';
 
 // DESIGN.md Components › Task Quick Add. Adds a Task by its title without
 // leaving the screen: a `plus` icon, no visible label (it has an accessible
-// name), an optional Area Select and a hint. Enter adds, Esc clears, and the
-// focus stays in the field for the next one. Never a modal.
+// name), an optional Area Select (beside the field, or under it in a narrow
+// pane) and a hint. Enter adds, Esc clears, and the focus stays in the field
+// for the next one. Never a modal.
 
 type TaskQuickAddProps = {
   /** Adds the Task. Return false to keep the text (the add failed). */
@@ -17,6 +18,8 @@ type TaskQuickAddProps = {
   label?: string;
   /** An Area Select, placed after the field. */
   area?: ReactNode;
+  /** Puts the Area Select under the field, for a narrow pane. */
+  stackArea?: boolean;
   className?: string | undefined;
 };
 
@@ -24,6 +27,7 @@ function TaskQuickAdd({
   onAdd,
   label = 'タスクを追加',
   area,
+  stackArea = false,
   className,
 }: TaskQuickAddProps) {
   const [title, setTitle] = useState('');
@@ -40,7 +44,12 @@ function TaskQuickAdd({
         inputRef.current?.focus();
       }}
     >
-      <div className="flex items-end gap-2">
+      <div
+        className={cn(
+          'flex gap-2',
+          stackArea ? 'flex-col items-stretch' : 'items-end',
+        )}
+      >
         <Field label={label} hideLabel className="min-w-0 flex-1">
           <TextInput
             ref={inputRef}

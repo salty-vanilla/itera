@@ -1,4 +1,4 @@
-import { id, type TaskId } from '@itera/domain';
+import { id, type AreaId, type TaskId } from '@itera/domain';
 import {
   Link,
   useNavigate,
@@ -23,6 +23,7 @@ import {
 } from '@/components/sprint/sprint-header';
 import { formatDate, formatDateRange } from '@/lib/date-format';
 import { isTyping } from '@/lib/row-keys';
+import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 import { formatPlanningSum } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { cn } from '@/lib/utils';
@@ -52,6 +53,35 @@ import { PlanPane, type Stage } from './plan-pane';
 //   Sprint that opens a right Drawer.
 // - compact: one column. The Backlog shows in 選ぶ only; the Capacity is
 //   the same one line (a Bottom Sheet), and 確かめる shows it in full.
+
+/** How long the row just added flashes; the same as `added-flash` in the CSS. */
+const ADDED_MS = 2500;
+
+/** The room the sticky Capacity line takes at the top of the screen. */
+const STICKY_ROOM = 72;
+
+/** Scrolls `main` so that the added row shows, keeping the Quick Add in view. */
+function revealAdded(taskId: TaskId) {
+  const main = document.querySelector('main');
+  const row = document.querySelector(
+    `[data-slot="plan-pane"] [data-task="${taskId}"]`,
+  );
+  const quickAdd = document.querySelector(
+    '[data-slot="planning-backlog"] [data-slot="task-quick-add"]',
+  );
+  if (main === null || row === null || quickAdd === null) return;
+  const view = main.getBoundingClientRect();
+  const rowRect = row.getBoundingClientRect();
+  const above = rowRect.top - (view.top + STICKY_ROOM);
+  if (above < 0) {
+    main.scrollBy?.({ top: above });
+    return;
+  }
+  const below = rowRect.bottom + 16 - view.bottom;
+  const spare = quickAdd.getBoundingClientRect().top - (view.top + STICKY_ROOM);
+  const by = Math.min(below, spare);
+  if (by > 0) main.scrollBy?.({ top: by });
+}
 
 export const STAGES: readonly { id: Stage; label: string }[] = [
   { id: 'pick', label: '選ぶ' },
@@ -99,6 +129,13 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
   const stage = search.stage ?? 'pick';
   const [confirming, setConfirming] = useState(false);
   const [outlookOpen, setOutlookOpen] = useState(false);
+  // The Task just added in the Quick Add: its row flashes for a moment
+  // (ADDED_MS) and a Toast says where it went (Issue #92).
+  const [addedTaskId, setAddedTaskId] = useState<TaskId>();
+  const week = weekCall(data.week, data.number);
+  // Under 768px the plan sits above the Backlog: the Quick Add stays where
+  // it is for the next Task, and the Toast tells where the Task went.
+  const sideBySide = useMediaQuery(MEDIUM_UP, true);
 
   const setSearch = (next: {
     [K in keyof SprintSearch]?: SprintSearch[K] | undefined;
@@ -149,6 +186,26 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
     });
     setSearch({ stage: undefined, criterion: undefined });
   };
+
+  const addTask = (title: string, areaId: AreaId | undefined) => {
+    const created = actions.addAndChoose(title, areaId);
+    if (created === undefined) return false;
+    setAddedTaskId(created);
+    toast.show({
+      kind: 'sprint-pick',
+      title: `「${title}」を追加して${weekText(week, 'に入れました')}`,
+    });
+    return true;
+  };
+  useEffect(() => {
+    if (addedTaskId === undefined) return;
+    // The row can sit below the fold. Scroll only as far as shows it, and
+    // never so far that the Quick Add leaves the screen: the next Task is
+    // typed there (Capture).
+    if (sideBySide) revealAdded(addedTaskId);
+    const timer = window.setTimeout(() => setAddedTaskId(undefined), ADDED_MS);
+    return () => window.clearTimeout(timer);
+  }, [addedTaskId, sideBySide]);
 
   const blocked = data.blockers.length > 0;
   const reasonId = useId();
@@ -273,10 +330,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
                   {data.blockers.includes('inactiveTasks') && (
                     <p>
                       完了・アーカイブした Task を
-                      {weekText(
-                        weekCall(data.week, data.number),
-                        'から外すと確定できます。',
-                      )}
+                      {weekText(week, 'から外すと確定できます。')}
                     </p>
                   )}
                 </div>
@@ -319,6 +373,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
         <BacklogPane
           data={data}
           slim={stage !== 'pick'}
+          onAdd={addTask}
           onOpenTask={openTask}
           onEstimateTask={openEstimate}
           className={cn(
@@ -331,6 +386,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
           <PlanPane
             data={data}
             stage={stage}
+            addedTaskId={addedTaskId}
             onOpenTask={openTask}
             onEstimateTask={openEstimate}
           />
