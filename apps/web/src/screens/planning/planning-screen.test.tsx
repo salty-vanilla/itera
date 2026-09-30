@@ -242,7 +242,7 @@ describe('Planning — 選ぶ', () => {
     await renderAt('/sprint?fixture=planning-pick&stage=pick');
     expect(draft().tasks.length).toBeGreaterThan(0);
     const note = within(planPane()).getByText(
-      /今週発生する繰り返しは最初から入っています。外すと Today にも出ません。/,
+      /今週発生する繰り返しは最初から入っています。外すと今日の画面にも出ません。/,
     );
     expect(note.textContent).toContain('行が黄色の地とチェックになり');
   });

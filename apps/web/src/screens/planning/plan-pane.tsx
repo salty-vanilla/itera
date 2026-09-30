@@ -178,7 +178,7 @@ function pickGuide(week: string, hasRecurring: boolean): string {
   return hasRecurring
     ? weekText(
         week,
-        '発生する繰り返しは最初から入っています。外すと Today にも出ません。',
+        '発生する繰り返しは最初から入っています。外すと今日の画面にも出ません。',
       ) + choosing
     : choosing;
 }
