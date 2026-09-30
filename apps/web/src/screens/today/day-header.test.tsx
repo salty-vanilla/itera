@@ -1,5 +1,6 @@
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -102,11 +103,14 @@ describe('Today — the heading’s days (#90)', () => {
     fireEvent.keyDown(input, { key: 'Enter' });
     await waitFor(() => expect(heading()).toBe('10月3日（土）'));
     expect(router.history.length).toBe(2);
+    expect(document.activeElement).toBe(dateInput());
 
     fireEvent.keyDown(dateInput(), { key: '5' });
     fireEvent.change(dateInput(), { target: { value: '2026-10-05' } });
-    fireEvent.blur(dateInput());
+    act(() => dateInput().blur());
     await waitFor(() => expect(heading()).toBe('10月5日（月）'));
+    // Focus has moved on; it is not brought back to the date.
+    expect(document.activeElement).not.toBe(dateInput());
   });
 
   it('goes back to the day shown when a typed date is left unfinished', async () => {

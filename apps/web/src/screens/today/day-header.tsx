@@ -84,8 +84,9 @@ function DayHeader({
   const focusAfter = useContext(DayFocus);
   // Today's own URL carries no date.
   const searchOf = (day: LocalDate) => (day === today ? {} : { date: day });
-  const open = (day: LocalDate, from: Control) => {
-    focusAfter?.set(from);
+  /** `from`: the control to keep focus on; none when focus has left. */
+  const open = (day: LocalDate, from: Control | undefined) => {
+    if (from !== undefined) focusAfter?.set(from);
     void navigate({ to: '/today', search: searchOf(day) });
   };
   const step = (day: LocalDate, side: '前' | '次') => ({
@@ -119,11 +120,12 @@ function DayHeader({
     setDraft(date);
   }
   const typed = useRef(false);
-  const commit = (value: string) => {
+  const commit = (value: string, left = false) => {
     typed.current = false;
     const parsed = parseLocalDate(value);
     if (!parsed.ok) setDraft(date);
-    else if (parsed.value !== date) open(parsed.value, 'date');
+    else if (parsed.value !== date)
+      open(parsed.value, left ? undefined : 'date');
   };
 
   return (
@@ -155,7 +157,7 @@ function DayHeader({
               if (!typed.current) commit(event.currentTarget.value);
             }}
             onBlur={(event) => {
-              if (typed.current) commit(event.currentTarget.value);
+              if (typed.current) commit(event.currentTarget.value, true);
             }}
             className="w-auto"
           />
