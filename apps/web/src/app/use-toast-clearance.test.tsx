@@ -31,7 +31,11 @@ function Screen() {
   return (
     <main ref={ref}>
       <div data-slot="task-row">
-        <button onClick={() => toast.show({ kind: 'k', title: '入れました' })}>
+        <button
+          onClick={() =>
+            toast.show({ kind: 'task-added', title: '入れました' })
+          }
+        >
           押す
         </button>
       </div>
@@ -62,12 +66,13 @@ describe('useToastClearance', () => {
   it('adds room under the screen while a Toast shows, and takes it away', async () => {
     const user = setup(rect(100, 40));
     const main = document.querySelector('main')!;
-    expect(main.style.paddingBottom).toBe('');
+    const room = () => main.style.getPropertyValue('--toast-clearance');
+    expect(room()).toBe('');
     await user.click(screen.getByRole('button', { name: '押す' }));
     // The Toast starts at 700 in a screen that ends at 800.
-    expect(main.style.paddingBottom).toBe('100px');
+    expect(room()).toBe('100px');
     await user.click(screen.getByRole('button', { name: '閉じる' }));
-    await vi.waitFor(() => expect(main.style.paddingBottom).toBe(''));
+    await vi.waitFor(() => expect(room()).toBe(''));
   });
 
   it('scrolls a pressed row up when a Toast would cover it', async () => {

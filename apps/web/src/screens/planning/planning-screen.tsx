@@ -184,7 +184,13 @@ function PlanningScreen({ data }: PlanningScreenProps) {
   }, [blocked]);
 
   return (
-    <div ref={rootRef} className="flex min-h-full flex-col">
+    <div
+      ref={rootRef}
+      // While Toasts show, `main` pads its bottom by --toast-clearance; the
+      // panes take that room inside them, so that their faces and the
+      // divider reach the bottom (app/use-toast-clearance.ts).
+      className="mb-[calc(var(--toast-clearance,0px)*-1)] flex min-h-[calc(100%+var(--toast-clearance,0px))] flex-col"
+    >
       <div className="px-4 pt-6 medium:px-6">
         <SprintHeader
           status={<Tag tone="draft">計画中 · 未確定</Tag>}
@@ -285,12 +291,12 @@ function PlanningScreen({ data }: PlanningScreenProps) {
           onOpenTask={openTask}
           onEstimateTask={openEstimate}
           className={cn(
-            'order-2 medium:order-none',
+            'order-2 pb-[calc(var(--spacing-4)+var(--toast-clearance,0px))] medium:order-none',
             // compact: the Backlog belongs to 選ぶ only.
             stage !== 'pick' && 'hidden medium:flex',
           )}
         />
-        <div className="order-1 flex flex-col gap-8 px-4 py-8 medium:order-none medium:px-6">
+        <div className="order-1 flex flex-col gap-8 px-4 pt-8 pb-[calc(var(--spacing-8)+var(--toast-clearance,0px))] medium:order-none medium:px-6 medium:pb-8">
           <PlanPane
             data={data}
             stage={stage}

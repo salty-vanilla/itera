@@ -1,16 +1,20 @@
 import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
-import { useToastsKey } from '@/components/ui/toast';
+import { useToasts } from '@/components/ui/toast';
 
 /** A Toast follows the press that caused it within this time. */
 const REACT_MS = 1000;
-
 /** Room left between the Toast and the row it made way for. */
 const GAP = 8;
 
 /** The nearest ancestor that scrolls vertically. */
 function scrollParent(el: HTMLElement): HTMLElement | null {
   for (let p = el.parentElement; p !== null; p = p.parentElement) {
-    if (/(auto|scroll)/.test(getComputedStyle(p).overflowY)) return p;
+    if (
+      /(auto|scroll)/.test(getComputedStyle(p).overflowY) &&
+      p.scrollHeight > p.clientHeight
+    ) {
+      return p;
+    }
   }
   return null;
 }
@@ -23,34 +27,44 @@ function toastBox(): DOMRect | undefined {
   return box === undefined || box.height === 0 ? undefined : box;
 }
 
-/** Sets the padding of `main` to the part of it the Toasts cover. */
+/**
+ * Publishes the part of `main` the Toasts cover as `--toast-clearance` on it.
+ * `main` pads its bottom by it; a screen whose panes have a face of their own
+ * takes the room inside them instead (Planning), so that the faces reach the
+ * bottom.
+ */
 function makeRoom(main: HTMLElement): DOMRect | undefined {
   const toasts = toastBox();
   const covered =
     toasts === undefined
       ? 0
       : Math.max(0, main.getBoundingClientRect().bottom - toasts.top);
-  main.style.paddingBottom = covered > 0 ? `${covered}px` : '';
+  if (covered > 0) main.style.setProperty('--toast-clearance', `${covered}px`);
+  else main.style.removeProperty('--toast-clearance');
   return toasts;
 }
 
 /**
  * Makes room for the Toasts in the screen's scroll area (DESIGN.md Toast).
- * The Toast lies over the bottom left of the screen; while it shows,
+ * The Toasts lie over the bottom left of the screen; while they show,
  *
- * - `main` gets bottom padding as tall as the part of it the Toasts cover,
- *   so that whatever is at the bottom (the last rows, the Quick Add) can be
- *   scrolled clear of them. It goes with the Toast, and nothing moves when
- *   it comes;
+ * - `main` gets bottom padding (`--toast-clearance`) as tall as the part of
+ *   it they cover, so
+ *   that whatever is at the bottom (the last rows, the Quick Add) can be
+ *   scrolled clear of them. It goes with the Toasts. Content that fills the
+ *   screen (`min-h-full`, `mt-auto`, a sticky bar at the end) rises by the
+ *   same amount, as if the screen were that much shorter;
  * - what the person just pressed or typed in is scrolled up, by the least
  *   that it takes, if a Toast would cover it.
  *
- * Toasts are never moved for this; DESIGN.md fixes where they are.
+ * The Toasts are never moved for this; DESIGN.md fixes where they are. (A
+ * bar stuck to the bottom of a compact screen lifts them instead:
+ * lib/use-toast-offset.ts.)
  */
 export function useToastClearance(mainRef: RefObject<HTMLElement | null>) {
-  const key = useToastsKey();
+  const toasts = useToasts();
   const last = useRef<{ target: Element; at: number } | null>(null);
-  const shown = useRef(new Set<string>());
+  const seen = useRef(new Set<unknown>());
 
   // What the person last pressed or typed in, before the Toast appears.
   useEffect(() => {
@@ -70,37 +84,35 @@ export function useToastClearance(mainRef: RefObject<HTMLElement | null>) {
   useLayoutEffect(() => {
     const main = mainRef.current;
     if (main === null) return;
-    const toasts = makeRoom(main);
-    if (toasts === undefined) {
-      shown.current.clear();
-      return;
-    }
+    const box = makeRoom(main);
 
-    // Only for a Toast just shown or replaced, and for what was pressed
-    // just before it.
-    const entries = key.split('|').filter((e) => !e.endsWith(':ending'));
-    const fresh = entries.some((e) => !shown.current.has(e));
-    shown.current = new Set(entries);
+    // Only for a Toast just shown or replaced (a new object), and for what
+    // was pressed just before it.
+    const shown = toasts.filter((t) => t.transitionStatus !== 'ending');
+    const fresh = shown.some((t) => !seen.current.has(t));
+    seen.current = new Set(shown);
     const target =
       last.current !== null && Date.now() - last.current.at < REACT_MS
         ? last.current.target
         : null;
-    if (!fresh || target === null || !main.contains(target)) return;
+    if (box === undefined || !fresh || target === null) return;
+    if (!main.contains(target)) return;
+
     const el =
       target.closest<HTMLElement>(
         '[data-slot="task-row"], [data-slot="task-quick-add"]',
       ) ?? (target as HTMLElement);
-    const box = el.getBoundingClientRect();
+    const rect = el.getBoundingClientRect();
     const overlaps =
-      box.left < toasts.right &&
-      box.right > toasts.left &&
-      box.bottom > toasts.top &&
-      box.top < toasts.bottom;
+      rect.left < box.right &&
+      rect.right > box.left &&
+      rect.bottom > box.top &&
+      rect.top < box.bottom;
     if (!overlaps) return;
     (scrollParent(el) ?? main).scrollBy({
-      top: box.bottom - toasts.top + GAP,
+      top: rect.bottom - box.top + GAP,
     });
-  }, [key, mainRef]);
+  }, [toasts, mainRef]);
 
   // The window's height changes where the Toasts are.
   useEffect(() => {

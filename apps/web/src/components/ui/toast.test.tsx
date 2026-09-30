@@ -185,7 +185,11 @@ describe('Toast', () => {
     function Twice() {
       const toast = useToast();
       return (
-        <Button onClick={() => toast.show({ kind: 'k', title: '入れました' })}>
+        <Button
+          onClick={() =>
+            toast.show({ kind: 'task-added', title: '入れました' })
+          }
+        >
           出す
         </Button>
       );
@@ -200,6 +204,48 @@ describe('Toast', () => {
     fireEvent.click(screen.getByRole('button', { name: '出す' }));
     await act(() => vi.advanceTimersByTimeAsync(TOAST_TIMEOUT - 1000));
     expect(visibleToasts()).toHaveLength(1);
+  });
+
+  it('puts the replacing Toast at the newest place, and shows it past the limit', async () => {
+    const user = userEvent.setup();
+    const kinds = [
+      'sprint-pick',
+      'task-added',
+      'task-archived',
+      'day-record-undone',
+    ] as const;
+    function Kinds() {
+      const toast = useToast();
+      return (
+        <>
+          {kinds.map((kind) => (
+            <Button
+              key={kind}
+              onClick={() => toast.show({ kind, title: kind })}
+            >
+              {kind}
+            </Button>
+          ))}
+        </>
+      );
+    }
+    render(
+      <ToastProvider>
+        <Kinds />
+      </ToastProvider>,
+    );
+    // The first kind is pushed past the limit by three others...
+    for (const kind of kinds)
+      await user.click(screen.getByRole('button', { name: kind }));
+    expect(visibleToasts()).toHaveLength(3);
+    // ...and shown again by its own kind, as the newest (first in the DOM:
+    // the list is newest at the bottom).
+    await user.click(screen.getByRole('button', { name: 'sprint-pick' }));
+    expect(visibleToasts()).toHaveLength(3);
+    expect(visibleToasts()[0]?.textContent).toContain('sprint-pick');
+    expect(
+      document.querySelectorAll('[data-slot="toast"]:not([data-ending-style])'),
+    ).toHaveLength(4);
   });
 
   it('announces danger with role="alert"', async () => {

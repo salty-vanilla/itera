@@ -17,8 +17,9 @@ import { IconButton } from './icon-button';
 //   (F6 moves focus to them),
 // - beyond the limit the oldest Toasts are marked data-limited and made inert.
 //
-// Toasts of one kind do not stack: `kind` gives them one ID, so the latest
-// replaces the one showing (DESIGN.md Toast).
+// Toasts of one kind do not stack: `kind` gives them one ID, and a Toast
+// with that ID closes the one showing and takes its place as the newest
+// (DESIGN.md Toast).
 
 /** docs/design/foundations.md `duration-toast`. */
 const TOAST_TIMEOUT = 8000;
@@ -26,6 +27,20 @@ const TOAST_TIMEOUT = 8000;
 const TOAST_LIMIT = 3;
 
 type ToastTone = 'neutral' | 'done' | 'danger';
+
+/**
+ * The kinds of operation a Toast reports (DESIGN.md Toast). One list, so that
+ * a misspelt kind is a type error instead of a Toast that stacks.
+ */
+type ToastKind =
+  /** Chosen for or removed from the week: 「入れました」「外しました」. */
+  | 'sprint-pick'
+  | 'sprint-confirmed'
+  | 'retro-completed'
+  | 'task-added'
+  | 'task-archived'
+  | 'day-record-undone'
+  | 'save-failed';
 
 type ToastOptions = {
   /**
@@ -35,7 +50,7 @@ type ToastOptions = {
    * the latest one. Toasts of other kinds stay. Without a kind a Toast is
    * always added.
    */
-  kind?: string;
+  kind?: ToastKind;
   tone?: ToastTone;
   /** The result, stated plainly: 「3件を今週に入れました」. */
   title: string;
@@ -159,10 +174,15 @@ function useToast() {
         description,
         action,
       }: ToastOptions) {
-        const id: string = manager.add({
-          // Adding with an existing ID updates that Toast in place and
-          // restarts its timer.
-          ...(kind !== undefined && { id: `kind:${kind}` }),
+        const id: string | undefined =
+          kind === undefined ? undefined : `kind:${kind}`;
+        // Base UI updates a Toast added with an existing ID in place, which
+        // would keep its place in the stack and, past the limit, keep it
+        // hidden. Closing it first makes the add a new, newest Toast (the
+        // closing one is removed by the add, with no second Toast to see).
+        if (id !== undefined) manager.close(id);
+        const shownId: string = manager.add({
+          ...(id !== undefined && { id }),
           type: tone,
           title,
           description,
@@ -174,11 +194,11 @@ function useToast() {
             children: action.label,
             onClick: () => {
               action.onClick();
-              manager.close(id);
+              manager.close(shownId);
             },
           },
         });
-        return id;
+        return shownId;
       },
       close: (id: string) => manager.close(id),
     }),
@@ -187,15 +207,12 @@ function useToast() {
 }
 
 /**
- * A key that changes when a Toast is shown, replaced or removed, for a screen
- * that must make room for the Toasts (lib/use-toast-clearance.ts).
+ * The Toasts showing, for a screen that makes room for them
+ * (app/use-toast-clearance.ts). A shown or replaced Toast is a new object.
  */
-function useToastsKey(): string {
-  const { toasts } = ToastPrimitive.useToastManager();
-  return toasts
-    .map((t) => `${t.id}:${t.title}:${t.transitionStatus ?? ''}`)
-    .join('|');
+function useToasts() {
+  return ToastPrimitive.useToastManager().toasts;
 }
 
-export { TOAST_LIMIT, TOAST_TIMEOUT, ToastProvider, useToast, useToastsKey };
-export type { ToastOptions, ToastTone };
+export { TOAST_LIMIT, TOAST_TIMEOUT, ToastProvider, useToast, useToasts };
+export type { ToastKind, ToastOptions, ToastTone };

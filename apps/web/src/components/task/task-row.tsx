@@ -29,7 +29,8 @@ type TaskRowProps = {
   /**
    * Keeps the width of the `…` when there are no `actions`, so that the
    * Estimate ends where it does in the rows of the same list that have them
-   * (Today: 今日やる and 今週の残り share one column of values).
+   * (Today: 今日やる and 今週の残り share one column of values). From 768px
+   * only: under it the `…` is 44px, and the title needs the room more.
    */
   reserveActions?: boolean;
   /** Opens the Task (its detail). Without it the title is plain text. */
@@ -115,7 +116,7 @@ function TaskRow({
         // The size of the `…` (IconButton sm).
         <div
           aria-hidden
-          className="size-control-lg shrink-0 medium:size-control-sm"
+          className="hidden size-control-sm shrink-0 medium:block"
         />
       )}
     </div>

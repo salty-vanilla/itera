@@ -15,6 +15,8 @@ import { TaskQuickAdd } from '@/components/task/task-quick-add';
 import { formatDate, formatDateHeading, formatTime } from '@/lib/date-format';
 import { formatHours, formatPlanningTotal } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
+import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
+import { useToastOffsetAbove } from '@/lib/use-toast-offset';
 import { cn } from '@/lib/utils';
 import type { TodayData, TodayRow as TodayRowData } from '@/store/today-view';
 import { useAppOverview } from '@/store/use-app-overview';
@@ -137,6 +139,9 @@ function TodayView({ data }: { data: TodayData }) {
   const [editing, setEditing] = useState<Editing | undefined>(undefined);
   const [interrupting, setInterrupting] = useState(false);
   const [quickArea, setQuickArea] = useState('');
+  // Under 768px the Quick Add sticks to the bottom: the Toast goes above it.
+  const quickAddRef = useRef<HTMLDivElement>(null);
+  useToastOffsetAbove(quickAddRef, !useMediaQuery(MEDIUM_UP, true));
   // The `…` of each row, for the actual time surface to sit by.
   const triggers = useRef(new Map<DailySelectionId, HTMLButtonElement>());
   // Where the focus goes once the records have changed: the row that
@@ -448,6 +453,7 @@ function TodayView({ data }: { data: TodayData }) {
         {/* Sticky above the tab bar under 768px (DESIGN.md Layout); last in
             the column so that it stays at the bottom while scrolling. */}
         <div
+          ref={quickAddRef}
           className={cn(
             'sticky bottom-0 z-(--layer-sticky) -mx-4 mt-auto border-t border-border bg-canvas px-4 py-3',
             'medium:-mx-6 medium:px-6 wide:mx-0 wide:px-0',
