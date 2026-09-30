@@ -446,6 +446,7 @@ Area（領域）はユーザーが作る。駅の路線記号のように、色�
 - ペイン padding `spacing.6`〜`spacing.8`、ブロック間 `spacing.8`、ブロック内 `spacing.2`〜`spacing.5`。
 - 見出しの上に `border`（またはセクション罫 `ink` 1px）を引き、罫と余白で区切る。
 - 確定した言葉（Goal、改善策、振り返り）は `measure-read` を超えて横に伸ばさない。Planning の Sprint ペインは最大 680px、Retro の読み物と desktop の Today は最大 720px。ただし Retro の「事実を見る」の Task の表は一覧なので、振り返りの材料のペインを出さず、その分まで広げる（`pane-today`＋`pane-side`＋間隔。`bp-xl` 以上では、画面の幅いっぱい）。どの表も同じ列幅にして、Goal をまたいで列を揃える。
+- どの画面も、見出しの左端はナビの右に `spacing.6`（compact は `spacing.4`）を足した位置に置く。画面ごとに中央へ寄せたり、幅の上限で位置を変えたりしない。画面を移っても見出しが動かないようにするため。Today も 1 カラム（と、wide では右の Goal の要約）の構成のまま、左に寄せる。余った幅は右に空く。
 - 大きい画面（`bp-xl` 1920px 以上）で変えてよいのは、ペインの広さと、その中に並ぶ数だけ。どのペインに何があるかは、画面の大きさで変えない。中央のペインは固定幅にせず、左右のペインを除いた幅を使い、上限は中身の種類で決める。
   - ブロック（Planning の Area）：幅に応じて 1〜3 列に並べる（1 列は `pane-sprint` まで）。
   - 表（Retro の事実を見る）：幅いっぱい。
@@ -479,9 +480,9 @@ Desktop の Planning を中心に設計し、スマートフォンでは Today�
 | 幅 | 名前 | レイアウト |
 | --- | --- | --- |
 | 1440px 以上（`bp-nav`） | wide | ナビ 224px ＋ Planning 3 ペイン（Backlog 384 / Sprint / 時間の見通し 336） |
-| 1200–1439px（`bp-wide`） | wide（rail） | ナビをアイコンだけの 64px にし、3 ペインを保つ |
-| 1920px 以上（`bp-xl`） | xl | wide のペインの数と役割は変えず、中央のペインを広げる。Planning は Area のブロックを 1〜3 列に並べ、Retro の事実を見るの表は幅いっぱい、Backlog の行は最大 `pane-rows`。Today・実行中の Sprint は変えない |
-| 768–1199px（`bp-medium`） | medium | ナビを 64px の rail にし、2 ペイン（Backlog / Sprint）。Capacity は Sprint の上に要約 1 行を sticky で出し、クリックで右 Drawer。Agent 提案も Drawer の中 |
+| 1200–1439px（`bp-wide`） | wide（rail） | ナビを 64px の rail（アイコンと名前）にし、3 ペインを保つ |
+| 1920px 以上（`bp-xl`） | xl | wide のペインの数と役割は変えず、中央のペインを広げる。Planning は Area のブロックを 1〜3 列に並べ、Retro の事実を見るの表は幅いっぱい、Backlog の行は最大 `pane-rows`。Today・実行中の Sprint は変えない（どちらも左のまま） |
+| 768–1199px（`bp-medium`） | medium | ナビを 64px の rail（アイコンと名前）にし、2 ペイン（Backlog / Sprint）。Capacity は Sprint の上に要約 1 行を sticky で出し、クリックで右 Drawer。Agent 提案も Drawer の中 |
 | 768px 未満 | compact | 1 カラム。下部タブバー（今日 / Sprint / Backlog / 振り返り） |
 
 compact の原則：
@@ -645,8 +646,9 @@ compact の原則：
 
 ### ナビゲーション
 
-**Navigation** — desktop の左サイドバー（`canvas-subtle`、右に `border`）。項目 36px（20px アイコン＋ラベル＋件数）、現在地は `here` の 4px の縦線＋`ink` 700＋`aria-current`（黄の印と太さで示し、地は塗らない）。768–1439px は `pane-rail`（アイコンだけ＋Tooltip、項目 44px。medium の 2 ペインを保つため medium も rail にする）、compact は下部タブバー（今日 / Sprint / Backlog / 振り返り）。項目は 8 個まで。
+**Navigation** — desktop の左サイドバー（`canvas-subtle`、右に `border`）。項目 36px（20px アイコン＋ラベル＋件数）、現在地は `here` の 4px の縦線＋`ink` 700＋`aria-current`（黄の印と太さで示し、地は塗らない）。768–1439px は `pane-rail`（幅 64px。20px アイコンの下に名前を `meta` で出す。項目は 56px で、下部タブバーと同じ組み方。medium の 2 ペインを保つため medium も rail にする）、compact は下部タブバー（今日 / Sprint / Backlog / 振り返り）。項目は 8 個まで。
 - 下部タブバーは `canvas-subtle`＋上に `border`。項目は等幅で、20px アイコンの下にラベル（`meta`）、高さ 56px。現在地は項目の上端の `here` の 4px の横線＋`ink` 700＋`aria-current`。件数は表示せず読み上げだけにする。
+- rail の名前はホバーしなくても読める。rail の内側の余白は 4px（8px だと「Backlog」が 48px の幅に収まらない）にし、名前は折り返さず切らない。現在地の太字（700）でも収まる幅を保つ。件数は rail では表示せず、読み上げと Tooltip で伝える。
 - rail とタブバーでも件数は読み上げる（「Backlog 42件」）。Disabled の項目はフォーカスでき、`aria-disabled` で使えないことを伝える。
 
 **Tabs** — 同じ場所の表示を切り替える。タブ 40px、ラベルは `button`、選択は `ink` 700 の文字＋`stroke-strong` の下線（色面・Pill にしない）、未選択は `ink-muted` 400（太さでも選択を示す。選んでも幅が変わらないよう 700 の幅を先に取る）、件数は `ink-subtle`。タブは 5 個まで。段階を進めるフロー（→ Sprint Header）と絞り込み（→ Filter）には使わない。

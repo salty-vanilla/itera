@@ -19,10 +19,10 @@ function DayColumns({
   children: ReactNode;
 }) {
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-[calc(var(--spacing-pane-today)+var(--spacing-pane-side)+var(--spacing-12))] gap-12 wide:px-6">
+    <div className="flex min-h-full w-full max-w-[calc(var(--spacing-pane-today)+var(--spacing-pane-side)+var(--spacing-12))] gap-12 wide:px-6">
       <div
         className={cn(
-          'flex min-w-0 flex-1 flex-col gap-8 px-4 pt-6 medium:mx-auto medium:max-w-pane-today medium:px-6 medium:pt-8 wide:mx-0 wide:px-0',
+          'flex min-w-0 flex-1 flex-col gap-8 px-4 pt-6 medium:max-w-pane-today medium:px-6 medium:pt-8 wide:px-0',
           className,
         )}
       >

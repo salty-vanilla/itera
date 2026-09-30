@@ -1,6 +1,6 @@
 # アイコンと動き
 
-更新：2026-09-26（DESIGN.md v0.2 から分離）。DESIGN.md の spec に対応する節がないため、ここに置く。
+更新：2026-10-01（ナビのアイコンを固定し、振り返りを `rewind` に替えた、Issue #112）。2026-09-26（DESIGN.md v0.2 から分離）。DESIGN.md の spec に対応する節がないため、ここに置く。
 
 ## アイコン
 
@@ -25,6 +25,7 @@
 | Goal への紐づけ | `target` |
 | 元に戻す | `undo-2` |
 | 変更履歴 | `history` |
+| ナビ：今日 / Sprint / Backlog / 振り返り | `sun` / `route` / `inbox` / `rewind`（rail と下部タブバーは名前を添える。振り返りの印は、Sprint の状態の Tag でも同じ） |
 | Agent 提案・下書き | `circle-dashed`（破線の円 = 未確定） |
 | 計画基準 | `info` |
 | 成功 / 注意 / エラー / 情報 | `circle-check` / `triangle-alert` / `circle-alert` / `info`（成功と情報は墨、注意は `warning`、エラーは `danger`） |

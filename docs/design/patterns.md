@@ -1,6 +1,6 @@
 # 画面のパターン
 
-更新：2026-10-01（見積もりを入れる入口（行の `…` と Planning の「見積もりなし」）と、計画に使う時間の値と説明、Issue #96。実行中の Sprint の画面に「今週の完了」を出す、Issue #103。Task Quick Add の「追加」ボタンと入り先の名前、Issue #98。画面を移ったら先頭から表示する。Retro をナビから開いたときの段階、Issue #111。compact の Today の順、割り込みの入口、compact の Task Row のタイトル、Issue #100。Retro の事実を見るで、持ち越しの見た目、まとめから行への移動、「振り返りに使う」の案内、材料の値と折り方、割り込みの日付、実績の面の語、Issue #108・#127。Planning の選ぶの追加に、領域の Select・Toast・点滅・最初から入っている行の案内、Issue #92。Today の割り込みを直す・消す、Issue #102。Retro の引き継ぐに、今回の計画基準の結果と持ち越しの行き先を出す、Issue #107。Backlog の Organize で、追加・反映していない入力を閉じる前に知らせる、Issue #88。今日の画面でどの日も日付で開き、前後の日に移る。今日以外の日の「過去」「未来」。Issue #90）。2026-09-30（Backlog の Organize の保存・並び・初期フォーカス、Issue #95。Retro の完了ボタンを引き継ぐの末尾に移し、完了の前に確認の Dialog を出す、Issue #106。文言の例を新しい画面の語に揃えた、Issue #104・#105。Planning の計画基準の見せ方を段階に合わせた、Issue #105。どの Sprint も番号で開き、前後に移る。週の呼び名。完了した Sprint と振り返りの読み取り専用。Issue #90。次の Sprint を先に計画したときの「Sprint N で実行中」、Issue #89）。2026-09-29（Backlog の追加、Issue #86。大きい画面の幅の使い方、Issue #81。リストのキー操作、Issue #48。Retro の事実を見るの表、Issue #73）。2026-09-28（実行中の Sprint の画面、Issue #51。期間外の Today とシステムの Review 移行、Issue #54。Retro の最初の実装で決めたこと、Issue #42。Today の最初の実装で決めたこと、Issue #41。Backlog の編集して採用と、Planning の最初の実装で決めたこと、Issue #40）。2026-09-27（Backlog の完了を元に戻す、Issue #47）。2026-09-26 に DESIGN.md v0.2 から分離。
+更新：2026-10-01（どの画面も見出しの左端をナビの右に揃える、Issue #112。見積もりを入れる入口（行の `…` と Planning の「見積もりなし」）と、計画に使う時間の値と説明、Issue #96。実行中の Sprint の画面に「今週の完了」を出す、Issue #103。Task Quick Add の「追加」ボタンと入り先の名前、Issue #98。画面を移ったら先頭から表示する。Retro をナビから開いたときの段階、Issue #111。compact の Today の順、割り込みの入口、compact の Task Row のタイトル、Issue #100。Retro の事実を見るで、持ち越しの見た目、まとめから行への移動、「振り返りに使う」の案内、材料の値と折り方、割り込みの日付、実績の面の語、Issue #108・#127。Planning の選ぶの追加に、領域の Select・Toast・点滅・最初から入っている行の案内、Issue #92。Today の割り込みを直す・消す、Issue #102。Retro の引き継ぐに、今回の計画基準の結果と持ち越しの行き先を出す、Issue #107。Backlog の Organize で、追加・反映していない入力を閉じる前に知らせる、Issue #88。今日の画面でどの日も日付で開き、前後の日に移る。今日以外の日の「過去」「未来」。Issue #90）。2026-09-30（Backlog の Organize の保存・並び・初期フォーカス、Issue #95。Retro の完了ボタンを引き継ぐの末尾に移し、完了の前に確認の Dialog を出す、Issue #106。文言の例を新しい画面の語に揃えた、Issue #104・#105。Planning の計画基準の見せ方を段階に合わせた、Issue #105。どの Sprint も番号で開き、前後に移る。週の呼び名。完了した Sprint と振り返りの読み取り専用。Issue #90。次の Sprint を先に計画したときの「Sprint N で実行中」、Issue #89）。2026-09-29（Backlog の追加、Issue #86。大きい画面の幅の使い方、Issue #81。リストのキー操作、Issue #48。Retro の事実を見るの表、Issue #73）。2026-09-28（実行中の Sprint の画面、Issue #51。期間外の Today とシステムの Review 移行、Issue #54。Retro の最初の実装で決めたこと、Issue #42。Today の最初の実装で決めたこと、Issue #41。Backlog の編集して採用と、Planning の最初の実装で決めたこと、Issue #40）。2026-09-27（Backlog の完了を元に戻す、Issue #47）。2026-09-26 に DESIGN.md v0.2 から分離。
 
 Backlog・Planning・Today・Retro の画面の組み立て方。見た目と部品は [DESIGN.md](../../DESIGN.md)、意味と操作の種類は [PRD](../requirements/prd.md) と [ドメインモデル](../domain/domain-model.md) が正。UI v0.1 モックは当たり付けで、ここに書いた構成を実装して触りながら削る（PRD §12）。
 
@@ -20,7 +20,7 @@ Issue #81 でオーナーが決めた（2026-09-29）。DESIGN.md の Layout（`
 - Planning：Sprint ペインを広げ、Area のブロックを幅に応じて 1〜3 列に並べる（列は 26rem 以上、3 列まで）。Backlog ペインと時間の見通しの幅は今のまま。1 列のときは今どおり最大 680px。
 - Backlog：一覧の行は最大 1280px で止め、左に置く。詳細の Drawer は今と同じ（右に重ねる）。絞り込みと Quick Add も同じ幅で止める。
 - Retro：3 段階とも本文を左に揃える（段階を切り替えても左端が動かない）。事実を見るの表は幅いっぱい（列は割合で分け、タイトルが幅を取りすぎない）。繰り返しの回は最大 1280px。文は 720px、振り返る・引き継ぐの材料は 336px のまま。
-- Today と実行中の Sprint は変えない（1 列の読み物として、左右が空くことを受け入れる）。
+- Today と実行中の Sprint は変えない（1 列の読み物として、右が空くことを受け入れる）。どの画面も見出しの左端をナビの右に揃える（DESIGN.md Layout、Issue #112）ので、Today と Sprint は中央ではなく左に置く。
 
 ### どの Sprint も開く（Issue #90）
 

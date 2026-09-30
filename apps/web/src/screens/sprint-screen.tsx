@@ -58,7 +58,7 @@ function NextSprint({ choice, steps }: { choice: SprintChoice; steps: Steps }) {
   };
   const link = 'ms-1 text-link underline focus-visible:focus-ring';
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-[calc(var(--spacing-pane-sprint)+var(--spacing-pane-side)+var(--spacing-12))] flex-col gap-8 px-4 pt-6 pb-16 medium:px-6 medium:pt-8">
+    <div className="flex min-h-full w-full max-w-[calc(var(--spacing-pane-sprint)+var(--spacing-pane-side)+var(--spacing-12))] flex-col gap-8 px-4 pt-6 pb-16 medium:px-6 medium:pt-8">
       <SprintHeader
         title={`Sprint ${current.number}`}
         week={current.week}

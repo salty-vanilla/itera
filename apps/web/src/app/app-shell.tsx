@@ -1,5 +1,5 @@
 import { useLocation, useNavigate, useRouter } from '@tanstack/react-router';
-import { Inbox, NotebookPen, Route, Sun } from 'lucide-react';
+import { Inbox, Rewind, Route, Sun } from 'lucide-react';
 import { useRef, type ReactElement, type ReactNode } from 'react';
 import { Navigation, type NavigationItem } from '@/components/ui/navigation';
 import type { ScreenId } from '@/fixtures/states';
@@ -12,13 +12,13 @@ const icons: Record<ScreenId, ReactElement> = {
   today: <Sun aria-hidden />,
   sprint: <Route aria-hidden />,
   backlog: <Inbox aria-hidden />,
-  retro: <NotebookPen aria-hidden />,
+  retro: <Rewind aria-hidden />,
 };
 
 /**
  * The app's frame (DESIGN.md Layout › Responsive, Navigation): the sidebar
- * (224px) from 1440px, the rail (64px) from 768px, and under 768px the
- * bottom tab bar under a one-column screen.
+ * (224px) from 1440px, the rail (64px, icons with names) from 768px, and
+ * under 768px the bottom tab bar under a one-column screen.
  */
 function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
