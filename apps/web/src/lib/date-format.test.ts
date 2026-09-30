@@ -4,6 +4,7 @@ import {
   daysBetween,
   formatDate,
   formatDateHeading,
+  formatDateTime,
   formatDateRange,
   formatTime,
 } from './date-format';
@@ -31,6 +32,17 @@ describe('date format', () => {
     );
     expect(formatTime(instant('2026-09-30T15:05:00.000Z'), tokyo)).toBe(
       '00:05',
+    );
+  });
+
+  it('writes the day with the time, by the user’s time zone (#108)', () => {
+    const tokyo = timeZone('Asia/Tokyo');
+    expect(formatDateTime(instant('2026-09-30T05:02:00.000Z'), tokyo)).toBe(
+      '9/30 (水) 14:02',
+    );
+    // 00:05 in Tokyo is still the day before in UTC.
+    expect(formatDateTime(instant('2026-09-30T15:05:00.000Z'), tokyo)).toBe(
+      '10/1 (木) 00:05',
     );
   });
 });

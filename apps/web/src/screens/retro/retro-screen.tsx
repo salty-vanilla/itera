@@ -216,9 +216,17 @@ function RetroView({
         )}
       >
         <div className="flex min-w-0 flex-col gap-8">
-          <h1 className="text-display-m text-ink">
-            {stageHeading(stage, data.number)}
-          </h1>
+          <div className="flex flex-col gap-2">
+            <h1 className="text-display-m text-ink">
+              {stageHeading(stage, data.number)}
+            </h1>
+            {stage === 'facts' && !readOnly && (
+              // Where the mark on a row leads, said once; the marks are optional.
+              <p className="text-help text-ink-muted">
+                気になった事実に「振り返りに使う」を付けると、「振り返る」で材料として並びます。付けなくても進めます。
+              </p>
+            )}
+          </div>
           {stage === 'facts' && (
             <FactsPane
               data={data}
@@ -279,7 +287,7 @@ function RetroView({
       {editing !== undefined && (
         <ActualTime
           key={`${editing.target.sprintTaskId}-${editing.target.occurrenceId ?? ''}`}
-          mode="record"
+          mode="add"
           taskTitle={editing.title}
           // The day it goes to, which is not always today in Retro (F22).
           description={`${formatDate(editing.target.date)} の実績として足します。`}

@@ -8,10 +8,19 @@ import { cn } from '@/lib/utils';
 
 type SprintSummaryItem = {
   label: string;
+  /** The fixed icon of what the item counts, before its label (12px). */
+  icon?: ReactNode;
   value: ReactNode;
   unit?: string | undefined;
   /** 「実績は入力済みのものだけ」 and the like. */
   note?: ReactNode | undefined;
+  /**
+   * Makes the value a button that moves to what it counts (Retro: the rows
+   * of the carry-overs). Left out, or the value 0, it is only text.
+   */
+  onSelect?: (() => void) | undefined;
+  /** What the button does, read out with it: 「持ち越し 2件の行へ移る」. */
+  selectLabel?: string | undefined;
 };
 
 type SprintSummaryProps = {
@@ -33,11 +42,22 @@ function SprintSummary({ items, className }: SprintSummaryProps) {
           key={item.label}
           className="flex min-w-0 flex-col gap-1 border-border-soft px-3 py-3 medium:flex-auto medium:border-l medium:first:border-l-0 medium:first:ps-0"
         >
-          <dt className="text-meta text-ink-muted">{item.label}</dt>
+          <dt className="flex items-center gap-1 text-meta text-ink-muted [&_svg]:size-3 [&_svg]:shrink-0 [&_svg]:[stroke-width:var(--icon-stroke-s)]">
+            {item.icon}
+            {item.label}
+          </dt>
           <dd className="flex items-baseline gap-1 text-ink">
-            <span className="text-num-l whitespace-nowrap">{item.value}</span>
-            {item.unit !== undefined && (
-              <span className="text-meta">{item.unit}</span>
+            {item.onSelect === undefined ? (
+              <Value item={item} />
+            ) : (
+              <button
+                type="button"
+                onClick={item.onSelect}
+                aria-label={item.selectLabel}
+                className="flex items-baseline gap-1 rounded-xs text-link underline focus-visible:focus-ring"
+              >
+                <Value item={item} />
+              </button>
             )}
           </dd>
           {item.note !== undefined && (
@@ -46,6 +66,17 @@ function SprintSummary({ items, className }: SprintSummaryProps) {
         </div>
       ))}
     </dl>
+  );
+}
+
+function Value({ item }: { item: SprintSummaryItem }) {
+  return (
+    <>
+      <span className="text-num-l whitespace-nowrap">{item.value}</span>
+      {item.unit !== undefined && (
+        <span className="text-meta">{item.unit}</span>
+      )}
+    </>
   );
 }
 
