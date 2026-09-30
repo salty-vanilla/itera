@@ -578,7 +578,14 @@ function TaskDetail({
                     label={
                       <span className="inline-flex flex-wrap items-center gap-2">
                         この Task の見積もり
-                        <Estimate value={facts.taskValue} inline />
+                        {facts.taskValue.base === 'none' ? (
+                          // 「見積もり」が 2 回続かないように、ここだけ「なし」。
+                          <span className="text-num-s text-ink-subtle">
+                            なし
+                          </span>
+                        ) : (
+                          <Estimate value={facts.taskValue} inline />
+                        )}
                       </span>
                     }
                   />

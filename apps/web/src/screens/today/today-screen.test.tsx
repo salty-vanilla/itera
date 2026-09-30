@@ -899,8 +899,9 @@ describe('Today — 計画に使う時間 in the detail (#96)', () => {
     const own = within(group).getByRole('radio', {
       name: /この Task の見積もり/,
     });
-    expect(own.closest('[data-slot="radio-item"]')?.textContent).toContain(
-      '見積もりなし',
+    // 「見積もり」が 2 回続かない。
+    expect(own.closest('[data-slot="radio-item"]')?.textContent).toBe(
+      'この Task の見積もりなし',
     );
     const sum = within(group).getByRole('radio', { name: /サブタスクの合計/ });
     expect(sum.closest('[data-slot="radio-item"]')?.textContent).toContain(
