@@ -650,7 +650,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     };
     await renderAt('/retro?fixture=retro-start&stage=handoff');
     expect(carryOverLine()?.textContent).toBe(
-      '持ち越し 2件のうち、1件は次の計画に入っています。1件は Backlog に残っています。次の計画の「持ち越し」に候補として出ます。',
+      '持ち越し 2件のうち、1件は次の計画に入っています。1件は Backlog に残り、次の計画の「持ち越し」に候補として出ます。',
     );
   });
 });
