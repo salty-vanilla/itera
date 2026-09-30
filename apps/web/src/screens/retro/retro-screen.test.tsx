@@ -101,12 +101,17 @@ describe('Retro — 事実を見る', () => {
       const term = within(summary).getByText(label!);
       expect(term.parentElement?.textContent).toContain(value);
     }
-    // The criterion this Sprint used, and what became of its Tasks.
+    // The criterion this Sprint used is one line; its result is in 引き継ぐ
+    // (#107).
     expect(
       screen.getByText(
-        '研究の幅のあるタスク 1件のうち 1件を持ち越し（計画値 5h・実績 4.5h）',
+        (_, element) =>
+          element?.tagName === 'P' &&
+          element.textContent ===
+            '今回の計画基準：「研究：提案の幅の上限で計画する」（引き継ぐで扱いを決めます）',
       ),
     ).toBeTruthy();
+    expect(screen.queryByText(/幅のあるタスク 1件のうち/)).toBeNull();
     // Estimate / 計画値 / 実績 / 結果 per Task, carry-overs and deferrals.
     const paper = screen.getByRole('rowheader', {
       name: '関連論文を 3 本読む',
@@ -444,6 +449,209 @@ describe('Retro — 引き継ぐ and 完了', () => {
     // The improvement comes back at the start of the next Planning.
     expect(await screen.findByText('前回決めた改善策')).toBeTruthy();
     expect(screen.getAllByText('論文は 1 本ずつ Task に分ける').length).toBe(1);
+  });
+});
+
+describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () => {
+  const criterionSection = () =>
+    screen.getByRole('region', { name: '今回の計画基準' });
+  const carryOverLine = () =>
+    document.querySelector('[data-slot="carry-over-place"]');
+
+  it('puts what the criterion did right before choosing what to do with it', async () => {
+    await renderAt('/retro?fixture=retro-start&stage=handoff');
+    const section = criterionSection();
+    const outcome = within(section).getByText(
+      '研究の幅のあるタスク 1件のうち 1件を持ち越し（計画値 5h・実績 4.5h）',
+    );
+    expect(
+      within(section).getByText('確定したときに、今回の計画値に使いました。'),
+    ).toBeTruthy();
+    const choices = within(section).getByRole('radiogroup');
+    expect(
+      outcome.compareDocumentPosition(choices) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    // The reason 振り返りを完了 waits points to this section by its name.
+    expect(
+      screen.getByText(decisionMissingText, { selector: 'p' }),
+    ).toBeTruthy();
+  });
+
+  it('says what each choice does to the next Planning, from the criteria themselves (invariant 39)', async () => {
+    await renderAt('/retro?fixture=retro-before-complete&stage=handoff');
+    const choices = () =>
+      within(criterionSection()).getByRole('radiogroup').textContent ?? '';
+    expect(choices()).toContain(
+      '次の計画でも、研究の幅のあるタスクを上限で計画します。確かめるで、使うかどうかを選べます。',
+    );
+    expect(choices()).toContain('次の計画では、この基準を使いません。');
+    await userEvent.click(
+      screen.getByRole('switch', { name: /計画基準にもする/ }),
+    );
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: '対象' }),
+      '',
+    );
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: '提案の幅のどこで計画するか' }),
+      'mid',
+    );
+    // The draft's name, its effect and 置き換える follow the same value.
+    const draftId = reviewed().retro?.improvement?.criterionId;
+    expect(
+      lastSnapshot().records.criteria.find((c) => c.id === draftId)?.policy,
+    ).toEqual({ scope: { kind: 'all' }, rangePolicy: 'mid' });
+    expect(screen.getByText('提案の幅の中央で計画する')).toBeTruthy();
+    expect(
+      screen.getByText(/幅のあるタスク \d+件を中央で計画します/),
+    ).toBeTruthy();
+    expect(choices()).toContain(
+      '次の計画では、代わりに幅のあるタスクを中央で計画します。確かめるで、使うかどうかを選べます。',
+    );
+  });
+
+  it('says so while the new criterion is the same as this one', async () => {
+    await renderAt('/retro?fixture=retro-before-complete&stage=handoff');
+    await userEvent.click(
+      screen.getByRole('switch', { name: /計画基準にもする/ }),
+    );
+    const same =
+      '今回の基準と同じ設定です。変えないなら、オフにして「続ける」を選びます。';
+    expect(screen.getByText(same)).toBeTruthy();
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: '提案の幅のどこで計画するか' }),
+      'mid',
+    );
+    expect(screen.queryByText(same)).toBeNull();
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: '提案の幅のどこで計画するか' }),
+      'hi',
+    );
+    expect(screen.getByText(same)).toBeTruthy();
+  });
+
+  it('says where the carry-overs are, first and in the Dialog alike, and decides nothing (invariant 20)', async () => {
+    await renderAt('/retro?fixture=retro-start&stage=handoff');
+    const words =
+      '2件は Backlog に残っています。次の計画の「持ち越し」に候補として出ます。';
+    const line = carryOverLine();
+    expect(line?.textContent).toBe(`持ち越し ${words}`);
+    // The first thing in 引き継ぐ, and not something to choose.
+    expect(
+      document.querySelector('[data-slot="handoff-pane"]')?.firstElementChild,
+    ).toBe(line);
+    expect(line?.querySelector('input, button')).toBeNull();
+    await userEvent.click(screen.getByRole('radio', { name: '終える' }));
+    await userEvent.click(completeButton());
+    const dialog = await screen.findByRole('dialog');
+    expect(
+      within(dialog).getByText('持ち越し').nextElementSibling?.textContent,
+    ).toBe(words);
+  });
+
+  it('has no line when nothing was carried over', async () => {
+    change = (snapshot) => ({
+      ...snapshot,
+      records: {
+        ...snapshot.records,
+        sprints: snapshot.records.sprints.map((s) =>
+          s.state !== 'review'
+            ? s
+            : {
+                ...s,
+                tasks: s.tasks.map((t) =>
+                  t.outcome === 'carriedOver'
+                    ? { ...t, outcome: 'done' as const }
+                    : t,
+                ),
+              },
+        ),
+      },
+    });
+    await renderAt('/retro?fixture=retro-start&stage=handoff');
+    expect(carryOverLine()).toBeNull();
+    await userEvent.click(screen.getByRole('radio', { name: '終える' }));
+    await userEvent.click(completeButton());
+    const dialog = await screen.findByRole('dialog');
+    expect(
+      within(dialog).getByText('持ち越し').nextElementSibling?.textContent,
+    ).toBe('なし');
+  });
+
+  it('keeps the criterion and what it did in a closed Retro, read only (#90)', async () => {
+    const router = await renderAt(
+      '/retro?fixture=retro-before-complete&stage=handoff',
+    );
+    await userEvent.click(completeButton());
+    await userEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', {
+        name: '振り返りを完了',
+      }),
+    );
+    expect(reviewed().state).toBe('closed');
+    await router.navigate({ to: '/retro', search: { stage: 'handoff' } });
+    const section = await screen.findByRole('region', {
+      name: '今回の計画基準',
+    });
+    expect(
+      within(section).getByText(/幅のあるタスク 1件のうち 1件を持ち越し/),
+    ).toBeTruthy();
+    expect(within(section).getByText('「続ける」にしました。')).toBeTruthy();
+    expect(within(section).queryByRole('radiogroup')).toBeNull();
+    // Nothing to decide on: the carry-overs' line is for the open Retro.
+    expect(carryOverLine()).toBeNull();
+    await router.navigate({ to: '/retro', search: { stage: 'facts' } });
+    expect(
+      await screen.findByText(
+        (_, element) =>
+          element?.tagName === 'P' &&
+          element.textContent ===
+            '今回の計画基準：「研究：提案の幅の上限で計画する」（結果と扱いは引き継ぐにあります）',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('counts apart the carry-overs the next Planning already took in (F35)', async () => {
+    change = (snapshot) => {
+      const review = snapshot.records.sprints.find(
+        (s) => s.state === 'review',
+      )!;
+      const carried = review.tasks.find((t) => t.outcome === 'carriedOver')!;
+      // A Planning that took one carry-over in before Review (F35).
+      const rest = Object.fromEntries(
+        Object.entries(review).filter(
+          ([key]) => key !== 'retro' && key !== 'criterionUse',
+        ),
+      ) as typeof review;
+      const next = {
+        ...rest,
+        id: 'sprint-2026-10-05' as typeof review.id,
+        state: 'planning' as const,
+        start: '2026-10-05' as typeof review.start,
+        end: '2026-10-11' as typeof review.end,
+        previousSprintId: review.id,
+        tasks: [
+          {
+            ...carried,
+            id: 'st-next' as typeof carried.id,
+            outcome: 'draft' as const,
+            carriedFrom: carried.id,
+          },
+        ],
+      };
+      return {
+        ...snapshot,
+        records: {
+          ...snapshot.records,
+          sprints: [...snapshot.records.sprints, next],
+        },
+      };
+    };
+    await renderAt('/retro?fixture=retro-start&stage=handoff');
+    expect(carryOverLine()?.textContent).toBe(
+      '持ち越し 2件のうち、1件は次の計画に入っています。1件は Backlog に残り、次の計画の「持ち越し」に候補として出ます。',
+    );
   });
 });
 

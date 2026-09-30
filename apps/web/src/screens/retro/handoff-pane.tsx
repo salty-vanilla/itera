@@ -10,18 +10,26 @@ import { Radio, RadioGroup } from '@/components/ui/radio-group';
 import { Select } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Tag } from '@/components/ui/tag';
-import { BOUND_WORDS, criterionName } from '@/lib/criterion-text';
+import {
+  BOUND_WORDS,
+  criterionEffectText,
+  criterionName,
+} from '@/lib/criterion-text';
 import { formatHours, formatRange } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
 import type { RetroCriterion, RetroData } from '@/store/retro-view';
-import { DECISION_WORDS } from './retro-words';
+import { carryOverWords, DECISION_WORDS } from './retro-words';
+import { UsedCriterion } from './used-criterion';
 
 // 引き継ぐ (patterns.md Retro, DESIGN.md 計画基準): the improvement goes to
 // the next Planning as it is. Only when it can be applied mechanically, a
 // planning criterion can be made from it (optional). A Sprint that had a
 // criterion chooses 続ける / 終える / 置き換える, with no reason asked
-// (invariant 36). The setting, its effect and the next Planning's preview
-// all come from the one policy (invariant 39).
+// (invariant 36), right after what it did this Sprint; each choice says
+// what the next Planning does (#107). The setting, its effect and the next
+// Planning's preview all come from the one policy (invariant 39).
+// Carry-overs are not decided here (invariant 20): the first line only says
+// where they are.
 
 type HandoffPaneProps = {
   data: RetroData;
@@ -51,9 +59,9 @@ function HandoffPane({
   onWriteImprovement,
   className,
 }: HandoffPaneProps) {
-  const { improvement, draft, used } = data;
+  const { improvement, draft, used, carryOver } = data;
   // A new criterion starts where this Sprint's left off, or at 上限 for
-  // every Area.
+  // every Area. While it is the same, the draft says so (#107).
   const initial: CriterionPolicy = used?.criterion.policy ?? {
     scope: { kind: 'all' },
     rangePolicy: 'hi',
@@ -65,6 +73,11 @@ function HandoffPane({
       data-slot="handoff-pane"
       className={cn('flex flex-col gap-12', className)}
     >
+      {carryOver.total > 0 && (
+        <p data-slot="carry-over-place" className="text-body text-ink">
+          持ち越し {carryOverWords(carryOver)}
+        </p>
+      )}
       <section
         aria-labelledby="handoff-improvement"
         className="flex flex-col gap-3 border-t border-b border-t-ink border-b-border py-4"
@@ -97,7 +110,7 @@ function HandoffPane({
 
       <section aria-labelledby="handoff-draft" className="flex flex-col gap-4">
         <h2 id="handoff-draft" className="text-heading text-ink">
-          計画基準
+          新しい計画基準
         </h2>
         <Switch
           label="計画基準にもする"
@@ -116,6 +129,10 @@ function HandoffPane({
           <DraftCriterion
             draft={draft}
             areas={data.areas}
+            sameAsUsed={
+              used !== undefined &&
+              samePolicy(draft.criterion.policy, used.criterion.policy)
+            }
             titleOf={titleOf}
             onChange={onDraftPolicy}
           />
@@ -123,9 +140,16 @@ function HandoffPane({
       </section>
 
       {used !== undefined && (
-        <section aria-label="今回の計画基準の扱い">
+        <section
+          aria-labelledby="handoff-criterion"
+          className="flex flex-col gap-4"
+        >
+          <h2 id="handoff-criterion" className="text-heading text-ink">
+            今回の計画基準
+          </h2>
+          <UsedCriterion used={used} />
           <RadioGroup<RetroDecision | null>
-            legend={`今回の計画基準「${criterionName(used.criterion.policy, used.areaName)}」を、次の Sprint でどうしますか`}
+            legend="次の Sprint でどうしますか"
             description="使った・使わなかったにかかわらず選びます。理由は要りません。"
             necessity="required"
             value={used.decision ?? null}
@@ -134,15 +158,16 @@ function HandoffPane({
             }}
             className="flex flex-col gap-2"
           >
+            {/* What the next Planning does, from the criteria's own values. */}
             <Radio<RetroDecision | null>
               value="continue"
               label="続ける"
-              description="次の Sprint でも、この基準を使えるようにします。"
+              description={`次の計画でも、${criterionEffectText(used.criterion.policy, used.areaName)}。確かめるで、使うかどうかを選べます。`}
             />
             <Radio<RetroDecision | null>
               value="end"
               label="終える"
-              description="この基準は今回で終わりにします。"
+              description="次の計画では、この基準を使いません。"
             />
             <Radio<RetroDecision | null>
               value="replace"
@@ -151,7 +176,7 @@ function HandoffPane({
               description={
                 draft === undefined
                   ? '上で「計画基準にもする」をオンにして新しい基準を作ると選べます。'
-                  : '上で作った新しい基準に置き換えます。'
+                  : `次の計画では、代わりに${criterionEffectText(draft.criterion.policy, draft.areaName)}。確かめるで、使うかどうかを選べます。`
               }
             />
           </RadioGroup>
@@ -160,6 +185,12 @@ function HandoffPane({
     </div>
   );
 }
+
+const samePolicy = (a: CriterionPolicy, b: CriterionPolicy) =>
+  a.rangePolicy === b.rangePolicy &&
+  (a.scope.kind === 'all'
+    ? b.scope.kind === 'all'
+    : b.scope.kind === 'area' && a.scope.areaId === b.scope.areaId);
 
 /** A closed Retro's handoff: the improvement and the criterion's decisions. */
 function ClosedHandoff({
@@ -190,21 +221,30 @@ function ClosedHandoff({
       </section>
       <section aria-labelledby="handoff-draft" className="flex flex-col gap-2">
         <h2 id="handoff-draft" className="text-heading text-ink">
-          計画基準
+          新しい計画基準
         </h2>
         <p className="text-body text-ink">
           {draft === undefined
             ? '改善策から計画基準は作りませんでした。'
             : `改善策から計画基準「${criterionName(draft.criterion.policy, draft.areaName)}」を作りました。`}
         </p>
-        {used !== undefined && used.decision !== undefined && (
-          <p className="text-body text-ink">
-            今回の計画基準「
-            {criterionName(used.criterion.policy, used.areaName)}
-            」は「{DECISION_WORDS[used.decision]}」にしました。
-          </p>
-        )}
       </section>
+      {used !== undefined && (
+        <section
+          aria-labelledby="handoff-criterion"
+          className="flex flex-col gap-4"
+        >
+          <h2 id="handoff-criterion" className="text-heading text-ink">
+            今回の計画基準
+          </h2>
+          <UsedCriterion used={used} />
+          {used.decision !== undefined && (
+            <p className="text-body text-ink">
+              「{DECISION_WORDS[used.decision]}」にしました。
+            </p>
+          )}
+        </section>
+      )}
     </div>
   );
 }
@@ -213,11 +253,14 @@ function ClosedHandoff({
 function DraftCriterion({
   draft,
   areas,
+  sameAsUsed,
   titleOf,
   onChange,
 }: {
   draft: RetroCriterion;
   areas: RetroData['areas'];
+  /** Still the same setting as this Sprint's criterion. */
+  sameAsUsed: boolean;
   titleOf: (taskId: string) => string;
   onChange: (policy: CriterionPolicy) => boolean;
 }) {
@@ -234,6 +277,11 @@ function DraftCriterion({
         {criterionName(policy, draft.areaName)}
         <Tag tone="draft">下書き</Tag>
       </p>
+      {sameAsUsed && (
+        <p className="text-body text-ink">
+          今回の基準と同じ設定です。変えないなら、オフにして「続ける」を選びます。
+        </p>
+      )}
       <p className="text-help text-ink-muted">
         見積もりそのものは書き換えません。
       </p>
@@ -281,9 +329,8 @@ function DraftCriterion({
       <div className="flex flex-col gap-1">
         <p className="text-body text-ink">
           次の計画では、
-          {draft.areaName === undefined ? '' : `${draft.areaName}の`}
-          提案の幅があるタスク {preview.length}件を
-          {BOUND_WORDS[policy.rangePolicy]}で計画します（今の Backlog で）。
+          {criterionEffectText(policy, draft.areaName, preview.length)}
+          （今の Backlog で）。
         </p>
         {preview.length > 0 && (
           <ul className="flex flex-col gap-1 text-body text-ink-muted">

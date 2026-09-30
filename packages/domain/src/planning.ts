@@ -244,16 +244,61 @@ export function carryOverCandidates(
   tasks: readonly Task[],
 ): readonly SprintTask[] {
   if (sprint.previousSprintId !== previous.id) return [];
-  return previous.tasks.filter((t) => {
-    const task = tasks.find((x) => x.id === t.taskId);
-    return (
-      t.outcome === 'carriedOver' &&
-      task !== undefined &&
-      task.lifecycle === 'active' &&
-      !isRecurring(task) &&
-      !sprint.tasks.some((s) => s.taskId === t.taskId)
-    );
-  });
+  return previous.tasks.filter(
+    (t) => carryOverPlace(t, sprint, tasks) === 'candidate',
+  );
+}
+
+/** Where a Sprint's carried-over Tasks are now, by count (Retro, #107). */
+export interface CarryOverPlaces {
+  readonly total: number;
+  /** Already chosen for the next Sprint, being planned (F35). */
+  readonly inNext: number;
+  /** Offered as the next Planning's 「持ち越し」 (carryOverCandidates). */
+  readonly candidates: number;
+  /** Completed or archived since, so no longer offered. */
+  readonly completed: number;
+  readonly archived: number;
+}
+
+/**
+ * Where `sprint`'s carried-over Tasks are: in `next` (the Sprint after it,
+ * if Planning has started), still offered as its candidates, or closed
+ * since. Nothing moves them (invariant 20); this only counts.
+ */
+export function carryOverPlaces(
+  sprint: Sprint,
+  next: Sprint | undefined,
+  tasks: readonly Task[],
+): CarryOverPlaces {
+  const following = next?.previousSprintId === sprint.id ? next : undefined;
+  const places = sprint.tasks
+    .filter((t) => t.outcome === 'carriedOver')
+    .map((t) => carryOverPlace(t, following, tasks));
+  const count = (place: (typeof places)[number]) =>
+    places.filter((p) => p === place).length;
+  return {
+    total: places.length,
+    inNext: count('inNext'),
+    candidates: count('candidate'),
+    completed: count('completed'),
+    archived: count('archived'),
+  };
+}
+
+/** One carried-over SprintTask's place; the candidates' one condition. */
+function carryOverPlace(
+  carried: SprintTask,
+  next: Sprint | undefined,
+  tasks: readonly Task[],
+): 'inNext' | 'candidate' | 'completed' | 'archived' | undefined {
+  if (carried.outcome !== 'carriedOver') return undefined;
+  const task = tasks.find((x) => x.id === carried.taskId);
+  if (task === undefined || isRecurring(task)) return undefined;
+  if (next?.tasks.some((s) => s.taskId === carried.taskId) === true) {
+    return 'inNext';
+  }
+  return task.lifecycle === 'active' ? 'candidate' : task.lifecycle;
 }
 
 /**
