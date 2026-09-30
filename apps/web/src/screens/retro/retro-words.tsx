@@ -1,4 +1,5 @@
 import type {
+  RetroDecision,
   RetroPin,
   SelfAssessment,
   SprintTaskOutcome,
@@ -102,3 +103,10 @@ export function PinToggle({
     </Button>
   );
 }
+
+/** The three choices for the criterion a Sprint used (invariant 36). */
+export const DECISION_WORDS: Readonly<Record<RetroDecision, string>> = {
+  continue: '続ける',
+  end: '終える',
+  replace: '置き換える',
+};

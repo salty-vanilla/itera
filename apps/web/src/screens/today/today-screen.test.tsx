@@ -555,6 +555,11 @@ describe('Today — outside the period (#54)', () => {
       screen.getByRole('button', { name: '振り返りを完了' }),
     );
     await userEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', {
+        name: '振り返りを完了',
+      }),
+    );
+    await userEvent.click(
       screen.getByRole('button', { name: 'Sprint 3 の計画を始める' }),
     );
     await userEvent.click(

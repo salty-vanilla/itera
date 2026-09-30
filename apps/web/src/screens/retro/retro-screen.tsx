@@ -1,7 +1,7 @@
 import type { Sprint, SprintId } from '@itera/domain';
 import { useNavigate, useRouter, useSearch } from '@tanstack/react-router';
 import { NotebookPen, Route } from 'lucide-react';
-import { useId, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tag } from '@/components/ui/tag';
 import { useToast } from '@/components/ui/toast';
@@ -12,7 +12,7 @@ import {
 import { formatDate, formatDateRange } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
 import { weekCall, weekText } from '@/lib/week-text';
-import type { ActualTarget, RetroBlocker, RetroData } from '@/store/retro-view';
+import type { ActualTarget, RetroData } from '@/store/retro-view';
 import { type SprintChoice, type SprintRef } from '@/store/sprint-choice';
 import { useAppOverview } from '@/store/use-app-overview';
 import { useRetro, useRetroActions } from '@/store/use-retro';
@@ -21,6 +21,7 @@ import { ActualTime } from '../today/actual-time';
 import { BeginPlanning } from '../begin-planning';
 import { ScreenFrame } from '../screen-frame';
 import { sprintSearchOf, useSprintSteps } from '../sprint-steps';
+import { CompleteRetro } from './complete-retro';
 import { FactsPane } from './facts-pane';
 import { HandoffPane } from './handoff-pane';
 import { Materials } from './materials';
@@ -62,14 +63,6 @@ function stageHeading(stage: RetroStage, number: number): string {
       return '次の Sprint に何を引き継ぐか';
   }
 }
-
-/** Why 「Retro を完了」 waits (docs/design/content.md). */
-export const BLOCKER_WORDS: Readonly<Record<RetroBlocker, string>> = {
-  decisionMissing:
-    '今回の計画基準を「続ける・終える・置き換える」から選ぶと完了できます。',
-  continueWithDraft:
-    '「続ける」ときは、新しい基準の下書きを外すか、「置き換える」を選ぶと完了できます。',
-};
 
 export interface RetroSearch {
   /** The Sprint to open, by number (#90). Absent: the current one. */
@@ -147,12 +140,10 @@ function RetroView({
   const actions = useRetroActions();
   const stage = search.stage ?? 'facts';
   const [editing, setEditing] = useState<Editing | undefined>(undefined);
-  const reasonId = useId();
   const readOnly = data.sprint.state === 'closed';
   const setStage = (next: RetroStage) =>
     void navigate({ search: (prev) => ({ ...prev, stage: next }) });
 
-  const blocked = data.blockers.length > 0;
   const complete = () => {
     if (!actions.completeRetro()) return;
     toast.show({
@@ -208,36 +199,7 @@ function RetroView({
           event.preventDefault();
           setStage(stageId as RetroStage);
         }}
-        actions={
-          readOnly ? (
-            leadsOn ? (
-              <BeginPlanning />
-            ) : undefined
-          ) : (
-            <div className="flex flex-col items-end gap-1">
-              <Button
-                variant="primary"
-                disabled={blocked}
-                focusableWhenDisabled
-                aria-describedby={reasonId}
-                onClick={complete}
-              >
-                振り返りを完了
-              </Button>
-              <div
-                id={reasonId}
-                className="flex max-w-measure-read flex-col items-end gap-1 text-right text-help text-ink-muted"
-              >
-                {data.blockers.map((b) => (
-                  <p key={b}>{BLOCKER_WORDS[b]}</p>
-                ))}
-                {data.improvement === undefined && (
-                  <p>改善策がないまま完了します。次の計画には何も出ません。</p>
-                )}
-              </div>
-            </div>
-          )
-        }
+        actions={readOnly && leadsOn ? <BeginPlanning /> : undefined}
       >
         <p className="text-help text-ink-muted">
           {readOnly
@@ -296,6 +258,9 @@ function RetroView({
             )}
             {stage === 'reflect' && (
               <Button onClick={() => setStage('handoff')}>引き継ぐへ</Button>
+            )}
+            {stage === 'handoff' && !readOnly && (
+              <CompleteRetro data={data} onComplete={complete} />
             )}
           </nav>
         </div>
