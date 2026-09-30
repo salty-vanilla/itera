@@ -289,11 +289,14 @@ function TodayView({ data }: { data: TodayData }) {
             unit="件"
             className="max-w-measure-read"
           />
-          <p className="text-body text-ink-muted">
-            {remaining.count === 0
-              ? '今日の残りはありません'
-              : `今日の残り ${remaining.count}件 · 見込み ${formatPlanningTotal({ ...remaining, unestimatedSubtasks: 0 })}`}
-          </p>
+          {/* Nothing chosen yet (no done and no closed row): the empty 今日やる already says so. */}
+          {(data.rows.length > 0 || data.closed.length > 0) && (
+            <p className="text-body text-ink-muted">
+              {remaining.count === 0
+                ? '今日の残りはありません'
+                : `今日の残り ${remaining.count}件 · 見込み ${formatPlanningTotal({ ...remaining, unestimatedSubtasks: 0 })}`}
+            </p>
+          )}
           {data.lastDay && (
             <div className="flex flex-wrap items-center gap-3">
               <p className="text-body text-ink">

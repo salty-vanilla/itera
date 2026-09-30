@@ -67,6 +67,22 @@ const backlogPane = () =>
 const planPane = () =>
   document.querySelector<HTMLElement>('[data-slot="plan-pane"]')!;
 
+describe('Planning — 優先度 (#97)', () => {
+  it('tells 高 in the candidates and in the plan, and not 通常', async () => {
+    await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    const row = within(backlogPane())
+      .getByText('新メンバーのオンボーディング資料')
+      .closest('li') as HTMLElement;
+    expect(row.textContent).toContain('優先度 高');
+    expect(backlogPane().textContent?.match(/優先度/g)).toHaveLength(1);
+    await userEvent.click(within(row).getByRole('checkbox'));
+    const planned = within(planPane())
+      .getByText('新メンバーのオンボーディング資料')
+      .closest('li') as HTMLElement;
+    expect(planned.textContent).toContain('優先度 高');
+  });
+});
+
 describe('Planning — 選ぶ', () => {
   it('chooses a Task with □, shows it in its Area, and can undo', async () => {
     await renderAt('/sprint?fixture=planning-pick&stage=pick');

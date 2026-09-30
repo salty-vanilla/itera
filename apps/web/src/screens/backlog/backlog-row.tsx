@@ -13,7 +13,11 @@ import {
 } from '@/components/ui/menu';
 import { Deadline } from '@/components/task/deadline';
 import { Estimate } from '@/components/task/estimate';
-import { MetaItem, TaskMetadata } from '@/components/task/task-metadata';
+import {
+  MetaItem,
+  PriorityText,
+  TaskMetadata,
+} from '@/components/task/task-metadata';
 import { CompletionCircle, TaskRow } from '@/components/task/task-row';
 import { formatDate } from '@/lib/date-format';
 import { formatPattern } from '@/lib/recurrence-text';
@@ -98,6 +102,7 @@ function BacklogRow({
   const hasMeta =
     area !== undefined ||
     task.due !== undefined ||
+    task.priority !== 'normal' ||
     carry !== undefined ||
     recurrence !== undefined ||
     thisWeek !== undefined;
@@ -135,6 +140,7 @@ function BacklogRow({
           <TaskMetadata>
             {area && <AreaIndicator name={area.name} color={area.color} />}
             {task.due && <Deadline due={task.due} today={today} />}
+            <PriorityText priority={task.priority} />
             {carry && <CarryOverText {...carry} />}
             {recurrence && <RecurrenceText recurrence={recurrence} />}
             {thisWeek && <SprintText {...thisWeek} />}

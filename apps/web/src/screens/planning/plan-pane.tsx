@@ -7,7 +7,11 @@ import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
 import { useToast } from '@/components/ui/toast';
 import { GoalBlock } from '@/components/sprint/goal-block';
 import { Estimate } from '@/components/task/estimate';
-import { MetaItem, TaskMetadata } from '@/components/task/task-metadata';
+import {
+  MetaItem,
+  PriorityText,
+  TaskMetadata,
+} from '@/components/task/task-metadata';
 import { TaskRow } from '@/components/task/task-row';
 import { formatPlanningTotal } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
@@ -208,6 +212,9 @@ function PlannedRow({
         {inactive === 'completed' ? '完了済み' : 'アーカイブ済み'} ·
         今週から外すと確定できます
       </MetaItem>
+    ),
+    task.priority !== 'normal' && (
+      <PriorityText key="p" priority={task.priority} />
     ),
     recurring && (
       <MetaItem key="r" icon={<Repeat aria-hidden />}>

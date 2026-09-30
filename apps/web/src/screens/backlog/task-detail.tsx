@@ -41,7 +41,7 @@ import { SubtaskList } from './subtask-list';
 
 const priorities: readonly { value: TaskPriority; label: string }[] = [
   { value: 'high', label: '高' },
-  { value: 'normal', label: '普通' },
+  { value: 'normal', label: '通常' },
   { value: 'low', label: '低' },
 ];
 
