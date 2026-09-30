@@ -92,6 +92,7 @@ function BacklogScreen() {
     announced.current = justAdded.id;
     const shown = items.some((i) => i.task.id === justAdded.id);
     toast.show({
+      kind: 'task-added',
       title: `「${justAdded.title}」を追加しました`,
       ...(shown
         ? {}
@@ -170,6 +171,7 @@ function BacklogScreen() {
         ?.focus(),
     );
     toast.show({
+      kind: 'task-archived',
       title: `「${title}」をアーカイブしました`,
       action: {
         label: '元に戻す',
@@ -226,7 +228,7 @@ function BacklogScreen() {
           above the tab bar (DESIGN.md Responsive › compact). */}
       <div
         ref={quickAddRef}
-        className="sticky bottom-0 z-(--layer-sticky) order-last border-t border-border bg-canvas px-4 py-3 medium:static medium:order-none medium:border-t-0 medium:px-6 medium:py-0 medium:pb-4 xl:max-w-pane-rows"
+        className="mt-[var(--toast-above-room,0px)] sticky bottom-0 z-(--layer-sticky) order-last border-t border-border bg-canvas px-4 py-3 medium:static medium:order-none medium:mt-0 medium:border-t-0 medium:px-6 medium:py-0 medium:pb-4 xl:max-w-pane-rows"
       >
         <TaskQuickAdd
           onAdd={(title) => {

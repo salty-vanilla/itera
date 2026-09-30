@@ -62,7 +62,7 @@ function onReview(
 export const assess = (areaId: AreaId, assessment: SelfAssessment | null) =>
   onReview((sprint, ctx) => assessGoal(sprint, { areaId, assessment }, ctx));
 
-/** 気になる印をつける / 外す. */
+/** 振り返りに使う印をつける / 外す. */
 export const pin = (target: RetroPin) =>
   onReview((sprint, ctx) => togglePin(sprint, { pin: target }, ctx));
 

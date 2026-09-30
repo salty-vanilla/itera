@@ -22,11 +22,11 @@ function renderPopover() {
         <PopoverTrigger render={<Button />}>3h</PopoverTrigger>
         <PopoverContent>
           <PopoverHeader>
-            <PopoverTitle>Estimate を編集</PopoverTitle>
+            <PopoverTitle>見積もりを編集</PopoverTitle>
           </PopoverHeader>
           <PopoverBody>
             <label>
-              Estimate
+              見積もり
               <input inputMode="decimal" defaultValue="3" />
             </label>
           </PopoverBody>
@@ -48,10 +48,10 @@ describe('Popover', () => {
   it('focuses the first input, not the close button', async () => {
     const trigger = renderPopover();
     await userEvent.click(trigger);
-    await screen.findByRole('dialog', { name: 'Estimate を編集' });
+    await screen.findByRole('dialog', { name: '見積もりを編集' });
     await waitFor(() =>
       expect(document.activeElement).toBe(
-        screen.getByRole('textbox', { name: 'Estimate' }),
+        screen.getByRole('textbox', { name: '見積もり' }),
       ),
     );
   });

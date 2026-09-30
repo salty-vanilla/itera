@@ -41,6 +41,7 @@ function PastDays({ days, onUndo }: PastDaysProps) {
     if (!onUndo(record)) return;
     setAsking(undefined);
     toast.show({
+      kind: 'day-record-undone',
       title: `${formatDate(record.selection.date)} の「${record.title}」の${word(record)}を取り消しました`,
     });
   };

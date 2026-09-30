@@ -156,6 +156,7 @@ function RetroView({
   const complete = () => {
     if (!actions.completeRetro()) return;
     toast.show({
+      kind: 'retro-completed',
       tone: 'done',
       title: `Sprint ${data.number} の振り返りを完了しました`,
     });
@@ -221,7 +222,7 @@ function RetroView({
                 aria-describedby={reasonId}
                 onClick={complete}
               >
-                Retro を完了
+                振り返りを完了
               </Button>
               <div
                 id={reasonId}
@@ -231,9 +232,7 @@ function RetroView({
                   <p key={b}>{BLOCKER_WORDS[b]}</p>
                 ))}
                 {data.improvement === undefined && (
-                  <p>
-                    改善策がないまま完了します。次の Planning には何も出ません。
-                  </p>
+                  <p>改善策がないまま完了します。次の計画には何も出ません。</p>
                 )}
               </div>
             </div>
@@ -375,7 +374,7 @@ function NotStarted({
         actions={
           lastDay ? (
             <Button variant="primary" onClick={() => actions.beginRetro()}>
-              Retro を始める
+              振り返りを始める
             </Button>
           ) : undefined
         }

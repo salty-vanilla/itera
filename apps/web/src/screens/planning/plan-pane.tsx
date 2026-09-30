@@ -249,7 +249,7 @@ function PlannedRow({
     // a linked Task whose Area has no Goal yet.
     stage !== 'pick' && planned.linkAtConfirm === 'unlinked' && (
       <MetaItem key="g" className="text-ink-subtle">
-        Goal なし
+        目標なし
       </MetaItem>
     ),
   ].filter(Boolean);
@@ -261,6 +261,7 @@ function PlannedRow({
       : actions.unchooseTasks([sprintTask.id]);
     if (!done) return;
     toast.show({
+      kind: 'sprint-pick',
       title: `「${task.title}」を${weekText(week, 'から外しました')}`,
       // A completed or archived Task cannot be chosen again, so there is
       // nothing to undo.
@@ -293,7 +294,7 @@ function PlannedRow({
         }
       >
         <Target aria-hidden />
-        {linked ? 'Goal に紐づけない' : 'Goal に紐づける'}
+        {linked ? '目標に紐づけない' : '目標に紐づける'}
       </MenuItem>
     ),
   ].filter(Boolean);
@@ -308,8 +309,9 @@ function PlannedRow({
       }
       estimate={
         // A value from a suggestion shows where it came from (DESIGN.md
-        // Estimate: 「提案 3–5h / 今回は 5h で計画」). The preview is solid.
-        <span className="flex flex-wrap items-center justify-end gap-2">
+        // Estimate: 「Agent の提案 3–5h」 and 「計画 5h」). The preview is
+        // solid. Under 768px the two stack, so the title keeps its width.
+        <span className="flex flex-col items-end gap-1 medium:flex-row medium:flex-wrap medium:items-center medium:justify-end medium:gap-2">
           {/* Always, when the value comes from a suggestion: it is not the
               person's Estimate yet (invariant 7, patterns.md Planning). For
               a recurring Task the suggestion is one occurrence's. */}

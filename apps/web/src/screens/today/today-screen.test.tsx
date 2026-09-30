@@ -105,12 +105,26 @@ describe('Today — the top', () => {
     expect(screen.getByText('今日の残り 2件 · 見込み 4.5–5.5h')).toBeTruthy();
     // Invariant 25: no daily capacity, no judgement of going over.
     const text = document.body.textContent ?? '';
-    for (const word of ['可用時間', '容量', '超過', '超える']) {
+    for (const word of ['使える時間', '容量', '超過', '超える']) {
       expect(text).not.toContain(word);
     }
     // The week's Goals as the background.
     expect(screen.getAllByText('先行研究を押さえる').length).toBeGreaterThan(0);
-    expect(screen.queryByRole('button', { name: 'Retro を始める' })).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: '振り返りを始める' }),
+    ).toBeNull();
+  });
+});
+
+describe('Today — the Toast above the Quick Add (#79)', () => {
+  it('lifts the Toast above the stuck Quick Add at every width, and stops when the screen goes', async () => {
+    const offset = () =>
+      document.documentElement.style.getPropertyValue('--toast-offset-above');
+    const router = await renderAt('/today?fixture=today-interrupt');
+    expect(offset()).not.toBe('');
+    await router.navigate({ to: '/backlog' });
+    await screen.findByRole('heading', { name: 'Backlog' });
+    expect(offset()).toBe('');
   });
 });
 
@@ -404,7 +418,7 @@ describe('Today — adding and interrupts', () => {
     expect(st).toMatchObject({ origin: 'midSprint', outcome: 'planned' });
     expect(selectionOf(task?.id ?? '')?.origin).toBe('midSprint');
     expect(
-      within(row('今日やる', '請求書を送る')).getByText('Sprint 中に追加'),
+      within(row('今日やる', '請求書を送る')).getByText('週の途中で追加'),
     ).toBeTruthy();
   });
 
@@ -464,12 +478,12 @@ describe('Today — the days', () => {
     expect(row('今日やる', '英語の多読 30 分')).toBeTruthy();
   });
 
-  it('offers 「Retro を始める」 on the last day and starts the Review (F21)', async () => {
+  it('offers 「振り返りを始める」 on the last day and starts the Review (F21)', async () => {
     clockOverride = at('2026-10-04', '09:00');
     const router = await renderAt('/today?fixture=today-interrupt');
     expect(screen.getByText('Sprint 2 · 7日目 / 7日')).toBeTruthy();
     await userEvent.click(
-      screen.getByRole('button', { name: 'Retro を始める' }),
+      screen.getByRole('button', { name: '振り返りを始める' }),
     );
     expect(
       lastSnapshot().records.sprints.find((s) => s.id === 'sprint-2026-09-28')
@@ -537,7 +551,9 @@ describe('Today — outside the period (#54)', () => {
     // 10/5 (Mon): Sprint 2's Retro completes and Sprint 3, starting today,
     // is planned and confirmed.
     await renderAt('/retro?fixture=retro-before-complete&stage=handoff');
-    await userEvent.click(screen.getByRole('button', { name: 'Retro を完了' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: '振り返りを完了' }),
+    );
     await userEvent.click(
       screen.getByRole('button', { name: 'Sprint 3 の計画を始める' }),
     );
@@ -582,7 +598,7 @@ describe('Today — keys of the lists (#48)', () => {
     await userEvent.keyboard('e');
     // The Task's own, not a subtask's (「Estimate（時間）: …」).
     const estimate = await screen.findByRole('textbox', {
-      name: /^Estimate（時間）(?!:)/,
+      name: /^見積もり（時間）(?!:)/,
     });
     await waitFor(() => expect(document.activeElement).toBe(estimate));
   });

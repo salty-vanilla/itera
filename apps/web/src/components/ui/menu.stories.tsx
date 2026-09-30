@@ -53,7 +53,7 @@ export const RowActions: Story = {
           </MenuItem>
           <MenuItem>
             <Pencil aria-hidden />
-            Estimate を編集
+            見積もりを編集
             <MenuShortcut>E</MenuShortcut>
           </MenuItem>
           <MenuSeparator />
@@ -87,7 +87,7 @@ export const RowActions: Story = {
     await waitFor(() => expect(first).toHaveFocus());
     await userEvent.keyboard('{ArrowDown}');
     await expect(
-      screen.getByRole('menuitem', { name: /Estimate を編集/ }),
+      screen.getByRole('menuitem', { name: /見積もりを編集/ }),
     ).toHaveFocus();
     await userEvent.keyboard('{End}');
     await expect(
@@ -171,7 +171,7 @@ function StateLabel({ children }: { children: string }) {
 
 const states = [
   ['default', '今日へ'],
-  ['hover', 'Estimate を編集'],
+  ['hover', '見積もりを編集'],
   ['focus', '詳細を開く'],
   ['hover-focus', '上へ'],
 ] as const;
@@ -210,7 +210,7 @@ export const States: Story = {
             </span>
           </MenuItem>
           <MenuSeparator />
-          <MenuCheckboxItem defaultChecked>Goal に紐づける</MenuCheckboxItem>
+          <MenuCheckboxItem defaultChecked>目標に紐づける</MenuCheckboxItem>
           <MenuCheckboxItem defaultChecked data-demo="hover">
             完了したタスク
             <StateLabel>hover</StateLabel>

@@ -79,7 +79,7 @@ function HandoffPane({
         </h2>
         {improvement === undefined ? (
           <p className="text-body text-ink-muted">
-            改善策はまだありません。書かなくても Retro は完了できます。
+            改善策はまだありません。書かなくても振り返りは完了できます。
             <button
               type="button"
               onClick={onWriteImprovement}
@@ -94,7 +94,7 @@ function HandoffPane({
               {improvement}
             </p>
             <p className="text-help text-ink-muted">
-              次の Planning の最初に、そのまま表示されます。
+              次の計画の最初に、そのまま表示されます。
             </p>
           </>
         )}
@@ -109,7 +109,7 @@ function HandoffPane({
           description={
             improvement === undefined
               ? '改善策を書くと選べます。任意です。'
-              : '改善策が「Estimate の幅のどこを計画値に使うか」で表せるときだけ、次の Planning の計画値に使うルールにできます。任意です。'
+              : '改善策が「提案の幅のどこで計画するか」で表せるときだけ、次の計画に使うルールにできます。任意です。'
           }
           disabled={improvement === undefined}
           checked={draft !== undefined}
@@ -240,7 +240,7 @@ function DraftCriterion({
         <Tag tone="draft">下書き</Tag>
       </p>
       <p className="text-help text-ink-muted">
-        Estimate そのものは書き換えません。
+        見積もりそのものは書き換えません。
       </p>
       <div className="flex flex-wrap gap-4">
         <Field label="対象">
@@ -265,7 +265,7 @@ function DraftCriterion({
             ))}
           </Select>
         </Field>
-        <Field label="推定幅のどこを計画値に使うか">
+        <Field label="提案の幅のどこで計画するか">
           <Select
             value={policy.rangePolicy}
             onChange={(e) =>
@@ -285,16 +285,16 @@ function DraftCriterion({
       </div>
       <div className="flex flex-col gap-1">
         <p className="text-body text-ink">
-          次の Planning では、
+          次の計画では、
           {draft.areaName === undefined ? '' : `${draft.areaName}の`}
-          推定幅のあるタスク {preview.length}件の計画値を
-          {BOUND_WORDS[policy.rangePolicy]}にします（今の Backlog で）。
+          提案の幅があるタスク {preview.length}件を
+          {BOUND_WORDS[policy.rangePolicy]}で計画します（今の Backlog で）。
         </p>
         {preview.length > 0 && (
           <ul className="flex flex-col gap-1 text-body text-ink-muted">
             {preview.map((row) => (
               <li key={row.taskId}>
-                {titleOf(row.taskId)}：提案{' '}
+                {titleOf(row.taskId)}：Agent の提案{' '}
                 {formatRange(row.from.lo, row.from.hi)} → 計画値{' '}
                 {formatHours(row.to)}
               </li>

@@ -18,7 +18,7 @@ const meta = {
   title: 'Components/RadioGroup',
   component: RadioGroup,
   args: {
-    legend: 'Goal の自己判定',
+    legend: '目標の自己判定',
     children: assessments,
     disabled: false,
   },
