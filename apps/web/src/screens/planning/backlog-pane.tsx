@@ -47,6 +47,7 @@ function BacklogPane({
     const taskIds = rows.map((r) => r.task.id);
     if (!actions.chooseTasks(taskIds)) return;
     toast.show({
+      kind: 'sprint-pick',
       title:
         rows.length === 1
           ? `「${rows[0]?.task.title}」を今週に入れました`
@@ -64,6 +65,7 @@ function BacklogPane({
     const taskIds = rows.map((r) => r.task.id);
     if (!actions.unchooseTasks(ids)) return;
     toast.show({
+      kind: 'sprint-pick',
       title:
         rows.length === 1
           ? `「${rows[0]?.task.title}」を今週から外しました`

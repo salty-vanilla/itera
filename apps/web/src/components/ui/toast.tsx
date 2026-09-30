@@ -16,6 +16,9 @@ import { IconButton } from './icon-button';
 // - timers stop while the pointer is over the Toasts or focus is inside them
 //   (F6 moves focus to them),
 // - beyond the limit the oldest Toasts are marked data-limited and made inert.
+//
+// Toasts of one kind do not stack: `kind` gives them one ID, so the latest
+// replaces the one showing (DESIGN.md Toast).
 
 /** docs/design/foundations.md `duration-toast`. */
 const TOAST_TIMEOUT = 8000;
@@ -25,6 +28,14 @@ const TOAST_LIMIT = 3;
 type ToastTone = 'neutral' | 'done' | 'danger';
 
 type ToastOptions = {
+  /**
+   * The kind of operation. A Toast of a kind that is already showing takes
+   * the place of the old one (its text, action and timer are replaced), so
+   * that repeating one operation never stacks Toasts and 「元に戻す」 acts on
+   * the latest one. Toasts of other kinds stay. Without a kind a Toast is
+   * always added.
+   */
+  kind?: string;
   tone?: ToastTone;
   /** The result, stated plainly: 「3件を今週に入れました」. */
   title: string;
@@ -141,8 +152,17 @@ function useToast() {
   const manager = ToastPrimitive.useToastManager();
   return useMemo(
     () => ({
-      show({ tone = 'neutral', title, description, action }: ToastOptions) {
+      show({
+        kind,
+        tone = 'neutral',
+        title,
+        description,
+        action,
+      }: ToastOptions) {
         const id: string = manager.add({
+          // Adding with an existing ID updates that Toast in place and
+          // restarts its timer.
+          ...(kind !== undefined && { id: `kind:${kind}` }),
           type: tone,
           title,
           description,
@@ -166,5 +186,16 @@ function useToast() {
   );
 }
 
-export { TOAST_LIMIT, TOAST_TIMEOUT, ToastProvider, useToast };
+/**
+ * A key that changes when a Toast is shown, replaced or removed, for a screen
+ * that must make room for the Toasts (lib/use-toast-clearance.ts).
+ */
+function useToastsKey(): string {
+  const { toasts } = ToastPrimitive.useToastManager();
+  return toasts
+    .map((t) => `${t.id}:${t.title}:${t.transitionStatus ?? ''}`)
+    .join('|');
+}
+
+export { TOAST_LIMIT, TOAST_TIMEOUT, ToastProvider, useToast, useToastsKey };
 export type { ToastOptions, ToastTone };

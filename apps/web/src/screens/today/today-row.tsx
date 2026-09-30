@@ -146,6 +146,7 @@ function TodayRow({
           <Estimate value={row.value} planned />
         )
       }
+      reserveActions
       actions={
         skipped ? (
           <Button

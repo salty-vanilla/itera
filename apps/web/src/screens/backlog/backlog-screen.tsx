@@ -92,6 +92,7 @@ function BacklogScreen() {
     announced.current = justAdded.id;
     const shown = items.some((i) => i.task.id === justAdded.id);
     toast.show({
+      kind: 'task-added',
       title: `「${justAdded.title}」を追加しました`,
       ...(shown
         ? {}
@@ -170,6 +171,7 @@ function BacklogScreen() {
         ?.focus(),
     );
     toast.show({
+      kind: 'task-archived',
       title: `「${title}」をアーカイブしました`,
       action: {
         label: '元に戻す',

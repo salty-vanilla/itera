@@ -26,6 +26,12 @@ type TaskRowProps = {
   estimate?: ReactNode;
   /** The `…` Menu or other row actions. */
   actions?: ReactNode;
+  /**
+   * Keeps the width of the `…` when there are no `actions`, so that the
+   * Estimate ends where it does in the rows of the same list that have them
+   * (Today: 今日やる and 今週の残り share one column of values).
+   */
+  reserveActions?: boolean;
   /** Opens the Task (its detail). Without it the title is plain text. */
   onOpen?: (() => void) | undefined;
   /** Read out with the title, e.g. that the detail is open. */
@@ -42,6 +48,7 @@ function TaskRow({
   metadata,
   estimate,
   actions,
+  reserveActions = false,
   onOpen,
   current = false,
   done = false,
@@ -103,6 +110,13 @@ function TaskRow({
         >
           {actions}
         </div>
+      )}
+      {actions === undefined && reserveActions && (
+        // The size of the `…` (IconButton sm).
+        <div
+          aria-hidden
+          className="size-control-lg shrink-0 medium:size-control-sm"
+        />
       )}
     </div>
   );

@@ -124,7 +124,11 @@ function PlanningScreen({ data }: PlanningScreenProps) {
   const confirm = () => {
     if (!actions.confirmSprint(data.criterion?.applied ?? false)) return;
     setConfirming(false);
-    toast.show({ tone: 'done', title: `Sprint ${data.number} を確定しました` });
+    toast.show({
+      kind: 'sprint-confirmed',
+      tone: 'done',
+      title: `Sprint ${data.number} を確定しました`,
+    });
     setSearch({ stage: undefined, criterion: undefined });
   };
 

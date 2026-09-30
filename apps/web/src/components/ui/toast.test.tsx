@@ -117,6 +117,91 @@ describe('Toast', () => {
     expect(visibleToasts()).toHaveLength(3);
   });
 
+  it('replaces a Toast of the same kind instead of stacking it', async () => {
+    const undoFirst = vi.fn();
+    const undoLast = vi.fn();
+    const user = userEvent.setup();
+    function Picker() {
+      const toast = useToast();
+      return (
+        <>
+          <Button
+            onClick={() =>
+              toast.show({
+                kind: 'sprint-pick',
+                title: '「A」を今週に入れました',
+                action: { label: '元に戻す', onClick: undoFirst },
+              })
+            }
+          >
+            A
+          </Button>
+          <Button
+            onClick={() =>
+              toast.show({
+                kind: 'sprint-pick',
+                title: '「B」を今週に入れました',
+                action: { label: '元に戻す', onClick: undoLast },
+              })
+            }
+          >
+            B
+          </Button>
+          <Button
+            onClick={() =>
+              toast.show({ kind: 'task-added', title: '「C」を追加しました' })
+            }
+          >
+            C
+          </Button>
+        </>
+      );
+    }
+    render(
+      <ToastProvider>
+        <Picker />
+      </ToastProvider>,
+    );
+    await user.click(screen.getByRole('button', { name: 'A' }));
+    await user.click(screen.getByRole('button', { name: 'B' }));
+    await user.click(screen.getByRole('button', { name: 'A' }));
+    await user.click(screen.getByRole('button', { name: 'B' }));
+    expect(visibleToasts()).toHaveLength(1);
+    expect(screen.queryByText('「A」を今週に入れました')).toBeNull();
+    // Another kind stays beside it.
+    await user.click(screen.getByRole('button', { name: 'C' }));
+    expect(visibleToasts()).toHaveLength(2);
+    // 「元に戻す」 acts on the latest operation.
+    await user.click(screen.getByRole('button', { name: '元に戻す' }));
+    expect(undoLast).toHaveBeenCalledOnce();
+    expect(undoFirst).not.toHaveBeenCalled();
+    // After it closed, the same kind shows again.
+    await user.click(screen.getByRole('button', { name: 'A' }));
+    expect(screen.getByText('「A」を今週に入れました')).not.toBeNull();
+  });
+
+  it('restarts the timer when a Toast of the same kind replaces it', async () => {
+    vi.useFakeTimers();
+    function Twice() {
+      const toast = useToast();
+      return (
+        <Button onClick={() => toast.show({ kind: 'k', title: '入れました' })}>
+          出す
+        </Button>
+      );
+    }
+    render(
+      <ToastProvider>
+        <Twice />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: '出す' }));
+    await act(() => vi.advanceTimersByTimeAsync(TOAST_TIMEOUT - 1000));
+    fireEvent.click(screen.getByRole('button', { name: '出す' }));
+    await act(() => vi.advanceTimersByTimeAsync(TOAST_TIMEOUT - 1000));
+    expect(visibleToasts()).toHaveLength(1);
+  });
+
   it('announces danger with role="alert"', async () => {
     const { show } = setup({
       tone: 'danger',
