@@ -15,7 +15,7 @@ const meta = {
   },
   render: (args) => (
     <Field
-      label="気になったこと"
+      label="気づいたこと"
       necessity="optional"
       className="max-w-measure-read"
     >
@@ -56,7 +56,7 @@ export const WithCount: Story = {
 export const BodyLarge: Story = {
   render: () => (
     <Field
-      label="気になったこと"
+      label="気づいたこと"
       necessity="optional"
       className="max-w-measure-read"
     >

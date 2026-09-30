@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import type { RetroData } from '@/store/retro-view';
 import { Materials } from './materials';
 
-// 振り返る (patterns.md Retro): two inputs only — 「気になったこと」
+// 振り返る (patterns.md Retro): two inputs only — 「気づいたこと」
 // (optional) and 「次の Sprint で 1 つだけ変えてみること」. No KPT and no
 // reasons for carry-overs. What is typed is saved when the field is left,
 // so it stays even if the Retro is closed half way.
@@ -52,9 +52,9 @@ function ReflectPane({
       ) : (
         <>
           <Field
-            label="気になったこと"
+            label="気づいたこと"
             necessity="optional"
-            description="事実を見て思ったことを、そのまま書きます。原因を突き止めなくて構いません。"
+            description="うまくいったこと、気になったこと。事実を見て思ったことを、そのまま書きます。"
           >
             <Textarea
               text="body-l"
@@ -81,7 +81,7 @@ function ClosedReflection({ data }: { data: RetroData }) {
         className="flex flex-col gap-2"
       >
         <h2 id="closed-reflection" className="text-label text-ink">
-          気になったこと
+          気づいたこと
         </h2>
         {data.reflection === '' ? (
           <p className="text-body text-ink-muted">書いていません。</p>

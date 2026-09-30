@@ -66,7 +66,7 @@ export const assess = (areaId: AreaId, assessment: SelfAssessment | null) =>
 export const pin = (target: RetroPin) =>
   onReview((sprint, ctx) => togglePin(sprint, { pin: target }, ctx));
 
-/** 気になったこと (optional). */
+/** 気づいたこと (optional). */
 export const reflect = (text: string) =>
   onReview((sprint, ctx) => setReflection(sprint, { text }, ctx));
 
