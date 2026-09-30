@@ -11,13 +11,9 @@ import {
 } from '@/components/sprint/sprint-header';
 import { formatDate, formatDateRange } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
-import { weekText } from '@/lib/week-text';
+import { weekCall, weekText } from '@/lib/week-text';
 import type { ActualTarget, RetroBlocker, RetroData } from '@/store/retro-view';
-import {
-  isWeekName,
-  type SprintChoice,
-  type SprintRef,
-} from '@/store/sprint-choice';
+import { type SprintChoice, type SprintRef } from '@/store/sprint-choice';
 import { useAppOverview } from '@/store/use-app-overview';
 import { useRetro, useRetroActions } from '@/store/use-retro';
 import { useSprintChoice } from '@/store/use-sprint-choice';
@@ -52,13 +48,14 @@ export const RETRO_STAGES: readonly { id: RetroStage; label: string }[] = [
   { id: 'handoff', label: '引き継ぐ' },
 ];
 
-/** The stage's heading; 事実を見る names the week (「Sprint 2 で何が起きたか」). */
-function stageHeading(stage: RetroStage, week: string): string {
+/**
+ * The stage's heading. 事実を見る names the Sprint: in Review or closed it
+ * is never 「今週」, as the next one to start is (#90).
+ */
+function stageHeading(stage: RetroStage, number: number): string {
   switch (stage) {
     case 'facts':
-      return isWeekName(week)
-        ? `${week}、何が起きたか`
-        : weekText(week, 'で何が起きたか');
+      return `Sprint ${number} で何が起きたか`;
     case 'reflect':
       return '何が気になったか';
     case 'handoff':
@@ -187,7 +184,6 @@ function RetroView({
           )
         }
         title={`Sprint ${data.number}`}
-        week={isWeekName(data.week) ? data.week : undefined}
         period={formatDateRange(data.sprint.start, data.sprint.end)}
         steps={steps}
         stages={RETRO_STAGES.map((s) => ({
@@ -260,7 +256,7 @@ function RetroView({
       >
         <div className="flex min-w-0 flex-col gap-8">
           <h1 className="text-display-m text-ink">
-            {stageHeading(stage, data.week)}
+            {stageHeading(stage, data.number)}
           </h1>
           {stage === 'facts' && (
             <FactsPane
@@ -358,7 +354,7 @@ function NotStarted({
 }) {
   const { today } = useAppOverview();
   const actions = useRetroActions();
-  const week = current.week ?? `Sprint ${current.number}`;
+  const week = weekCall(current.week, current.number);
   const lastDay = sprint.state === 'active' && today >= sprint.end;
   return (
     <div className="mx-auto flex min-h-full w-full max-w-[calc(var(--spacing-pane-today)+var(--spacing-pane-side)+var(--spacing-12))] flex-col gap-8 px-4 pt-6 pb-16 medium:px-6 medium:pt-8">

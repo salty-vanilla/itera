@@ -15,7 +15,7 @@ import {
 import { TaskRow } from '@/components/task/task-row';
 import { formatPlanningTotal } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
-import { weekText } from '@/lib/week-text';
+import { weekCall, weekText } from '@/lib/week-text';
 import type {
   AreaPlan,
   PlannedTask,
@@ -67,6 +67,7 @@ function PlanPane({
   className,
 }: PlanPaneProps) {
   const actions = usePlanningActions();
+  const week = weekCall(data.week, data.number);
   const withTasks = data.plan.filter((p) => p.tasks.length > 0);
   // 整える shows every Area (a Goal can be written before choosing Tasks);
   // 領域なし has no Goal and shows only with Tasks.
@@ -87,13 +88,11 @@ function PlanPane({
         className,
       )}
     >
-      <h1 className="text-display-m text-ink">
-        {stageHeading(stage, data.week)}
-      </h1>
+      <h1 className="text-display-m text-ink">{stageHeading(stage, week)}</h1>
       {stage === 'pick' && data.chosenCount === 0 && (
         <p className="text-body text-ink-muted">
-          Backlog から □ で{weekText(data.week, 'へ選びます。')}
-          {weekText(data.week, '発生する繰り返しは最初から入っています。')}
+          Backlog から □ で{weekText(week, 'へ選びます。')}
+          {weekText(week, '発生する繰り返しは最初から入っています。')}
         </p>
       )}
       {/*
@@ -124,7 +123,7 @@ function PlanPane({
               <PlannedList
                 block={block}
                 stage={stage}
-                week={data.week}
+                week={week}
                 onOpenTask={onOpenTask}
                 onEstimateTask={onEstimateTask}
               />
@@ -137,7 +136,7 @@ function PlanPane({
               area={{ name: block.area.name, color: block.area.color }}
               summary={block.tasks.length > 0 ? summaryOf(block) : undefined}
               goal={block.goal?.text}
-              week={data.week}
+              week={week}
               onSave={
                 block.area.id === null
                   ? undefined
@@ -152,7 +151,7 @@ function PlanPane({
                 <PlannedList
                   block={block}
                   stage={stage}
-                  week={data.week}
+                  week={week}
                   onOpenTask={onOpenTask}
                   onEstimateTask={onEstimateTask}
                 />

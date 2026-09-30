@@ -19,8 +19,8 @@ type GoalBlockProps = {
   /** 「3件 · 8–10h」 */
   summary?: string | undefined;
   goal?: string | undefined;
-  /** 「今週」「来週」: the week the Goal is for (#90). */
-  week?: string | undefined;
+  /** 「今週」「来週」, or 「Sprint N」: the week the Goal is for (#90). */
+  week: string;
   /** The heading level; the screen's h1 is followed by h2 by default. */
   level?: 2 | 3 | undefined;
   /** Saves the text; an empty text removes the Goal. Returns success. */
@@ -50,7 +50,7 @@ function GoalBlock({
   area,
   summary,
   goal,
-  week = '今週',
+  week,
   level = 2,
   onSave,
   removable = true,
@@ -203,9 +203,12 @@ function GoalBlock({
               + Goal を書く
             </Button>
           )}
-          <p className="text-help text-ink-muted">
-            この領域の Goal は任意です。タスクだけでも計画できます。
-          </p>
+          {/* Only where a Goal can be written: not read only, not 領域なし. */}
+          {onSave !== undefined && (
+            <p className="text-help text-ink-muted">
+              この領域の Goal は任意です。タスクだけでも計画できます。
+            </p>
+          )}
         </div>
       )}
 

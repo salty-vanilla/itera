@@ -7,6 +7,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import type { WeekName } from '@/lib/week-text';
 
 // DESIGN.md Components › Sprint Header. The Status Tag, the title
 // (`display-l`「Sprint 14」) between the links to the previous and next
@@ -26,7 +27,7 @@ type SprintHeaderProps = {
   status?: ReactNode;
   title: string;
   /** 「今週」「来週」: the Sprint's name next to now (#90). */
-  week?: string | undefined;
+  week?: WeekName | undefined;
   period: string;
   /** The previous and next Sprints (#90); a missing one is shown disabled. */
   steps?:
@@ -74,7 +75,9 @@ function SprintHeader({
     >
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="flex min-w-0 flex-col gap-1">
-          {status !== undefined && <div>{status}</div>}
+          {/* Without a Status (the next week) its line is kept, so that the
+              title and its arrows stay where they are between Sprints. */}
+          <div className="min-h-5">{status}</div>
           <div className="flex items-center gap-1">
             {steps !== undefined && (
               <StepLink
@@ -102,7 +105,10 @@ function SprintHeader({
           </p>
         </div>
         {actions !== undefined && (
-          <div className="flex flex-wrap items-center gap-3">{actions}</div>
+          // At the right, also when it wraps under the title.
+          <div className="ms-auto flex flex-wrap items-center gap-3">
+            {actions}
+          </div>
         )}
       </div>
       {stages !== undefined && (
@@ -201,4 +207,4 @@ function StepLink({
 }
 
 export { SprintHeader };
-export type { SprintHeaderProps, SprintStep, Stage };
+export type { SprintHeaderProps, Stage };

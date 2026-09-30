@@ -24,7 +24,6 @@ import {
   type SprintTaskId,
 } from '@itera/domain';
 import type { Clock, Records } from './records';
-import { weekCallOf } from './sprint-choice';
 
 export interface RetroArea {
   readonly id: AreaId | null;
@@ -70,11 +69,6 @@ export interface RetroData {
   readonly sprint: Sprint;
   /** 「Sprint 14」 (F25). */
   readonly number: number;
-  /**
-   * 「Sprint N」: a Sprint in Review or closed is never 「今週」, as the
-   * next one to start is (#90).
-   */
-  readonly week: string;
   readonly today: LocalDate;
   readonly timeZone: Records['user']['timeZone'];
   readonly facts: RetroFacts;
@@ -174,7 +168,6 @@ export function retroData(
   return {
     sprint,
     number: sprintNumber(sprint, records.sprints),
-    week: weekCallOf(sprint, records, clock),
     today: clock.today,
     timeZone: records.user.timeZone,
     facts,

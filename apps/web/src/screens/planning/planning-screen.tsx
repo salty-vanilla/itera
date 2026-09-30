@@ -26,9 +26,8 @@ import { isTyping } from '@/lib/row-keys';
 import { formatPlanningTotal } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { cn } from '@/lib/utils';
-import { weekText } from '@/lib/week-text';
+import { weekCall, weekText } from '@/lib/week-text';
 import type { PlanningData } from '@/store/planning-view';
-import { isWeekName } from '@/store/sprint-choice';
 import { useBacklog } from '@/store/use-backlog';
 import { usePlanningActions } from '@/store/use-planning';
 import { useTaskActions } from '@/store/use-task-actions';
@@ -198,7 +197,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
         <SprintHeader
           status={<Tag tone="draft">計画中 · 未確定</Tag>}
           title={`Sprint ${data.number}`}
-          week={isWeekName(data.week) ? data.week : undefined}
+          week={data.week}
           period={formatDateRange(data.sprint.start, data.sprint.end)}
           steps={steps}
           stages={STAGES.map((s) => ({
@@ -237,7 +236,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
               {blocked && (
                 <div
                   id={reasonId}
-                  className="flex flex-col items-end gap-1 text-help text-ink-muted"
+                  className="flex max-w-measure-read flex-col items-end gap-1 text-right text-help text-ink-muted"
                 >
                   {data.blockers.includes('previousRetroOpen') &&
                     data.previous !== undefined && (
@@ -258,7 +257,10 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
                   {data.blockers.includes('inactiveTasks') && (
                     <p>
                       完了・アーカイブした Task を
-                      {weekText(data.week, 'から外すと確定できます。')}
+                      {weekText(
+                        weekCall(data.week, data.number),
+                        'から外すと確定できます。',
+                      )}
                     </p>
                   )}
                 </div>

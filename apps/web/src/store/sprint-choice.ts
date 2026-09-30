@@ -10,14 +10,10 @@ import {
   type Sprint,
   type SprintState,
 } from '@itera/domain';
+import type { WeekName } from '@/lib/week-text';
 import type { Clock, Records } from './records';
 
-/** A Sprint's name next to now. */
-export type WeekName = '今週' | '来週';
-
-export function isWeekName(value: string | undefined): value is WeekName {
-  return value === '今週' || value === '来週';
-}
+export type { WeekName };
 
 /** A Sprint a screen can open, or the next week before its Planning. */
 export interface SprintRef {
@@ -61,15 +57,26 @@ export function weekNameOf(
   return start === upcoming ? '今週' : undefined;
 }
 
-/** 「今週」「来週」, or 「Sprint N」 for a Sprint that is neither. */
-export function weekCallOf(
+/** `{ week }` for a view's data, left out for a Sprint with no name. */
+export function weekOf(
   sprint: Sprint,
   records: Records,
   clock: Clock,
-): string {
-  return (
-    weekNameOf(sprint.start, records, clock) ??
-    `Sprint ${sprintNumber(sprint, records.sprints)}`
+): { week?: WeekName } {
+  const week = weekNameOf(sprint.start, records, clock);
+  return week === undefined ? {} : { week };
+}
+
+/**
+ * The Sprint called 「今週」, if one is: the running one, else the one being
+ * planned. The Backlog marks its Tasks 「今週」 by it.
+ */
+export function thisWeekSprintOf(
+  records: Records,
+  clock: Clock,
+): Sprint | undefined {
+  return records.sprints.find(
+    (s) => weekNameOf(s.start, records, clock) === '今週',
   );
 }
 

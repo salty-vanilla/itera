@@ -34,7 +34,7 @@ import {
   type Task,
 } from '@itera/domain';
 import type { Clock, Records } from './records';
-import { weekCallOf } from './sprint-choice';
+import { weekOf, type WeekName } from './sprint-choice';
 
 export interface PlanningArea {
   /** `null` for Tasks without an Area (「領域なし」). */
@@ -99,7 +99,7 @@ export interface PlanningData {
    * 「今週」, or 「来週」 while this week runs (#90): the words of the
    * screen follow it.
    */
-  readonly week: string;
+  readonly week?: WeekName;
   readonly today: LocalDate;
   readonly timeZone: Records['user']['timeZone'];
   /** Areas to plan with, in the person's order, then 領域なし. */
@@ -274,7 +274,7 @@ export function planningData(
   return {
     sprint,
     number: sprintNumber(sprint, records.sprints),
-    week: weekCallOf(sprint, records, clock),
+    ...weekOf(sprint, records, clock),
     today: clock.today,
     timeZone: records.user.timeZone,
     areas,

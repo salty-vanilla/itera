@@ -9,7 +9,7 @@ import {
   sprintAreaName,
   sprintNumber,
   sprintTotals,
-  totalPlanningValues,
+  retroFacts,
   type AreaColor,
   type AreaId,
   type CriterionPolicy,
@@ -25,7 +25,7 @@ import {
 } from '@itera/domain';
 import { daysBetween } from '@/lib/date-format';
 import type { Clock, Records } from './records';
-import { weekCallOf } from './sprint-choice';
+import { weekOf, type WeekName } from './sprint-choice';
 
 export interface RunningArea {
   /** `null` for Tasks without an Area (「領域なし」). */
@@ -75,8 +75,8 @@ export interface RunningData {
   readonly sprint: Sprint;
   /** 「Sprint 14」 (F25). */
   readonly number: number;
-  /** 「今週」, or 「Sprint N」 for one that has ended (#90). */
-  readonly week: string;
+  /** 「今週」; none for one that has ended (#90). */
+  readonly week?: WeekName;
   readonly today: LocalDate;
   /** 「2日目 / 7日」, absent before the first day and once it has ended. */
   readonly day?: { readonly index: number; readonly count: number };
@@ -85,7 +85,10 @@ export interface RunningData {
    * Once the Sprint has ended, the carried-over Tasks are in it too.
    */
   readonly plan: readonly RunningAreaPlan[];
-  /** The planned values of the Tasks in `plan`. */
+  /**
+   * The planned values of the Tasks in `plan`. Once ended, the total is the
+   * Retro's (retroFacts) and there are no per-Area totals.
+   */
   readonly totals: Pick<SprintTotals, 'total' | 'byArea'>;
   readonly availableHours: {
     readonly planned?: number;
@@ -155,8 +158,11 @@ export function runningData(
       const inArea = counted.filter((t) => t.task.areaId === areaId);
       // A Goal can be written for any Area of the Sprint, even without
       // Tasks (F16: it has no planned text then).
+      // Once ended, an Area with neither has nothing to show.
       const archived = areas.find((a) => a.id === areaId)?.archived ?? false;
-      if (goal === undefined && inArea.length === 0 && archived) return [];
+      if (goal === undefined && inArea.length === 0 && (archived || ended)) {
+        return [];
+      }
       return [
         {
           area: areaOf(areaId),
@@ -179,26 +185,24 @@ export function runningData(
   const criterion = records.criteria.find((c) => c.id === use?.criterionId);
   const scope = criterion?.policy.scope;
 
-  const valued = counted.map((t) => ({
-    areaId: t.task.areaId ?? null,
-    value: t.value,
-  }));
+  // Once ended, the planned total is the Retro's: carried-over Tasks
+  // count too (retroFacts), and it has no per-Area totals.
   const totals = ended
     ? {
-        total: totalPlanningValues(valued.map((v) => v.value)),
-        byArea: [...new Set(valued.map((v) => v.areaId))].map((areaId) => ({
-          areaId,
-          ...totalPlanningValues(
-            valued.filter((v) => v.areaId === areaId).map((v) => v.value),
-          ),
-        })),
+        total: retroFacts(sprint, {
+          tasks,
+          areas,
+          occurrences: records.occurrences,
+          sprints: records.sprints,
+        }).plannedTotal.withAdditions,
+        byArea: [],
       }
     : sprintTotals(sprint, { tasks, now: clock.now });
 
   return {
     sprint,
     number: sprintNumber(sprint, records.sprints),
-    week: weekCallOf(sprint, records, clock),
+    ...weekOf(sprint, records, clock),
     today: clock.today,
     ...(clock.today < sprint.start || ended
       ? {}

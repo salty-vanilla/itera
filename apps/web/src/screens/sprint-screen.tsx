@@ -3,7 +3,7 @@ import { Link, useSearch } from '@tanstack/react-router';
 import type { SprintHeaderProps } from '@/components/sprint/sprint-header';
 import { SprintHeader } from '@/components/sprint/sprint-header';
 import { formatDate, formatDateRange } from '@/lib/date-format';
-import { weekText } from '@/lib/week-text';
+import { weekCall, weekText } from '@/lib/week-text';
 import type { SprintChoice } from '@/store/sprint-choice';
 import { usePlanning } from '@/store/use-planning';
 import { useRunningSprint } from '@/store/use-running-sprint';
@@ -51,7 +51,7 @@ function Confirmed({ sprintId, steps }: { sprintId: SprintId; steps: Steps }) {
  */
 function NextSprint({ choice, steps }: { choice: SprintChoice; steps: Steps }) {
   const { current, previous } = choice;
-  const week = current.week ?? `Sprint ${current.number}`;
+  const week = weekCall(current.week, current.number);
   const before = previous?.sprint && {
     sprint: previous.sprint,
     number: previous.number,

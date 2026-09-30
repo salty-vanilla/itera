@@ -17,9 +17,8 @@ import { criterionName } from '@/lib/criterion-text';
 import { formatDateRange } from '@/lib/date-format';
 import { formatHours, formatPlanningTotal } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
-import { weekText } from '@/lib/week-text';
+import { weekCall, weekText, type WeekName } from '@/lib/week-text';
 import type { RunningData, RunningTask } from '@/store/running-view';
-import { isWeekName } from '@/store/sprint-choice';
 import { useRunningSprintActions } from '@/store/use-running-sprint';
 import { PastDays } from './past-days';
 
@@ -45,6 +44,7 @@ function RunningSprint({
   const byArea = data.totals.byArea;
   const { state } = data.sprint;
   const running = state === 'active';
+  const week = weekCall(data.week, data.number);
 
   const outlook = (
     <Outlook
@@ -70,7 +70,7 @@ function RunningSprint({
           )
         }
         title={`Sprint ${data.number}`}
-        week={isWeekName(data.week) ? data.week : undefined}
+        week={data.week}
         period={
           data.day === undefined
             ? period
@@ -110,7 +110,7 @@ function RunningSprint({
       <div className="grid grid-cols-1 gap-12 wide:grid-cols-[minmax(0,var(--spacing-pane-sprint))_var(--spacing-pane-side)]">
         <div className="flex min-w-0 flex-col gap-8">
           <h1 className="text-display-m text-ink">
-            {weekText(data.week, running ? 'の計画' : 'の計画と結果')}
+            {weekText(week, running ? 'の計画' : 'の計画と結果')}
           </h1>
           {data.plan.map((block) => {
             const total = byArea.find((t) => t.areaId === block.area.id);
@@ -133,7 +133,7 @@ function RunningSprint({
                     : (block.goal.plannedText ?? null)
                 }
                 removable={false}
-                week={data.week}
+                week={week}
                 onSave={
                   block.area.id === null || !running
                     ? undefined
@@ -184,8 +184,8 @@ function RunningRow({
   hasGoal,
 }: {
   item: RunningTask;
-  /** 「今週」, or 「Sprint N」 once ended (#90). */
-  week: string;
+  /** 「今週」; none once ended (#90). */
+  week: WeekName | undefined;
   /** In Review or closed: each Task says how it ended. */
   ended: boolean;
   hasGoal: boolean;
@@ -208,7 +208,8 @@ function RunningRow({
     ),
     count !== undefined && (
       <MetaItem key="r" icon={<Repeat aria-hidden />}>
-        {week} {count}回
+        {/* 「今週 3回」; an ended Sprint's count needs no name. */}
+        {week === undefined ? `${count}回` : `${week} ${count}回`}
       </MetaItem>
     ),
     hasGoal && sprintTask.goalLink === 'unlinked' && (

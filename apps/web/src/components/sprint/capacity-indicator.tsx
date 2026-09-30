@@ -38,7 +38,7 @@ type CapacityIndicatorProps = {
   /** Read-only after confirm. */
   readOnly?: boolean | undefined;
   /** 「今週」「来週」: the week the hours are for (#90). */
-  week?: string | undefined;
+  week: string;
   className?: string | undefined;
 };
 
@@ -122,7 +122,7 @@ function CapacityIndicator({
   areas,
   onAvailableHoursChange,
   readOnly = false,
-  week = '今週',
+  week,
   className,
 }: CapacityIndicatorProps) {
   const statement = capacityStatement(capacity);

@@ -6,6 +6,7 @@ const meta = {
   component: GoalBlock,
   parameters: { layout: 'padded' },
   args: {
+    week: '今週',
     area: { name: '研究', color: 2 },
     summary: '2件 · 7.5h',
     onSave: () => true,
