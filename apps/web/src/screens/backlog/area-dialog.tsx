@@ -169,13 +169,15 @@ function AreaEditor({
                 data-area={area.id}
                 className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border-soft py-2"
               >
-                <span className="flex min-w-0 flex-1 items-center gap-2">
+                {/* A long name keeps 12em; the buttons go under it when the row
+                    is narrower. */}
+                <span className="flex min-w-0 flex-[1_1_12em] items-center gap-2">
                   <AreaMark name={area.name} color={area.color} />
                   <span className="min-w-0 text-body text-ink wrap-anywhere">
                     {area.name}
                   </span>
                 </span>
-                <span className="flex shrink-0 gap-2">
+                <span className="ml-auto flex shrink-0 gap-2">
                   <Button
                     size="sm"
                     variant="quiet"
