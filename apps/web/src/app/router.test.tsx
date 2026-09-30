@@ -58,7 +58,7 @@ describe('routes', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: '今週、何が起きたか',
+        name: 'Sprint 2 で何が起きたか',
       }),
     ).toBeTruthy();
     expect(router.state.location.search).toEqual({ fixture: 'retro-reflect' });

@@ -15,6 +15,7 @@ import { TaskQuickAdd } from '@/components/task/task-quick-add';
 import { formatDate } from '@/lib/date-format';
 import { rowKeyHandlers } from '@/lib/row-keys';
 import { cn } from '@/lib/utils';
+import { weekText } from '@/lib/week-text';
 import type { CandidateRow, PlanningData } from '@/store/planning-view';
 import { usePlanningActions } from '@/store/use-planning';
 import { CarryOverText } from '../backlog/backlog-row';
@@ -53,8 +54,8 @@ function BacklogPane({
     toast.show({
       title:
         rows.length === 1
-          ? `「${rows[0]?.task.title}」を今週に入れました`
-          : `${rows.length}件を今週に入れました`,
+          ? `「${rows[0]?.task.title}」を${weekText(data.week, 'に入れました')}`
+          : `${rows.length}件を${weekText(data.week, 'に入れました')}`,
       action: {
         label: '元に戻す',
         onClick: () => actions.unchooseByTask(taskIds),
@@ -70,8 +71,8 @@ function BacklogPane({
     toast.show({
       title:
         rows.length === 1
-          ? `「${rows[0]?.task.title}」を今週から外しました`
-          : `${rows.length}件を今週から外しました`,
+          ? `「${rows[0]?.task.title}」を${weekText(data.week, 'から外しました')}`
+          : `${rows.length}件を${weekText(data.week, 'から外しました')}`,
       action: {
         label: '元に戻す',
         onClick: () => actions.chooseTasks(taskIds),
@@ -86,24 +87,40 @@ function BacklogPane({
     >
       <h2 className="text-subheading text-ink">Backlog</h2>
       <TaskQuickAdd
-        label="タスクを追加して今週に入れる"
+        label={`タスクを追加して${weekText(data.week, 'に入れる')}`}
         onAdd={(title) => actions.addAndChoose(title)}
       />
       <Group
         title="持ち越し"
         rows={candidates.carriedOver}
         slim={slim}
-        {...{ choose, unchoose, onOpenTask, onEstimateTask, today: data.today }}
+        {...{
+          choose,
+          unchoose,
+          onOpenTask,
+          onEstimateTask,
+          today: data.today,
+          week: data.week,
+        }}
       />
       <Group
         title="期限が近い"
         rows={candidates.dueSoon}
         slim={slim}
-        {...{ choose, unchoose, onOpenTask, onEstimateTask, today: data.today }}
+        {...{
+          choose,
+          unchoose,
+          onOpenTask,
+          onEstimateTask,
+          today: data.today,
+          week: data.week,
+        }}
       />
       {candidates.recurring.length > 0 && (
         <section className="flex flex-col gap-2">
-          <DividerLabel level={3}>今週発生する繰り返し</DividerLabel>
+          <DividerLabel level={3}>
+            {weekText(data.week, '発生する繰り返し')}
+          </DividerLabel>
           <ul className="flex flex-col">
             {candidates.recurring.map(({ task, occurrences }) => (
               <li
@@ -124,7 +141,7 @@ function BacklogPane({
                 {/* The group names the Task; each box is one occurrence. */}
                 <div
                   role="group"
-                  aria-label={`今週に含める回: ${task.title}`}
+                  aria-label={`${weekText(data.week, 'に含める回')}: ${task.title}`}
                   className="flex flex-wrap gap-x-4 gap-y-1"
                 >
                   {occurrences.map((o) => (
@@ -147,7 +164,14 @@ function BacklogPane({
         title="そのほか"
         rows={candidates.others}
         slim={slim}
-        {...{ choose, unchoose, onOpenTask, onEstimateTask, today: data.today }}
+        {...{
+          choose,
+          unchoose,
+          onOpenTask,
+          onEstimateTask,
+          today: data.today,
+          week: data.week,
+        }}
       />
     </div>
   );
@@ -162,6 +186,7 @@ function Group({
   onOpenTask,
   onEstimateTask,
   today,
+  week,
 }: {
   title: string;
   rows: readonly CandidateRow[];
@@ -171,6 +196,7 @@ function Group({
   onOpenTask: (taskId: TaskId) => void;
   onEstimateTask: (taskId: TaskId) => void;
   today: PlanningData['today'];
+  week: PlanningData['week'];
 }) {
   if (rows.length === 0) return null;
   const chosen = rows.filter((r) => r.chosen !== undefined);
@@ -180,7 +206,7 @@ function Group({
       <div className="flex items-center gap-2">
         <span className="grid size-target-touch shrink-0 place-items-center medium:size-target-min">
           <CheckboxControl
-            aria-label={`${title}をすべて今週に入れる`}
+            aria-label={`${title}をすべて${weekText(week, 'に入れる')}`}
             checked={all}
             indeterminate={chosen.length > 0 && !all}
             onCheckedChange={(checked) =>
@@ -205,6 +231,7 @@ function Group({
             row={row}
             slim={slim}
             today={today}
+            week={week}
             onToggle={(checked) => (checked ? choose([row]) : unchoose([row]))}
             onOpen={() => onOpenTask(row.task.id)}
             onEstimate={() => onEstimateTask(row.task.id)}
@@ -219,6 +246,7 @@ function CandidateItem({
   row,
   slim,
   today,
+  week,
   onToggle,
   onOpen,
   onEstimate,
@@ -226,6 +254,7 @@ function CandidateItem({
   row: CandidateRow;
   slim: boolean;
   today: PlanningData['today'];
+  week: PlanningData['week'];
   onToggle: (checked: boolean) => void;
   onOpen: () => void;
   onEstimate: () => void;
@@ -243,7 +272,7 @@ function CandidateItem({
     if (chosen)
       meta.push(
         <MetaItem key="w" className="text-ink-subtle">
-          今週
+          {week}
         </MetaItem>,
       );
   }
@@ -261,7 +290,7 @@ function CandidateItem({
         className="grid size-target-touch shrink-0 place-items-center medium:size-target-min"
       >
         <CheckboxControl
-          aria-label={`今週に入れる: ${task.title}`}
+          aria-label={`${weekText(week, 'に入れる')}: ${task.title}`}
           checked={chosen}
           onCheckedChange={onToggle}
         />

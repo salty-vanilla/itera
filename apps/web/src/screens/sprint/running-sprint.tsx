@@ -1,11 +1,14 @@
 import { Link } from '@tanstack/react-router';
-import { Info, Route } from 'lucide-react';
+import { Info, NotebookPen, Route } from 'lucide-react';
 import { useId } from 'react';
 import { buttonVariants } from '@/components/ui/button';
 import { Tag } from '@/components/ui/tag';
 import { AvailableHoursField } from '@/components/sprint/capacity-indicator';
 import { GoalBlock } from '@/components/sprint/goal-block';
-import { SprintHeader } from '@/components/sprint/sprint-header';
+import {
+  SprintHeader,
+  type SprintHeaderProps,
+} from '@/components/sprint/sprint-header';
 import { Estimate } from '@/components/task/estimate';
 import { MetaItem, TaskMetadata } from '@/components/task/task-metadata';
 import { TaskRow } from '@/components/task/task-row';
@@ -14,54 +17,101 @@ import { criterionName } from '@/lib/criterion-text';
 import { formatDateRange } from '@/lib/date-format';
 import { formatHours, formatPlanningTotal } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
+import { weekText } from '@/lib/week-text';
 import type { RunningData, RunningTask } from '@/store/running-view';
+import { isWeekName } from '@/store/sprint-choice';
 import { useRunningSprintActions } from '@/store/use-running-sprint';
-import { BeginPlanning } from '../begin-planning';
 import { PastDays } from './past-days';
 
-// The running Sprint (#51, patterns.md Sprint Planning › 確定). After
-// confirm: Status 「実行中」 (solid) with no stages, the way to Today, and
+// A confirmed Sprint (#51, patterns.md Sprint Planning › 確定).
+// Running: Status 「実行中」 (solid) with no stages, the way to Today, and
 // what may still change — the Goals' text (never removed, F16) and the
 // available hours — with the planned values beside them (invariant 18,
 // MVP 16). The Tasks' values are the plan fixed at confirm (invariant 16)
 // and the criterion's use is read only (invariant 37).
+// In Review or closed (#90): the same plan, read only, with how each Task
+// ended, and the way to its Retro. Nothing changes here any more.
 
-function RunningSprint({ data }: { data: RunningData }) {
+function RunningSprint({
+  data,
+  steps,
+}: {
+  data: RunningData;
+  /** The previous and next Sprints (#90). */
+  steps?: SprintHeaderProps['steps'];
+}) {
   const actions = useRunningSprintActions();
   const period = formatDateRange(data.sprint.start, data.sprint.end);
   const byArea = data.totals.byArea;
+  const { state } = data.sprint;
+  const running = state === 'active';
 
-  const outlook = <Outlook data={data} onHours={actions.setAvailableHours} />;
+  const outlook = (
+    <Outlook
+      data={data}
+      onHours={running ? actions.setAvailableHours : undefined}
+    />
+  );
 
   return (
     <div className="mx-auto flex min-h-full w-full max-w-[calc(var(--spacing-pane-sprint)+var(--spacing-pane-side)+var(--spacing-12))] flex-col gap-8 px-4 pt-6 pb-16 medium:px-6 medium:pt-8">
       <SprintHeader
         status={
-          <Tag tone="neutral" icon={Route}>
-            実行中
-          </Tag>
+          state === 'active' ? (
+            <Tag tone="neutral" icon={Route}>
+              実行中
+            </Tag>
+          ) : state === 'review' ? (
+            <Tag tone="neutral" icon={NotebookPen}>
+              振り返り中
+            </Tag>
+          ) : (
+            <Tag tone="done">完了</Tag>
+          )
         }
         title={`Sprint ${data.number}`}
+        week={isWeekName(data.week) ? data.week : undefined}
         period={
           data.day === undefined
             ? period
             : `${period} · ${data.day.index}日目 / ${data.day.count}日`
         }
+        steps={steps}
         actions={
-          <>
-            <BeginPlanning variant="secondary" />
+          running ? (
             <Link
               to="/today"
               className={cn(buttonVariants({ variant: 'primary' }))}
             >
               今日を開く
             </Link>
-          </>
+          ) : (
+            // Its Retro: to write while in Review, to read once closed.
+            <Link
+              to="/retro"
+              search={{ sprint: data.number }}
+              className={cn(
+                buttonVariants({
+                  variant: state === 'review' ? 'primary' : 'secondary',
+                }),
+              )}
+            >
+              {state === 'review' ? '振り返りを開く' : '振り返りを見る'}
+            </Link>
+          )
         }
-      />
+      >
+        {!running && (
+          <p className="text-help text-ink-muted">
+            確定したときの計画と、それぞれの結果です。ここでは変えられません。
+          </p>
+        )}
+      </SprintHeader>
       <div className="grid grid-cols-1 gap-12 wide:grid-cols-[minmax(0,var(--spacing-pane-sprint))_var(--spacing-pane-side)]">
         <div className="flex min-w-0 flex-col gap-8">
-          <h1 className="text-display-m text-ink">今週の計画</h1>
+          <h1 className="text-display-m text-ink">
+            {weekText(data.week, running ? 'の計画' : 'の計画と結果')}
+          </h1>
           {data.plan.map((block) => {
             const total = byArea.find((t) => t.areaId === block.area.id);
             const count = `${block.tasks.length}件`;
@@ -83,8 +133,9 @@ function RunningSprint({ data }: { data: RunningData }) {
                     : (block.goal.plannedText ?? null)
                 }
                 removable={false}
+                week={data.week}
                 onSave={
-                  block.area.id === null
+                  block.area.id === null || !running
                     ? undefined
                     : (text) =>
                         actions.setGoal(
@@ -99,6 +150,8 @@ function RunningSprint({ data }: { data: RunningData }) {
                       <li key={t.sprintTask.id}>
                         <RunningRow
                           item={t}
+                          week={data.week}
+                          ended={!running}
                           hasGoal={block.goal !== undefined}
                         />
                       </li>
@@ -108,10 +161,12 @@ function RunningSprint({ data }: { data: RunningData }) {
               </GoalBlock>
             );
           })}
-          <PastDays
-            days={data.pastDays}
-            onUndo={(r) => actions.undoPastDay(r.selection.id)}
-          />
+          {running && (
+            <PastDays
+              days={data.pastDays}
+              onUndo={(r) => actions.undoPastDay(r.selection.id)}
+            />
+          )}
         </div>
         {/* One Outlook: beside the plan from 1200px, under it below. */}
         <aside aria-label="時間と計画基準">
@@ -124,9 +179,15 @@ function RunningSprint({ data }: { data: RunningData }) {
 
 function RunningRow({
   item,
+  week,
+  ended,
   hasGoal,
 }: {
   item: RunningTask;
+  /** 「今週」, or 「Sprint N」 once ended (#90). */
+  week: string;
+  /** In Review or closed: each Task says how it ended. */
+  ended: boolean;
   hasGoal: boolean;
 }) {
   const { sprintTask, task, value } = item;
@@ -136,6 +197,10 @@ function RunningRow({
   // DESIGN.md Task Metadata order: carry-over, recurrence, Goal, notes.
   const meta = [
     sprintTask.outcome === 'done' && <MetaItem key="d">完了</MetaItem>,
+    // How it ended; 「持ち越し」 alone reads as coming from the week before.
+    ended && sprintTask.outcome === 'carriedOver' && (
+      <MetaItem key="d">持ち越し（未完了）</MetaItem>
+    ),
     sprintTask.carriedFrom !== undefined && (
       <MetaItem key="c" icon={<Carry aria-hidden />}>
         持ち越し
@@ -143,7 +208,7 @@ function RunningRow({
     ),
     count !== undefined && (
       <MetaItem key="r" icon={<Repeat aria-hidden />}>
-        今週 {count}回
+        {week} {count}回
       </MetaItem>
     ),
     hasGoal && sprintTask.goalLink === 'unlinked' && (
@@ -180,7 +245,8 @@ function Outlook({
   onHours,
 }: {
   data: RunningData;
-  onHours: (hours: number | null) => boolean;
+  /** Absent once the Sprint has ended: the hours are read only. */
+  onHours: ((hours: number | null) => boolean) | undefined;
 }) {
   const ids = useId();
   const { planned, current } = data.availableHours;
@@ -202,12 +268,23 @@ function Outlook({
               : formatHours(planned, { total: true })}
           </dd>
         </dl>
-        <AvailableHoursField
-          value={current}
-          onChange={onHours}
-          label="今の可用時間（時間）"
-          description="確定した後も変えられます。計画時の値は残ります。"
-        />
+        {onHours === undefined ? (
+          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-body">
+            <dt className="text-ink-muted">最後の可用時間</dt>
+            <dd className="text-right text-ink">
+              {current === undefined
+                ? '未入力'
+                : formatHours(current, { total: true })}
+            </dd>
+          </dl>
+        ) : (
+          <AvailableHoursField
+            value={current}
+            onChange={onHours}
+            label="今の可用時間（時間）"
+            description="確定した後も変えられます。計画時の値は残ります。"
+          />
+        )}
       </section>
       {data.criterion !== undefined && (
         <section
