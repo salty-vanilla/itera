@@ -88,15 +88,15 @@ describe('useToastClearance', () => {
     ).toBe('');
   });
 
-  it('adds no room where a stuck bar lifts the Toasts above it', async () => {
+  it('leaves the room before a stuck bar, where the Toasts are lifted above it', async () => {
     document.documentElement.style.setProperty('--toast-offset-above', '70px');
     const user = setup(rect(100, 40));
     await user.click(screen.getByRole('button', { name: '押す' }));
-    expect(
-      document
-        .querySelector('main')!
-        .style.getPropertyValue('--toast-clearance'),
-    ).toBe('');
+    const main = document.querySelector('main')!;
+    // No padding, which would lift the bar. The Toasts start at 700 in a
+    // screen that ends at 800, and the bar takes 70 of it: 30px to leave.
+    expect(main.style.getPropertyValue('--toast-clearance')).toBe('');
+    expect(main.style.getPropertyValue('--toast-above-room')).toBe('30px');
   });
 
   it('scrolls a pressed row up when a Toast would cover it', async () => {

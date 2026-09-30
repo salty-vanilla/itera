@@ -414,7 +414,9 @@ function TodayView({ data }: { data: TodayData }) {
 
         <section
           aria-labelledby="today-interrupts"
-          className="flex flex-col gap-2"
+          // Under 768px a Toast above the stuck Quick Add covers what is
+          // just before it: the room is left here (app/use-toast-clearance.ts).
+          className="flex flex-col gap-2 pb-[var(--toast-above-room,0px)]"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 id="today-interrupts" className="text-subheading text-ink">
