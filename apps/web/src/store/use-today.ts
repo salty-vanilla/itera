@@ -44,6 +44,8 @@ export function useTodayActions() {
       defer: (selectionId: DailySelectionId) => run(changes.defer(selectionId)),
       removeFromToday: (selectionId: DailySelectionId) =>
         run(changes.remove(selectionId)),
+      undoClose: (selectionId: DailySelectionId) =>
+        run(changes.undoClose(selectionId)),
       pause: (selectionId: DailySelectionId, hours?: number) =>
         run(changes.pause(selectionId, hours)),
       complete: (selectionId: DailySelectionId) =>
