@@ -42,6 +42,7 @@ type ToastKind =
   | 'added-to-today'
   | 'task-archived'
   | 'day-record-undone'
+  | 'interrupt-deleted'
   | 'save-failed';
 
 type ToastOptions = {

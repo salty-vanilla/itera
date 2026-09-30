@@ -11,16 +11,20 @@ import {
   undoCompleteFromBacklog,
   completeSelection,
   deferSelection,
+  deleteInterrupt,
+  editInterrupt,
   noteInterrupt,
   pauseSelection,
   recordActualTime,
   removeFromToday,
+  restoreInterrupt,
   selectForToday,
   skipSelection,
   startDay,
   startSelection,
   undoCompleteSelection,
 } from './today';
+import { retroFacts } from './retro-facts';
 import { updateTask, type Task } from './task';
 import {
   at,
@@ -578,6 +582,175 @@ describe('records', () => {
     expect(
       noteInterrupt(active(), { id: id('int-2'), text: ' ' }, ctx),
     ).toMatchObject({ ok: false });
+  });
+});
+
+describe('F38: interrupts can be edited and deleted while the Sprint runs', () => {
+  const noted = (): Sprint =>
+    unwrap(
+      noteInterrupt(
+        unwrap(
+          noteInterrupt(
+            active(),
+            { id: id('int-1'), text: '急な会議', minutes: 30 },
+            at('2026-09-28T01:00:00.000Z'),
+          ),
+        ),
+        { id: id('int-2'), text: '問い合わせ' },
+        at('2026-09-28T03:00:00.000Z'),
+      ),
+    );
+  const later = at('2026-09-28T05:00:00.000Z');
+  const review = (sprint: Sprint): Sprint => ({ ...sprint, state: 'review' });
+
+  it('edits the note and minutes, keeps the time, and leaves an Activity', () => {
+    const result = editInterrupt(
+      noted(),
+      { id: id('int-2'), text: ' 障害の問い合わせ ', minutes: 45 },
+      later,
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        activities: [
+          {
+            kind: 'interruptEdited',
+            at: later.now,
+            actor: 'user',
+            interruptId: 'int-2',
+          },
+        ],
+      },
+    });
+    expect(unwrap(result).interrupts).toEqual([
+      {
+        id: 'int-1',
+        at: instant('2026-09-28T01:00:00.000Z'),
+        text: '急な会議',
+        minutes: 30,
+      },
+      {
+        id: 'int-2',
+        at: instant('2026-09-28T03:00:00.000Z'),
+        text: '障害の問い合わせ',
+        minutes: 45,
+      },
+    ]);
+  });
+
+  it('clears the minutes when none are given', () => {
+    const sprint = unwrap(
+      editInterrupt(noted(), { id: id('int-1'), text: '急な会議' }, later),
+    );
+    expect(sprint.interrupts[0]).toEqual({
+      id: 'int-1',
+      at: instant('2026-09-28T01:00:00.000Z'),
+      text: '急な会議',
+    });
+  });
+
+  it('records nothing when nothing changed', () => {
+    const result = editInterrupt(
+      noted(),
+      { id: id('int-1'), text: '急な会議', minutes: 30 },
+      later,
+    );
+    expect(result).toMatchObject({ ok: true, value: { activities: [] } });
+  });
+
+  it('rejects an empty note, non-positive minutes and an unknown note', () => {
+    expect(
+      editInterrupt(noted(), { id: id('int-1'), text: ' ' }, later),
+    ).toMatchObject({ ok: false, error: { code: 'invalidInput' } });
+    expect(
+      editInterrupt(noted(), { id: id('int-1'), text: 'x', minutes: 0 }, later),
+    ).toMatchObject({ ok: false, error: { code: 'invalidInput' } });
+    expect(
+      editInterrupt(noted(), { id: id('int-9'), text: 'x' }, later),
+    ).toMatchObject({ ok: false, error: { code: 'notFound' } });
+    expect(deleteInterrupt(noted(), { id: id('int-9') }, later)).toMatchObject({
+      ok: false,
+      error: { code: 'notFound' },
+    });
+  });
+
+  it('deletes a note, leaving an Activity, and it leaves the Retro facts', () => {
+    const result = deleteInterrupt(noted(), { id: id('int-1') }, later);
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        activities: [
+          { kind: 'interruptDeleted', at: later.now, interruptId: 'int-1' },
+        ],
+      },
+    });
+    const sprint = unwrap(result);
+    expect(sprint.interrupts.map((n) => n.id)).toEqual(['int-2']);
+    const facts = retroFacts(review(sprint), {
+      tasks: [newTask()],
+      areas: [research, work],
+      occurrences: [],
+      sprints: [],
+    });
+    expect(facts.interrupts.map((n) => n.id)).toEqual(['int-2']);
+  });
+
+  it('an edit shows in the Retro facts', () => {
+    const sprint = unwrap(
+      editInterrupt(noted(), { id: id('int-1'), text: '臨時の会議' }, later),
+    );
+    const facts = retroFacts(review(sprint), {
+      tasks: [newTask()],
+      areas: [research, work],
+      occurrences: [],
+      sprints: [],
+    });
+    expect(facts.interrupts[0]).toMatchObject({ text: '臨時の会議' });
+  });
+
+  it('restores a deleted note in its place with its time', () => {
+    const before = noted();
+    const note = before.interrupts[0];
+    if (note === undefined) throw new Error('no note');
+    const deleted = unwrap(deleteInterrupt(before, { id: note.id }, later));
+    const result = restoreInterrupt(deleted, { note }, later);
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        activities: [{ kind: 'interruptRestored', interruptId: 'int-1' }],
+      },
+    });
+    expect(unwrap(result).interrupts).toEqual(before.interrupts);
+    expect(restoreInterrupt(before, { note }, later)).toMatchObject({
+      ok: false,
+    });
+    expect(
+      restoreInterrupt(
+        deleted,
+        { note: { ...note, at: instant('2026-09-28T06:00:00.000Z') } },
+        later,
+      ),
+    ).toMatchObject({ ok: false, error: { code: 'invalidInput' } });
+  });
+
+  it('invariant 40: after the Review starts the notes are fixed', () => {
+    const fixed = review(noted());
+    const note = fixed.interrupts[0];
+    if (note === undefined) throw new Error('no note');
+    for (const result of [
+      editInterrupt(fixed, { id: note.id, text: 'x' }, later),
+      deleteInterrupt(fixed, { id: note.id }, later),
+      restoreInterrupt(
+        { ...fixed, interrupts: fixed.interrupts.slice(1) },
+        { note },
+        later,
+      ),
+    ]) {
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'invalidTransition' },
+      });
+    }
   });
 });
 

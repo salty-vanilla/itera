@@ -1,6 +1,8 @@
 import type {
   AreaId,
   DailySelectionId,
+  InterruptNote,
+  InterruptNoteId,
   LocalDate,
   OccurrenceId,
   SprintTaskId,
@@ -59,6 +61,10 @@ export function useTodayActions() {
         run(changes.recordActual(selectionId, hours)),
       noteInterrupt: (text: string, minutes?: number) =>
         run(changes.interrupt(text, minutes)),
+      editInterrupt: (id: InterruptNoteId, text: string, minutes?: number) =>
+        run(changes.editNote(id, text, minutes)),
+      deleteInterrupt: (id: InterruptNoteId) => run(changes.deleteNote(id)),
+      restoreInterrupt: (note: InterruptNote) => run(changes.restoreNote(note)),
       addToToday: (title: string, areaId?: AreaId) =>
         run(changes.addAndChoose(title, areaId)),
       beginRetro: () => run(changes.beginRetro()),

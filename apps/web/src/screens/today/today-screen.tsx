@@ -2,6 +2,7 @@ import {
   id,
   type AreaId,
   type DailySelectionId,
+  type InterruptNote,
   type LocalDate,
   type TaskId,
 } from '@itera/domain';
@@ -11,10 +12,11 @@ import { AreaIndicator } from '@/components/ui/area-indicator';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Progress } from '@/components/ui/progress';
+import { useToast } from '@/components/ui/toast';
 import { AreaSelect } from '@/components/task/area-select';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
 import { formatDate, formatTime } from '@/lib/date-format';
-import { formatHours, formatPlanningTotal } from '@/lib/time-format';
+import { formatPlanningTotal } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { useToastOffsetAbove } from '@/lib/use-toast-offset';
 import { cn } from '@/lib/utils';
@@ -28,6 +30,7 @@ import { useTaskDetailLeave } from '../backlog/use-task-detail-leave';
 import { DayFocusScope, DayHeader, dateSearchOf } from './day-header';
 import { DayColumns, DayFrame } from './day-frame';
 import { ActualTime, type ActualTimeMode } from './actual-time';
+import { InterruptRow } from './interrupt-row';
 import { InterruptSheet } from './interrupt-sheet';
 import { OtherDay } from './other-day';
 import { TodayRow } from './today-row';
@@ -170,6 +173,10 @@ function TodayView({ data }: { data: TodayData }) {
   const backlog = useBacklog({});
   const [editing, setEditing] = useState<Editing | undefined>(undefined);
   const [interrupting, setInterrupting] = useState(false);
+  const [editingNote, setEditingNote] = useState<InterruptNote | undefined>(
+    undefined,
+  );
+  const toast = useToast();
   const [quickArea, setQuickArea] = useState('');
   // The Quick Add sticks to the bottom at every width: the Toast goes above
   // it, and the Quick Add does not move (DESIGN.md Toast).
@@ -235,6 +242,31 @@ function TodayView({ data }: { data: TodayData }) {
       document.querySelector<HTMLElement>(selector)?.focus(),
     );
   }, [data]);
+  // 消す: at once, with 「元に戻す」 in a Toast rather than a Dialog, since
+  // it can be undone (DESIGN.md Toast, F38). The focus goes to the next
+  // note's `…`, or to 「割り込みを記録」 when none is left.
+  const deleteInterrupt = (note: InterruptNote) => {
+    const index = data.interrupts.findIndex((n) => n.id === note.id);
+    const next = data.interrupts[index + 1] ?? data.interrupts[index - 1];
+    if (!actions.deleteInterrupt(note.id)) return;
+    toast.show({
+      kind: 'interrupt-deleted',
+      title: `割り込み「${note.text}」を消しました`,
+      action: {
+        label: '元に戻す',
+        onClick: () => actions.restoreInterrupt(note),
+      },
+    });
+    requestAnimationFrame(() =>
+      document
+        .querySelector<HTMLElement>(
+          next === undefined
+            ? '[data-action="note-interrupt"]'
+            : `[data-interrupt="${next.id}"] [data-action="interrupt-actions"]`,
+        )
+        ?.focus(),
+    );
+  };
   const editingRow = [...data.rows, ...data.closed].find(
     (r) => r.selection.id === editing?.selectionId,
   );
@@ -467,7 +499,11 @@ function TodayView({ data }: { data: TodayData }) {
             <h2 id="today-interrupts" className="text-subheading text-ink">
               割り込み
             </h2>
-            <Button size="sm" onClick={() => setInterrupting(true)}>
+            <Button
+              size="sm"
+              data-action="note-interrupt"
+              onClick={() => setInterrupting(true)}
+            >
               割り込みを記録
             </Button>
           </div>
@@ -478,19 +514,13 @@ function TodayView({ data }: { data: TodayData }) {
           ) : (
             <ul className="flex flex-col gap-1 text-body text-ink">
               {data.interrupts.map((n) => (
-                <li key={n.id} className="flex gap-3">
-                  <span className="shrink-0 text-meta leading-(--text-body--line-height) text-ink-muted">
-                    {formatTime(n.at, data.timeZone)}
-                  </span>
-                  <span>
-                    {n.text}
-                    {n.minutes !== undefined && (
-                      <span className="text-ink-muted">
-                        {' '}
-                        · {formatHours(n.minutes / 60)}
-                      </span>
-                    )}
-                  </span>
+                <li key={n.id} data-interrupt={n.id}>
+                  <InterruptRow
+                    note={n}
+                    time={formatTime(n.at, data.timeZone)}
+                    onEdit={() => setEditingNote(n)}
+                    onDelete={() => deleteInterrupt(n)}
+                  />
                 </li>
               ))}
             </ul>
@@ -555,6 +585,25 @@ function TodayView({ data }: { data: TodayData }) {
         onOpenChange={setInterrupting}
         onSubmit={(text, minutes) => actions.noteInterrupt(text, minutes)}
       />
+      {editingNote !== undefined && (
+        <InterruptSheet
+          key={editingNote.id}
+          open
+          onOpenChange={(open) => {
+            if (!open) setEditingNote(undefined);
+          }}
+          editing={{
+            text: editingNote.text,
+            ...(editingNote.minutes === undefined
+              ? {}
+              : { minutes: editingNote.minutes }),
+            time: formatTime(editingNote.at, data.timeZone),
+          }}
+          onSubmit={(text, minutes) =>
+            actions.editInterrupt(editingNote.id, text, minutes)
+          }
+        />
+      )}
 
       <Drawer
         open={openItem !== undefined}
