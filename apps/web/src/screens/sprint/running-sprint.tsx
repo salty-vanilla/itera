@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import { Info, NotebookPen, Route } from 'lucide-react';
+import { Info, Rewind, Route } from 'lucide-react';
 import { useId } from 'react';
 import { buttonVariants } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -60,7 +60,7 @@ function RunningSprint({
   );
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-[calc(var(--spacing-pane-sprint)+var(--spacing-pane-side)+var(--spacing-12))] flex-col gap-8 px-4 pt-6 pb-16 medium:px-6 medium:pt-8">
+    <div className="flex min-h-full w-full max-w-[calc(var(--spacing-pane-sprint)+var(--spacing-pane-side)+var(--spacing-12))] flex-col gap-8 px-4 pt-6 pb-16 medium:px-6 medium:pt-8">
       <SprintHeader
         status={
           state === 'active' ? (
@@ -68,7 +68,7 @@ function RunningSprint({
               実行中
             </Tag>
           ) : state === 'review' ? (
-            <Tag tone="neutral" icon={NotebookPen}>
+            <Tag tone="neutral" icon={Rewind}>
               振り返り中
             </Tag>
           ) : (
