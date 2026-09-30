@@ -75,6 +75,18 @@ describe('useToastClearance', () => {
     await vi.waitFor(() => expect(room()).toBe(''));
   });
 
+  it('adds no room where a stuck bar lifts the Toasts above it', async () => {
+    document.documentElement.style.setProperty('--toast-offset-above', '70px');
+    const user = setup(rect(100, 40));
+    await user.click(screen.getByRole('button', { name: '押す' }));
+    expect(
+      document
+        .querySelector('main')!
+        .style.getPropertyValue('--toast-clearance'),
+    ).toBe('');
+    document.documentElement.style.removeProperty('--toast-offset-above');
+  });
+
   it('scrolls a pressed row up when a Toast would cover it', async () => {
     const scrollBy = vi.fn();
     const user = setup(rect(680, 40, 20));
