@@ -4,6 +4,7 @@ import {
   capacityHeadline,
   capacityHeadlineSentences,
   capacityStatement,
+  capacityStatusLine,
 } from './capacity-indicator';
 
 const headline = (lo: number, hi: number, available: number) =>
@@ -31,12 +32,17 @@ describe('capacityHeadline (owner decision S5 in #93)', () => {
     expect(headline(17, 19, 14)).toBe('超過 3 〜 5h');
   });
 
-  it('keeps the statement as it was', () => {
-    expect(capacityStatement(capacityOf({ lo: 14.75, hi: 17.75 }, 17))).toEqual(
-      {
-        tone: 'tight',
-        text: '上限側では 0.75h 超える可能性があります。',
-      },
+  it('does not say the numbers again in the state while the difference crosses 0', () => {
+    const capacity = capacityOf({ lo: 14.75, hi: 17.75 }, 17);
+    expect(capacityStatement(capacity)).toEqual({
+      tone: 'tight',
+      text: '超える可能性',
+    });
+    expect(capacityStatusLine(capacity).text).toBe(
+      '超える可能性：下限なら 2.25h 残る · 上限なら 0.75h 超える',
     );
+    // Otherwise the line is the statement itself.
+    const over = capacityOf({ lo: 17, hi: 19 }, 14);
+    expect(capacityStatusLine(over)).toEqual(capacityStatement(over));
   });
 });

@@ -66,7 +66,10 @@ const areaLine = {
   none: 'border-area-none',
 } satisfies Record<AreaColor, string>;
 
-/** The status sentence and its tone (DESIGN.md: ok / tight / over / unknown). */
+/**
+ * The status sentence and its tone (DESIGN.md: ok / tight / over / unknown),
+ * said under the headline.
+ */
 export function capacityStatement(capacity: Capacity | undefined): {
   tone: 'ok' | 'tight' | 'over' | 'unknown';
   text: string;
@@ -84,12 +87,9 @@ export function capacityStatement(capacity: Capacity | undefined): {
       text: `超過 ${formatDifference(-remaining.hi, -remaining.lo)}`,
     };
   }
-  if (status === 'mayExceed') {
-    return {
-      tone: 'tight',
-      text: `上限側では ${formatHours(-remaining.lo, { total: true })} 超える可能性があります。`,
-    };
-  }
+  // The numbers are in the headline's two sentences; the state does not
+  // say them again (#93).
+  if (status === 'mayExceed') return { tone: 'tight', text: '超える可能性' };
   return { tone: 'ok', text: '使える時間の範囲に収まっています。' };
 }
 
@@ -151,6 +151,21 @@ export function capacityHeadlineSentences(
   return headline.kind === 'range'
     ? [`${headline.label} ${headline.value}`]
     : [partText(headline.lower), partText(headline.upper)];
+}
+
+/**
+ * The state where no headline is shown (the 確かめる summary, the 確定
+ * Dialog): the statement, and while the difference crosses 0 the headline's
+ * two sentences after it, each number said once: 「超える可能性：下限なら
+ * 1.75h 残る · 上限なら 0.25h 超える」 (#93).
+ */
+export function capacityStatusLine(
+  capacity: Capacity | undefined,
+): ReturnType<typeof capacityStatement> {
+  const statement = capacityStatement(capacity);
+  if (capacity?.status !== 'mayExceed') return statement;
+  const sentences = capacityHeadlineSentences(capacityHeadline(capacity));
+  return { ...statement, text: `${statement.text}：${sentences.join(' · ')}` };
 }
 
 const toneClass = {

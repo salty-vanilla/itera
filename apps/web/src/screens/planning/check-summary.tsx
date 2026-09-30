@@ -227,13 +227,11 @@ function Drivers({ data }: { data: PlanningData }) {
           </li>
         ))}
       </ul>
-      {capacity !== undefined && capacity.status !== 'within' && (
+      {/* While the difference crosses 0, the state line above already says
+          what is left at the lower end (#93). */}
+      {capacity?.status === 'exceeds' && (
         <p className="text-help text-ink-muted">
-          {capacity.remaining.hi === 0
-            ? '計画値が下限どおりなら、ちょうど収まります。'
-            : capacity.remaining.hi > 0
-              ? `計画値が下限どおりなら、残り ${formatDifference(capacity.remaining.hi, capacity.remaining.hi)} です。`
-              : `計画値が下限どおりでも、超過 ${formatDifference(-capacity.remaining.hi, -capacity.remaining.hi)} です。`}
+          {`計画値が下限どおりでも、超過 ${formatDifference(-capacity.remaining.hi, -capacity.remaining.hi)} です。`}
         </p>
       )}
     </section>

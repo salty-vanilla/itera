@@ -1,4 +1,7 @@
-import { capacityStatement } from '@/components/sprint/capacity-indicator';
+import {
+  capacityStatusLine,
+  type capacityStatement,
+} from '@/components/sprint/capacity-indicator';
 import { criterionName } from '@/lib/criterion-text';
 import {
   formatHours,
@@ -16,7 +19,10 @@ import type {
 // S4). The screens only lay it out.
 
 export interface PlanSummary {
-  /** Whether the plan fits: ok / tight / over / unknown. */
+  /**
+   * Whether the plan fits: ok / tight / over / unknown, with the numbers
+   * while the difference crosses 0 (`capacityStatusLine`).
+   */
   readonly statement: ReturnType<typeof capacityStatement>;
   /** 「14.75–17.75h」, or 「見積もりなし 3件」 with nothing estimated. */
   readonly total: string;
@@ -45,7 +51,7 @@ export function planSummary(data: PlanningData): PlanSummary {
   const tasks = data.plan.flatMap((p) => p.tasks);
   const leftOut = formatLeftOut(totals.total);
   return {
-    statement: capacityStatement(totals.capacity),
+    statement: capacityStatusLine(totals.capacity),
     total: formatPlanningSum(totals.total),
     ...(totals.capacity === undefined
       ? {}

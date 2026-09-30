@@ -394,9 +394,13 @@ describe('Planning — 確かめる', () => {
     );
     expect(outlook.textContent).not.toMatch(/−/);
     expect(line().textContent).not.toMatch(/−/);
-    expect(
-      within(outlook).getByText('上限側では 0.25h 超える可能性があります。'),
-    ).toBeTruthy();
+    // The state under the headline does not say the numbers again (#93),
+    // and it is read out with the headline.
+    const state = within(within(outlook).getByRole('status')).getByText(
+      '超える可能性',
+    );
+    expect(state.className).toContain('text-warning');
+    expect(outlook.textContent?.match(/0\.25h/g)).toHaveLength(1);
     expect(outlook.querySelector('.text-danger')).toBeNull();
 
     // Fits.
@@ -432,9 +436,13 @@ describe('Planning — 確かめる', () => {
       計画値の合計: '15.25–17.25h',
       タスク: expect.stringMatching(/^7件/),
     });
+    // Without a headline, the state line carries the two sentences, once.
     expect(
-      within(summary()).getByText('上限側では 0.25h 超える可能性があります。'),
+      within(summary()).getByText(
+        '超える可能性：下限なら 1.75h 残る · 上限なら 0.25h 超える',
+      ),
     ).toBeTruthy();
+    expect(summary().textContent?.match(/1\.75h/g)).toHaveLength(1);
     expect(
       within(summary()).getByText(/見積もりのないサブタスク 1件/),
     ).toBeTruthy();
@@ -454,7 +462,9 @@ describe('Planning — 確かめる', () => {
       タスク: fromSummary['タスク'],
     });
     expect(
-      within(dialog).getByText('上限側では 0.25h 超える可能性があります。'),
+      within(dialog).getByText(
+        '超える可能性：下限なら 1.75h 残る · 上限なら 0.25h 超える',
+      ),
     ).toBeTruthy();
     expect(rows(dialog)['使える時間']).toBe(`${hours}h`);
   });
@@ -572,7 +582,7 @@ describe('Planning — 確定', () => {
       ),
     );
     expect(within(dialog).getByText(/今回は使わない/)).toBeTruthy();
-    expect(within(dialog).getByText(/上限側では/)).toBeTruthy();
+    expect(within(dialog).getByText(/^超える可能性：/)).toBeTruthy();
     await userEvent.click(
       within(dialog).getByRole('button', { name: 'Sprint 2 を確定' }),
     );
