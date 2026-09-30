@@ -673,7 +673,7 @@ compact の原則：
 
 **Task Metadata** — タスクの属性を Badge ではなく文字とアイコンで 1 行に並べる（`meta` 12px、要素間 `spacing.3`）。順に Area Indicator（グループ化していない一覧だけ）、Deadline、優先度（高と低だけ「優先度 高」「優先度 低」と語で出す。通常は値がない扱いで出さない。色・アイコンで強調せず、並びも変えない。Issue #97）、持ち越し、繰り返し、Goal（`target`＋Goal 文を省略）、注記（`ink-subtle`）。値がない属性は出さない（「—」で埋めない）。グループ見出しと同じ情報を行に重ねない。
 
-**Task Quick Add** — 画面を中断せずにタイトルだけでタスクを追加する入力。`plus` の接頭アイコン、視覚ラベルなし（`aria-label` あり）、任意で Area の Select（既定は直前に使った Area）、ヒント（Enter で追加 / Esc で取り消し）。追加後も入力にフォーカスを残す。Backlog 上部、Planning、Today の下部（幅に関係なく下端に固定（sticky）。compact はタブバーの上）で同じ形。モーダルで追加させない。
+**Task Quick Add** — 画面を中断せずにタイトルだけでタスクを追加する入力。`plus` の接頭アイコン、視覚ラベルなし（`aria-label` あり）。`aria-label` とプレースホルダーには同じ語で入り先を書く（Backlog「Backlog にタスクを追加」、Today「今日やるタスクを追加」、Planning「今週のタスクを追加」。週の語は週の呼び名に従う）。任意で Area の Select（既定は直前に使った Area）、Secondary の「追加」ボタン（すべての画面・すべての幅に置く。compact では 44px。空のときに押しても何も起きない）、ヒント（Enter で追加 / Esc で取り消し。compact には出さない）。ボタンも Enter も同じ追加で、追加後も入力にフォーカスを残す。768px 以上では、入力・Area の Select・ボタンを 1 行に並べる。compact と Planning の Backlog の枠（細いので）では、入力を 1 行目に広げ、2 行目に Select とボタンを置く（プレースホルダーが切れないように）。Backlog 上部、Planning、Today の下部（幅に関係なく下端に固定（sticky）。compact はタブバーの上）で同じ形。モーダルで追加させない。
 
 **Estimate** — タスクを終えるまでの作業時間。本人の値と提案を見た目と語で区別する。
 

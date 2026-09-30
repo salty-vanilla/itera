@@ -169,10 +169,32 @@ describe('Planning — 選ぶ', () => {
     await renderAt('/sprint?fixture=planning-pick&stage=pick');
     await userEvent.type(
       within(backlogPane()).getByRole('textbox', {
-        name: 'タスクを追加して今週に入れる',
+        name: '今週のタスクを追加',
       }),
       '発表資料を見直す{Enter}',
     );
+    const task = lastSnapshot().records.tasks.find(
+      (t) => t.title === '発表資料を見直す',
+    );
+    expect(draft().tasks.some((t) => t.taskId === task?.id)).toBe(true);
+  });
+
+  // Issue #98
+  it('the 追加 button adds a Task and chooses it, with the week in the placeholder', async () => {
+    await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    const field = within(backlogPane()).getByRole('textbox', {
+      name: '今週のタスクを追加',
+    });
+    expect(field.getAttribute('placeholder')).toBe('今週のタスクを追加');
+    const add = within(backlogPane()).getByRole('button', { name: '追加' });
+    await userEvent.click(add);
+    expect(lastSnapshot().records.tasks.some((t) => t.title === '')).toBe(
+      false,
+    );
+    await userEvent.type(field, '発表資料を見直す');
+    await userEvent.click(add);
+    expect(field).toHaveProperty('value', '');
+    expect(document.activeElement).toBe(field);
     const task = lastSnapshot().records.tasks.find(
       (t) => t.title === '発表資料を見直す',
     );
@@ -190,7 +212,7 @@ describe('Planning — 選ぶ', () => {
     );
     await userEvent.type(
       within(backlogPane()).getByRole('textbox', {
-        name: 'タスクを追加して今週に入れる',
+        name: '今週のタスクを追加',
       }),
       '発表資料を見直す{Enter}',
     );
@@ -223,7 +245,7 @@ describe('Planning — 選ぶ', () => {
     expect(select).toHaveProperty('value', '');
     await userEvent.type(
       within(backlogPane()).getByRole('textbox', {
-        name: 'タスクを追加して今週に入れる',
+        name: '今週のタスクを追加',
       }),
       '机を片づける{Enter}',
     );
@@ -233,7 +255,7 @@ describe('Planning — 選ぶ', () => {
     await userEvent.selectOptions(select, '学習');
     await userEvent.type(
       within(backlogPane()).getByRole('textbox', {
-        name: 'タスクを追加して今週に入れる',
+        name: '今週のタスクを追加',
       }),
       '単語を覚える{Enter}',
     );
@@ -249,16 +271,23 @@ describe('Planning — 選ぶ', () => {
     expect(note.textContent).toContain('行が黄色の地とチェックになり');
   });
 
-  it('puts the Area Select under the field in the slim Backlog', async () => {
-    await renderAt('/sprint?fixture=planning-shape&stage=shape');
-    const form = backlogPane().querySelector<HTMLElement>(
-      '[data-slot="task-quick-add"]',
-    )!;
-    expect(form.firstElementChild?.className).toContain('flex-col');
-    expect(
-      within(form).getByRole('combobox', { name: '追加する Task の領域' }),
-    ).toBeTruthy();
-  });
+  // Issue #98: the pane is narrow at every stage, so the field has a row to
+  // itself and the Select and the button share the next.
+  it.each(['pick', 'shape'])(
+    'puts the Area Select and the 追加 button under the field (%s)',
+    async (stage) => {
+      await renderAt(
+        `/sprint?fixture=${stage === 'pick' ? 'planning-pick' : 'planning-shape'}&stage=${stage}`,
+      );
+      const form = backlogPane().querySelector<HTMLElement>(
+        '[data-slot="task-quick-add"]',
+      )!;
+      expect(form.firstElementChild?.className).not.toContain('medium:flex');
+      expect(
+        within(form).getByRole('combobox', { name: '追加する Task の領域' }),
+      ).toBeTruthy();
+    },
+  );
 });
 
 describe('Planning — 整える', () => {
@@ -517,7 +546,7 @@ describe('Planning — 確かめる', () => {
     await renderAt('/sprint?fixture=planning-pick&stage=pick');
     await userEvent.type(
       within(backlogPane()).getByRole('textbox', {
-        name: 'タスクを追加して今週に入れる',
+        name: '今週のタスクを追加',
       }),
       '発表資料を見直す{Enter}',
     );
@@ -819,7 +848,7 @@ describe('Planning — keys (#48)', () => {
   it('N goes to the Quick Add, where it is typed', async () => {
     await renderAt('/sprint?fixture=planning-pick&stage=pick');
     const field = within(backlogPane()).getByRole('textbox', {
-      name: 'タスクを追加して今週に入れる',
+      name: '今週のタスクを追加',
     });
     await userEvent.keyboard('n');
     expect(document.activeElement).toBe(field);
@@ -831,7 +860,7 @@ describe('Planning — keys (#48)', () => {
   it('⌘/Ctrl+Enter opens the confirm Dialog, also from a field', async () => {
     await renderAt('/sprint?fixture=planning-pick&stage=pick');
     const field = within(backlogPane()).getByRole('textbox', {
-      name: 'タスクを追加して今週に入れる',
+      name: '今週のタスクを追加',
     });
     const tasks = lastSnapshot().records.tasks.length;
     await userEvent.type(field, '発表資料を見直す');
