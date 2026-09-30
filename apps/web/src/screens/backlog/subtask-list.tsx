@@ -154,6 +154,9 @@ function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
           inputMode="decimal"
           suffix="h"
           placeholder="見積もりなし"
+          // Saved on leaving it, like the Task detail's own fields: a value
+          // left in error keeps the detail open (Issue #95).
+          data-detail-field
           value={hours}
           onChange={(e) => setHours(e.currentTarget.value)}
           onBlur={commit}

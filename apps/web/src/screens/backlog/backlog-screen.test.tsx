@@ -576,6 +576,27 @@ describe('Backlog', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
+  it('Detail (#95): a wrong subtask Estimate keeps the detail open, even folded', async () => {
+    await renderAt('/backlog?fixture=backlog-capture&task=task-bookshelf');
+    const detail = await screen.findByRole('dialog');
+    const more = within(detail).getByRole('button', { name: '詳しく' });
+    await userEvent.click(more);
+    await userEvent.type(
+      within(detail).getByRole('textbox', { name: 'サブタスクを追加' }),
+      '上の段{Enter}',
+    );
+    const hours = within(detail).getByRole('textbox', {
+      name: '見積もり（時間）: 上の段',
+    });
+    await userEvent.type(hours, '0');
+    await userEvent.click(more);
+    await userEvent.keyboard('{Escape}');
+    expect(screen.getByRole('dialog')).toBe(detail);
+    expect(more.getAttribute('aria-expanded')).toBe('true');
+    expect(document.activeElement).toBe(hours);
+    expect(hours).toHaveProperty('value', '0');
+  });
+
   it('優先度 (#97): 高 and 低 show in the row in words, 通常 does not, and the order stays', async () => {
     await renderAt('/backlog?fixture=backlog-capture');
     const rowOf = (name: string) =>

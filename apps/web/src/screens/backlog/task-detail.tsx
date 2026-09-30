@@ -317,7 +317,11 @@ function TaskDetail({
       '[data-detail-field][aria-invalid="true"]',
     );
     if (invalid !== null) {
-      setHeld(undefined);
+      // A subtask's Estimate may be in the fold: open it to show the error.
+      flushSync(() => {
+        setHeld(undefined);
+        if (foldRef.current?.contains(invalid)) setMore(true);
+      });
       invalid.focus();
       return;
     }
@@ -711,7 +715,7 @@ function TaskDetail({
         </p>
       </DrawerBody>
       {held !== undefined && (
-        <div className="shrink-0 border-t border-border-soft px-4 pt-3">
+        <div className="shrink-0 border-t border-border-soft px-4 py-3">
           <Notice
             live
             title={
