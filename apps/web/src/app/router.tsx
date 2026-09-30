@@ -3,6 +3,7 @@ import {
   createRoute,
   createRouter,
   redirect,
+  type ParsedLocation,
   retainSearchParams,
   type RouterHistory,
 } from '@tanstack/react-router';
@@ -79,9 +80,31 @@ const routeTree = rootRoute.addChildren([
   retroRoute,
 ]);
 
+/**
+ * The scroll rule (#111). The shell's `main` is what scrolls, so it is the
+ * one the router is told about (`scrollToTopSelectors`; app-shell.tsx
+ * marks it). Moving to another
+ * screen, or to another stage of one, opens it from the top; going back or
+ * forward restores where that entry was. Other changes to the search
+ * (a filter, an open detail) leave the scroll alone, which is why the
+ * router is asked only when the screen or the stage differs.
+ */
+function scrollOnNewView() {
+  let previous: string | undefined;
+  return ({ location }: { location: ParsedLocation }) => {
+    const search = location.search as { stage?: unknown };
+    const view = `${location.pathname}?${String(search.stage ?? '')}`;
+    const isNew = previous !== view;
+    previous = view;
+    return isNew;
+  };
+}
+
 export function createAppRouter(options: { history?: RouterHistory } = {}) {
   return createRouter({
     routeTree,
+    scrollRestoration: scrollOnNewView(),
+    scrollToTopSelectors: ['[data-scroll-restoration-id="main"]'],
     ...(options.history === undefined ? {} : { history: options.history }),
     defaultNotFoundComponent: NotFoundScreen,
   });

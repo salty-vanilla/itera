@@ -54,6 +54,8 @@ function AppShell({ children }: { children: ReactNode }) {
       />
       <main
         ref={mainRef}
+        // The router resets and restores this element's scroll (router.tsx).
+        data-scroll-restoration-id="main"
         className="min-h-0 flex-1 overflow-auto pb-[var(--toast-clearance,0px)]"
       >
         {children}

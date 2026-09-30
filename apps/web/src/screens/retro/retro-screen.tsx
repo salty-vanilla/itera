@@ -1,7 +1,7 @@
 import type { Sprint, SprintId } from '@itera/domain';
 import { useNavigate, useRouter, useSearch } from '@tanstack/react-router';
 import { NotebookPen, Route } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tag } from '@/components/ui/tag';
 import { useToast } from '@/components/ui/toast';
@@ -26,6 +26,7 @@ import { FactsPane } from './facts-pane';
 import { HandoffPane } from './handoff-pane';
 import { Materials } from './materials';
 import { ReflectPane } from './reflect-pane';
+import { retroStageOf } from './retro-stage';
 
 // Retro (docs/design/patterns.md Retro, PRD §5 D). As important as
 // Planning: not a report card, but where this week's facts become one
@@ -138,7 +139,18 @@ function RetroView({
   const router = useRouter();
   const toast = useToast();
   const actions = useRetroActions();
-  const stage = search.stage ?? 'facts';
+  // No stage in the URL (opened from the navigation): where the records
+  // say the writing has got to. The URL then names it, so that it stays put
+  // while the records change under it.
+  const fromRecords = retroStageOf(data);
+  const stage = search.stage ?? fromRecords;
+  useEffect(() => {
+    if (search.stage !== undefined) return;
+    void navigate({
+      search: (prev) => ({ ...prev, stage: fromRecords }),
+      replace: true,
+    });
+  }, [search.stage, fromRecords, navigate]);
   const [editing, setEditing] = useState<Editing | undefined>(undefined);
   const readOnly = data.sprint.state === 'closed';
   const setStage = (next: RetroStage) =>
