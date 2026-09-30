@@ -447,6 +447,7 @@ function TaskDetail({
           // chooses a field, so a phone does not raise its keyboard (#95).
           tabIndex={-1}
           data-autofocus={focusEstimate === undefined || undefined}
+          className="rounded-sm focus-visible:focus-ring"
         >
           {task.title}
         </DrawerTitle>
@@ -602,6 +603,8 @@ function TaskDetail({
             <div className="flex flex-wrap items-center gap-x-2">
               <Button
                 variant="quiet"
+                // The chevron lines up with the fields' left edge.
+                className="-ms-3"
                 aria-expanded={more}
                 aria-controls={moreId}
                 onClick={() => setMore((m) => !m)}
