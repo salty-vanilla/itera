@@ -24,6 +24,7 @@ import { useBacklog } from '@/store/use-backlog';
 import { useTaskActions } from '@/store/use-task-actions';
 import { useToday, useTodayActions } from '@/store/use-today';
 import { TaskDetail } from '../backlog/task-detail';
+import { useTaskDetailLeave } from '../backlog/use-task-detail-leave';
 import { DayFocusScope, DayHeader, dateSearchOf } from './day-header';
 import { DayColumns, DayFrame } from './day-frame';
 import { ActualTime, type ActualTimeMode } from './actual-time';
@@ -186,7 +187,8 @@ function TodayView({ data }: { data: TodayData }) {
     | undefined
   >(undefined);
 
-  const openTask = (taskId: TaskId | undefined) =>
+  const detail = useTaskDetailLeave();
+  const showTask = (taskId: TaskId | undefined) =>
     void navigate({
       search: (prev) =>
         taskId === undefined
@@ -195,13 +197,17 @@ function TodayView({ data }: { data: TodayData }) {
             )
           : { ...prev, task: taskId },
     });
+  // Closing the detail or opening another Task asks the detail first.
+  const openTask = (taskId: TaskId | undefined) =>
+    detail.leave(() => showTask(taskId), taskId !== undefined);
   const openItem =
     search.task === undefined ? undefined : backlog.item(search.task);
   const estimateFocus = useEstimateFocus(search.task);
-  const openEstimate = (taskId: TaskId) => {
-    estimateFocus.request(taskId);
-    openTask(taskId);
-  };
+  const openEstimate = (taskId: TaskId) =>
+    detail.leave(() => {
+      estimateFocus.request(taskId);
+      showTask(taskId);
+    }, true);
 
   const moved = (selectionId: DailySelectionId, done: boolean) => {
     if (done) focusNext.current = { selection: selectionId };
@@ -562,13 +568,14 @@ function TodayView({ data }: { data: TodayData }) {
               item={openItem}
               areas={backlog.areas}
               timeZone={backlog.timeZone}
-              onClose={() => openTask(undefined)}
+              onClose={() => showTask(undefined)}
               onComplete={() => {
                 if (taskActions.completeTask(openItem.task.id)) {
-                  openTask(undefined);
+                  showTask(undefined);
                 }
               }}
               focusEstimate={estimateFocus.of(openItem.task.id)}
+              leaveRef={detail.ref}
             />
           )}
         </DrawerContent>

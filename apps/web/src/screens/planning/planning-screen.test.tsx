@@ -611,3 +611,56 @@ describe('Planning — keys (#48)', () => {
     ).toBeNull();
   });
 });
+
+describe('Planning — the Task detail (#95)', () => {
+  it('a wrong value keeps the detail open; a valid one is saved on closing', async () => {
+    await renderAt(
+      '/sprint?fixture=planning-check&stage=check&task=task-onboarding',
+    );
+    const detail = await screen.findByRole('dialog');
+    const estimate = within(detail).getByRole('textbox', {
+      name: /見積もり（時間）/,
+    });
+    await userEvent.clear(estimate);
+    await userEvent.type(estimate, 'x');
+    await userEvent.keyboard('{Escape}');
+    expect(screen.getByRole('dialog')).toBe(detail);
+    expect(document.activeElement).toBe(estimate);
+    await userEvent.clear(estimate);
+    await userEvent.type(estimate, '2');
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(
+      lastSnapshot().records.tasks.find((t) => t.id === 'task-onboarding')
+        ?.estimate?.hours,
+    ).toBe(2);
+  });
+
+  it('opening another Task saves the field first, or stays on a wrong value', async () => {
+    await renderAt(
+      '/sprint?fixture=planning-pick&stage=pick&task=task-bookshelf',
+    );
+    const detail = await screen.findByRole('dialog');
+    const estimate = within(detail).getByRole('textbox', {
+      name: /見積もり（時間）/,
+    });
+    await userEvent.type(estimate, 'x');
+    const other =
+      within(backlogPane()).getByText('新メンバーのオンボーディング資料');
+    await userEvent.click(other);
+    expect(screen.getByRole('dialog').textContent).toContain('本棚を整理する');
+    expect(document.activeElement).toBe(estimate);
+    await userEvent.clear(estimate);
+    await userEvent.type(estimate, '1');
+    await userEvent.click(other);
+    await waitFor(() =>
+      expect(screen.getByRole('dialog').textContent).toContain(
+        '新メンバーのオンボーディング資料',
+      ),
+    );
+    expect(
+      lastSnapshot().records.tasks.find((t) => t.id === 'task-bookshelf')
+        ?.estimate?.hours,
+    ).toBe(1);
+  });
+});

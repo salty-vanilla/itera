@@ -1,5 +1,5 @@
 import type { DayOfWeek, LocalDate, RecurrencePattern } from '@itera/domain';
-import { useState } from 'react';
+import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
@@ -46,18 +46,48 @@ function patternOf(
 type Result =
   { kind: 'applied'; effectiveFrom: LocalDate } | { kind: 'unchanged' };
 
-function RecurrenceEditor({ item }: { item: BacklogItem }) {
+/** The choice the editor starts from: the latest version, or none yet. */
+function choiceOf(latest: RecurrencePattern | undefined) {
+  return {
+    freq: latest?.freq ?? 'weekly',
+    days: latest?.freq === 'weekly' ? latest.daysOfWeek : [],
+    dayOfMonth: latest?.freq === 'monthly' ? latest.dayOfMonth : 1,
+  } satisfies { freq: Freq; days: readonly DayOfWeek[]; dayOfMonth: number };
+}
+
+function RecurrenceEditor({
+  item,
+  pendingRef,
+}: {
+  item: BacklogItem;
+  /**
+   * For the Task detail's close (Issue #95): the button that applies a
+   * choice changed but not applied yet, or null.
+   */
+  pendingRef?: Ref<() => HTMLElement | null> | undefined;
+}) {
   const actions = useTaskActions();
   const { task, rule } = item;
   // A change starts from the latest version (it may begin next Sprint).
   const latest = rule?.latest;
-  const [freq, setFreq] = useState<Freq>(latest?.freq ?? 'weekly');
+  const [freq, setFreq] = useState<Freq>(() => choiceOf(latest).freq);
   const [days, setDays] = useState<readonly DayOfWeek[]>(
-    latest?.freq === 'weekly' ? latest.daysOfWeek : [],
+    () => choiceOf(latest).days,
   );
   const [dayOfMonth, setDayOfMonth] = useState(
-    latest?.freq === 'monthly' ? latest.dayOfMonth : 1,
+    () => choiceOf(latest).dayOfMonth,
   );
+  const applyRef = useRef<HTMLButtonElement>(null);
+  useImperativeHandle(pendingRef, () => () => {
+    const base = choiceOf(latest);
+    const changed =
+      freq !== base.freq ||
+      (freq === 'weekly' &&
+        (days.length !== base.days.length ||
+          days.some((d) => !base.days.includes(d)))) ||
+      (freq === 'monthly' && dayOfMonth !== base.dayOfMonth);
+    return changed ? applyRef.current : null;
+  });
   const [result, setResult] = useState<Result>();
   const [error, setError] = useState<string>();
 
@@ -151,7 +181,7 @@ function RecurrenceEditor({ item }: { item: BacklogItem }) {
         </p>
       )}
       <div>
-        <Button onClick={submit}>
+        <Button ref={applyRef} onClick={submit}>
           {rule === undefined ? '繰り返しにする' : 'ルールを変更'}
         </Button>
       </div>
