@@ -226,7 +226,11 @@ export type Activity =
       readonly date: LocalDate;
     })
   | (ActivityBase & {
-      readonly kind: 'interruptNoted';
+      readonly kind:
+        | 'interruptNoted'
+        | 'interruptEdited'
+        | 'interruptDeleted'
+        | 'interruptRestored';
       readonly sprintId: SprintId;
       readonly interruptId: InterruptNoteId;
     })

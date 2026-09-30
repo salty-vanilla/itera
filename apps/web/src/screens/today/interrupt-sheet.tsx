@@ -16,17 +16,27 @@ import { TextInput } from '@/components/ui/text-input';
 // 割り込みを記録 (patterns.md Today): a short note and optional minutes,
 // from its own entry, not a Task row. A Bottom Sheet on compact, the right
 // Drawer from medium up. Recording it rearranges nothing (invariant 29).
+// 直す uses the same surface, filled with the note (F38).
 
 type InterruptSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Returns whether it went through; the sheet then closes. */
   onSubmit: (text: string, minutes: number | undefined) => boolean;
+  /** 直す: the note as recorded, and the time it was noted (「10:00」). */
+  editing?: { text: string; minutes?: number; time: string };
 };
 
-function InterruptSheet({ open, onOpenChange, onSubmit }: InterruptSheetProps) {
-  const [text, setText] = useState('');
-  const [minutes, setMinutes] = useState('');
+function InterruptSheet({
+  open,
+  onOpenChange,
+  onSubmit,
+  editing,
+}: InterruptSheetProps) {
+  const [text, setText] = useState(editing?.text ?? '');
+  const [minutes, setMinutes] = useState(
+    editing?.minutes === undefined ? '' : String(editing.minutes),
+  );
   const [errors, setErrors] = useState<{ text?: string; minutes?: string }>({});
   const formRef = useRef<HTMLFormElement>(null);
   const change = (next: boolean) => {
@@ -69,9 +79,13 @@ function InterruptSheet({ open, onOpenChange, onSubmit }: InterruptSheetProps) {
           className="flex min-h-0 flex-1 flex-col"
         >
           <DrawerHeader>
-            <DrawerTitle>割り込みを記録</DrawerTitle>
+            <DrawerTitle>
+              {editing === undefined ? '割り込みを記録' : '割り込みを直す'}
+            </DrawerTitle>
             <DrawerDescription>
-              予定外の出来事をメモします。今日のタスクは組み替えません。
+              {editing === undefined
+                ? '予定外の出来事をメモします。今日のタスクは組み替えません。'
+                : `${editing.time} の記録`}
             </DrawerDescription>
           </DrawerHeader>
           <DrawerBody className="flex flex-col gap-4">
@@ -99,7 +113,9 @@ function InterruptSheet({ open, onOpenChange, onSubmit }: InterruptSheetProps) {
             <DrawerClose render={<Button variant="quiet" />}>
               キャンセル
             </DrawerClose>
-            <Button type="submit">記録する</Button>
+            <Button type="submit">
+              {editing === undefined ? '記録する' : '保存'}
+            </Button>
           </DrawerFooter>
         </form>
       </DrawerContent>
