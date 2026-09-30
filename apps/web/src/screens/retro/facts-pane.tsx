@@ -768,7 +768,9 @@ function FactRow({
     // The actions go under the words when both do not fit (a narrow screen
     // with two actions), rather than squeezing the words.
     <li className="flex min-h-row-touch flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-border-soft py-1 text-body text-ink medium:min-h-row-task">
-      <span className="min-w-0 grow basis-[12rem]">{children}</span>
+      <span className="min-w-0 grow basis-[12rem] [word-break:auto-phrase]">
+        {children}
+      </span>
       <span className="ms-auto shrink-0">{action}</span>
     </li>
   );

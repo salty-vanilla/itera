@@ -54,7 +54,8 @@ function SprintSummary({ items, className }: SprintSummaryProps) {
                 type="button"
                 onClick={item.onSelect}
                 aria-label={item.selectLabel}
-                className="flex items-baseline gap-1 rounded-xs text-link underline focus-visible:focus-ring"
+                // 44px to press on compact (accessibility.md); the words keep their size.
+                className="relative flex items-baseline gap-1 rounded-xs text-link underline after:absolute after:-inset-[calc((var(--spacing-target-touch)-2rem)/2)] medium:after:hidden focus-visible:focus-ring"
               >
                 <Value item={item} />
               </button>

@@ -222,7 +222,7 @@ function RetroView({
             </h1>
             {stage === 'facts' && !readOnly && (
               // Where the mark on a row leads, said once; the marks are optional.
-              <p className="text-help text-ink-muted">
+              <p className="text-help text-ink-muted [word-break:auto-phrase]">
                 気になった事実に「振り返りに使う」を付けると、「振り返る」で材料として並びます。付けなくても進めます。
               </p>
             )}
