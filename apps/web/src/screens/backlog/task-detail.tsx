@@ -681,10 +681,16 @@ function TaskDetail({
                   開始
                 </Button>
               )}
-              {/* While the field is open its own 今日はここまで records: two of
-                  the same look would do different things. */}
-              {facts.today?.resolution === 'started' && !pausing && (
-                <Button ref={pauseButtonRef} onClick={() => setPausing(true)}>
+              {/* While the field is open, its own 今日はここまで records: this one
+                  stays where it is, disabled, so that the buttons after it do
+                  not move under a second press. */}
+              {facts.today?.resolution === 'started' && (
+                <Button
+                  ref={pauseButtonRef}
+                  disabled={pausing}
+                  focusableWhenDisabled
+                  onClick={() => setPausing(true)}
+                >
                   今日はここまで
                 </Button>
               )}
