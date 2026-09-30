@@ -1,18 +1,46 @@
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { MouseEvent, ReactNode } from 'react';
+import { iconButtonVariants } from '@/components/ui/icon-button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import type { WeekName } from '@/lib/week-text';
 
 // DESIGN.md Components › Sprint Header. The Status Tag, the title
-// (`display-l`「Sprint 14」), the period, the actions on the right (one
-// Primary at most), and the stages drawn like a route map: stations joined
-// by a line, the current one marked in `here` with 「現在」 and
-// aria-current="step". The stages are a guide; any of them can be opened.
+// (`display-l`「Sprint 14」) between the links to the previous and next
+// Sprints, the week's name (「今週」「来週」) and the period, the actions on
+// the right (one Primary at most), and the stages drawn like a route map:
+// stations joined by a line, the current one marked in `here` with 「現在」
+// and aria-current="step". The stages are a guide; any of them can be
+// opened.
 
 type Stage = { id: string; label: string; href: string };
 
+/** Another Sprint to open: its number (F25) and where it is. */
+type SprintStep = { number: number; href: string };
+
 type SprintHeaderProps = {
-  status: ReactNode;
+  /** The Sprint's state. The next week has none before its Planning. */
+  status?: ReactNode;
   title: string;
+  /** 「今週」「来週」: the Sprint's name next to now (#90). */
+  week?: WeekName | undefined;
   period: string;
+  /** The previous and next Sprints (#90); a missing one is shown disabled. */
+  steps?:
+    | {
+        previous?: SprintStep | undefined;
+        next?: SprintStep | undefined;
+        /** Lets the router take over a plain click. */
+        onStep?: (
+          step: SprintStep,
+          event: MouseEvent<HTMLAnchorElement>,
+        ) => void;
+      }
+    | undefined;
   actions?: ReactNode;
   stages?: readonly Stage[] | undefined;
   currentStage?: string | undefined;
@@ -27,7 +55,9 @@ type SprintHeaderProps = {
 function SprintHeader({
   status,
   title,
+  week,
   period,
+  steps,
   actions,
   stages,
   currentStage,
@@ -45,12 +75,40 @@ function SprintHeader({
     >
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="flex min-w-0 flex-col gap-1">
-          <div>{status}</div>
-          <p className="text-display-l text-ink">{title}</p>
-          <p className="text-body text-ink-muted">{period}</p>
+          {/* Without a Status (the next week) its line is kept, so that the
+              title and its arrows stay where they are between Sprints. */}
+          <div className="min-h-5">{status}</div>
+          <div className="flex items-center gap-1">
+            {steps !== undefined && (
+              <StepLink
+                direction="previous"
+                step={steps.previous}
+                onStep={steps.onStep}
+              />
+            )}
+            <p className="text-display-l text-ink">{title}</p>
+            {steps !== undefined && (
+              <StepLink
+                direction="next"
+                step={steps.next}
+                onStep={steps.onStep}
+              />
+            )}
+          </div>
+          <p className="text-body text-ink-muted">
+            {week !== undefined && (
+              <>
+                <span className="font-bold text-ink">{week}</span> ·{' '}
+              </>
+            )}
+            {period}
+          </p>
         </div>
         {actions !== undefined && (
-          <div className="flex flex-wrap items-center gap-3">{actions}</div>
+          // At the right, also when it wraps under the title.
+          <div className="ms-auto flex flex-wrap items-center gap-3">
+            {actions}
+          </div>
         )}
       </div>
       {stages !== undefined && (
@@ -97,6 +155,54 @@ function SprintHeader({
       )}
       {children}
     </header>
+  );
+}
+
+/**
+ * ‹ and ›: a link to the previous or next Sprint, named in its Tooltip.
+ * At either end the arrow stays in place, disabled, and is not announced
+ * (there is nothing to go to).
+ */
+function StepLink({
+  direction,
+  step,
+  onStep,
+}: {
+  direction: 'previous' | 'next';
+  step: SprintStep | undefined;
+  onStep:
+    | ((step: SprintStep, event: MouseEvent<HTMLAnchorElement>) => void)
+    | undefined;
+}) {
+  const Arrow = direction === 'previous' ? ChevronLeft : ChevronRight;
+  const classes = iconButtonVariants({ variant: 'quiet', size: 'md' });
+  if (step === undefined) {
+    return (
+      <span aria-hidden data-disabled="" className={classes}>
+        <Arrow />
+      </span>
+    );
+  }
+  const label = `${direction === 'previous' ? '前' : '次'}の Sprint（Sprint ${step.number}）`;
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        // The Tooltip repeats the accessible name; do not read it twice.
+        describes={false}
+        render={
+          <a
+            href={step.href}
+            aria-label={label}
+            data-step={direction}
+            onClick={(event) => onStep?.(step, event)}
+            className={classes}
+          />
+        }
+      >
+        <Arrow aria-hidden />
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   );
 }
 

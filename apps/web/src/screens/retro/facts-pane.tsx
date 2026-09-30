@@ -29,39 +29,50 @@ import {
 
 // 事実を見る (patterns.md Retro): 「今週、何が起きたか」. Everything here is
 // derived from the records by `retroFacts` and never edited (invariant 40);
-// the person only marks facts (振り返りに使う), judges Goals and adds actual time
-// (F22). No scores and no rates; facts are written neutrally.
+// the person only marks facts (気になる), judges Goals and adds actual time
+// (F22). No scores and no rates; facts are written neutrally. Once the
+// Sprint is closed, all of it is read only (#90): no 気になる, no judging
+// and no actual time.
+
+type AddActual = (
+  target: ActualTarget,
+  title: string,
+  anchor: HTMLElement,
+) => void;
 
 type FactsPaneProps = {
   data: RetroData;
+  /** A closed Retro (#90). */
+  readOnly?: boolean | undefined;
   onPin: (pin: RetroPin) => void;
   onAssess: (areaId: AreaId, assessment: SelfAssessment | null) => void;
-  /** 実績を足す: opens the actual time surface by the pressed button. */
-  /** 実績を足す: `title` names it on the surface. */
-  onAddActual: (
-    target: ActualTarget,
-    title: string,
-    anchor: HTMLElement,
-  ) => void;
+  /**
+   * 実績を足す: opens the actual time surface by the pressed button;
+   * `title` names it on the surface.
+   */
+  onAddActual: AddActual;
   className?: string | undefined;
 };
 
 function FactsPane({
   data,
+  readOnly = false,
   onPin,
   onAssess,
-  onAddActual,
+  onAddActual: addActual,
   className,
 }: FactsPaneProps) {
   const { facts, used } = data;
   const pinned = (pin: RetroPin) => data.pins.some((p) => samePin(p, pin));
-  const toggle = (pin: RetroPin, subject: string) => (
-    <PinToggle
-      pinned={pinned(pin)}
-      subject={subject}
-      onToggle={() => onPin(pin)}
-    />
-  );
+  const toggle = (pin: RetroPin, subject: string) =>
+    readOnly ? null : (
+      <PinToggle
+        pinned={pinned(pin)}
+        subject={subject}
+        onToggle={() => onPin(pin)}
+      />
+    );
+  const onAddActual = readOnly ? undefined : addActual;
   // compact is not a smaller table: each Task is stacked (owner decision
   // in #57), so nothing needs scrolling sideways.
   const compact = !useMediaQuery(MEDIUM_UP, true);
@@ -198,7 +209,7 @@ function FactsPane({
           area={area}
           compact={compact}
           toggle={toggle}
-          onAssess={onAssess}
+          onAssess={readOnly ? undefined : onAssess}
           onAddActual={onAddActual}
         />
       ))}
@@ -223,16 +234,18 @@ function FactsPane({
                       <span className="flex flex-wrap justify-end gap-1">
                         {toggle({ kind: 'occurrence', id: o.id }, subject)}
                         {/* Per occurrence (#56): the time goes to its day. */}
-                        <AddActualButton
-                          subject={subject}
-                          onClick={(anchor) =>
-                            onAddActual(
-                              target,
-                              `${title}（${formatDate(o.scheduledDate)} の回）`,
-                              anchor,
-                            )
-                          }
-                        />
+                        {onAddActual !== undefined && (
+                          <AddActualButton
+                            subject={subject}
+                            onClick={(anchor) =>
+                              onAddActual(
+                                target,
+                                `${title}（${formatDate(o.scheduledDate)} の回）`,
+                                anchor,
+                              )
+                            }
+                          />
+                        )}
                       </span>
                     }
                   >
@@ -378,8 +391,9 @@ type AreaFactsProps = {
   /** Under 768px: Tasks stacked rather than in a table. */
   compact: boolean;
   toggle: (pin: RetroPin, subject: string) => ReactNode;
-  onAssess: FactsPaneProps['onAssess'];
-  onAddActual: FactsPaneProps['onAddActual'];
+  /** Absent in a closed Retro: the judgement is read only. */
+  onAssess: FactsPaneProps['onAssess'] | undefined;
+  onAddActual: AddActual | undefined;
 };
 
 function AreaFacts({
@@ -421,23 +435,29 @@ function AreaFacts({
             <p className="max-w-measure-read text-goal text-ink">{goal.text}</p>
             {toggle({ kind: 'goal', id: areaId }, `${shown.name}の目標`)}
           </div>
-          <RadioGroup<SelfAssessment | null>
-            legend="この目標を自分でどう見ますか"
-            description="システムは判定しません。選ばなくても次へ進めます。"
-            value={goal.selfAssessment ?? null}
-            onValueChange={(value) => onAssess(areaId, value)}
-            className="flex flex-col gap-2"
-          >
-            <div className="flex flex-wrap gap-x-6 gap-y-2">
-              {ASSESSMENTS.map((a) => (
-                <Radio<SelfAssessment | null>
-                  key={a.value}
-                  value={a.value}
-                  label={a.label}
-                />
-              ))}
-            </div>
-          </RadioGroup>
+          {onAssess === undefined ? (
+            goal.selfAssessment === undefined && (
+              <p className="text-meta text-ink-muted">自己判定：未判定</p>
+            )
+          ) : (
+            <RadioGroup<SelfAssessment | null>
+              legend="この目標を自分でどう見ますか"
+              description="システムは判定しません。選ばなくても次へ進めます。"
+              value={goal.selfAssessment ?? null}
+              onValueChange={(value) => onAssess(areaId, value)}
+              className="flex flex-col gap-2"
+            >
+              <div className="flex flex-wrap gap-x-6 gap-y-2">
+                {ASSESSMENTS.map((a) => (
+                  <Radio<SelfAssessment | null>
+                    key={a.value}
+                    value={a.value}
+                    label={a.label}
+                  />
+                ))}
+              </div>
+            </RadioGroup>
+          )}
         </div>
       )}
       {area.linked.length > 0 && (
@@ -469,7 +489,8 @@ type TaskFactsProps = {
   tasks: readonly TaskFact[];
   data: RetroData;
   toggle: AreaFactsProps['toggle'];
-  onAddActual: FactsPaneProps['onAddActual'];
+  /** Absent in a closed Retro, which has no actions at all. */
+  onAddActual: AddActual | undefined;
 };
 
 /** A group of Tasks: a table from 768px, stacked under it. */
@@ -497,6 +518,8 @@ function TaskTable({
 }: TaskFactsProps) {
   const cell = 'border-b border-border-soft px-2 py-2 align-top';
   const num = cn(cell, 'text-right whitespace-nowrap');
+  // A closed Retro has nothing to do on a row: no column for it.
+  const actions = onAddActual !== undefined;
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[53rem] table-fixed border-collapse text-body">
@@ -506,7 +529,7 @@ function TaskTable({
           <col className="w-[9rem] xl:w-[11%]" />
           <col className="w-[5rem] xl:w-[11%]" />
           <col className="w-[13rem] wide:w-[18rem] xl:w-[20%]" />
-          <col className="w-[9rem] wide:w-[13rem] xl:w-[15%]" />
+          {actions && <col className="w-[9rem] wide:w-[13rem] xl:w-[15%]" />}
         </colgroup>
         <caption className="pb-2 text-left text-subheading text-ink">
           {caption}
@@ -531,9 +554,11 @@ function TaskTable({
             >
               結果
             </th>
-            <th scope="col" className={cell}>
-              <span className="sr-only">操作</span>
-            </th>
+            {actions && (
+              <th scope="col" className={cell}>
+                <span className="sr-only">操作</span>
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -571,16 +596,18 @@ function TaskTable({
                   ))}
                 <DaysNote fact={t} />
               </td>
-              <td className={cn(cell, 'whitespace-nowrap')}>
-                <div className="flex flex-col items-end gap-1 wide:flex-row wide:justify-end">
-                  <TaskActions
-                    fact={t}
-                    actualDate={data.actualDate}
-                    toggle={toggle}
-                    onAddActual={onAddActual}
-                  />
-                </div>
-              </td>
+              {actions && (
+                <td className={cn(cell, 'whitespace-nowrap')}>
+                  <div className="flex flex-col items-end gap-1 wide:flex-row wide:justify-end">
+                    <TaskActions
+                      fact={t}
+                      actualDate={data.actualDate}
+                      toggle={toggle}
+                      onAddActual={onAddActual}
+                    />
+                  </div>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
@@ -637,14 +664,16 @@ function TaskList({
               )}
               <p className="text-body text-ink">{values.join(' · ')}</p>
               <p className="text-meta text-ink-muted">{outcome.join(' · ')}</p>
-              <div className="flex flex-wrap gap-2">
-                <TaskActions
-                  fact={t}
-                  actualDate={data.actualDate}
-                  toggle={toggle}
-                  onAddActual={onAddActual}
-                />
-              </div>
+              {onAddActual !== undefined && (
+                <div className="flex flex-wrap gap-2">
+                  <TaskActions
+                    fact={t}
+                    actualDate={data.actualDate}
+                    toggle={toggle}
+                    onAddActual={onAddActual}
+                  />
+                </div>
+              )}
             </li>
           );
         })}
@@ -664,7 +693,7 @@ function TaskActions({
   /** The day a Task's actual time goes to (RetroData.actualDate). */
   actualDate: RetroData['actualDate'];
   toggle: AreaFactsProps['toggle'];
-  onAddActual: FactsPaneProps['onAddActual'];
+  onAddActual: AddActual;
 }) {
   return (
     <>
@@ -789,7 +818,7 @@ function resultText(t: TaskFact, data: RetroData): string {
   return `回：完了 ${count(done)} · スキップ ${count(skipped)} · 未処理 ${count(missed)}`;
 }
 
-/** One fact in a list, with its 振り返りに使う at the right. */
+/** One fact in a list, with its 気になる at the right (none when closed). */
 function FactRow({
   children,
   action,

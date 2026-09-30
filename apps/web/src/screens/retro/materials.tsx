@@ -7,7 +7,8 @@ import { OUTCOME_WORDS, occurrenceWord, PinToggle } from './retro-words';
 
 // 振り返りの材料 (DESIGN.md RetroInsight, fact): the facts marked 振り返りに使う,
 // gathered at the side. Facts in `body`; the person's own words are
-// elsewhere, in `reflection`. Marking is optional.
+// elsewhere, in `reflection`. Marking is optional. A closed Retro lists
+// them without the toggles (#90).
 
 function pinText(pin: RetroPin, data: RetroData): string | undefined {
   const { facts } = data;
@@ -47,7 +48,7 @@ function pinText(pin: RetroPin, data: RetroData): string | undefined {
     }
     case 'availableHours': {
       const { planned, current } = facts.availableHours;
-      return `使える時間 計画時 ${planned === undefined ? '未入力' : formatHours(planned, { total: true })} → 今 ${current === undefined ? '未入力' : formatHours(current, { total: true })}`;
+      return `使える時間計画時 ${planned === undefined ? '未入力' : formatHours(planned, { total: true })} → 今 ${current === undefined ? '未入力' : formatHours(current, { total: true })}`;
     }
   }
 }
@@ -59,7 +60,8 @@ function Materials({
   className,
 }: {
   data: RetroData;
-  onPin: (pin: RetroPin) => void;
+  /** Absent in a closed Retro: read only. */
+  onPin: ((pin: RetroPin) => void) | undefined;
   headingLevel?: 2 | 3;
   className?: string | undefined;
 }) {
@@ -77,7 +79,9 @@ function Materials({
       <Heading className="text-subheading text-ink">振り返りの材料</Heading>
       {items.length === 0 ? (
         <p className="text-help text-ink-muted">
-          事実に「振り返りに使う」の印を付けると、ここに集まります。付けなくても先へ進めます。
+          {onPin === undefined
+            ? '「振り返りに使う」の印を付けた事実はありません。'
+            : '事実に「振り返りに使う」の印を付けると、ここに集まります。付けなくても先へ進めます。'}
         </p>
       ) : (
         <ul className="flex flex-col border-t border-border-soft">
@@ -87,7 +91,9 @@ function Materials({
               className="flex items-center justify-between gap-2 border-b border-border-soft py-1 text-body text-ink"
             >
               <span className="min-w-0">{text}</span>
-              <PinToggle pinned subject={text} onToggle={() => onPin(pin)} />
+              {onPin !== undefined && (
+                <PinToggle pinned subject={text} onToggle={() => onPin(pin)} />
+              )}
             </li>
           ))}
         </ul>

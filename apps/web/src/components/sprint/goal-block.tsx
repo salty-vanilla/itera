@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { weekText } from '@/lib/week-text';
 
 // DESIGN.md Components › Goal. Sprint × Area: 「今週どんな状態にしたいか」.
 // A `border` rule on top, the heading (Area Indicator heading, the number of
@@ -18,6 +19,8 @@ type GoalBlockProps = {
   /** 「3件 · 8–10h」 */
   summary?: string | undefined;
   goal?: string | undefined;
+  /** 「今週」「来週」, or 「Sprint N」: the week the Goal is for (#90). */
+  week: string;
   /** The heading level; the screen's h1 is followed by h2 by default. */
   level?: 2 | 3 | undefined;
   /** Saves the text; an empty text removes the Goal. Returns success. */
@@ -47,6 +50,7 @@ function GoalBlock({
   area,
   summary,
   goal,
+  week,
   level = 2,
   onSave,
   removable = true,
@@ -144,7 +148,7 @@ function GoalBlock({
           }}
         >
           <Field
-            label="目標（今週の終わりにどんな状態にしたいか）"
+            label={`目標（${weekText(week, 'の終わりにどんな状態にしたいか')}）`}
             necessity="optional"
             description={
               removable
@@ -199,9 +203,12 @@ function GoalBlock({
               + 目標を書く
             </Button>
           )}
-          <p className="text-help text-ink-muted">
-            この領域の目標は任意です。タスクだけでも計画できます。
-          </p>
+          {/* Only where a Goal can be written: not read only, not 領域なし. */}
+          {onSave !== undefined && (
+            <p className="text-help text-ink-muted">
+              この領域の目標は任意です。タスクだけでも計画できます。
+            </p>
+          )}
         </div>
       )}
 

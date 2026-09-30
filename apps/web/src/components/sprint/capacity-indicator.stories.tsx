@@ -12,7 +12,12 @@ const meta = {
   title: 'Components/Capacity Indicator',
   component: CapacityIndicator,
   parameters: { layout: 'padded' },
-  args: { total, areas, onAvailableHoursChange: () => true },
+  args: {
+    total,
+    areas,
+    week: '今週',
+    onAvailableHoursChange: () => true,
+  },
   decorators: [(Story) => <div className="max-w-pane-side">{Story()}</div>],
 } satisfies Meta<typeof CapacityIndicator>;
 

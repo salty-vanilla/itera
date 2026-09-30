@@ -17,12 +17,16 @@ import {
 import { Tag } from '@/components/ui/tag';
 import { useToast } from '@/components/ui/toast';
 import { capacityHeadline } from '@/components/sprint/capacity-indicator';
-import { SprintHeader } from '@/components/sprint/sprint-header';
-import { formatDateRange } from '@/lib/date-format';
+import {
+  SprintHeader,
+  type SprintHeaderProps,
+} from '@/components/sprint/sprint-header';
+import { formatDate, formatDateRange } from '@/lib/date-format';
 import { isTyping } from '@/lib/row-keys';
 import { formatPlanningSum } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { cn } from '@/lib/utils';
+import { weekCall, weekText } from '@/lib/week-text';
 import type { PlanningData } from '@/store/planning-view';
 import { useBacklog } from '@/store/use-backlog';
 import { usePlanningActions } from '@/store/use-planning';
@@ -30,6 +34,7 @@ import { useTaskActions } from '@/store/use-task-actions';
 import { TaskDetail } from '../backlog/task-detail';
 import { BacklogPane } from './backlog-pane';
 import { ConfirmDialog } from './confirm-dialog';
+import { sprintSearchOf } from '../sprint-steps';
 import { OutlookPane } from './outlook-pane';
 import { PlanPane, type Stage } from './plan-pane';
 
@@ -54,6 +59,8 @@ export const STAGES: readonly { id: Stage; label: string }[] = [
 ];
 
 export interface SprintSearch {
+  /** The Sprint to open, by number (#90). Absent: the current one. */
+  readonly sprint?: number;
   readonly stage?: Stage;
   /** The criterion is used unless the Check switches it off. */
   readonly criterion?: 'off';
@@ -65,6 +72,7 @@ export function validateSprintSearch(
 ): SprintSearch {
   const stage = STAGES.find((s) => s.id === search.stage)?.id;
   return {
+    ...sprintSearchOf(search),
     ...(stage === undefined ? {} : { stage }),
     ...(search.criterion === 'off' ? { criterion: 'off' as const } : {}),
     ...(typeof search.task === 'string'
@@ -73,9 +81,13 @@ export function validateSprintSearch(
   };
 }
 
-type PlanningScreenProps = { data: PlanningData };
+type PlanningScreenProps = {
+  data: PlanningData;
+  /** The previous and next Sprints (#90). */
+  steps: SprintHeaderProps['steps'];
+};
 
-function PlanningScreen({ data }: PlanningScreenProps) {
+function PlanningScreen({ data, steps }: PlanningScreenProps) {
   const search = useSearch({ from: '/sprint' });
   const navigate = useNavigate({ from: '/sprint' });
   const router = useRouter();
@@ -185,7 +197,9 @@ function PlanningScreen({ data }: PlanningScreenProps) {
         <SprintHeader
           status={<Tag tone="draft">計画中 · 未確定</Tag>}
           title={`Sprint ${data.number}`}
+          week={data.week}
           period={formatDateRange(data.sprint.start, data.sprint.end)}
+          steps={steps}
           stages={STAGES.map((s) => ({
             id: s.id,
             label: s.label,
@@ -222,22 +236,31 @@ function PlanningScreen({ data }: PlanningScreenProps) {
               {blocked && (
                 <div
                   id={reasonId}
-                  className="flex flex-col items-end gap-1 text-help text-ink-muted"
+                  className="flex max-w-measure-read flex-col items-end gap-1 text-right text-help text-ink-muted"
                 >
-                  {data.blockers.includes('previousRetroOpen') && (
-                    <p>
-                      前の Sprint の振り返りを完了すると確定できます。
-                      <Link
-                        to="/retro"
-                        className="ms-1 text-link underline focus-visible:focus-ring"
-                      >
-                        振り返りを開く
-                      </Link>
-                    </p>
-                  )}
+                  {data.blockers.includes('previousRetroOpen') &&
+                    data.previous !== undefined && (
+                      <p>
+                        前の Sprint の振り返りを完了すると確定できます。
+                        {data.previous.state === 'active' &&
+                          // F21: its Retro starts on its last day.
+                          `Sprint ${data.previous.number} の振り返りは ${formatDate(data.previous.end)} から始められます。`}
+                        <Link
+                          to="/retro"
+                          search={{ sprint: data.previous.number }}
+                          className="ms-1 text-link underline focus-visible:focus-ring"
+                        >
+                          振り返りを開く
+                        </Link>
+                      </p>
+                    )}
                   {data.blockers.includes('inactiveTasks') && (
                     <p>
-                      完了・アーカイブした Task を今週から外すと確定できます。
+                      完了・アーカイブした Task を
+                      {weekText(
+                        weekCall(data.week, data.number),
+                        'から外すと確定できます。',
+                      )}
                     </p>
                   )}
                 </div>

@@ -1,8 +1,9 @@
 import { useLocation, useNavigate, useRouter } from '@tanstack/react-router';
 import { Inbox, NotebookPen, Route, Sun } from 'lucide-react';
-import type { MouseEvent, ReactElement, ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { Navigation, type NavigationItem } from '@/components/ui/navigation';
 import type { ScreenId } from '@/fixtures/states';
+import { isPlainClick } from '@/lib/plain-click';
 import { useAppOverview } from '@/store/use-app-overview';
 import { screens } from './screens';
 
@@ -12,17 +13,6 @@ const icons: Record<ScreenId, ReactElement> = {
   backlog: <Inbox aria-hidden />,
   retro: <NotebookPen aria-hidden />,
 };
-
-/** A plain left click; others (a new tab, a download) stay with the browser. */
-function isPlainClick(event: MouseEvent<HTMLAnchorElement>): boolean {
-  return (
-    event.button === 0 &&
-    !event.metaKey &&
-    !event.ctrlKey &&
-    !event.shiftKey &&
-    !event.altKey
-  );
-}
 
 /**
  * The app's frame (DESIGN.md Layout › Responsive, Navigation): the sidebar
@@ -39,7 +29,8 @@ function AppShell({ children }: { children: ReactNode }) {
     id: screen.id,
     label: screen.label,
     icon: icons[screen.id],
-    // The fixture search parameter is kept (ADR 0005).
+    // The fixture search parameter is kept (ADR 0005); the Sprint and the
+    // day are not, so the navigation opens the current ones (#90).
     href: router.buildLocation({ to: screen.path }).href,
     ...(screen.id === 'backlog' ? { count: backlogCount } : {}),
   }));

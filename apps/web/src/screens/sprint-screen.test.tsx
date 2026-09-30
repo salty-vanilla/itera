@@ -1,0 +1,283 @@
+import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createAppRouter } from '@/app/router';
+import { TooltipProvider } from '@/components/ui/tooltip';
+
+// Any Sprint by its number in the URL, stepping between them, and the
+// week's words (#90).
+
+afterEach(cleanup);
+beforeEach(() => {
+  vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+});
+
+async function renderAt(url: string) {
+  const router = createAppRouter({
+    history: createMemoryHistory({ initialEntries: [url] }),
+  });
+  render(
+    <TooltipProvider>
+      <RouterProvider router={router} />
+    </TooltipProvider>,
+  );
+  await screen.findByRole('heading', { level: 1 });
+  return router;
+}
+
+/** The Sprint Header's title, 「Sprint 2」. */
+const title = () =>
+  document.querySelector('[data-slot="sprint-header"] .text-display-l')
+    ?.textContent;
+/** The Sprint Header's Status Tag. */
+const status = () =>
+  document.querySelector('[data-slot="sprint-header"] [data-slot="tag"]')
+    ?.textContent;
+const step = (name: string) => screen.getByRole('link', { name });
+const nav = (name: string) => screen.getAllByRole('link', { name })[0]!;
+
+describe('Sprint — by number (#90)', () => {
+  it('opens a past, the current and the next Sprint by number', async () => {
+    await renderAt('/sprint?fixture=today-daytime&sprint=1');
+    expect(title()).toBe('Sprint 1');
+    expect(status()).toBe('完了');
+    cleanup();
+
+    await renderAt('/sprint?fixture=today-daytime&sprint=2');
+    expect(title()).toBe('Sprint 2');
+    expect(status()).toBe('実行中');
+    cleanup();
+
+    await renderAt('/sprint?fixture=today-daytime&sprint=3');
+    expect(title()).toBe('Sprint 3');
+    expect(
+      screen.getByRole('heading', {
+        level: 1,
+        name: '来週の計画はまだありません',
+      }),
+    ).toBeTruthy();
+  });
+
+  it.each(['abc', '0', '-1', '1.5', '9'])(
+    'opens the current Sprint for ?sprint=%s',
+    async (value) => {
+      await renderAt(`/sprint?fixture=today-daytime&sprint=${value}`);
+      expect(title()).toBe('Sprint 2');
+      expect(status()).toBe('実行中');
+    },
+  );
+
+  it('steps with ‹ ›, and the browser goes back to the same Sprint', async () => {
+    const router = await renderAt('/sprint?fixture=today-daytime');
+    await userEvent.click(step('前の Sprint（Sprint 1）'));
+    await waitFor(() => expect(title()).toBe('Sprint 1'));
+    expect(router.state.location.search).toEqual({
+      fixture: 'today-daytime',
+      sprint: 1,
+    });
+    // Sprint 1 is the first: no link before it.
+    expect(screen.queryByRole('link', { name: /前の Sprint/ })).toBeNull();
+
+    await userEvent.click(step('次の Sprint（Sprint 2）'));
+    await waitFor(() => expect(title()).toBe('Sprint 2'));
+    await act(() => router.history.back());
+    await waitFor(() => expect(title()).toBe('Sprint 1'));
+    await act(() => router.history.forward());
+    await waitFor(() => expect(title()).toBe('Sprint 2'));
+  });
+
+  it('opens the same Sprint again from its URL (a reload, a new tab)', async () => {
+    const router = await renderAt('/sprint?fixture=today-daytime');
+    await userEvent.click(step('前の Sprint（Sprint 1）'));
+    await waitFor(() => expect(title()).toBe('Sprint 1'));
+    const { href } = router.state.location;
+    cleanup();
+    await renderAt(href);
+    expect(title()).toBe('Sprint 1');
+    expect(status()).toBe('完了');
+  });
+
+  it('shows a closed Sprint read only, with how each Task ended', async () => {
+    await renderAt('/sprint?fixture=today-daytime&sprint=1');
+    expect(
+      screen.getByRole('heading', {
+        level: 1,
+        name: 'Sprint 1 の計画と結果',
+      }),
+    ).toBeTruthy();
+    // Not 「今週」 or 「来週」: the header names it by number only.
+    expect(document.body.textContent).not.toMatch(/今週|来週/);
+    expect(screen.queryByRole('button', { name: /編集|目標を書く/ })).toBe(
+      null,
+    );
+    expect(screen.queryByRole('textbox')).toBeNull();
+    expect(screen.getAllByText('完了').length).toBeGreaterThan(1);
+    expect(step('振り返りを見る').getAttribute('href')).toBe(
+      '/retro?sprint=1&fixture=today-daytime',
+    );
+  });
+});
+
+describe('Sprint — the next week (#90)', () => {
+  it('says when it can be confirmed before its Planning starts', async () => {
+    const router = await renderAt('/sprint?fixture=today-daytime');
+    // The running Sprint no longer starts the next Planning.
+    expect(screen.queryByRole('button', { name: /計画を始める/ })).toBeNull();
+    await userEvent.click(step('次の Sprint（Sprint 3）'));
+    await screen.findByRole('heading', {
+      level: 1,
+      name: '来週の計画はまだありません',
+    });
+    expect(
+      screen.getByText(
+        /確定できるのは、前の Sprint（Sprint 2）の振り返り\s*を完了してからです。/,
+      ).textContent,
+    ).toContain('Sprint 2 の振り返りは、最終日の 10/4 (日) から始められます。');
+    // The last one: no Sprint after the next week.
+    expect(screen.queryByRole('link', { name: /次の Sprint/ })).toBeNull();
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Sprint 3 の計画を始める' }),
+    );
+    expect(router.state.location.search).toMatchObject({ sprint: 3 });
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: '来週、何を進めますか',
+      }),
+    ).toBeTruthy();
+  });
+
+  it('keeps the navigation on the running Sprint while the next is planned', async () => {
+    const router = await renderAt('/sprint?fixture=today-daytime&sprint=3');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Sprint 3 の計画を始める' }),
+    );
+    await screen.findByRole('heading', {
+      level: 1,
+      name: '来週、何を進めますか',
+    });
+    // The navigation does not carry the Sprint (#90).
+    expect(nav('Sprint').getAttribute('href')).toBe(
+      '/sprint?fixture=today-daytime',
+    );
+    await userEvent.click(nav('Sprint'));
+    await waitFor(() => expect(title()).toBe('Sprint 2'));
+    expect(status()).toBe('実行中');
+    expect(router.state.location.search).toEqual({ fixture: 'today-daytime' });
+
+    await userEvent.click(step('次の Sprint（Sprint 3）'));
+    await waitFor(() => expect(title()).toBe('Sprint 3'));
+    expect(status()).toBe('計画中 · 未確定');
+    await userEvent.click(step('前の Sprint（Sprint 2）'));
+    await waitFor(() => expect(title()).toBe('Sprint 2'));
+  });
+
+  it('plans next week in 「来週」 words while this week runs', async () => {
+    await renderAt('/sprint?fixture=today-daytime&sprint=3');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Sprint 3 の計画を始める' }),
+    );
+    const header = document.querySelector<HTMLElement>(
+      '[data-slot="sprint-header"]',
+    )!;
+    expect(await within(header).findByText('来週')).toBeTruthy();
+    const backlog = document.querySelector<HTMLElement>(
+      '[data-slot="planning-backlog"]',
+    )!;
+    await userEvent.click(
+      within(backlog).getByRole('checkbox', {
+        name: '来週に入れる: 歯医者の予約',
+      }),
+    );
+    expect(
+      await screen.findByText('「歯医者の予約」を来週に入れました'),
+    ).toBeTruthy();
+    expect(within(backlog).getByText('来週発生する繰り返し')).toBeTruthy();
+    // Its confirm waits for this week's Retro, from its last day (F21).
+    expect(
+      screen.getByText(/Sprint 2 の振り返りは 10\/4 \(日\) から始められます。/),
+    ).toBeTruthy();
+    expect(screen.queryByText(/今週/)).toBeNull();
+  });
+
+  it('plans in 「今週」 words when no week runs', async () => {
+    await renderAt('/sprint?fixture=retro-start&sprint=3');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Sprint 3 の計画を始める' }),
+    );
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: '今週、何を進めますか',
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getAllByRole('checkbox', { name: /^今週に入れる: / }).length,
+    ).toBeGreaterThan(0);
+  });
+});
+
+describe('Retro — by number (#90)', () => {
+  it('opens a closed Retro read only: no inputs, 気になる or 実績を足す', async () => {
+    await renderAt('/retro?sprint=1&fixture=today-daytime');
+    expect(title()).toBe('Sprint 1');
+    expect(status()).toBe('完了');
+    expect(
+      screen.getByRole('heading', {
+        level: 1,
+        name: 'Sprint 1 で何が起きたか',
+      }),
+    ).toBeTruthy();
+    expect(screen.queryByRole('radio')).toBeNull();
+    expect(screen.queryByRole('button', { name: /振り返りに使う/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /実績を足す/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: '振り返りを完了' })).toBeNull();
+    // Its self-assessment, as a Tag.
+    expect(screen.getByText('できた')).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('link', { name: /振り返る/ }));
+    expect(
+      await screen.findByText('研究の Task は提案の幅の上のほうまでかかった。'),
+    ).toBeTruthy();
+    expect(screen.queryByRole('textbox')).toBeNull();
+
+    await userEvent.click(screen.getByRole('link', { name: /引き継ぐ/ }));
+    expect(
+      await screen.findByText('研究の見積もりは幅の上限で計画する'),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/改善策から計画基準「研究：提案の幅の上限で計画する」/),
+    ).toBeTruthy();
+    expect(screen.queryByRole('switch')).toBeNull();
+    // An older Retro does not lead on to a Planning.
+    expect(screen.queryByRole('button', { name: /計画を始める/ })).toBeNull();
+  });
+
+  it('opens the running Sprint by default, and steps to the closed one', async () => {
+    await renderAt('/retro?fixture=today-daytime');
+    expect(title()).toBe('Sprint 2');
+    expect(
+      screen.getByText(
+        'この Sprint の振り返りは、最終日（10/4 (日)）から始められます。',
+      ),
+    ).toBeTruthy();
+    await userEvent.click(step('前の Sprint（Sprint 1）'));
+    await waitFor(() => expect(title()).toBe('Sprint 1'));
+    expect(status()).toBe('完了');
+  });
+
+  it('opens the current Retro for a number with no Sprint', async () => {
+    await renderAt('/retro?fixture=retro-start&sprint=3');
+    expect(title()).toBe('Sprint 2');
+    expect(status()).toBe('振り返り中');
+  });
+});

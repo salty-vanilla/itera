@@ -524,9 +524,7 @@ describe('Today — outside the period (#54)', () => {
       (a) => a.kind === 'sprintReviewStarted',
     );
     expect(started?.actor).toBe('system');
-    expect(
-      await screen.findByText(/今週の Sprint は振り返り中です/),
-    ).toBeTruthy();
+    expect(await screen.findByText(/Sprint 2 は振り返り中です/)).toBeTruthy();
     // The system's work is not the person's: no error Toast.
     expect(screen.queryByText('保存できませんでした')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();

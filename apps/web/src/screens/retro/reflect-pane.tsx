@@ -15,6 +15,8 @@ import { Materials } from './materials';
 
 type ReflectPaneProps = {
   data: RetroData;
+  /** A closed Retro: the words as they were written (#90). */
+  readOnly?: boolean | undefined;
   onPin: (pin: RetroPin) => void;
   onReflect: (text: string) => boolean;
   onImprove: (text: string) => boolean;
@@ -25,6 +27,7 @@ type ReflectPaneProps = {
 
 function ReflectPane({
   data,
+  readOnly = false,
   onPin,
   onReflect,
   onImprove,
@@ -38,24 +41,73 @@ function ReflectPane({
       className={cn('flex flex-col gap-12', className)}
     >
       {showMaterials && (
-        <Materials data={data} onPin={onPin} className="wide:hidden" />
-      )}
-      <Field
-        label="気になったこと"
-        necessity="optional"
-        description="事実を見て思ったことを、そのまま書きます。原因を突き止めなくて構いません。"
-      >
-        <Textarea
-          text="body-l"
-          value={reflection}
-          onChange={(e) => setReflection(e.currentTarget.value)}
-          onBlur={() => {
-            if (reflection !== data.reflection) onReflect(reflection);
-          }}
+        <Materials
+          data={data}
+          onPin={readOnly ? undefined : onPin}
+          className="wide:hidden"
         />
-      </Field>
-      <Improvement data={data} onImprove={onImprove} />
+      )}
+      {readOnly ? (
+        <ClosedReflection data={data} />
+      ) : (
+        <>
+          <Field
+            label="気になったこと"
+            necessity="optional"
+            description="事実を見て思ったことを、そのまま書きます。原因を突き止めなくて構いません。"
+          >
+            <Textarea
+              text="body-l"
+              value={reflection}
+              onChange={(e) => setReflection(e.currentTarget.value)}
+              onBlur={() => {
+                if (reflection !== data.reflection) onReflect(reflection);
+              }}
+            />
+          </Field>
+          <Improvement data={data} onImprove={onImprove} />
+        </>
+      )}
     </div>
+  );
+}
+
+/** A closed Retro's two answers, as text. */
+function ClosedReflection({ data }: { data: RetroData }) {
+  return (
+    <>
+      <section
+        aria-labelledby="closed-reflection"
+        className="flex flex-col gap-2"
+      >
+        <h2 id="closed-reflection" className="text-label text-ink">
+          気になったこと
+        </h2>
+        {data.reflection === '' ? (
+          <p className="text-body text-ink-muted">書いていません。</p>
+        ) : (
+          <p className="max-w-measure-read text-reflection whitespace-pre-line text-ink">
+            {data.reflection}
+          </p>
+        )}
+      </section>
+      <section
+        aria-labelledby="closed-improvement"
+        data-slot="retro-improvement"
+        className="flex flex-col gap-3 border-t border-b border-t-ink border-b-border py-4"
+      >
+        <h2 id="closed-improvement" className="text-label">
+          次の Sprint で 1 つだけ変えてみること
+        </h2>
+        {data.improvement === undefined ? (
+          <p className="text-body text-ink-muted">改善策はありませんでした。</p>
+        ) : (
+          <p className="max-w-measure-read text-goal text-ink">
+            {data.improvement}
+          </p>
+        )}
+      </section>
+    </>
   );
 }
 

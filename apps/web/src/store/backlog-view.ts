@@ -22,6 +22,7 @@ import {
   type Task,
 } from '@itera/domain';
 import type { Clock, Records } from './records';
+import { thisWeekSprintOf } from './sprint-choice';
 import { activeSprint } from './task-changes';
 
 export interface BacklogItem {
@@ -62,17 +63,6 @@ export interface BacklogItem {
   readonly canComplete: boolean;
 }
 
-/**
- * The Sprint 「今週」 refers to: the active one, or, before one is
- * confirmed, the one being planned (Scenario A step 3). A draft for next
- * week while this week still runs is not 「今週」.
- */
-function thisWeeksSprint(records: Records) {
-  return (
-    activeSprint(records) ?? records.sprints.find((s) => s.state === 'planning')
-  );
-}
-
 export function backlogItem(
   task: Task,
   records: Records,
@@ -82,7 +72,9 @@ export function backlogItem(
   const carry = carryOverOf(task.id, records.sprints);
   const carryFrom = records.sprints.find((s) => s.id === carry?.fromSprintId);
   const rule = records.rules.find((r) => r.id === task.recurrenceRuleId);
-  const week = thisWeeksSprint(records);
+  // 「今週」: the active one, or, before one is confirmed, the one being
+  // planned (Scenario A step 3); a draft for next week is 「来週」 (#90).
+  const week = thisWeekSprintOf(records, clock);
   const inWeek: SprintTask | undefined = week?.tasks.find(
     (t) => t.taskId === task.id && isCounted(t),
   );
