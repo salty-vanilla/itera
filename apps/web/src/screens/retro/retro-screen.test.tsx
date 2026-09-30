@@ -483,7 +483,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     const choices = () =>
       within(criterionSection()).getByRole('radiogroup').textContent ?? '';
     expect(choices()).toContain(
-      '次の計画でも、研究の提案の幅があるタスクを上限で計画します。確かめるで、使うかどうかを選べます。',
+      '次の計画でも、研究の幅のあるタスクを上限で計画します。確かめるで、使うかどうかを選べます。',
     );
     expect(choices()).toContain('次の計画では、この基準を使いません。');
     await userEvent.click(
@@ -507,7 +507,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
       screen.getByText(/提案の幅があるタスク \d+件を中央で計画します/),
     ).toBeTruthy();
     expect(choices()).toContain(
-      '次の計画では、代わりに提案の幅があるタスクを中央で計画します。確かめるで、使うかどうかを選べます。',
+      '次の計画では、代わりに幅のあるタスクを中央で計画します。確かめるで、使うかどうかを選べます。',
     );
   });
 
