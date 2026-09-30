@@ -116,6 +116,18 @@ describe('Today — the top', () => {
   });
 });
 
+describe('Today — the Toast above the Quick Add (#79)', () => {
+  it('lifts the Toast above the stuck Quick Add at every width, and stops when the screen goes', async () => {
+    const offset = () =>
+      document.documentElement.style.getPropertyValue('--toast-offset-above');
+    const router = await renderAt('/today?fixture=today-interrupt');
+    expect(offset()).not.toBe('');
+    await router.navigate({ to: '/backlog' });
+    await screen.findByRole('heading', { name: 'Backlog' });
+    expect(offset()).toBe('');
+  });
+});
+
 describe('Today — the top, when nothing is chosen (#99)', () => {
   it('shows no 今日の残り line in the morning before choosing, and shows it once all are done', async () => {
     await renderAt('/today?fixture=today-morning');

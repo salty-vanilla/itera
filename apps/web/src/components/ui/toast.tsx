@@ -16,6 +16,10 @@ import { IconButton } from './icon-button';
 // - timers stop while the pointer is over the Toasts or focus is inside them
 //   (F6 moves focus to them),
 // - beyond the limit the oldest Toasts are marked data-limited and made inert.
+//
+// Toasts of one kind do not stack: `kind` gives them one ID, and a Toast
+// with that ID closes the one showing and takes its place as the newest
+// (DESIGN.md Toast).
 
 /** docs/design/foundations.md `duration-toast`. */
 const TOAST_TIMEOUT = 8000;
@@ -24,7 +28,29 @@ const TOAST_LIMIT = 3;
 
 type ToastTone = 'neutral' | 'done' | 'danger';
 
+/**
+ * The kinds of operation a Toast reports (DESIGN.md Toast). One list, so that
+ * a misspelt kind is a type error instead of a Toast that stacks.
+ */
+type ToastKind =
+  /** Chosen for or removed from the week: 「入れました」「外しました」. */
+  | 'sprint-pick'
+  | 'sprint-confirmed'
+  | 'retro-completed'
+  | 'task-added'
+  | 'task-archived'
+  | 'day-record-undone'
+  | 'save-failed';
+
 type ToastOptions = {
+  /**
+   * The kind of operation. A Toast of a kind that is already showing takes
+   * the place of the old one (its text, action and timer are replaced), so
+   * that repeating one operation never stacks Toasts and 「元に戻す」 acts on
+   * the latest one. Toasts of other kinds stay. Without a kind a Toast is
+   * always added.
+   */
+  kind?: ToastKind;
   tone?: ToastTone;
   /** The result, stated plainly: 「3件を今週に入れました」. */
   title: string;
@@ -48,9 +74,9 @@ function ToastProvider({ children }: { children: ReactNode }) {
             // compact: full width above the bottom tab bar, whose height the
             // screen sets in --toast-offset-bottom, and above a bar the screen
             // sticks over it (--toast-offset-above, lib/use-toast-offset.ts).
-            // medium and up: bottom left.
+            // medium and up: bottom left, and above such a bar too.
             'inset-x-4 bottom-[calc(var(--toast-offset-bottom,0px)+var(--toast-offset-above,0px)+var(--spacing-4))]',
-            'medium:right-auto medium:bottom-6 medium:left-6 medium:w-pane-side',
+            'medium:right-auto medium:bottom-[calc(var(--toast-offset-above,0px)+var(--spacing-6))] medium:left-6 medium:w-pane-side',
           )}
         >
           <ToastList />
@@ -141,8 +167,22 @@ function useToast() {
   const manager = ToastPrimitive.useToastManager();
   return useMemo(
     () => ({
-      show({ tone = 'neutral', title, description, action }: ToastOptions) {
-        const id: string = manager.add({
+      show({
+        kind,
+        tone = 'neutral',
+        title,
+        description,
+        action,
+      }: ToastOptions) {
+        const id: string | undefined =
+          kind === undefined ? undefined : `kind:${kind}`;
+        // Base UI updates a Toast added with an existing ID in place, which
+        // would keep its place in the stack and, past the limit, keep it
+        // hidden. Closing it first makes the add a new, newest Toast (the
+        // closing one is removed by the add, with no second Toast to see).
+        if (id !== undefined) manager.close(id);
+        const shownId: string = manager.add({
+          ...(id !== undefined && { id }),
           type: tone,
           title,
           description,
@@ -154,11 +194,11 @@ function useToast() {
             children: action.label,
             onClick: () => {
               action.onClick();
-              manager.close(id);
+              manager.close(shownId);
             },
           },
         });
-        return id;
+        return shownId;
       },
       close: (id: string) => manager.close(id),
     }),
@@ -166,5 +206,13 @@ function useToast() {
   );
 }
 
-export { TOAST_LIMIT, TOAST_TIMEOUT, ToastProvider, useToast };
-export type { ToastOptions, ToastTone };
+/**
+ * The Toasts showing, for a screen that makes room for them
+ * (app/use-toast-clearance.ts). A shown or replaced Toast is a new object.
+ */
+function useToasts() {
+  return ToastPrimitive.useToastManager().toasts;
+}
+
+export { TOAST_LIMIT, TOAST_TIMEOUT, ToastProvider, useToast, useToasts };
+export type { ToastKind, ToastOptions, ToastTone };

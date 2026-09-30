@@ -41,6 +41,8 @@ function WeekRow({ item, onOpen, onEstimate, onChoose }: WeekRowProps) {
           <Estimate value={item.value} planned />
         )
       }
+      // 今日やる has the `…`; the values line up with it.
+      reserveActions
     />
   );
 }

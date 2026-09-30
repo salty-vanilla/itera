@@ -1,9 +1,10 @@
 import { useLocation, useNavigate, useRouter } from '@tanstack/react-router';
 import { Inbox, NotebookPen, Route, Sun } from 'lucide-react';
-import type { ReactElement, ReactNode } from 'react';
+import { useRef, type ReactElement, type ReactNode } from 'react';
 import { Navigation, type NavigationItem } from '@/components/ui/navigation';
 import type { ScreenId } from '@/fixtures/states';
 import { isPlainClick } from '@/lib/plain-click';
+import { useToastClearance } from './use-toast-clearance';
 import { useAppOverview } from '@/store/use-app-overview';
 import { screens } from './screens';
 
@@ -24,6 +25,8 @@ function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const pathname = useLocation({ select: (location) => location.pathname });
   const { backlogCount } = useAppOverview();
+  const mainRef = useRef<HTMLElement>(null);
+  useToastClearance(mainRef);
 
   const items: NavigationItem[] = screens.map((screen) => ({
     id: screen.id,
@@ -49,7 +52,12 @@ function AppShell({ children }: { children: ReactNode }) {
           void navigate({ to: screen.path });
         }}
       />
-      <main className="min-h-0 flex-1 overflow-auto">{children}</main>
+      <main
+        ref={mainRef}
+        className="min-h-0 flex-1 overflow-auto pb-[var(--toast-clearance,0px)]"
+      >
+        {children}
+      </main>
     </div>
   );
 }

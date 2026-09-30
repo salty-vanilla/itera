@@ -261,6 +261,7 @@ function PlannedRow({
       : actions.unchooseTasks([sprintTask.id]);
     if (!done) return;
     toast.show({
+      kind: 'sprint-pick',
       title: `「${task.title}」を${weekText(week, 'から外しました')}`,
       // A completed or archived Task cannot be chosen again, so there is
       // nothing to undo.

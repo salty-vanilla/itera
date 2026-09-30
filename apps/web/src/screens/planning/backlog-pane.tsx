@@ -53,6 +53,7 @@ function BacklogPane({
     const taskIds = rows.map((r) => r.task.id);
     if (!actions.chooseTasks(taskIds)) return;
     toast.show({
+      kind: 'sprint-pick',
       title:
         rows.length === 1
           ? `「${rows[0]?.task.title}」を${weekText(week, 'に入れました')}`
@@ -70,6 +71,7 @@ function BacklogPane({
     const taskIds = rows.map((r) => r.task.id);
     if (!actions.unchooseTasks(ids)) return;
     toast.show({
+      kind: 'sprint-pick',
       title:
         rows.length === 1
           ? `「${rows[0]?.task.title}」を${weekText(week, 'から外しました')}`
