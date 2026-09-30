@@ -20,12 +20,16 @@ export function criterionName(
 
 /**
  * What the criterion does to a Planning: 「研究の幅のあるタスクを上限で
- * 計画します」. From the same policy as its name (invariant 39).
+ * 計画します」, or with `count`, 「研究の幅のあるタスク 1件を…」. From the
+ * same policy as its name (invariant 39).
  */
 export function criterionEffectText(
   policy: CriterionPolicy,
   areaName: string | undefined,
+  count?: number,
 ): string {
   const scope = policy.scope.kind === 'all' ? '' : `${areaName ?? '領域'}の`;
-  return `${scope}幅のあるタスクを${BOUND_WORDS[policy.rangePolicy]}で計画します`;
+  const tasks =
+    count === undefined ? '幅のあるタスク' : `幅のあるタスク ${count}件`;
+  return `${scope}${tasks}を${BOUND_WORDS[policy.rangePolicy]}で計画します`;
 }

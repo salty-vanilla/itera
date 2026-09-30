@@ -329,9 +329,8 @@ function DraftCriterion({
       <div className="flex flex-col gap-1">
         <p className="text-body text-ink">
           次の計画では、
-          {draft.areaName === undefined ? '' : `${draft.areaName}の`}
-          幅のあるタスク {preview.length}件を
-          {BOUND_WORDS[policy.rangePolicy]}で計画します（今の Backlog で）。
+          {criterionEffectText(policy, draft.areaName, preview.length)}
+          （今の Backlog で）。
         </p>
         {preview.length > 0 && (
           <ul className="flex flex-col gap-1 text-body text-ink-muted">
