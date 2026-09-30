@@ -298,18 +298,15 @@ function EditRow({
           <Button size="sm" variant="danger" type="button" onClick={onArchive}>
             アーカイブ
           </Button>
-          <Button
-            size="sm"
-            variant="quiet"
-            type="button"
-            className="ml-auto"
-            onClick={onCancel}
-          >
-            キャンセル
-          </Button>
-          <Button size="sm" type="submit">
-            名前を変える
-          </Button>
+          {/* Together at the right; under アーカイブ when narrow. */}
+          <span className="ml-auto flex gap-2">
+            <Button size="sm" variant="quiet" type="button" onClick={onCancel}>
+              キャンセル
+            </Button>
+            <Button size="sm" type="submit">
+              名前を変える
+            </Button>
+          </span>
         </div>
       </form>
     </li>

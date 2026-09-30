@@ -65,7 +65,10 @@ function DialogContent({
   return (
     <DialogPrimitive.Portal>
       {/* scrim without blur (DESIGN.md Colors). */}
+      {/* Also over a Drawer (a Dialog opened from the Task detail): Base UI
+          leaves a nested Dialog without its backdrop unless forced. */}
       <DialogPrimitive.Backdrop
+        forceRender
         data-slot="dialog-backdrop"
         className={cn(
           'fixed inset-0 z-(--layer-dialog) bg-scrim',
