@@ -1,6 +1,6 @@
 import type { AreaId, RetroPin, SelfAssessment, TaskFact } from '@itera/domain';
 import { Info, Timer } from 'lucide-react';
-import { useId, useRef, type ReactNode } from 'react';
+import { Fragment, useId, useRef, type ReactNode } from 'react';
 import { semanticIcons } from '@/components/ui/icon';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { Button } from '@/components/ui/button';
@@ -671,7 +671,15 @@ function TaskList({
                   前の Sprint から持ち越し（{t.carryCount}回）
                 </p>
               )}
-              <p className="text-body text-ink">{values.join(' · ')}</p>
+              <p className="text-body text-ink">
+                {/* Breaks only between the values, never inside one. */}
+                {values.map((v, i) => (
+                  <Fragment key={v}>
+                    {i > 0 && ' · '}
+                    <span className="whitespace-nowrap">{v}</span>
+                  </Fragment>
+                ))}
+              </p>
               <p className="text-meta text-ink-muted">
                 <TaskResult fact={t} data={data} iconSize="xs" />
                 {days !== undefined && ` · ${days}`}
