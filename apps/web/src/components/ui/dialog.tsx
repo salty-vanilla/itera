@@ -5,9 +5,9 @@ import { useFooterActionFocus } from '@/lib/focus';
 import { cn } from '@/lib/utils';
 
 // DESIGN.md Components › Dialog. A modal that stops the work to ask for a
-// confirmation or a decision: confirming a Sprint and confirming a
-// destructive action, nothing else. Do not stack Dialogs and do not confirm
-// every operation.
+// confirmation or a decision: confirming a Sprint, completing a Retro (it
+// cannot be undone) and confirming a destructive action, nothing else. Do
+// not stack Dialogs and do not confirm every operation.
 //
 // - The title is a question (「Sprint 14 を確定しますか？」), not 「本当によろしいですか？」.
 // - The footer puts Secondary on the left and the Primary (or danger-solid)

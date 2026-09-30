@@ -635,9 +635,9 @@ compact の原則：
 
 ### 面
 
-**Dialog** — 作業を止めて確認・決定を求めるモーダル。Sprint の確定と破壊的操作の確認だけ。
+**Dialog** — 作業を止めて確認・決定を求めるモーダル。Sprint の確定、振り返りの完了（取り消せないため）、破壊的操作の確認だけ。
 - `scrim`（Blur なし）、面 sm 440 / md 560 / lg 720px、`rounded.lg`、`elevation-modal`。タイトルは問いの形（`heading` 16 / 700）、フッターは `border-soft` の罫の下に右寄せで Secondary → Primary。
-- 初期フォーカスは最も安全な操作（確定では「戻って調整」）。ボタンは結果を書く。× 「本当によろしいですか？」、Dialog を重ねる、操作のたびに確認する。
+- 初期フォーカスは最も安全な操作（確定では「戻って調整」、振り返りの完了では「戻る」）。ボタンは結果を書く。× 「本当によろしいですか？」、Dialog を重ねる、操作のたびに確認する。
 
 **Drawer** — 文脈を残したまま詳細を編集する側面パネル。desktop は右 400px（左に `border`）、compact は Bottom Sheet（上角 `rounded.xl`、グリップ）。ヘッダー（タイトル＋閉じる、下に `border-soft`）、本文（スクロール）、フッター（キャンセル / 保存）。タスクの詳細は欄を離れたときに欄ごとに保存するので、フッターは「閉じる」だけにする。追加・反映していない入力があるときは、閉じずにフッターの上に Notice と「戻る」「破棄して閉じる」を出す（Dialog は使わない。[patterns.md](docs/design/patterns.md) の Backlog Organize）。非モーダルが既定で、背後を操作させない場合だけ modal（`scrim` あり）。タスクの詳細、計画案の差分、medium 幅の Capacity に使う。Drawer の中に Drawer を開かない。
 
