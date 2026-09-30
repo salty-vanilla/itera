@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import { formatDate } from '@/lib/date-format';
+import { SELECTION_WORDS } from '@/lib/selection-words';
 import type { PastDayRecord, RunningData } from '@/store/running-view';
 
 // 日ごとの記録 (#53, owner decisions): the days before today with their
@@ -136,12 +137,6 @@ function PastDays({ days, onUndo }: PastDaysProps) {
   );
 }
 
-const CLOSED_WORDS = {
-  paused: '今日はここまで',
-  deferred: '見送り',
-  removed: '今日から外した',
-} as const;
-
 /** What undoing leaves, in words (F33, F17, F29). */
 function consequence(r: PastDayRecord): string {
   const back = r.recurring
@@ -151,7 +146,7 @@ function consequence(r: PastDayRecord): string {
     r.after.kind === 'gone'
       ? 'Backlog から完了した記録なので、その日の記録ごと消え、'
       : r.after.kind === 'closed'
-        ? `その日の記録は、完了にする前の「${CLOSED_WORDS[r.after.resolution]}」に戻り、`
+        ? `その日の記録は、完了にする前の「${SELECTION_WORDS[r.after.resolution]}」に戻り、`
         : 'その日の記録は未処理になり、';
   const noWayBack =
     r.selection.resolution === 'skipped'

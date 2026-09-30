@@ -51,6 +51,11 @@ const records = () => lastSnapshot().records;
 const task = (id: string) => records().tasks.find((t) => t.id === id);
 const list = () => screen.getByRole('region', { name: 'Task の一覧' });
 // The line left where a completed row was (it has role="status").
+// 閉じる in the detail's footer (the header's × has the same name).
+const footerClose = (detail: HTMLElement) =>
+  within(
+    detail.querySelector<HTMLElement>('[data-slot="drawer-footer"]')!,
+  ).getByRole('button', { name: '閉じる' });
 const completedLine = () =>
   list().querySelector<HTMLElement>('[data-slot="completed-line"]');
 
@@ -167,7 +172,9 @@ describe('Backlog', () => {
       hours: 2.5,
       source: { kind: 'adopted', bound: 'mid' },
     });
-    const outcome = within(detail).getByRole('status');
+    const outcome = within(detail)
+      .getByText(/を採用しました（Agent/)
+      .closest<HTMLElement>('[role="status"]')!;
     expect(outcome.textContent).toContain(
       '見積もり 2.5h を採用しました（Agent 提案 2–3h）',
     );
@@ -287,32 +294,316 @@ describe('Backlog', () => {
     ).toBeTruthy();
   });
 
-  it('Detail: saves the attributes with 保存, and checks the Estimate', async () => {
+  it('Detail (#95): each field is saved on leaving it, and a wrong value stays with its error', async () => {
     await renderAt('/backlog?fixture=backlog-capture&task=task-bookshelf');
     const detail = await screen.findByRole('dialog');
     const estimate = within(detail).getByRole('textbox', {
       name: /見積もり（時間）/,
     });
     await userEvent.type(estimate, 'abc');
-    await userEvent.click(within(detail).getByRole('button', { name: '保存' }));
+    await userEvent.tab();
     expect(
       within(detail).getByText('0 より大きい数で入力してください（例: 1.5）'),
     ).toBeTruthy();
     expect(task('task-bookshelf')).not.toHaveProperty('estimate');
-    // Focus moves to the field in error.
-    expect(document.activeElement).toBe(estimate);
+    // The input stays as typed.
+    expect(estimate).toHaveProperty('value', 'abc');
 
     await userEvent.clear(estimate);
     await userEvent.type(estimate, '1.5');
+    await userEvent.tab();
+    expect(task('task-bookshelf')).toMatchObject({
+      estimate: { hours: 1.5, source: { kind: 'manual' } },
+    });
+    expect(
+      within(detail).queryByText('0 より大きい数で入力してください（例: 1.5）'),
+    ).toBeNull();
+    expect(within(detail).getByText('保存しました')).toBeTruthy();
+    expect(
+      within(detail).getByText('見積もりを保存しました', {
+        selector: '.sr-only',
+      }),
+    ).toBeTruthy();
+
+    // A choice is saved when it is made.
     await userEvent.selectOptions(
       within(detail).getByRole('combobox', { name: /領域/ }),
       'area-life',
     );
-    await userEvent.click(within(detail).getByRole('button', { name: '保存' }));
-    expect(task('task-bookshelf')).toMatchObject({
-      areaId: 'area-life',
-      estimate: { hours: 1.5, source: { kind: 'manual' } },
+    expect(task('task-bookshelf')?.areaId).toBe('area-life');
+
+    // Leaving a field without a change records nothing.
+    const count = records().activities.length;
+    await userEvent.click(
+      within(detail).getByRole('textbox', { name: /タイトル/ }),
+    );
+    await userEvent.tab();
+    expect(records().activities.length).toBe(count);
+
+    // An empty title is not saved.
+    const title = within(detail).getByRole('textbox', { name: /タイトル/ });
+    await userEvent.clear(title);
+    await userEvent.tab();
+    expect(within(detail).getByText('タイトルを入力してください')).toBeTruthy();
+    expect(task('task-bookshelf')?.title).toBe('本棚を整理する');
+  });
+
+  it('Detail (#88): what was typed is kept when another row is opened or the detail is closed', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    await userEvent.click(within(list()).getByText('本棚を整理する'));
+    let detail = await screen.findByRole('dialog');
+    await userEvent.click(
+      within(detail).getByRole('button', { name: '詳しく' }),
+    );
+    await userEvent.type(
+      within(detail).getByRole('textbox', { name: /説明/ }),
+      '上の段から',
+    );
+    // Opening another row saves it first.
+    await userEvent.click(within(list()).getByText('歯医者の予約'));
+    await waitFor(() =>
+      expect(screen.getByRole('dialog').textContent).toContain('歯医者の予約'),
+    );
+    expect(task('task-bookshelf')?.description).toBe('上の段から');
+
+    // So does closing, by × and by Esc.
+    detail = screen.getByRole('dialog');
+    await userEvent.click(
+      within(detail).getByRole('button', { name: '詳しく' }),
+    );
+    await userEvent.type(
+      within(detail).getByRole('textbox', { name: /説明/ }),
+      '電話で',
+    );
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(task('task-dentist')?.description).toBe('電話で');
+
+    await userEvent.click(within(list()).getByText('本棚を整理する'));
+    detail = await screen.findByRole('dialog');
+    // A field with a value is out of the fold.
+    expect(
+      within(detail).getByRole('textbox', { name: /説明/ }),
+    ).toHaveProperty('value', '上の段から');
+    await userEvent.type(
+      within(detail).getByRole('textbox', { name: /タイトル/ }),
+      'と机',
+    );
+    await userEvent.click(footerClose(detail));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(task('task-bookshelf')?.title).toBe('本棚を整理すると机');
+  });
+
+  it('Detail (#95): a wrong value keeps the detail open and takes the focus back', async () => {
+    await renderAt('/backlog?fixture=backlog-capture&task=task-bookshelf');
+    const detail = await screen.findByRole('dialog');
+    const estimate = within(detail).getByRole('textbox', {
+      name: /見積もり（時間）/,
     });
+    await userEvent.type(estimate, '0');
+    await userEvent.keyboard('{Escape}');
+    expect(screen.getByRole('dialog')).toBe(detail);
+    expect(document.activeElement).toBe(estimate);
+    expect(estimate).toHaveProperty('value', '0');
+
+    await userEvent.click(within(list()).getByText('歯医者の予約'));
+    expect(screen.getByRole('dialog').textContent).toContain('本棚を整理する');
+    expect(document.activeElement).toBe(estimate);
+
+    await userEvent.click(footerClose(detail));
+    expect(screen.getByRole('dialog')).toBe(detail);
+
+    await userEvent.clear(estimate);
+    await userEvent.click(footerClose(detail));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('Detail (#95): opens on its heading, with the other fields folded under 詳しく', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    await userEvent.click(within(list()).getByText('本棚を整理する'));
+    const detail = await screen.findByRole('dialog');
+    const heading = within(detail).getByRole('heading', {
+      name: '本棚を整理する',
+    });
+    await waitFor(() => expect(document.activeElement).toBe(heading));
+    // No field takes the focus, so a phone keeps its keyboard down.
+    expect(document.activeElement?.matches('input, textarea, select')).toBe(
+      false,
+    );
+    // タイトル・領域・期限・見積もり first; the rest in the fold.
+    expect(
+      within(detail).getByRole('textbox', { name: /タイトル/ }),
+    ).toBeTruthy();
+    expect(within(detail).getByRole('combobox', { name: /領域/ })).toBeTruthy();
+    expect(within(detail).getByLabelText(/期限/)).toBeTruthy();
+    expect(
+      within(detail).getByRole('textbox', { name: /見積もり（時間）/ }),
+    ).toBeTruthy();
+    const more = within(detail).getByRole('button', { name: '詳しく' });
+    expect(more.getAttribute('aria-expanded')).toBe('false');
+    expect(within(detail).queryByRole('textbox', { name: /説明/ })).toBeNull();
+    expect(
+      within(detail).queryByRole('combobox', { name: '優先度' }),
+    ).toBeNull();
+    expect(
+      within(detail).queryByRole('region', { name: 'サブタスク' }),
+    ).toBeNull();
+    expect(
+      within(detail).queryByRole('region', { name: '繰り返し' }),
+    ).toBeNull();
+    await userEvent.click(more);
+    expect(more.getAttribute('aria-expanded')).toBe('true');
+    expect(within(detail).getByRole('textbox', { name: /説明/ })).toBeTruthy();
+    expect(
+      within(detail).getByRole('combobox', { name: '優先度' }),
+    ).toBeTruthy();
+    expect(
+      within(detail).getByRole('region', { name: 'サブタスク' }),
+    ).toBeTruthy();
+    expect(
+      within(detail).getByRole('region', { name: '繰り返し' }),
+    ).toBeTruthy();
+    // The footer only closes.
+    expect(within(detail).queryByRole('button', { name: '保存' })).toBeNull();
+    expect(
+      within(detail).queryByRole('button', { name: 'キャンセル' }),
+    ).toBeNull();
+  });
+
+  it('Detail (#95): adopting a suggestion clears the error of the value it replaces', async () => {
+    await renderAt('/backlog?fixture=backlog-detail&task=task-interview');
+    const detail = await screen.findByRole('dialog');
+    const estimate = within(detail).getByRole('textbox', {
+      name: /^見積もり（時間）(?!:)/,
+    });
+    await userEvent.type(estimate, 'abc');
+    await userEvent.tab();
+    expect(
+      within(detail).getByText('0 より大きい数で入力してください（例: 1.5）'),
+    ).toBeTruthy();
+    await userEvent.click(
+      within(detail).getByRole('button', { name: '中央 2.5h を採用' }),
+    );
+    expect(estimate).toHaveProperty('value', '2.5');
+    expect(
+      within(detail).queryByText('0 より大きい数で入力してください（例: 1.5）'),
+    ).toBeNull();
+    await userEvent.click(footerClose(detail));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('Detail (#95): an item in 詳しく stays in place when it gets a value', async () => {
+    await renderAt('/backlog?fixture=backlog-capture&task=task-bookshelf');
+    const detail = await screen.findByRole('dialog');
+    await userEvent.click(
+      within(detail).getByRole('button', { name: '詳しく' }),
+    );
+    const priority = within(detail).getByRole('combobox', { name: '優先度' });
+    await userEvent.selectOptions(priority, '高');
+    expect(task('task-bookshelf')?.priority).toBe('high');
+    expect(within(detail).getByRole('combobox', { name: '優先度' })).toBe(
+      priority,
+    );
+
+    const subtask = within(detail).getByRole('textbox', {
+      name: 'サブタスクを追加',
+    });
+    await userEvent.type(subtask, '上の段{Enter}');
+    expect(task('task-bookshelf')?.subtasks).toHaveLength(1);
+    expect(
+      within(detail).getByRole('textbox', { name: 'サブタスクを追加' }),
+    ).toBe(subtask);
+    expect(document.activeElement).toBe(subtask);
+
+    const recurrence = within(detail).getByRole('region', { name: '繰り返し' });
+    await userEvent.selectOptions(
+      within(recurrence).getByRole('combobox', { name: '頻度' }),
+      'daily',
+    );
+    await userEvent.click(
+      within(recurrence).getByRole('button', { name: '繰り返しにする' }),
+    );
+    expect(within(recurrence).getByRole('status').textContent).toContain(
+      '次の Sprint から反映',
+    );
+  });
+
+  it('Detail (#95): a subtask not added or a recurrence not applied holds the close with a notice', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    await userEvent.click(within(list()).getByText('本棚を整理する'));
+    const detail = await screen.findByRole('dialog');
+    await userEvent.click(
+      within(detail).getByRole('button', { name: '詳しく' }),
+    );
+    const subtask = within(detail).getByRole('textbox', {
+      name: 'サブタスクを追加',
+    });
+    await userEvent.type(subtask, '上の段');
+    await userEvent.click(footerClose(detail));
+    expect(screen.getByRole('dialog')).toBe(detail);
+    expect(
+      within(detail).getByText('追加していないサブタスクがあります'),
+    ).toBeTruthy();
+    const back = within(detail).getByRole('button', { name: '戻る' });
+    expect(document.activeElement).toBe(back);
+    await userEvent.click(back);
+    expect(
+      within(detail).queryByText('追加していないサブタスクがあります'),
+    ).toBeNull();
+    expect(document.activeElement).toBe(subtask);
+    expect(subtask).toHaveProperty('value', '上の段');
+    // Closing says 破棄して閉じる.
+    await userEvent.keyboard('{Escape}');
+    expect(
+      within(detail).getByRole('button', { name: '破棄して閉じる' }),
+    ).toBeTruthy();
+    expect(
+      within(detail).queryByRole('button', { name: '破棄して開く' }),
+    ).toBeNull();
+    await userEvent.click(within(detail).getByRole('button', { name: '戻る' }));
+
+    // Opening another row asks the same; 破棄して開く carries it out.
+    await userEvent.selectOptions(
+      within(detail).getByRole('combobox', { name: '頻度' }),
+      'daily',
+    );
+    await userEvent.click(within(list()).getByText('歯医者の予約'));
+    expect(screen.getByRole('dialog').textContent).toContain('本棚を整理する');
+    expect(
+      within(detail).getByText('反映していない繰り返しの変更があります'),
+    ).toBeTruthy();
+    await userEvent.click(
+      within(detail).getByRole('button', { name: '破棄して開く' }),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('dialog').textContent).toContain('歯医者の予約'),
+    );
+    expect(task('task-bookshelf')?.subtasks).toHaveLength(0);
+
+    // Nothing typed: it closes at once.
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('Detail (#95): a wrong subtask Estimate keeps the detail open, even folded', async () => {
+    await renderAt('/backlog?fixture=backlog-capture&task=task-bookshelf');
+    const detail = await screen.findByRole('dialog');
+    const more = within(detail).getByRole('button', { name: '詳しく' });
+    await userEvent.click(more);
+    await userEvent.type(
+      within(detail).getByRole('textbox', { name: 'サブタスクを追加' }),
+      '上の段{Enter}',
+    );
+    const hours = within(detail).getByRole('textbox', {
+      name: '見積もり（時間）: 上の段',
+    });
+    await userEvent.type(hours, '0');
+    await userEvent.click(more);
+    await userEvent.keyboard('{Escape}');
+    expect(screen.getByRole('dialog')).toBe(detail);
+    expect(more.getAttribute('aria-expanded')).toBe('true');
+    expect(document.activeElement).toBe(hours);
+    expect(hours).toHaveProperty('value', '0');
   });
 
   it('優先度 (#97): 高 and 低 show in the row in words, 通常 does not, and the order stays', async () => {
@@ -333,6 +624,9 @@ describe('Backlog', () => {
       within(rowOf('本棚を整理する')).getByText('本棚を整理する'),
     );
     const detail = await screen.findByRole('dialog');
+    await userEvent.click(
+      within(detail).getByRole('button', { name: '詳しく' }),
+    );
     const select = within(detail).getByRole('combobox', { name: '優先度' });
     expect(
       within(select)
@@ -340,7 +634,6 @@ describe('Backlog', () => {
         .map((o) => o.textContent),
     ).toEqual(['高', '通常', '低']);
     await userEvent.selectOptions(select, '低');
-    await userEvent.click(within(detail).getByRole('button', { name: '保存' }));
     expect(task('task-bookshelf')?.priority).toBe('low');
     expect(rowOf('本棚を整理する').textContent).toContain('優先度 低');
     // Never an order (invariant 5).
@@ -659,13 +952,15 @@ describe('Backlog — keys of the list (#48)', () => {
       name: /^見積もり（時間）(?!:)/,
     });
     await waitFor(() => expect(document.activeElement).toBe(estimate));
-    // Only that time: opened again with Enter, it starts at the first field.
+    // Only that time: opened again with Enter, it starts at the heading.
     await userEvent.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     rowTitle('本棚を整理する').focus();
     await userEvent.keyboard('{Enter}');
-    const title = await screen.findByRole('textbox', { name: /^タイトル/ });
-    await waitFor(() => expect(document.activeElement).toBe(title));
+    const heading = await screen.findByRole('heading', {
+      name: '本棚を整理する',
+    });
+    await waitFor(() => expect(document.activeElement).toBe(heading));
   });
 
   it('Delete archives with an undo, and the focus goes to the next row', async () => {

@@ -1,6 +1,6 @@
 # アクセシビリティ
 
-更新：2026-09-30（□ の読み上げの週の語、Sprint Header の前後の矢印、Issue #90）。2026-09-27（Dialog の初期フォーカスと `menuitemradio`、Issue #9。リストの Space の対象を Backlog 画面と Planning で分けた、Issue #47）。2026-09-26 に DESIGN.md v0.2 から分離。
+更新：2026-10-01（今日以外の日の「過去」「未来」の読み上げ、日付の入力、Issue #90）。2026-09-30（タスクの詳細を開いたときのフォーカス、Issue #95。□ の読み上げの週の語、Sprint Header と今日の日付の前後の矢印、Issue #90）。2026-09-27（Dialog の初期フォーカスと `menuitemradio`、Issue #9。リストの Space の対象を Backlog 画面と Planning で分けた、Issue #47）。2026-09-26 に DESIGN.md v0.2 から分離。
 
 DADS の品質基準（WCAG 2.2 AA）を下限にする。後から足すのではなく、部品の仕様に含める。色のコントラストと状態の見た目は [DESIGN.md](../../DESIGN.md) の Colors と Components。一次資料の引き方は `design-references` Skill。
 
@@ -14,7 +14,7 @@ DADS の品質基準（WCAG 2.2 AA）を下限にする。後から足すので�
 
 - 全要素共通：`outline: 2px solid var(--focus); outline-offset: 2px`（`:focus-visible`）。リスト内・タブ・メニュー項目は `outline-offset: -2px`。
 - フォーカスを消すスタイル（`outline: none` だけ）を書かない。
-- Dialog とモーダル Drawer は、開いたらフォーカスを中に移し、Tab を閉じ込め、閉じたら呼び出し元に戻す。Esc で閉じる。移す先は、Dialog は入力があっても最も安全な操作（[DESIGN.md](../../DESIGN.md) の Dialog。確定では「戻って調整」）、Drawer と Popover は最初の入力（なければ最も安全な操作）。
+- Dialog とモーダル Drawer は、開いたらフォーカスを中に移し、Tab を閉じ込め、閉じたら呼び出し元に戻す。Esc で閉じる。移す先は、Dialog は入力があっても最も安全な操作（[DESIGN.md](../../DESIGN.md) の Dialog。確定では「戻って調整」）、Drawer と Popover は最初の入力（なければ最も安全な操作）。ただしタスクの詳細の Drawer は、見出し（Task のタイトル。`tabindex="-1"`）に移し、どの欄にも入れない（見るだけで開いたときに書き換えそうにならず、compact でキーボードが出ない）。行の E で開いたときだけ Estimate の欄に移す（[patterns.md](patterns.md) の Backlog Organize）。
 
 ## キーボード
 
@@ -48,7 +48,7 @@ DADS の品質基準（WCAG 2.2 AA）を下限にする。後から足すので�
 ## スクリーンリーダー
 
 - □ は「今週に入れる: タスク名」、○ は「完了にする: タスク名」と読ませる。□ とグループの Checkbox の「今週」は、開いている Sprint の呼び名に従う（実行中の Sprint があるあいだの次の計画では「来週に入れる: タスク名」「持ち越しをすべて来週に入れる」。[文言と用語](content.md) の「週の呼び名」）。
-- Sprint Header の前後の矢印はリンクで、「前の Sprint（Sprint 1）」「次の Sprint（Sprint 3）」と読ませる（Tooltip も同じ語）。端で行き先がない矢印は、無効の形で残して読み上げない。
+- Sprint Header の前後の矢印はリンクで、「前の Sprint（Sprint 1）」「次の Sprint（Sprint 3）」と読ませる（Tooltip も同じ語）。端で行き先がない矢印は、無効の形で残して読み上げない。今日の画面の日付の矢印も同じ形で、「前の日（9/30 (水)）」「次の日（10/2 (金)）」と読ませる。今日以外の日の「過去」「未来」は、見出しの中に視覚的に隠して入れ、見出しと一緒に「9月30日（水） 過去」と読ませる。矢印の後ろに見える同じ語は `aria-hidden` にして、2 回読ませない。日付の選択は、見える「日付を選ぶ」のラベルを入力に結ぶ。キーボードで打った日付は、欄ごとに移らず、Enter か入力から離れたときに開く（年を打つ途中の 0202 年などを開かない）。ピッカーで選んだ日付はすぐに開く。今日と今日以外の日のあいだで画面が変わっても、フォーカスは押した矢印（または日付の選択）に戻す。
 - Agent 提案の値は「Agent の提案（未確定）: 2〜4時間」、Estimate は「見積もり 3時間」と読ませる。
 - 動的な結果（Toast、Capacity の状態、保存エラー）は `role="status"` / `role="alert"` で通知する。
 - 装飾のアイコンは `aria-hidden`。意味を持つアイコンだけに `aria-label`。

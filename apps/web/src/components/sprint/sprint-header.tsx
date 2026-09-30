@@ -1,11 +1,5 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { MouseEvent, ReactNode } from 'react';
-import { iconButtonVariants } from '@/components/ui/icon-button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { StepLink } from '@/components/ui/step-link';
 import { cn } from '@/lib/utils';
 import type { WeekName } from '@/lib/week-text';
 
@@ -82,16 +76,14 @@ function SprintHeader({
             {steps !== undefined && (
               <StepLink
                 direction="previous"
-                step={steps.previous}
-                onStep={steps.onStep}
+                {...stepProps(steps.previous, '前', steps.onStep)}
               />
             )}
             <p className="text-display-l text-ink">{title}</p>
             {steps !== undefined && (
               <StepLink
                 direction="next"
-                step={steps.next}
-                onStep={steps.onStep}
+                {...stepProps(steps.next, '次', steps.onStep)}
               />
             )}
           </div>
@@ -158,52 +150,20 @@ function SprintHeader({
   );
 }
 
-/**
- * ‹ and ›: a link to the previous or next Sprint, named in its Tooltip.
- * At either end the arrow stays in place, disabled, and is not announced
- * (there is nothing to go to).
- */
-function StepLink({
-  direction,
-  step,
-  onStep,
-}: {
-  direction: 'previous' | 'next';
-  step: SprintStep | undefined;
-  onStep:
-    | ((step: SprintStep, event: MouseEvent<HTMLAnchorElement>) => void)
-    | undefined;
-}) {
-  const Arrow = direction === 'previous' ? ChevronLeft : ChevronRight;
-  const classes = iconButtonVariants({ variant: 'quiet', size: 'md' });
-  if (step === undefined) {
-    return (
-      <span aria-hidden data-disabled="" className={classes}>
-        <Arrow />
-      </span>
-    );
-  }
-  const label = `${direction === 'previous' ? '前' : '次'}の Sprint（Sprint ${step.number}）`;
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        // The Tooltip repeats the accessible name; do not read it twice.
-        describes={false}
-        render={
-          <a
-            href={step.href}
-            aria-label={label}
-            data-step={direction}
-            onClick={(event) => onStep?.(step, event)}
-            className={classes}
-          />
-        }
-      >
-        <Arrow aria-hidden />
-      </TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
-    </Tooltip>
-  );
+/** 「前の Sprint（Sprint 1）」, and where it goes; none at either end. */
+function stepProps(
+  step: SprintStep | undefined,
+  side: '前' | '次',
+  onStep: NonNullable<SprintHeaderProps['steps']>['onStep'],
+) {
+  return step === undefined
+    ? {}
+    : {
+        label: `${side}の Sprint（Sprint ${step.number}）`,
+        href: step.href,
+        onClick: (event: MouseEvent<HTMLAnchorElement>) =>
+          onStep?.(step, event),
+      };
 }
 
 export { SprintHeader };

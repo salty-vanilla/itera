@@ -34,15 +34,20 @@ export function useSprintSteps(
  * `?sprint=3`: a Sprint's number (F25), a whole number from 1. Anything
  * else is dropped and the screen opens the current Sprint (ADR 0005). A
  * number with no Sprint also opens the current one; the screen decides.
+ * A dropped value is set to `undefined`, not left out: the router lays a
+ * route's search over the URL's own values, which would bring it back.
  */
 export function sprintSearchOf(search: Record<string, unknown>): {
-  sprint?: number;
+  sprint: number | undefined;
 } {
   const value =
     typeof search.sprint === 'string' && /^\d+$/.test(search.sprint)
       ? Number(search.sprint)
       : search.sprint;
-  return typeof value === 'number' && Number.isInteger(value) && value >= 1
-    ? { sprint: value }
-    : {};
+  return {
+    sprint:
+      typeof value === 'number' && Number.isInteger(value) && value >= 1
+        ? value
+        : undefined,
+  };
 }

@@ -2,6 +2,7 @@ import {
   id,
   type AreaId,
   type DailySelectionId,
+  type LocalDate,
   type TaskId,
 } from '@itera/domain';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
@@ -12,7 +13,7 @@ import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Progress } from '@/components/ui/progress';
 import { AreaSelect } from '@/components/task/area-select';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
-import { formatDate, formatDateHeading, formatTime } from '@/lib/date-format';
+import { formatDate, formatTime } from '@/lib/date-format';
 import { formatHours, formatPlanningTotal } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { useToastOffsetAbove } from '@/lib/use-toast-offset';
@@ -23,9 +24,12 @@ import { useBacklog } from '@/store/use-backlog';
 import { useTaskActions } from '@/store/use-task-actions';
 import { useToday, useTodayActions } from '@/store/use-today';
 import { TaskDetail } from '../backlog/task-detail';
-import { ScreenFrame } from '../screen-frame';
+import { useTaskDetailLeave } from '../backlog/use-task-detail-leave';
+import { DayFocusScope, DayHeader, dateSearchOf } from './day-header';
+import { DayColumns, DayFrame } from './day-frame';
 import { ActualTime, type ActualTimeMode } from './actual-time';
 import { InterruptSheet } from './interrupt-sheet';
+import { OtherDay } from './other-day';
 import { TodayRow } from './today-row';
 import { WeekRow } from './week-row';
 
@@ -39,6 +43,8 @@ import { WeekRow } from './week-row';
 // 768px, no FAB); a Toast shows above it.
 
 export interface TodaySearch {
+  /** A day other than today, read only (#90). Absent: today. */
+  readonly date?: LocalDate | undefined;
   /** The open Task (its detail). */
   readonly task?: TaskId;
 }
@@ -46,12 +52,31 @@ export interface TodaySearch {
 export function validateTodaySearch(
   search: Record<string, unknown>,
 ): TodaySearch {
-  return typeof search.task === 'string'
-    ? { task: id<'Task'>(search.task) }
-    : {};
+  return {
+    ...dateSearchOf(search),
+    ...(typeof search.task === 'string'
+      ? { task: id<'Task'>(search.task) }
+      : {}),
+  };
 }
 
+// Any day opens by `?date=` (#90); today is the screen without it, and a
+// date that is today opens today as well.
 function TodayScreen() {
+  const { date } = useSearch({ from: '/today' });
+  const { today } = useAppOverview();
+  return (
+    <DayFocusScope>
+      {date !== undefined && date !== today ? (
+        <OtherDay date={date} />
+      ) : (
+        <ThisDay />
+      )}
+    </DayFocusScope>
+  );
+}
+
+function ThisDay() {
   const data = useToday();
   // The day itself is started by the app (useSystemDay, #54).
   if (data === undefined) return <NoActiveSprint />;
@@ -67,15 +92,20 @@ function TodayScreen() {
  */
 function BeforeStart({ data }: { data: TodayData }) {
   return (
-    <ScreenFrame heading={formatDateHeading(data.today)}>
+    <DayFrame date={data.today}>
       <p className="text-body text-ink-muted">
         Sprint {data.number} は {formatDate(data.sprint.start)} から始まります。
+        {/* One step to the Sprint (#90). */}{' '}
+        <Link
+          to="/sprint"
+          search={{ sprint: data.number }}
+          className="whitespace-nowrap text-link underline focus-visible:focus-ring"
+        >
+          Sprint {data.number} を開く
+        </Link>
       </p>
       {data.goals.length > 0 && (
-        <section
-          aria-labelledby="before-goals"
-          className="mt-6 flex flex-col gap-3"
-        >
+        <section aria-labelledby="before-goals" className="flex flex-col gap-3">
           <h2 id="before-goals" className="text-subheading text-ink-muted">
             今週の目標
           </h2>
@@ -89,29 +119,30 @@ function BeforeStart({ data }: { data: TodayData }) {
           </ul>
         </section>
       )}
-    </ScreenFrame>
+    </DayFrame>
   );
 }
 
 /** Today without an active Sprint: the date, and where the week is. */
 function NoActiveSprint() {
   const { today, reviewSprint, planningSprint } = useAppOverview();
-  const link = 'ms-1 text-link underline focus-visible:focus-ring';
+  // After the sentence's space, the link moves to the next line whole.
+  const link = 'whitespace-nowrap text-link underline focus-visible:focus-ring';
   return (
-    <ScreenFrame heading={formatDateHeading(today)}>
+    <DayFrame date={today}>
       <p className="text-body text-ink-muted">
         {/* A week in Retro comes first, even when the next is being planned.
             It is not 「今週」: that is the next one to start (#90). */}
         {reviewSprint !== undefined ? (
           <>
-            Sprint {reviewSprint.number} は振り返り中です。
+            Sprint {reviewSprint.number} は振り返り中です。{' '}
             <Link to="/retro" className={link}>
               振り返りを開く
             </Link>
           </>
         ) : planningSprint !== undefined ? (
           <>
-            今週の計画を確定すると、ここで今日やることを選べます。
+            今週の計画を確定すると、ここで今日やることを選べます。{' '}
             <Link to="/sprint" className={link}>
               計画を開く
             </Link>
@@ -120,7 +151,7 @@ function NoActiveSprint() {
           '実行中の Sprint はありません。'
         )}
       </p>
-    </ScreenFrame>
+    </DayFrame>
   );
 }
 
@@ -156,7 +187,8 @@ function TodayView({ data }: { data: TodayData }) {
     | undefined
   >(undefined);
 
-  const openTask = (taskId: TaskId | undefined) =>
+  const detail = useTaskDetailLeave();
+  const showTask = (taskId: TaskId | undefined) =>
     void navigate({
       search: (prev) =>
         taskId === undefined
@@ -165,13 +197,17 @@ function TodayView({ data }: { data: TodayData }) {
             )
           : { ...prev, task: taskId },
     });
+  // Closing the detail or opening another Task asks the detail first.
+  const openTask = (taskId: TaskId | undefined) =>
+    detail.leave(() => showTask(taskId), taskId !== undefined);
   const openItem =
     search.task === undefined ? undefined : backlog.item(search.task);
   const estimateFocus = useEstimateFocus(search.task);
-  const openEstimate = (taskId: TaskId) => {
-    estimateFocus.request(taskId);
-    openTask(taskId);
-  };
+  const openEstimate = (taskId: TaskId) =>
+    detail.leave(() => {
+      estimateFocus.request(taskId);
+      showTask(taskId);
+    }, true);
 
   const moved = (selectionId: DailySelectionId, done: boolean) => {
     if (done) focusNext.current = { selection: selectionId };
@@ -280,15 +316,21 @@ function TodayView({ data }: { data: TodayData }) {
     );
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-[calc(var(--spacing-pane-today)+var(--spacing-pane-side)+var(--spacing-12))] gap-12 wide:px-6">
-      <div className="flex min-w-0 flex-1 flex-col gap-8 px-4 pt-6 medium:mx-auto medium:max-w-pane-today medium:px-6 medium:pt-8 wide:mx-0 wide:px-0">
-        <header className="flex flex-col gap-3">
-          <p className="text-meta text-ink-muted">
-            Sprint {data.number} · {data.day.index}日目 / {data.day.count}日
-          </p>
-          <h1 className="text-display-m text-ink">
-            {formatDateHeading(data.today)}
-          </h1>
+    <>
+      <DayColumns
+        side={
+          <aside
+            aria-label="今週の目標の要約"
+            className="hidden w-pane-side shrink-0 pt-8 wide:block"
+          >
+            <div className="sticky top-8">{goals('today-goals-side')}</div>
+          </aside>
+        }
+      >
+        <DayHeader
+          date={data.today}
+          meta={`Sprint ${data.number} · ${data.day.index}日目 / ${data.day.count}日`}
+        >
           <Progress
             label="今週の完了"
             value={data.progress.done}
@@ -318,7 +360,7 @@ function TodayView({ data }: { data: TodayData }) {
               </Button>
             </div>
           )}
-        </header>
+        </DayHeader>
 
         <div className="wide:hidden">{goals('today-goals')}</div>
 
@@ -481,14 +523,7 @@ function TodayView({ data }: { data: TodayData }) {
             }
           />
         </div>
-      </div>
-
-      <aside
-        aria-label="今週の目標の要約"
-        className="hidden w-pane-side shrink-0 pt-8 wide:block"
-      >
-        <div className="sticky top-8">{goals('today-goals-side')}</div>
-      </aside>
+      </DayColumns>
 
       {editingRow !== undefined && editing !== undefined && (
         <ActualTime
@@ -533,18 +568,19 @@ function TodayView({ data }: { data: TodayData }) {
               item={openItem}
               areas={backlog.areas}
               timeZone={backlog.timeZone}
-              onClose={() => openTask(undefined)}
+              onClose={() => showTask(undefined)}
               onComplete={() => {
                 if (taskActions.completeTask(openItem.task.id)) {
-                  openTask(undefined);
+                  showTask(undefined);
                 }
               }}
               focusEstimate={estimateFocus.of(openItem.task.id)}
+              leaveRef={detail.ref}
             />
           )}
         </DrawerContent>
       </Drawer>
-    </div>
+    </>
   );
 }
 

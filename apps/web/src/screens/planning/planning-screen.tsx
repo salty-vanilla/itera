@@ -32,6 +32,7 @@ import { useBacklog } from '@/store/use-backlog';
 import { usePlanningActions } from '@/store/use-planning';
 import { useTaskActions } from '@/store/use-task-actions';
 import { TaskDetail } from '../backlog/task-detail';
+import { useTaskDetailLeave } from '../backlog/use-task-detail-leave';
 import { BacklogPane } from './backlog-pane';
 import { ConfirmDialog } from './confirm-dialog';
 import { sprintSearchOf } from '../sprint-steps';
@@ -60,7 +61,7 @@ export const STAGES: readonly { id: Stage; label: string }[] = [
 
 export interface SprintSearch {
   /** The Sprint to open, by number (#90). Absent: the current one. */
-  readonly sprint?: number;
+  readonly sprint?: number | undefined;
   readonly stage?: Stage;
   /** The criterion is used unless the Check switches it off. */
   readonly criterion?: 'off';
@@ -110,17 +111,22 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
           ),
         ),
     });
-  const openTask = (taskId: TaskId) => {
-    setOutlookOpen(false);
-    setSearch({ task: taskId });
-  };
+  // Closing the detail or opening another Task asks the detail first.
+  const detail = useTaskDetailLeave();
+  const openTask = (taskId: TaskId) =>
+    detail.leave(() => {
+      setOutlookOpen(false);
+      setSearch({ task: taskId });
+    }, true);
   const openItem =
     search.task === undefined ? undefined : backlog.item(search.task);
   const estimateFocus = useEstimateFocus(search.task);
-  const openEstimate = (taskId: TaskId) => {
-    estimateFocus.request(taskId);
-    openTask(taskId);
-  };
+  const openEstimate = (taskId: TaskId) =>
+    detail.leave(() => {
+      estimateFocus.request(taskId);
+      setOutlookOpen(false);
+      setSearch({ task: taskId });
+    }, true);
 
   const outlook = (
     <OutlookPane
@@ -284,10 +290,12 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
       <div className="sticky top-0 z-(--layer-sticky) border-b border-border bg-canvas px-4 py-2 medium:px-6 wide:hidden">
         <button
           type="button"
-          onClick={() => {
-            setSearch({ task: undefined });
-            setOutlookOpen(true);
-          }}
+          onClick={() =>
+            detail.leave(() => {
+              setSearch({ task: undefined });
+              setOutlookOpen(true);
+            })
+          }
           className="flex min-h-target-touch w-full items-center justify-between gap-3 rounded-sm text-left text-body text-ink focus-visible:focus-ring medium:min-h-target-min"
         >
           <CapacitySummary data={data} />
@@ -350,7 +358,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
       <Drawer
         open={openItem !== undefined}
         onOpenChange={(next) => {
-          if (!next) setSearch({ task: undefined });
+          if (!next) detail.leave(() => setSearch({ task: undefined }));
         }}
       >
         <DrawerContent>
@@ -367,6 +375,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
                 }
               }}
               focusEstimate={estimateFocus.of(openItem.task.id)}
+              leaveRef={detail.ref}
             />
           )}
         </DrawerContent>
