@@ -68,7 +68,7 @@ function SubtaskList({ task }: { task: Task }) {
           />
         </Field>
         <Field
-          label="サブタスクの Estimate（時間、任意）"
+          label="サブタスクの見積もり（時間、任意）"
           hideLabel
           error={error}
           className="w-1/4 min-w-16 shrink-0"
@@ -127,7 +127,7 @@ function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
         {subtask.title}
       </span>
       <Field
-        label={`Estimate（時間）: ${subtask.title}`}
+        label={`見積もり（時間）: ${subtask.title}`}
         hideLabel
         error={error}
         className="w-1/4 min-w-16 shrink-0"
@@ -136,7 +136,7 @@ function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
           size="sm"
           inputMode="decimal"
           suffix="h"
-          placeholder="未見積"
+          placeholder="見積もりなし"
           value={hours}
           onChange={(e) => setHours(e.currentTarget.value)}
           onBlur={commit}

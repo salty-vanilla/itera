@@ -76,7 +76,7 @@ function BeforeStart({ data }: { data: TodayData }) {
           className="mt-6 flex flex-col gap-3"
         >
           <h2 id="before-goals" className="text-subheading text-ink-muted">
-            今週の Goal
+            今週の目標
           </h2>
           <ul className="flex flex-col gap-3">
             {data.goals.map((g) => (
@@ -265,7 +265,7 @@ function TodayView({ data }: { data: TodayData }) {
     data.goals.length > 0 && (
       <section aria-labelledby={headingId} className="flex flex-col gap-3">
         <h2 id={headingId} className="text-subheading text-ink-muted">
-          今週の Goal
+          今週の目標
         </h2>
         <ul className="flex flex-col gap-3">
           {data.goals.map((g) => (
@@ -313,7 +313,7 @@ function TodayView({ data }: { data: TodayData }) {
                   if (actions.beginRetro()) void navigate({ to: '/retro' });
                 }}
               >
-                Retro を始める
+                振り返りを始める
               </Button>
             </div>
           )}
@@ -483,7 +483,7 @@ function TodayView({ data }: { data: TodayData }) {
       </div>
 
       <aside
-        aria-label="今週の Goal の要約"
+        aria-label="今週の目標の要約"
         className="hidden w-pane-side shrink-0 pt-8 wide:block"
       >
         <div className="sticky top-8">{goals('today-goals-side')}</div>

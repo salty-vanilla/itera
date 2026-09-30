@@ -45,8 +45,9 @@ export const Tones: Story = {
       >
         計画案を作った後に 2件が追加されました。
       </Notice>
-      <Notice tone="warning" title="可用時間を超えるかもしれません">
-        計画値の合計は 16.5–19.5h です。上限では可用時間 18h を 1.5h 超えます。
+      <Notice tone="warning" title="使える時間を超えるかもしれません">
+        計画値の合計は 16.5–19.5h です。上限では使える時間 18h を 1.5h
+        超えます。
       </Notice>
       <Notice
         tone="danger"
@@ -56,10 +57,10 @@ export const Tones: Story = {
         通信を確認してから、もう一度読み込んでください。
       </Notice>
       <Notice tone="done" title="計画案を反映しました">
-        3件を今週に入れ、1件の Estimate を更新しました。
+        3件を今週に入れ、1件の見積もりを更新しました。
       </Notice>
-      <Notice tone="neutral" title="未見積のタスクは合計に含めません">
-        Estimate を入れると、計画値の合計に加わります。
+      <Notice tone="neutral" title="見積もりのないタスクは合計に含めません">
+        見積もりを入れると、計画値の合計に加わります。
       </Notice>
     </div>
   ),
@@ -86,7 +87,7 @@ export const WithActions: Story = {
   render: () => (
     <Notice
       tone="warning"
-      title="未見積のタスクが 3件あります"
+      title="見積もりのないタスクが 3件あります"
       action={
         <>
           <Button size="sm" data-demo="focus">
@@ -98,7 +99,7 @@ export const WithActions: Story = {
         </>
       }
     >
-      未見積のタスクは計画値の合計に含まれません。
+      見積もりのないタスクは計画値の合計に含まれません。
     </Notice>
   ),
 };

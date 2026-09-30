@@ -41,13 +41,13 @@ export const Outcome: Story = {
   render: () => (
     <div className="flex flex-col gap-2">
       <SuggestionOutcome onUndo={() => {}}>
-        Estimate 3h を採用しました（Agent 提案 2–4h）
+        見積もり 3h を採用しました（Agent 提案 2–4h）
       </SuggestionOutcome>
       <SuggestionOutcome onUndo={() => {}}>
-        Estimate 2.5h を採用しました（Agent 提案 2–4h を編集）
+        見積もり 2.5h を採用しました（Agent 提案 2–4h を編集）
       </SuggestionOutcome>
       <SuggestionOutcome onUndo={() => {}}>
-        提案 2–4h を却下しました
+        Agent の提案 2–4h を却下しました
       </SuggestionOutcome>
     </div>
   ),

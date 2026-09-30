@@ -86,7 +86,7 @@ export const Rule: Story = {
   render: () => (
     <section className="flex max-w-measure-read flex-col gap-3">
       <Divider variant="rule" />
-      <h2 className="text-display-m">今週の Goal</h2>
+      <h2 className="text-display-m">今週の目標</h2>
       <p className="text-goal">関連研究の章を書き終えた状態にする</p>
     </section>
   ),

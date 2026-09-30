@@ -23,7 +23,7 @@ import {
 } from '@/components/sprint/sprint-header';
 import { formatDate, formatDateRange } from '@/lib/date-format';
 import { isTyping } from '@/lib/row-keys';
-import { formatPlanningTotal } from '@/lib/time-format';
+import { formatPlanningSum } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { cn } from '@/lib/utils';
 import { weekCall, weekText } from '@/lib/week-text';
@@ -251,10 +251,10 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
                   {data.blockers.includes('previousRetroOpen') &&
                     data.previous !== undefined && (
                       <p>
-                        前の Sprint の Retro を完了すると確定できます。
+                        前の Sprint の振り返りを完了すると確定できます。
                         {data.previous.state === 'active' &&
                           // F21: its Retro starts on its last day.
-                          `Sprint ${data.previous.number} の Retro は ${formatDate(data.previous.end)} から始められます。`}
+                          `Sprint ${data.previous.number} の振り返りは ${formatDate(data.previous.end)} から始められます。`}
                         <Link
                           to="/retro"
                           search={{ sprint: data.previous.number }}
@@ -388,7 +388,7 @@ function CapacitySummary({ data }: { data: PlanningData }) {
   if (capacity === undefined) {
     return (
       <span>
-        計画値の合計 {formatPlanningTotal(data.totals.total)} · 可用時間は未入力
+        計画値の合計 {formatPlanningSum(data.totals.total)} · 使える時間は未入力
       </span>
     );
   }

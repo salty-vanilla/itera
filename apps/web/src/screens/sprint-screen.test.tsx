@@ -115,7 +115,7 @@ describe('Sprint — by number (#90)', () => {
     ).toBeTruthy();
     // Not 「今週」 or 「来週」: the header names it by number only.
     expect(document.body.textContent).not.toMatch(/今週|来週/);
-    expect(screen.queryByRole('button', { name: /編集|Goal を書く/ })).toBe(
+    expect(screen.queryByRole('button', { name: /編集|目標を書く/ })).toBe(
       null,
     );
     expect(screen.queryByRole('textbox')).toBeNull();
@@ -138,9 +138,9 @@ describe('Sprint — the next week (#90)', () => {
     });
     expect(
       screen.getByText(
-        /確定できるのは、前の Sprint（Sprint 2）の Retro\s*を完了してからです。/,
+        /確定できるのは、前の Sprint（Sprint 2）の振り返り\s*を完了してからです。/,
       ).textContent,
-    ).toContain('Sprint 2 の Retro は、最終日の 10/4 (日) から始められます。');
+    ).toContain('Sprint 2 の振り返りは、最終日の 10/4 (日) から始められます。');
     // The last one: no Sprint after the next week.
     expect(screen.queryByRole('link', { name: /次の Sprint/ })).toBeNull();
 
@@ -204,7 +204,7 @@ describe('Sprint — the next week (#90)', () => {
     expect(within(backlog).getByText('来週発生する繰り返し')).toBeTruthy();
     // Its confirm waits for this week's Retro, from its last day (F21).
     expect(
-      screen.getByText(/Sprint 2 の Retro は 10\/4 \(日\) から始められます。/),
+      screen.getByText(/Sprint 2 の振り返りは 10\/4 \(日\) から始められます。/),
     ).toBeTruthy();
     expect(screen.queryByText(/今週/)).toBeNull();
   });
@@ -238,9 +238,9 @@ describe('Retro — by number (#90)', () => {
       }),
     ).toBeTruthy();
     expect(screen.queryByRole('radio')).toBeNull();
-    expect(screen.queryByRole('button', { name: /気になる/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /振り返りに使う/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /実績を足す/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Retro を完了' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '振り返りを完了' })).toBeNull();
     // Its self-assessment, as a Tag.
     expect(screen.getByText('できた')).toBeTruthy();
 
@@ -252,10 +252,10 @@ describe('Retro — by number (#90)', () => {
 
     await userEvent.click(screen.getByRole('link', { name: /引き継ぐ/ }));
     expect(
-      await screen.findByText('研究の見積りは幅の上限で計画する'),
+      await screen.findByText('研究の見積もりは幅の上限で計画する'),
     ).toBeTruthy();
     expect(
-      screen.getByText(/改善策から計画基準「研究の推定幅 → 上限を計画値に」/),
+      screen.getByText(/改善策から計画基準「研究：提案の幅の上限で計画する」/),
     ).toBeTruthy();
     expect(screen.queryByRole('switch')).toBeNull();
     // An older Retro does not lead on to a Planning.

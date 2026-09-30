@@ -7,8 +7,8 @@
 // - a range that includes a negative value, and any difference from the
 //   available hours (残り・超過), uses `〜` with spaces and the minus sign
 //   U+2212 (`−1 〜 1h`, `残り 1 〜 3h`, `超過 3 〜 5h`);
-// - no value is 「未見積」, never 0h, and unestimated parts left out of a sum
-//   are counted after it (`2.5h ＋ 未見積 1`).
+// - no value is 「見積もりなし」, never 0h, and unestimated parts left out of
+//   a sum are counted after it (`2.5h（見積もりなしが 1件）`).
 // The words around a value (「提案」「計画」「残り」「超過」) belong to the screen.
 
 import type { PlanningTotal, PlanningValue } from '@itera/domain';
@@ -16,7 +16,7 @@ import type { PlanningTotal, PlanningValue } from '@itera/domain';
 const MINUS = '−';
 const EN_DASH = '–';
 
-export const UNESTIMATED = '未見積';
+export const UNESTIMATED = '見積もりなし';
 
 type HoursOptions = {
   /** A total (合計): always in hours, even under 1h. */
@@ -74,7 +74,7 @@ export function formatDifference(lo: number, hi: number): string {
   return `${number(lo)} 〜 ${number(hi)}h`;
 }
 
-/** An Estimate or a planning value that may be missing: 「未見積」 then. */
+/** An Estimate or a planning value that may be missing: 「見積もりなし」 then. */
 export function formatEstimate(
   value: number | { readonly lo: number; readonly hi: number } | undefined,
   options: HoursOptions = {},
@@ -84,8 +84,13 @@ export function formatEstimate(
   return formatRange(value.lo, value.hi, options);
 }
 
+/** 「見積もりなしが 1件」: the parts left out of a sum. */
+export function formatUnestimatedCount(count: number): string {
+  return `${UNESTIMATED}が ${count}件`;
+}
+
 function withUnestimated(text: string, count: number): string {
-  return count === 0 ? text : `${text} ＋ ${UNESTIMATED} ${count}`;
+  return count === 0 ? text : `${text}（${formatUnestimatedCount(count)}）`;
 }
 
 /** A planning value (計画値), with the subtasks left out of a subtask sum. */
@@ -98,19 +103,40 @@ export function formatPlanningValue(value: PlanningValue): string {
 }
 
 /**
+ * A sum of planning values, in hours, without what is left out of it (for a
+ * value that has its count in a sentence of its own, `formatLeftOut`). With
+ * nothing estimated at all the sum is 「見積もりなし 3件」.
+ */
+export function formatPlanningSum(total: PlanningTotal): string {
+  const unestimated = total.unestimated + total.unestimatedSubtasks;
+  if (total.lo === 0 && total.hi === 0 && unestimated > 0) {
+    return `${UNESTIMATED} ${unestimated}件`;
+  }
+  return formatRange(total.lo, total.hi, { total: true });
+}
+
+/**
  * A sum of planning values, in hours. Unestimated values and subtasks are
- * not in the sum and are counted after it. With nothing estimated at all
- * the sum is 「未見積」.
+ * not in the sum and are counted after it (`12–16h（見積もりなしが 2件）`).
  */
 export function formatPlanningTotal(total: PlanningTotal): string {
   const unestimated = total.unestimated + total.unestimatedSubtasks;
-  if (total.lo === 0 && total.hi === 0 && unestimated > 0) {
-    return `${UNESTIMATED} ${unestimated}`;
-  }
-  return withUnestimated(
-    formatRange(total.lo, total.hi, { total: true }),
-    unestimated,
-  );
+  if (total.lo === 0 && total.hi === 0) return formatPlanningSum(total);
+  return withUnestimated(formatPlanningSum(total), unestimated);
+}
+
+/**
+ * What a sum leaves out, as sentences: 「見積もりのないタスク 1件は合計に
+ * 含まれていません。」. Nothing when everything is estimated.
+ */
+export function formatLeftOut(total: PlanningTotal): string | undefined {
+  const sentences = [
+    total.unestimated > 0 &&
+      `見積もりのないタスク ${total.unestimated}件は合計に含まれていません。`,
+    total.unestimatedSubtasks > 0 &&
+      `見積もりのないサブタスク ${total.unestimatedSubtasks}件は合計に含まれていません。`,
+  ].filter(Boolean);
+  return sentences.length === 0 ? undefined : sentences.join(' ');
 }
 
 function spokenOne(hours: number): string {

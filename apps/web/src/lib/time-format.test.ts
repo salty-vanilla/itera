@@ -70,8 +70,8 @@ describe('formatRange', () => {
 });
 
 describe('formatEstimate', () => {
-  it('writes 「未見積」 instead of 0h', () => {
-    expect(formatEstimate(undefined)).toBe('未見積');
+  it('writes 「見積もりなし」 instead of 0h', () => {
+    expect(formatEstimate(undefined)).toBe('見積もりなし');
   });
 
   it('writes a point or a range', () => {
@@ -81,14 +81,14 @@ describe('formatEstimate', () => {
 });
 
 describe('formatPlanningValue', () => {
-  it('writes an unestimated value as 「未見積」', () => {
+  it('writes an unestimated value as 「見積もりなし」', () => {
     expect(
       formatPlanningValue({
         base: 'none',
         criterionApplied: false,
         computedAt,
       }),
-    ).toBe('未見積');
+    ).toBe('見積もりなし');
   });
 
   it('counts the subtasks left out of a subtask sum', () => {
@@ -101,7 +101,7 @@ describe('formatPlanningValue', () => {
         criterionApplied: false,
         computedAt,
       }),
-    ).toBe('2.5h ＋ 未見積 1');
+    ).toBe('2.5h（見積もりなしが 1件）');
   });
 
   it('writes a suggestion range as it is', () => {
@@ -126,7 +126,7 @@ describe('formatPlanningTotal', () => {
         unestimated: 2,
         unestimatedSubtasks: 0,
       }),
-    ).toBe('12–16h ＋ 未見積 2');
+    ).toBe('12–16h（見積もりなしが 2件）');
     expect(
       formatPlanningTotal({
         lo: 0.5,
@@ -137,7 +137,7 @@ describe('formatPlanningTotal', () => {
     ).toBe('0.5h');
   });
 
-  it('writes 「未見積」 when nothing is estimated', () => {
+  it('writes 「見積もりなし」 when nothing is estimated', () => {
     expect(
       formatPlanningTotal({
         lo: 0,
@@ -145,7 +145,7 @@ describe('formatPlanningTotal', () => {
         unestimated: 3,
         unestimatedSubtasks: 0,
       }),
-    ).toBe('未見積 3');
+    ).toBe('見積もりなし 3件');
   });
 });
 

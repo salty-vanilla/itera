@@ -83,7 +83,7 @@ function EstimateSuggestion({
 
   return (
     <section
-      aria-label="Agent 提案 · Estimate"
+      aria-label="Agent 提案 · 見積もり"
       data-slot="estimate-suggestion"
       className={cn(
         'flex flex-col gap-3 rounded-md border border-dashed border-proposal-border bg-surface p-4',
@@ -91,7 +91,7 @@ function EstimateSuggestion({
       )}
     >
       <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <p className="text-kicker text-ink-muted">Agent 提案 · Estimate</p>
+        <p className="text-kicker text-ink-muted">Agent 提案 · 見積もり</p>
         <p className="text-meta text-ink-subtle">
           製品内の見積もり支援 · {madeAt}
         </p>
@@ -132,8 +132,8 @@ function EstimateSuggestion({
           }}
         >
           <Field
-            label="採用する Estimate（時間）"
-            description="提案の値を直して、本人の Estimate にします"
+            label="採用する見積もり（時間）"
+            description="提案の値を直して、本人の見積もりにします"
             error={error}
           >
             <TextInput

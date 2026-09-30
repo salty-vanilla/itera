@@ -61,7 +61,7 @@ export function SprintText({
 }: Pick<NonNullable<BacklogItem['thisWeek']>, 'midSprint'>) {
   return (
     <MetaItem className="text-ink-subtle">
-      今週{midSprint && ' · Sprint 中に追加'}
+      今週{midSprint && ' · 週の途中で追加'}
     </MetaItem>
   );
 }
