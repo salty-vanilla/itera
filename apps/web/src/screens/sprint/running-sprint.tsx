@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { Info, NotebookPen, Route } from 'lucide-react';
 import { useId } from 'react';
 import { buttonVariants } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import { Tag } from '@/components/ui/tag';
 import { AvailableHoursField } from '@/components/sprint/capacity-indicator';
 import { GoalBlock } from '@/components/sprint/goal-block';
@@ -112,6 +113,15 @@ function RunningSprint({
           </p>
         )}
       </SprintHeader>
+      {data.progress !== undefined && (
+        <Progress
+          label="今週の完了"
+          value={data.progress.done}
+          max={data.progress.total}
+          unit="件"
+          className="max-w-measure-read"
+        />
+      )}
       <div className="grid grid-cols-1 gap-12 wide:grid-cols-[minmax(0,var(--spacing-pane-sprint))_var(--spacing-pane-side)]">
         <div className="flex min-w-0 flex-col gap-8">
           <h1 className="text-display-m text-ink">

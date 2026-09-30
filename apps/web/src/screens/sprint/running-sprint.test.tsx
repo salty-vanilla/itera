@@ -89,6 +89,29 @@ describe('Sprint — running (#51)', () => {
     ).toBeGreaterThan(0);
   });
 
+  it('shows 今週の完了 as Today counts it, with no judgement (#103, F32)', async () => {
+    await renderAt('/sprint?fixture=today-interrupt');
+    const bar = screen.getByRole('progressbar', { name: '今週の完了' });
+    expect(
+      within(bar.parentElement as HTMLElement).getByText('4 / 10件'),
+    ).toBeTruthy();
+    // Count only: no remaining time, no colour or word of going over or short.
+    const text = document.body.textContent ?? '';
+    for (const word of ['不足', '遅れ', '残り時間']) {
+      expect(text).not.toContain(word);
+    }
+    cleanup();
+    await renderAt('/today?fixture=today-interrupt');
+    expect(screen.getByText('4 / 10件')).toBeTruthy();
+  });
+
+  it('does not show it for a Sprint that has ended (#103)', async () => {
+    await renderAt('/sprint?fixture=today-daytime&sprint=1');
+    expect(
+      screen.queryByRole('progressbar', { name: '今週の完了' }),
+    ).toBeNull();
+  });
+
   it('rewords a Goal and keeps the planned text beside it (invariant 18, MVP 16)', async () => {
     await renderAt('/sprint?fixture=today-interrupt');
     await userEvent.click(
