@@ -8,10 +8,23 @@ import {
   type EstimateSuggestionId,
   type SuggestionBound,
   type Task,
+  type TaskAttributeUpdate,
   type TaskPriority,
   type TimeBasis,
 } from '@itera/domain';
-import { useEffect, useRef, useState } from 'react';
+import { Check, ChevronDown, ChevronRight } from 'lucide-react';
+import {
+  Fragment,
+  useEffect,
+  useId,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+  type Ref,
+} from 'react';
+import { flushSync } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import {
   DrawerBody,
@@ -45,26 +58,131 @@ const priorities: readonly { value: TaskPriority; label: string }[] = [
   { value: 'low', label: '低' },
 ];
 
+/** The fields typed as text: kept as typed until the person leaves them. */
 type Draft = {
   title: string;
   description: string;
-  areaId: string;
   due: string;
-  priority: TaskPriority;
-  timeBasis: TimeBasis;
   estimate: string;
+};
+
+type TextKey = keyof Draft;
+type FieldKey = TextKey | 'areaId' | 'priority' | 'timeBasis';
+
+/** The words of 「〜を保存しました」 for each field. */
+const fieldNames: Record<FieldKey, string> = {
+  title: 'タイトル',
+  description: '説明',
+  areaId: '領域',
+  due: '期限',
+  priority: '優先度',
+  estimate: '見積もり',
+  timeBasis: '計画に使う時間',
 };
 
 function draftOf(task: Task): Draft {
   return {
     title: task.title,
     description: task.description,
-    areaId: task.areaId ?? '',
     due: task.due ?? '',
-    priority: task.priority,
-    timeBasis: task.timeBasis,
     estimate: task.estimate === undefined ? '' : String(task.estimate.hours),
   };
+}
+
+type Reading =
+  | { kind: 'error'; message: string }
+  | { kind: 'same' }
+  | { kind: 'save'; update: TaskAttributeUpdate; estimate?: number | null };
+
+const same: Reading = { kind: 'same' };
+
+/** What leaving a text field records: nothing, a change, or why not. */
+function readField(key: TextKey, draft: Draft, task: Task): Reading {
+  switch (key) {
+    case 'title': {
+      const title = draft.title.trim();
+      if (title === '') {
+        return { kind: 'error', message: 'タイトルを入力してください' };
+      }
+      return title === task.title ? same : { kind: 'save', update: { title } };
+    }
+    case 'description':
+      return draft.description === task.description
+        ? same
+        : { kind: 'save', update: { description: draft.description } };
+    case 'due': {
+      if (draft.due === '') {
+        return task.due === undefined
+          ? same
+          : { kind: 'save', update: { due: null } };
+      }
+      const parsed = parseLocalDate(draft.due);
+      if (!parsed.ok) {
+        return {
+          kind: 'error',
+          message: '日付を入力してください（例: 2026-10-05）',
+        };
+      }
+      return parsed.value === task.due
+        ? same
+        : { kind: 'save', update: { due: parsed.value } };
+    }
+    case 'estimate': {
+      const text = draft.estimate.trim();
+      const hours = text === '' ? null : Number(text);
+      if (hours !== null && !(Number.isFinite(hours) && hours > 0)) {
+        return {
+          kind: 'error',
+          message: '0 より大きい数で入力してください（例: 1.5）',
+        };
+      }
+      return hours === (task.estimate?.hours ?? null)
+        ? same
+        : { kind: 'save', update: {}, estimate: hours };
+    }
+  }
+}
+
+/** The items folded under 詳しく, in their order (Issue #95). */
+type MoreKey = 'description' | 'priority' | 'subtasks' | 'recurrence';
+
+const moreNames: Record<MoreKey, string> = {
+  description: '説明',
+  priority: '優先度',
+  subtasks: 'サブタスク',
+  recurrence: '繰り返し',
+};
+
+function valuesOf(item: BacklogItem): Record<MoreKey, boolean> {
+  return {
+    description: item.task.description !== '',
+    priority: item.task.priority !== 'normal',
+    subtasks: item.task.subtasks.length > 0,
+    recurrence: item.rule !== undefined,
+  };
+}
+
+/**
+ * 保存しました, beside the field's label: it takes no line of its own, so
+ * nothing moves under the pointer when a field is saved on leaving it. The
+ * detail announces the save once, in its status line.
+ */
+function Saved({ show, children }: { show: boolean; children: ReactNode }) {
+  return (
+    <div className="relative">
+      {children}
+      {show && (
+        <span
+          aria-hidden
+          data-slot="saved-note"
+          className="absolute top-0 right-0 flex items-center gap-1 text-help text-ink-muted [&_svg]:size-icon-s [&_svg]:[stroke-width:var(--icon-stroke-s)]"
+        >
+          <Check />
+          保存しました
+        </span>
+      )}
+    </div>
+  );
 }
 
 type Outcome =
@@ -77,9 +195,11 @@ type Outcome =
   | { kind: 'rejected'; suggestionId: EstimateSuggestionId; text: string };
 
 /**
- * The Task detail (PRD §5 A Organize): the attributes and the Estimate are a
- * form saved with 「保存」; subtasks, the suggestion, the recurrence rule and
- * the actions take effect at once, each through its domain command.
+ * The Task detail (PRD §5 A Organize). Every field is saved on its own when
+ * the person leaves it (a choice, when it is made); a value that cannot be
+ * saved stays in the field with its error. Subtasks, the suggestion, the
+ * recurrence rule and the actions take effect at once, each through its
+ * domain command. The footer only closes (Issue #95).
  */
 function TaskDetail({
   item,
@@ -88,6 +208,7 @@ function TaskDetail({
   onClose,
   onComplete,
   focusEstimate,
+  leaveRef,
 }: {
   item: BacklogItem;
   /** The Areas to choose from, in the person's order. */
@@ -98,70 +219,87 @@ function TaskDetail({
   onComplete: () => void;
   /**
    * E on the row: the focus goes to the Estimate. A new value moves it
-   * there again (`useEstimateFocus`).
+   * there again (`useEstimateFocus`). Otherwise it opens on the heading.
    */
   focusEstimate?: number | undefined;
+  /** From `useTaskDetailLeave`: the screen asks before it closes the detail. */
+  leaveRef?: Ref<() => boolean> | undefined;
 }) {
   const actions = useTaskActions();
   const { task } = item;
   const facts = item;
   const toast = useToast();
   const [draft, setDraft] = useState(() => draftOf(task));
-  const [errors, setErrors] = useState<{
-    title?: string;
-    estimate?: string;
-    due?: string;
-  }>({});
+  const [errors, setErrors] = useState<Partial<Record<TextKey, string>>>({});
+  // The field saved last, marked 保存しました until it is edited again.
+  const [saved, setSaved] = useState<FieldKey>();
   const [outcome, setOutcome] = useState<Outcome>();
   // After 元に戻す the suggestion comes back and takes the focus.
   const [suggestionBack, setSuggestionBack] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
+  // 詳しく: an item with a value when the detail opened stays out of the
+  // fold, even if it is cleared meanwhile.
+  const [openedWith] = useState(() => valuesOf(item));
+  const [more, setMore] = useState(false);
+  const moreId = useId();
+  const bodyRef = useRef<HTMLDivElement>(null);
   const estimateRef = useRef<HTMLInputElement>(null);
   // Opening, the Drawer finds it by `data-autofocus`; already open, this.
   useEffect(() => {
     if (focusEstimate !== undefined) estimateRef.current?.focus();
   }, [focusEstimate]);
-  // After a failed save, focus goes to the first field in error.
-  useEffect(() => {
-    formRef.current
-      ?.querySelector<HTMLElement>('[aria-invalid="true"]')
-      ?.focus();
-  }, [errors]);
   const suggestion = presentedSuggestion(task);
-  const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
+  const set = (key: TextKey, value: string) => {
     setDraft((d) => ({ ...d, [key]: value }));
+    if (saved === key) setSaved(undefined);
+  };
 
-  function save() {
-    const title = draft.title.trim();
-    const hours = draft.estimate.trim() === '' ? null : Number(draft.estimate);
-    const parsedDue = draft.due === '' ? undefined : parseLocalDate(draft.due);
-    const due = parsedDue?.ok ? parsedDue.value : undefined;
-    const next = {
-      ...(title === '' ? { title: 'タイトルを入力してください' } : {}),
-      ...(hours !== null && !(Number.isFinite(hours) && hours > 0)
-        ? { estimate: '0 より大きい数で入力してください（例: 1.5）' }
-        : {}),
-      ...(parsedDue !== undefined && !parsedDue.ok
-        ? { due: '日付を入力してください（例: 2026-10-05）' }
-        : {}),
-    };
-    setErrors(next);
-    if (Object.keys(next).length > 0) return;
-    const current = task.estimate?.hours ?? null;
-    const ok = actions.saveTask(
-      task.id,
-      {
-        title,
-        description: draft.description,
-        areaId: draft.areaId === '' ? null : id<'Area'>(draft.areaId),
-        due: due === undefined ? null : due,
-        priority: draft.priority,
-        timeBasis: draft.timeBasis,
-      },
-      hours === current ? undefined : hours,
-    );
-    if (ok) onClose();
+  function record(
+    key: FieldKey,
+    update: TaskAttributeUpdate,
+    estimate?: number | null,
+  ): boolean {
+    if (!actions.saveTask(task.id, update, estimate)) return false;
+    setSaved(key);
+    return true;
   }
+
+  /** Leaving a text field: saves it when it changed and can be saved. */
+  function commit(key: TextKey) {
+    const reading = readField(key, draft, task);
+    setErrors((e) => {
+      const next = { ...e };
+      if (reading.kind === 'error') next[key] = reading.message;
+      else delete next[key];
+      return next;
+    });
+    if (reading.kind === 'save') {
+      record(key, reading.update, reading.estimate);
+    }
+  }
+
+  // Closing or opening another Task leaves the field being edited first,
+  // so it is saved or shows its error. A field left in error keeps the
+  // detail open and takes the focus back.
+  function leave(): boolean {
+    const body = bodyRef.current;
+    if (body === null) return true;
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && body.contains(active)) {
+      flushSync(() => active.blur());
+    }
+    const invalid = body.querySelector<HTMLElement>('[aria-invalid="true"]');
+    if (invalid === null) return true;
+    invalid.focus();
+    return false;
+  }
+  useImperativeHandle(leaveRef, () => leave);
+
+  const leaveOnEnter = (key: TextKey) => (event: KeyboardEvent) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      commit(key);
+    }
+  };
 
   function onAdopt(bound: SuggestionBound) {
     if (suggestion === undefined) return;
@@ -222,10 +360,96 @@ function TaskDetail({
     setSuggestionBack(true);
   }
 
+  const values = valuesOf(item);
+  const shown = (key: MoreKey) => more || openedWith[key] || values[key];
+  const folded = (Object.keys(moreNames) as MoreKey[]).filter(
+    (key) => !openedWith[key] && !values[key],
+  );
+  // The items with a value come first; the fold opens under its button.
+  const moreItems = (inFold: boolean) =>
+    (Object.keys(moreNames) as MoreKey[])
+      .filter((key) => folded.includes(key) === inFold && shown(key))
+      .map((key) => <Fragment key={key}>{moreItem(key)}</Fragment>);
+
+  function moreItem(key: MoreKey) {
+    switch (key) {
+      case 'description':
+        return (
+          <Saved show={saved === 'description'}>
+            <Field label="説明" necessity="optional">
+              <Textarea
+                value={draft.description}
+                onChange={(e) => set('description', e.currentTarget.value)}
+                onBlur={() => commit('description')}
+              />
+            </Field>
+          </Saved>
+        );
+      case 'priority':
+        return (
+          <Saved show={saved === 'priority'}>
+            <Field label="優先度">
+              <Select
+                value={task.priority}
+                onChange={(e) =>
+                  record('priority', {
+                    priority: e.currentTarget.value as TaskPriority,
+                  })
+                }
+              >
+                {priorities.map((p) => (
+                  <option key={p.value} value={p.value}>
+                    {p.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </Saved>
+        );
+      case 'subtasks':
+        return (
+          <>
+            <SubtaskList task={task} />
+            {task.subtasks.length > 0 && (
+              <Saved show={saved === 'timeBasis'}>
+                <RadioGroup<TimeBasis>
+                  legend="計画に使う時間"
+                  value={task.timeBasis}
+                  onValueChange={(timeBasis) =>
+                    record('timeBasis', { timeBasis })
+                  }
+                >
+                  <Radio<TimeBasis> value="task" label="この Task の見積もり" />
+                  <Radio<TimeBasis>
+                    value="subtasks"
+                    label={
+                      <span className="inline-flex flex-wrap items-center gap-2">
+                        サブタスクの合計
+                        <Estimate value={facts.subtaskValue} inline />
+                      </span>
+                    }
+                  />
+                </RadioGroup>
+              </Saved>
+            )}
+          </>
+        );
+      case 'recurrence':
+        return <RecurrenceEditor item={item} />;
+    }
+  }
+
   return (
     <>
       <DrawerHeader>
-        <DrawerTitle>{task.title}</DrawerTitle>
+        <DrawerTitle
+          // Opening shows the Task first; typing starts only when the person
+          // chooses a field, so a phone does not raise its keyboard (#95).
+          tabIndex={-1}
+          data-autofocus={focusEstimate === undefined || undefined}
+        >
+          {task.title}
+        </DrawerTitle>
         {(facts.thisWeek || facts.carry || facts.recurrence) && (
           <DrawerDescription className="flex flex-wrap gap-x-3 text-meta">
             {facts.thisWeek && <SprintText {...facts.thisWeek} />}
@@ -236,128 +460,7 @@ function TaskDetail({
           </DrawerDescription>
         )}
       </DrawerHeader>
-      <DrawerBody className="flex flex-col gap-6">
-        <form
-          id="task-detail-form"
-          ref={formRef}
-          className="flex flex-col gap-4"
-          noValidate
-          onSubmit={(event) => {
-            event.preventDefault();
-            save();
-          }}
-        >
-          <Field label="タイトル" necessity="required" error={errors.title}>
-            <TextInput
-              value={draft.title}
-              onChange={(e) => set('title', e.currentTarget.value)}
-            />
-          </Field>
-          <Field label="説明" necessity="optional">
-            <Textarea
-              value={draft.description}
-              onChange={(e) => set('description', e.currentTarget.value)}
-            />
-          </Field>
-          <div className="grid gap-4 medium:grid-cols-2">
-            <Field label="領域" necessity="optional">
-              <Select
-                value={draft.areaId}
-                onChange={(e) => set('areaId', e.currentTarget.value)}
-              >
-                <option value="">領域なし</option>
-                {/* An archived Area stays selectable while the Task is in it. */}
-                {task.areaId !== undefined &&
-                  facts.area !== undefined &&
-                  !areas.some((a) => a.id === task.areaId) && (
-                    <option value={task.areaId}>{facts.area.name}</option>
-                  )}
-                {areas.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="期限" necessity="optional" error={errors.due}>
-              <TextInput
-                type="date"
-                value={draft.due}
-                onChange={(e) => set('due', e.currentTarget.value)}
-              />
-            </Field>
-            <Field label="優先度">
-              <Select
-                value={draft.priority}
-                onChange={(e) =>
-                  set('priority', e.currentTarget.value as TaskPriority)
-                }
-              >
-                {priorities.map((p) => (
-                  <option key={p.value} value={p.value}>
-                    {p.label}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field
-              label="見積もり（時間）"
-              necessity="optional"
-              description="本人の見積もり。0.25時間単位など（例: 1.5）"
-              error={errors.estimate}
-            >
-              <TextInput
-                ref={estimateRef}
-                data-autofocus={focusEstimate !== undefined || undefined}
-                inputMode="decimal"
-                suffix="h"
-                value={draft.estimate}
-                onChange={(e) => set('estimate', e.currentTarget.value)}
-              />
-            </Field>
-          </div>
-          {task.subtasks.length > 0 && (
-            <RadioGroup<TimeBasis>
-              legend="計画に使う時間"
-              value={draft.timeBasis}
-              onValueChange={(value) => set('timeBasis', value)}
-            >
-              <Radio<TimeBasis> value="task" label="この Task の見積もり" />
-              <Radio<TimeBasis>
-                value="subtasks"
-                label={
-                  <span className="inline-flex flex-wrap items-center gap-2">
-                    サブタスクの合計
-                    <Estimate value={facts.subtaskValue} inline />
-                  </span>
-                }
-              />
-            </RadioGroup>
-          )}
-        </form>
-
-        {suggestion !== undefined && (
-          <EstimateSuggestion
-            key={suggestion.id}
-            suggestion={suggestion}
-            autoFocus={suggestionBack}
-            madeAt={`${formatDate(toLocalDate(suggestion.createdAt, timeZone))} ${formatTime(suggestion.createdAt, timeZone)}`}
-            onAdopt={onAdopt}
-            onAdoptEdited={onAdoptEdited}
-            onReject={onReject}
-          />
-        )}
-        {outcome !== undefined && (
-          <SuggestionOutcome
-            onUndo={outcome.kind === 'adopted' ? onUndoAdopt : onUndoReject}
-          >
-            {outcome.text}
-          </SuggestionOutcome>
-        )}
-
-        <SubtaskList task={task} />
-        <RecurrenceEditor item={item} />
-
+      <DrawerBody ref={bodyRef} className="flex flex-col gap-6">
         {(facts.canAddToToday ||
           facts.todayOpensOn !== undefined ||
           facts.canComplete) && (
@@ -405,6 +508,123 @@ function TaskDetail({
           </section>
         )}
 
+        <div className="flex flex-col gap-4">
+          <Saved show={saved === 'title'}>
+            <Field label="タイトル" necessity="required" error={errors.title}>
+              <TextInput
+                value={draft.title}
+                onChange={(e) => set('title', e.currentTarget.value)}
+                onBlur={() => commit('title')}
+                onKeyDown={leaveOnEnter('title')}
+              />
+            </Field>
+          </Saved>
+          <Saved show={saved === 'areaId'}>
+            <Field label="領域" necessity="optional">
+              <Select
+                value={task.areaId ?? ''}
+                onChange={(e) => {
+                  const areaId = e.currentTarget.value;
+                  record('areaId', {
+                    areaId: areaId === '' ? null : id<'Area'>(areaId),
+                  });
+                }}
+              >
+                <option value="">領域なし</option>
+                {/* An archived Area stays selectable while the Task is in it. */}
+                {task.areaId !== undefined &&
+                  facts.area !== undefined &&
+                  !areas.some((a) => a.id === task.areaId) && (
+                    <option value={task.areaId}>{facts.area.name}</option>
+                  )}
+                {areas.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </Saved>
+          <Saved show={saved === 'due'}>
+            <Field label="期限" necessity="optional" error={errors.due}>
+              <TextInput
+                type="date"
+                value={draft.due}
+                onChange={(e) => set('due', e.currentTarget.value)}
+                onBlur={() => commit('due')}
+                onKeyDown={leaveOnEnter('due')}
+              />
+            </Field>
+          </Saved>
+          <Saved show={saved === 'estimate'}>
+            <Field
+              label="見積もり（時間）"
+              necessity="optional"
+              description="本人の見積もり。0.25時間単位など（例: 1.5）"
+              error={errors.estimate}
+            >
+              <TextInput
+                ref={estimateRef}
+                data-autofocus={focusEstimate !== undefined || undefined}
+                inputMode="decimal"
+                suffix="h"
+                value={draft.estimate}
+                onChange={(e) => set('estimate', e.currentTarget.value)}
+                onBlur={() => commit('estimate')}
+                onKeyDown={leaveOnEnter('estimate')}
+              />
+            </Field>
+          </Saved>
+        </div>
+
+        {suggestion !== undefined && (
+          <EstimateSuggestion
+            key={suggestion.id}
+            suggestion={suggestion}
+            autoFocus={suggestionBack}
+            madeAt={`${formatDate(toLocalDate(suggestion.createdAt, timeZone))} ${formatTime(suggestion.createdAt, timeZone)}`}
+            onAdopt={onAdopt}
+            onAdoptEdited={onAdoptEdited}
+            onReject={onReject}
+          />
+        )}
+        {outcome !== undefined && (
+          <SuggestionOutcome
+            onUndo={outcome.kind === 'adopted' ? onUndoAdopt : onUndoReject}
+          >
+            {outcome.text}
+          </SuggestionOutcome>
+        )}
+
+        {moreItems(false)}
+        {folded.length > 0 && (
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-wrap items-center gap-x-2">
+              <Button
+                variant="quiet"
+                aria-expanded={more}
+                aria-controls={moreId}
+                onClick={() => setMore((m) => !m)}
+              >
+                {more ? (
+                  <ChevronDown aria-hidden />
+                ) : (
+                  <ChevronRight aria-hidden />
+                )}
+                詳しく
+              </Button>
+              {!more && (
+                <span className="text-meta text-ink-muted">
+                  {folded.map((key) => moreNames[key]).join('・')}
+                </span>
+              )}
+            </div>
+            <div id={moreId} hidden={!more} className="flex flex-col gap-6">
+              {more && moreItems(true)}
+            </div>
+          </div>
+        )}
+
         <div className="border-t border-border-soft pt-4">
           <Button
             variant="danger"
@@ -423,13 +643,17 @@ function TaskDetail({
             アーカイブ
           </Button>
         </div>
+        <p role="status" className="sr-only">
+          {saved === undefined ? '' : `${fieldNames[saved]}を保存しました`}
+        </p>
       </DrawerBody>
       <DrawerFooter>
-        <Button variant="quiet" onClick={onClose}>
-          キャンセル
-        </Button>
-        <Button variant="primary" type="submit" form="task-detail-form">
-          保存
+        <Button
+          onClick={() => {
+            if (leave()) onClose();
+          }}
+        >
+          閉じる
         </Button>
       </DrawerFooter>
     </>

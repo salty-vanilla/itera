@@ -32,6 +32,7 @@ import { useBacklog } from '@/store/use-backlog';
 import { usePlanningActions } from '@/store/use-planning';
 import { useTaskActions } from '@/store/use-task-actions';
 import { TaskDetail } from '../backlog/task-detail';
+import { useTaskDetailLeave } from '../backlog/use-task-detail-leave';
 import { BacklogPane } from './backlog-pane';
 import { ConfirmDialog } from './confirm-dialog';
 import { sprintSearchOf } from '../sprint-steps';
@@ -110,7 +111,9 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
           ),
         ),
     });
+  const detail = useTaskDetailLeave();
   const openTask = (taskId: TaskId) => {
+    if (!detail.leave()) return;
     setOutlookOpen(false);
     setSearch({ task: taskId });
   };
@@ -118,6 +121,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
     search.task === undefined ? undefined : backlog.item(search.task);
   const estimateFocus = useEstimateFocus(search.task);
   const openEstimate = (taskId: TaskId) => {
+    if (!detail.leave()) return;
     estimateFocus.request(taskId);
     openTask(taskId);
   };
@@ -275,6 +279,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
         <button
           type="button"
           onClick={() => {
+            if (!detail.leave()) return;
             setSearch({ task: undefined });
             setOutlookOpen(true);
           }}
@@ -340,7 +345,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
       <Drawer
         open={openItem !== undefined}
         onOpenChange={(next) => {
-          if (!next) setSearch({ task: undefined });
+          if (!next && detail.leave()) setSearch({ task: undefined });
         }}
       >
         <DrawerContent>
@@ -357,6 +362,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
                 }
               }}
               focusEstimate={estimateFocus.of(openItem.task.id)}
+              leaveRef={detail.ref}
             />
           )}
         </DrawerContent>

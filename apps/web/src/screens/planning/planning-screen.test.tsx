@@ -611,3 +611,24 @@ describe('Planning — keys (#48)', () => {
     ).toBeNull();
   });
 });
+
+describe('Planning — the Task detail (#95)', () => {
+  it('a wrong value keeps the detail open; a valid one is saved on closing', async () => {
+    await renderAt(
+      '/sprint?fixture=planning-check&stage=check&task=task-onboarding',
+    );
+    const detail = await screen.findByRole('dialog');
+    const estimate = within(detail).getByRole('textbox', {
+      name: /見積もり（時間）/,
+    });
+    await userEvent.clear(estimate);
+    await userEvent.type(estimate, 'x');
+    await userEvent.keyboard('{Escape}');
+    expect(screen.getByRole('dialog')).toBe(detail);
+    expect(document.activeElement).toBe(estimate);
+    await userEvent.clear(estimate);
+    await userEvent.type(estimate, '2');
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+});

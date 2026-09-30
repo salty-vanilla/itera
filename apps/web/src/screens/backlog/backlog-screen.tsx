@@ -15,6 +15,7 @@ import { useBacklog } from '@/store/use-backlog';
 import { useTaskActions } from '@/store/use-task-actions';
 import { BacklogRow } from './backlog-row';
 import { TaskDetail } from './task-detail';
+import { useTaskDetailLeave } from './use-task-detail-leave';
 
 // Backlog (docs/design/patterns.md Backlog, PRD §5 A). The active Tasks,
 // newest first (Issue #86; never by priority, invariant 5), narrowed by a
@@ -108,6 +109,7 @@ function BacklogScreen() {
     return () => window.clearTimeout(timer);
   }, [justAdded]);
   const estimateFocus = useEstimateFocus(search.task);
+  const detail = useTaskDetailLeave();
   /** Another operation: the completed line and the pending focus go. */
   const endUndo = () => {
     setCompleted(undefined);
@@ -285,7 +287,9 @@ function BacklogScreen() {
                       item={item}
                       today={today}
                       current={task.id === open?.task.id}
-                      onOpen={() => setSearch({ task: task.id })}
+                      onOpen={() => {
+                        if (detail.leave()) setSearch({ task: task.id });
+                      }}
                       onComplete={() => completeWithUndo(task.id, task.title)}
                       onToday={() => {
                         endUndo();
@@ -293,6 +297,7 @@ function BacklogScreen() {
                       }}
                       onArchive={() => archiveWithUndo(task.id, task.title)}
                       onEstimate={() => {
+                        if (!detail.leave()) return;
                         estimateFocus.request(task.id);
                         setSearch({ task: task.id });
                       }}
@@ -319,7 +324,7 @@ function BacklogScreen() {
       <Drawer
         open={open !== undefined}
         onOpenChange={(next) => {
-          if (!next) setSearch({ task: undefined });
+          if (!next && detail.leave()) setSearch({ task: undefined });
         }}
       >
         <DrawerContent
@@ -336,6 +341,7 @@ function BacklogScreen() {
               onClose={() => setSearch({ task: undefined })}
               onComplete={() => completeWithUndo(open.task.id, open.task.title)}
               focusEstimate={estimateFocus.of(open.task.id)}
+              leaveRef={detail.ref}
             />
           )}
         </DrawerContent>

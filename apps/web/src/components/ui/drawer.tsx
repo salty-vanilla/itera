@@ -17,8 +17,9 @@ import { IconButton } from './icon-button';
 //   only when the background must not be used; it adds the scrim.
 //   The Bottom Sheet covers most of a phone screen, so it is always modal
 //   (DESIGN.md Elevation: Bottom Sheet uses elevation-modal with the scrim).
-// - Focus moves to the first input when it opens, Esc closes it and focus
-//   returns to the trigger.
+// - Focus moves to the first input when it opens, or to an element the
+//   content marks with `data-autofocus` (the Task detail marks its heading,
+//   Issue #95). Esc closes it and focus returns to the trigger.
 
 type DrawerContextValue = { modal: boolean; sheet: boolean };
 
@@ -215,7 +216,10 @@ function DrawerBody({ className, ...props }: ComponentProps<'div'>) {
   );
 }
 
-/** Cancel / Save, right-aligned under a border-soft rule. */
+/**
+ * Cancel / Save, right-aligned under a border-soft rule. The Task detail
+ * saves each field on its own and has 閉じる only (Issue #95).
+ */
 function DrawerFooter({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div

@@ -22,6 +22,7 @@ import { useBacklog } from '@/store/use-backlog';
 import { useTaskActions } from '@/store/use-task-actions';
 import { useToday, useTodayActions } from '@/store/use-today';
 import { TaskDetail } from '../backlog/task-detail';
+import { useTaskDetailLeave } from '../backlog/use-task-detail-leave';
 import { ScreenFrame } from '../screen-frame';
 import { ActualTime, type ActualTimeMode } from './actual-time';
 import { InterruptSheet } from './interrupt-sheet';
@@ -150,7 +151,8 @@ function TodayView({ data }: { data: TodayData }) {
     | undefined
   >(undefined);
 
-  const openTask = (taskId: TaskId | undefined) =>
+  const detail = useTaskDetailLeave();
+  const showTask = (taskId: TaskId | undefined) =>
     void navigate({
       search: (prev) =>
         taskId === undefined
@@ -159,10 +161,15 @@ function TodayView({ data }: { data: TodayData }) {
             )
           : { ...prev, task: taskId },
     });
+  // Closing the detail or opening another Task asks the detail first.
+  const openTask = (taskId: TaskId | undefined) => {
+    if (detail.leave()) showTask(taskId);
+  };
   const openItem =
     search.task === undefined ? undefined : backlog.item(search.task);
   const estimateFocus = useEstimateFocus(search.task);
   const openEstimate = (taskId: TaskId) => {
+    if (!detail.leave()) return;
     estimateFocus.request(taskId);
     openTask(taskId);
   };
@@ -526,10 +533,11 @@ function TodayView({ data }: { data: TodayData }) {
               onClose={() => openTask(undefined)}
               onComplete={() => {
                 if (taskActions.completeTask(openItem.task.id)) {
-                  openTask(undefined);
+                  showTask(undefined);
                 }
               }}
               focusEstimate={estimateFocus.of(openItem.task.id)}
+              leaveRef={detail.ref}
             />
           )}
         </DrawerContent>
