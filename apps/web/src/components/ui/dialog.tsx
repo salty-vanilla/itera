@@ -6,8 +6,9 @@ import { cn } from '@/lib/utils';
 
 // DESIGN.md Components › Dialog. A modal that stops the work to ask for a
 // confirmation or a decision: confirming a Sprint, completing a Retro (it
-// cannot be undone) and confirming a destructive action, nothing else. Do
-// not stack Dialogs and do not confirm every operation.
+// cannot be undone), confirming a destructive action and 領域を編集 (Issue
+// #113), nothing else. Do not stack Dialogs and do not confirm every
+// operation.
 //
 // - The title is a question (「Sprint 14 を確定しますか？」), not 「本当によろしいですか？」.
 // - The footer puts Secondary on the left and the Primary (or danger-solid)
@@ -64,7 +65,10 @@ function DialogContent({
   return (
     <DialogPrimitive.Portal>
       {/* scrim without blur (DESIGN.md Colors). */}
+      {/* Also over a Drawer (a Dialog opened from the Task detail): Base UI
+          leaves a nested Dialog without its backdrop unless forced. */}
       <DialogPrimitive.Backdrop
+        forceRender
         data-slot="dialog-backdrop"
         className={cn(
           'fixed inset-0 z-(--layer-dialog) bg-scrim',

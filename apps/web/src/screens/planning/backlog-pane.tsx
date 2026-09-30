@@ -8,7 +8,7 @@ import { IconButton } from '@/components/ui/icon-button';
 import { Menu, MenuContent, MenuTrigger } from '@/components/ui/menu';
 import { useToast } from '@/components/ui/toast';
 import { Deadline } from '@/components/task/deadline';
-import { AreaSelect } from '@/components/task/area-select';
+import { AreaSelect, chosenArea } from '@/components/task/area-select';
 import { Estimate } from '@/components/task/estimate';
 import { EstimateMenuItem } from '@/components/task/estimate-menu-item';
 import {
@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 import { weekCall, weekText } from '@/lib/week-text';
 import type { CandidateRow, PlanningData } from '@/store/planning-view';
 import { usePlanningActions } from '@/store/use-planning';
+import { useNewAreaDialog } from '../backlog/area-dialog';
 import { CarryOverText } from '../backlog/backlog-row';
 
 // The Backlog pane of Planning (docs/design/patterns.md 選ぶ). Groups: 持ち越し
@@ -62,6 +63,9 @@ function BacklogPane({
   const week = weekCall(data.week, data.number);
   // The Area of the next Quick Add: the one used last, else 領域なし.
   const [quickArea, setQuickArea] = useState('');
+  const newArea = useNewAreaDialog();
+  // One archived since it was chosen is no longer a choice (#113).
+  const quickChoice = chosenArea(quickArea, data.addAreas);
 
   const choose = (rows: readonly CandidateRow[]) => {
     const taskIds = rows.map((r) => r.task.id);
@@ -107,16 +111,18 @@ function BacklogPane({
         label={weekText(week, 'のタスクを追加')}
         stackArea
         onAdd={(title) =>
-          onAdd(title, quickArea === '' ? undefined : id<'Area'>(quickArea))
+          onAdd(title, quickChoice === '' ? undefined : id<'Area'>(quickChoice))
         }
         area={
           <AreaSelect
             areas={data.addAreas}
-            value={quickArea}
+            value={quickChoice}
             onChange={setQuickArea}
+            onNewArea={() => newArea.open(setQuickArea)}
           />
         }
       />
+      {newArea.dialog}
       <Group
         title="持ち越し"
         rows={candidates.carriedOver}

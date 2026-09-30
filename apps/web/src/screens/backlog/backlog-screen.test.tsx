@@ -1228,3 +1228,245 @@ describe('Backlog — keys of the list (#48)', () => {
     expect(archived()).toBe(before);
   });
 });
+
+// Issue #113: one Dialog makes, renames and archives Areas. It opens from the
+// end of the Area filters and from 「新しい領域…」 at the end of an Area Select.
+describe('Backlog › Areas', () => {
+  const areaDialog = () => screen.getByRole('dialog', { name: '領域を編集' });
+  const areaFilters = () =>
+    screen.getByRole('group', { name: '領域で絞り込む' });
+  const quickSelect = () =>
+    screen.getByRole('combobox', { name: '追加する Task の領域' });
+  /** Opens a row of the Dialog to edit it. */
+  const edit = (name: string) =>
+    userEvent.click(
+      within(areaDialog()).getByRole('button', { name: `「${name}」を編集` }),
+    );
+  const archiveArea = async (name: string) => {
+    await edit(name);
+    await userEvent.click(
+      within(areaDialog()).getByRole('button', { name: 'アーカイブ' }),
+    );
+  };
+  const optionNames = (select: HTMLElement) =>
+    within(select)
+      .getAllByRole('option')
+      .map((o) => o.textContent);
+
+  it('makes an Area from 領域を編集: it shows in the filters and the Selects', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    await userEvent.click(screen.getByRole('button', { name: '領域を編集' }));
+    const dialog = areaDialog();
+    await userEvent.type(
+      within(dialog).getByRole('textbox', { name: '新しい領域' }),
+      '就活{Enter}',
+    );
+    // The Dialog stays open for the next one, with the field empty.
+    const field = within(dialog).getByRole('textbox', { name: '新しい領域' });
+    expect(field).toHaveProperty('value', '');
+    expect(document.activeElement).toBe(field);
+    expect(within(dialog).getByText('就活')).toBeTruthy();
+    expect(records().areas.at(-1)).toMatchObject({ name: '就活', color: 5 });
+
+    await userEvent.click(
+      within(dialog).getAllByRole('button', { name: '閉じる' })[0]!,
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    const filter = within(areaFilters()).getByRole('button', {
+      name: /^就活/,
+    });
+    expect(filter.querySelector('[data-slot="area-mark"]')?.textContent).toBe(
+      '就',
+    );
+    expect(optionNames(quickSelect())).toEqual([
+      '領域なし',
+      '仕事',
+      '研究',
+      '学習',
+      '生活',
+      '就活',
+      '新しい領域…',
+    ]);
+  });
+
+  it('makes an Area from the Quick Add’s Select and chooses it', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    await userEvent.selectOptions(quickSelect(), '新しい領域…');
+    const dialog = areaDialog();
+    const field = within(dialog).getByRole('textbox', { name: '新しい領域' });
+    await waitFor(() => expect(document.activeElement).toBe(field));
+    await userEvent.type(field, '就活{Enter}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    const made = records().areas.at(-1)!;
+    expect(quickSelect()).toHaveProperty('value', made.id);
+
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Backlog にタスクを追加' }),
+      'ES を書く{Enter}',
+    );
+    expect(records().tasks.at(-1)).toMatchObject({
+      title: 'ES を書く',
+      areaId: made.id,
+    });
+    // The row shows the Area by its symbol and name.
+    const row = list().querySelector<HTMLElement>(
+      `[data-task="${records().tasks.at(-1)!.id}"]`,
+    )!;
+    expect(within(row).getByText('就活')).toBeTruthy();
+  });
+
+  it('closing the Dialog from a Select leaves the Select as it was', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    const select = quickSelect();
+    await userEvent.selectOptions(select, '研究');
+    await userEvent.selectOptions(select, '新しい領域…');
+    expect(areaDialog()).toBeTruthy();
+    expect(select).toHaveProperty('value', 'area-research');
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(quickSelect()).toHaveProperty('value', 'area-research');
+  });
+
+  it('makes an Area from the detail’s Select and files the Task under it', async () => {
+    await renderAt('/backlog?fixture=backlog-capture&task=task-bookshelf');
+    const detail = await screen.findByRole('dialog');
+    await userEvent.selectOptions(
+      within(detail).getByRole('combobox', { name: /領域/ }),
+      '新しい領域…',
+    );
+    const dialog = areaDialog();
+    await userEvent.type(
+      within(dialog).getByRole('textbox', { name: '新しい領域' }),
+      '趣味{Enter}',
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: '領域を編集' })).toBeNull(),
+    );
+    const made = records().areas.at(-1)!;
+    expect(made.name).toBe('趣味');
+    expect(task('task-bookshelf')?.areaId).toBe(made.id);
+    expect(
+      within(screen.getByRole('dialog')).getByRole('combobox', {
+        name: /領域/,
+      }),
+    ).toHaveProperty('value', made.id);
+  });
+
+  it('renames an Area: the Backlog shows the new name at once (F5)', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    await userEvent.click(screen.getByRole('button', { name: '領域を編集' }));
+    const dialog = areaDialog();
+    await edit('研究');
+    const field = within(dialog).getByRole('textbox', {
+      name: '「研究」の名前',
+    });
+    expect(
+      within(dialog).getByText(
+        'Sprint の画面には、次の Sprint から反映されます。',
+      ),
+    ).toBeTruthy();
+    // An empty name is not saved.
+    await userEvent.clear(field);
+    await userEvent.keyboard('{Enter}');
+    expect(within(dialog).getByText('名前を入力してください')).toBeTruthy();
+    await userEvent.type(field, '研究室{Enter}');
+    expect(records().areas.find((a) => a.id === 'area-research')?.name).toBe(
+      '研究室',
+    );
+    // Back to the row, the focus on its 編集.
+    const again = await within(dialog).findByRole('button', {
+      name: '「研究室」を編集',
+    });
+    await waitFor(() => expect(document.activeElement).toBe(again));
+
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(
+      within(areaFilters()).getByRole('button', { name: /^研究室/ }),
+    ).toBeTruthy();
+    expect(within(list()).getAllByText('研究室').length).toBeGreaterThan(0);
+    expect(within(list()).queryByText('研究')).toBeNull();
+  });
+
+  it('Esc in the name field goes back to the row, not out of the Dialog', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    await userEvent.click(screen.getByRole('button', { name: '領域を編集' }));
+    const dialog = areaDialog();
+    await edit('仕事');
+    const field = within(dialog).getByRole('textbox', {
+      name: '「仕事」の名前',
+    });
+    await waitFor(() => expect(document.activeElement).toBe(field));
+    await userEvent.keyboard('職場{Escape}');
+    expect(screen.getByRole('dialog', { name: '領域を編集' })).toBeTruthy();
+    expect(records().areas.find((a) => a.id === 'area-work')?.name).toBe(
+      '仕事',
+    );
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(dialog).getByRole('button', { name: '「仕事」を編集' }),
+      ),
+    );
+  });
+
+  it('archives an Area: out of the choices, kept on its Tasks, with 元に戻す', async () => {
+    const router = await renderAt(
+      '/backlog?fixture=backlog-capture&area=area-research',
+    );
+    await userEvent.click(screen.getByRole('button', { name: '領域を編集' }));
+    const dialog = areaDialog();
+    await archiveArea('研究');
+    expect(
+      records().areas.find((a) => a.id === 'area-research')?.archived,
+    ).toBe(true);
+    expect(
+      within(dialog).getByText(
+        '「研究」をアーカイブしました。Task と過去の記録には残ります。',
+      ),
+    ).toBeTruthy();
+    // 元に戻す brings it back.
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: '元に戻す' }),
+    );
+    expect(
+      records().areas.find((a) => a.id === 'area-research')?.archived,
+    ).toBe(false);
+    await archiveArea('研究');
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+
+    expect(
+      within(areaFilters()).queryByRole('button', { name: /^研究/ }),
+    ).toBeNull();
+    expect(optionNames(quickSelect())).not.toContain('研究');
+    // The filter on it has no chip left to take it off: it narrows nothing,
+    // and every Task shows.
+    expect(router.state.location.search).toMatchObject({
+      area: 'area-research',
+    });
+    expect(within(list()).getByText('歯医者の予約')).toBeTruthy();
+    // A Task in it still shows it.
+    const inIt = records().tasks.find(
+      (t) => t.areaId === 'area-research' && t.lifecycle === 'active',
+    )!;
+    const row = list().querySelector<HTMLElement>(`[data-task="${inIt.id}"]`)!;
+    expect(within(row).getByText('研究')).toBeTruthy();
+  });
+
+  it('archiving from a Select’s Dialog leaves the Quick Add with 領域なし', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    const select = quickSelect();
+    await userEvent.selectOptions(select, '研究');
+    await userEvent.selectOptions(select, '新しい領域…');
+    await archiveArea('研究');
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(select).toHaveProperty('value', '');
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Backlog にタスクを追加' }),
+      '請求書を送る{Enter}',
+    );
+    expect(records().tasks.at(-1)).toMatchObject({ title: '請求書を送る' });
+    expect(records().tasks.at(-1)).not.toHaveProperty('areaId');
+  });
+});

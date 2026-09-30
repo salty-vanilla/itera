@@ -34,3 +34,6 @@ export const NoArea: Story = {};
 
 /** 領域を選ぶと、その色と頭文字の記号になる。 */
 export const Chosen: Story = { args: { value: 'area-research' } };
+
+/** 末尾に「新しい領域…」。選ぶと領域の Dialog を開き、値は変えない（Issue #113）。 */
+export const WithNewArea: Story = { args: { onNewArea: () => {} } };

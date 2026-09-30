@@ -110,6 +110,12 @@ Task 詳細では必要に応じて以下を編集できる。
 
 PC は一覧を見失わないサイドパネル、スマートフォンは下から開く詳細を基本とする。
 
+Area（領域）は本人が作る。Backlog の Area の絞り込みと、Task の Area の選択から、次のことができる（Issue #113）。
+
+- Area を作る。Task の Area の選択から作った Area は、その Task の Area として選ばれる。
+- Area の名前を変える。Sprint の画面（Planning / Today / Retro）には次の Sprint から反映し、Backlog などには現在の名前を出す。
+- Area をアーカイブする。選べる候補から外れるが、その Area の Task と過去 Sprint の記録からは消さない。
+
 #### Estimate
 
 - 本人が確定した点の値を **Estimate** とする。

@@ -261,22 +261,25 @@ export function backlogData(
       ? all
       : all.filter((t) => inBacklogSlice(t, slice, context));
   const bySlice = inSlice(filter.view ?? 'all');
+  const choices = records.areas
+    .filter((a) => !a.archived)
+    .toSorted((a, b) => a.order - b.order);
+  // An Area archived while chosen has no filter left to take it off (#113):
+  // it narrows nothing.
+  const area = choices.some((a) => a.id === filter.area)
+    ? filter.area
+    : undefined;
   const shown =
-    filter.area === undefined
-      ? bySlice
-      : bySlice.filter((t) => t.areaId === filter.area);
+    area === undefined ? bySlice : bySlice.filter((t) => t.areaId === area);
   return {
     today: clock.today,
     timeZone: records.user.timeZone,
-    areas: records.areas
-      .filter((a) => !a.archived)
-      .toSorted((a, b) => a.order - b.order)
-      .map((a) => ({
-        id: a.id,
-        name: a.name,
-        color: a.color,
-        count: bySlice.filter((t) => t.areaId === a.id).length,
-      })),
+    areas: choices.map((a) => ({
+      id: a.id,
+      name: a.name,
+      color: a.color,
+      count: bySlice.filter((t) => t.areaId === a.id).length,
+    })),
     sliceCounts: Object.fromEntries(
       SLICES.map((slice) => [slice, inSlice(slice).length]),
     ) as Record<BacklogSlice | 'all', number>,
