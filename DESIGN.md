@@ -412,7 +412,7 @@ Area（領域）はユーザーが作る。駅の路線記号のように、色�
 - 見出しの階層は 700 とサイズの差、余白、罫で作る。500 や 600 の中間の太さを使わない。
 - `font-feature-settings: "palt"` を使わない。素のメトリクスで組む。
 - 数値は `num-*`。時間・件数・日付が並ぶ列は右揃え。
-- 確定した言葉（Goal、改善策、振り返り）は 1 行 38 字程度（`measure-read`）まで。Task タイトルは 1 行で省略し、詳細で全文を読める。
+- 確定した言葉（Goal、改善策、振り返り）は 1 行 38 字程度（`measure-read`）まで。Task タイトルは compact では 2 行まで、medium 以上では 1 行で省略し、詳細で全文を読める（Issue #100）。
 - 本文は `line-break: strict`、`overflow-wrap: anywhere`。`anywhere` は表のセルや flex の子の最小幅も 1 文字まで縮めるので、段落（説明文・Goal・振り返り）にだけ付け、画面全体の既定は `break-word` にする。
 - **確定した言葉は大きく、編集中は本文のサイズ。** Goal は編集中は `body-l`、確定すると `goal` で組む。未確定の Agent 提案は `body` のまま破線の枠に入れる。
 - ○ Sprint Header「Sprint 14」＝`display-l`、期間「9/28 (月) – 10/4 (日)」＝`body` `ink-muted`。× Estimate・Capacity の数字を `num-*` 以外で組む、数字だけ別の書体にする。
@@ -665,7 +665,7 @@ compact の原則：
 ### タスク
 
 **Task Row** — タスク 1 件の行。Backlog・Sprint・Today で同じ構造。
-- 左から：ドラッグハンドル（hover / focus 時のみ、compact は非表示）、コントロール（□ 選ぶ / ○ 完了 / なし）、タイトル（`task`、1 行で省略）、Task Metadata、Estimate（右端 `num-s`）、行の操作 `…`（hover / focus 時、compact は常時）。
+- 左から：ドラッグハンドル（hover / focus 時のみ、compact は非表示）、コントロール（□ 選ぶ / ○ 完了 / なし）、タイトル（`task`。compact は 2 行まで、medium 以上は 1 行で省略）、Task Metadata、Estimate（右端 `num-s`）、行の操作 `…`（hover / focus 時、compact は常時）。
 - layout stacked（既定、約 52px）/ inline（40px、`row-task` は最小高さ）。区切りは `border-soft`、行間 0、角丸・影なし、Card で囲まない。
 - 状態：Selected（`here-subtle`＋チェック）、Done（○ を `primary` で塗り、タイトル `ink-subtle`＋取り消し線）、Skipped（○ に「−」＋「スキップ」）、Dragging（`surface`＋`elevation-drag`＋`border`）、Loading（Estimate が「見積中」）、Error（行内に「保存できませんでした · 再試行」）、Disabled（アーカイブ済み、`ink-disabled`）。
 - Today の「今日やる」の行は、日次の操作（開始 / 完了 / 今日はここまで / 今日は見送る / 今日から外す / 繰り返しのスキップ）を持つ。強い操作を常時並べすぎず、完了（○）以外は行の操作 `…` と詳細から出す（PRD §12）。例外として、見送り・外した・スキップの行は `…` の位置に「取り消す」（`undo-2` の IconButton、`…` と同じ大きさ）をどの幅でも常に出す（誤操作から戻る手段を hover の裏に置かない。ドメインモデル F19・F37、Issue #101）。「今週の残り」「昨日の続き」の行は □ ではなく、行の先頭に常に見える「今日へ」のボタンで選ぶ（□ は今週へ選ぶ意味なので使わない）。
