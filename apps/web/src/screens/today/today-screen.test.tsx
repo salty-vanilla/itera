@@ -545,6 +545,11 @@ describe('Today — outside the period (#54)', () => {
       screen.queryByRole('textbox', { name: '今日やるタスクを追加' }),
     ).toBeNull();
     expect(screen.queryByText(/日目/)).toBeNull();
+    // One step to the Sprint (#90).
+    const open = screen.getByRole('link', { name: 'Sprint 2 を開く' });
+    expect(open.getAttribute('href')).toContain('sprint=2');
+    await userEvent.click(open);
+    expect(await screen.findByText('実行中')).toBeTruthy();
   });
 
   it('puts a Sprint past its end into Review when the app opens (F21, F23)', async () => {

@@ -7,6 +7,7 @@ import { Radio, RadioGroup } from '@/components/ui/radio-group';
 import { SprintSummary } from '@/components/sprint/sprint-summary';
 import { criterionName } from '@/lib/criterion-text';
 import { formatDate, formatTime } from '@/lib/date-format';
+import { SELECTION_WORDS } from '@/lib/selection-words';
 import {
   formatHours,
   formatPlanningTotal,
@@ -295,8 +296,14 @@ function FactsPane({
           </h2>
           <ul className="flex flex-col border-t border-border-soft">
             {[
-              ...facts.deferrals.map((s) => ({ s, word: '見送り' })),
-              ...facts.pauses.map((s) => ({ s, word: '今日はここまで' })),
+              ...facts.deferrals.map((s) => ({
+                s,
+                word: SELECTION_WORDS.deferred,
+              })),
+              ...facts.pauses.map((s) => ({
+                s,
+                word: SELECTION_WORDS.paused,
+              })),
             ]
               .toSorted((a, b) => (a.s.date < b.s.date ? -1 : 1))
               .map(({ s, word }) => {

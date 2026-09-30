@@ -1,10 +1,12 @@
 import type {
   AreaId,
   DailySelectionId,
+  LocalDate,
   OccurrenceId,
   SprintTaskId,
 } from '@itera/domain';
 import { useMemo } from 'react';
+import { dayData } from './day-view';
 import { useStoreSnapshot } from './store-provider';
 import * as changes from './today-changes';
 import { todayData } from './today-view';
@@ -14,6 +16,15 @@ import { useRun } from './use-run';
 export function useToday() {
   const { records, clock } = useStoreSnapshot();
   return useMemo(() => todayData(records, clock), [records, clock]);
+}
+
+/**
+ * A day other than today on the Today screen (#90), read only; `undefined`
+ * for today.
+ */
+export function useDay(date: LocalDate) {
+  const { records, clock } = useStoreSnapshot();
+  return useMemo(() => dayData(records, clock, date), [records, clock, date]);
 }
 
 /**

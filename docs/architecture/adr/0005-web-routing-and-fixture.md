@@ -3,7 +3,7 @@
 - 状態：採用
 - 日付：2026-09-27
 - 関連：Issue #38、後続 Issue #39〜#42
-- 改訂：2026-09-27（API への移行と状態の置き場所を追記）、2026-09-28（クライアントとデータの方式を追記）、2026-09-30（Sprint を番号で開く検索パラメータ、Issue #90）
+- 改訂：2026-09-27（API への移行と状態の置き場所を追記）、2026-09-28（クライアントとデータの方式を追記）、2026-09-30（Sprint を番号で、日を日付で開く検索パラメータ、Issue #90）
 
 ## 背景
 
@@ -31,13 +31,15 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
   - 画面の中身は Sprint の状態で決まる。`/sprint` は計画中なら Planning、実行中なら実行中の Sprint、振り返り中と完了は確定時の計画と結果（読み取り専用）、次の週は「Sprint N の計画を始める」。`/retro` は振り返り中なら Retro、完了なら読み取り専用の Retro、実行中と計画中は始められる日。
   - Sprint Header の前後の矢印で、過去・次の Sprint に移る。`/sprint` では最後の Sprint の次に次の週がある（計画中の Sprint があるときはない）。移るときは、その Sprint の段階・開いている詳細などの検索パラメータを持ち越さない。
   - 数でない値・1 未満・その番号の Sprint がないときは、今の Sprint を開く（例外にしない）。
+- `/today` は、検索パラメータ `date` で日を開く（例：`/today?date=2026-10-01`。Issue #90）。指定がないとき（ナビから開いたとき）と、今日の日付のときは今日を開く。今日以外の日は読み取り専用で、過去の日はその日の記録、先の日はその日の繰り返しの回と期限のタスクを出す。日付の見出しの前後の矢印と日付の選択で移る。実在しない日付と形式の違う値は、今日を開く。
 - 検索パラメータは、ルートの `validateSearch` で検証してから使う。不正な値は捨てて既定に戻す（例外にしない）。Valibot はまだ入れていないので、それまでは手書きの検証関数にする。画面の状態（絞り込み、開いている詳細など）は、各画面の Issue でその画面のルートに足す。
+  - TanStack Router は、ルートの検索パラメータを URL の値の上に検証の結果を重ねて作る（`{ ...URL の値, ...検証の結果 }`）。検証で捨てる値は、キーを省かずに `undefined` を返して上書きする（省くと URL の不正な値が画面に届く）。Issue #90 で `sprint`・`date` をこの形にした。ほかの検索パラメータ（`stage`・`criterion`・`task`・`view`・`area`・`fixture`）は、まだキーを省いている（未対応）。
 - ナビゲーションは `Navigation`（DESIGN.md Components › Navigation）を使い、項目の `href` はルーターの `buildLocation` で作る。修飾キーなしの左クリックだけをルーターの遷移にし、新しいタブで開く操作はブラウザに任せる。
 
 ### fixture の状態
 
 - 状態は PRD §12 の 12 個：選ぶ / 整える / 確かめる、Today の朝 / 日中 / 割り込み、Retro の開始 / 振り返り / 完了直前、Backlog の Capture / Detail / Recurrence。
-- 状態はルートの検索パラメータ `fixture` で選ぶ（例：`/today?fixture=today-morning`）。`retainSearchParams` で、画面を移っても保つ。ないときは「日中」（`today-daytime`）。`sprint` は `retainSearchParams` に入れない。ナビから開けば今の Sprint に戻り、画面を移っても前に選んだ Sprint を持ち越さない（Issue #90）。
+- 状態はルートの検索パラメータ `fixture` で選ぶ（例：`/today?fixture=today-morning`）。`retainSearchParams` で、画面を移っても保つ。ないときは「日中」（`today-daytime`）。`sprint` と `date` は `retainSearchParams` に入れない。ナビから開けば今の Sprint と今日に戻り、画面を移っても前に選んだ Sprint と日を持ち越さない（Issue #90）。
 - 開発用メニューは画面の右下に出し、状態を選ぶとその状態の画面を開く。`import.meta.env.DEV` のときだけ動的に読み込むので、本番ビルドには入らない。URL での切り替えは本番ビルドでも使える（services/api とつなぐまでは fixture がデータの唯一の出どころのため）。
 - fixture は、`packages/domain` のコマンドを 1 本の時系列（9/13〜10/5）で実行して作り、途中の記録をスナップショットとして取る（`apps/web/src/fixtures/timeline.ts`）。記録を手で書かないので、どの状態もドメインが作りうる記録だけになり、不変条件はコマンドが守る。ドメインモデルの Scenario A〜C を 1 人の利用者の 1 本の時系列に並べ直している。
 - 状態ごとに時計（「今日」の LocalDate と現在時刻の Instant）を持つ。画面とコマンドはこの時計を使い、ブラウザの時計を読まない。
@@ -72,7 +74,7 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
 グローバルな UI 状態のストアは入れない。
 
 - 記録：`RecordStore`（移行後は TanStack Query）。
-- 画面の状態（fixture の状態、絞り込み、開いている詳細、開いている Sprint など）：ルートの検索パラメータ。選んでいる Sprint も Zustand などのアプリ全体のストアに持たない。再読み込み・ブラウザの戻る・新しいタブ・共有で同じ画面を開けるようにするため（Issue #90 のオーナー決定）。
+- 画面の状態（fixture の状態、絞り込み、開いている詳細、開いている Sprint など）：ルートの検索パラメータ。選んでいる Sprint と日も Zustand などのアプリ全体のストアに持たない。再読み込み・ブラウザの戻る・新しいタブ・共有で同じ画面を開けるようにするため（Issue #90 のオーナー決定）。
 - 部品の中だけの状態（開閉、入力途中の値）：React の state。
 
 どれにも当てはまらない状態が出てきたら、そのとき改めて決める。
