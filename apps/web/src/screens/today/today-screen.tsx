@@ -15,6 +15,7 @@ import { TaskQuickAdd } from '@/components/task/task-quick-add';
 import { formatDate, formatDateHeading, formatTime } from '@/lib/date-format';
 import { formatHours, formatPlanningTotal } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
+import { useToastOffsetAbove } from '@/lib/use-toast-offset';
 import { cn } from '@/lib/utils';
 import type { TodayData, TodayRow as TodayRowData } from '@/store/today-view';
 import { useAppOverview } from '@/store/use-app-overview';
@@ -35,7 +36,8 @@ import { WeekRow } from './week-row';
 // capacity and nothing is judged as going over (invariant 25).
 //
 // Layout: one column, at most 720px; on wide screens the Goals move to the
-// right. Under 768px the quick add is sticky above the tab bar (no FAB).
+// right. The quick add is sticky at the bottom (above the tab bar under
+// 768px, no FAB); a Toast shows above it.
 
 export interface TodaySearch {
   /** The open Task (its detail). */
@@ -139,6 +141,10 @@ function TodayView({ data }: { data: TodayData }) {
   const [editing, setEditing] = useState<Editing | undefined>(undefined);
   const [interrupting, setInterrupting] = useState(false);
   const [quickArea, setQuickArea] = useState('');
+  // The Quick Add sticks to the bottom at every width: the Toast goes above
+  // it, and the Quick Add does not move (DESIGN.md Toast).
+  const quickAddRef = useRef<HTMLDivElement>(null);
+  useToastOffsetAbove(quickAddRef);
   // The `…` of each row, for the actual time surface to sit by.
   const triggers = useRef(new Map<DailySelectionId, HTMLButtonElement>());
   // Where the focus goes once the records have changed: the row that
@@ -416,7 +422,9 @@ function TodayView({ data }: { data: TodayData }) {
 
         <section
           aria-labelledby="today-interrupts"
-          className="flex flex-col gap-2"
+          // A Toast above the stuck Quick Add covers what is just before it:
+          // the room is left here (app/use-toast-clearance.ts).
+          className="flex flex-col gap-2 pb-[var(--toast-above-room,0px)]"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 id="today-interrupts" className="text-subheading text-ink">
@@ -452,9 +460,11 @@ function TodayView({ data }: { data: TodayData }) {
           )}
         </section>
 
-        {/* Sticky above the tab bar under 768px (DESIGN.md Layout); last in
-            the column so that it stays at the bottom while scrolling. */}
+        {/* Stuck to the bottom of the screen (above the tab bar under 768px,
+            DESIGN.md Layout); last in the column so that it stays at the
+            bottom while scrolling. A Toast shows above it, never over it. */}
         <div
+          ref={quickAddRef}
           className={cn(
             'sticky bottom-0 z-(--layer-sticky) -mx-4 mt-auto border-t border-border bg-canvas px-4 py-3',
             'medium:-mx-6 medium:px-6 wide:mx-0 wide:px-0',

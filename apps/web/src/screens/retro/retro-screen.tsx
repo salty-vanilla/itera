@@ -156,6 +156,7 @@ function RetroView({
   const complete = () => {
     if (!actions.completeRetro()) return;
     toast.show({
+      kind: 'retro-completed',
       tone: 'done',
       title: `Sprint ${data.number} の振り返りを完了しました`,
     });

@@ -16,6 +16,7 @@ export function useRun() {
       const result = store.run(change);
       if (!result.ok) {
         toast.show({
+          kind: 'save-failed',
           tone: 'danger',
           title: '保存できませんでした',
           description:

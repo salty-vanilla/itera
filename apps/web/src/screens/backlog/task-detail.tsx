@@ -694,6 +694,7 @@ function TaskDetail({
               if (!actions.archiveTask(task.id)) return;
               onClose();
               toast.show({
+                kind: 'task-archived',
                 title: `「${task.title}」をアーカイブしました`,
                 action: {
                   label: '元に戻す',
