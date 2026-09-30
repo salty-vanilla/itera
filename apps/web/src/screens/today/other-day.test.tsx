@@ -91,6 +91,8 @@ describe('Today — any day by date (#90)', () => {
       '/today?fixture=today-daytime&date=2026-09-10',
     );
     expect(screen.getByText(/この日を含む Sprint はありません。/)).toBeTruthy();
+    // Nothing could be chosen on it.
+    expect(screen.queryByRole('heading', { name: 'この日の記録' })).toBeNull();
     await userEvent.click(
       screen.getByRole('link', { name: 'Sprint 1（9/21 (月) から）を開く' }),
     );

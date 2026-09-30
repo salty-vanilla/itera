@@ -30,7 +30,8 @@ const ENDED: Readonly<Record<DailySelection['resolution'], string>> = {
   removed: '今日から外した',
 };
 
-const link = 'text-link underline focus-visible:focus-ring';
+// A link after a sentence moves to the next line whole, not mid-word.
+const link = 'whitespace-nowrap text-link underline focus-visible:focus-ring';
 const Repeat = semanticIcons.recurrence;
 
 function OtherDay({ date }: { date: LocalDate }) {
@@ -48,7 +49,12 @@ function OtherDay({ date }: { date: LocalDate }) {
         }
       />
       <Where data={data} />
-      {data.when === 'past' ? <Past data={data} /> : <Future data={data} />}
+      {data.when === 'future' ? (
+        <Future data={data} />
+      ) : (
+        // With no Sprint, nothing could be chosen that day.
+        within?.sprint !== undefined && <Past data={data} />
+      )}
     </div>
   );
 }

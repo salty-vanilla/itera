@@ -88,7 +88,7 @@ function BeforeStart({ data }: { data: TodayData }) {
         <Link
           to="/sprint"
           search={{ sprint: data.number }}
-          className="ms-1 text-link underline focus-visible:focus-ring"
+          className="ms-1 whitespace-nowrap text-link underline focus-visible:focus-ring"
         >
           Sprint {data.number} を開く
         </Link>
