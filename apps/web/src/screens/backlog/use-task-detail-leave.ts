@@ -3,11 +3,19 @@ import { useRef } from 'react';
 /**
  * Asks the open Task detail before the screen closes it or opens another
  * Task (Issue #95). The detail saves the field being edited, as leaving it
- * would, and answers false with the focus on the field when a value there
- * cannot be saved; the screen then keeps the detail open. Pass `ref` to
- * TaskDetail's `leaveRef`.
+ * would, then runs `then`. It keeps itself open instead when a field is left
+ * with a value it cannot save (the focus goes there), or holds `then` behind
+ * a notice when a subtask or a recurrence change was not added or applied.
+ * Pass `ref` to TaskDetail's `leaveRef`. Call `leave` from an event handler:
+ * it flushes the field's blur synchronously.
  */
 export function useTaskDetailLeave() {
-  const ref = useRef<(() => boolean) | null>(null);
-  return { ref, leave: () => ref.current?.() ?? true };
+  const ref = useRef<((then: () => void) => void) | null>(null);
+  return {
+    ref,
+    leave: (then: () => void) => {
+      if (ref.current === null) then();
+      else ref.current(then);
+    },
+  };
 }

@@ -470,6 +470,112 @@ describe('Backlog', () => {
     ).toBeNull();
   });
 
+  it('Detail (#95): adopting a suggestion clears the error of the value it replaces', async () => {
+    await renderAt('/backlog?fixture=backlog-detail&task=task-interview');
+    const detail = await screen.findByRole('dialog');
+    const estimate = within(detail).getByRole('textbox', {
+      name: /^見積もり（時間）(?!:)/,
+    });
+    await userEvent.type(estimate, 'abc');
+    await userEvent.tab();
+    expect(
+      within(detail).getByText('0 より大きい数で入力してください（例: 1.5）'),
+    ).toBeTruthy();
+    await userEvent.click(
+      within(detail).getByRole('button', { name: '中央 2.5h を採用' }),
+    );
+    expect(estimate).toHaveProperty('value', '2.5');
+    expect(
+      within(detail).queryByText('0 より大きい数で入力してください（例: 1.5）'),
+    ).toBeNull();
+    await userEvent.click(footerClose(detail));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('Detail (#95): an item in 詳しく stays in place when it gets a value', async () => {
+    await renderAt('/backlog?fixture=backlog-capture&task=task-bookshelf');
+    const detail = await screen.findByRole('dialog');
+    await userEvent.click(
+      within(detail).getByRole('button', { name: '詳しく' }),
+    );
+    const priority = within(detail).getByRole('combobox', { name: '優先度' });
+    await userEvent.selectOptions(priority, '高');
+    expect(task('task-bookshelf')?.priority).toBe('high');
+    expect(within(detail).getByRole('combobox', { name: '優先度' })).toBe(
+      priority,
+    );
+
+    const subtask = within(detail).getByRole('textbox', {
+      name: 'サブタスクを追加',
+    });
+    await userEvent.type(subtask, '上の段{Enter}');
+    expect(task('task-bookshelf')?.subtasks).toHaveLength(1);
+    expect(
+      within(detail).getByRole('textbox', { name: 'サブタスクを追加' }),
+    ).toBe(subtask);
+    expect(document.activeElement).toBe(subtask);
+
+    const recurrence = within(detail).getByRole('region', { name: '繰り返し' });
+    await userEvent.selectOptions(
+      within(recurrence).getByRole('combobox', { name: '頻度' }),
+      'daily',
+    );
+    await userEvent.click(
+      within(recurrence).getByRole('button', { name: '繰り返しにする' }),
+    );
+    expect(within(recurrence).getByRole('status').textContent).toContain(
+      '次の Sprint から反映',
+    );
+  });
+
+  it('Detail (#95): a subtask not added or a recurrence not applied holds the close with a notice', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    await userEvent.click(within(list()).getByText('本棚を整理する'));
+    const detail = await screen.findByRole('dialog');
+    await userEvent.click(
+      within(detail).getByRole('button', { name: '詳しく' }),
+    );
+    const subtask = within(detail).getByRole('textbox', {
+      name: 'サブタスクを追加',
+    });
+    await userEvent.type(subtask, '上の段');
+    await userEvent.click(footerClose(detail));
+    expect(screen.getByRole('dialog')).toBe(detail);
+    expect(
+      within(detail).getByText('追加していないサブタスクがあります'),
+    ).toBeTruthy();
+    const back = within(detail).getByRole('button', { name: '戻る' });
+    expect(document.activeElement).toBe(back);
+    await userEvent.click(back);
+    expect(
+      within(detail).queryByText('追加していないサブタスクがあります'),
+    ).toBeNull();
+    expect(document.activeElement).toBe(subtask);
+    expect(subtask).toHaveProperty('value', '上の段');
+
+    // Opening another row asks the same; 破棄して閉じる carries it out.
+    await userEvent.selectOptions(
+      within(detail).getByRole('combobox', { name: '頻度' }),
+      'daily',
+    );
+    await userEvent.click(within(list()).getByText('歯医者の予約'));
+    expect(screen.getByRole('dialog').textContent).toContain('本棚を整理する');
+    expect(
+      within(detail).getByText('反映していない繰り返しの変更があります'),
+    ).toBeTruthy();
+    await userEvent.click(
+      within(detail).getByRole('button', { name: '破棄して閉じる' }),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('dialog').textContent).toContain('歯医者の予約'),
+    );
+    expect(task('task-bookshelf')?.subtasks).toHaveLength(0);
+
+    // Nothing typed: it closes at once.
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
   it('優先度 (#97): 高 and 低 show in the row in words, 通常 does not, and the order stays', async () => {
     await renderAt('/backlog?fixture=backlog-capture');
     const rowOf = (name: string) =>

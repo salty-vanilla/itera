@@ -111,20 +111,22 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
           ),
         ),
     });
+  // Closing the detail or opening another Task asks the detail first.
   const detail = useTaskDetailLeave();
-  const openTask = (taskId: TaskId) => {
-    if (!detail.leave()) return;
-    setOutlookOpen(false);
-    setSearch({ task: taskId });
-  };
+  const openTask = (taskId: TaskId) =>
+    detail.leave(() => {
+      setOutlookOpen(false);
+      setSearch({ task: taskId });
+    });
   const openItem =
     search.task === undefined ? undefined : backlog.item(search.task);
   const estimateFocus = useEstimateFocus(search.task);
-  const openEstimate = (taskId: TaskId) => {
-    if (!detail.leave()) return;
-    estimateFocus.request(taskId);
-    openTask(taskId);
-  };
+  const openEstimate = (taskId: TaskId) =>
+    detail.leave(() => {
+      estimateFocus.request(taskId);
+      setOutlookOpen(false);
+      setSearch({ task: taskId });
+    });
 
   const outlook = (
     <OutlookPane
@@ -278,11 +280,12 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
       <div className="sticky top-0 z-(--layer-sticky) border-b border-border bg-canvas px-4 py-2 medium:px-6 wide:hidden">
         <button
           type="button"
-          onClick={() => {
-            if (!detail.leave()) return;
-            setSearch({ task: undefined });
-            setOutlookOpen(true);
-          }}
+          onClick={() =>
+            detail.leave(() => {
+              setSearch({ task: undefined });
+              setOutlookOpen(true);
+            })
+          }
           className="flex min-h-target-touch w-full items-center justify-between gap-3 rounded-sm text-left text-body text-ink focus-visible:focus-ring medium:min-h-target-min"
         >
           <CapacitySummary data={data} />
@@ -345,7 +348,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
       <Drawer
         open={openItem !== undefined}
         onOpenChange={(next) => {
-          if (!next && detail.leave()) setSearch({ task: undefined });
+          if (!next) detail.leave(() => setSearch({ task: undefined }));
         }}
       >
         <DrawerContent>

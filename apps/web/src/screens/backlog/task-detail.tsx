@@ -34,6 +34,7 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer';
 import { Field } from '@/components/ui/field';
+import { Notice } from '@/components/ui/notice';
 import { Radio, RadioGroup } from '@/components/ui/radio-group';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -223,7 +224,7 @@ function TaskDetail({
    */
   focusEstimate?: number | undefined;
   /** From `useTaskDetailLeave`: the screen asks before it closes the detail. */
-  leaveRef?: Ref<() => boolean> | undefined;
+  leaveRef?: Ref<(then: () => void) => void> | undefined;
 }) {
   const actions = useTaskActions();
   const { task } = item;
@@ -236,12 +237,25 @@ function TaskDetail({
   const [outcome, setOutcome] = useState<Outcome>();
   // After 元に戻す the suggestion comes back and takes the focus.
   const [suggestionBack, setSuggestionBack] = useState(false);
-  // 詳しく: an item with a value when the detail opened stays out of the
-  // fold, even if it is cleared meanwhile.
+  // 詳しく: the items with a value when the detail opened are out of the
+  // fold. Nothing moves in or out while it is open, so an item keeps its
+  // focus and its state when it gets a value.
   const [openedWith] = useState(() => valuesOf(item));
   const [more, setMore] = useState(false);
   const moreId = useId();
+  // What was typed in the subtask and recurrence forms but not added or
+  // applied: closing asks first, with the operation it would carry out.
+  const [held, setHeld] = useState<{
+    then: () => void;
+    subtask: boolean;
+    recurrence: boolean;
+  }>();
+  const noticeId = useId();
+  const backRef = useRef<HTMLButtonElement>(null);
+  const subtaskPending = useRef<() => HTMLElement | null>(null);
+  const recurrencePending = useRef<() => HTMLElement | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
+  const foldRef = useRef<HTMLDivElement>(null);
   const estimateRef = useRef<HTMLInputElement>(null);
   // Opening, the Drawer finds it by `data-autofocus`; already open, this.
   useEffect(() => {
@@ -251,6 +265,16 @@ function TaskDetail({
   const set = (key: TextKey, value: string) => {
     setDraft((d) => ({ ...d, [key]: value }));
     if (saved === key) setSaved(undefined);
+  };
+  // The suggestion's operations put a saved value in the field: whatever
+  // was wrong with the text before is gone with it.
+  const replaceEstimate = (value: string) => {
+    set('estimate', value);
+    setErrors((e) => {
+      const next = { ...e };
+      delete next.estimate;
+      return next;
+    });
   };
 
   function record(
@@ -278,21 +302,48 @@ function TaskDetail({
   }
 
   // Closing or opening another Task leaves the field being edited first,
-  // so it is saved or shows its error. A field left in error keeps the
-  // detail open and takes the focus back.
-  function leave(): boolean {
+  // so it is saved or shows its error. One of this detail's fields left in
+  // error keeps it open and takes the focus back. A subtask not added or a
+  // recurrence change not applied holds it with a notice: 戻る, or
+  // 破棄して閉じる carries out `then`.
+  function leave(then: () => void) {
     const body = bodyRef.current;
-    if (body === null) return true;
+    if (body === null) return then();
     const active = document.activeElement;
     if (active instanceof HTMLElement && body.contains(active)) {
       flushSync(() => active.blur());
     }
-    const invalid = body.querySelector<HTMLElement>('[aria-invalid="true"]');
-    if (invalid === null) return true;
-    invalid.focus();
-    return false;
+    const invalid = body.querySelector<HTMLElement>(
+      '[data-detail-field][aria-invalid="true"]',
+    );
+    if (invalid !== null) {
+      setHeld(undefined);
+      invalid.focus();
+      return;
+    }
+    const subtask = subtaskPending.current?.() ?? null;
+    const recurrence = recurrencePending.current?.() ?? null;
+    if (subtask === null && recurrence === null) return then();
+    flushSync(() =>
+      setHeld({
+        then,
+        subtask: subtask !== null,
+        recurrence: recurrence !== null,
+      }),
+    );
+    backRef.current?.focus();
   }
   useImperativeHandle(leaveRef, () => leave);
+
+  /** 戻る: back to what was typed, opening the fold if it is in there. */
+  function holdBack() {
+    const target = subtaskPending.current?.() ?? recurrencePending.current?.();
+    flushSync(() => {
+      setHeld(undefined);
+      if (target && foldRef.current?.contains(target)) setMore(true);
+    });
+    target?.focus();
+  }
 
   const leaveOnEnter = (key: TextKey) => (event: KeyboardEvent) => {
     if (event.key === 'Enter') {
@@ -306,7 +357,7 @@ function TaskDetail({
     const previous = task.estimate ?? null;
     const hours = boundValue(suggestion, bound);
     if (!actions.adoptSuggestion(task.id, suggestion.id, bound)) return;
-    set('estimate', String(hours));
+    replaceEstimate(String(hours));
     setOutcome({
       kind: 'adopted',
       suggestionId: suggestion.id,
@@ -321,7 +372,7 @@ function TaskDetail({
     if (!actions.adoptEditedSuggestion(task.id, suggestion.id, hours)) {
       return false;
     }
-    set('estimate', String(hours));
+    replaceEstimate(String(hours));
     setOutcome({
       kind: 'adopted',
       suggestionId: suggestion.id,
@@ -335,8 +386,7 @@ function TaskDetail({
     if (outcome?.kind !== 'adopted') return;
     if (!actions.undoAdoption(task.id, outcome.suggestionId, outcome.previous))
       return;
-    set(
-      'estimate',
+    replaceEstimate(
       outcome.previous === null ? '' : String(outcome.previous.hours),
     );
     setOutcome(undefined);
@@ -360,15 +410,14 @@ function TaskDetail({
     setSuggestionBack(true);
   }
 
-  const values = valuesOf(item);
-  const shown = (key: MoreKey) => more || openedWith[key] || values[key];
   const folded = (Object.keys(moreNames) as MoreKey[]).filter(
-    (key) => !openedWith[key] && !values[key],
+    (key) => !openedWith[key],
   );
   // The items with a value come first; the fold opens under its button.
+  // Folded items stay mounted, hidden, so what is typed there is kept.
   const moreItems = (inFold: boolean) =>
     (Object.keys(moreNames) as MoreKey[])
-      .filter((key) => folded.includes(key) === inFold && shown(key))
+      .filter((key) => folded.includes(key) === inFold)
       .map((key) => <Fragment key={key}>{moreItem(key)}</Fragment>);
 
   function moreItem(key: MoreKey) {
@@ -409,7 +458,7 @@ function TaskDetail({
       case 'subtasks':
         return (
           <>
-            <SubtaskList task={task} />
+            <SubtaskList task={task} pendingRef={subtaskPending} />
             {task.subtasks.length > 0 && (
               <Saved show={saved === 'timeBasis'}>
                 <RadioGroup<TimeBasis>
@@ -435,7 +484,7 @@ function TaskDetail({
           </>
         );
       case 'recurrence':
-        return <RecurrenceEditor item={item} />;
+        return <RecurrenceEditor item={item} pendingRef={recurrencePending} />;
     }
   }
 
@@ -447,7 +496,7 @@ function TaskDetail({
           // chooses a field, so a phone does not raise its keyboard (#95).
           tabIndex={-1}
           data-autofocus={focusEstimate === undefined || undefined}
-          className="rounded-sm focus-visible:focus-ring"
+          className="w-fit rounded-sm focus-visible:focus-ring"
         >
           {task.title}
         </DrawerTitle>
@@ -515,6 +564,7 @@ function TaskDetail({
               <TextInput
                 value={draft.title}
                 onChange={(e) => set('title', e.currentTarget.value)}
+                data-detail-field
                 onBlur={() => commit('title')}
                 onKeyDown={leaveOnEnter('title')}
               />
@@ -552,6 +602,7 @@ function TaskDetail({
                 type="date"
                 value={draft.due}
                 onChange={(e) => set('due', e.currentTarget.value)}
+                data-detail-field
                 onBlur={() => commit('due')}
                 onKeyDown={leaveOnEnter('due')}
               />
@@ -571,6 +622,7 @@ function TaskDetail({
                 suffix="h"
                 value={draft.estimate}
                 onChange={(e) => set('estimate', e.currentTarget.value)}
+                data-detail-field
                 onBlur={() => commit('estimate')}
                 onKeyDown={leaveOnEnter('estimate')}
               />
@@ -597,36 +649,43 @@ function TaskDetail({
           </SuggestionOutcome>
         )}
 
-        {moreItems(false)}
-        {folded.length > 0 && (
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-wrap items-center gap-x-2">
-              <Button
-                variant="quiet"
-                // The chevron lines up with the fields' left edge.
-                className="-ms-3"
-                aria-expanded={more}
-                aria-controls={moreId}
-                onClick={() => setMore((m) => !m)}
-              >
-                {more ? (
-                  <ChevronDown aria-hidden />
-                ) : (
-                  <ChevronRight aria-hidden />
+        <div className="flex flex-col gap-4">
+          {moreItems(false)}
+          {folded.length > 0 && (
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-wrap items-center gap-x-2">
+                <Button
+                  variant="quiet"
+                  // The chevron lines up with the fields' left edge.
+                  className="-ms-3"
+                  aria-expanded={more}
+                  aria-controls={moreId}
+                  onClick={() => setMore((m) => !m)}
+                >
+                  {more ? (
+                    <ChevronDown aria-hidden />
+                  ) : (
+                    <ChevronRight aria-hidden />
+                  )}
+                  詳しく
+                </Button>
+                {!more && (
+                  <span className="text-meta text-ink-muted">
+                    {folded.map((key) => moreNames[key]).join('・')}
+                  </span>
                 )}
-                詳しく
-              </Button>
-              {!more && (
-                <span className="text-meta text-ink-muted">
-                  {folded.map((key) => moreNames[key]).join('・')}
-                </span>
-              )}
+              </div>
+              <div
+                ref={foldRef}
+                id={moreId}
+                hidden={!more}
+                className="flex flex-col gap-4"
+              >
+                {moreItems(true)}
+              </div>
             </div>
-            <div id={moreId} hidden={!more} className="flex flex-col gap-6">
-              {more && moreItems(true)}
-            </div>
-          </div>
-        )}
+          )}
+        </div>
 
         <div className="border-t border-border-soft pt-4">
           <Button
@@ -650,14 +709,48 @@ function TaskDetail({
           {saved === undefined ? '' : `${fieldNames[saved]}を保存しました`}
         </p>
       </DrawerBody>
+      {held !== undefined && (
+        <div className="shrink-0 border-t border-border-soft px-4 pt-3">
+          <Notice
+            live
+            title={
+              <span id={noticeId} className="flex flex-col">
+                {held.subtask && (
+                  <span>追加していないサブタスクがあります</span>
+                )}
+                {held.recurrence && (
+                  <span>反映していない繰り返しの変更があります</span>
+                )}
+              </span>
+            }
+            action={
+              <>
+                <Button
+                  ref={backRef}
+                  size="sm"
+                  aria-describedby={noticeId}
+                  onClick={holdBack}
+                >
+                  戻る
+                </Button>
+                <Button
+                  size="sm"
+                  variant="danger"
+                  onClick={() => {
+                    const { then } = held;
+                    setHeld(undefined);
+                    then();
+                  }}
+                >
+                  破棄して閉じる
+                </Button>
+              </>
+            }
+          />
+        </div>
+      )}
       <DrawerFooter>
-        <Button
-          onClick={() => {
-            if (leave()) onClose();
-          }}
-        >
-          閉じる
-        </Button>
+        <Button onClick={() => leave(onClose)}>閉じる</Button>
       </DrawerFooter>
     </>
   );

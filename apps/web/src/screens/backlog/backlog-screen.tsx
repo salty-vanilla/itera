@@ -287,20 +287,21 @@ function BacklogScreen() {
                       item={item}
                       today={today}
                       current={task.id === open?.task.id}
-                      onOpen={() => {
-                        if (detail.leave()) setSearch({ task: task.id });
-                      }}
+                      onOpen={() =>
+                        detail.leave(() => setSearch({ task: task.id }))
+                      }
                       onComplete={() => completeWithUndo(task.id, task.title)}
                       onToday={() => {
                         endUndo();
                         actions.addToToday(task.id);
                       }}
                       onArchive={() => archiveWithUndo(task.id, task.title)}
-                      onEstimate={() => {
-                        if (!detail.leave()) return;
-                        estimateFocus.request(task.id);
-                        setSearch({ task: task.id });
-                      }}
+                      onEstimate={() =>
+                        detail.leave(() => {
+                          estimateFocus.request(task.id);
+                          setSearch({ task: task.id });
+                        })
+                      }
                       focusControl={refocus === task.id}
                     />
                   </li>
@@ -324,7 +325,7 @@ function BacklogScreen() {
       <Drawer
         open={open !== undefined}
         onOpenChange={(next) => {
-          if (!next && detail.leave()) setSearch({ task: undefined });
+          if (!next) detail.leave(() => setSearch({ task: undefined }));
         }}
       >
         <DrawerContent

@@ -1,5 +1,5 @@
 import type { Subtask, Task } from '@itera/domain';
-import { useRef, useState } from 'react';
+import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { Button } from '@/components/ui/button';
 import { CheckboxControl } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
@@ -16,12 +16,28 @@ function parseHours(text: string): number | null | 'invalid' {
   return Number.isFinite(hours) && hours > 0 ? hours : 'invalid';
 }
 
-function SubtaskList({ task }: { task: Task }) {
+function SubtaskList({
+  task,
+  pendingRef,
+}: {
+  task: Task;
+  /**
+   * For the Task detail's close (Issue #95): the field holding a subtask
+   * typed but not added, or null.
+   */
+  pendingRef?: Ref<() => HTMLElement | null> | undefined;
+}) {
   const actions = useTaskActions();
   const [title, setTitle] = useState('');
   const [hours, setHours] = useState('');
   const [error, setError] = useState<string>();
+  const titleRef = useRef<HTMLInputElement>(null);
   const hoursRef = useRef<HTMLInputElement>(null);
+  useImperativeHandle(pendingRef, () => () => {
+    if (title.trim() !== '') return titleRef.current;
+    if (hours.trim() !== '') return hoursRef.current;
+    return null;
+  });
 
   return (
     <section aria-labelledby="subtasks-heading" className="flex flex-col gap-2">
@@ -62,6 +78,7 @@ function SubtaskList({ task }: { task: Task }) {
       >
         <Field label="サブタスクを追加" hideLabel className="min-w-0 flex-1">
           <TextInput
+            ref={titleRef}
             value={title}
             placeholder="サブタスクのタイトル"
             onChange={(e) => setTitle(e.currentTarget.value)}

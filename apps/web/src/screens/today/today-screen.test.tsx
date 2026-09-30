@@ -603,5 +603,36 @@ describe('Today — the Task detail (#95)', () => {
     await userEvent.type(estimate, '2');
     await userEvent.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(
+      lastSnapshot().records.tasks.find((t) => t.id === 'task-bookshelf')
+        ?.estimate?.hours,
+    ).toBe(2);
+  });
+
+  it('opening another Task saves the field first, or stays on a wrong value', async () => {
+    await renderAt('/today?fixture=today-daytime&task=task-bookshelf');
+    const detail = await screen.findByRole('dialog');
+    const estimate = within(detail).getByRole('textbox', {
+      name: /見積もり（時間）/,
+    });
+    await userEvent.type(estimate, 'x');
+    const other = within(row('今日やる', '実験データの前処理')).getByText(
+      '実験データの前処理',
+    );
+    await userEvent.click(other);
+    expect(screen.getByRole('dialog').textContent).toContain('本棚を整理する');
+    expect(document.activeElement).toBe(estimate);
+    await userEvent.clear(estimate);
+    await userEvent.type(estimate, '1');
+    await userEvent.click(other);
+    await waitFor(() =>
+      expect(screen.getByRole('dialog').textContent).toContain(
+        '実験データの前処理',
+      ),
+    );
+    expect(
+      lastSnapshot().records.tasks.find((t) => t.id === 'task-bookshelf')
+        ?.estimate?.hours,
+    ).toBe(1);
   });
 });
