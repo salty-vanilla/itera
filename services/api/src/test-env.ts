@@ -1,8 +1,9 @@
 // Bindings for app.request() in tests. Dependencies are injected, so nothing
-// reads DB; the WorkOS values match the tokens the WorkOS tests sign.
+// reads DB; the Better Auth values are for the tests' own instances.
 export const testEnv: CloudflareBindings = {
   DB: {} as D1Database,
-  WORKOS_CLIENT_ID: 'client_test',
-  WORKOS_ISSUER: 'https://api.workos.com/',
-  WORKOS_AUDIENCE: 'https://api.itera.test',
+  BETTER_AUTH_SECRET: 'test-secret-that-is-at-least-32-characters',
+  BETTER_AUTH_URL: 'http://localhost:8787',
+  GOOGLE_CLIENT_ID: 'google-client-id.test',
+  GOOGLE_CLIENT_SECRET: 'google-client-secret.test',
 };

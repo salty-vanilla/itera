@@ -7,7 +7,7 @@ export type AppEnv = {
   Variables: {
     // Built from Dependencies['database'] for each request.
     db: Database;
-    // WorkOS user ID (the access token's `sub`), set by requireAuth.
+    // Better Auth user ID of the request's session, set by requireAuth.
     userId: string;
   };
 };

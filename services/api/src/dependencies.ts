@@ -7,5 +7,7 @@ import type { Database } from './db/database';
 // dependency is a factory from env.
 export type Dependencies = {
   database: (env: CloudflareBindings) => Database;
-  authenticator: (env: CloudflareBindings) => Authenticator;
+  // Receives the request's database (built by `database`), so the auth
+  // service keeps its users and sessions there.
+  authenticator: (env: CloudflareBindings, db: Database) => Authenticator;
 };

@@ -25,13 +25,13 @@ MVP は Web のみ。PC を基準にし、スマートフォンは DESIGN.md の
 2. monorepo の土台（pnpm workspace、TypeScript、ESLint、Prettier、lefthook、vitest）
 3. `packages/domain`：ドメインロジックを UI・DB から独立した純粋な TypeScript で書き、不変条件をテストで固める
 4. `apps/web`：fixture だけで Backlog・Planning・Today・Retro の操作感を検証する（PRD §12）
-5. `services/api`：API・DB・認証・データ保存。実行基盤は Cloudflare Workers、DB は D1、認証は WorkOS AuthKit（ADR 0004）
+5. `services/api`：API・DB・認証・データ保存。実行基盤は Cloudflare Workers、DB は D1、認証は Better Auth（パスキーと Google。ADR 0004）
 
 手順 4 のうち、ドメインの型に依存しない土台（トークン、基底部品、Storybook）は手順 3 と並行して先に作ってよい（Issue #6、ADR 0003）。画面と fixture は `packages/domain` の型と関数ができてから作る。
 
 `packages/domain`・`apps/web`・`services/api` で作業するときは、ファイルを作る前に `.claude/rules/domain.md` / `.claude/rules/web-ui.md` / `.claude/rules/api.md` を読む。
 
-技術スタックの候補：Vite、React 19、Tailwind 4、shadcn（base-ui）、TanStack Query、Valibot、Hono、Drizzle、OpenAPI + Hey API、vitest、Playwright。導入するときに ADR で決め、バージョンを固定する。まだ入っていないものを、入っている前提で使わない。導入済みの Web 側の依存（Vite、React、Tailwind、shadcn / base-ui、lucide-react、Storybook）は ADR 0003、ルーター（TanStack Router）と fixture・記録のストアの置き場所は ADR 0005。API 側（Hono + Cloudflare Workers、D1 + Drizzle、WorkOS AuthKit、`jose`、wrangler）の方式と版は ADR 0004。
+技術スタックの候補：Vite、React 19、Tailwind 4、shadcn（base-ui）、TanStack Query、Valibot、Hono、Drizzle、OpenAPI + Hey API、vitest、Playwright。導入するときに ADR で決め、バージョンを固定する。まだ入っていないものを、入っている前提で使わない。導入済みの Web 側の依存（Vite、React、Tailwind、shadcn / base-ui、lucide-react、Storybook）は ADR 0003、ルーター（TanStack Router）と fixture・記録のストアの置き場所は ADR 0005。API 側（Hono + Cloudflare Workers、D1 + Drizzle、Better Auth、wrangler）の方式と版は ADR 0004。
 
 ### 未決事項の扱い
 

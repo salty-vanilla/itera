@@ -6,7 +6,7 @@ import type { Database, Schema } from './database';
 
 // Checked by `pnpm typecheck` (tsc); the test body does nothing at runtime.
 describe('Database', () => {
-  it('accepts D1 (default), libSQL (planned) and sqlite-proxy (tests)', () => {
+  it('accepts D1 (default), libSQL and sqlite-proxy (tests)', () => {
     expectTypeOf<DrizzleD1Database<Schema>>().toExtend<Database>();
     expectTypeOf<LibSQLDatabase<Schema>>().toExtend<Database>();
     expectTypeOf<SqliteRemoteDatabase<Schema>>().toExtend<Database>();
