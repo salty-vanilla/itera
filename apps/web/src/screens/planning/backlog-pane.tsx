@@ -1,10 +1,11 @@
-import type { TaskId } from '@itera/domain';
-import type { ReactNode } from 'react';
+import type { AreaId, TaskId } from '@itera/domain';
+import { useState, type ReactNode } from 'react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { Checkbox, CheckboxControl } from '@/components/ui/checkbox';
 import { DividerLabel } from '@/components/ui/divider';
 import { useToast } from '@/components/ui/toast';
 import { Deadline } from '@/components/task/deadline';
+import { AreaSelect } from '@/components/task/area-select';
 import { Estimate } from '@/components/task/estimate';
 import {
   MetaItem,
@@ -26,11 +27,15 @@ import { CarryOverText } from '../backlog/backlog-row';
 // chooses or clears the whole group. This week's occurrences are chosen by
 // default and can be left out one by one. Carried-over Tasks never join by
 // themselves (invariant 20). In 整える・確かめる the pane is slim (titles
-// only, owner decision in #40).
+// only, owner decision in #40). The Quick Add adds a Task and chooses it at
+// once, in the Area picked beside it (Issue #92); slim, the Select goes under
+// the field.
 
 type BacklogPaneProps = {
   data: PlanningData;
   slim?: boolean;
+  /** Adds a Task and chooses it for the week. Returns false to keep the text. */
+  onAdd: (title: string, areaId: AreaId | undefined) => boolean;
   onOpenTask: (taskId: TaskId) => void;
   /** E on a row: the Task's detail, at its Estimate. */
   onEstimateTask: (taskId: TaskId) => void;
@@ -40,6 +45,7 @@ type BacklogPaneProps = {
 function BacklogPane({
   data,
   slim = false,
+  onAdd,
   onOpenTask,
   onEstimateTask,
   className,
@@ -48,6 +54,13 @@ function BacklogPane({
   const toast = useToast();
   const { candidates } = data;
   const week = weekCall(data.week, data.number);
+  // The Area of the next Quick Add: the one used last, else 領域なし.
+  const [quickArea, setQuickArea] = useState('');
+  const areas = data.areas.flatMap((a) =>
+    a.id === null || a.color === 'none'
+      ? []
+      : [{ id: a.id, name: a.name, color: a.color }],
+  );
 
   const choose = (rows: readonly CandidateRow[]) => {
     const taskIds = rows.map((r) => r.task.id);
@@ -91,7 +104,13 @@ function BacklogPane({
       <h2 className="text-subheading text-ink">Backlog</h2>
       <TaskQuickAdd
         label={`タスクを追加して${weekText(week, 'に入れる')}`}
-        onAdd={(title) => actions.addAndChoose(title)}
+        stackArea={slim}
+        onAdd={(title) =>
+          onAdd(title, quickArea === '' ? undefined : (quickArea as AreaId))
+        }
+        area={
+          <AreaSelect areas={areas} value={quickArea} onChange={setQuickArea} />
+        }
       />
       <Group
         title="持ち越し"

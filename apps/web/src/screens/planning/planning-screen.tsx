@@ -1,4 +1,4 @@
-import { id, type TaskId } from '@itera/domain';
+import { id, type AreaId, type TaskId } from '@itera/domain';
 import {
   Link,
   useNavigate,
@@ -53,6 +53,9 @@ import { PlanPane, type Stage } from './plan-pane';
 // - compact: one column. The Backlog shows in 選ぶ only; the Capacity is
 //   the same one line (a Bottom Sheet), and 確かめる shows it in full.
 
+/** How long the row just added flashes; the same as `added-flash` in the CSS. */
+const ADDED_MS = 2500;
+
 export const STAGES: readonly { id: Stage; label: string }[] = [
   { id: 'pick', label: '選ぶ' },
   { id: 'shape', label: '整える' },
@@ -99,6 +102,10 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
   const stage = search.stage ?? 'pick';
   const [confirming, setConfirming] = useState(false);
   const [outlookOpen, setOutlookOpen] = useState(false);
+  // The Task just added in the Quick Add: its row flashes for a moment
+  // (ADDED_MS) and a Toast says where it went (Issue #92).
+  const [addedTaskId, setAddedTaskId] = useState<TaskId>();
+  const week = weekCall(data.week, data.number);
 
   const setSearch = (next: {
     [K in keyof SprintSearch]?: SprintSearch[K] | undefined;
@@ -149,6 +156,26 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
     });
     setSearch({ stage: undefined, criterion: undefined });
   };
+
+  const addTask = (title: string, areaId: AreaId | undefined) => {
+    const created = actions.addAndChoose(title, areaId);
+    if (created === undefined) return false;
+    setAddedTaskId(created);
+    toast.show({
+      kind: 'sprint-pick',
+      title: `「${title}」を追加して${weekText(week, 'に入れました')}`,
+    });
+    return true;
+  };
+  useEffect(() => {
+    if (addedTaskId === undefined) return;
+    // The row may sit below or above what the screen shows.
+    document
+      .querySelector(`[data-slot="plan-pane"] [data-task="${addedTaskId}"]`)
+      ?.scrollIntoView?.({ block: 'nearest' });
+    const timer = window.setTimeout(() => setAddedTaskId(undefined), ADDED_MS);
+    return () => window.clearTimeout(timer);
+  }, [addedTaskId]);
 
   const blocked = data.blockers.length > 0;
   const reasonId = useId();
@@ -273,10 +300,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
                   {data.blockers.includes('inactiveTasks') && (
                     <p>
                       完了・アーカイブした Task を
-                      {weekText(
-                        weekCall(data.week, data.number),
-                        'から外すと確定できます。',
-                      )}
+                      {weekText(week, 'から外すと確定できます。')}
                     </p>
                   )}
                 </div>
@@ -319,6 +343,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
         <BacklogPane
           data={data}
           slim={stage !== 'pick'}
+          onAdd={addTask}
           onOpenTask={openTask}
           onEstimateTask={openEstimate}
           className={cn(
@@ -331,6 +356,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
           <PlanPane
             data={data}
             stage={stage}
+            addedTaskId={addedTaskId}
             onOpenTask={openTask}
             onEstimateTask={openEstimate}
           />
