@@ -961,7 +961,7 @@ describe('Planning — 見積もりを入れる (#96)', () => {
     await renderAt('/sprint?fixture=planning-pick&stage=pick');
     await userEvent.type(
       within(backlogPane()).getByRole('textbox', {
-        name: 'タスクを追加して今週に入れる',
+        name: '今週のタスクを追加',
       }),
       '発表資料を見直す{Enter}',
     );
