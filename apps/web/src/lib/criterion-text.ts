@@ -17,3 +17,15 @@ export function criterionName(
   const scope = policy.scope.kind === 'all' ? '' : `${areaName ?? '領域'}：`;
   return `${scope}提案の幅の${BOUND_WORDS[policy.rangePolicy]}で計画する`;
 }
+
+/**
+ * What the criterion does to a Planning: 「研究の提案の幅があるタスクを上限で
+ * 計画します」. From the same policy as its name (invariant 39).
+ */
+export function criterionEffect(
+  policy: CriterionPolicy,
+  areaName: string | undefined,
+): string {
+  const scope = policy.scope.kind === 'all' ? '' : `${areaName ?? '領域'}の`;
+  return `${scope}提案の幅があるタスクを${BOUND_WORDS[policy.rangePolicy]}で計画します`;
+}

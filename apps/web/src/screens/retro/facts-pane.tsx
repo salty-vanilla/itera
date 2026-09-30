@@ -140,27 +140,21 @@ function FactsPane({
       </section>
 
       {used !== undefined && (
-        <section
-          aria-labelledby="retro-criterion"
-          className="flex flex-col gap-2 rounded-sm bg-canvas-subtle p-4"
-        >
-          <h2
-            id="retro-criterion"
-            className="flex items-center gap-2 text-subheading text-ink"
-          >
-            <Info
-              aria-hidden
-              className="size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
-            />
-            {`今回の計画基準「${criterionName(used.criterion.policy, used.areaName)}」`}
-          </h2>
-          <p className="text-body text-ink">
-            {used.appliedAtConfirm
-              ? '確定したときに、今回の計画値に使いました。'
-              : '確定したときに、今回の計画値には使いませんでした。'}
-          </p>
-          {used.appliedAtConfirm && <CriterionOutcome data={data} />}
-        </section>
+        // Its result is in 引き継ぐ, right before it is decided on (#107).
+        <p className="flex items-start gap-2 text-body text-ink">
+          <Info
+            aria-hidden
+            className="mt-1 size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
+          />
+          <span>
+            {`今回の計画基準：「${criterionName(used.criterion.policy, used.areaName)}」`}
+            <span className="text-ink-muted">
+              {readOnly
+                ? '（結果と扱いは引き継ぐにあります）'
+                : '（引き継ぐで扱いを決めます）'}
+            </span>
+          </span>
+        </p>
       )}
 
       {(changedGoals.length > 0 || hoursChanged) && (
@@ -353,35 +347,6 @@ function FactsPane({
         </section>
       )}
     </div>
-  );
-}
-
-/** 「研究の幅のあるタスク 1件のうち 1 件を持ち越し（計画値 5h・実績 4.5h）」. */
-function CriterionOutcome({ data }: { data: RetroData }) {
-  const used = data.used;
-  if (used === undefined) return null;
-  const { result } = used;
-  const scope = used.areaName === undefined ? '' : `${used.areaName}の`;
-  if (result.tasks.length === 0) {
-    return (
-      <p className="text-body text-ink-muted">
-        計画値を変えたタスクはありませんでした。
-      </p>
-    );
-  }
-  const parts = [
-    result.done.length > 0 && `${result.done.length}件を完了`,
-    result.carriedOver.length > 0 && `${result.carriedOver.length}件を持ち越し`,
-  ].filter(Boolean);
-  return (
-    <p className="text-body text-ink">
-      {scope}幅のあるタスク {result.tasks.length}件のうち {parts.join('、')}
-      （計画値 {formatPlanningTotal(result.planned)}・実績{' '}
-      {result.actualHours > 0
-        ? formatHours(result.actualHours, { total: true })
-        : '未入力'}
-      ）
-    </p>
   );
 }
 

@@ -99,6 +99,24 @@ export interface RetroData {
   readonly actualDate: LocalDate;
   /** Done, skipped and missed occurrences, by date (F2, F14, F24). */
   readonly occurrences: readonly RetroOccurrence[];
+  /** Where the carried-over Tasks are now (#107). */
+  readonly carryOver: CarryOverPlaces;
+}
+
+/**
+ * Where the carried-over Tasks are now, by count (#107). Nothing moves them
+ * in Retro (invariant 20): they wait in Backlog for the next Planning's
+ * 「持ち越し」, unless the next Sprint already took them in (F35) or they
+ * were completed or archived since.
+ */
+export interface CarryOverPlaces {
+  readonly total: number;
+  /** In the next Sprint, being planned. */
+  readonly inNext: number;
+  /** In Backlog, offered as the next Planning's 「持ち越し」. */
+  readonly inBacklog: number;
+  readonly completed: number;
+  readonly archived: number;
 }
 
 const NO_AREA: RetroArea = { id: null, name: '領域なし', color: 'none' };
@@ -217,6 +235,30 @@ export function retroData(
         date: f.doneOn ?? f.occurrence.scheduledDate,
       },
     })),
+    carryOver: carryOverPlaces(facts, records, sprint),
+  };
+}
+
+function carryOverPlaces(
+  facts: RetroFacts,
+  records: Records,
+  sprint: Sprint,
+): CarryOverPlaces {
+  const next = records.sprints.find((s) => s.previousSprintId === sprint.id);
+  const places = facts.carriedOver.map((f) =>
+    next?.tasks.some((t) => t.taskId === f.taskId) === true
+      ? 'inNext'
+      : records.tasks.find((t) => t.id === f.taskId)?.lifecycle,
+  );
+  const count = (place: (typeof places)[number]) =>
+    places.filter((l) => l === place).length;
+  return {
+    total: facts.carriedOver.length,
+    inNext: count('inNext'),
+    // As carryOverCandidates offers them: active and not yet chosen.
+    inBacklog: count('active'),
+    completed: count('completed'),
+    archived: count('archived'),
   };
 }
 

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tag } from '@/components/ui/tag';
+import type { CarryOverPlaces } from '@/store/retro-view';
 
 // Words and small parts shared by the Retro panes. Facts are written
 // neutrally, never as failures (patterns.md Retro › ルール).
@@ -110,3 +111,21 @@ export const DECISION_WORDS: Readonly<Record<RetroDecision, string>> = {
   end: '終える',
   replace: '置き換える',
 };
+
+/**
+ * Where the carried-over Tasks are (#107): the first line of 引き継ぐ and the
+ * Dialog of 「振り返りを完了」 say it in these same words. Retro moves none
+ * of them (invariant 20).
+ */
+export function carryOverWords(places: CarryOverPlaces): string {
+  const parts = [
+    places.inNext > 0 && `${places.inNext}件は次の計画に入っています。`,
+    places.inBacklog > 0 &&
+      `${places.inBacklog}件は Backlog に残っています。次の計画の「持ち越し」に候補として出ます。`,
+    places.completed > 0 && `${places.completed}件は完了しています。`,
+    places.archived > 0 && `${places.archived}件はアーカイブしています。`,
+  ].filter((p) => p !== false);
+  return parts.length > 1
+    ? `${places.total}件のうち、${parts.join('')}`
+    : parts.join('');
+}
