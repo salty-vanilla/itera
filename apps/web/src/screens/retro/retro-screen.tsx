@@ -1,18 +1,26 @@
+import type { Sprint, SprintId } from '@itera/domain';
 import { useNavigate, useRouter, useSearch } from '@tanstack/react-router';
-import { NotebookPen } from 'lucide-react';
+import { NotebookPen, Route } from 'lucide-react';
 import { useId, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tag } from '@/components/ui/tag';
 import { useToast } from '@/components/ui/toast';
-import { SprintHeader } from '@/components/sprint/sprint-header';
+import {
+  SprintHeader,
+  type SprintHeaderProps,
+} from '@/components/sprint/sprint-header';
 import { formatDate, formatDateRange } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
+import { weekCall, weekText } from '@/lib/week-text';
 import type { ActualTarget, RetroBlocker, RetroData } from '@/store/retro-view';
+import { type SprintChoice, type SprintRef } from '@/store/sprint-choice';
 import { useAppOverview } from '@/store/use-app-overview';
-import { useAfterRetro, useRetro, useRetroActions } from '@/store/use-retro';
+import { useRetro, useRetroActions } from '@/store/use-retro';
+import { useSprintChoice } from '@/store/use-sprint-choice';
 import { ActualTime } from '../today/actual-time';
 import { BeginPlanning } from '../begin-planning';
 import { ScreenFrame } from '../screen-frame';
+import { sprintSearchOf, useSprintSteps } from '../sprint-steps';
 import { FactsPane } from './facts-pane';
 import { HandoffPane } from './handoff-pane';
 import { Materials } from './materials';
@@ -26,6 +34,11 @@ import { ReflectPane } from './reflect-pane';
 // most 720px, and from 1200px 振り返りの材料 sits at its right. 事実を見る
 // has no materials beside it: its tables of Tasks take the whole width,
 // while its text keeps to 720px (owner decision in #73).
+// Any Sprint's Retro opens by its number in the URL (`?sprint=2`, #90):
+// by default the one in Review, else the running one (its Retro starts on
+// its last day, F21), else the last closed. A closed Sprint's Retro is read
+// only: its facts, judgements and words stay as they were (F22,
+// invariant 40).
 
 export type RetroStage = 'facts' | 'reflect' | 'handoff';
 
@@ -35,11 +48,20 @@ export const RETRO_STAGES: readonly { id: RetroStage; label: string }[] = [
   { id: 'handoff', label: '引き継ぐ' },
 ];
 
-const HEADINGS: Readonly<Record<RetroStage, string>> = {
-  facts: '今週、何が起きたか',
-  reflect: '何が気になったか',
-  handoff: '次の Sprint に何を引き継ぐか',
-};
+/**
+ * The stage's heading. 事実を見る names the Sprint: in Review or closed it
+ * is never 「今週」, as the next one to start is (#90).
+ */
+function stageHeading(stage: RetroStage, number: number): string {
+  switch (stage) {
+    case 'facts':
+      return `Sprint ${number} で何が起きたか`;
+    case 'reflect':
+      return '何が気になったか';
+    case 'handoff':
+      return '次の Sprint に何を引き継ぐか';
+  }
+}
 
 /** Why 「Retro を完了」 waits (docs/design/content.md). */
 export const BLOCKER_WORDS: Readonly<Record<RetroBlocker, string>> = {
@@ -50,6 +72,8 @@ export const BLOCKER_WORDS: Readonly<Record<RetroBlocker, string>> = {
 };
 
 export interface RetroSearch {
+  /** The Sprint to open, by number (#90). Absent: the current one. */
+  readonly sprint?: number;
   readonly stage?: RetroStage;
 }
 
@@ -57,18 +81,65 @@ export function validateRetroSearch(
   search: Record<string, unknown>,
 ): RetroSearch {
   const stage = RETRO_STAGES.find((s) => s.id === search.stage)?.id;
-  return stage === undefined ? {} : { stage };
+  return {
+    ...sprintSearchOf(search),
+    ...(stage === undefined ? {} : { stage }),
+  };
 }
 
+type Steps = SprintHeaderProps['steps'];
+
 function RetroScreen() {
-  const data = useRetro();
-  if (data !== undefined) return <RetroView data={data} />;
-  return <NoRetro />;
+  const search = useSearch({ from: '/retro' });
+  const choice = useSprintChoice('retro', search.sprint);
+  if (choice === undefined) {
+    return (
+      <ScreenFrame heading="振り返り" meta="振り返る Sprint はありません" />
+    );
+  }
+  return <RetroOf choice={choice} />;
+}
+
+function RetroOf({ choice }: { choice: SprintChoice }) {
+  const steps = useSprintSteps('/retro', choice);
+  const { sprint } = choice.current;
+  if (sprint === undefined) return null;
+  if (sprint.state === 'review' || sprint.state === 'closed') {
+    return <RetroFor sprintId={sprint.id} choice={choice} steps={steps} />;
+  }
+  return <NotStarted current={choice.current} sprint={sprint} steps={steps} />;
+}
+
+function RetroFor({
+  sprintId,
+  choice,
+  steps,
+}: {
+  sprintId: SprintId;
+  choice: SprintChoice;
+  steps: Steps;
+}) {
+  const data = useRetro(sprintId);
+  if (data === undefined) return null;
+  // The last closed Retro leads on to the next Planning (#42); an older
+  // one, with a Sprint confirmed after it, does not.
+  const leadsOn =
+    choice.next === undefined || choice.next.sprint?.state === 'planning';
+  return <RetroView data={data} steps={steps} leadsOn={leadsOn} />;
 }
 
 type Editing = { target: ActualTarget; title: string; anchor: HTMLElement };
 
-function RetroView({ data }: { data: RetroData }) {
+function RetroView({
+  data,
+  steps,
+  leadsOn,
+}: {
+  data: RetroData;
+  steps: Steps;
+  /** Closed: whether 「Sprint N の計画を始める」 follows (#42). */
+  leadsOn: boolean;
+}) {
   const search = useSearch({ from: '/retro' });
   const navigate = useNavigate({ from: '/retro' });
   const router = useRouter();
@@ -77,6 +148,7 @@ function RetroView({ data }: { data: RetroData }) {
   const stage = search.stage ?? 'facts';
   const [editing, setEditing] = useState<Editing | undefined>(undefined);
   const reasonId = useId();
+  const readOnly = data.sprint.state === 'closed';
   const setStage = (next: RetroStage) =>
     void navigate({ search: (prev) => ({ ...prev, stage: next }) });
 
@@ -103,12 +175,17 @@ function RetroView({ data }: { data: RetroData }) {
     <div className="mx-auto flex min-h-full w-full max-w-[calc(var(--spacing-pane-today)+var(--spacing-pane-side)+var(--spacing-12))] flex-col gap-8 px-4 pt-6 pb-16 medium:px-6 medium:pt-8 xl:mx-0 xl:max-w-none">
       <SprintHeader
         status={
-          <Tag tone="neutral" icon={NotebookPen}>
-            振り返り中
-          </Tag>
+          readOnly ? (
+            <Tag tone="done">完了</Tag>
+          ) : (
+            <Tag tone="neutral" icon={NotebookPen}>
+              振り返り中
+            </Tag>
+          )
         }
         title={`Sprint ${data.number}`}
         period={formatDateRange(data.sprint.start, data.sprint.end)}
+        steps={steps}
         stages={RETRO_STAGES.map((s) => ({
           id: s.id,
           label: s.label,
@@ -131,34 +208,42 @@ function RetroView({ data }: { data: RetroData }) {
           setStage(stageId as RetroStage);
         }}
         actions={
-          <div className="flex flex-col items-end gap-1">
-            <Button
-              variant="primary"
-              disabled={blocked}
-              focusableWhenDisabled
-              aria-describedby={reasonId}
-              onClick={complete}
-            >
-              Retro を完了
-            </Button>
-            <div
-              id={reasonId}
-              className="flex max-w-measure-read flex-col items-end gap-1 text-right text-help text-ink-muted"
-            >
-              {data.blockers.map((b) => (
-                <p key={b}>{BLOCKER_WORDS[b]}</p>
-              ))}
-              {data.improvement === undefined && (
-                <p>
-                  改善策がないまま完了します。次の Planning には何も出ません。
-                </p>
-              )}
+          readOnly ? (
+            leadsOn ? (
+              <BeginPlanning />
+            ) : undefined
+          ) : (
+            <div className="flex flex-col items-end gap-1">
+              <Button
+                variant="primary"
+                disabled={blocked}
+                focusableWhenDisabled
+                aria-describedby={reasonId}
+                onClick={complete}
+              >
+                Retro を完了
+              </Button>
+              <div
+                id={reasonId}
+                className="flex max-w-measure-read flex-col items-end gap-1 text-right text-help text-ink-muted"
+              >
+                {data.blockers.map((b) => (
+                  <p key={b}>{BLOCKER_WORDS[b]}</p>
+                ))}
+                {data.improvement === undefined && (
+                  <p>
+                    改善策がないまま完了します。次の Planning には何も出ません。
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
+          )
         }
       >
         <p className="text-help text-ink-muted">
-          書いた内容は、途中で閉じても残ります。
+          {readOnly
+            ? '完了した振り返りです。書いた内容は、ここでは変えられません。'
+            : '書いた内容は、途中で閉じても残ります。'}
         </p>
       </SprintHeader>
 
@@ -170,10 +255,13 @@ function RetroView({ data }: { data: RetroData }) {
         )}
       >
         <div className="flex min-w-0 flex-col gap-8">
-          <h1 className="text-display-m text-ink">{HEADINGS[stage]}</h1>
+          <h1 className="text-display-m text-ink">
+            {stageHeading(stage, data.number)}
+          </h1>
           {stage === 'facts' && (
             <FactsPane
               data={data}
+              readOnly={readOnly}
               onPin={actions.togglePin}
               onAssess={actions.assessGoal}
               onAddActual={(target, title, anchor) =>
@@ -184,6 +272,7 @@ function RetroView({ data }: { data: RetroData }) {
           {stage === 'reflect' && (
             <ReflectPane
               data={data}
+              readOnly={readOnly}
               onPin={actions.togglePin}
               onReflect={actions.setReflection}
               onImprove={actions.setImprovement}
@@ -193,6 +282,7 @@ function RetroView({ data }: { data: RetroData }) {
           {stage === 'handoff' && (
             <HandoffPane
               data={data}
+              readOnly={readOnly}
               titleOf={data.taskTitleOf}
               onDraft={actions.draftCriterion}
               onDraftPolicy={actions.setDraftPolicy}
@@ -213,7 +303,10 @@ function RetroView({ data }: { data: RetroData }) {
         {stage !== 'facts' && (
           <aside className="hidden wide:block">
             <div className="sticky top-8">
-              <Materials data={data} onPin={actions.togglePin} />
+              <Materials
+                data={data}
+                onPin={readOnly ? undefined : actions.togglePin}
+              />
             </div>
           </aside>
         )}
@@ -247,54 +340,59 @@ function RetroView({ data }: { data: RetroData }) {
 }
 
 /**
- * /retro without a Sprint in Review: the running Sprint (Retro starts from
- * its last day, F21), or the Retro just completed and the next Planning
- * (owner decision in #42).
+ * A Sprint whose Retro has not started: running (its Retro starts on its
+ * last day, F21) or still being planned.
  */
-function NoRetro() {
-  // The running week, even while the next is being planned.
-  const { today, activeSprint: running } = useAppOverview();
-  const after = useAfterRetro();
+function NotStarted({
+  current,
+  sprint,
+  steps,
+}: {
+  current: SprintRef;
+  sprint: Sprint;
+  steps: Steps;
+}) {
+  const { today } = useAppOverview();
   const actions = useRetroActions();
-  if (running !== undefined) {
-    const lastDay = today >= running.end;
-    return (
-      <ScreenFrame heading="振り返り">
-        <p className="text-body text-ink-muted">
-          {lastDay
-            ? '今日はこの Sprint の最終日です。振り返りを始められます。'
-            : `この Sprint の振り返りは、最終日（${formatDate(running.end)}）から始められます。`}
-        </p>
-        {lastDay && (
-          <div>
-            <Button onClick={() => actions.beginRetro()}>Retro を始める</Button>
-          </div>
-        )}
-      </ScreenFrame>
-    );
-  }
-  if (after === undefined) {
-    return (
-      <ScreenFrame heading="振り返り" meta="振り返る Sprint はありません" />
-    );
-  }
+  const week = weekCall(current.week, current.number);
+  const lastDay = sprint.state === 'active' && today >= sprint.end;
   return (
-    <ScreenFrame heading={`Sprint ${after.number} の振り返りは完了しています`}>
-      {after.improvement !== undefined && (
-        <section
-          aria-labelledby="after-improvement"
-          className="mt-6 flex flex-col gap-2 border-t border-b border-t-ink border-b-border py-4"
-        >
-          <h2 id="after-improvement" className="text-label text-ink-muted">
-            次に試す変更
-          </h2>
-          <p className="text-goal text-ink">{after.improvement}</p>
-        </section>
-      )}
-      <div className="mt-6">
-        <BeginPlanning />
+    <div className="mx-auto flex min-h-full w-full max-w-[calc(var(--spacing-pane-today)+var(--spacing-pane-side)+var(--spacing-12))] flex-col gap-8 px-4 pt-6 pb-16 medium:px-6 medium:pt-8">
+      <SprintHeader
+        status={
+          sprint.state === 'active' ? (
+            <Tag tone="neutral" icon={Route}>
+              実行中
+            </Tag>
+          ) : (
+            <Tag tone="draft">計画中 · 未確定</Tag>
+          )
+        }
+        title={`Sprint ${current.number}`}
+        week={current.week}
+        period={formatDateRange(sprint.start, sprint.end)}
+        steps={steps}
+        actions={
+          lastDay ? (
+            <Button variant="primary" onClick={() => actions.beginRetro()}>
+              Retro を始める
+            </Button>
+          ) : undefined
+        }
+      />
+      <div className="flex max-w-measure-read flex-col gap-3">
+        <h1 className="text-display-m text-ink">
+          {weekText(week, 'の振り返り')}
+        </h1>
+        <p className="text-body text-ink-muted">
+          {sprint.state === 'planning'
+            ? `この Sprint はまだ計画中です。振り返りは、確定した後、最終日（${formatDate(sprint.end)}）から始められます。`
+            : lastDay
+              ? '今日はこの Sprint の最終日です。振り返りを始められます。'
+              : `この Sprint の振り返りは、最終日（${formatDate(sprint.end)}）から始められます。`}
+        </p>
       </div>
-    </ScreenFrame>
+    </div>
   );
 }
 

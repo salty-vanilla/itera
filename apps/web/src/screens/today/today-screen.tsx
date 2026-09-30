@@ -98,10 +98,11 @@ function NoActiveSprint() {
   return (
     <ScreenFrame heading={formatDateHeading(today)}>
       <p className="text-body text-ink-muted">
-        {/* A week in Retro comes first, even when the next is being planned. */}
+        {/* A week in Retro comes first, even when the next is being planned.
+            It is not 「今週」: that is the next one to start (#90). */}
         {reviewSprint !== undefined ? (
           <>
-            今週の Sprint は振り返り中です。
+            Sprint {reviewSprint.number} は振り返り中です。
             <Link to="/retro" className={link}>
               振り返りを開く
             </Link>

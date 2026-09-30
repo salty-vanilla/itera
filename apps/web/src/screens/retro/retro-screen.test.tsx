@@ -72,7 +72,10 @@ describe('Retro — 事実を見る', () => {
   it('shows the facts from the records, with no score (invariant 40)', async () => {
     await renderAt('/retro?fixture=retro-start');
     expect(
-      screen.getByRole('heading', { level: 1, name: '今週、何が起きたか' }),
+      screen.getByRole('heading', {
+        level: 1,
+        name: 'Sprint 2 で何が起きたか',
+      }),
     ).toBeTruthy();
     expect(screen.getByText('振り返り中')).toBeTruthy();
     const summary = document.querySelector<HTMLElement>(
@@ -293,11 +296,12 @@ describe('Retro — 引き継ぐ and 完了', () => {
     const criteria = lastSnapshot().records.criteria;
     expect(criteria.find((c) => c.id === draftId)?.state).toBe('active');
     expect(criteria.filter((c) => c.state === 'active')).toHaveLength(1);
+    // The same Retro, now read only (#90), with what it handed on.
+    expect(await screen.findByText('完了')).toBeTruthy();
     expect(
-      await screen.findByRole('heading', {
-        level: 1,
-        name: 'Sprint 2 の振り返りは完了しています',
-      }),
+      screen.getByText(
+        '完了した振り返りです。書いた内容は、ここでは変えられません。',
+      ),
     ).toBeTruthy();
     expect(screen.getByText('論文は 1 本ずつ Task に分ける')).toBeTruthy();
     // The completed view's next step takes the focus.
@@ -311,6 +315,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
       screen.getByRole('button', { name: 'Sprint 3 の計画を始める' }),
     );
     await waitFor(() => expect(router.state.location.pathname).toBe('/sprint'));
+    expect(router.state.location.search).toMatchObject({ sprint: 3 });
     const next = lastSnapshot().records.sprints.find(
       (s) => s.state === 'planning',
     );
@@ -401,19 +406,28 @@ describe('Retro — boundaries', () => {
       screen.getByRole('button', { name: 'Retro を始める' }),
     );
     expect(reviewed().state).toBe('review');
+    // In Review it is no longer 「今週」: the next week to start is (#90).
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: '今週、何が起きたか',
+        name: 'Sprint 2 で何が起きたか',
       }),
     ).toBeTruthy();
   });
 
   it('starts the next Planning from the Sprint screen while the Retro is open', async () => {
     const router = await renderAt('/sprint?fixture=retro-start');
-    // The week in Retro, named with its number (#57).
+    // The week in Retro opens by default, read only (#90).
+    expect(screen.getByText('振り返り中')).toBeTruthy();
+    expect(screen.getByRole('link', { name: '振り返りを開く' })).toBeTruthy();
+    // The next week is after it; its confirm waits for this Retro.
+    await userEvent.click(
+      screen.getByRole('link', { name: '次の Sprint（Sprint 3）' }),
+    );
     expect(
-      screen.getByText('Sprint 2 · 9/28 (月) – 10/4 (日) · 振り返り中'),
+      await screen.findByText(
+        /確定できるのは、前の Sprint（Sprint 2）の Retro/,
+      ),
     ).toBeTruthy();
     await userEvent.click(
       screen.getByRole('button', { name: 'Sprint 3 の計画を始める' }),
@@ -436,6 +450,9 @@ describe('Retro — boundaries', () => {
   it('keeps the running week on /retro and /today after the next Planning starts', async () => {
     await renderAt('/sprint?fixture=today-daytime');
     await userEvent.click(
+      screen.getByRole('link', { name: '次の Sprint（Sprint 3）' }),
+    );
+    await userEvent.click(
       screen.getByRole('button', { name: 'Sprint 3 の計画を始める' }),
     );
     await userEvent.click(
@@ -453,12 +470,14 @@ describe('Retro — boundaries', () => {
   it('tells Today the week is in Retro even when the next is being planned', async () => {
     await renderAt('/sprint?fixture=retro-start');
     await userEvent.click(
+      screen.getByRole('link', { name: '次の Sprint（Sprint 3）' }),
+    );
+    await userEvent.click(
       screen.getByRole('button', { name: 'Sprint 3 の計画を始める' }),
     );
     await userEvent.click(screen.getAllByRole('link', { name: '今日' })[0]!);
-    expect(
-      await screen.findByText(/今週の Sprint は振り返り中です/),
-    ).toBeTruthy();
+    // Not 「今週」: that is the next week, being planned (#90).
+    expect(await screen.findByText(/Sprint 2 は振り返り中です/)).toBeTruthy();
   });
 });
 

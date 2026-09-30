@@ -65,8 +65,13 @@ describe('Sprint — running (#51)', () => {
   it('shows 実行中, the fixed plan and the way to Today, with no over-capacity', async () => {
     await renderAt('/sprint?fixture=today-interrupt');
     expect(screen.getByText('実行中')).toBeTruthy();
+    // Its name next to now, then the period (#90).
     expect(
-      screen.getByText('9/28 (月) – 10/4 (日) · 4日目 / 7日'),
+      screen.getByText(
+        (_, el) =>
+          el?.tagName === 'P' &&
+          el.textContent === '今週 · 9/28 (月) – 10/4 (日) · 4日目 / 7日',
+      ),
     ).toBeTruthy();
     // No stages once confirmed (DESIGN.md Sprint Header).
     expect(screen.queryByRole('navigation', { name: '段階' })).toBeNull();

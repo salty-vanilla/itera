@@ -1,6 +1,6 @@
 # アクセシビリティ
 
-更新：2026-09-27（Dialog の初期フォーカスと `menuitemradio`、Issue #9。リストの Space の対象を Backlog 画面と Planning で分けた、Issue #47）。2026-09-26 に DESIGN.md v0.2 から分離。
+更新：2026-09-30（□ の読み上げの週の語、Sprint Header の前後の矢印、Issue #90）。2026-09-27（Dialog の初期フォーカスと `menuitemradio`、Issue #9。リストの Space の対象を Backlog 画面と Planning で分けた、Issue #47）。2026-09-26 に DESIGN.md v0.2 から分離。
 
 DADS の品質基準（WCAG 2.2 AA）を下限にする。後から足すのではなく、部品の仕様に含める。色のコントラストと状態の見た目は [DESIGN.md](../../DESIGN.md) の Colors と Components。一次資料の引き方は `design-references` Skill。
 
@@ -47,7 +47,8 @@ DADS の品質基準（WCAG 2.2 AA）を下限にする。後から足すので�
 
 ## スクリーンリーダー
 
-- □ は「今週に入れる: タスク名」、○ は「完了にする: タスク名」と読ませる。
+- □ は「今週に入れる: タスク名」、○ は「完了にする: タスク名」と読ませる。□ とグループの Checkbox の「今週」は、開いている Sprint の呼び名に従う（実行中の Sprint があるあいだの次の計画では「来週に入れる: タスク名」「持ち越しをすべて来週に入れる」。[文言と用語](content.md) の「週の呼び名」）。
+- Sprint Header の前後の矢印はリンクで、「前の Sprint（Sprint 1）」「次の Sprint（Sprint 3）」と読ませる（Tooltip も同じ語）。端で行き先がない矢印は、無効の形で残して読み上げない。
 - Agent 提案の値は「Agent の提案（未確定）: 2〜4時間」、Estimate は「見積もり 3時間」と読ませる。
 - 動的な結果（Toast、Capacity の状態、保存エラー）は `role="status"` / `role="alert"` で通知する。
 - 装飾のアイコンは `aria-hidden`。意味を持つアイコンだけに `aria-label`。

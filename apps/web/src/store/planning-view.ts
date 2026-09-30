@@ -34,6 +34,7 @@ import {
   type Task,
 } from '@itera/domain';
 import type { Clock, Records } from './records';
+import { weekOf, type WeekName } from './sprint-choice';
 
 export interface PlanningArea {
   /** `null` for Tasks without an Area (「領域なし」). */
@@ -94,6 +95,11 @@ export interface PlanningData {
   readonly sprint: Sprint;
   /** 「Sprint 14」 (F25). */
   readonly number: number;
+  /**
+   * 「今週」, or 「来週」 while this week runs (#90): the words of the
+   * screen follow it.
+   */
+  readonly week?: WeekName;
   readonly today: LocalDate;
   readonly timeZone: Records['user']['timeZone'];
   /** Areas to plan with, in the person's order, then 領域なし. */
@@ -129,6 +135,13 @@ export interface PlanningData {
    * archived and must leave the week first.
    */
   readonly blockers: readonly ('previousRetroOpen' | 'inactiveTasks')[];
+  /** The previous Sprint while its Retro is open: where 振り返り opens. */
+  readonly previous?: {
+    readonly number: number;
+    /** Its last day, from which its Retro can start (F21). */
+    readonly end: LocalDate;
+    readonly state: Sprint['state'];
+  };
 }
 
 const NO_AREA: PlanningArea = { id: null, name: '領域なし', color: 'none' };
@@ -261,6 +274,7 @@ export function planningData(
   return {
     sprint,
     number: sprintNumber(sprint, records.sprints),
+    ...weekOf(sprint, records, clock),
     today: clock.today,
     timeZone: records.user.timeZone,
     areas,
@@ -297,5 +311,14 @@ export function planningData(
         ? (['inactiveTasks'] as const)
         : []),
     ],
+    ...(previous === undefined || previous.state === 'closed'
+      ? {}
+      : {
+          previous: {
+            number: sprintNumber(previous, records.sprints),
+            end: previous.end,
+            state: previous.state,
+          },
+        }),
   };
 }

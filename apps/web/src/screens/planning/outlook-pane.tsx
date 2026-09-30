@@ -7,6 +7,7 @@ import { BOUND_WORDS, criterionName } from '@/lib/criterion-text';
 import { formatDifference, formatHours, formatRange } from '@/lib/time-format';
 import type { PlanningData } from '@/store/planning-view';
 import { cn } from '@/lib/utils';
+import { weekCall, weekText } from '@/lib/week-text';
 
 // 時間の見通し (docs/design/patterns.md Sprint Planning, right pane): the
 // previous improvement (shown only), the active planning criterion, and the
@@ -101,6 +102,7 @@ function OutlookPane({
         capacity={totals.capacity}
         areas={areas}
         onAvailableHoursChange={onAvailableHours}
+        week={weekCall(data.week, data.number)}
       />
       {stage === 'check' && <Drivers data={data} />}
     </div>
@@ -121,7 +123,10 @@ function CriterionEffect({ data }: { data: PlanningData }) {
   if (count === 0) {
     return (
       <p className="text-body text-ink-muted">
-        今週選んだタスクに、この基準の対象はありません。
+        {weekText(
+          weekCall(data.week, data.number),
+          '選んだタスクに、この基準の対象はありません。',
+        )}
       </p>
     );
   }

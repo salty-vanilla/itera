@@ -1,14 +1,20 @@
-import type { AreaId, DailySelectionId } from '@itera/domain';
+import type { AreaId, DailySelectionId, SprintId } from '@itera/domain';
 import { useMemo } from 'react';
 import * as changes from './running-changes';
 import { runningData } from './running-view';
 import { useStoreSnapshot } from './store-provider';
 import { useRun } from './use-run';
 
-/** The running Sprint's screen data (ADR 0005: screens read through hooks). */
-export function useRunningSprint() {
+/**
+ * A confirmed Sprint's screen data (ADR 0005: screens read through hooks):
+ * the running one, or the one asked for (#90).
+ */
+export function useRunningSprint(sprintId?: SprintId) {
   const { records, clock } = useStoreSnapshot();
-  return useMemo(() => runningData(records, clock), [records, clock]);
+  return useMemo(
+    () => runningData(records, clock, sprintId),
+    [records, clock, sprintId],
+  );
 }
 
 /** What may change after confirm, one named function each. */
