@@ -166,7 +166,9 @@ function Materials({
               className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-b border-border-soft py-1 text-body text-ink"
             >
               <span className="flex min-w-0 grow basis-[10rem] flex-col gap-1">
-                <span className="text-balance">{lead}</span>
+                <span className="text-balance [word-break:auto-phrase]">
+                  {lead}
+                </span>
                 {/* The spaces do not show in the flex lines; they keep the words apart in the text. */}
                 {meta.length > 0 && (
                   <>
