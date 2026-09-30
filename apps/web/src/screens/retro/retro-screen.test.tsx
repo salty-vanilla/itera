@@ -65,10 +65,16 @@ const sprintById = (id: string) => {
   return s;
 };
 const reviewed = () => sprintById('sprint-2026-09-28');
-// Its three choices sit in one span (kept on a line), so match the whole <p>.
-const decisionMissingText = (_: string, element: Element | null) =>
-  element?.textContent ===
-  '上の「今回の計画基準」で、続ける・終える・置き換えるのどれかを選ぶと完了できます。';
+// The words of the reason sit in spans (kept whole on a line), so match the
+// whole <p>.
+const reasonText = (text: string) => (_: string, element: Element | null) =>
+  element?.tagName === 'P' && element.textContent === text;
+const decisionMissingText = reasonText(
+  '上の「今回の計画基準」で、続ける・終える・置き換えるのどれかを選ぶと完了できます。',
+);
+const continueWithDraftText = reasonText(
+  '上の「今回の計画基準」で「続ける」を選んでいるときは、「計画基準にもする」をオフにするか、「置き換える」を選ぶと完了できます。',
+);
 const completeButton = () =>
   screen.getByRole('button', { name: '振り返りを完了' });
 
@@ -338,7 +344,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: '戻る' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(reviewed().state).toBe('review');
-    // Nothing was written: not the Sprint, nor the criteria, nor a Toast.
+    // Nothing was written: not the Sprint, nor the criteria.
     expect(lastSnapshot().records).toEqual(recordsBefore);
     expect(document.activeElement).toBe(completeButton());
   });
@@ -386,11 +392,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
     const draftId = reviewed().retro?.improvement?.criterionId;
     expect(draftId).toBeDefined();
     // 続ける with a draft cannot complete (invariant 35).
-    expect(
-      screen.getByText(
-        '上の「今回の計画基準」で「続ける」を選んでいるときは、「計画基準にもする」をオフにするか、「置き換える」を選ぶと完了できます。',
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText(continueWithDraftText)).toBeTruthy();
     // The setting, its effect and preview from one value (invariant 39).
     await userEvent.selectOptions(
       screen.getByRole('combobox', { name: '提案の幅のどこで計画するか' }),

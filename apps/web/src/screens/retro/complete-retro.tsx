@@ -24,16 +24,27 @@ import { DECISION_WORDS } from './retro-words';
 
 /** Why 「振り返りを完了」 waits, and where to choose (docs/design/content.md). */
 const BLOCKER_WORDS: Readonly<Record<RetroBlocker, ReactNode>> = {
-  // The three choices stay on one line, so the sentence breaks after 「で、」.
+  // The words the screen shows stay whole when the line breaks.
   decisionMissing: (
     <>
       上の「今回の計画基準」で、
-      <span className="whitespace-nowrap">続ける・終える・置き換える</span>
-      のどれかを選ぶと完了できます。
+      <span className="whitespace-nowrap">
+        続ける・終える・置き換えるのどれか
+      </span>
+      を選ぶと完了できます。
     </>
   ),
-  continueWithDraft:
-    '上の「今回の計画基準」で「続ける」を選んでいるときは、「計画基準にもする」をオフにするか、「置き換える」を選ぶと完了できます。',
+  continueWithDraft: (
+    <>
+      上の「今回の計画基準」で
+      <span className="whitespace-nowrap">「続ける」</span>
+      を選んでいるときは、
+      <span className="whitespace-nowrap">「計画基準にもする」</span>
+      をオフにするか、
+      <span className="whitespace-nowrap">「置き換える」</span>
+      を選ぶと完了できます。
+    </>
+  ),
 };
 
 type CompleteRetroProps = {
@@ -131,7 +142,7 @@ function CompleteDialog({
           <DialogTitle>
             Sprint {data.number} の振り返りを完了しますか？
           </DialogTitle>
-          <DialogDescription className="text-balance">
+          <DialogDescription>
             完了すると、この Sprint には実績を足せなくなります。
           </DialogDescription>
         </DialogHeader>
