@@ -25,6 +25,7 @@ import { useAppOverview } from '@/store/use-app-overview';
 import { useBacklog } from '@/store/use-backlog';
 import { useTaskActions } from '@/store/use-task-actions';
 import { useToday, useTodayActions } from '@/store/use-today';
+import { useNewAreaDialog } from '../backlog/area-dialog';
 import { TaskDetail } from '../backlog/task-detail';
 import { useTaskDetailLeave } from '../backlog/use-task-detail-leave';
 import { DayFocusScope, DayHeader, dateSearchOf } from './day-header';
@@ -181,6 +182,7 @@ function TodayView({ data }: { data: TodayData }) {
   );
   const toast = useToast();
   const [quickArea, setQuickArea] = useState('');
+  const newArea = useNewAreaDialog();
   // The Quick Add sticks to the bottom at every width: the Toast goes above
   // it, and the Quick Add does not move (DESIGN.md Toast).
   const quickAddRef = useRef<HTMLDivElement>(null);
@@ -581,9 +583,11 @@ function TodayView({ data }: { data: TodayData }) {
                 areas={data.areas}
                 value={quickArea}
                 onChange={setQuickArea}
+                onNewArea={() => newArea.open(setQuickArea)}
               />
             }
           />
+          {newArea.dialog}
         </div>
       </DayColumns>
 

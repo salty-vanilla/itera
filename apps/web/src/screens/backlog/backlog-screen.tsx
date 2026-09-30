@@ -1,5 +1,6 @@
 import { id, type AreaId, type BacklogSlice, type TaskId } from '@itera/domain';
 import { useNavigate, useSearch } from '@tanstack/react-router';
+import { Pencil } from 'lucide-react';
 import { Fragment, useEffect, useId, useRef, useState, type Ref } from 'react';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
@@ -13,6 +14,7 @@ import { useToastOffsetAbove } from '@/lib/use-toast-offset';
 import { cn } from '@/lib/utils';
 import { useBacklog } from '@/store/use-backlog';
 import { useTaskActions } from '@/store/use-task-actions';
+import { AreaDialog, useNewAreaDialog } from './area-dialog';
 import { BacklogRow } from './backlog-row';
 import { TaskDetail } from './task-detail';
 import { useAddToToday } from './use-add-to-today';
@@ -66,6 +68,9 @@ function BacklogScreen() {
   const toast = useToast();
   // The Area of the next Quick Add: the one used last, else the Area filter.
   const [quickArea, setQuickArea] = useState<string>();
+  // 領域を編集, from the end of the Area filters (Issue #113).
+  const [editingAreas, setEditingAreas] = useState(false);
+  const newArea = useNewAreaDialog();
   const backlog = useBacklog({ view: search.view, area: search.area });
   const { areas, items, today } = backlog;
   const open =
@@ -209,23 +214,42 @@ function BacklogScreen() {
             );
           })}
         </FilterGroup>
-        {areas.length > 0 && (
-          <FilterGroup label="領域で絞り込む">
-            {areas.map((a) => (
-              <Filter
-                key={a.id}
-                area={{ name: a.name, color: a.color }}
-                pressed={search.area === a.id}
-                count={a.count}
-                onPressedChange={(pressed) =>
-                  setSearch({ area: pressed ? a.id : undefined })
-                }
-              >
-                {a.name}
-              </Filter>
-            ))}
-          </FilterGroup>
-        )}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-4 medium:gap-y-2">
+          {areas.length > 0 && (
+            <FilterGroup label="領域で絞り込む" className="contents">
+              {areas.map((a) => (
+                <Filter
+                  key={a.id}
+                  area={{ name: a.name, color: a.color }}
+                  pressed={search.area === a.id}
+                  count={a.count}
+                  onPressedChange={(pressed) =>
+                    setSearch({ area: pressed ? a.id : undefined })
+                  }
+                >
+                  {a.name}
+                </Filter>
+              ))}
+            </FilterGroup>
+          )}
+          <Button
+            size="sm"
+            variant="quiet"
+            className="shrink-0"
+            onClick={() => setEditingAreas(true)}
+          >
+            <Pencil />
+            領域を編集
+          </Button>
+        </div>
+        <AreaDialog
+          open={editingAreas}
+          onOpenChange={setEditingAreas}
+          onArchived={(areaId) => {
+            if (search.area === areaId) setSearch({ area: undefined });
+            if (quickArea === areaId) setQuickArea(undefined);
+          }}
+        />
       </div>
 
       {/* Quick Add: at the top from 768px; under it, sticky at the bottom
@@ -250,9 +274,11 @@ function BacklogScreen() {
               areas={areas}
               value={quickArea ?? search.area ?? ''}
               onChange={setQuickArea}
+              onNewArea={() => newArea.open(setQuickArea)}
             />
           }
         />
+        {newArea.dialog}
       </div>
 
       <section

@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 import { weekCall, weekText } from '@/lib/week-text';
 import type { CandidateRow, PlanningData } from '@/store/planning-view';
 import { usePlanningActions } from '@/store/use-planning';
+import { useNewAreaDialog } from '../backlog/area-dialog';
 import { CarryOverText } from '../backlog/backlog-row';
 
 // The Backlog pane of Planning (docs/design/patterns.md 選ぶ). Groups: 持ち越し
@@ -62,6 +63,7 @@ function BacklogPane({
   const week = weekCall(data.week, data.number);
   // The Area of the next Quick Add: the one used last, else 領域なし.
   const [quickArea, setQuickArea] = useState('');
+  const newArea = useNewAreaDialog();
 
   const choose = (rows: readonly CandidateRow[]) => {
     const taskIds = rows.map((r) => r.task.id);
@@ -114,9 +116,11 @@ function BacklogPane({
             areas={data.addAreas}
             value={quickArea}
             onChange={setQuickArea}
+            onNewArea={() => newArea.open(setQuickArea)}
           />
         }
       />
+      {newArea.dialog}
       <Group
         title="持ち越し"
         rows={candidates.carriedOver}

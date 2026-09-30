@@ -47,6 +47,7 @@ import {
   SuggestionOutcome,
 } from '@/components/task/estimate-suggestion';
 import { Estimate } from '@/components/task/estimate';
+import { NEW_AREA } from '@/components/task/area-select';
 import {
   ACTUAL_HOURS_ERROR,
   ACTUAL_HOURS_HINT,
@@ -57,6 +58,7 @@ import { formatHours, formatRange } from '@/lib/time-format';
 import type { BacklogData, BacklogItem } from '@/store/backlog-view';
 import { useTaskActions } from '@/store/use-task-actions';
 import { useTodayActions } from '@/store/use-today';
+import { useNewAreaDialog } from './area-dialog';
 import { CarryOverText, RecurrenceText, SprintText } from './backlog-row';
 import { RecurrenceEditor } from './recurrence-editor';
 import { SubtaskList } from './subtask-list';
@@ -271,6 +273,7 @@ function TaskDetail({
   leaveRef?: Ref<(then: () => void, opens: boolean) => void> | undefined;
 }) {
   const actions = useTaskActions();
+  const newArea = useNewAreaDialog();
   const todayActions = useTodayActions();
   const addToToday = useAddToToday();
   const { task } = item;
@@ -826,6 +829,12 @@ function TaskDetail({
                 value={task.areaId ?? ''}
                 onChange={(e) => {
                   const areaId = e.currentTarget.value;
+                  if (areaId === NEW_AREA) {
+                    newArea.open((created) =>
+                      record('areaId', { areaId: created }),
+                    );
+                    return;
+                  }
                   record('areaId', {
                     areaId: areaId === '' ? null : id<'Area'>(areaId),
                   });
@@ -843,9 +852,11 @@ function TaskDetail({
                     {a.name}
                   </option>
                 ))}
+                <option value={NEW_AREA}>新しい領域…</option>
               </Select>
             </Field>
           </Saved>
+          {newArea.dialog}
           <Saved show={saved === 'due'}>
             <Field label="期限" necessity="optional" error={errors.due}>
               <TextInput

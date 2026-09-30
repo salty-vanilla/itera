@@ -7,21 +7,32 @@ import { Select } from '@/components/ui/select';
 // Quick Add): a native Select with the chosen Area's line symbol inside, the
 // same symbol the Filter chips and rows show. No Area is 「領域なし」 with the
 // `area-none` mark. Without a visual label; it has an accessible name.
+// With `onNewArea`, 「新しい領域…」 ends the list (Issue #113): choosing it
+// opens the Area Dialog and leaves the value as it was.
+
+/** The value of 「新しい領域…」; never an Area's ID. */
+const NEW_AREA = '__new-area__';
 
 type AreaSelectProps = {
   areas: readonly { id: AreaId; name: string; color: AreaColor }[];
   /** The chosen Area's ID, or '' for 領域なし. */
   value: string;
   onChange: (value: string) => void;
+  /** Adds 「新しい領域…」 at the end; choosing it calls this instead of `onChange`. */
+  onNewArea?: (() => void) | undefined;
 };
 
-function AreaSelect({ areas, value, onChange }: AreaSelectProps) {
+function AreaSelect({ areas, value, onChange, onNewArea }: AreaSelectProps) {
   const chosen = areas.find((a) => a.id === value);
   return (
     <Field label="追加する Task の領域" hideLabel className="shrink-0">
       <Select
         value={value}
-        onChange={(e) => onChange(e.currentTarget.value)}
+        onChange={(e) => {
+          const next = e.currentTarget.value;
+          if (next === NEW_AREA) onNewArea?.();
+          else onChange(next);
+        }}
         prefix={
           <AreaMark
             name={chosen?.name ?? '領域なし'}
@@ -35,9 +46,12 @@ function AreaSelect({ areas, value, onChange }: AreaSelectProps) {
             {a.name}
           </option>
         ))}
+        {onNewArea !== undefined && (
+          <option value={NEW_AREA}>新しい領域…</option>
+        )}
       </Select>
     </Field>
   );
 }
 
-export { AreaSelect };
+export { AreaSelect, NEW_AREA };
