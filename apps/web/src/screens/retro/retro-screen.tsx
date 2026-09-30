@@ -1,6 +1,6 @@
 import type { Sprint, SprintId } from '@itera/domain';
 import { useNavigate, useRouter, useSearch } from '@tanstack/react-router';
-import { NotebookPen, Route } from 'lucide-react';
+import { Rewind, Route } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tag } from '@/components/ui/tag';
@@ -172,17 +172,18 @@ function RetroView({
   };
 
   return (
-    // From 1920px (bp-xl) every stage is at the left and as wide as the
+    // Every screen starts at the same left edge, beside the navigation
+    // (#112). From 1920px (bp-xl) every stage is also as wide as the
     // screen: 事実を見る fills it with its tables, the others keep their
     // 720px text and 336px materials; so the left edge stays where it is
     // when the stage changes (owner decision in #81).
-    <div className="mx-auto flex min-h-full w-full max-w-[calc(var(--spacing-pane-today)+var(--spacing-pane-side)+var(--spacing-12))] flex-col gap-8 px-4 pt-6 pb-16 medium:px-6 medium:pt-8 xl:mx-0 xl:max-w-none">
+    <div className="flex min-h-full w-full max-w-[calc(var(--spacing-pane-today)+var(--spacing-pane-side)+var(--spacing-12))] flex-col gap-8 px-4 pt-6 pb-16 medium:px-6 medium:pt-8 xl:max-w-none">
       <SprintHeader
         status={
           readOnly ? (
             <Tag tone="done">完了</Tag>
           ) : (
-            <Tag tone="neutral" icon={NotebookPen}>
+            <Tag tone="neutral" icon={Rewind}>
               振り返り中
             </Tag>
           )
@@ -341,7 +342,7 @@ function NotStarted({
   const week = weekCall(current.week, current.number);
   const lastDay = sprint.state === 'active' && today >= sprint.end;
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-[calc(var(--spacing-pane-today)+var(--spacing-pane-side)+var(--spacing-12))] flex-col gap-8 px-4 pt-6 pb-16 medium:px-6 medium:pt-8">
+    <div className="flex min-h-full w-full max-w-[calc(var(--spacing-pane-today)+var(--spacing-pane-side)+var(--spacing-12))] flex-col gap-8 px-4 pt-6 pb-16 medium:px-6 medium:pt-8">
       <SprintHeader
         status={
           sprint.state === 'active' ? (

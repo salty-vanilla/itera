@@ -13,7 +13,7 @@ function ScreenFrame({
   children?: ReactNode;
 }) {
   return (
-    <div className="mx-auto flex w-full max-w-measure-read flex-col gap-2 px-4 py-10 medium:px-6">
+    <div className="flex w-full max-w-measure-read flex-col gap-2 px-4 py-10 medium:px-6">
       <h1 className="text-display-m text-ink">{heading}</h1>
       {meta !== undefined && <p className="text-body text-ink-muted">{meta}</p>}
       {children}
