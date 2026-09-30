@@ -61,7 +61,7 @@ export const STAGES: readonly { id: Stage; label: string }[] = [
 
 export interface SprintSearch {
   /** The Sprint to open, by number (#90). Absent: the current one. */
-  readonly sprint?: number;
+  readonly sprint?: number | undefined;
   readonly stage?: Stage;
   /** The criterion is used unless the Check switches it off. */
   readonly criterion?: 'off';

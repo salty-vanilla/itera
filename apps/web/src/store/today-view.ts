@@ -23,8 +23,8 @@ import {
   type TodayRemaining,
   type WeekProgress,
 } from '@itera/domain';
-import { daysBetween } from '@/lib/date-format';
 import type { Clock, Records } from './records';
+import { dayInPeriod, selectionActualHours } from './sprint-day';
 
 export interface TodayArea {
   readonly id: AreaId;
@@ -146,14 +146,7 @@ export function todayData(
     if (sprintTask === undefined || sprintTask.outcome === 'removed') return [];
     const base = item(sprintTask, selection.occurrenceId);
     if (base === undefined) return [];
-    const actualHours = sprint.actualTimes
-      .filter(
-        (a) =>
-          a.date === selection.date &&
-          a.sprintTaskId === selection.sprintTaskId &&
-          a.occurrenceId === selection.occurrenceId,
-      )
-      .reduce((sum, a) => sum + a.hours, 0);
+    const actualHours = selectionActualHours(sprint, selection);
     return [{ ...base, selection, actualHours }];
   };
 
@@ -247,10 +240,7 @@ export function todayData(
     sprint,
     number: sprintNumber(sprint, sprints),
     today,
-    day: {
-      index: daysBetween(sprint.start, today) + 1,
-      count: daysBetween(sprint.start, sprint.end) + 1,
-    },
+    day: dayInPeriod(sprint, today),
     lastDay: today === sprint.end,
     timeZone: records.user.timeZone,
     progress: weekProgress(sprint, occurrences),

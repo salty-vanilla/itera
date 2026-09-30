@@ -1,5 +1,6 @@
 import type { RetroPin } from '@itera/domain';
 import { formatDate, formatTime } from '@/lib/date-format';
+import { SELECTION_WORDS } from '@/lib/selection-words';
 import { formatHours } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
 import type { RetroData } from '@/store/retro-view';
@@ -26,8 +27,8 @@ function pinText(pin: RetroPin, data: RetroData): string | undefined {
       if (s === undefined) return undefined;
       const word =
         s.resolution === 'paused' || s.closedBefore?.resolution === 'paused'
-          ? '今日はここまで'
-          : '見送り';
+          ? SELECTION_WORDS.paused
+          : SELECTION_WORDS.deferred;
       return `${formatDate(s.date)} ${word} · ${data.titleOf(s.sprintTaskId)}`;
     }
     case 'occurrence': {
