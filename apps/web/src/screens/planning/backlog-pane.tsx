@@ -161,10 +161,10 @@ function BacklogPane({
                   <button
                     type="button"
                     data-row-focus
-                    className="min-w-0 truncate text-left text-task text-ink focus-visible:focus-ring"
+                    className="min-w-0 text-left text-task text-ink focus-visible:focus-ring"
                     onClick={() => onOpenTask(task.id)}
                   >
-                    {task.title}
+                    <TaskTitleLines>{task.title}</TaskTitleLines>
                   </button>
                   {!slim && (
                     <EstimateActions

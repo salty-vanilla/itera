@@ -58,8 +58,7 @@ function Estimate({
           className={cn(
             base,
             // Above the row's whole-row button, like the control and the `…`.
-            'relative z-1 min-h-target-touch justify-end rounded-sm px-1 text-ink-subtle underline decoration-dotted underline-offset-4',
-            'hover:text-ink focus-visible:focus-ring medium:min-h-target-min',
+            'relative z-1 min-h-target-touch justify-end rounded-sm px-1 text-link underline focus-visible:focus-ring medium:min-h-target-min',
             className,
           )}
         >

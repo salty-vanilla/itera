@@ -331,7 +331,10 @@ function PlannedRow({
         {linked ? '目標に紐づけない' : '目標に紐づける'}
       </MenuItem>
     ),
-    <EstimateMenuItem key="estimate" onSelect={onEstimate} />,
+    // A completed or archived Task has no detail to open (as in Today).
+    inactive === undefined && (
+      <EstimateMenuItem key="estimate" onSelect={onEstimate} />
+    ),
   ].filter(Boolean);
 
   return (
@@ -344,7 +347,7 @@ function PlannedRow({
         added ? 'animate-[added-flash_2.5s_ease-in-out_forwards]' : undefined
       }
       onOpen={onOpen}
-      keys={{ onEstimate }}
+      keys={inactive === undefined ? { onEstimate } : undefined}
       metadata={
         meta.length > 0 ? <TaskMetadata>{meta}</TaskMetadata> : undefined
       }
@@ -375,7 +378,11 @@ function PlannedRow({
           <Estimate
             value={value}
             planned={value.base !== 'none'}
-            enter={{ title: task.title, onEnter: onEstimate }}
+            enter={
+              inactive === undefined
+                ? { title: task.title, onEnter: onEstimate }
+                : undefined
+            }
           />
         </span>
       }
