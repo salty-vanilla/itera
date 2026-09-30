@@ -39,7 +39,7 @@ type HandoffPaneProps = {
 
 const BOUNDS: readonly SuggestionBound[] = ['lo', 'mid', 'hi'];
 
-const DECISION_WORDS: Readonly<Record<RetroDecision, string>> = {
+export const DECISION_WORDS: Readonly<Record<RetroDecision, string>> = {
   continue: '続ける',
   end: '終える',
   replace: '置き換える',
