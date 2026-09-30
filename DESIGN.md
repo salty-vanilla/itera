@@ -648,7 +648,7 @@ compact の原則：
 
 **Navigation** — desktop の左サイドバー（`canvas-subtle`、右に `border`）。項目 36px（20px アイコン＋ラベル＋件数）、現在地は `here` の 4px の縦線＋`ink` 700＋`aria-current`（黄の印と太さで示し、地は塗らない）。768–1439px は `pane-rail`（幅 64px。20px アイコンの下に名前を `meta` で出す。項目は 56px で、下部タブバーと同じ組み方。medium の 2 ペインを保つため medium も rail にする）、compact は下部タブバー（今日 / Sprint / Backlog / 振り返り）。項目は 8 個まで。
 - 下部タブバーは `canvas-subtle`＋上に `border`。項目は等幅で、20px アイコンの下にラベル（`meta`）、高さ 56px。現在地は項目の上端の `here` の 4px の横線＋`ink` 700＋`aria-current`。件数は表示せず読み上げだけにする。
-- rail の名前はホバーしなくても読める。rail の内側の余白は 4px（8px だと「Backlog」が 48px の幅に収まらない）にし、名前は折り返さず切らない。現在地の太字（700）でも収まる幅を保つ。件数は rail では表示せず、読み上げと Tooltip で伝える。
+- rail の名前はホバーしなくても読める。rail の内側の余白は 4px（8px だと「Backlog」が 48px の幅に収まらない）にし、名前は折り返さず切らない。現在地の太字（700）でも収まる幅を保つ。現在地の縦線は項目の外、rail の余白に引き、名前に重ねない。件数は rail では表示せず、読み上げと Tooltip で伝える。
 - rail とタブバーでも件数は読み上げる（「Backlog 42件」）。Disabled の項目はフォーカスでき、`aria-disabled` で使えないことを伝える。
 
 **Tabs** — 同じ場所の表示を切り替える。タブ 40px、ラベルは `button`、選択は `ink` 700 の文字＋`stroke-strong` の下線（色面・Pill にしない）、未選択は `ink-muted` 400（太さでも選択を示す。選んでも幅が変わらないよう 700 の幅を先に取る）、件数は `ink-subtle`。タブは 5 個まで。段階を進めるフロー（→ Sprint Header）と絞り込み（→ Filter）には使わない。
