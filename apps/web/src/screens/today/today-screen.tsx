@@ -394,7 +394,7 @@ function TodayView({ data }: { data: TodayData }) {
             </h2>
             <p className="text-help text-ink-muted">
               明日から今週の残りに出ます。今日のうちに終わったら ○
-              で完了にできます。見送りは「続けて見送り」の回数に入り、外したものは入りません。
+              で完了にできます。見送りは「続けて見送り」に数え、外したものは数えません。
             </p>
             <ul className="flex flex-col border-t border-border-soft">
               {data.closed.map((row) => (

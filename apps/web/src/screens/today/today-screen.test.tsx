@@ -307,7 +307,7 @@ describe('Today — the daily operations', () => {
       .getByRole('heading', { name: '今日はもうやらない' })
       .closest('section');
     expect(section?.textContent).toContain(
-      '見送りは「続けて見送り」の回数に入り、外したものは入りません。',
+      '見送りは「続けて見送り」に数え、外したものは数えません。',
     );
   });
 
@@ -324,7 +324,7 @@ describe('Today — the daily operations', () => {
       await userEvent.click(
         within(row('今日はもうやらない', '顧客インタビューの設計')).getByRole(
           'button',
-          { name: `取り消す（${state}: 顧客インタビューの設計）` },
+          { name: `取り消す（${state}）: 顧客インタビューの設計` },
         ),
       );
       expect(selectionOf('task-interview')).toMatchObject({

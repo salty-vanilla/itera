@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import type { Ref } from 'react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
-import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { semanticIcons } from '@/components/ui/icon';
 import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
@@ -158,32 +157,24 @@ function TodayRow({
         )
       }
       reserveActions
+      actionsVisible={skipped || undoable}
       actions={
-        skipped ? (
-          <Button
+        skipped || undoable ? (
+          // The size of the `…`, so the values stay in one column; always
+          // shown, as the way back from a slip (F19, F37).
+          <IconButton
             size="sm"
-            variant="quiet"
-            data-action="undo-skip"
-            onClick={onUndoSkip}
-          >
-            <Undo2 aria-hidden />
-            取り消す
-            <span className="sr-only">（スキップ: {task.title}）</span>
-          </Button>
-        ) : undoable ? (
-          <Button
-            size="sm"
-            variant="quiet"
-            data-action="undo-close"
-            onClick={onUndoClose}
-          >
-            <Undo2 aria-hidden />
-            取り消す
-            <span className="sr-only">
-              （{state === 'deferred' ? '見送り' : '今日から外した'}:{' '}
-              {task.title}）
-            </span>
-          </Button>
+            data-action={skipped ? 'undo-skip' : 'undo-close'}
+            label={`取り消す（${
+              skipped
+                ? 'スキップ'
+                : state === 'deferred'
+                  ? '見送り'
+                  : '今日から外した'
+            }）: ${task.title}`}
+            icon={<Undo2 />}
+            onClick={skipped ? onUndoSkip : onUndoClose}
+          />
         ) : items.length > 0 ? (
           <Menu>
             <MenuTrigger
