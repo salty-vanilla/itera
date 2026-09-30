@@ -20,7 +20,13 @@ import { useAreaActions, useAreas, type EditableArea } from '@/store/use-areas';
 // Backlog's Area filters and from 「新しい領域…」 at the end of an Area
 // Select. From a Select, the Area made is handed back to be chosen and the
 // Dialog closes. Areas are the person's, so the names here are the current
-// ones; a Sprint screen keeps its Sprint's names (F5).
+// ones; a Sprint screen keeps its Sprint's names (F5). A row has one quiet
+// 編集; it opens to the name's field, with アーカイブ, so that the one
+// danger button shows only on the row being edited.
+//
+// An archived Area may still be what a screen has chosen (a filter, a Quick
+// Add's Area): the screen treats a choice that is not among its Areas as
+// none, so this Dialog does not tell it.
 
 type AreaDialogProps = {
   open: boolean;
@@ -30,8 +36,6 @@ type AreaDialogProps = {
    * Area made is handed back and the Dialog closes.
    */
   onCreated?: ((areaId: AreaId) => void) | undefined;
-  /** An Area was archived: a filter on it has nothing to show any more. */
-  onArchived?: ((areaId: AreaId) => void) | undefined;
   /** Where the focus goes back to on closing; by default, where it was. */
   returnFocus?: HTMLElement | null | undefined;
 };
@@ -40,13 +44,16 @@ function AreaDialog({
   open,
   onOpenChange,
   onCreated,
-  onArchived,
   returnFocus,
 }: AreaDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         size="sm"
+        // Top-aligned rather than centred: the list changes in place (a
+        // row opens to its field, a new Area is added), and the title and
+        // the row stay where they were.
+        className="self-start medium:mt-16"
         finalFocus={() => (returnFocus?.isConnected ? returnFocus : true)}
       >
         <DialogHeader>
@@ -62,7 +69,6 @@ function AreaDialog({
                   onOpenChange(false);
                 }
           }
-          onArchived={onArchived}
         />
         <DialogFooter>
           <DialogClose render={<Button />}>閉じる</DialogClose>
@@ -72,15 +78,30 @@ function AreaDialog({
   );
 }
 
+/**
+ * Runs `focus` once Base UI has put the focus back: when the control that
+ * had it goes (a row's 編集, its field), the Dialog takes the focus
+ * to itself in the next frame (`restoreFocus: 'popup'`), so this waits one
+ * frame more. Returns a cleanup for an effect.
+ */
+function afterFocusSettles(focus: () => void): () => void {
+  let inner = 0;
+  const outer = requestAnimationFrame(() => {
+    inner = requestAnimationFrame(focus);
+  });
+  return () => {
+    cancelAnimationFrame(outer);
+    cancelAnimationFrame(inner);
+  };
+}
+
 /** The Dialog's body. It is made again each time the Dialog opens. */
 function AreaEditor({
   focusNew,
   onCreated,
-  onArchived,
 }: {
   focusNew: boolean;
   onCreated: ((areaId: AreaId) => void) | undefined;
-  onArchived: ((areaId: AreaId) => void) | undefined;
 }) {
   const areas = useAreas();
   const actions = useAreaActions();
@@ -93,21 +114,14 @@ function AreaEditor({
   const listRef = useRef<HTMLUListElement>(null);
   const shown = areas.filter((a) => !a.archived || archived.includes(a.id));
 
-  /**
-   * After a row changes, the focus goes to a control of that row. The
-   * control focused before is gone, and the Dialog takes the focus back to
-   * itself in the next frame (Base UI's `restoreFocus: 'popup'`), so this
-   * waits one frame more.
-   */
-  const focusRow = (areaId: AreaId, slot: string) =>
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() =>
-        listRef.current
-          ?.querySelector<HTMLElement>(
-            `[data-area="${areaId}"] [data-slot="${slot}"]`,
-          )
-          ?.focus(),
-      ),
+  /** After a row changes, the focus goes to a control of that row. */
+  const focusRow = (areaId: AreaId, action: 'edit' | 'undo') =>
+    afterFocusSettles(() =>
+      listRef.current
+        ?.querySelector<HTMLElement>(
+          `[data-area="${areaId}"] [data-action="${action}"]`,
+        )
+        ?.focus(),
     );
 
   function add(event: FormEvent) {
@@ -145,64 +159,50 @@ function AreaEditor({
                   if (!actions.restoreArea(area.id)) return;
                   setArchived((ids) => ids.filter((id) => id !== area.id));
                   setStatus(`「${area.name}」を元に戻しました`);
-                  focusRow(area.id, 'area-rename');
+                  focusRow(area.id, 'edit');
                 }}
               />
             ) : renaming === area.id ? (
-              <RenameRow
+              <EditRow
                 key={area.id}
                 area={area}
+                onArchive={() => {
+                  setRenaming(undefined);
+                  if (!actions.archiveArea(area.id)) return;
+                  setArchived((ids) => [...ids, area.id]);
+                  focusRow(area.id, 'undo');
+                }}
                 onCancel={() => {
                   setRenaming(undefined);
-                  focusRow(area.id, 'area-rename');
+                  focusRow(area.id, 'edit');
                 }}
                 onRename={(name) => {
                   if (!actions.renameArea(area.id, name)) return;
                   setRenaming(undefined);
                   if (name !== area.name) setStatus(`「${name}」に変えました`);
-                  focusRow(area.id, 'area-rename');
+                  focusRow(area.id, 'edit');
                 }}
               />
             ) : (
               <li
                 key={area.id}
                 data-area={area.id}
-                className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border-soft py-2"
+                className="flex min-h-row-touch items-center gap-2 border-b border-border-soft py-1 medium:min-h-row-task"
               >
-                {/* A long name keeps 12em; the buttons go under it when the row
-                    is narrower. */}
-                <span className="flex min-w-0 flex-[1_1_12em] items-center gap-2">
-                  <AreaMark name={area.name} color={area.color} />
-                  <span className="min-w-0 text-body text-ink wrap-anywhere">
-                    {area.name}
-                  </span>
+                <AreaMark name={area.name} color={area.color} />
+                <span className="min-w-0 flex-1 text-body text-ink wrap-anywhere">
+                  {area.name}
                 </span>
-                <span className="ml-auto flex shrink-0 gap-2">
-                  <Button
-                    size="sm"
-                    variant="quiet"
-                    data-slot="area-rename"
-                    // The visible words come in the name (WCAG 2.5.3).
-                    aria-label={`「${area.name}」の名前を変える`}
-                    onClick={() => setRenaming(area.id)}
-                  >
-                    名前を変える
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    onClick={() => {
-                      if (renaming !== undefined) setRenaming(undefined);
-                      if (!actions.archiveArea(area.id)) return;
-                      setArchived((ids) => [...ids, area.id]);
-                      onArchived?.(area.id);
-                      focusRow(area.id, 'area-undo');
-                    }}
-                    aria-label={`「${area.name}」をアーカイブ`}
-                  >
-                    アーカイブ
-                  </Button>
-                </span>
+                <Button
+                  size="sm"
+                  variant="quiet"
+                  data-action="edit"
+                  // The visible word comes in the name (WCAG 2.5.3).
+                  aria-label={`「${area.name}」を編集`}
+                  onClick={() => setRenaming(area.id)}
+                >
+                  編集
+                </Button>
               </li>
             ),
           )}
@@ -227,23 +227,32 @@ function AreaEditor({
   );
 }
 
-/** The name in a field. Enter or 名前を変える saves it; Esc or キャンセル goes back. */
-function RenameRow({
+/**
+ * The row being edited: the name in a field (Enter or 名前を変える saves it;
+ * Esc or キャンセル goes back), and アーカイブ.
+ */
+function EditRow({
   area,
   onRename,
+  onArchive,
   onCancel,
 }: {
   area: EditableArea;
   onRename: (name: string) => void;
+  onArchive: () => void;
   onCancel: () => void;
 }) {
   const [name, setName] = useState(area.name);
   const [error, setError] = useState<string>();
   const inputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    inputRef.current?.focus();
-    inputRef.current?.select();
-  }, []);
+  useEffect(
+    () =>
+      afterFocusSettles(() => {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      }),
+    [],
+  );
   return (
     <li data-area={area.id} className="border-b border-border-soft py-3">
       <form
@@ -259,8 +268,12 @@ function RenameRow({
         }}
       >
         <Field
-          label={`「${area.name}」の新しい名前`}
-          description="Sprint の画面には、次の Sprint から反映されます。"
+          label={`「${area.name}」の名前`}
+          description={
+            <span className="[word-break:auto-phrase]">
+              Sprint の画面には、次の Sprint から反映されます。
+            </span>
+          }
           error={error}
         >
           <TextInput
@@ -280,8 +293,18 @@ function RenameRow({
             }}
           />
         </Field>
-        <div className="flex justify-end gap-2">
-          <Button size="sm" variant="quiet" type="button" onClick={onCancel}>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* No confirmation: the line left in its place has 元に戻す. */}
+          <Button size="sm" variant="danger" type="button" onClick={onArchive}>
+            アーカイブ
+          </Button>
+          <Button
+            size="sm"
+            variant="quiet"
+            type="button"
+            className="ml-auto"
+            onClick={onCancel}
+          >
             キャンセル
           </Button>
           <Button size="sm" type="submit">
@@ -308,13 +331,17 @@ function ArchivedLine({
         role="status"
         className="flex flex-wrap items-center gap-x-2 gap-y-1 bg-canvas-subtle px-3 py-2 text-body text-ink"
       >
-        <span id={textId} className="min-w-0 flex-1 wrap-anywhere">
+        {/* Under a narrow width 元に戻す goes under the sentence. */}
+        <span
+          id={textId}
+          className="min-w-0 flex-[1_1_12em] [word-break:auto-phrase]"
+        >
           「{area.name}」をアーカイブしました。Task と過去の記録には残ります。
         </span>
         <Button
           size="sm"
           variant="quiet"
-          data-slot="area-undo"
+          data-action="undo"
           aria-describedby={textId}
           onClick={onUndo}
         >

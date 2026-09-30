@@ -13,8 +13,8 @@ export interface EditableArea {
 }
 
 /**
- * Every Area, archived ones too, in the person's order by current name. The
- * choices are the ones not archived.
+ * Every Area, archived ones too, in the person's order (`order`), each by
+ * its current name. The choices are the ones not archived.
  */
 export function useAreas(): readonly EditableArea[] {
   const { records } = useStoreSnapshot();

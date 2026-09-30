@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/toast';
-import { AreaSelect } from '@/components/task/area-select';
+import { AreaSelect, chosenArea } from '@/components/task/area-select';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
 import { formatDate, formatTime } from '@/lib/date-format';
 import { formatPlanningTotal } from '@/lib/time-format';
@@ -183,6 +183,8 @@ function TodayView({ data }: { data: TodayData }) {
   const toast = useToast();
   const [quickArea, setQuickArea] = useState('');
   const newArea = useNewAreaDialog();
+  // One archived since it was chosen is no longer a choice (#113).
+  const quickChoice = chosenArea(quickArea, data.areas);
   // The Quick Add sticks to the bottom at every width: the Toast goes above
   // it, and the Quick Add does not move (DESIGN.md Toast).
   const quickAddRef = useRef<HTMLDivElement>(null);
@@ -575,13 +577,13 @@ function TodayView({ data }: { data: TodayData }) {
             onAdd={(title) =>
               actions.addToToday(
                 title,
-                quickArea === '' ? undefined : (quickArea as AreaId),
+                quickChoice === '' ? undefined : (quickChoice as AreaId),
               )
             }
             area={
               <AreaSelect
                 areas={data.areas}
-                value={quickArea}
+                value={quickChoice}
                 onChange={setQuickArea}
                 onNewArea={() => newArea.open(setQuickArea)}
               />

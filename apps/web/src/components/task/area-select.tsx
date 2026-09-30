@@ -54,4 +54,12 @@ function AreaSelect({ areas, value, onChange, onNewArea }: AreaSelectProps) {
   );
 }
 
-export { AreaSelect, NEW_AREA };
+/**
+ * `value` when it is one of `areas`, else '' (領域なし). A Quick Add keeps
+ * the Area chosen last; one archived since then is no longer a choice.
+ */
+function chosenArea(value: string, areas: AreaSelectProps['areas']): string {
+  return areas.some((a) => a.id === value) ? value : '';
+}
+
+export { AreaSelect, chosenArea, NEW_AREA };

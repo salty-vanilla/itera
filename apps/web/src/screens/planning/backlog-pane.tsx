@@ -8,7 +8,7 @@ import { IconButton } from '@/components/ui/icon-button';
 import { Menu, MenuContent, MenuTrigger } from '@/components/ui/menu';
 import { useToast } from '@/components/ui/toast';
 import { Deadline } from '@/components/task/deadline';
-import { AreaSelect } from '@/components/task/area-select';
+import { AreaSelect, chosenArea } from '@/components/task/area-select';
 import { Estimate } from '@/components/task/estimate';
 import { EstimateMenuItem } from '@/components/task/estimate-menu-item';
 import {
@@ -64,6 +64,8 @@ function BacklogPane({
   // The Area of the next Quick Add: the one used last, else 領域なし.
   const [quickArea, setQuickArea] = useState('');
   const newArea = useNewAreaDialog();
+  // One archived since it was chosen is no longer a choice (#113).
+  const quickChoice = chosenArea(quickArea, data.addAreas);
 
   const choose = (rows: readonly CandidateRow[]) => {
     const taskIds = rows.map((r) => r.task.id);
@@ -109,12 +111,12 @@ function BacklogPane({
         label={weekText(week, 'のタスクを追加')}
         stackArea
         onAdd={(title) =>
-          onAdd(title, quickArea === '' ? undefined : id<'Area'>(quickArea))
+          onAdd(title, quickChoice === '' ? undefined : id<'Area'>(quickChoice))
         }
         area={
           <AreaSelect
             areas={data.addAreas}
-            value={quickArea}
+            value={quickChoice}
             onChange={setQuickArea}
             onNewArea={() => newArea.open(setQuickArea)}
           />

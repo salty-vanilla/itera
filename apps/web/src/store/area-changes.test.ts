@@ -7,6 +7,7 @@ import { planningData } from './planning-view';
 import { createMemoryStore } from './record-store';
 import { retroData } from './retro-view';
 import { runningData } from './running-view';
+import { addAndChoose } from './today-changes';
 import { todayData } from './today-view';
 
 const research = id<'Area'>('area-research');
@@ -94,6 +95,27 @@ describe('Area changes (Issue #113)', () => {
       expect(running?.plan.find((p) => p.area.id === research)?.area.name).toBe(
         '研究',
       );
+    });
+
+    it('does not show on the running Sprint for an Area new to it (F9)', () => {
+      // Made in the middle of the week, then used from Today.
+      const store = createMemoryStore(fixtureSnapshot('today-daytime'));
+      store.run(addArea('就活'));
+      const made = store.getSnapshot().records.areas.at(-1)!;
+      expect(store.run(addAndChoose('ES を書く', made.id)).ok).toBe(true);
+      const active = () =>
+        store.getSnapshot().records.sprints.find((s) => s.state === 'active');
+      expect(active()?.areaSnapshot.at(-1)).toMatchObject({
+        areaId: made.id,
+        name: '就活',
+      });
+      store.run(rename(made.id, '就職活動'));
+      const { records, clock } = store.getSnapshot();
+      expect(todayData(records, clock)?.areas.at(-1)?.name).toBe('就活');
+      expect(
+        backlogData(records, clock, {}).areas.find((a) => a.id === made.id)
+          ?.name,
+      ).toBe('就職活動');
     });
 
     it('shows on the next Sprint being planned, and not on a past one', () => {

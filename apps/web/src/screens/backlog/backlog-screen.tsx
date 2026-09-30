@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Filter, FilterGroup } from '@/components/ui/filter';
 import { useToast } from '@/components/ui/toast';
-import { AreaSelect } from '@/components/task/area-select';
+import { AreaSelect, chosenArea } from '@/components/task/area-select';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
@@ -73,6 +73,9 @@ function BacklogScreen() {
   const newArea = useNewAreaDialog();
   const backlog = useBacklog({ view: search.view, area: search.area });
   const { areas, items, today } = backlog;
+  // The Area of the next Quick Add. One archived since it was chosen is no
+  // longer a choice: none (#113).
+  const quickChoice = chosenArea(quickArea ?? search.area ?? '', areas);
   const open =
     search.task === undefined ? undefined : backlog.item(search.task);
   // The Task just completed, kept as one line where its row was until the
@@ -242,14 +245,7 @@ function BacklogScreen() {
             領域を編集
           </Button>
         </div>
-        <AreaDialog
-          open={editingAreas}
-          onOpenChange={setEditingAreas}
-          onArchived={(areaId) => {
-            if (search.area === areaId) setSearch({ area: undefined });
-            if (quickArea === areaId) setQuickArea(undefined);
-          }}
-        />
+        <AreaDialog open={editingAreas} onOpenChange={setEditingAreas} />
       </div>
 
       {/* Quick Add: at the top from 768px; under it, sticky at the bottom
@@ -261,8 +257,8 @@ function BacklogScreen() {
         <TaskQuickAdd
           label="Backlog にタスクを追加"
           onAdd={(title) => {
-            const chosen = quickArea ?? search.area ?? '';
-            const areaId = chosen === '' ? undefined : id<'Area'>(chosen);
+            const areaId =
+              quickChoice === '' ? undefined : id<'Area'>(quickChoice);
             endUndo();
             const created = actions.addTask(title, areaId);
             if (created === undefined) return false;
@@ -272,7 +268,7 @@ function BacklogScreen() {
           area={
             <AreaSelect
               areas={areas}
-              value={quickArea ?? search.area ?? ''}
+              value={quickChoice}
               onChange={setQuickArea}
               onNewArea={() => newArea.open(setQuickArea)}
             />
