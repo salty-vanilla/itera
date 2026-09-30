@@ -242,7 +242,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
     ).toBeTruthy();
     expect(
       screen.getByText(
-        '改善策がないまま完了します。次の Planning には何も出ません。',
+        '改善策がないまま完了します。次の計画には何も出ません。',
       ),
     ).toBeTruthy();
     // 置き換える needs a new criterion first.

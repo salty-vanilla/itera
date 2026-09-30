@@ -84,7 +84,7 @@ function HandoffPane({
               {improvement}
             </p>
             <p className="text-help text-ink-muted">
-              次の Planning の最初に、そのまま表示されます。
+              次の計画の最初に、そのまま表示されます。
             </p>
           </>
         )}
@@ -99,7 +99,7 @@ function HandoffPane({
           description={
             improvement === undefined
               ? '改善策を書くと選べます。任意です。'
-              : '改善策が「提案の幅のどこで計画するか」で表せるときだけ、次の Planning の計画に使うルールにできます。任意です。'
+              : '改善策が「提案の幅のどこで計画するか」で表せるときだけ、次の計画に使うルールにできます。任意です。'
           }
           disabled={improvement === undefined}
           checked={draft !== undefined}
@@ -227,7 +227,7 @@ function DraftCriterion({
       </div>
       <div className="flex flex-col gap-1">
         <p className="text-body text-ink">
-          次の Planning では、
+          次の計画では、
           {draft.areaName === undefined ? '' : `${draft.areaName}の`}
           提案の幅があるタスク {preview.length}件を
           {BOUND_WORDS[policy.rangePolicy]}で計画します（今の Backlog で）。

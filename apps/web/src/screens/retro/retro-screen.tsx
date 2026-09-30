@@ -149,9 +149,7 @@ function RetroView({ data }: { data: RetroData }) {
                 <p key={b}>{BLOCKER_WORDS[b]}</p>
               ))}
               {data.improvement === undefined && (
-                <p>
-                  改善策がないまま完了します。次の Planning には何も出ません。
-                </p>
+                <p>改善策がないまま完了します。次の計画には何も出ません。</p>
               )}
             </div>
           </div>
