@@ -151,10 +151,15 @@ describe('Backlog', () => {
     });
   });
 
-  it('shows 「今週」 for a Task in the current Sprint', async () => {
+  it('shows 「今週」 for a Task in the Sprint, and 「今日」 for one in 今日やる (#94)', async () => {
     await renderAt('/backlog?fixture=backlog-capture');
-    const row = within(list()).getByText('関連論文を 3 本読む').closest('li');
-    expect(row?.textContent).toContain('今週');
+    const rowOf = (title: string) =>
+      within(list()).getByText(title).closest('li')!;
+    // Chosen for today (invariant 26: so it is in the week too).
+    expect(rowOf('関連論文を 3 本読む').textContent).toContain('今日');
+    expect(rowOf('関連論文を 3 本読む').textContent).not.toContain('今週');
+    expect(rowOf('API 設計のレビュー').textContent).toContain('今週');
+    expect(rowOf('API 設計のレビュー').textContent).not.toContain('今日');
   });
 
   it('Detail: adopting a suggestion changes the Estimate, and it can be undone', async () => {
@@ -663,7 +668,63 @@ describe('Backlog', () => {
       resolution: 'selected',
     });
     const row = within(list()).getByText('本棚を整理する').closest('li');
-    expect(row?.textContent).toContain('今週 · 週の途中で追加');
+    expect(row?.textContent).toContain('今日 · 週の途中で追加');
+  });
+
+  it('今日へ from the row: a Toast says where it went and 今日を開く opens it in 今日やる (#94)', async () => {
+    const router = await renderAt('/backlog?fixture=backlog-capture');
+    await userEvent.click(
+      screen.getByRole('button', { name: '操作: 本棚を整理する' }),
+    );
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: '今日へ' }),
+    );
+    const toast = (
+      await screen.findByText('「本棚を整理する」を今日やるに入れました')
+    ).closest<HTMLElement>('[role="dialog"]')!;
+    expect(toast.textContent).toContain('今週の Sprint にも入りました。');
+    // Neither a confirmation nor a capacity warning, and no 元に戻す.
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(
+      within(toast).queryByRole('button', { name: '元に戻す' }),
+    ).toBeNull();
+    await userEvent.click(
+      within(toast).getByRole('button', { name: '今日を開く' }),
+    );
+    await waitFor(() => expect(router.state.location.pathname).toBe('/today'));
+    const rows = await screen.findByRole('region', { name: '今日やる' });
+    expect(within(rows).getByText('本棚を整理する')).toBeTruthy();
+  });
+
+  it('今日へ from the detail: the section is first, and keeps the state and 今日を開く after (#94)', async () => {
+    const router = await renderAt('/backlog?fixture=backlog-capture');
+    await userEvent.click(
+      within(list()).getByRole('button', { name: '本棚を整理する' }),
+    );
+    const detail = await screen.findByRole('dialog', {
+      name: '本棚を整理する',
+    });
+    const now = within(detail).getByRole('region', { name: '今日と今週' });
+    // Above the title field.
+    const title = within(detail).getByRole('textbox', { name: /タイトル/ });
+    expect(
+      now.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(within(now).queryByText(/今日やるに入っています/)).toBeNull();
+    await userEvent.click(within(now).getByRole('button', { name: '今日へ' }));
+    expect(
+      await screen.findByText('「本棚を整理する」を今日やるに入れました'),
+    ).toBeTruthy();
+    // The button is replaced by the state, 今日を開く and the day's operations.
+    expect(within(now).queryByRole('button', { name: '今日へ' })).toBeNull();
+    expect(within(now).getByText('今日やるに入っています')).toBeTruthy();
+    const open = within(now).getByRole('link', { name: '今日を開く' });
+    await waitFor(() => expect(document.activeElement).toBe(open));
+    expect(within(now).getByRole('button', { name: '開始' })).toBeTruthy();
+    // Nothing to save: the footer only closes.
+    expect(within(detail).queryByRole('button', { name: '保存' })).toBeNull();
+    await userEvent.click(open);
+    await waitFor(() => expect(router.state.location.pathname).toBe('/today'));
   });
 
   it('完了: a Task in the Sprint completes there and today too', async () => {
@@ -921,6 +982,102 @@ describe('Backlog — before the Sprint starts (#59)', () => {
     ).toBeTruthy();
     await userEvent.click(today);
     expect(screen.queryByText('保存できませんでした')).toBeNull();
+  });
+});
+
+describe('Backlog — 繰り返しの説明 (#94)', () => {
+  it('says what stays this week and when the occurrences start', async () => {
+    await renderAt('/backlog?fixture=backlog-capture&task=task-paper');
+    const detail = await screen.findByRole('dialog', {
+      name: '関連論文を 3 本読む',
+    });
+    expect(
+      within(detail).getByText(
+        '繰り返しにしても、今週の Sprint ではこの 1 件のままです。回は次の Sprint から作られます。',
+      ),
+    ).toBeTruthy();
+    expect(within(detail).queryByText(/単発のまま/)).toBeNull();
+  });
+});
+
+describe('Backlog — the detail of a Task in 今日やる (#94)', () => {
+  const now = async () => {
+    const detail = await screen.findByRole('dialog', {
+      name: '顧客インタビューの設計',
+    });
+    return within(detail).getByRole('region', { name: '今日と今週' });
+  };
+  const selectionOf = (taskId: string) => {
+    const sprint = records().sprints.find((s) => s.state === 'active')!;
+    const st = sprint.tasks.find((t) => t.taskId === taskId);
+    return sprint.dailySelections.find(
+      (d) => d.sprintTaskId === st?.id && d.date === '2026-10-01',
+    );
+  };
+
+  it('offers the day’s operations for a selected Task, and starts it as the row does', async () => {
+    await renderAt('/backlog?fixture=backlog-detail&task=task-interview');
+    const section = await now();
+    expect(section.textContent).toContain('今日やるに入っています');
+    expect(
+      within(section)
+        .getAllByRole('button')
+        .map((b) => b.textContent),
+    ).toEqual(['開始', '今日は見送る', '今日から外す', '完了にする']);
+    // Not a recurring Task: no スキップ.
+    await userEvent.click(
+      within(section).getByRole('button', { name: '開始' }),
+    );
+    expect(selectionOf('task-interview')?.resolution).toBe('started');
+    expect(section.textContent).toMatch(
+      /今日やるに入っています（開始 \d\d:\d\d）/,
+    );
+    expect(
+      within(section).getByRole('button', { name: '今日はここまで' }),
+    ).toBeTruthy();
+    expect(within(section).queryByRole('button', { name: '開始' })).toBeNull();
+  });
+
+  it('見送る and 外す take the Task out of 今日, and the row says 今週 again', async () => {
+    await renderAt('/backlog?fixture=backlog-detail&task=task-interview');
+    let section = await now();
+    await userEvent.click(
+      within(section).getByRole('button', { name: '今日は見送る' }),
+    );
+    expect(selectionOf('task-interview')?.resolution).toBe('deferred');
+    section = await now();
+    expect(section.textContent).not.toContain('今日やるに入っています');
+    const row = within(list())
+      .getByText('顧客インタビューの設計')
+      .closest('li')!;
+    expect(row.textContent).toContain('今週');
+    expect(row.textContent).not.toContain('今日');
+  });
+
+  it('今日から外す records the same removal as the row’s menu', async () => {
+    await renderAt('/backlog?fixture=backlog-detail&task=task-interview');
+    const section = await now();
+    await userEvent.click(
+      within(section).getByRole('button', { name: '今日から外す' }),
+    );
+    expect(selectionOf('task-interview')?.resolution).toBe('removed');
+  });
+
+  it('今日はここまで opens the actual time surface, then pauses', async () => {
+    await renderAt('/backlog?fixture=backlog-detail&task=task-dataset');
+    const detail = await screen.findByRole('dialog', {
+      name: '実験データの前処理',
+    });
+    await userEvent.click(
+      within(detail).getByRole('button', { name: '今日はここまで' }),
+    );
+    const surface = await screen.findByRole('dialog', {
+      name: /今日はここまで: /,
+    });
+    await userEvent.click(
+      within(surface).getByRole('button', { name: '今日はここまで' }),
+    );
+    expect(selectionOf('task-dataset')?.resolution).toBe('paused');
   });
 });
 

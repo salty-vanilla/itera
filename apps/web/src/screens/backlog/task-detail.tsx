@@ -12,6 +12,7 @@ import {
   type TaskPriority,
   type TimeBasis,
 } from '@itera/domain';
+import { Link, useLocation } from '@tanstack/react-router';
 import { Check, ChevronDown, ChevronRight } from 'lucide-react';
 import {
   Fragment,
@@ -49,9 +50,12 @@ import { formatDate, formatTime } from '@/lib/date-format';
 import { formatHours, formatRange } from '@/lib/time-format';
 import type { BacklogData, BacklogItem } from '@/store/backlog-view';
 import { useTaskActions } from '@/store/use-task-actions';
+import { useTodayActions } from '@/store/use-today';
+import { ActualTime } from '../today/actual-time';
 import { CarryOverText, RecurrenceText, SprintText } from './backlog-row';
 import { RecurrenceEditor } from './recurrence-editor';
 import { SubtaskList } from './subtask-list';
+import { useAddToToday } from './use-add-to-today';
 
 const priorities: readonly { value: TaskPriority; label: string }[] = [
   { value: 'high', label: '高' },
@@ -186,6 +190,25 @@ function Saved({ show, children }: { show: boolean; children: ReactNode }) {
   );
 }
 
+/** The line under 今日と今週 for a Task in today's 今日やる. */
+function dayText(
+  today: NonNullable<BacklogItem['today']>,
+  timeZone: BacklogData['timeZone'],
+): string {
+  switch (today.resolution) {
+    case 'started':
+      return today.startedAt === undefined
+        ? '今日やるに入っています（開始済み）'
+        : `今日やるに入っています（開始 ${formatTime(today.startedAt, timeZone)}）`;
+    case 'done':
+      return '今日やるに入っています（完了）';
+    case 'skipped':
+      return '今日やるに入っています（この回はスキップ）';
+    case 'selected':
+      return '今日やるに入っています';
+  }
+}
+
 type Outcome =
   | {
       kind: 'adopted';
@@ -227,9 +250,38 @@ function TaskDetail({
   leaveRef?: Ref<(then: () => void, opens: boolean) => void> | undefined;
 }) {
   const actions = useTaskActions();
+  const todayActions = useTodayActions();
+  const addToToday = useAddToToday();
   const { task } = item;
   const facts = item;
   const toast = useToast();
+  // 今日と今週: Today is where 今日を開く leads, so it is not offered there.
+  const onTodayScreen = useLocation({ select: (l) => l.pathname === '/today' });
+  const nowRef = useRef<HTMLElement>(null);
+  const openTodayRef = useRef<HTMLAnchorElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  // The Popover of 今日はここまで sits by its button.
+  const [pauseAnchor, setPauseAnchor] = useState<HTMLButtonElement | null>(
+    null,
+  );
+  const [pausing, setPausing] = useState(false);
+  // After an operation of the section the button pressed is gone: the
+  // focus goes to 今日を開く, else to the first button left, else the title.
+  const refocusNow = useRef(false);
+  const dayState = facts.today?.resolution;
+  useEffect(() => {
+    if (!refocusNow.current) return;
+    refocusNow.current = false;
+    (
+      openTodayRef.current ??
+      nowRef.current?.querySelector<HTMLElement>('button:not([disabled])') ??
+      titleRef.current
+    )?.focus();
+  }, [dayState, facts.canAddToToday]);
+  const nowOperation = (run: () => boolean) => () => {
+    refocusNow.current = true;
+    if (!run()) refocusNow.current = false;
+  };
   const [draft, setDraft] = useState(() => draftOf(task));
   const [errors, setErrors] = useState<Partial<Record<TextKey, string>>>({});
   // The field saved last, marked 保存しました until it is edited again.
@@ -499,6 +551,7 @@ function TaskDetail({
     <>
       <DrawerHeader>
         <DrawerTitle
+          ref={titleRef}
           // Opening shows the Task first; typing starts only when the person
           // chooses a field, so a phone does not raise its keyboard (#95).
           tabIndex={-1}
@@ -509,7 +562,12 @@ function TaskDetail({
         </DrawerTitle>
         {(facts.thisWeek || facts.carry || facts.recurrence) && (
           <DrawerDescription className="flex flex-wrap gap-x-3 text-meta">
-            {facts.thisWeek && <SprintText {...facts.thisWeek} />}
+            {facts.thisWeek && (
+              <SprintText
+                {...facts.thisWeek}
+                today={facts.today !== undefined}
+              />
+            )}
             {facts.carry && <CarryOverText {...facts.carry} />}
             {facts.recurrence && (
               <RecurrenceText recurrence={facts.recurrence} />
@@ -520,17 +578,26 @@ function TaskDetail({
       <DrawerBody ref={bodyRef} className="flex flex-col gap-6">
         {(facts.canAddToToday ||
           facts.todayOpensOn !== undefined ||
+          facts.today !== undefined ||
           facts.canComplete) && (
           <section
+            ref={nowRef}
             aria-labelledby="task-detail-now"
             className="flex flex-col gap-2"
           >
             <h3 id="task-detail-now" className="text-subheading text-ink">
               今日と今週
             </h3>
-            <div className="flex flex-wrap gap-2">
+            {facts.today !== undefined && (
+              <p role="status" className="text-body text-ink">
+                {dayText(facts.today, timeZone)}
+              </p>
+            )}
+            <div className="flex flex-wrap items-center gap-2">
               {facts.canAddToToday && (
-                <Button onClick={() => actions.addToToday(task.id)}>
+                <Button
+                  onClick={nowOperation(() => addToToday(task.id, task.title))}
+                >
                   今日へ
                 </Button>
               )}
@@ -543,6 +610,49 @@ function TaskDetail({
                   今日へ
                 </Button>
               )}
+              {facts.today?.resolution === 'selected' && (
+                <Button
+                  onClick={nowOperation(() =>
+                    todayActions.start(facts.today!.selectionId),
+                  )}
+                >
+                  開始
+                </Button>
+              )}
+              {facts.today?.resolution === 'started' && (
+                <Button ref={setPauseAnchor} onClick={() => setPausing(true)}>
+                  今日はここまで
+                </Button>
+              )}
+              {(facts.today?.resolution === 'selected' ||
+                facts.today?.resolution === 'started') && (
+                <Button
+                  onClick={nowOperation(() =>
+                    todayActions.defer(facts.today!.selectionId),
+                  )}
+                >
+                  今日は見送る
+                </Button>
+              )}
+              {facts.today?.resolution === 'selected' &&
+                facts.today.recurring && (
+                  <Button
+                    onClick={nowOperation(() =>
+                      todayActions.skip(facts.today!.selectionId),
+                    )}
+                  >
+                    今日はスキップ
+                  </Button>
+                )}
+              {facts.today?.resolution === 'selected' && (
+                <Button
+                  onClick={nowOperation(() =>
+                    todayActions.removeFromToday(facts.today!.selectionId),
+                  )}
+                >
+                  今日から外す
+                </Button>
+              )}
               {facts.canComplete && (
                 <Button
                   onClick={() => {
@@ -551,6 +661,15 @@ function TaskDetail({
                 >
                   完了にする
                 </Button>
+              )}
+              {facts.today !== undefined && !onTodayScreen && (
+                <Link
+                  ref={openTodayRef}
+                  to="/today"
+                  className="inline-flex min-h-target-touch items-center rounded-sm px-2 text-link underline focus-visible:focus-ring medium:min-h-target-min"
+                >
+                  今日を開く
+                </Link>
               )}
             </div>
             {facts.todayOpensOn !== undefined && (
@@ -760,6 +879,22 @@ function TaskDetail({
       <DrawerFooter>
         <Button onClick={() => leave(onClose)}>閉じる</Button>
       </DrawerFooter>
+      {facts.today !== undefined && (
+        <ActualTime
+          mode="pause"
+          taskTitle={task.title}
+          open={pausing}
+          onOpenChange={setPausing}
+          anchor={pauseAnchor}
+          onSubmit={(hours) => {
+            if (facts.today === undefined) return false;
+            refocusNow.current = true;
+            const ok = todayActions.pause(facts.today.selectionId, hours);
+            if (!ok) refocusNow.current = false;
+            return ok;
+          }}
+        />
+      )}
     </>
   );
 }

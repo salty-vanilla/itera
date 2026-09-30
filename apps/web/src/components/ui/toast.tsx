@@ -38,6 +38,8 @@ type ToastKind =
   | 'sprint-confirmed'
   | 'retro-completed'
   | 'task-added'
+  /** 今日へ from the Backlog: 「「タイトル」を今日やるに入れました」. */
+  | 'added-to-today'
   | 'task-archived'
   | 'day-record-undone'
   | 'save-failed';

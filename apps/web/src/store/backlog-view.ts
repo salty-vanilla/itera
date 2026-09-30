@@ -14,6 +14,8 @@ import {
   type AreaColor,
   type AreaId,
   type BacklogSlice,
+  type DailySelectionId,
+  type Instant,
   type LocalDate,
   type PlanningValue,
   type RecurrencePattern,
@@ -44,6 +46,20 @@ export interface BacklogItem {
   readonly thisWeek?: {
     readonly midSprint: boolean;
     readonly confirmed: boolean;
+  };
+  /**
+   * In today's 今日やる (a selection made today that is open, done or
+   * skipped: what Today lists there). The Backlog row says 「今日」 instead
+   * of 「今週」 (Issue #94), and the detail offers the day's operations.
+   * A Task chosen today and then closed (今日はここまで, 見送り, 外した) is
+   * back among the week's, so it has none.
+   */
+  readonly today?: {
+    readonly selectionId: DailySelectionId;
+    readonly resolution: 'selected' | 'started' | 'done' | 'skipped';
+    readonly startedAt?: Instant;
+    /** An occurrence of a recurring Task: it can be skipped (F19). */
+    readonly recurring: boolean;
   };
   /** The Task's own time: Estimate, suggestion, subtask sum or none. */
   readonly value: PlanningValue;
@@ -85,6 +101,28 @@ export function backlogItem(
     !isRecurring(task) &&
     !active.tasks.some((t) => t.taskId === task.id);
   const beforeStart = active !== undefined && clock.today < active.start;
+  const chosen = active?.dailySelections
+    .filter(
+      (s) =>
+        s.date === clock.today &&
+        (s.resolution === 'selected' ||
+          s.resolution === 'started' ||
+          s.resolution === 'done' ||
+          s.resolution === 'skipped') &&
+        active.tasks.some(
+          (t) =>
+            t.id === s.sprintTaskId &&
+            t.taskId === task.id &&
+            t.outcome !== 'removed',
+        ),
+    )
+    // What can still be done comes first: the detail acts on that one.
+    .toSorted(
+      (a, b) =>
+        Number(b.resolution === 'selected' || b.resolution === 'started') -
+        Number(a.resolution === 'selected' || a.resolution === 'started'),
+    )
+    .at(0);
   return {
     task,
     ...(area === undefined
@@ -116,6 +154,20 @@ export function backlogItem(
           thisWeek: {
             midSprint: inWeek.origin === 'midSprint',
             confirmed: week?.state === 'active',
+          },
+        }),
+    ...(chosen === undefined
+      ? {}
+      : {
+          today: {
+            selectionId: chosen.id,
+            resolution: chosen.resolution as NonNullable<
+              BacklogItem['today']
+            >['resolution'],
+            ...(chosen.startedAt === undefined
+              ? {}
+              : { startedAt: chosen.startedAt }),
+            recurring: chosen.occurrenceId !== undefined,
           },
         }),
     value: planningValueOf(task, { now: clock.now }),
