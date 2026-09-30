@@ -7,10 +7,13 @@ import {
   completeSelection,
   createTask,
   deferSelection,
+  deleteInterrupt,
+  editInterrupt,
   noteInterrupt,
   pauseSelection,
   recordActualTime,
   removeFromToday,
+  restoreInterrupt,
   selectForToday,
   skipSelection,
   startDay,
@@ -25,6 +28,8 @@ import {
   type CommandResult,
   type DailySelection,
   type DailySelectionId,
+  type InterruptNote,
+  type InterruptNoteId,
   type Occurrence,
   type OccurrenceId,
   type Result,
@@ -287,6 +292,28 @@ export const interrupt = (text: string, minutes?: number): Change =>
       ctx,
     ),
   );
+
+/** 割り込みを直す: its note and minutes; the time stays (F38). */
+export const editNote = (
+  id: InterruptNoteId,
+  text: string,
+  minutes?: number,
+): Change =>
+  onActive((sprint, ctx) =>
+    editInterrupt(
+      sprint,
+      { id, text, ...(minutes === undefined ? {} : { minutes }) },
+      ctx,
+    ),
+  );
+
+/** 割り込みを消す (F38). */
+export const deleteNote = (id: InterruptNoteId): Change =>
+  onActive((sprint, ctx) => deleteInterrupt(sprint, { id }, ctx));
+
+/** 元に戻す after 割り込みを消す: the same note, in its place (F38). */
+export const restoreNote = (note: InterruptNote): Change =>
+  onActive((sprint, ctx) => restoreInterrupt(sprint, { note }, ctx));
 
 /**
  * Today's quick add: a new Task, added to the Sprint and chosen for today
