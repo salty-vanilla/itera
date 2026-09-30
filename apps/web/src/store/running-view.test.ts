@@ -138,7 +138,7 @@ describe('retroData (#90)', () => {
     const closed = records.sprints.find((s) => s.state === 'closed')!;
     const data = retroData(records, clock, closed.id);
     expect(data?.number).toBe(1);
-    expect(data?.improvement).toBe('研究の見積りは幅の上限で計画する');
+    expect(data?.improvement).toBe('研究の見積もりは幅の上限で計画する');
     // No Sprint in Review: nothing by default.
     expect(retroData(records, clock)).toBeUndefined();
   });

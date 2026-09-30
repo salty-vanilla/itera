@@ -9,9 +9,9 @@ describe('criterionName', () => {
         { scope: { kind: 'area', areaId: id('a') }, rangePolicy: 'hi' },
         '研究',
       ),
-    ).toBe('研究の推定幅 → 上限を計画値に');
+    ).toBe('研究：提案の幅の上限で計画する');
     expect(
       criterionName({ scope: { kind: 'all' }, rangePolicy: 'mid' }, undefined),
-    ).toBe('推定幅 → 中央を計画値に');
+    ).toBe('提案の幅の中央で計画する');
   });
 });

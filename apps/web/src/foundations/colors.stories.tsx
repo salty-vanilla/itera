@@ -56,7 +56,7 @@ const days = ['月', '火', '水', '木', '金', '土', '日'] as const;
 
 function StageLine({ current }: { current: number }) {
   return (
-    <ol className="flex items-start" aria-label="Planning の段階">
+    <ol className="flex items-start" aria-label="計画の段階">
       {stages.map((stage, index) => {
         const isCurrent = index === current;
         return (

@@ -76,10 +76,10 @@ function NextSprint({ choice, steps }: { choice: SprintChoice; steps: Steps }) {
         </p>
         {before !== undefined && before.sprint.state !== 'closed' && (
           <p className="text-body text-ink-muted">
-            確定できるのは、前の Sprint（Sprint {before.number}）の Retro
-            を完了してからです。
+            確定できるのは、前の Sprint（Sprint {before.number}
+            ）の振り返りを完了してからです。
             {before.sprint.state === 'active' ? (
-              `Sprint ${before.number} の Retro は、最終日の ${formatDate(before.sprint.end)} から始められます。`
+              `Sprint ${before.number} の振り返りは、最終日の ${formatDate(before.sprint.end)} から始められます。`
             ) : (
               <>
                 Sprint {before.number} は振り返り中です。

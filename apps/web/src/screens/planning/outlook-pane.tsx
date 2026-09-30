@@ -11,9 +11,11 @@ import { weekCall, weekText } from '@/lib/week-text';
 
 // 時間の見通し (docs/design/patterns.md Sprint Planning, right pane): the
 // previous improvement (shown only), the active planning criterion, and the
-// Capacity. In 確かめる the criterion gets its 「今回の時間の判断に使う」
+// Capacity. In 選ぶ and 整える the criterion is its name on one line under
+// the improvement; in 確かめる it gets its frame, the 「今回の計画に使う」
 // Switch and effect, and the Capacity explains what would push the total
-// over (「何が上振れすると超過するか」, MVP 完了条件 5).
+// over (「何が上振れすると超過するか」, MVP 完了条件 5). Without a criterion,
+// nothing is shown in any stage (#105).
 
 type OutlookPaneProps = {
   data: PlanningData;
@@ -47,6 +49,20 @@ function OutlookPane({
           },
         ],
   );
+  // 選ぶ・整える: the criterion's name alone, on one line under the
+  // improvement (owner decision R3 in #105).
+  const criterionLine = criterion !== undefined && stage !== 'check' && (
+    <p
+      data-slot="criterion-line"
+      className="flex items-start gap-2 text-body text-ink-muted"
+    >
+      <Info
+        aria-hidden
+        className="mt-1 size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
+      />
+      {criterionName(criterion.active.policy, criterion.areaName)}
+    </p>
+  );
   return (
     <div
       data-slot="outlook-pane"
@@ -61,38 +77,39 @@ function OutlookPane({
             前回決めた改善策
           </h2>
           <p className="text-goal text-ink">{improvement.text}</p>
+          {criterionLine}
         </section>
       )}
 
-      {criterion !== undefined && (
+      {improvement === undefined && criterionLine}
+
+      {criterion !== undefined && stage === 'check' && (
         <section
           aria-labelledby={`${ids}-criterion`}
           className="flex flex-col gap-3 rounded-sm bg-canvas-subtle p-4"
         >
-          <h2
-            id={`${ids}-criterion`}
-            className="flex items-center gap-2 text-subheading text-ink"
-          >
-            <Info
-              aria-hidden
-              className="size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
-            />
-            {criterionName(criterion.active.policy, criterion.areaName)}
-          </h2>
-          <p className="text-help text-ink-muted">
-            Estimate そのものは書き換えません。
-          </p>
-          {stage === 'check' && (
-            <>
-              <Switch
-                label="今回の時間の判断に使う"
-                description="オンにすると、対象のタスクの計画値を提案の幅の一端にします。"
-                checked={criterion.applied}
-                onCheckedChange={(checked) => onApplyCriterion(checked)}
+          <div className="flex flex-col gap-1">
+            <h2 id={`${ids}-criterion`} className="text-label text-ink-muted">
+              計画基準
+            </h2>
+            <p className="flex items-center gap-2 text-subheading text-ink">
+              <Info
+                aria-hidden
+                className="size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
               />
-              <CriterionEffect data={data} />
-            </>
-          )}
+              {criterionName(criterion.active.policy, criterion.areaName)}
+            </p>
+          </div>
+          <p className="text-help text-ink-muted">
+            前の振り返りで決めた、提案の幅のどこで計画するかのルール。
+          </p>
+          <Switch
+            label="今回の計画に使う"
+            description="対象のタスクを提案の幅の一端で計画します。見積もりは変わりません。"
+            checked={criterion.applied}
+            onCheckedChange={(checked) => onApplyCriterion(checked)}
+          />
+          <CriterionEffect data={data} />
         </section>
       )}
 
@@ -111,7 +128,7 @@ function OutlookPane({
 
 /**
  * The criterion's effect, from the same policy as its name (invariant 39):
- * 「研究の推定タスク 1 件を上限で計画値にしています（+2h）」.
+ * 「研究の幅のあるタスク 1件を上限で計画しています（合計の下限 +2h）」.
  */
 function CriterionEffect({ data }: { data: PlanningData }) {
   const { criterion } = data;
@@ -140,8 +157,8 @@ function CriterionEffect({ data }: { data: PlanningData }) {
   return (
     <p className="text-body text-ink">
       {criterion.applied
-        ? `${scope}推定タスク ${count}件を${bound}で計画値にしています${moves.length > 0 ? `（${moves.join('、')}）` : ''}。`
-        : `使わない場合、${scope}推定タスク ${count}件は提案の幅のまま計画値になります。`}
+        ? `${scope}幅のあるタスク ${count}件を${bound}で計画しています${moves.length > 0 ? `（${moves.join('、')}）` : ''}。`
+        : `使わない場合、${scope}幅のあるタスク ${count}件は提案の幅のまま計画します。`}
     </p>
   );
 }
@@ -161,7 +178,7 @@ function Drivers({ data }: { data: PlanningData }) {
         {drivers.map((d) => (
           <li key={d.sprintTask.id}>
             {d.fromRange !== undefined
-              ? `計画基準で「${d.task.title}」を ${formatHours(d.value.lo)} で計算しています（提案 ${formatRange(d.fromRange.lo, d.fromRange.hi)}）。`
+              ? `計画基準で「${d.task.title}」を ${formatHours(d.value.lo)} で計算しています（Agent の提案 ${formatRange(d.fromRange.lo, d.fromRange.hi)}）。`
               : `「${d.task.title}」は ${formatRange(d.value.lo, d.value.hi)} の幅があります。`}
           </li>
         ))}

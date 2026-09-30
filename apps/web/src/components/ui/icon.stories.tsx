@@ -46,7 +46,7 @@ const meanings: [keyof typeof semanticIcons, string, string?][] = [
   ['overdue', '期限超過', 'text-danger'],
   ['carriedOver', '持ち越し'],
   ['recurrence', '繰り返し'],
-  ['goalLink', 'Goal への紐づけ'],
+  ['goalLink', '目標への紐づけ'],
   ['undo', '元に戻す'],
   ['history', '変更履歴'],
   ['proposal', 'Agent 提案・下書き'],

@@ -122,7 +122,7 @@ export const ValidateOnBlurAndSubmit: Story = {
         <Field
           label="見積もり"
           necessity="optional"
-          description="時間で入力（例: 1.5）。空欄なら未見積"
+          description="時間で入力（例: 1.5）。空欄なら見積もりなし"
           error={errors.estimate}
         >
           <TextInput
@@ -165,13 +165,13 @@ export const Composition: Story = {
   render: () => (
     <form noValidate className="flex max-w-measure-read flex-col gap-6">
       <Field
-        label="Goal"
+        label="目標"
         necessity="optional"
         description="「〜な状態にする」「〜を終える」の形で"
       >
         <Textarea defaultValue="関連研究の章を書き終える" />
       </Field>
-      <RadioGroup legend="Goal の自己判定" necessity="optional">
+      <RadioGroup legend="目標の自己判定" necessity="optional">
         <Radio value="achieved" label="できた" />
         <Radio value="partial" label="一部できた" />
         <Radio value="notAchieved" label="できなかった" />

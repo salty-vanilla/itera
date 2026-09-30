@@ -16,11 +16,11 @@ describe('Switch', () => {
   it('is a switch named by its label that says オン / オフ', async () => {
     render(
       <Switch
-        label="Retro の前日に通知"
+        label="振り返りの前日に通知"
         description="オンにすると、Sprint の最終日の前日 18:00 に通知します。"
       />,
     );
-    const toggle = screen.getByRole('switch', { name: 'Retro の前日に通知' });
+    const toggle = screen.getByRole('switch', { name: '振り返りの前日に通知' });
     expect(toggle.getAttribute('aria-checked')).toBe('false');
     expect(describedBy(toggle)).toEqual([
       'オンにすると、Sprint の最終日の前日 18:00 に通知します。',
