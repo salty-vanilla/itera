@@ -10,6 +10,7 @@ import {
   sprintNumber,
   sprintTotals,
   retroFacts,
+  weekProgress,
   type AreaColor,
   type AreaId,
   type CriterionPolicy,
@@ -22,6 +23,7 @@ import {
   type SprintTask,
   type SprintTotals,
   type Task,
+  type WeekProgress,
 } from '@itera/domain';
 import { daysBetween } from '@/lib/date-format';
 import type { Clock, Records } from './records';
@@ -94,6 +96,8 @@ export interface RunningData {
     readonly planned?: number;
     readonly current?: number;
   };
+  /** 「今週の完了 N / M件」 (F32), as Today counts it; only while running. */
+  readonly progress?: WeekProgress;
   /** Before today, newest first: the days' completions and skips (#53). */
   readonly pastDays: readonly PastDay[];
   /** The criterion as this Sprint treated it at confirm (read only, invariant 37). */
@@ -213,6 +217,7 @@ export function runningData(
           },
         }),
     plan,
+    ...(ended ? {} : { progress: weekProgress(sprint, records.occurrences) }),
     // Undoing a past day is for the running Sprint only (F33).
     pastDays: ended ? [] : pastDaysOf(sprint, tasks, clock.today),
     totals,
