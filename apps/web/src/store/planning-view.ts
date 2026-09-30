@@ -82,6 +82,12 @@ export interface CandidateRow {
   readonly value: PlanningValue;
   /** 持ち越し N回（Sprint M から）(F25, F26). */
   readonly carry?: { readonly count: number; readonly fromSprint: number };
+  /**
+   * 「Sprint N で実行中」: the Task is still unfinished in the running Sprint
+   * (#89). Choosing it stays possible; when that Sprint enters Review, the
+   * choice is linked to its carry-over (F35).
+   */
+  readonly running?: { readonly sprint: number };
 }
 
 export interface RecurringCandidate {
@@ -185,6 +191,9 @@ export function planningData(
   const previous = records.sprints.find(
     (s) => s.id === sprint.previousSprintId,
   );
+  const running = records.sprints.find((s) => s.state === 'active');
+  const runningNumber =
+    running === undefined ? undefined : sprintNumber(running, records.sprints);
   const row = (task: Task): CandidateRow => {
     const chosen = sprint.tasks.find(
       (t) => t.taskId === task.id && t.outcome === 'draft',
@@ -195,6 +204,9 @@ export function planningData(
     const area = areaOf(task);
     const carry = carryOverOf(task.id, records.sprints);
     const carryFrom = records.sprints.find((s) => s.id === carry?.fromSprintId);
+    const unfinished = running?.tasks.some(
+      (t) => t.taskId === task.id && t.outcome === 'planned',
+    );
     return {
       task,
       ...(chosen === undefined ? {} : { chosen }),
@@ -209,6 +221,9 @@ export function planningData(
               fromSprint: sprintNumber(carryFrom, records.sprints),
             },
           }),
+      ...(unfinished === true && runningNumber !== undefined
+        ? { running: { sprint: runningNumber } }
+        : {}),
     };
   };
 

@@ -7,7 +7,12 @@ import {
   type CommandContext,
   type CommandResult,
 } from './shared/command';
-import type { AreaId, PlanningCriterionId } from './shared/ids';
+import type {
+  AreaId,
+  PlanningCriterionId,
+  SprintTaskId,
+  TaskId,
+} from './shared/ids';
 import { omit } from './shared/record';
 import { err, type Result } from './shared/result';
 import type { LocalDate } from './shared/time';
@@ -28,6 +33,12 @@ export interface EnterReviewInput {
   readonly today: LocalDate;
   /** Occurrences of the Sprint's recurring Tasks. */
   readonly occurrences: readonly Occurrence[];
+  /**
+   * The next Sprint, when it is already in Planning (its previous Sprint is
+   * this one). Tasks chosen there before this Sprint ended are linked to
+   * their carry-over (F35).
+   */
+  readonly next?: Sprint;
 }
 
 /**
@@ -41,6 +52,10 @@ export interface EnterReviewInput {
  * - its occurrences still pending become missed;
  * - selections still open become unresolved (as at a change of date).
  * The missed and unresolved marks are the system's (F23, invariant 24).
+ * When the next Sprint is in Planning and the person already chose a
+ * carried-over Task there on its own, the system links that draft to the
+ * carry-over (carriedFrom, F35), as if it had been chosen from 持ち越し
+ * after the Review. Nothing is added to the next Sprint (invariant 20).
  * The Retro starts empty.
  */
 export function enterReview(
@@ -50,9 +65,18 @@ export function enterReview(
 ): CommandResult<{
   readonly sprint: Sprint;
   readonly occurrences: readonly Occurrence[];
+  /** The next Sprint with its drafts linked, when `input.next` was given. */
+  readonly next?: Sprint;
 }> {
   if (sprint.state !== 'active') {
     return err('invalidTransition', `Cannot review a ${sprint.state} Sprint.`);
+  }
+  const { next } = input;
+  if (
+    next !== undefined &&
+    (next.state !== 'planning' || next.previousSprintId !== sprint.id)
+  ) {
+    return err('invalidInput', 'The next Sprint is not in Planning after it.');
   }
   // The system acts after the end date; the person may start on the last day.
   const tooEarly =
@@ -113,6 +137,39 @@ export function enterReview(
     return next;
   });
 
+  // Link the next Sprint's drafts to what was just carried over (F35): a
+  // non-recurring draft of the same Task, chosen on its own.
+  let linked: Sprint | undefined;
+  if (next !== undefined) {
+    const carried = new Map<TaskId, SprintTaskId>(
+      tasks
+        .filter((t) => t.outcome === 'carriedOver')
+        .map((t) => [t.taskId, t.id]),
+    );
+    const nextTasks = next.tasks.map((t) => {
+      const from = carried.get(t.taskId);
+      if (
+        from === undefined ||
+        t.outcome !== 'draft' ||
+        t.occurrenceIds !== undefined ||
+        t.carriedFrom !== undefined
+      ) {
+        return t;
+      }
+      activities.push({
+        kind: 'sprintTaskCarryLinked',
+        at: ctx.now,
+        actor: 'system',
+        sprintId: next.id,
+        sprintTaskId: t.id,
+        taskId: t.taskId,
+        carriedFrom: from,
+      });
+      return { ...t, carriedFrom: from };
+    });
+    linked = { ...next, tasks: nextTasks };
+  }
+
   const retro: Retro = { startedAt: ctx.now, pins: [], reflection: '' };
   activities.push({
     kind: 'sprintReviewStarted',
@@ -124,6 +181,7 @@ export function enterReview(
     {
       sprint: { ...sprint, state: 'review', tasks, dailySelections, retro },
       occurrences: missed,
+      ...(linked === undefined ? {} : { next: linked }),
     },
     activities,
   );

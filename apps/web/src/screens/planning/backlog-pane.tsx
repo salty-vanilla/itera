@@ -230,7 +230,7 @@ function CandidateItem({
   onOpen: () => void;
   onEstimate: () => void;
 }) {
-  const { task, area, carry, value } = row;
+  const { task, area, carry, running, value } = row;
   const chosen = row.chosen !== undefined;
   const meta: ReactNode[] = [];
   if (!slim) {
@@ -240,6 +240,8 @@ function CandidateItem({
     if (task.priority !== 'normal')
       meta.push(<PriorityText key="p" priority={task.priority} />);
     if (carry) meta.push(<CarryOverText key="c" {...carry} />);
+    if (running)
+      meta.push(<MetaItem key="r">Sprint {running.sprint} で実行中</MetaItem>);
     if (chosen)
       meta.push(
         <MetaItem key="w" className="text-ink-subtle">

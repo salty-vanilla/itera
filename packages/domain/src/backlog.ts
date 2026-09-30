@@ -48,7 +48,9 @@ export interface CarryOver {
  * The Task's carry-over, as the Backlog shows it (F26): from its latest
  * SprintTask, the carriedFrom chain behind it, plus one if that SprintTask
  * was itself carried over. A Task chosen again from a carry-over keeps the
- * count while it is in the new Sprint. `undefined` when it has none.
+ * count while it is in the new Sprint. A draft in a Sprint not yet
+ * confirmed does not count as the latest (F36), so choosing a Task for the
+ * next Sprint does not hide its carry-over. `undefined` when it has none.
  */
 export function carryOverOf(
   taskId: TaskId,
@@ -57,7 +59,9 @@ export function carryOverOf(
   let latest:
     { sprint: Sprint; sprintTask: Sprint['tasks'][number] } | undefined;
   for (const sprint of sprints) {
-    const sprintTask = sprint.tasks.find((t) => t.taskId === taskId);
+    const sprintTask = sprint.tasks.find(
+      (t) => t.taskId === taskId && t.outcome !== 'draft',
+    );
     if (
       sprintTask !== undefined &&
       (latest === undefined || sprint.start > latest.sprint.start)
