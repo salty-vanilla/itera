@@ -8,6 +8,7 @@ import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
 import { useToast } from '@/components/ui/toast';
 import { GoalBlock } from '@/components/sprint/goal-block';
 import { Estimate } from '@/components/task/estimate';
+import { EstimateMenuItem } from '@/components/task/estimate-menu-item';
 import {
   MetaItem,
   PriorityText,
@@ -330,6 +331,7 @@ function PlannedRow({
         {linked ? '目標に紐づけない' : '目標に紐づける'}
       </MenuItem>
     ),
+    <EstimateMenuItem key="estimate" onSelect={onEstimate} />,
   ].filter(Boolean);
 
   return (
@@ -370,7 +372,11 @@ function PlannedRow({
               )}
             </span>
           )}
-          <Estimate value={value} planned={value.base !== 'none'} />
+          <Estimate
+            value={value}
+            planned={value.base !== 'none'}
+            enter={{ title: task.title, onEnter: onEstimate }}
+          />
         </span>
       }
       actions={

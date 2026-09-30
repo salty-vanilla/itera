@@ -915,3 +915,63 @@ describe('Planning — the Task detail (#95)', () => {
     ).toBe(1);
   });
 });
+
+describe('Planning — 見積もりを入れる (#96)', () => {
+  const ownEstimate = () =>
+    screen.findByRole('textbox', { name: /^見積もり（時間）(?!:)/ });
+
+  async function addUnestimated() {
+    await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    await userEvent.type(
+      within(backlogPane()).getByRole('textbox', {
+        name: 'タスクを追加して今週に入れる',
+      }),
+      '発表資料を見直す{Enter}',
+    );
+  }
+
+  it('見積もりなし on a row is a button that opens the Task at its Estimate', async () => {
+    await addUnestimated();
+    const button = within(planPane()).getByRole('button', {
+      name: '見積もりを入れる: 発表資料を見直す',
+    });
+    expect(button.textContent).toBe('見積もりなし');
+    button.focus();
+    await userEvent.keyboard('{Enter}');
+    await waitFor(async () =>
+      expect(document.activeElement).toBe(await ownEstimate()),
+    );
+  });
+
+  it('a row of the plan has 見積もりを入れる in its … with the key E', async () => {
+    await addUnestimated();
+    await userEvent.click(
+      within(planPane()).getByRole('button', {
+        name: '操作: 発表資料を見直す',
+      }),
+    );
+    const item = await screen.findByRole('menuitem', {
+      name: /見積もりを入れる/,
+    });
+    expect(item.textContent).toContain('E');
+    await userEvent.click(item);
+    await waitFor(async () =>
+      expect(document.activeElement).toBe(await ownEstimate()),
+    );
+  });
+
+  it('a row of the Backlog pane has it too', async () => {
+    await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    await userEvent.click(
+      within(backlogPane()).getByRole('button', {
+        name: '操作: 顧客インタビューの設計',
+      }),
+    );
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: /見積もりを入れる/ }),
+    );
+    await waitFor(async () =>
+      expect(document.activeElement).toBe(await ownEstimate()),
+    );
+  });
+});

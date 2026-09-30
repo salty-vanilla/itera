@@ -1155,6 +1155,22 @@ describe('Backlog — keys of the list (#48)', () => {
     await waitFor(() => expect(document.activeElement).toBe(heading));
   });
 
+  it('見積もりを入れる in the … opens the Task at its Estimate, as E does (#96)', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    await userEvent.click(
+      within(list()).getByRole('button', { name: '操作: 本棚を整理する' }),
+    );
+    const item = await screen.findByRole('menuitem', {
+      name: /見積もりを入れる/,
+    });
+    expect(item.textContent).toContain('E');
+    await userEvent.click(item);
+    const estimate = await screen.findByRole('textbox', {
+      name: /^見積もり（時間）(?!:)/,
+    });
+    await waitFor(() => expect(document.activeElement).toBe(estimate));
+  });
+
   it('Delete archives with an undo, and the focus goes to the next row', async () => {
     await renderAt('/backlog?fixture=backlog-capture');
     rowTitle('歯医者の予約').focus();
