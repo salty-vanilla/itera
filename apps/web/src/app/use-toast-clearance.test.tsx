@@ -99,6 +99,18 @@ describe('useToastClearance', () => {
     expect(main.style.getPropertyValue('--toast-above-room')).toBe('30px');
   });
 
+  it('leaves no room before a stuck bar where the content stands clear of the Toasts sideways', async () => {
+    document.documentElement.style.setProperty('--toast-offset-above', '70px');
+    // The Toasts are over x 0 to 300; the button is at 500.
+    const user = setup(rect(100, 40), rect(0, 40, 500));
+    await user.click(screen.getByRole('button', { name: '押す' }));
+    expect(
+      document
+        .querySelector('main')!
+        .style.getPropertyValue('--toast-above-room'),
+    ).toBe('');
+  });
+
   it('scrolls a pressed row up when a Toast would cover it', async () => {
     const scrollBy = vi.fn();
     const user = setup(rect(680, 40, 20));

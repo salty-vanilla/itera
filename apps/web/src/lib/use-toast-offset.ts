@@ -2,13 +2,14 @@ import { useEffect, type RefObject } from 'react';
 
 /**
  * Lifts the Toast above a bar that is stuck to the bottom of the screen
- * (the Quick Add under 768px), so that the Toast does not cover it. The
+ * (the Quick Add of Today; of Backlog under 768px), so that the Toast does
+ * not cover it, at any width. The
  * Toast reads `--toast-offset-above` (components/ui/toast.tsx); it is the
  * bar's height while `active`, and is removed when the bar goes.
  */
 export function useToastOffsetAbove(
   ref: RefObject<HTMLElement | null>,
-  active: boolean,
+  active = true,
 ) {
   useEffect(() => {
     const el = ref.current;

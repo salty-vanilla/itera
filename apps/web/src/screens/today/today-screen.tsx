@@ -15,7 +15,6 @@ import { TaskQuickAdd } from '@/components/task/task-quick-add';
 import { formatDate, formatDateHeading, formatTime } from '@/lib/date-format';
 import { formatHours, formatPlanningTotal } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
-import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 import { useToastOffsetAbove } from '@/lib/use-toast-offset';
 import { cn } from '@/lib/utils';
 import type { TodayData, TodayRow as TodayRowData } from '@/store/today-view';
@@ -140,9 +139,10 @@ function TodayView({ data }: { data: TodayData }) {
   const [editing, setEditing] = useState<Editing | undefined>(undefined);
   const [interrupting, setInterrupting] = useState(false);
   const [quickArea, setQuickArea] = useState('');
-  // Under 768px the Quick Add sticks to the bottom: the Toast goes above it.
+  // The Quick Add sticks to the bottom at every width: the Toast goes above
+  // it, and the Quick Add does not move (DESIGN.md Toast).
   const quickAddRef = useRef<HTMLDivElement>(null);
-  useToastOffsetAbove(quickAddRef, !useMediaQuery(MEDIUM_UP, true));
+  useToastOffsetAbove(quickAddRef);
   // The `…` of each row, for the actual time surface to sit by.
   const triggers = useRef(new Map<DailySelectionId, HTMLButtonElement>());
   // Where the focus goes once the records have changed: the row that
@@ -415,8 +415,8 @@ function TodayView({ data }: { data: TodayData }) {
 
         <section
           aria-labelledby="today-interrupts"
-          // Under 768px a Toast above the stuck Quick Add covers what is
-          // just before it: the room is left here (app/use-toast-clearance.ts).
+          // A Toast above the stuck Quick Add covers what is just before it:
+          // the room is left here (app/use-toast-clearance.ts).
           className="flex flex-col gap-2 pb-[var(--toast-above-room,0px)]"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -453,16 +453,13 @@ function TodayView({ data }: { data: TodayData }) {
           )}
         </section>
 
-        {/* Sticky above the tab bar under 768px (DESIGN.md Layout); last in
-            the column so that it stays at the bottom while scrolling. */}
+        {/* Stuck to the bottom of the screen (above the tab bar under 768px,
+            DESIGN.md Layout); last in the column so that it stays at the
+            bottom while scrolling. A Toast shows above it, never over it. */}
         <div
           ref={quickAddRef}
           className={cn(
-            // While Toasts show, `main` pads its bottom by --toast-clearance.
-            // The bar stays stuck to the very bottom (so nothing shows under
-            // it) and its face reaches down behind the Toasts, with the input
-            // above them (app/use-toast-clearance.ts).
-            'sticky bottom-[calc(var(--toast-clearance,0px)*-1)] z-(--layer-sticky) -mx-4 mt-auto mb-[calc(var(--toast-clearance,0px)*-1)] border-t border-border bg-canvas px-4 pt-3 pb-[calc(var(--spacing-3)+var(--toast-clearance,0px))]',
+            'sticky bottom-0 z-(--layer-sticky) -mx-4 mt-auto border-t border-border bg-canvas px-4 py-3',
             'medium:-mx-6 medium:px-6 wide:mx-0 wide:px-0',
           )}
         >
