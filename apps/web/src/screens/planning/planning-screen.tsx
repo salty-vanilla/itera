@@ -5,7 +5,7 @@ import {
   useRouter,
   useSearch,
 } from '@tanstack/react-router';
-import { useEffect, useId, useRef, useState } from 'react';
+import { Fragment, useEffect, useId, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Drawer,
@@ -16,7 +16,10 @@ import {
 } from '@/components/ui/drawer';
 import { Tag } from '@/components/ui/tag';
 import { useToast } from '@/components/ui/toast';
-import { capacityHeadline } from '@/components/sprint/capacity-indicator';
+import {
+  capacityHeadline,
+  capacityHeadlineSentences,
+} from '@/components/sprint/capacity-indicator';
 import {
   SprintHeader,
   type SprintHeaderProps,
@@ -35,6 +38,7 @@ import { useTaskActions } from '@/store/use-task-actions';
 import { TaskDetail } from '../backlog/task-detail';
 import { useTaskDetailLeave } from '../backlog/use-task-detail-leave';
 import { BacklogPane } from './backlog-pane';
+import { CheckSummary } from './check-summary';
 import { ConfirmDialog } from './confirm-dialog';
 import { sprintSearchOf } from '../sprint-steps';
 import { OutlookPane } from './outlook-pane';
@@ -52,7 +56,7 @@ import { PlanPane, type Stage } from './plan-pane';
 // - medium: Backlog / Sprint. The Capacity is one sticky line above the
 //   Sprint that opens a right Drawer.
 // - compact: one column. The Backlog shows in 選ぶ only; the Capacity is
-//   the same one line (a Bottom Sheet), and 確かめる shows it in full.
+//   the same one line (a Bottom Sheet). 確かめる opens with its summary (#93).
 
 /** How long the row just added flashes; the same as `added-flash` in the CSS. */
 const ADDED_MS = 2500;
@@ -168,11 +172,10 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
   const outlook = (
     <OutlookPane
       data={data}
-      stage={stage}
-      onApplyCriterion={(applied) =>
-        setSearch({ criterion: applied ? undefined : 'off' })
+      // 確かめる takes the hours in its summary only: one field (#93).
+      onAvailableHours={
+        stage === 'check' ? undefined : actions.setAvailableHours
       }
-      onAvailableHours={actions.setAvailableHours}
     />
   );
 
@@ -386,13 +389,23 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
           <PlanPane
             data={data}
             stage={stage}
+            summary={
+              stage === 'check' && (
+                <CheckSummary
+                  data={data}
+                  onApplyCriterion={(applied) =>
+                    setSearch({ criterion: applied ? undefined : 'off' })
+                  }
+                  onAvailableHours={actions.setAvailableHours}
+                  onEstimateTask={openEstimate}
+                  onOpenTask={openTask}
+                />
+              )
+            }
             addedTaskId={addedTaskId}
             onOpenTask={openTask}
             onEstimateTask={openEstimate}
           />
-          {stage === 'check' && (
-            <div className="max-w-pane-sprint wide:hidden">{outlook}</div>
-          )}
         </div>
         <aside
           aria-label="時間の見通し"
@@ -447,26 +460,39 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
   );
 }
 
-/** 「残り −1 〜 1h · 超える可能性」 (patterns.md compact). */
+/**
+ * 「残り 1 〜 3h · 収まる」「超過 3 〜 5h · 下限でも超える」, and when the
+ * difference crosses 0, the two sentences alone: 「下限なら 2.25h 残る · 上限なら
+ * 0.75h 超える」 (patterns.md compact, owner decision S5 in #93).
+ */
 function CapacitySummary({ data }: { data: PlanningData }) {
   const capacity = data.totals.capacity;
-  if (capacity === undefined) {
-    return (
-      <span>
-        計画値の合計 {formatPlanningSum(data.totals.total)} · 使える時間は未入力
-      </span>
-    );
-  }
-  const headline = capacityHeadline(capacity);
-  const state =
-    capacity.status === 'exceeds'
-      ? '下限でも超える'
-      : capacity.status === 'mayExceed'
-        ? '超える可能性'
-        : '収まる';
+  const sentences =
+    capacity === undefined
+      ? [
+          `計画値の合計 ${formatPlanningSum(data.totals.total)}`,
+          '使える時間は未入力',
+        ]
+      : [
+          ...capacityHeadlineSentences(capacityHeadline(capacity)),
+          ...(capacity.status === 'exceeds'
+            ? ['下限でも超える']
+            : capacity.status === 'within'
+              ? ['収まる']
+              : []),
+        ];
+  // Each sentence stays whole: the line wraps only at 「·」, so a number
+  // never leaves its words.
   return (
-    <span className={capacity.status === 'exceeds' ? 'text-danger' : undefined}>
-      {headline.label} {headline.value} · {state}
+    <span
+      className={capacity?.status === 'exceeds' ? 'text-danger' : undefined}
+    >
+      {sentences.map((sentence, i) => (
+        <Fragment key={sentence}>
+          {i > 0 && ' · '}
+          <span className="whitespace-nowrap">{sentence}</span>
+        </Fragment>
+      ))}
     </span>
   );
 }

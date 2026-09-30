@@ -1,5 +1,5 @@
 import type { Capacity, PlanningTotal } from '@itera/domain';
-import { useId, useState } from 'react';
+import { Fragment, useId, useState } from 'react';
 import { AreaIndicator, type AreaColor } from '@/components/ui/area-indicator';
 import { Field } from '@/components/ui/field';
 import { semanticIcons } from '@/components/ui/icon';
@@ -15,7 +15,8 @@ import { cn } from '@/lib/utils';
 import { weekText } from '@/lib/week-text';
 
 // DESIGN.md Components › Capacity Indicator. The difference between the
-// available hours and the planned total, as a range. The numbers and the
+// available hours and the planned total, as a range, or as two sentences
+// when it crosses 0. The numbers and the
 // state sentence are the truth (role="status"); the bar repeats them and
 // is aria-hidden. `danger` only when even the lower end is over
 // (確定的な容量超過); the possibility of going over is `warning`. It never
@@ -65,7 +66,10 @@ const areaLine = {
   none: 'border-area-none',
 } satisfies Record<AreaColor, string>;
 
-/** The status sentence and its tone (DESIGN.md: ok / tight / over / unknown). */
+/**
+ * The status sentence and its tone (DESIGN.md: ok / tight / over / unknown),
+ * said under the headline.
+ */
 export function capacityStatement(capacity: Capacity | undefined): {
   tone: 'ok' | 'tight' | 'over' | 'unknown';
   text: string;
@@ -83,25 +87,99 @@ export function capacityStatement(capacity: Capacity | undefined): {
       text: `超過 ${formatDifference(-remaining.hi, -remaining.lo)}`,
     };
   }
-  if (status === 'mayExceed') {
-    return {
-      tone: 'tight',
-      text: `上限側では ${formatHours(-remaining.lo, { total: true })} 超える可能性があります。`,
-    };
-  }
+  // The numbers are in the headline's two sentences; the state does not
+  // say them again (#93).
+  if (status === 'mayExceed') return { tone: 'tight', text: '超える可能性' };
   return { tone: 'ok', text: '使える時間の範囲に収まっています。' };
 }
 
-/** The headline number: 残り or, when even the lower end is over, 超過. */
-export function capacityHeadline(capacity: Capacity): {
-  label: '残り' | '超過';
-  value: string;
-} {
+/**
+ * The headline. 残り or, when even the lower end is over, 超過, as a range.
+ * When the difference crosses 0 (mayExceed), no range with a negative end:
+ * two sentences instead, 「下限なら 2.25h 残る」「上限なら 0.75h 超える」
+ * (owner decision S5 in #93).
+ */
+export type CapacityHeadline =
+  | { kind: 'range'; label: '残り' | '超過'; value: string }
+  | { kind: 'split'; lower: HeadlinePart; upper: HeadlinePart };
+
+/** 「下限なら」「2.25h」「残る」; `value` is absent for 「ちょうど収まる」. */
+type HeadlinePart = { lead: string; value?: string; tail: string };
+
+export function capacityHeadline(capacity: Capacity): CapacityHeadline {
   const { remaining, status } = capacity;
-  return status === 'exceeds'
-    ? { label: '超過', value: formatDifference(-remaining.hi, -remaining.lo) }
-    : { label: '残り', value: formatDifference(remaining.lo, remaining.hi) };
+  if (status === 'exceeds') {
+    return {
+      kind: 'range',
+      label: '超過',
+      value: formatDifference(-remaining.hi, -remaining.lo),
+    };
+  }
+  if (status === 'mayExceed') {
+    return {
+      kind: 'split',
+      lower:
+        remaining.hi === 0
+          ? { lead: '下限なら', tail: 'ちょうど収まる' }
+          : {
+              lead: '下限なら',
+              value: formatHours(remaining.hi, { total: true }),
+              tail: '残る',
+            },
+      upper: {
+        lead: '上限なら',
+        value: formatHours(-remaining.lo, { total: true }),
+        tail: '超える',
+      },
+    };
+  }
+  return {
+    kind: 'range',
+    label: '残り',
+    value: formatDifference(remaining.lo, remaining.hi),
+  };
 }
+
+function partText({ lead, value, tail }: HeadlinePart): string {
+  return value === undefined ? `${lead}${tail}` : `${lead} ${value} ${tail}`;
+}
+
+/** 「残り 1 〜 3h」, or the two sentences 「下限なら 2.25h 残る」「上限なら 0.75h 超える」. */
+export function capacityHeadlineSentences(
+  headline: CapacityHeadline,
+): readonly string[] {
+  return headline.kind === 'range'
+    ? [`${headline.label} ${headline.value}`]
+    : [partText(headline.lower), partText(headline.upper)];
+}
+
+/**
+ * The state where no headline is shown (the 確かめる summary, the 確定
+ * Dialog): the statement, and while the difference crosses 0 the headline's
+ * two sentences after it, each number said once: 「超える可能性：下限なら
+ * 1.75h 残る · 上限なら 0.25h 超える」 (#93).
+ */
+export function capacityStatusLine(
+  capacity: Capacity | undefined,
+): CapacityState {
+  const statement = capacityStatement(capacity);
+  if (capacity?.status !== 'mayExceed') return statement;
+  const sentences = capacityHeadlineSentences(capacityHeadline(capacity));
+  return {
+    ...statement,
+    text: `${statement.text}：${sentences.join(' · ')}`,
+    sentences,
+  };
+}
+
+/**
+ * A state to show: the tone and the words, and when the words carry the
+ * headline's sentences, those sentences (so that a line breaks between
+ * them, never inside one).
+ */
+export type CapacityState = ReturnType<typeof capacityStatement> & {
+  sentences?: readonly string[];
+};
 
 const toneClass = {
   ok: 'text-ink-muted',
@@ -117,6 +195,59 @@ const toneIcon = {
   unknown: semanticIcons.info,
 } as const;
 
+/**
+ * The state sentence: its icon and words in its tone, never the colour
+ * alone. Shared by the Capacity, the 確かめる summary and the 確定 Dialog
+ * (#93). `strong`: an ok state in `ink`, where the sentence leads.
+ */
+function CapacityStatement({
+  statement,
+  as: Tag = 'p',
+  strong = false,
+  className,
+}: {
+  statement: CapacityState;
+  as?: 'p' | 'li';
+  strong?: boolean;
+  className?: string | undefined;
+}) {
+  const Icon = toneIcon[statement.tone];
+  return (
+    <Tag
+      data-slot="capacity-statement"
+      className={cn(
+        'flex items-start gap-1 text-body',
+        strong && statement.tone === 'ok'
+          ? 'text-ink'
+          : toneClass[statement.tone],
+        className,
+      )}
+    >
+      <Icon
+        aria-hidden
+        className="mt-1 size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
+      />
+      {statement.sentences === undefined ? (
+        statement.text
+      ) : (
+        // 「超える可能性：」 and each sentence stay whole; the line breaks
+        // only after 「：」 or at 「·」.
+        <span>
+          <span className="whitespace-nowrap">
+            {statement.text.slice(0, statement.text.indexOf('：') + 1)}
+          </span>
+          {statement.sentences.map((sentence, i) => (
+            <Fragment key={sentence}>
+              {i > 0 && ' · '}
+              <span className="whitespace-nowrap">{sentence}</span>
+            </Fragment>
+          ))}
+        </span>
+      )}
+    </Tag>
+  );
+}
+
 function CapacityIndicator({
   total,
   capacity,
@@ -127,7 +258,6 @@ function CapacityIndicator({
   className,
 }: CapacityIndicatorProps) {
   const statement = capacityStatement(capacity);
-  const Icon = toneIcon[statement.tone];
   const leftOut = formatLeftOut(total);
   const headingId = useId();
   return (
@@ -143,32 +273,12 @@ function CapacityIndicator({
         {/* Read out when it changes: the headline and the state only. */}
         <div role="status" className="flex flex-col gap-2">
           {capacity !== undefined && (
-            <p className="flex items-baseline gap-2">
-              <span className="text-label text-ink-muted">
-                {capacityHeadline(capacity).label}
-              </span>
-              <span
-                className={cn(
-                  'text-num-l',
-                  capacity.status === 'exceeds' ? 'text-danger' : 'text-ink',
-                )}
-              >
-                {capacityHeadline(capacity).value}
-              </span>
-            </p>
-          )}
-          <p
-            className={cn(
-              'flex items-center gap-1 text-body',
-              toneClass[statement.tone],
-            )}
-          >
-            <Icon
-              aria-hidden
-              className="size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
+            <Headline
+              headline={capacityHeadline(capacity)}
+              over={capacity.status === 'exceeds'}
             />
-            {statement.text}
-          </p>
+          )}
+          <CapacityStatement statement={statement} />
         </div>
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 text-body">
           <dt className="whitespace-nowrap text-ink-muted">計画値の合計</dt>
@@ -221,6 +331,41 @@ function CapacityIndicator({
         />
       )}
     </section>
+  );
+}
+
+function Headline({
+  headline,
+  over,
+}: {
+  headline: CapacityHeadline;
+  over: boolean;
+}) {
+  if (headline.kind === 'range') {
+    return (
+      <p className="flex items-baseline gap-2">
+        <span className="text-label text-ink-muted">{headline.label}</span>
+        <span className={cn('text-num-l', over ? 'text-danger' : 'text-ink')}>
+          {headline.value}
+        </span>
+      </p>
+    );
+  }
+  // Two sentences, one per line; the words are quieter than the number.
+  return (
+    <p className="flex flex-col gap-1">
+      {[headline.lower, headline.upper].map((part) => (
+        <span key={part.lead} className="flex items-baseline gap-2">
+          <span className="text-label text-ink-muted">{part.lead}</span>
+          {part.value !== undefined && (
+            <span className="text-num-l text-ink">{part.value}</span>
+          )}
+          <span className="text-label text-ink-muted">{part.tail}</span>
+          {/* A pause between the two sentences when read out. */}
+          <span className="sr-only">。</span>
+        </span>
+      ))}
+    </p>
   );
 }
 
@@ -349,5 +494,5 @@ function CapacityBar({
   );
 }
 
-export { AvailableHoursField, CapacityIndicator };
+export { AvailableHoursField, CapacityIndicator, CapacityStatement };
 export type { AreaSegment, CapacityIndicatorProps };
