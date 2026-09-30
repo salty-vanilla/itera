@@ -58,10 +58,13 @@ describe('routes', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: 'Sprint 2 で何が起きたか',
+        name: '何に気づいたか',
       }),
     ).toBeTruthy();
-    expect(router.state.location.search).toEqual({ fixture: 'retro-reflect' });
+    expect(router.state.location.search).toEqual({
+      fixture: 'retro-reflect',
+      stage: 'reflect',
+    });
     const [current] = screen.getAllByRole('link', { current: 'page' });
     expect(current?.textContent).toBe('振り返り');
   });
@@ -87,5 +90,55 @@ describe('routes', () => {
     expect(
       Array.from(side!.querySelectorAll('a')).map((a) => a.textContent),
     ).toEqual(['今日', 'Sprint', 'Backlog11件', '振り返り']);
+  });
+});
+
+describe('scroll (#111)', () => {
+  // jsdom has no scrolling: the `main` is told to scroll and the call is seen.
+  let scrolled: ReturnType<typeof vi.fn>;
+  beforeEach(() => {
+    scrolled = vi.fn();
+    Object.defineProperty(Element.prototype, 'scrollTo', {
+      configurable: true,
+      value: scrolled,
+    });
+  });
+  afterEach(() => {
+    Reflect.deleteProperty(Element.prototype, 'scrollTo');
+  });
+  const mainTops = () =>
+    scrolled.mock.contexts.filter(
+      (element: Element) => element.tagName === 'MAIN',
+    );
+
+  it('opens another screen from the top of the shell’s main', async () => {
+    const router = renderAt('/today?fixture=today-morning');
+    await screen.findByRole('heading', { level: 1 });
+    const before = mainTops().length;
+    await act(() => router.navigate({ to: '/backlog' }));
+    await screen.findByText('12件');
+    expect(mainTops().length).toBeGreaterThan(before);
+    expect(scrolled).toHaveBeenLastCalledWith(
+      expect.objectContaining({ top: 0 }),
+    );
+  });
+
+  it('opens another stage from the top, and leaves a filter or an open Task where it is', async () => {
+    const router = renderAt('/backlog?fixture=backlog-capture');
+    await screen.findByText('12件');
+    const before = mainTops().length;
+    await act(() =>
+      router.navigate({ to: '/backlog', search: { view: 'overdue' } }),
+    );
+    expect(router.state.location.search).toMatchObject({ view: 'overdue' });
+    expect(mainTops().length).toBe(before);
+
+    await act(() => router.navigate({ to: '/retro', search: {} }));
+    await screen.findByRole('heading', { level: 1 });
+    const inRetro = mainTops().length;
+    await act(() =>
+      router.navigate({ to: '/retro', search: { stage: 'reflect' } }),
+    );
+    expect(mainTops().length).toBeGreaterThan(inRetro);
   });
 });

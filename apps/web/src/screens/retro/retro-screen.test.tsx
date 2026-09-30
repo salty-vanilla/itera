@@ -1,3 +1,4 @@
+import type { Retro } from '@itera/domain';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import {
   cleanup,
@@ -1119,5 +1120,104 @@ describe('Retro — actual time per occurrence (#56)', () => {
       date: '2026-10-02',
       hours: 0.5,
     });
+  });
+});
+
+describe('Retro — the stage it opens on (#111)', () => {
+  const inReview = (
+    snapshot: StoreSnapshot,
+    change: (retro: Retro) => Retro,
+  ): StoreSnapshot => ({
+    ...snapshot,
+    records: {
+      ...snapshot.records,
+      sprints: snapshot.records.sprints.map((s) =>
+        s.state === 'review' && s.retro !== undefined
+          ? { ...s, retro: change(s.retro) }
+          : s,
+      ),
+    },
+  });
+  const heading = () =>
+    screen.getByRole('heading', { level: 1 }).textContent ?? '';
+
+  it('opens 事実を見る when nothing is written, and names the stage in the URL', async () => {
+    const router = await renderAt('/retro?fixture=retro-start');
+    expect(heading()).toBe('Sprint 2 で何が起きたか');
+    await waitFor(() =>
+      expect(router.state.location.search).toMatchObject({ stage: 'facts' }),
+    );
+  });
+
+  it('opens 振り返る when something is noticed', async () => {
+    change = (snapshot) =>
+      inReview(snapshot, (retro) => ({
+        ...retro,
+        reflection: '朝のほうが進んだ',
+      }));
+    await renderAt('/retro?fixture=retro-start');
+    expect(heading()).toBe('何に気づいたか');
+  });
+
+  it('opens 引き継ぐ when an improvement is set', async () => {
+    const router = await renderAt('/retro?fixture=retro-before-complete');
+    expect(heading()).toBe('次の Sprint に何を引き継ぐか');
+    await waitFor(() =>
+      expect(router.state.location.search).toMatchObject({ stage: 'handoff' }),
+    );
+  });
+
+  it('opens 引き継ぐ when the criterion is decided, without an improvement', async () => {
+    change = (snapshot) => ({
+      ...snapshot,
+      records: {
+        ...snapshot.records,
+        sprints: snapshot.records.sprints.map((s) =>
+          s.state === 'review' && s.criterionUse !== undefined
+            ? {
+                ...s,
+                criterionUse: { ...s.criterionUse, retroDecision: 'end' },
+              }
+            : s,
+        ),
+      },
+    });
+    await renderAt('/retro?fixture=retro-start');
+    expect(heading()).toBe('次の Sprint に何を引き継ぐか');
+  });
+
+  it('opens the stage the URL names, whatever is written', async () => {
+    await renderAt('/retro?fixture=retro-before-complete&stage=facts');
+    expect(heading()).toBe('Sprint 2 で何が起きたか');
+  });
+
+  it('keeps the stage it opened on when the writing is emptied', async () => {
+    await renderAt('/retro?fixture=retro-reflect');
+    expect(heading()).toBe('何に気づいたか');
+    await userEvent.clear(
+      screen.getByRole('textbox', { name: /気づいたこと/ }),
+    );
+    await userEvent.tab();
+    expect(heading()).toBe('何に気づいたか');
+  });
+
+  it('comes back to the stage reached after leaving by the navigation', async () => {
+    await renderAt('/retro?fixture=retro-before-complete');
+    const [today] = screen.getAllByRole('link', { name: '今日' });
+    await userEvent.click(today!);
+    await screen.findByRole('heading', { level: 1, name: /月|日/ });
+    const [retro] = screen.getAllByRole('link', { name: '振り返り' });
+    await userEvent.click(retro!);
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: '次の Sprint に何を引き継ぐか',
+      }),
+    ).toBeTruthy();
+  });
+
+  it('opens a closed Retro on 事実を見る', async () => {
+    await renderAt('/retro?sprint=1&fixture=today-daytime');
+    expect(heading()).toBe('Sprint 1 で何が起きたか');
   });
 });
