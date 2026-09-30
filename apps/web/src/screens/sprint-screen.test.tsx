@@ -216,7 +216,7 @@ describe('Sprint — the next week (#90)', () => {
     );
     await userEvent.type(
       await screen.findByRole('textbox', {
-        name: 'タスクを追加して来週に入れる',
+        name: '来週のタスクを追加',
       }),
       '本を返す{Enter}',
     );

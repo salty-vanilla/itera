@@ -559,6 +559,27 @@ describe('Today — adding and interrupts', () => {
     ).toBeTruthy();
   });
 
+  // Issue #98
+  it('the 追加 button adds like Enter, with a placeholder that says it is for today', async () => {
+    await renderAt('/today?fixture=today-interrupt');
+    const field = screen.getByRole('textbox', { name: '今日やるタスクを追加' });
+    expect(field.getAttribute('placeholder')).toBe('今日やるタスクを追加');
+    const add = within(
+      field.closest<HTMLElement>('[data-slot="task-quick-add"]')!,
+    ).getByRole('button', { name: '追加' });
+    const before = lastSnapshot().records.tasks.length;
+    await userEvent.click(add);
+    expect(lastSnapshot().records.tasks).toHaveLength(before);
+    await userEvent.type(field, '請求書を送る');
+    await userEvent.click(add);
+    expect(field).toHaveProperty('value', '');
+    expect(document.activeElement).toBe(field);
+    const task = lastSnapshot().records.tasks.find(
+      (t) => t.title === '請求書を送る',
+    );
+    expect(selectionOf(task?.id ?? '')?.origin).toBe('midSprint');
+  });
+
   it('notes an interrupt without changing today (invariant 29)', async () => {
     await renderAt('/today?fixture=today-daytime');
     const before = sprint().dailySelections;

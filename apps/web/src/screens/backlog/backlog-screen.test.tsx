@@ -62,7 +62,9 @@ const completedLine = () =>
 describe('Backlog', () => {
   it('Capture: adds a Task by its title alone and keeps the field for the next', async () => {
     await renderAt('/backlog?fixture=backlog-capture');
-    const field = screen.getByRole('textbox', { name: 'タスクを追加' });
+    const field = screen.getByRole('textbox', {
+      name: 'Backlog にタスクを追加',
+    });
     await userEvent.type(field, '請求書を送る{Enter}');
     expect(field).toHaveProperty('value', '');
     expect(document.activeElement).toBe(field);
@@ -73,10 +75,32 @@ describe('Backlog', () => {
     expect(records().activities.at(-1)).toMatchObject({ kind: 'taskCreated' });
   });
 
+  // Issue #98
+  it('Capture: the 追加 button adds like Enter, does nothing when empty, and keeps the focus in the field', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    const field = screen.getByRole('textbox', {
+      name: 'Backlog にタスクを追加',
+    });
+    // The placeholder says where the Task goes, as the accessible name does.
+    expect(field.getAttribute('placeholder')).toBe('Backlog にタスクを追加');
+    const add = within(
+      field.closest<HTMLElement>('[data-slot="task-quick-add"]')!,
+    ).getByRole('button', { name: '追加' });
+    const before = records().tasks.length;
+    await userEvent.click(add);
+    expect(records().tasks).toHaveLength(before);
+    await userEvent.type(field, '請求書を送る');
+    await userEvent.click(add);
+    expect(field).toHaveProperty('value', '');
+    expect(document.activeElement).toBe(field);
+    expect(records().tasks).toHaveLength(before + 1);
+    expect(records().tasks.at(-1)).toMatchObject({ title: '請求書を送る' });
+  });
+
   it('Capture: the new Task is the first row, flashes for a moment, and a Toast says so (#86)', async () => {
     await renderAt('/backlog?fixture=backlog-capture');
     await userEvent.type(
-      screen.getByRole('textbox', { name: 'タスクを追加' }),
+      screen.getByRole('textbox', { name: 'Backlog にタスクを追加' }),
       '請求書を送る{Enter}',
     );
     // Newest first: right under the Quick Add, not at the bottom.
@@ -100,7 +124,7 @@ describe('Backlog', () => {
   it('Capture: a Task the 切り口 does not show is not in the list, and the Toast says why (#86)', async () => {
     await renderAt('/backlog?fixture=backlog-capture&view=carriedOver');
     await userEvent.type(
-      screen.getByRole('textbox', { name: 'タスクを追加' }),
+      screen.getByRole('textbox', { name: 'Backlog にタスクを追加' }),
       '請求書を送る{Enter}',
     );
     expect(
@@ -1179,7 +1203,9 @@ describe('Backlog — keys of the list (#48)', () => {
     const archived = () =>
       records().tasks.filter((t) => t.lifecycle === 'archived').length;
     const before = archived();
-    const field = screen.getByRole('textbox', { name: 'タスクを追加' });
+    const field = screen.getByRole('textbox', {
+      name: 'Backlog にタスクを追加',
+    });
     await userEvent.type(field, 'ex{Backspace}{Delete} ');
     expect(field).toHaveProperty('value', 'e ');
     expect(router.state.location.search).not.toHaveProperty('task');
