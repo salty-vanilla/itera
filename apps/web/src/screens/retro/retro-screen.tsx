@@ -58,7 +58,7 @@ function stageHeading(stage: RetroStage, number: number): string {
     case 'facts':
       return `Sprint ${number} で何が起きたか`;
     case 'reflect':
-      return '何が気になったか';
+      return '何に気づいたか';
     case 'handoff':
       return '次の Sprint に何を引き継ぐか';
   }

@@ -234,10 +234,28 @@ describe('Retro — 計画時との差 (MVP 16)', () => {
 });
 
 describe('Retro — 振り返る', () => {
+  it('names the first field 気づいたこと and says that what went well can be written too', async () => {
+    await renderAt('/retro?fixture=retro-start&stage=reflect');
+    expect(
+      screen.getByRole('heading', { level: 1, name: '何に気づいたか' }),
+    ).toBeTruthy();
+    const field = screen.getByRole('textbox', { name: /気づいたこと/ });
+    const description = document.getElementById(
+      field.getAttribute('aria-describedby')!.split(' ')[0]!,
+    );
+    expect(description?.textContent).toBe(
+      'うまくいったこと、気になったこと。事実を見て思ったことを、そのまま書きます。',
+    );
+    expect(screen.queryByText('何が気になったか')).toBeNull();
+    expect(
+      screen.queryByRole('textbox', { name: /気になったこと/ }),
+    ).toBeNull();
+  });
+
   it('keeps the reflection and the improvement when the field is left', async () => {
     await renderAt('/retro?fixture=retro-start&stage=reflect');
     await userEvent.type(
-      screen.getByRole('textbox', { name: /気になったこと/ }),
+      screen.getByRole('textbox', { name: /気づいたこと/ }),
       '午後が崩れた',
     );
     await userEvent.tab();
@@ -610,6 +628,12 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
             '今回の計画基準：「研究：提案の幅の上限で計画する」（結果と扱いは引き継ぐにあります）',
       ),
     ).toBeTruthy();
+    // The closed reflection keeps the new name, as text (#109).
+    await router.navigate({ to: '/retro', search: { stage: 'reflect' } });
+    expect(
+      await screen.findByRole('heading', { level: 2, name: '気づいたこと' }),
+    ).toBeTruthy();
+    expect(screen.queryByRole('textbox', { name: /気づいたこと/ })).toBeNull();
   });
 
   it('counts apart the carry-overs the next Planning already took in (F35)', async () => {
