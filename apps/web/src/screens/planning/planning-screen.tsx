@@ -23,6 +23,7 @@ import {
 } from '@/components/sprint/sprint-header';
 import { formatDate, formatDateRange } from '@/lib/date-format';
 import { isTyping } from '@/lib/row-keys';
+import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 import { formatPlanningSum } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { cn } from '@/lib/utils';
@@ -55,6 +56,9 @@ import { PlanPane, type Stage } from './plan-pane';
 
 /** How long the row just added flashes; the same as `added-flash` in the CSS. */
 const ADDED_MS = 2500;
+
+/** The room the sticky Capacity line takes at the top of the screen. */
+const STICKY_ROOM = 72;
 
 export const STAGES: readonly { id: Stage; label: string }[] = [
   { id: 'pick', label: '選ぶ' },
@@ -106,6 +110,9 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
   // (ADDED_MS) and a Toast says where it went (Issue #92).
   const [addedTaskId, setAddedTaskId] = useState<TaskId>();
   const week = weekCall(data.week, data.number);
+  // Under 768px the plan sits above the Backlog: the Quick Add stays where
+  // it is for the next Task, and the Toast tells where the Task went.
+  const sideBySide = useMediaQuery(MEDIUM_UP, true);
 
   const setSearch = (next: {
     [K in keyof SprintSearch]?: SprintSearch[K] | undefined;
@@ -169,13 +176,19 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
   };
   useEffect(() => {
     if (addedTaskId === undefined) return;
-    // The row may sit below or above what the screen shows.
-    document
-      .querySelector(`[data-slot="plan-pane"] [data-task="${addedTaskId}"]`)
-      ?.scrollIntoView?.({ block: 'nearest' });
+    // A row out of sight (or under the sticky Capacity line) is brought to
+    // the middle, so that its flash can be seen.
+    if (sideBySide) {
+      const row = document.querySelector(
+        `[data-slot="plan-pane"] [data-task="${addedTaskId}"]`,
+      );
+      const { top = 0, bottom = 0 } = row?.getBoundingClientRect() ?? {};
+      if (row !== null && (top < STICKY_ROOM || bottom > window.innerHeight))
+        row.scrollIntoView?.({ block: 'center' });
+    }
     const timer = window.setTimeout(() => setAddedTaskId(undefined), ADDED_MS);
     return () => window.clearTimeout(timer);
-  }, [addedTaskId]);
+  }, [addedTaskId, sideBySide]);
 
   const blocked = data.blockers.length > 0;
   const reasonId = useId();
