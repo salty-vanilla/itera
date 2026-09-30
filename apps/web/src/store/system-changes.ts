@@ -1,8 +1,8 @@
 // The system's own records (actor = system), run when the app opens and
 // when the date changes (owner decision in #54): a Sprint past its end
 // goes to Review (F21, F23), and the day starts (startDay, invariant 24).
-import { enterReview } from '@itera/domain';
-import { changed, type Change } from './record-store';
+import type { Change } from './record-store';
+import { reviewSprint } from './review-changes';
 
 /**
  * 終了日を過ぎた Sprint を Review にする (F21): open choices become
@@ -16,12 +16,5 @@ export const reviewEnded = (): Change => (records, ctx) => {
   if (ended === undefined) {
     return { ok: true, value: { changes: {}, activities: [] } };
   }
-  return changed(
-    enterReview(
-      ended,
-      { today: ctx.today, occurrences: records.occurrences },
-      ctx,
-    ),
-    (next) => ({ sprints: [next.sprint], occurrences: next.occurrences }),
-  );
+  return reviewSprint(ended)(records, ctx);
 };

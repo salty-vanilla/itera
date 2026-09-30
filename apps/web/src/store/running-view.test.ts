@@ -2,6 +2,7 @@ import type { Instant, LocalDate } from '@itera/domain';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from '@/fixtures/states';
 import type { Records } from './records';
+import { retroData } from './retro-view';
 import { runningData } from './running-view';
 
 const withActive = (
@@ -98,5 +99,53 @@ describe('runningData', () => {
       '2026-09-29': ['closed'],
       '2026-09-28': ['unresolved'],
     });
+  });
+
+  it('shows an ended Sprint by id, read only, with its carried-over Tasks (#90)', () => {
+    const { records, clock } = fixtureSnapshot('today-daytime');
+    const closed = records.sprints.find((s) => s.state === 'closed')!;
+    const data = runningData(records, clock, closed.id);
+    expect(data?.sprint.id).toBe(closed.id);
+    expect(data?.week).toBeUndefined();
+    expect(data?.day).toBeUndefined();
+    expect(data?.pastDays).toEqual([]);
+    const outcomes = data?.plan.flatMap((p) =>
+      p.tasks.map((t) => [t.task.id, t.sprintTask.outcome]),
+    );
+    expect(outcomes).toContainEqual(['task-api-review', 'carriedOver']);
+    // The Retro's planned total, carried-over Tasks included.
+    const facts = retroData(records, clock, closed.id)?.facts;
+    expect(data?.totals.total).toEqual(facts?.plannedTotal.withAdditions);
+    expect(data?.totals.byArea).toEqual([]);
+    // Areas with neither a Goal nor Tasks are left out once ended.
+    expect(
+      data?.plan.every((p) => p.goal !== undefined || p.tasks.length > 0),
+    ).toBe(true);
+  });
+
+  it('calls the running Sprint 「今週」 and is absent for one being planned', () => {
+    const { records, clock } = fixtureSnapshot('planning-pick');
+    const planning = records.sprints.find((s) => s.state === 'planning')!;
+    expect(runningData(records, clock, planning.id)).toBeUndefined();
+    const running = fixtureSnapshot('today-daytime');
+    expect(runningData(running.records, running.clock)?.week).toBe('今週');
+  });
+});
+
+describe('retroData (#90)', () => {
+  it('opens a closed Sprint’s Retro by id', () => {
+    const { records, clock } = fixtureSnapshot('today-daytime');
+    const closed = records.sprints.find((s) => s.state === 'closed')!;
+    const data = retroData(records, clock, closed.id);
+    expect(data?.number).toBe(1);
+    expect(data?.improvement).toBe('研究の見積りは幅の上限で計画する');
+    // No Sprint in Review: nothing by default.
+    expect(retroData(records, clock)).toBeUndefined();
+  });
+
+  it('is absent for a Sprint whose Retro has not started', () => {
+    const { records, clock } = fixtureSnapshot('today-daytime');
+    const running = records.sprints.find((s) => s.state === 'active')!;
+    expect(retroData(records, clock, running.id)).toBeUndefined();
   });
 });

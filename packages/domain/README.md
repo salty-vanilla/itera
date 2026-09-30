@@ -133,7 +133,7 @@ type CommandResult<T> =
 
 ## Review と Retro で決めた細部（#24）
 
-- **Review への移行**（`enterReview`）：本人は最終日から、システムは終了日の翌日から（F21）。planned の単発の SprintTask は carriedOver、繰り返しの SprintTask は done で閉じる（F20）。Sprint に含めた Pending の回は missed、開いた選択は unresolved にする。この 2 つは本人が始めた場合もシステムの記録（actor = system、F23）。`occurrences` には Sprint の回を漏れなく渡すのは呼び出し側の責任（渡さなかった Pending の回は残る）。Retro はこのとき空で始まる。
+- **Review への移行**（`enterReview`）：本人は最終日から、システムは終了日の翌日から（F21）。planned の単発の SprintTask は carriedOver、繰り返しの SprintTask は done で閉じる（F20）。Sprint に含めた Pending の回は missed、開いた選択は unresolved にする。この 2 つは本人が始めた場合もシステムの記録（actor = system、F23）。`occurrences` には Sprint の回を漏れなく渡すのは呼び出し側の責任（渡さなかった Pending の回は残る）。次の Sprint が Planning 中なら、それを `next` に渡し、戻り値の `next` も保存するのも呼び出し側の責任（渡さないと、先に選んだ Task が持ち越しとしてつながらない）。`next` の Draft のうち、carriedOver にした Task の単発で carriedFrom のないものに carriedFrom を付け、`sprintTaskCarryLinked` をシステムの記録として残す（F35。次の Sprint に入れるのではないので不変条件 20 に当たらない）。Retro はこのとき空で始まる。
 - **Retro**：Sprint の中に 1 つ（`sprint.retro`）。印（`togglePin`）、気になったこと（`setReflection`）、次に 1 つ変えること（`setImprovement`、1 件の自然文。不変条件 38）。自己判定（`assessGoal`）は本人（actor = user）だけが付け、`null` で未判定に戻す（不変条件 19）。同じ値を入れ直しても Activity は残さない。
 - **計画基準**：PlanningCriterion は User の記録（`criterion.ts`）。Improvement から `draftCriterion` で 0..1 件の下書きを作り、`dropCriterionDraft` で捨てる（記録は呼び出し側が消す）。この Sprint に CriterionUse があれば、`decideCriterion`（本人だけ）で続ける / 終える / 置き換えるを選ぶまで `completeRetro` はできない（不変条件 36。理由は求めない）。置き換えるには、この Retro の下書きが要る。
 - **Retro の完了**（`completeRetro`）：Review → Closed。続けるなら Active のまま、終えるなら Ended、置き換えるなら Replaced（`replacedBy` = 下書き）にして下書きを Active にする。下書きは、Active が続く場合を除いて Active になる（続けるのに下書きがあると Active が 2 つになるので拒否する。不変条件 35）。変わった基準の記録を返す。
@@ -145,7 +145,7 @@ type CommandResult<T> =
 ## Backlog の画面で決めた細部（#39）
 
 - **Sprint の番号**（`sprintNumber`、F25）：作成順の通し番号（1 から）。新しい Sprint はそれまでのどの Sprint よりも後に始まる（不変条件 11）ので、開始日の順に数えれば作成順になる。保存しない。
-- **持ち越し回数**（`carryOverOf`、F26）：Task の最新の SprintTask から、`carryCount`（carriedFrom の連なり）に、その SprintTask 自身が carriedOver なら 1 を足す。持ち越しから選び直して今の Sprint にある間も回数を保ち、持ち越しを使わずに選び直すと数え直す。`fromSprintId` は連なりの最初の Sprint（「Sprint 13から」）。
+- **持ち越し回数**（`carryOverOf`、F26）：Task の最新の SprintTask から、`carryCount`（carriedFrom の連なり）に、その SprintTask 自身が carriedOver なら 1 を足す。持ち越しから選び直して今の Sprint にある間も回数を保ち、持ち越しを使わずに選び直すと数え直す。Planning 中の Draft は最新とみなさない（F36）ので、実行中の Sprint の週に次の Sprint で選んでも回数は消えず、数え直しは確定したときから効く。`fromSprintId` は連なりの最初の Sprint（「Sprint 13から」）。
 - **切り口**（`inBacklogSlice`）：期限が近い（今日から、今日を含む Sprint の終わりまで。Sprint がなければその週の終わりまで。オーナー決定）/ 期限超過（今日より前）/ 持ち越し（F26 の回数が 1 以上）/ 繰り返し / 領域なし。期限のない Task は期限の切り口に入らない。
 - **採用を元に戻す**（`undoAdoption`、F27）：Task は今の Estimate しか持たないので、採用前の Estimate（`adoptSuggestion` に渡した Task の値、なければ `null`）を呼び出し側が渡す。Estimate がその採用のままで、ほかに提示中の提案がないときだけ戻せる。`estimateChanged` と `suggestionAdoptionUndone` を残す。
 

@@ -11,6 +11,7 @@ import {
   formatRange,
 } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
+import { weekText } from '@/lib/week-text';
 
 // DESIGN.md Components › Capacity Indicator. The difference between the
 // available hours and the planned total, as a range. The numbers and the
@@ -36,6 +37,8 @@ type CapacityIndicatorProps = {
   onAvailableHoursChange?: ((hours: number | null) => boolean) | undefined;
   /** Read-only after confirm. */
   readOnly?: boolean | undefined;
+  /** 「今週」「来週」: the week the hours are for (#90). */
+  week: string;
   className?: string | undefined;
 };
 
@@ -119,6 +122,7 @@ function CapacityIndicator({
   areas,
   onAvailableHoursChange,
   readOnly = false,
+  week,
   className,
 }: CapacityIndicatorProps) {
   const statement = capacityStatement(capacity);
@@ -215,6 +219,7 @@ function CapacityIndicator({
         <AvailableHoursField
           value={capacity?.availableHours}
           onChange={onAvailableHoursChange}
+          description={weekText(week, '、計画に使える時間。本人が決めます')}
         />
       )}
     </section>

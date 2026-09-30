@@ -34,6 +34,7 @@ import {
   type Task,
 } from '@itera/domain';
 import type { Clock, Records } from './records';
+import { weekOf, type WeekName } from './sprint-choice';
 
 export interface PlanningArea {
   /** `null` for Tasks without an Area (「領域なし」). */
@@ -82,6 +83,12 @@ export interface CandidateRow {
   readonly value: PlanningValue;
   /** 持ち越し N回（Sprint M から）(F25, F26). */
   readonly carry?: { readonly count: number; readonly fromSprint: number };
+  /**
+   * 「Sprint N で実行中」: the Task is still unfinished in the running Sprint
+   * (#89). Choosing it stays possible; when that Sprint enters Review, the
+   * choice is linked to its carry-over (F35).
+   */
+  readonly running?: { readonly sprint: number };
 }
 
 export interface RecurringCandidate {
@@ -94,6 +101,11 @@ export interface PlanningData {
   readonly sprint: Sprint;
   /** 「Sprint 14」 (F25). */
   readonly number: number;
+  /**
+   * 「今週」, or 「来週」 while this week runs (#90): the words of the
+   * screen follow it.
+   */
+  readonly week?: WeekName;
   readonly today: LocalDate;
   readonly timeZone: Records['user']['timeZone'];
   /** Areas to plan with, in the person's order, then 領域なし. */
@@ -129,6 +141,13 @@ export interface PlanningData {
    * archived and must leave the week first.
    */
   readonly blockers: readonly ('previousRetroOpen' | 'inactiveTasks')[];
+  /** The previous Sprint while its Retro is open: where 振り返り opens. */
+  readonly previous?: {
+    readonly number: number;
+    /** Its last day, from which its Retro can start (F21). */
+    readonly end: LocalDate;
+    readonly state: Sprint['state'];
+  };
 }
 
 const NO_AREA: PlanningArea = { id: null, name: '領域なし', color: 'none' };
@@ -185,6 +204,11 @@ export function planningData(
   const previous = records.sprints.find(
     (s) => s.id === sprint.previousSprintId,
   );
+  // The Sprint still running is the one before this draft; its unfinished
+  // Tasks are linked when it enters Review (F35).
+  const running = previous?.state === 'active' ? previous : undefined;
+  const runningNumber =
+    running === undefined ? undefined : sprintNumber(running, records.sprints);
   const row = (task: Task): CandidateRow => {
     const chosen = sprint.tasks.find(
       (t) => t.taskId === task.id && t.outcome === 'draft',
@@ -195,6 +219,9 @@ export function planningData(
     const area = areaOf(task);
     const carry = carryOverOf(task.id, records.sprints);
     const carryFrom = records.sprints.find((s) => s.id === carry?.fromSprintId);
+    const unfinished = running?.tasks.some(
+      (t) => t.taskId === task.id && t.outcome === 'planned',
+    );
     return {
       task,
       ...(chosen === undefined ? {} : { chosen }),
@@ -209,6 +236,9 @@ export function planningData(
               fromSprint: sprintNumber(carryFrom, records.sprints),
             },
           }),
+      ...(unfinished === true && runningNumber !== undefined
+        ? { running: { sprint: runningNumber } }
+        : {}),
     };
   };
 
@@ -261,6 +291,7 @@ export function planningData(
   return {
     sprint,
     number: sprintNumber(sprint, records.sprints),
+    ...weekOf(sprint, records, clock),
     today: clock.today,
     timeZone: records.user.timeZone,
     areas,
@@ -297,5 +328,14 @@ export function planningData(
         ? (['inactiveTasks'] as const)
         : []),
     ],
+    ...(previous === undefined || previous.state === 'closed'
+      ? {}
+      : {
+          previous: {
+            number: sprintNumber(previous, records.sprints),
+            end: previous.end,
+            state: previous.state,
+          },
+        }),
   };
 }

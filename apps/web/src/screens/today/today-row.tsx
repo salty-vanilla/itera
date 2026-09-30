@@ -16,7 +16,11 @@ import { IconButton } from '@/components/ui/icon-button';
 import { semanticIcons } from '@/components/ui/icon';
 import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
 import { Estimate } from '@/components/task/estimate';
-import { MetaItem, TaskMetadata } from '@/components/task/task-metadata';
+import {
+  MetaItem,
+  PriorityText,
+  TaskMetadata,
+} from '@/components/task/task-metadata';
 import { CompletionCircle, TaskRow } from '@/components/task/task-row';
 import { formatDate, formatTime } from '@/lib/date-format';
 import { formatHours } from '@/lib/time-format';
@@ -254,7 +258,7 @@ function RowMetadata({
   );
 }
 
-/** What every Today row tells: Area, recurrence, addition, streak. */
+/** What every Today row tells: Area, priority, recurrence, addition, streak. */
 function ItemMetadata({
   item,
   occurrenceDate = false,
@@ -270,6 +274,7 @@ function ItemMetadata({
       {item.area !== undefined && (
         <AreaIndicator name={item.area.name} color={item.area.color} />
       )}
+      <PriorityText priority={item.task.priority} />
       {item.occurrence !== undefined && (
         <MetaItem icon={<Repeat aria-hidden />}>
           {occurrenceDate

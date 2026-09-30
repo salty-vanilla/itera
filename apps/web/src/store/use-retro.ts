@@ -1,5 +1,6 @@
 import type {
   AreaId,
+  SprintId,
   CriterionPolicy,
   LocalDate,
   OccurrenceId,
@@ -10,21 +11,21 @@ import type {
 } from '@itera/domain';
 import { useMemo } from 'react';
 import * as changes from './retro-changes';
-import { afterRetro, nextPlanningOf, retroData } from './retro-view';
+import { nextPlanningOf, retroData } from './retro-view';
 import { useStoreSnapshot } from './store-provider';
 import { beginRetro } from './today-changes';
 import { useRun } from './use-run';
 
-/** The Retro screen's data (ADR 0005: screens read through hooks). */
-export function useRetro() {
+/**
+ * The Retro screen's data (ADR 0005: screens read through hooks): the
+ * Sprint in Review, or the one asked for (#90).
+ */
+export function useRetro(sprintId?: SprintId) {
   const { records, clock } = useStoreSnapshot();
-  return useMemo(() => retroData(records, clock), [records, clock]);
-}
-
-/** The Sprint whose Retro was completed last. */
-export function useAfterRetro() {
-  const { records } = useStoreSnapshot();
-  return useMemo(() => afterRetro(records), [records]);
+  return useMemo(
+    () => retroData(records, clock, sprintId),
+    [records, clock, sprintId],
+  );
 }
 
 /** The next week's Planning: being planned, or where one would start. */

@@ -7,10 +7,15 @@ import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
 import { useToast } from '@/components/ui/toast';
 import { GoalBlock } from '@/components/sprint/goal-block';
 import { Estimate } from '@/components/task/estimate';
-import { MetaItem, TaskMetadata } from '@/components/task/task-metadata';
+import {
+  MetaItem,
+  PriorityText,
+  TaskMetadata,
+} from '@/components/task/task-metadata';
 import { TaskRow } from '@/components/task/task-row';
 import { formatPlanningTotal } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
+import { weekCall, weekText } from '@/lib/week-text';
 import type {
   AreaPlan,
   PlannedTask,
@@ -26,16 +31,24 @@ import { usePlanningActions } from '@/store/use-planning';
 // - 整える: 「今週、どんな状態にしたいか」, each Area's Goal (optional) with
 //   its Tasks; a Task is linked to the Goal or not, and both count.
 // - 確かめる: 「この計画で、進められそうか」, Goals, Tasks and their values.
+// 「今週」 is the Sprint's name next to now: next week's Planning, started
+// while this week runs, says 「来週」 (#90).
 // Before confirm the values are a preview, drawn solid (owner decision in
 // #40): they come from the person's own choices.
 
 export type Stage = 'pick' | 'shape' | 'check';
 
-export const STAGE_HEADINGS: Readonly<Record<Stage, string>> = {
-  pick: '今週、何を進めますか',
-  shape: '今週、どんな状態にしたいか',
-  check: 'この計画で、進められそうか',
-};
+/** The stage's heading, in the week's words (「来週、何を進めますか」). */
+export function stageHeading(stage: Stage, week: string): string {
+  switch (stage) {
+    case 'pick':
+      return weekText(week, '、何を進めますか');
+    case 'shape':
+      return weekText(week, '、どんな状態にしたいか');
+    case 'check':
+      return 'この計画で、進められそうか';
+  }
+}
 
 type PlanPaneProps = {
   data: PlanningData;
@@ -54,6 +67,7 @@ function PlanPane({
   className,
 }: PlanPaneProps) {
   const actions = usePlanningActions();
+  const week = weekCall(data.week, data.number);
   const withTasks = data.plan.filter((p) => p.tasks.length > 0);
   // 整える shows every Area (a Goal can be written before choosing Tasks);
   // 領域なし has no Goal and shows only with Tasks.
@@ -74,11 +88,11 @@ function PlanPane({
         className,
       )}
     >
-      <h1 className="text-display-m text-ink">{STAGE_HEADINGS[stage]}</h1>
+      <h1 className="text-display-m text-ink">{stageHeading(stage, week)}</h1>
       {stage === 'pick' && data.chosenCount === 0 && (
         <p className="text-body text-ink-muted">
-          Backlog から □
-          で今週へ選びます。今週発生する繰り返しは最初から入っています。
+          Backlog から □ で{weekText(week, 'へ選びます。')}
+          {weekText(week, '発生する繰り返しは最初から入っています。')}
         </p>
       )}
       {/*
@@ -109,6 +123,7 @@ function PlanPane({
               <PlannedList
                 block={block}
                 stage={stage}
+                week={week}
                 onOpenTask={onOpenTask}
                 onEstimateTask={onEstimateTask}
               />
@@ -121,6 +136,7 @@ function PlanPane({
               area={{ name: block.area.name, color: block.area.color }}
               summary={block.tasks.length > 0 ? summaryOf(block) : undefined}
               goal={block.goal?.text}
+              week={week}
               onSave={
                 block.area.id === null
                   ? undefined
@@ -135,6 +151,7 @@ function PlanPane({
                 <PlannedList
                   block={block}
                   stage={stage}
+                  week={week}
                   onOpenTask={onOpenTask}
                   onEstimateTask={onEstimateTask}
                 />
@@ -157,11 +174,13 @@ function summaryOf(block: AreaPlan): string {
 function PlannedList({
   block,
   stage,
+  week,
   onOpenTask,
   onEstimateTask,
 }: {
   block: AreaPlan;
   stage: Stage;
+  week: string;
   onOpenTask: (taskId: TaskId) => void;
   onEstimateTask: (taskId: TaskId) => void;
 }) {
@@ -172,6 +191,7 @@ function PlannedList({
           <PlannedRow
             planned={planned}
             stage={stage}
+            week={week}
             onOpen={() => onOpenTask(planned.task.id)}
             onEstimate={() => onEstimateTask(planned.task.id)}
           />
@@ -184,11 +204,14 @@ function PlannedList({
 function PlannedRow({
   planned,
   stage,
+  week,
   onOpen,
   onEstimate,
 }: {
   planned: PlannedTask;
   stage: Stage;
+  /** 「今週」「来週」 (#90). */
+  week: string;
   onOpen: () => void;
   onEstimate: () => void;
 }) {
@@ -205,13 +228,16 @@ function PlannedRow({
   const meta = [
     inactive !== undefined && (
       <MetaItem key="i" className="text-ink">
-        {inactive === 'completed' ? '完了済み' : 'アーカイブ済み'} ·
-        今週から外すと確定できます
+        {inactive === 'completed' ? '完了済み' : 'アーカイブ済み'} ·{' '}
+        {weekText(week, 'から外すと確定できます')}
       </MetaItem>
+    ),
+    task.priority !== 'normal' && (
+      <PriorityText key="p" priority={task.priority} />
     ),
     recurring && (
       <MetaItem key="r" icon={<Repeat aria-hidden />}>
-        今週 {occurrenceCount}回
+        {week} {occurrenceCount}回
       </MetaItem>
     ),
     sprintTask.carriedFrom !== undefined && (
@@ -236,7 +262,7 @@ function PlannedRow({
     if (!done) return;
     toast.show({
       kind: 'sprint-pick',
-      title: `「${task.title}」を今週から外しました`,
+      title: `「${task.title}」を${weekText(week, 'から外しました')}`,
       // A completed or archived Task cannot be chosen again, so there is
       // nothing to undo.
       ...(inactive === undefined
@@ -257,8 +283,8 @@ function PlannedRow({
     <MenuItem key="out" onClick={unchoose}>
       <Undo2 aria-hidden />
       {recurring
-        ? `今週から外す（${occurrenceCount}回すべて）`
-        : '今週から外す'}
+        ? weekText(week, `から外す（${occurrenceCount}回すべて）`)
+        : weekText(week, 'から外す')}
     </MenuItem>,
     stage !== 'pick' && canLink && (
       <MenuItem
