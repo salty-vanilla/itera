@@ -139,7 +139,7 @@ export function useToastClearance(mainRef: RefObject<HTMLElement | null>) {
       if (!main.contains(target)) return;
       const el =
         target.closest<HTMLElement>(
-          '[data-slot="task-row"], [data-slot="task-quick-add"]',
+          '[data-slot="task-row"], [data-slot="interrupt-row"], [data-slot="task-quick-add"]',
         ) ?? (target as HTMLElement);
       const rect = el.getBoundingClientRect();
       const overlaps =

@@ -25,21 +25,24 @@ type InterruptRowProps = {
 
 function InterruptRow({ note, time, onEdit, onDelete }: InterruptRowProps) {
   return (
-    <div className="flex items-start gap-3 px-2 medium:px-3">
-      {/* As tall as the `…` so that one line sits by it; longer notes wrap
-          below. */}
-      <span className="flex min-h-control-lg shrink-0 items-center text-meta leading-(--text-body--line-height) text-ink-muted medium:min-h-control-sm">
-        {time}
-      </span>
-      <span className="flex min-h-control-lg min-w-0 flex-1 items-center break-words medium:min-h-control-sm">
-        <span>
-          {note.text}
-          {note.minutes !== undefined && (
-            <span className="text-ink-muted">
-              {' '}
-              · {formatHours(note.minutes / 60)}
-            </span>
-          )}
+    <div
+      data-slot="interrupt-row"
+      className="flex items-start gap-3 px-2 medium:px-3"
+    >
+      {/* As tall as the `…` so that one line sits by it; a longer note
+          wraps below, the time on its first line. */}
+      <span className="flex min-h-control-lg min-w-0 flex-1 items-center medium:min-h-control-sm">
+        <span className="flex min-w-0 items-baseline gap-3">
+          <span className="shrink-0 text-meta text-ink-muted">{time}</span>
+          <span className="min-w-0 break-words">
+            {note.text}
+            {note.minutes !== undefined && (
+              <span className="text-ink-muted">
+                {' '}
+                · {formatHours(note.minutes / 60)}
+              </span>
+            )}
+          </span>
         </span>
       </span>
       <Menu>
