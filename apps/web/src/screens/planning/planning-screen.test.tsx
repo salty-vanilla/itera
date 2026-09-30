@@ -66,6 +66,8 @@ const backlogPane = () =>
   document.querySelector<HTMLElement>('[data-slot="planning-backlog"]')!;
 const planPane = () =>
   document.querySelector<HTMLElement>('[data-slot="plan-pane"]')!;
+const summary = () =>
+  document.querySelector<HTMLElement>('[data-slot="check-summary"]')!;
 
 describe('Planning — 優先度 (#97)', () => {
   it('tells 高 in the candidates and in the plan, and not 通常', async () => {
@@ -307,10 +309,10 @@ describe('Planning — 計画基準の見せ方 (#105)', () => {
   const outlook = () =>
     screen.getByRole('complementary', { name: '時間の見通し' });
 
-  it.each(['pick', 'shape'])(
+  it.each(['pick', 'shape', 'check'])(
     'shows only the criterion’s name on one line in %s',
     async (stage) => {
-      await renderAt(`/sprint?fixture=planning-pick&stage=${stage}`);
+      await renderAt(`/sprint?fixture=planning-check&stage=${stage}`);
       const line = outlook().querySelector('[data-slot="criterion-line"]');
       expect(line?.textContent).toBe('研究：提案の幅の上限で計画する');
       // It sits under the previous improvement.
@@ -326,9 +328,9 @@ describe('Planning — 計画基準の見せ方 (#105)', () => {
     },
   );
 
-  it('shows the frame, the Switch and the effect in check', async () => {
+  it('shows the frame, the Switch and the effect in the check summary', async () => {
     await renderAt('/sprint?fixture=planning-check&stage=check');
-    const frame = within(outlook()).getByRole('region', { name: '計画基準' });
+    const frame = within(summary()).getByRole('region', { name: '計画基準' });
     expect(
       within(frame).getByText(
         '前の振り返りで決めた、提案の幅のどこで計画するかのルール。',
@@ -340,7 +342,6 @@ describe('Planning — 計画基準の見せ方 (#105)', () => {
     expect(within(frame).getByText(/幅のあるタスク 1件を上限で/)).toBeTruthy();
     // 適用 happens here; 採用 (the Estimate) stays in the Task’s detail (invariant 7).
     expect(frame.textContent).not.toMatch(/採用/);
-    expect(outlook().querySelector('[data-slot="criterion-line"]')).toBeNull();
   });
 
   it.each(['pick', 'shape', 'check'])(
@@ -364,30 +365,197 @@ describe('Planning — 計画基準の見せ方 (#105)', () => {
 });
 
 describe('Planning — 確かめる', () => {
-  it('compares the total with the available hours, as a range', async () => {
+  // The headline in the right pane and the one line under 1200px, in the
+  // three states (owner decision S5 in #93): a range while it fits or even
+  // the lower end is over, two sentences while the difference crosses 0.
+  it('compares the total with the available hours in the three states', async () => {
     await renderAt('/sprint?fixture=planning-check&stage=check');
     const outlook = screen.getByRole('complementary', { name: '時間の見通し' });
-    expect(within(outlook).getByText('残り')).toBeTruthy();
-    expect(within(outlook).getByText('−0.25 〜 1.75h')).toBeTruthy();
+    const headline = () =>
+      within(outlook).getByRole('status').querySelector('p')!;
+    // 確かめる has one field for the hours, in its summary.
+    expect(within(outlook).queryByRole('textbox')).toBeNull();
+    const line = () =>
+      screen.getByRole('button', { name: /時間の見通しを開く/ });
+    const hours = within(summary()).getByRole('textbox', {
+      name: /使える時間/,
+    });
+    const setHours = async (value: string) => {
+      await userEvent.clear(hours);
+      await userEvent.type(hours, `${value}{Enter}`);
+    };
+
+    // May exceed: 15.25–17.25h against 17h. No negative value.
+    expect(headline().textContent).toBe(
+      '下限なら1.75h残る。上限なら0.25h超える。',
+    );
+    expect(line().textContent).toMatch(
+      /^下限なら 1.75h 残る · 上限なら 0.25h 超える/,
+    );
+    expect(outlook.textContent).not.toMatch(/−/);
+    expect(line().textContent).not.toMatch(/−/);
+    // The state under the headline does not say the numbers again (#93),
+    // and it is read out with the headline.
+    const state = within(within(outlook).getByRole('status')).getByText(
+      '超える可能性',
+    );
+    expect(state.className).toContain('text-warning');
+    expect(outlook.textContent?.match(/0\.25h/g)).toHaveLength(1);
+    expect(outlook.querySelector('.text-danger')).toBeNull();
+
+    // Fits.
+    await setHours('20');
+    expect(draft().availableHours).toBe(20);
+    expect(headline().textContent).toBe('残り2.75 〜 4.75h');
+    expect(line().textContent).toMatch(/^残り 2.75 〜 4.75h · 収まる/);
+    expect(outlook.querySelector('.text-danger')).toBeNull();
+
+    // Over even at the lower end: the only state in danger.
+    await setHours('14');
+    expect(headline().textContent).toBe('超過1.25 〜 3.25h');
+    expect(within(outlook).getByText('1.25 〜 3.25h').className).toContain(
+      'text-danger',
+    );
+    expect(line().textContent).toMatch(/^超過 1.25 〜 3.25h · 下限でも超える/);
+  });
+
+  it('opens with the summary the 確定 Dialog shows, from the same values (#93)', async () => {
+    await renderAt('/sprint?fixture=planning-check&stage=check');
+    // At the head of the Sprint pane, under the heading.
+    const heading = within(planPane()).getByRole('heading', { level: 1 });
+    expect(heading.nextElementSibling).toBe(summary());
+    const rows = (root: HTMLElement) =>
+      Object.fromEntries(
+        [...root.querySelectorAll('dt')].map((dt) => [
+          dt.textContent,
+          dt.nextElementSibling?.textContent,
+        ]),
+      );
+    const fromSummary = rows(summary());
+    expect(fromSummary).toMatchObject({
+      計画値の合計: '15.25–17.25h',
+      タスク: expect.stringMatching(/^7件/),
+    });
+    // Without a headline, the state line carries the two sentences, once.
+    const stateOf = (root: HTMLElement) =>
+      root.querySelector('[data-slot="capacity-statement"]')!;
+    expect(stateOf(summary()).textContent).toBe(
+      '超える可能性：下限なら 1.75h 残る · 上限なら 0.25h 超える',
+    );
+    // It breaks between the sentences, never inside one.
     expect(
-      within(outlook).getByText('上限側では 0.25h 超える可能性があります。'),
+      [...stateOf(summary()).querySelectorAll('.whitespace-nowrap')].map(
+        (e) => e.textContent,
+      ),
+    ).toEqual([
+      '超える可能性：',
+      '下限なら 1.75h 残る',
+      '上限なら 0.25h 超える',
+    ]);
+    expect(summary().textContent?.match(/1\.75h/g)).toHaveLength(1);
+    expect(
+      within(summary()).getByText(/見積もりのないサブタスク 1件/),
     ).toBeTruthy();
-    const hours = within(outlook).getByRole('textbox', { name: /使える時間/ });
-    await userEvent.clear(hours);
-    await userEvent.type(hours, '14{Enter}');
-    expect(draft().availableHours).toBe(14);
-    expect(within(outlook).getByText('超過')).toBeTruthy();
-    expect(within(outlook).getByText('1.25 〜 3.25h')).toBeTruthy();
+
+    const hours = (
+      within(summary()).getByRole('textbox', {
+        name: /使える時間/,
+      }) as HTMLInputElement
+    ).value;
+    expect(hours).toBe('17');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Sprint 2 を確定' }),
+    );
+    const dialog = await screen.findByRole('dialog');
+    expect(rows(dialog)).toMatchObject({
+      計画値の合計: fromSummary['計画値の合計'],
+      タスク: fromSummary['タスク'],
+    });
+    expect(stateOf(dialog).textContent).toBe(
+      '超える可能性：下限なら 1.75h 残る · 上限なら 0.25h 超える',
+    );
+    expect(rows(dialog)['使える時間']).toBe(`${hours}h`);
+  });
+
+  it('takes the available hours in the summary, keeping the focus there', async () => {
+    await renderAt('/sprint?fixture=planning-check&stage=check');
+    const field = within(summary()).getByRole('textbox', {
+      name: /使える時間/,
+    });
+    await userEvent.clear(field);
+    await userEvent.keyboard('{Enter}');
+    expect(draft().availableHours).toBeUndefined();
+    expect(
+      within(summary()).getByText(
+        '使える時間を入力すると、計画との差を表示します。',
+      ),
+    ).toBeTruthy();
+    await userEvent.type(field, '18{Enter}');
+    expect(draft().availableHours).toBe(18);
+    expect(document.activeElement).toBe(field);
+  });
+
+  it('keeps the Area blocks for reading, with 整える to write a Goal', async () => {
+    const router = await renderAt('/sprint?fixture=planning-check&stage=check');
+    expect(
+      within(planPane()).queryByRole('button', { name: /目標を書く/ }),
+    ).toBeNull();
+    expect(
+      within(planPane()).queryByRole('button', { name: /目標を編集/ }),
+    ).toBeNull();
+    expect(planPane().textContent).not.toMatch(/目標は任意です/);
+    await userEvent.click(
+      within(summary()).getByRole('link', { name: '整えるで書く' }),
+    );
+    expect(router.state.location.search).toMatchObject({
+      fixture: 'planning-check',
+      stage: 'shape',
+    });
+  });
+
+  it('opens the Estimate of a Task without one from the summary', async () => {
+    await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    await userEvent.type(
+      within(backlogPane()).getByRole('textbox', {
+        name: 'タスクを追加して今週に入れる',
+      }),
+      '発表資料を見直す{Enter}',
+    );
+    await userEvent.click(
+      within(screen.getByRole('navigation', { name: '段階' })).getByRole(
+        'link',
+        { name: /確かめる/ },
+      ),
+    );
+    await userEvent.click(
+      await within(summary()).findByRole('button', {
+        name: '見積もる: 発表資料を見直す',
+      }),
+    );
+    const estimate = await screen.findByRole('textbox', {
+      name: /^見積もり（時間）(?!:)/,
+    });
+    await waitFor(() => expect(document.activeElement).toBe(estimate));
+  });
+
+  it('opens a Task with subtasks left out from the summary', async () => {
+    await renderAt('/sprint?fixture=planning-check&stage=check');
+    const button = within(summary()).getByRole('button', {
+      name: /^見積もる: /,
+    });
+    const title = button.getAttribute('aria-label')!.replace('見積もる: ', '');
+    await userEvent.click(button);
+    const detail = await screen.findByRole('dialog');
+    expect(within(detail).getByRole('heading', { name: title })).toBeTruthy();
   });
 
   it('the criterion switch changes the preview, not the Estimate (invariant 7)', async () => {
     const router = await renderAt('/sprint?fixture=planning-check&stage=check');
-    const outlook = screen.getByRole('complementary', { name: '時間の見通し' });
     const before = lastSnapshot().records.tasks.find(
       (t) => t.id === 'task-paper',
     );
     await userEvent.click(
-      within(outlook).getByRole('switch', { name: /今回の計画に使う/ }),
+      within(summary()).getByRole('switch', { name: /今回の計画に使う/ }),
     );
     expect(router.state.location.search).toMatchObject({ criterion: 'off' });
     const research = within(planPane()).getByRole('region', { name: /研究/ });
@@ -399,9 +567,8 @@ describe('Planning — 確かめる', () => {
 
   it('explains what may push the total over', async () => {
     await renderAt('/sprint?fixture=planning-check&stage=check');
-    const outlook = screen.getByRole('complementary', { name: '時間の見通し' });
     expect(
-      within(outlook).getByText(
+      within(summary()).getByText(
         '計画基準で「関連論文を 3 本読む」を 5h で計算しています（Agent の提案 3–5h）。',
       ),
     ).toBeTruthy();
@@ -423,7 +590,9 @@ describe('Planning — 確定', () => {
       ),
     );
     expect(within(dialog).getByText(/今回は使わない/)).toBeTruthy();
-    expect(within(dialog).getByText(/上限側では/)).toBeTruthy();
+    expect(
+      dialog.querySelector('[data-slot="capacity-statement"]')?.textContent,
+    ).toMatch(/^超える可能性：/);
     await userEvent.click(
       within(dialog).getByRole('button', { name: 'Sprint 2 を確定' }),
     );
@@ -472,7 +641,9 @@ describe('Planning — review fixes', () => {
     expect(line()?.dataset.over).toBe('mayExceed');
     expect(line()?.className).toContain('border-warning');
     expect(line()?.className).not.toContain('danger');
-    const hours = within(outlook).getByRole('textbox', { name: /使える時間/ });
+    const hours = within(summary()).getByRole('textbox', {
+      name: /使える時間/,
+    });
     await userEvent.clear(hours);
     await userEvent.type(hours, '14{Enter}');
     expect(line()?.dataset.over).toBe('exceeds');
@@ -514,9 +685,8 @@ describe('Planning — review fixes', () => {
 
   it('explains the criterion’s effect from the domain (invariant 39)', async () => {
     await renderAt('/sprint?fixture=planning-check&stage=check');
-    const outlook = screen.getByRole('complementary', { name: '時間の見通し' });
     expect(
-      within(outlook).getByText(
+      within(summary()).getByText(
         '研究の幅のあるタスク 1件を上限で計画しています（合計の下限 +2h）。',
       ),
     ).toBeTruthy();

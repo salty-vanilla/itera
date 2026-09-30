@@ -102,7 +102,9 @@ describe('Today — the top', () => {
     expect(screen.getByText('Sprint 2 · 4日目 / 7日')).toBeTruthy();
     // F32: 2 Tasks and occurrences done of 10 this week.
     expect(screen.getByText('4 / 10件')).toBeTruthy();
-    expect(screen.getByText('今日の残り 2件 · 見込み 4.5–5.5h')).toBeTruthy();
+    expect(screen.getByText('今日の残り 2件 ·').closest('p')?.textContent).toBe(
+      '今日の残り 2件 · 見込み 4.5–5.5h',
+    );
     // Invariant 25: no daily capacity, no judgement of going over.
     const text = document.body.textContent ?? '';
     for (const word of ['使える時間', '容量', '超過', '超える']) {
@@ -143,6 +145,40 @@ describe('Today — the top, when nothing is chosen (#99)', () => {
       screen.getByRole('button', { name: '完了にする: 関連論文を 3 本読む' }),
     );
     expect(screen.getByText('今日の残りはありません')).toBeTruthy();
+  });
+});
+
+describe('Today — the order for a phone (#100)', () => {
+  const follows = (a: Element, b: Element) =>
+    (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+
+  it('keeps 「割り込みを記録」 at the top, with or without the 今日の残り line', async () => {
+    await renderAt('/today?fixture=today-morning');
+    const note = screen.getByRole('button', { name: '割り込みを記録' });
+    const rows = screen.getByRole('heading', { name: '今日やる' });
+    expect(follows(note, rows)).toBe(true);
+    // No notes yet: no 割り込み list further down.
+    expect(screen.queryByRole('region', { name: '割り込み' })).toBeNull();
+    await userEvent.click(
+      within(region('昨日の続き')).getByRole('button', {
+        name: '今日へ: 関連論文を 3 本読む',
+      }),
+    );
+    const line = screen.getByText(/今日の残り 1件/).closest('p');
+    expect(line?.parentElement).toBe(
+      screen.getByRole('button', { name: '割り込みを記録' }).parentElement,
+    );
+  });
+
+  it('puts the week’s Goals for a phone after 今週の残り', async () => {
+    await renderAt('/today?fixture=today-morning');
+    const goals = screen.getAllByRole('region', { name: '今週の目標' });
+    const rest = region('今週の残り');
+    // One per width, shown by CSS: medium, compact, then wide's side column.
+    expect(goals).toHaveLength(3);
+    const [medium, compact] = goals;
+    expect(follows(medium as Element, rest)).toBe(true);
+    expect(follows(rest, compact as Element)).toBe(true);
   });
 });
 

@@ -131,7 +131,7 @@ export const typographyGroups = [
     description:
       '数字も LINE Seed JP で組む。数字はプロポーショナルなので、並ぶ列は右揃えにする。–（範囲）と −（負号）はハイフンと見分けられる。',
     samples: [
-      ['num-l', 'text-num-l', '残り −1 〜 1h'],
+      ['num-l', 'text-num-l', '残り 1 〜 3h'],
       ['num-m', 'text-num-m', '16.5–18.5h'],
       ['num-s', 'text-num-s', '2–4h / 2-4'],
       ['code', 'text-code', '⌘ Enter'],

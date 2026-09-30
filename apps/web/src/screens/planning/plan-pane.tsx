@@ -1,5 +1,6 @@
 import type { TaskId } from '@itera/domain';
 import { Ellipsis, Target, Undo2 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { IconButton } from '@/components/ui/icon-button';
 import { semanticIcons } from '@/components/ui/icon';
@@ -30,7 +31,9 @@ import { usePlanningActions } from '@/store/use-planning';
 // - 選ぶ: 「今週、何を進めますか」, the chosen Tasks per Area.
 // - 整える: 「今週、どんな状態にしたいか」, each Area's Goal (optional) with
 //   its Tasks; a Task is linked to the Goal or not, and both count.
-// - 確かめる: 「この計画で、進められそうか」, Goals, Tasks and their values.
+// - 確かめる: 「この計画で、進められそうか」, the summary first (what the 確定
+//   Dialog sums up, #93), then the Goals, Tasks and their values, to read:
+//   a Goal is written in 整える.
 // 「今週」 is the Sprint's name next to now: next week's Planning, started
 // while this week runs, says 「来週」 (#90).
 // Before confirm the values are a preview, drawn solid (owner decision in
@@ -53,6 +56,8 @@ export function stageHeading(stage: Stage, week: string): string {
 type PlanPaneProps = {
   data: PlanningData;
   stage: Stage;
+  /** 確かめる: the summary under the heading (#93). */
+  summary?: ReactNode;
   /** The Task just added in the Quick Add: its row flashes (Issue #92). */
   addedTaskId?: TaskId | undefined;
   onOpenTask: (taskId: TaskId) => void;
@@ -64,6 +69,7 @@ type PlanPaneProps = {
 function PlanPane({
   data,
   stage,
+  summary,
   addedTaskId,
   onOpenTask,
   onEstimateTask,
@@ -97,6 +103,7 @@ function PlanPane({
           {pickGuide(week, data.candidates.recurring.length > 0)}
         </p>
       )}
+      {summary}
       {/*
         From 1920px (bp-xl) the Area blocks sit in 1 to 3 columns, as many as
         fit: a column is at least 26rem and at least a third of the row (less
@@ -140,8 +147,9 @@ function PlanPane({
               summary={block.tasks.length > 0 ? summaryOf(block) : undefined}
               goal={block.goal?.text}
               week={week}
+              // 確かめる is for reading: no 編集, no 「+ 目標を書く」 (#93).
               onSave={
-                block.area.id === null
+                block.area.id === null || stage === 'check'
                   ? undefined
                   : (text) =>
                       actions.setGoal(
