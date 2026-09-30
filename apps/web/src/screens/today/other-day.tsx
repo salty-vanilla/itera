@@ -1,14 +1,15 @@
-import type { DailySelection, LocalDate } from '@itera/domain';
+import type { LocalDate } from '@itera/domain';
 import { Link } from '@tanstack/react-router';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { semanticIcons } from '@/components/ui/icon';
 import { Deadline } from '@/components/task/deadline';
 import { MetaItem, TaskMetadata } from '@/components/task/task-metadata';
 import { formatDate, formatTime } from '@/lib/date-format';
+import { SELECTION_WORDS } from '@/lib/selection-words';
 import { formatHours } from '@/lib/time-format';
 import type { DayData } from '@/store/day-view';
 import { useDay } from '@/store/use-today';
-import { DayHeader } from './day-header';
+import { DayFrame } from './day-frame';
 
 // A day other than today on the Today screen (#90), read only.
 // - Past: what was chosen that day and how each ended, and the interrupts.
@@ -18,19 +19,7 @@ import { DayHeader } from './day-header';
 //   is. Choosing a day to do a Task on is #91.
 // - A day no Sprint has: the Sprint that has it, or the next to start.
 
-/** How a choice ended, as Today and Retro say it. */
-const ENDED: Readonly<Record<DailySelection['resolution'], string>> = {
-  selected: '未処理',
-  started: '未処理',
-  unresolved: '未処理',
-  done: '完了',
-  skipped: 'スキップ',
-  paused: '今日はここまで',
-  deferred: '見送り',
-  removed: '今日から外した',
-};
-
-// A link after a sentence moves to the next line whole, not mid-word.
+// After the sentence's space, a link moves to the next line whole.
 const link = 'whitespace-nowrap text-link underline focus-visible:focus-ring';
 const Repeat = semanticIcons.recurrence;
 
@@ -39,15 +28,14 @@ function OtherDay({ date }: { date: LocalDate }) {
   if (data === undefined) return null;
   const { within } = data;
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-pane-today flex-col gap-8 px-4 pt-6 pb-16 medium:px-6 medium:pt-8">
-      <DayHeader
-        date={date}
-        meta={
-          within === undefined
-            ? undefined
-            : `Sprint ${within.number} · ${within.day.index}日目 / ${within.day.count}日`
-        }
-      />
+    <DayFrame
+      date={date}
+      meta={
+        within === undefined
+          ? undefined
+          : `Sprint ${within.number} · ${within.day.index}日目 / ${within.day.count}日`
+      }
+    >
       <Where data={data} />
       {data.when === 'future' ? (
         <Future data={data} />
@@ -55,7 +43,7 @@ function OtherDay({ date }: { date: LocalDate }) {
         // With no Sprint, nothing could be chosen that day.
         within?.sprint !== undefined && <Past data={data} />
       )}
-    </div>
+    </DayFrame>
   );
 }
 
@@ -71,13 +59,16 @@ function Where({ data }: { data: DayData }) {
       <p className="text-body text-ink-muted">
         この日を含む Sprint はありません。
         {next !== undefined && (
-          <Link
-            to="/sprint"
-            search={{ sprint: next.number }}
-            className={`ms-1 ${link}`}
-          >
-            Sprint {next.number}（{formatDate(next.start)} から）を開く
-          </Link>
+          <>
+            {' '}
+            <Link
+              to="/sprint"
+              search={{ sprint: next.number }}
+              className={link}
+            >
+              Sprint {next.number}（{formatDate(next.start)} から）を開く
+            </Link>
+          </>
         )}
       </p>
     );
@@ -86,12 +77,8 @@ function Where({ data }: { data: DayData }) {
     <p className="text-body text-ink-muted">
       {within.sprint === undefined
         ? `Sprint ${within.number} の計画はまだありません。`
-        : readOnly}
-      <Link
-        to="/sprint"
-        search={{ sprint: within.number }}
-        className={`ms-1 ${link}`}
-      >
+        : readOnly}{' '}
+      <Link to="/sprint" search={{ sprint: within.number }} className={link}>
         Sprint {within.number} を開く
       </Link>
     </p>
@@ -126,7 +113,7 @@ function Past({ data }: { data: DayData }) {
                     <MetaItem icon={<Repeat aria-hidden />}>繰り返し</MetaItem>
                   )}
                   <MetaItem className="text-ink">
-                    {ENDED[r.selection.resolution]}
+                    {SELECTION_WORDS[r.selection.resolution]}
                   </MetaItem>
                   {r.actualHours > 0 && (
                     <MetaItem>実績 {formatHours(r.actualHours)}</MetaItem>

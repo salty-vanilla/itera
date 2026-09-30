@@ -6,7 +6,7 @@ import {
   type TaskId,
 } from '@itera/domain';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
@@ -23,7 +23,8 @@ import { useBacklog } from '@/store/use-backlog';
 import { useTaskActions } from '@/store/use-task-actions';
 import { useToday, useTodayActions } from '@/store/use-today';
 import { TaskDetail } from '../backlog/task-detail';
-import { DayHeader, dateSearchOf } from './day-header';
+import { DayFocusScope, DayHeader, dateSearchOf } from './day-header';
+import { DayColumns, DayFrame } from './day-frame';
 import { ActualTime, type ActualTimeMode } from './actual-time';
 import { InterruptSheet } from './interrupt-sheet';
 import { OtherDay } from './other-day';
@@ -61,8 +62,15 @@ export function validateTodaySearch(
 function TodayScreen() {
   const { date } = useSearch({ from: '/today' });
   const { today } = useAppOverview();
-  if (date !== undefined && date !== today) return <OtherDay date={date} />;
-  return <ThisDay />;
+  return (
+    <DayFocusScope>
+      {date !== undefined && date !== today ? (
+        <OtherDay date={date} />
+      ) : (
+        <ThisDay />
+      )}
+    </DayFocusScope>
+  );
 }
 
 function ThisDay() {
@@ -84,11 +92,11 @@ function BeforeStart({ data }: { data: TodayData }) {
     <DayFrame date={data.today}>
       <p className="text-body text-ink-muted">
         Sprint {data.number} は {formatDate(data.sprint.start)} から始まります。
-        {/* One step to the Sprint (#90). */}
+        {/* One step to the Sprint (#90). */}{' '}
         <Link
           to="/sprint"
           search={{ sprint: data.number }}
-          className="ms-1 whitespace-nowrap text-link underline focus-visible:focus-ring"
+          className="whitespace-nowrap text-link underline focus-visible:focus-ring"
         >
           Sprint {data.number} を開く
         </Link>
@@ -115,7 +123,8 @@ function BeforeStart({ data }: { data: TodayData }) {
 /** Today without an active Sprint: the date, and where the week is. */
 function NoActiveSprint() {
   const { today, reviewSprint, planningSprint } = useAppOverview();
-  const link = 'ms-1 text-link underline focus-visible:focus-ring';
+  // After the sentence's space, the link moves to the next line whole.
+  const link = 'whitespace-nowrap text-link underline focus-visible:focus-ring';
   return (
     <DayFrame date={today}>
       <p className="text-body text-ink-muted">
@@ -123,14 +132,14 @@ function NoActiveSprint() {
             It is not 「今週」: that is the next one to start (#90). */}
         {reviewSprint !== undefined ? (
           <>
-            Sprint {reviewSprint.number} は振り返り中です。
+            Sprint {reviewSprint.number} は振り返り中です。{' '}
             <Link to="/retro" className={link}>
               振り返りを開く
             </Link>
           </>
         ) : planningSprint !== undefined ? (
           <>
-            今週の計画を確定すると、ここで今日やることを選べます。
+            今週の計画を確定すると、ここで今日やることを選べます。{' '}
             <Link to="/sprint" className={link}>
               計画を開く
             </Link>
@@ -140,22 +149,6 @@ function NoActiveSprint() {
         )}
       </p>
     </DayFrame>
-  );
-}
-
-/** A plain day's column: its heading, then a few lines. */
-function DayFrame({
-  date,
-  children,
-}: {
-  date: LocalDate;
-  children: ReactNode;
-}) {
-  return (
-    <div className="mx-auto flex w-full max-w-pane-today flex-col gap-6 px-4 pt-6 pb-16 medium:px-6 medium:pt-8">
-      <DayHeader date={date} />
-      {children}
-    </div>
   );
 }
 
@@ -311,8 +304,17 @@ function TodayView({ data }: { data: TodayData }) {
     );
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-[calc(var(--spacing-pane-today)+var(--spacing-pane-side)+var(--spacing-12))] gap-12 wide:px-6">
-      <div className="flex min-w-0 flex-1 flex-col gap-8 px-4 pt-6 medium:mx-auto medium:max-w-pane-today medium:px-6 medium:pt-8 wide:mx-0 wide:px-0">
+    <>
+      <DayColumns
+        side={
+          <aside
+            aria-label="今週の Goal の要約"
+            className="hidden w-pane-side shrink-0 pt-8 wide:block"
+          >
+            <div className="sticky top-8">{goals('today-goals-side')}</div>
+          </aside>
+        }
+      >
         <DayHeader
           date={data.today}
           meta={`Sprint ${data.number} · ${data.day.index}日目 / ${data.day.count}日`}
@@ -505,14 +507,7 @@ function TodayView({ data }: { data: TodayData }) {
             }
           />
         </div>
-      </div>
-
-      <aside
-        aria-label="今週の Goal の要約"
-        className="hidden w-pane-side shrink-0 pt-8 wide:block"
-      >
-        <div className="sticky top-8">{goals('today-goals-side')}</div>
-      </aside>
+      </DayColumns>
 
       {editingRow !== undefined && editing !== undefined && (
         <ActualTime
@@ -568,7 +563,7 @@ function TodayView({ data }: { data: TodayData }) {
           )}
         </DrawerContent>
       </Drawer>
-    </div>
+    </>
   );
 }
 

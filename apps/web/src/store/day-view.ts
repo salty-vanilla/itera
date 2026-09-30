@@ -13,9 +13,9 @@ import {
   type Sprint,
   type Task,
 } from '@itera/domain';
-import { daysBetween } from '@/lib/date-format';
 import type { Clock, Records } from './records';
 import { sprintRefs, type SprintRef } from './sprint-choice';
+import { dayInPeriod, selectionActualHours } from './sprint-day';
 
 export interface DayArea {
   readonly id: AreaId;
@@ -96,6 +96,8 @@ export function dayData(
     );
 
   const past = date < clock.today;
+  // What happened that day, even for a Task removed from the Sprint since
+  // (Today shows the week as it is now, F13).
   const dayRecords: DayRecord[] =
     !past || sprint === undefined
       ? []
@@ -114,14 +116,7 @@ export function dayData(
                 title: task.title,
                 ...withArea(task),
                 ...(occurrence === undefined ? {} : { occurrence }),
-                actualHours: sprint.actualTimes
-                  .filter(
-                    (a) =>
-                      a.date === date &&
-                      a.sprintTaskId === selection.sprintTaskId &&
-                      a.occurrenceId === selection.occurrenceId,
-                  )
-                  .reduce((sum, a) => sum + a.hours, 0),
+                actualHours: selectionActualHours(sprint, selection),
               },
             ];
           });
@@ -163,13 +158,7 @@ export function dayData(
         ? {}
         : { next }
       : {
-          within: {
-            ...ref,
-            day: {
-              index: daysBetween(ref.start, date) + 1,
-              count: daysBetween(ref.start, ref.end) + 1,
-            },
-          },
+          within: { ...ref, day: dayInPeriod(ref, date) },
         }),
     records: dayRecords,
     interrupts: past

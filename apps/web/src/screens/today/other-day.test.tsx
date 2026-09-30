@@ -1,7 +1,6 @@
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import {
   cleanup,
-  fireEvent,
   render,
   screen,
   waitFor,
@@ -12,8 +11,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
-// Any day on the Today screen by `?date=` (#90): the days before and after
-// it, a date to choose, and past, future and out-of-period days, read only.
+// A day other than today on the Today screen by `?date=` (#90): past,
+// future and out-of-period days, read only. The heading's arrows and date
+// are day-header.test.tsx.
 
 afterEach(cleanup);
 beforeEach(() => {
@@ -112,55 +112,4 @@ describe('Today — any day by date (#90)', () => {
       expect(router.state.location.pathname).toBe('/today');
     },
   );
-
-  it('steps a day at a time, and back to today with no date', async () => {
-    const router = await renderAt('/today?fixture=today-daytime');
-    await userEvent.click(
-      screen.getByRole('link', { name: '前の日（9/30 (水)）' }),
-    );
-    await waitFor(() => expect(heading()).toBe('9月30日（水）'));
-    expect(router.state.location.search).toEqual({
-      fixture: 'today-daytime',
-      date: '2026-09-30',
-    });
-    await userEvent.click(
-      screen.getByRole('link', { name: '次の日（10/1 (木)）' }),
-    );
-    await waitFor(() => expect(heading()).toBe('10月1日（木）'));
-    expect(router.state.location.search).toEqual({ fixture: 'today-daytime' });
-  });
-
-  it('opens the chosen date, and the navigation comes back to today', async () => {
-    const router = await renderAt('/today?fixture=today-daytime');
-    fireEvent.change(screen.getByLabelText('日付を選ぶ'), {
-      target: { value: '2026-10-03' },
-    });
-    await waitFor(() => expect(heading()).toBe('10月3日（土）'));
-    expect(router.state.location.search).toMatchObject({ date: '2026-10-03' });
-    // The navigation does not carry the day (#90).
-    await userEvent.click(screen.getAllByRole('link', { name: '今日' })[0]!);
-    await waitFor(() => expect(heading()).toBe('10月1日（木）'));
-    expect(router.state.location.search).toEqual({ fixture: 'today-daytime' });
-  });
-
-  it('opens the Sprint in one step before its first day', async () => {
-    const router = await renderAt('/sprint?fixture=planning-check&stage=check');
-    await userEvent.click(
-      screen.getAllByRole('button', { name: 'Sprint 2 を確定' })[0]!,
-    );
-    await userEvent.click(
-      within(await screen.findByRole('dialog')).getByRole('button', {
-        name: 'Sprint 2 を確定',
-      }),
-    );
-    await userEvent.click(screen.getAllByRole('link', { name: '今日' })[0]!);
-    await screen.findByText(/Sprint 2 は 9\/28 \(月\) から始まります。/);
-    await userEvent.click(
-      screen.getByRole('link', { name: 'Sprint 2 を開く' }),
-    );
-    await waitFor(() =>
-      expect(router.state.location.search).toMatchObject({ sprint: 2 }),
-    );
-    expect(await screen.findByText('実行中')).toBeTruthy();
-  });
 });
