@@ -724,6 +724,13 @@ describe('F38: interrupts can be edited and deleted while the Sprint runs', () =
     expect(restoreInterrupt(before, { note }, later)).toMatchObject({
       ok: false,
     });
+    expect(
+      restoreInterrupt(
+        deleted,
+        { note: { ...note, at: instant('2026-09-28T06:00:00.000Z') } },
+        later,
+      ),
+    ).toMatchObject({ ok: false, error: { code: 'invalidInput' } });
   });
 
   it('invariant 40: after the Review starts the notes are fixed', () => {

@@ -134,21 +134,35 @@ export function useToastClearance(mainRef: RefObject<HTMLElement | null>) {
         ? last.current.target
         : null;
     if (box === undefined || !fresh || target === null) return;
-    if (!main.contains(target)) return;
 
-    const el =
-      target.closest<HTMLElement>(
-        '[data-slot="task-row"], [data-slot="task-quick-add"]',
-      ) ?? (target as HTMLElement);
-    const rect = el.getBoundingClientRect();
-    const overlaps =
-      rect.left < box.right &&
-      rect.right > box.left &&
-      rect.bottom > box.top &&
-      rect.top < box.bottom;
-    if (!overlaps) return;
-    (scrollParent(el) ?? main).scrollBy({
-      top: rect.bottom - box.top + GAP,
+    const clear = (target: Element) => {
+      if (!main.contains(target)) return;
+      const el =
+        target.closest<HTMLElement>(
+          '[data-slot="task-row"], [data-slot="task-quick-add"]',
+        ) ?? (target as HTMLElement);
+      const rect = el.getBoundingClientRect();
+      const overlaps =
+        rect.left < box.right &&
+        rect.right > box.left &&
+        rect.bottom > box.top &&
+        rect.top < box.bottom;
+      if (!overlaps) return;
+      (scrollParent(el) ?? main).scrollBy({
+        top: rect.bottom - box.top + GAP,
+      });
+    };
+    if (target.isConnected) {
+      clear(target);
+      return;
+    }
+    // What was pressed went away with the operation (a deleted row): the
+    // screen moves the focus on in the next frame, and that is what the
+    // Toast must not cover.
+    // Not cancelled when the Toasts change again (their transition) before
+    // then.
+    requestAnimationFrame(() => {
+      if (document.activeElement !== null) clear(document.activeElement);
     });
   }, [toasts, mainRef]);
 

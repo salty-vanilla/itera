@@ -11,8 +11,9 @@ import {
 import { formatHours } from '@/lib/time-format';
 
 // A row of today's 割り込み: the time it was noted, the note and the
-// minutes. While the Sprint runs, its `…` edits or deletes it (F38); the
-// `…` is always shown, as on Today's rows.
+// minutes. While the Sprint runs, its `…` edits or deletes it (F38). The
+// `…` is always shown, at every width (docs/design/patterns.md Today), in
+// the column of the Task rows' `…`.
 
 type InterruptRowProps = {
   note: InterruptNote;
@@ -24,7 +25,7 @@ type InterruptRowProps = {
 
 function InterruptRow({ note, time, onEdit, onDelete }: InterruptRowProps) {
   return (
-    <div className="flex items-start gap-3">
+    <div className="flex items-start gap-3 px-2 medium:px-3">
       {/* As tall as the `…` so that one line sits by it; longer notes wrap
           below. */}
       <span className="flex min-h-control-lg shrink-0 items-center text-meta leading-(--text-body--line-height) text-ink-muted medium:min-h-control-sm">

@@ -941,6 +941,10 @@ export function restoreInterrupt(
   if (note.minutes !== undefined && !isPositiveHours(note.minutes)) {
     return err('invalidInput', 'Minutes must be positive.');
   }
+  // A note is restored, not made: it was noted before now.
+  if (note.at > ctx.now) {
+    return err('invalidInput', 'The note was noted later than now.');
+  }
   const after = sprint.interrupts.findIndex((n) => n.at > note.at);
   const interrupts =
     after === -1

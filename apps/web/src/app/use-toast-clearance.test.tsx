@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider, useToast } from '@/components/ui/toast';
 import { useToastClearance } from './use-toast-clearance';
@@ -90,6 +90,34 @@ function MenuScreen() {
   );
 }
 
+function DeleteScreen() {
+  const ref = useRef<HTMLElement>(null);
+  useToastClearance(ref);
+  const toast = useToast();
+  const [deleted, setDeleted] = useState(false);
+  return (
+    <main ref={ref}>
+      {!deleted && (
+        <button
+          onClick={() => {
+            setDeleted(true);
+            toast.show({ kind: 'interrupt-deleted', title: '消しました' });
+            // The screen moves the focus on once the row has gone.
+            requestAnimationFrame(() =>
+              document.getElementById('next')?.focus(),
+            );
+          }}
+        >
+          消す
+        </button>
+      )}
+      <div data-row="next">
+        <button id="next">次</button>
+      </div>
+    </main>
+  );
+}
+
 describe('useToastClearance', () => {
   it('adds room under the screen while a Toast shows, and takes it away', async () => {
     const user = setup(rect(100, 40));
@@ -175,5 +203,26 @@ describe('useToastClearance', () => {
       .setup()
       .click(screen.getByRole('menuitem', { name: '今日へ' }));
     expect(scrollBy).toHaveBeenCalledWith({ top: 28 });
+  });
+
+  it('scrolls to where the focus went when the pressed row went away', async () => {
+    const scrollBy = vi.fn();
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(
+      function (this: Element) {
+        if (this.matches('[data-slot="toast-viewport"]'))
+          return this.childElementCount > 0 ? rect(700, 76) : rect(776, 0);
+        if (this.matches('main')) return rect(0, 800);
+        if (this.matches('#next')) return rect(680, 40, 20);
+        return rect(0, 0);
+      },
+    );
+    render(
+      <ToastProvider>
+        <DeleteScreen />
+      </ToastProvider>,
+    );
+    document.querySelector('main')!.scrollBy = scrollBy;
+    await userEvent.setup().click(screen.getByRole('button', { name: '消す' }));
+    await vi.waitFor(() => expect(scrollBy).toHaveBeenCalledWith({ top: 28 }));
   });
 });
