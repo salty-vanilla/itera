@@ -318,7 +318,7 @@ function FactsPane({
       {(facts.deferrals.length > 0 || facts.pauses.length > 0) && (
         <section aria-labelledby="retro-days" className="flex flex-col gap-3">
           <h2 id="retro-days" className="text-heading text-ink">
-            Today での見送り・今日はここまで
+            見送り・今日はここまで
           </h2>
           <ul className="flex flex-col border-t border-border-soft">
             {[

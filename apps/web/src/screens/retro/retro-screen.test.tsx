@@ -122,7 +122,7 @@ describe('Retro — 事実を見る', () => {
     expect(paper.textContent).toContain('見送り 2回');
     expect(screen.getByRole('region', { name: '割り込み' })).toBeTruthy();
     expect(
-      screen.getByRole('region', { name: 'Today での見送り・今日はここまで' }),
+      screen.getByRole('region', { name: '見送り・今日はここまで' }),
     ).toBeTruthy();
     // No rates or scores (patterns.md Retro › ルール).
     expect(document.body.textContent).not.toMatch(/%|点|達成率|失敗/);
