@@ -12,7 +12,7 @@ v0.2 Final は v0.1 の骨格（恒久的な **Task** と、「この Sprint で
 2. Goal は **SprintGoal**（Sprint × Area）。Task は Goal を持たず、関係は SprintTask.goalLink（linked / unlinked）にだけある。
 3. 時間は **Estimate**（本人）・**EstimateSuggestion**（提案）・**PlanningValue**（今回の計画値）の 3 つ。「提案を採用して Estimate にする」と「計画基準を適用して計画値を作る」は別の操作。
 4. **RetroImprovement**（文）と **PlanningCriterion**（ルール）は別物。Sprint で基準をどう扱ったかは **CriterionUse** に残す。
-5. 後から変えられる値（Goal の文、可用時間、Area 名）は **Sprint 確定時に写し取り**、変更は履歴として残す。Sprint の画面はその Sprint の間、写し取った Area 名で固定する。操作の「いつ・誰が」は **Activity** に追記する。
+5. 後から変えられる値（Goal の文、使える時間、Area 名）は **Sprint 確定時に写し取り**、変更は履歴として残す。Sprint の画面はその Sprint の間、写し取った Area 名で固定する。操作の「いつ・誰が」は **Activity** に追記する。
 
 ### v0.1 からの変更
 
@@ -24,13 +24,13 @@ v0.2 Final は v0.1 の骨格（恒久的な **Task** と、「この Sprint で
 | 4 | 日付変更まで未処理の選択は unresolved | システムが Unresolved にし、連続見送りに数えない | なし |
 | 5 | 確定後の基準 OFF は扱わない | CriterionUse から disabledAt を削除 | Retro：「途中で使わなくなった」表示を削除 |
 | 6 | 確定時に適用しなかった Sprint も Retro で決める | Active な基準があれば必ず CriterionUse を作り、retroDecision を必須に | Retro：未適用でも決定欄を出す |
-| 7 | Sprint 中の追加にも基準を当てる | 追加時点で planSnapshot を作る。基準は確定時に適用したときだけ当てる。容量警告は出さない | Today / Backlog：超過表示なし |
-| 8 | Sprint 中の追加は Goal に自動で紐付けない | role を goalLink（linked / unlinked）に変更。追加は unlinked | 表記「Goal に紐づく / 紐づかない」 |
+| 7 | 週の途中の追加にも基準を当てる | 追加時点で planSnapshot を作る。基準は確定時に適用したときだけ当てる。容量警告は出さない | Today / Backlog：超過表示なし |
+| 8 | 週の途中の追加は Goal に自動で紐付けない | role を goalLink（linked / unlinked）に変更。追加は unlinked | 表記「Goal に紐づく / 紐づかない」 |
 | 9 | 「今日は見送る」と「今日から外す」を分ける | DailySelection = Deferred / Removed。Removed は見送りに数えない | Today：操作を 2 つに |
 | 10 | Backlog からの完了を Sprint にも反映 | SprintTask = Done、当日の DailySelection（Done）を作る | Today：「済んだもの」に出る |
 | 11 | 持ち越しは自動で次に入れない | 次の Sprint の候補に出すだけ。選ばれたら carriedFrom | なし（v0.1 のまま） |
 | 12 | 前 Retro 未完了でも draft は可、確定は不可 | Sprint 確定の前提条件に「前の Sprint が Closed」 | Planning：確定ボタンに理由を添えて無効化 |
-| 13 | 確定後も Goal と可用時間は変更可 | 確定時の値を写し取り、変更を履歴に残す | Retro：計画時との差分を表示 |
+| 13 | 確定後も Goal と使える時間は変更可 | 確定時の値を写し取り、変更を履歴に残す | Retro：計画時との差分を表示 |
 | 修正 | Task は User に属する | Backlog は active Task のビュー | なし |
 | 修正 | Area 名を写し取る | Sprint 確定時に SprintAreaSnapshot | Sprint の画面は確定時の名前で表示 |
 | 修正 | 採用と適用を分ける | 下の「用語」を参照 | Backlog / Planning のボタン文言を変更 |
@@ -43,15 +43,15 @@ F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F
 | --- | --- | --- | --- |
 | F1 | Active な Sprint 中の Rule 変更は次の Sprint から | 新しい版は、まだ確定していない次の Sprint から効く（effectiveFrom = その Sprint の開始日）。確定済みの Sprint の回と SprintTask は変えない（draft が生成済みの回は F7） | Backlog：変更時に「次の Sprint から反映」 |
 | F2 | Excluded は通常の Retro 事実に出さない | Occurrence = Excluded は記録に残す。Retro の事実は Sprint に含めた回だけから派生させる | Retro：外した回は表示しない |
-| F3 | Sprint 中の追加への基準は確定時の適用に従う | 追加時の planSnapshot は、CriterionUse.appliedAtConfirm = true のときだけ基準を当てる | なし |
+| F3 | 週の途中の追加への基準は確定時の適用に従う | 追加時の planSnapshot は、CriterionUse.appliedAtConfirm = true のときだけ基準を当てる | なし |
 | F4 | 連続見送りは選んだ機会で数える | 同じ Task の DailySelection を日付順に並べ、Deferred の連続を数える。選ばなかった日は無視し、Paused / Done / Removed で途切れる | Today：「N回続けて見送り」 |
 | F5 | Sprint の画面は確定時の Area 名 | Planning / Today / Retro は SprintAreaSnapshot の名前、Backlog など恒久側は現在の名前 | 改名は次の Sprint から Sprint の画面に反映 |
 | F6 | Paused は翌日に自動で入れない | 「昨日の続き」は派生（前日の DailySelection = Paused）。DailySelection は本人の「今日へ」で作る | Today：「昨日の続き」として候補の上に出す |
 | F7 | 次の Sprint の draft が回を生成した後の Rule 変更は、未確定の回を作り直す | 新しい版は、まだ確定していない次の Sprint から効く。draft がすでに回を生成していれば、その Task の回（Pending / Excluded）と SprintTask（Draft）を捨て、新しい版の回を既定どおり Sprint に含めて作り直す。draft で外した選択は引き継がない。確定済みの Sprint の回は変えない（不変条件 31） | Backlog の「次の Sprint から反映」がそのまま正しくなる |
 | F8 | 連続見送りは Unresolved を無視し、Skipped で途切れる | Unresolved は選ばなかった日と同じく、数えず途切れさせない。繰り返しの回の Skipped は本人の決定なので、Done・Removed と同じく連続を途切れさせる（不変条件 23） | なし |
 | F9 | Sprint 中に初めて現れた Area は、その時点の名前を写し取る | SprintAreaSnapshot にない Area が Sprint 中に初めて現れたとき（その Area の Task を Sprint に追加した、または Sprint 内の Task の Area にした）、その時点の名前を並び順の末尾に足して固定する（不変条件 18） | その Sprint の Today / Retro では、その Area も名前が固定される |
-| F10 | 計画基準はサブタスク合計に作用しない | Subtask の見積りは点の値なので、サブタスク合計も点になる。不変条件 9 の「幅のあるサブタスク合計」を削除 | なし |
-| F11 | 一部のサブタスクが未見積なら、その件数を示す | timeBasis がサブタスク合計のとき、見積りのあるサブタスクだけを足し、未見積のサブタスクの件数を PlanningValue に持つ。すべて未見積なら、その Task が未見積（不変条件 8） | Planning：「2.5h ＋ 未見積 1」のように合計と件数を並べる |
+| F10 | 計画基準はサブタスク合計に作用しない | Subtask の見積もりは点の値なので、サブタスク合計も点になる。不変条件 9 の「幅のあるサブタスク合計」を削除 | なし |
+| F11 | 一部のサブタスクが見積もりなしなら、その件数を示す | timeBasis がサブタスク合計のとき、見積もりのあるサブタスクだけを足し、見積もりのないサブタスクの件数を PlanningValue に持つ。すべて見積もりなしなら、その Task が見積もりなし（不変条件 8） | Planning：「2.5h（見積もりなしが 1件）」のように合計と件数を並べる |
 | F12 | 毎週の繰り返しは曜日を複数指定できる | RecurrenceRule の版の曜日は 1 つ以上（例：毎週 月・木）。その Sprint で発生する回は指定した曜日の数（1〜7 回） | Backlog・Planning：「毎週 月・木」のように曜日を並べる |
 | F13 | Sprint から外した Task は同じ Sprint に戻せる | SprintTask に Removed → Planned（Sprint に戻す）を足す。同じ SprintTask を戻すので「同じ Sprint に 1 件まで」（不変条件 14）は保たれ、origin と planSnapshot は変わらない | 確定後に外した Task を元に戻せる |
 | F14 | 繰り返しの SprintTask を外すと、残りの回は外した回になる | Sprint 中に Removed にすると、その SprintTask の Pending の回を Excluded にする（完了・スキップ済みの回はそのまま）。Today に出ず、Retro の事実（未処理）にも出ない（F2）。F13 で戻すと Pending に戻る | なし |
@@ -104,7 +104,7 @@ Task は User に属し、Backlog はそのうち active なものを並べた�
 &#91;embedded content: ドメインマップ · 恒久（Backlog）・期間（Sprint / Today）・学び（Retro）\]
 
 - **恒久（User の持ち物）**：Area、Task とその持ち物（Subtask、Estimate / Suggestion、RecurrenceRule、Occurrence）、PlanningCriterion。Sprint が終わっても残る。Backlog は lifecycle = active の Task のビューで、独立した入れ物ではなく、Area は現在の名前で表示する。RecurrenceRule の変更は、まだ確定していない次の Sprint から効く。
-- **期間（Sprint）**：Sprint が SprintGoal、SprintTask、DailySelection、InterruptNote、SprintAreaSnapshot（確定時の Area 名。Sprint 中に初めて現れた Area はその時点の名前）を持つ。Planning / Today / Retro はその Sprint の間、SprintAreaSnapshot の名前で Area を表示する。可用時間と Goal の文は、確定時の値と現在の値の両方を持つ。
+- **期間（Sprint）**：Sprint が SprintGoal、SprintTask、DailySelection、InterruptNote、SprintAreaSnapshot（確定時の Area 名。Sprint 中に初めて現れた Area はその時点の名前）を持つ。Planning / Today / Retro はその Sprint の間、SprintAreaSnapshot の名前で Area を表示する。使える時間と Goal の文は、確定時の値と現在の値の両方を持つ。
 - **学び（Retro）**：Retro は 1 つの Sprint を振り返り、ReflectionNote と RetroImprovement を持つ。Improvement から任意で PlanningCriterion を作り、次の Sprint での扱いが CriterionUse になる。Retro が完了するまで、次の Sprint は確定できない。
 - 図にはないが、すべての操作は **Activity**（いつ・誰が・何を）として追記される。外部 Agent の計画案は **PlanProposal** として Sprint の Planning 中だけ存在する。
 
@@ -123,16 +123,16 @@ Task は User に属し、Backlog はそのうち active なものを並べた�
 | EstimateSuggestion（E） | 製品側の提案（幅） | lo–hi、根拠、不確実な点、createdAt、state（提示中 / 採用 / 却下 / 置換） | Task | すべて残す |
 | RecurrenceRule（E・版つき） | 繰り返しの決まり | 版ごとに freq（毎日 / 平日 / 毎週 / 毎月）、曜日（毎週は 1 つ以上）・日付、effectiveFrom、effectiveTo | Task（0..1） | 版そのもの。新しい版は、まだ確定していない次の Sprint から効く（effectiveFrom = その Sprint の開始日）。その Sprint の Planning（draft）がすでに回を生成していれば、その回を作り直す |
 | Occurrence（E） | ルールから発生した 1 回 | scheduledDate、ruleVersion、materializedAt、state（Pending / Excluded / Done / Skipped / Missed） | Task（Rule の版を参照） | 状態と日時。Sprint の確定後は Rule 変更の影響を受けない（未確定の draft の回は作り直す）。Excluded は記録に残すが、通常の Retro 事実には出さない |
-| Sprint（E・集約の根） | 期間の計画単位（MVP は 1 週） | start、end、state、confirmedAt、availableHours（確定時 / 現在）、previousSprint | User | 可用時間の変更履歴、確定日時、状態遷移 |
+| Sprint（E・集約の根） | 期間の計画単位（MVP は 1 週） | start、end、state、confirmedAt、availableHours（確定時 / 現在）、previousSprint | User | 使える時間の変更履歴、確定日時、状態遷移 |
 | SprintAreaSnapshot（VO） | その Sprint での Area の表示名。その Sprint の Planning / Today / Retro はこの名前を使う | area、name、order | Sprint | 確定時に固定。Sprint 中に初めて現れた Area は、その時点の名前を並び順の末尾に足して固定 |
 | SprintGoal（E） | Sprint × Area の「今週どうなっていたいか」 | area、plannedText（確定時）、text（現在）、selfAssessment（できた / 一部できた / できなかった / 判断しない / 未判定） | Sprint。Area を参照 | 確定後の文の変更履歴、自己判定 |
 | SprintTask（E） | Task をこの Sprint で扱うこと（参加レコード） | task、occurrences（繰り返しのみ）、origin（planning / midSprint）、addedAt、goalLink（linked / unlinked）、planSnapshot、outcome、carriedFrom | Sprint。Task・Occurrence を参照 | 追加の日時と経路、goalLink の変更、計画値、結果 |
-| PlanningValue（VO） | 今回の時間判断に使う値 | lo、hi、base（Estimate / 提案 / サブタスク合計 / なし）、unestimatedSubtasks（サブタスク合計のとき、未見積のサブタスクの件数）、criterionApplied、computedAt | SprintTask の planSnapshot | 作成時に固定（計画分は確定時、追加分は追加時） |
-| DailySelection（E） | ある日に、ある SprintTask（またはその回）を「今日やる」と選んだこと | date、origin（手動 / 当日の繰り返し / Sprint 中の追加 / Backlog からの完了）、selectedAt、startedAt、resolution（Done / Paused / Deferred / Removed / Skipped / Unresolved）、resolvedAt、closedBefore（F17：その日に閉じた後に完了したとき、元の閉じた状態と日時） | Sprint。SprintTask・Occurrence を参照 | すべて残す（例外：Backlog からの完了で作った選択は、その完了を取り消すと消える。F29。完了と取り消しは Activity に残る） |
+| PlanningValue（VO） | 今回の時間判断に使う値 | lo、hi、base（Estimate / 提案 / サブタスク合計 / なし）、unestimatedSubtasks（サブタスク合計のとき、見積もりのないサブタスクの件数）、criterionApplied、computedAt | SprintTask の planSnapshot | 作成時に固定（計画分は確定時、追加分は追加時） |
+| DailySelection（E） | ある日に、ある SprintTask（またはその回）を「今日やる」と選んだこと | date、origin（手動 / 当日の繰り返し / 週の途中の追加 / Backlog からの完了）、selectedAt、startedAt、resolution（Done / Paused / Deferred / Removed / Skipped / Unresolved）、resolvedAt、closedBefore（F17：その日に閉じた後に完了したとき、元の閉じた状態と日時） | Sprint。SprintTask・Occurrence を参照 | すべて残す（例外：Backlog からの完了で作った選択は、その完了を取り消すと消える。F29。完了と取り消しは Activity に残る） |
 | ActualTime（VO） | 任意の実績時間 | hours、date、via（完了時 / 今日はここまで / 後から）、recordedAt | SprintTask（繰り返しは Occurrence） | 追記のみ。合計がその Sprint の実績 |
 | InterruptNote（E） | 予定外の出来事のメモ。Task ではない | at、text、minutes（任意） | Sprint | Sprint が実行中の間は text と minutes を直せる・消せる（F38）。Review に入った後は固定。記録・直す・消す・元に戻すは Activity に残る |
 | PlanningCriterion（E） | Estimate の幅を計画値にするルール | scope（すべて / 特定の Area）、rangePolicy（下限 / 中央 / 上限）、sourceImprovement、state（Draft / Active / Ended / Replaced）、replacedBy | User。Improvement を参照 | 作成・継続・終了・置換 |
-| CriterionUse（E） | ある Sprint でその基準をどう扱ったか | criterion、appliedAtConfirm（適用した / しなかった。Sprint 中の追加もこれに従う）、retroDecision（続ける / 終える / 置き換える） | Sprint。Criterion を参照 | 確定時の適用と Retro での決定 |
+| CriterionUse（E） | ある Sprint でその基準をどう扱ったか | criterion、appliedAtConfirm（適用した / しなかった。週の途中の追加もこれに従う）、retroDecision（続ける / 終える / 置き換える） | Sprint。Criterion を参照 | 確定時の適用と Retro での決定 |
 | Retro（E） | Sprint の振り返り | startedAt、completedAt、pins（気になる印）、ReflectionNote（VO・自然文） | Sprint と 1 対 1 | 完了日時（次の Sprint を確定できる条件）、印 |
 | RetroImprovement（E） | 次の Sprint で 1 つ変えてみること（自然文） | text、derivedCriterion（0..1） | Retro（1 件） | 文、次回 Planning で表示した事実 |
 | PlanProposal（E） | 外部 Agent の計画案（差分） | source、createdAt、項目ごとの採否 | Planning 中の Sprint | 項目ごとの採否 |
@@ -183,7 +183,7 @@ stateDiagram-v2
   [*] --> Draft: Planning で選ぶ / 今週の繰り返しを既定で含める
   Draft --> [*]: 確定前に外す（繰り返しは Occurrence = Excluded）
   Draft --> Planned: Sprint を確定（planSnapshot を作る）
-  [*] --> Planned: Sprint 中の追加（追加時に planSnapshot、goalLink = unlinked）
+  [*] --> Planned: 週の途中の追加（追加時に planSnapshot、goalLink = unlinked）
   Planned --> Done: 完了（Today / Backlog）
   Done --> Planned: 完了を取り消す
   Planned --> Removed: 確定後に Sprint から外す
@@ -194,13 +194,13 @@ stateDiagram-v2
 
 - 「進行中」「今日はここまで」は SprintTask の状態にしない。その日の DailySelection が持つ。未完了のまま実績がある SprintTask は Planned のまま。
 - CarriedOver は次の Sprint に自動で入らない。次の Planning の「持ち越し」候補に出て、本人が選んだときだけ新しい SprintTask（carriedFrom = 前のもの）ができる。前の Sprint が Review に入る前に次の Sprint で選んでいた場合は、Review に入るときにシステムがその Draft に carriedFrom を付ける（F35）。
-- goalLink の既定：Planning で選んだ非繰り返しは linked、繰り返しと Sprint 中の追加は unlinked。確定時に Goal のない Area の SprintTask は unlinked になる。
+- goalLink の既定：Planning で選んだ非繰り返しは linked、繰り返しと 週の途中の追加は unlinked。確定時に Goal のない Area の SprintTask は unlinked になる。
 
 ### DailySelection
 
 ```mermaid
 stateDiagram-v2
-  [*] --> Selected: 今日へ（手動 / 当日の繰り返し / Sprint 中の追加）
+  [*] --> Selected: 今日へ（手動 / 当日の繰り返し / 週の途中の追加）
   [*] --> Done: Backlog から完了
   Selected --> Started: 開始
   Selected --> Done: 完了
@@ -234,7 +234,7 @@ stateDiagram-v2
   [*] --> Projected: Rule から計算（保存しない）
   Projected --> Pending: Planning 開始時に生成（既定で Sprint に含める）
   Pending --> Excluded: Planning で外す / Sprint から外す（F14）
-  Excluded --> Pending: Planning で戻す / Sprint 中に追加 / Sprint に戻す（F13）
+  Excluded --> Pending: Planning で戻す / 週の途中で追加 / Sprint に戻す（F13）
   Pending --> Done: 完了
   Pending --> Skipped: スキップ
   Done --> Pending: 取り消す
@@ -273,7 +273,7 @@ stateDiagram-v2
   Active --> Replaced: Retro で「置き換える」（replacedBy）
 ```
 
-- Active は同時に 1 つまで。Active がある間に確定した Sprint には必ず CriterionUse が 1 件できる。Planning の Check で外した場合は appliedAtConfirm = false。Sprint 中の追加も appliedAtConfirm に従い、true なら追加分にも基準を当て、false なら当てない。
+- Active は同時に 1 つまで。Active がある間に確定した Sprint には必ず CriterionUse が 1 件できる。Planning の Check で外した場合は appliedAtConfirm = false。週の途中の追加も appliedAtConfirm に従い、true なら追加分にも基準を当て、false なら当てない。
 - 確定後に基準を外す操作はない（MVP）。適用しなかった Sprint でも、Retro で続ける / 終える / 置き換えるを選ぶ。
 
 ### Sprint
@@ -286,8 +286,8 @@ stateDiagram-v2
   Review --> Closed: 次回に引き継いで Retro を完了
 ```
 
-- 確定時に写し取るもの：各 SprintTask の planSnapshot、SprintGoal.plannedText、可用時間（確定時）、SprintAreaSnapshot、CriterionUse。SprintAreaSnapshot はその Sprint の Planning / Today / Retro での Area 名になり、Sprint 中の改名は反映しない。確定前の Planning は現在の名前を使う。スナップショットにない Area が Sprint 中に初めて現れたとき（その Area の Task を Sprint に追加した、または Sprint 内の Task の Area にした）は、その時点の名前を末尾に足して固定する（F9）。
-- Active の間も Goal の文と可用時間は変えられる。変更は履歴に残り、Retro で確定時との差分を見せる。確定後に Goal を新しく書くことはできるが、消すことはできない（F16）。
+- 確定時に写し取るもの：各 SprintTask の planSnapshot、SprintGoal.plannedText、使える時間（確定時）、SprintAreaSnapshot、CriterionUse。SprintAreaSnapshot はその Sprint の Planning / Today / Retro での Area 名になり、Sprint 中の改名は反映しない。確定前の Planning は現在の名前を使う。スナップショットにない Area が Sprint 中に初めて現れたとき（その Area の Task を Sprint に追加した、または Sprint 内の Task の Area にした）は、その時点の名前を末尾に足して固定する（F9）。
+- Active の間も Goal の文と使える時間は変えられる。変更は履歴に残り、Retro で確定時との差分を見せる。確定後に Goal を新しく書くことはできるが、消すことはできない（F16）。
 - Review に入った時点で、未完了の SprintTask を CarriedOver（繰り返しの SprintTask は Done で閉じる：F20）、未処理の Occurrence を Missed、開いたままの DailySelection を Unresolved にする。本人は最終日から、システムは終了日を過ぎたら Review に入れる（F21）。次の Sprint が Planning 中で、CarriedOver にした Task をそこで単発として選んでいれば、その Draft に carriedFrom を付ける（F35）。
 
 ## 不変条件（Invariants）
@@ -306,8 +306,8 @@ stateDiagram-v2
 
 6. Estimate は本人の点の値。提案が自動で Estimate になることはない。提案を Estimate にするのは本人の「採用」だけで、source に採用元（下限・中央・上限。編集して採用なら元の提案：F31）を残す。
 7. 計画基準の「適用」は PlanningValue だけを作り、Estimate も提案も変えない。採用と適用は、画面でも別の言葉・別の場所で行う。
-8. 計画値の元は、Estimate → なければ提示中の提案 → なければ未見積（合計に含めず、件数を示す）の順。timeBasis がサブタスク合計なら、見積りのあるサブタスクだけを足し、未見積のサブタスクの件数を示す（すべて未見積なら、その Task が未見積）。
-9. 計画基準は幅のある元（提案）にだけ作用する。点の Estimate とサブタスク合計（Subtask の見積りは点の値）には作用しない。
+8. 計画値の元は、Estimate → なければ提示中の提案 → なければ見積もりなし（合計に含めず、件数を示す）の順。timeBasis がサブタスク合計なら、見積もりのあるサブタスクだけを足し、見積もりのないサブタスクの件数を示す（すべて見積もりなしなら、その Task が見積もりなし）。
+9. 計画基準は幅のある元（提案）にだけ作用する。点の Estimate とサブタスク合計（Subtask の見積もりは点の値）には作用しない。
 10. 親 Task とサブタスクの時間は、timeBasis で選んだ一方だけを数える。
 
 **Sprint / Goal**
@@ -316,10 +316,10 @@ stateDiagram-v2
 12. 前の Sprint が Closed（Retro 完了）でなければ、次の Sprint は Planning（draft）までで、確定できない。
 13. SprintGoal は Sprint × Area に 0..1。全体 Goal は持たない。
 14. 非繰り返しの Task は、同じ Sprint に SprintTask を 1 件まで。
-15. goalLink = unlinked の SprintTask も時間の合計に含める。Sprint 中の追加は unlinked で作られ、自動で Goal に紐付かない。
-16. planSnapshot は作成時に固定する：計画分は確定時、Sprint 中の追加は追加時。Sprint 中の追加に基準を当てるのは、その Sprint の CriterionUse.appliedAtConfirm = true のときだけ（false や CriterionUse がなければ当てない）。
+15. goalLink = unlinked の SprintTask も時間の合計に含める。週の途中の追加は unlinked で作られ、自動で Goal に紐付かない。
+16. planSnapshot は作成時に固定する：計画分は確定時、週の途中の追加は追加時。週の途中の追加に基準を当てるのは、その Sprint の CriterionUse.appliedAtConfirm = true のときだけ（false や CriterionUse がなければ当てない）。
 17. SprintTask.origin（planning / midSprint）は作成時に決まり変わらない。
-18. 確定時に Goal の文・可用時間・Area 名を写し取る。確定後の Goal の文と可用時間の変更は履歴に残し、写し取った値は書き換えない。Sprint に属する画面（Planning / Today / Retro）はその Sprint の間 SprintAreaSnapshot の名前で固定し、Backlog など恒久側は現在の Area 名を使う。確定後に Sprint へ初めて現れた Area は、その時点の名前をスナップショットに足して固定する。
+18. 確定時に Goal の文・使える時間・Area 名を写し取る。確定後の Goal の文と使える時間の変更は履歴に残し、写し取った値は書き換えない。Sprint に属する画面（Planning / Today / Retro）はその Sprint の間 SprintAreaSnapshot の名前で固定し、Backlog など恒久側は現在の Area 名を使う。確定後に Sprint へ初めて現れた Area は、その時点の名前をスナップショットに足して固定する。
 19. Goal の達成はシステムが判定しない。Chore の完了率を代わりにしない。
 20. CarriedOver は次の Sprint に自動で入らない。
 
@@ -329,11 +329,11 @@ stateDiagram-v2
 22. Paused・Deferred・Removed・Unresolved のどれでも、SprintTask は Sprint に残る。翌日の DailySelection は自動で作らない（Paused は翌日「昨日の続き」として候補に出すだけ）。
 23. 連続見送りは、同じ Task を Today に選んだ機会の連続で数え、数えるのは Deferred だけ。選ばなかった日と Unresolved は無視し、Paused・Done・Removed・Skipped で途切れる。表示は「N回続けて見送り」。
 24. Unresolved は日付変更時、または Review への移行時にシステムだけが付ける（本人が Retro を始めた場合も、記録はシステムのもの：F23）。
-25. Today は Goal・計画基準・可用時間を変えない。Today と Backlog では容量超過を表示しない。
+25. Today は Goal・計画基準・使える時間を変えない。Today と Backlog では容量超過を表示しない。
 26. Sprint 外の Task を今日へ入れる操作は、SprintTask（midSprint）と DailySelection を同時に作る。片方だけが残ることはない。
 27. Backlog から今の Sprint の Task を完了すると、Task = Completed、SprintTask = Done、その日の DailySelection（Done）が同時にできる。Sprint の開始日より前は、DailySelection を作らずに Task と SprintTask だけが同時に変わる（F34）。
 28. 実績時間は任意で、完了の条件にしない。未完了でも「今日はここまで」で残せる。
-29. InterruptNote は Task ではない。Sprint 中の追加とは別に数える。
+29. InterruptNote は Task ではない。週の途中の追加とは別に数える。
 
 **繰り返し**
 
@@ -359,7 +359,7 @@ stateDiagram-v2
 
 | 失われる情報 | 現在状態だけだと | 残し方 |
 | --- | --- | --- |
-| Sprint に入れた日時と経路 | Planning 時か Sprint 中の追加か区別できない | SprintTask.origin・addedAt |
+| Sprint に入れた日時と経路 | Planning 時か 週の途中の追加か区別できない | SprintTask.origin・addedAt |
 | 計画時（追加時）の Estimate・提案・計画値 | 後で Estimate を変えると当時の判断が消える | planSnapshot（確定時 / 追加時に固定） |
 | 提案が出ていたことと採否 | 採用すると提案だったことが消える | EstimateSuggestion.state と Estimate.source |
 | Estimate の変更 | 最新値だけになる | Estimate の変更履歴 |
@@ -374,13 +374,13 @@ stateDiagram-v2
 | 今週は計画しなかった回 | 外すと消える | Occurrence = Excluded（通常の Retro 事実には出さない） |
 | ルール変更前の回の意味 | 上書きすると過去の曜日が変わって見える | Rule の版と Occurrence.ruleVersion |
 | Goal の文 | 確定後に書き換えると当時の意図が消える | SprintGoal.plannedText と変更履歴 |
-| 可用時間 | 同上 | 確定時の値と変更履歴 |
+| 使える時間 | 同上 | 確定時の値と変更履歴 |
 | Area の名前 | 名前を変えると、過去や進行中の Sprint の意味が変わる | SprintAreaSnapshot |
 | 計画基準を適用したか | 次の Sprint で基準が変わると消える | CriterionUse.appliedAtConfirm |
 | 基準の継続・終了・置換 | Active が 1 つあるだけでは流れが追えない | Criterion.state、replacedBy、CriterionUse.retroDecision |
 | Agent 案の採否と割り込み | 本人の操作と区別できない / どこにも残らない | PlanProposal の採否と Activity.actor、InterruptNote |
 
-**Activity に残す最小限の種類**：Task の作成 / 完了 / アーカイブ、Estimate の変更（採用を含む）、提案の提示 / 却下、Sprint への追加（経路つき）/ 外す / 持ち越しとしてつなぐ（F35）、Sprint の確定、Goal の文と可用時間の変更、今日へ / 開始 / 完了 / 今日はここまで / 見送り / 外す、Occurrence の生成 / 外す / 完了 / スキップ、Rule の変更、基準の適用と Retro での決定、Retro の完了。
+**Activity に残す最小限の種類**：Task の作成 / 完了 / アーカイブ、Estimate の変更（採用を含む）、提案の提示 / 却下、Sprint への追加（経路つき）/ 外す / 持ち越しとしてつなぐ（F35）、Sprint の確定、Goal の文と使える時間の変更、今日へ / 開始 / 完了 / 今日はここまで / 見送り / 外す、Occurrence の生成 / 外す / 完了 / スキップ、Rule の変更、基準の適用と Retro での決定、Retro の完了。
 
 ## Scenario A〜C のウォークスルー
 
@@ -396,7 +396,7 @@ v0.2 Final でも 3 つとも、UI に入口のない操作を使わずに最後
 | 2 | 提案 3–5h | EstimateSuggestion（3–5h、根拠、不確実な点、提示中）。Estimate は空のまま | 一覧は「提案 3–5h」（破線） |
 | 3 | Planning で選ぶ | Sprint（Planning）、SprintTask（Draft、origin = planning、goalLink = linked） | 「今週」。確定前の Planning は現在の Area 名 |
 | 4 | 研究の Goal を書く | SprintGoal（Sprint × 研究、text） | Task 側は変化なし |
-| 5 | 基準を適用して確定 | 前の Sprint が Closed なので確定できる。CriterionUse（appliedAtConfirm = true）。PlanningValue = 5h（base = 提案 3–5h、基準を適用）を planSnapshot に固定。SprintGoal.plannedText、可用時間 18h、SprintAreaSnapshot（研究）を写し取る。SprintTask → Planned、Sprint → Active | 「Estimate 提案 3–5h / 今回は 5h で計画」。提案は採用していないので Estimate は空のまま。以後、この Sprint の画面は「研究」の名前で固定 |
+| 5 | 基準を適用して確定 | 前の Sprint が Closed なので確定できる。CriterionUse（appliedAtConfirm = true）。PlanningValue = 5h（base = 提案 3–5h、基準を適用）を planSnapshot に固定。SprintGoal.plannedText、使える時間 18h、SprintAreaSnapshot（研究）を写し取る。SprintTask → Planned、Sprint → Active | 「Estimate 提案 3–5h / 今回は 5h で計画」。提案は採用していないので Estimate は空のまま。以後、この Sprint の画面は「研究」の名前で固定 |
 | 6 | 9/28 (月) に Today へ | DailySelection（9/28、手動、Selected） | Today に表示 |
 | 7 | 今日は見送る | DailySelection（9/28）→ Deferred。SprintTask は Planned のまま | 「今週の残り」に戻る |
 | 8 | 9/29 (火) も入れて見送る | DailySelection（9/29）を新しく作り → Deferred | 「2回続けて見送り」（この Task の選択機会 9/28・9/29 がどちらも Deferred、派生） |
@@ -414,9 +414,9 @@ v0.2 Final でも 3 つとも、UI に入口のない操作を使わずに最後
 
 | # | 操作（画面） | 作られる / 変わるもの | 表示・事実 |
 | --- | --- | --- | --- |
-| 1–3 | Backlog の詳細で「今日へ」（1 操作） | 同時に SprintTask（Planned、origin = midSprint、goalLink = unlinked、planSnapshot = 追加時点。仕事は基準の対象外なので計画値 2–3h）と DailySelection（当日、origin = Sprint 中の追加）。Activity：Sprint への追加（経路 = Backlog→今日） | 確認ダイアログなし、容量の警告なし。Toast「「顧客インタビューの設計」を今日やるに入れました」（今週の Sprint にも入ったことを添え、「今日を開く」を出す）。Backlog の行に「今日」「週の途中で追加」（今日やるに入っているあいだ。今日やるから外れたら「今週」） |
+| 1–3 | Backlog の詳細で「今日へ」（1 操作） | 同時に SprintTask（Planned、origin = midSprint、goalLink = unlinked、planSnapshot = 追加時点。仕事は基準の対象外なので計画値 2–3h）と DailySelection（当日、origin = 週の途中の追加）。Activity：Sprint への追加（経路 = Backlog→今日） | 確認ダイアログなし、容量の警告なし。Toast「「顧客インタビューの設計」を今日やるに入れました」（今週の Sprint にも入ったことを添え、「今日を開く」を出す）。Backlog の行に「今日」「週の途中で追加」（今日やるに入っているあいだ。今日やるから外れたら「今週」） |
 | 4 | Today で完了 | DailySelection → Done、SprintTask → Done、Task → Completed。実績は任意で ActualTime | 「実績時間を残す（任意）」 |
-| 5 | Retro | origin = midSprint の SprintTask を数える | 「Sprint 中の追加 1件（Goal に紐づかない）」。InterruptNote とは別に表示。計画値の合計には含め、確定時の合計との差を見せる |
+| 5 | Retro | origin = midSprint の SprintTask を数える | 「週の途中の追加 1件（Goal に紐づかない）」。InterruptNote とは別に表示。計画値の合計には含め、確定時の合計との差を見せる |
 
 同じ操作を研究の提案を持つ Task に行えば、appliedAtConfirm = true なので追加時にも基準が当たり、計画値は上限になる。確定時に基準を適用しなかった Sprint（appliedAtConfirm = false）なら、研究でも基準は当たらず、計画値は提案の幅のまま。Backlog の詳細から今の Sprint の Task を「完了にする」場合は、Task = Completed、SprintTask = Done、その日の DailySelection（origin = Backlog からの完了、Done）が同時にでき、Today の「済んだもの」に出る。
 

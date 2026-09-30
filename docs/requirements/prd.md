@@ -57,7 +57,7 @@ Personal Sprint は Scrum の儀式を個人向けに再現するものではな
    Agent / AI は候補・根拠・差分を出す。Task、Goal、計画値、Improvement、Criterion の確定は本人が行う。
 
 3. **現実との差を隠さない**  
-   持ち越し、見送り、途中終了、Sprint 中追加、割り込み、可用時間や Goal の変更を失敗として消さず、次回の判断材料にする。
+   持ち越し、見送り、途中終了、週の途中の追加、割り込み、使える時間や Goal の変更を失敗として消さず、次回の判断材料にする。
 
 4. **入力を増やしすぎない**  
    Task はタイトルだけで成立する。日々の完了や見送りに理由入力を強制しない。実績時間も任意とする。
@@ -134,7 +134,7 @@ Planning は **ひとつの workspace が Pick → Shape → Check と自然に�
 - Task を今週へ選び、その場で新規追加・編集もできる。
 - Goal の入力をこの段階で強制しない。
 - 前回 Retro Improvement と有効な Planning Criterion を確認できる。
-- Capacity は主役にせず、選んだ Task の合計と本人が入力した可用時間を控えめに表示する。
+- Capacity は主役にせず、選んだ Task の合計と本人が入力した使える時間を控えめに表示する。
 - 今週発生する繰り返し Occurrence は既定で選択済み。不要な回は本人が外せる。
 
 #### Shape — Goal と Task を整える
@@ -143,13 +143,13 @@ Planning は **ひとつの workspace が Pick → Shape → Check と自然に�
 - Goal は「今週どんな状態にしたいか」を表す自然文とする。
 - 全 Area に Goal は必要ない。
 - Task は `Goal に紐づく / 紐づかない` を選べる。
-- Chore・定常 Task・Sprint 中追加など Goal に紐づかない Task も正常であり、時間合計に含める。
+- Chore・定常 Task・週の途中の追加など Goal に紐づかない Task も正常であり、時間合計に含める。
 - Task を見て Goal を書き、Goal を書いた後に Task を増減できる。
 - AI による Goal 文案は小さな補助として提供できるが、自動確定しない。
 
 #### Check — 現実的か確認する
 
-- Area ごとの時間と Sprint 全体の時間を可用時間と比較する。
+- Area ごとの時間と Sprint 全体の時間を使える時間と比較する。
 - 幅がある場合は「何が上振れすると超過するか」を説明する。
 - 調整案は必要時に開く段階表示とし、強制的な推奨にはしない。
 - Sprint を確定する前に、Task、Goal、Planning Criterion の適用を本人が確認する。
@@ -163,12 +163,12 @@ Planning は **ひとつの workspace が Pick → Shape → Check と自然に�
   - scope: すべて / 特定 Area
   - range policy: 下限 / 中央 / 上限
 - Sprint 確定時に Planning Value とその根拠を固定する。
-- Sprint 中に追加した Task も追加時点で Planning Value を固定する。Criterion を使うかは Sprint 確定時の適用判断に従う。
-- Sprint 中追加によって Capacity を超えても、Today / Backlog では警告を出さない。Retro で計画時との差として確認できる。
+- 週の途中で追加した Task も追加時点で Planning Value を固定する。Criterion を使うかは Sprint 確定時の適用判断に従う。
+- 週の途中の追加によって Capacity を超えても、Today / Backlog では警告を出さない。Retro で計画時との差として確認できる。
 
 #### 確定後の変更
 
-- Goal 文と可用時間は Sprint 中にも変更できる。Sprint 中に Goal を新しく書くこともできるが、消すことはできない。
+- Goal 文と使える時間は Sprint 中にも変更できる。Sprint 中に Goal を新しく書くこともできるが、消すことはできない。
 - 確定後に Sprint から外した Task は、同じ Sprint に戻せる。繰り返し Task を外した場合、その Sprint の残りの Occurrence は外した回として扱い、Today にも Retro の未処理にも出さない。
 - 計画時の値は保持し、変更履歴を Retro で確認できる。
 - Planning Criterion の適用有無は Sprint 確定後には変更しない（MVP）。
@@ -220,7 +220,7 @@ Today は毎日使う軽量画面であり、日次 Planning や詳細なタイ�
 - ストップウォッチを必須にしない。
 - 実績入力がなくても完了・見送り・Retro を妨げない。
 
-#### Sprint 中追加と割り込み
+#### 週の途中の追加と割り込み
 
 - Today からタイトルと Area 程度ですぐ Task を追加できる。
 - 追加した Task は mid-sprint addition として Sprint に入り、Retro の事実に残る。
@@ -244,12 +244,12 @@ Area ごとに以下を確認できる。
 - 完了・持ち越し
 - Goal に紐づかなかった Task
 - 繰り返し Occurrence の完了 / スキップ / 未処理
-- Sprint 中追加
+- 週の途中の追加
 - Today での見送り / 今日はここまで
 - Interrupt
 - Planning 時の Estimate / Planning Value
 - 実績時間（入力がある場合のみ）
-- Goal / 可用時間を Sprint 中に変更した場合の計画時との差
+- Goal / 使える時間を Sprint 中に変更した場合の計画時との差
 
 Planning で明示的に外した繰り返し Occurrence は通常の Retro 事実には出さない。
 
@@ -297,7 +297,7 @@ Planning で明示的に外した繰り返し Occurrence は通常の Retro 事�
 
 - Task は Subtask を持てる。
 - Planning の時間計算は `親 Task の Estimate` または `Subtask の Estimate 合計` のどちらか一方を使い、二重計上しない。
-- Subtask の Estimate は点の値とする。一部の Subtask が未見積なら、見積りのある分を合計し、未見積の件数を示す。Planning Criterion は Subtask の Estimate 合計には作用しない。
+- Subtask の Estimate は点の値とする。一部の Subtask が見積もりなしなら、見積もりのある分を合計し、見積もりなしの件数を示す。Planning Criterion は Subtask の Estimate 合計には作用しない。
 - MVP では Subtask 単位で Sprint へ参加させない。
 
 ### Recurrence
@@ -346,18 +346,18 @@ Jev / LLM の具体的な採用は検証対象であり、プロダクト成立�
 2. Backlog を見て Task を Sprint に選び、Planning 中にも Task を追加・編集できる。
 3. Area ごとに Goal を書き、Task を Goal に紐づける / 紐づけないを選べる。Goal のない Area も許容する。
 4. 本人の Estimate、製品の Estimate Suggestion、今回の Planning Value を区別して表示・記録できる。
-5. 本人が入力した Sprint の可用時間と Planning Value 合計を比較でき、Capacity 超過の原因を確認できる。
+5. 本人が入力した Sprint の使える時間と Planning Value 合計を比較でき、Capacity 超過の原因を確認できる。
 6. Planning Criterion を使う場合、Task の Estimate 自体を書き換えず今回の Planning Value にだけ反映できる。
 7. 今週発生する繰り返し Occurrence が Planning に既定で現れ、外す・完了する・スキップする・次回へ進む履歴が矛盾なく残る。
 8. Today で今日やる Task を選び、開始、完了、今日はここまで、今日は見送る、今日から外す、繰り返しのスキップを記録できる。
 9. 未完了でも `今日はここまで` から任意の Actual Time を記録できる。
-10. Sprint 外の Task を `今日へ` 入れた場合、Sprint 中追加として現在 Sprint と Today に同時追加できる。
+10. Sprint 外の Task を `今日へ` 入れた場合、週の途中の追加として現在 Sprint と Today に同時追加できる。
 11. Interrupt を Task と分けて短く記録できる。
-12. Sprint 終了時に Area Goal の自己判定、持ち越し、見送り、Sprint 中追加、Interrupt、Estimate / Planning Value / Actual Time を事実として確認できる。
+12. Sprint 終了時に Area Goal の自己判定、持ち越し、見送り、週の途中の追加、Interrupt、Estimate / Planning Value / Actual Time を事実として確認できる。
 13. Retro Improvement を 1 件確定し、次の Planning に表示できる。
 14. Criterion がある場合は Retro で継続 / 終了 / 置換を決め、次回 Planning に一貫して反映できる。
 15. 前 Sprint の Retro が未完了でも次 Planning の下書きは作れるが、Retro 完了前に次 Sprint を確定できない。
-16. Goal / 可用時間を Sprint 中に変更しても計画時の値が失われず、Retro で差分を確認できる。
+16. Goal / 使える時間を Sprint 中に変更しても計画時の値が失われず、Retro で差分を確認できる。
 17. Goal や AI の設定なしでも、Task の追加から Today の完了、Retro まで一周できる。
 18. Agent が参照していない予定・実績を参照したように説明しない。
 
@@ -376,7 +376,7 @@ Jev / LLM の具体的な採用は検証対象であり、プロダクト成立�
 - Retro 完了率
 - Retro Improvement を次週 Planning で確認した割合
 - Goal 自己判定の入力率
-- 持ち越し / Sprint 中追加 / 見送りが Retro の材料として確認された割合
+- 持ち越し / 週の途中の追加 / 見送りが Retro の材料として確認された割合
 - Estimate Suggestion の採用 / 編集 / 却下
 - Planning Criterion の継続 / 終了 / 置換
 - Quick Capture から実際の Planning / Today に使われた Task の割合
