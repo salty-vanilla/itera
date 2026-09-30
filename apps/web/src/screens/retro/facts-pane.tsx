@@ -1,20 +1,18 @@
 import type { AreaId, RetroPin, SelfAssessment, TaskFact } from '@itera/domain';
 import { Info, Timer } from 'lucide-react';
-import { Fragment, useId, type ReactNode } from 'react';
+import { Fragment, useId, useRef, type ReactNode } from 'react';
+import { semanticIcons } from '@/components/ui/icon';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { Button } from '@/components/ui/button';
 import { Radio, RadioGroup } from '@/components/ui/radio-group';
 import { SprintSummary } from '@/components/sprint/sprint-summary';
 import { criterionName } from '@/lib/criterion-text';
-import { formatDate, formatTime } from '@/lib/date-format';
+import { formatDate, formatDateTime } from '@/lib/date-format';
 import { SELECTION_WORDS } from '@/lib/selection-words';
 import {
   formatHours,
   formatPlanningTotal,
-  formatPlanningValue,
   formatRange,
-  formatUnestimatedCount,
-  UNESTIMATED,
 } from '@/lib/time-format';
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 import { cn } from '@/lib/utils';
@@ -27,6 +25,16 @@ import {
   PinToggle,
   samePin,
 } from './retro-words';
+import { TaskResult } from './task-result';
+import {
+  actualLabel,
+  daysText,
+  estimateOf,
+  plannedCellText,
+  plannedLabel,
+  planNotes,
+  unestimatedNote,
+} from './task-values';
 
 // 事実を見る (patterns.md Retro): 「今週、何が起きたか」. Everything here is
 // derived from the records by `retroFacts` and never edited (invariant 40);
@@ -34,6 +42,8 @@ import {
 // (F22). No scores and no rates; facts are written neutrally. Once the
 // Sprint is closed, all of it is read only (#90): no 振り返りに使う, no judging
 // and no actual time.
+
+const CarryIcon = semanticIcons.carriedOver;
 
 type AddActual = (
   target: ActualTarget,
@@ -86,8 +96,24 @@ function FactsPane({
   // Also when the hours were first entered after confirming.
   const hoursChanged = currentHours !== plannedHours;
 
+  // 持ち越し N件 in the summary moves to the rows, one press at a time from
+  // the first, and round again after the last.
+  const paneRef = useRef<HTMLDivElement>(null);
+  const nextCarried = useRef(0);
+  const goToCarriedOver = () => {
+    const rows =
+      paneRef.current?.querySelectorAll<HTMLElement>('[data-carried-over]') ??
+      [];
+    const row = rows[nextCarried.current % rows.length];
+    nextCarried.current = (nextCarried.current + 1) % Math.max(rows.length, 1);
+    if (row === undefined) return;
+    row.focus();
+    row.scrollIntoView?.({ block: 'center' });
+  };
+
   return (
     <div
+      ref={paneRef}
       data-slot="facts-pane"
       // The tables of Tasks and occurrences take the whole width; the rest
       // is text and keeps to the reading column (owner decision in #73).
@@ -102,8 +128,14 @@ function FactsPane({
             { label: '完了', value: facts.completed.length, unit: '件' },
             {
               label: '持ち越し',
+              icon: <CarryIcon aria-hidden />,
               value: facts.carriedOver.length,
               unit: '件',
+              // To the rows that carry the same icon; 0 is only text.
+              ...(facts.carriedOver.length > 0 && {
+                onSelect: goToCarriedOver,
+                selectLabel: `持ち越し ${facts.carriedOver.length}件の行へ移る`,
+              }),
             },
             {
               label: 'スキップ',
@@ -286,7 +318,7 @@ function FactsPane({
       {(facts.deferrals.length > 0 || facts.pauses.length > 0) && (
         <section aria-labelledby="retro-days" className="flex flex-col gap-3">
           <h2 id="retro-days" className="text-heading text-ink">
-            Today での見送り・今日はここまで
+            見送り・今日はここまで
           </h2>
           <ul className="flex flex-col border-t border-border-soft">
             {[
@@ -338,8 +370,8 @@ function FactsPane({
                 key={n.id}
                 action={toggle({ kind: 'interrupt', id: n.id }, n.text)}
               >
-                <span className="text-ink-muted">
-                  {formatTime(n.at, data.timeZone)}
+                <span className="whitespace-nowrap text-ink-muted">
+                  {formatDateTime(n.at, data.timeZone)}
                 </span>{' '}
                 {n.text}
                 {n.minutes !== undefined && (
@@ -465,6 +497,14 @@ type TaskFactsProps = {
   onAddActual: AddActual | undefined;
 };
 
+/**
+ * A carried-over Task's title is where 持ち越し N件 in the summary moves to
+ * (focus, so it is read out; the ring shows where it landed).
+ */
+const carriedAnchor = (t: TaskFact) =>
+  t.outcome === 'carriedOver' ? { 'data-carried-over': '', tabIndex: -1 } : {};
+const carriedFocus = 'focus:focus-ring-inset';
+
 /** A group of Tasks: a table from 768px, stacked under it. */
 function TaskFacts({
   compact,
@@ -536,7 +576,11 @@ function TaskTable({
         <tbody>
           {tasks.map((t) => (
             <tr key={t.sprintTaskId}>
-              <th scope="row" className={cn(cell, 'text-left font-normal')}>
+              <th
+                scope="row"
+                {...carriedAnchor(t)}
+                className={cn(cell, 'text-left font-normal', carriedFocus)}
+              >
                 <span className="text-ink">{t.title}</span>
                 {t.carryCount > 0 && (
                   <span className="block text-meta text-ink-muted">
@@ -557,15 +601,7 @@ function TaskTable({
                 {t.actualHours > 0 ? formatHours(t.actualHours) : '未入力'}
               </td>
               <td className={cn(cell, 'xl:ps-8')}>
-                {/* Breaks only between its parts (「回：完了 2 · スキップ 1」). */}
-                {resultText(t, data)
-                  .split(' · ')
-                  .map((part, i) => (
-                    <Fragment key={part}>
-                      {i > 0 && ' · '}
-                      <span className="whitespace-nowrap">{part}</span>
-                    </Fragment>
-                  ))}
+                <TaskResult fact={t} data={data} />
                 <DaysNote fact={t} />
               </td>
               {actions && (
@@ -615,27 +651,39 @@ function TaskList({
             estimate.kind === 'estimate'
               ? `見積もり ${estimate.text}`
               : estimate.text,
-            `計画 ${plannedText(t)}${planNotes(t)
-              .map((n) => `（${n}）`)
-              .join('')}`,
-            `実績 ${t.actualHours > 0 ? formatHours(t.actualHours) : '未入力'}`,
+            plannedLabel(t),
+            actualLabel(t),
           ];
-          const outcome = [resultText(t, data), daysText(t)].filter(
-            (x) => x !== undefined,
-          );
+          const days = daysText(t);
           return (
             <li
               key={t.sprintTaskId}
               className="flex flex-col gap-1 border-b border-border-soft py-3"
             >
-              <p className="text-body text-ink">{t.title}</p>
+              <p
+                {...carriedAnchor(t)}
+                className={cn('text-body text-ink', carriedFocus)}
+              >
+                {t.title}
+              </p>
               {t.carryCount > 0 && (
                 <p className="text-meta text-ink-muted">
                   前の Sprint から持ち越し（{t.carryCount}回）
                 </p>
               )}
-              <p className="text-body text-ink">{values.join(' · ')}</p>
-              <p className="text-meta text-ink-muted">{outcome.join(' · ')}</p>
+              <p className="text-body text-ink">
+                {/* Breaks only between the values, never inside one. */}
+                {values.map((v, i) => (
+                  <Fragment key={v}>
+                    {i > 0 && ' · '}
+                    <span className="whitespace-nowrap">{v}</span>
+                  </Fragment>
+                ))}
+              </p>
+              <p className="text-meta text-ink-muted">
+                <TaskResult fact={t} data={data} iconSize="xs" />
+                {days !== undefined && ` · ${days}`}
+              </p>
               {onAddActual !== undefined && (
                 <div className="flex flex-wrap gap-2">
                   <TaskActions
@@ -708,86 +756,12 @@ function AddActualButton({
   );
 }
 
-/** The planning value fixed in the plan. */
-function plannedText(t: TaskFact): string {
-  return t.plan === undefined ? UNESTIMATED : formatPlanningValue(t.plan.value);
-}
-
-/**
- * The planning value in the table's narrow column: a subtask sum without
- * its count, which goes under it (`unestimatedNote`).
- */
-function plannedCellText(t: TaskFact): string {
-  const value = t.plan?.value;
-  return value?.base === 'subtasks'
-    ? formatRange(value.lo, value.hi)
-    : plannedText(t);
-}
-
-/** 「見積もりなしが 1件」 for the subtasks left out of a subtask sum. */
-function unestimatedNote(t: TaskFact): string[] {
-  const value = t.plan?.value;
-  return value?.base === 'subtasks' && value.unestimatedSubtasks > 0
-    ? [formatUnestimatedCount(value.unestimatedSubtasks)]
-    : [];
-}
-
-/** What the value came from: the criterion, and a recurring Task's count. */
-function planNotes(t: TaskFact): string[] {
-  return [
-    ...(t.plan?.value.criterionApplied === true ? ['基準'] : []),
-    ...(t.plan?.occurrenceCount === undefined
-      ? []
-      : [`${t.plan.occurrenceCount}回分`]),
-  ];
-}
-
-/** 「見送り 2回 · 今日はここまで 1回」, or nothing. */
-function daysText(t: TaskFact): string | undefined {
-  const parts = [
-    ...(t.deferredDates.length > 0
-      ? [`見送り ${t.deferredDates.length}回`]
-      : []),
-    ...(t.pausedDates.length > 0
-      ? [`今日はここまで ${t.pausedDates.length}回`]
-      : []),
-  ];
-  return parts.length === 0 ? undefined : parts.join(' · ');
-}
-
-/** The Estimate in the plan: the person's, the suggestion shown, or none. */
-function estimateOf(t: TaskFact): {
-  kind: 'estimate' | 'suggestion' | 'none';
-  text: string;
-} {
-  const plan = t.plan;
-  if (plan?.estimateHours !== undefined) {
-    return { kind: 'estimate', text: formatHours(plan.estimateHours) };
-  }
-  if (plan?.suggestion !== undefined) {
-    return {
-      kind: 'suggestion',
-      text: `Agent の提案 ${formatRange(plan.suggestion.lo, plan.suggestion.hi)}`,
-    };
-  }
-  return { kind: 'none', text: UNESTIMATED };
-}
-
 /** 「見送り 2回 · 今日はここまで 1回」 under the outcome, if any. */
 function DaysNote({ fact }: { fact: TaskFact }) {
   const text = daysText(fact);
   return text === undefined ? null : (
     <span className="block text-meta text-ink-muted">{text}</span>
   );
-}
-
-function resultText(t: TaskFact, data: RetroData): string {
-  if (!t.recurring) return OUTCOME_WORDS[t.outcome];
-  // A recurring Task is shown by its occurrences, not done / carried (F20).
-  const { done, skipped, missed } = data.facts.occurrences;
-  const count = (list: readonly { taskId: string }[]) =>
-    list.filter((o) => o.taskId === t.taskId).length;
-  return `回：完了 ${count(done)} · スキップ ${count(skipped)} · 未処理 ${count(missed)}`;
 }
 
 /** One fact in a list, with its 振り返りに使う at the right (none when closed). */
@@ -802,7 +776,9 @@ function FactRow({
     // The actions go under the words when both do not fit (a narrow screen
     // with two actions), rather than squeezing the words.
     <li className="flex min-h-row-touch flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-border-soft py-1 text-body text-ink medium:min-h-row-task">
-      <span className="min-w-0 grow basis-[12rem]">{children}</span>
+      <span className="min-w-0 grow basis-[12rem] [word-break:auto-phrase]">
+        {children}
+      </span>
       <span className="ms-auto shrink-0">{action}</span>
     </li>
   );
