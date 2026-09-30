@@ -153,11 +153,6 @@ export function capacityHeadlineSentences(
     : [partText(headline.lower), partText(headline.upper)];
 }
 
-/** The headline on one line: 「下限なら 2.25h 残る · 上限なら 0.75h 超える」. */
-export function capacityHeadlineText(headline: CapacityHeadline): string {
-  return capacityHeadlineSentences(headline).join(' · ');
-}
-
 const toneClass = {
   ok: 'text-ink-muted',
   tight: 'text-warning',

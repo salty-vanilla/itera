@@ -2,12 +2,14 @@ import { capacityOf } from '@itera/domain';
 import { describe, expect, it } from 'vitest';
 import {
   capacityHeadline,
-  capacityHeadlineText,
+  capacityHeadlineSentences,
   capacityStatement,
 } from './capacity-indicator';
 
 const headline = (lo: number, hi: number, available: number) =>
-  capacityHeadlineText(capacityHeadline(capacityOf({ lo, hi }, available)));
+  capacityHeadlineSentences(
+    capacityHeadline(capacityOf({ lo, hi }, available)),
+  ).join(' · ');
 
 describe('capacityHeadline (owner decision S5 in #93)', () => {
   it('is a range while the plan fits', () => {

@@ -467,25 +467,26 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
  */
 function CapacitySummary({ data }: { data: PlanningData }) {
   const capacity = data.totals.capacity;
-  if (capacity === undefined) {
-    return (
-      <span>
-        計画値の合計 {formatPlanningSum(data.totals.total)} · 使える時間は未入力
-      </span>
-    );
-  }
-  const sentences = [
-    ...capacityHeadlineSentences(capacityHeadline(capacity)),
-    ...(capacity.status === 'exceeds'
-      ? ['下限でも超える']
-      : capacity.status === 'within'
-        ? ['収まる']
-        : []),
-  ];
+  const sentences =
+    capacity === undefined
+      ? [
+          `計画値の合計 ${formatPlanningSum(data.totals.total)}`,
+          '使える時間は未入力',
+        ]
+      : [
+          ...capacityHeadlineSentences(capacityHeadline(capacity)),
+          ...(capacity.status === 'exceeds'
+            ? ['下限でも超える']
+            : capacity.status === 'within'
+              ? ['収まる']
+              : []),
+        ];
   // Each sentence stays whole: the line wraps only at 「·」, so a number
   // never leaves its words.
   return (
-    <span className={capacity.status === 'exceeds' ? 'text-danger' : undefined}>
+    <span
+      className={capacity?.status === 'exceeds' ? 'text-danger' : undefined}
+    >
       {sentences.map((sentence, i) => (
         <Fragment key={sentence}>
           {i > 0 && ' · '}
