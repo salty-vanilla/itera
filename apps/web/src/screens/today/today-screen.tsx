@@ -35,7 +35,8 @@ import { WeekRow } from './week-row';
 // capacity and nothing is judged as going over (invariant 25).
 //
 // Layout: one column, at most 720px; on wide screens the Goals move to the
-// right. Under 768px the quick add is sticky above the tab bar (no FAB).
+// right. The quick add is sticky at the bottom (above the tab bar under
+// 768px, no FAB); a Toast shows above it.
 
 export interface TodaySearch {
   /** The open Task (its detail). */

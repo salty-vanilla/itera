@@ -78,10 +78,10 @@ function makeRoom(main: HTMLElement): DOMRect | undefined {
  *
  * - `main` gets bottom padding (`--toast-clearance`) as tall as the part of
  *   it they cover, if any content lies in their columns, so
- *   that whatever is at the bottom (the last rows, the Quick Add) can be
- *   scrolled clear of them. It goes with the Toasts. Content that fills the
- *   screen (`min-h-full`, `mt-auto`, a sticky bar at the end) rises by the
- *   same amount, as if the screen were that much shorter;
+ *   that whatever is at the bottom (the last rows) can be scrolled clear of
+ *   them. It goes with the Toasts. Content that fills the screen
+ *   (`min-h-full`, `mt-auto`) rises by the same amount, as if the screen were
+ *   that much shorter;
  * - what the person just pressed or typed in is scrolled up, by the least
  *   that it takes, if a Toast would cover it.
  *
