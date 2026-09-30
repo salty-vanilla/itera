@@ -120,7 +120,7 @@ export function enterReview(
 
   const dailySelections: DailySelection[] = sprint.dailySelections.map((s) => {
     if (s.resolution !== 'selected' && s.resolution !== 'started') return s;
-    const next: DailySelection = {
+    const unresolved: DailySelection = {
       ...s,
       resolution: 'unresolved',
       resolvedAt: ctx.now,
@@ -134,7 +134,7 @@ export function enterReview(
       sprintTaskId: s.sprintTaskId,
       date: s.date,
     });
-    return next;
+    return unresolved;
   });
 
   // Link the next Sprint's drafts to what was just carried over (F35): a

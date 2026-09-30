@@ -39,7 +39,7 @@ import {
   type Changed,
 } from './record-store';
 import type { Records } from './records';
-import { review } from './system-changes';
+import { reviewSprint } from './review-changes';
 import { activeSprintOf } from './today-view';
 
 function active(records: Records): Result<Sprint> {
@@ -329,5 +329,5 @@ export function addAndChoose(
 export const beginRetro = (): Change => (records, ctx) => {
   const sprint = active(records);
   if (!sprint.ok) return sprint;
-  return review(sprint.value)(records, ctx);
+  return reviewSprint(sprint.value)(records, ctx);
 };

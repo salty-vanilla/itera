@@ -66,7 +66,7 @@ import {
 import { find, onSprint, onTask, onToday } from '@/store/changes';
 import { changed, type Change, type StoreSnapshot } from '@/store/record-store';
 import { applyChanges, type Records } from '@/store/records';
-import { review as reviewSprint } from '@/store/system-changes';
+import { reviewSprint } from '@/store/review-changes';
 
 export type FixtureStateId =
   | 'planning-pick'

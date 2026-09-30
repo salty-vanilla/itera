@@ -191,7 +191,9 @@ export function planningData(
   const previous = records.sprints.find(
     (s) => s.id === sprint.previousSprintId,
   );
-  const running = records.sprints.find((s) => s.state === 'active');
+  // The Sprint still running is the one before this draft; its unfinished
+  // Tasks are linked when it enters Review (F35).
+  const running = previous?.state === 'active' ? previous : undefined;
   const runningNumber =
     running === undefined ? undefined : sprintNumber(running, records.sprints);
   const row = (task: Task): CandidateRow => {

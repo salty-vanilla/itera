@@ -6,6 +6,7 @@ import { planningData } from './planning-view';
 import { createMemoryStore } from './record-store';
 import { beginPlanning } from './retro-changes';
 import { reviewEnded } from './system-changes';
+import { beginRetro } from './today-changes';
 
 // Issue #89: the next Sprint is planned while this one still runs.
 describe('planning the next Sprint mid-week', () => {
@@ -44,24 +45,31 @@ describe('planning the next Sprint mid-week', () => {
     }
   });
 
-  it('links the choice to its carry-over when the running Sprint enters Review (F35)', () => {
-    const { store, running, unfinished } = chooseUnfinished();
-    const { records } = store.getSnapshot();
-    const after = createMemoryStore({
-      records,
-      clock: {
-        today: addDays(running.end, 1),
-        now: instant(`${addDays(running.end, 1)}T00:05:00.000Z`),
-      },
-    });
-    expect(after.run(reviewEnded(), { actor: 'system' }).ok).toBe(true);
-    const next = after.getSnapshot();
-    const draft = next.records.sprints
-      .find((s) => s.state === 'planning')
-      ?.tasks.find((t) => t.taskId === unfinished.taskId);
-    expect(draft?.carriedFrom).toBe(unfinished.id);
-    expect(
-      next.records.activities.filter((a) => a.kind === 'sprintTaskCarryLinked'),
-    ).toMatchObject([{ actor: 'system', taskId: unfinished.taskId }]);
-  });
+  it.each([
+    ['the system after the end date', 1, 'system'],
+    ['the person starting the Retro on the last day', 0, 'user'],
+  ] as const)(
+    'links the choice to its carry-over when %s moves the Sprint to Review (F35)',
+    (_, days, actor) => {
+      const { store, running, unfinished } = chooseUnfinished();
+      const { records } = store.getSnapshot();
+      const day = addDays(running.end, days);
+      const after = createMemoryStore({
+        records,
+        clock: { today: day, now: instant(`${day}T00:05:00.000Z`) },
+      });
+      const change = actor === 'system' ? reviewEnded() : beginRetro();
+      expect(after.run(change, { actor }).ok).toBe(true);
+      const next = after.getSnapshot();
+      const draft = next.records.sprints
+        .find((s) => s.state === 'planning')
+        ?.tasks.find((t) => t.taskId === unfinished.taskId);
+      expect(draft?.carriedFrom).toBe(unfinished.id);
+      expect(
+        next.records.activities.filter(
+          (a) => a.kind === 'sprintTaskCarryLinked',
+        ),
+      ).toMatchObject([{ actor: 'system', taskId: unfinished.taskId }]);
+    },
+  );
 });
