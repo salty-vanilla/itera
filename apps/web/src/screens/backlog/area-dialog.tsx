@@ -190,7 +190,7 @@ function AreaEditor({
                 className="flex min-h-row-touch items-center gap-2 border-b border-border-soft py-1 medium:min-h-row-task"
               >
                 <AreaMark name={area.name} color={area.color} />
-                <span className="min-w-0 flex-1 text-body text-ink wrap-anywhere">
+                <span className="min-w-0 flex-1 text-body text-ink wrap-anywhere [word-break:auto-phrase]">
                   {area.name}
                 </span>
                 <Button
@@ -293,12 +293,14 @@ function EditRow({
             }}
           />
         </Field>
-        <div className="flex flex-wrap items-center gap-2">
+        {/* When the row is too narrow for one line, キャンセル and 名前を変える
+            stay right under the field and アーカイブ goes below them. */}
+        <div className="flex flex-wrap-reverse items-center gap-2">
           {/* No confirmation: the line left in its place has 元に戻す. */}
           <Button size="sm" variant="danger" type="button" onClick={onArchive}>
             アーカイブ
           </Button>
-          {/* Together at the right; under アーカイブ when narrow. */}
+          {/* Together at the right. */}
           <span className="ml-auto flex gap-2">
             <Button size="sm" variant="quiet" type="button" onClick={onCancel}>
               キャンセル
