@@ -28,7 +28,6 @@ import {
   decideCriterion,
   deferSelection,
   draftCriterion,
-  enterReview,
   id,
   instant,
   localDate,
@@ -67,6 +66,7 @@ import {
 import { find, onSprint, onTask, onToday } from '@/store/changes';
 import { changed, type Change, type StoreSnapshot } from '@/store/record-store';
 import { applyChanges, type Records } from '@/store/records';
+import { reviewSprint } from '@/store/review-changes';
 
 export type FixtureStateId =
   | 'planning-pick'
@@ -470,14 +470,7 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
   const review =
     (sprintId: SprintId): Change =>
     (r, ctx) =>
-      changed(
-        enterReview(
-          get(r.sprints, sprintId),
-          { today: ctx.today, occurrences: r.occurrences },
-          ctx,
-        ),
-        ({ sprint, occurrences }) => ({ sprints: [sprint], occurrences }),
-      );
+      reviewSprint(get(r.sprints, sprintId))(r, ctx);
 
   // ------------------------------------------------------------ 9/13 setup
 
