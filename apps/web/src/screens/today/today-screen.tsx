@@ -334,9 +334,12 @@ function TodayView({ data }: { data: TodayData }) {
   };
 
   const remaining = data.remaining;
-  const goals = (headingId: string) =>
+  const goals = (headingId: string, className?: string) =>
     data.goals.length > 0 && (
-      <section aria-labelledby={headingId} className="flex flex-col gap-3">
+      <section
+        aria-labelledby={headingId}
+        className={cn('flex flex-col gap-3', className)}
+      >
         <h2 id={headingId} className="text-subheading text-ink-muted">
           今週の目標
         </h2>
@@ -379,10 +382,11 @@ function TodayView({ data }: { data: TodayData }) {
             />
             {/* 「割り込みを記録」 on the right, reached without scrolling at
               every width (#100); it stays there with no 今日の残り line. */}
-            <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+            <div className="flex items-center justify-end gap-4">
               {/* Nothing chosen yet (no done and no closed row): the empty 今日やる already says so. */}
               {(data.rows.length > 0 || data.closed.length > 0) && (
-                <p className="me-auto text-body text-ink-muted">
+                // Two lines if need be under 768px: the button stays on the right.
+                <p className="min-w-0 flex-1 text-body text-ink-muted">
                   {remaining.count === 0
                     ? '今日の残りはありません'
                     : `今日の残り ${remaining.count}件 · 見込み ${formatPlanningTotal({ ...remaining, unestimatedSubtasks: 0 })}`}
@@ -391,6 +395,7 @@ function TodayView({ data }: { data: TodayData }) {
               <Button
                 size="sm"
                 data-action="note-interrupt"
+                className="shrink-0"
                 onClick={() => setInterrupting(true)}
               >
                 割り込みを記録
@@ -412,9 +417,7 @@ function TodayView({ data }: { data: TodayData }) {
             )}
           </DayHeader>
 
-          <div className="hidden medium:block wide:hidden">
-            {goals('today-goals')}
-          </div>
+          {goals('today-goals', 'hidden medium:flex wide:hidden')}
 
           <section aria-labelledby="today-rows" className="flex flex-col gap-2">
             <h2 id="today-rows" className="text-heading text-ink">
@@ -534,7 +537,7 @@ function TodayView({ data }: { data: TodayData }) {
           )}
 
           {/* The background under 768px, after the Tasks (#100). */}
-          <div className="medium:hidden">{goals('today-goals-compact')}</div>
+          {goals('today-goals-compact', 'medium:hidden')}
         </div>
 
         {/* Stuck to the bottom of the screen (above the tab bar under 768px,

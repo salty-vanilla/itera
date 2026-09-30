@@ -13,6 +13,7 @@ import {
   TaskMetadata,
 } from '@/components/task/task-metadata';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
+import { TaskTitleLines } from '@/components/task/task-row';
 import { formatDate } from '@/lib/date-format';
 import { rowKeyHandlers } from '@/lib/row-keys';
 import { cn } from '@/lib/utils';
@@ -325,10 +326,9 @@ function CandidateItem({
           type="button"
           onClick={onOpen}
           data-row-focus
-          // Two lines under 768px, one from it (DESIGN.md Task Row).
-          className="line-clamp-2 min-w-0 text-left text-task text-ink focus-visible:focus-ring medium:block medium:truncate"
+          className="min-w-0 text-left text-task text-ink focus-visible:focus-ring"
         >
-          {task.title}
+          <TaskTitleLines>{task.title}</TaskTitleLines>
         </button>
         {meta.length > 0 && <TaskMetadata>{meta}</TaskMetadata>}
       </div>

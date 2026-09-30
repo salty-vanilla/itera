@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 
 // DESIGN.md Components › Task Row. One Task, the same structure in Backlog,
 // Sprint and Today: a control (○ complete / □ choose / none), the title
-// (`task`, two lines under 768px and one from it), Task Metadata, the Estimate at the right end and the
+// (`task`, two lines under 768px, one from it), Task Metadata, the Estimate at the right end and the
 // row's `…` actions. Rows are separated by `border-soft`, with no gap, no
 // corners and no Card.
 //
@@ -64,9 +64,6 @@ function TaskRow({
 }: TaskRowProps) {
   const titleClass = cn(
     'min-w-0 text-left text-task',
-    // Up to two lines under 768px, where the control and the values take
-    // the room of a long title; one line from 768px (DESIGN.md Task Row).
-    'line-clamp-2 medium:block medium:truncate',
     done ? 'text-ink-subtle line-through' : 'text-ink',
   );
   return (
@@ -100,10 +97,12 @@ function TaskRow({
               'after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:focus-ring-inset',
             )}
           >
-            {title}
+            <TaskTitleLines>{title}</TaskTitleLines>
           </button>
         ) : (
-          <span className={titleClass}>{title}</span>
+          <span className={titleClass}>
+            <TaskTitleLines>{title}</TaskTitleLines>
+          </span>
         )}
         {metadata}
       </div>
@@ -131,6 +130,21 @@ function TaskRow({
         />
       )}
     </div>
+  );
+}
+
+/**
+ * A Task's title: up to two lines under 768px, where the control and the
+ * values take the room of a long title, and one line from 768px
+ * (DESIGN.md Task Row). The clamp is on this inner box, as a button's own
+ * box does not take it in every browser; `pretty` keeps a lone character
+ * off the second line.
+ */
+function TaskTitleLines({ children }: { children: ReactNode }) {
+  return (
+    <span className="line-clamp-2 text-pretty medium:block medium:truncate">
+      {children}
+    </span>
   );
 }
 
@@ -182,5 +196,5 @@ function CompletionCircle({
   );
 }
 
-export { CompletionCircle, TaskRow };
+export { CompletionCircle, TaskRow, TaskTitleLines };
 export type { TaskRowProps };
