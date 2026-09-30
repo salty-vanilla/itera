@@ -176,6 +176,87 @@ describe('Planning — 選ぶ', () => {
     );
     expect(draft().tasks.some((t) => t.taskId === task?.id)).toBe(true);
   });
+
+  // Issue #92
+  it('a Task added in an Area goes into that Area, flashes, and a Toast says so', async () => {
+    await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    await userEvent.selectOptions(
+      within(backlogPane()).getByRole('combobox', {
+        name: '追加する Task の領域',
+      }),
+      '研究',
+    );
+    await userEvent.type(
+      within(backlogPane()).getByRole('textbox', {
+        name: 'タスクを追加して今週に入れる',
+      }),
+      '発表資料を見直す{Enter}',
+    );
+    expect(
+      await screen.findByText('「発表資料を見直す」を追加して今週に入れました'),
+    ).toBeTruthy();
+    // No 元に戻す: it is left out by 今週から外す.
+    expect(screen.queryByRole('button', { name: '元に戻す' })).toBeNull();
+    const task = lastSnapshot().records.tasks.find(
+      (t) => t.title === '発表資料を見直す',
+    );
+    expect(task?.areaId).toBe('area-research');
+    const research = within(planPane()).getByRole('region', { name: /研究/ });
+    const row = within(research)
+      .getByText('発表資料を見直す')
+      .closest<HTMLElement>('[data-slot="task-row"]')!;
+    expect(row.className).toContain('added-flash');
+    // Once: the mark goes after a moment, and the row stays.
+    await waitFor(() => expect(row.className).not.toContain('added-flash'), {
+      timeout: 4000,
+    });
+    expect(within(research).getByText('発表資料を見直す')).toBeTruthy();
+  });
+
+  it('a Task added without an Area goes into 領域なし', async () => {
+    await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    const select = within(backlogPane()).getByRole('combobox', {
+      name: '追加する Task の領域',
+    });
+    expect(select).toHaveProperty('value', '');
+    await userEvent.type(
+      within(backlogPane()).getByRole('textbox', {
+        name: 'タスクを追加して今週に入れる',
+      }),
+      '机を片づける{Enter}',
+    );
+    const none = within(planPane()).getByRole('region', { name: '領域なし' });
+    expect(within(none).getByText('机を片づける')).toBeTruthy();
+    // The Area of the last add stays for the next one.
+    await userEvent.selectOptions(select, '学習');
+    await userEvent.type(
+      within(backlogPane()).getByRole('textbox', {
+        name: 'タスクを追加して今週に入れる',
+      }),
+      '単語を覚える{Enter}',
+    );
+    expect(select).toHaveProperty('value', 'area-study');
+  });
+
+  it('tells why rows are in already, also when Tasks are chosen', async () => {
+    await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    expect(draft().tasks.length).toBeGreaterThan(0);
+    const note = within(planPane()).getByText(
+      /今週発生する繰り返しは最初から入っています。外すと今日の画面にも出ません。/,
+    );
+    expect(note.textContent).toContain('行が黄色の地とチェックになり');
+  });
+
+  it('puts the Area Select under the field in the slim Backlog', async () => {
+    await renderAt('/sprint?fixture=planning-shape&stage=shape');
+    const form = backlogPane().querySelector<HTMLElement>(
+      '[data-slot="task-quick-add"]',
+    )!;
+    expect(form.firstElementChild?.className).toContain('flex-col');
+    expect(
+      within(form).getByRole('combobox', { name: '追加する Task の領域' }),
+    ).toBeTruthy();
+  });
 });
 
 describe('Planning — 整える', () => {
