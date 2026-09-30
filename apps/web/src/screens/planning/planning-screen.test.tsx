@@ -437,11 +437,21 @@ describe('Planning — 確かめる', () => {
       タスク: expect.stringMatching(/^7件/),
     });
     // Without a headline, the state line carries the two sentences, once.
+    const stateOf = (root: HTMLElement) =>
+      root.querySelector('[data-slot="capacity-statement"]')!;
+    expect(stateOf(summary()).textContent).toBe(
+      '超える可能性：下限なら 1.75h 残る · 上限なら 0.25h 超える',
+    );
+    // It breaks between the sentences, never inside one.
     expect(
-      within(summary()).getByText(
-        '超える可能性：下限なら 1.75h 残る · 上限なら 0.25h 超える',
+      [...stateOf(summary()).querySelectorAll('.whitespace-nowrap')].map(
+        (e) => e.textContent,
       ),
-    ).toBeTruthy();
+    ).toEqual([
+      '超える可能性：',
+      '下限なら 1.75h 残る',
+      '上限なら 0.25h 超える',
+    ]);
     expect(summary().textContent?.match(/1\.75h/g)).toHaveLength(1);
     expect(
       within(summary()).getByText(/見積もりのないサブタスク 1件/),
@@ -461,11 +471,9 @@ describe('Planning — 確かめる', () => {
       計画値の合計: fromSummary['計画値の合計'],
       タスク: fromSummary['タスク'],
     });
-    expect(
-      within(dialog).getByText(
-        '超える可能性：下限なら 1.75h 残る · 上限なら 0.25h 超える',
-      ),
-    ).toBeTruthy();
+    expect(stateOf(dialog).textContent).toBe(
+      '超える可能性：下限なら 1.75h 残る · 上限なら 0.25h 超える',
+    );
     expect(rows(dialog)['使える時間']).toBe(`${hours}h`);
   });
 
@@ -582,7 +590,9 @@ describe('Planning — 確定', () => {
       ),
     );
     expect(within(dialog).getByText(/今回は使わない/)).toBeTruthy();
-    expect(within(dialog).getByText(/^超える可能性：/)).toBeTruthy();
+    expect(
+      dialog.querySelector('[data-slot="capacity-statement"]')?.textContent,
+    ).toMatch(/^超える可能性：/);
     await userEvent.click(
       within(dialog).getByRole('button', { name: 'Sprint 2 を確定' }),
     );

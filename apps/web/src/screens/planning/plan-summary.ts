@@ -1,6 +1,6 @@
 import {
   capacityStatusLine,
-  type capacityStatement,
+  type CapacityState,
 } from '@/components/sprint/capacity-indicator';
 import { criterionName } from '@/lib/criterion-text';
 import {
@@ -23,7 +23,7 @@ export interface PlanSummary {
    * Whether the plan fits: ok / tight / over / unknown, with the numbers
    * while the difference crosses 0 (`capacityStatusLine`).
    */
-  readonly statement: ReturnType<typeof capacityStatement>;
+  readonly statement: CapacityState;
   /** 「14.75–17.75h」, or 「見積もりなし 3件」 with nothing estimated. */
   readonly total: string;
   /** 「18h」; absent while no available hours are entered. */

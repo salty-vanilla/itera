@@ -1,5 +1,5 @@
 import type { Capacity, PlanningTotal } from '@itera/domain';
-import { useId, useState } from 'react';
+import { Fragment, useId, useState } from 'react';
 import { AreaIndicator, type AreaColor } from '@/components/ui/area-indicator';
 import { Field } from '@/components/ui/field';
 import { semanticIcons } from '@/components/ui/icon';
@@ -161,12 +161,25 @@ export function capacityHeadlineSentences(
  */
 export function capacityStatusLine(
   capacity: Capacity | undefined,
-): ReturnType<typeof capacityStatement> {
+): CapacityState {
   const statement = capacityStatement(capacity);
   if (capacity?.status !== 'mayExceed') return statement;
   const sentences = capacityHeadlineSentences(capacityHeadline(capacity));
-  return { ...statement, text: `${statement.text}：${sentences.join(' · ')}` };
+  return {
+    ...statement,
+    text: `${statement.text}：${sentences.join(' · ')}`,
+    sentences,
+  };
 }
+
+/**
+ * A state to show: the tone and the words, and when the words carry the
+ * headline's sentences, those sentences (so that a line breaks between
+ * them, never inside one).
+ */
+export type CapacityState = ReturnType<typeof capacityStatement> & {
+  sentences?: readonly string[];
+};
 
 const toneClass = {
   ok: 'text-ink-muted',
@@ -193,7 +206,7 @@ function CapacityStatement({
   strong = false,
   className,
 }: {
-  statement: ReturnType<typeof capacityStatement>;
+  statement: CapacityState;
   as?: 'p' | 'li';
   strong?: boolean;
   className?: string | undefined;
@@ -201,6 +214,7 @@ function CapacityStatement({
   const Icon = toneIcon[statement.tone];
   return (
     <Tag
+      data-slot="capacity-statement"
       className={cn(
         'flex items-start gap-1 text-body',
         strong && statement.tone === 'ok'
@@ -213,7 +227,23 @@ function CapacityStatement({
         aria-hidden
         className="mt-1 size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
       />
-      {statement.text}
+      {statement.sentences === undefined ? (
+        statement.text
+      ) : (
+        // 「超える可能性：」 and each sentence stay whole; the line breaks
+        // only after 「：」 or at 「·」.
+        <span>
+          <span className="whitespace-nowrap">
+            {statement.text.slice(0, statement.text.indexOf('：') + 1)}
+          </span>
+          {statement.sentences.map((sentence, i) => (
+            <Fragment key={sentence}>
+              {i > 0 && ' · '}
+              <span className="whitespace-nowrap">{sentence}</span>
+            </Fragment>
+          ))}
+        </span>
+      )}
     </Tag>
   );
 }
