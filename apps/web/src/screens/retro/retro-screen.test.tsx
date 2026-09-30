@@ -202,6 +202,19 @@ describe('Retro — 計画時との差 (MVP 16)', () => {
       '「先行研究を押さえる」 → 「先行研究を 2 本押さえる」',
     );
     expect(diff.textContent).toContain('計画時 17h → 今 14h');
+    // Marked, it reads as its own words in 振り返りの材料 (#105).
+    await userEvent.click(
+      within(diff).getByRole('button', {
+        name: /振り返りに使う.*使える時間の変更/,
+      }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: '振り返るへ' }));
+    const materials = screen.getAllByRole('region', {
+      name: '振り返りの材料',
+    })[0]!;
+    expect(materials.textContent).toContain(
+      '使える時間 計画したとき 17h → 今 14h',
+    );
   });
 });
 
