@@ -38,6 +38,8 @@ type ToastKind =
   | 'sprint-confirmed'
   | 'retro-completed'
   | 'task-added'
+  /** 今日へ (a Backlog row or a Task detail): 「「タイトル」を今日やるに入れました」. */
+  | 'added-to-today'
   | 'task-archived'
   | 'day-record-undone'
   | 'save-failed';
@@ -130,10 +132,10 @@ function ToastList() {
             {/* A sentence, not a heading of the page. */}
             <ToastPrimitive.Title
               render={<p />}
-              className="text-body text-ink"
+              className="text-body text-ink [word-break:auto-phrase]"
             />
             {toast.description !== undefined && (
-              <ToastPrimitive.Description className="text-help text-ink-muted" />
+              <ToastPrimitive.Description className="text-help text-ink-muted [word-break:auto-phrase]" />
             )}
           </div>
           {toast.actionProps && (

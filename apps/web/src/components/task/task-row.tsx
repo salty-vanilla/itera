@@ -33,6 +33,11 @@ type TaskRowProps = {
    * only: under it the `…` is 44px, and the title needs the room more.
    */
   reserveActions?: boolean;
+  /**
+   * Shows the `actions` at every width, not only on hover and focus: for
+   * a way back (「取り消す」) that must not be hidden behind the pointer.
+   */
+  actionsVisible?: boolean;
   /** Opens the Task (its detail). Without it the title is plain text. */
   onOpen?: (() => void) | undefined;
   /** Read out with the title, e.g. that the detail is open. */
@@ -50,6 +55,7 @@ function TaskRow({
   estimate,
   actions,
   reserveActions = false,
+  actionsVisible = false,
   onOpen,
   current = false,
   done = false,
@@ -105,8 +111,10 @@ function TaskRow({
         <div
           className={cn(
             'relative z-1 flex shrink-0',
-            'medium:opacity-0 medium:group-hover/row:opacity-100 medium:group-focus-within/row:opacity-100',
-            'medium:has-[[aria-expanded=true]]:opacity-100',
+            !actionsVisible && [
+              'medium:opacity-0 medium:group-hover/row:opacity-100 medium:group-focus-within/row:opacity-100',
+              'medium:has-[[aria-expanded=true]]:opacity-100',
+            ],
           )}
         >
           {actions}

@@ -199,7 +199,10 @@ export type Activity =
         | 'todayBacklogCompletionUndone'
         | 'todayPaused'
         | 'todayDeferred'
+        /** 見送り・外すを、その日のうちに取り消した (F37). */
+        | 'todayDeferUndone'
         | 'todayRemoved'
+        | 'todayRemoveUndone'
         | 'todaySkipped'
         | 'todaySkipUndone'
         | 'todayUnresolved';

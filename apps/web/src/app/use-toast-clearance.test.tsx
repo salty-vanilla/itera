@@ -64,6 +64,32 @@ function setup(row: DOMRect, content = rect(0, 0)) {
   return userEvent.setup();
 }
 
+function MenuScreen() {
+  const ref = useRef<HTMLElement>(null);
+  useToastClearance(ref);
+  const toast = useToast();
+  return (
+    <>
+      <main ref={ref}>
+        <div data-slot="task-row">
+          <button id="opener">操作</button>
+        </div>
+      </main>
+      {/* A Menu is in a portal, outside the screen. */}
+      <div role="menu" aria-labelledby="opener">
+        <button
+          role="menuitem"
+          onClick={() =>
+            toast.show({ kind: 'added-to-today', title: '入れました' })
+          }
+        >
+          今日へ
+        </button>
+      </div>
+    </>
+  );
+}
+
 describe('useToastClearance', () => {
   it('adds room under the screen while a Toast shows, and takes it away', async () => {
     const user = setup(rect(100, 40));
@@ -126,5 +152,28 @@ describe('useToastClearance', () => {
     document.querySelector('main')!.scrollBy = scrollBy;
     await user.click(screen.getByRole('button', { name: '押す' }));
     expect(scrollBy).not.toHaveBeenCalled();
+  });
+
+  it('scrolls the row whose Menu was used, not the item in the portal', async () => {
+    const scrollBy = vi.fn();
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(
+      function (this: Element) {
+        if (this.matches('[data-slot="toast-viewport"]'))
+          return this.childElementCount > 0 ? rect(700, 76) : rect(776, 0);
+        if (this.matches('main')) return rect(0, 800);
+        if (this.matches('[data-slot="task-row"]')) return rect(680, 40, 20);
+        return rect(0, 0);
+      },
+    );
+    render(
+      <ToastProvider>
+        <MenuScreen />
+      </ToastProvider>,
+    );
+    document.querySelector('main')!.scrollBy = scrollBy;
+    await userEvent
+      .setup()
+      .click(screen.getByRole('menuitem', { name: '今日へ' }));
+    expect(scrollBy).toHaveBeenCalledWith({ top: 28 });
   });
 });

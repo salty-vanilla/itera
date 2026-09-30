@@ -56,12 +56,20 @@ export function RecurrenceText({
   );
 }
 
+/**
+ * 「今週」, or 「今日」 for a Task in today's 今日やる: in today implies in
+ * the week (invariant 26), so the row says the nearer one (Issue #94).
+ */
 export function SprintText({
   midSprint,
-}: Pick<NonNullable<BacklogItem['thisWeek']>, 'midSprint'>) {
+  today,
+}: Pick<NonNullable<BacklogItem['thisWeek']>, 'midSprint'> & {
+  today: boolean;
+}) {
   return (
     <MetaItem className="text-ink-subtle">
-      今週{midSprint && ' · 週の途中で追加'}
+      {today ? '今日' : '今週'}
+      {midSprint && ' · 週の途中で追加'}
     </MetaItem>
   );
 }
@@ -143,7 +151,9 @@ function BacklogRow({
             <PriorityText priority={task.priority} />
             {carry && <CarryOverText {...carry} />}
             {recurrence && <RecurrenceText recurrence={recurrence} />}
-            {thisWeek && <SprintText {...thisWeek} />}
+            {thisWeek && (
+              <SprintText {...thisWeek} today={item.today !== undefined} />
+            )}
           </TaskMetadata>
         ) : undefined
       }

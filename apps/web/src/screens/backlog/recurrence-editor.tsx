@@ -177,7 +177,8 @@ function RecurrenceEditor({
           Sprint is still being planned, it becomes recurring there (F15). */}
       {rule === undefined && item.thisWeek?.confirmed === true && (
         <p className="text-help text-ink-muted">
-          今週の Sprint には、この Task は単発のまま残ります。
+          繰り返しにしても、今週の Sprint ではこの 1 件のままです。回は次の
+          Sprint から作られます。
         </p>
       )}
       <div>

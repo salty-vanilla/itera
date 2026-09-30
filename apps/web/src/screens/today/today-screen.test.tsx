@@ -209,6 +209,36 @@ describe('Today — 今日へ', () => {
   });
 });
 
+describe('Today — the daily operations in the detail (#94)', () => {
+  it('skips an occurrence from the Task’s detail, as the row’s menu does', async () => {
+    await renderAt('/today?fixture=today-daytime');
+    await userEvent.click(
+      within(region('今週の残り')).getByRole('button', {
+        name: '今日へ: 英語の多読 30 分',
+      }),
+    );
+    await userEvent.click(
+      within(row('今日やる', '英語の多読 30 分')).getByRole('button', {
+        name: '英語の多読 30 分',
+      }),
+    );
+    const detail = await screen.findByRole('dialog', {
+      name: '英語の多読 30 分',
+    });
+    const now = within(detail).getByRole('region', { name: '今日と今週' });
+    // Today is already open: no 今日を開く.
+    expect(within(now).queryByRole('link', { name: '今日を開く' })).toBeNull();
+    // A recurring Task is completed by its occurrence, in the row.
+    expect(
+      within(now).queryByRole('button', { name: '完了にする' }),
+    ).toBeNull();
+    await userEvent.click(
+      within(now).getByRole('button', { name: '今日はスキップ' }),
+    );
+    expect(selectionOf('task-reading')?.resolution).toBe('skipped');
+  });
+});
+
 describe('Today — the daily operations', () => {
   it('completes with ○ and undoes it with ○ again, with no Toast', async () => {
     await renderAt('/today?fixture=today-interrupt');
@@ -236,9 +266,13 @@ describe('Today — the daily operations', () => {
     await renderAt('/today?fixture=today-interrupt');
     await menu('顧客インタビューの設計', '開始');
     expect(selectionOf('task-interview')?.resolution).toBe('started');
-    expect(
-      within(row('今日やる', '顧客インタビューの設計')).getByText(/開始/),
-    ).toBeTruthy();
+    // #101: in ink with its icon, not only a colour.
+    const started = within(row('今日やる', '顧客インタビューの設計'))
+      .getByText(/開始/)
+      .closest('[data-slot="meta-item"]');
+    expect(started?.className).toContain('text-ink');
+    expect(started?.className).not.toContain('text-ink-muted');
+    expect(started?.querySelector('svg')).toBeTruthy();
     await menu('顧客インタビューの設計', '今日はここまで');
     const hours = await screen.findByRole('textbox', { name: /実績時間/ });
     await userEvent.type(hours, '1.5');
@@ -252,7 +286,7 @@ describe('Today — the daily operations', () => {
       ),
     ).toBe(true);
     expect(
-      row('今日はここまでにしたもの', '顧客インタビューの設計').textContent,
+      row('今日はもうやらない', '顧客インタビューの設計').textContent,
     ).toContain('今日はここまで · 1.5h');
     // The moved row's ○ takes the focus.
     await waitFor(() =>
@@ -266,7 +300,7 @@ describe('Today — the daily operations', () => {
     await renderAt('/today?fixture=today-interrupt');
     await menu('実験データの前処理', '今日は見送る');
     expect(selectionOf('task-dataset')?.resolution).toBe('deferred');
-    const closed = row('今日はここまでにしたもの', '実験データの前処理');
+    const closed = row('今日はもうやらない', '実験データの前処理');
     expect(within(closed).getByText('今日は見送り')).toBeTruthy();
     await userEvent.click(
       within(closed).getByRole('button', {
@@ -290,10 +324,67 @@ describe('Today — the daily operations', () => {
     await menu('顧客インタビューの設計', '今日から外す');
     expect(selectionOf('task-interview')?.resolution).toBe('removed');
     expect(
-      within(
-        row('今日はここまでにしたもの', '顧客インタビューの設計'),
-      ).getByText('今日から外した'),
+      within(row('今日はもうやらない', '顧客インタビューの設計')).getByText(
+        '今日から外した',
+      ),
     ).toBeTruthy();
+  });
+
+  it('tells what a deferral and a removal count for (#101)', async () => {
+    await renderAt('/today?fixture=today-interrupt');
+    await menu('顧客インタビューの設計', '今日から外す');
+    const section = screen
+      .getByRole('heading', { name: '今日はもうやらない' })
+      .closest('section');
+    expect(section?.textContent).toContain(
+      '見送りは「続けて見送り」に数え、外したものは数えません。',
+    );
+  });
+
+  it.each([
+    ['今日は見送る', '見送り'],
+    ['今日から外す', '今日から外した'],
+  ])(
+    'F37: %s, then 取り消す the same day: back to 今日やる, the same selection',
+    async (action, state) => {
+      await renderAt('/today?fixture=today-interrupt');
+      const before = sprint().dailySelections.length;
+      const id = selectionOf('task-interview')?.id;
+      await menu('顧客インタビューの設計', action);
+      await userEvent.click(
+        within(row('今日はもうやらない', '顧客インタビューの設計')).getByRole(
+          'button',
+          { name: `取り消す（${state}）: 顧客インタビューの設計` },
+        ),
+      );
+      expect(selectionOf('task-interview')).toMatchObject({
+        id,
+        resolution: 'selected',
+      });
+      expect(sprint().dailySelections).toHaveLength(before);
+      expect(row('今日やる', '顧客インタビューの設計')).toBeTruthy();
+      // The row's ○ takes the focus where it went back to.
+      await waitFor(() =>
+        expect(document.activeElement?.getAttribute('aria-label')).toBe(
+          '完了にする: 顧客インタビューの設計',
+        ),
+      );
+    },
+  );
+
+  it('F37: a paused row has no 取り消す', async () => {
+    await renderAt('/today?fixture=today-interrupt');
+    await menu('顧客インタビューの設計', '開始');
+    await menu('顧客インタビューの設計', '今日はここまで');
+    await userEvent.click(
+      await screen.findByRole('button', { name: '今日はここまで' }),
+    );
+    expect(
+      within(row('今日はもうやらない', '顧客インタビューの設計')).queryByRole(
+        'button',
+        { name: /^取り消す/ },
+      ),
+    ).toBeNull();
   });
 
   it('records actual hours after completing (append-only)', async () => {
@@ -338,10 +429,20 @@ describe('Today — the daily operations', () => {
     );
     await menu('API 設計のレビュー', '今日は見送る');
     const streak = within(
-      row('今日はここまでにしたもの', 'API 設計のレビュー'),
+      row('今日はもうやらない', 'API 設計のレビュー'),
     ).getByText('2回続けて見送り');
     expect(streak.className).not.toContain('danger');
     expect(streak.className).not.toContain('warning');
+    // Undone the same day, the deferral no longer counts (invariant 23).
+    await userEvent.click(
+      within(row('今日はもうやらない', 'API 設計のレビュー')).getByRole(
+        'button',
+        { name: /^取り消す/ },
+      ),
+    );
+    expect(
+      within(row('今日やる', 'API 設計のレビュー')).queryByText(/続けて見送り/),
+    ).toBeNull();
   });
 });
 

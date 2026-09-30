@@ -30,3 +30,26 @@ describe('TaskRow reserveActions', () => {
     expect(spacer(withActions.container)).toBeNull();
   });
 });
+
+describe('TaskRow actionsVisible', () => {
+  const slot = (container: HTMLElement) =>
+    container.querySelector('button')?.parentElement;
+
+  it('hides the actions until hover or focus from 768px by default', () => {
+    const { container } = render(
+      <TaskRow title="部屋の掃除" actions={<button>操作</button>} />,
+    );
+    expect(slot(container)?.className).toContain('medium:opacity-0');
+  });
+
+  it('shows them at every width when asked', () => {
+    const { container } = render(
+      <TaskRow
+        title="部屋の掃除"
+        actions={<button>取り消す</button>}
+        actionsVisible
+      />,
+    );
+    expect(slot(container)?.className).not.toContain('opacity-0');
+  });
+});

@@ -251,6 +251,66 @@ export function removeFromToday(
   );
 }
 
+export interface UndoCloseInput extends SelectionActionInput {
+  /** Today, in the user's time zone: only today's selection goes back (F37). */
+  readonly today: LocalDate;
+}
+
+/**
+ * 見送りを取り消す (F37): deferred → selected, or started if it had been
+ * started, the same day only. The same selection goes back (invariant 21),
+ * so the deferral no longer counts toward 連続見送り (invariant 23); the
+ * Activity keeps both.
+ */
+export function undoDeferSelection(
+  sprint: Sprint,
+  input: UndoCloseInput,
+  ctx: CommandContext,
+): CommandResult<Sprint> {
+  return reopenClosed(sprint, input, 'deferred', 'todayDeferUndone', ctx);
+}
+
+/** 外したのを取り消す (F37): removed → selected, the same day only. */
+export function undoRemoveFromToday(
+  sprint: Sprint,
+  input: UndoCloseInput,
+  ctx: CommandContext,
+): CommandResult<Sprint> {
+  return reopenClosed(sprint, input, 'removed', 'todayRemoveUndone', ctx);
+}
+
+function reopenClosed(
+  sprint: Sprint,
+  input: UndoCloseInput,
+  from: 'deferred' | 'removed',
+  kind: 'todayDeferUndone' | 'todayRemoveUndone',
+  ctx: CommandContext,
+): CommandResult<Sprint> {
+  const found = selectionAndTask(sprint, input.selectionId);
+  if (!found.ok) return found;
+  const { selection } = found.value;
+  if (selection.resolution !== from) {
+    return err(
+      'invalidTransition',
+      `Cannot undo ${from} on a ${selection.resolution} selection.`,
+    );
+  }
+  if (selection.date !== input.today) {
+    return err(
+      'invalidTransition',
+      `Only today's selection can go back, not one of ${selection.date}.`,
+    );
+  }
+  // Back to how it was before it was closed: started keeps its time.
+  const reopened: DailySelection = {
+    ...omit(selection, 'resolvedAt'),
+    resolution: selection.startedAt === undefined ? 'selected' : 'started',
+  };
+  return applied(replaceSelection(sprint, reopened), [
+    selectionActivity(kind, sprint, reopened, ctx),
+  ]);
+}
+
 export interface PauseInput extends SelectionActionInput {
   /** Optional actual hours of the day (invariant 28). */
   readonly actualHours?: number;
