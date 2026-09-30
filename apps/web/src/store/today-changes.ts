@@ -7,7 +7,6 @@ import {
   completeSelection,
   createTask,
   deferSelection,
-  enterReview,
   noteInterrupt,
   pauseSelection,
   recordActualTime,
@@ -40,6 +39,7 @@ import {
   type Changed,
 } from './record-store';
 import type { Records } from './records';
+import { reviewSprint } from './review-changes';
 import { activeSprintOf } from './today-view';
 
 function active(records: Records): Result<Sprint> {
@@ -329,12 +329,5 @@ export function addAndChoose(
 export const beginRetro = (): Change => (records, ctx) => {
   const sprint = active(records);
   if (!sprint.ok) return sprint;
-  return changed(
-    enterReview(
-      sprint.value,
-      { today: ctx.today, occurrences: records.occurrences },
-      ctx,
-    ),
-    (next) => ({ sprints: [next.sprint], occurrences: next.occurrences }),
-  );
+  return reviewSprint(sprint.value)(records, ctx);
 };

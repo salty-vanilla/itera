@@ -48,7 +48,7 @@ function pinText(pin: RetroPin, data: RetroData): string | undefined {
     }
     case 'availableHours': {
       const { planned, current } = facts.availableHours;
-      return `使える時間計画時 ${planned === undefined ? '未入力' : formatHours(planned, { total: true })} → 今 ${current === undefined ? '未入力' : formatHours(current, { total: true })}`;
+      return `使える時間計画したとき ${planned === undefined ? '未入力' : formatHours(planned, { total: true })} → 今 ${current === undefined ? '未入力' : formatHours(current, { total: true })}`;
     }
   }
 }

@@ -147,6 +147,18 @@ export type Activity =
       readonly via: SprintTaskAddedVia;
     })
   | (ActivityBase & {
+      /**
+       * A draft chosen on its own linked to its carry-over when the previous
+       * Sprint entered Review (F35). Always the system's record.
+       */
+      readonly kind: 'sprintTaskCarryLinked';
+      readonly sprintId: SprintId;
+      readonly sprintTaskId: SprintTaskId;
+      readonly taskId: TaskId;
+      /** The previous Sprint's carried-over SprintTask. */
+      readonly carriedFrom: SprintTaskId;
+    })
+  | (ActivityBase & {
       /** Unselected in Planning (draft), removed after confirm, or restored (F13). */
       readonly kind:
         'sprintTaskUnselected' | 'sprintTaskRemoved' | 'sprintTaskRestored';

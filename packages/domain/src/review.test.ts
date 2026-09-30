@@ -168,6 +168,83 @@ describe('enterReview', () => {
   });
 });
 
+describe('F35: enterReview links drafts of the next Sprint to their carry-over', () => {
+  const draft = (taskId: string, extra: Partial<SprintTask> = {}) =>
+    planned(taskId, { id: id(`next-${taskId}`), outcome: 'draft', ...extra });
+  const nextSprint = (tasks: readonly SprintTask[]): Sprint =>
+    sprintFixture('2026-10-05', 'planning', {
+      previousSprintId: active().id,
+      tasks,
+    });
+
+  it('links a draft chosen on its own, as the system (invariant 20: nothing is added)', () => {
+    const next = nextSprint([draft('task-open'), draft('task-new')]);
+    const result = enterReview(
+      active(),
+      { today: d('2026-10-04'), occurrences: [], next },
+      ctx,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const linked = result.value.record.next;
+    expect(linked?.tasks.map((t) => [t.taskId, t.carriedFrom])).toEqual([
+      ['task-open', 'st-task-open'],
+      ['task-new', undefined],
+    ]);
+    expect(
+      result.value.activities.filter((a) => a.kind === 'sprintTaskCarryLinked'),
+    ).toEqual([
+      {
+        kind: 'sprintTaskCarryLinked',
+        at: ctx.now,
+        actor: 'system',
+        sprintId: next.id,
+        sprintTaskId: id('next-task-open'),
+        taskId: id('task-open'),
+        carriedFrom: id('st-task-open'),
+      },
+    ]);
+  });
+
+  it('leaves Tasks that were done, recurring or already linked as they are', () => {
+    const next = nextSprint([
+      draft('task-done'),
+      draft('task-stretch', { occurrenceIds: [] }),
+      draft('task-open', { carriedFrom: id('st-older') }),
+    ]);
+    const result = unwrap(
+      enterReview(
+        active(),
+        { today: d('2026-10-05'), occurrences: [], next },
+        system,
+      ),
+    );
+    expect(result.next).toEqual(next);
+  });
+
+  it('without a next Sprint in Planning, nothing else changes', () => {
+    expect(reviewed().next).toBeUndefined();
+  });
+
+  it('refuses a next Sprint that is not the draft after this one', () => {
+    const input = { today: d('2026-10-05'), occurrences: [] };
+    expect(
+      enterReview(
+        active(),
+        { ...input, next: { ...nextSprint([]), state: 'active' } },
+        system,
+      ),
+    ).toMatchObject({ ok: false, error: { code: 'invalidInput' } });
+    expect(
+      enterReview(
+        active(),
+        { ...input, next: { ...nextSprint([]), previousSprintId: id('x') } },
+        system,
+      ),
+    ).toMatchObject({ ok: false, error: { code: 'invalidInput' } });
+  });
+});
+
 describe('Retro', () => {
   it('invariant 19: Goals are judged by the person only, and can be left unjudged', () => {
     const sprint = reviewed().sprint;

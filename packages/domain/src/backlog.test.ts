@@ -147,6 +147,26 @@ describe('carryOverOf (F26)', () => {
     });
     expect(carryOverOf(taskId, [s1, s2])).toBeUndefined();
   });
+
+  it('F36: a draft of the next Sprint does not count until it is confirmed', () => {
+    const s1 = sprintFixture('2026-09-21', 'closed', {
+      tasks: [st('st-1', 'carriedOver')],
+    });
+    const s2 = sprintFixture('2026-09-28', 'active', {
+      tasks: [st('st-2', 'planned', 'st-1')],
+    });
+    const s3 = sprintFixture('2026-10-05', 'planning', {
+      tasks: [st('st-3', 'draft')],
+    });
+    expect(carryOverOf(taskId, [s1, s2, s3])).toEqual({
+      count: 1,
+      fromSprintId: s1.id,
+    });
+    const onlyDraft = sprintFixture('2026-10-05', 'planning', {
+      tasks: [st('st-9', 'draft')],
+    });
+    expect(carryOverOf(taskId, [onlyDraft])).toBeUndefined();
+  });
 });
 
 describe('inBacklogSlice', () => {

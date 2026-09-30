@@ -29,9 +29,9 @@ import {
 
 // 事実を見る (patterns.md Retro): 「今週、何が起きたか」. Everything here is
 // derived from the records by `retroFacts` and never edited (invariant 40);
-// the person only marks facts (気になる), judges Goals and adds actual time
+// the person only marks facts (振り返りに使う), judges Goals and adds actual time
 // (F22). No scores and no rates; facts are written neutrally. Once the
-// Sprint is closed, all of it is read only (#90): no 気になる, no judging
+// Sprint is closed, all of it is read only (#90): no 振り返りに使う, no judging
 // and no actual time.
 
 type AddActual = (
@@ -818,7 +818,7 @@ function resultText(t: TaskFact, data: RetroData): string {
   return `回：完了 ${count(done)} · スキップ ${count(skipped)} · 未処理 ${count(missed)}`;
 }
 
-/** One fact in a list, with its 気になる at the right (none when closed). */
+/** One fact in a list, with its 振り返りに使う at the right (none when closed). */
 function FactRow({
   children,
   action,
