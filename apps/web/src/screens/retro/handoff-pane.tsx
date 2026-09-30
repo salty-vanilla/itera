@@ -14,6 +14,7 @@ import { BOUND_WORDS, criterionName } from '@/lib/criterion-text';
 import { formatHours, formatRange } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
 import type { RetroCriterion, RetroData } from '@/store/retro-view';
+import { DECISION_WORDS } from './retro-words';
 
 // 引き継ぐ (patterns.md Retro, DESIGN.md 計画基準): the improvement goes to
 // the next Planning as it is. Only when it can be applied mechanically, a
@@ -38,12 +39,6 @@ type HandoffPaneProps = {
 };
 
 const BOUNDS: readonly SuggestionBound[] = ['lo', 'mid', 'hi'];
-
-const DECISION_WORDS: Readonly<Record<RetroDecision, string>> = {
-  continue: '続ける',
-  end: '終える',
-  replace: '置き換える',
-};
 
 function HandoffPane({
   data,
