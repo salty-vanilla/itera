@@ -41,7 +41,11 @@ const record = (title: string) =>
 describe('Today — any day by date (#90)', () => {
   it('shows a past day’s records, read only', async () => {
     await renderAt('/today?fixture=today-daytime&date=2026-09-30');
-    expect(heading()).toBe('9月30日（水）');
+    // 過去 by the date, read with the heading, and no sentence saying so.
+    expect(
+      screen.getByRole('heading', { level: 1, name: '9月30日（水） 過去' }),
+    ).toBeTruthy();
+    expect(screen.queryByText(/過ぎた日|ここでは/)).toBeNull();
     expect(screen.getByText('Sprint 2 · 3日目 / 7日')).toBeTruthy();
     const paper = record('関連論文を 3 本読む');
     expect(within(paper).getByText('今日はここまで')).toBeTruthy();
@@ -66,7 +70,8 @@ describe('Today — any day by date (#90)', () => {
 
   it('shows a future day’s occurrences, read only', async () => {
     await renderAt('/today?fixture=today-daytime&date=2026-10-03');
-    expect(heading()).toBe('10月3日（土）');
+    expect(heading()).toBe('10月3日（土） 未来');
+    expect(screen.queryByText(/先の日|ここでは/)).toBeNull();
     const occurrences = screen.getByRole('region', {
       name: 'この日の繰り返し',
     });

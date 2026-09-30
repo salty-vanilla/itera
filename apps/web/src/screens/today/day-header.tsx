@@ -136,7 +136,19 @@ function DayHeader({
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="flex items-center gap-1">
           <StepLink direction="previous" {...step(addDays(date, -1), '前')} />
-          <h1 className="text-display-m text-ink">{formatDateHeading(date)}</h1>
+          <h1 className="text-display-m text-ink">
+            {formatDateHeading(date)}
+            {/* A day other than today says which side of it, in a word read
+                with the heading; no color, no Tag (owner, PR #122). */}
+            {date !== today && (
+              <>
+                {' '}
+                <span className="text-body text-ink-muted">
+                  {date < today ? '過去' : '未来'}
+                </span>
+              </>
+            )}
+          </h1>
           <StepLink direction="next" {...step(addDays(date, 1), '次')} />
         </div>
         <div className="flex items-center gap-2">

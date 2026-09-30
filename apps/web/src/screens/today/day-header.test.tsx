@@ -42,7 +42,7 @@ describe('Today — the heading’s days (#90)', () => {
     await userEvent.click(
       screen.getByRole('link', { name: '前の日（9/30 (水)）' }),
     );
-    await waitFor(() => expect(heading()).toBe('9月30日（水）'));
+    await waitFor(() => expect(heading()).toBe('9月30日（水） 過去'));
     expect(router.state.location.search).toEqual({
       fixture: 'today-daytime',
       date: '2026-09-30',
@@ -79,7 +79,7 @@ describe('Today — the heading’s days (#90)', () => {
     const router = await renderAt('/today?fixture=today-daytime');
     // The picker sets a whole date with no key.
     fireEvent.change(dateInput(), { target: { value: '2026-10-03' } });
-    await waitFor(() => expect(heading()).toBe('10月3日（土）'));
+    await waitFor(() => expect(heading()).toBe('10月3日（土） 未来'));
     expect(router.state.location.search).toMatchObject({ date: '2026-10-03' });
     expect(document.activeElement).toBe(dateInput());
     // The navigation does not carry the day (#90).
@@ -101,14 +101,14 @@ describe('Today — the heading’s days (#90)', () => {
     fireEvent.keyDown(input, { key: '6' });
     fireEvent.change(input, { target: { value: '2026-10-03' } });
     fireEvent.keyDown(input, { key: 'Enter' });
-    await waitFor(() => expect(heading()).toBe('10月3日（土）'));
+    await waitFor(() => expect(heading()).toBe('10月3日（土） 未来'));
     expect(router.history.length).toBe(2);
     expect(document.activeElement).toBe(dateInput());
 
     fireEvent.keyDown(dateInput(), { key: '5' });
     fireEvent.change(dateInput(), { target: { value: '2026-10-05' } });
     act(() => dateInput().blur());
-    await waitFor(() => expect(heading()).toBe('10月5日（月）'));
+    await waitFor(() => expect(heading()).toBe('10月5日（月） 未来'));
     // Focus has moved on; it is not brought back to the date.
     expect(document.activeElement).not.toBe(dateInput());
   });
@@ -119,6 +119,6 @@ describe('Today — the heading’s days (#90)', () => {
     fireEvent.change(dateInput(), { target: { value: '' } });
     fireEvent.blur(dateInput());
     expect(dateInput().value).toBe('2026-09-30');
-    expect(heading()).toBe('9月30日（水）');
+    expect(heading()).toBe('9月30日（水） 過去');
   });
 });

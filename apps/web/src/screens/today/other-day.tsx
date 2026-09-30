@@ -50,10 +50,6 @@ function OtherDay({ date }: { date: LocalDate }) {
 /** Which Sprint the day belongs to, and the way to it. */
 function Where({ data }: { data: DayData }) {
   const { within, next } = data;
-  const readOnly =
-    data.when === 'past'
-      ? '過ぎた日の記録です。ここでは変えられません。'
-      : '先の日です。ここでは読むだけです。';
   if (within === undefined) {
     return (
       <p className="text-body text-ink-muted">
@@ -75,9 +71,8 @@ function Where({ data }: { data: DayData }) {
   }
   return (
     <p className="text-body text-ink-muted">
-      {within.sprint === undefined
-        ? `Sprint ${within.number} の計画はまだありません。`
-        : readOnly}{' '}
+      {within.sprint === undefined &&
+        `Sprint ${within.number} の計画はまだありません。 `}
       <Link to="/sprint" search={{ sprint: within.number }} className={link}>
         Sprint {within.number} を開く
       </Link>
