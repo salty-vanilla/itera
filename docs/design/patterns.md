@@ -76,12 +76,12 @@ active な Task を眺めるビュー。Sprint や Today に入れても消え�
 
 ### 画面構成（wide）
 
-| 領域                                 | 密度                   | 中身                                                                                                                                                                                                  |
-| ------------------------------------ | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Sprint Header                        | —                      | Status「計画中 · 未確定」（draft の破線 Tag）、タイトル（`display-l`）、期間、段階表示（路線図の形。現在の段階は黄の印）、操作（変更履歴 / Agent に計画案を依頼 / 「Sprint を確定」= 唯一の Primary） |
-| Backlog（左、`canvas-subtle`）       | Task density           | Task Quick Add、Filter、グループ（持ち越し → 期限が近い → 今週発生する繰り返し → そのほか）、□ で今週へ選ぶ                                                                                           |
-| Sprint（中央、`canvas`、最大 680px） | Thinking space         | 段階ごとの見出し（`display-m`）、Area ごとの Goal と選んだ Task                                                                                                                                       |
-| 時間の見通し（右）                   | Thinking space（狭い） | 前回の改善策と有効な計画基準（選ぶ・整えるは名前の 1 行、確かめるは枠）、使える時間と Capacity、Agent 提案                                                                                            |
+| 領域 | 密度 | 中身 |
+| --- | --- | --- |
+| Sprint Header | — | Status「計画中 · 未確定」（draft の破線 Tag）、タイトル（`display-l`）、期間、段階表示（路線図の形。現在の段階は黄の印）、操作（変更履歴 / Agent に計画案を依頼 / 「Sprint を確定」= 唯一の Primary） |
+| Backlog（左、`canvas-subtle`） | Task density | Task Quick Add、Filter、グループ（持ち越し → 期限が近い → 今週発生する繰り返し → そのほか）、□ で今週へ選ぶ |
+| Sprint（中央、`canvas`、最大 680px） | Thinking space | 段階ごとの見出し（`display-m`）、Area ごとの Goal と選んだ Task |
+| 時間の見通し（右） | Thinking space（狭い） | 前回の改善策と有効な計画基準（選ぶ・整えるは名前の 1 行、確かめるは枠）、使える時間と Capacity、Agent 提案 |
 
 ### 選ぶ（Pick）
 
