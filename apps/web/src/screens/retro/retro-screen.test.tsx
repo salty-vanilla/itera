@@ -65,6 +65,10 @@ const sprintById = (id: string) => {
   return s;
 };
 const reviewed = () => sprintById('sprint-2026-09-28');
+// Its three choices sit in one span (kept on a line), so match the whole <p>.
+const decisionMissingText = (_: string, element: Element | null) =>
+  element?.textContent ===
+  '上の「今回の計画基準」で、続ける・終える・置き換えるのどれかを選ぶと完了できます。';
 const completeButton = () =>
   screen.getByRole('button', { name: '振り返りを完了' });
 
@@ -251,9 +255,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
   it('waits for 続ける・終える・置き換える and says only why, and where to choose (invariant 36)', async () => {
     await renderAt('/retro?fixture=retro-start&stage=handoff');
     expect(completeButton().getAttribute('aria-disabled')).toBe('true');
-    const reason = screen.getByText(
-      '上の「今回の計画基準」で、続ける・終える・置き換えるのどれかを選ぶと完了できます。',
-    );
+    const reason = screen.getByText(decisionMissingText, { selector: 'p' });
     expect(completeButton().getAttribute('aria-describedby')).toBe(
       reason.parentElement?.id,
     );
@@ -273,7 +275,9 @@ describe('Retro — 引き継ぐ and 完了', () => {
     expect(reviewed().criterionUse?.retroDecision).toBe('end');
     expect(completeButton().getAttribute('aria-disabled')).toBeNull();
     // Now it can, and says that no improvement goes on; the button stays.
-    expect(screen.queryByText(/から選ぶと完了できます/)).toBeNull();
+    expect(
+      screen.queryByText(decisionMissingText, { selector: 'p' }),
+    ).toBeNull();
     expect(
       screen.getByText(
         '改善策がないまま完了します。次の計画には何も出ません。',
@@ -309,6 +313,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
 
   it('asks before completing: 戻る changes nothing, and the Dialog says what is handed on', async () => {
     await renderAt('/retro?fixture=retro-before-complete&stage=handoff');
+    const recordsBefore = lastSnapshot().records;
     await userEvent.click(completeButton());
     const dialog = await screen.findByRole('dialog', {
       name: 'Sprint 2 の振り返りを完了しますか？',
@@ -333,6 +338,8 @@ describe('Retro — 引き継ぐ and 完了', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: '戻る' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(reviewed().state).toBe('review');
+    // Nothing was written: not the Sprint, nor the criteria, nor a Toast.
+    expect(lastSnapshot().records).toEqual(recordsBefore);
     expect(document.activeElement).toBe(completeButton());
   });
 
@@ -469,7 +476,9 @@ describe('Retro — boundaries', () => {
     });
     await renderAt('/retro?fixture=retro-start&stage=handoff');
     expect(screen.queryByRole('radiogroup', { name: /計画基準/ })).toBeNull();
-    expect(screen.queryByText(/から選ぶと完了できます/)).toBeNull();
+    expect(
+      screen.queryByText(decisionMissingText, { selector: 'p' }),
+    ).toBeNull();
     expect(screen.queryByText(/今回の計画基準/)).toBeNull();
     await userEvent.click(completeButton());
     await userEvent.click(
@@ -492,9 +501,7 @@ describe('Retro — boundaries', () => {
     expect(reviewed().retro?.improvement?.criterionId).toBeUndefined();
     expect(reviewed().criterionUse?.retroDecision).toBeUndefined();
     expect(
-      screen.getByText(
-        '上の「今回の計画基準」で、続ける・終える・置き換えるのどれかを選ぶと完了できます。',
-      ),
+      screen.getByText(decisionMissingText, { selector: 'p' }),
     ).toBeTruthy();
   });
 

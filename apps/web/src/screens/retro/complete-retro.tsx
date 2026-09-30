@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { criterionName } from '@/lib/criterion-text';
 import type { RetroBlocker, RetroData } from '@/store/retro-view';
-import { DECISION_WORDS } from './handoff-pane';
+import { DECISION_WORDS } from './retro-words';
 
 // 「振り返りを完了」 (docs/design/patterns.md Retro › 引き継ぐ, Issue #106).
 // At the end of 引き継ぐ, where the other stages have their 次へ button, and
@@ -23,9 +23,15 @@ import { DECISION_WORDS } from './handoff-pane';
 // whether or not it can be pressed.
 
 /** Why 「振り返りを完了」 waits, and where to choose (docs/design/content.md). */
-export const BLOCKER_WORDS: Readonly<Record<RetroBlocker, string>> = {
-  decisionMissing:
-    '上の「今回の計画基準」で、続ける・終える・置き換えるのどれかを選ぶと完了できます。',
+const BLOCKER_WORDS: Readonly<Record<RetroBlocker, ReactNode>> = {
+  // The three choices stay on one line, so the sentence breaks after 「で、」.
+  decisionMissing: (
+    <>
+      上の「今回の計画基準」で、
+      <span className="whitespace-nowrap">続ける・終える・置き換える</span>
+      のどれかを選ぶと完了できます。
+    </>
+  ),
   continueWithDraft:
     '上の「今回の計画基準」で「続ける」を選んでいるときは、「計画基準にもする」をオフにするか、「置き換える」を選ぶと完了できます。',
 };
@@ -125,12 +131,12 @@ function CompleteDialog({
           <DialogTitle>
             Sprint {data.number} の振り返りを完了しますか？
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-balance">
             完了すると、この Sprint には実績を足せなくなります。
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
-          <dl className="grid grid-cols-1 gap-x-6 gap-y-1 text-body medium:grid-cols-[auto_1fr]">
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-1 text-body medium:grid-cols-[auto_1fr] medium:gap-y-2">
             <dt className="text-ink-muted">次に試す変更</dt>
             <dd className="mb-2 text-ink medium:mb-0">
               {improvement ?? 'なし'}
