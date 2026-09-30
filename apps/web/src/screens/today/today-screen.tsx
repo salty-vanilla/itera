@@ -390,18 +390,22 @@ function TodayView({ data }: { data: TodayData }) {
                   {remaining.count === 0 ? (
                     '今日の残りはありません'
                   ) : (
-                    // Broken between the two parts first, not in the range.
+                    // Broken between the parts (and before 「（見積もりなしが
+                    // 1件）」), not in the range or the note.
                     <>
                       <span className="inline-block">
                         今日の残り {remaining.count}件 ·
                       </span>{' '}
-                      <span className="inline-block">
-                        見込み{' '}
-                        {formatPlanningTotal({
-                          ...remaining,
-                          unestimatedSubtasks: 0,
-                        })}
-                      </span>
+                      {formatPlanningTotal({
+                        ...remaining,
+                        unestimatedSubtasks: 0,
+                      })
+                        .split(/(?=（)/)
+                        .map((part, i) => (
+                          <span key={i} className="inline-block">
+                            {i === 0 ? `見込み ${part}` : part}
+                          </span>
+                        ))}
                     </>
                   )}
                 </p>
