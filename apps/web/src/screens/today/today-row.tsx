@@ -29,9 +29,12 @@ import type { TodayItem, TodayRow as TodayRowData } from '@/store/today-view';
 
 // A row of 今日やる, or one closed today (DESIGN.md Task Row, patterns.md
 // Today). ○ is always there; the other daily operations are in the `…`
-// (always visible under 768px). Owner decisions in #41:
+// (always visible under 768px). Owner decisions in #41 and #101:
 // - the state and its time go in the metadata line (「開始 10:12」「今日は
-//   ここまで · 1.5h」「今日は見送り」), in `ink-muted` with an icon;
+//   ここまで · 1.5h」「今日は見送り」) with an icon, in `ink-muted`, except
+//   開始 in `ink` (#101);
+// - a deferred or removed row has 「取り消す」 the same day (F37), as a
+//   skipped one does (F19);
 // - a done row stays where it is, struck through; ○ again undoes it;
 // - 「今日は見送る」 comes first in the `…`, nearest the thumb.
 
@@ -49,6 +52,8 @@ type TodayRowProps = {
   onRemove: () => void;
   onSkip: () => void;
   onUndoSkip: () => void;
+  /** 見送り・外すを取り消す (F37). */
+  onUndoClose: () => void;
   /** 今日はここまで: opens the actual time surface. */
   onPause: () => void;
   /** 実績を残す: opens the actual time surface. */
@@ -69,6 +74,7 @@ function TodayRow({
   onRemove,
   onSkip,
   onUndoSkip,
+  onUndoClose,
   onPause,
   onRecord,
   actionsRef,
@@ -77,6 +83,7 @@ function TodayRow({
   const state = selection.resolution;
   const done = state === 'done';
   const skipped = state === 'skipped';
+  const undoable = state === 'deferred' || state === 'removed';
   const recurring = occurrence !== undefined;
 
   const items = [
@@ -163,6 +170,20 @@ function TodayRow({
             取り消す
             <span className="sr-only">（スキップ: {task.title}）</span>
           </Button>
+        ) : undoable ? (
+          <Button
+            size="sm"
+            variant="quiet"
+            data-action="undo-close"
+            onClick={onUndoClose}
+          >
+            <Undo2 aria-hidden />
+            取り消す
+            <span className="sr-only">
+              （{state === 'deferred' ? '見送り' : '今日から外した'}:{' '}
+              {task.title}）
+            </span>
+          </Button>
         ) : items.length > 0 ? (
           <Menu>
             <MenuTrigger
@@ -196,7 +217,8 @@ function RowMetadata({
     switch (selection.resolution) {
       case 'started':
         return (
-          <MetaItem wrap icon={<Play aria-hidden />}>
+          // In `ink`, not muted: the one open state to see at a glance.
+          <MetaItem wrap icon={<Play aria-hidden />} className="text-ink">
             開始
             {selection.startedAt !== undefined &&
               ` ${formatTime(selection.startedAt, timeZone)}`}

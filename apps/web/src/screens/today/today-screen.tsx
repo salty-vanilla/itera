@@ -270,6 +270,7 @@ function TodayView({ data }: { data: TodayData }) {
       onRemove: () => moved(selectionId, actions.removeFromToday(selectionId)),
       onSkip: () => moved(selectionId, actions.skip(selectionId)),
       onUndoSkip: () => moved(selectionId, actions.undoSkip(selectionId)),
+      onUndoClose: () => moved(selectionId, actions.undoClose(selectionId)),
       onPause: () =>
         setEditing({
           selectionId,
@@ -389,11 +390,11 @@ function TodayView({ data }: { data: TodayData }) {
             className="flex flex-col gap-2"
           >
             <h2 id="today-closed" className="text-subheading text-ink-muted">
-              今日はここまでにしたもの
+              今日はもうやらない
             </h2>
             <p className="text-help text-ink-muted">
               明日から今週の残りに出ます。今日のうちに終わったら ○
-              で完了にできます。
+              で完了にできます。見送りは「続けて見送り」の回数に入り、外したものは入りません。
             </p>
             <ul className="flex flex-col border-t border-border-soft">
               {data.closed.map((row) => (
