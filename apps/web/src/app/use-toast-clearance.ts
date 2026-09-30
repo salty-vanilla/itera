@@ -27,6 +27,18 @@ function toastBox(): DOMRect | undefined {
   return box === undefined || box.height === 0 ? undefined : box;
 }
 
+/** Text and controls that reach under the Toasts' columns (not scroll-bound). */
+const CONTENT =
+  'button, a, input, [role="checkbox"], li, p, h1, h2, h3, td, th';
+
+/** Whether anything in `main` lies in the columns the Toasts are over. */
+function underToasts(main: HTMLElement, toasts: DOMRect): boolean {
+  return [...main.querySelectorAll(CONTENT)].some((el) => {
+    const box = el.getBoundingClientRect();
+    return box.width > 0 && box.left < toasts.right && box.right > toasts.left;
+  });
+}
+
 /**
  * Publishes the part of `main` the Toasts cover as `--toast-clearance` on it.
  * `main` pads its bottom by it; a screen whose panes have a face of their own
@@ -41,8 +53,9 @@ function makeRoom(main: HTMLElement): DOMRect | undefined {
   const lifted =
     document.documentElement.style.getPropertyValue('--toast-offset-above') !==
     '';
+  // On a wide screen the content may stand clear of the Toasts sideways.
   const covered =
-    toasts === undefined || lifted
+    toasts === undefined || lifted || !underToasts(main, toasts)
       ? 0
       : Math.max(0, main.getBoundingClientRect().bottom - toasts.top);
   if (covered > 0) main.style.setProperty('--toast-clearance', `${covered}px`);
@@ -55,7 +68,7 @@ function makeRoom(main: HTMLElement): DOMRect | undefined {
  * The Toasts lie over the bottom left of the screen; while they show,
  *
  * - `main` gets bottom padding (`--toast-clearance`) as tall as the part of
- *   it they cover, so
+ *   it they cover, if any content lies in their columns, so
  *   that whatever is at the bottom (the last rows, the Quick Add) can be
  *   scrolled clear of them. It goes with the Toasts. Content that fills the
  *   screen (`min-h-full`, `mt-auto`, a sticky bar at the end) rises by the
@@ -119,6 +132,23 @@ export function useToastClearance(mainRef: RefObject<HTMLElement | null>) {
       top: rect.bottom - box.top + GAP,
     });
   }, [toasts, mainRef]);
+
+  // Another screen, or content that comes late, has other content and other
+  // stuck bars: measure again when `main` changes.
+  useEffect(() => {
+    const main = mainRef.current;
+    if (main === null) return;
+    let frame = 0;
+    const observer = new MutationObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => makeRoom(main));
+    });
+    observer.observe(main, { childList: true, subtree: true });
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+    };
+  }, [mainRef]);
 
   // The window's height changes where the Toasts are.
   useEffect(() => {

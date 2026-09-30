@@ -455,7 +455,11 @@ function TodayView({ data }: { data: TodayData }) {
         <div
           ref={quickAddRef}
           className={cn(
-            'sticky bottom-0 z-(--layer-sticky) -mx-4 mt-auto border-t border-border bg-canvas px-4 py-3',
+            // While Toasts show, `main` pads its bottom by --toast-clearance.
+            // The bar stays stuck to the very bottom (so nothing shows under
+            // it) and its face reaches down behind the Toasts, with the input
+            // above them (app/use-toast-clearance.ts).
+            'sticky bottom-[calc(var(--toast-clearance,0px)*-1)] z-(--layer-sticky) -mx-4 mt-auto mb-[calc(var(--toast-clearance,0px)*-1)] border-t border-border bg-canvas px-4 pt-3 pb-[calc(var(--spacing-3)+var(--toast-clearance,0px))]',
             'medium:-mx-6 medium:px-6 wide:mx-0 wide:px-0',
           )}
         >

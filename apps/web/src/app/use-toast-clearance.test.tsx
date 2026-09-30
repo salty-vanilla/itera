@@ -7,6 +7,7 @@ import { useToastClearance } from './use-toast-clearance';
 
 afterEach(() => {
   cleanup();
+  document.documentElement.style.removeProperty('--toast-offset-above');
   vi.restoreAllMocks();
 });
 
@@ -44,13 +45,14 @@ function Screen() {
 }
 
 // jsdom has no layout: the boxes are given.
-function setup(row: DOMRect) {
+function setup(row: DOMRect, content = rect(0, 0)) {
   vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(
     function (this: Element) {
       if (this.matches('[data-slot="toast-viewport"]'))
         return this.childElementCount > 0 ? rect(700, 76) : rect(776, 0);
       if (this.matches('main')) return rect(0, 800);
       if (this.matches('[data-slot="task-row"]')) return row;
+      if (this.matches('button')) return content;
       return rect(0, 0);
     },
   );
@@ -75,6 +77,17 @@ describe('useToastClearance', () => {
     await vi.waitFor(() => expect(room()).toBe(''));
   });
 
+  it('adds no room where the content stands clear of the Toasts sideways', async () => {
+    // The Toasts are over x 0 to 300; the button is at 500.
+    const user = setup(rect(100, 40), rect(0, 40, 500));
+    await user.click(screen.getByRole('button', { name: '押す' }));
+    expect(
+      document
+        .querySelector('main')!
+        .style.getPropertyValue('--toast-clearance'),
+    ).toBe('');
+  });
+
   it('adds no room where a stuck bar lifts the Toasts above it', async () => {
     document.documentElement.style.setProperty('--toast-offset-above', '70px');
     const user = setup(rect(100, 40));
@@ -84,7 +97,6 @@ describe('useToastClearance', () => {
         .querySelector('main')!
         .style.getPropertyValue('--toast-clearance'),
     ).toBe('');
-    document.documentElement.style.removeProperty('--toast-offset-above');
   });
 
   it('scrolls a pressed row up when a Toast would cover it', async () => {
