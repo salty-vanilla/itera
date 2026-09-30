@@ -316,7 +316,7 @@ components:
 | 罫 | `border` / `border-soft` | 構造の罫 / リスト内の行区切り | 操作部品の輪郭 |
 | 罫 | `border-strong` | 入力・Checkbox・Radio・Switch・Secondary Button の輪郭 | 装飾の罫 |
 | 確定 | `primary`（墨）/ `on-primary` | Primary Button の塗り、オン状態、完了サークル、Progress、IconButton の pressed | 大きな面 |
-| 現在地 | `here`（黄）/ `here-subtle` / `on-here` | 今日の列・今の段階の印（`here`）、選んだ行・項目の地（`here-subtle`）。必ずチェックか語を伴う（Filter だけは `ink` の 2px の枠と太字。もう 1 つの例外は、Backlog で追加した直後の行の点滅で、2.5 秒でこの地から透明に消える。docs/design/foundations.md） | 注意・警告（→ `warning`）、装飾、フォーカス |
+| 現在地 | `here`（黄）/ `here-subtle` / `on-here` | 今日の列・今の段階の印（`here`）、選んだ行・項目の地（`here-subtle`）。必ずチェックか語を伴う（Filter だけは `ink` の 2px の枠と太字。もう 1 つの例外は、Backlog と Planning の選ぶで追加した直後の行の点滅で、2.5 秒でこの地から透明に消える。docs/design/foundations.md） | 注意・警告（→ `warning`）、装飾、フォーカス |
 | Focus | `focus`（`ink` の別名） | フォーカスリングだけ。色相を持たず、墨の 2px の輪郭と 2px のアキで示す | それ以外すべて |
 | リンク | `link`（`ink` の別名） | 下線付きの文字リンク | — |
 | Semantic | `danger` `warning` と `*-subtle` | 危険と注意の文字・アイコン・Status Tag・Notice。必ずアイコンか語を伴う。成功と情報は色を持たず、墨の文字＋アイコン（`circle-check` / `info`）＋語で示す | Area の識別、装飾 |

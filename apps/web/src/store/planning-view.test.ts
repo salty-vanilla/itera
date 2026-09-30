@@ -19,6 +19,20 @@ describe('planningData', () => {
     expect(data?.number).toBe(2);
   });
 
+  it('offers the Quick Add only the Areas that are not archived (#92)', () => {
+    const { records, clock } = fixtureSnapshot('planning-pick');
+    const [first, ...rest] = records.areas;
+    if (first === undefined) throw new Error('no Area');
+    const archived = {
+      ...records,
+      areas: [{ ...first, archived: true }, ...rest],
+    };
+    const data = planningData(archived, clock, { applyCriterion: true });
+    expect(data?.addAreas.map((a) => a.id)).toEqual(
+      rest.toSorted((a, b) => a.order - b.order).map((a) => a.id),
+    );
+  });
+
   it('says why 確定 waits while the previous Retro is open (invariant 12)', () => {
     // 10/5: Sprint 2 is in Review; the next week's Planning starts anyway.
     const store = createMemoryStore(fixtureSnapshot('retro-start'));

@@ -8,7 +8,7 @@ import type {
 import { useMemo } from 'react';
 import * as changes from './planning-changes';
 import { planningData } from './planning-view';
-import { useStoreSnapshot } from './store-provider';
+import { useRecordStore, useStoreSnapshot } from './store-provider';
 import { useRun } from './use-run';
 
 /** The Planning screen's data (ADR 0005: screens read through hooks). */
@@ -27,6 +27,7 @@ export function usePlanning(options: { applyCriterion: boolean }) {
  */
 export function usePlanningActions() {
   const run = useRun();
+  const store = useRecordStore();
   return useMemo(
     () => ({
       chooseTasks: (taskIds: readonly TaskId[]) =>
@@ -43,8 +44,11 @@ export function usePlanningActions() {
         occurrenceIds.every((id) =>
           run(changes.setOccurrenceIncluded(id, true)),
         ),
-      addAndChoose: (title: string, areaId?: AreaId) =>
-        run(changes.addAndChoose(title, areaId)),
+      /** The new Task's ID, or `undefined` when it did not go through. */
+      addAndChoose: (title: string, areaId?: AreaId): TaskId | undefined =>
+        run(changes.addAndChoose(title, areaId))
+          ? store.getSnapshot().records.tasks.at(-1)?.id
+          : undefined,
       setGoal: (areaId: AreaId, text: string) =>
         run(changes.setGoal(areaId, text)),
       setGoalLink: (sprintTaskId: SprintTaskId, goalLink: GoalLink) =>
@@ -53,6 +57,6 @@ export function usePlanningActions() {
       confirmSprint: (applyCriterion: boolean) =>
         run(changes.confirm(applyCriterion)),
     }),
-    [run],
+    [run, store],
   );
 }

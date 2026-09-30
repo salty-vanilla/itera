@@ -47,7 +47,7 @@
 
 - 動かしてよいプロパティは `opacity`、`transform`（8px 以内の移動）、`background-color`、`border-color`、`color`。サイズとレイアウトを動かさない。
 - Backlog から今週に入れたとき：行の背景が `here-subtle` に変わり、チェックが付く（`duration-fast`）＋ Toast「〜を今週に入れました · 元に戻す」。行を飛ばすアニメーションは作らない。
-- Backlog で Task を追加した直後：その行が `here-subtle` の地で点滅する。最初の 1 秒は保ち、2.5 秒までに透明に戻る（1 回だけ。繰り返さない。Issue #86 でオーナーが決めた。ほかの動きより長いのは、追加した行を見つけるため）。`prefers-reduced-motion: reduce` では動かさず、Toast が知らせる。
+- Backlog と Planning の選ぶで Task を追加した直後（Planning は中央の、入り先の領域の塊の行。Issue #92）：その行が `here-subtle` の地で点滅する。最初の 1 秒は保ち、2.5 秒までに透明に戻る（1 回だけ。繰り返さない。Issue #86 でオーナーが決めた。ほかの動きより長いのは、追加した行を見つけるため）。`prefers-reduced-motion: reduce` では動かさず、Toast が知らせる。
 - 完了：サークルが塗られる（`duration-fast`）。紙吹雪・チェックの跳ねなどの祝福の演出を作らない。
 - Drawer は `duration-slow` で 16px スライドする。
 - Loading：300ms 未満で終わる処理にはスピナーを出さない。スピナーは必ず文言と一緒に（「見積中」「保存中…」）。

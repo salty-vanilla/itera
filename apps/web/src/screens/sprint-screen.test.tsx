@@ -209,6 +209,22 @@ describe('Sprint — the next week (#90)', () => {
     expect(screen.queryByText(/今週/)).toBeNull();
   });
 
+  it('says 「来週」 in the Toast of a Task added while planning next week (#92)', async () => {
+    await renderAt('/sprint?fixture=today-daytime&sprint=3');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Sprint 3 の計画を始める' }),
+    );
+    await userEvent.type(
+      await screen.findByRole('textbox', {
+        name: 'タスクを追加して来週に入れる',
+      }),
+      '本を返す{Enter}',
+    );
+    expect(
+      await screen.findByText('「本を返す」を追加して来週に入れました'),
+    ).toBeTruthy();
+  });
+
   it('plans in 「今週」 words when no week runs', async () => {
     await renderAt('/sprint?fixture=retro-start&sprint=3');
     await userEvent.click(
