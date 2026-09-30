@@ -20,7 +20,7 @@ import { capacityHeadline } from '@/components/sprint/capacity-indicator';
 import { SprintHeader } from '@/components/sprint/sprint-header';
 import { formatDateRange } from '@/lib/date-format';
 import { isTyping } from '@/lib/row-keys';
-import { formatPlanningTotal } from '@/lib/time-format';
+import { formatPlanningSum } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { cn } from '@/lib/utils';
 import type { PlanningData } from '@/store/planning-view';
@@ -355,8 +355,7 @@ function CapacitySummary({ data }: { data: PlanningData }) {
   if (capacity === undefined) {
     return (
       <span>
-        計画値の合計 {formatPlanningTotal(data.totals.total)} ·
-        使える時間は未入力
+        計画値の合計 {formatPlanningSum(data.totals.total)} · 使える時間は未入力
       </span>
     );
   }

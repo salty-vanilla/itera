@@ -37,7 +37,7 @@ export interface BacklogItem {
     readonly latest: RecurrencePattern;
   };
   /**
-   * In this week's Sprint: 「今週」, and 「Sprint 中に追加」 if mid-Sprint.
+   * In this week's Sprint: 「今週」, and 「週の途中で追加」 if mid-Sprint.
    * `confirmed` is false while that Sprint is still being planned.
    */
   readonly thisWeek?: {

@@ -52,5 +52,5 @@ export const Over: Story = {
   },
 };
 
-/** unknown：可用時間が未入力。 */
+/** unknown：使える時間が未入力。 */
 export const Unknown: Story = {};

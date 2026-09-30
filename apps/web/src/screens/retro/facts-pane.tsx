@@ -12,6 +12,7 @@ import {
   formatPlanningTotal,
   formatPlanningValue,
   formatRange,
+  formatUnestimatedCount,
   UNESTIMATED,
 } from '@/lib/time-format';
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
@@ -28,7 +29,7 @@ import {
 
 // 事実を見る (patterns.md Retro): 「今週、何が起きたか」. Everything here is
 // derived from the records by `retroFacts` and never edited (invariant 40);
-// the person only marks facts (気になる), judges Goals and adds actual time
+// the person only marks facts (振り返りに使う), judges Goals and adds actual time
 // (F22). No scores and no rates; facts are written neutrally.
 
 type FactsPaneProps = {
@@ -413,7 +414,7 @@ function AreaFacts({
       </div>
       {goal !== undefined && areaId !== null && (
         <div className="flex flex-col gap-3">
-          {/* The Goal's 「気になる」 sits at the right end, over the rows'
+          {/* The Goal's 「振り返りに使う」 sits at the right end, over the rows'
               ones (#73); the Goal text keeps to measure-read. The end
               padding matches the table cells'. */}
           <div className="flex flex-wrap items-start justify-between gap-2 medium:pe-2">
@@ -590,7 +591,7 @@ function TaskTable({
 
 /**
  * compact: one Task per item, its values in words on wrapping lines
- * (「提案 3–5h · 計画 5h（基準） · 実績 4.5h」), then its outcome and days,
+ * (「Agent の提案 3–5h · 計画 5h（基準） · 実績 4.5h」), then its outcome and days,
  * then its actions in a row.
  */
 function TaskList({
@@ -610,9 +611,10 @@ function TaskList({
         {tasks.map((t) => {
           const estimate = estimateOf(t);
           const values = [
-            // A suggestion and 未見積 say what they are; a number needs its name.
+            // A suggestion and 見積もりなし say what they are; a number needs
+            // its name.
             estimate.kind === 'estimate'
-              ? `Estimate ${estimate.text}`
+              ? `見積もり ${estimate.text}`
               : estimate.text,
             `計画 ${plannedText(t)}${planNotes(t)
               .map((n) => `（${n}）`)
@@ -651,7 +653,7 @@ function TaskList({
   );
 }
 
-/** 気になる, and 実績を足す for a non-recurring Task (F22). */
+/** 振り返りに使う, and 実績を足す for a non-recurring Task (F22). */
 function TaskActions({
   fact,
   actualDate,
@@ -725,7 +727,7 @@ function plannedCellText(t: TaskFact): string {
 function unestimatedNote(t: TaskFact): string[] {
   const value = t.plan?.value;
   return value?.base === 'subtasks' && value.unestimatedSubtasks > 0
-    ? [`${UNESTIMATED}が ${value.unestimatedSubtasks}件`]
+    ? [formatUnestimatedCount(value.unestimatedSubtasks)]
     : [];
 }
 
@@ -787,7 +789,7 @@ function resultText(t: TaskFact, data: RetroData): string {
   return `回：完了 ${count(done)} · スキップ ${count(skipped)} · 未処理 ${count(missed)}`;
 }
 
-/** One fact in a list, with its 気になる at the right. */
+/** One fact in a list, with its 振り返りに使う at the right. */
 function FactRow({
   children,
   action,

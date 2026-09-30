@@ -10,7 +10,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** 完了 / 持ち越し / スキップ / Sprint 中の追加 / 計画値と可用時間。点数や割合は出さない。 */
+/** 完了 / 持ち越し / スキップ / 週の途中の追加 / 計画値と使える時間。点数や割合は出さない。 */
 export const Default: Story = {
   args: {
     items: [

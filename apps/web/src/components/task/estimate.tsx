@@ -2,6 +2,7 @@ import type { PlanningValue } from '@itera/domain';
 import {
   formatPlanningValue,
   formatRange,
+  formatUnestimatedCount,
   spokenHours,
   UNESTIMATED,
 } from '@/lib/time-format';
@@ -21,10 +22,20 @@ type EstimateProps = {
   value: PlanningValue;
   /** This Sprint's planning value rather than the Task's own time. */
   planned?: boolean;
+  /**
+   * On one line, as in a label: a subtask sum keeps its count in brackets
+   * instead of stacking it under the value as a row does.
+   */
+  inline?: boolean;
   className?: string | undefined;
 };
 
-function Estimate({ value, planned = false, className }: EstimateProps) {
+function Estimate({
+  value,
+  planned = false,
+  inline = false,
+  className,
+}: EstimateProps) {
   const base =
     'inline-flex shrink-0 items-center gap-1 text-num-s whitespace-nowrap';
   if (value.base === 'none') {
@@ -41,12 +52,14 @@ function Estimate({ value, planned = false, className }: EstimateProps) {
   // A subtask sum with subtasks left out: the count goes on a line of its
   // own under the value, so that a row keeps room for its title (#105).
   const missing = value.base === 'subtasks' ? value.unestimatedSubtasks : 0;
-  const text =
-    missing > 0 ? formatRange(value.lo, value.hi) : formatPlanningValue(value);
-  const stacked = missing > 0 && 'flex-col items-end gap-0';
-  const missingNote = missing > 0 && (
+  const stack = missing > 0 && !inline;
+  const text = stack
+    ? formatRange(value.lo, value.hi)
+    : formatPlanningValue(value);
+  const stacked = stack && 'flex-col items-end gap-0';
+  const missingNote = stack && (
     <span aria-hidden className="text-meta text-ink-muted">
-      {`${UNESTIMATED}が ${missing}件`}
+      {formatUnestimatedCount(missing)}
     </span>
   );
   const missingSpoken =

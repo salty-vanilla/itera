@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import type { RetroData } from '@/store/retro-view';
 import { OUTCOME_WORDS, occurrenceWord, PinToggle } from './retro-words';
 
-// 振り返りの材料 (DESIGN.md RetroInsight, fact): the facts marked 気になる,
+// 振り返りの材料 (DESIGN.md RetroInsight, fact): the facts marked 振り返りに使う,
 // gathered at the side. Facts in `body`; the person's own words are
 // elsewhere, in `reflection`. Marking is optional.
 

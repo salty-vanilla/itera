@@ -496,6 +496,14 @@ describe('Retro — compact (#57)', () => {
       expect(
         within(paper!).getByRole('button', { name: /実績を足す.*関連論文/ }),
       ).toBeTruthy();
+      // The person's own value is named in words too (#104).
+      const review = screen
+        .getAllByRole('listitem')
+        .find((li) => li.textContent?.startsWith('API 設計のレビュー'));
+      expect(review?.textContent).toContain('見積もり 2h · 計画 2h');
+      for (const li of screen.getAllByRole('listitem')) {
+        expect(li.textContent).not.toMatch(/Estimate|Goal|Retro/);
+      }
     } finally {
       vi.unstubAllGlobals();
     }

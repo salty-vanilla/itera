@@ -104,7 +104,7 @@ function OutlookPane({
           </p>
           <Switch
             label="今回の計画に使う"
-            description="オンにすると、対象のタスクを提案の幅の一端で計画します。見積もりは変わりません。"
+            description="対象のタスクを提案の幅の一端で計画します。見積もりは変わりません。"
             checked={criterion.applied}
             onCheckedChange={(checked) => onApplyCriterion(checked)}
           />

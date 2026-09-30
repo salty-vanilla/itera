@@ -7,7 +7,8 @@ import { TextInput } from '@/components/ui/text-input';
 import {
   formatDifference,
   formatHours,
-  formatPlanningTotal,
+  formatLeftOut,
+  formatPlanningSum,
   formatRange,
 } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
@@ -123,7 +124,7 @@ function CapacityIndicator({
 }: CapacityIndicatorProps) {
   const statement = capacityStatement(capacity);
   const Icon = toneIcon[statement.tone];
-  const unestimated = total.unestimated + total.unestimatedSubtasks;
+  const leftOut = formatLeftOut(total);
   const headingId = useId();
   return (
     <section
@@ -168,12 +169,8 @@ function CapacityIndicator({
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 text-body">
           <dt className="whitespace-nowrap text-ink-muted">計画値の合計</dt>
           <dd className="text-right text-num-m text-ink">
-            {/* The count left out is its own sentence below, so the sum
-                stays one range here (only 「見積もりなし 3件」 when nothing
-                is estimated). */}
-            {total.lo === 0 && total.hi === 0
-              ? formatPlanningTotal(total)
-              : formatRange(total.lo, total.hi, { total: true })}
+            {/* The count left out is its own sentence below. */}
+            {formatPlanningSum(total)}
           </dd>
           {capacity !== undefined && (
             <>
@@ -184,20 +181,8 @@ function CapacityIndicator({
             </>
           )}
         </dl>
-        <p className="text-help text-ink-muted">
-          計画値：今回の計画に使う時間。見積もりは変わりません。
-        </p>
-        {unestimated > 0 && (
-          <p className="text-help text-ink-muted">
-            {[
-              total.unestimated > 0 &&
-                `見積もりのないタスク ${total.unestimated}件は合計に含まれていません。`,
-              total.unestimatedSubtasks > 0 &&
-                `見積もりのないサブタスク ${total.unestimatedSubtasks}件は合計に含まれていません。`,
-            ]
-              .filter(Boolean)
-              .join(' ')}
-          </p>
+        {leftOut !== undefined && (
+          <p className="text-help text-ink-muted">{leftOut}</p>
         )}
       </div>
 
@@ -218,6 +203,11 @@ function CapacityIndicator({
           ))}
         </ul>
       )}
+
+      {/* Where 計画値 first shows: what it is, in one line (#105). */}
+      <p className="text-help text-ink-muted">
+        計画値：今回の計画に使う時間。見積もりは変わりません。
+      </p>
 
       {!readOnly && onAvailableHoursChange !== undefined && (
         <AvailableHoursField

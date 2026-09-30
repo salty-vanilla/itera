@@ -73,7 +73,7 @@ export const samePin = (a: RetroPin, b: RetroPin) =>
   a.kind === b.kind && a.id === b.id;
 
 /**
- * 気になる: marks a fact so that it gathers in 振り返りの材料. Optional;
+ * 振り返りに使う: marks a fact so that it gathers in 振り返りの材料. Optional;
  * the Retro moves on without any.
  */
 export function PinToggle({

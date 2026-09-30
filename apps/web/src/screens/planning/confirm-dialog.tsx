@@ -12,7 +12,11 @@ import {
 import { semanticIcons } from '@/components/ui/icon';
 import { capacityStatement } from '@/components/sprint/capacity-indicator';
 import { criterionName } from '@/lib/criterion-text';
-import { formatHours, formatPlanningTotal } from '@/lib/time-format';
+import {
+  formatHours,
+  formatLeftOut,
+  formatPlanningSum,
+} from '@/lib/time-format';
 import type { PlanningData } from '@/store/planning-view';
 
 // 確定 (docs/design/patterns.md Sprint Planning › 確定). A Dialog (md) with
@@ -44,7 +48,7 @@ function ConfirmDialog({
   const statement = capacityStatement(totals.capacity);
   const Warning =
     statement.tone === 'over' ? semanticIcons.error : semanticIcons.warning;
-  const unestimated = totals.total.unestimated;
+  const leftOut = formatLeftOut(totals.total);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="md">
@@ -81,7 +85,7 @@ function ConfirmDialog({
             </dd>
             <dt className="text-ink-muted">計画値の合計</dt>
             <dd className="text-num-m text-ink">
-              {formatPlanningTotal(totals.total)}
+              {formatPlanningSum(totals.total)}
             </dd>
             <dt className="text-ink-muted">使える時間</dt>
             <dd className="text-ink">
@@ -104,7 +108,7 @@ function ConfirmDialog({
           </dl>
           {(statement.tone === 'tight' ||
             statement.tone === 'over' ||
-            unestimated > 0) && (
+            leftOut !== undefined) && (
             <ul className="flex flex-col gap-1 text-body">
               {(statement.tone === 'tight' || statement.tone === 'over') && (
                 <li
@@ -121,10 +125,8 @@ function ConfirmDialog({
                   {statement.text}
                 </li>
               )}
-              {unestimated > 0 && (
-                <li className="text-ink-muted">
-                  見積もりのないタスク {unestimated}件は合計に含まれていません。
-                </li>
+              {leftOut !== undefined && (
+                <li className="text-ink-muted">{leftOut}</li>
               )}
             </ul>
           )}

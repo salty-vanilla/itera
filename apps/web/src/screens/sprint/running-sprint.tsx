@@ -12,7 +12,12 @@ import { TaskRow } from '@/components/task/task-row';
 import { semanticIcons } from '@/components/ui/icon';
 import { criterionName } from '@/lib/criterion-text';
 import { formatDateRange } from '@/lib/date-format';
-import { formatHours, formatPlanningTotal } from '@/lib/time-format';
+import {
+  formatHours,
+  formatLeftOut,
+  formatPlanningSum,
+  formatPlanningTotal,
+} from '@/lib/time-format';
 import { cn } from '@/lib/utils';
 import type { RunningData, RunningTask } from '@/store/running-view';
 import { useRunningSprintActions } from '@/store/use-running-sprint';
@@ -193,7 +198,7 @@ function Outlook({
         <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-body">
           <dt className="text-ink-muted">計画値の合計</dt>
           <dd className="text-right text-num-m text-ink">
-            {formatPlanningTotal(data.totals.total)}
+            {formatPlanningSum(data.totals.total)}
           </dd>
           <dt className="text-ink-muted">計画したときの使える時間</dt>
           <dd className="text-right text-ink">
@@ -202,6 +207,11 @@ function Outlook({
               : formatHours(planned, { total: true })}
           </dd>
         </dl>
+        {formatLeftOut(data.totals.total) !== undefined && (
+          <p className="text-help text-ink-muted">
+            {formatLeftOut(data.totals.total)}
+          </p>
+        )}
         <AvailableHoursField
           value={current}
           onChange={onHours}
