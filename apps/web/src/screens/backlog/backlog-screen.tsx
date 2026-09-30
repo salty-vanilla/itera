@@ -235,6 +235,7 @@ function BacklogScreen() {
         className="mt-[var(--toast-above-room,0px)] sticky bottom-0 z-(--layer-sticky) order-last border-t border-border bg-canvas px-4 py-3 medium:static medium:order-none medium:mt-0 medium:border-t-0 medium:px-6 medium:py-0 medium:pb-4 xl:max-w-pane-rows"
       >
         <TaskQuickAdd
+          label="Backlog にタスクを追加"
           onAdd={(title) => {
             const chosen = quickArea ?? search.area ?? '';
             const areaId = chosen === '' ? undefined : id<'Area'>(chosen);

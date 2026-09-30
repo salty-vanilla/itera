@@ -33,8 +33,8 @@ import { CarryOverText } from '../backlog/backlog-row';
 // default and can be left out one by one. Carried-over Tasks never join by
 // themselves (invariant 20). In 整える・確かめる the pane is slim (titles
 // only, owner decision in #40). The Quick Add adds a Task and chooses it at
-// once, in the Area picked beside it (Issue #92); slim, the Select goes under
-// the field. A row's `…` has 見積もりを入れる, as E has (Issue #96); slim rows
+// once, in the Area picked under the field, beside the 「追加」 button (Issues
+// #92, #98). A row's `…` has 見積もりを入れる, as E has (Issue #96); slim rows
 // keep to the title.
 
 type BacklogPaneProps = {
@@ -104,8 +104,8 @@ function BacklogPane({
     >
       <h2 className="text-subheading text-ink">Backlog</h2>
       <TaskQuickAdd
-        label={`タスクを追加して${weekText(week, 'に入れる')}`}
-        stackArea={slim}
+        label={weekText(week, 'のタスクを追加')}
+        stackArea
         onAdd={(title) =>
           onAdd(title, quickArea === '' ? undefined : id<'Area'>(quickArea))
         }

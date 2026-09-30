@@ -1,21 +1,23 @@
 import { Plus } from 'lucide-react';
 import { useId, useRef, useState, type ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Kbd } from '@/components/ui/kbd';
 import { TextInput } from '@/components/ui/text-input';
 import { cn } from '@/lib/utils';
 
 // DESIGN.md Components › Task Quick Add. Adds a Task by its title without
-// leaving the screen: a `plus` icon, no visible label (it has an accessible
-// name), an optional Area Select (beside the field, or under it in a narrow
-// pane) and a hint. Enter adds, Esc clears, and the focus stays in the field
-// for the next one. Never a modal.
+// leaving the screen: a `plus` icon, no visible label (the accessible name
+// and the placeholder both say where the Task goes), an optional Area Select
+// (beside the field, or under it in a narrow pane), an 「追加」 button at every
+// width and a hint. The button and Enter add, Esc clears, and the focus stays
+// in the field for the next one. Never a modal.
 
 type TaskQuickAddProps = {
   /** Adds the Task. Return false to keep the text (the add failed). */
   onAdd: (title: string) => boolean;
-  /** Accessible name of the field. */
-  label?: string;
+  /** Accessible name and placeholder: where the Task goes (#98). */
+  label: string;
   /** An Area Select, placed after the field. */
   area?: ReactNode;
   /** Puts the Area Select under the field, for a narrow pane. */
@@ -25,7 +27,7 @@ type TaskQuickAddProps = {
 
 function TaskQuickAdd({
   onAdd,
-  label = 'タスクを追加',
+  label,
   area,
   stackArea = false,
   className,
@@ -33,41 +35,58 @@ function TaskQuickAdd({
   const [title, setTitle] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const hintId = useId();
+  const field = (
+    <Field
+      label={label}
+      hideLabel
+      className={cn(
+        'min-w-0 flex-1',
+        area !== undefined && 'col-span-2',
+        area !== undefined && !stackArea && 'medium:col-auto',
+      )}
+    >
+      <TextInput
+        ref={inputRef}
+        prefix={<Plus />}
+        value={title}
+        placeholder={label}
+        enterKeyHint="done"
+        aria-describedby={hintId}
+        onChange={(event) => setTitle(event.currentTarget.value)}
+        onKeyDown={(event) => {
+          // Esc while converting Japanese input only closes the IME.
+          if (event.key === 'Escape' && !event.nativeEvent.isComposing) {
+            setTitle('');
+          }
+        }}
+      />
+    </Field>
+  );
+  // Pressing it with nothing typed adds nothing; the focus goes to the field.
+  const button = <Button type="submit">追加</Button>;
   return (
     <form
       data-slot="task-quick-add"
       className={cn('flex flex-col gap-1', className)}
       onSubmit={(event) => {
         event.preventDefault();
-        if (title.trim() === '') return;
-        if (onAdd(title.trim())) setTitle('');
+        if (title.trim() !== '' && onAdd(title.trim())) setTitle('');
         inputRef.current?.focus();
       }}
     >
+      {/* Under 768px, and in a narrow pane, the field has the whole first
+          row (its placeholder says where the Task goes) and the Area Select
+          and the button share the second. From 768px it is one row. The
+          order in the page is the same at every width. */}
       <div
         className={cn(
-          'flex gap-2',
-          stackArea ? 'flex-col items-stretch' : 'items-end',
+          'grid grid-cols-[1fr_auto] items-end gap-2',
+          !stackArea && 'medium:flex',
         )}
       >
-        <Field label={label} hideLabel className="min-w-0 flex-1">
-          <TextInput
-            ref={inputRef}
-            prefix={<Plus />}
-            value={title}
-            placeholder="タイトルを入力"
-            enterKeyHint="done"
-            aria-describedby={hintId}
-            onChange={(event) => setTitle(event.currentTarget.value)}
-            onKeyDown={(event) => {
-              // Esc while converting Japanese input only closes the IME.
-              if (event.key === 'Escape' && !event.nativeEvent.isComposing) {
-                setTitle('');
-              }
-            }}
-          />
-        </Field>
+        {field}
         {area}
+        {button}
       </div>
       <p id={hintId} className="hidden text-help text-ink-subtle medium:block">
         <Kbd>Enter</Kbd> で追加 / <Kbd>Esc</Kbd> で取り消し
