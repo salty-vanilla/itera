@@ -387,9 +387,23 @@ function TodayView({ data }: { data: TodayData }) {
               {(data.rows.length > 0 || data.closed.length > 0) && (
                 // Two lines if need be under 768px: the button stays on the right.
                 <p className="min-w-0 flex-1 text-body text-ink-muted">
-                  {remaining.count === 0
-                    ? '今日の残りはありません'
-                    : `今日の残り ${remaining.count}件 · 見込み ${formatPlanningTotal({ ...remaining, unestimatedSubtasks: 0 })}`}
+                  {remaining.count === 0 ? (
+                    '今日の残りはありません'
+                  ) : (
+                    // Broken between the two parts first, not in the range.
+                    <>
+                      <span className="inline-block">
+                        今日の残り {remaining.count}件 ·
+                      </span>{' '}
+                      <span className="inline-block">
+                        見込み{' '}
+                        {formatPlanningTotal({
+                          ...remaining,
+                          unestimatedSubtasks: 0,
+                        })}
+                      </span>
+                    </>
+                  )}
                 </p>
               )}
               <Button

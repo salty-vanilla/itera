@@ -102,7 +102,9 @@ describe('Today — the top', () => {
     expect(screen.getByText('Sprint 2 · 4日目 / 7日')).toBeTruthy();
     // F32: 2 Tasks and occurrences done of 10 this week.
     expect(screen.getByText('4 / 10件')).toBeTruthy();
-    expect(screen.getByText('今日の残り 2件 · 見込み 4.5–5.5h')).toBeTruthy();
+    expect(screen.getByText('今日の残り 2件 ·').closest('p')?.textContent).toBe(
+      '今日の残り 2件 · 見込み 4.5–5.5h',
+    );
     // Invariant 25: no daily capacity, no judgement of going over.
     const text = document.body.textContent ?? '';
     for (const word of ['使える時間', '容量', '超過', '超える']) {
@@ -162,8 +164,8 @@ describe('Today — the order for a phone (#100)', () => {
         name: '今日へ: 関連論文を 3 本読む',
       }),
     );
-    const line = screen.getByText(/今日の残り 1件/);
-    expect(line.parentElement).toBe(
+    const line = screen.getByText(/今日の残り 1件/).closest('p');
+    expect(line?.parentElement).toBe(
       screen.getByRole('button', { name: '割り込みを記録' }).parentElement,
     );
   });
