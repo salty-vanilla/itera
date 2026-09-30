@@ -74,6 +74,8 @@ export interface BacklogItem {
   readonly closedToday?: ClosedResolution;
   /** The Task's own time: Estimate, suggestion, subtask sum or none. */
   readonly value: PlanningValue;
+  /** The Task's own Estimate, for choosing it as the time basis in the detail. */
+  readonly taskValue: PlanningValue;
   /** The subtask sum, for choosing it as the time basis in the detail. */
   readonly subtaskValue: PlanningValue;
   /** 今日へ: only for a Task outside the active Sprint (invariant 26). */
@@ -185,6 +187,10 @@ export function backlogItem(
       ? {}
       : { closedToday: closed.resolution }),
     value: planningValueOf(task, { now: clock.now }),
+    taskValue: planningValueOf(
+      { ...task, timeBasis: 'task' },
+      { now: clock.now },
+    ),
     subtaskValue: planningValueOf(
       { ...task, timeBasis: 'subtasks' },
       { now: clock.now },

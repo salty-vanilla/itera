@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/menu';
 import { Deadline } from '@/components/task/deadline';
 import { Estimate } from '@/components/task/estimate';
+import { EstimateMenuItem } from '@/components/task/estimate-menu-item';
 import {
   MetaItem,
   PriorityText,
@@ -190,9 +191,8 @@ function BacklogRow({
                 完了にする
               </MenuItem>
             )}
-            {(item.canAddToToday ||
-              item.todayOpensOn !== undefined ||
-              item.canComplete) && <MenuSeparator />}
+            <EstimateMenuItem onSelect={onEstimate} />
+            <MenuSeparator />
             <MenuItem variant="danger" onClick={onArchive}>
               <Archive aria-hidden />
               アーカイブ

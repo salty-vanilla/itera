@@ -15,6 +15,8 @@ import { cn } from '@/lib/utils';
 // - suggestion: 「Agent の提案 2–4h」 in a dashed `rounded.xs` box.
 // - planned: 「計画 5h」, this Sprint's planning value.
 // - unset: 「見積もりなし」, never 0h.
+// - unset with `enter`: the same words as a button that opens the Task's
+//   detail at its Estimate, as E does (Planning rows, #96).
 // Read out as 「見積もり 3時間」 and 「Agent の提案（未確定）: 2〜4時間」.
 
 type EstimateProps = {
@@ -27,6 +29,11 @@ type EstimateProps = {
    * instead of stacking it under the value as a row does.
    */
   inline?: boolean;
+  /**
+   * For an unset value on a row: the words are a button, named
+   * 「見積もりを入れる: タスク名」, that opens the Task at its Estimate.
+   */
+  enter?: { title: string; onEnter: () => void } | undefined;
   className?: string | undefined;
 };
 
@@ -34,11 +41,31 @@ function Estimate({
   value,
   planned = false,
   inline = false,
+  enter,
   className,
 }: EstimateProps) {
   const base =
     'inline-flex shrink-0 items-center gap-1 text-num-s whitespace-nowrap';
   if (value.base === 'none') {
+    if (enter !== undefined) {
+      return (
+        <button
+          type="button"
+          data-slot="estimate"
+          data-variant="unset"
+          aria-label={`見積もりを入れる: ${enter.title}`}
+          onClick={enter.onEnter}
+          className={cn(
+            base,
+            // Above the row's whole-row button, like the control and the `…`.
+            'relative z-1 min-h-target-touch justify-end rounded-sm px-1 text-link underline focus-visible:focus-ring medium:min-h-target-min',
+            className,
+          )}
+        >
+          {UNESTIMATED}
+        </button>
+      );
+    }
     return (
       <span
         data-slot="estimate"

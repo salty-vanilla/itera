@@ -522,6 +522,17 @@ describe('Today — completed from the Backlog', () => {
         name: '新メンバーのオンボーディング資料',
       }),
     ).toBeNull();
+    // Nor does its `…` offer 見積もりを入れる (#96).
+    await userEvent.click(
+      within(last).getByRole('button', {
+        name: '操作: 新メンバーのオンボーディング資料',
+      }),
+    );
+    await screen.findByRole('menuitem', { name: /実績を残す/ });
+    expect(
+      screen.queryByRole('menuitem', { name: /見積もりを入れる/ }),
+    ).toBeNull();
+    await userEvent.keyboard('{Escape}');
     await userEvent.click(
       within(last).getByRole('button', {
         name: '完了を取り消す: 新メンバーのオンボーディング資料',
@@ -851,6 +862,57 @@ describe('Today — keys of the lists (#48)', () => {
       name: /^見積もり（時間）(?!:)/,
     });
     await waitFor(() => expect(document.activeElement).toBe(estimate));
+  });
+});
+
+describe('Today — 見積もりを入れる (#96)', () => {
+  it('the … of a row opens the Task at its Estimate, as E does', async () => {
+    await renderAt('/today?fixture=today-interrupt');
+    await userEvent.click(
+      within(region('今日やる')).getByRole('button', {
+        name: '操作: 顧客インタビューの設計',
+      }),
+    );
+    const item = await screen.findByRole('menuitem', {
+      name: /見積もりを入れる/,
+    });
+    expect(item.textContent).toContain('E');
+    await userEvent.click(item);
+    const estimate = await screen.findByRole('textbox', {
+      name: /^見積もり（時間）(?!:)/,
+    });
+    await waitFor(() => expect(document.activeElement).toBe(estimate));
+  });
+});
+
+describe('Today — 計画に使う時間 in the detail (#96)', () => {
+  it('shows both values under the subtasks, and says only one is used', async () => {
+    await renderAt('/today?fixture=today-daytime&task=task-dataset');
+    const detail = await screen.findByRole('dialog');
+    const group = within(detail).getByRole('radiogroup', {
+      name: /計画に使う時間/,
+    });
+    expect(group.textContent).toContain(
+      'どちらか一方だけを使います（両方は足しません）。',
+    );
+    // This Task has no Estimate of its own; the subtasks add up to 2.5h.
+    const own = within(group).getByRole('radio', {
+      name: /この Task の見積もり/,
+    });
+    // 「見積もり」が 2 回続かない。
+    expect(own.closest('[data-slot="radio-item"]')?.textContent).toBe(
+      'この Task の見積もりなし',
+    );
+    const sum = within(group).getByRole('radio', { name: /サブタスクの合計/ });
+    expect(sum.closest('[data-slot="radio-item"]')?.textContent).toContain(
+      '2.5h（見積もりなしが 1件）',
+    );
+    // Right under the subtasks, not above them.
+    const subtasks = within(detail).getByText('結果を共有する');
+    expect(
+      subtasks.compareDocumentPosition(group) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 });
 

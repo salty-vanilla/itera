@@ -746,6 +746,14 @@ describe('Planning — review fixes', () => {
         name: '操作: 新メンバーのオンボーディング資料',
       }),
     );
+    // No detail to open, so no way in to the Estimate either (#96).
+    await screen.findByRole('menuitem', { name: '今週から外す' });
+    expect(
+      screen.queryByRole('menuitem', { name: /見積もりを入れる/ }),
+    ).toBeNull();
+    expect(
+      within(work).queryByRole('button', { name: /^見積もりを入れる: / }),
+    ).toBeNull();
     await userEvent.click(
       await screen.findByRole('menuitem', { name: '今週から外す' }),
     );
@@ -942,5 +950,86 @@ describe('Planning — the Task detail (#95)', () => {
       lastSnapshot().records.tasks.find((t) => t.id === 'task-bookshelf')
         ?.estimate?.hours,
     ).toBe(1);
+  });
+});
+
+describe('Planning — 見積もりを入れる (#96)', () => {
+  const ownEstimate = () =>
+    screen.findByRole('textbox', { name: /^見積もり（時間）(?!:)/ });
+
+  async function addUnestimated() {
+    await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    await userEvent.type(
+      within(backlogPane()).getByRole('textbox', {
+        name: '今週のタスクを追加',
+      }),
+      '発表資料を見直す{Enter}',
+    );
+  }
+
+  it('見積もりなし on a row is a button that opens the Task at its Estimate', async () => {
+    await addUnestimated();
+    const button = within(planPane()).getByRole('button', {
+      name: '見積もりを入れる: 発表資料を見直す',
+    });
+    expect(button.textContent).toBe('見積もりなし');
+    button.focus();
+    await userEvent.keyboard('{Enter}');
+    await waitFor(async () =>
+      expect(document.activeElement).toBe(await ownEstimate()),
+    );
+  });
+
+  it('a row of the plan has 見積もりを入れる in its … with the key E', async () => {
+    await addUnestimated();
+    await userEvent.click(
+      within(planPane()).getByRole('button', {
+        name: '操作: 発表資料を見直す',
+      }),
+    );
+    const item = await screen.findByRole('menuitem', {
+      name: /見積もりを入れる/,
+    });
+    expect(item.textContent).toContain('E');
+    await userEvent.click(item);
+    await waitFor(async () =>
+      expect(document.activeElement).toBe(await ownEstimate()),
+    );
+  });
+
+  it('only the chosen side of 計画に使う時間 is in the plan (invariant 10)', async () => {
+    await renderAt(
+      '/sprint?fixture=planning-check&stage=check&task=task-dataset',
+    );
+    const detail = await screen.findByRole('dialog');
+    const row = () =>
+      within(planPane())
+        .getByRole('button', { name: '実験データの前処理' })
+        .closest('[data-slot="task-row"]')!;
+    expect(row().textContent).toContain('計画 2.5h');
+    await userEvent.click(
+      within(detail).getByRole('radio', { name: /この Task の見積もり/ }),
+    );
+    expect(row().textContent).not.toContain('計画 2.5h');
+    expect(row().textContent).toContain('見積もりなし');
+    await userEvent.click(
+      within(detail).getByRole('radio', { name: /サブタスクの合計/ }),
+    );
+    expect(row().textContent).toContain('計画 2.5h');
+  });
+
+  it('a row of the Backlog pane has it too', async () => {
+    await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    await userEvent.click(
+      within(backlogPane()).getByRole('button', {
+        name: '操作: 顧客インタビューの設計',
+      }),
+    );
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: /見積もりを入れる/ }),
+    );
+    await waitFor(async () =>
+      expect(document.activeElement).toBe(await ownEstimate()),
+    );
   });
 });

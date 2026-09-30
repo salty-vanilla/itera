@@ -1,12 +1,16 @@
 import { id, type AreaId, type TaskId } from '@itera/domain';
+import { Ellipsis } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { Checkbox, CheckboxControl } from '@/components/ui/checkbox';
 import { DividerLabel } from '@/components/ui/divider';
+import { IconButton } from '@/components/ui/icon-button';
+import { Menu, MenuContent, MenuTrigger } from '@/components/ui/menu';
 import { useToast } from '@/components/ui/toast';
 import { Deadline } from '@/components/task/deadline';
 import { AreaSelect } from '@/components/task/area-select';
 import { Estimate } from '@/components/task/estimate';
+import { EstimateMenuItem } from '@/components/task/estimate-menu-item';
 import {
   MetaItem,
   PriorityText,
@@ -30,7 +34,8 @@ import { CarryOverText } from '../backlog/backlog-row';
 // themselves (invariant 20). In 整える・確かめる the pane is slim (titles
 // only, owner decision in #40). The Quick Add adds a Task and chooses it at
 // once, in the Area picked under the field, beside the 「追加」 button (Issues
-// #92, #98).
+// #92, #98). A row's `…` has 見積もりを入れる, as E has (Issue #96); slim rows
+// keep to the title.
 
 type BacklogPaneProps = {
   data: PlanningData;
@@ -147,19 +152,27 @@ function BacklogPane({
             {candidates.recurring.map(({ task, occurrences }) => (
               <li
                 key={task.id}
-                className="flex flex-col gap-1 border-b border-border-soft py-2"
+                className="group/row flex flex-col gap-1 border-b border-border-soft py-2"
                 {...rowKeyHandlers({
                   onEstimate: () => onEstimateTask(task.id),
                 })}
               >
-                <button
-                  type="button"
-                  data-row-focus
-                  className="self-start text-left text-task text-ink focus-visible:focus-ring"
-                  onClick={() => onOpenTask(task.id)}
-                >
-                  {task.title}
-                </button>
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    data-row-focus
+                    className="min-w-0 text-left text-task text-ink focus-visible:focus-ring"
+                    onClick={() => onOpenTask(task.id)}
+                  >
+                    <TaskTitleLines>{task.title}</TaskTitleLines>
+                  </button>
+                  {!slim && (
+                    <EstimateActions
+                      title={task.title}
+                      onEstimate={() => onEstimateTask(task.id)}
+                    />
+                  )}
+                </div>
                 {/* The group names the Task; each box is one occurrence. */}
                 <div
                   role="group"
@@ -195,6 +208,34 @@ function BacklogPane({
           week,
         }}
       />
+    </div>
+  );
+}
+
+/** The row's `…`: shown on hover and focus from 768px, as a Task Row's is. */
+function EstimateActions({
+  title,
+  onEstimate,
+}: {
+  title: string;
+  onEstimate: () => void;
+}) {
+  return (
+    <div className="relative z-1 flex shrink-0 medium:opacity-0 medium:group-focus-within/row:opacity-100 medium:group-hover/row:opacity-100 medium:has-[[aria-expanded=true]]:opacity-100">
+      <Menu>
+        <MenuTrigger
+          render={
+            <IconButton
+              size="sm"
+              label={`操作: ${title}`}
+              icon={<Ellipsis />}
+            />
+          }
+        />
+        <MenuContent align="end">
+          <EstimateMenuItem onSelect={onEstimate} />
+        </MenuContent>
+      </Menu>
     </div>
   );
 }
@@ -306,7 +347,7 @@ function CandidateItem({
     <li
       data-chosen={chosen || undefined}
       className={cn(
-        'flex min-h-row-touch items-center gap-2 border-b border-border-soft py-1 medium:min-h-row-task',
+        'group/row flex min-h-row-touch items-center gap-2 border-b border-border-soft py-1 medium:min-h-row-task',
         chosen && 'bg-here-subtle',
       )}
       {...rowKeyHandlers({ onEstimate })}
@@ -337,6 +378,7 @@ function CandidateItem({
           <Estimate value={value} />
         </span>
       )}
+      {!slim && <EstimateActions title={task.title} onEstimate={onEstimate} />}
     </li>
   );
 }

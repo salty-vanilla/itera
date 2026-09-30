@@ -15,6 +15,7 @@ import { IconButton } from '@/components/ui/icon-button';
 import { semanticIcons } from '@/components/ui/icon';
 import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
 import { Estimate } from '@/components/task/estimate';
+import { EstimateMenuItem } from '@/components/task/estimate-menu-item';
 import {
   MetaItem,
   PriorityText,
@@ -121,6 +122,10 @@ function TodayRow({
         <Timer aria-hidden />
         実績を残す
       </MenuItem>
+    ),
+    // Where the detail opens (the rows E works on).
+    onEstimate !== undefined && (
+      <EstimateMenuItem key="estimate" onSelect={onEstimate} />
     ),
   ].filter(Boolean);
 

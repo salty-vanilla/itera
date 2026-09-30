@@ -567,12 +567,28 @@ function TaskDetail({
               <Saved show={saved === 'timeBasis'}>
                 <RadioGroup<TimeBasis>
                   legend="計画に使う時間"
+                  description="どちらか一方だけを使います（両方は足しません）。"
                   value={task.timeBasis}
                   onValueChange={(timeBasis) =>
                     record('timeBasis', { timeBasis })
                   }
                 >
-                  <Radio<TimeBasis> value="task" label="この Task の見積もり" />
+                  <Radio<TimeBasis>
+                    value="task"
+                    label={
+                      <span className="inline-flex flex-wrap items-center gap-2">
+                        この Task の見積もり
+                        {facts.taskValue.base === 'none' ? (
+                          // 「見積もり」が 2 回続かないように、ここだけ「なし」。
+                          <span className="text-num-s text-ink-subtle">
+                            なし
+                          </span>
+                        ) : (
+                          <Estimate value={facts.taskValue} inline />
+                        )}
+                      </span>
+                    }
+                  />
                   <Radio<TimeBasis>
                     value="subtasks"
                     label={

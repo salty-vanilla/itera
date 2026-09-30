@@ -8,6 +8,7 @@ import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
 import { useToast } from '@/components/ui/toast';
 import { GoalBlock } from '@/components/sprint/goal-block';
 import { Estimate } from '@/components/task/estimate';
+import { EstimateMenuItem } from '@/components/task/estimate-menu-item';
 import {
   MetaItem,
   PriorityText,
@@ -330,6 +331,10 @@ function PlannedRow({
         {linked ? '目標に紐づけない' : '目標に紐づける'}
       </MenuItem>
     ),
+    // A completed or archived Task has no detail to open (as in Today).
+    inactive === undefined && (
+      <EstimateMenuItem key="estimate" onSelect={onEstimate} />
+    ),
   ].filter(Boolean);
 
   return (
@@ -342,7 +347,7 @@ function PlannedRow({
         added ? 'animate-[added-flash_2.5s_ease-in-out_forwards]' : undefined
       }
       onOpen={onOpen}
-      keys={{ onEstimate }}
+      keys={inactive === undefined ? { onEstimate } : undefined}
       metadata={
         meta.length > 0 ? <TaskMetadata>{meta}</TaskMetadata> : undefined
       }
@@ -370,7 +375,15 @@ function PlannedRow({
               )}
             </span>
           )}
-          <Estimate value={value} planned={value.base !== 'none'} />
+          <Estimate
+            value={value}
+            planned={value.base !== 'none'}
+            enter={
+              inactive === undefined
+                ? { title: task.title, onEnter: onEstimate }
+                : undefined
+            }
+          />
         </span>
       }
       actions={
