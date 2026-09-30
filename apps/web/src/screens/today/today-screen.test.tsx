@@ -174,9 +174,9 @@ describe('Today — the order for a phone (#100)', () => {
     const rest = region('今週の残り');
     // One per width, shown by CSS: medium, compact, then wide's side column.
     expect(goals).toHaveLength(3);
-    const [medium, compact] = goals as [Element, Element];
-    expect(follows(medium, rest)).toBe(true);
-    expect(follows(rest, compact)).toBe(true);
+    const [medium, compact] = goals;
+    expect(follows(medium as Element, rest)).toBe(true);
+    expect(follows(rest, compact as Element)).toBe(true);
   });
 });
 
