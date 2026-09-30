@@ -46,6 +46,9 @@ describe('Today — any day by date (#90)', () => {
       screen.getByRole('heading', { level: 1, name: '9月30日（水） 過去' }),
     ).toBeTruthy();
     expect(screen.queryByText(/過ぎた日|ここでは/)).toBeNull();
+    // The word seen sits after the arrows, outside the heading, not read twice.
+    const word = screen.getByText('過去', { selector: '[aria-hidden]' });
+    expect(word.closest('h1')).toBeNull();
     expect(screen.getByText('Sprint 2 · 3日目 / 7日')).toBeTruthy();
     const paper = record('関連論文を 3 本読む');
     expect(within(paper).getByText('今日はここまで')).toBeTruthy();

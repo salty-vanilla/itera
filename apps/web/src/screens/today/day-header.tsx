@@ -82,6 +82,9 @@ function DayHeader({
   const inputId = useId();
   const header = useRef<HTMLElement>(null);
   const focusAfter = useContext(DayFocus);
+  // A day other than today says which side of it in a word beside the
+  // date: no color, no Tag, and no sentence (owner, PR #122).
+  const side = date === today ? undefined : date < today ? '過去' : '未来';
   // Today's own URL carries no date.
   const searchOf = (day: LocalDate) => (day === today ? {} : { date: day });
   /** `from`: the control to keep focus on; none when focus has left. */
@@ -138,18 +141,21 @@ function DayHeader({
           <StepLink direction="previous" {...step(addDays(date, -1), '前')} />
           <h1 className="text-display-m text-ink">
             {formatDateHeading(date)}
-            {/* A day other than today says which side of it, in a word read
-                with the heading; no color, no Tag (owner, PR #122). */}
-            {date !== today && (
+            {side !== undefined && (
               <>
                 {' '}
-                <span className="text-body text-ink-muted">
-                  {date < today ? '過去' : '未来'}
-                </span>
+                <span className="sr-only">{side}</span>
               </>
             )}
           </h1>
           <StepLink direction="next" {...step(addDays(date, 1), '次')} />
+          {/* After the arrows, so they stay put from day to day; read with
+              the heading above. */}
+          {side !== undefined && (
+            <span aria-hidden className="ms-2 text-body text-ink-muted">
+              {side}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <label htmlFor={inputId} className="text-meta text-ink-muted">
