@@ -209,6 +209,36 @@ describe('Today — 今日へ', () => {
   });
 });
 
+describe('Today — the daily operations in the detail (#94)', () => {
+  it('skips an occurrence from the Task’s detail, as the row’s menu does', async () => {
+    await renderAt('/today?fixture=today-daytime');
+    await userEvent.click(
+      within(region('今週の残り')).getByRole('button', {
+        name: '今日へ: 英語の多読 30 分',
+      }),
+    );
+    await userEvent.click(
+      within(row('今日やる', '英語の多読 30 分')).getByRole('button', {
+        name: '英語の多読 30 分',
+      }),
+    );
+    const detail = await screen.findByRole('dialog', {
+      name: '英語の多読 30 分',
+    });
+    const now = within(detail).getByRole('region', { name: '今日と今週' });
+    // Today is already open: no 今日を開く.
+    expect(within(now).queryByRole('link', { name: '今日を開く' })).toBeNull();
+    // A recurring Task is completed by its occurrence, in the row.
+    expect(
+      within(now).queryByRole('button', { name: '完了にする' }),
+    ).toBeNull();
+    await userEvent.click(
+      within(now).getByRole('button', { name: '今日はスキップ' }),
+    );
+    expect(selectionOf('task-reading')?.resolution).toBe('skipped');
+  });
+});
+
 describe('Today — the daily operations', () => {
   it('completes with ○ and undoes it with ○ again, with no Toast', async () => {
     await renderAt('/today?fixture=today-interrupt');

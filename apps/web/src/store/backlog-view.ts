@@ -14,6 +14,8 @@ import {
   type AreaColor,
   type AreaId,
   type BacklogSlice,
+  type DailySelectionId,
+  type Instant,
   type LocalDate,
   type PlanningValue,
   type RecurrencePattern,
@@ -24,6 +26,12 @@ import {
 import type { Clock, Records } from './records';
 import { thisWeekSprintOf } from './sprint-choice';
 import { activeSprint } from './task-changes';
+import {
+  isClosedResolution,
+  isListedResolution,
+  type ClosedResolution,
+  type ListedResolution,
+} from './today-view';
 
 export interface BacklogItem {
   readonly task: Task;
@@ -45,6 +53,25 @@ export interface BacklogItem {
     readonly midSprint: boolean;
     readonly confirmed: boolean;
   };
+  /**
+   * In today's 今日やる (a selection made today that is open, done or
+   * skipped: what Today lists there). The Backlog row says 「今日」 instead
+   * of 「今週」 (Issue #94), and the detail offers the day's operations.
+   * A Task chosen today and then closed (今日はここまで, 見送り, 外した) is
+   * back among the week's, so it has none.
+   */
+  readonly today?: {
+    readonly selectionId: DailySelectionId;
+    readonly resolution: ListedResolution;
+    readonly startedAt?: Instant;
+    /** An occurrence of a recurring Task: it can be skipped (F19). */
+    readonly recurring: boolean;
+  };
+  /**
+   * Chosen today and closed for the day (今日はここまで, 見送り, 外した): it
+   * is among the week's remaining again, and the detail says what happened.
+   */
+  readonly closedToday?: ClosedResolution;
   /** The Task's own time: Estimate, suggestion, subtask sum or none. */
   readonly value: PlanningValue;
   /** The subtask sum, for choosing it as the time basis in the detail. */
@@ -85,6 +112,28 @@ export function backlogItem(
     !isRecurring(task) &&
     !active.tasks.some((t) => t.taskId === task.id);
   const beforeStart = active !== undefined && clock.today < active.start;
+  // Today's selections of this Task (of its occurrences, if recurring).
+  const todays =
+    active?.dailySelections.filter(
+      (s) =>
+        s.date === clock.today &&
+        active.tasks.some(
+          (t) =>
+            t.id === s.sprintTaskId &&
+            t.taskId === task.id &&
+            t.outcome !== 'removed',
+        ),
+    ) ?? [];
+  const chosen = todays
+    .filter((s) => isListedResolution(s.resolution))
+    // What can still be done comes first: the detail acts on that one.
+    .toSorted(
+      (a, b) =>
+        Number(b.resolution === 'selected' || b.resolution === 'started') -
+        Number(a.resolution === 'selected' || a.resolution === 'started'),
+    )
+    .at(0);
+  const closed = todays.findLast((s) => isClosedResolution(s.resolution));
   return {
     task,
     ...(area === undefined
@@ -118,6 +167,23 @@ export function backlogItem(
             confirmed: week?.state === 'active',
           },
         }),
+    ...(chosen === undefined || !isListedResolution(chosen.resolution)
+      ? {}
+      : {
+          today: {
+            selectionId: chosen.id,
+            resolution: chosen.resolution,
+            ...(chosen.startedAt === undefined
+              ? {}
+              : { startedAt: chosen.startedAt }),
+            recurring: chosen.occurrenceId !== undefined,
+          },
+        }),
+    ...(chosen !== undefined ||
+    closed === undefined ||
+    !isClosedResolution(closed.resolution)
+      ? {}
+      : { closedToday: closed.resolution }),
     value: planningValueOf(task, { now: clock.now }),
     subtaskValue: planningValueOf(
       { ...task, timeBasis: 'subtasks' },

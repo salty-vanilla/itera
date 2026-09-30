@@ -22,6 +22,11 @@ import {
   PopoverTitle,
 } from '@/components/ui/popover';
 import { TextInput } from '@/components/ui/text-input';
+import {
+  ACTUAL_HOURS_ERROR,
+  ACTUAL_HOURS_HINT,
+  readActualHours,
+} from '@/lib/actual-hours';
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 
 // 実績時間 (patterns.md Today): optional, added lightly after completing or
@@ -97,14 +102,13 @@ function ActualTime({
   };
   const save = (event: FormEvent) => {
     event.preventDefault();
-    const trimmed = text.trim();
-    if (trimmed === '' && optional) {
+    const hours = readActualHours(text);
+    if (hours === undefined && optional) {
       if (onSubmit(undefined)) change(false);
       return;
     }
-    const hours = Number(trimmed);
-    if (trimmed === '' || !Number.isFinite(hours) || hours <= 0) {
-      setError('0 より大きい時間を数字で入れてください（例: 1.5）');
+    if (hours === undefined || hours === null) {
+      setError(ACTUAL_HOURS_ERROR);
       focusError();
       return;
     }
@@ -115,7 +119,7 @@ function ActualTime({
     <Field
       label="実績時間"
       necessity={optional ? 'optional' : 'required'}
-      description="時間単位（例: 1.5）。記録は残り、あとから足せます"
+      description={ACTUAL_HOURS_HINT}
       error={error}
     >
       <TextInput

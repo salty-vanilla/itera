@@ -413,7 +413,7 @@ v0.2 Final でも 3 つとも、UI に入口のない操作を使わずに最後
 
 | # | 操作（画面） | 作られる / 変わるもの | 表示・事実 |
 | --- | --- | --- | --- |
-| 1–3 | Backlog の詳細で「今日へ」（1 操作） | 同時に SprintTask（Planned、origin = midSprint、goalLink = unlinked、planSnapshot = 追加時点。仕事は基準の対象外なので計画値 2–3h）と DailySelection（当日、origin = Sprint 中の追加）。Activity：Sprint への追加（経路 = Backlog→今日） | 確認ダイアログなし、容量の警告なし。Backlog の行に「今週」「Sprint 中に追加」 |
+| 1–3 | Backlog の詳細で「今日へ」（1 操作） | 同時に SprintTask（Planned、origin = midSprint、goalLink = unlinked、planSnapshot = 追加時点。仕事は基準の対象外なので計画値 2–3h）と DailySelection（当日、origin = Sprint 中の追加）。Activity：Sprint への追加（経路 = Backlog→今日） | 確認ダイアログなし、容量の警告なし。Toast「「顧客インタビューの設計」を今日やるに入れました」（今週の Sprint にも入ったことを添え、「今日を開く」を出す）。Backlog の行に「今日」「週の途中で追加」（今日やるに入っているあいだ。今日やるから外れたら「今週」） |
 | 4 | Today で完了 | DailySelection → Done、SprintTask → Done、Task → Completed。実績は任意で ActualTime | 「実績時間を残す（任意）」 |
 | 5 | Retro | origin = midSprint の SprintTask を数える | 「Sprint 中の追加 1件（Goal に紐づかない）」。InterruptNote とは別に表示。計画値の合計には含め、確定時の合計との差を見せる |
 
