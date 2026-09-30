@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tag } from '@/components/ui/tag';
 import {
   BOUND_WORDS,
-  criterionEffect,
+  criterionEffectText,
   criterionName,
 } from '@/lib/criterion-text';
 import { formatHours, formatRange } from '@/lib/time-format';
@@ -110,7 +110,7 @@ function HandoffPane({
 
       <section aria-labelledby="handoff-draft" className="flex flex-col gap-4">
         <h2 id="handoff-draft" className="text-heading text-ink">
-          計画基準
+          新しい計画基準
         </h2>
         <Switch
           label="計画基準にもする"
@@ -162,7 +162,7 @@ function HandoffPane({
             <Radio<RetroDecision | null>
               value="continue"
               label="続ける"
-              description={`次の計画でも、${criterionEffect(used.criterion.policy, used.areaName)}。確かめるで、使うかどうかを選べます。`}
+              description={`次の計画でも、${criterionEffectText(used.criterion.policy, used.areaName)}。確かめるで、使うかどうかを選べます。`}
             />
             <Radio<RetroDecision | null>
               value="end"
@@ -176,7 +176,7 @@ function HandoffPane({
               description={
                 draft === undefined
                   ? '上で「計画基準にもする」をオンにして新しい基準を作ると選べます。'
-                  : `次の計画では、代わりに${criterionEffect(draft.criterion.policy, draft.areaName)}。確かめるで、使うかどうかを選べます。`
+                  : `次の計画では、代わりに${criterionEffectText(draft.criterion.policy, draft.areaName)}。確かめるで、使うかどうかを選べます。`
               }
             />
           </RadioGroup>
@@ -221,7 +221,7 @@ function ClosedHandoff({
       </section>
       <section aria-labelledby="handoff-draft" className="flex flex-col gap-2">
         <h2 id="handoff-draft" className="text-heading text-ink">
-          計画基準
+          新しい計画基準
         </h2>
         <p className="text-body text-ink">
           {draft === undefined
@@ -279,7 +279,7 @@ function DraftCriterion({
       </p>
       {sameAsUsed && (
         <p className="text-body text-ink">
-          今回の基準と同じ設定から始めています。同じまま使うなら、オフにして下の「続ける」を選びます。
+          今回の基準と同じ設定です。変えないなら、オフにして「続ける」を選びます。
         </p>
       )}
       <p className="text-help text-ink-muted">
@@ -330,7 +330,7 @@ function DraftCriterion({
         <p className="text-body text-ink">
           次の計画では、
           {draft.areaName === undefined ? '' : `${draft.areaName}の`}
-          提案の幅があるタスク {preview.length}件を
+          幅のあるタスク {preview.length}件を
           {BOUND_WORDS[policy.rangePolicy]}で計画します（今の Backlog で）。
         </p>
         {preview.length > 0 && (

@@ -22,7 +22,7 @@ export function criterionName(
  * What the criterion does to a Planning: 「研究の幅のあるタスクを上限で
  * 計画します」. From the same policy as its name (invariant 39).
  */
-export function criterionEffect(
+export function criterionEffectText(
   policy: CriterionPolicy,
   areaName: string | undefined,
 ): string {
