@@ -16,7 +16,10 @@ import {
 } from '@/components/ui/drawer';
 import { Tag } from '@/components/ui/tag';
 import { useToast } from '@/components/ui/toast';
-import { capacityHeadline } from '@/components/sprint/capacity-indicator';
+import {
+  capacityHeadline,
+  capacityHeadlineText,
+} from '@/components/sprint/capacity-indicator';
 import {
   SprintHeader,
   type SprintHeaderProps,
@@ -35,6 +38,7 @@ import { useTaskActions } from '@/store/use-task-actions';
 import { TaskDetail } from '../backlog/task-detail';
 import { useTaskDetailLeave } from '../backlog/use-task-detail-leave';
 import { BacklogPane } from './backlog-pane';
+import { CheckSummary } from './check-summary';
 import { ConfirmDialog } from './confirm-dialog';
 import { sprintSearchOf } from '../sprint-steps';
 import { OutlookPane } from './outlook-pane';
@@ -52,7 +56,7 @@ import { PlanPane, type Stage } from './plan-pane';
 // - medium: Backlog / Sprint. The Capacity is one sticky line above the
 //   Sprint that opens a right Drawer.
 // - compact: one column. The Backlog shows in 選ぶ only; the Capacity is
-//   the same one line (a Bottom Sheet), and 確かめる shows it in full.
+//   the same one line (a Bottom Sheet). 確かめる opens with its summary (#93).
 
 /** How long the row just added flashes; the same as `added-flash` in the CSS. */
 const ADDED_MS = 2500;
@@ -166,14 +170,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
     }, true);
 
   const outlook = (
-    <OutlookPane
-      data={data}
-      stage={stage}
-      onApplyCriterion={(applied) =>
-        setSearch({ criterion: applied ? undefined : 'off' })
-      }
-      onAvailableHours={actions.setAvailableHours}
-    />
+    <OutlookPane data={data} onAvailableHours={actions.setAvailableHours} />
   );
 
   const confirm = () => {
@@ -386,13 +383,21 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
           <PlanPane
             data={data}
             stage={stage}
+            summary={
+              <CheckSummary
+                data={data}
+                onApplyCriterion={(applied) =>
+                  setSearch({ criterion: applied ? undefined : 'off' })
+                }
+                onAvailableHours={actions.setAvailableHours}
+                onEstimateTask={openEstimate}
+                onOpenTask={openTask}
+              />
+            }
             addedTaskId={addedTaskId}
             onOpenTask={openTask}
             onEstimateTask={openEstimate}
           />
-          {stage === 'check' && (
-            <div className="max-w-pane-sprint wide:hidden">{outlook}</div>
-          )}
         </div>
         <aside
           aria-label="時間の見通し"
@@ -447,7 +452,11 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
   );
 }
 
-/** 「残り −1 〜 1h · 超える可能性」 (patterns.md compact). */
+/**
+ * 「残り 1 〜 3h · 収まる」「超過 3 〜 5h · 下限でも超える」, and when the
+ * difference crosses 0, the two sentences alone: 「下限なら 2.25h 残る · 上限なら
+ * 0.75h 超える」 (patterns.md compact, owner decision S5 in #93).
+ */
 function CapacitySummary({ data }: { data: PlanningData }) {
   const capacity = data.totals.capacity;
   if (capacity === undefined) {
@@ -457,16 +466,14 @@ function CapacitySummary({ data }: { data: PlanningData }) {
       </span>
     );
   }
-  const headline = capacityHeadline(capacity);
-  const state =
-    capacity.status === 'exceeds'
-      ? '下限でも超える'
-      : capacity.status === 'mayExceed'
-        ? '超える可能性'
-        : '収まる';
+  const headline = capacityHeadlineText(capacityHeadline(capacity));
   return (
     <span className={capacity.status === 'exceeds' ? 'text-danger' : undefined}>
-      {headline.label} {headline.value} · {state}
+      {capacity.status === 'exceeds'
+        ? `${headline} · 下限でも超える`
+        : capacity.status === 'mayExceed'
+          ? headline
+          : `${headline} · 収まる`}
     </span>
   );
 }

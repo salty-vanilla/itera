@@ -15,7 +15,8 @@ import { cn } from '@/lib/utils';
 import { weekText } from '@/lib/week-text';
 
 // DESIGN.md Components › Capacity Indicator. The difference between the
-// available hours and the planned total, as a range. The numbers and the
+// available hours and the planned total, as a range, or as two sentences
+// when it crosses 0. The numbers and the
 // state sentence are the truth (role="status"); the bar repeats them and
 // is aria-hidden. `danger` only when even the lower end is over
 // (確定的な容量超過); the possibility of going over is `warning`. It never
@@ -92,15 +93,62 @@ export function capacityStatement(capacity: Capacity | undefined): {
   return { tone: 'ok', text: '使える時間の範囲に収まっています。' };
 }
 
-/** The headline number: 残り or, when even the lower end is over, 超過. */
-export function capacityHeadline(capacity: Capacity): {
-  label: '残り' | '超過';
-  value: string;
-} {
+/**
+ * The headline. 残り or, when even the lower end is over, 超過, as a range.
+ * When the difference crosses 0 (mayExceed), no range with a negative end:
+ * two sentences instead, 「下限なら 2.25h 残る」「上限なら 0.75h 超える」
+ * (owner decision S5 in #93).
+ */
+export type CapacityHeadline =
+  | { kind: 'range'; label: '残り' | '超過'; value: string }
+  | { kind: 'split'; lower: HeadlinePart; upper: HeadlinePart };
+
+/** 「下限なら」「2.25h」「残る」; `value` is absent for 「ちょうど収まる」. */
+type HeadlinePart = { lead: string; value?: string; tail: string };
+
+export function capacityHeadline(capacity: Capacity): CapacityHeadline {
   const { remaining, status } = capacity;
-  return status === 'exceeds'
-    ? { label: '超過', value: formatDifference(-remaining.hi, -remaining.lo) }
-    : { label: '残り', value: formatDifference(remaining.lo, remaining.hi) };
+  if (status === 'exceeds') {
+    return {
+      kind: 'range',
+      label: '超過',
+      value: formatDifference(-remaining.hi, -remaining.lo),
+    };
+  }
+  if (status === 'mayExceed') {
+    return {
+      kind: 'split',
+      lower:
+        remaining.hi === 0
+          ? { lead: '下限なら', tail: 'ちょうど収まる' }
+          : {
+              lead: '下限なら',
+              value: formatHours(remaining.hi, { total: true }),
+              tail: '残る',
+            },
+      upper: {
+        lead: '上限なら',
+        value: formatHours(-remaining.lo, { total: true }),
+        tail: '超える',
+      },
+    };
+  }
+  return {
+    kind: 'range',
+    label: '残り',
+    value: formatDifference(remaining.lo, remaining.hi),
+  };
+}
+
+function partText({ lead, value, tail }: HeadlinePart): string {
+  return value === undefined ? `${lead}${tail}` : `${lead} ${value} ${tail}`;
+}
+
+/** The headline on one line: 「残り 1 〜 3h」「下限なら 2.25h 残る · 上限なら 0.75h 超える」. */
+export function capacityHeadlineText(headline: CapacityHeadline): string {
+  return headline.kind === 'range'
+    ? `${headline.label} ${headline.value}`
+    : `${partText(headline.lower)} · ${partText(headline.upper)}`;
 }
 
 const toneClass = {
@@ -143,19 +191,10 @@ function CapacityIndicator({
         {/* Read out when it changes: the headline and the state only. */}
         <div role="status" className="flex flex-col gap-2">
           {capacity !== undefined && (
-            <p className="flex items-baseline gap-2">
-              <span className="text-label text-ink-muted">
-                {capacityHeadline(capacity).label}
-              </span>
-              <span
-                className={cn(
-                  'text-num-l',
-                  capacity.status === 'exceeds' ? 'text-danger' : 'text-ink',
-                )}
-              >
-                {capacityHeadline(capacity).value}
-              </span>
-            </p>
+            <Headline
+              headline={capacityHeadline(capacity)}
+              over={capacity.status === 'exceeds'}
+            />
           )}
           <p
             className={cn(
@@ -221,6 +260,39 @@ function CapacityIndicator({
         />
       )}
     </section>
+  );
+}
+
+function Headline({
+  headline,
+  over,
+}: {
+  headline: CapacityHeadline;
+  over: boolean;
+}) {
+  if (headline.kind === 'range') {
+    return (
+      <p className="flex items-baseline gap-2">
+        <span className="text-label text-ink-muted">{headline.label}</span>
+        <span className={cn('text-num-l', over ? 'text-danger' : 'text-ink')}>
+          {headline.value}
+        </span>
+      </p>
+    );
+  }
+  // Two sentences, one per line; the words are quieter than the number.
+  return (
+    <p className="flex flex-col gap-1">
+      {[headline.lower, headline.upper].map((part) => (
+        <span key={part.lead} className="flex items-baseline gap-2">
+          <span className="text-label text-ink-muted">{part.lead}</span>
+          {part.value !== undefined && (
+            <span className="text-num-l text-ink">{part.value}</span>
+          )}
+          <span className="text-label text-ink-muted">{part.tail}</span>
+        </span>
+      ))}
+    </p>
   );
 }
 

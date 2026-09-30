@@ -6,7 +6,9 @@
 // - a range uses an en dash without spaces (`2–4h`);
 // - a range that includes a negative value, and any difference from the
 //   available hours (残り・超過), uses `〜` with spaces and the minus sign
-//   U+2212 (`−1 〜 1h`, `残り 1 〜 3h`, `超過 3 〜 5h`);
+//   U+2212 (`−1 〜 1h`, `残り 1 〜 3h`, `超過 3 〜 5h`); a difference that
+//   crosses 0 is not a headline range but two sentences, made by the
+//   Capacity Indicator (#93);
 // - no value is 「見積もりなし」, never 0h, and unestimated parts left out of
 //   a sum are counted after it (`2.5h（見積もりなしが 1件）`).
 // The words around a value (「提案」「計画」「残り」「超過」) belong to the screen.
