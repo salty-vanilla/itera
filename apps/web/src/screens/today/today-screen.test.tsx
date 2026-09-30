@@ -547,6 +547,93 @@ describe('Today — adding and interrupts', () => {
   });
 });
 
+describe('Today — editing and deleting interrupts (F38)', () => {
+  const openActions = async (text: string) => {
+    await userEvent.click(
+      within(row('割り込み', text)).getByRole('button', {
+        name: /^操作: 割り込み/,
+      }),
+    );
+  };
+
+  it('edits a note and its minutes in the same surface as recording', async () => {
+    await renderAt('/today?fixture=today-interrupt');
+    const before = sprint().interrupts;
+    await openActions('障害の問い合わせに対応');
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: '直す' }),
+    );
+    expect(
+      await screen.findByRole('heading', { name: '割り込みを直す' }),
+    ).toBeTruthy();
+    const note = screen.getByRole('textbox', { name: /メモ/ });
+    expect((note as HTMLInputElement).value).toBe('障害の問い合わせに対応');
+    const minutes = screen.getByRole('textbox', { name: /かかった時間/ });
+    expect((minutes as HTMLInputElement).value).toBe('45');
+    await userEvent.clear(note);
+    await userEvent.type(note, '障害の問い合わせと報告');
+    await userEvent.clear(minutes);
+    await userEvent.type(minutes, '60');
+    await userEvent.click(screen.getByRole('button', { name: '保存' }));
+    expect(sprint().interrupts).toHaveLength(before.length);
+    expect(sprint().interrupts[0]).toMatchObject({
+      id: before[0]?.id,
+      at: before[0]?.at,
+      text: '障害の問い合わせと報告',
+      minutes: 60,
+    });
+    expect(
+      within(region('割り込み')).getByText('障害の問い合わせと報告'),
+    ).toBeTruthy();
+    expect(lastSnapshot().records.activities.at(-1)).toMatchObject({
+      kind: 'interruptEdited',
+    });
+  });
+
+  it('deletes a note at once and brings it back with 「元に戻す」', async () => {
+    await renderAt('/today?fixture=today-interrupt');
+    const before = sprint().interrupts;
+    await openActions('障害の問い合わせに対応');
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: '消す' }),
+    );
+    expect(sprint().interrupts.map((n) => n.text)).toEqual([
+      '急ぎのレビュー依頼',
+    ]);
+    expect(
+      within(region('割り込み')).queryByText('障害の問い合わせに対応'),
+    ).toBeNull();
+    expect(lastSnapshot().records.activities.at(-1)).toMatchObject({
+      kind: 'interruptDeleted',
+    });
+    // The focus moves to the next note's `…`.
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(row('割り込み', '急ぎのレビュー依頼')).getByRole('button', {
+          name: /^操作: 割り込み/,
+        }),
+      ),
+    );
+    expect(
+      await screen.findByText('割り込み「障害の問い合わせに対応」を消しました'),
+    ).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: '元に戻す' }));
+    expect(sprint().interrupts).toEqual(before);
+  });
+});
+
+describe('Today — interrupts after the Review starts (F38, invariant 40)', () => {
+  it('shows the day’s notes with no way to edit or delete them', async () => {
+    clockOverride = at('2026-10-05', '07:00');
+    await renderAt('/today?fixture=today-interrupt&date=2026-10-01');
+    await waitFor(() => expect(sprint).toThrow());
+    expect(await screen.findByText('障害の問い合わせに対応')).toBeTruthy();
+    expect(
+      screen.queryByRole('button', { name: /^操作: 割り込み/ }),
+    ).toBeNull();
+  });
+});
+
 describe('Today — errors', () => {
   it('focuses the note when an interrupt is recorded empty', async () => {
     await renderAt('/today?fixture=today-daytime');
