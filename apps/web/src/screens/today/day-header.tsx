@@ -1,6 +1,6 @@
 import { addDays, parseLocalDate, type LocalDate } from '@itera/domain';
 import { useNavigate, useRouter } from '@tanstack/react-router';
-import { useId, type ReactNode } from 'react';
+import { useId, type MouseEvent, type ReactNode } from 'react';
 import { StepLink } from '@/components/ui/step-link';
 import { TextInput } from '@/components/ui/text-input';
 import { formatDate, formatDateHeading } from '@/lib/date-format';
@@ -45,7 +45,7 @@ function DayHeader({
   const step = (day: LocalDate, side: '前' | '次') => ({
     label: `${side}の日（${formatDate(day)}）`,
     href: router.buildLocation({ to: '/today', search: searchOf(day) }).href,
-    onClick: (event: React.MouseEvent<HTMLAnchorElement>) => {
+    onClick: (event: MouseEvent<HTMLAnchorElement>) => {
       if (!isPlainClick(event)) return;
       event.preventDefault();
       open(day);
