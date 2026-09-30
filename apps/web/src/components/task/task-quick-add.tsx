@@ -62,7 +62,7 @@ function TaskQuickAdd({
       />
     </Field>
   );
-  // Pressing it with nothing typed does nothing (the submit handler returns).
+  // Pressing it with nothing typed adds nothing; the focus goes to the field.
   const button = <Button type="submit">追加</Button>;
   return (
     <form
