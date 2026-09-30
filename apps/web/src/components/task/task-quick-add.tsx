@@ -8,8 +8,8 @@ import { cn } from '@/lib/utils';
 // DESIGN.md Components › Task Quick Add. Adds a Task by its title without
 // leaving the screen: a `plus` icon, no visible label (it has an accessible
 // name), an optional Area Select (beside the field, or under it in a narrow
-// pane) and a hint. Enter adds, Esc clears, and the
-// focus stays in the field for the next one. Never a modal.
+// pane) and a hint. Enter adds, Esc clears, and the focus stays in the field
+// for the next one. Never a modal.
 
 type TaskQuickAddProps = {
   /** Adds the Task. Return false to keep the text (the add failed). */

@@ -93,7 +93,7 @@ function PlanPane({
     >
       <h1 className="text-display-m text-ink">{stageHeading(stage, week)}</h1>
       {stage === 'pick' && (
-        <p className="max-w-measure-read text-body text-ink-muted">
+        <p className="max-w-measure-read text-body text-ink-muted [text-wrap:pretty] [word-break:auto-phrase]">
           {pickGuide(week, data.candidates.recurring.length > 0)}
         </p>
       )}

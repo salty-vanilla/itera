@@ -1,4 +1,4 @@
-import type { AreaId, TaskId } from '@itera/domain';
+import { id, type AreaId, type TaskId } from '@itera/domain';
 import { useState, type ReactNode } from 'react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { Checkbox, CheckboxControl } from '@/components/ui/checkbox';
@@ -56,11 +56,6 @@ function BacklogPane({
   const week = weekCall(data.week, data.number);
   // The Area of the next Quick Add: the one used last, else 領域なし.
   const [quickArea, setQuickArea] = useState('');
-  const areas = data.areas.flatMap((a) =>
-    a.id === null || a.color === 'none'
-      ? []
-      : [{ id: a.id, name: a.name, color: a.color }],
-  );
 
   const choose = (rows: readonly CandidateRow[]) => {
     const taskIds = rows.map((r) => r.task.id);
@@ -106,10 +101,14 @@ function BacklogPane({
         label={`タスクを追加して${weekText(week, 'に入れる')}`}
         stackArea={slim}
         onAdd={(title) =>
-          onAdd(title, quickArea === '' ? undefined : (quickArea as AreaId))
+          onAdd(title, quickArea === '' ? undefined : id<'Area'>(quickArea))
         }
         area={
-          <AreaSelect areas={areas} value={quickArea} onChange={setQuickArea} />
+          <AreaSelect
+            areas={data.addAreas}
+            value={quickArea}
+            onChange={setQuickArea}
+          />
         }
       />
       <Group

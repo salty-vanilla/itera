@@ -110,6 +110,12 @@ export interface PlanningData {
   readonly timeZone: Records['user']['timeZone'];
   /** Areas to plan with, in the person's order, then 領域なし. */
   readonly areas: readonly PlanningArea[];
+  /** The Areas a new Task can be added to: not archived (Backlog, Today). */
+  readonly addAreas: readonly {
+    readonly id: AreaId;
+    readonly name: string;
+    readonly color: AreaColor;
+  }[];
   /** 選ぶ: the Backlog in groups. */
   readonly candidates: {
     readonly carriedOver: readonly CandidateRow[];
@@ -295,6 +301,10 @@ export function planningData(
     today: clock.today,
     timeZone: records.user.timeZone,
     areas,
+    addAreas: records.areas
+      .filter((a) => !a.archived)
+      .toSorted((a, b) => a.order - b.order)
+      .map((a) => ({ id: a.id, name: a.name, color: a.color })),
     candidates: {
       carriedOver: groups.carriedOver.map(row),
       dueSoon: groups.dueSoon.map(row),

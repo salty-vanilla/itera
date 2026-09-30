@@ -60,6 +60,29 @@ const ADDED_MS = 2500;
 /** The room the sticky Capacity line takes at the top of the screen. */
 const STICKY_ROOM = 72;
 
+/** Scrolls `main` so that the added row shows, keeping the Quick Add in view. */
+function revealAdded(taskId: TaskId) {
+  const main = document.querySelector('main');
+  const row = document.querySelector(
+    `[data-slot="plan-pane"] [data-task="${taskId}"]`,
+  );
+  const quickAdd = document.querySelector(
+    '[data-slot="planning-backlog"] [data-slot="task-quick-add"]',
+  );
+  if (main === null || row === null || quickAdd === null) return;
+  const view = main.getBoundingClientRect();
+  const rowRect = row.getBoundingClientRect();
+  const above = rowRect.top - (view.top + STICKY_ROOM);
+  if (above < 0) {
+    main.scrollBy?.({ top: above });
+    return;
+  }
+  const below = rowRect.bottom + 16 - view.bottom;
+  const spare = quickAdd.getBoundingClientRect().top - (view.top + STICKY_ROOM);
+  const by = Math.min(below, spare);
+  if (by > 0) main.scrollBy?.({ top: by });
+}
+
 export const STAGES: readonly { id: Stage; label: string }[] = [
   { id: 'pick', label: '選ぶ' },
   { id: 'shape', label: '整える' },
@@ -176,16 +199,10 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
   };
   useEffect(() => {
     if (addedTaskId === undefined) return;
-    // A row out of sight (or under the sticky Capacity line) is brought to
-    // the middle, so that its flash can be seen.
-    if (sideBySide) {
-      const row = document.querySelector(
-        `[data-slot="plan-pane"] [data-task="${addedTaskId}"]`,
-      );
-      const { top = 0, bottom = 0 } = row?.getBoundingClientRect() ?? {};
-      if (row !== null && (top < STICKY_ROOM || bottom > window.innerHeight))
-        row.scrollIntoView?.({ block: 'center' });
-    }
+    // The row can sit below the fold. Scroll only as far as shows it, and
+    // never so far that the Quick Add leaves the screen: the next Task is
+    // typed there (Capture).
+    if (sideBySide) revealAdded(addedTaskId);
     const timer = window.setTimeout(() => setAddedTaskId(undefined), ADDED_MS);
     return () => window.clearTimeout(timer);
   }, [addedTaskId, sideBySide]);
