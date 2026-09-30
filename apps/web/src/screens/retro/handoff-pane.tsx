@@ -24,6 +24,8 @@ import type { RetroCriterion, RetroData } from '@/store/retro-view';
 
 type HandoffPaneProps = {
   data: RetroData;
+  /** A closed Retro: what was handed on, as text (#90). */
+  readOnly?: boolean | undefined;
   /** The Task titles, for the preview. */
   titleOf: (taskId: string) => string;
   onDraft: (policy: CriterionPolicy) => boolean;
@@ -37,8 +39,15 @@ type HandoffPaneProps = {
 
 const BOUNDS: readonly SuggestionBound[] = ['lo', 'mid', 'hi'];
 
+const DECISION_WORDS: Readonly<Record<RetroDecision, string>> = {
+  continue: '続ける',
+  end: '終える',
+  replace: '置き換える',
+};
+
 function HandoffPane({
   data,
+  readOnly = false,
   titleOf,
   onDraft,
   onDraftPolicy,
@@ -55,6 +64,7 @@ function HandoffPane({
     rangePolicy: 'hi',
   };
 
+  if (readOnly) return <ClosedHandoff data={data} className={className} />;
   return (
     <div
       data-slot="handoff-pane"
@@ -152,6 +162,54 @@ function HandoffPane({
           </RadioGroup>
         </section>
       )}
+    </div>
+  );
+}
+
+/** A closed Retro's handoff: the improvement and the criterion's decisions. */
+function ClosedHandoff({
+  data,
+  className,
+}: {
+  data: RetroData;
+  className?: string | undefined;
+}) {
+  const { improvement, draft, used } = data;
+  return (
+    <div
+      data-slot="handoff-pane"
+      className={cn('flex flex-col gap-12', className)}
+    >
+      <section
+        aria-labelledby="handoff-improvement"
+        className="flex flex-col gap-3 border-t border-b border-t-ink border-b-border py-4"
+      >
+        <h2 id="handoff-improvement" className="text-label text-ink-muted">
+          次に試す変更
+        </h2>
+        {improvement === undefined ? (
+          <p className="text-body text-ink-muted">改善策はありませんでした。</p>
+        ) : (
+          <p className="max-w-measure-read text-goal text-ink">{improvement}</p>
+        )}
+      </section>
+      <section aria-labelledby="handoff-draft" className="flex flex-col gap-2">
+        <h2 id="handoff-draft" className="text-heading text-ink">
+          計画基準
+        </h2>
+        <p className="text-body text-ink">
+          {draft === undefined
+            ? '改善策から計画基準は作りませんでした。'
+            : `改善策から計画基準「${criterionName(draft.criterion.policy, draft.areaName)}」を作りました。`}
+        </p>
+        {used !== undefined && used.decision !== undefined && (
+          <p className="text-body text-ink">
+            今回の計画基準「
+            {criterionName(used.criterion.policy, used.areaName)}
+            」は「{DECISION_WORDS[used.decision]}」にしました。
+          </p>
+        )}
+      </section>
     </div>
   );
 }

@@ -654,9 +654,13 @@ compact の原則：
 **Filter** — リストを絞り込むトグル。Pill（28px、`border`）＋任意の Area の路線記号（`area-badge` 20px。記号は読み上げず、ラベルの Area 名を読む）＋ラベル＋件数。Selected は `here-subtle` の地、`ink` の 2px の枠（`stroke-strong`。内側に取り、大きさを変えない）、ラベルの 700、`aria-pressed`。チェックは付けない（選んでも幅を変えず、後ろの Filter を動かさないため。太字の幅は先に取る）。0 件は disabled（フォーカスでき、「0件」を読める）。ただし選択中の Filter は 0 件になっても外せるよう disabled にしない。compact 幅では見た目の 28px を保ったまま当たり判定を 44px にし、折り返した行の間を 16px 空けて当たり判定を重ねない。
 
 **Sprint Header** — Sprint の画面の見出し。Status Tag、タイトル（`display-l`「Sprint 14」）、期間（`body` `ink-muted`）、右に操作（Primary は 1 つ）、段階表示（路線図のように段階を線でつなぎ、番号付きの駅として並べる。`nav`＋`ol`、現在の段階は `here` の印＋「現在」、`aria-current="step"`）。段階表示は目安で、どの段階にも戻れる。
+- 前後の移動：タイトルの左右に、前の Sprint・次の Sprint へ移る矢印（`chevron-left` / `chevron-right`、IconButton と同じ Quiet の見た目のリンク、Tooltip と読み上げは「前の Sprint（Sprint 13）」）。端で行き先がなければ、矢印を無効の形（`ink-disabled`）で同じ位置に残す。
+- 呼び名：今と比べた呼び名（「今週」「来週」）があれば、期間の前に `ink` の太字で添える（「来週 · 10/5 (月) – 10/11 (日)」）。呼び名の規則は `docs/design/content.md`「週の呼び名」。
 - Planning：選ぶ / 整える / 確かめる（PRD §5.B の Pick / Shape / Check）
 - 実行中：Status「実行中」、段階なし
-- Retro：事実を見る / 振り返る / 引き継ぐ（PRD §5.D）
+- 振り返り中・完了の Sprint の画面：Status「振り返り中」/「完了」（`done`）、段階なし、確定時の計画と結果を読み取り専用で出す
+- 次の週（計画を始める前）：Status なし、操作は「Sprint N の計画を始める」
+- Retro：事実を見る / 振り返る / 引き継ぐ（PRD §5.D）。完了した Retro も同じ段階を読み取り専用で出す
 
 ### タスク
 

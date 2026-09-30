@@ -108,11 +108,19 @@ export function reviewSprintOf(records: Records): Sprint | undefined {
   return records.sprints.find((s) => s.state === 'review');
 }
 
+/**
+ * The Retro of the Sprint in Review, or of the one asked for once it is in
+ * Review or closed (#90; a closed one is read only). `undefined` before it.
+ */
 export function retroData(
   records: Records,
   clock: Clock,
+  sprintId?: SprintId,
 ): RetroData | undefined {
-  const sprint = reviewSprintOf(records);
+  const sprint =
+    sprintId === undefined
+      ? reviewSprintOf(records)
+      : records.sprints.find((s) => s.id === sprintId);
   if (sprint?.retro === undefined) return undefined;
   const { tasks, areas: allAreas, criteria } = records;
   const facts = retroFacts(sprint, {
@@ -233,26 +241,5 @@ export function nextPlanningOf(records: Records, clock: Clock): NextPlanning {
     start,
     // Its number as F25 counts it: one after every Sprint before it.
     number: records.sprints.filter((s) => s.start < start).length + 1,
-  };
-}
-
-/** After the Retro: the Sprint just closed (owner decision in #42). */
-export interface AfterRetro {
-  readonly closed: Sprint;
-  readonly number: number;
-  readonly improvement?: string;
-}
-
-export function afterRetro(records: Records): AfterRetro | undefined {
-  const closed = records.sprints
-    .filter((s) => s.state === 'closed')
-    .toSorted((a, b) => (a.start < b.start ? 1 : -1))[0];
-  if (closed === undefined) return undefined;
-  return {
-    closed,
-    number: sprintNumber(closed, records.sprints),
-    ...(closed.retro?.improvement === undefined
-      ? {}
-      : { improvement: closed.retro.improvement.text }),
   };
 }
