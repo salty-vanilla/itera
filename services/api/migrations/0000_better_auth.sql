@@ -31,8 +31,8 @@ CREATE TABLE `passkey` (
 	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
+CREATE UNIQUE INDEX `passkey_credential_id_unique` ON `passkey` (`credential_id`);--> statement-breakpoint
 CREATE INDEX `passkey_userId_idx` ON `passkey` (`user_id`);--> statement-breakpoint
-CREATE INDEX `passkey_credentialID_idx` ON `passkey` (`credential_id`);--> statement-breakpoint
 CREATE TABLE `rate_limit` (
 	`id` text PRIMARY KEY NOT NULL,
 	`key` text NOT NULL,

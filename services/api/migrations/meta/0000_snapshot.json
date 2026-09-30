@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "71d1b5fa-9bdc-4cc7-9299-f3469581dd75",
+  "id": "6eaba768-2478-4ae3-81f6-0a93574d1fc9",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account": {
@@ -210,17 +210,17 @@
         }
       },
       "indexes": {
+        "passkey_credential_id_unique": {
+          "name": "passkey_credential_id_unique",
+          "columns": [
+            "credential_id"
+          ],
+          "isUnique": true
+        },
         "passkey_userId_idx": {
           "name": "passkey_userId_idx",
           "columns": [
             "user_id"
-          ],
-          "isUnique": false
-        },
-        "passkey_credentialID_idx": {
-          "name": "passkey_credentialID_idx",
-          "columns": [
-            "credential_id"
           ],
           "isUnique": false
         }

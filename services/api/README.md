@@ -28,6 +28,8 @@ pnpm --filter @itera/api dev                                  # http://localhost
 - **Google**：OAuth クライアントの承認済みリダイレクト URI に `<BETTER_AUTH_URL>/api/auth/callback/google`（ローカルなら `http://localhost:8787/api/auth/callback/google`）を登録する。
 - **パスキー**：RP ID は `BETTER_AUTH_URL` のホスト名、origin は `BETTER_AUTH_URL` の origin。ローカルは `localhost` のままで動く（RP ID はポートを含まないので、同じ `localhost` のポート違いでも登録したパスキーを使える。origin はポートまで一致させる）。本番のドメインで登録したパスキーは、別のドメインでは使えない。
 - **Cookie**：Web と API は同じ origin で配信する前提（CORS は設定しない）。`BETTER_AUTH_URL` が `https` なら Cookie は `Secure` になる。
+- **セッションの延長**：`/me` などの API の経路はセッションを延長しない。延長するのは `GET /api/auth/get-session` だけなので、クライアントは起動時などに呼ぶ（呼ばないと最後の延長から 7 日で 401）。
+- **Google のトークン**：アクセストークンとリフレッシュトークンは `BETTER_AUTH_SECRET` で暗号化して保存する。秘密鍵を変えると復号できなくなるが、Itera はこれらを使わない。
 - **レート制限**：本番と同じくローカルでも有効（サインインは 10 秒に 3 回まで）。回数は D1 の `rate_limit` テーブルに入る。
 
 ## 構成

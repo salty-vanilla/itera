@@ -1,6 +1,6 @@
 import { makeSignature } from 'better-auth/crypto';
 import { eq } from 'drizzle-orm';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app';
 import type { Database } from '../db/database';
 import { createMemoryDatabase } from '../db/memory-database';
@@ -8,19 +8,14 @@ import * as schema from '../db/schema';
 import { testEnv as env } from '../test-env';
 import {
   betterAuthAuthenticator,
+  betterAuthSettings,
   createBetterAuth,
-  type BetterAuthSettings,
 } from './better-auth';
 
 // Runs Better Auth behind the app, as the default composition does, on an
 // in-memory database with the real migrations applied.
 
-const settings: BetterAuthSettings = {
-  secret: env.BETTER_AUTH_SECRET,
-  baseURL: env.BETTER_AUTH_URL,
-  googleClientId: env.GOOGLE_CLIENT_ID,
-  googleClientSecret: env.GOOGLE_CLIENT_SECRET,
-};
+const settings = betterAuthSettings(env);
 
 let db: Database;
 let close: () => void;
@@ -34,7 +29,10 @@ beforeEach(async () => {
   });
 });
 
-afterEach(() => close());
+afterEach(() => {
+  close();
+  vi.unstubAllGlobals();
+});
 
 // Signs a user in the way a finished Google sign-in would: a user with a
 // Google account, a session row, and the signed session cookie.
@@ -80,6 +78,14 @@ function auth(
     },
     env,
   );
+}
+
+// `name=value` pairs of a response's Set-Cookie headers, for a Cookie header.
+function cookiesFrom(response: Response): string {
+  return response.headers
+    .getSetCookie()
+    .map((cookie) => cookie.split(';')[0])
+    .join('; ');
 }
 
 describe('Better Auth authenticator (GET /me)', () => {
@@ -158,6 +164,26 @@ describe('Better Auth authenticator (GET /me)', () => {
     const context = await createBetterAuth(db, settings).$context;
     await expect(context.explicitSchemaCheck?.()).resolves.toBeUndefined();
   });
+
+  it('keeps passkey credential IDs unique across users', async () => {
+    const passkeyOf = (userId: string) => ({
+      id: `passkey-${userId}`,
+      userId,
+      publicKey: 'public-key',
+      credentialID: 'credential-1',
+      counter: 0,
+      deviceType: 'singleDevice',
+      backedUp: false,
+    });
+    await db.insert(schema.user).values([
+      { id: 'user-1', name: 'Ada', email: 'ada@example.com' },
+      { id: 'user-2', name: 'Eve', email: 'eve@example.com' },
+    ]);
+    await db.insert(schema.passkey).values(passkeyOf('user-1'));
+    await expect(
+      db.insert(schema.passkey).values(passkeyOf('user-2')),
+    ).rejects.toThrow();
+  });
 });
 
 describe('Better Auth sign-in methods', () => {
@@ -174,6 +200,75 @@ describe('Better Auth sign-in methods', () => {
     expect(google.searchParams.get('redirect_uri')).toBe(
       `${env.BETTER_AUTH_URL}/api/auth/callback/google`,
     );
+  });
+
+  it('signs a new user up with Google and encrypts the access token', async () => {
+    // Google's token endpoint, answering the authorization code exchange.
+    // The ID token is only decoded, not verified: it comes straight from
+    // Google over TLS in this flow.
+    const encode = (value: object) =>
+      btoa(JSON.stringify(value))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+    const now = Math.floor(Date.now() / 1000);
+    const idToken = [
+      encode({ alg: 'RS256', kid: 'test' }),
+      encode({
+        iss: 'https://accounts.google.com',
+        aud: env.GOOGLE_CLIENT_ID,
+        sub: 'google-user-42',
+        email: 'grace@example.com',
+        email_verified: true,
+        name: 'Grace',
+        iat: now,
+        exp: now + 3600,
+      }),
+      'signature',
+    ].join('.');
+    const google = vi.fn(async (input: RequestInfo | URL) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url !== 'https://oauth2.googleapis.com/token') {
+        throw new Error(`unexpected fetch: ${url}`);
+      }
+      return Response.json({
+        access_token: 'google-access-token',
+        id_token: idToken,
+        expires_in: 3600,
+        token_type: 'Bearer',
+        scope: 'openid email profile',
+      });
+    });
+    vi.stubGlobal('fetch', google);
+
+    const start = await auth('/sign-in/social', {
+      method: 'POST',
+      body: { provider: 'google', callbackURL: '/' },
+    });
+    const { url } = (await start.json()) as { url: string };
+    const state = new URL(url).searchParams.get('state') ?? '';
+    const callback = await auth(
+      `/callback/google?code=code-1&state=${encodeURIComponent(state)}`,
+      { headers: { Cookie: cookiesFrom(start) } },
+    );
+    expect(callback.status).toBe(302);
+    expect(google).toHaveBeenCalledOnce();
+
+    const [user] = await db.select().from(schema.user);
+    expect(user).toMatchObject({ email: 'grace@example.com', name: 'Grace' });
+    const [account] = await db.select().from(schema.account);
+    expect(account).toMatchObject({
+      userId: user?.id,
+      providerId: 'google',
+      accountId: 'google-user-42',
+    });
+    // Better Auth encrypts the access and refresh tokens, not the ID token.
+    expect(account?.accessToken).toBeTruthy();
+    expect(account?.accessToken).not.toContain('google-access-token');
+
+    const response = await me(cookiesFrom(callback));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ userId: user?.id });
   });
 
   it('rejects other social providers', async () => {

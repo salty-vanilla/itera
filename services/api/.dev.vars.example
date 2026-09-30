@@ -1,5 +1,6 @@
 # Copy to .dev.vars (ignored by Git) for `pnpm dev`. Never commit real values.
-# Signs cookies and encrypts tokens. Generate with `openssl rand -base64 32`.
+# Signs cookies and encrypts stored Google tokens. At least 32 characters;
+# generate with `openssl rand -base64 32`.
 BETTER_AUTH_SECRET=
 # The origin the browser sees (Web and API are served from it together).
 # Passkeys are bound to its host name, so `localhost` works for local use.

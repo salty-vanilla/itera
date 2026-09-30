@@ -6,7 +6,8 @@ import * as schema from '../db/schema';
 import { authBasePath, type Authenticator } from './authenticator';
 
 export type BetterAuthSettings = {
-  // Signs cookies and encrypts tokens. At least 32 random characters.
+  // Signs cookies and encrypts the stored OAuth tokens. At least 32 random
+  // characters.
   secret: string | undefined;
   // The origin the browser sees. Web and API are served from it together.
   // Passkeys are bound to its host name and origin.
@@ -16,6 +17,18 @@ export type BetterAuthSettings = {
 };
 
 const minimumSecretLength = 32;
+
+// The settings from the Worker's env (see .dev.vars.example).
+export function betterAuthSettings(
+  env: CloudflareBindings,
+): BetterAuthSettings {
+  return {
+    secret: env.BETTER_AUTH_SECRET,
+    baseURL: env.BETTER_AUTH_URL,
+    googleClientId: env.GOOGLE_CLIENT_ID,
+    googleClientSecret: env.GOOGLE_CLIENT_SECRET,
+  };
+}
 
 // Better Auth decides some defaults from NODE_ENV, which Workers do not set:
 // without a secret it falls back to a public default, and rate limiting is
@@ -58,6 +71,10 @@ export function createBetterAuth(db: Database, settings: BetterAuthSettings) {
     socialProviders: {
       google: { clientId: googleClientId, clientSecret: googleClientSecret },
     },
+    // Itera does not call Google with them, but Better Auth stores Google's
+    // access and refresh tokens on the account row. Keep them unreadable in
+    // D1 and its backups. (The ID token is stored as is.)
+    account: { encryptOAuthTokens: true },
     plugins: [
       passkey({ rpID: new URL(origin).hostname, rpName: 'Itera', origin }),
     ],
@@ -75,15 +92,16 @@ export function createBetterAuth(db: Database, settings: BetterAuthSettings) {
 }
 
 // The Authenticator backed by Better Auth's session cookie.
-export function createBetterAuthAuthenticator(
+function createBetterAuthAuthenticator(
   db: Database,
   settings: BetterAuthSettings,
 ): Authenticator {
   const auth = createBetterAuth(db, settings);
   return {
     async authenticate(headers) {
-      // Only reads the session. Extending it is left to Better Auth's own
-      // routes (authBasePath), which can send the renewed cookie back.
+      // Does not extend the session: only Better Auth's own session route
+      // (GET authBasePath/get-session) can send the renewed cookie back, so
+      // clients call it. An expired session is still deleted here.
       const session = await auth.api.getSession({
         headers,
         query: { disableRefresh: true },
@@ -94,14 +112,8 @@ export function createBetterAuthAuthenticator(
   };
 }
 
-// Dependencies['authenticator'] for Better Auth: reads the settings from the
-// Worker's env (see .dev.vars.example).
+// Dependencies['authenticator'] for Better Auth.
 export function betterAuthAuthenticator() {
   return (env: CloudflareBindings, db: Database): Authenticator =>
-    createBetterAuthAuthenticator(db, {
-      secret: env.BETTER_AUTH_SECRET,
-      baseURL: env.BETTER_AUTH_URL,
-      googleClientId: env.GOOGLE_CLIENT_ID,
-      googleClientSecret: env.GOOGLE_CLIENT_SECRET,
-    });
+    createBetterAuthAuthenticator(db, betterAuthSettings(env));
 }

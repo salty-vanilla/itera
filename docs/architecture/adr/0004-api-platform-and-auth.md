@@ -42,8 +42,10 @@ Better Auth が自分で書き込む行（利用者・アカウント・セッ�
 - パスキーの RP ID は `BETTER_AUTH_URL` のホスト名、origin は `BETTER_AUTH_URL` の origin にする（別の設定を増やさない）。ローカル開発は `http://localhost:<port>` のままで動く（WebAuthn は `localhost` を安全なコンテキストとして扱い、RP ID はポートを含まない）。
 - Google の OAuth クライアントの承認済みリダイレクト URI は `<BETTER_AUTH_URL>/api/auth/callback/google`。
 - セッションは D1 の行と、署名した Cookie（`better-auth.session_token`、https では `__Secure-` 付き。HttpOnly、SameSite=Lax）で持つ。有効期間は Better Auth の既定（7 日。1 日を過ぎると `/api/auth/get-session` が延長し、Cookie を送り直す）。Cookie キャッシュは使わないので、サインアウトやセッションの削除はすぐに効く。
+- **セッションを延長するのは `/api/auth/get-session` だけ**。`requireAuth` を通る API の経路はセッションを読むだけで延長しない（Cookie を送り直せないため。期限切れの行は Better Auth が削除する）。そのためクライアントは、起動時など定期的に `/api/auth/get-session` を呼ぶ。呼ばないと、最後の延長から 7 日で API が 401 を返す。
 - Cookie を使うので、**Web と API は同じ origin で配信する**。CORS と、`BETTER_AUTH_URL` 以外の信頼する origin は設定しない。Web のログイン画面とログインの流れは別の Issue で作る。
 - 利用者の識別子は Better Auth の利用者 ID（`user.id`、Better Auth が生成するランダムな文字列）。
+- Google から受け取ったアクセストークンとリフレッシュトークンは、`account.encryptOAuthTokens` で `BETTER_AUTH_SECRET` から作る鍵で暗号化して保存する。Itera は Google の API を呼ばないが、Better Auth がアカウントの行に保存するため。
 - 設定値（`BETTER_AUTH_SECRET`・`BETTER_AUTH_URL`・`GOOGLE_CLIENT_ID`・`GOOGLE_CLIENT_SECRET`）は環境変数と wrangler の secret で渡し、リポジトリに書かない。どれかが空、または `BETTER_AUTH_SECRET` が 32 文字未満なら、認証を使うリクエストは 500 で失敗する（下の確認事項の 5）。
 
 ### Better Auth を Workers で使うときの確認事項（2026-09-30）
@@ -52,7 +54,8 @@ Better Auth の文書（Context7 と better-auth.com）と、固定した 1.7.6 
 
 1. **パスキー**：上の「認証の構成」のとおり、ログイン済みの利用者があとから追加する形が既定。`/api/auth/passkey/generate-register-options` はセッションなしで 401 を返す（テストで確認）。
 2. **D1 と Drizzle adapter**：`drizzleAdapter(db, { provider: 'sqlite', schema })` に注入された `Database` を渡す。`env.DB` は渡さない。
-   - adapter はテーブルをスキーマの export 名（`user`・`session`・`account`・`verification`・`passkey`・`rateLimit`）と property 名で探す。SQL の列名は Better Auth の Drizzle スキーマ生成器に合わせて snake_case にした。adapter は使う前にこのスキーマを Better Auth の期待と照らし合わせ、合わなければ失敗する。
+   - adapter はテーブルをスキーマの export 名（`user`・`session`・`account`・`verification`・`passkey`・`rateLimit`）と property 名で探す。SQL の列名は Better Auth の Drizzle スキーマ生成器に合わせて snake_case にした。adapter は使う前にこのスキーマの列を Better Auth の期待と照らし合わせ、合わなければ失敗する（制約と index は照らさない）。
+   - 生成器との違いは 1 つ：`passkey.credential_id` を unique にした（生成器は通常の index）。Better Auth はパスキーを登録するときにほかの利用者の同じ ID を確かめず、サインインではこの ID だけで行を選ぶため。
    - テーブルは `src/db/schema.ts` に置き、drizzle-kit でマイグレーションを生成して wrangler で適用する。Better Auth のマイグレーション（CLI の `migrate` やエンドポイント）は使わない。
    - **Better Auth の複数行の書き込みは原子的ではない**。Drizzle adapter の `transaction` は既定で無効で、D1 は対話型のトランザクションを持たない。`env.DB` をそのまま渡す経路（Kysely の D1 dialect）も `transaction` を無効にし、`batch()` はスキーマの読み取りにだけ使う。どちらの経路でも、Google での初回サインイン（利用者とアカウントの作成）などは別々の文で書かれる。途中で失敗して利用者だけが残っても、次の Google サインインで、Google が検証済みとするメールの一致によって同じ利用者にアカウントが結び直される（1.7.6 の既定の account linking。コードで確認）。
 3. **Hono への組み込み**：公式の方法どおり、`app.all('/api/auth/*', (c) => auth.handler(c.req.raw))` と `auth.api.getSession({ headers })` を使う。Workers の env と注入する DB はリクエストの中でしか得られないので、Better Auth のインスタンスはリクエストごとに作る。
@@ -100,7 +103,7 @@ Better Auth の文書（Context7 と better-auth.com）と、固定した 1.7.6 
 - `createApp(dependencies)` が依存を 1 つの引数で受け取る。Workers の env はリクエストの中でしか得られないので、依存は env から実装を作る関数（`Dependencies`：`database`・`authenticator`）にする。`authenticator` は、そのリクエストの DB（`database` で作ったもの）も受け取る。本番の構成（D1、Better Auth）は `src/default-dependencies.ts` にあり、それを選ぶのは `src/index.ts` だけ。
 - DB：ハンドラーは `c.var.db`（型は `Database`）だけを使う。`Database` は Drizzle の非同期の SQLite の型に `batch()` を加えたもので、D1・libSQL・sqlite-proxy のどれでも満たせる（`src/db/database.test.ts` で型を確かめる）。同期の API の better-sqlite3 は満たさない。`drizzle-orm/d1` を使うのは既定の構成だけ。
 - 認証：`Authenticator` は、リクエストのヘッダー（セッションの Cookie）から利用者を返すか、有効なセッションがなければ `null` を返す（サーバー側の失敗は例外）。あわせて、認証サービス自身の経路（`/api/auth/*`）の応答を受け持つ。`requireAuth` は `Authenticator` だけを使い、401 の応答と `c.var.userId` の設定を受け持つ。Bearer トークンは受け付けないので、401 に `WWW-Authenticate: Bearer` は付けない。Better Auth の実装は `src/auth/better-auth.ts` の 1 実装。
-- テストでは、DB に sqlite-proxy の Drizzle（実行した SQL を記録し、行を返さない）を、認証に仮の `Authenticator` を渡す。Better Auth の実装は、libSQL のメモリ DB に `migrations/` を適用したもの（`src/db/memory-database.ts`）を渡し、アプリ越しに確かめる。セッションは Better Auth の内部の adapter で作り、署名した Cookie を付けて送る（あり・なし・期限切れ・別の鍵の署名・サインアウト後）。
+- テストでは、DB に sqlite-proxy の Drizzle（実行した SQL を記録し、行を返さない）を、認証に仮の `Authenticator` を渡す。Better Auth の実装は、libSQL のメモリ DB に `migrations/` を適用したもの（`src/db/memory-database.ts`）を渡し、アプリ越しに確かめる。セッションは Better Auth の内部の adapter で作り、署名した Cookie を付けて送る（あり・なし・期限切れ・別の鍵の署名・サインアウト後）。Google での登録は、Google のトークンのエンドポイントへの `fetch` をテストの中で差し替えて、サインインの開始からコールバック、`/me` までを通す。
 - DI コンテナのライブラリは使わない。関数の引数と Hono の context で足りる範囲にする。
 - 別の DB ドライバ、別の認証サービス、Node でのローカル実行は、必要になったときに別の Issue で足す。
 
@@ -129,7 +132,9 @@ Issue #121 は「Better Auth は原子的な処理に `batch()` を使う」を�
 
 - D1 は対話型のトランザクションを持たない（上の「トランザクション」）。Better Auth 自身の複数行の書き込みも原子的ではない（確認事項の 2）。
 - 脆弱性への対応を自分で負う。版を固定しているので、修正は版を上げるまで入らない。
-- Google との実際の往復（同意画面からコールバックまで）は、Google の OAuth クライアントを作るまで確かめていない。テストと `wrangler dev` で確かめたのは、Google への遷移先（client ID とリダイレクト URI）を組み立てるところまで。
+- Google との実際の往復（同意画面からコールバックまで）は、Google の OAuth クライアントを作るまで確かめていない。テストで確かめたのは、Google への遷移先（client ID とリダイレクト URI）の組み立てと、Google のトークンのエンドポイントを差し替えたうえでのコールバックの処理まで。
+- Google の ID トークン（氏名・メールなどを含む、Google が署名した本人確認）は暗号化されずにアカウントの行に残る（1.7.6 の `encryptOAuthTokens` の対象外）。Google の API を呼ぶ資格ではなく、Itera の ID トークンでのサインイン（`/sign-in/social` に `idToken` を渡す）も発行から 1 時間までしか受け付けない。
+- パスキーは本人確認（PIN・生体認証）を必須にしない。プラグインの中で `userVerification: "preferred"` に固定されている（1.7.6）。
 - 利用者を作れるのは Google だけ。Google アカウントを使わない人は登録できない。
 - Better Auth のインスタンスをリクエストごとに作る。その分の CPU 時間がかかる（Workers Paid を使ってよい）。
 - レート制限の回数を D1 に置くので、認証の各リクエストで D1 の読み書きが増える。
@@ -138,8 +143,8 @@ Issue #121 は「Better Auth は原子的な処理に `batch()` を使う」を�
 ## 影響
 
 - `services/api` は Workers 向けに作り、wrangler が束ねてデプロイする。ADR 0001 の「Node で直接動かして出力する `services/api`」という前提は、この ADR で置き換わる。
-- #32（デプロイ）は、認証の設定を Better Auth と Google の OAuth クライアントに合わせる。
-- 決めていないもの：API の契約（エンドポイント、OpenAPI）、ドメインのテーブル設計、Web のログイン画面とログインの流れ、データの同期・削除・エクスポート、一般公開の範囲。
+- #32（デプロイ）は、認証の設定を Better Auth と Google の OAuth クライアントに合わせる。あわせて、デプロイ先の API に `cf-connecting-ip` が届くこと（届かないとレート制限が全員で 1 つになる）と、`BETTER_AUTH_URL` が https であること（Cookie が Secure になる）を確かめる。
+- 決めていないもの：API の契約（エンドポイント、OpenAPI）、ドメインのテーブル設計、Web のログイン画面とログインの流れ、データの同期・削除・エクスポート、一般公開の範囲。Better Auth の Origin の検査は `/api/auth/*` にだけかかるので、書き込みを伴う API を足すときに、CSRF への備え（Origin の検査など）を決める。
 - Cloudflare の料金・上限・機能の区分は、2026-09-27 に下の一次資料で確認した。Better Auth の挙動は 2026-09-30 に 1.7.6 で確認した。変わった場合はこの ADR を見直す。
 
 ## 参照

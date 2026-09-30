@@ -11,9 +11,10 @@ import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 // the core tables, the passkey plugin, and rate limits kept in the database.
 // Better Auth addresses them by the export names and property names below;
 // the column names follow its Drizzle schema generator (snake_case). Its
-// Drizzle adapter checks this schema against its own before use and fails on
-// a mismatch, so after upgrading Better Auth run the tests
-// (src/auth/better-auth.test.ts) and update this section.
+// Drizzle adapter checks this schema's columns against its own before use and
+// fails on a mismatch, so after upgrading Better Auth run the tests
+// (src/auth/better-auth.test.ts) and update this section. Constraints the
+// generator leaves out are added where noted.
 // ---------------------------------------------------------------------------
 
 // Milliseconds since the epoch, as Better Auth's generator writes it.
@@ -118,7 +119,10 @@ export const passkey = sqliteTable(
     userId: text('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
-    credentialID: text('credential_id').notNull(),
+    // Unique, unlike the generator's plain index: Better Auth does not check
+    // other users' passkeys before registering one, and sign-in looks a
+    // passkey up by this ID alone.
+    credentialID: text('credential_id').notNull().unique(),
     counter: integer('counter').notNull(),
     deviceType: text('device_type').notNull(),
     backedUp: integer('backed_up', { mode: 'boolean' }).notNull(),
@@ -126,10 +130,7 @@ export const passkey = sqliteTable(
     createdAt: integer('created_at', { mode: 'timestamp_ms' }),
     aaguid: text('aaguid'),
   },
-  (table) => [
-    index('passkey_userId_idx').on(table.userId),
-    index('passkey_credentialID_idx').on(table.credentialID),
-  ],
+  (table) => [index('passkey_userId_idx').on(table.userId)],
 );
 
 // Request counts per client IP and path (`rateLimit.storage: 'database'`).
