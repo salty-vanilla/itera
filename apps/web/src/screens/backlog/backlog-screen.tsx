@@ -290,7 +290,7 @@ function BacklogScreen() {
                       today={today}
                       current={task.id === open?.task.id}
                       onOpen={() =>
-                        detail.leave(() => setSearch({ task: task.id }))
+                        detail.leave(() => setSearch({ task: task.id }), true)
                       }
                       onComplete={() => completeWithUndo(task.id, task.title)}
                       onToday={() => {
@@ -302,7 +302,7 @@ function BacklogScreen() {
                         detail.leave(() => {
                           estimateFocus.request(task.id);
                           setSearch({ task: task.id });
-                        })
+                        }, true)
                       }
                       focusControl={refocus === task.id}
                     />

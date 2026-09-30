@@ -169,7 +169,7 @@ function TodayView({ data }: { data: TodayData }) {
     });
   // Closing the detail or opening another Task asks the detail first.
   const openTask = (taskId: TaskId | undefined) =>
-    detail.leave(() => showTask(taskId));
+    detail.leave(() => showTask(taskId), taskId !== undefined);
   const openItem =
     search.task === undefined ? undefined : backlog.item(search.task);
   const estimateFocus = useEstimateFocus(search.task);
@@ -177,7 +177,7 @@ function TodayView({ data }: { data: TodayData }) {
     detail.leave(() => {
       estimateFocus.request(taskId);
       showTask(taskId);
-    });
+    }, true);
 
   const moved = (selectionId: DailySelectionId, done: boolean) => {
     if (done) focusNext.current = { selection: selectionId };

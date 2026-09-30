@@ -224,7 +224,7 @@ function TaskDetail({
    */
   focusEstimate?: number | undefined;
   /** From `useTaskDetailLeave`: the screen asks before it closes the detail. */
-  leaveRef?: Ref<(then: () => void) => void> | undefined;
+  leaveRef?: Ref<(then: () => void, opens: boolean) => void> | undefined;
 }) {
   const actions = useTaskActions();
   const { task } = item;
@@ -247,6 +247,8 @@ function TaskDetail({
   // applied: closing asks first, with the operation it would carry out.
   const [held, setHeld] = useState<{
     then: () => void;
+    /** `then` opens another Task: 破棄して開く rather than 破棄して閉じる. */
+    opens: boolean;
     subtask: boolean;
     recurrence: boolean;
   }>();
@@ -305,8 +307,8 @@ function TaskDetail({
   // so it is saved or shows its error. One of this detail's fields left in
   // error keeps it open and takes the focus back. A subtask not added or a
   // recurrence change not applied holds it with a notice: 戻る, or
-  // 破棄して閉じる carries out `then`.
-  function leave(then: () => void) {
+  // 破棄して閉じる (破棄して開く) carries out `then`.
+  function leave(then: () => void, opens = false) {
     const body = bodyRef.current;
     if (body === null) return then();
     const active = document.activeElement;
@@ -331,6 +333,7 @@ function TaskDetail({
     flushSync(() =>
       setHeld({
         then,
+        opens,
         subtask: subtask !== null,
         recurrence: recurrence !== null,
       }),
@@ -747,7 +750,7 @@ function TaskDetail({
                     then();
                   }}
                 >
-                  破棄して閉じる
+                  {held.opens ? '破棄して開く' : '破棄して閉じる'}
                 </Button>
               </>
             }

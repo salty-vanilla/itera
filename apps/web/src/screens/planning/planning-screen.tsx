@@ -117,7 +117,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
     detail.leave(() => {
       setOutlookOpen(false);
       setSearch({ task: taskId });
-    });
+    }, true);
   const openItem =
     search.task === undefined ? undefined : backlog.item(search.task);
   const estimateFocus = useEstimateFocus(search.task);
@@ -126,7 +126,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
       estimateFocus.request(taskId);
       setOutlookOpen(false);
       setSearch({ task: taskId });
-    });
+    }, true);
 
   const outlook = (
     <OutlookPane

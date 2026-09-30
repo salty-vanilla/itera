@@ -552,8 +552,17 @@ describe('Backlog', () => {
     ).toBeNull();
     expect(document.activeElement).toBe(subtask);
     expect(subtask).toHaveProperty('value', '上の段');
+    // Closing says 破棄して閉じる.
+    await userEvent.keyboard('{Escape}');
+    expect(
+      within(detail).getByRole('button', { name: '破棄して閉じる' }),
+    ).toBeTruthy();
+    expect(
+      within(detail).queryByRole('button', { name: '破棄して開く' }),
+    ).toBeNull();
+    await userEvent.click(within(detail).getByRole('button', { name: '戻る' }));
 
-    // Opening another row asks the same; 破棄して閉じる carries it out.
+    // Opening another row asks the same; 破棄して開く carries it out.
     await userEvent.selectOptions(
       within(detail).getByRole('combobox', { name: '頻度' }),
       'daily',
@@ -564,7 +573,7 @@ describe('Backlog', () => {
       within(detail).getByText('反映していない繰り返しの変更があります'),
     ).toBeTruthy();
     await userEvent.click(
-      within(detail).getByRole('button', { name: '破棄して閉じる' }),
+      within(detail).getByRole('button', { name: '破棄して開く' }),
     );
     await waitFor(() =>
       expect(screen.getByRole('dialog').textContent).toContain('歯医者の予約'),
