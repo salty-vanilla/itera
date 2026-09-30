@@ -122,7 +122,7 @@ describe('Retro — 事実を見る', () => {
     expect(paper.textContent).toContain('見送り 2回');
     expect(screen.getByRole('region', { name: '割り込み' })).toBeTruthy();
     expect(
-      screen.getByRole('region', { name: 'Today での見送り・今日はここまで' }),
+      screen.getByRole('region', { name: '見送り・今日はここまで' }),
     ).toBeTruthy();
     // No rates or scores (patterns.md Retro › ルール).
     expect(document.body.textContent).not.toMatch(/%|点|達成率|失敗/);
@@ -181,7 +181,7 @@ describe('Retro — 事実を見る', () => {
       await screen.findByRole('textbox', { name: /実績時間/ }),
       '0.5',
     );
-    await userEvent.click(screen.getByRole('button', { name: '残す' }));
+    await userEvent.click(screen.getByRole('button', { name: '足す' }));
     expect(reviewed().actualTimes.at(-1)).toMatchObject({
       hours: 0.5,
       via: 'later',
@@ -863,6 +863,178 @@ describe('Retro — compact (#57)', () => {
   });
 });
 
+describe('Retro — 事実を見るを読みやすくする (#108)', () => {
+  const rowOf = (title: string) =>
+    screen.getByRole('rowheader', { name: new RegExp(title) }).parentElement!;
+  const carryIcon = (element: Element) =>
+    element.querySelector('svg.lucide-corner-down-right');
+
+  it('shows a carry-over with its icon and word, apart from a done row, never in danger', async () => {
+    await renderAt('/retro?fixture=retro-start');
+    const carried = rowOf('関連論文を 3 本読む');
+    expect(carryIcon(carried)).toBeTruthy();
+    // The icon and the word are one unit, in ink-muted.
+    const unit = carryIcon(carried)!.parentElement!;
+    expect(unit.textContent).toBe('持ち越し');
+    expect(unit.className).toContain('text-ink-muted');
+    const done = rowOf('住民税の支払い');
+    expect(done.textContent).toContain('完了');
+    expect(carryIcon(done)).toBeNull();
+    // 持ち越し is a fact, not a failure (DESIGN.md).
+    expect(carried.querySelector('[class*="danger"]')).toBeNull();
+    expect(carried.className).not.toContain('danger');
+  });
+
+  it('moves from 持ち越し N件 in the summary to its rows, one by one, and is only text at 0', async () => {
+    await renderAt('/retro?fixture=retro-start');
+    const jump = screen.getByRole('button', { name: '持ち越し 2件の行へ移る' });
+    const carriedTitles = [
+      ...document.querySelectorAll<HTMLElement>('[data-carried-over]'),
+    ];
+    expect(carriedTitles).toHaveLength(2);
+    await userEvent.click(jump);
+    expect(document.activeElement).toBe(carriedTitles[0]);
+    await userEvent.click(jump);
+    expect(document.activeElement).toBe(carriedTitles[1]);
+    await userEvent.click(jump);
+    expect(document.activeElement).toBe(carriedTitles[0]);
+    // The other counts are not buttons.
+    const summary = document.querySelector<HTMLElement>(
+      '[data-slot="sprint-summary"]',
+    )!;
+    expect(within(summary).getAllByRole('button')).toHaveLength(1);
+    cleanup();
+
+    change = (snapshot) => ({
+      ...snapshot,
+      records: {
+        ...snapshot.records,
+        sprints: snapshot.records.sprints.map((sprint) =>
+          sprint.state !== 'review'
+            ? sprint
+            : {
+                ...sprint,
+                tasks: sprint.tasks.map((t) =>
+                  t.outcome === 'carriedOver'
+                    ? { ...t, outcome: 'done' as const }
+                    : t,
+                ),
+              },
+        ),
+      },
+    });
+    await renderAt('/retro?fixture=retro-start');
+    expect(screen.queryByRole('button', { name: /行へ移る/ })).toBeNull();
+    expect(
+      within(
+        document.querySelector<HTMLElement>('[data-slot="sprint-summary"]')!,
+      ).getByText('持ち越し').parentElement?.textContent,
+    ).toContain('0');
+  });
+
+  it('says once, under the heading, what 振り返りに使う leads to, and not when closed', async () => {
+    await renderAt('/retro?fixture=retro-start');
+    const guide = screen.getAllByText(
+      /気になった事実に「振り返りに使う」を付けると/,
+    );
+    expect(guide).toHaveLength(1);
+    expect(guide[0]?.textContent).toBe(
+      '気になった事実に「振り返りに使う」を付けると、「振り返る」で材料として並びます。付けなくても進めます。',
+    );
+    // Under the heading, before the summary.
+    expect(
+      screen
+        .getByRole('heading', { level: 1 })
+        .compareDocumentPosition(guide[0]!) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: '振り返るへ' }));
+    expect(
+      screen.queryByText(/気になった事実に「振り返りに使う」を付けると/),
+    ).toBeNull();
+    cleanup();
+
+    const router = await renderAt(
+      '/retro?fixture=retro-before-complete&stage=handoff',
+    );
+    await userEvent.click(completeButton());
+    await userEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', {
+        name: '振り返りを完了',
+      }),
+    );
+    await router.navigate({ to: '/retro', search: { stage: 'facts' } });
+    await screen.findByText(/今回の計画基準：/);
+    expect(
+      screen.queryByText(/気になった事実に「振り返りに使う」を付けると/),
+    ).toBeNull();
+  });
+
+  it('writes an interrupt with its day and time in the list and in the materials', async () => {
+    await renderAt('/retro?fixture=retro-start');
+    const interrupts = screen.getByRole('region', { name: '割り込み' });
+    expect(interrupts.textContent).toMatch(/\d+\/\d+ \(.\) \d{2}:\d{2}/);
+    const time = /(\d+\/\d+ \(.\) \d{2}:\d{2})/.exec(
+      interrupts.textContent ?? '',
+    )![1]!;
+    await userEvent.click(
+      within(interrupts).getAllByRole('button', { name: /振り返りに使う/ })[0]!,
+    );
+    await userEvent.click(screen.getByRole('button', { name: '振り返るへ' }));
+    const materials = screen.getAllByRole('region', {
+      name: '振り返りの材料',
+    })[0]!;
+    expect(materials.textContent).toContain('割り込み');
+    expect(
+      within(materials)
+        .getAllByRole('listitem')[0]!
+        .querySelector('[data-slot="task-metadata"]')?.textContent,
+    ).toContain(time);
+  });
+
+  it('gives a Task in the materials the values of its row (#108), each value whole on a line (#127)', async () => {
+    await renderAt('/retro?fixture=retro-start');
+    await userEvent.click(
+      screen.getAllByRole('button', {
+        name: /振り返りに使う.*関連論文を 3 本読む/,
+      })[0]!,
+    );
+    await userEvent.click(screen.getByRole('button', { name: '振り返るへ' }));
+    const materials = screen.getAllByRole('region', {
+      name: '振り返りの材料',
+    })[0]!;
+    const item = within(materials).getAllByRole('listitem')[0]!;
+    expect(item.textContent).toContain('関連論文を 3 本読む');
+    // The values of its row, one unit each, the carry-over with its icon.
+    const values = [...item.querySelectorAll('[data-slot="meta-item"]')];
+    expect(values.map((v) => v.textContent)).toEqual([
+      '持ち越し',
+      '計画 5h（基準）',
+      '実績 4.5h',
+    ]);
+    expect(carryIcon(values[0]!)).toBeTruthy();
+    expect(carryIcon(values[1]!)).toBeNull();
+    // The button's name still says which Task and what it became.
+    expect(
+      within(item).getByRole('button', {
+        name: /関連論文を 3 本読む · 持ち越し · 計画 5h（基準） · 実績 4.5h/,
+      }),
+    ).toBeTruthy();
+  });
+
+  it('opens 実績を足す by the same words on its face: 「実績を足す」 and 「足す」', async () => {
+    await renderAt('/retro?fixture=retro-start');
+    await userEvent.click(
+      screen.getByRole('button', { name: /実績を足す.*住民税の支払い/ }),
+    );
+    const surface = await screen.findByRole('dialog');
+    expect(
+      within(surface).getByText('実績を足す: 住民税の支払い'),
+    ).toBeTruthy();
+    expect(within(surface).getByRole('button', { name: '足す' })).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/実績を残す/);
+  });
+});
+
 describe('Retro — actual time per occurrence (#56)', () => {
   it('adds to one occurrence, on the day it was done, and shows it on its row', async () => {
     await renderAt('/retro?fixture=retro-start');
@@ -882,7 +1054,7 @@ describe('Retro — actual time per occurrence (#56)', () => {
       await screen.findByRole('textbox', { name: /実績時間/ }),
       '0.25',
     );
-    await userEvent.click(screen.getByRole('button', { name: '残す' }));
+    await userEvent.click(screen.getByRole('button', { name: '足す' }));
     // The Task's row and the week's total follow (Issue #56).
     expect(
       screen.getByRole('rowheader', { name: '英語の多読 30 分' }).parentElement
@@ -918,7 +1090,7 @@ describe('Retro — actual time per occurrence (#56)', () => {
       await screen.findByRole('textbox', { name: /実績時間/ }),
       '0.5',
     );
-    await userEvent.click(screen.getByRole('button', { name: '残す' }));
+    await userEvent.click(screen.getByRole('button', { name: '足す' }));
     expect(reviewed().actualTimes.at(-1)).toMatchObject({
       date: '2026-10-02',
       hours: 0.5,

@@ -37,7 +37,9 @@ export type ActualTimeMode =
   /** 今日はここまで, with the day's hours if given. */
   | 'pause'
   /** 実績を残す after completing or pausing: the hours are the point. */
-  | 'record';
+  | 'record'
+  /** 実績を足す from Retro, where the time goes to a day of the Sprint. */
+  | 'add';
 
 type ActualTimeProps = {
   mode: ActualTimeMode;
@@ -66,6 +68,11 @@ const words: Record<
     title: '実績を残す',
     description: '今日この Task にかけた時間を足します。',
     submit: '残す',
+  },
+  add: {
+    title: '実績を足す',
+    description: '足す時間を入力します。',
+    submit: '足す',
   },
 };
 
