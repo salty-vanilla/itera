@@ -41,8 +41,11 @@ import { WeekRow } from './week-row';
 // week's Goals as the background, and 今日やる in front. There is no daily
 // capacity and nothing is judged as going over (invariant 25).
 //
-// Layout: one column, at most 720px; on wide screens the Goals move to the
-// right. The quick add is sticky at the bottom (above the tab bar under
+// Layout: one column, at most 720px. The Goals are the background: to the
+// right on wide screens, under Progress on medium ones, and after 今週の残り
+// under 768px, so that a phone's first screen reaches the Tasks to choose
+// (#100). 「割り込みを記録」 is at the top, right of 今日の残り, at every
+// width. The quick add is sticky at the bottom (above the tab bar under
 // 768px, no FAB); a Toast shows above it.
 
 export interface TodaySearch {
@@ -360,172 +363,179 @@ function TodayView({ data }: { data: TodayData }) {
           </aside>
         }
       >
-        <DayHeader
-          date={data.today}
-          meta={`Sprint ${data.number} · ${data.day.index}日目 / ${data.day.count}日`}
-        >
-          <Progress
-            label="今週の完了"
-            value={data.progress.done}
-            max={data.progress.total}
-            unit="件"
-            className="max-w-measure-read"
-          />
-          {/* Nothing chosen yet (no done and no closed row): the empty 今日やる already says so. */}
-          {(data.rows.length > 0 || data.closed.length > 0) && (
-            <p className="text-body text-ink-muted">
-              {remaining.count === 0
-                ? '今日の残りはありません'
-                : `今日の残り ${remaining.count}件 · 見込み ${formatPlanningTotal({ ...remaining, unestimatedSubtasks: 0 })}`}
-            </p>
-          )}
-          {data.lastDay && (
-            <div className="flex flex-wrap items-center gap-3">
-              <p className="text-body text-ink">
-                今日はこの Sprint の最終日です。
-              </p>
+        {/* A Toast above the stuck Quick Add covers what is just before it:
+            the room is left here (app/use-toast-clearance.ts). */}
+        <div className="flex flex-col gap-8 pb-[var(--toast-above-room,0px)]">
+          <DayHeader
+            date={data.today}
+            meta={`Sprint ${data.number} · ${data.day.index}日目 / ${data.day.count}日`}
+          >
+            <Progress
+              label="今週の完了"
+              value={data.progress.done}
+              max={data.progress.total}
+              unit="件"
+              className="max-w-measure-read"
+            />
+            {/* 「割り込みを記録」 on the right, reached without scrolling at
+              every width (#100); it stays there with no 今日の残り line. */}
+            <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+              {/* Nothing chosen yet (no done and no closed row): the empty 今日やる already says so. */}
+              {(data.rows.length > 0 || data.closed.length > 0) && (
+                <p className="me-auto text-body text-ink-muted">
+                  {remaining.count === 0
+                    ? '今日の残りはありません'
+                    : `今日の残り ${remaining.count}件 · 見込み ${formatPlanningTotal({ ...remaining, unestimatedSubtasks: 0 })}`}
+                </p>
+              )}
               <Button
-                onClick={() => {
-                  if (actions.beginRetro()) void navigate({ to: '/retro' });
-                }}
+                size="sm"
+                data-action="note-interrupt"
+                onClick={() => setInterrupting(true)}
               >
-                振り返りを始める
+                割り込みを記録
               </Button>
             </div>
-          )}
-        </DayHeader>
-
-        <div className="wide:hidden">{goals('today-goals')}</div>
-
-        <section aria-labelledby="today-rows" className="flex flex-col gap-2">
-          <h2 id="today-rows" className="text-heading text-ink">
-            今日やる
-          </h2>
-          {data.rows.length === 0 ? (
-            <p className="text-body text-ink-muted">
-              まだありません。下の「今週の残り」から「今日へ」で選びます。
-            </p>
-          ) : (
-            <ul className="flex flex-col border-t border-border-soft">
-              {data.rows.map((row) => (
-                <li key={row.selection.id} data-selection={row.selection.id}>
-                  <TodayRow {...rowProps(row)} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        {data.closed.length > 0 && (
-          <section
-            aria-labelledby="today-closed"
-            className="flex flex-col gap-2"
-          >
-            <h2 id="today-closed" className="text-subheading text-ink-muted">
-              今日はもうやらない
-            </h2>
-            <p className="text-help text-ink-muted">
-              明日から今週の残りに出ます。今日のうちに終わったら ○
-              で完了にできます。見送りは「続けて見送り」に数え、外したものは数えません。
-            </p>
-            <ul className="flex flex-col border-t border-border-soft">
-              {data.closed.map((row) => (
-                <li key={row.selection.id} data-selection={row.selection.id}>
-                  <TodayRow {...rowProps(row)} />
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        {data.continuation.length > 0 && (
-          <section
-            aria-labelledby="today-continuation"
-            className="flex flex-col gap-2"
-          >
-            <h2 id="today-continuation" className="text-subheading text-ink">
-              昨日の続き
-            </h2>
-            <ul className="flex flex-col border-t border-border-soft">
-              {data.continuation.map((item) => (
-                <li
-                  key={`${item.sprintTask.id}-${item.occurrence?.id ?? ''}`}
-                  data-item={item.sprintTask.id}
+            {data.lastDay && (
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-body text-ink">
+                  今日はこの Sprint の最終日です。
+                </p>
+                <Button
+                  onClick={() => {
+                    if (actions.beginRetro()) void navigate({ to: '/retro' });
+                  }}
                 >
-                  <WeekRow
-                    item={item}
-                    onOpen={() => openTask(item.task.id)}
-                    onEstimate={() => openEstimate(item.task.id)}
-                    onChoose={() => choose(item)}
-                  />
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+                  振り返りを始める
+                </Button>
+              </div>
+            )}
+          </DayHeader>
 
-        <section aria-labelledby="today-rest" className="flex flex-col gap-2">
-          <h2 id="today-rest" className="text-subheading text-ink">
-            今週の残り
-          </h2>
-          {data.rest.length === 0 ? (
-            <p className="text-body text-ink-muted">今週の残りはありません。</p>
-          ) : (
-            <ul className="flex flex-col border-t border-border-soft">
-              {data.rest.map((item) => (
-                <li
-                  key={`${item.sprintTask.id}-${item.occurrence?.id ?? ''}`}
-                  data-item={item.sprintTask.id}
-                >
-                  <WeekRow
-                    item={item}
-                    onOpen={() => openTask(item.task.id)}
-                    onEstimate={() => openEstimate(item.task.id)}
-                    onChoose={() => choose(item)}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section
-          aria-labelledby="today-interrupts"
-          // A Toast above the stuck Quick Add covers what is just before it:
-          // the room is left here (app/use-toast-clearance.ts).
-          className="flex flex-col gap-2 pb-[var(--toast-above-room,0px)]"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 id="today-interrupts" className="text-subheading text-ink">
-              割り込み
-            </h2>
-            <Button
-              size="sm"
-              data-action="note-interrupt"
-              onClick={() => setInterrupting(true)}
-            >
-              割り込みを記録
-            </Button>
+          <div className="hidden medium:block wide:hidden">
+            {goals('today-goals')}
           </div>
-          {data.interrupts.length === 0 ? (
-            <p className="text-help text-ink-muted">
-              予定外の出来事があれば、短くメモできます。
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-1 text-body text-ink">
-              {data.interrupts.map((n) => (
-                <li key={n.id} data-interrupt={n.id}>
-                  <InterruptRow
-                    note={n}
-                    time={formatTime(n.at, data.timeZone)}
-                    onEdit={() => setEditingNote(n)}
-                    onDelete={() => deleteInterrupt(n)}
-                  />
-                </li>
-              ))}
-            </ul>
+
+          <section aria-labelledby="today-rows" className="flex flex-col gap-2">
+            <h2 id="today-rows" className="text-heading text-ink">
+              今日やる
+            </h2>
+            {data.rows.length === 0 ? (
+              <p className="text-body text-ink-muted">
+                まだありません。下の「今週の残り」から「今日へ」で選びます。
+              </p>
+            ) : (
+              <ul className="flex flex-col border-t border-border-soft">
+                {data.rows.map((row) => (
+                  <li key={row.selection.id} data-selection={row.selection.id}>
+                    <TodayRow {...rowProps(row)} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {data.closed.length > 0 && (
+            <section
+              aria-labelledby="today-closed"
+              className="flex flex-col gap-2"
+            >
+              <h2 id="today-closed" className="text-subheading text-ink-muted">
+                今日はもうやらない
+              </h2>
+              <p className="text-help text-ink-muted">
+                明日から今週の残りに出ます。今日のうちに終わったら ○
+                で完了にできます。見送りは「続けて見送り」に数え、外したものは数えません。
+              </p>
+              <ul className="flex flex-col border-t border-border-soft">
+                {data.closed.map((row) => (
+                  <li key={row.selection.id} data-selection={row.selection.id}>
+                    <TodayRow {...rowProps(row)} />
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
-        </section>
+
+          {data.continuation.length > 0 && (
+            <section
+              aria-labelledby="today-continuation"
+              className="flex flex-col gap-2"
+            >
+              <h2 id="today-continuation" className="text-subheading text-ink">
+                昨日の続き
+              </h2>
+              <ul className="flex flex-col border-t border-border-soft">
+                {data.continuation.map((item) => (
+                  <li
+                    key={`${item.sprintTask.id}-${item.occurrence?.id ?? ''}`}
+                    data-item={item.sprintTask.id}
+                  >
+                    <WeekRow
+                      item={item}
+                      onOpen={() => openTask(item.task.id)}
+                      onEstimate={() => openEstimate(item.task.id)}
+                      onChoose={() => choose(item)}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          <section aria-labelledby="today-rest" className="flex flex-col gap-2">
+            <h2 id="today-rest" className="text-subheading text-ink">
+              今週の残り
+            </h2>
+            {data.rest.length === 0 ? (
+              <p className="text-body text-ink-muted">
+                今週の残りはありません。
+              </p>
+            ) : (
+              <ul className="flex flex-col border-t border-border-soft">
+                {data.rest.map((item) => (
+                  <li
+                    key={`${item.sprintTask.id}-${item.occurrence?.id ?? ''}`}
+                    data-item={item.sprintTask.id}
+                  >
+                    <WeekRow
+                      item={item}
+                      onOpen={() => openTask(item.task.id)}
+                      onEstimate={() => openEstimate(item.task.id)}
+                      onChoose={() => choose(item)}
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {data.interrupts.length > 0 && (
+            <section
+              aria-labelledby="today-interrupts"
+              className="flex flex-col gap-2"
+            >
+              <h2 id="today-interrupts" className="text-subheading text-ink">
+                割り込み
+              </h2>
+              <ul className="flex flex-col gap-1 text-body text-ink">
+                {data.interrupts.map((n) => (
+                  <li key={n.id} data-interrupt={n.id}>
+                    <InterruptRow
+                      note={n}
+                      time={formatTime(n.at, data.timeZone)}
+                      onEdit={() => setEditingNote(n)}
+                      onDelete={() => deleteInterrupt(n)}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* The background under 768px, after the Tasks (#100). */}
+          <div className="medium:hidden">{goals('today-goals-compact')}</div>
+        </div>
 
         {/* Stuck to the bottom of the screen (above the tab bar under 768px,
             DESIGN.md Layout); last in the column so that it stays at the

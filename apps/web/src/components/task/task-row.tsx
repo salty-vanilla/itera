@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 
 // DESIGN.md Components › Task Row. One Task, the same structure in Backlog,
 // Sprint and Today: a control (○ complete / □ choose / none), the title
-// (`task`, one line), Task Metadata, the Estimate at the right end and the
+// (`task`, two lines under 768px and one from it), Task Metadata, the Estimate at the right end and the
 // row's `…` actions. Rows are separated by `border-soft`, with no gap, no
 // corners and no Card.
 //
@@ -63,7 +63,10 @@ function TaskRow({
   className,
 }: TaskRowProps) {
   const titleClass = cn(
-    'min-w-0 truncate text-left text-task',
+    'min-w-0 text-left text-task',
+    // Up to two lines under 768px, where the control and the values take
+    // the room of a long title; one line from 768px (DESIGN.md Task Row).
+    'line-clamp-2 medium:block medium:truncate',
     done ? 'text-ink-subtle line-through' : 'text-ink',
   );
   return (

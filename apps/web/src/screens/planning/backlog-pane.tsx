@@ -307,7 +307,8 @@ function CandidateItem({
           type="button"
           onClick={onOpen}
           data-row-focus
-          className="min-w-0 truncate text-left text-task text-ink focus-visible:focus-ring"
+          // Two lines under 768px, one from it (DESIGN.md Task Row).
+          className="line-clamp-2 min-w-0 text-left text-task text-ink focus-visible:focus-ring medium:block medium:truncate"
         >
           {task.title}
         </button>
