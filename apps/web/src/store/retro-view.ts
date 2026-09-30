@@ -2,6 +2,7 @@
 // The screen reads it through `useRetro`; nothing here is stored. The facts
 // are never edited in Retro and carry no score (invariant 40).
 import {
+  carryOverPlaces,
   criterionResult,
   criterionView,
   nextUnconfirmedSprintStart,
@@ -10,6 +11,7 @@ import {
   sprintNumber,
   type AreaColor,
   type AreaId,
+  type CarryOverPlaces,
   type CriterionResult,
   type CriterionView,
   type LocalDate,
@@ -99,6 +101,8 @@ export interface RetroData {
   readonly actualDate: LocalDate;
   /** Done, skipped and missed occurrences, by date (F2, F14, F24). */
   readonly occurrences: readonly RetroOccurrence[];
+  /** Where the carried-over Tasks are now (#107, F35). */
+  readonly carryOver: CarryOverPlaces;
 }
 
 const NO_AREA: RetroArea = { id: null, name: '領域なし', color: 'none' };
@@ -217,6 +221,11 @@ export function retroData(
         date: f.doneOn ?? f.occurrence.scheduledDate,
       },
     })),
+    carryOver: carryOverPlaces(
+      sprint,
+      records.sprints.find((s) => s.previousSprintId === sprint.id),
+      tasks,
+    ),
   };
 }
 

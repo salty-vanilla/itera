@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { criterionName } from '@/lib/criterion-text';
 import type { RetroBlocker, RetroData } from '@/store/retro-view';
-import { DECISION_WORDS } from './retro-words';
+import { carryOverWords, DECISION_WORDS } from './retro-words';
 
 // 「振り返りを完了」 (docs/design/patterns.md Retro › 引き継ぐ, Issue #106).
 // At the end of 引き継ぐ, where the other stages have their 次へ button, and
@@ -95,13 +95,6 @@ function CompleteRetro({ data, onComplete }: CompleteRetroProps) {
   );
 }
 
-/** Where the Sprint's carry-overs are, in the words of 引き継ぐ (#107). */
-function carryOverWords(count: number): string {
-  return count === 0
-    ? 'なし'
-    : `${count}件は Backlog に残っています。次の計画の「持ち越し」に候補として出ます。`;
-}
-
 type CompleteDialogProps = CompleteRetroProps & {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -173,7 +166,9 @@ function CompleteDialog({
             </dd>
             <dt className="text-ink-muted">持ち越し</dt>
             <dd className="text-ink">
-              {carryOverWords(data.facts.carriedOver.length)}
+              {data.carryOver.total === 0
+                ? 'なし'
+                : carryOverWords(data.carryOver)}
             </dd>
           </dl>
         </DialogBody>

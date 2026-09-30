@@ -1,4 +1,5 @@
 import type {
+  CarryOverPlaces,
   RetroDecision,
   RetroPin,
   SelfAssessment,
@@ -110,3 +111,25 @@ export const DECISION_WORDS: Readonly<Record<RetroDecision, string>> = {
   end: '終える',
   replace: '置き換える',
 };
+
+/**
+ * Where the carried-over Tasks are (#107): the first line of 引き継ぐ and the
+ * Dialog of 「振り返りを完了」 say it in these same words. Retro moves none
+ * of them (invariant 20).
+ */
+export function carryOverWords(places: CarryOverPlaces): string {
+  // Split, it keeps to one short sentence per place.
+  const split = places.candidates < places.total;
+  const parts = [
+    places.inNext > 0 && `${places.inNext}件は次の計画に入っています。`,
+    places.candidates > 0 &&
+      (split
+        ? `${places.candidates}件は Backlog に残り、次の計画の「持ち越し」に候補として出ます。`
+        : `${places.candidates}件は Backlog に残っています。次の計画の「持ち越し」に候補として出ます。`),
+    places.completed > 0 && `${places.completed}件は完了しています。`,
+    places.archived > 0 && `${places.archived}件はアーカイブしています。`,
+  ].filter((p) => p !== false);
+  return parts.length > 1
+    ? `${places.total}件のうち、${parts.join('')}`
+    : parts.join('');
+}
