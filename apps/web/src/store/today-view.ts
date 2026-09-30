@@ -93,8 +93,31 @@ export function activeSprintOf(records: Records): Sprint | undefined {
   return records.sprints.find((s) => s.state === 'active');
 }
 
-const OPEN_OR_DONE = new Set(['selected', 'started', 'done', 'skipped']);
+/**
+ * The resolutions of a selection that Today lists in 今日やる. The Backlog's
+ * 「今日」 (Issue #94) is the same set, so that the two agree.
+ */
+export type ListedResolution = 'selected' | 'started' | 'done' | 'skipped';
+export function isListedResolution(
+  resolution: DailySelection['resolution'],
+): resolution is ListedResolution {
+  return (
+    resolution === 'selected' ||
+    resolution === 'started' ||
+    resolution === 'done' ||
+    resolution === 'skipped'
+  );
+}
+
 const CLOSED = new Set(['paused', 'deferred', 'removed']);
+
+/** A selection closed for the day: back among the week's remaining. */
+export type ClosedResolution = 'paused' | 'deferred' | 'removed';
+export function isClosedResolution(
+  resolution: DailySelection['resolution'],
+): resolution is ClosedResolution {
+  return CLOSED.has(resolution);
+}
 
 export function todayData(
   records: Records,
@@ -157,10 +180,12 @@ export function todayData(
     );
   const rows = [
     ...todays.filter(
-      (s) => OPEN_OR_DONE.has(s.resolution) && s.origin !== 'backlogCompletion',
+      (s) =>
+        isListedResolution(s.resolution) && s.origin !== 'backlogCompletion',
     ),
     ...todays.filter(
-      (s) => OPEN_OR_DONE.has(s.resolution) && s.origin === 'backlogCompletion',
+      (s) =>
+        isListedResolution(s.resolution) && s.origin === 'backlogCompletion',
     ),
   ].flatMap(row);
   const closed = todays.filter((s) => CLOSED.has(s.resolution)).flatMap(row);

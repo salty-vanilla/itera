@@ -18,7 +18,7 @@ export function useAddToToday() {
     toast.show({
       kind: 'added-to-today',
       title: `「${title}」を今日やるに入れました`,
-      description: '今週の Sprint にも入りました。',
+      description: '今週にも入りました。',
       action: {
         label: '今日を開く',
         onClick: () => void navigate({ to: '/today' }),

@@ -682,7 +682,7 @@ describe('Backlog', () => {
     const toast = (
       await screen.findByText('「本棚を整理する」を今日やるに入れました')
     ).closest<HTMLElement>('[role="dialog"]')!;
-    expect(toast.textContent).toContain('今週の Sprint にも入りました。');
+    expect(toast.textContent).toContain('今週にも入りました。');
     // Neither a confirmation nor a capacity warning, and no 元に戻す.
     expect(screen.queryByRole('alertdialog')).toBeNull();
     expect(
@@ -1047,6 +1047,9 @@ describe('Backlog — the detail of a Task in 今日やる (#94)', () => {
     expect(selectionOf('task-interview')?.resolution).toBe('deferred');
     section = await now();
     expect(section.textContent).not.toContain('今日やるに入っています');
+    expect(section.textContent).toContain(
+      '今日は見送りました。明日から今週の残りに出ます。',
+    );
     const row = within(list())
       .getByText('顧客インタビューの設計')
       .closest('li')!;
@@ -1061,23 +1064,55 @@ describe('Backlog — the detail of a Task in 今日やる (#94)', () => {
       within(section).getByRole('button', { name: '今日から外す' }),
     );
     expect(selectionOf('task-interview')?.resolution).toBe('removed');
+    expect(section.textContent).toContain('今日から外しました。');
   });
 
-  it('今日はここまで opens the actual time surface, then pauses', async () => {
+  it('今日はここまで asks for the actual time in the section, without another surface, then pauses', async () => {
     await renderAt('/backlog?fixture=backlog-detail&task=task-dataset');
     const detail = await screen.findByRole('dialog', {
       name: '実験データの前処理',
     });
+    const section = within(detail).getByRole('region', { name: '今日と今週' });
     await userEvent.click(
-      within(detail).getByRole('button', { name: '今日はここまで' }),
+      within(section).getByRole('button', { name: '今日はここまで' }),
     );
-    const surface = await screen.findByRole('dialog', {
-      name: /今日はここまで: /,
-    });
-    await userEvent.click(
-      within(surface).getByRole('button', { name: '今日はここまで' }),
-    );
+    // No Drawer inside the Drawer.
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    const field = within(section).getByRole('textbox', { name: /実績時間/ });
+    await waitFor(() => expect(document.activeElement).toBe(field));
+    // A wrong value stays in the field with its error.
+    await userEvent.type(field, '0{Enter}');
+    expect(within(section).getByText(/0 より大きい時間/)).toBeTruthy();
+    expect(selectionOf('task-dataset')?.resolution).toBe('started');
+    await userEvent.clear(field);
+    await userEvent.type(field, '1.5{Enter}');
     expect(selectionOf('task-dataset')?.resolution).toBe('paused');
+    // The hours are optional: this is the same record as the row's.
+    const sprint = records().sprints.find((s) => s.state === 'active')!;
+    expect(sprint.actualTimes.at(-1)?.hours).toBe(1.5);
+    // What happened stays.
+    expect(section.textContent).toContain(
+      '今日はここまでにしました。明日から今週の残りに出ます。',
+    );
+  });
+
+  it('Esc leaves the actual time field, not the detail', async () => {
+    await renderAt('/backlog?fixture=backlog-detail&task=task-dataset');
+    const detail = await screen.findByRole('dialog', {
+      name: '実験データの前処理',
+    });
+    const section = within(detail).getByRole('region', { name: '今日と今週' });
+    await userEvent.click(
+      within(section).getByRole('button', { name: '今日はここまで' }),
+    );
+    await userEvent.keyboard('{Escape}');
+    expect(
+      within(section).queryByRole('textbox', { name: /実績時間/ }),
+    ).toBeNull();
+    expect(
+      screen.getByRole('dialog', { name: '実験データの前処理' }),
+    ).toBeTruthy();
+    expect(selectionOf('task-dataset')?.resolution).toBe('started');
   });
 });
 

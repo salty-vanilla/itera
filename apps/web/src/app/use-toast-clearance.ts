@@ -99,7 +99,16 @@ export function useToastClearance(mainRef: RefObject<HTMLElement | null>) {
   useEffect(() => {
     const remember = (event: Event) => {
       if (event.target instanceof Element) {
-        last.current = { target: event.target, at: Date.now() };
+        // An item of a Menu lies outside the screen, in a portal: the row
+        // that opened the Menu is what was pressed.
+        const menu = event.target.closest('[role="menu"]');
+        const opener =
+          menu === null
+            ? null
+            : document.getElementById(
+                menu.getAttribute('aria-labelledby') ?? '',
+              );
+        last.current = { target: opener ?? event.target, at: Date.now() };
       }
     };
     document.addEventListener('pointerdown', remember, true);
