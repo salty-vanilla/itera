@@ -47,6 +47,11 @@ import {
   SuggestionOutcome,
 } from '@/components/task/estimate-suggestion';
 import { Estimate } from '@/components/task/estimate';
+import {
+  ACTUAL_HOURS_ERROR,
+  ACTUAL_HOURS_HINT,
+  readActualHours,
+} from '@/lib/actual-hours';
 import { formatDate, formatTime } from '@/lib/date-format';
 import { formatHours, formatRange } from '@/lib/time-format';
 import type { BacklogData, BacklogItem } from '@/store/backlog-view';
@@ -210,10 +215,19 @@ function dayText(
 }
 
 /** The line under 今日と今週 after the Task was closed for the day. */
-const closedText: Record<NonNullable<BacklogItem['closedToday']>, string> = {
-  paused: '今日はここまでにしました。明日から今週の残りに出ます。',
-  deferred: '今日は見送りました。明日から今週の残りに出ます。',
-  removed: '今日から外しました。',
+const closedText: Record<
+  NonNullable<BacklogItem['closedToday']>,
+  { result: string; rest?: string }
+> = {
+  paused: {
+    result: '今日はここまでにしました。',
+    rest: '明日から今週の残りに出ます。',
+  },
+  deferred: {
+    result: '今日は見送りました。',
+    rest: '明日から今週の残りに出ます。',
+  },
+  removed: { result: '今日から外しました。' },
 };
 
 type Outcome =
@@ -286,10 +300,9 @@ function TaskDetail({
   function submitPause(event: FormEvent) {
     event.preventDefault();
     if (facts.today === undefined) return;
-    const text = pauseText.trim();
-    const hours = text === '' ? undefined : Number(text);
-    if (hours !== undefined && !(Number.isFinite(hours) && hours > 0)) {
-      setPauseError('0 より大きい時間を数字で入れてください（例: 1.5）');
+    const hours = readActualHours(pauseText);
+    if (hours === null) {
+      setPauseError(ACTUAL_HOURS_ERROR);
       pauseInputRef.current?.focus();
       return;
     }
@@ -626,9 +639,20 @@ function TaskDetail({
                 role="status"
                 className="text-body text-ink [text-wrap:pretty] [word-break:auto-phrase]"
               >
-                {facts.today !== undefined
-                  ? dayText(facts.today, timeZone)
-                  : closedText[facts.closedToday!]}
+                {facts.today !== undefined ? (
+                  dayText(facts.today, timeZone)
+                ) : (
+                  <>
+                    {closedText[facts.closedToday!].result}
+                    {closedText[facts.closedToday!].rest !== undefined && (
+                      // The consequence on its own line, so that no line ends
+                      // with a word's last letters.
+                      <span className="block text-help text-ink-muted">
+                        {closedText[facts.closedToday!].rest}
+                      </span>
+                    )}
+                  </>
+                )}
               </p>
             )}
             <div className="flex flex-wrap items-center gap-2">
@@ -657,12 +681,10 @@ function TaskDetail({
                   開始
                 </Button>
               )}
-              {facts.today?.resolution === 'started' && (
-                <Button
-                  ref={pauseButtonRef}
-                  aria-expanded={pausing}
-                  onClick={() => (pausing ? closePause() : setPausing(true))}
-                >
+              {/* While the field is open its own 今日はここまで records: two of
+                  the same look would do different things. */}
+              {facts.today?.resolution === 'started' && !pausing && (
+                <Button ref={pauseButtonRef} onClick={() => setPausing(true)}>
                   今日はここまで
                 </Button>
               )}
@@ -716,7 +738,7 @@ function TaskDetail({
                 </Link>
               )}
             </div>
-            {pausing && (
+            {pausing && facts.today?.resolution === 'started' && (
               <form
                 noValidate
                 onSubmit={submitPause}
@@ -733,7 +755,7 @@ function TaskDetail({
                 <Field
                   label="実績時間"
                   necessity="optional"
-                  description="時間単位（例: 1.5）。記録は残り、あとから足せます"
+                  description={ACTUAL_HOURS_HINT}
                   error={pauseError}
                 >
                   <TextInput
