@@ -3,12 +3,13 @@ import { Link } from '@tanstack/react-router';
 import { Info } from 'lucide-react';
 import { useId } from 'react';
 import { Button } from '@/components/ui/button';
-import { semanticIcons } from '@/components/ui/icon';
 import { Switch } from '@/components/ui/switch';
-import { AvailableHoursField } from '@/components/sprint/capacity-indicator';
+import {
+  AvailableHoursField,
+  CapacityStatement,
+} from '@/components/sprint/capacity-indicator';
 import { BOUND_WORDS, criterionName } from '@/lib/criterion-text';
 import { formatDifference, formatHours, formatRange } from '@/lib/time-format';
-import { cn } from '@/lib/utils';
 import { weekCall, weekText } from '@/lib/week-text';
 import type { PlanningData } from '@/store/planning-view';
 import { planSummary } from './plan-summary';
@@ -16,11 +17,11 @@ import { planSummary } from './plan-summary';
 // The head of 確かめる (Issue #93, owner decision S4): what the 確定 Dialog
 // sums up, from the same `planSummary`, so that the first screen says
 // whether the plan fits. In order: whether it fits with the planned total
-// and the Tasks, the available hours (a field while none are entered),
+// and the Tasks, the available hours (the one field for them in 確かめる),
 // what may push the total over, the Tasks left out of the total (each opens
-// its Estimate, or its detail for subtasks), the Areas without a Goal (written in 整える), and the
-// planning criterion with its Switch and effect (#105). The Area blocks
-// under it are for reading.
+// its Estimate, or its detail for subtasks), the Areas without a Goal
+// (written in 整える), and the planning criterion with its Switch and effect
+// (#105). The Area blocks under it are for reading.
 
 type CheckSummaryProps = {
   data: PlanningData;
@@ -32,20 +33,6 @@ type CheckSummaryProps = {
   onOpenTask: (taskId: TaskId) => void;
 };
 
-const toneClass = {
-  ok: 'text-ink',
-  tight: 'text-warning',
-  over: 'text-danger',
-  unknown: 'text-ink-muted',
-} as const;
-
-const toneIcon = {
-  ok: semanticIcons.done,
-  tight: semanticIcons.warning,
-  over: semanticIcons.error,
-  unknown: semanticIcons.info,
-} as const;
-
 function CheckSummary({
   data,
   onApplyCriterion,
@@ -54,8 +41,6 @@ function CheckSummary({
   onOpenTask,
 }: CheckSummaryProps) {
   const summary = planSummary(data);
-  const { statement } = summary;
-  const Icon = toneIcon[statement.tone];
   const week = weekCall(data.week, data.number);
   const ids = useId();
   return (
@@ -68,29 +53,14 @@ function CheckSummary({
         <h2 id={`${ids}-heading`} className="text-label text-ink-muted">
           要約
         </h2>
-        <p
-          className={cn(
-            'flex items-start gap-2 text-subheading',
-            toneClass[statement.tone],
-          )}
-        >
-          <Icon
-            aria-hidden
-            className="mt-1 size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
-          />
-          {statement.text}
-        </p>
+        <CapacityStatement
+          statement={summary.statement}
+          strong
+          className="text-subheading"
+        />
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-1 text-body">
           <dt className="text-ink-muted">計画値の合計</dt>
           <dd className="text-num-m text-ink">{summary.total}</dd>
-          <dt className="text-ink-muted">使える時間</dt>
-          <dd className="text-ink">
-            {summary.available === undefined ? (
-              '未入力'
-            ) : (
-              <span className="text-num-m">{summary.available}</span>
-            )}
-          </dd>
           <dt className="text-ink-muted">タスク</dt>
           <dd className="text-ink">
             {summary.taskCount}件
@@ -102,15 +72,14 @@ function CheckSummary({
         {summary.leftOut !== undefined && (
           <p className="text-help text-ink-muted">{summary.leftOut}</p>
         )}
-        {summary.available === undefined && (
-          <div className="max-w-measure-read">
-            <AvailableHoursField
-              value={undefined}
-              onChange={onAvailableHours}
-              description={weekText(week, '、計画に使える時間。本人が決めます')}
-            />
-          </div>
-        )}
+        {/* The one field for the hours in 確かめる; the right pane has none. */}
+        <div className="max-w-pane-side">
+          <AvailableHoursField
+            value={data.totals.capacity?.availableHours}
+            onChange={onAvailableHours}
+            description={weekText(week, '、計画に使える時間。本人が決めます')}
+          />
+        </div>
       </div>
 
       <Drivers data={data} />

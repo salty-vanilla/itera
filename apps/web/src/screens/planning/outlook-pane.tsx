@@ -16,7 +16,8 @@ import { weekCall } from '@/lib/week-text';
 
 type OutlookPaneProps = {
   data: PlanningData;
-  onAvailableHours: (hours: number | null) => boolean;
+  /** Absent: no field for the available hours (確かめる has its own). */
+  onAvailableHours?: ((hours: number | null) => boolean) | undefined;
   className?: string | undefined;
 };
 

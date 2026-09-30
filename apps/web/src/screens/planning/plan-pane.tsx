@@ -103,7 +103,7 @@ function PlanPane({
           {pickGuide(week, data.candidates.recurring.length > 0)}
         </p>
       )}
-      {stage === 'check' && summary}
+      {summary}
       {/*
         From 1920px (bp-xl) the Area blocks sit in 1 to 3 columns, as many as
         fit: a column is at least 26rem and at least a third of the row (less

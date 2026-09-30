@@ -5,7 +5,7 @@ import {
   useRouter,
   useSearch,
 } from '@tanstack/react-router';
-import { useEffect, useId, useRef, useState } from 'react';
+import { Fragment, useEffect, useId, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Drawer,
@@ -18,7 +18,7 @@ import { Tag } from '@/components/ui/tag';
 import { useToast } from '@/components/ui/toast';
 import {
   capacityHeadline,
-  capacityHeadlineText,
+  capacityHeadlineSentences,
 } from '@/components/sprint/capacity-indicator';
 import {
   SprintHeader,
@@ -170,7 +170,13 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
     }, true);
 
   const outlook = (
-    <OutlookPane data={data} onAvailableHours={actions.setAvailableHours} />
+    <OutlookPane
+      data={data}
+      // 確かめる takes the hours in its summary only: one field (#93).
+      onAvailableHours={
+        stage === 'check' ? undefined : actions.setAvailableHours
+      }
+    />
   );
 
   const confirm = () => {
@@ -384,15 +390,17 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
             data={data}
             stage={stage}
             summary={
-              <CheckSummary
-                data={data}
-                onApplyCriterion={(applied) =>
-                  setSearch({ criterion: applied ? undefined : 'off' })
-                }
-                onAvailableHours={actions.setAvailableHours}
-                onEstimateTask={openEstimate}
-                onOpenTask={openTask}
-              />
+              stage === 'check' && (
+                <CheckSummary
+                  data={data}
+                  onApplyCriterion={(applied) =>
+                    setSearch({ criterion: applied ? undefined : 'off' })
+                  }
+                  onAvailableHours={actions.setAvailableHours}
+                  onEstimateTask={openEstimate}
+                  onOpenTask={openTask}
+                />
+              )
             }
             addedTaskId={addedTaskId}
             onOpenTask={openTask}
@@ -466,14 +474,24 @@ function CapacitySummary({ data }: { data: PlanningData }) {
       </span>
     );
   }
-  const headline = capacityHeadlineText(capacityHeadline(capacity));
+  const sentences = [
+    ...capacityHeadlineSentences(capacityHeadline(capacity)),
+    ...(capacity.status === 'exceeds'
+      ? ['下限でも超える']
+      : capacity.status === 'within'
+        ? ['収まる']
+        : []),
+  ];
+  // Each sentence stays whole: the line wraps only at 「·」, so a number
+  // never leaves its words.
   return (
     <span className={capacity.status === 'exceeds' ? 'text-danger' : undefined}>
-      {capacity.status === 'exceeds'
-        ? `${headline} · 下限でも超える`
-        : capacity.status === 'mayExceed'
-          ? headline
-          : `${headline} · 収まる`}
+      {sentences.map((sentence, i) => (
+        <Fragment key={sentence}>
+          {i > 0 && ' · '}
+          <span className="whitespace-nowrap">{sentence}</span>
+        </Fragment>
+      ))}
     </span>
   );
 }

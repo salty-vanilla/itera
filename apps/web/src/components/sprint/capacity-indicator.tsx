@@ -144,11 +144,18 @@ function partText({ lead, value, tail }: HeadlinePart): string {
   return value === undefined ? `${lead}${tail}` : `${lead} ${value} ${tail}`;
 }
 
-/** The headline on one line: 「残り 1 〜 3h」「下限なら 2.25h 残る · 上限なら 0.75h 超える」. */
-export function capacityHeadlineText(headline: CapacityHeadline): string {
+/** 「残り 1 〜 3h」, or the two sentences 「下限なら 2.25h 残る」「上限なら 0.75h 超える」. */
+export function capacityHeadlineSentences(
+  headline: CapacityHeadline,
+): readonly string[] {
   return headline.kind === 'range'
-    ? `${headline.label} ${headline.value}`
-    : `${partText(headline.lower)} · ${partText(headline.upper)}`;
+    ? [`${headline.label} ${headline.value}`]
+    : [partText(headline.lower), partText(headline.upper)];
+}
+
+/** The headline on one line: 「下限なら 2.25h 残る · 上限なら 0.75h 超える」. */
+export function capacityHeadlineText(headline: CapacityHeadline): string {
+  return capacityHeadlineSentences(headline).join(' · ');
 }
 
 const toneClass = {
@@ -165,6 +172,42 @@ const toneIcon = {
   unknown: semanticIcons.info,
 } as const;
 
+/**
+ * The state sentence: its icon and words in its tone, never the colour
+ * alone. Shared by the Capacity, the 確かめる summary and the 確定 Dialog
+ * (#93). `strong`: an ok state in `ink`, where the sentence leads.
+ */
+function CapacityStatement({
+  statement,
+  as: Tag = 'p',
+  strong = false,
+  className,
+}: {
+  statement: ReturnType<typeof capacityStatement>;
+  as?: 'p' | 'li';
+  strong?: boolean;
+  className?: string | undefined;
+}) {
+  const Icon = toneIcon[statement.tone];
+  return (
+    <Tag
+      className={cn(
+        'flex items-start gap-1 text-body',
+        strong && statement.tone === 'ok'
+          ? 'text-ink'
+          : toneClass[statement.tone],
+        className,
+      )}
+    >
+      <Icon
+        aria-hidden
+        className="mt-1 size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
+      />
+      {statement.text}
+    </Tag>
+  );
+}
+
 function CapacityIndicator({
   total,
   capacity,
@@ -175,7 +218,6 @@ function CapacityIndicator({
   className,
 }: CapacityIndicatorProps) {
   const statement = capacityStatement(capacity);
-  const Icon = toneIcon[statement.tone];
   const leftOut = formatLeftOut(total);
   const headingId = useId();
   return (
@@ -196,18 +238,7 @@ function CapacityIndicator({
               over={capacity.status === 'exceeds'}
             />
           )}
-          <p
-            className={cn(
-              'flex items-center gap-1 text-body',
-              toneClass[statement.tone],
-            )}
-          >
-            <Icon
-              aria-hidden
-              className="size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
-            />
-            {statement.text}
-          </p>
+          <CapacityStatement statement={statement} />
         </div>
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 text-body">
           <dt className="whitespace-nowrap text-ink-muted">計画値の合計</dt>
@@ -290,6 +321,8 @@ function Headline({
             <span className="text-num-l text-ink">{part.value}</span>
           )}
           <span className="text-label text-ink-muted">{part.tail}</span>
+          {/* A pause between the two sentences when read out. */}
+          <span className="sr-only">。</span>
         </span>
       ))}
     </p>
@@ -421,5 +454,5 @@ function CapacityBar({
   );
 }
 
-export { AvailableHoursField, CapacityIndicator };
+export { AvailableHoursField, CapacityIndicator, CapacityStatement };
 export type { AreaSegment, CapacityIndicatorProps };

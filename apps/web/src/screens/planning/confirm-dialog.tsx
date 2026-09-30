@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { semanticIcons } from '@/components/ui/icon';
+import { CapacityStatement } from '@/components/sprint/capacity-indicator';
 import type { PlanningData } from '@/store/planning-view';
 import { planSummary } from './plan-summary';
 
@@ -37,8 +37,6 @@ function ConfirmDialog({
   const { number } = data;
   const summary = planSummary(data);
   const { statement, goals, leftOut } = summary;
-  const Warning =
-    statement.tone === 'over' ? semanticIcons.error : semanticIcons.warning;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="md">
@@ -90,19 +88,7 @@ function ConfirmDialog({
             leftOut !== undefined) && (
             <ul className="flex flex-col gap-1 text-body">
               {(statement.tone === 'tight' || statement.tone === 'over') && (
-                <li
-                  className={
-                    statement.tone === 'over'
-                      ? 'flex items-center gap-1 text-danger'
-                      : 'flex items-center gap-1 text-warning'
-                  }
-                >
-                  <Warning
-                    aria-hidden
-                    className="size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
-                  />
-                  {statement.text}
-                </li>
+                <CapacityStatement as="li" statement={statement} />
               )}
               {leftOut !== undefined && (
                 <li className="text-ink-muted">{leftOut}</li>
