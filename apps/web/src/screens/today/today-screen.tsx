@@ -2,17 +2,18 @@ import {
   id,
   type AreaId,
   type DailySelectionId,
+  type LocalDate,
   type TaskId,
 } from '@itera/domain';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Progress } from '@/components/ui/progress';
 import { AreaSelect } from '@/components/task/area-select';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
-import { formatDate, formatDateHeading, formatTime } from '@/lib/date-format';
+import { formatDate, formatTime } from '@/lib/date-format';
 import { formatHours, formatPlanningTotal } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { cn } from '@/lib/utils';
@@ -22,9 +23,10 @@ import { useBacklog } from '@/store/use-backlog';
 import { useTaskActions } from '@/store/use-task-actions';
 import { useToday, useTodayActions } from '@/store/use-today';
 import { TaskDetail } from '../backlog/task-detail';
-import { ScreenFrame } from '../screen-frame';
+import { DayHeader, dateSearchOf } from './day-header';
 import { ActualTime, type ActualTimeMode } from './actual-time';
 import { InterruptSheet } from './interrupt-sheet';
+import { OtherDay } from './other-day';
 import { TodayRow } from './today-row';
 import { WeekRow } from './week-row';
 
@@ -37,6 +39,8 @@ import { WeekRow } from './week-row';
 // right. Under 768px the quick add is sticky above the tab bar (no FAB).
 
 export interface TodaySearch {
+  /** A day other than today, read only (#90). Absent: today. */
+  readonly date?: LocalDate | undefined;
   /** The open Task (its detail). */
   readonly task?: TaskId;
 }
@@ -44,12 +48,24 @@ export interface TodaySearch {
 export function validateTodaySearch(
   search: Record<string, unknown>,
 ): TodaySearch {
-  return typeof search.task === 'string'
-    ? { task: id<'Task'>(search.task) }
-    : {};
+  return {
+    ...dateSearchOf(search),
+    ...(typeof search.task === 'string'
+      ? { task: id<'Task'>(search.task) }
+      : {}),
+  };
 }
 
+// Any day opens by `?date=` (#90); today is the screen without it, and a
+// date that is today opens today as well.
 function TodayScreen() {
+  const { date } = useSearch({ from: '/today' });
+  const { today } = useAppOverview();
+  if (date !== undefined && date !== today) return <OtherDay date={date} />;
+  return <ThisDay />;
+}
+
+function ThisDay() {
   const data = useToday();
   // The day itself is started by the app (useSystemDay, #54).
   if (data === undefined) return <NoActiveSprint />;
@@ -65,15 +81,20 @@ function TodayScreen() {
  */
 function BeforeStart({ data }: { data: TodayData }) {
   return (
-    <ScreenFrame heading={formatDateHeading(data.today)}>
+    <DayFrame date={data.today}>
       <p className="text-body text-ink-muted">
         Sprint {data.number} は {formatDate(data.sprint.start)} から始まります。
+        {/* One step to the Sprint (#90). */}
+        <Link
+          to="/sprint"
+          search={{ sprint: data.number }}
+          className="ms-1 text-link underline focus-visible:focus-ring"
+        >
+          Sprint {data.number} を開く
+        </Link>
       </p>
       {data.goals.length > 0 && (
-        <section
-          aria-labelledby="before-goals"
-          className="mt-6 flex flex-col gap-3"
-        >
+        <section aria-labelledby="before-goals" className="flex flex-col gap-3">
           <h2 id="before-goals" className="text-subheading text-ink-muted">
             今週の Goal
           </h2>
@@ -87,7 +108,7 @@ function BeforeStart({ data }: { data: TodayData }) {
           </ul>
         </section>
       )}
-    </ScreenFrame>
+    </DayFrame>
   );
 }
 
@@ -96,7 +117,7 @@ function NoActiveSprint() {
   const { today, reviewSprint, planningSprint } = useAppOverview();
   const link = 'ms-1 text-link underline focus-visible:focus-ring';
   return (
-    <ScreenFrame heading={formatDateHeading(today)}>
+    <DayFrame date={today}>
       <p className="text-body text-ink-muted">
         {/* A week in Retro comes first, even when the next is being planned.
             It is not 「今週」: that is the next one to start (#90). */}
@@ -118,7 +139,23 @@ function NoActiveSprint() {
           '実行中の Sprint はありません。'
         )}
       </p>
-    </ScreenFrame>
+    </DayFrame>
+  );
+}
+
+/** A plain day's column: its heading, then a few lines. */
+function DayFrame({
+  date,
+  children,
+}: {
+  date: LocalDate;
+  children: ReactNode;
+}) {
+  return (
+    <div className="mx-auto flex w-full max-w-pane-today flex-col gap-6 px-4 pt-6 pb-16 medium:px-6 medium:pt-8">
+      <DayHeader date={date} />
+      {children}
+    </div>
   );
 }
 
@@ -276,13 +313,10 @@ function TodayView({ data }: { data: TodayData }) {
   return (
     <div className="mx-auto flex min-h-full w-full max-w-[calc(var(--spacing-pane-today)+var(--spacing-pane-side)+var(--spacing-12))] gap-12 wide:px-6">
       <div className="flex min-w-0 flex-1 flex-col gap-8 px-4 pt-6 medium:mx-auto medium:max-w-pane-today medium:px-6 medium:pt-8 wide:mx-0 wide:px-0">
-        <header className="flex flex-col gap-3">
-          <p className="text-meta text-ink-muted">
-            Sprint {data.number} · {data.day.index}日目 / {data.day.count}日
-          </p>
-          <h1 className="text-display-m text-ink">
-            {formatDateHeading(data.today)}
-          </h1>
+        <DayHeader
+          date={data.today}
+          meta={`Sprint ${data.number} · ${data.day.index}日目 / ${data.day.count}日`}
+        >
           <Progress
             label="今週の完了"
             value={data.progress.done}
@@ -312,7 +346,7 @@ function TodayView({ data }: { data: TodayData }) {
               </Button>
             </div>
           )}
-        </header>
+        </DayHeader>
 
         <div className="wide:hidden">{goals('today-goals')}</div>
 

@@ -73,7 +73,7 @@ export const BLOCKER_WORDS: Readonly<Record<RetroBlocker, string>> = {
 
 export interface RetroSearch {
   /** The Sprint to open, by number (#90). Absent: the current one. */
-  readonly sprint?: number;
+  readonly sprint?: number | undefined;
   readonly stage?: RetroStage;
 }
 
