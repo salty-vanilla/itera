@@ -683,6 +683,13 @@ describe('Today — adding and interrupts', () => {
     ).not.toBeNull();
     const note = within(sheet).getByRole('textbox', { name: /メモ/ });
     await waitFor(() => expect(document.activeElement).toBe(note));
+    // A click on the scrim keeps it open with what is typed.
+    await userEvent.type(note, '来客対応');
+    await userEvent.click(
+      document.querySelector<HTMLElement>('[data-slot="drawer-backdrop"]')!,
+    );
+    expect(screen.getByRole('dialog', { name: '割り込みを記録' })).toBe(sheet);
+    expect((note as HTMLInputElement).value).toBe('来客対応');
     await userEvent.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(document.activeElement).toBe(open);
