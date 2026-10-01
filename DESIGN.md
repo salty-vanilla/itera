@@ -624,7 +624,7 @@ compact の原則：
 
 **Tag** — Status（Sprint の状態、Goal の自己判定）と本人のラベルだけに使う小さな Pill。
 - 20px、`rounded.full`、Status はアイコン必須、語は 1〜2 語（本人のラベルは 12em で省略し、全文を title で読める）。Variant：neutral / done（墨の文字＋`circle-check`）/ warning（`triangle-alert`）/ danger（`circle-alert`）/ draft（破線＋`circle-dashed`。「計画中 · 未確定」）。neutral の Status は意味に合うアイコンを画面側で選ぶ（同期中・次の Sprint で試すは `info`）。アイコンのない neutral は本人のラベルで、`border` の輪郭だけにする。
-- tone の使い分け：neutral = 本人のラベル・一部できた・できなかった・決めない・同期中・次の Sprint で試す、done = できた・保存済み、warning = 超過の可能性、danger = 同期エラーなど保存・同期の失敗、draft = 未確定。期限超過は Tag にせず、Task Metadata の文字（`circle-alert`＋「2日過ぎ」）で示す。Goal の自己判定は円の形と語で区別し、色で区別しない（Issue #42）：できた `circle-check`（done）/ 一部できた `contrast`（半分を描いた円、neutral）/ できなかった `circle`（空の円、neutral）/ 決めない `circle-minus`（neutral）。できなかったに赤や × を使わない。
+- tone の使い分け：neutral = 本人のラベル・一部できた・できなかった・決めなかった・同期中・次の Sprint で試す、done = できた・保存済み、warning = 超過の可能性、danger = 同期エラーなど保存・同期の失敗、draft = 未確定。期限超過は Tag にせず、Task Metadata の文字（`circle-alert`＋「2日過ぎ」）で示す。Goal の自己判定は円の形と語で区別し、色で区別しない（Issue #42）：できた `circle-check`（done）/ 一部できた `contrast`（半分を描いた円、neutral）/ できなかった `circle`（空の円、neutral）/ 決めなかった `circle-minus`（neutral）。できなかったに赤や × を使わない。
 - 期限・Estimate・持ち越し・繰り返し・Area を Tag にしない（→ Task Metadata の文字）。1 行に 3 つ以上並べない。
 
 **Divider** — Card の代わりにグループを区切る、構造の主役。default（`border`）/ soft（`border-soft`、リスト内）/ rule（`ink` 1px、考える領域の上端、1 画面に 1〜2 本）/ label（ラベル付き。グループ見出し）。× 2px 以上の太い罫、二重線、点線。
@@ -714,7 +714,7 @@ compact の原則：
 
 **Goal** — Sprint × Area の「今週どんな状態にしたいか」。
 - 上端の罫（`border`）、見出し（Area Indicator heading＋タスク数と時間＋自己判定の Tag）、Goal 文（`goal`、`measure-read`）とその直下の編集（Quiet sm、文の左端に揃える。何を変えるかが分かるように、見出しではなく文の近くに置く）、その Area の選んだタスク。
-- set（確定）/ empty（「+ 目標を書く」だけ。「目標は任意です」のような案内は、計画中も確定後も置かない、Issue #155・#208。Goal も Task もない Area は、名前と「+ 目標を書く」を 1 行にする。Issue #161）/ editing（`body-l` の Textarea＋保存 / キャンセル）/ 自己判定済み（できた = done の Tag、一部できた・できなかった・決めない = neutral）。
+- set（確定）/ empty（「+ 目標を書く」だけ。「目標は任意です」のような案内は、計画中も確定後も置かない、Issue #155・#208。Goal も Task もない Area は、名前と「+ 目標を書く」を 1 行にする。Issue #161）/ editing（`body-l` の Textarea＋保存 / キャンセル）/ 自己判定済み（できた = done の Tag、一部できた・できなかった・決めなかった = neutral）。
 - Goal の間は `spacing.8`。× Card で囲む、Goal がない Area を警告色で示す、Goal 文を太字・大見出しにする、全体 Goal を作る。
 
 **Capacity Indicator** — 使える時間（Sprint.availableHours）と計画の合計の差を、幅のまま示す。
