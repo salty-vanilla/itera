@@ -193,10 +193,10 @@ describe('Backlog', () => {
       name: '顧客インタビューの設計',
     });
     const proposal = within(detail).getByRole('region', {
-      name: 'Agent 提案 · 見積もり',
+      name: '見積もりの提案',
     });
     // 採用 only: no word of 適用 or of a planning criterion here (invariant 7).
-    expect(proposal.textContent).not.toMatch(/適用|計画基準/);
+    expect(proposal.textContent).not.toMatch(/適用|計画のルール/);
     await userEvent.click(
       within(proposal).getByRole('button', { name: '中央 2.5h を採用' }),
     );
@@ -205,10 +205,10 @@ describe('Backlog', () => {
       source: { kind: 'adopted', bound: 'mid' },
     });
     const outcome = within(detail)
-      .getByText(/を採用しました（Agent/)
+      .getByText(/を採用しました（提案/)
       .closest<HTMLElement>('[role="status"]')!;
     expect(outcome.textContent).toContain(
-      '見積もり 2.5h を採用しました（Agent 提案 2–3h）',
+      '見積もり 2.5h を採用しました（提案 2–3h）',
     );
     // The Sprint's plan snapshot is not touched by adopting (invariant 16).
     const sprintTask = records()
@@ -227,7 +227,7 @@ describe('Backlog', () => {
     await renderAt('/backlog?fixture=backlog-detail&task=task-interview');
     const detail = await screen.findByRole('dialog');
     const proposal = within(detail).getByRole('region', {
-      name: 'Agent 提案 · 見積もり',
+      name: '見積もりの提案',
     });
     await userEvent.click(
       within(proposal).getByRole('button', { name: '編集して採用' }),
@@ -247,7 +247,7 @@ describe('Backlog', () => {
       source: { kind: 'edited' },
     });
     const outcome = within(detail).getByText(
-      '見積もり 4h を採用しました（Agent 提案 2–3h を編集）',
+      '見積もり 4h を採用しました（提案 2–3h を編集）',
     );
     await userEvent.click(
       within(outcome.closest('p') as HTMLElement).getByRole('button', {
@@ -262,7 +262,7 @@ describe('Backlog', () => {
     await renderAt('/backlog?fixture=backlog-detail&task=task-interview');
     const detail = await screen.findByRole('dialog');
     const proposal = () =>
-      within(detail).getByRole('region', { name: 'Agent 提案 · 見積もり' });
+      within(detail).getByRole('region', { name: '見積もりの提案' });
     const edit = within(proposal()).getByRole('button', {
       name: '編集して採用',
     });
@@ -315,14 +315,14 @@ describe('Backlog', () => {
     await userEvent.click(within(detail).getByRole('button', { name: '却下' }));
     expect(task('task-interview')?.suggestions.at(-1)?.state).toBe('rejected');
     expect(
-      within(detail).queryByRole('region', { name: 'Agent 提案 · 見積もり' }),
+      within(detail).queryByRole('region', { name: '見積もりの提案' }),
     ).toBeNull();
     await userEvent.click(
       within(detail).getByRole('button', { name: '元に戻す' }),
     );
     expect(task('task-interview')?.suggestions.at(-1)?.state).toBe('presented');
     expect(
-      within(detail).getByRole('region', { name: 'Agent 提案 · 見積もり' }),
+      within(detail).getByRole('region', { name: '見積もりの提案' }),
     ).toBeTruthy();
   });
 

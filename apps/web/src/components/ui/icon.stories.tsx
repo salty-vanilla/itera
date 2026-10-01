@@ -50,7 +50,7 @@ const meanings: [keyof typeof semanticIcons, string, string?][] = [
   ['undo', '元に戻す'],
   ['history', '変更履歴'],
   ['proposal', 'Agent 提案・下書き'],
-  ['criterion', '計画基準'],
+  ['criterion', '計画のルール'],
   ['done', '成功'],
   ['warning', '注意', 'text-warning'],
   ['error', 'エラー', 'text-danger'],

@@ -43,7 +43,7 @@ function ConfirmDialog({
         <DialogHeader>
           <DialogTitle>Sprint {number} を確定しますか？</DialogTitle>
           <DialogDescription>
-            確定すると、各タスクの計画値がこの Sprint
+            確定すると、各タスクの計画の時間がこの Sprint
             の値として固定されます。確定後も目標と使える時間は変更できます。
           </DialogDescription>
         </DialogHeader>
@@ -72,13 +72,13 @@ function ConfirmDialog({
               {summary.unlinked > 0 &&
                 `（うち目標に紐づかない ${summary.unlinked}件）`}
             </dd>
-            <dt className="text-ink-muted">計画値の合計</dt>
+            <dt className="text-ink-muted">計画の合計</dt>
             <dd className="text-num-m text-ink">{summary.total}</dd>
             <dt className="text-ink-muted">使える時間</dt>
             <dd className="text-ink">{summary.available ?? '未入力'}</dd>
             {summary.criterion !== undefined && (
               <>
-                <dt className="text-ink-muted">計画基準</dt>
+                <dt className="text-ink-muted">計画のルール</dt>
                 <dd className="text-ink">{summary.criterion}</dd>
               </>
             )}

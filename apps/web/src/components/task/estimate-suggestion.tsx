@@ -83,7 +83,7 @@ function EstimateSuggestion({
 
   return (
     <section
-      aria-label="Agent 提案 · 見積もり"
+      aria-label="見積もりの提案"
       data-slot="estimate-suggestion"
       className={cn(
         'flex flex-col gap-3 rounded-md border border-dashed border-proposal-border bg-surface p-4',
@@ -91,7 +91,7 @@ function EstimateSuggestion({
       )}
     >
       <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <p className="text-kicker text-ink-muted">Agent 提案 · 見積もり</p>
+        <p className="text-kicker text-ink-muted">見積もりの提案</p>
         <p className="text-meta text-ink-subtle">
           製品内の見積もり支援 · {madeAt}
         </p>
@@ -100,7 +100,8 @@ function EstimateSuggestion({
         <span className="text-num-m text-ink">
           <span aria-hidden>{formatRange(suggestion.lo, suggestion.hi)}</span>
           <span className="sr-only">
-            Agent の提案（未確定）: {spokenHours(suggestion.lo, suggestion.hi)}
+            見積もりの提案（未確定）:{' '}
+            {spokenHours(suggestion.lo, suggestion.hi)}
           </span>
         </span>
         <span className="text-meta text-ink-muted">

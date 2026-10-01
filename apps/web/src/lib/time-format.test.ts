@@ -101,7 +101,7 @@ describe('formatPlanningValue', () => {
         criterionApplied: false,
         computedAt,
       }),
-    ).toBe('2.5h（見積もりなしが 1件）');
+    ).toBe('2.5h（サブタスク 1件は見積もりなし）');
   });
 
   it('writes a suggestion range as it is', () => {
@@ -126,7 +126,7 @@ describe('formatPlanningTotal', () => {
         unestimated: 2,
         unestimatedSubtasks: 0,
       }),
-    ).toBe('12–16h（見積もりなしが 2件）');
+    ).toBe('12–16h（ほかに見積もりなし 2件）');
     expect(
       formatPlanningTotal({
         lo: 0.5,

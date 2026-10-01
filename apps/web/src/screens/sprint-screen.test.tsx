@@ -290,7 +290,9 @@ describe('Retro — by number (#90)', () => {
       await screen.findByText('研究の見積もりは幅の上限で計画する'),
     ).toBeTruthy();
     expect(
-      screen.getByText(/改善策から計画基準「研究：提案の幅の上限で計画する」/),
+      screen.getByText(
+        /改善策から計画のルール「研究：見積もりの提案の上限で計画する」/,
+      ),
     ).toBeTruthy();
     expect(screen.queryByRole('switch')).toBeNull();
     // An older Retro does not lead on to a Planning.

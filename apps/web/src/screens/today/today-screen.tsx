@@ -484,8 +484,8 @@ function TodayView({ data }: { data: TodayData }) {
                   {remaining.count === 0 ? (
                     '今日の残りはありません'
                   ) : (
-                    // Broken between the parts (and before 「（見積もりなしが
-                    // 1件）」), not in the range or the note.
+                    // Broken between the parts (and before 「（ほかに見積もり
+                    // なし 1件）」), not in the range or the note.
                     <>
                       <span className="inline-block">
                         今日の残り {remaining.count}件 ·
@@ -497,7 +497,7 @@ function TodayView({ data }: { data: TodayData }) {
                         .split(/(?=（)/)
                         .map((part, i) => (
                           <span key={i} className="inline-block">
-                            {i === 0 ? `見込み ${part}` : part}
+                            {part}
                           </span>
                         ))}
                     </>

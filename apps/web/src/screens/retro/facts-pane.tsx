@@ -181,7 +181,7 @@ function FactsPane({
               unit: '件',
             },
             {
-              label: '計画値の合計',
+              label: '計画の合計',
               value: formatRange(total.lo, total.hi, { total: true }),
               note: (
                 <Sentences
@@ -271,7 +271,7 @@ function FactsPane({
             className="mt-1 size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
           />
           <span>
-            {`今回の計画基準：「${criterionName(used.criterion.policy, used.areaName)}」`}
+            {`今回の計画のルール：「${criterionName(used.criterion.policy, used.areaName)}」`}
             <span className="text-ink-muted">
               {readOnly
                 ? '（結果と扱いは引き継ぐにあります）'
@@ -646,7 +646,7 @@ function TaskTable({
               見積もり
             </th>
             <th scope="col" className={cn(num, 'font-normal')}>
-              計画値
+              計画
             </th>
             {/* The end padding keeps 実績 and its difference apart from
                 the result's words, which start right after (#167). */}
@@ -721,7 +721,7 @@ function TaskTable({
 
 /**
  * compact: one Task per item, its values in words on wrapping lines
- * (「Agent の提案 3–5h · 計画 5h（基準） · 実績 4.5h」), then its outcome and days,
+ * (「見積もりの提案 3–5h · 計画 5h（ルール） · 実績 4.5h」), then its outcome and days,
  * then its actions in a row.
  */
 function TaskList({

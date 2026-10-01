@@ -364,7 +364,7 @@ function PlannedRow({
       }
       estimate={
         // A value from a suggestion shows where it came from (DESIGN.md
-        // Estimate: 「Agent の提案 3–5h」 and 「計画 5h」). The preview is
+        // Estimate: 「見積もりの提案 3–5h」 and 「計画 5h」). The preview is
         // solid. Under 768px the two stack, so the title keeps its width.
         <span className="flex flex-col items-end gap-1 medium:flex-row medium:flex-wrap medium:items-center medium:justify-end medium:gap-2">
           {/* Always, when the value comes from a suggestion: it is not the

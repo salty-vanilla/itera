@@ -46,8 +46,7 @@ export const Tones: Story = {
         計画案を作った後に 2件が追加されました。
       </Notice>
       <Notice tone="warning" title="使える時間を超えるかもしれません">
-        計画値の合計は 16.5–19.5h です。上限では使える時間 18h を 1.5h
-        超えます。
+        計画の合計は 16.5–19.5h です。上限では使える時間 18h を 1.5h 超えます。
       </Notice>
       <Notice
         tone="danger"
@@ -60,7 +59,7 @@ export const Tones: Story = {
         3件を今週に入れ、1件の見積もりを更新しました。
       </Notice>
       <Notice tone="neutral" title="見積もりのないタスクは合計に含めません">
-        見積もりを入れると、計画値の合計に加わります。
+        見積もりを入れると、計画の合計に加わります。
       </Notice>
     </div>
   ),
@@ -68,7 +67,7 @@ export const Tones: Story = {
 
 /**
  * 持ち越し・見送り・未達は事実として中立に書き、warning や danger の
- * Notice にしない。超過の「可能性」は warning、下限でも超える確定的な
+ * Notice にしない。超過の「可能性」は warning、少なく済んでも超える確定的な
  * 超過だけが danger の候補になる（DESIGN.md Colors）。
  */
 export const NeutralFacts: Story = {
@@ -99,7 +98,7 @@ export const WithActions: Story = {
         </>
       }
     >
-      見積もりのないタスクは計画値の合計に含まれません。
+      見積もりのないタスクは計画の合計に含まれません。
     </Notice>
   ),
 };

@@ -35,7 +35,7 @@ describe('Dialog', () => {
           <DialogBody>
             <label>
               <input type="checkbox" defaultChecked />
-              計画基準を使う
+              計画のルールを使う
             </label>
           </DialogBody>
           <DialogFooter>

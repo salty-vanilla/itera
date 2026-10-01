@@ -99,7 +99,7 @@ export const Deadlines: Story = {
   ),
 };
 
-/** Estimate：本人の値（実線）、提案（破線＋「Agent の提案」）、計画値、サブタスク合計、見積もりなし。 */
+/** Estimate：本人の値（実線）、提案（破線＋「見積もりの提案」）、計画値、サブタスク合計、見積もりなし。 */
 export const Estimates: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-2">

@@ -25,7 +25,7 @@ import { useNextPlanning } from '@/store/use-retro';
 import { CARRY_OVER_PLACE_WORDS, DECISION_WORDS } from './retro-words';
 import { UsedCriterion } from './used-criterion';
 
-// 引き継ぐ (patterns.md Retro, DESIGN.md 計画基準): the improvement goes to
+// 引き継ぐ (patterns.md Retro, DESIGN.md 計画のルール): the improvement goes to
 // the next Planning as it is. Only when it can be applied mechanically, a
 // planning criterion can be made from it (optional). A Sprint that had a
 // criterion chooses 続ける / 終える / 置き換える, with no reason asked
@@ -110,14 +110,14 @@ function HandoffPane({
 
       <section aria-labelledby="handoff-draft" className="flex flex-col gap-4">
         <h2 id="handoff-draft" className="text-heading text-ink">
-          新しい計画基準
+          新しい計画のルール
         </h2>
         <Switch
-          label="計画基準にもする"
+          label="計画のルールにもする"
           description={
             improvement === undefined
               ? '改善策を書くと選べます。任意です。'
-              : '改善策が「提案の幅のどこで計画するか」で表せるときだけ、次の計画に使うルールにできます。任意です。'
+              : '改善策が「見積もりの提案のどこで計画するか」で表せるときだけ、次の計画に使うルールにできます。任意です。'
           }
           disabled={improvement === undefined}
           checked={draft !== undefined}
@@ -145,7 +145,7 @@ function HandoffPane({
           className="flex flex-col gap-4"
         >
           <h2 id="handoff-criterion" className="text-heading text-ink">
-            今回の計画基準
+            今回の計画のルール
           </h2>
           <UsedCriterion used={used} />
           <RadioGroup<RetroDecision | null>
@@ -167,7 +167,7 @@ function HandoffPane({
             <Radio<RetroDecision | null>
               value="end"
               label="終える"
-              description="次の計画では、この基準を使いません。"
+              description="次の計画では、このルールを使いません。"
             />
             <Radio<RetroDecision | null>
               value="replace"
@@ -175,7 +175,7 @@ function HandoffPane({
               disabled={draft === undefined}
               description={
                 draft === undefined
-                  ? '上で「計画基準にもする」をオンにして新しい基準を作ると選べます。'
+                  ? '上で「計画のルールにもする」をオンにして新しいルールを作ると選べます。'
                   : `次の計画では、代わりに${criterionEffectText(draft.criterion.policy, draft.areaName)}。確かめるで、使うかどうかを選べます。`
               }
             />
@@ -294,12 +294,12 @@ function ClosedHandoff({
       </section>
       <section aria-labelledby="handoff-draft" className="flex flex-col gap-2">
         <h2 id="handoff-draft" className="text-heading text-ink">
-          新しい計画基準
+          新しい計画のルール
         </h2>
         <p className="text-body text-ink">
           {draft === undefined
-            ? '改善策から計画基準は作りませんでした。'
-            : `改善策から計画基準「${criterionName(draft.criterion.policy, draft.areaName)}」を作りました。`}
+            ? '改善策から計画のルールは作りませんでした。'
+            : `改善策から計画のルール「${criterionName(draft.criterion.policy, draft.areaName)}」を作りました。`}
         </p>
       </section>
       {used !== undefined && (
@@ -308,7 +308,7 @@ function ClosedHandoff({
           className="flex flex-col gap-4"
         >
           <h2 id="handoff-criterion" className="text-heading text-ink">
-            今回の計画基準
+            今回の計画のルール
           </h2>
           <UsedCriterion used={used} />
           {used.decision !== undefined && (
@@ -352,7 +352,7 @@ function DraftCriterion({
       </p>
       {sameAsUsed && (
         <p className="text-body text-ink">
-          今回の基準と同じ設定です。変えないなら、オフにして「続ける」を選びます。
+          今回のルールと同じ設定です。変えないなら、オフにして「続ける」を選びます。
         </p>
       )}
       <p className="text-help text-ink-muted">
@@ -381,7 +381,7 @@ function DraftCriterion({
             ))}
           </Select>
         </Field>
-        <Field label="提案の幅のどこで計画するか">
+        <Field label="見積もりの提案のどこで計画するか">
           <Select
             value={policy.rangePolicy}
             onChange={(e) =>
@@ -409,8 +409,8 @@ function DraftCriterion({
           <ul className="flex flex-col gap-1 text-body text-ink-muted">
             {preview.map((row) => (
               <li key={row.taskId}>
-                {titleOf(row.taskId)}：Agent の提案{' '}
-                {formatRange(row.from.lo, row.from.hi)} → 計画値{' '}
+                {titleOf(row.taskId)}：見積もりの提案{' '}
+                {formatRange(row.from.lo, row.from.hi)} → 計画{' '}
                 {formatHours(row.to)}
               </li>
             ))}

@@ -167,7 +167,7 @@ function Roles() {
         </Specimen>
         <Specimen
           title="破線：計画中"
-          note="Agent の提案と下書きは 1px の破線と「提案」の語。本人の値は実線。"
+          note="見積もりの提案と下書きは 1px の破線と「提案」の語。本人の値は実線。"
         >
           <div className="flex flex-wrap items-center gap-3">
             <span className="inline-flex items-center gap-2 rounded-xs border border-dashed border-proposal-border px-2 py-1 text-ink">

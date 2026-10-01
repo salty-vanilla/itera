@@ -4,7 +4,7 @@ import {
   formatHours,
   formatPlanningValue,
   formatRange,
-  formatUnestimatedCount,
+  formatUnestimatedSubtasks,
   UNESTIMATED,
 } from '@/lib/time-format';
 import type { RetroData } from '@/store/retro-view';
@@ -29,18 +29,18 @@ export function plannedCellText(t: TaskFact): string {
     : plannedText(t);
 }
 
-/** 「見積もりなしが 1件」 for the subtasks left out of a subtask sum. */
+/** 「サブタスク 1件は見積もりなし」 for the subtasks left out of a subtask sum. */
 export function unestimatedNote(t: TaskFact): string[] {
   const value = t.plan?.value;
   return value?.base === 'subtasks' && value.unestimatedSubtasks > 0
-    ? [formatUnestimatedCount(value.unestimatedSubtasks)]
+    ? [formatUnestimatedSubtasks(value.unestimatedSubtasks)]
     : [];
 }
 
 /** What the value came from: the criterion, and a recurring Task's count. */
 export function planNotes(t: TaskFact): string[] {
   return [
-    ...(t.plan?.value.criterionApplied === true ? ['基準'] : []),
+    ...(t.plan?.value.criterionApplied === true ? ['ルール'] : []),
     ...(t.plan?.occurrenceCount === undefined
       ? []
       : [`${t.plan.occurrenceCount}回分`]),
@@ -72,7 +72,7 @@ export function estimateOf(t: TaskFact): {
   if (plan?.suggestion !== undefined) {
     return {
       kind: 'suggestion',
-      text: `Agent の提案 ${formatRange(plan.suggestion.lo, plan.suggestion.hi)}`,
+      text: `見積もりの提案 ${formatRange(plan.suggestion.lo, plan.suggestion.hi)}`,
     };
   }
   return { kind: 'none', text: UNESTIMATED };
@@ -87,7 +87,7 @@ export function resultText(t: TaskFact, data: RetroData): string {
   return `回：完了 ${count(done)} · スキップ ${count(skipped)} · 未処理 ${count(missed)}`;
 }
 
-/** 「計画 5h（基準）」: the planning value with what it came from. */
+/** 「計画 5h（ルール）」: the planning value with what it came from. */
 export function plannedLabel(t: TaskFact): string {
   return `計画 ${plannedText(t)}${planNotes(t)
     .map((n) => `（${n}）`)

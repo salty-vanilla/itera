@@ -499,8 +499,8 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
 }
 
 /**
- * 「残り 1 〜 3h · 収まる」「超過 3 〜 5h · 下限でも超える」, and when the
- * difference crosses 0, the two sentences alone: 「下限なら 2.25h 残る · 上限なら
+ * 「残り 1 〜 3h · 収まる」「超過 3 〜 5h · 少なく済んでも超える」, and when the
+ * difference crosses 0, the two sentences alone: 「少なく済めば 2.25h 残る · 多くかかれば
  * 0.75h 超える」 (patterns.md compact, owner decision S5 in #93).
  */
 function CapacitySummary({ data }: { data: PlanningData }) {
@@ -508,13 +508,13 @@ function CapacitySummary({ data }: { data: PlanningData }) {
   const sentences =
     capacity === undefined
       ? [
-          `計画値の合計 ${formatPlanningSum(data.totals.total)}`,
+          `計画の合計 ${formatPlanningSum(data.totals.total)}`,
           '使える時間は未入力',
         ]
       : [
           ...capacityHeadlineSentences(capacityHeadline(capacity)),
           ...(capacity.status === 'exceeds'
-            ? ['下限でも超える']
+            ? ['少なく済んでも超える']
             : capacity.status === 'within'
               ? ['収まる']
               : []),

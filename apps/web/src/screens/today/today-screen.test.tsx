@@ -106,7 +106,7 @@ describe('Today — the top', () => {
     // F32: 2 Tasks and occurrences done of 10 this week.
     expect(screen.getByText('4 / 10件')).toBeTruthy();
     expect(screen.getByText('今日の残り 2件 ·').closest('p')?.textContent).toBe(
-      '今日の残り 2件 · 見込み 4.5–5.5h',
+      '今日の残り 2件 · 4.5–5.5h',
     );
     // Invariant 25: no daily capacity, no judgement of going over.
     const text = document.body.textContent ?? '';
@@ -1057,7 +1057,7 @@ describe('Today — 計画に使う時間 in the detail (#96)', () => {
     );
     const sum = within(group).getByRole('radio', { name: /サブタスクの合計/ });
     expect(sum.closest('[data-slot="radio-item"]')?.textContent).toContain(
-      '2.5h（見積もりなしが 1件）',
+      '2.5h（サブタスク 1件は見積もりなし）',
     );
     // Right under the subtasks, not above them.
     const subtasks = within(detail).getByText('結果を共有する');
