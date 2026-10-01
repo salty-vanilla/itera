@@ -506,8 +506,8 @@ describe('retroFacts — the plan against what happened (#167)', () => {
         status: 'within',
       },
     });
-    // Against 11h: the plan as confirmed may exceed it, the addition makes
-    // even the lower end exceed it.
+    // Against 11h: the plan as confirmed just fits at its upper end; with
+    // the addition even the lower end exceeds it.
     const tight = retroFacts({ ...sprint, plannedAvailableHours: 11 }, input());
     expect(tight.capacity?.atConfirm.status).toBe('within');
     expect(tight.capacity?.withAdditions.status).toBe('exceeds');
@@ -515,7 +515,21 @@ describe('retroFacts — the plan against what happened (#167)', () => {
       { ...sprint, plannedAvailableHours: 10.5 },
       input(),
     );
+    // Against 10.5h the plan as confirmed may exceed it.
     expect(over.capacity?.atConfirm.status).toBe('mayExceed');
+    // A Task removed later was in the plan as confirmed, and is no longer in
+    // the one with the additions: 12–14h at confirm, 12–14h after (2–3h
+    // removed, 2–3h added).
+    const withRemoved = retroFacts(base, input());
+    expect(withRemoved.plannedTotal.atConfirm).toMatchObject({
+      lo: 12,
+      hi: 14,
+    });
+    expect(withRemoved.capacity?.atConfirm.remaining).toEqual({ lo: 4, hi: 6 });
+    expect(withRemoved.capacity?.withAdditions.remaining).toEqual({
+      lo: 4,
+      hi: 6,
+    });
     // No hours entered when planning: nothing to compare with.
     const none = retroFacts(
       sprintFixture('2026-09-28', 'review', { tasks: base.tasks }),

@@ -1113,6 +1113,21 @@ describe('Retro — the plan against what happened (#167)', () => {
     expect(lineOf('週の途中の追加を含めて')).toBeUndefined();
   });
 
+  it('has one line when an addition was removed again', async () => {
+    change = reviewing((tasks) =>
+      tasks.map((t) =>
+        t.origin === 'midSprint' ? { ...t, outcome: 'removed' as const } : t,
+      ),
+    );
+    await renderAt('/retro?fixture=retro-start');
+    expect(lineOf('確定時の計画')).toBeTruthy();
+    expect(
+      screen
+        .getAllByRole('listitem')
+        .filter((li) => /を含め|を除いて/.test(li.textContent ?? '')),
+    ).toEqual([]);
+  });
+
   it('names a removed Task as what the second total leaves out', async () => {
     change = reviewing((tasks) =>
       tasks

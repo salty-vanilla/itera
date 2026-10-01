@@ -102,13 +102,23 @@ function FactsPane({
   // Also when the hours were first entered after confirming.
   const hoursChanged = currentHours !== plannedHours;
   const { minutes: interruptMinutes, withoutMinutes } = facts.interruptTime;
-  // How the plan changed after confirm, which makes its second total.
-  const changedLead =
-    facts.midSprint.length > 0 && facts.removed.length > 0
+  // How the plan changed after confirm, which makes its second total: an
+  // addition removed again changes neither, and equal totals say nothing new.
+  const added = facts.midSprint.filter((t) => t.outcome !== 'removed').length;
+  const leftOut = facts.removed.filter((t) => t.origin === 'planning').length;
+  const { atConfirm, withAdditions } = facts.plannedTotal;
+  const sameTotal =
+    atConfirm.lo === withAdditions.lo &&
+    atConfirm.hi === withAdditions.hi &&
+    atConfirm.unestimated === withAdditions.unestimated &&
+    atConfirm.unestimatedSubtasks === withAdditions.unestimatedSubtasks;
+  const changedLead = sameTotal
+    ? undefined
+    : added > 0 && leftOut > 0
       ? '週の途中の追加を含め、外したタスクを除いて'
-      : facts.midSprint.length > 0
+      : added > 0
         ? '週の途中の追加を含めて'
-        : facts.removed.length > 0
+        : leftOut > 0
           ? '外したタスクを除いて'
           : undefined;
   const interruptNote = [
