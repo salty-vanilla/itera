@@ -64,8 +64,8 @@ export function RecurrenceText({
   icon?: boolean;
 }) {
   const Icon = semanticIcons.recurrence;
-  // Each phrase stays whole. A narrow row breaks after the "·" first, then
-  // between the phrases of a long part, never inside one (Issue #218).
+  // A narrow row moves a whole part to the next line first; only a part wider
+  // than the row breaks, between its phrases, never inside one (Issue #218).
   const parts: string[][] = [
     [formatPattern(recurrence.pattern)],
     ...(recurrence.next
@@ -87,13 +87,17 @@ export function RecurrenceText({
         {parts.map((phrases, i) => (
           <Fragment key={phrases.join(' ')}>
             {i > 0 && ' '}
-            {phrases.map((phrase, j) => (
-              <Fragment key={phrase}>
-                {j > 0 && ' '}
-                <span className="whitespace-nowrap">{phrase}</span>
-              </Fragment>
-            ))}
-            {i < parts.length - 1 && ' ·'}
+            <span className="inline-block max-w-full align-top">
+              {phrases.map((phrase, j) => (
+                <Fragment key={phrase}>
+                  {j > 0 && ' '}
+                  <span className="whitespace-nowrap">
+                    {phrase}
+                    {j === phrases.length - 1 && i < parts.length - 1 && ' ·'}
+                  </span>
+                </Fragment>
+              ))}
+            </span>
           </Fragment>
         ))}
       </span>
