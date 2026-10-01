@@ -45,6 +45,8 @@ type ToastKind =
   | 'task-added'
   /** 今日へ (a Backlog row or a Task detail): 「「タイトル」を今日やるに入れました」. */
   | 'added-to-today'
+  /** 今週へ (a Backlog row or a Task detail), with 元に戻す (#155). */
+  | 'added-to-week'
   | 'task-archived'
   | 'day-record-undone'
   /** 今日は見送る / 今日の予定から外す from a Today row, with 元に戻す (#163). */

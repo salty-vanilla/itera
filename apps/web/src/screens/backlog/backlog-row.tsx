@@ -1,6 +1,6 @@
 import type { LocalDate } from '@itera/domain';
 import { useEffect, useRef } from 'react';
-import { Archive, CircleCheck, Ellipsis, Sun } from 'lucide-react';
+import { Archive, CircleCheck, Ellipsis, Route, Sun } from 'lucide-react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { IconButton } from '@/components/ui/icon-button';
 import { semanticIcons } from '@/components/ui/icon';
@@ -129,6 +129,7 @@ type BacklogRowProps = {
   onOpen: () => void;
   onComplete: () => void;
   onToday: () => void;
+  onWeek: () => void;
   onArchive: () => void;
   /** E on the row: the detail, at its Estimate. */
   onEstimate: () => void;
@@ -146,6 +147,7 @@ function BacklogRow({
   onOpen,
   onComplete,
   onToday,
+  onWeek,
   onArchive,
   onEstimate,
   focusControl = false,
@@ -252,6 +254,12 @@ function BacklogRow({
               <MenuItem disabled>
                 <Sun aria-hidden />
                 今日へ（{formatDate(item.todayOpensOn.start)} から）
+              </MenuItem>
+            )}
+            {item.canAddToWeek && (
+              <MenuItem onClick={onWeek}>
+                <Route aria-hidden />
+                今週へ
               </MenuItem>
             )}
             {item.canComplete && (

@@ -4,6 +4,7 @@
 import {
   activeCriterion,
   addSubtask,
+  addTaskMidSprint,
   addToToday,
   adoptEditedSuggestion,
   adoptSuggestion,
@@ -20,6 +21,7 @@ import {
   setEstimate,
   setSubtaskDone,
   setSubtaskEstimate,
+  undoAddTaskMidSprint,
   undoAdoption,
   undoRejection,
   updateTask,
@@ -33,16 +35,47 @@ import {
   type SubtaskId,
   type SuggestionBound,
   type TaskAttributeUpdate,
+  type Task,
   type TaskId,
 } from '@itera/domain';
 import { find, onTask } from './changes';
-import { changed, type Change, type Changed } from './record-store';
+import {
+  changed,
+  type Change,
+  type ChangeContext,
+  type Changed,
+} from './record-store';
 import type { Records } from './records';
 
 /** The active Sprint, if any: 今日へ and 完了 act on it. */
 export function activeSprint(records: Records) {
   return records.sprints.find((s) => s.state === 'active');
 }
+
+/**
+ * What every mid-Sprint addition passes the domain: a new SprintTask ID, the
+ * Areas (F9) and the active criterion, if any (F3).
+ */
+export function midSprintAddition(
+  records: Records,
+  task: Task,
+  ctx: ChangeContext,
+) {
+  const criterion = activeCriterion(records.criteria);
+  return {
+    sprintTaskId: ctx.newId('SprintTask'),
+    task,
+    areas: records.areas,
+    ...(criterion === undefined
+      ? {}
+      : { criterion: { id: criterion.id, policy: criterion.policy } }),
+  };
+}
+
+const noActiveSprint = {
+  ok: false,
+  error: { code: 'invalidTransition', message: 'No active Sprint.' },
+} as const;
 
 /** Quick Add: a Task from its title, optionally in an Area. */
 export function addTask(title: string, areaId: AreaId | undefined): Change {
@@ -230,29 +263,57 @@ export function toToday(taskId: TaskId): Change {
     const task = find(records.tasks, taskId, 'Task');
     if (!task.ok) return task;
     const sprint = activeSprint(records);
-    if (sprint === undefined) {
-      return {
-        ok: false,
-        error: { code: 'invalidTransition', message: 'No active Sprint.' },
-      };
-    }
-    const criterion = activeCriterion(records.criteria);
+    if (sprint === undefined) return noActiveSprint;
     return changed(
       addToToday(
         sprint,
         {
-          sprintTaskId: ctx.newId('SprintTask'),
-          task: task.value,
-          areas: records.areas,
-          ...(criterion === undefined
-            ? {}
-            : { criterion: { id: criterion.id, policy: criterion.policy } }),
+          ...midSprintAddition(records, task.value, ctx),
           via: 'backlogToToday',
           selectionId: ctx.newId('DailySelection'),
           date: ctx.today,
         },
         ctx,
       ),
+      (next) => ({ sprints: [next] }),
+    );
+  };
+}
+
+/**
+ * 今週へ (#155): the Task joins the active Sprint as a mid-Sprint addition
+ * without a day chosen (unlinked, own snapshot, no capacity warning).
+ */
+export function toWeek(taskId: TaskId): Change {
+  return (records, ctx) => {
+    const task = find(records.tasks, taskId, 'Task');
+    if (!task.ok) return task;
+    const sprint = activeSprint(records);
+    if (sprint === undefined) return noActiveSprint;
+    return changed(
+      addTaskMidSprint(
+        sprint,
+        { ...midSprintAddition(records, task.value, ctx), via: 'backlog' },
+        ctx,
+      ),
+      (next) => ({ sprints: [next] }),
+    );
+  };
+}
+
+/** 元に戻す right after 今週へ (F40): the addition goes with its record. */
+export function undoToWeek(taskId: TaskId): Change {
+  return (records, ctx) => {
+    const sprint = activeSprint(records);
+    const sprintTask = sprint?.tasks.find((t) => t.taskId === taskId);
+    if (sprint === undefined || sprintTask === undefined) {
+      return {
+        ok: false,
+        error: { code: 'notFound', message: 'Not in the active Sprint.' },
+      };
+    }
+    return changed(
+      undoAddTaskMidSprint(sprint, { sprintTaskId: sprintTask.id }, ctx),
       (next) => ({ sprints: [next] }),
     );
   };

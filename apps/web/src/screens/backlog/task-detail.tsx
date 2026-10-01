@@ -64,6 +64,7 @@ import { CarryOverText, RecurrenceText, SprintText } from './backlog-row';
 import { RecurrenceEditor } from './recurrence-editor';
 import { SubtaskList } from './subtask-list';
 import { useAddToToday } from './use-add-to-today';
+import { useAddToWeek } from './use-add-to-week';
 
 const priorities: readonly { value: TaskPriority; label: string }[] = [
   { value: 'high', label: '高' },
@@ -279,11 +280,18 @@ function TaskDetail({
   const newArea = useNewAreaDialog();
   const todayActions = useTodayActions();
   const addToToday = useAddToToday();
+  const addToWeek = useAddToWeek();
   const { task } = item;
   const facts = item;
   const toast = useToast();
   // 今日と今週: Today is where 今日を開く leads, so it is not offered there.
   const onTodayScreen = useLocation({ select: (l) => l.pathname === '/today' });
+  // 今週へ is for the Backlog and Today (#155). Planning chooses for its own
+  // week with □, and the running Sprint lists only its own Tasks.
+  const onSprintScreen = useLocation({
+    select: (l) => l.pathname === '/sprint',
+  });
+  const offersWeek = facts.canAddToWeek && !onSprintScreen;
   // A recurring Task in the week is done per occurrence, in Today (#171).
   const opensOccurrences =
     facts.recurrence !== undefined &&
@@ -643,6 +651,7 @@ function TaskDetail({
       <DrawerBody ref={bodyRef} className="flex flex-col gap-6">
         {(facts.canAddToToday ||
           facts.todayOpensOn !== undefined ||
+          offersWeek ||
           facts.today !== undefined ||
           facts.closedToday !== undefined ||
           facts.canComplete ||
@@ -691,6 +700,13 @@ function TaskDetail({
                   aria-describedby="task-detail-today-opens"
                 >
                   今日へ
+                </Button>
+              )}
+              {offersWeek && (
+                <Button
+                  onClick={() => runNow(() => addToWeek(task.id, task.title))}
+                >
+                  今週へ
                 </Button>
               )}
               {offers.start && (

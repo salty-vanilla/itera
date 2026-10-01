@@ -1,16 +1,20 @@
 // Scenario B of docs/domain/domain-model.md, steps 1–4: adding a Task that
 // is not in the Sprint during the Sprint (Backlog の詳細で「今日へ」, one
 // operation making the SprintTask and the DailySelection), then completing
-// it in Today. The Sprint applied 「研究 → 上限」 at confirm.
+// it in Today. The Sprint applied 「研究 → 上限」 at confirm. Then the
+// variant without a day (「今週へ」, F40): added to the week only, undone
+// right after, added again and chosen later from the week's remaining.
 import { describe, expect, it } from 'vitest';
 import { sprintTotals } from './capacity';
 import { presentSuggestion } from './estimate';
 import { retroFacts } from './retro-facts';
 import { enterReview } from './review';
+import { addTaskMidSprint, undoAddTaskMidSprint } from './mid-sprint';
 import {
   addToToday as addToTodayCommand,
   completeSelection,
   noteInterrupt,
+  selectForToday,
 } from './today';
 import type { ActiveCriterion } from './planning';
 import { id, type AreaId } from './shared/ids';
@@ -181,5 +185,91 @@ describe('Scenario B — Sprint 外の Task を「今日へ」', () => {
       hi: 5,
       criterionApplied: false,
     });
+  });
+});
+
+describe('Scenario B — 今日を選ばずに「今週へ」', () => {
+  function addToWeek(target: ReturnType<typeof sprint>, task: Task) {
+    return addTaskMidSprint(
+      target,
+      {
+        sprintTaskId: id(`st-${task.id}`),
+        task,
+        areas: [research, work],
+        criterion,
+        via: 'backlog',
+      },
+      ctx,
+    );
+  }
+
+  it('adds to the week without a day, undoes right after, then is chosen on another day', () => {
+    const interview = taskWith(
+      'task-interview',
+      '顧客インタビューの設計',
+      workId,
+      2,
+      3,
+    );
+    const before = sprint(true);
+    // 1. Backlog の行の … で「今週へ」: the SprintTask alone, no selection.
+    const result = addToWeek(before, interview);
+    const added = unwrap(result);
+    expect(added.tasks[0]).toMatchObject({
+      outcome: 'planned',
+      origin: 'midSprint',
+      goalLink: 'unlinked',
+      planSnapshot: { value: { lo: 2, hi: 3, criterionApplied: false } },
+    });
+    expect(added.dailySelections).toEqual([]);
+    expect(result.ok && result.value.activities).toMatchObject([
+      { kind: 'sprintTaskAdded', via: 'backlog' },
+    ]);
+
+    // 2. 元に戻す: back to the Sprint before, with the undo in the Activity.
+    const undone = undoAddTaskMidSprint(
+      added,
+      { sprintTaskId: id('st-task-interview') },
+      ctx,
+    );
+    expect(unwrap(undone)).toEqual(before);
+    expect(undone.ok && undone.value.activities).toMatchObject([
+      { kind: 'sprintTaskAddUndone', taskId: 'task-interview' },
+    ]);
+
+    // 3. 今週へ again, and on a later day 今日へ from the week's remaining.
+    const again = unwrap(addToWeek(unwrap(undone), interview));
+    const chosen = unwrap(
+      selectForToday(
+        again,
+        {
+          selectionId: id('sel-task-interview'),
+          date: localDate('2026-10-01'),
+          sprintTaskId: id('st-task-interview'),
+        },
+        ctx,
+      ),
+    );
+    expect(chosen.dailySelections).toMatchObject([
+      { origin: 'manual', resolution: 'selected' },
+    ]);
+
+    // 4. Retro: one mid-Sprint addition, unlinked, as with 今日へ.
+    const reviewed = unwrap(
+      enterReview(
+        chosen,
+        { today: localDate('2026-10-04'), occurrences: [] },
+        ctx,
+      ),
+    ).sprint;
+    const facts = retroFacts(reviewed, {
+      tasks: [interview],
+      areas: [research, work],
+      occurrences: [],
+      sprints: [reviewed],
+    });
+    expect(facts.midSprint).toMatchObject([
+      { taskId: 'task-interview', goalLink: 'unlinked' },
+    ]);
   });
 });

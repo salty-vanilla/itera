@@ -89,6 +89,65 @@ export function addTaskMidSprint(
   );
 }
 
+export interface UndoAddMidSprintInput {
+  readonly sprintTaskId: SprintTaskId;
+}
+
+/**
+ * 今週へ を元に戻す (F40), right after a mid-Sprint addition that chose no
+ * day: the SprintTask is taken out of the Sprint with its record, so the
+ * Task is outside the Sprint again and can be added once more (invariant
+ * 14). Only while it is still planned and no day has chosen it; with a
+ * selection it would be the addition of 今日へ, which is not undone
+ * (invariant 26). The Area appended to the snapshot stays (F9). The
+ * addition and its undo stay in the Activity.
+ */
+export function undoAddTaskMidSprint(
+  sprint: Sprint,
+  input: UndoAddMidSprintInput,
+  ctx: CommandContext,
+): CommandResult<Sprint> {
+  if (sprint.state !== 'active') {
+    return err(
+      'invalidTransition',
+      'Only an active Sprint’s additions are undone.',
+    );
+  }
+  const target = sprint.tasks.find((t) => t.id === input.sprintTaskId);
+  if (target === undefined) return err('notFound', 'No such SprintTask.');
+  if (target.origin !== 'midSprint' || target.occurrenceIds !== undefined) {
+    return err(
+      'invalidInput',
+      'Only a mid-Sprint addition of a one-off Task is undone.',
+    );
+  }
+  if (target.outcome !== 'planned') {
+    return err(
+      'invalidTransition',
+      `Cannot undo the addition of a ${target.outcome} SprintTask.`,
+    );
+  }
+  if (sprint.dailySelections.some((s) => s.sprintTaskId === target.id)) {
+    return err(
+      'invalidTransition',
+      'A SprintTask chosen for a day stays in the Sprint.',
+    );
+  }
+  return applied(
+    { ...sprint, tasks: sprint.tasks.filter((t) => t.id !== target.id) },
+    [
+      {
+        kind: 'sprintTaskAddUndone',
+        at: ctx.now,
+        actor: ctx.actor,
+        sprintId: sprint.id,
+        sprintTaskId: target.id,
+        taskId: target.taskId,
+      },
+    ],
+  );
+}
+
 /**
  * Sprint 中に追加 of an occurrence left out in Planning: excluded → pending,
  * in a new mid-Sprint SprintTask of its own.

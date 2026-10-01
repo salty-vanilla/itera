@@ -73,6 +73,8 @@ export function useTaskActions() {
       completeTask: (taskId: TaskId) => run(changes.complete(taskId)),
       undoCompleteTask: (taskId: TaskId) => run(changes.undoComplete(taskId)),
       addToToday: (taskId: TaskId) => run(changes.toToday(taskId)),
+      addToWeek: (taskId: TaskId) => run(changes.toWeek(taskId)),
+      undoAddToWeek: (taskId: TaskId) => run(changes.undoToWeek(taskId)),
       /**
        * Makes the Task recurring or changes its rule. `effectiveFrom` is the
        * day the change takes effect (「次の Sprint から反映」), absent when

@@ -22,6 +22,11 @@ export const Set: Story = { args: { goal: '先行研究を押さえる' } };
 /** empty：「+ Goal を書く」と、Goal は任意であること。警告色にしない。 */
 export const Empty: Story = {};
 
+/** 実行中の Sprint の empty：「+ 目標を書く」だけ。任意である案内は計画中だけ（Issue #155）。 */
+export const EmptyAfterConfirm: Story = {
+  args: { removable: false, optionalNote: false },
+};
+
 /** Goal も Task もない Area：名前と「+ 目標を書く」を 1 行に。案内は添えない（Issue #161）。 */
 export const Bare: Story = { args: { bare: true, summary: undefined } };
 

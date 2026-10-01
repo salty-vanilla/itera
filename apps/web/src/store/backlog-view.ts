@@ -86,6 +86,11 @@ export interface BacklogItem {
   /** 今日へ: only for a Task outside the active Sprint (invariant 26). */
   readonly canAddToToday: boolean;
   /**
+   * 今週へ (#155): a one-off Task outside the active Sprint, without a day.
+   * Also before the Sprint starts, since no day is chosen.
+   */
+  readonly canAddToWeek: boolean;
+  /**
    * 今日へ waits for the Sprint's first day (#59): the Sprint is confirmed
    * but has not started, so there is no day to choose on yet.
    */
@@ -205,6 +210,7 @@ export function backlogItem(
       { now: clock.now },
     ),
     canAddToToday: canChoose && !beforeStart,
+    canAddToWeek: canChoose,
     ...(canChoose && beforeStart && active !== undefined
       ? {
           todayOpensOn: {
