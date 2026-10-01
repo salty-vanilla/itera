@@ -109,7 +109,7 @@ describe('Retro — 事実を見る', () => {
         (_, element) =>
           element?.tagName === 'P' &&
           element.textContent ===
-            '今回の計画のルール：「研究：見積もりの提案の上限で計画する」（引き継ぐで扱いを決めます）',
+            '今回の計画のルール：「研究：見積もりの提案の上限で計画する」（扱いは「引き継ぐ」で決めます）',
       ),
     ).toBeTruthy();
     expect(screen.queryByText(/幅のあるタスク 1件のうち/)).toBeNull();
@@ -512,7 +512,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     const choices = () =>
       within(criterionSection()).getByRole('radiogroup').textContent ?? '';
     expect(choices()).toContain(
-      '次の計画でも、研究の幅のあるタスクを上限で計画します。確かめるで、使うかどうかを選べます。',
+      '次の計画でも、研究の幅のあるタスクを上限で計画します。使うかどうかは「確かめる」で選べます。',
     );
     expect(choices()).toContain('次の計画では、このルールを使いません。');
     await userEvent.click(
@@ -538,7 +538,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
       screen.getByText(/幅のあるタスク \d+件を中央で計画します/),
     ).toBeTruthy();
     expect(choices()).toContain(
-      '次の計画では、代わりに幅のあるタスクを中央で計画します。確かめるで、使うかどうかを選べます。',
+      '次の計画では、代わりに幅のあるタスクを中央で計画します。使うかどうかは「確かめる」で選べます。',
     );
   });
 
@@ -694,7 +694,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
         (_, element) =>
           element?.tagName === 'P' &&
           element.textContent ===
-            '今回の計画のルール：「研究：見積もりの提案の上限で計画する」（結果と扱いは引き継ぐにあります）',
+            '今回の計画のルール：「研究：見積もりの提案の上限で計画する」（結果と扱いは「引き継ぐ」にあります）',
       ),
     ).toBeTruthy();
     // The closed reflection keeps the new name, as text (#109).
@@ -827,7 +827,7 @@ describe('Retro — boundaries', () => {
     await userEvent.click(await screen.findByRole('button', { name: '編集' }));
     expect(
       screen.getByText(
-        /先に引き継ぐで「計画のルールにもする」をオフにしてください/,
+        /先に「引き継ぐ」で「計画のルールにもする」をオフにしてください/,
       ),
     ).toBeTruthy();
   });

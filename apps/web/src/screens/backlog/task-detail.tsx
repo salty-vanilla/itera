@@ -204,13 +204,13 @@ function dayText(
 ): string {
   switch (today.resolution) {
     case 'started':
-      return `今日やるに入っています（${startedText(today.startedAt, timeZone)}）`;
+      return `「今日やる」に入っています（${startedText(today.startedAt, timeZone)}）`;
     case 'done':
-      return '今日やるに入っています（完了）';
+      return '「今日やる」に入っています（完了）';
     case 'skipped':
-      return '今日やるに入っています（この回はスキップ）';
+      return '「今日やる」に入っています（この回はスキップ）';
     case 'selected':
-      return '今日やるに入っています';
+      return '「今日やる」に入っています';
   }
 }
 

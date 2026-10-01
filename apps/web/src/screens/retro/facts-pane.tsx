@@ -276,8 +276,8 @@ function FactsPane({
             {`今回の計画のルール：「${criterionName(used.criterion.policy, used.areaName)}」`}
             <span className="text-ink-muted">
               {readOnly
-                ? '（結果と扱いは引き継ぐにあります）'
-                : '（引き継ぐで扱いを決めます）'}
+                ? '（結果と扱いは「引き継ぐ」にあります）'
+                : '（扱いは「引き継ぐ」で決めます）'}
             </span>
           </span>
         </p>

@@ -857,7 +857,7 @@ describe('Backlog', () => {
       await screen.findByRole('menuitem', { name: '今日へ' }),
     );
     const toast = (
-      await screen.findByText('「本棚を整理する」を今日やるに入れました')
+      await screen.findByText('「本棚を整理する」を「今日やる」に入れました')
     ).closest<HTMLElement>('[role="dialog"]')!;
     expect(toast.textContent).toContain('今週にも入りました。');
     // Neither a confirmation nor a capacity warning, and no 元に戻す.
@@ -887,14 +887,14 @@ describe('Backlog', () => {
     expect(
       now.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    expect(within(now).queryByText(/今日やるに入っています/)).toBeNull();
+    expect(within(now).queryByText(/「今日やる」に入っています/)).toBeNull();
     await userEvent.click(within(now).getByRole('button', { name: '今日へ' }));
     expect(
-      await screen.findByText('「本棚を整理する」を今日やるに入れました'),
+      await screen.findByText('「本棚を整理する」を「今日やる」に入れました'),
     ).toBeTruthy();
     // The button is replaced by the state, 今日を開く and the day's operations.
     expect(within(now).queryByRole('button', { name: '今日へ' })).toBeNull();
-    expect(within(now).getByText('今日やるに入っています')).toBeTruthy();
+    expect(within(now).getByText('「今日やる」に入っています')).toBeTruthy();
     const open = within(now).getByRole('link', { name: '今日を開く' });
     await waitFor(() => expect(document.activeElement).toBe(open));
     expect(within(now).getByRole('button', { name: '開始' })).toBeTruthy();
@@ -1376,7 +1376,7 @@ describe('Backlog — the detail of a Task in 今日やる (#94)', () => {
   it('offers the day’s operations for a selected Task, and starts it as the row does', async () => {
     await renderAt('/backlog?fixture=backlog-detail&task=task-interview');
     const section = await now();
-    expect(section.textContent).toContain('今日やるに入っています');
+    expect(section.textContent).toContain('「今日やる」に入っています');
     expect(
       within(section)
         .getAllByRole('button')
@@ -1390,7 +1390,7 @@ describe('Backlog — the detail of a Task in 今日やる (#94)', () => {
     );
     expect(selectionOf('task-interview')?.resolution).toBe('started');
     expect(section.textContent).toMatch(
-      /今日やるに入っています（作業中 · \d\d:\d\d から）/,
+      /「今日やる」に入っています（作業中 · \d\d:\d\d から）/,
     );
     expect(
       within(section).getByRole('button', { name: '今日はここまで' }),
@@ -1406,7 +1406,7 @@ describe('Backlog — the detail of a Task in 今日やる (#94)', () => {
     );
     expect(selectionOf('task-interview')?.resolution).toBe('deferred');
     section = await now();
-    expect(section.textContent).not.toContain('今日やるに入っています');
+    expect(section.textContent).not.toContain('「今日やる」に入っています');
     expect(section.textContent).toContain(
       '今日は見送りました。明日から今週の残りに出ます。',
     );
