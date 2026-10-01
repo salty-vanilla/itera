@@ -21,7 +21,7 @@ import type {
 export interface PlanSummary {
   /**
    * Whether the plan fits: ok / tight / over / unknown, with the numbers
-   * while the difference crosses 0 (`capacityStatusLine`).
+   * while it may or does go over (`capacityStatusLine`).
    */
   readonly statement: CapacityState;
   /** 「14.75–17.75h」, or 「見積もりなし 3件」 with nothing estimated. */
@@ -51,7 +51,7 @@ export function planSummary(data: PlanningData): PlanSummary {
   const tasks = data.plan.flatMap((p) => p.tasks);
   const leftOut = formatLeftOut(totals.total);
   return {
-    statement: capacityStatusLine(totals.capacity),
+    statement: capacityStatusLine(totals.capacity, totals.total),
     total: formatPlanningSum(totals.total),
     ...(totals.capacity === undefined
       ? {}

@@ -10,18 +10,28 @@ import { weekCall } from '@/lib/week-text';
 // 時間の見通し (docs/design/patterns.md Sprint Planning, right pane): the
 // previous improvement (shown only), the active planning criterion, and the
 // Capacity. The criterion is its name on one line under the improvement, in
-// every stage: its frame, the 「今回の計画に使う」 Switch and effect, and
+// 選ぶ and 整える: its frame, the 「今回の計画に使う」 Switch and effect, and
 // 「何が上振れすると超過するか」 are in the 確かめる summary at the head of
 // the Sprint pane (#93). Without a criterion, nothing is shown (#105).
+// In 確かめる, that summary has the numbers, the hours and the criterion, so
+// this pane keeps the improvement and the Capacity's bar and Areas only: each
+// number shows once (#165).
 
 type OutlookPaneProps = {
   data: PlanningData;
+  /** 確かめる: the summary at the head of the Sprint pane has the numbers. */
+  check?: boolean | undefined;
   /** Absent: no field for the available hours (確かめる has its own). */
   onAvailableHours?: ((hours: number | null) => boolean) | undefined;
   className?: string | undefined;
 };
 
-function OutlookPane({ data, onAvailableHours, className }: OutlookPaneProps) {
+function OutlookPane({
+  data,
+  check = false,
+  onAvailableHours,
+  className,
+}: OutlookPaneProps) {
   const { improvement, criterion, totals } = data;
   // The pane can be drawn twice (the right pane and a Drawer), so ids are
   // made per instance.
@@ -41,7 +51,7 @@ function OutlookPane({ data, onAvailableHours, className }: OutlookPaneProps) {
   );
   // The criterion's name alone, on one line under the improvement (owner
   // decision R3 in #105).
-  const criterionLine = criterion !== undefined && (
+  const criterionLine = criterion !== undefined && !check && (
     <p
       data-slot="criterion-line"
       className="flex items-start gap-2 text-body text-ink-muted"
@@ -78,6 +88,7 @@ function OutlookPane({ data, onAvailableHours, className }: OutlookPaneProps) {
         total={totals.total}
         capacity={totals.capacity}
         areas={areas}
+        breakdownOnly={check}
         onAvailableHoursChange={onAvailableHours}
         week={weekCall(data.week, data.number)}
       />

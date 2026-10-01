@@ -59,3 +59,18 @@ export const Over: Story = {
 
 /** unknown：使える時間が未入力。 */
 export const Unknown: Story = {};
+
+/**
+ * Planning の確かめるの右列：数字・状態・入力欄は中央の要約にだけ置き、ここは
+ * バー・領域ごとの内訳・計画値の説明だけ（Issue #165）。
+ */
+export const BreakdownOnly: Story = {
+  args: {
+    breakdownOnly: true,
+    capacity: {
+      availableHours: 11,
+      remaining: { lo: -5, hi: -3 },
+      status: 'exceeds',
+    },
+  },
+};
