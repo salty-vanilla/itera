@@ -43,6 +43,12 @@ export interface TodayItem {
   readonly value: PlanningValue;
   /** 「N回続けて見送り」 (F4), 0 when there is none. */
   readonly streak: number;
+  /**
+   * 今週の残り only: today's choice of it, put back with 今週の残りに戻す
+   * (Removed). 今日へ takes that choice back (F37) rather than making a
+   * second one, which the day does not allow (F17, #233).
+   */
+  readonly removedToday?: DailySelection['id'];
 }
 
 /** A row of 今日やる, or one closed today. */
@@ -76,7 +82,10 @@ export interface TodayData {
    * from the Backlog come last.
    */
   readonly rows: readonly TodayRow[];
-  /** 今日はここまで・見送り・外すにした選択. Still completable today (F17). */
+  /**
+   * 今日は中断する・今日は見送るにした選択. Still completable today (F17).
+   * One put back with 今週の残りに戻す is in 今週の残り instead (#233).
+   */
   readonly closed: readonly TodayRow[];
   /** 昨日の続き (F6): candidates only, never chosen automatically. */
   readonly continuation: readonly TodayItem[];
@@ -193,7 +202,9 @@ export function todayData(
         isListedResolution(s.resolution) && s.origin === 'backlogCompletion',
     ),
   ].flatMap(row);
-  const closed = todays.filter((s) => CLOSED.has(s.resolution)).flatMap(row);
+  const closed = todays
+    .filter((s) => CLOSED.has(s.resolution) && s.resolution !== 'removed')
+    .flatMap(row);
 
   const continuation = yesterdaysContinuation(sprint, sprints, today).flatMap(
     (c) => item(c.sprintTask, c.occurrenceId) ?? [],
@@ -203,8 +214,8 @@ export function todayData(
       (c) =>
         c.sprintTask.id === sprintTask.id && c.occurrence?.id === occurrenceId,
     );
-  const chosenToday = (sprintTask: SprintTask, occurrenceId?: string) =>
-    todays.some(
+  const todayOf = (sprintTask: SprintTask, occurrenceId?: string) =>
+    todays.find(
       (s) =>
         s.sprintTaskId === sprintTask.id && s.occurrenceId === occurrenceId,
     );
@@ -234,11 +245,15 @@ export function todayData(
           : 1,
       ),
   ];
-  const rest = plan.filter(
-    (i) =>
-      !chosenToday(i.sprintTask, i.occurrence?.id) &&
-      !inContinuation(i.sprintTask, i.occurrence?.id),
-  );
+  // Put back with 今週の残りに戻す: in 今週の残り again at once (#233).
+  const rest = plan.flatMap((i): TodayItem[] => {
+    if (inContinuation(i.sprintTask, i.occurrence?.id)) return [];
+    const chosen = todayOf(i.sprintTask, i.occurrence?.id);
+    if (chosen === undefined) return [i];
+    return chosen.resolution === 'removed'
+      ? [{ ...i, removedToday: chosen.id }]
+      : [];
+  });
 
   const areas = records.areas
     .filter((a) => !a.archived)

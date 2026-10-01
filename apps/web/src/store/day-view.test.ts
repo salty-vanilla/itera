@@ -64,6 +64,22 @@ describe('dayData (#90)', () => {
     expect(titles).toContain('関連論文を 3本読む');
   });
 
+  it('leaves out a choice put back with 今週の残りに戻す (#233)', () => {
+    const { records, clock } = fixtureSnapshot('today-daytime');
+    const putBack = withSprint(records, 'sprint-2026-09-28', (s) => ({
+      ...s,
+      dailySelections: s.dailySelections.map((d) =>
+        d.date === '2026-09-30' && d.resolution === 'paused'
+          ? { ...d, resolution: 'removed' as const }
+          : d,
+      ),
+    }));
+    const titles = dayData(putBack, clock, day('2026-09-30'))?.records.map(
+      (r) => r.title,
+    );
+    expect(titles).toEqual(['英語の多読 30分']);
+  });
+
   it('names the Areas of a closed Sprint as at its confirm (F5)', () => {
     const { records, clock } = fixtureSnapshot('today-daytime');
     const renamed = {

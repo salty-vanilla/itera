@@ -2,7 +2,7 @@ import { HOURS_HINT } from './time-format';
 
 /**
  * The actual time typed for a day (かかった時間), in hours. One reading for the
- * surface of Today's rows and the Task detail's 今日はここまで, so that both
+ * surface of Today's rows and the Task detail's 今日は中断する, so that both
  * leave the same record.
  */
 export const ACTUAL_HOURS_HINT = `${HOURS_HINT}。あとから追加もできます`;

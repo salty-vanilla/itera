@@ -49,7 +49,7 @@ type ToastKind =
   | 'added-to-week'
   | 'task-archived'
   | 'day-record-undone'
-  /** 今日は見送る / 今日の予定から外す from a Today row, with 元に戻す (#163). */
+  /** 今日は見送る / 今週の残りに戻す from a Today row, with 元に戻す (#163). */
   | 'today-closed'
   | 'interrupt-deleted'
   /** 割り込みを記録 from the sheet, with 見る to the list (#157). */

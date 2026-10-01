@@ -51,8 +51,8 @@ describe('Today — any day by date (#90)', () => {
     expect(word.closest('h1')).toBeNull();
     expect(screen.getByText('Sprint 2 · 3日目 / 7日')).toBeTruthy();
     const paper = record('関連論文を 3本読む');
-    // The day is not today: 「ここまで」, not 「今日はここまで」 (#166).
-    expect(within(paper).getByText('ここまで')).toBeTruthy();
+    // The same word as today's row (#233), with no 「今日」 (#166).
+    expect(within(paper).getByText('中断')).toBeTruthy();
     expect(within(paper).queryByText(/今日/)).toBeNull();
     expect(within(paper).getByText('実績 4.5h')).toBeTruthy();
     expect(within(record('英語の多読 30分')).getByText('完了')).toBeTruthy();

@@ -169,7 +169,7 @@ export const defer = (selectionId: DailySelectionId): Change =>
 export const remove = (selectionId: DailySelectionId): Change =>
   onActive((sprint, ctx) => removeFromToday(sprint, { selectionId }, ctx));
 
-/** 見送り・外すを取り消す: back to 今日やる, today only (F37). */
+/** 見送り・今週の残りに戻したのを取り消す: back to 今日やる, today only (F37). */
 export const undoClose = (selectionId: DailySelectionId): Change =>
   onActive((sprint, ctx) => {
     const selection = find(sprint.dailySelections, selectionId, 'Selection');
@@ -181,7 +181,7 @@ export const undoClose = (selectionId: DailySelectionId): Change =>
     return undo(sprint, { selectionId, today: ctx.today }, ctx);
   });
 
-/** 今日はここまで, with the day's actual hours if given. */
+/** 今日は中断する, with the day's actual hours if given. */
 export const pause = (selectionId: DailySelectionId, hours?: number): Change =>
   onActive((sprint, ctx) =>
     pauseSelection(

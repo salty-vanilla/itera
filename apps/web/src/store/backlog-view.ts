@@ -62,7 +62,7 @@ export interface BacklogItem {
    * In today's 今日やる (a selection made today that is open, done or
    * skipped: what Today lists there). The Backlog row says 「今日」 instead
    * of 「今週」 (Issue #94), and the detail offers the day's operations.
-   * A Task chosen today and then closed (今日はここまで, 見送り, 外した) is
+   * A Task chosen today and then closed (中断, 見送り, 今週の残りに戻した) is
    * back among the week's, so it has none.
    */
   readonly today?: {
@@ -73,7 +73,7 @@ export interface BacklogItem {
     readonly recurring: boolean;
   };
   /**
-   * Chosen today and closed for the day (今日はここまで, 見送り, 外した): it
+   * Chosen today and closed for the day (中断, 見送り, 今週の残りに戻した): it
    * is among the week's remaining again, and the detail says what happened.
    */
   readonly closedToday?: ClosedResolution;

@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import { formatDate } from '@/lib/date-format';
-import { PAST_DAY_WORDS } from '@/lib/selection-words';
+import { SELECTION_WORDS } from '@/lib/selection-words';
 import type { PastDayRecord, RunningData } from '@/store/running-view';
 
 // 日ごとの記録 (#53, owner decisions): the days before today with their
@@ -152,11 +152,13 @@ function consequence(r: PastDayRecord): string {
   const back = r.recurring
     ? '繰り返しは未完了に戻ります。'
     : 'タスクは今週の残りに戻ります。';
+  // A choice put back to the week is not listed on another day (#233).
   const day =
-    r.after.kind === 'gone'
+    r.after.kind === 'gone' ||
+    (r.after.kind === 'closed' && r.after.resolution === 'removed')
       ? 'その日の記録は消え、'
       : r.after.kind === 'closed'
-        ? `その日の記録は「${PAST_DAY_WORDS[r.after.resolution]}」に戻り、`
+        ? `その日の記録は「${SELECTION_WORDS[r.after.resolution]}」に戻り、`
         : 'その日の記録は未完了に戻り、';
   return `${day}${back}${noWayBack}`;
 }

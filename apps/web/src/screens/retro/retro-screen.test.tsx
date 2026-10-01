@@ -123,9 +123,7 @@ describe('Retro — 事実を見る', () => {
     expect(paper.textContent).toContain('持ち越し');
     expect(paper.textContent).toContain('見送り 2回');
     expect(screen.getByRole('region', { name: '割り込み' })).toBeTruthy();
-    expect(
-      screen.getByRole('region', { name: '見送り・ここまで' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('region', { name: '見送り・中断' })).toBeTruthy();
     // No rates or scores (patterns.md Retro › ルール).
     expect(document.body.textContent).not.toMatch(/%|点|達成率|失敗/);
   });
@@ -965,9 +963,7 @@ describe('Retro — compact (#57)', () => {
       expect(paper?.textContent).toContain(
         '見積もりの提案 3–5h · 計画 5h（ルール） · 実績 4.5h',
       );
-      expect(paper?.textContent).toContain(
-        '持ち越し · 見送り 2回 · ここまで 1回',
-      );
+      expect(paper?.textContent).toContain('持ち越し · 見送り 2回 · 中断 1回');
       expect(
         within(paper!).getByRole('button', {
           name: /かかった時間を記録.*関連論文/,
