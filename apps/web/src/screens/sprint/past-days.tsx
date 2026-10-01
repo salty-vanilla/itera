@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import { formatDate } from '@/lib/date-format';
-import { SELECTION_WORDS } from '@/lib/selection-words';
+import { PAST_DAY_WORDS } from '@/lib/selection-words';
 import type { PastDayRecord, RunningData } from '@/store/running-view';
 
 // 日ごとの記録 (#53, owner decisions): the days before today with their
@@ -145,7 +145,7 @@ function consequence(r: PastDayRecord): string {
     r.after.kind === 'gone'
       ? 'Backlog から完了した記録なので、その日の記録ごと消え、'
       : r.after.kind === 'closed'
-        ? `その日の記録は、完了にする前の「${SELECTION_WORDS[r.after.resolution]}」に戻り、`
+        ? `その日の記録は、完了にする前の「${PAST_DAY_WORDS[r.after.resolution]}」に戻り、`
         : 'その日の記録は未処理になり、';
   const noWayBack =
     r.selection.resolution === 'skipped'

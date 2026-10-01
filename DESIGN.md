@@ -417,6 +417,7 @@ Area（領域）はユーザーが作る。駅の路線記号のように、色�
 - 数値は `num-*`。時間・件数・日付が並ぶ列は右揃え。
 - 確定した言葉（Goal、改善策、振り返り）は 1 行 38 字程度（`measure-read`）まで。Task タイトルは compact では 2 行まで、medium 以上では 1 行で省略し、詳細で全文を読める（Issue #100）。
 - 本文は `line-break: strict`、`overflow-wrap: anywhere`。`anywhere` は表のセルや flex の子の最小幅も 1 文字まで縮めるので、段落（説明文・Goal・振り返り）にだけ付け、画面全体の既定は `break-word` にする。
+- 見出し（`h1`〜`h3`）は `word-break: auto-phrase` で文節の途中では折らず、`text-wrap: balance` で行の長さを揃える。画面の既定にする。見出しの横に添える短い語（Today の「過去」「未来」）は、語の途中で折らない（Issue #166）。
 - **確定した言葉は大きく、編集中は本文のサイズ。** Goal は編集中は `body-l`、確定すると `goal` で組む。未確定の Agent 提案は `body` のまま破線の枠に入れる。
 - ○ Sprint Header「Sprint 14」＝`display-l`、期間「9/28 (月) – 10/4 (日)」＝`body` `ink-muted`。× Estimate・Capacity の数字を `num-*` 以外で組む、数字だけ別の書体にする。
 

@@ -270,6 +270,17 @@
   }
 
   /*
+   * Headings break between phrases and keep their lines even (#166), so
+   * 「来週の計画はまだありません」 never ends a line on 「ん」 at 375px.
+   */
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+    word-break: auto-phrase;
+  }
+
+  /*
    * Browser surfaces follow the palette. Text selection stays neutral: yellow
    * is reserved for where you are and always comes with a check or a word.
    */
