@@ -683,11 +683,29 @@ function TaskTable({
                   </span>
                 )}
               </th>
-              <td className={num}>{estimateOf(t).text}</td>
+              <td className={num}>
+                {/* A suggestion is its range, with what it is under it, so
+                    that the column keeps its numbers aligned (#162). */}
+                {t.plan?.estimateHours === undefined &&
+                t.plan?.suggestion !== undefined ? (
+                  <>
+                    {formatRange(t.plan.suggestion.lo, t.plan.suggestion.hi)}
+                    <span className="block text-meta text-ink-muted">
+                      見積もりの提案
+                    </span>
+                  </>
+                ) : (
+                  estimateOf(t).text
+                )}
+              </td>
               <td className={num}>
                 {plannedCellText(t)}
+                {/* Notes break at a phrase within the column, not into 実績. */}
                 {[...unestimatedNote(t), ...planNotes(t)].map((note) => (
-                  <span key={note} className="block text-meta text-ink-muted">
+                  <span
+                    key={note}
+                    className="block text-meta whitespace-normal text-ink-muted [word-break:auto-phrase]"
+                  >
                     {note}
                   </span>
                 ))}

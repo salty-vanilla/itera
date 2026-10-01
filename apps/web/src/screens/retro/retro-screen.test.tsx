@@ -113,11 +113,12 @@ describe('Retro — 事実を見る', () => {
       ),
     ).toBeTruthy();
     expect(screen.queryByText(/幅のあるタスク 1件のうち/)).toBeNull();
-    // Estimate / 計画値 / 実績 / 結果 per Task, carry-overs and deferrals.
+    // Estimate / 計画 / 実績 / 結果 per Task, carry-overs and deferrals.
     const paper = screen.getByRole('rowheader', {
       name: '関連論文を 3 本読む',
     }).parentElement!;
-    expect(paper.textContent).toContain('見積もりの提案 3–5h');
+    // The suggestion's range, with what it is under it (#162).
+    expect(paper.textContent).toContain('3–5h見積もりの提案');
     expect(paper.textContent).toContain('4.5h');
     expect(paper.textContent).toContain('持ち越し');
     expect(paper.textContent).toContain('見送り 2回');
