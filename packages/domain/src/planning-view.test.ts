@@ -4,9 +4,14 @@ import type { Occurrence } from './occurrence';
 import {
   capacityDrivers,
   criterionEffect,
+  criterionHasTarget,
   planningCandidates,
 } from './planning-view';
-import { carryOverCandidates, goalLinkAtConfirm } from './planning';
+import {
+  carryOverCandidates,
+  goalLinkAtConfirm,
+  planSnapshotOf,
+} from './planning';
 import { id } from './shared/ids';
 import { instant, localDate } from './shared/time';
 import type { SprintTask } from './sprint';
@@ -331,5 +336,120 @@ describe('planningCandidates and carryOverCandidates agree (invariant 20)', () =
     }).carriedOver.map((t) => t.id);
     expect(candidates).toEqual(['b']);
     expect(group).toEqual(['a', 'b']);
+  });
+});
+
+describe('criterionHasTarget (#161, F42)', () => {
+  const criterion = {
+    id: id<'PlanningCriterion'>('crit'),
+    policy: { scope: { kind: 'area', areaId: researchId }, rangePolicy: 'hi' },
+  } as const;
+  const research = unwrap(
+    updateTask(
+      unwrap(
+        presentSuggestion(
+          newTask('paper', 'paper'),
+          {
+            id: id('sug-paper'),
+            lo: 3,
+            hi: 5,
+            rationale: '',
+            uncertainties: [],
+          },
+          ctx,
+        ),
+      ),
+      { areaId: researchId },
+      ctx,
+    ),
+  );
+  const other = unwrap(
+    presentSuggestion(
+      newTask('other', 'other'),
+      { id: id('sug-other'), lo: 1, hi: 2, rationale: '', uncertainties: [] },
+      ctx,
+    ),
+  );
+  const planned = (
+    t: Task,
+    applied: boolean,
+    extra: Partial<SprintTask> = {},
+  ): SprintTask => {
+    const sprintTask = st(t.id, { outcome: 'planned', ...extra });
+    return {
+      ...sprintTask,
+      planSnapshot: planSnapshotOf(
+        t,
+        sprintTask,
+        applied ? criterion : undefined,
+        ctx,
+      ),
+    };
+  };
+  const has = (tasks: SprintTask[]) =>
+    criterionHasTarget(
+      { ...sprintFixture('2026-09-28', 'active'), tasks },
+      { tasks: [research, other], policy: criterion.policy },
+    );
+
+  it('has a target when it acted on a value, or would have', () => {
+    expect(has([planned(research, true)])).toBe(true);
+    // Switched off at the Check: the range in its scope is still a target.
+    expect(has([planned(research, false)])).toBe(true);
+  });
+
+  it('has none outside its scope, on a point or after removal', () => {
+    expect(has([planned(other, false)])).toBe(false);
+    expect(has([])).toBe(false);
+    const estimated = unwrap(setEstimate(research, 4, ctx));
+    expect(has([planned(estimated, false)])).toBe(false);
+    expect(has([planned(research, true, { outcome: 'removed' })])).toBe(false);
+    // Added mid-Sprint without it: not planned at confirm (F3).
+    expect(has([planned(research, false, { origin: 'midSprint' })])).toBe(
+      false,
+    );
+  });
+
+  it('has none on a point suggestion; every Area is in scope for 「all」', () => {
+    const point = unwrap(
+      updateTask(
+        unwrap(
+          presentSuggestion(
+            newTask('point', 'point'),
+            {
+              id: id('sug-point'),
+              lo: 3,
+              hi: 3,
+              rationale: '',
+              uncertainties: [],
+            },
+            ctx,
+          ),
+        ),
+        { areaId: researchId },
+        ctx,
+      ),
+    );
+    expect(
+      criterionHasTarget(
+        {
+          ...sprintFixture('2026-09-28', 'active'),
+          tasks: [planned(point, false)],
+        },
+        { tasks: [point], policy: criterion.policy },
+      ),
+    ).toBe(false);
+    expect(
+      criterionHasTarget(
+        {
+          ...sprintFixture('2026-09-28', 'active'),
+          tasks: [planned(other, false)],
+        },
+        {
+          tasks: [other],
+          policy: { scope: { kind: 'all' }, rangePolicy: 'hi' },
+        },
+      ),
+    ).toBe(true);
   });
 });

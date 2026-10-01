@@ -34,8 +34,8 @@ type CapacityIndicatorProps = {
   total: PlanningTotal;
   /**
    * 確かめる: the numbers, the state and the field are in the summary at the
-   * head of the Sprint pane, so only the bar, the Areas and what 計画値 is
-   * are shown here (#165).
+   * head of the Sprint pane, so only the bar and the Areas are shown here
+   * (#165).
    */
   breakdownOnly?: boolean | undefined;
   /** Absent while no available hours are entered (unknown). */
@@ -96,7 +96,8 @@ export function capacityStatement(
   const { status } = capacity;
   // The numbers are in the headline; the state does not say them again
   // (#93, #165).
-  if (status === 'exceeds') return { tone: 'over', text: '下限でも超える' };
+  if (status === 'exceeds')
+    return { tone: 'over', text: '少なく済んでも超える' };
   if (status === 'mayExceed') return { tone: 'tight', text: '超える可能性' };
   const leftOut =
     total !== undefined && total.unestimated + total.unestimatedSubtasks > 0;
@@ -111,14 +112,14 @@ export function capacityStatement(
 /**
  * The headline. 残り or, when even the lower end is over, 超過, as a range.
  * When the difference crosses 0 (mayExceed), no range with a negative end:
- * two sentences instead, 「下限なら 2.25h 残る」「上限なら 0.75h 超える」
+ * two sentences instead, 「少なく済めば 2.25h 残る」「多くかかれば 0.75h 超える」
  * (owner decision S5 in #93).
  */
 export type CapacityHeadline =
   | { kind: 'range'; label: '残り' | '超過'; value: string }
   | { kind: 'split'; lower: HeadlinePart; upper: HeadlinePart };
 
-/** 「下限なら」「2.25h」「残る」; `value` is absent for 「ちょうど収まる」. */
+/** 「少なく済めば」「2.25h」「残る」; `value` is absent for 「ちょうど収まる」. */
 type HeadlinePart = { lead: string; value?: string; tail: string };
 
 export function capacityHeadline(capacity: Capacity): CapacityHeadline {
@@ -135,14 +136,14 @@ export function capacityHeadline(capacity: Capacity): CapacityHeadline {
       kind: 'split',
       lower:
         remaining.hi === 0
-          ? { lead: '下限なら', tail: 'ちょうど収まる' }
+          ? { lead: '少なく済めば', tail: 'ちょうど収まる' }
           : {
-              lead: '下限なら',
+              lead: '少なく済めば',
               value: formatHours(remaining.hi, { total: true }),
               tail: '残る',
             },
       upper: {
-        lead: '上限なら',
+        lead: '多くかかれば',
         value: formatHours(-remaining.lo, { total: true }),
         tail: '超える',
       },
@@ -159,7 +160,7 @@ function partText({ lead, value, tail }: HeadlinePart): string {
   return value === undefined ? `${lead}${tail}` : `${lead} ${value} ${tail}`;
 }
 
-/** 「残り 1 〜 3h」, or the two sentences 「下限なら 2.25h 残る」「上限なら 0.75h 超える」. */
+/** 「残り 1 〜 3h」, or the two sentences 「少なく済めば 2.25h 残る」「多くかかれば 0.75h 超える」. */
 export function capacityHeadlineSentences(
   headline: CapacityHeadline,
 ): readonly string[] {
@@ -170,8 +171,8 @@ export function capacityHeadlineSentences(
 
 /**
  * How a planned total stood against the available hours, as a fact of the
- * week (Retro, #167): 「下限でも 0.25h 超える」, 「下限なら 1.75h 残る · 上限なら
- * 0.25h 超える」 (the headline's two sentences), 「上限でも 1h 残る」. Words
+ * week (Retro, #167): 「少なく済んでも 0.25h 超える」, 「少なく済めば 1.75h 残る · 多くかかれば
+ * 0.25h 超える」 (the headline's two sentences), 「多くかかっても 1h 残る」. Words
  * only: no tone, so never `danger`.
  */
 export function capacityRelationSentences(
@@ -179,15 +180,17 @@ export function capacityRelationSentences(
 ): readonly string[] {
   const { remaining, status } = capacity;
   if (status === 'exceeds') {
-    return [`下限でも ${formatHours(-remaining.hi, { total: true })} 超える`];
+    return [
+      `少なく済んでも ${formatHours(-remaining.hi, { total: true })} 超える`,
+    ];
   }
   if (status === 'mayExceed') {
     return capacityHeadlineSentences(capacityHeadline(capacity));
   }
   return [
     remaining.lo === 0
-      ? '上限でちょうど収まる'
-      : `上限でも ${formatHours(remaining.lo, { total: true })} 残る`,
+      ? '多くかかってもちょうど収まる'
+      : `多くかかっても ${formatHours(remaining.lo, { total: true })} 残る`,
   ];
 }
 
@@ -207,8 +210,8 @@ function Sentences({ items }: { items: readonly string[] }) {
 /**
  * The state where no headline is shown (the 確かめる summary, the 確定
  * Dialog): the statement, and while the plan may or does go over, the
- * headline's sentences after it, each number said once: 「超える可能性：下限
- * なら 1.75h 残る · 上限なら 0.25h 超える」 (#93), 「下限でも超える：超過 3 〜
+ * headline's sentences after it, each number said once: 「超える可能性：少なく
+ * 済めば 1.75h 残る · 多くかかれば 0.25h 超える」 (#93), 「少なく済んでも超える：超過 3 〜
  * 5h」 (#165).
  */
 export function capacityStatusLine(
@@ -337,7 +340,7 @@ function CapacityIndicator({
             <CapacityStatement statement={statement} />
           </div>
           <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 text-body">
-            <dt className="whitespace-nowrap text-ink-muted">計画値の合計</dt>
+            <dt className="whitespace-nowrap text-ink-muted">計画の合計</dt>
             <dd className="text-right text-num-m text-ink">
               {/* The count left out is its own sentence below. */}
               {formatPlanningSum(total)}
@@ -375,7 +378,7 @@ function CapacityIndicator({
       <CapacityBar total={total} capacity={capacity} areas={areas} />
 
       {areas.length > 0 && (
-        <ul aria-label="領域ごとの計画値" className="flex flex-col">
+        <ul aria-label="領域ごとの計画の時間" className="flex flex-col">
           {areas.map((a) => (
             <li
               key={a.key}
@@ -389,11 +392,6 @@ function CapacityIndicator({
           ))}
         </ul>
       )}
-
-      {/* Where 計画値 first shows: what it is, in one line (#105). */}
-      <p className="text-help text-ink-muted">
-        計画値：今回の計画に使う時間。見積もりは変わりません。
-      </p>
     </section>
   );
 }

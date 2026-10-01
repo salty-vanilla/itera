@@ -21,11 +21,11 @@ describe('capacityHeadline (owner decision S5 in #93)', () => {
 
   it('is two sentences while the difference crosses 0', () => {
     expect(headline(14.75, 17.75, 17)).toBe(
-      '下限なら 2.25h 残る · 上限なら 0.75h 超える',
+      '少なく済めば 2.25h 残る · 多くかかれば 0.75h 超える',
     );
     // The lower end is exactly the available hours.
     expect(headline(17, 18, 17)).toBe(
-      '下限ならちょうど収まる · 上限なら 1h 超える',
+      '少なく済めばちょうど収まる · 多くかかれば 1h 超える',
     );
   });
 
@@ -40,7 +40,7 @@ describe('capacityHeadline (owner decision S5 in #93)', () => {
       text: '超える可能性',
     });
     expect(capacityStatusLine(capacity).text).toBe(
-      '超える可能性：下限なら 2.25h 残る · 上限なら 0.75h 超える',
+      '超える可能性：少なく済めば 2.25h 残る · 多くかかれば 0.75h 超える',
     );
     // While it fits, the line is the statement itself.
     const fits = capacityOf({ lo: 15, hi: 17 }, 18);
@@ -51,10 +51,12 @@ describe('capacityHeadline (owner decision S5 in #93)', () => {
     const over = capacityOf({ lo: 17, hi: 19 }, 14);
     expect(capacityStatement(over)).toEqual({
       tone: 'over',
-      text: '下限でも超える',
+      text: '少なく済んでも超える',
     });
     // Where no headline is shown, the numbers follow, once.
-    expect(capacityStatusLine(over).text).toBe('下限でも超える：超過 3 〜 5h');
+    expect(capacityStatusLine(over).text).toBe(
+      '少なく済んでも超える：超過 3 〜 5h',
+    );
   });
 
   it('says that the estimated part fits when some is left out (#165)', () => {
@@ -74,11 +76,11 @@ describe('capacityRelationSentences (Retro, #167)', () => {
     capacityRelationSentences(capacityOf({ lo, hi }, available)).join(' · ');
 
   it('says how the plan stood, with the end that decides it', () => {
-    expect(relation(17.25, 20.25, 17)).toBe('下限でも 0.25h 超える');
+    expect(relation(17.25, 20.25, 17)).toBe('少なく済んでも 0.25h 超える');
     expect(relation(15.25, 17.25, 17)).toBe(
-      '下限なら 1.75h 残る · 上限なら 0.25h 超える',
+      '少なく済めば 1.75h 残る · 多くかかれば 0.25h 超える',
     );
-    expect(relation(15, 16, 17)).toBe('上限でも 1h 残る');
-    expect(relation(15, 17, 17)).toBe('上限でちょうど収まる');
+    expect(relation(15, 16, 17)).toBe('多くかかっても 1h 残る');
+    expect(relation(15, 17, 17)).toBe('多くかかってもちょうど収まる');
   });
 });

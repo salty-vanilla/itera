@@ -71,10 +71,10 @@ const reviewed = () => sprintById('sprint-2026-09-28');
 const reasonText = (text: string) => (_: string, element: Element | null) =>
   element?.tagName === 'P' && element.textContent === text;
 const decisionMissingText = reasonText(
-  '上の「今回の計画基準」で、続ける・終える・置き換えるのどれかを選ぶと完了できます。',
+  '上の「今回の計画のルール」で、続ける・終える・置き換えるのどれかを選ぶと完了できます。',
 );
 const continueWithDraftText = reasonText(
-  '上の「今回の計画基準」で「続ける」を選んでいるときは、「計画基準にもする」をオフにするか、「置き換える」を選ぶと完了できます。',
+  '上の「今回の計画のルール」で「続ける」を選んでいるときは、「計画のルールにもする」をオフにするか、「置き換える」を選ぶと完了できます。',
 );
 const completeButton = () =>
   screen.getByRole('button', { name: '振り返りを完了' });
@@ -97,7 +97,7 @@ describe('Retro — 事実を見る', () => {
       ['持ち越し', '2'],
       ['スキップ', '1'],
       ['週の途中の追加', '1'],
-      ['計画値の合計', '17.25–20.25h'],
+      ['計画の合計', '17.25–20.25h'],
     ]) {
       const term = within(summary).getByText(label!);
       expect(term.parentElement?.textContent).toContain(value);
@@ -109,15 +109,16 @@ describe('Retro — 事実を見る', () => {
         (_, element) =>
           element?.tagName === 'P' &&
           element.textContent ===
-            '今回の計画基準：「研究：提案の幅の上限で計画する」（引き継ぐで扱いを決めます）',
+            '今回の計画のルール：「研究：見積もりの提案の上限で計画する」（引き継ぐで扱いを決めます）',
       ),
     ).toBeTruthy();
     expect(screen.queryByText(/幅のあるタスク 1件のうち/)).toBeNull();
-    // Estimate / 計画値 / 実績 / 結果 per Task, carry-overs and deferrals.
+    // Estimate / 計画 / 実績 / 結果 per Task, carry-overs and deferrals.
     const paper = screen.getByRole('rowheader', {
       name: '関連論文を 3 本読む',
     }).parentElement!;
-    expect(paper.textContent).toContain('Agent の提案 3–5h');
+    // The suggestion's range, with what it is under it (#162).
+    expect(paper.textContent).toContain('3–5h見積もりの提案');
     expect(paper.textContent).toContain('4.5h');
     expect(paper.textContent).toContain('持ち越し');
     expect(paper.textContent).toContain('見送り 2回');
@@ -363,7 +364,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
     );
     const text = dialog.textContent ?? '';
     expect(text).toContain(reviewed().retro?.improvement?.text);
-    expect(text).toContain('今回の計画基準「');
+    expect(text).toContain('今回の計画のルール「');
     expect(text).toContain('2件は Backlog に残っています。');
     expect(text).toContain(
       '完了すると、書いた内容は変えられず、この Sprint には実績を足せなくなります。',
@@ -393,7 +394,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
     await renderAt('/retro?fixture=retro-start&stage=handoff');
     await userEvent.click(completeButton());
     const dialog = await screen.findByRole('dialog');
-    for (const label of ['次に試す変更', '計画基準の決定']) {
+    for (const label of ['次に試す変更', '計画のルールの決定']) {
       expect(
         within(dialog).getByText(label).nextElementSibling?.textContent,
       ).toBe('なし');
@@ -415,7 +416,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
       '/retro?fixture=retro-before-complete&stage=handoff',
     );
     await userEvent.click(
-      screen.getByRole('switch', { name: /計画基準にもする/ }),
+      screen.getByRole('switch', { name: /計画のルールにもする/ }),
     );
     const draftId = reviewed().retro?.improvement?.criterionId;
     expect(draftId).toBeDefined();
@@ -423,7 +424,9 @@ describe('Retro — 引き継ぐ and 完了', () => {
     expect(screen.getByText(continueWithDraftText)).toBeTruthy();
     // The setting, its effect and preview from one value (invariant 39).
     await userEvent.selectOptions(
-      screen.getByRole('combobox', { name: '提案の幅のどこで計画するか' }),
+      screen.getByRole('combobox', {
+        name: '見積もりの提案のどこで計画するか',
+      }),
       'mid',
     );
     expect(
@@ -431,7 +434,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
         .rangePolicy,
     ).toBe('mid');
     expect(
-      screen.getAllByText(/提案の幅の中央で計画する/).length,
+      screen.getAllByText(/見積もりの提案の中央で計画する/).length,
     ).toBeGreaterThan(0);
     await userEvent.click(screen.getByRole('radio', { name: '置き換える' }));
     await userEvent.click(completeButton());
@@ -480,7 +483,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
 
 describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () => {
   const criterionSection = () =>
-    screen.getByRole('region', { name: '今回の計画基準' });
+    screen.getByRole('region', { name: '今回の計画のルール' });
   const carryOverLine = () =>
     document.querySelector('[data-slot="carry-over-place"]');
 
@@ -488,10 +491,10 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     await renderAt('/retro?fixture=retro-start&stage=handoff');
     const section = criterionSection();
     const outcome = within(section).getByText(
-      '研究の幅のあるタスク 1件のうち 1件を持ち越し（計画値 5h・実績 4.5h）',
+      '研究の幅のあるタスク 1件のうち 1件を持ち越し（計画 5h・実績 4.5h）',
     );
     expect(
-      within(section).getByText('確定したときに、今回の計画値に使いました。'),
+      within(section).getByText('確定したときに、このルールで計画しました。'),
     ).toBeTruthy();
     const choices = within(section).getByRole('radiogroup');
     expect(
@@ -511,16 +514,18 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     expect(choices()).toContain(
       '次の計画でも、研究の幅のあるタスクを上限で計画します。確かめるで、使うかどうかを選べます。',
     );
-    expect(choices()).toContain('次の計画では、この基準を使いません。');
+    expect(choices()).toContain('次の計画では、このルールを使いません。');
     await userEvent.click(
-      screen.getByRole('switch', { name: /計画基準にもする/ }),
+      screen.getByRole('switch', { name: /計画のルールにもする/ }),
     );
     await userEvent.selectOptions(
       screen.getByRole('combobox', { name: '対象' }),
       '',
     );
     await userEvent.selectOptions(
-      screen.getByRole('combobox', { name: '提案の幅のどこで計画するか' }),
+      screen.getByRole('combobox', {
+        name: '見積もりの提案のどこで計画するか',
+      }),
       'mid',
     );
     // The draft's name, its effect and 置き換える follow the same value.
@@ -528,7 +533,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     expect(
       lastSnapshot().records.criteria.find((c) => c.id === draftId)?.policy,
     ).toEqual({ scope: { kind: 'all' }, rangePolicy: 'mid' });
-    expect(screen.getByText('提案の幅の中央で計画する')).toBeTruthy();
+    expect(screen.getByText('見積もりの提案の中央で計画する')).toBeTruthy();
     expect(
       screen.getByText(/幅のあるタスク \d+件を中央で計画します/),
     ).toBeTruthy();
@@ -540,18 +545,22 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
   it('says so while the new criterion is the same as this one', async () => {
     await renderAt('/retro?fixture=retro-before-complete&stage=handoff');
     await userEvent.click(
-      screen.getByRole('switch', { name: /計画基準にもする/ }),
+      screen.getByRole('switch', { name: /計画のルールにもする/ }),
     );
     const same =
-      '今回の基準と同じ設定です。変えないなら、オフにして「続ける」を選びます。';
+      '今回のルールと同じ設定です。変えないなら、オフにして「続ける」を選びます。';
     expect(screen.getByText(same)).toBeTruthy();
     await userEvent.selectOptions(
-      screen.getByRole('combobox', { name: '提案の幅のどこで計画するか' }),
+      screen.getByRole('combobox', {
+        name: '見積もりの提案のどこで計画するか',
+      }),
       'mid',
     );
     expect(screen.queryByText(same)).toBeNull();
     await userEvent.selectOptions(
-      screen.getByRole('combobox', { name: '提案の幅のどこで計画するか' }),
+      screen.getByRole('combobox', {
+        name: '見積もりの提案のどこで計画するか',
+      }),
       'hi',
     );
     expect(screen.getByText(same)).toBeTruthy();
@@ -670,7 +679,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     expect(reviewed().state).toBe('closed');
     await router.navigate({ to: '/retro', search: { stage: 'handoff' } });
     const section = await screen.findByRole('region', {
-      name: '今回の計画基準',
+      name: '今回の計画のルール',
     });
     expect(
       within(section).getByText(/幅のあるタスク 1件のうち 1件を持ち越し/),
@@ -685,7 +694,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
         (_, element) =>
           element?.tagName === 'P' &&
           element.textContent ===
-            '今回の計画基準：「研究：提案の幅の上限で計画する」（結果と扱いは引き継ぐにあります）',
+            '今回の計画のルール：「研究：見積もりの提案の上限で計画する」（結果と扱いは引き継ぐにあります）',
       ),
     ).toBeTruthy();
     // The closed reflection keeps the new name, as text (#109).
@@ -777,11 +786,13 @@ describe('Retro — boundaries', () => {
       },
     });
     await renderAt('/retro?fixture=retro-start&stage=handoff');
-    expect(screen.queryByRole('radiogroup', { name: /計画基準/ })).toBeNull();
+    expect(
+      screen.queryByRole('radiogroup', { name: /計画のルール/ }),
+    ).toBeNull();
     expect(
       screen.queryByText(decisionMissingText, { selector: 'p' }),
     ).toBeNull();
-    expect(screen.queryByText(/今回の計画基準/)).toBeNull();
+    expect(screen.queryByText(/今回の計画のルール/)).toBeNull();
     await userEvent.click(completeButton());
     await userEvent.click(
       within(await screen.findByRole('dialog')).getByRole('button', {
@@ -794,7 +805,7 @@ describe('Retro — boundaries', () => {
   it('clears 置き換える when the draft is turned off, and waits again', async () => {
     await renderAt('/retro?fixture=retro-before-complete&stage=handoff');
     const draftSwitch = screen.getByRole('switch', {
-      name: /計画基準にもする/,
+      name: /計画のルールにもする/,
     });
     await userEvent.click(draftSwitch);
     await userEvent.click(screen.getByRole('radio', { name: '置き換える' }));
@@ -810,13 +821,13 @@ describe('Retro — boundaries', () => {
   it('says why the improvement stays while a criterion is made from it', async () => {
     await renderAt('/retro?fixture=retro-before-complete&stage=handoff');
     await userEvent.click(
-      screen.getByRole('switch', { name: /計画基準にもする/ }),
+      screen.getByRole('switch', { name: /計画のルールにもする/ }),
     );
     await userEvent.click(screen.getByRole('link', { name: /振り返る/ }));
     await userEvent.click(await screen.findByRole('button', { name: '編集' }));
     expect(
       screen.getByText(
-        /先に引き継ぐで「計画基準にもする」をオフにしてください/,
+        /先に引き継ぐで「計画のルールにもする」をオフにしてください/,
       ),
     ).toBeTruthy();
   });
@@ -933,7 +944,7 @@ describe('Retro — compact (#57)', () => {
         .getAllByRole('listitem')
         .find((li) => li.textContent?.startsWith('関連論文を 3 本読む'));
       expect(paper?.textContent).toContain(
-        'Agent の提案 3–5h · 計画 5h（基準） · 実績 4.5h',
+        '見積もりの提案 3–5h · 計画 5h（ルール） · 実績 4.5h',
       );
       expect(paper?.textContent).toContain(
         '持ち越し · 見送り 2回 · ここまで 1回',
@@ -1057,7 +1068,7 @@ describe('Retro — 事実を見るを読みやすくする (#108)', () => {
       }),
     );
     await router.navigate({ to: '/retro', search: { stage: 'facts' } });
-    await screen.findByText(/今回の計画基準：/);
+    await screen.findByText(/今回の計画のルール：/);
     expect(
       screen.queryByText(/気になった事実に「振り返りに使う」を付けると/),
     ).toBeNull();
@@ -1106,7 +1117,7 @@ describe('Retro — 事実を見るを読みやすくする (#108)', () => {
     const values = [...item.querySelectorAll('[data-slot="meta-item"]')];
     expect(values.map((v) => v.textContent)).toEqual([
       '持ち越し',
-      '計画 5h（基準）',
+      '計画 5h（ルール）',
       '実績 4.5h',
       // 計画時との差, in the same words as the row (#167).
       '計画より 30m 少ない',
@@ -1116,7 +1127,7 @@ describe('Retro — 事実を見るを読みやすくする (#108)', () => {
     // The button's name still says which Task and what it became.
     expect(
       within(item).getByRole('button', {
-        name: /関連論文を 3 本読む · 持ち越し · 計画 5h（基準） · 実績 4.5h/,
+        name: /関連論文を 3 本読む · 持ち越し · 計画 5h（ルール） · 実績 4.5h/,
       }),
     ).toBeTruthy();
   });
@@ -1162,14 +1173,14 @@ describe('Retro — the plan against what happened (#167)', () => {
     const summary = document.querySelector<HTMLElement>(
       '[data-slot="sprint-summary"]',
     )!;
-    const total = within(summary).getByText('計画値の合計').parentElement!;
+    const total = within(summary).getByText('計画の合計').parentElement!;
     expect(total.textContent).toContain('使える時間 17h');
     // As confirmed, and with the mid-Sprint addition, against 17h.
     expect(lineOf('確定時の計画')?.textContent).toBe(
-      '確定時の計画 15.25–17.25h：下限なら 1.75h 残る · 上限なら 0.25h 超える',
+      '確定時の計画 15.25–17.25h：少なく済めば 1.75h 残る · 多くかかれば 0.25h 超える',
     );
     expect(lineOf('週の途中の追加を含めて')?.textContent).toBe(
-      '週の途中の追加を含めて 17.25–20.25h：下限でも 0.25h 超える',
+      '週の途中の追加を含めて 17.25–20.25h：少なく済んでも 0.25h 超える',
     );
     // Facts of the week, not an alarm (PRD §12).
     expect(pane().querySelector('.text-danger')).toBeNull();
@@ -1305,7 +1316,7 @@ describe('Retro — the plan against what happened (#167)', () => {
       }),
     );
     await router.navigate({ to: '/retro', search: { stage: 'facts' } });
-    await screen.findByText(/今回の計画基準：/);
+    await screen.findByText(/今回の計画のルール：/);
     expect(screen.queryByText(/振り返りに使う \d+件/)).toBeNull();
   });
 });

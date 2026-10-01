@@ -2,7 +2,6 @@ import type { PlanningValue } from '@itera/domain';
 import {
   formatPlanningValue,
   formatRange,
-  formatUnestimatedCount,
   spokenHours,
   UNESTIMATED,
 } from '@/lib/time-format';
@@ -11,13 +10,13 @@ import { cn } from '@/lib/utils';
 // DESIGN.md Components › Estimate. The person's value and a suggestion look
 // and read differently:
 // - user (the default): 「3h」, solid, no label. A subtask sum is also the
-//   person's values: 「2.5h」 with 「見積もりなしが 1件」 under it.
-// - suggestion: 「Agent の提案 2–4h」 in a dashed `rounded.xs` box.
+//   person's values: 「2.5h」 with 「サブタスク 1件は見積もりなし」 under it.
+// - suggestion: 「見積もりの提案 2–4h」 in a dashed `rounded.xs` box.
 // - planned: 「計画 5h」, this Sprint's planning value.
 // - unset: 「見積もりなし」, never 0h.
 // - unset with `enter`: the same words as a button that opens the Task's
 //   detail at its Estimate, as E does (Planning rows, #96).
-// Read out as 「見積もり 3時間」 and 「Agent の提案（未確定）: 2〜4時間」.
+// Read out as 「見積もり 3時間」 and 「見積もりの提案（未確定）: 2〜4時間」.
 
 type EstimateProps = {
   /** From `planningValueOf` (the Task's own value) or a plan snapshot. */
@@ -30,6 +29,11 @@ type EstimateProps = {
    */
   inline?: boolean;
   /**
+   * Inline beside 「サブタスクの合計」: the count does not say 「サブタスク」
+   * again (「2.5h（1件は見積もりなし）」).
+   */
+  subtasksNamed?: boolean;
+  /**
    * For an unset value on a row: the words are a button, named
    * 「見積もりを入れる: タスク名」, that opens the Task at its Estimate.
    */
@@ -41,6 +45,7 @@ function Estimate({
   value,
   planned = false,
   inline = false,
+  subtasksNamed = false,
   enter,
   className,
 }: EstimateProps) {
@@ -82,11 +87,14 @@ function Estimate({
   const stack = missing > 0 && !inline;
   const text = stack
     ? formatRange(value.lo, value.hi)
-    : formatPlanningValue(value);
+    : formatPlanningValue(value, { subtasksNamed });
   const stacked = stack && 'flex-col items-end gap-0';
+  // Two lines under 768px, so that the note does not take the title's
+  // room (#162).
   const missingNote = stack && (
-    <span aria-hidden className="text-meta text-ink-muted">
-      {formatUnestimatedCount(missing)}
+    <span aria-hidden className="text-right text-meta text-ink-muted">
+      サブタスク {missing}件は
+      <span className="block medium:inline">{UNESTIMATED}</span>
     </span>
   );
   const missingSpoken =
@@ -102,7 +110,7 @@ function Estimate({
         <span aria-hidden>計画 {text}</span>
         {missingNote}
         <span className="sr-only">
-          計画値 {spoken}
+          計画の時間 {spoken}
           {missingSpoken}
         </span>
       </span>
@@ -119,8 +127,8 @@ function Estimate({
           className,
         )}
       >
-        <span aria-hidden>Agent の提案 {text}</span>
-        <span className="sr-only">Agent の提案（未確定）: {spoken}</span>
+        <span aria-hidden>見積もりの提案 {text}</span>
+        <span className="sr-only">見積もりの提案（未確定）: {spoken}</span>
       </span>
     );
   }

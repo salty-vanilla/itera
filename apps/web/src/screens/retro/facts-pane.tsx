@@ -181,7 +181,7 @@ function FactsPane({
               unit: '件',
             },
             {
-              label: '計画値の合計',
+              label: '計画の合計',
               value: formatRange(total.lo, total.hi, { total: true }),
               note: (
                 <Sentences
@@ -202,8 +202,10 @@ function FactsPane({
         />
         <div className="flex flex-col gap-1 text-body text-ink">
           <p>
-            計画 {formatPlanningTotal(total)} → 実績{' '}
-            {formatHours(facts.actualHours, { total: true })}
+            計画 {formatPlanningTotal(total)}{' '}
+            <span className="whitespace-nowrap">
+              → 実績 {formatHours(facts.actualHours, { total: true })}
+            </span>
             <span className="text-ink-muted">
               （入力済み {entered}件。実績は入力したものだけを数えています）
             </span>
@@ -271,7 +273,7 @@ function FactsPane({
             className="mt-1 size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
           />
           <span>
-            {`今回の計画基準：「${criterionName(used.criterion.policy, used.areaName)}」`}
+            {`今回の計画のルール：「${criterionName(used.criterion.policy, used.areaName)}」`}
             <span className="text-ink-muted">
               {readOnly
                 ? '（結果と扱いは引き継ぐにあります）'
@@ -646,7 +648,7 @@ function TaskTable({
               見積もり
             </th>
             <th scope="col" className={cn(num, 'font-normal')}>
-              計画値
+              計画
             </th>
             {/* The end padding keeps 実績 and its difference apart from
                 the result's words, which start right after (#167). */}
@@ -681,11 +683,29 @@ function TaskTable({
                   </span>
                 )}
               </th>
-              <td className={num}>{estimateOf(t).text}</td>
+              <td className={num}>
+                {/* A suggestion is its range, with what it is under it, so
+                    that the column keeps its numbers aligned (#162). */}
+                {t.plan?.estimateHours === undefined &&
+                t.plan?.suggestion !== undefined ? (
+                  <>
+                    {formatRange(t.plan.suggestion.lo, t.plan.suggestion.hi)}
+                    <span className="block text-meta text-ink-muted">
+                      見積もりの提案
+                    </span>
+                  </>
+                ) : (
+                  estimateOf(t).text
+                )}
+              </td>
               <td className={num}>
                 {plannedCellText(t)}
+                {/* Notes break at a phrase within the column, not into 実績. */}
                 {[...unestimatedNote(t), ...planNotes(t)].map((note) => (
-                  <span key={note} className="block text-meta text-ink-muted">
+                  <span
+                    key={note}
+                    className="block text-meta whitespace-normal text-ink-muted [word-break:auto-phrase]"
+                  >
                     {note}
                   </span>
                 ))}
@@ -721,7 +741,7 @@ function TaskTable({
 
 /**
  * compact: one Task per item, its values in words on wrapping lines
- * (「Agent の提案 3–5h · 計画 5h（基準） · 実績 4.5h」), then its outcome and days,
+ * (「見積もりの提案 3–5h · 計画 5h（ルール） · 実績 4.5h」), then its outcome and days,
  * then its actions in a row.
  */
 function TaskList({

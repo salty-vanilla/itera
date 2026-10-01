@@ -35,8 +35,17 @@ function withoutCriterionTarget(initial: StoreSnapshot): StoreSnapshot {
             ? t
             : {
                 ...t,
+                // A point suggestion: nothing for the criterion to act on.
                 planSnapshot: {
                   ...t.planSnapshot,
+                  ...(t.planSnapshot.suggestion === undefined
+                    ? {}
+                    : {
+                        suggestion: {
+                          ...t.planSnapshot.suggestion,
+                          hi: t.planSnapshot.suggestion.lo,
+                        },
+                      }),
                   value: { ...t.planSnapshot.value, criterionApplied: false },
                 },
               },
@@ -113,7 +122,7 @@ describe('Sprint — running (#51)', () => {
     // The criterion's use is read only (invariant 37).
     expect(screen.queryByRole('switch')).toBeNull();
     expect(
-      screen.getAllByText('確定したときに、今回の計画値に使いました。').length,
+      screen.getAllByText('確定したときに、このルールで計画しました。').length,
     ).toBeGreaterThan(0);
   });
 
@@ -136,10 +145,10 @@ describe('Sprint — running (#51)', () => {
     await renderAt('/sprint?fixture=today-interrupt');
     const line = document.querySelector('[data-slot="criterion-line"]');
     expect(line?.textContent).toBe(
-      '計画基準「研究：提案の幅の上限で計画する」 · 対象なし',
+      '計画のルール「研究：見積もりの提案の上限で計画する」 · 対象なし',
     );
     expect(
-      screen.queryByText('確定したときに、今回の計画値に使いました。'),
+      screen.queryByText('確定したときに、このルールで計画しました。'),
     ).toBeNull();
     expect(screen.queryByText(/確定した後は変えられません/)).toBeNull();
   });
@@ -220,7 +229,7 @@ describe('Sprint — running (#51)', () => {
   it('changes the available hours and keeps the planned hours (invariant 18)', async () => {
     await renderAt('/sprint?fixture=today-interrupt');
     // One field, whatever the width (it follows the saved value).
-    const hours = screen.getByRole('textbox', { name: /今の使える時間/ });
+    const hours = screen.getByRole('textbox', { name: /^使える時間/ });
     await userEvent.clear(hours);
     await userEvent.type(hours, '14');
     await userEvent.tab();
@@ -246,7 +255,7 @@ describe('Sprint — running (#51)', () => {
 
   it('clears the available hours and says so beside the planned hours', async () => {
     await renderAt('/sprint?fixture=today-interrupt');
-    const hours = screen.getByRole('textbox', { name: /今の使える時間/ });
+    const hours = screen.getByRole('textbox', { name: /^使える時間/ });
     await userEvent.clear(hours);
     await userEvent.tab();
     expect(running().availableHours).toBeUndefined();

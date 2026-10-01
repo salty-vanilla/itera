@@ -47,7 +47,7 @@ export interface PlanSummary {
   /** 「見積もりのないタスク 1件は合計に含まれていません。」 */
   readonly leftOut?: string;
   /**
-   * 「「研究：提案の幅の上限で計画する」を今回の計画に使う」; absent when no
+   * 「「研究：見積もりの提案の上限で計画する」を使う」; absent when no
    * chosen Task is one it acts on (#161).
    */
   readonly criterion?: string;
@@ -88,7 +88,7 @@ export function planSummary(data: PlanningData): PlanSummary {
       ? {}
       : {
           criterion: `「${criterionName(criterion.active.policy, criterion.areaName)}」${
-            criterion.applied ? 'を今回の計画に使う' : 'は今回は使わない'
+            criterion.applied ? 'を使う' : 'は今回は使わない'
           }`,
         }),
   };

@@ -24,7 +24,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** ok：上限でも収まる。`ink-muted` の文。 */
+/** ok：多くかかっても収まる。`ink-muted` の文。 */
 export const Ok: Story = {
   args: {
     capacity: {
@@ -46,7 +46,7 @@ export const Tight: Story = {
   },
 };
 
-/** over：下限でも超える（確定的な容量超過）。`danger` はここだけ。 */
+/** over：少なく済んでも超える（確定的な容量超過）。`danger` はここだけ。 */
 export const Over: Story = {
   args: {
     capacity: {
@@ -62,7 +62,7 @@ export const Unknown: Story = {};
 
 /**
  * Planning の確かめるの右列：数字・状態・入力欄は中央の要約にだけ置き、ここは
- * バー・領域ごとの内訳・計画値の説明だけ（Issue #165）。
+ * バーと領域ごとの内訳だけ（Issue #165）。
  */
 export const BreakdownOnly: Story = {
   args: {

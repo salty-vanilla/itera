@@ -37,7 +37,7 @@ v0.2 Final は v0.1 の骨格（恒久的な **Task** と、「この Sprint で
 
 ### v0.2 Final で決めたこと
 
-F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F11 は同じ日に、`packages/domain` の実装で見つかった食い違いについて決めた（Issue #20）。F12 も同じ日に決めた（Issue #21）。F13〜F16 も同じ日に、Sprint と Planning の実装で出た境界の場合について決めた（Issue #22）。F17〜F19 も同じ日に、Today の実装で出た境界の場合について決めた（Issue #23）。F20〜F24 も同じ日に、Review と Retro の実装で出た境界の場合について決めた（Issue #24）。F25〜F27 も同じ日に、Backlog の画面の実装で出た表示と操作について決めた（Issue #39）。F28・F29 も同じ日に、Backlog の実装の後に残った点について決めた（Issue #47）。F30・F31 は 2026-09-28 に、Agent 提案の操作について決めた（Issue #40、決定 4A）。F32 も同じ日に、Today の画面の実装で出た数え方について決めた（Issue #41）。F33 は 2026-09-29 に、過去の日の取り消しについて決めた（Issue #53）。F34 も同じ日に、Sprint の開始日より前の Backlog からの完了について決めた（Issue #59）。F35・F36 は 2026-09-30 に、実行中の Sprint の週のうちに次の Sprint を計画したときの持ち越しについて決めた（Issue #89）。F37 は 2026-10-01 に、Today の見送り・外すの取り消しについて決めた（Issue #101、決定シート B12=B）。F38 も同じ日に、記録した割り込みを直す・消すことについて決めた（Issue #102、決定シート B13=A）。F39 も同じ日に、まだ効き始めていない Rule の版を変えることについて決めた（Issue #192）。F40 も同じ日に、今日を選ばずに今週に足す操作の取り消しについて決めた（Issue #155）。F41 も同じ日に、繰り返しをやめることについて決めた（Issue #189）。
+F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F11 は同じ日に、`packages/domain` の実装で見つかった食い違いについて決めた（Issue #20）。F12 も同じ日に決めた（Issue #21）。F13〜F16 も同じ日に、Sprint と Planning の実装で出た境界の場合について決めた（Issue #22）。F17〜F19 も同じ日に、Today の実装で出た境界の場合について決めた（Issue #23）。F20〜F24 も同じ日に、Review と Retro の実装で出た境界の場合について決めた（Issue #24）。F25〜F27 も同じ日に、Backlog の画面の実装で出た表示と操作について決めた（Issue #39）。F28・F29 も同じ日に、Backlog の実装の後に残った点について決めた（Issue #47）。F30・F31 は 2026-09-28 に、Agent 提案の操作について決めた（Issue #40、決定 4A）。F32 も同じ日に、Today の画面の実装で出た数え方について決めた（Issue #41）。F33 は 2026-09-29 に、過去の日の取り消しについて決めた（Issue #53）。F34 も同じ日に、Sprint の開始日より前の Backlog からの完了について決めた（Issue #59）。F35・F36 は 2026-09-30 に、実行中の Sprint の週のうちに次の Sprint を計画したときの持ち越しについて決めた（Issue #89）。F37 は 2026-10-01 に、Today の見送り・外すの取り消しについて決めた（Issue #101、決定シート B12=B）。F38 も同じ日に、記録した割り込みを直す・消すことについて決めた（Issue #102、決定シート B13=A）。F39 も同じ日に、まだ効き始めていない Rule の版を変えることについて決めた（Issue #192）。F40 も同じ日に、今日を選ばずに今週に足す操作の取り消しについて決めた（Issue #155）。F41 も同じ日に、繰り返しをやめることについて決めた（Issue #189）。F42 も同じ日に、選んだ Task に効かない計画基準の確定時の扱いについて決めた（Issue #162）。
 
 | # | 決定 | モデルへの反映 | UI への影響 |
 | --- | --- | --- | --- |
@@ -51,7 +51,7 @@ F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F
 | F8 | 連続見送りは Unresolved を無視し、Skipped で途切れる | Unresolved は選ばなかった日と同じく、数えず途切れさせない。繰り返しの回の Skipped は本人の決定なので、Done・Removed と同じく連続を途切れさせる（不変条件 23） | なし |
 | F9 | Sprint 中に初めて現れた Area は、その時点の名前を写し取る | SprintAreaSnapshot にない Area が Sprint 中に初めて現れたとき（その Area の Task を Sprint に追加した、または Sprint 内の Task の Area にした）、その時点の名前を並び順の末尾に足して固定する（不変条件 18） | その Sprint の Today / Retro では、その Area も名前が固定される |
 | F10 | 計画基準はサブタスク合計に作用しない | Subtask の見積もりは点の値なので、サブタスク合計も点になる。不変条件 9 の「幅のあるサブタスク合計」を削除 | なし |
-| F11 | 一部のサブタスクが見積もりなしなら、その件数を示す | timeBasis がサブタスク合計のとき、見積もりのあるサブタスクだけを足し、見積もりのないサブタスクの件数を PlanningValue に持つ。すべて見積もりなしなら、その Task が見積もりなし（不変条件 8） | Planning：「2.5h（見積もりなしが 1件）」のように合計と件数を並べる |
+| F11 | 一部のサブタスクが見積もりなしなら、その件数を示す | timeBasis がサブタスク合計のとき、見積もりのあるサブタスクだけを足し、見積もりのないサブタスクの件数を PlanningValue に持つ。すべて見積もりなしなら、その Task が見積もりなし（不変条件 8） | Planning：「2.5h（サブタスク 1件は見積もりなし）」のように合計と件数を並べる |
 | F12 | 毎週の繰り返しは曜日を複数指定できる | RecurrenceRule の版の曜日は 1 つ以上（例：毎週 月・木）。その Sprint で発生する回は指定した曜日の数（1〜7 回） | Backlog・Planning：「毎週 月・木」のように曜日を並べる |
 | F13 | Sprint から外した Task は同じ Sprint に戻せる | SprintTask に Removed → Planned（Sprint に戻す）を足す。同じ SprintTask を戻すので「同じ Sprint に 1 件まで」（不変条件 14）は保たれ、origin と planSnapshot は変わらない | 確定後に外した Task を元に戻せる |
 | F14 | 繰り返しの SprintTask を外すと、残りの回は外した回になる | Sprint 中に Removed にすると、その SprintTask の Pending の回を Excluded にする（完了・スキップ済みの回はそのまま）。Today に出ず、Retro の事実（未処理）にも出ない（F2）。F13 で戻すと Pending に戻る | なし |
@@ -82,6 +82,7 @@ F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F
 | F39 | まだ効き始めていない版を変えるときは、版を増やさずに置き換える | 最新の版の effectiveFrom が新しい版と同じ（まだ効き始めていない）なら、新しい版を足さず、最新の版の型を置き換える。置き換えた型が 1 つ前の版と同じなら、最新の版を消し、1 つ前の版の effectiveTo を外して版を戻す。どちらも Activity に Rule の変更として残す（版は置き換えた版、戻したときは戻った先の版）。効き始めた版は変えない（不変条件 31）。draft が生成済みの回は F7 のとおり作り直す | Backlog：選ぶたびに保存しても、版は次の Sprint の分の 1 つだけ増える |
 | F40 | 今日を選ばずに今週に足した Task（今週へ）は、直後に元に戻せる | 今週へは、今日の選択を作らない週の途中の追加（origin = midSprint、goalLink = unlinked、planSnapshot は追加時、容量の警告なし）。元に戻すと、その SprintTask を記録ごと消す（SprintTask に Planned → [*] を足す）。Task は Sprint 外に戻るので、もう一度今週へ・今日へ入れられる（不変条件 14）。SprintTask が Planned のままで、その SprintTask を選んだ DailySelection がないときだけ。今日へ（SprintTask と DailySelection を同時に作る、不変条件 26）は取り消さない。追加で SprintAreaSnapshot に足した Area はそのまま（F9）。追加と取り消しは Activity に残す | Backlog：行の `…` と Task の詳細に「今週へ」。Toast「「タイトル」を今週に入れました」と「元に戻す」 |
 | F41 | 繰り返しをやめると、まだ確定していない次の Sprint から回を作らず、Task はその後単発になる。回を 1 つも作っていない Rule は外して単発の Task に戻す | 本人が「繰り返しをやめる」と、Rule の最新の版に effectiveTo（まだ確定していない次の Sprint の開始日の前日）を入れ、Rule を Task から外す（Rule は taskId で Task を指したまま残る）。その日より後に効き始める版（まだ効き始めていない版）は消す（F39 と同じ考え方）。その Sprint の Planning（draft）が回を生成していれば、その Task の回（Pending / Excluded）と SprintTask（Draft）を捨てる（F7 と同じく、F15 で置き換えた単発の選択は戻さない）。確定済みの Sprint の回と SprintTask は変えない（不変条件 31）。Task と過去の回の記録は残る。effectiveTo までは今までどおり繰り返しとして扱う（その Sprint の回は Today で回ごとに完了し、Backlog からは完了にも今日へにもできない）。effectiveTo より後の Sprint では単発の Task として扱う（Planning で選べ、完了できる。もう一度繰り返しにもできる）。やめた Rule は変えられず、もう一度やめることもできない。draft の回を捨てた後に Rule の回が 1 つも残らない（作ったばかり）なら、Rule を消し、すぐに単発に戻す。どちらも Activity に残す（やめた版と最後の日、または Rule を外したこと） | Backlog の Task 詳細：繰り返しの欄に「繰り返しをやめる」。最後の日までは行を「毎週 土 · 次は 10/3 (土)（10/4 (日) まで）」と出して切り口「繰り返し」に残し、過ぎたら行の ○ が戻る。外したときはすぐ ○ が戻る |
+| F42 | 選んだ Task に効かない計画基準は、確定時に適用しない | 確定時に、Check で使うとしていても、基準が当たった計画値（幅のある提案から、基準の対象の Area で作った計画値）が 1 件もなければ、CriterionUse.appliedAtConfirm = false にする。CriterionUse はできる（不変条件 36）。週の途中の追加にも基準は当たらない（F3） | Planning：対象がなければ基準を出さない（Issue #161）。週の途中に足した幅のある Task にも当たらない |
 
 ### 用語
 
@@ -277,7 +278,7 @@ stateDiagram-v2
   Active --> Replaced: Retro で「置き換える」（replacedBy）
 ```
 
-- Active は同時に 1 つまで。Active がある間に確定した Sprint には必ず CriterionUse が 1 件できる。Planning の Check で外した場合は appliedAtConfirm = false。週の途中の追加も appliedAtConfirm に従い、true なら追加分にも基準を当て、false なら当てない。
+- Active は同時に 1 つまで。Active がある間に確定した Sprint には必ず CriterionUse が 1 件できる。Planning の Check で外した場合と、基準が当たる計画値が 1 件もない場合（F42）は appliedAtConfirm = false。週の途中の追加も appliedAtConfirm に従い、true なら追加分にも基準を当て、false なら当てない。
 - 確定後に基準を外す操作はない（MVP）。適用しなかった Sprint でも、Retro で続ける / 終える / 置き換えるを選ぶ。
 
 ### Sprint
@@ -397,7 +398,7 @@ v0.2 Final でも 3 つとも、UI に入口のない操作を使わずに最後
 | # | 操作（画面） | 作られる / 変わるもの | 表示・事実 |
 | --- | --- | --- | --- |
 | 1 | Backlog で追加 | Task（User 所有、active、title のみ）。Activity：作成（Backlog） | Backlog ビューに出る。領域は後で研究に（Backlog は現在の Area 名） |
-| 2 | 提案 3–5h | EstimateSuggestion（3–5h、根拠、不確実な点、提示中）。Estimate は空のまま | 一覧は「提案 3–5h」（破線） |
+| 2 | 提案 3–5h | EstimateSuggestion（3–5h、根拠、不確実な点、提示中）。Estimate は空のまま | 一覧は「見積もりの提案 3–5h」（破線） |
 | 3 | Planning で選ぶ | Sprint（Planning）、SprintTask（Draft、origin = planning、goalLink = linked） | 「今週」。確定前の Planning は現在の Area 名 |
 | 4 | 研究の Goal を書く | SprintGoal（Sprint × 研究、text） | Task 側は変化なし |
 | 5 | 基準を適用して確定 | 前の Sprint が Closed なので確定できる。CriterionUse（appliedAtConfirm = true）。PlanningValue = 5h（base = 提案 3–5h、基準を適用）を planSnapshot に固定。SprintGoal.plannedText、使える時間 18h、SprintAreaSnapshot（研究）を写し取る。SprintTask → Planned、Sprint → Active | 「Estimate 提案 3–5h / 今回は 5h で計画」。提案は採用していないので Estimate は空のまま。以後、この Sprint の画面は「研究」の名前で固定 |
@@ -408,7 +409,7 @@ v0.2 Final でも 3 つとも、UI に入口のない操作を使わずに最後
 | 10 | 4.5h 作業して「今日はここまで」 | DailySelection（9/30）→ Paused。ActualTime（4.5h、9/30、via = 今日はここまで）を SprintTask に追記。SprintTask は Planned（未完了）のまま | 「今週の残り」に「実績 4.5h」付きで戻る。Paused が挟まったので連続見送りはここで途切れる |
 | 11 | 10/1 (木) の朝、Today を開く | DailySelection は自動で作らない（前日の Paused からの派生だけ） | 「昨日の続き」として候補の上に出る（実績 4.5h）。この日は「今日へ」を押さない |
 | 12 | 10/2 (金) 〜 10/4 (日) | 選ばなかった日は DailySelection がない | 選ばなかった日は見送りの回数に影響しない。前日に Paused がないので「昨日の続き」にも出ない |
-| 13 | Sprint 終了 | 10/5 に Sprint → Review。SprintTask → CarriedOver。Task は active のまま Backlog に残る | Retro の事実：持ち越し、提案 3–5h · 計画値 5h · 実績 4.5h、2回続けて見送り（9/28・9/29）、9/30 は「今日はここまで」 |
+| 13 | Sprint 終了 | 10/5 に Sprint → Review。SprintTask → CarriedOver。Task は active のまま Backlog に残る | Retro の事実：持ち越し、見積もりの提案 3–5h · 計画 5h（ルール） · 実績 4.5h、2回続けて見送り（9/28・9/29）、9/30 は「今日はここまで」 |
 | 14 | Retro で「1 本ずつに分ける」を決める | Retro（印、ReflectionNote）、RetroImprovement（文）。CriterionUse.retroDecision を本人が選ぶ（例：続ける）。完了で Sprint → Closed | 次の Sprint が確定できるようになる |
 | 15 | 次の Planning | Task は「持ち越し」候補に出るだけ。選べば新しい SprintTask（carriedFrom = 前のもの） | 入口に Improvement。Task を分けるかは本人が決める（自動で分割しない） |
 

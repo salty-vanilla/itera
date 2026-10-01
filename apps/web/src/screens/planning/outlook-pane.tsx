@@ -10,7 +10,7 @@ import { weekCall } from '@/lib/week-text';
 // 時間の見通し (docs/design/patterns.md Sprint Planning, right pane): the
 // previous improvement (shown only), the active planning criterion, and the
 // Capacity. The criterion is its name on one line under the improvement, in
-// 選ぶ and 整える: its frame, the 「今回の計画に使う」 Switch and effect, and
+// 選ぶ and 整える: its frame, the 「このルールで計画する」 Switch and effect, and
 // 「何が上振れすると超過するか」 are in the 確かめる summary at the head of
 // the Sprint pane (#93). Without a criterion, nothing is shown (#105); nor
 // when no chosen Task is one it acts on (#161).

@@ -10,7 +10,8 @@
 //   crosses 0 is not a headline range but two sentences, made by the
 //   Capacity Indicator (#93);
 // - no value is 「見積もりなし」, never 0h, and unestimated parts left out of
-//   a sum are counted after it (`2.5h（見積もりなしが 1件）`).
+//   a sum are counted after it (`2.5h（サブタスク 1件は見積もりなし）`,
+//   `12–16h（ほかに見積もりなし 2件）`).
 // The words around a value (「提案」「計画」「残り」「超過」) belong to the screen.
 
 import type { PlanningTotal, PlanningValue } from '@itera/domain';
@@ -86,22 +87,32 @@ export function formatEstimate(
   return formatRange(value.lo, value.hi, options);
 }
 
-/** 「見積もりなしが 1件」: the parts left out of a sum. */
-export function formatUnestimatedCount(count: number): string {
-  return `${UNESTIMATED}が ${count}件`;
+/** 「サブタスク 1件は見積もりなし」: the subtasks left out of a subtask sum. */
+export function formatUnestimatedSubtasks(count: number): string {
+  return `サブタスク ${count}件は${UNESTIMATED}`;
 }
 
+/** 「12–16h（ほかに見積もりなし 2件）」, or the text alone with none. */
 function withUnestimated(text: string, count: number): string {
-  return count === 0 ? text : `${text}（${formatUnestimatedCount(count)}）`;
+  return count === 0 ? text : `${text}（ほかに${UNESTIMATED} ${count}件）`;
 }
 
-/** A planning value (計画値), with the subtasks left out of a subtask sum. */
-export function formatPlanningValue(value: PlanningValue): string {
+/**
+ * A planning value (計画の時間), with the subtasks left out of a subtask sum.
+ * Where the value is already named 「サブタスクの合計」, `subtasksNamed` leaves
+ * 「サブタスク」 out of the count: 「2.5h（1件は見積もりなし）」.
+ */
+export function formatPlanningValue(
+  value: PlanningValue,
+  options: { subtasksNamed?: boolean } = {},
+): string {
   if (value.base === 'none') return UNESTIMATED;
   const text = formatRange(value.lo, value.hi);
-  return value.base === 'subtasks'
-    ? withUnestimated(text, value.unestimatedSubtasks)
-    : text;
+  const missing = value.base === 'subtasks' ? value.unestimatedSubtasks : 0;
+  if (missing === 0) return text;
+  return options.subtasksNamed === true
+    ? `${text}（${missing}件は${UNESTIMATED}）`
+    : `${text}（${formatUnestimatedSubtasks(missing)}）`;
 }
 
 /**
@@ -119,7 +130,7 @@ export function formatPlanningSum(total: PlanningTotal): string {
 
 /**
  * A sum of planning values, in hours. Unestimated values and subtasks are
- * not in the sum and are counted after it (`12–16h（見積もりなしが 2件）`).
+ * not in the sum and are counted after it (`12–16h（ほかに見積もりなし 2件）`).
  */
 export function formatPlanningTotal(total: PlanningTotal): string {
   const unestimated = total.unestimated + total.unestimatedSubtasks;

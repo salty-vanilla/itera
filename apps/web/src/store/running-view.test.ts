@@ -66,13 +66,14 @@ describe('runningData', () => {
     expect(data?.criterion).toBeUndefined();
   });
 
-  it('knows whether an applied criterion changed a planned value (#161)', () => {
+  it('knows whether the criterion had a planned value to act on (#161, F42)', () => {
     const { records, clock } = fixtureSnapshot('today-interrupt');
     expect(runningData(records, clock)?.criterion).toMatchObject({
       applied: true,
       noEffect: false,
     });
-    // Applied at confirm, but no planned value came from it.
+    // Applied at confirm, but no planned value came from it (the
+    // suggestions were points).
     const none = withActive(records, (s) => ({
       ...s,
       tasks: s.tasks.map((t) =>
@@ -82,6 +83,14 @@ describe('runningData', () => {
               ...t,
               planSnapshot: {
                 ...t.planSnapshot,
+                ...(t.planSnapshot.suggestion === undefined
+                  ? {}
+                  : {
+                      suggestion: {
+                        ...t.planSnapshot.suggestion,
+                        hi: t.planSnapshot.suggestion.lo,
+                      },
+                    }),
                 value: { ...t.planSnapshot.value, criterionApplied: false },
               },
             },
@@ -91,17 +100,38 @@ describe('runningData', () => {
       applied: true,
       noEffect: true,
     });
-    // Switched off by the person: it stays whole, with a Task or without.
-    const off = withActive(none, (s) => ({
-      ...s,
-      ...(s.criterionUse === undefined
-        ? {}
-        : { criterionUse: { ...s.criterionUse, appliedAtConfirm: false } }),
-    }));
-    expect(runningData(off, clock)?.criterion).toMatchObject({
-      applied: false,
-      noEffect: false,
-    });
+    // Switched off by the person with a range it would act on: it stays
+    // whole. Without one it is a line, as it is not applied (F42, #162).
+    const switchedOff = (from: typeof records, range: boolean) =>
+      withActive(from, (s) => ({
+        ...s,
+        tasks: s.tasks.map((t) => {
+          const snapshot = t.planSnapshot;
+          if (snapshot?.suggestion === undefined) return t;
+          if (snapshot.value.base !== 'suggestion') return t;
+          // Without a range, the suggestion was a point (invariant 9).
+          const { lo, hi } = range
+            ? snapshot.suggestion
+            : { lo: snapshot.suggestion.lo, hi: snapshot.suggestion.lo };
+          return {
+            ...t,
+            planSnapshot: {
+              ...snapshot,
+              suggestion: { ...snapshot.suggestion, lo, hi },
+              value: { ...snapshot.value, lo, hi, criterionApplied: false },
+            },
+          };
+        }),
+        ...(s.criterionUse === undefined
+          ? {}
+          : { criterionUse: { ...s.criterionUse, appliedAtConfirm: false } }),
+      }));
+    expect(
+      runningData(switchedOff(records, true), clock)?.criterion,
+    ).toMatchObject({ applied: false, noEffect: false });
+    expect(
+      runningData(switchedOff(records, false), clock)?.criterion,
+    ).toMatchObject({ applied: false, noEffect: true });
   });
 
   it('tells what undoing a past day leaves (F33, F17, F29)', () => {

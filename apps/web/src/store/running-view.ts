@@ -6,6 +6,7 @@
 // (invariant 18, F16).
 import {
   carryOriginOf,
+  criterionHasTarget,
   isCounted,
   occurrenceProgress,
   sprintAreaName,
@@ -122,9 +123,10 @@ export interface RunningData {
     readonly areaName?: string;
     readonly applied: boolean;
     /**
-     * Applied at confirm, and no planned value came from it: the screen
-     * folds it to a line (#161). Not applied: the person chose that at the
-     * Check, so it stays whole whether or not it had a Task to act on.
+     * Nothing in the Sprint it acted on or would have acted on
+     * (`criterionHasTarget`): the screen folds it to a line (#161). Not
+     * applied with a Task to act on: the person chose that at the Check, so
+     * it stays whole. With no Task to act on it is not applied (F42).
      */
     readonly noEffect: boolean;
   };
@@ -286,9 +288,10 @@ export function runningData(
               ? { areaName: areaOf(scope.areaId).name }
               : {}),
             applied: use.appliedAtConfirm,
-            noEffect:
-              use.appliedAtConfirm &&
-              !counted.some((t) => t.value.criterionApplied),
+            noEffect: !criterionHasTarget(sprint, {
+              tasks,
+              policy: criterion.policy,
+            }),
           },
         }),
   };

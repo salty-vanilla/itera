@@ -41,7 +41,7 @@ function SprintConfirmDialog({ defaultOpen }: { defaultOpen?: boolean }) {
         <DialogHeader>
           <DialogTitle>Sprint 14 を確定しますか？</DialogTitle>
           <DialogDescription>
-            確定すると、各タスクの計画値がこの Sprint
+            確定すると、各タスクの計画の時間がこの Sprint
             の値として固定されます。確定した後もタスクは追加できます。
           </DialogDescription>
         </DialogHeader>

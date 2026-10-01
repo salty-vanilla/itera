@@ -235,7 +235,7 @@ function RunningSprint({
           )}
         </div>
         {/* One Outlook: beside the plan from 1200px, under it below. */}
-        <aside aria-label="時間と計画基準">
+        <aside aria-label="時間と計画のルール">
           <div className="wide:sticky wide:top-8">{outlook}</div>
         </aside>
       </div>
@@ -387,11 +387,11 @@ function Outlook({
           時間
         </h2>
         <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-body">
-          <dt className="text-ink-muted">計画値の合計</dt>
+          <dt className="text-ink-muted">計画の合計</dt>
           <dd className="text-right text-num-m text-ink">
             {formatPlanningSum(data.totals.total)}
           </dd>
-          <dt className="text-ink-muted">計画したときの使える時間</dt>
+          <dt className="text-ink-muted">確定したときの使える時間</dt>
           <dd className="text-right text-ink">
             {planned === undefined
               ? '未入力'
@@ -416,14 +416,14 @@ function Outlook({
           <AvailableHoursField
             value={current}
             onChange={onHours}
-            label="今の使える時間"
-            description="時間（h）で入力します。確定した後も変えられます。計画時の値は残ります。"
+            label="使える時間"
+            description="時間（h）で入力します。確定した後も変えられます。確定したときの値は残ります。"
           />
         )}
       </section>
       {data.criterion?.noEffect === true && (
-        // Applied, and no planned value came from it: a line, not a frame
-        // (#161).
+        // Nothing it acted on or would have acted on: a line, not a frame
+        // (#161). Not applied then (F42).
         <p
           data-slot="criterion-line"
           className="flex items-start gap-2 text-help text-ink-muted"
@@ -433,7 +433,7 @@ function Outlook({
             className="mt-0.5 size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
           />
           <span className="[word-break:auto-phrase]">
-            計画基準「
+            計画のルール「
             {criterionName(data.criterion.policy, data.criterion.areaName)}」
             <span className="whitespace-nowrap"> · 対象なし</span>
           </span>
@@ -456,8 +456,8 @@ function Outlook({
           </h2>
           <p className="text-body text-ink">
             {data.criterion.applied
-              ? '確定したときに、今回の計画値に使いました。'
-              : '確定したときに、今回の計画値には使いませんでした。'}
+              ? '確定したときに、このルールで計画しました。'
+              : '確定したときに、このルールでは計画しませんでした。'}
           </p>
           <p className="text-help text-ink-muted">
             確定した後は変えられません。振り返りで続けるかを決めます。

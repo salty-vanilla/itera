@@ -20,7 +20,7 @@ export const Default: Story = {
       { label: 'スキップ', value: 1, unit: '回' },
       { label: '週の途中の追加', value: 1, unit: '件' },
       {
-        label: '計画値の合計',
+        label: '計画の合計',
         value: '17.25–20.25h',
         note: '使える時間 17h',
       },

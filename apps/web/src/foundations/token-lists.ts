@@ -113,11 +113,11 @@ export const typographyGroups = [
       ['heading', 'text-heading', '時間の見通し'],
       ['subheading', 'text-subheading', '研究'],
       ['button', 'text-button', 'Sprint を確定'],
-      ['body-l', 'text-body-l', '提案の幅のどこで計画するかを決めます。'],
+      ['body-l', 'text-body-l', '見積もりの提案のどこで計画するかを決めます。'],
       [
         'body',
         'text-body',
-        '使える時間から計画値の合計を引いた残りを、幅のまま示します。',
+        '使える時間から計画の合計を引いた残りを、幅のまま示します。',
       ],
       ['task', 'text-task', '関連研究のメモを整理する'],
       ['label', 'text-label', '使える時間'],

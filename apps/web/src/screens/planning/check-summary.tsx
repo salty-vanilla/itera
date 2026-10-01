@@ -64,7 +64,7 @@ function CheckSummary({
           />
         </div>
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-1 text-body">
-          <dt className="text-ink-muted">計画値の合計</dt>
+          <dt className="text-ink-muted">計画の合計</dt>
           <dd className="text-num-m text-ink">{summary.total}</dd>
           <dt className="text-ink-muted">タスク</dt>
           <dd className="text-ink">
@@ -151,7 +151,7 @@ function CheckSummary({
         >
           <div className="flex flex-col gap-1">
             <h3 id={`${ids}-criterion`} className="text-label text-ink-muted">
-              計画基準
+              計画のルール
             </h3>
             <p className="flex items-center gap-2 text-subheading text-ink">
               <Info
@@ -164,12 +164,8 @@ function CheckSummary({
               )}
             </p>
           </div>
-          <p className="text-help text-ink-muted">
-            前の振り返りで決めた、提案の幅のどこで計画するかのルール。
-          </p>
           <Switch
-            label="今回の計画に使う"
-            description="対象のタスクを提案の幅の一端で計画します。見積もりは変わりません。"
+            label="このルールで計画する"
             checked={data.criterion.applied}
             onCheckedChange={(checked) => onApplyCriterion(checked)}
           />
@@ -204,7 +200,7 @@ function CriterionEffect({
     <p className="text-body text-ink">
       {criterion.applied
         ? `${scope}幅のあるタスク ${count}件を${bound}で計画しています${moves.length > 0 ? `（${moves.join('、')}）` : ''}。`
-        : `使わない場合、${scope}幅のあるタスク ${count}件は提案の幅のまま計画します。`}
+        : `使わない場合、${scope}幅のあるタスク ${count}件は見積もりの提案の幅のまま計画します。`}
     </p>
   );
 }
@@ -217,14 +213,22 @@ function Drivers({ data }: { data: PlanningData }) {
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-2">
       <h3 id={headingId} className="text-subheading text-ink">
-        幅のある計画値
+        幅のある計画
       </h3>
       <ul className="flex flex-col gap-1 text-body text-ink">
         {drivers.map((d) => (
           <li key={d.sprintTask.id}>
-            {d.fromRange !== undefined
-              ? `計画基準で「${d.task.title}」を ${formatHours(d.value.lo)} で計算しています（Agent の提案 ${formatRange(d.fromRange.lo, d.fromRange.hi)}）。`
-              : `「${d.task.title}」は ${formatRange(d.value.lo, d.value.hi)} の幅があります。`}
+            {d.fromRange !== undefined ? (
+              <>
+                {`計画のルールで「${d.task.title}」を ${formatHours(d.value.lo)} で計算しています`}
+                {/* The range is not broken at its dash. */}
+                <span className="whitespace-nowrap">
+                  {`（見積もりの提案 ${formatRange(d.fromRange.lo, d.fromRange.hi)}）。`}
+                </span>
+              </>
+            ) : (
+              `「${d.task.title}」は ${formatRange(d.value.lo, d.value.hi)} の幅があります。`
+            )}
           </li>
         ))}
       </ul>

@@ -74,7 +74,7 @@ export const reflect = (text: string) =>
 export const improve = (text: string) =>
   onReview((sprint, ctx) => setImprovement(sprint, { text }, ctx));
 
-/** 計画基準にもする: a draft criterion from the improvement. */
+/** 計画のルールにもする: a draft criterion from the improvement. */
 export const draft =
   (policy: CriterionPolicy): Change =>
   (records, ctx) => {

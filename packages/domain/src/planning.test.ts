@@ -679,6 +679,31 @@ describe('confirmSprint', () => {
     expect(none).not.toHaveProperty('criterionUse');
   });
 
+  it('F42: a criterion that acts on no planned value is not applied', () => {
+    // Only a work Task: the research criterion covers nothing.
+    const job = unwrap(
+      updateTask(newTask('面談の設計', 'task-job'), { areaId: workId }, ctx),
+    );
+    const workOnly = unwrap(
+      confirm(withTask(plan().sprint, job), { tasks: [job] }),
+    );
+    expect(workOnly.criterionUse).toEqual({
+      criterionId: 'criterion-1',
+      appliedAtConfirm: false,
+    });
+
+    // A research Task with an Estimate has no range for it to act on.
+    const estimated = unwrap(setEstimate(paperTask(), 4, ctx));
+    const pointOnly = confirm(withTask(plan().sprint, estimated), {
+      tasks: [estimated],
+    });
+    expect(unwrap(pointOnly).criterionUse?.appliedAtConfirm).toBe(false);
+    expect(pointOnly.ok && pointOnly.value.activities[0]).toMatchObject({
+      kind: 'sprintConfirmed',
+      criterion: { criterionId: 'criterion-1', appliedAtConfirm: false },
+    });
+  });
+
   it('cannot apply a criterion when none is active', () => {
     expect(
       confirmSprint(

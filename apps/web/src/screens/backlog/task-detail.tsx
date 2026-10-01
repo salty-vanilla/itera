@@ -495,7 +495,7 @@ function TaskDetail({
       kind: 'adopted',
       suggestionId: suggestion.id,
       previous,
-      text: `見積もり ${formatHours(hours)} を採用しました（Agent 提案 ${formatRange(suggestion.lo, suggestion.hi)}）`,
+      text: `見積もり ${formatHours(hours)} を採用しました（提案 ${formatRange(suggestion.lo, suggestion.hi)}）`,
     });
   }
 
@@ -510,7 +510,7 @@ function TaskDetail({
       kind: 'adopted',
       suggestionId: suggestion.id,
       previous,
-      text: `見積もり ${formatHours(hours)} を採用しました（Agent 提案 ${formatRange(suggestion.lo, suggestion.hi)} を編集）`,
+      text: `見積もり ${formatHours(hours)} を採用しました（提案 ${formatRange(suggestion.lo, suggestion.hi)} を編集）`,
     });
     return true;
   }
@@ -532,7 +532,7 @@ function TaskDetail({
     setOutcome({
       kind: 'rejected',
       suggestionId: suggestion.id,
-      text: `Agent の提案 ${formatRange(suggestion.lo, suggestion.hi)} を却下しました`,
+      text: `見積もりの提案 ${formatRange(suggestion.lo, suggestion.hi)} を却下しました`,
     });
   }
 
@@ -602,7 +602,11 @@ function TaskDetail({
                     label={
                       <span className="inline-flex flex-wrap items-center gap-2">
                         サブタスクの合計
-                        <Estimate value={facts.subtaskValue} inline />
+                        <Estimate
+                          value={facts.subtaskValue}
+                          inline
+                          subtasksNamed
+                        />
                       </span>
                     }
                   />

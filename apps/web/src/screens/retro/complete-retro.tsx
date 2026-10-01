@@ -27,7 +27,7 @@ const BLOCKER_WORDS: Readonly<Record<RetroBlocker, ReactNode>> = {
   // The words the screen shows stay whole when the line breaks.
   decisionMissing: (
     <>
-      上の「今回の計画基準」で、
+      上の「今回の計画のルール」で、
       <span className="whitespace-nowrap">
         続ける・終える・置き換えるのどれか
       </span>
@@ -36,10 +36,10 @@ const BLOCKER_WORDS: Readonly<Record<RetroBlocker, ReactNode>> = {
   ),
   continueWithDraft: (
     <>
-      上の「今回の計画基準」で
+      上の「今回の計画のルール」で
       <span className="whitespace-nowrap">「続ける」</span>
       を選んでいるときは、
-      <span className="whitespace-nowrap">「計画基準にもする」</span>
+      <span className="whitespace-nowrap">「計画のルールにもする」</span>
       をオフにするか、
       <span className="whitespace-nowrap">「置き換える」</span>
       を選ぶと完了できます。
@@ -116,7 +116,7 @@ function CompleteDialog({
       ? []
       : [
           {
-            text: `今回の計画基準「${criterionName(used.criterion.policy, used.areaName)}」を`,
+            text: `今回の計画のルール「${criterionName(used.criterion.policy, used.areaName)}」を`,
             decision: `「${DECISION_WORDS[used.decision]}」`,
           },
         ]),
@@ -124,7 +124,7 @@ function CompleteDialog({
       ? []
       : [
           {
-            text: `新しい計画基準「${criterionName(draft.criterion.policy, draft.areaName)}」を、次の計画から使えるようにする`,
+            text: `新しい計画のルール「${criterionName(draft.criterion.policy, draft.areaName)}」を、次の計画から使えるようにする`,
           },
         ]),
   ];
@@ -146,7 +146,7 @@ function CompleteDialog({
             <dd className="mb-2 text-ink medium:mb-0">
               {improvement ?? 'なし'}
             </dd>
-            <dt className="text-ink-muted">計画基準の決定</dt>
+            <dt className="text-ink-muted">計画のルールの決定</dt>
             <dd className="mb-2 text-ink medium:mb-0">
               {criterionLines.length === 0 ? (
                 'なし'
