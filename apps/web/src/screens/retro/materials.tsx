@@ -165,7 +165,7 @@ function Materials({
         <p className="text-help text-ink-muted">
           {onPin === undefined
             ? '「振り返りに使う」の印を付けた事実はありません。'
-            : '事実に「振り返りに使う」の印を付けると、ここに集まります。付けなくても先へ進めます。'}
+            : '「振り返りに使う」を付けた記録が、ここに集まります。'}
         </p>
       ) : (
         <ul className="flex flex-col border-t border-border-soft">

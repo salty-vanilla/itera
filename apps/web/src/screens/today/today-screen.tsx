@@ -537,7 +537,7 @@ function TodayView({ data }: { data: TodayData }) {
             </h2>
             {data.rows.length === 0 ? (
               <p className="text-body text-ink-muted">
-                まだありません。下の「今週の残り」から「今日へ」で選びます。
+                まだありません。下の「今週の残り」から「今日へ」で入れられます。
               </p>
             ) : (
               <ul className="flex flex-col border-t border-border-soft">

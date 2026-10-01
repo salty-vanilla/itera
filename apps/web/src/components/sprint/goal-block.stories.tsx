@@ -19,12 +19,12 @@ type Story = StoryObj<typeof meta>;
 /** set：Goal 文を `goal` で、`measure-read` の幅に組む。 */
 export const Set: Story = { args: { goal: '先行研究を押さえる' } };
 
-/** empty：「+ Goal を書く」と、Goal は任意であること。警告色にしない。 */
+/** empty：「+ Goal を書く」だけ。Goal は任意だが、その説明は置かない。警告色にしない。 */
 export const Empty: Story = {};
 
-/** 実行中の Sprint の empty：「+ 目標を書く」だけ。任意である案内は計画中だけ（Issue #155）。 */
+/** 実行中の Sprint の empty：「+ 目標を書く」だけ。 */
 export const EmptyAfterConfirm: Story = {
-  args: { removable: false, optionalNote: false },
+  args: { removable: false },
 };
 
 /** Goal も Task もない Area：名前と「+ 目標を書く」を 1 行に。案内は添えない（Issue #161）。 */

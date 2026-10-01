@@ -87,7 +87,7 @@ function HandoffPane({
         </h2>
         {improvement === undefined ? (
           <p className="text-body text-ink-muted">
-            次に試すことはまだありません。書かなくても振り返りは完了できます。
+            次に試すことはまだありません。
             <button
               type="button"
               onClick={onWriteImprovement}
@@ -102,7 +102,7 @@ function HandoffPane({
               {improvement}
             </p>
             <p className="text-help text-ink-muted">
-              次の計画の最初に、そのまま表示されます。
+              次の計画のはじめに表示されます。
             </p>
           </>
         )}
@@ -116,8 +116,8 @@ function HandoffPane({
           label="計画のルールにもする"
           description={
             improvement === undefined
-              ? '次に試すことを書くと選べます。任意です。'
-              : '次に試すことが「見積もりの提案のどこで計画するか」で表せるときだけ、次の計画に使うルールにできます。任意です。'
+              ? '次に試すことを書くと選べます。'
+              : '次に試すことが「見積もりの提案のどこで計画するか」で表せるときだけ、次の計画に使うルールにできます。'
           }
           disabled={improvement === undefined}
           checked={draft !== undefined}
@@ -150,7 +150,7 @@ function HandoffPane({
           <UsedCriterion used={used} />
           <RadioGroup<RetroDecision | null>
             legend="次の Sprint でどうしますか"
-            description="使った・使わなかったにかかわらず選びます。理由は要りません。"
+            description="使ったかどうかに関係なく選んでください。"
             necessity="required"
             value={used.decision ?? null}
             onValueChange={(value) => {
@@ -357,9 +357,6 @@ function DraftCriterion({
           今回のルールと同じ設定です。変えないなら、オフにして「続ける」を選びます。
         </p>
       )}
-      <p className="text-help text-ink-muted">
-        見積もりそのものは書き換えません。
-      </p>
       <div className="flex flex-wrap gap-4">
         <Field label="対象">
           <Select

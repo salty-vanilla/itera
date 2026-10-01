@@ -248,9 +248,9 @@ function RetroView({
               {stageHeading(stage, data.number)}
             </h1>
             {stage === 'facts' && !readOnly && (
-              // Where the mark on a row leads, said once; the marks are optional.
+              // Where the mark on a row leads, said once.
               <p className="text-help text-ink-muted [word-break:auto-phrase]">
-                気になった事実に「振り返りに使う」を付けると、「振り返る」で材料として並びます。付けなくても進めます。
+                気になった事実に「振り返りに使う」を付けると、「振り返る」で材料として並びます。
               </p>
             )}
           </div>
