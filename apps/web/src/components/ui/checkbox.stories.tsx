@@ -33,7 +33,7 @@ export const WithDescription: Story = {
 
 /**
  * ラベルを横に置かない場所（Backlog の行など）では、四角だけを使い、
- * aria-label で「今週に入れる: タスク名」と読ませる。
+ * aria-label で「今週に入れる：タスク名」と読ませる。
  */
 export const BareControl: Story = {
   render: () => (

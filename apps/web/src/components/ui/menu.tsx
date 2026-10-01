@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 
 // DESIGN.md Components › Menu. The drop-down for secondary actions of a row or
 // a header. The trigger is the `…` IconButton or a Secondary Button
-// (「並び順: 期限 ⌄」). Do not hide primary actions here and do not nest
+// (「並び順：期限 ⌄」). Do not hide primary actions here and do not nest
 // submenus. Put dangerous items last, after a separator.
 //
 // Keyboard (docs/design/accessibility.md): ↓ ↑ move, Home / End jump, Enter

@@ -97,7 +97,7 @@ export const typographyGroups = [
     samples: [
       ['display-l', 'text-display-l', 'Sprint 14'],
       ['display-m', 'text-display-m', '今週、何を進めるか'],
-      ['goal', 'text-goal', '論文の第 3章の草稿を終える'],
+      ['goal', 'text-goal', '論文の第3章の草稿を終える'],
       [
         'reflection',
         'text-reflection',

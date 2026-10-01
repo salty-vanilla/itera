@@ -1101,7 +1101,7 @@ describe('Backlog', () => {
     expect(rows).toHaveLength(2);
     expect(
       within(list()).getByText('部屋の掃除').closest('li')?.textContent,
-    ).toContain('毎週 土 · 次は 10/3 (土) · 10/5 (月) から 毎週 日');
+    ).toContain('毎週 土 · 次は 10/3 (土) · 変更：10/5 (月) から 毎週 日');
 
     const detail = await screen.findByRole('dialog');
     const section = within(detail).getByRole('region', { name: '繰り返し' });

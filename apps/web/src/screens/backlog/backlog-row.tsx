@@ -56,7 +56,7 @@ export function RecurrenceText({
       {recurrence.next &&
         ` · 次は ${formatDate(recurrence.next.scheduledDate)}`}
       {recurrence.upcoming &&
-        ` · ${formatDate(recurrence.upcoming.effectiveFrom)} から ${formatPattern(recurrence.upcoming.pattern)}`}
+        ` · 変更：${formatDate(recurrence.upcoming.effectiveFrom)} から ${formatPattern(recurrence.upcoming.pattern)}`}
       {recurrence.endsOn && ` · ${formatDate(recurrence.endsOn)} まで`}
     </MetaItem>
   );

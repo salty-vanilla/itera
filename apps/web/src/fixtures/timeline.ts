@@ -6,7 +6,7 @@
 // timeline (Asia/Tokyo, weeks start on Monday):
 // - Sprint 9/21–9/27 is the previous week. Its Retro makes the criterion
 //   「研究：見積もりの提案の上限で計画する」 active.
-// - Sprint 9/28–10/4 follows Scenario A (関連論文を 3 本読む: deferred twice,
+// - Sprint 9/28–10/4 follows Scenario A (関連論文を 3本読む: deferred twice,
 //   4.5h then 今日はここまで, 昨日の続き, carried over; the available hours
 //   differ, see the Check) and Scenario B
 //   (顧客インタビューの設計 added to Today from the Backlog). Scenario C's
