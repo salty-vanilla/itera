@@ -198,7 +198,7 @@ describe('Backlog', () => {
     // 採用 only: no word of 適用 or of a planning criterion here (invariant 7).
     expect(proposal.textContent).not.toMatch(/適用|計画のルール/);
     await userEvent.click(
-      within(proposal).getByRole('button', { name: '中央 2.5h を使う' }),
+      within(proposal).getByRole('button', { name: 'ふつうの 2.5h を使う' }),
     );
     expect(task('task-interview')?.estimate).toMatchObject({
       hours: 2.5,
@@ -300,7 +300,7 @@ describe('Backlog', () => {
     expect(document.activeElement).toBe(undo);
     await userEvent.click(undo);
     expect(document.activeElement).toBe(
-      within(proposal()).getByRole('button', { name: '下限 2h を使う' }),
+      within(proposal()).getByRole('button', { name: '少なめの 2h を使う' }),
     );
   });
 
@@ -514,7 +514,7 @@ describe('Backlog', () => {
       ),
     ).toBeTruthy();
     await userEvent.click(
-      within(detail).getByRole('button', { name: '中央 2.5h を使う' }),
+      within(detail).getByRole('button', { name: 'ふつうの 2.5h を使う' }),
     );
     expect(estimate).toHaveProperty('value', '2.5');
     expect(

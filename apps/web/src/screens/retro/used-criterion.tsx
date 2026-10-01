@@ -33,7 +33,7 @@ function UsedCriterion({ used }: UsedCriterionProps) {
 }
 
 /**
- * 「見積もりの提案の上限で計画した研究のタスク 2件のうち、1件を持ち越し（計画 5h・
+ * 「提案の多めの値で計画した研究のタスク 2件のうち、1件を持ち越し（計画 5h・
  * 実績 4.5h）」.
  */
 function CriterionOutcome({ used }: UsedCriterionProps) {

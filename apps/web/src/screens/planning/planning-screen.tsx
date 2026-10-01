@@ -499,9 +499,10 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
 }
 
 /**
- * 「残り 1 〜 3h · 収まる」「超過 3 〜 5h · 少なく済んでも超える」, and when the
- * difference crosses 0, the two sentences alone: 「少なく済めば 2.25h 残る · 多くかかれば
- * 0.75h 超える」 (patterns.md compact, owner decision S5 in #93).
+ * The headline's sentences in one line, in one form for all three states
+ * (#234): 「少なく済めば 3h 残る · 多くかかっても 1h 残る」「少なく済めば 2.25h
+ * 残る · 多くかかれば 0.75h 超える」「少なく済んでも 3h 超える · 多くかかれば 5h
+ * 超える」 (patterns.md compact, owner decision S5 in #93).
  */
 function CapacitySummary({ data }: { data: PlanningData }) {
   const capacity = data.totals.capacity;
@@ -511,14 +512,7 @@ function CapacitySummary({ data }: { data: PlanningData }) {
           `計画の合計 ${formatPlanningSum(data.totals.total)}`,
           '使える時間は未入力',
         ]
-      : [
-          ...capacityHeadlineSentences(capacityHeadline(capacity)),
-          ...(capacity.status === 'exceeds'
-            ? ['少なく済んでも超える']
-            : capacity.status === 'within'
-              ? ['収まる']
-              : []),
-        ];
+      : capacityHeadlineSentences(capacityHeadline(capacity));
   // Each sentence stays whole: the line wraps only at 「·」, so a number
   // never leaves its words.
   return (
