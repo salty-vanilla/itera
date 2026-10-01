@@ -653,7 +653,7 @@ compact の原則：
 
 ### ナビゲーション
 
-**Navigation** — desktop の左サイドバー（`canvas-subtle`、右に `border`）。項目 36px（20px アイコン＋ラベル＋件数）、現在地は `here` の 4px の縦線＋`ink` 700＋`aria-current`（黄の印と太さで示し、地は塗らない）。768–1439px は `pane-rail`（幅 64px。20px アイコンの下に名前を `meta` で出す。項目は 56px で、下部タブバーと同じ組み方。medium の 2 ペインを保つため medium も rail にする）、compact は下部タブバー（今日 / Sprint / Backlog / 振り返り）。項目は 8 個まで。
+**Navigation** — desktop の左サイドバー（`canvas-subtle`、右に `border`）。上端にアプリの名前「Itera」を `ink` 700 で置く（リンクにせず、説明文も添えない。rail では `meta` で中央に置き、compact の下部タブバーには出さない）。項目 36px（20px アイコン＋ラベル＋件数）、現在地は `here` の 4px の縦線＋`ink` 700＋`aria-current`（黄の印と太さで示し、地は塗らない）。768–1439px は `pane-rail`（幅 64px。20px アイコンの下に名前を `meta` で出す。項目は 56px で、下部タブバーと同じ組み方。medium の 2 ペインを保つため medium も rail にする）、compact は下部タブバー（今日 / Sprint / Backlog / 振り返り）。項目は 8 個まで。
 - 下部タブバーは `canvas-subtle`＋上に `border`。項目は等幅で、20px アイコンの下にラベル（`meta`）、高さ 56px。現在地は項目の上端の `here` の 4px の横線＋`ink` 700＋`aria-current`。件数は表示せず読み上げだけにする。
 - rail の名前はホバーしなくても読める。rail の内側の余白は 4px（8px だと「Backlog」が 48px の幅に収まらない）にし、名前は折り返さず切らない。現在地の太字（700）でも収まる幅を保つ。現在地の縦線は項目の外、rail の余白に引き、名前に重ねない。件数は rail では表示せず、読み上げと Tooltip で伝える。
 - rail とタブバーでも件数は読み上げる（「Backlog 42件」）。Disabled の項目はフォーカスでき、`aria-disabled` で使えないことを伝える。
