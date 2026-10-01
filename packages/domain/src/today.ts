@@ -236,7 +236,7 @@ export function deferSelection(
   );
 }
 
-/** 今日から外す: selected → removed. A re-pick; not a deferral. */
+/** 今日の予定から外す: selected → removed. A re-pick; not a deferral. */
 export function removeFromToday(
   sprint: Sprint,
   input: SelectionActionInput,
