@@ -25,6 +25,7 @@ import type {
   PlanningCriterionId,
   SprintId,
   SprintTaskId,
+  TaskId,
 } from './shared/ids';
 import { omit } from './shared/record';
 import { err } from './shared/result';
@@ -261,20 +262,40 @@ export interface CarryOverPlaces {
   readonly archived: number;
 }
 
+/** Where a carried-over Task is: the next Sprint, offered, or closed. */
+export type CarryOverPlace = 'inNext' | 'candidate' | 'completed' | 'archived';
+
+/** One carried-over Task and where it is now (Retro 引き継ぐ, #169). */
+export interface CarryOverTask {
+  readonly taskId: TaskId;
+  readonly place: CarryOverPlace;
+}
+
 /**
- * Where `sprint`'s carried-over Tasks are: in `next` (the Sprint after it,
- * if Planning has started), still offered as its candidates, or closed
- * since. Nothing moves them (invariant 20); this only counts.
+ * `sprint`'s carried-over Tasks, in the Sprint's order, each with its place:
+ * in `next` (the Sprint after it, if Planning has started), still offered as
+ * its candidates, or closed since. Recurring Tasks have none. Nothing moves
+ * them (invariant 20).
  */
+export function carryOverTasks(
+  sprint: Sprint,
+  next: Sprint | undefined,
+  tasks: readonly Task[],
+): readonly CarryOverTask[] {
+  const following = next?.previousSprintId === sprint.id ? next : undefined;
+  return sprint.tasks.flatMap((t) => {
+    const place = carryOverPlace(t, following, tasks);
+    return place === undefined ? [] : [{ taskId: t.taskId, place }];
+  });
+}
+
+/** Where `sprint`'s carried-over Tasks are, by count (see carryOverTasks). */
 export function carryOverPlaces(
   sprint: Sprint,
   next: Sprint | undefined,
   tasks: readonly Task[],
 ): CarryOverPlaces {
-  const following = next?.previousSprintId === sprint.id ? next : undefined;
-  const places = sprint.tasks
-    .filter((t) => t.outcome === 'carriedOver')
-    .map((t) => carryOverPlace(t, following, tasks));
+  const places = carryOverTasks(sprint, next, tasks).map((t) => t.place);
   const count = (place: (typeof places)[number]) =>
     places.filter((p) => p === place).length;
   return {
@@ -291,7 +312,7 @@ function carryOverPlace(
   carried: SprintTask,
   next: Sprint | undefined,
   tasks: readonly Task[],
-): 'inNext' | 'candidate' | 'completed' | 'archived' | undefined {
+): CarryOverPlace | undefined {
   if (carried.outcome !== 'carriedOver') return undefined;
   const task = tasks.find((x) => x.id === carried.taskId);
   if (task === undefined || isRecurring(task)) return undefined;

@@ -3,6 +3,7 @@
 // are never edited in Retro and carry no score (invariant 40).
 import {
   carryOverPlaces,
+  carryOverTasks,
   criterionResult,
   criterionView,
   nextUnconfirmedSprintStart,
@@ -12,6 +13,7 @@ import {
   type AreaColor,
   type AreaId,
   type CarryOverPlaces,
+  type CarryOverTask,
   type CriterionResult,
   type CriterionView,
   type LocalDate,
@@ -106,6 +108,8 @@ export interface RetroData {
   readonly occurrences: readonly RetroOccurrence[];
   /** Where the carried-over Tasks are now (#107, F35). */
   readonly carryOver: CarryOverPlaces;
+  /** The carried-over Tasks and their places, for 引き継ぐ (#169). */
+  readonly carryOverTasks: readonly CarryOverTask[];
 }
 
 const NO_AREA: RetroArea = { id: null, name: '領域なし', color: 'none' };
@@ -172,6 +176,9 @@ export function retroData(
   const decision = use?.retroDecision;
   const used = use === undefined ? undefined : usedCriterion;
 
+  const following = records.sprints.find(
+    (s) => s.previousSprintId === sprint.id,
+  );
   return {
     sprint,
     number: sprintNumber(sprint, records.sprints),
@@ -225,11 +232,8 @@ export function retroData(
         date: f.doneOn ?? f.occurrence.scheduledDate,
       },
     })),
-    carryOver: carryOverPlaces(
-      sprint,
-      records.sprints.find((s) => s.previousSprintId === sprint.id),
-      tasks,
-    ),
+    carryOver: carryOverPlaces(sprint, following, tasks),
+    carryOverTasks: carryOverTasks(sprint, following, tasks),
   };
 }
 
