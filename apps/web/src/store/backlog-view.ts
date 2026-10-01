@@ -5,9 +5,9 @@ import {
   carryOverOf,
   inBacklogSlice,
   isCounted,
-  isRecurring,
   planningValueOf,
   projectFrom,
+  recurrenceOf,
   recurrenceSummary,
   sprintNumber,
   versionOn,
@@ -110,7 +110,8 @@ export function backlogItem(
   const area = records.areas.find((a) => a.id === task.areaId);
   const carry = carryOverOf(task.id, records.sprints);
   const carryFrom = records.sprints.find((s) => s.id === carry?.fromSprintId);
-  const rule = records.rules.find((r) => r.id === task.recurrenceRuleId);
+  // An ended rule is shown until its last day (F41).
+  const rule = recurrenceOf(task, records.rules, clock.today);
   // 「今週」: the active one, or, before one is confirmed, the one being
   // planned (Scenario A step 3); a draft for next week is 「来週」 (#90).
   const week = thisWeekSprintOf(records, clock);
@@ -124,7 +125,7 @@ export function backlogItem(
   const latest = rule?.versions.at(-1);
   const canChoose =
     active !== undefined &&
-    !isRecurring(task) &&
+    rule === undefined &&
     !active.tasks.some((t) => t.taskId === task.id);
   const beforeStart = active !== undefined && clock.today < active.start;
   // Today's selections of this Task (of its occurrences, if recurring).
@@ -219,7 +220,7 @@ export function backlogItem(
           },
         }
       : {}),
-    canComplete: !isRecurring(task),
+    canComplete: rule === undefined,
   };
 }
 
@@ -270,6 +271,7 @@ export function backlogData(
     user: records.user,
     today: clock.today,
     sprints: records.sprints,
+    rules: records.rules,
   };
   const inSlice = (slice: BacklogSlice | 'all') =>
     slice === 'all'

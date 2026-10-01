@@ -101,6 +101,21 @@ export function useTaskActions() {
           ? { ok: true }
           : { ok: true, effectiveFrom: change.effectiveFrom };
       },
+      /**
+       * 繰り返しをやめる (F41). `removed` when the rule had made no
+       * occurrence and was taken off: the Task is one-off again.
+       */
+      endRecurrence: (taskId: TaskId): { ok: boolean; removed?: boolean } => {
+        const activitiesOf = () => store.getSnapshot().records.activities;
+        const before = activitiesOf().length;
+        if (!run(changes.endRule(taskId))) return { ok: false };
+        const removed = activitiesOf()
+          .slice(before)
+          .some(
+            (a) => a.kind === 'recurrenceRuleRemoved' && a.taskId === taskId,
+          );
+        return { ok: true, removed };
+      },
     }),
     [run, store],
   );

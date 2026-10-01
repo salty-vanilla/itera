@@ -192,6 +192,7 @@ describe('inBacklogSlice', () => {
     user,
     today: localDate('2026-09-29'),
     sprints: [sprint],
+    rules: [],
   };
   const due = (date: string) =>
     unwrap(
