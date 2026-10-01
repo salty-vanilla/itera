@@ -794,6 +794,44 @@ describe('endRuleForNextSprint (F41)', () => {
     expect(completeTask(ended.task, ctx).ok).toBe(true);
   });
 
+  it('after its last day the Task can be made recurring again, with a rule of its own', () => {
+    const { task, rule, active, occurrences } = setUp({ completeOct3: false });
+    const ended = unwrap(
+      endRuleForNextSprint(
+        {
+          task,
+          rule,
+          user,
+          today: d('2026-09-30'),
+          sprints: [{ ...active, state: 'active' }],
+          occurrences: occurrences.slice(0, 1),
+        },
+        ctx,
+      ),
+    );
+    const again = unwrap(
+      createRuleForNextSprint(
+        {
+          task: ended.task,
+          ruleId: id('rule-2'),
+          pattern: sunday,
+          user,
+          today: d('2026-10-06'),
+          sprints: [{ ...active, state: 'closed' }],
+          occurrences: [],
+          newOccurrenceId: ids('occ-again'),
+          newSprintTaskId: ids('st-again'),
+        },
+        ctx,
+      ),
+    );
+    expect(again.task.recurrenceRuleId).toBe('rule-2');
+    // The Backlog follows the Task's own rule, not the ended one.
+    const rules = [ended.rule, again.rule];
+    expect(recurrenceOf(again.task, rules, d('2026-10-06'))).toBe(again.rule);
+    expect(again.rule.versions[0]?.effectiveFrom).toBe('2026-10-05');
+  });
+
   it('recurrenceOf: the Backlog shows an ended rule until its last day', () => {
     const { task, rule, active, occurrences } = setUp({ completeOct3: false });
     const ended = unwrap(
