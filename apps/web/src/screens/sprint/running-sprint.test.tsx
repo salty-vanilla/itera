@@ -210,8 +210,6 @@ describe('Sprint — running (#51)', () => {
 
   it('writes a new Goal after confirm, without a planned text (F16)', async () => {
     await renderAt('/sprint?fixture=today-interrupt');
-    // The note that a Goal is optional is for planning only (#155).
-    expect(screen.queryByText(/目標なしでも計画できます/)).toBeNull();
     await userEvent.click(
       screen.getByRole('button', { name: '目標を書く: 学習' }),
     );

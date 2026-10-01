@@ -395,13 +395,11 @@ describe('Planning — 整える', () => {
     await renderAt('/sprint?fixture=planning-shape&stage=shape');
     await leaveWeek('学習', '英語の多読 30 分');
     const study = within(planPane()).getByRole('region', { name: /学習/ });
-    // The name and the way in, without the note on every empty Area.
+    // The name and the way in, and no note about Goals being optional.
     expect(
       within(study).getByRole('button', { name: '目標を書く: 学習' }),
     ).toBeTruthy();
-    expect(study.textContent).not.toContain('目標なしでも計画できます');
-    // An Area with Tasks and no Goal keeps its note.
-    expect(planPane().textContent).toContain('目標なしでも計画できます。');
+    expect(planPane().textContent).not.toContain('目標なしでも計画できます');
 
     // Cancelling goes back to the line, with the focus on the way in.
     await userEvent.click(
@@ -820,7 +818,6 @@ describe('Planning — 確かめる', () => {
     expect(
       within(planPane()).queryByRole('button', { name: /目標を編集/ }),
     ).toBeNull();
-    expect(planPane().textContent).not.toMatch(/目標なしでも計画できます/);
     await userEvent.click(
       within(summary()).getByRole('link', { name: '「整える」で書く' }),
     );
