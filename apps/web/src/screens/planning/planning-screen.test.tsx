@@ -608,6 +608,20 @@ describe('Planning — 計画基準の見せ方 (#105)', () => {
   });
 });
 
+describe('Planning — the 時間の見通し sheet (#166)', () => {
+  it('says 時間の見通し once, in its title, and keeps the hours field', async () => {
+    await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    await userEvent.click(
+      screen.getByRole('button', { name: /時間の見通しを開く/ }),
+    );
+    const sheet = await screen.findByRole('dialog');
+    expect(within(sheet).getAllByText('時間の見通し')).toHaveLength(1);
+    expect(
+      within(sheet).getByRole('textbox', { name: /^使える時間/ }),
+    ).toBeTruthy();
+  });
+});
+
 describe('Planning — 確かめる', () => {
   // The headline in the right pane and the one line under 1200px, in the
   // three states (owner decision S5 in #93): a range while it fits or even

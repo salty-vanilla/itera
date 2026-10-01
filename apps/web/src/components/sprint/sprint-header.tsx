@@ -110,19 +110,12 @@ function SprintHeader({
               const current = stage.id === currentStage;
               return (
                 <li key={stage.id} className="flex items-center">
-                  {index > 0 && (
-                    // The line between stations.
-                    <span
-                      aria-hidden
-                      className="mx-2 h-px w-6 bg-border-strong medium:w-10"
-                    />
-                  )}
                   <a
                     href={stage.href}
                     aria-current={current ? 'step' : undefined}
                     onClick={(event) => onStage?.(stage.id, event)}
                     className={cn(
-                      'group/stage inline-flex min-h-target-touch items-center gap-2 rounded-sm px-1 text-body text-ink-muted medium:min-h-target-min',
+                      'group/stage inline-flex min-h-target-touch items-center gap-1 rounded-sm px-0 text-body whitespace-nowrap text-ink-muted medium:min-h-target-min medium:gap-2 medium:px-1',
                       'hover:text-ink focus-visible:focus-ring',
                       current && 'font-bold text-ink',
                     )}
@@ -139,6 +132,15 @@ function SprintHeader({
                     {stage.label}
                     {current && <span className="text-meta">現在</span>}
                   </a>
+                  {index < stages.length - 1 && (
+                    // The line to the next station ends its own row, so
+                    // that a wrap never leaves it first on the next one
+                    // (#166).
+                    <span
+                      aria-hidden
+                      className="mx-1 h-px w-3 bg-border-strong medium:mx-2 medium:w-10"
+                    />
+                  )}
                 </li>
               );
             })}

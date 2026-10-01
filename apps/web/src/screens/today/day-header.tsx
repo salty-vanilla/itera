@@ -137,7 +137,7 @@ function DayHeader({
           place from one day to the next. */}
       <p className="min-h-4 text-meta text-ink-muted">{meta}</p>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <div className="flex items-center gap-1">
+        <div className="flex min-w-0 items-center gap-1">
           <StepLink direction="previous" {...step(addDays(date, -1), '前')} />
           <h1 className="text-display-m text-ink">
             {formatDateHeading(date)}
@@ -152,7 +152,10 @@ function DayHeader({
           {/* After the arrows, so they stay put from day to day; read with
               the heading above. */}
           {side !== undefined && (
-            <span aria-hidden className="ms-2 text-body text-ink-muted">
+            <span
+              aria-hidden
+              className="ms-2 shrink-0 text-body whitespace-nowrap text-ink-muted"
+            >
               {side}
             </span>
           )}
