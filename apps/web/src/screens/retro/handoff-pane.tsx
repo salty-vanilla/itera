@@ -220,7 +220,7 @@ function CarryOverList({
           <li key={t.taskId}>
             {titleOf(t.taskId)}
             {t.place !== 'candidate' && (
-              <span className="ms-2 text-help text-ink-muted">
+              <span className="ms-2 text-help text-ink-muted [word-break:auto-phrase]">
                 {CARRY_OVER_PLACE_WORDS[t.place]}
               </span>
             )}
@@ -240,7 +240,7 @@ function CarryOverList({
         </Button>
       )}
       {tasks.some((t) => t.place === 'candidate') && (
-        <p className="text-body text-ink-muted">
+        <p className="text-body text-ink-muted [word-break:auto-phrase]">
           次の計画の「選ぶ」で決めます。
           {next.planning !== undefined ? (
             <Link
