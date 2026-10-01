@@ -398,7 +398,23 @@ function Outlook({
           />
         )}
       </section>
-      {data.criterion !== undefined && (
+      {data.criterion?.hadTarget === false && (
+        // Applied, and no planned value came from it: a line, not a frame
+        // (#161).
+        <p
+          data-slot="criterion-line"
+          className="flex items-start gap-2 text-help text-ink-muted"
+        >
+          <Info
+            aria-hidden
+            className="mt-0.5 size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
+          />
+          計画基準「
+          {criterionName(data.criterion.policy, data.criterion.areaName)}」 ·
+          対象なし
+        </p>
+      )}
+      {data.criterion?.hadTarget === true && (
         <section
           aria-labelledby={`${ids}-criterion`}
           className="flex flex-col gap-2 rounded-sm bg-canvas-subtle p-4"

@@ -12,7 +12,8 @@ import { weekCall } from '@/lib/week-text';
 // Capacity. The criterion is its name on one line under the improvement, in
 // 選ぶ and 整える: its frame, the 「今回の計画に使う」 Switch and effect, and
 // 「何が上振れすると超過するか」 are in the 確かめる summary at the head of
-// the Sprint pane (#93). Without a criterion, nothing is shown (#105).
+// the Sprint pane (#93). Without a criterion, nothing is shown (#105); nor
+// when no chosen Task is one it acts on (#161).
 // In 確かめる, that summary has the numbers, the hours and the criterion, so
 // this pane keeps the improvement and the Capacity's bar and Areas only: each
 // number shows once (#165).
@@ -51,7 +52,7 @@ function OutlookPane({
   );
   // The criterion's name alone, on one line under the improvement (owner
   // decision R3 in #105).
-  const criterionLine = criterion !== undefined && !check && (
+  const criterionLine = criterion?.hasTarget === true && !check && (
     <p
       data-slot="criterion-line"
       className="flex items-start gap-2 text-body text-ink-muted"

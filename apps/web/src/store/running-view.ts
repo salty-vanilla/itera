@@ -116,6 +116,12 @@ export interface RunningData {
     /** The Area it covers, when its scope is an Area. */
     readonly areaName?: string;
     readonly applied: boolean;
+    /**
+     * False when it was applied at confirm and no planned value came from it:
+     * the screen folds it to a line (#161). Not applied: the person chose
+     * that at the Check, so it stays whole.
+     */
+    readonly hadTarget: boolean;
   };
 }
 
@@ -265,6 +271,9 @@ export function runningData(
               ? { areaName: areaOf(scope.areaId).name }
               : {}),
             applied: use.appliedAtConfirm,
+            hadTarget:
+              !use.appliedAtConfirm ||
+              counted.some((t) => t.value.criterionApplied),
           },
         }),
   };

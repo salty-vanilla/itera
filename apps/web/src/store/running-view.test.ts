@@ -66,6 +66,44 @@ describe('runningData', () => {
     expect(data?.criterion).toBeUndefined();
   });
 
+  it('knows whether the criterion changed a planned value (#161)', () => {
+    const { records, clock } = fixtureSnapshot('today-interrupt');
+    expect(runningData(records, clock)?.criterion).toMatchObject({
+      applied: true,
+      hadTarget: true,
+    });
+    // Applied at confirm, but no planned value came from it.
+    const none = withActive(records, (s) => ({
+      ...s,
+      tasks: s.tasks.map((t) =>
+        t.planSnapshot === undefined
+          ? t
+          : {
+              ...t,
+              planSnapshot: {
+                ...t.planSnapshot,
+                value: { ...t.planSnapshot.value, criterionApplied: false },
+              },
+            },
+      ),
+    }));
+    expect(runningData(none, clock)?.criterion).toMatchObject({
+      applied: true,
+      hadTarget: false,
+    });
+    // Switched off by the person: it stays whole.
+    const off = withActive(none, (s) => ({
+      ...s,
+      ...(s.criterionUse === undefined
+        ? {}
+        : { criterionUse: { ...s.criterionUse, appliedAtConfirm: false } }),
+    }));
+    expect(runningData(off, clock)?.criterion).toMatchObject({
+      applied: false,
+      hadTarget: true,
+    });
+  });
+
   it('tells what undoing a past day leaves (F33, F17, F29)', () => {
     const { records } = fixtureSnapshot('today-interrupt');
     const withKinds = withActive(records, (s) => ({
