@@ -159,7 +159,7 @@ export function runningData(
   // Only the running Sprint says 「来週にも」: a Sprint that has ended has
   // no next week to be in (#150).
   const nextWeekTasks = new Set(
-    sprint.state !== 'active'
+    ended
       ? []
       : (nextWeekSprintOf(records, clock)?.tasks ?? [])
           .filter(isCounted)

@@ -338,6 +338,8 @@ describe('「来週」 mark of a Task chosen for next week (#150)', () => {
     expect(metaOf('本棚を整理する')).toContain('来週');
     expect(metaOf('本棚を整理する')).not.toMatch(/今週|今日/);
     expect(metaOf('関連論文を 3 本読む')).toContain('今週 · 来週');
+    // A recurring Task comes into the draft on its own (patterns.md).
+    expect(metaOf('部屋の掃除')).toContain('今週 · 来週');
     // Not chosen: no mark.
     expect(metaOf('TypeScript 6 の変更点を読む')).not.toContain('来週');
 
