@@ -311,6 +311,12 @@ function RunningRow({
     sprintTask.origin === 'midSprint' && (
       <MetaItem key="m">週の途中で追加</MetaItem>
     ),
+    // Also in next week's draft (#150): the plan here is not the only one.
+    item.nextWeek && (
+      <MetaItem key="n" className="text-ink-subtle">
+        来週にも
+      </MetaItem>
+    ),
   ].filter(Boolean);
   return (
     <TaskRow

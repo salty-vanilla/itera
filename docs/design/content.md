@@ -20,7 +20,7 @@
 | 画面の語 | モデル | 意味と表記 |
 | --- | --- | --- |
 | Sprint | Sprint | 1 週間の計画単位。「Sprint 14」。カタカナにしない |
-| Backlog | Backlog（ビュー） | active な Task の一覧。Sprint や Today に入っても消えない。今の Sprint に入っている Task には「今週」 |
+| Backlog | Backlog（ビュー） | active な Task の一覧。Sprint や Today に入っても消えない。今の Sprint に入っている Task には「今週」、来週の計画にも入っていれば「今週 · 来週」（来週だけなら「来週」） |
 | 計画 | Planning（Sprint = planning） | 次の Sprint の計画を立てること。「次の計画には何も出ません」「Sprint 14 の計画を始める」。画面に「Planning」と書かない |
 | 領域 | Area | 仕事・研究など、本人が作る領域。画面では各 Area の名前を出し、「カテゴリ」と呼ばない。未設定は「領域なし」 |
 | 目標 | SprintGoal | Sprint × 領域の「今週の終わりにどんな状態にしたいか」。「〜な状態にする」「〜を終える」。任意。見出しは「今週の目標」、入力は「目標を書く」 |
