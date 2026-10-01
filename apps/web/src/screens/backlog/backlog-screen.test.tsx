@@ -548,6 +548,10 @@ describe('Backlog', () => {
       '次の Sprint から反映',
     );
     expect(task('task-bookshelf')?.recurrenceRuleId).toBeDefined();
+    // The button goes, so the focus goes to the frequency.
+    expect(document.activeElement).toBe(
+      within(recurrence).getByRole('combobox', { name: '頻度' }),
+    );
     // Once it has a rule, the button is gone: changes are saved as made.
     expect(
       within(recurrence).queryByRole('button', { name: '繰り返しにする' }),

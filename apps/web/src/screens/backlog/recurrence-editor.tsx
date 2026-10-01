@@ -1,5 +1,11 @@
 import type { DayOfWeek, LocalDate, RecurrencePattern } from '@itera/domain';
-import { useImperativeHandle, useRef, useState, type Ref } from 'react';
+import {
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type Ref,
+} from 'react';
 import { Button } from '@/components/ui/button';
 import { Check } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -86,6 +92,13 @@ function RecurrenceEditor({
   );
   const daysRef = useRef<HTMLFieldSetElement>(null);
   const createRef = useRef<HTMLButtonElement>(null);
+  const freqRef = useRef<HTMLSelectElement>(null);
+  // 繰り返しにする makes the button go: the focus moves to the frequency.
+  const hadRule = useRef(rule !== undefined);
+  useEffect(() => {
+    if (rule !== undefined && !hadRule.current) freqRef.current?.focus();
+    hadRule.current = rule !== undefined;
+  }, [rule]);
   useImperativeHandle(pendingRef, () => () => {
     if (rule !== undefined) {
       return freq === 'weekly' && days.length === 0
@@ -177,12 +190,11 @@ function RecurrenceEditor({
       {rule !== undefined && (
         <p className="text-body text-ink">
           今のルール: {formatPattern(rule.current)}
-          {rule.latest !== rule.current &&
-            `（次の Sprint から ${formatPattern(rule.latest)}）`}
         </p>
       )}
       <Field label="頻度">
         <Select
+          ref={freqRef}
           value={freq}
           onChange={(e) => onFreq(e.currentTarget.value as Freq)}
         >
