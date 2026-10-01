@@ -801,9 +801,10 @@ describe('Today — editing and deleting interrupts (F38)', () => {
     await renderAt('/today?fixture=today-interrupt');
     const before = sprint().interrupts;
     await openActions('障害の問い合わせに対応');
-    await userEvent.click(
-      await screen.findByRole('menuitem', { name: '消す' }),
-    );
+    const del = await screen.findByRole('menuitem', { name: '消す' });
+    // It can be undone, so it is not `danger` (#197).
+    expect(del.className).not.toContain('text-danger');
+    await userEvent.click(del);
     expect(sprint().interrupts.map((n) => n.text)).toEqual([
       '急ぎのレビュー依頼',
     ]);
