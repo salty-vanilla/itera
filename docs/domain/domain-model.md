@@ -51,7 +51,7 @@ F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F
 | F8 | 連続見送りは Unresolved を無視し、Skipped で途切れる | Unresolved は選ばなかった日と同じく、数えず途切れさせない。繰り返しの回の Skipped は本人の決定なので、Done・Removed と同じく連続を途切れさせる（不変条件 23） | なし |
 | F9 | Sprint 中に初めて現れた Area は、その時点の名前を写し取る | SprintAreaSnapshot にない Area が Sprint 中に初めて現れたとき（その Area の Task を Sprint に追加した、または Sprint 内の Task の Area にした）、その時点の名前を並び順の末尾に足して固定する（不変条件 18） | その Sprint の Today / Retro では、その Area も名前が固定される |
 | F10 | 計画基準はサブタスク合計に作用しない | Subtask の見積もりは点の値なので、サブタスク合計も点になる。不変条件 9 の「幅のあるサブタスク合計」を削除 | なし |
-| F11 | 一部のサブタスクが見積もりなしなら、その件数を示す | timeBasis がサブタスク合計のとき、見積もりのあるサブタスクだけを足し、見積もりのないサブタスクの件数を PlanningValue に持つ。すべて見積もりなしなら、その Task が見積もりなし（不変条件 8） | Planning：「2.5h（見積もりなしが 1件）」のように合計と件数を並べる |
+| F11 | 一部のサブタスクが見積もりなしなら、その件数を示す | timeBasis がサブタスク合計のとき、見積もりのあるサブタスクだけを足し、見積もりのないサブタスクの件数を PlanningValue に持つ。すべて見積もりなしなら、その Task が見積もりなし（不変条件 8） | Planning：「2.5h（サブタスク 1件は見積もりなし）」のように合計と件数を並べる |
 | F12 | 毎週の繰り返しは曜日を複数指定できる | RecurrenceRule の版の曜日は 1 つ以上（例：毎週 月・木）。その Sprint で発生する回は指定した曜日の数（1〜7 回） | Backlog・Planning：「毎週 月・木」のように曜日を並べる |
 | F13 | Sprint から外した Task は同じ Sprint に戻せる | SprintTask に Removed → Planned（Sprint に戻す）を足す。同じ SprintTask を戻すので「同じ Sprint に 1 件まで」（不変条件 14）は保たれ、origin と planSnapshot は変わらない | 確定後に外した Task を元に戻せる |
 | F14 | 繰り返しの SprintTask を外すと、残りの回は外した回になる | Sprint 中に Removed にすると、その SprintTask の Pending の回を Excluded にする（完了・スキップ済みの回はそのまま）。Today に出ず、Retro の事実（未処理）にも出ない（F2）。F13 で戻すと Pending に戻る | なし |
@@ -398,7 +398,7 @@ v0.2 Final でも 3 つとも、UI に入口のない操作を使わずに最後
 | # | 操作（画面） | 作られる / 変わるもの | 表示・事実 |
 | --- | --- | --- | --- |
 | 1 | Backlog で追加 | Task（User 所有、active、title のみ）。Activity：作成（Backlog） | Backlog ビューに出る。領域は後で研究に（Backlog は現在の Area 名） |
-| 2 | 提案 3–5h | EstimateSuggestion（3–5h、根拠、不確実な点、提示中）。Estimate は空のまま | 一覧は「提案 3–5h」（破線） |
+| 2 | 提案 3–5h | EstimateSuggestion（3–5h、根拠、不確実な点、提示中）。Estimate は空のまま | 一覧は「見積もりの提案 3–5h」（破線） |
 | 3 | Planning で選ぶ | Sprint（Planning）、SprintTask（Draft、origin = planning、goalLink = linked） | 「今週」。確定前の Planning は現在の Area 名 |
 | 4 | 研究の Goal を書く | SprintGoal（Sprint × 研究、text） | Task 側は変化なし |
 | 5 | 基準を適用して確定 | 前の Sprint が Closed なので確定できる。CriterionUse（appliedAtConfirm = true）。PlanningValue = 5h（base = 提案 3–5h、基準を適用）を planSnapshot に固定。SprintGoal.plannedText、使える時間 18h、SprintAreaSnapshot（研究）を写し取る。SprintTask → Planned、Sprint → Active | 「Estimate 提案 3–5h / 今回は 5h で計画」。提案は採用していないので Estimate は空のまま。以後、この Sprint の画面は「研究」の名前で固定 |

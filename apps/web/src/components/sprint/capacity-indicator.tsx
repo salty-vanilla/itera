@@ -189,7 +189,7 @@ export function capacityRelationSentences(
   }
   return [
     remaining.lo === 0
-      ? '上限でちょうど収まる'
+      ? '多くかかってもちょうど収まる'
       : `多くかかっても ${formatHours(remaining.lo, { total: true })} 残る`,
   ];
 }

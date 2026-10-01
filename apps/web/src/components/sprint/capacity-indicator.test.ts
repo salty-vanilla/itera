@@ -81,6 +81,6 @@ describe('capacityRelationSentences (Retro, #167)', () => {
       '少なく済めば 1.75h 残る · 多くかかれば 0.25h 超える',
     );
     expect(relation(15, 16, 17)).toBe('多くかかっても 1h 残る');
-    expect(relation(15, 17, 17)).toBe('上限でちょうど収まる');
+    expect(relation(15, 17, 17)).toBe('多くかかってもちょうど収まる');
   });
 });
