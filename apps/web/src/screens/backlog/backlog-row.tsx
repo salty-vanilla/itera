@@ -51,7 +51,7 @@ export function RecurrenceText({
 }) {
   const Icon = semanticIcons.recurrence;
   return (
-    <MetaItem icon={icon ? <Icon aria-hidden /> : undefined}>
+    <MetaItem icon={icon ? <Icon aria-hidden /> : undefined} wrap>
       {formatPattern(recurrence.pattern)}
       {recurrence.next &&
         ` · 次は ${formatDate(recurrence.next.scheduledDate)}`}
