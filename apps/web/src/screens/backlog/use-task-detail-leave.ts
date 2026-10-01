@@ -8,7 +8,7 @@ import { useRef } from 'react';
  * a notice when a subtask or a recurrence change was not added or applied.
  * Pass `ref` to TaskDetail's `leaveRef`. Call `leave` from an event handler:
  * it flushes the field's blur synchronously. `opens` says that `then` opens
- * another Task, for the notice's 破棄して開く.
+ * another Task, for the notice's 保存せずに開く.
  */
 export function useTaskDetailLeave() {
   const ref = useRef<((then: () => void, opens: boolean) => void) | null>(null);

@@ -452,7 +452,7 @@ function AvailableHoursField({
     const trimmed = text.trim();
     const hours = trimmed === '' ? null : Number(trimmed);
     if (hours !== null && !(Number.isFinite(hours) && hours >= 0)) {
-      setError('0 以上の数で入力してください（例：18）');
+      setError('0 以上の時間を数字で入れてください（例：18）');
       return;
     }
     setError(undefined);

@@ -603,7 +603,7 @@ describe('Today — completed from the Backlog', () => {
       resolution: 'done',
     });
     const last = within(region('今日やる')).getAllByRole('listitem').at(-1)!;
-    expect(within(last).getByText('Backlog から完了')).toBeTruthy();
+    expect(within(last).getByText('Backlog で完了')).toBeTruthy();
     // A completed Task has no detail to open here.
     expect(
       within(last).queryByRole('button', {

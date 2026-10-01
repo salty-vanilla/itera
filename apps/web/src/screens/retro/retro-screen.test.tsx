@@ -74,7 +74,7 @@ const decisionMissingText = reasonText(
   '上の「今回の計画のルール」で、続ける・終える・置き換えるのどれかを選ぶと完了できます。',
 );
 const continueWithDraftText = reasonText(
-  '新しいルールを作るなら「置き換える」を、作らないなら「計画のルールにもする」をオフにしてください。',
+  '新しいルールを使うなら、「今回の計画のルール」で「置き換える」を選んでください。使わないなら、「計画のルールにもする」をオフにしてください。',
 );
 const completeButton = () =>
   screen.getByRole('button', { name: '振り返りを完了' });

@@ -35,11 +35,12 @@ const BLOCKER_WORDS: Readonly<Record<RetroBlocker, ReactNode>> = {
     </>
   ),
   continueWithDraft: (
-    // copy-lint-ignore long-sentence -- PR #216 でオーナーが「いったん」と決めた文（content.md の操作できない理由）
     <>
-      新しいルールを作るなら
-      <span className="whitespace-nowrap">「置き換える」を、</span>
-      <span className="whitespace-nowrap">作らないなら</span>
+      新しいルールを使うなら、
+      <span className="whitespace-nowrap">「今回の計画のルール」で</span>
+      <span className="whitespace-nowrap">「置き換える」を</span>
+      <span className="whitespace-nowrap">選んでください。</span>
+      <span className="whitespace-nowrap">使わないなら、</span>
       <span className="whitespace-nowrap">「計画のルールにもする」</span>
       をオフにしてください。
     </>

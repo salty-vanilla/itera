@@ -147,7 +147,7 @@ function readField(key: TextKey, draft: Draft, task: Task): Reading {
       if (hours !== null && !(Number.isFinite(hours) && hours > 0)) {
         return {
           kind: 'error',
-          message: '0 より大きい数で入力してください（例：1.5）',
+          message: '0 より大きい時間を数字で入れてください（例：1.5）',
         };
       }
       return hours === (task.estimate?.hours ?? null)
@@ -373,7 +373,7 @@ function TaskDetail({
   // applied: closing asks first, with the operation it would carry out.
   const [held, setHeld] = useState<{
     then: () => void;
-    /** `then` opens another Task: 破棄して開く rather than 破棄して閉じる. */
+    /** `then` opens another Task: 保存せずに開く rather than 保存せずに閉じる. */
     opens: boolean;
     subtask: boolean;
     recurrence: boolean;
@@ -433,7 +433,7 @@ function TaskDetail({
   // so it is saved or shows its error. One of this detail's fields left in
   // error keeps it open and takes the focus back. A subtask not added or a
   // recurrence change not applied holds it with a notice: 戻る, or
-  // 破棄して閉じる (破棄して開く) carries out `then`.
+  // 保存せずに閉じる (保存せずに開く) carries out `then`.
   function leave(then: () => void, opens = false) {
     const body = bodyRef.current;
     if (body === null) return then();
@@ -1023,11 +1023,13 @@ function TaskDetail({
             live
             title={
               <span id={noticeId} className="flex flex-col">
-                {held.subtask && (
-                  <span>追加していないサブタスクがあります</span>
-                )}
+                {held.subtask && <span>入力中のサブタスクがあります</span>}
                 {held.recurrence && (
-                  <span>反映していない繰り返しの変更があります</span>
+                  <span>
+                    {item.rule === undefined
+                      ? '「繰り返しにする」をまだ押していません'
+                      : '繰り返しの変更がまだ保存されていません'}
+                  </span>
                 )}
               </span>
             }
@@ -1050,7 +1052,7 @@ function TaskDetail({
                     then();
                   }}
                 >
-                  {held.opens ? '破棄して開く' : '破棄して閉じる'}
+                  {held.opens ? '保存せずに開く' : '保存せずに閉じる'}
                 </Button>
               </>
             }

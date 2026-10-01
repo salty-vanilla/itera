@@ -273,7 +273,7 @@ describe('Backlog', () => {
     );
     expect(
       within(proposal()).getByText(
-        '0 より大きい数で入力してください（例：2.5）',
+        '0 より大きい時間を数字で入れてください（例：2.5）',
       ),
     ).toBeTruthy();
     expect(document.activeElement).toBe(field);
@@ -332,7 +332,9 @@ describe('Backlog', () => {
     await userEvent.type(estimate, 'abc');
     await userEvent.tab();
     expect(
-      within(detail).getByText('0 より大きい数で入力してください（例：1.5）'),
+      within(detail).getByText(
+        '0 より大きい時間を数字で入れてください（例：1.5）',
+      ),
     ).toBeTruthy();
     expect(task('task-bookshelf')).not.toHaveProperty('estimate');
     // The input stays as typed.
@@ -345,7 +347,9 @@ describe('Backlog', () => {
       estimate: { hours: 1.5, source: { kind: 'manual' } },
     });
     expect(
-      within(detail).queryByText('0 より大きい数で入力してください（例：1.5）'),
+      within(detail).queryByText(
+        '0 より大きい時間を数字で入れてください（例：1.5）',
+      ),
     ).toBeNull();
     expect(within(detail).getByText('保存しました')).toBeTruthy();
     expect(
@@ -505,14 +509,18 @@ describe('Backlog', () => {
     await userEvent.type(estimate, 'abc');
     await userEvent.tab();
     expect(
-      within(detail).getByText('0 より大きい数で入力してください（例：1.5）'),
+      within(detail).getByText(
+        '0 より大きい時間を数字で入れてください（例：1.5）',
+      ),
     ).toBeTruthy();
     await userEvent.click(
       within(detail).getByRole('button', { name: '中央 2.5h を使う' }),
     );
     expect(estimate).toHaveProperty('value', '2.5');
     expect(
-      within(detail).queryByText('0 より大きい数で入力してください（例：1.5）'),
+      within(detail).queryByText(
+        '0 より大きい時間を数字で入れてください（例：1.5）',
+      ),
     ).toBeNull();
     await userEvent.click(footerClose(detail));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
@@ -627,7 +635,7 @@ describe('Backlog', () => {
     await userEvent.click(footerClose(detail));
     expect(screen.getByRole('dialog')).toBe(detail);
     expect(
-      within(detail).getByText('反映していない繰り返しの変更があります'),
+      within(detail).getByText('繰り返しの変更がまだ保存されていません'),
     ).toBeTruthy();
     await userEvent.click(within(detail).getByRole('button', { name: '戻る' }));
     expect(document.activeElement?.getAttribute('role')).toBe('checkbox');
@@ -718,27 +726,27 @@ describe('Backlog', () => {
     await userEvent.click(footerClose(detail));
     expect(screen.getByRole('dialog')).toBe(detail);
     expect(
-      within(detail).getByText('追加していないサブタスクがあります'),
+      within(detail).getByText('入力中のサブタスクがあります'),
     ).toBeTruthy();
     const back = within(detail).getByRole('button', { name: '戻る' });
     expect(document.activeElement).toBe(back);
     await userEvent.click(back);
     expect(
-      within(detail).queryByText('追加していないサブタスクがあります'),
+      within(detail).queryByText('入力中のサブタスクがあります'),
     ).toBeNull();
     expect(document.activeElement).toBe(subtask);
     expect(subtask).toHaveProperty('value', '上の段');
-    // Closing says 破棄して閉じる.
+    // Closing says 保存せずに閉じる.
     await userEvent.keyboard('{Escape}');
     expect(
-      within(detail).getByRole('button', { name: '破棄して閉じる' }),
+      within(detail).getByRole('button', { name: '保存せずに閉じる' }),
     ).toBeTruthy();
     expect(
-      within(detail).queryByRole('button', { name: '破棄して開く' }),
+      within(detail).queryByRole('button', { name: '保存せずに開く' }),
     ).toBeNull();
     await userEvent.click(within(detail).getByRole('button', { name: '戻る' }));
 
-    // Opening another row asks the same; 破棄して開く carries it out.
+    // Opening another row asks the same; 保存せずに開く carries it out.
     await userEvent.selectOptions(
       within(detail).getByRole('combobox', { name: '頻度' }),
       'daily',
@@ -746,10 +754,10 @@ describe('Backlog', () => {
     await userEvent.click(within(list()).getByText('歯医者の予約'));
     expect(screen.getByRole('dialog').textContent).toContain('本棚を整理する');
     expect(
-      within(detail).getByText('反映していない繰り返しの変更があります'),
+      within(detail).getByText('「繰り返しにする」をまだ押していません'),
     ).toBeTruthy();
     await userEvent.click(
-      within(detail).getByRole('button', { name: '破棄して開く' }),
+      within(detail).getByRole('button', { name: '保存せずに開く' }),
     );
     await waitFor(() =>
       expect(screen.getByRole('dialog').textContent).toContain('歯医者の予約'),

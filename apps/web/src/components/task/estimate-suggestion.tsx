@@ -78,7 +78,7 @@ function EstimateSuggestion({
   function adoptEdited() {
     const value = Number(hours);
     if (hours.trim() === '' || !Number.isFinite(value) || value <= 0) {
-      setError('0 より大きい数で入力してください（例：2.5）');
+      setError('0 より大きい時間を数字で入れてください（例：2.5）');
       fieldRef.current?.focus();
       return;
     }

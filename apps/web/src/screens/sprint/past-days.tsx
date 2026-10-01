@@ -142,8 +142,8 @@ function PastDays({ days, onUndo }: PastDaysProps) {
 function consequence(r: PastDayRecord): string {
   const noWayBack =
     r.selection.resolution === 'skipped'
-      ? 'あとから、その日をスキップにはできません。'
-      : 'あとから、その日を完了にはできません。';
+      ? '取り消したあと、その日の記録をもう一度スキップにはできません。'
+      : '取り消したあと、その日の記録をもう一度完了にはできません。';
   // Unresolved reads 「未完了」 (#205), the state before the completion or
   // skip, as 日ごとの記録 says. With an occurrence both go back to it: one
   // sentence.
