@@ -278,6 +278,7 @@ function RunningRow({
 }) {
   const { sprintTask, task, value, occurrences, carry } = item;
   const Repeat = semanticIcons.recurrence;
+  const GoalLink = semanticIcons.goalLink;
   const count = sprintTask.planSnapshot?.occurrenceCount;
   const done = sprintTask.outcome === 'done';
   // DESIGN.md Task Metadata order: carry-over, recurrence, Goal, notes.
@@ -298,11 +299,15 @@ function RunningRow({
           .join(' ')}
       </MetaItem>
     ),
-    hasGoal && sprintTask.goalLink === 'unlinked' && (
-      <MetaItem key="g" className="text-ink-subtle">
-        目標なし
-      </MetaItem>
-    ),
+    // Both states, in the words and tone of Planning's rows (#159).
+    hasGoal &&
+      (sprintTask.goalLink === 'linked' ? (
+        <MetaItem key="g" icon={<GoalLink aria-hidden />}>
+          目標に紐づく
+        </MetaItem>
+      ) : (
+        <MetaItem key="g">目標に紐づかない</MetaItem>
+      )),
     sprintTask.origin === 'midSprint' && (
       <MetaItem key="m">週の途中で追加</MetaItem>
     ),

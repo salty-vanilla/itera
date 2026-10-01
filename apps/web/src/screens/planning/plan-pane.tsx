@@ -223,6 +223,7 @@ function PlannedList({
             planned={planned}
             stage={stage}
             week={week}
+            hasGoal={block.goal !== undefined}
             added={planned.task.id === addedTaskId}
             onOpen={() => onOpenTask(planned.task.id)}
             onEstimate={() => onEstimateTask(planned.task.id)}
@@ -237,6 +238,7 @@ function PlannedRow({
   planned,
   stage,
   week,
+  hasGoal,
   added,
   onOpen,
   onEstimate,
@@ -245,6 +247,8 @@ function PlannedRow({
   stage: Stage;
   /** 「今週」「来週」 (#90). */
   week: string;
+  /** The Task's Area has a Goal: only then is the link shown and changed. */
+  hasGoal: boolean;
   /** Just added in the Quick Add: the row flashes for a moment (Issue #92). */
   added: boolean;
   onOpen: () => void;
@@ -256,8 +260,11 @@ function PlannedRow({
     planned;
   const recurring = occurrenceCount !== undefined;
   const linked = sprintTask.goalLink === 'linked';
-  // A Task without an Area has no Goal to link to.
-  const canLink = task.areaId !== undefined;
+  // The link means something only where the Area has a Goal (a Task in an
+  // Area without one is unlinked at confirm, goalLinkAtConfirm), so the row
+  // says it, in the words of its menu item, only there (#159).
+  const showLink = stage !== 'pick' && hasGoal;
+  const GoalLink = semanticIcons.goalLink;
   const Repeat = semanticIcons.recurrence;
   const Carry = semanticIcons.carriedOver;
   const meta = [
@@ -280,13 +287,16 @@ function PlannedRow({
         持ち越し
       </MetaItem>
     ),
-    // 「Goal なし」 as confirming will set it (goalLinkAtConfirm): also for
-    // a linked Task whose Area has no Goal yet.
-    stage !== 'pick' && planned.linkAtConfirm === 'unlinked' && (
-      <MetaItem key="g" className="text-ink-subtle">
-        目標なし
-      </MetaItem>
-    ),
+    // Both states, in the same tone: an unlinked Task is not lighter
+    // (DESIGN.md Do's and Don'ts).
+    showLink &&
+      (linked ? (
+        <MetaItem key="g" icon={<GoalLink aria-hidden />}>
+          目標に紐づく
+        </MetaItem>
+      ) : (
+        <MetaItem key="g">目標に紐づかない</MetaItem>
+      )),
   ].filter(Boolean);
 
   const unchoose = () => {
@@ -321,7 +331,7 @@ function PlannedRow({
         ? weekText(week, `から外す（${occurrenceCount}回すべて）`)
         : weekText(week, 'から外す')}
     </MenuItem>,
-    stage !== 'pick' && canLink && (
+    showLink && (
       <MenuItem
         key="link"
         onClick={() =>
