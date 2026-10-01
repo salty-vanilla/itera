@@ -120,7 +120,8 @@ function Past({ data }: { data: DayData }) {
         )}
         {running && data.records.length > 0 && (
           <p className="text-help text-ink-muted [text-wrap:pretty] [word-break:auto-phrase]">
-            完了・スキップの取り消しは、Sprint の画面の「日ごとの記録」から。
+            完了・スキップの取り消しは、Sprint の画面の
+            <span className="whitespace-nowrap">「日ごとの記録」から。</span>
           </p>
         )}
       </section>

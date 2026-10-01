@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Drawer,
@@ -56,11 +56,18 @@ type ActualTimeProps = {
 
 const words: Record<
   ActualTimeMode,
-  { title: string; description: string; submit: string }
+  { title: string; description: ReactNode; submit: string }
 > = {
   pause: {
     title: '今日はここまで',
-    description: '途中のタスクは今週の残りに戻り、明日「昨日の続き」に出ます。',
+    // The screen's word stays whole when the line breaks.
+    description: (
+      <>
+        途中のタスクは今週の残りに戻り、明日
+        <span className="whitespace-nowrap">「昨日の続き」</span>
+        に出ます。
+      </>
+    ),
     submit: '今日はここまで',
   },
   record: {
