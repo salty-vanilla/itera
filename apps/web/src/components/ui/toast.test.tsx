@@ -310,7 +310,7 @@ describe('Toast with an action (#170)', () => {
       <ToastProvider>
         <Trigger
           options={{
-            title: '「本棚を整理する」を今日やるに入れました',
+            title: '「本棚を整理する」を「今日やる」に入れました',
             action: { label: '今日を開く', onClick: () => {} },
           }}
         />
@@ -324,11 +324,11 @@ describe('Toast with an action (#170)', () => {
     expect(visibleToasts()).toHaveLength(2);
     await act(() => vi.advanceTimersByTimeAsync(TOAST_TIMEOUT + 500));
     expect(screen.queryByText('3件を今週に入れました')).toBeNull();
-    expect(screen.queryByText(/今日やるに入れました/)).not.toBeNull();
+    expect(screen.queryByText(/「今日やる」に入れました/)).not.toBeNull();
     await act(() =>
       vi.advanceTimersByTimeAsync(TOAST_ACTION_TIMEOUT - TOAST_TIMEOUT),
     );
-    expect(screen.queryByText(/今日やるに入れました/)).toBeNull();
+    expect(screen.queryByText(/「今日やる」に入れました/)).toBeNull();
   });
 
   it('closing for a screen change keeps a failure and its 再試行', async () => {

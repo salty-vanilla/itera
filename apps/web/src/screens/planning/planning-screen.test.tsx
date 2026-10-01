@@ -822,7 +822,7 @@ describe('Planning — 確かめる', () => {
     ).toBeNull();
     expect(planPane().textContent).not.toMatch(/目標なしでも計画できます/);
     await userEvent.click(
-      within(summary()).getByRole('link', { name: '整えるで書く' }),
+      within(summary()).getByRole('link', { name: '「整える」で書く' }),
     );
     expect(router.state.location.search).toMatchObject({
       fixture: 'planning-check',
