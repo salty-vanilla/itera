@@ -1,3 +1,4 @@
+import { recurrenceOf, type RecurrenceRule } from './recurrence';
 import { carryCount } from './retro-facts';
 import type { AreaId, SprintId, TaskId } from './shared/ids';
 import type { LocalDate } from './shared/time';
@@ -114,6 +115,8 @@ export interface BacklogSliceContext {
   /** Today, in the user's time zone. */
   readonly today: LocalDate;
   readonly sprints: readonly Sprint[];
+  /** Every rule of the user, for 繰り返し (an ended one until its last day, F41). */
+  readonly rules: readonly RecurrenceRule[];
 }
 
 /**
@@ -151,7 +154,7 @@ export function inBacklogSlice(
     case 'carriedOver':
       return carryOverOf(task.id, context.sprints) !== undefined;
     case 'recurring':
-      return task.recurrenceRuleId !== undefined;
+      return recurrenceOf(task, context.rules, context.today) !== undefined;
     case 'noArea':
       return task.areaId === undefined;
   }
