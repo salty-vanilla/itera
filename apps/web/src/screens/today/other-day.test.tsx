@@ -50,12 +50,12 @@ describe('Today — any day by date (#90)', () => {
     const word = screen.getByText('過去', { selector: '[aria-hidden]' });
     expect(word.closest('h1')).toBeNull();
     expect(screen.getByText('Sprint 2 · 3日目 / 7日')).toBeTruthy();
-    const paper = record('関連論文を 3 本読む');
+    const paper = record('関連論文を 3本読む');
     // The day is not today: 「ここまで」, not 「今日はここまで」 (#166).
     expect(within(paper).getByText('ここまで')).toBeTruthy();
     expect(within(paper).queryByText(/今日/)).toBeNull();
     expect(within(paper).getByText('実績 4.5h')).toBeTruthy();
-    expect(within(record('英語の多読 30 分')).getByText('完了')).toBeTruthy();
+    expect(within(record('英語の多読 30分')).getByText('完了')).toBeTruthy();
     // Nothing to do on it: no 今日へ, no ○, no adding.
     expect(screen.queryByRole('button', { name: /今日へ|完了にする/ })).toBe(
       null,
@@ -75,7 +75,7 @@ describe('Today — any day by date (#90)', () => {
   it('shows the deferrals of a past day', async () => {
     await renderAt('/today?fixture=today-daytime&date=2026-09-29');
     expect(
-      within(record('関連論文を 3 本読む')).getByText('見送り'),
+      within(record('関連論文を 3本読む')).getByText('見送り'),
     ).toBeTruthy();
     expect(within(record('住民税の支払い')).getByText('完了')).toBeTruthy();
   });
@@ -111,7 +111,9 @@ describe('Today — any day by date (#90)', () => {
     // Nothing could be chosen on it.
     expect(screen.queryByRole('heading', { name: 'この日の記録' })).toBeNull();
     await userEvent.click(
-      screen.getByRole('link', { name: 'Sprint 1（9/21 (月) から）を開く' }),
+      screen.getByRole('link', {
+        name: '9/21 (月) から始まる Sprint 1 を開く',
+      }),
     );
     await waitFor(() => expect(router.state.location.pathname).toBe('/sprint'));
     expect(router.state.location.search).toMatchObject({ sprint: 1 });

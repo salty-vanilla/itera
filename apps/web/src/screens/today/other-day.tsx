@@ -62,7 +62,7 @@ function Where({ data }: { data: DayData }) {
               search={{ sprint: next.number }}
               className={link}
             >
-              Sprint {next.number}（{formatDate(next.start)} から）を開く
+              {formatDate(next.start)} から始まる Sprint {next.number} を開く
             </Link>
           </>
         )}

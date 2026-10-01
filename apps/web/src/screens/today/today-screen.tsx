@@ -169,7 +169,7 @@ function NoActiveSprint() {
     <DayFrame date={today}>
       <p className="text-body text-ink-muted">
         {/* A week in Retro comes first, even when the next is being planned.
-            It is not 「今週」: that is the next one to start (#90). */}
+            It is not 「今週」：that is the next one to start (#90). */}
         {reviewSprint !== undefined ? (
           <>
             Sprint {reviewSprint.number} は振り返り中です。{' '}

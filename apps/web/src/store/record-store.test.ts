@@ -47,7 +47,7 @@ describe('createMemoryStore', () => {
           {
             id: ctx.newId('Task'),
             userId: records.user.id,
-            title: '関連論文を 3 本読む',
+            title: '関連論文を 3本読む',
             via: 'backlog',
           },
           ctx,
@@ -58,7 +58,7 @@ describe('createMemoryStore', () => {
 
     expect(result.ok).toBe(true);
     const { records } = store.getSnapshot();
-    expect(records.tasks.map((t) => t.title)).toEqual(['関連論文を 3 本読む']);
+    expect(records.tasks.map((t) => t.title)).toEqual(['関連論文を 3本読む']);
     expect(records.activities).toEqual([
       expect.objectContaining({
         kind: 'taskCreated',

@@ -97,7 +97,7 @@ function PastDays({ days, onUndo }: PastDaysProps) {
                   <IconButton
                     size="sm"
                     className="ms-auto"
-                    label={`取り消す（${word(r)}）: ${formatDate(r.selection.date)} ${r.title}`}
+                    label={`取り消す（${word(r)}）：${formatDate(r.selection.date)} ${r.title}`}
                     icon={<Undo2 />}
                     onClick={() => setAsking(r)}
                   />
@@ -127,8 +127,8 @@ function PastDays({ days, onUndo }: PastDaysProps) {
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
-                <DialogClose render={<Button />}>やめる</DialogClose>
-                <Button onClick={confirm}>取り消す</Button>
+                <DialogClose render={<Button />}>キャンセル</DialogClose>
+                <Button onClick={confirm}>{word(asking)}を取り消す</Button>
               </DialogFooter>
             </>
           )}

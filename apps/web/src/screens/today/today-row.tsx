@@ -189,7 +189,7 @@ function TodayRow({
                 : state === 'deferred'
                   ? '見送り'
                   : '予定から外した'
-            }）: ${task.title}`}
+            }）：${task.title}`}
             icon={<Undo2 />}
             onClick={skipped ? onUndoSkip : onUndoClose}
           />
@@ -200,7 +200,7 @@ function TodayRow({
                 <IconButton
                   ref={actionsRef}
                   size="sm"
-                  label={`その他の操作: ${task.title}`}
+                  label={`その他の操作：${task.title}`}
                   icon={<Ellipsis />}
                 />
               }

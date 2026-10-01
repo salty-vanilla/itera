@@ -36,7 +36,7 @@ export const Playground: Story = {};
 export const WithCount: Story = {
   render: () => (
     <Field
-      label="次の Sprint で 1 つだけ変えてみること"
+      label="次に試すこと"
       necessity="optional"
       description="次の計画のはじめに表示されます"
       className="max-w-measure-read"
@@ -62,7 +62,7 @@ export const BodyLarge: Story = {
     >
       <Textarea
         text="body-l"
-        defaultValue="水曜に割り込みが 2 件入り、研究の時間が半分になった。"
+        defaultValue="水曜に割り込みが 2件入り、研究の時間が半分になった。"
       />
     </Field>
   ),

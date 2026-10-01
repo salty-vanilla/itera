@@ -67,9 +67,9 @@ type Result =
 function resultText(result: Result): string {
   switch (result.kind) {
     case 'applied':
-      return `次の Sprint から反映（${formatDate(result.effectiveFrom)} から）`;
+      return `次の Sprint から反映 · ${formatDate(result.effectiveFrom)}`;
     case 'unchanged':
-      return '今のルールと同じなので、変わっていません';
+      return '変更はありません';
     case 'ended':
     case 'removed':
       return '繰り返しをやめました';
@@ -151,7 +151,7 @@ function RecurrenceEditor({
     nextDayOfMonth: number,
   ) {
     if (next === 'weekly' && nextDays.length === 0) {
-      setError('曜日を 1 つ以上選んでください');
+      setError('曜日を 1つ以上選んでください');
       return;
     }
     setError(undefined);
@@ -236,8 +236,8 @@ function RecurrenceEditor({
       </div>
       {rule !== undefined && (
         <p className="text-body text-ink">
-          今のルール: {formatPattern(rule.current)}
-          {endsOn !== undefined && `（${formatDate(endsOn)} まで）`}
+          今の設定：{formatPattern(rule.current)}
+          {endsOn !== undefined && ` · ${formatDate(endsOn)} まで`}
         </p>
       )}
       {endsOn === undefined && (
@@ -293,7 +293,7 @@ function RecurrenceEditor({
               rule. */}
           {rule !== undefined && rule.latest !== rule.current && (
             <p className="text-body text-ink">
-              次の Sprint から: {formatPattern(rule.latest)}
+              次の Sprint から：{formatPattern(rule.latest)}
             </p>
           )}
           {/* A one-off in the running Sprint stays so this week (F1). While
@@ -301,7 +301,7 @@ function RecurrenceEditor({
               (F15). */}
           {rule === undefined && item.thisWeek?.confirmed === true && (
             <p className="text-help text-ink-muted [text-wrap:pretty] [word-break:auto-phrase]">
-              今週はこの 1 件のまま。繰り返しは次の Sprint から始まります。
+              今週はこの 1件のまま。繰り返しは次の Sprint から始まります。
             </p>
           )}
           {rule === undefined && (

@@ -74,7 +74,7 @@ const decisionMissingText = reasonText(
   '上の「今回の計画のルール」で、続ける・終える・置き換えるのどれかを選ぶと完了できます。',
 );
 const continueWithDraftText = reasonText(
-  '新しいルールを作るなら、上の「今回の計画のルール」で「置き換える」を選んでください。',
+  '新しいルールを作るなら「置き換える」を、作らないなら「計画のルールにもする」をオフにしてください。',
 );
 const completeButton = () =>
   screen.getByRole('button', { name: '振り返りを完了' });
@@ -115,7 +115,7 @@ describe('Retro — 事実を見る', () => {
     expect(screen.queryByText(/幅のあるタスク 1件のうち/)).toBeNull();
     // Estimate / 計画 / 実績 / 結果 per Task, carry-overs and deferrals.
     const paper = screen.getByRole('rowheader', {
-      name: '関連論文を 3 本読む',
+      name: '関連論文を 3本読む',
     }).parentElement!;
     // The suggestion's range, with what it is under it (#162).
     expect(paper.textContent).toContain('3–5h見積もりの提案');
@@ -194,7 +194,7 @@ describe('Retro — 事実を見る', () => {
   });
 });
 
-describe('Retro — 計画時との差 (MVP 16)', () => {
+describe('Retro — 確定したときとの差 (MVP 16)', () => {
   it('shows a Goal and the available hours changed during the Sprint', async () => {
     change = (snapshot) => ({
       ...snapshot,
@@ -207,7 +207,7 @@ describe('Retro — 計画時との差 (MVP 16)', () => {
                 availableHours: 14,
                 goals: s.goals.map((g) =>
                   g.areaId === 'area-research'
-                    ? { ...g, text: '先行研究を 2 本押さえる' }
+                    ? { ...g, text: '先行研究を 2本押さえる' }
                     : g,
                 ),
               }
@@ -216,11 +216,11 @@ describe('Retro — 計画時との差 (MVP 16)', () => {
       },
     });
     await renderAt('/retro?fixture=retro-start');
-    const diff = screen.getByRole('region', { name: '計画時との差' });
+    const diff = screen.getByRole('region', { name: '確定したときとの差' });
     expect(diff.textContent).toContain(
-      '「先行研究を押さえる」 → 「先行研究を 2 本押さえる」',
+      '「先行研究を押さえる」 → 「先行研究を 2本押さえる」',
     );
-    expect(diff.textContent).toContain('計画時 17h → 今 14h');
+    expect(diff.textContent).toContain('確定したとき 17h → 今 14h');
     // Marked, it reads as its own words in 振り返りの材料 (#105).
     await userEvent.click(
       within(diff).getByRole('button', {
@@ -234,7 +234,7 @@ describe('Retro — 計画時との差 (MVP 16)', () => {
       name: '振り返りの材料',
     })[0]!;
     expect(materials.textContent).toContain(
-      '使える時間 計画したとき 17h → 今 14h',
+      '使える時間 確定したとき 17h → 今 14h',
     );
   });
 });
@@ -268,18 +268,16 @@ describe('Retro — 振り返る', () => {
     expect(reviewed().retro?.reflection).toBe('午後が崩れた');
     await userEvent.type(
       screen.getByRole('textbox', {
-        name: '次の Sprint で 1 つだけ変えてみること',
+        name: '次に試すこと',
       }),
-      '論文は 1 本ずつ',
+      '論文は 1本ずつ',
     );
     await userEvent.tab();
-    expect(reviewed().retro?.improvement?.text).toBe('論文は 1 本ずつ');
+    expect(reviewed().retro?.improvement?.text).toBe('論文は 1本ずつ');
     await userEvent.click(
-      screen.getByRole('button', { name: '改善策として確定' }),
+      screen.getByRole('button', { name: '次に試すことを確定' }),
     );
-    expect(screen.getByText('論文は 1 本ずつ').className).toContain(
-      'text-goal',
-    );
+    expect(screen.getByText('論文は 1本ずつ').className).toContain('text-goal');
     await waitFor(() =>
       expect(document.activeElement?.textContent).toBe('編集'),
     );
@@ -295,7 +293,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
       reason.parentElement?.id,
     );
     // The improvement is empty here, but it is said only when it can complete.
-    expect(screen.queryByText(/改善策がないまま完了します/)).toBeNull();
+    expect(screen.queryByText(/次に試すことがないまま完了します/)).toBeNull();
     // 置き換える needs a new criterion first.
     expect(
       screen
@@ -315,7 +313,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
     ).toBeNull();
     expect(
       screen.getByText(
-        '改善策がないまま完了します。次の計画には何も出ません。',
+        '次に試すことがないまま完了します。次の計画には何も出ません。',
       ),
     ).toBeTruthy();
     expect(completeButton()).toBe(before);
@@ -394,7 +392,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
     await renderAt('/retro?fixture=retro-start&stage=handoff');
     await userEvent.click(completeButton());
     const dialog = await screen.findByRole('dialog');
-    for (const label of ['次に試す変更', '計画のルールの決定']) {
+    for (const label of ['次に試すこと', '計画のルールの決定']) {
       expect(
         within(dialog).getByText(label).nextElementSibling?.textContent,
       ).toBe('なし');
@@ -453,7 +451,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
     expect(
       screen.getByText('完了した後は、書いた内容を変えられません。'),
     ).toBeTruthy();
-    expect(screen.getByText('論文は 1 本ずつ Task に分ける')).toBeTruthy();
+    expect(screen.getByText('論文は 1本ずつタスクに分ける')).toBeTruthy();
     // Every stage is done: none is 「現在」, and all three can be opened (#168).
     const stages = screen.getByRole('navigation', { name: '段階' });
     expect(within(stages).queryByText('現在')).toBeNull();
@@ -476,8 +474,8 @@ describe('Retro — 引き継ぐ and 完了', () => {
     );
     expect(next?.start).toBe('2026-10-05');
     // The improvement comes back at the start of the next Planning.
-    expect(await screen.findByText('前回決めた改善策')).toBeTruthy();
-    expect(screen.getAllByText('論文は 1 本ずつ Task に分ける').length).toBe(1);
+    expect(await screen.findByText('前回、次に試すと決めたこと')).toBeTruthy();
+    expect(screen.getAllByText('論文は 1本ずつタスクに分ける').length).toBe(1);
   });
 });
 
@@ -580,7 +578,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
       (li) => li.textContent,
     );
     expect(titles).toHaveLength(2);
-    expect(titles).toEqual(['関連論文を 3 本読む', '実験データの前処理']);
+    expect(titles).toEqual(['関連論文を 3本読む', '実験データの前処理']);
     // Not started yet: it says when, and offers nothing to choose.
     expect(list?.textContent).toContain(
       '次の計画の「選ぶ」で決めます。振り返りの完了後に始まります。',
@@ -761,7 +759,7 @@ describe('Retro — before Review', () => {
     await renderAt('/retro?fixture=today-interrupt');
     expect(
       screen.getByText(
-        'この Sprint の振り返りは、最終日（10/4 (日)）から始められます。',
+        'この Sprint の振り返りは、最終日の 10/4 (日) から始められます。',
       ),
     ).toBeTruthy();
     expect(
@@ -899,7 +897,7 @@ describe('Retro — boundaries', () => {
     );
     expect(
       await screen.findByText(
-        'この Sprint の振り返りは、最終日（10/4 (日)）から始められます。',
+        'この Sprint の振り返りは、最終日の 10/4 (日) から始められます。',
       ),
     ).toBeTruthy();
     await userEvent.click(screen.getAllByRole('link', { name: '今日' })[0]!);
@@ -942,7 +940,7 @@ describe('Retro — compact (#57)', () => {
       ).toBeGreaterThan(0);
       const paper = screen
         .getAllByRole('listitem')
-        .find((li) => li.textContent?.startsWith('関連論文を 3 本読む'));
+        .find((li) => li.textContent?.startsWith('関連論文を 3本読む'));
       expect(paper?.textContent).toContain(
         '見積もりの提案 3–5h · 計画 5h（ルール） · 実績 4.5h',
       );
@@ -974,7 +972,7 @@ describe('Retro — 事実を見るを読みやすくする (#108)', () => {
 
   it('shows a carry-over with its icon and word, apart from a done row, never in danger', async () => {
     await renderAt('/retro?fixture=retro-start');
-    const carried = rowOf('関連論文を 3 本読む');
+    const carried = rowOf('関連論文を 3本読む');
     expect(carryIcon(carried)).toBeTruthy();
     // The icon and the word are one unit, in ink-muted.
     const unit = carryIcon(carried)!.parentElement!;
@@ -1102,7 +1100,7 @@ describe('Retro — 事実を見るを読みやすくする (#108)', () => {
     await renderAt('/retro?fixture=retro-start');
     await userEvent.click(
       screen.getAllByRole('button', {
-        name: /振り返りに使う.*関連論文を 3 本読む/,
+        name: /振り返りに使う.*関連論文を 3本読む/,
       })[0]!,
     );
     await userEvent.click(
@@ -1112,14 +1110,14 @@ describe('Retro — 事実を見るを読みやすくする (#108)', () => {
       name: '振り返りの材料',
     })[0]!;
     const item = within(materials).getAllByRole('listitem')[0]!;
-    expect(item.textContent).toContain('関連論文を 3 本読む');
+    expect(item.textContent).toContain('関連論文を 3本読む');
     // The values of its row, one unit each, the carry-over with its icon.
     const values = [...item.querySelectorAll('[data-slot="meta-item"]')];
     expect(values.map((v) => v.textContent)).toEqual([
       '持ち越し',
       '計画 5h（ルール）',
       '実績 4.5h',
-      // 計画時との差, in the same words as the row (#167).
+      // 確定したときとの差, in the same words as the row (#167).
       '計画より 30m 少ない',
     ]);
     expect(carryIcon(values[0]!)).toBeTruthy();
@@ -1127,7 +1125,7 @@ describe('Retro — 事実を見るを読みやすくする (#108)', () => {
     // The button's name still says which Task and what it became.
     expect(
       within(item).getByRole('button', {
-        name: /関連論文を 3 本読む · 持ち越し · 計画 5h（ルール） · 実績 4.5h/,
+        name: /関連論文を 3本読む · 持ち越し · 計画 5h（ルール） · 実績 4.5h/,
       }),
     ).toBeTruthy();
   });
@@ -1139,7 +1137,7 @@ describe('Retro — 事実を見るを読みやすくする (#108)', () => {
     );
     const surface = await screen.findByRole('dialog');
     expect(
-      within(surface).getByText('実績を足す: 住民税の支払い'),
+      within(surface).getByText('実績を足す：住民税の支払い'),
     ).toBeTruthy();
     expect(within(surface).getByRole('button', { name: '足す' })).toBeTruthy();
     expect(document.body.textContent).not.toMatch(/実績を残す/);
@@ -1176,8 +1174,8 @@ describe('Retro — the plan against what happened (#167)', () => {
     const total = within(summary).getByText('計画の合計').parentElement!;
     expect(total.textContent).toContain('使える時間 17h');
     // As confirmed, and with the mid-Sprint addition, against 17h.
-    expect(lineOf('確定時の計画')?.textContent).toBe(
-      '確定時の計画 15.25–17.25h：少なく済めば 1.75h 残る · 多くかかれば 0.25h 超える',
+    expect(lineOf('確定したときの計画')?.textContent).toBe(
+      '確定したときの計画 15.25–17.25h：少なく済めば 1.75h 残る · 多くかかれば 0.25h 超える',
     );
     expect(lineOf('週の途中の追加を含めて')?.textContent).toBe(
       '週の途中の追加を含めて 17.25–20.25h：少なく済んでも 0.25h 超える',
@@ -1191,7 +1189,7 @@ describe('Retro — the plan against what happened (#167)', () => {
       tasks.filter((t) => t.origin !== 'midSprint'),
     );
     await renderAt('/retro?fixture=retro-start');
-    expect(lineOf('確定時の計画')).toBeTruthy();
+    expect(lineOf('確定したときの計画')).toBeTruthy();
     expect(lineOf('週の途中の追加を含めて')).toBeUndefined();
   });
 
@@ -1202,7 +1200,7 @@ describe('Retro — the plan against what happened (#167)', () => {
       ),
     );
     await renderAt('/retro?fixture=retro-start');
-    expect(lineOf('確定時の計画')).toBeTruthy();
+    expect(lineOf('確定したときの計画')).toBeTruthy();
     expect(
       screen
         .getAllByRole('listitem')
@@ -1236,7 +1234,7 @@ describe('Retro — the plan against what happened (#167)', () => {
   it('puts each Task’s difference from its planning value under its actual time', async () => {
     await renderAt('/retro?fixture=retro-start');
     // 4.5h against 5h.
-    expect(rowOf('関連論文を 3 本読む').textContent).toContain(
+    expect(rowOf('関連論文を 3本読む').textContent).toContain(
       '計画より 30m 少ない',
     );
     // 4.5h against 3–5h.
@@ -1327,7 +1325,7 @@ describe('Retro — actual time per occurrence (#56)', () => {
     const list = screen.getByRole('region', { name: '繰り返しの回' });
     const row = within(list)
       .getAllByRole('listitem')
-      .find((li) => li.textContent?.startsWith('9/28 (月) 英語の多読 30 分'))!;
+      .find((li) => li.textContent?.startsWith('9/28 (月) 英語の多読 30分'))!;
     expect(row.textContent).toContain('実績 30m');
     await userEvent.click(
       within(row).getByRole('button', { name: /実績を足す/ }),
@@ -1343,7 +1341,7 @@ describe('Retro — actual time per occurrence (#56)', () => {
     await userEvent.click(screen.getByRole('button', { name: '足す' }));
     // The Task's row and the week's total follow (Issue #56).
     expect(
-      screen.getByRole('rowheader', { name: '英語の多読 30 分' }).parentElement
+      screen.getByRole('rowheader', { name: '英語の多読 30分' }).parentElement
         ?.textContent,
     ).toContain('1.25h');
     expect(document.body.textContent).toContain('実績 18h');
@@ -1359,7 +1357,7 @@ describe('Retro — actual time per occurrence (#56)', () => {
     expect(
       within(screen.getByRole('region', { name: '繰り返しの回' }))
         .getAllByRole('listitem')
-        .find((li) => li.textContent?.startsWith('9/28 (月) 英語の多読 30 分'))
+        .find((li) => li.textContent?.startsWith('9/28 (月) 英語の多読 30分'))
         ?.textContent,
     ).toContain('実績 45m');
   });

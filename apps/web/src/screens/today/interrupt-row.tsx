@@ -51,7 +51,7 @@ function InterruptRow({ note, time, onEdit, onDelete }: InterruptRowProps) {
             <IconButton
               size="sm"
               data-action="interrupt-actions"
-              label={`その他の操作: 割り込み ${time}「${note.text}」`}
+              label={`その他の操作：割り込み ${time}「${note.text}」`}
               icon={<Ellipsis />}
             />
           }
@@ -59,7 +59,7 @@ function InterruptRow({ note, time, onEdit, onDelete }: InterruptRowProps) {
         <MenuContent align="end">
           <MenuItem onClick={onEdit}>
             <Pencil aria-hidden />
-            直す
+            編集
           </MenuItem>
           <MenuSeparator />
           {/* Not `danger`: it can be undone from the Toast (Issue #197). */}

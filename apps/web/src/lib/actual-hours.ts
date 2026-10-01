@@ -4,9 +4,9 @@
  * leave the same record.
  */
 export const ACTUAL_HOURS_HINT =
-  '時間単位（例: 1.5）。記録は残り、あとから足せます';
+  '時間単位（例：1.5）。記録は残り、あとから足せます';
 export const ACTUAL_HOURS_ERROR =
-  '0 より大きい時間を数字で入れてください（例: 1.5）';
+  '0 より大きい時間を数字で入れてください（例：1.5）';
 
 /** The hours typed; `undefined` when the field is empty; `null` when it is not a number above 0. */
 export function readActualHours(text: string): number | undefined | null {

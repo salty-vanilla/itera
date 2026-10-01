@@ -151,7 +151,7 @@ describe('Sprint — the next week (#90)', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: '来週、何を進めますか',
+        name: '来週、何を進めるか',
       }),
     ).toBeTruthy();
   });
@@ -163,7 +163,7 @@ describe('Sprint — the next week (#90)', () => {
     );
     await screen.findByRole('heading', {
       level: 1,
-      name: '来週、何を進めますか',
+      name: '来週、何を進めるか',
     });
     // The navigation does not carry the Sprint (#90).
     expect(nav('Sprint').getAttribute('href')).toBe(
@@ -214,7 +214,7 @@ describe('Sprint — the next week (#90)', () => {
     )!;
     await userEvent.click(
       within(backlog).getByRole('checkbox', {
-        name: '来週に入れる: 歯医者の予約',
+        name: '来週に入れる：歯医者の予約',
       }),
     );
     expect(
@@ -252,11 +252,11 @@ describe('Sprint — the next week (#90)', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: '今週、何を進めますか',
+        name: '今週、何を進めるか',
       }),
     ).toBeTruthy();
     expect(
-      screen.getAllByRole('checkbox', { name: /^今週に入れる: / }).length,
+      screen.getAllByRole('checkbox', { name: /^今週に入れる：/ }).length,
     ).toBeGreaterThan(0);
   });
 });
@@ -281,7 +281,7 @@ describe('Retro — by number (#90)', () => {
 
     await userEvent.click(screen.getByRole('link', { name: /振り返る/ }));
     expect(
-      await screen.findByText('研究の Task は提案の幅の上のほうまでかかった。'),
+      await screen.findByText('研究のタスクは提案の幅の上のほうまでかかった。'),
     ).toBeTruthy();
     expect(screen.queryByRole('textbox')).toBeNull();
 
@@ -291,7 +291,7 @@ describe('Retro — by number (#90)', () => {
     ).toBeTruthy();
     expect(
       screen.getByText(
-        /改善策から計画のルール「研究：見積もりの提案の上限で計画する」/,
+        /次に試すことから計画のルール「研究：見積もりの提案の上限で計画する」/,
       ),
     ).toBeTruthy();
     expect(screen.queryByRole('switch')).toBeNull();
@@ -304,7 +304,7 @@ describe('Retro — by number (#90)', () => {
     expect(title()).toBe('Sprint 2');
     expect(
       screen.getByText(
-        'この Sprint の振り返りは、最終日（10/4 (日)）から始められます。',
+        'この Sprint の振り返りは、最終日の 10/4 (日) から始められます。',
       ),
     ).toBeTruthy();
     await userEvent.click(step('前の Sprint（Sprint 1）'));
@@ -333,10 +333,10 @@ describe('「来週」 mark of a Task chosen for next week (#150)', () => {
   const chooseCheckbox = (title: string) =>
     within(
       document.querySelector<HTMLElement>('[data-slot="planning-backlog"]')!,
-    ).getByRole('checkbox', { name: `来週に入れる: ${title}` });
+    ).getByRole('checkbox', { name: `来週に入れる：${title}` });
 
   const findChoice = (title: string) =>
-    screen.findByRole('checkbox', { name: `来週に入れる: ${title}` });
+    screen.findByRole('checkbox', { name: `来週に入れる：${title}` });
 
   async function startPlanning() {
     const router = await renderAt('/sprint?fixture=today-daytime&sprint=3');
@@ -344,21 +344,21 @@ describe('「来週」 mark of a Task chosen for next week (#150)', () => {
       screen.getByRole('button', { name: 'Sprint 3 の計画を始める' }),
     );
     await screen.findByRole('checkbox', {
-      name: '来週に入れる: 本棚を整理する',
+      name: '来週に入れる：本棚を整理する',
     });
     return router;
   }
 
   it('shows 「来週」 on the Backlog row, with 「今週」 or 「今日」 when it is also in this week, and takes it off with the choice', async () => {
     const router = await startPlanning();
-    for (const t of ['本棚を整理する', '関連論文を 3 本読む']) {
+    for (const t of ['本棚を整理する', '関連論文を 3本読む']) {
       await userEvent.click(chooseCheckbox(t));
     }
     await router.navigate({ to: '/backlog' });
     await screen.findByRole('heading', { level: 1, name: 'Backlog' });
     expect(metaOf('本棚を整理する')).toContain('来週');
     expect(metaOf('本棚を整理する')).not.toMatch(/今週|今日/);
-    expect(metaOf('関連論文を 3 本読む')).toContain('今週 · 来週');
+    expect(metaOf('関連論文を 3本読む')).toContain('今週 · 来週');
     // A recurring Task comes into the draft on its own (patterns.md).
     expect(metaOf('部屋の掃除')).toContain('今週 · 来週');
     // Not chosen: no mark.
@@ -382,23 +382,23 @@ describe('「来週」 mark of a Task chosen for next week (#150)', () => {
     await router.navigate({ to: '/backlog' });
     await screen.findByRole('heading', { level: 1, name: 'Backlog' });
     expect(metaOf('本棚を整理する')).not.toContain('来週');
-    expect(metaOf('関連論文を 3 本読む')).toContain('来週');
+    expect(metaOf('関連論文を 3本読む')).toContain('来週');
   });
 
   it('says 「来週にも」 on the running Sprint’s row of a Task also in next week’s plan, and not after it is taken off', async () => {
     const router = await startPlanning();
-    await userEvent.click(chooseCheckbox('関連論文を 3 本読む'));
+    await userEvent.click(chooseCheckbox('関連論文を 3本読む'));
     await router.navigate({ to: '/sprint' });
     await screen.findByRole('heading', { level: 1, name: /の計画$/ });
-    expect(metaOf('関連論文を 3 本読む')).toContain('来週にも');
+    expect(metaOf('関連論文を 3本読む')).toContain('来週にも');
     expect(metaOf('新メンバーのオンボーディング資料')).not.toContain(
       '来週にも',
     );
 
     await router.navigate({ to: '/sprint', search: { sprint: 3 } });
-    await userEvent.click(await findChoice('関連論文を 3 本読む'));
+    await userEvent.click(await findChoice('関連論文を 3本読む'));
     await router.navigate({ to: '/sprint' });
     await screen.findByRole('heading', { level: 1, name: /の計画$/ });
-    expect(metaOf('関連論文を 3 本読む')).not.toContain('来週にも');
+    expect(metaOf('関連論文を 3本読む')).not.toContain('来週にも');
   });
 });

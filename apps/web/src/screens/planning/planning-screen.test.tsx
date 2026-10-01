@@ -74,7 +74,7 @@ async function leaveWeek(area: string, title: string) {
     name: new RegExp(area),
   });
   await userEvent.click(
-    within(block).getByRole('button', { name: `その他の操作: ${title}` }),
+    within(block).getByRole('button', { name: `その他の操作：${title}` }),
   );
   await userEvent.click(
     await screen.findByRole('menuitem', { name: /^今週から外す/ }),
@@ -148,12 +148,12 @@ describe('Planning — 選ぶ', () => {
     expect(
       within(planPane()).getByRole('heading', {
         level: 1,
-        name: '今週、何を進めますか',
+        name: '今週、何を進めるか',
       }),
     ).toBeTruthy();
     await userEvent.click(
       within(backlogPane()).getByRole('checkbox', {
-        name: '今週に入れる: 顧客インタビューの設計',
+        name: '今週に入れる：顧客インタビューの設計',
       }),
     );
     expect(
@@ -180,7 +180,7 @@ describe('Planning — 選ぶ', () => {
     // In the fixture it is already chosen with carriedFrom.
     expect(
       within(carried)
-        .getByRole('checkbox', { name: '今週に入れる: API 設計のレビュー' })
+        .getByRole('checkbox', { name: '今週に入れる：API 設計のレビュー' })
         .getAttribute('aria-checked'),
     ).toBe('true');
     const sprintTask = draft().tasks.find(
@@ -223,7 +223,7 @@ describe('Planning — 選ぶ', () => {
     await renderAt('/sprint?fixture=planning-pick&stage=pick');
     const box = within(
       within(backlogPane()).getByRole('group', {
-        name: '今週に含める回: 英語の多読 30 分',
+        name: '今週に含める回：英語の多読 30分',
       }),
     ).getByRole('checkbox', { name: '9/30 (水)' });
     await userEvent.click(box);
@@ -280,7 +280,7 @@ describe('Planning — 選ぶ', () => {
     await renderAt('/sprint?fixture=planning-pick&stage=pick');
     await userEvent.selectOptions(
       within(backlogPane()).getByRole('combobox', {
-        name: '追加する Task の領域',
+        name: '追加するタスクの領域',
       }),
       '研究',
     );
@@ -314,7 +314,7 @@ describe('Planning — 選ぶ', () => {
   it('a Task added without an Area goes into 領域なし', async () => {
     await renderAt('/sprint?fixture=planning-pick&stage=pick');
     const select = within(backlogPane()).getByRole('combobox', {
-      name: '追加する Task の領域',
+      name: '追加するタスクの領域',
     });
     expect(select).toHaveProperty('value', '');
     await userEvent.type(
@@ -360,7 +360,7 @@ describe('Planning — 選ぶ', () => {
       )!;
       expect(form.firstElementChild?.className).not.toContain('medium:flex');
       expect(
-        within(form).getByRole('combobox', { name: '追加する Task の領域' }),
+        within(form).getByRole('combobox', { name: '追加するタスクの領域' }),
       ).toBeTruthy();
     },
   );
@@ -371,7 +371,7 @@ describe('Planning — 整える', () => {
     await renderAt('/sprint?fixture=planning-shape&stage=shape');
     const study = within(planPane()).getByRole('region', { name: /学習/ });
     await userEvent.click(
-      within(study).getByRole('button', { name: '目標を書く: 学習' }),
+      within(study).getByRole('button', { name: '目標を書く：学習' }),
     );
     await userEvent.type(
       within(study).getByRole('textbox', { name: /目標（今週の終わりに/ }),
@@ -384,7 +384,7 @@ describe('Planning — 整える', () => {
     expect(within(study).getByText('英語を毎日読む状態にする')).toBeTruthy();
 
     await userEvent.click(
-      within(study).getByRole('button', { name: '目標を編集: 学習' }),
+      within(study).getByRole('button', { name: '目標を編集：学習' }),
     );
     await userEvent.clear(within(study).getByRole('textbox', { name: /目標/ }));
     await userEvent.click(within(study).getByRole('button', { name: '保存' }));
@@ -393,27 +393,27 @@ describe('Planning — 整える', () => {
 
   it('shows an Area with neither a Goal nor a Task as one line, and a Goal can still be written (#161)', async () => {
     await renderAt('/sprint?fixture=planning-shape&stage=shape');
-    await leaveWeek('学習', '英語の多読 30 分');
+    await leaveWeek('学習', '英語の多読 30分');
     const study = within(planPane()).getByRole('region', { name: /学習/ });
     // The name and the way in, and no note about Goals being optional.
     expect(
-      within(study).getByRole('button', { name: '目標を書く: 学習' }),
+      within(study).getByRole('button', { name: '目標を書く：学習' }),
     ).toBeTruthy();
     expect(planPane().textContent).not.toContain('目標なしでも計画できます');
 
     // Cancelling goes back to the line, with the focus on the way in.
     await userEvent.click(
-      within(study).getByRole('button', { name: '目標を書く: 学習' }),
+      within(study).getByRole('button', { name: '目標を書く：学習' }),
     );
     await userEvent.click(
       within(study).getByRole('button', { name: 'キャンセル' }),
     );
     expect(document.activeElement).toBe(
-      within(study).getByRole('button', { name: '目標を書く: 学習' }),
+      within(study).getByRole('button', { name: '目標を書く：学習' }),
     );
 
     await userEvent.click(
-      within(study).getByRole('button', { name: '目標を書く: 学習' }),
+      within(study).getByRole('button', { name: '目標を書く：学習' }),
     );
     await userEvent.type(
       within(study).getByRole('textbox', { name: /目標（今週の終わりに/ }),
@@ -426,7 +426,7 @@ describe('Planning — 整える', () => {
     expect(within(study).getByText('英語に触れる状態にする')).toBeTruthy();
     // Saving puts the focus on 編集, where the Goal is.
     expect(document.activeElement).toBe(
-      within(study).getByRole('button', { name: '目標を編集: 学習' }),
+      within(study).getByRole('button', { name: '目標を編集：学習' }),
     );
   });
 
@@ -435,7 +435,7 @@ describe('Planning — 整える', () => {
     const research = within(planPane()).getByRole('region', { name: /研究/ });
     await userEvent.click(
       within(research).getByRole('button', {
-        name: 'その他の操作: 関連論文を 3 本読む',
+        name: 'その他の操作：関連論文を 3本読む',
       }),
     );
     await userEvent.click(
@@ -445,7 +445,7 @@ describe('Planning — 整える', () => {
       'unlinked',
     );
     const row = within(research)
-      .getByText('関連論文を 3 本読む')
+      .getByText('関連論文を 3本読む')
       .closest('[data-slot="task-row"]') as HTMLElement;
     expect(within(row).getByText('目標に紐づかない')).toBeTruthy();
     expect(within(research).getByText(/2件/)).toBeTruthy();
@@ -453,7 +453,7 @@ describe('Planning — 整える', () => {
     // The menu now offers the other way, in the row's words (#159).
     await userEvent.click(
       within(research).getByRole('button', {
-        name: 'その他の操作: 関連論文を 3 本読む',
+        name: 'その他の操作：関連論文を 3本読む',
       }),
     );
     await userEvent.click(
@@ -467,14 +467,14 @@ describe('Planning — 整える', () => {
     const study = within(planPane()).getByRole('region', { name: /学習/ });
     const reading = () =>
       within(study)
-        .getByText('英語の多読 30 分')
+        .getByText('英語の多読 30分')
         .closest('[data-slot="task-row"]') as HTMLElement;
     // 学習 has no Goal: no state on the row and nothing to choose.
     expect(reading().textContent).not.toContain('目標に紐づ');
     expect(reading().textContent).not.toContain('目標なし');
     await userEvent.click(
       within(study).getByRole('button', {
-        name: 'その他の操作: 英語の多読 30 分',
+        name: 'その他の操作：英語の多読 30分',
       }),
     );
     await screen.findByRole('menuitem', { name: /から外す/ });
@@ -482,7 +482,7 @@ describe('Planning — 整える', () => {
     await userEvent.keyboard('{Escape}');
 
     await userEvent.click(
-      within(study).getByRole('button', { name: '目標を書く: 学習' }),
+      within(study).getByRole('button', { name: '目標を書く：学習' }),
     );
     await userEvent.type(
       within(study).getByRole('textbox', { name: /目標（今週の終わりに/ }),
@@ -496,7 +496,7 @@ describe('Planning — 整える', () => {
 
     await userEvent.click(
       within(study).getByRole('button', {
-        name: 'その他の操作: 英語の多読 30 分',
+        name: 'その他の操作：英語の多読 30分',
       }),
     );
     await userEvent.click(
@@ -519,7 +519,7 @@ describe('Planning — 計画のルールの見せ方 (#105)', () => {
       // It sits under the previous improvement.
       expect(
         within(outlook())
-          .getByRole('region', { name: '前回決めた改善策' })
+          .getByRole('region', { name: '前回、次に試すと決めたこと' })
           .contains(line),
       ).toBe(true);
       expect(within(outlook()).queryByRole('switch')).toBeNull();
@@ -563,7 +563,7 @@ describe('Planning — 計画のルールの見せ方 (#105)', () => {
       expect(
         outlook().querySelector('[data-slot="criterion-line"]'),
       ).not.toBeNull();
-      await leaveWeek('研究', '関連論文を 3 本読む');
+      await leaveWeek('研究', '関連論文を 3本読む');
       expect(
         outlook().querySelector('[data-slot="criterion-line"]'),
       ).toBeNull();
@@ -576,7 +576,7 @@ describe('Planning — 計画のルールの見せ方 (#105)', () => {
   it('shows no frame, Switch or effect in the check summary, nor in the 確定 Dialog, without a Task it acts on (#161)', async () => {
     await renderAt('/sprint?fixture=planning-check&stage=check');
     expect(within(summary()).getByRole('switch')).toBeTruthy();
-    await leaveWeek('研究', '関連論文を 3 本読む');
+    await leaveWeek('研究', '関連論文を 3本読む');
     expect(
       within(summary()).queryByRole('region', { name: '計画のルール' }),
     ).toBeNull();
@@ -606,7 +606,7 @@ describe('Planning — 計画のルールの見せ方 (#105)', () => {
 
   it('shows the criterion again when a Task it acts on comes back (#161)', async () => {
     await renderAt('/sprint?fixture=planning-check&stage=check');
-    await leaveWeek('研究', '関連論文を 3 本読む');
+    await leaveWeek('研究', '関連論文を 3本読む');
     expect(within(summary()).queryByRole('switch')).toBeNull();
     await userEvent.click(
       await screen.findByRole('button', { name: '元に戻す' }),
@@ -708,7 +708,9 @@ describe('Planning — 確かめる', () => {
     expect(within(outlook).queryByRole('textbox')).toBeNull();
     expect(outlook.textContent).not.toMatch(/計画の合計|1\.75h|0\.25h/);
     expect(
-      within(outlook).getByRole('region', { name: '前回決めた改善策' }),
+      within(outlook).getByRole('region', {
+        name: '前回、次に試すと決めたこと',
+      }),
     ).toBeTruthy();
     expect(
       within(outlook).getByRole('list', { name: '領域ごとの計画の時間' }),
@@ -843,11 +845,11 @@ describe('Planning — 確かめる', () => {
     );
     await userEvent.click(
       await within(summary()).findByRole('button', {
-        name: '見積もる: 発表資料を見直す',
+        name: '見積もる：発表資料を見直す',
       }),
     );
     const estimate = await screen.findByRole('textbox', {
-      name: /^見積もり（時間）(?!:)/,
+      name: /^見積もり（時間）(?!：)/,
     });
     await waitFor(() => expect(document.activeElement).toBe(estimate));
   });
@@ -855,9 +857,9 @@ describe('Planning — 確かめる', () => {
   it('opens a Task with subtasks left out from the summary', async () => {
     await renderAt('/sprint?fixture=planning-check&stage=check');
     const button = within(summary()).getByRole('button', {
-      name: /^見積もる: /,
+      name: /^見積もる：/,
     });
-    const title = button.getAttribute('aria-label')!.replace('見積もる: ', '');
+    const title = button.getAttribute('aria-label')!.replace('見積もる：', '');
     await userEvent.click(button);
     const detail = await screen.findByRole('dialog');
     expect(within(detail).getByRole('heading', { name: title })).toBeTruthy();
@@ -886,7 +888,7 @@ describe('Planning — 確かめる', () => {
         (_, el) =>
           el?.tagName === 'LI' &&
           el.textContent ===
-            '計画のルールで「関連論文を 3 本読む」を 5h で計算しています（見積もりの提案 3–5h）。',
+            '計画のルールで「関連論文を 3本読む」を 5h で計算しています（見積もりの提案 3–5h）。',
       ),
     ).toBeTruthy();
   });
@@ -971,7 +973,7 @@ describe('Planning — review fixes', () => {
     await renderAt('/sprint?fixture=planning-shape&stage=shape');
     await userEvent.click(
       within(backlogPane()).getByRole('checkbox', {
-        name: '今週に入れる: TypeScript 6 の変更点を読む',
+        name: '今週に入れる：TypeScript 6 の変更点を読む',
       }),
     );
     const study = within(planPane()).getByRole('region', { name: /学習/ });
@@ -1001,7 +1003,7 @@ describe('Planning — review fixes', () => {
     const research = within(planPane()).getByRole('region', { name: /研究/ });
     await userEvent.click(
       within(research).getByRole('button', {
-        name: 'その他の操作: 関連論文を 3 本読む',
+        name: 'その他の操作：関連論文を 3本読む',
       }),
     );
     await userEvent.click(
@@ -1015,7 +1017,7 @@ describe('Planning — review fixes', () => {
     await renderAt('/sprint?fixture=planning-check&stage=check');
     const research = within(planPane()).getByRole('region', { name: /研究/ });
     const row = within(research)
-      .getByText('関連論文を 3 本読む')
+      .getByText('関連論文を 3本読む')
       .closest('[data-slot="task-row"]');
     expect(row?.textContent).toContain('見積もりの提案 3–5h');
     expect(row?.textContent).toContain('計画 5h');
@@ -1045,14 +1047,14 @@ describe('Planning — review fixes', () => {
     ).not.toBeNull();
     expect(
       screen.getByText(
-        '完了・アーカイブした Task を今週から外すと確定できます。',
+        '完了・アーカイブしたタスクを今週から外すと確定できます。',
       ),
     ).toBeTruthy();
     const work = within(planPane()).getByRole('region', { name: /仕事/ });
     expect(work.textContent).toContain('完了済み');
     await userEvent.click(
       within(work).getByRole('button', {
-        name: 'その他の操作: 新メンバーのオンボーディング資料',
+        name: 'その他の操作：新メンバーのオンボーディング資料',
       }),
     );
     // No detail to open, so no way in to the Estimate either (#96).
@@ -1061,14 +1063,14 @@ describe('Planning — review fixes', () => {
       screen.queryByRole('menuitem', { name: /見積もりを入れる/ }),
     ).toBeNull();
     expect(
-      within(work).queryByRole('button', { name: /^見積もりを入れる: / }),
+      within(work).queryByRole('button', { name: /^見積もりを入れる：/ }),
     ).toBeNull();
     await userEvent.click(
       await screen.findByRole('menuitem', { name: '今週から外す' }),
     );
     expect(
       screen.queryByText(
-        '完了・アーカイブした Task を今週から外すと確定できます。',
+        '完了・アーカイブしたタスクを今週から外すと確定できます。',
       ),
     ).toBeNull();
   });
@@ -1124,13 +1126,13 @@ describe('Planning — review fixes (2)', () => {
     );
     expect(
       screen.getByText(
-        '完了・アーカイブした Task を今週から外すと確定できます。',
+        '完了・アーカイブしたタスクを今週から外すと確定できます。',
       ),
     ).toBeTruthy();
     const study = within(planPane()).getByRole('region', { name: /学習/ });
     await userEvent.click(
       within(study).getByRole('button', {
-        name: 'その他の操作: 英語の多読 30 分',
+        name: 'その他の操作：英語の多読 30分',
       }),
     );
     await userEvent.click(
@@ -1147,7 +1149,7 @@ describe('Planning — review fixes (2)', () => {
     ).toEqual(['excluded', 'excluded', 'excluded']);
     expect(
       screen.queryByText(
-        '完了・アーカイブした Task を今週から外すと確定できます。',
+        '完了・アーカイブしたタスクを今週から外すと確定できます。',
       ),
     ).toBeNull();
   });
@@ -1175,7 +1177,7 @@ describe('Planning — keys (#48)', () => {
     await userEvent.keyboard('e');
     // The Task's own, not a subtask's (「Estimate（時間）: …」).
     const estimate = await screen.findByRole('textbox', {
-      name: /^見積もり（時間）(?!:)/,
+      name: /^見積もり（時間）(?!：)/,
     });
     await waitFor(() => expect(document.activeElement).toBe(estimate));
   });
@@ -1282,7 +1284,7 @@ describe('Planning — the Task detail (#95)', () => {
 
 describe('Planning — 見積もりを入れる (#96)', () => {
   const ownEstimate = () =>
-    screen.findByRole('textbox', { name: /^見積もり（時間）(?!:)/ });
+    screen.findByRole('textbox', { name: /^見積もり（時間）(?!：)/ });
 
   async function addUnestimated() {
     await renderAt('/sprint?fixture=planning-pick&stage=pick');
@@ -1297,7 +1299,7 @@ describe('Planning — 見積もりを入れる (#96)', () => {
   it('見積もりなし on a row is a button that opens the Task at its Estimate', async () => {
     await addUnestimated();
     const button = within(planPane()).getByRole('button', {
-      name: '見積もりを入れる: 発表資料を見直す',
+      name: '見積もりを入れる：発表資料を見直す',
     });
     expect(button.textContent).toBe('見積もりなし');
     button.focus();
@@ -1311,7 +1313,7 @@ describe('Planning — 見積もりを入れる (#96)', () => {
     await addUnestimated();
     await userEvent.click(
       within(planPane()).getByRole('button', {
-        name: 'その他の操作: 発表資料を見直す',
+        name: 'その他の操作：発表資料を見直す',
       }),
     );
     const item = await screen.findByRole('menuitem', {
@@ -1335,7 +1337,7 @@ describe('Planning — 見積もりを入れる (#96)', () => {
         .closest('[data-slot="task-row"]')!;
     expect(row().textContent).toContain('計画 2.5h');
     await userEvent.click(
-      within(detail).getByRole('radio', { name: /この Task の見積もり/ }),
+      within(detail).getByRole('radio', { name: /このタスクの見積もり/ }),
     );
     expect(row().textContent).not.toContain('計画 2.5h');
     expect(row().textContent).toContain('見積もりなし');
@@ -1349,7 +1351,7 @@ describe('Planning — 見積もりを入れる (#96)', () => {
     await renderAt('/sprint?fixture=planning-pick&stage=pick');
     await userEvent.click(
       within(backlogPane()).getByRole('button', {
-        name: 'その他の操作: 顧客インタビューの設計',
+        name: 'その他の操作：顧客インタビューの設計',
       }),
     );
     await userEvent.click(

@@ -114,7 +114,7 @@ function CheckSummary({
                 <Button
                   size="sm"
                   variant="quiet"
-                  aria-label={`見積もる: ${planned.task.title}`}
+                  aria-label={`見積もる：${planned.task.title}`}
                   onClick={() =>
                     planned.value.base === 'none'
                       ? onEstimateTask(planned.task.id)
@@ -200,7 +200,7 @@ function CriterionEffect({
     <p className="text-body text-ink [text-wrap:pretty] [word-break:auto-phrase]">
       {criterion.applied
         ? `${scope}幅のあるタスク ${count}件を${bound}で計画しています${moves.length > 0 ? `（${moves.join('、')}）` : ''}。`
-        : '使わないときは、見積もりの提案の幅のまま合計します。'}
+        : '見積もりの提案の幅のまま合計します。'}
     </p>
   );
 }

@@ -91,7 +91,7 @@ const row = (name: string, title: string) => {
 };
 async function menu(title: string, item: string) {
   await userEvent.click(
-    screen.getByRole('button', { name: `その他の操作: ${title}` }),
+    screen.getByRole('button', { name: `その他の操作：${title}` }),
   );
   await userEvent.click(await screen.findByRole('menuitem', { name: item }));
 }
@@ -145,12 +145,12 @@ describe('Today — the top, when nothing is chosen (#99)', () => {
     expect(screen.queryByText(/今日の残り/)).toBeNull();
     await userEvent.click(
       within(region('昨日の続き')).getByRole('button', {
-        name: '今日へ: 関連論文を 3 本読む',
+        name: '今日へ：関連論文を 3本読む',
       }),
     );
     expect(screen.getByText(/今日の残り 1件/)).toBeTruthy();
     await userEvent.click(
-      screen.getByRole('button', { name: '完了にする: 関連論文を 3 本読む' }),
+      screen.getByRole('button', { name: '完了にする：関連論文を 3本読む' }),
     );
     expect(screen.getByText('今日の残りはありません')).toBeTruthy();
   });
@@ -169,7 +169,7 @@ describe('Today — the order for a phone (#100)', () => {
     expect(screen.queryByRole('region', { name: '割り込み' })).toBeNull();
     await userEvent.click(
       within(region('昨日の続き')).getByRole('button', {
-        name: '今日へ: 関連論文を 3 本読む',
+        name: '今日へ：関連論文を 3本読む',
       }),
     );
     const line = screen.getByText(/今日の残り 1件/).closest('p');
@@ -195,10 +195,10 @@ describe('Today — the top, when all chosen are closed (#99)', () => {
     await renderAt('/today?fixture=today-morning');
     await userEvent.click(
       within(region('昨日の続き')).getByRole('button', {
-        name: '今日へ: 関連論文を 3 本読む',
+        name: '今日へ：関連論文を 3本読む',
       }),
     );
-    await menu('関連論文を 3 本読む', '今日は見送る');
+    await menu('関連論文を 3本読む', '今日は見送る');
     expect(selectionOf('task-paper')?.resolution).toBe('deferred');
     expect(screen.getByText('今日の残りはありません')).toBeTruthy();
   });
@@ -212,15 +212,15 @@ describe('Today — 今日へ', () => {
     expect(selectionOf('task-paper')).toBeUndefined();
     await userEvent.click(
       within(region('昨日の続き')).getByRole('button', {
-        name: '今日へ: 関連論文を 3 本読む',
+        name: '今日へ：関連論文を 3本読む',
       }),
     );
     expect(selectionOf('task-paper')?.resolution).toBe('selected');
-    expect(row('今日やる', '関連論文を 3 本読む')).toBeTruthy();
+    expect(row('今日やる', '関連論文を 3本読む')).toBeTruthy();
     expect(screen.queryByRole('region', { name: '昨日の続き' })).toBeNull();
     await waitFor(() =>
       expect(document.activeElement?.getAttribute('aria-label')).toBe(
-        '完了にする: 関連論文を 3 本読む',
+        '完了にする：関連論文を 3本読む',
       ),
     );
   });
@@ -229,16 +229,16 @@ describe('Today — 今日へ', () => {
     await renderAt('/today?fixture=today-daytime');
     await userEvent.click(
       within(region('今週の残り')).getByRole('button', {
-        name: '今日へ: 英語の多読 30 分',
+        name: '今日へ：英語の多読 30分',
       }),
     );
     const occurrence = lastSnapshot().records.occurrences.find(
       (o) => o.taskId === 'task-reading' && o.scheduledDate === '2026-10-02',
     );
     expect(selectionOf('task-reading')?.occurrenceId).toBe(occurrence?.id);
-    await menu('英語の多読 30 分', '今日はスキップ');
+    await menu('英語の多読 30分', '今日はスキップ');
     expect(selectionOf('task-reading')?.resolution).toBe('skipped');
-    const skipped = row('今日やる', '英語の多読 30 分');
+    const skipped = row('今日やる', '英語の多読 30分');
     expect(within(skipped).getByText('スキップ')).toBeTruthy();
     // The Menu's trigger is gone; 「取り消す」 takes the focus.
     const undo = within(skipped).getByRole('button', { name: /取り消す/ });
@@ -247,7 +247,7 @@ describe('Today — 今日へ', () => {
     expect(selectionOf('task-reading')?.resolution).toBe('selected');
     await waitFor(() =>
       expect(document.activeElement?.getAttribute('aria-label')).toBe(
-        '完了にする: 英語の多読 30 分',
+        '完了にする：英語の多読 30分',
       ),
     );
   });
@@ -258,16 +258,16 @@ describe('Today — the daily operations in the detail (#94)', () => {
     await renderAt('/today?fixture=today-daytime');
     await userEvent.click(
       within(region('今週の残り')).getByRole('button', {
-        name: '今日へ: 英語の多読 30 分',
+        name: '今日へ：英語の多読 30分',
       }),
     );
     await userEvent.click(
-      within(row('今日やる', '英語の多読 30 分')).getByRole('button', {
-        name: '英語の多読 30 分',
+      within(row('今日やる', '英語の多読 30分')).getByRole('button', {
+        name: '英語の多読 30分',
       }),
     );
     const detail = await screen.findByRole('dialog', {
-      name: '英語の多読 30 分',
+      name: '英語の多読 30分',
     });
     const now = within(detail).getByRole('region', { name: '今日と今週' });
     // Today is already open: no 今日を開く.
@@ -287,7 +287,7 @@ describe('Today — the daily operations', () => {
   it('completes with ○ and undoes it with ○ again, with no Toast', async () => {
     await renderAt('/today?fixture=today-interrupt');
     const circle = screen.getByRole('button', {
-      name: '完了にする: 顧客インタビューの設計',
+      name: '完了にする：顧客インタビューの設計',
     });
     await userEvent.click(circle);
     expect(selectionOf('task-interview')?.resolution).toBe('done');
@@ -300,7 +300,7 @@ describe('Today — the daily operations', () => {
     expect(screen.queryByRole('status')).toBeNull();
     await userEvent.click(
       screen.getByRole('button', {
-        name: '完了を取り消す: 顧客インタビューの設計',
+        name: '完了を取り消す：顧客インタビューの設計',
       }),
     );
     expect(selectionOf('task-interview')?.resolution).toBe('selected');
@@ -342,7 +342,7 @@ describe('Today — the daily operations', () => {
     // The moved row's ○ takes the focus.
     await waitFor(() =>
       expect(document.activeElement?.getAttribute('aria-label')).toBe(
-        '完了にする: 顧客インタビューの設計',
+        '完了にする：顧客インタビューの設計',
       ),
     );
   });
@@ -355,7 +355,7 @@ describe('Today — the daily operations', () => {
     expect(within(closed).getByText('今日は見送り')).toBeTruthy();
     await userEvent.click(
       within(closed).getByRole('button', {
-        name: '完了にする: 実験データの前処理',
+        name: '完了にする：実験データの前処理',
       }),
     );
     expect(selectionOf('task-dataset')).toMatchObject({
@@ -364,7 +364,7 @@ describe('Today — the daily operations', () => {
     });
     await userEvent.click(
       screen.getByRole('button', {
-        name: '完了を取り消す: 実験データの前処理',
+        name: '完了を取り消す：実験データの前処理',
       }),
     );
     expect(selectionOf('task-dataset')?.resolution).toBe('deferred');
@@ -416,8 +416,8 @@ describe('Today — the daily operations', () => {
   );
 
   it.each([
-    ['取り消す', '取り消す（見送り）: 顧客インタビューの設計'],
-    ['○', '完了にする: 顧客インタビューの設計'],
+    ['取り消す', '取り消す（見送り）：顧客インタビューの設計'],
+    ['○', '完了にする：顧客インタビューの設計'],
   ])(
     'closes the Toast once the row itself is undone with %s (#163)',
     async (_, name) => {
@@ -443,7 +443,7 @@ describe('Today — the daily operations', () => {
     await renderAt('/today?fixture=today-interrupt');
     await userEvent.click(
       screen.getByRole('button', {
-        name: 'その他の操作: 顧客インタビューの設計',
+        name: 'その他の操作：顧客インタビューの設計',
       }),
     );
     const items = await screen.findAllByRole('menuitem');
@@ -476,7 +476,7 @@ describe('Today — the daily operations', () => {
       await userEvent.click(
         within(row('今日はもうやらない', '顧客インタビューの設計')).getByRole(
           'button',
-          { name: `取り消す（${state}）: 顧客インタビューの設計` },
+          { name: `取り消す（${state}）：顧客インタビューの設計` },
         ),
       );
       expect(selectionOf('task-interview')).toMatchObject({
@@ -488,7 +488,7 @@ describe('Today — the daily operations', () => {
       // The row's ○ takes the focus where it went back to.
       await waitFor(() =>
         expect(document.activeElement?.getAttribute('aria-label')).toBe(
-          '完了にする: 顧客インタビューの設計',
+          '完了にする：顧客インタビューの設計',
         ),
       );
     },
@@ -547,7 +547,7 @@ describe('Today — the daily operations', () => {
     const rest = row('今週の残り', 'API 設計のレビュー');
     expect(within(rest).queryByText(/続けて見送り/)).toBeNull();
     await userEvent.click(
-      within(rest).getByRole('button', { name: '今日へ: API 設計のレビュー' }),
+      within(rest).getByRole('button', { name: '今日へ：API 設計のレビュー' }),
     );
     await menu('API 設計のレビュー', '今日は見送る');
     const streak = within(
@@ -611,7 +611,7 @@ describe('Today — completed from the Backlog', () => {
     // Nor does its `…` offer 見積もりを入れる (#96).
     await userEvent.click(
       within(last).getByRole('button', {
-        name: 'その他の操作: 新メンバーのオンボーディング資料',
+        name: 'その他の操作：新メンバーのオンボーディング資料',
       }),
     );
     await screen.findByRole('menuitem', { name: /実績を残す/ });
@@ -621,7 +621,7 @@ describe('Today — completed from the Backlog', () => {
     await userEvent.keyboard('{Escape}');
     await userEvent.click(
       within(last).getByRole('button', {
-        name: '完了を取り消す: 新メンバーのオンボーディング資料',
+        name: '完了を取り消す：新メンバーのオンボーディング資料',
       }),
     );
     // The choice the completion made is gone; the Task is back in the week.
@@ -747,7 +747,7 @@ describe('Today — adding and interrupts', () => {
       );
       expect(document.activeElement).toBe(
         within(row('割り込み', '来客対応')).getByRole('button', {
-          name: /^その他の操作: 割り込み/,
+          name: /^その他の操作：割り込み/,
         }),
       );
     },
@@ -758,7 +758,7 @@ describe('Today — editing and deleting interrupts (F38)', () => {
   const openActions = async (text: string) => {
     await userEvent.click(
       within(row('割り込み', text)).getByRole('button', {
-        name: /^その他の操作: 割り込み/,
+        name: /^その他の操作：割り込み/,
       }),
     );
   };
@@ -768,10 +768,10 @@ describe('Today — editing and deleting interrupts (F38)', () => {
     const before = sprint().interrupts;
     await openActions('障害の問い合わせに対応');
     await userEvent.click(
-      await screen.findByRole('menuitem', { name: '直す' }),
+      await screen.findByRole('menuitem', { name: '編集' }),
     );
     expect(
-      await screen.findByRole('dialog', { name: '割り込みを直す' }),
+      await screen.findByRole('dialog', { name: '割り込みを編集' }),
     ).toBeTruthy();
     const note = screen.getByRole('textbox', { name: /メモ/ });
     expect((note as HTMLInputElement).value).toBe('障害の問い合わせに対応');
@@ -818,7 +818,7 @@ describe('Today — editing and deleting interrupts (F38)', () => {
     await waitFor(() =>
       expect(document.activeElement).toBe(
         within(row('割り込み', '急ぎのレビュー依頼')).getByRole('button', {
-          name: /^その他の操作: 割り込み/,
+          name: /^その他の操作：割り込み/,
         }),
       ),
     );
@@ -837,7 +837,7 @@ describe('Today — interrupts after the Review starts (F38, invariant 40)', () 
     await waitFor(() => expect(sprint).toThrow());
     expect(await screen.findByText('障害の問い合わせに対応')).toBeTruthy();
     expect(
-      screen.queryByRole('button', { name: /^その他の操作: 割り込み/ }),
+      screen.queryByRole('button', { name: /^その他の操作：割り込み/ }),
     ).toBeNull();
   });
 });
@@ -871,7 +871,7 @@ describe('Today — the days', () => {
     expect(selectionOf('task-reading', '2026-10-02')?.origin).toBe(
       'recurringToday',
     );
-    expect(row('今日やる', '英語の多読 30 分')).toBeTruthy();
+    expect(row('今日やる', '英語の多読 30分')).toBeTruthy();
   });
 
   it('offers 「振り返りを始める」 on the last day and starts the Review (F21)', async () => {
@@ -982,7 +982,7 @@ describe('Today — outside the period (#54)', () => {
     await userEvent.click(screen.getAllByRole('link', { name: '今日' })[0]!);
     // Today's recurring occurrence is there without reopening the app.
     expect(await screen.findByText('Sprint 3 · 1日目 / 7日')).toBeTruthy();
-    expect(row('今日やる', '英語の多読 30 分')).toBeTruthy();
+    expect(row('今日やる', '英語の多読 30分')).toBeTruthy();
   });
 });
 
@@ -1001,7 +1001,7 @@ describe('Today — keys of the lists (#48)', () => {
 
   it('Space on a row of 昨日の続き chooses it for today', async () => {
     await renderAt('/today?fixture=today-morning');
-    rowTitle('昨日の続き', '関連論文を 3 本読む').focus();
+    rowTitle('昨日の続き', '関連論文を 3本読む').focus();
     await userEvent.keyboard(' ');
     expect(selectionOf('task-paper')?.resolution).toBe('selected');
   });
@@ -1012,7 +1012,7 @@ describe('Today — keys of the lists (#48)', () => {
     await userEvent.keyboard('e');
     // The Task's own, not a subtask's (「Estimate（時間）: …」).
     const estimate = await screen.findByRole('textbox', {
-      name: /^見積もり（時間）(?!:)/,
+      name: /^見積もり（時間）(?!：)/,
     });
     await waitFor(() => expect(document.activeElement).toBe(estimate));
   });
@@ -1023,7 +1023,7 @@ describe('Today — 見積もりを入れる (#96)', () => {
     await renderAt('/today?fixture=today-interrupt');
     await userEvent.click(
       within(region('今日やる')).getByRole('button', {
-        name: 'その他の操作: 顧客インタビューの設計',
+        name: 'その他の操作：顧客インタビューの設計',
       }),
     );
     const item = await screen.findByRole('menuitem', {
@@ -1032,7 +1032,7 @@ describe('Today — 見積もりを入れる (#96)', () => {
     expect(item.textContent).toContain('E');
     await userEvent.click(item);
     const estimate = await screen.findByRole('textbox', {
-      name: /^見積もり（時間）(?!:)/,
+      name: /^見積もり（時間）(?!：)/,
     });
     await waitFor(() => expect(document.activeElement).toBe(estimate));
   });
@@ -1050,11 +1050,11 @@ describe('Today — 計画に使う時間 in the detail (#96)', () => {
     );
     // This Task has no Estimate of its own; the subtasks add up to 2.5h.
     const own = within(group).getByRole('radio', {
-      name: /この Task の見積もり/,
+      name: /このタスクの見積もり/,
     });
     // 「見積もり」が 2 回続かない。
     expect(own.closest('[data-slot="radio-item"]')?.textContent).toBe(
-      'この Task の見積もりなし',
+      'このタスクの見積もりなし',
     );
     const sum = within(group).getByRole('radio', { name: /サブタスクの合計/ });
     expect(sum.closest('[data-slot="radio-item"]')?.textContent).toContain(

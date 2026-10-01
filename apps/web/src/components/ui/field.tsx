@@ -23,7 +23,7 @@ function NecessityWord({ necessity }: { necessity?: Necessity | undefined }) {
 }
 
 // Icon and words: an error is never shown by color alone. The message says
-// what is wrong and how to fix it, e.g. 「数値で入力してください（例: 1.5）」.
+// what is wrong and how to fix it, e.g. 「数値で入力してください（例：1.5）」.
 function FieldError({
   children,
   className,

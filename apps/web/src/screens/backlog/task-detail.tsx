@@ -134,7 +134,7 @@ function readField(key: TextKey, draft: Draft, task: Task): Reading {
       if (!parsed.ok) {
         return {
           kind: 'error',
-          message: '日付を入力してください（例: 2026-10-05）',
+          message: '日付を入力してください（例：2026-10-05）',
         };
       }
       return parsed.value === task.due
@@ -147,7 +147,7 @@ function readField(key: TextKey, draft: Draft, task: Task): Reading {
       if (hours !== null && !(Number.isFinite(hours) && hours > 0)) {
         return {
           kind: 'error',
-          message: '0 より大きい数で入力してください（例: 1.5）',
+          message: '0 より大きい数で入力してください（例：1.5）',
         };
       }
       return hours === (task.estimate?.hours ?? null)
@@ -585,7 +585,7 @@ function TaskDetail({
                     value="task"
                     label={
                       <span className="inline-flex flex-wrap items-center gap-2">
-                        この Task の見積もり
+                        このタスクの見積もり
                         {facts.taskValue.base === 'none' ? (
                           // 「見積もり」が 2 回続かないように、ここだけ「なし」。
                           <span className="text-num-s text-ink-subtle">
@@ -920,7 +920,7 @@ function TaskDetail({
             <Field
               label="見積もり（時間）"
               necessity="optional"
-              description="本人の見積もり。0.25時間単位など（例: 1.5）"
+              description="本人の見積もり。0.25時間単位など（例：1.5）"
               error={errors.estimate}
             >
               <TextInput

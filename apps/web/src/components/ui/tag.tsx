@@ -21,7 +21,7 @@ const tagVariants = cva(
       tone: {
         // A person's own label: outline only, no icon.
         label: 'border-border bg-transparent text-ink',
-        // 一部できた・できなかった・判断しない・同期中・次の Sprint で試す.
+        // 一部できた・できなかった・判断しない・同期中・次に試す.
         neutral: 'border-border-soft bg-canvas-subtle text-ink-muted',
         // できた・保存済み. Success has no color of its own: ink and the icon.
         done: 'border-border-soft bg-canvas-subtle text-ink',

@@ -217,7 +217,7 @@ function FactsPane({
             <ul className="flex flex-col gap-1">
               {[
                 {
-                  lead: '確定時の計画',
+                  lead: '確定したときの計画',
                   total: facts.plannedTotal.atConfirm,
                   capacity: facts.capacity.atConfirm,
                 },
@@ -286,7 +286,7 @@ function FactsPane({
       {(changedGoals.length > 0 || hoursChanged) && (
         <section aria-labelledby="retro-diff" className="flex flex-col gap-3">
           <h2 id="retro-diff" className="text-heading text-ink">
-            計画時との差
+            確定したときとの差
           </h2>
           <ul className="flex flex-col border-t border-border-soft">
             {changedGoals.map((a) => (
@@ -299,7 +299,7 @@ function FactsPane({
               >
                 <span className="text-ink-muted">{a.name} の目標：</span>
                 {a.goal?.plannedText === undefined
-                  ? `計画時にはなかった → 「${a.goal?.text ?? ''}」`
+                  ? `確定したときにはなかった → 「${a.goal?.text ?? ''}」`
                   : `「${a.goal.plannedText}」 → 「${a.goal.text}」`}
               </FactRow>
             ))}
@@ -308,7 +308,7 @@ function FactsPane({
                 action={toggle({ kind: 'availableHours' }, '使える時間の変更')}
               >
                 <span className="text-ink-muted">使える時間：</span>
-                計画時{' '}
+                確定したとき{' '}
                 {plannedHours === undefined
                   ? '未入力'
                   : formatHours(plannedHours, { total: true })}{' '}
@@ -360,7 +360,7 @@ function FactsPane({
                             onClick={(anchor) =>
                               onAddActual(
                                 target,
-                                `${title}（${formatDate(o.scheduledDate)} の回）`,
+                                `${title} · ${formatDate(o.scheduledDate)} の回`,
                                 anchor,
                               )
                             }
@@ -711,7 +711,7 @@ function TaskTable({
               </td>
               <td className={cn(num, 'pe-4')}>
                 {t.actualHours > 0 ? formatHours(t.actualHours) : '未入力'}
-                {/* 計画時との差, under the value it is about (#167). */}
+                {/* 確定したときとの差, under the value it is about (#167). */}
                 <DifferenceNote fact={t} />
               </td>
               <td className={cn(cell, 'xl:ps-8')}>
@@ -863,7 +863,7 @@ function AddActualButton({
     <Button
       size="sm"
       variant="quiet"
-      aria-label={`実績を足す: ${subject}`}
+      aria-label={`実績を足す：${subject}`}
       onClick={(event) => onClick(event.currentTarget)}
     >
       <Timer aria-hidden />

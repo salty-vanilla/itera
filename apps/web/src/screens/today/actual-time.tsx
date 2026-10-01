@@ -72,7 +72,7 @@ const words: Record<
   },
   record: {
     title: '実績を残す',
-    description: '今日この Task にかけた時間を足します。',
+    description: '今日このタスクにかけた時間を足します。',
     submit: '残す',
   },
   add: {
@@ -143,7 +143,7 @@ function ActualTime({
       />
     </Field>
   );
-  const heading = `${title}: ${taskTitle}`;
+  const heading = `${title}：${taskTitle}`;
 
   if (sheet) {
     return (
