@@ -46,7 +46,10 @@ function FieldError({
       <span className="flex h-5 shrink-0 items-center">
         <CircleAlert aria-hidden />
       </span>
-      <span>{children}</span>
+      {/* Same break rule as FieldDescription: no lone 「）」 on the last line. */}
+      <span className="[text-wrap:pretty] [word-break:auto-phrase]">
+        {children}
+      </span>
     </FieldPrimitive.Error>
   );
 }
