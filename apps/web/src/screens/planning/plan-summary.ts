@@ -42,7 +42,10 @@ export interface PlanSummary {
   readonly unestimated: readonly PlannedTask[];
   /** 「見積もりのないタスク 1件は合計に含まれていません。」 */
   readonly leftOut?: string;
-  /** 「「研究：提案の幅の上限で計画する」を今回の計画に使う」 */
+  /**
+   * 「「研究：提案の幅の上限で計画する」を今回の計画に使う」; absent when no
+   * chosen Task is one it acts on (#161).
+   */
   readonly criterion?: string;
 }
 
@@ -74,7 +77,7 @@ export function planSummary(data: PlanningData): PlanSummary {
         (t.value.base === 'subtasks' && t.value.unestimatedSubtasks > 0),
     ),
     ...(leftOut === undefined ? {} : { leftOut }),
-    ...(criterion === undefined
+    ...(criterion?.hasTarget !== true
       ? {}
       : {
           criterion: `「${criterionName(criterion.active.policy, criterion.areaName)}」${

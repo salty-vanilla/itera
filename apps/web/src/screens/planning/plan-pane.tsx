@@ -31,7 +31,8 @@ import { usePlanningActions } from '@/store/use-planning';
 // workspace that changes with the stage (PRD §5 B), never a forced wizard:
 // - 選ぶ: 「今週、何を進めますか」, the chosen Tasks per Area.
 // - 整える: 「今週、どんな状態にしたいか」, each Area's Goal (optional) with
-//   its Tasks; a Task is linked to the Goal or not, and both count.
+//   its Tasks; a Task is linked to the Goal or not, and both count. An Area
+//   with neither is one line, so that a Goal can still be written first.
 // - 確かめる: 「この計画で、進められそうか」, the summary first (what the 確定
 //   Dialog sums up, #93), then the Goals, Tasks and their values, to read:
 //   a Goal is written in 整える.
@@ -146,6 +147,8 @@ function PlanPane({
               summary={block.tasks.length > 0 ? summaryOf(block) : undefined}
               goal={block.goal?.text}
               week={week}
+              // An Area with neither a Goal nor a Task is one line (#161).
+              bare={block.tasks.length === 0 && block.goal === undefined}
               // 確かめる is for reading: no 編集, no 「+ 目標を書く」 (#93).
               onSave={
                 block.area.id === null || stage === 'check'
