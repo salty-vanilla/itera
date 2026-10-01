@@ -270,6 +270,17 @@
   }
 
   /*
+   * Headings break between phrases and keep their lines even (#166), so
+   * 「来週の計画はまだありません」 never ends a line on 「ん」 at 375px.
+   */
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+    word-break: auto-phrase;
+  }
+
+  /*
    * Browser surfaces follow the palette. Text selection stays neutral: yellow
    * is reserved for where you are and always comes with a check or a word.
    */
@@ -295,6 +306,33 @@
   :focus-visible {
     outline: var(--stroke-strong) solid var(--focus);
     outline-offset: 2px;
+  }
+
+  /*
+   * WCAG 2.4.11 (#152): what takes the focus in `main` scrolls clear of the
+   * bars stuck to its edges (lib/use-stuck-bar.ts), with room for the focus
+   * ring. A margin on the content rather than padding on `main`: the bars'
+   * own controls are in view already, and focusing them does not move the
+   * screen.
+   */
+  main * {
+    scroll-margin-top: calc(var(--stuck-bar-top, 0px) + var(--spacing-2));
+    scroll-margin-bottom: calc(var(--stuck-bar-bottom, 0px) + var(--spacing-2));
+  }
+
+  main [data-stuck-bar],
+  main [data-stuck-bar] * {
+    scroll-margin-block: 0;
+  }
+
+  /*
+   * #154: a new screen puts the focus on its heading (app/use-screen-focus.ts).
+   * The ring fits the words, as on the Task's heading in the detail, rather
+   * than the column. Every heading, so taking the focus moves nothing.
+   */
+  main h1 {
+    width: fit-content;
+    border-radius: var(--radius-sm);
   }
 
   /*

@@ -30,6 +30,7 @@ import { isTyping } from '@/lib/row-keys';
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 import { formatPlanningSum } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
+import { useStuckBar } from '@/lib/use-stuck-bar';
 import { cn } from '@/lib/utils';
 import { weekCall, weekText } from '@/lib/week-text';
 import type { PlanningData } from '@/store/planning-view';
@@ -65,9 +66,6 @@ import { PlanPane, type Stage } from './plan-pane';
 /** How long the row just added flashes; the same as `added-flash` in the CSS. */
 const ADDED_MS = 2500;
 
-/** The room the sticky Capacity line takes at the top of the screen. */
-const STICKY_ROOM = 72;
-
 /** Scrolls `main` so that the added row shows, keeping the Quick Add in view. */
 function revealAdded(taskId: TaskId) {
   const main = document.querySelector('main');
@@ -80,13 +78,16 @@ function revealAdded(taskId: TaskId) {
   if (main === null || row === null || quickAdd === null) return;
   const view = main.getBoundingClientRect();
   const rowRect = row.getBoundingClientRect();
-  const above = rowRect.top - (view.top + STICKY_ROOM);
+  // The room the sticky Capacity line takes at the top of the screen, and
+  // the gap below it: the row's scroll margin (lib/use-stuck-bar.ts).
+  const room = parseFloat(getComputedStyle(row).scrollMarginTop) || 0;
+  const above = rowRect.top - (view.top + room);
   if (above < 0) {
     main.scrollBy?.({ top: above });
     return;
   }
   const below = rowRect.bottom + 16 - view.bottom;
-  const spare = quickAdd.getBoundingClientRect().top - (view.top + STICKY_ROOM);
+  const spare = quickAdd.getBoundingClientRect().top - (view.top + room);
   const by = Math.min(below, spare);
   if (by > 0) main.scrollBy?.({ top: by });
 }
@@ -173,10 +174,11 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
       setSearch({ task: taskId });
     }, true);
 
-  const outlook = (
+  const outlookOf = (sheet: boolean) => (
     <OutlookPane
       data={data}
       check={stage === 'check'}
+      sheet={sheet}
       // 確かめる takes the hours in its summary only: one field (#93).
       onAvailableHours={
         stage === 'check' ? undefined : actions.setAvailableHours
@@ -219,6 +221,10 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
   const reasonId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
+  // The Capacity line sticks to the top under 1200px: what takes the focus
+  // scrolls clear of it (#152).
+  const capacityRef = useRef<HTMLDivElement>(null);
+  useStuckBar(capacityRef, 'top');
 
   // docs/design/accessibility.md Planning: N goes to the Quick Add and
   // ⌘/Ctrl+Enter confirms (it opens the Dialog; while confirming is not
@@ -349,7 +355,10 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
       </div>
 
       {/* The Capacity in one line, under 1200px (DESIGN.md Responsive). */}
-      <div className="sticky top-0 z-(--layer-sticky) border-b border-border bg-canvas px-4 py-2 medium:px-6 wide:hidden">
+      <div
+        ref={capacityRef}
+        className="sticky top-0 z-(--layer-sticky) border-b border-border bg-canvas px-4 py-2 medium:px-6 wide:hidden"
+      >
         <button
           type="button"
           onClick={() =>
@@ -425,7 +434,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
           {/* In view while the Backlog scrolls; scrolls on its own when it
               is taller than the screen (#165). */}
           <div className="sticky top-0 max-h-dvh overflow-y-auto px-6 py-8">
-            {outlook}
+            {outlookOf(false)}
           </div>
         </aside>
       </div>
@@ -435,7 +444,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
           <DrawerHeader>
             <DrawerTitle>時間の見通し</DrawerTitle>
           </DrawerHeader>
-          <DrawerBody>{outlook}</DrawerBody>
+          <DrawerBody>{outlookOf(true)}</DrawerBody>
         </DrawerContent>
       </Drawer>
 

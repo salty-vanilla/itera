@@ -103,7 +103,7 @@ function InterruptSheet({
             <Field label="メモ" necessity="required" error={errors.text}>
               <TextInput
                 value={text}
-                placeholder="例: 障害の問い合わせに対応"
+                placeholder="例: 障害対応、急な来客"
                 onChange={(e) => setText(e.currentTarget.value)}
               />
             </Field>

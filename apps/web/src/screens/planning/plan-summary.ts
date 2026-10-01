@@ -29,7 +29,11 @@ export interface PlanSummary {
   /** 「18h」; absent while no available hours are entered. */
   readonly available?: string;
   readonly taskCount: number;
-  /** Tasks that confirming leaves without a Goal (goalLinkAtConfirm). */
+  /**
+   * Tasks not linked to their Area's Goal, in the Areas with one: the rows
+   * that say 「目標に紐づかない」. A Task in an Area without a Goal is not
+   * counted, though confirming leaves it unlinked (owner decision, #159).
+   */
   readonly unlinked: number;
   /** The Areas with a Goal. */
   readonly goals: readonly AreaPlan[];
@@ -64,7 +68,10 @@ export function planSummary(data: PlanningData): PlanSummary {
           }),
         }),
     taskCount: tasks.length,
-    unlinked: tasks.filter((t) => t.linkAtConfirm === 'unlinked').length,
+    unlinked: data.plan
+      .filter((p) => p.goal !== undefined)
+      .flatMap((p) => p.tasks)
+      .filter((t) => t.linkAtConfirm === 'unlinked').length,
     goals: data.plan.filter((p) => p.goal !== undefined),
     goalless: data.plan.filter(
       (p) => p.area.id !== null && p.goal === undefined && p.tasks.length > 0,

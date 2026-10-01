@@ -18,7 +18,7 @@ import { TaskQuickAdd } from '@/components/task/task-quick-add';
 import { formatDate, formatTime } from '@/lib/date-format';
 import { formatPlanningTotal } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
-import { useToastOffsetAbove } from '@/lib/use-toast-offset';
+import { useStuckBar } from '@/lib/use-stuck-bar';
 import { cn } from '@/lib/utils';
 import type { TodayData, TodayRow as TodayRowData } from '@/store/today-view';
 import { useAppOverview } from '@/store/use-app-overview';
@@ -188,7 +188,7 @@ function TodayView({ data }: { data: TodayData }) {
   // The Quick Add sticks to the bottom at every width: the Toast goes above
   // it, and the Quick Add does not move (DESIGN.md Toast).
   const quickAddRef = useRef<HTMLDivElement>(null);
-  useToastOffsetAbove(quickAddRef);
+  useStuckBar(quickAddRef, 'bottom');
   // The `…` of each row, for the actual time surface to sit by.
   const triggers = useRef(new Map<DailySelectionId, HTMLButtonElement>());
   // Where the focus goes once the records have changed: the row that
@@ -273,6 +273,25 @@ function TodayView({ data }: { data: TodayData }) {
         )
         ?.focus(),
     );
+  };
+  // 記録する: the list is below the fold, so the Toast says it went through
+  // and 「見る」 takes the focus to the new note (#157).
+  const noteInterrupt = (text: string, minutes: number | undefined) => {
+    if (!actions.noteInterrupt(text, minutes)) return false;
+    toast.show({
+      kind: 'interrupt-noted',
+      title: '割り込みを記録しました',
+      action: {
+        label: '見る',
+        onClick: () =>
+          document
+            .querySelector<HTMLElement>(
+              '[data-interrupt]:last-child [data-action="interrupt-actions"]',
+            )
+            ?.focus(),
+      },
+    });
+    return true;
   };
   // 今日は見送る and 今日の予定から外す from the `…`: the row moves to
   // 今日はもうやらない, with 「元に戻す」 in a Toast as well as the row's own
@@ -660,7 +679,7 @@ function TodayView({ data }: { data: TodayData }) {
       <InterruptSheet
         open={interrupting}
         onOpenChange={setInterrupting}
-        onSubmit={(text, minutes) => actions.noteInterrupt(text, minutes)}
+        onSubmit={noteInterrupt}
       />
       {editingNote !== undefined && (
         <InterruptSheet
