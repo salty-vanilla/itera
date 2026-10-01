@@ -56,10 +56,22 @@ const buttonVariants = cva(
         md: 'h-control-lg px-3 medium:h-control-md',
         lg: 'h-control-lg px-4',
       },
+      // A toggle that is on inverts, whatever its variant (DESIGN.md
+      // Selected, as IconButton's pressed): an ink fill, so the state never
+      // depends on a pale tint. Defined after `variant` so that it wins.
+      pressed: {
+        true: [
+          'border-primary bg-primary text-on-primary',
+          'not-data-disabled:hover:border-primary-hover not-data-disabled:hover:bg-primary-hover',
+          'not-data-disabled:active:border-primary-active not-data-disabled:active:bg-primary-active',
+        ],
+        false: '',
+      },
     },
     defaultVariants: {
       variant: 'secondary',
       size: 'md',
+      pressed: false,
     },
   },
 );
@@ -78,9 +90,17 @@ type LoadingProps =
       loadingLabel: string;
     };
 
-type ButtonProps = Omit<ButtonPrimitive.Props, 'className' | 'render'> &
-  VariantProps<typeof buttonVariants> &
+type ButtonProps = Omit<
+  ButtonPrimitive.Props,
+  'className' | 'render' | 'aria-pressed'
+> &
+  Omit<VariantProps<typeof buttonVariants>, 'pressed'> &
   LoadingProps & {
+    /**
+     * Makes it a toggle (aria-pressed), inverted while on. Leave undefined
+     * for a plain action.
+     */
+    pressed?: boolean;
     className?: string;
   };
 
@@ -88,6 +108,7 @@ function Button({
   className,
   variant,
   size,
+  pressed,
   loading = false,
   loadingLabel,
   disabled = false,
@@ -106,13 +127,17 @@ function Button({
       disabled={disabled}
       // Loading keeps the variant's look and ignores presses instead of
       // turning grey like a disabled button.
+      aria-pressed={pressed}
       aria-busy={loading || undefined}
       aria-disabled={loading || disabled || undefined}
       onClick={(event) => {
         if (loading) event.preventDefault();
         else onClick?.(event);
       }}
-      className={cn(buttonVariants({ variant, size }), className)}
+      className={cn(
+        buttonVariants({ variant, size, pressed: pressed === true }),
+        className,
+      )}
       {...props}
     >
       {loadingLabel === undefined ? (

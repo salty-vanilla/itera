@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { setEstimate } from './estimate';
 import type { Occurrence } from './occurrence';
 import { carryCount, criterionResult, retroFacts } from './retro-facts';
 import { id } from './shared/ids';
 import { localDate } from './shared/time';
-import type { DailySelection, Sprint, SprintTask } from './sprint';
+import type { ActualTime, DailySelection, Sprint, SprintTask } from './sprint';
 import { updateTask } from './task';
 import {
   ctx,
@@ -458,5 +459,164 @@ describe('retroFacts — occurrences as facts (#56)', () => {
     });
     expect(all[1]?.doneOn).toBeUndefined();
     expect(all[1]?.actualHours).toBe(0);
+  });
+});
+
+describe('retroFacts — the plan against what happened (#167)', () => {
+  const input = () => ({
+    tasks: tasks(),
+    areas: [research, work],
+    occurrences,
+    sprints: [],
+  });
+
+  it('invariant 40: the interrupts’ minutes are summed apart from the actual time', () => {
+    const sprint: Sprint = {
+      ...reviewSprint(),
+      interrupts: [
+        { id: id('int-1'), at: ctx.now, text: '障害の問い合わせ', minutes: 45 },
+        { id: id('int-2'), at: ctx.now, text: 'レビュー依頼', minutes: 20 },
+        { id: id('int-3'), at: ctx.now, text: '電話' },
+      ],
+    };
+    const facts = retroFacts(sprint, input());
+    expect(facts.interruptTime).toEqual({ minutes: 65, withoutMinutes: 1 });
+    // The actual time is the Tasks' only.
+    expect(facts.actualHours).toBe(4.5);
+  });
+
+  it('invariant 15: compares both planned totals, as confirmed and with the mid-Sprint additions, with the hours entered when planning', () => {
+    // Without the removed Task: 10–11h at confirm (paper 5, done 2–3, clean
+    // 3), 12–14h with the mid-Sprint addition (interview 2–3).
+    const base = reviewSprint();
+    const sprint = {
+      ...base,
+      tasks: base.tasks.filter((t) => t.taskId !== 'task-removed'),
+    };
+    // Against 18h planned (15h now): both fit.
+    expect(retroFacts(sprint, input()).capacity).toEqual({
+      atConfirm: {
+        availableHours: 18,
+        remaining: { lo: 7, hi: 8 },
+        status: 'within',
+      },
+      withAdditions: {
+        availableHours: 18,
+        remaining: { lo: 4, hi: 6 },
+        status: 'within',
+      },
+    });
+    // Against 11h: the plan as confirmed just fits at its upper end; with
+    // the addition even the lower end exceeds it.
+    const tight = retroFacts({ ...sprint, plannedAvailableHours: 11 }, input());
+    expect(tight.capacity?.atConfirm.status).toBe('within');
+    expect(tight.capacity?.withAdditions.status).toBe('exceeds');
+    const over = retroFacts(
+      { ...sprint, plannedAvailableHours: 10.5 },
+      input(),
+    );
+    // Against 10.5h the plan as confirmed may exceed it.
+    expect(over.capacity?.atConfirm.status).toBe('mayExceed');
+    // A Task removed later was in the plan as confirmed, and is no longer in
+    // the one with the additions: 12–14h at confirm, 12–14h after (2–3h
+    // removed, 2–3h added).
+    const withRemoved = retroFacts(base, input());
+    expect(withRemoved.plannedTotal.atConfirm).toMatchObject({
+      lo: 12,
+      hi: 14,
+    });
+    expect(withRemoved.capacity?.atConfirm.remaining).toEqual({ lo: 4, hi: 6 });
+    expect(withRemoved.capacity?.withAdditions.remaining).toEqual({
+      lo: 4,
+      hi: 6,
+    });
+    // No hours entered when planning: nothing to compare with.
+    const none = retroFacts(
+      sprintFixture('2026-09-28', 'review', { tasks: base.tasks }),
+      input(),
+    );
+    expect(none.capacity).toBeUndefined();
+  });
+
+  it('each Task’s actual time against its planning value, only when both are there', () => {
+    const sprint = reviewSprint();
+    const facts = retroFacts(
+      {
+        ...sprint,
+        actualTimes: [
+          ...sprint.actualTimes,
+          {
+            sprintTaskId: id('st-task-done'),
+            hours: 3.5,
+            date: d('2026-09-30'),
+            via: 'later',
+            recordedAt: ctx.now,
+          },
+        ],
+      },
+      input(),
+    );
+    const of = (taskId: string) =>
+      facts.tasks.find((f) => f.taskId === taskId)?.actualVsPlan;
+    // 4.5h against 5h.
+    expect(of('task-paper')).toEqual({ lo: -0.5, hi: -0.5 });
+    // 3.5h against 2–3h: 0.5h over the upper end, 1.5h over the lower.
+    expect(of('task-done')).toEqual({ lo: 0.5, hi: 1.5 });
+    // No actual time entered: no difference.
+    expect(of('task-interview')).toBeUndefined();
+  });
+
+  it('below a range, and nothing against an unestimated value', () => {
+    const sprint = reviewSprint();
+    const actual = (sprintTaskId: string, hours: number): ActualTime => ({
+      sprintTaskId: id(sprintTaskId),
+      hours,
+      date: d('2026-09-30'),
+      via: 'later',
+      recordedAt: ctx.now,
+    });
+    const facts = retroFacts(
+      {
+        ...sprint,
+        tasks: sprint.tasks.map((t) =>
+          t.taskId === 'task-interview'
+            ? {
+                ...t,
+                planSnapshot: {
+                  value: {
+                    base: 'none' as const,
+                    criterionApplied: false as const,
+                    computedAt: ctx.now,
+                  },
+                  timeBasis: 'task' as const,
+                },
+              }
+            : t,
+        ),
+        actualTimes: [
+          actual('st-task-done', 1.5),
+          actual('st-task-interview', 2),
+        ],
+      },
+      input(),
+    );
+    const of = (taskId: string) =>
+      facts.tasks.find((f) => f.taskId === taskId)?.actualVsPlan;
+    // 1.5h against 2–3h: 0.5h under the lower end.
+    expect(of('task-done')).toEqual({ lo: -1.5, hi: -0.5 });
+    expect(of('task-interview')).toBeUndefined();
+  });
+
+  it('invariant 16: the difference is against the plan fixed at confirm, not the Estimate now', () => {
+    const changed = input().tasks.map((t) =>
+      t.id === 'task-paper' ? unwrap(setEstimate(t, 8, ctx)) : t,
+    );
+    const paper = retroFacts(reviewSprint(), {
+      ...input(),
+      tasks: changed,
+    }).tasks.find((f) => f.taskId === 'task-paper');
+    expect(paper?.estimateNow).toBe(8);
+    // Still 4.5h against the 5h fixed in the plan.
+    expect(paper?.actualVsPlan).toEqual({ lo: -0.5, hi: -0.5 });
   });
 });

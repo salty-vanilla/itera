@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { ChevronDown, Plus } from 'lucide-react';
+import { Check, ChevronDown, Pin, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from './button';
 
@@ -38,6 +38,30 @@ export const Variants: Story = {
       <Button variant="quiet">キャンセル</Button>
       <Button variant="danger">アーカイブ</Button>
       <Button variant="danger-solid">完全に削除</Button>
+    </div>
+  ),
+};
+
+/**
+ * トグル（`pressed`、`aria-pressed`）。オンは墨の反転（DESIGN.md Selected）。
+ * 語は変えず、アイコンを替える（例：振り返りに使う）。
+ */
+export const Toggle: Story = {
+  render: () => (
+    <div className="flex flex-wrap items-center gap-3">
+      <Button
+        size="sm"
+        variant="quiet"
+        pressed={false}
+        className="text-ink-muted"
+      >
+        <Pin aria-hidden />
+        振り返りに使う
+      </Button>
+      <Button size="sm" variant="quiet" pressed>
+        <Check aria-hidden />
+        振り返りに使う
+      </Button>
     </div>
   ),
 };
