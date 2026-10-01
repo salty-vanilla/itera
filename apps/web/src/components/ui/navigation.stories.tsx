@@ -61,6 +61,7 @@ function Shell() {
     <div className="flex h-dvh flex-col-reverse bg-canvas medium:flex-row">
       <Navigation
         items={items}
+        brand="Itera"
         current={current}
         onNavigate={(id, event) => {
           event.preventDefault();
@@ -191,6 +192,7 @@ export const States: Story = {
         <figcaption className="text-label text-ink-muted">sidebar</figcaption>
         <Navigation
           items={stateItems}
+          brand="Itera"
           current="sprint"
           layout="sidebar"
           label="sidebar"
@@ -200,6 +202,7 @@ export const States: Story = {
         <figcaption className="text-label text-ink-muted">rail</figcaption>
         <Navigation
           items={stateItems}
+          brand="Itera"
           current="sprint"
           layout="rail"
           label="rail"
