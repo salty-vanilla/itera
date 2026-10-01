@@ -17,6 +17,9 @@ import { TextInput } from '@/components/ui/text-input';
 // from its own entry, not a Task row. A Bottom Sheet on compact, the right
 // Drawer from medium up. Recording it rearranges nothing (invariant 29).
 // 直す uses the same surface, filled with the note (F38).
+// Modal at every width: a short form with nothing to use behind it, so Tab
+// stays inside, the scrim shows and closing returns focus to what opened it
+// (#153).
 
 type InterruptSheetProps = {
   open: boolean;
@@ -70,7 +73,7 @@ function InterruptSheet({
     if (onSubmit(note, m)) change(false);
   };
   return (
-    <Drawer open={open} onOpenChange={change}>
+    <Drawer modal open={open} onOpenChange={change}>
       <DrawerContent>
         <form
           ref={formRef}

@@ -25,10 +25,16 @@ function WeekRow({ item, onOpen, onEstimate, onChoose }: WeekRowProps) {
       onOpen={onOpen}
       keys={{ onEstimate }}
       control={
-        <Button size="sm" data-action="choose" onClick={onChoose}>
+        <Button
+          size="sm"
+          data-action="choose"
+          // The whole name, not a visually hidden 「: タイトル」: browsers
+          // read a hidden span apart, as 「今日へ : タイトル」 (#153).
+          aria-label={`今日へ: ${item.task.title}`}
+          onClick={onChoose}
+        >
           <ArrowUp aria-hidden />
           今日へ
-          <span className="sr-only">: {item.task.title}</span>
         </Button>
       }
       metadata={
