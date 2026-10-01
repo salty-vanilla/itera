@@ -542,7 +542,7 @@ describe('Backlog', () => {
       within(recurrence).getByRole('combobox', { name: '頻度' }),
       'daily',
     );
-    // Making it recurring cannot be undone: the button stays for that.
+    // Making it recurring stays a button.
     expect(task('task-bookshelf')?.recurrenceRuleId).toBeUndefined();
     await userEvent.click(
       within(recurrence).getByRole('button', { name: '繰り返しにする' }),
@@ -592,7 +592,9 @@ describe('Backlog', () => {
     );
     const detail = await screen.findByRole('dialog');
     const section = within(detail).getByRole('region', { name: '繰り返し' });
-    expect(within(section).queryByRole('button')).toBeNull();
+    expect(
+      within(section).queryByRole('button', { name: '繰り返しにする' }),
+    ).toBeNull();
     const latest = () =>
       records()
         .rules.find((r) => r.taskId === 'task-cleaning')
@@ -1054,6 +1056,75 @@ describe('Backlog', () => {
     expect(
       records().occurrences.find((o) => o.scheduledDate === '2026-10-03'),
     ).toMatchObject({ state: 'pending', ruleVersion: 1 });
+  });
+
+  it('Recurrence (F40): 繰り返しをやめる ends the rule with this Sprint; the Task and its occurrences stay', async () => {
+    await renderAt(
+      '/backlog?fixture=backlog-recurrence&view=recurring&task=task-cleaning',
+    );
+    const detail = await screen.findByRole('dialog');
+    const section = within(detail).getByRole('region', { name: '繰り返し' });
+    await userEvent.click(
+      within(section).getByRole('button', { name: '繰り返しをやめる' }),
+    );
+    expect(within(section).getByRole('status').textContent).toBe(
+      '繰り返しをやめました',
+    );
+    expect(
+      within(section).getByText('今のルール: 毎週 土（10/4 (日) まで）'),
+    ).toBeTruthy();
+    // An ended rule is not changed again: the inputs and the button go.
+    expect(within(section).queryByRole('combobox')).toBeNull();
+    expect(within(section).queryByRole('button')).toBeNull();
+    expect(document.activeElement).toBe(
+      within(section).getByRole('heading', { name: '繰り返し' }),
+    );
+    const rule = records().rules.find((r) => r.taskId === 'task-cleaning');
+    // The 10/5 version had not taken effect: it goes (F39, F40).
+    expect(rule?.versions).toEqual([
+      expect.objectContaining({ version: 1, effectiveTo: '2026-10-04' }),
+    ]);
+    expect(task('task-cleaning')?.recurrenceRuleId).toBe(rule?.id);
+    expect(
+      records().occurrences.find((o) => o.scheduledDate === '2026-10-03'),
+    ).toMatchObject({ state: 'pending', ruleVersion: 1 });
+    // Still under 繰り返し, with its last day.
+    expect(
+      within(list()).getByText('部屋の掃除').closest('li')?.textContent,
+    ).toContain('毎週 土 · 次は 10/3 (土)（10/4 (日) まで）');
+  });
+
+  it('Recurrence (F40): a rule that has made no occurrence is taken off; the Task is one-off again', async () => {
+    await renderAt('/backlog?fixture=backlog-capture&task=task-bookshelf');
+    const detail = await screen.findByRole('dialog');
+    await userEvent.click(
+      within(detail).getByRole('button', { name: '詳しく' }),
+    );
+    const section = within(detail).getByRole('region', { name: '繰り返し' });
+    await userEvent.selectOptions(
+      within(section).getByRole('combobox', { name: '頻度' }),
+      'daily',
+    );
+    await userEvent.click(
+      within(section).getByRole('button', { name: '繰り返しにする' }),
+    );
+    await userEvent.click(
+      within(section).getByRole('button', { name: '繰り返しをやめる' }),
+    );
+    expect(task('task-bookshelf')?.recurrenceRuleId).toBeUndefined();
+    expect(
+      records().rules.filter((r) => r.taskId === 'task-bookshelf'),
+    ).toEqual([]);
+    expect(within(section).getByRole('status').textContent).toBe(
+      '繰り返しをやめました',
+    );
+    // Back to making one, from the start; nothing is held on close.
+    const freq = within(section).getByRole('combobox', { name: '頻度' });
+    expect(document.activeElement).toBe(freq);
+    expect((freq as HTMLSelectElement).value).toBe('weekly');
+    expect(
+      within(section).getByRole('button', { name: '繰り返しにする' }),
+    ).toBeTruthy();
   });
 
   it('Recurrence: says so when the chosen rule is the one already set', async () => {

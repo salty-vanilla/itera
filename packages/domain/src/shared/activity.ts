@@ -112,6 +112,20 @@ export type Activity =
       readonly effectiveFrom: LocalDate;
     })
   | (ActivityBase & {
+      /** F40: the version that now ends, and its last day. */
+      readonly kind: 'recurrenceRuleEnded';
+      readonly taskId: TaskId;
+      readonly ruleId: RecurrenceRuleId;
+      readonly version: number;
+      readonly effectiveTo: LocalDate;
+    })
+  | (ActivityBase & {
+      /** F40: a rule with no occurrence left, taken off; the Task is one-off again. */
+      readonly kind: 'recurrenceRuleRemoved';
+      readonly taskId: TaskId;
+      readonly ruleId: RecurrenceRuleId;
+    })
+  | (ActivityBase & {
       readonly kind:
         | 'occurrenceGenerated'
         | 'occurrenceExcluded'

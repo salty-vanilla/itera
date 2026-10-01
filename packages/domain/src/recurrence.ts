@@ -45,7 +45,8 @@ export interface RecurrenceRuleVersion {
  * those belong to each Occurrence (invariant 30). A change adds a version
  * and never rewrites one that has taken effect, so occurrences generated
  * from an earlier version keep their meaning (invariant 31). Only a latest
- * version that has not taken effect yet is replaced (F39).
+ * version that has not taken effect yet is replaced (F39). An ended rule's
+ * latest version has an `effectiveTo` and is never changed again (F40).
  */
 export interface RecurrenceRule {
   readonly id: RecurrenceRuleId;
@@ -162,6 +163,9 @@ export function changeRecurrenceRule(
   const problem = validatePattern(pattern);
   if (problem !== null) return err('invalidInput', problem);
   const latest = latestVersion(rule);
+  if (latest.effectiveTo !== undefined) {
+    return err('invalidTransition', 'The rule has ended.');
+  }
   // Changing to the pattern already in place changes nothing.
   if (samePattern(latest.pattern, pattern)) return applied(rule, []);
   if (effectiveFrom < latest.effectiveFrom) {
@@ -215,6 +219,60 @@ function replaceLatest(
     ];
   }
   return [...earlier, { ...latest, pattern }];
+}
+
+export interface EndRecurrenceRuleInput {
+  /**
+   * The first day without the rule: the start of the next Sprint not yet
+   * confirmed (decided by the Sprint code, as for a change).
+   */
+  readonly endFrom: LocalDate;
+}
+
+/**
+ * Ends the rule (F40): the latest version ends the day before `endFrom`, so
+ * the rule produces no date from then on. Days before keep their version
+ * (invariant 31). Versions that would only take effect from `endFrom` on
+ * are dropped, as a change to them replaces them (F39). A rule with no
+ * version in effect before `endFrom` cannot be ended; it is removed instead
+ * (`endRuleForNextSprint`).
+ */
+export function endRecurrenceRule(
+  rule: RecurrenceRule,
+  input: EndRecurrenceRuleInput,
+  ctx: CommandContext,
+): CommandResult<RecurrenceRule> {
+  if (ruleEndsOn(rule) !== undefined) {
+    return err('invalidTransition', 'The rule has already ended.');
+  }
+  const kept = rule.versions.filter((v) => v.effectiveFrom < input.endFrom);
+  const last = kept.at(-1);
+  if (last === undefined) {
+    return err(
+      'invalidInput',
+      `The rule is not in effect before ${input.endFrom}.`,
+    );
+  }
+  const effectiveTo = addDays(input.endFrom, -1);
+  return applied(
+    { ...rule, versions: [...kept.slice(0, -1), { ...last, effectiveTo }] },
+    [
+      {
+        kind: 'recurrenceRuleEnded',
+        at: ctx.now,
+        actor: ctx.actor,
+        taskId: rule.taskId,
+        ruleId: rule.id,
+        version: last.version,
+        effectiveTo,
+      },
+    ],
+  );
+}
+
+/** The last day of an ended rule (F40); `undefined` while it goes on. */
+export function ruleEndsOn(rule: RecurrenceRule): LocalDate | undefined {
+  return latestVersion(rule).effectiveTo;
 }
 
 export function samePattern(
@@ -388,6 +446,8 @@ export interface RecurrenceSummary {
     readonly effectiveFrom: LocalDate;
   };
   readonly next?: NextOccurrence;
+  /** The last day of an ended rule (F40). */
+  readonly endsOn?: LocalDate;
 }
 
 /**
@@ -409,6 +469,7 @@ export function recurrenceSummary(
     ) ??
     latest;
   const next = nextOccurrence(rule, occurrences, options);
+  const endsOn = ruleEndsOn(rule);
   return {
     pattern: current.pattern,
     ...(latest !== current && latest.effectiveFrom > options.today
@@ -420,5 +481,6 @@ export function recurrenceSummary(
         }
       : {}),
     ...(next === undefined ? {} : { next }),
+    ...(endsOn === undefined ? {} : { endsOn }),
   };
 }

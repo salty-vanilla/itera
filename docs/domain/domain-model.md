@@ -37,7 +37,7 @@ v0.2 Final は v0.1 の骨格（恒久的な **Task** と、「この Sprint で
 
 ### v0.2 Final で決めたこと
 
-F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F11 は同じ日に、`packages/domain` の実装で見つかった食い違いについて決めた（Issue #20）。F12 も同じ日に決めた（Issue #21）。F13〜F16 も同じ日に、Sprint と Planning の実装で出た境界の場合について決めた（Issue #22）。F17〜F19 も同じ日に、Today の実装で出た境界の場合について決めた（Issue #23）。F20〜F24 も同じ日に、Review と Retro の実装で出た境界の場合について決めた（Issue #24）。F25〜F27 も同じ日に、Backlog の画面の実装で出た表示と操作について決めた（Issue #39）。F28・F29 も同じ日に、Backlog の実装の後に残った点について決めた（Issue #47）。F30・F31 は 2026-09-28 に、Agent 提案の操作について決めた（Issue #40、決定 4A）。F32 も同じ日に、Today の画面の実装で出た数え方について決めた（Issue #41）。F33 は 2026-09-29 に、過去の日の取り消しについて決めた（Issue #53）。F34 も同じ日に、Sprint の開始日より前の Backlog からの完了について決めた（Issue #59）。F35・F36 は 2026-09-30 に、実行中の Sprint の週のうちに次の Sprint を計画したときの持ち越しについて決めた（Issue #89）。F37 は 2026-10-01 に、Today の見送り・外すの取り消しについて決めた（Issue #101、決定シート B12=B）。F38 も同じ日に、記録した割り込みを直す・消すことについて決めた（Issue #102、決定シート B13=A）。F39 も同じ日に、まだ効き始めていない Rule の版を変えることについて決めた（Issue #192）。
+F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F11 は同じ日に、`packages/domain` の実装で見つかった食い違いについて決めた（Issue #20）。F12 も同じ日に決めた（Issue #21）。F13〜F16 も同じ日に、Sprint と Planning の実装で出た境界の場合について決めた（Issue #22）。F17〜F19 も同じ日に、Today の実装で出た境界の場合について決めた（Issue #23）。F20〜F24 も同じ日に、Review と Retro の実装で出た境界の場合について決めた（Issue #24）。F25〜F27 も同じ日に、Backlog の画面の実装で出た表示と操作について決めた（Issue #39）。F28・F29 も同じ日に、Backlog の実装の後に残った点について決めた（Issue #47）。F30・F31 は 2026-09-28 に、Agent 提案の操作について決めた（Issue #40、決定 4A）。F32 も同じ日に、Today の画面の実装で出た数え方について決めた（Issue #41）。F33 は 2026-09-29 に、過去の日の取り消しについて決めた（Issue #53）。F34 も同じ日に、Sprint の開始日より前の Backlog からの完了について決めた（Issue #59）。F35・F36 は 2026-09-30 に、実行中の Sprint の週のうちに次の Sprint を計画したときの持ち越しについて決めた（Issue #89）。F37 は 2026-10-01 に、Today の見送り・外すの取り消しについて決めた（Issue #101、決定シート B12=B）。F38 も同じ日に、記録した割り込みを直す・消すことについて決めた（Issue #102、決定シート B13=A）。F39 も同じ日に、まだ効き始めていない Rule の版を変えることについて決めた（Issue #192）。F40 も同じ日に、繰り返しをやめることについて決めた（Issue #189）。
 
 | # | 決定 | モデルへの反映 | UI への影響 |
 | --- | --- | --- | --- |
@@ -80,6 +80,7 @@ F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F
 | F37 | 「今日は見送る」「今日の予定から外す」は、その日のうちなら取り消せる | DailySelection に Deferred → Selected / Started と Removed → Selected（同じ日のうち）を足す。同じ選択を開いた状態に戻す（2 件目は作らない。不変条件 21）。戻る先は閉じる前の状態で、開始してから見送った選択は Started に戻り、開始時刻を残す（オーナーの確認待ち：開始後に見送った選択の取り消しで Started に戻すのは推奨案 A として実装した）。翌日以降は取り消せない（過ぎた日の見送り・外すはそのまま記録に残る）。連続見送りは取り消した後の状態で数える（不変条件 23）ので、取り消した見送りは数えない。見送り・外すと、その取り消しは Activity に残る。「今日はここまで」の取り消しは含めない | Today：見送り・外した行に「取り消す」を出し、押すと「今日やる」に戻る |
 | F38 | 割り込みは、Sprint が実行中の間は直せる・消せる | InterruptNote の text と minutes を直せる（minutes は消してもよい。at は記録した時刻のまま）。InterruptNote を消せる。消した直後は元に戻せる（同じ id・at・text・minutes で元の位置に戻す。at が今より後のものは戻さない）。どれも Sprint が実行中の間だけで、Review に入った後は固定する（Retro の事実を Retro で編集しない、不変条件 40）。直した・消した・元に戻したことは Activity に残る。Today・Retro の割り込みは今の記録から出すので、直した内容が出て、消したものは出ない | Today：割り込みの各行の `…` に「直す」「消す」。直すのは記録と同じ面。消すと Toast「割り込み「メモ」を消しました」と「元に戻す」 |
 | F39 | まだ効き始めていない版を変えるときは、版を増やさずに置き換える | 最新の版の effectiveFrom が新しい版と同じ（まだ効き始めていない）なら、新しい版を足さず、最新の版の型を置き換える。置き換えた型が 1 つ前の版と同じなら、最新の版を消し、1 つ前の版の effectiveTo を外して版を戻す。どちらも Activity に Rule の変更として残す（版は置き換えた版、戻したときは戻った先の版）。効き始めた版は変えない（不変条件 31）。draft が生成済みの回は F7 のとおり作り直す | Backlog：選ぶたびに保存しても、版は次の Sprint の分の 1 つだけ増える |
+| F40 | 繰り返しをやめると、まだ確定していない次の Sprint から回を作らない。回を 1 つも作っていない Rule は外して単発の Task に戻す | 本人が「繰り返しをやめる」と、Rule の最新の版に effectiveTo（まだ確定していない次の Sprint の開始日の前日）を入れる。その日より後に効き始める版（まだ効き始めていない版）は消す（F39 と同じ考え方）。その Sprint の Planning（draft）が回を生成していれば、その Task の回（Pending / Excluded）と SprintTask（Draft）を捨てる。確定済みの Sprint の回と SprintTask は変えない（不変条件 31）。Task と過去の回の記録は残り、Task は繰り返しの Task のまま（単発としては扱わない）。やめた Rule は変えられず、もう一度やめることもできない。draft の回を捨てた後に Rule の回が 1 つも残らない（作ったばかり）なら、Rule を消し、Task を単発に戻す。どちらも Activity に残す（やめた版と最後の日、または Rule を外したこと） | Backlog の Task 詳細：繰り返しの欄に「繰り返しをやめる」。やめた行は「毎週 土 · 次は 10/3 (土)（10/4 (日) まで）」で、切り口「繰り返し」に残る。外したときは行の ○ が戻る |
 
 ### 用語
 
@@ -122,7 +123,7 @@ Task は User に属し、Backlog はそのうち active なものを並べた�
 | Subtask（E） | Task の中の手順 | title、estimate（任意）、done | Task | 完了日時 |
 | Estimate（VO） | 本人が確定した点の値 | hours、setAt、source（手入力 / 提案を採用：下限・中央・上限 / 提案を編集して採用：元の提案、F31） | Task（現在値は 1 つ） | 値の変更履歴 |
 | EstimateSuggestion（E） | 製品側の提案（幅） | lo–hi、根拠、不確実な点、createdAt、state（提示中 / 採用 / 却下 / 置換） | Task | すべて残す |
-| RecurrenceRule（E・版つき） | 繰り返しの決まり | 版ごとに freq（毎日 / 平日 / 毎週 / 毎月）、曜日（毎週は 1 つ以上）・日付、effectiveFrom、effectiveTo | Task（0..1） | 版そのもの。新しい版は、まだ確定していない次の Sprint から効く（effectiveFrom = その Sprint の開始日）。まだ効き始めていない版は、足さずに置き換える（F39）。その Sprint の Planning（draft）がすでに回を生成していれば、その回を作り直す |
+| RecurrenceRule（E・版つき） | 繰り返しの決まり | 版ごとに freq（毎日 / 平日 / 毎週 / 毎月）、曜日（毎週は 1 つ以上）・日付、effectiveFrom、effectiveTo | Task（0..1） | 版そのもの。新しい版は、まだ確定していない次の Sprint から効く（effectiveFrom = その Sprint の開始日）。まだ効き始めていない版は、足さずに置き換える（F39）。その Sprint の Planning（draft）がすでに回を生成していれば、その回を作り直す。やめると最新の版に effectiveTo を入れ、回を 1 つも作っていなければ Rule を外す（F40） |
 | Occurrence（E） | ルールから発生した 1 回 | scheduledDate、ruleVersion、materializedAt、state（Pending / Excluded / Done / Skipped / Missed） | Task（Rule の版を参照） | 状態と日時。Sprint の確定後は Rule 変更の影響を受けない（未確定の draft の回は作り直す）。Excluded は記録に残すが、通常の Retro 事実には出さない |
 | Sprint（E・集約の根） | 期間の計画単位（MVP は 1 週） | start、end、state、confirmedAt、availableHours（確定時 / 現在）、previousSprint | User | 使える時間の変更履歴、確定日時、状態遷移 |
 | SprintAreaSnapshot（VO） | その Sprint での Area の表示名。その Sprint の Planning / Today / Retro はこの名前を使う | area、name、order | Sprint | 確定時に固定。Sprint 中に初めて現れた Area は、その時点の名前を並び順の末尾に足して固定 |
@@ -381,7 +382,7 @@ stateDiagram-v2
 | 基準の継続・終了・置換 | Active が 1 つあるだけでは流れが追えない | Criterion.state、replacedBy、CriterionUse.retroDecision |
 | Agent 案の採否と割り込み | 本人の操作と区別できない / どこにも残らない | PlanProposal の採否と Activity.actor、InterruptNote |
 
-**Activity に残す最小限の種類**：Task の作成 / 完了 / アーカイブ、Estimate の変更（採用を含む）、提案の提示 / 却下、Sprint への追加（経路つき）/ 外す / 持ち越しとしてつなぐ（F35）、Sprint の確定、Goal の文と使える時間の変更、今日へ / 開始 / 完了 / 今日はここまで / 見送り / 外す、Occurrence の生成 / 外す / 完了 / スキップ、Rule の変更、基準の適用と Retro での決定、Retro の完了。
+**Activity に残す最小限の種類**：Task の作成 / 完了 / アーカイブ、Estimate の変更（採用を含む）、提案の提示 / 却下、Sprint への追加（経路つき）/ 外す / 持ち越しとしてつなぐ（F35）、Sprint の確定、Goal の文と使える時間の変更、今日へ / 開始 / 完了 / 今日はここまで / 見送り / 外す、Occurrence の生成 / 外す / 完了 / スキップ、Rule の変更 / やめる（F40）、基準の適用と Retro での決定、Retro の完了。
 
 ## Scenario A〜C のウォークスルー
 

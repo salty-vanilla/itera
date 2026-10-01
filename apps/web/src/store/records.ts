@@ -42,6 +42,8 @@ export interface RecordChanges {
   readonly deleted?: {
     readonly occurrences?: readonly Occurrence['id'][];
     readonly criteria?: readonly PlanningCriterion['id'][];
+    /** A rule taken off a Task with no occurrence (F40). */
+    readonly rules?: readonly RecurrenceRule['id'][];
   };
 }
 
@@ -88,7 +90,10 @@ export function applyChanges(
     user: changes.user ?? records.user,
     areas: upsert(records.areas, changes.areas ?? []),
     tasks: upsert(records.tasks, changes.tasks ?? []),
-    rules: upsert(records.rules, changes.rules ?? []),
+    rules: remove(
+      upsert(records.rules, changes.rules ?? []),
+      changes.deleted?.rules,
+    ),
     occurrences: remove(
       upsert(records.occurrences, changes.occurrences ?? []),
       changes.deleted?.occurrences,

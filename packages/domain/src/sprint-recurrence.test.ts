@@ -8,6 +8,7 @@ import type { Sprint } from './sprint';
 import {
   changeRuleForNextSprint,
   createRuleForNextSprint,
+  endRuleForNextSprint,
 } from './sprint-recurrence';
 import { at, ctx, ids, newTask, sprintFixture, unwrap, user } from './testing';
 
@@ -488,6 +489,250 @@ describe('createRuleForNextSprint (F15)', () => {
       }),
     ]);
     expect(applied.sprint?.tasks[0]).not.toHaveProperty('carriedFrom');
+  });
+});
+
+describe('endRuleForNextSprint (F40)', () => {
+  it('ends before the draft and takes the rule out of it; the Task and past occurrences remain', () => {
+    const { task, rule, active, draft, occurrences } = setUp();
+    const result = endRuleForNextSprint(
+      {
+        task,
+        rule,
+        user,
+        today: d('2026-10-04'),
+        sprints: [active, draft],
+        occurrences,
+      },
+      ctx,
+    );
+    const ended = unwrap(result);
+    expect(ended.task).toBe(task);
+    expect(ended.rule?.versions).toEqual([
+      {
+        version: 1,
+        pattern: saturday,
+        effectiveFrom: '2026-09-28',
+        effectiveTo: '2026-10-04',
+      },
+    ]);
+    expect(ended.discarded).toEqual(['occ-2']);
+    expect(ended.sprint?.tasks).toEqual([]);
+    expect(result.ok && result.value.activities.map((a) => a.kind)).toEqual([
+      'recurrenceRuleEnded',
+      'occurrenceDiscarded',
+      'sprintTaskUnselected',
+    ]);
+    // The 9/28 week is untouched (invariant 31).
+    expect(occurrences[0]).toMatchObject({ state: 'done', ruleVersion: 1 });
+  });
+
+  it('without a draft, ends with the active Sprint and changes no Sprint', () => {
+    const { task, rule, active, occurrences } = setUp({ completeOct3: false });
+    const ended = unwrap(
+      endRuleForNextSprint(
+        {
+          task,
+          rule,
+          user,
+          today: d('2026-09-30'),
+          sprints: [{ ...active, state: 'active' }],
+          occurrences: occurrences.slice(0, 1),
+        },
+        ctx,
+      ),
+    );
+    // The pending 10/3 of the running week stays (invariant 31).
+    expect(ended.rule?.versions.at(-1)?.effectiveTo).toBe('2026-10-04');
+    expect(ended.discarded).toEqual([]);
+    expect(ended).not.toHaveProperty('sprint');
+  });
+
+  it('F39: a change not in effect yet is dropped with the draft', () => {
+    const { task, rule, active, draft, occurrences, newOccurrenceId } = setUp();
+    const changed = unwrap(
+      changeRuleForNextSprint(
+        {
+          task,
+          rule,
+          pattern: sunday,
+          user,
+          today: d('2026-10-04'),
+          sprints: [active, draft],
+          occurrences,
+          newOccurrenceId,
+          newSprintTaskId: ids('st-new'),
+        },
+        ctx,
+      ),
+    );
+    const ended = unwrap(
+      endRuleForNextSprint(
+        {
+          task,
+          rule: changed.rule,
+          user,
+          today: d('2026-10-04'),
+          sprints: [active, changed.sprint ?? draft],
+          occurrences: [occurrences[0]!, ...changed.generated],
+        },
+        ctx,
+      ),
+    );
+    expect(ended.rule?.versions).toEqual([
+      {
+        version: 1,
+        pattern: saturday,
+        effectiveFrom: '2026-09-28',
+        effectiveTo: '2026-10-04',
+      },
+    ]);
+    expect(ended.discarded).toEqual(changed.generated.map((o) => o.id));
+    expect(ended.sprint?.tasks).toEqual([]);
+  });
+
+  it('a rule just made, with only draft occurrences, is removed: the Task is one-off again', () => {
+    const sprints = [
+      sprintFixture('2026-09-28', 'active'),
+      sprintFixture('2026-10-05', 'planning'),
+    ];
+    const created = unwrap(
+      createRuleForNextSprint(
+        {
+          task: newTask('ストレッチ', 'task-stretch'),
+          ruleId: id('rule-s'),
+          pattern: { freq: 'weekly', daysOfWeek: [1, 3] },
+          user,
+          today: d('2026-10-02'),
+          sprints,
+          occurrences: [],
+          newOccurrenceId: ids('occ'),
+          newSprintTaskId: ids('st'),
+        },
+        ctx,
+      ),
+    );
+    const result = endRuleForNextSprint(
+      {
+        task: created.task,
+        rule: created.rule,
+        user,
+        today: d('2026-10-02'),
+        sprints: [sprints[0]!, created.sprint!],
+        occurrences: created.generated,
+      },
+      ctx,
+    );
+    const removed = unwrap(result);
+    expect(removed.task).not.toHaveProperty('recurrenceRuleId');
+    expect(removed).not.toHaveProperty('rule');
+    expect(removed.discarded).toEqual(['occ-1', 'occ-2']);
+    expect(removed.sprint?.tasks).toEqual([]);
+    expect(result.ok && result.value.activities.map((a) => a.kind)).toEqual([
+      'recurrenceRuleRemoved',
+      'occurrenceDiscarded',
+      'occurrenceDiscarded',
+      'sprintTaskUnselected',
+    ]);
+  });
+
+  it('a rule just made without a draft is removed too', () => {
+    const created = unwrap(
+      createRuleForNextSprint(
+        {
+          task: newTask('ストレッチ', 'task-stretch'),
+          ruleId: id('rule-s'),
+          pattern: { freq: 'daily' },
+          user,
+          today: d('2026-09-30'),
+          sprints: [sprintFixture('2026-09-28', 'active')],
+          occurrences: [],
+          newOccurrenceId: ids('occ'),
+          newSprintTaskId: ids('st'),
+        },
+        ctx,
+      ),
+    );
+    const removed = unwrap(
+      endRuleForNextSprint(
+        {
+          task: created.task,
+          rule: created.rule,
+          user,
+          today: d('2026-09-30'),
+          sprints: [sprintFixture('2026-09-28', 'active')],
+          occurrences: [],
+        },
+        ctx,
+      ),
+    );
+    expect(removed.task).not.toHaveProperty('recurrenceRuleId');
+    expect(removed).not.toHaveProperty('sprint');
+    expect(removed.discarded).toEqual([]);
+  });
+
+  it('refuses a rule of another Task, a Task not active, or a rule already ended', () => {
+    const { task, rule, active, occurrences } = setUp();
+    const end = (input: Partial<Parameters<typeof endRuleForNextSprint>[0]>) =>
+      endRuleForNextSprint(
+        {
+          task,
+          rule,
+          user,
+          today: d('2026-09-30'),
+          sprints: [{ ...active, state: 'active' }],
+          occurrences: occurrences.slice(0, 1),
+          ...input,
+        },
+        ctx,
+      );
+    expect(end({ task: newTask('別', 'task-other') })).toMatchObject({
+      ok: false,
+      error: { code: 'invalidInput' },
+    });
+    expect(end({ task: { ...task, lifecycle: 'archived' } })).toMatchObject({
+      ok: false,
+      error: { code: 'invalidTransition' },
+    });
+    const ended = unwrap(end({}));
+    expect(end({ rule: ended.rule! })).toMatchObject({
+      ok: false,
+      error: { code: 'invalidTransition' },
+    });
+  });
+
+  it('a later Planning generates no occurrence of an ended rule', () => {
+    const { task, rule, active, occurrences } = setUp({ completeOct3: false });
+    const ended = unwrap(
+      endRuleForNextSprint(
+        {
+          task,
+          rule,
+          user,
+          today: d('2026-09-30'),
+          sprints: [{ ...active, state: 'active' }],
+          occurrences: occurrences.slice(0, 1),
+        },
+        ctx,
+      ),
+    );
+    const next = unwrap(
+      startPlanning(
+        {
+          sprintId: id('sprint-2026-10-05'),
+          user,
+          start: d('2026-10-05'),
+          sprints: [{ ...active, state: 'review' }],
+          recurring: [{ task, rule: ended.rule! }],
+          occurrences: occurrences.slice(0, 1),
+          newOccurrenceId: ids('occ-later'),
+          newSprintTaskId: ids('st-later'),
+        },
+        ctx,
+      ),
+    );
+    expect(next.occurrences).toEqual([]);
+    expect(next.sprint.tasks).toEqual([]);
   });
 });
 

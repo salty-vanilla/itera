@@ -14,6 +14,7 @@ import {
   undoCompleteFromBacklog,
   createRuleForNextSprint,
   createTask,
+  endRuleForNextSprint,
   noteAreaInSprint,
   rejectSuggestion,
   restoreTask,
@@ -23,6 +24,7 @@ import {
   undoAdoption,
   undoRejection,
   updateTask,
+  err,
   type Activity,
   type AreaId,
   type Estimate,
@@ -311,6 +313,43 @@ export function setRule(taskId: TaskId, pattern: RecurrencePattern): Change {
       ...(applied.sprint === undefined ? {} : { sprints: [applied.sprint] }),
       occurrences: applied.generated,
       deleted: { occurrences: applied.discarded },
+    }));
+  };
+}
+
+/**
+ * 繰り返しをやめる (F40): the rule ends before the next Sprint not confirmed
+ * yet, or, with no occurrence made yet, is taken off the Task.
+ */
+export function endRule(taskId: TaskId): Change {
+  return (records, ctx) => {
+    const task = find(records.tasks, taskId, 'Task');
+    if (!task.ok) return task;
+    const ruleId = task.value.recurrenceRuleId;
+    if (ruleId === undefined) {
+      return err('invalidInput', 'The Task is not recurring.');
+    }
+    const rule = find(records.rules, ruleId, 'RecurrenceRule');
+    if (!rule.ok) return rule;
+    const result = endRuleForNextSprint(
+      {
+        user: records.user,
+        today: ctx.today,
+        sprints: records.sprints,
+        occurrences: records.occurrences.filter((o) => o.ruleId === ruleId),
+        task: task.value,
+        rule: rule.value,
+      },
+      ctx,
+    );
+    return changed(result, (applied) => ({
+      tasks: [applied.task],
+      ...(applied.rule === undefined ? {} : { rules: [applied.rule] }),
+      ...(applied.sprint === undefined ? {} : { sprints: [applied.sprint] }),
+      deleted: {
+        occurrences: applied.discarded,
+        ...(applied.rule === undefined ? { rules: [ruleId] } : {}),
+      },
     }));
   };
 }
