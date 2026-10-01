@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readTable } from './content.mjs';
+import { escapeRegExp, readTable } from './content.mjs';
 import { extractCopy } from './extract.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -38,7 +38,7 @@ const HIRAGANA_ONLY = /^[぀-ゟ]+$/;
 // they are short hiragana (はい in 入っていない). They match only as a whole
 // word, between non-hiragana characters.
 function wordPattern(word) {
-  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escaped = escapeRegExp(word);
   if (/^[A-Za-z]+$/.test(word))
     return new RegExp(`(?<![A-Za-z])${escaped}(?![A-Za-z])`, 'g');
   if (HIRAGANA_ONLY.test(word) && word.length <= 3)
@@ -57,7 +57,7 @@ function exceptionPatterns(exception) {
       new RegExp(
         phrase
           .split(/\{[^}]*\}/)
-          .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+          .map(escapeRegExp)
           .join('\\{[^}]*\\}'),
         'g',
       ),
@@ -86,11 +86,12 @@ export function readRules(content) {
     ([term]) => term,
   );
   const length = content
-    .split(/^## 3\. 型$/m)[1]
-    ?.match(/1 文は ([0-9]+) 字まで/)?.[1];
+    .split(/^### 文の長さ$/m)[1]
+    ?.split(/^#{1,3} /m)[0]
+    .match(/1 文は ([0-9]+) 字まで/)?.[1];
   if (length === undefined)
     throw new Error(
-      `No "1 文は N 字まで" under "## 3. 型" in ${CONTENT}. ${FIX_HINT}`,
+      `No "1 文は N 字まで" under "### 文の長さ" in ${CONTENT}. ${FIX_HINT}`,
     );
   return { banned, quoted, terms, longSentence: Number(length) };
 }
@@ -136,7 +137,7 @@ function checkQuoted(text, { quoted }) {
   const masked = maskValues(text);
   const found = [];
   for (const word of quoted) {
-    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escaped = escapeRegExp(word);
     const pattern = new RegExp(
       `(?<![「])(?:(?<=の)${escaped}|${escaped}(?=${NOUN_AFTER}))(?![」])`,
       'g',
@@ -179,7 +180,7 @@ const PATTERNS = [
   },
   {
     rule: 'middle-dot',
-    pattern: /[0-9}]h?・|・(?:計画|実績|完了|スキップ|未完了) ?[0-9}]/g,
+    pattern: /[0-9}]h?・/g,
     use: '「 · 」',
   },
 ];
@@ -215,9 +216,14 @@ function checkSentences(text, { longSentence }) {
     if (length > longSentence)
       found.push({ rule: 'long-sentence', word: `${length} 字` });
   }
-  const masu = text.match(/ます。/g)?.length ?? 0;
-  if (masu >= MASU_IN_A_ROW)
-    found.push({ rule: 'many-masu', word: `${masu} つ` });
+  let run = 0;
+  let longest = 0;
+  for (const sentence of text.split(/(?<=。)/)) {
+    run = /ます。$/.test(sentence.trim()) ? run + 1 : 0;
+    longest = Math.max(longest, run);
+  }
+  if (longest >= MASU_IN_A_ROW)
+    found.push({ rule: 'many-masu', word: `${longest} つ` });
   return found;
 }
 
@@ -268,14 +274,9 @@ export function ignoresAt(lines, line) {
   return ignores;
 }
 
-// CSS selectors that name an element by its Japanese label
-// (`nav[aria-label="次の段階"]`) are code, not copy.
-const SELECTOR = /\[[\w-]+=["']/;
-
 export function lintItems(items, rules, readLines) {
   const warnings = [];
   for (const item of items) {
-    if (SELECTOR.test(item.text)) continue;
     const lines = readLines(item.file);
     const ignores = ignoresAt(lines, item.line);
     const off = new Set(

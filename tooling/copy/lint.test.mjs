@@ -23,10 +23,9 @@ const rulesOf = (text) => lintText(text, rules).map(({ rule }) => rule);
 describe('readRules', () => {
   it('reads the tables of content.md', () => {
     expect(rules.banned.length).toBeGreaterThan(50);
-    expect(rules.banned[0]).toMatchObject({
-      word: '紐づく',
-      use: '目標に入っている',
-    });
+    expect(rules.banned).toContainEqual(
+      expect.objectContaining({ word: '紐づく', use: '目標に入っている' }),
+    );
     expect(rules.quoted).toContain('今日やる');
     expect(rules.terms).toContain('Sprint');
     expect(rules.longSentence).toBeGreaterThan(0);
@@ -126,6 +125,7 @@ describe('notation', () => {
 
   it('middle-dot: numbers listed with ・ instead of ·', () => {
     expect(rulesOf('（計画 5h・実績 4.5h）')).toEqual(['middle-dot']);
+    expect(rulesOf('完了 3・スキップ 1')).toEqual(['middle-dot']);
     expect(rulesOf('（計画 {plan}・実績 {actual}）')).toEqual(['middle-dot']);
     expect(rulesOf('計画 5h · 実績 4.5h')).toEqual([]);
     expect(rulesOf('毎週 月・水')).toEqual([]);
@@ -148,11 +148,15 @@ describe('guidelines', () => {
     expect(rulesOf(`{${'x'.repeat(60)}}を開きました。`)).toEqual([]);
   });
 
-  it('many-masu: three or more sentences ending in ます。', () => {
+  it('many-masu: three or more sentences in a row ending in ます。', () => {
     expect(
       rulesOf('時間で入力します。確定した後も変えられます。値は残ります。'),
     ).toEqual(['many-masu']);
     expect(rulesOf('時間で入力します。確定した後も変えられます。')).toEqual([]);
+    // Three in total, but not in a row.
+    expect(
+      rulesOf('入力します。変えられます。値は残る。あとから足せます。'),
+    ).toEqual([]);
   });
 
   it('reassurance: sentences that reassure instead of showing', () => {
@@ -238,11 +242,6 @@ describe('lintItems', () => {
     expect(ignoresAt(lines, 3)).toEqual([
       { line: 2, rules: ['banned-word'], reason: undefined },
     ]);
-  });
-
-  it('leaves CSS selectors with a Japanese label alone', () => {
-    const selector = `nav[aria-label="次の段階"] ${'a'.repeat(50)}`;
-    expect(lintItems([item(selector)], rules, () => [])).toEqual([]);
   });
 });
 
