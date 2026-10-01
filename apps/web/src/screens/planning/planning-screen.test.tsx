@@ -68,6 +68,18 @@ const planPane = () =>
   document.querySelector<HTMLElement>('[data-slot="plan-pane"]')!;
 const summary = () =>
   document.querySelector<HTMLElement>('[data-slot="check-summary"]')!;
+/** 今週から外す, from the row menu in the plan pane. */
+async function leaveWeek(area: string, title: string) {
+  const block = within(planPane()).getByRole('region', {
+    name: new RegExp(area),
+  });
+  await userEvent.click(
+    within(block).getByRole('button', { name: `操作: ${title}` }),
+  );
+  await userEvent.click(
+    await screen.findByRole('menuitem', { name: /^今週から外す/ }),
+  );
+}
 
 describe('Planning — 優先度 (#97)', () => {
   it('tells 高 in the candidates and in the plan, and not 通常', async () => {
@@ -94,6 +106,39 @@ describe('Planning — the stuck Capacity line (#152)', () => {
     await router.navigate({ to: '/backlog' });
     await screen.findByRole('heading', { name: 'Backlog' });
     expect(top()).toBe('');
+  });
+});
+
+describe('Planning — Backlog のタイトル (#158)', () => {
+  const titleBox = (title: string) => {
+    const button = within(backlogPane())
+      .getByText(title)
+      .closest('button') as HTMLElement;
+    return { button, text: button.firstElementChild as HTMLElement };
+  };
+
+  it('wraps a title to two lines in 選ぶ, with the Estimate under it', async () => {
+    await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    const { button, text } = titleBox('顧客インタビューの設計');
+    expect(text.className).toContain('line-clamp-2');
+    // Not the one-line truncation a Task Row has from 768px.
+    expect(text.className).not.toContain('truncate');
+    // The suggestion is in the column of the title, not a column of its own.
+    const estimate = button
+      .closest('li')!
+      .querySelector('[data-slot="estimate"]');
+    expect(estimate).not.toBeNull();
+    expect(button.parentElement!.contains(estimate)).toBe(true);
+  });
+
+  it('keeps the whole title in the slim 整える and 確かめる', async () => {
+    for (const stage of ['shape', 'check']) {
+      await renderAt(`/sprint?fixture=planning-${stage}&stage=${stage}`);
+      const { text } = titleBox('TypeScript 6 の変更点を読む');
+      expect(text.className).not.toContain('line-clamp');
+      expect(text.className).not.toContain('truncate');
+      cleanup();
+    }
   });
 });
 
@@ -327,6 +372,49 @@ describe('Planning — 整える', () => {
     expect(draft().goals.some((g) => g.areaId === 'area-study')).toBe(false);
   });
 
+  it('shows an Area with neither a Goal nor a Task as one line, and a Goal can still be written (#161)', async () => {
+    await renderAt('/sprint?fixture=planning-shape&stage=shape');
+    await leaveWeek('学習', '英語の多読 30 分');
+    const study = within(planPane()).getByRole('region', { name: /学習/ });
+    // The name and the way in, without the note on every empty Area.
+    expect(
+      within(study).getByRole('button', { name: '目標を書く: 学習' }),
+    ).toBeTruthy();
+    expect(study.textContent).not.toContain('目標は任意です');
+    // An Area with Tasks and no Goal keeps its note.
+    expect(planPane().textContent).toContain(
+      'この領域の目標は任意です。タスクだけでも計画できます。',
+    );
+
+    // Cancelling goes back to the line, with the focus on the way in.
+    await userEvent.click(
+      within(study).getByRole('button', { name: '目標を書く: 学習' }),
+    );
+    await userEvent.click(
+      within(study).getByRole('button', { name: 'キャンセル' }),
+    );
+    expect(document.activeElement).toBe(
+      within(study).getByRole('button', { name: '目標を書く: 学習' }),
+    );
+
+    await userEvent.click(
+      within(study).getByRole('button', { name: '目標を書く: 学習' }),
+    );
+    await userEvent.type(
+      within(study).getByRole('textbox', { name: /目標（今週の終わりに/ }),
+      '英語に触れる状態にする',
+    );
+    await userEvent.click(within(study).getByRole('button', { name: '保存' }));
+    expect(draft().goals.find((g) => g.areaId === 'area-study')?.text).toBe(
+      '英語に触れる状態にする',
+    );
+    expect(within(study).getByText('英語に触れる状態にする')).toBeTruthy();
+    // Saving puts the focus on 編集, where the Goal is.
+    expect(document.activeElement).toBe(
+      within(study).getByRole('button', { name: '目標を編集: 学習' }),
+    );
+  });
+
   it('links a Task to the Goal or not; both count in the total (invariant 15)', async () => {
     await renderAt('/sprint?fixture=planning-shape&stage=shape');
     const research = within(planPane()).getByRole('region', { name: /研究/ });
@@ -350,7 +438,7 @@ describe('Planning — 計画基準の見せ方 (#105)', () => {
   const outlook = () =>
     screen.getByRole('complementary', { name: '時間の見通し' });
 
-  it.each(['pick', 'shape', 'check'])(
+  it.each(['pick', 'shape'])(
     'shows only the criterion’s name on one line in %s',
     async (stage) => {
       await renderAt(`/sprint?fixture=planning-check&stage=${stage}`);
@@ -371,6 +459,8 @@ describe('Planning — 計画基準の見せ方 (#105)', () => {
 
   it('shows the frame, the Switch and the effect in the check summary', async () => {
     await renderAt('/sprint?fixture=planning-check&stage=check');
+    // The right pane does not say it again (#165).
+    expect(outlook().querySelector('[data-slot="criterion-line"]')).toBeNull();
     const frame = within(summary()).getByRole('region', { name: '計画基準' });
     expect(
       within(frame).getByText(
@@ -395,6 +485,66 @@ describe('Planning — 計画基準の見せ方 (#105)', () => {
     },
   );
 
+  it.each(['pick', 'shape'])(
+    'shows no criterion in %s once no chosen Task is one it acts on (#161)',
+    async (stage) => {
+      await renderAt(`/sprint?fixture=planning-check&stage=${stage}`);
+      expect(
+        outlook().querySelector('[data-slot="criterion-line"]'),
+      ).not.toBeNull();
+      await leaveWeek('研究', '関連論文を 3 本読む');
+      expect(
+        outlook().querySelector('[data-slot="criterion-line"]'),
+      ).toBeNull();
+      expect(outlook().textContent).not.toMatch(/提案の幅の/);
+      // The Area stays with its other Task; only the criterion is gone.
+      expect(planPane().textContent).toContain('実験データの前処理');
+    },
+  );
+
+  it('shows no frame, Switch or effect in the check summary, nor in the 確定 Dialog, without a Task it acts on (#161)', async () => {
+    await renderAt('/sprint?fixture=planning-check&stage=check');
+    expect(within(summary()).getByRole('switch')).toBeTruthy();
+    await leaveWeek('研究', '関連論文を 3 本読む');
+    expect(
+      within(summary()).queryByRole('region', { name: '計画基準' }),
+    ).toBeNull();
+    expect(within(summary()).queryByRole('switch')).toBeNull();
+    expect(summary().textContent).not.toMatch(
+      /計画基準|この基準の対象はありません/,
+    );
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Sprint 2 を確定' }),
+    );
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Sprint 2 を確定しますか？',
+    });
+    expect(dialog.textContent).not.toMatch(/計画基準/);
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: 'Sprint 2 を確定' }),
+    );
+    // How it is applied is not changed by what the screens show (CriterionUse).
+    await waitFor(() =>
+      expect(
+        lastSnapshot().records.sprints.find((x) => x.state === 'active')
+          ?.criterionUse,
+      ).toMatchObject({ appliedAtConfirm: true }),
+    );
+  });
+
+  it('shows the criterion again when a Task it acts on comes back (#161)', async () => {
+    await renderAt('/sprint?fixture=planning-check&stage=check');
+    await leaveWeek('研究', '関連論文を 3 本読む');
+    expect(within(summary()).queryByRole('switch')).toBeNull();
+    await userEvent.click(
+      await screen.findByRole('button', { name: '元に戻す' }),
+    );
+    expect(
+      within(summary()).getByRole('region', { name: '計画基準' }),
+    ).toBeTruthy();
+  });
+
   it('explains 計画値 next to the Capacity', async () => {
     await renderAt('/sprint?fixture=planning-pick&stage=pick');
     expect(
@@ -410,16 +560,15 @@ describe('Planning — 確かめる', () => {
   // three states (owner decision S5 in #93): a range while it fits or even
   // the lower end is over, two sentences while the difference crosses 0.
   it('compares the total with the available hours in the three states', async () => {
-    await renderAt('/sprint?fixture=planning-check&stage=check');
+    await renderAt('/sprint?fixture=planning-check&stage=pick');
     const outlook = screen.getByRole('complementary', { name: '時間の見通し' });
     const headline = () =>
       within(outlook).getByRole('status').querySelector('p')!;
-    // 確かめる has one field for the hours, in its summary.
-    expect(within(outlook).queryByRole('textbox')).toBeNull();
     const line = () =>
       screen.getByRole('button', { name: /時間の見通しを開く/ });
-    const hours = within(summary()).getByRole('textbox', {
-      name: /使える時間/,
+    // Right under the total, without 「（時間）」 after the name (#165).
+    const hours = within(outlook).getByRole('textbox', {
+      name: /^使える時間/,
     });
     const setHours = async (value: string) => {
       await userEvent.clear(hours);
@@ -457,7 +606,47 @@ describe('Planning — 確かめる', () => {
     expect(within(outlook).getByText('1.25 〜 3.25h').className).toContain(
       'text-danger',
     );
+    // The state says the words only: each number once (#165).
+    expect(
+      within(within(outlook).getByRole('status')).getByText('下限でも超える'),
+    ).toBeTruthy();
+    expect(outlook.textContent?.match(/3\.25h/g)).toHaveLength(1);
     expect(line().textContent).toMatch(/^超過 1.25 〜 3.25h · 下限でも超える/);
+  });
+
+  it('says the numbers in the summary only, in 確かめる (#165)', async () => {
+    await renderAt('/sprint?fixture=planning-check&stage=check');
+    const outlook = screen.getByRole('complementary', { name: '時間の見通し' });
+    // The improvement, the bar and the Areas: no numbers of the difference,
+    // no state, no field.
+    expect(within(outlook).queryByRole('status')).toBeNull();
+    expect(within(outlook).queryByRole('textbox')).toBeNull();
+    expect(outlook.textContent).not.toMatch(/計画値の合計|1\.75h|0\.25h/);
+    expect(
+      within(outlook).getByRole('region', { name: '前回決めた改善策' }),
+    ).toBeTruthy();
+    expect(
+      within(outlook).getByRole('list', { name: '領域ごとの計画値' }),
+    ).toBeTruthy();
+    // Under 1200px the line only opens the Drawer (#139).
+    expect(
+      screen.getByRole('button', { name: /時間の見通しを開く/ }).textContent,
+    ).toBe('時間の見通しを開く');
+
+    const hours = within(summary()).getByRole('textbox', {
+      name: /^使える時間/,
+    });
+    await userEvent.clear(hours);
+    await userEvent.type(hours, '14{Enter}');
+    const state = summary().querySelector('[data-slot="capacity-statement"]')!;
+    expect(state.textContent).toBe('下限でも超える：超過 1.25 〜 3.25h');
+    // Read out from the summary, the one live region in 確かめる.
+    expect(within(summary()).getByRole('status').textContent).toBe(
+      '下限でも超える：超過 1.25 〜 3.25h',
+    );
+    expect(state.className).toContain('text-danger');
+    // 「計画値が下限どおりでも、超過 1.25h です。」 would say it again.
+    expect(summary().textContent?.match(/1\.25/g)).toHaveLength(1);
   });
 
   it('opens with the summary the 確定 Dialog shows, from the same values (#93)', async () => {
@@ -774,6 +963,22 @@ describe('Planning — review fixes', () => {
         '完了・アーカイブした Task を今週から外すと確定できます。',
       ),
     ).toBeNull();
+  });
+
+  it('shows what an Estimate typed in the detail does to the plan, before closing (#165)', async () => {
+    await renderAt(
+      '/sprint?fixture=planning-check&stage=pick&task=task-onboarding',
+    );
+    const detail = await screen.findByRole('dialog');
+    const line = detail.querySelector('[data-slot="detail-capacity"]')!;
+    expect(line.getAttribute('role')).toBe('status');
+    // 15.25–17.25h against 17h; the onboarding Task plans 3–5h.
+    expect(line.textContent).toBe(
+      '時間の見通し下限なら 1.75h 残る · 上限なら 0.25h 超える',
+    );
+    const estimate = within(detail).getByRole('textbox', { name: /見積もり/ });
+    await userEvent.type(estimate, '1{Enter}');
+    expect(line.textContent).toBe('時間の見通し残り 3.75h · 収まる');
   });
 
   it('confirming copies what may change later (invariants 16, 18; MVP 16)', async () => {

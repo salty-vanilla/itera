@@ -22,6 +22,9 @@ export const Set: Story = { args: { goal: '先行研究を押さえる' } };
 /** empty：「+ Goal を書く」と、Goal は任意であること。警告色にしない。 */
 export const Empty: Story = {};
 
+/** Goal も Task もない Area：名前と「+ 目標を書く」を 1 行に。案内は添えない（Issue #161）。 */
+export const Bare: Story = { args: { bare: true, summary: undefined } };
+
 /** 確定後に文を変えた：今の文と、計画時の文を並べる（不変条件 18、F16）。 */
 export const ChangedAfterConfirm: Story = {
   args: {

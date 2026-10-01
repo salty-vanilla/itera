@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   capacityHeadline,
   capacityHeadlineSentences,
+  capacityRelationSentences,
   capacityStatement,
   capacityStatusLine,
 } from './capacity-indicator';
@@ -41,8 +42,43 @@ describe('capacityHeadline (owner decision S5 in #93)', () => {
     expect(capacityStatusLine(capacity).text).toBe(
       '超える可能性：下限なら 2.25h 残る · 上限なら 0.75h 超える',
     );
-    // Otherwise the line is the statement itself.
+    // While it fits, the line is the statement itself.
+    const fits = capacityOf({ lo: 15, hi: 17 }, 18);
+    expect(capacityStatusLine(fits)).toEqual(capacityStatement(fits));
+  });
+
+  it('says the words only in the state when even the lower end is over (#165)', () => {
     const over = capacityOf({ lo: 17, hi: 19 }, 14);
-    expect(capacityStatusLine(over)).toEqual(capacityStatement(over));
+    expect(capacityStatement(over)).toEqual({
+      tone: 'over',
+      text: '下限でも超える',
+    });
+    // Where no headline is shown, the numbers follow, once.
+    expect(capacityStatusLine(over).text).toBe('下限でも超える：超過 3 〜 5h');
+  });
+
+  it('says that the estimated part fits when some is left out (#165)', () => {
+    const fits = capacityOf({ lo: 15, hi: 17 }, 18);
+    const total = { lo: 15, hi: 17, unestimated: 2, unestimatedSubtasks: 0 };
+    expect(capacityStatement(fits, total).text).toBe(
+      '見積もりのある分は、使える時間の範囲に収まっています。',
+    );
+    expect(capacityStatement(fits, { ...total, unestimated: 0 }).text).toBe(
+      '使える時間の範囲に収まっています。',
+    );
+  });
+});
+
+describe('capacityRelationSentences (Retro, #167)', () => {
+  const relation = (lo: number, hi: number, available: number) =>
+    capacityRelationSentences(capacityOf({ lo, hi }, available)).join(' · ');
+
+  it('says how the plan stood, with the end that decides it', () => {
+    expect(relation(17.25, 20.25, 17)).toBe('下限でも 0.25h 超える');
+    expect(relation(15.25, 17.25, 17)).toBe(
+      '下限なら 1.75h 残る · 上限なら 0.25h 超える',
+    );
+    expect(relation(15, 16, 17)).toBe('上限でも 1h 残る');
+    expect(relation(15, 17, 17)).toBe('上限でちょうど収まる');
   });
 });

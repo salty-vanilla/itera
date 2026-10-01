@@ -5,6 +5,7 @@ import {
   useRouter,
   useSearch,
 } from '@tanstack/react-router';
+import { ChevronRight } from 'lucide-react';
 import { Fragment, useEffect, useId, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -53,9 +54,12 @@ import { PlanPane, type Stage } from './plan-pane';
 // Layout (DESIGN.md Layout › Responsive):
 // - wide (1200px and up): Backlog / Sprint (at most 680px; from 1920px it
 //   takes the width that is left) / 時間の見通し (336px). The Backlog is
-//   384px in 選ぶ and 240px, titles only, later.
+//   384px in 選ぶ and 240px, titles only, later; from 1920px, 480px and
+//   320px (#158). 時間の見通し stays in view while the Backlog scrolls
+//   (#165).
 // - medium: Backlog / Sprint. The Capacity is one sticky line above the
-//   Sprint that opens a right Drawer.
+//   Sprint that opens a right Drawer. In 確かめる the summary has the
+//   numbers, so the line only opens the Drawer (#165).
 // - compact: one column. The Backlog shows in 選ぶ only; the Capacity is
 //   the same one line (a Bottom Sheet). 確かめる opens with its summary (#93).
 
@@ -173,6 +177,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
   const outlook = (
     <OutlookPane
       data={data}
+      check={stage === 'check'}
       // 確かめる takes the hours in its summary only: one field (#93).
       onAvailableHours={
         stage === 'check' ? undefined : actions.setAvailableHours
@@ -363,9 +368,15 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
           }
           className="flex min-h-target-touch w-full items-center justify-between gap-3 rounded-sm text-left text-body text-ink focus-visible:focus-ring medium:min-h-target-min"
         >
-          <CapacitySummary data={data} />
-          <span className="shrink-0 text-meta text-ink-muted">
+          {/* 確かめる says the numbers once, in its summary (#165). */}
+          {stage !== 'check' && <CapacitySummary data={data} />}
+          {/* At the right end in every stage, with a mark that it opens. */}
+          <span className="ms-auto flex shrink-0 items-center gap-1 text-meta text-ink-muted">
             時間の見通しを開く
+            <ChevronRight
+              aria-hidden
+              className="size-icon-s [stroke-width:var(--icon-stroke-s)]"
+            />
           </span>
         </button>
       </div>
@@ -377,8 +388,8 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
             ? 'medium:grid-cols-[var(--spacing-pane-list)_minmax(0,1fr)]'
             : 'medium:grid-cols-[var(--spacing-pane-list-slim)_minmax(0,1fr)]',
           stage === 'pick'
-            ? 'wide:grid-cols-[var(--spacing-pane-list)_minmax(0,1fr)_var(--spacing-pane-side)]'
-            : 'wide:grid-cols-[var(--spacing-pane-list-slim)_minmax(0,1fr)_var(--spacing-pane-side)]',
+            ? 'wide:grid-cols-[var(--spacing-pane-list)_minmax(0,1fr)_var(--spacing-pane-side)] xl:grid-cols-[var(--spacing-pane-list-xl)_minmax(0,1fr)_var(--spacing-pane-side)]'
+            : 'wide:grid-cols-[var(--spacing-pane-list-slim)_minmax(0,1fr)_var(--spacing-pane-side)] xl:grid-cols-[var(--spacing-pane-list-slim-xl)_minmax(0,1fr)_var(--spacing-pane-side)]',
         )}
       >
         <BacklogPane
@@ -417,9 +428,13 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
         </div>
         <aside
           aria-label="時間の見通し"
-          className="hidden border-l border-border px-6 py-8 wide:block"
+          className="hidden border-l border-border wide:block"
         >
-          {outlook}
+          {/* In view while the Backlog scrolls; scrolls on its own when it
+              is taller than the screen (#165). */}
+          <div className="sticky top-0 max-h-dvh overflow-y-auto px-6 py-8">
+            {outlook}
+          </div>
         </aside>
       </div>
 
@@ -453,6 +468,20 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
               }}
               focusEstimate={estimateFocus.of(openItem.task.id)}
               leaveRef={detail.ref}
+              footer={
+                // The right pane is under the Drawer: what an Estimate
+                // typed here does to the plan, before closing (#165).
+                <p
+                  role="status"
+                  data-slot="detail-capacity"
+                  className="me-auto min-w-0 text-body text-ink"
+                >
+                  <span className="me-2 text-label text-ink-muted">
+                    時間の見通し
+                  </span>
+                  <CapacitySummary data={data} />
+                </p>
+              }
             />
           )}
         </DrawerContent>

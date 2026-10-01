@@ -179,6 +179,8 @@ function RunningSprint({
                     : (block.goal.plannedText ?? null)
                 }
                 removable={false}
+                // An Area with neither a Goal nor a Task is one line (#161).
+                bare={block.tasks.length === 0 && block.goal === undefined}
                 week={week}
                 onSave={
                   block.area.id === null || !running
@@ -393,12 +395,30 @@ function Outlook({
           <AvailableHoursField
             value={current}
             onChange={onHours}
-            label="今の使える時間（時間）"
-            description="確定した後も変えられます。計画時の値は残ります。"
+            label="今の使える時間"
+            description="時間（h）で入力します。確定した後も変えられます。計画時の値は残ります。"
           />
         )}
       </section>
-      {data.criterion !== undefined && (
+      {data.criterion?.noEffect === true && (
+        // Applied, and no planned value came from it: a line, not a frame
+        // (#161).
+        <p
+          data-slot="criterion-line"
+          className="flex items-start gap-2 text-help text-ink-muted"
+        >
+          <Info
+            aria-hidden
+            className="mt-0.5 size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
+          />
+          <span className="[word-break:auto-phrase]">
+            計画基準「
+            {criterionName(data.criterion.policy, data.criterion.areaName)}」
+            <span className="whitespace-nowrap"> · 対象なし</span>
+          </span>
+        </p>
+      )}
+      {data.criterion?.noEffect === false && (
         <section
           aria-labelledby={`${ids}-criterion`}
           className="flex flex-col gap-2 rounded-sm bg-canvas-subtle p-4"

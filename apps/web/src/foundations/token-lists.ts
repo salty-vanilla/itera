@@ -170,6 +170,8 @@ export const dimensions = [
   'pane-rail',
   'pane-list',
   'pane-list-slim',
+  'pane-list-xl',
+  'pane-list-slim-xl',
   'pane-sprint',
   'pane-today',
   'pane-rows',

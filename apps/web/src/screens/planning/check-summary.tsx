@@ -9,7 +9,7 @@ import {
   CapacityStatement,
 } from '@/components/sprint/capacity-indicator';
 import { BOUND_WORDS, criterionName } from '@/lib/criterion-text';
-import { formatDifference, formatHours, formatRange } from '@/lib/time-format';
+import { formatHours, formatRange } from '@/lib/time-format';
 import { weekCall, weekText } from '@/lib/week-text';
 import type { PlanningData } from '@/store/planning-view';
 import { planSummary } from './plan-summary';
@@ -21,7 +21,8 @@ import { planSummary } from './plan-summary';
 // what may push the total over, the Tasks left out of the total (each opens
 // its Estimate, or its detail for subtasks), the Areas without a Goal
 // (written in 整える), and the planning criterion with its Switch and effect
-// (#105). The Area blocks under it are for reading.
+// (#105), when a chosen Task is one it acts on (#161). The Area blocks under
+// it are for reading.
 
 type CheckSummaryProps = {
   data: PlanningData;
@@ -53,11 +54,15 @@ function CheckSummary({
         <h2 id={`${ids}-heading`} className="text-label text-ink-muted">
           要約
         </h2>
-        <CapacityStatement
-          statement={summary.statement}
-          strong
-          className="text-subheading"
-        />
+        {/* The one place in 確かめる that reads out the state when it
+            changes: the right pane shows no numbers here (#165). */}
+        <div role="status">
+          <CapacityStatement
+            statement={summary.statement}
+            strong
+            className="text-subheading"
+          />
+        </div>
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-1 text-body">
           <dt className="text-ink-muted">計画値の合計</dt>
           <dd className="text-num-m text-ink">{summary.total}</dd>
@@ -70,14 +75,19 @@ function CheckSummary({
         </dl>
         {/* Under the numbers, as in the Capacity: the first screen tells it. */}
         {summary.leftOut !== undefined && (
-          <p className="text-help text-ink-muted">{summary.leftOut}</p>
+          <p className="text-body text-ink [text-wrap:pretty] [word-break:auto-phrase]">
+            {summary.leftOut}
+          </p>
         )}
         {/* The one field for the hours in 確かめる; the right pane has none. */}
         <div className="max-w-pane-side">
           <AvailableHoursField
             value={data.totals.capacity?.availableHours}
             onChange={onAvailableHours}
-            description={weekText(week, '、計画に使える時間。本人が決めます')}
+            description={weekText(
+              week,
+              '、計画に使える時間（h）。本人が決めます',
+            )}
           />
         </div>
       </div>
@@ -134,7 +144,7 @@ function CheckSummary({
         </p>
       )}
 
-      {data.criterion !== undefined && (
+      {data.criterion?.hasTarget === true && (
         <section
           aria-labelledby={`${ids}-criterion`}
           className="flex flex-col gap-3 rounded-sm bg-canvas-subtle p-4"
@@ -163,7 +173,7 @@ function CheckSummary({
             checked={data.criterion.applied}
             onCheckedChange={(checked) => onApplyCriterion(checked)}
           />
-          <CriterionEffect data={data} />
+          <CriterionEffect criterion={data.criterion} />
         </section>
       )}
     </section>
@@ -174,23 +184,15 @@ function CheckSummary({
  * The criterion's effect, from the same policy as its name (invariant 39):
  * 「研究の幅のあるタスク 1件を上限で計画しています（合計の下限 +2h）」.
  */
-function CriterionEffect({ data }: { data: PlanningData }) {
-  const { criterion } = data;
-  if (criterion === undefined) return null;
+function CriterionEffect({
+  criterion,
+}: {
+  criterion: NonNullable<PlanningData['criterion']>;
+}) {
   const { count, delta } = criterion.effect;
   const bound = BOUND_WORDS[criterion.active.policy.rangePolicy];
   const scope =
     criterion.areaName === undefined ? '' : `${criterion.areaName}の`;
-  if (count === 0) {
-    return (
-      <p className="text-body text-ink-muted">
-        {weekText(
-          weekCall(data.week, data.number),
-          '選んだタスクに、この基準の対象はありません。',
-        )}
-      </p>
-    );
-  }
   // How the total moves: the lower end rises, the upper end falls, or both.
   const moves = [
     delta.lo !== 0 &&
@@ -209,10 +211,9 @@ function CriterionEffect({ data }: { data: PlanningData }) {
 
 /** 「何が上振れすると超過するか」 (PRD §5 B Check, MVP 完了条件 5). */
 function Drivers({ data }: { data: PlanningData }) {
-  const { drivers, totals } = data;
+  const { drivers } = data;
   const headingId = useId();
   if (drivers.length === 0) return null;
-  const capacity = totals.capacity;
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-2">
       <h3 id={headingId} className="text-subheading text-ink">
@@ -227,13 +228,8 @@ function Drivers({ data }: { data: PlanningData }) {
           </li>
         ))}
       </ul>
-      {/* While the difference crosses 0, the state line above already says
-          what is left at the lower end (#93). */}
-      {capacity?.status === 'exceeds' && (
-        <p className="text-help text-ink-muted">
-          {`計画値が下限どおりでも、超過 ${formatDifference(-capacity.remaining.hi, -capacity.remaining.hi)} です。`}
-        </p>
-      )}
+      {/* What is left or over at the lower end is in the state line above
+          (#93, #165). */}
     </section>
   );
 }

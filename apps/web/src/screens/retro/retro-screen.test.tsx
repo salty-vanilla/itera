@@ -1,4 +1,4 @@
-import type { Retro } from '@itera/domain';
+import type { Retro, SprintTask } from '@itera/domain';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import {
   cleanup,
@@ -318,10 +318,12 @@ describe('Retro — 引き継ぐ and 完了', () => {
 
   it('puts 振り返りを完了 at the end of 引き継ぐ only, and the one Primary of every stage', async () => {
     const router = await renderAt('/retro?fixture=retro-before-complete');
+    // A toggle that is on shares the ink fill (DESIGN.md Selected; 振り返りに
+    // 使う, #167) but is not a Primary Button.
     const primaries = () =>
-      [...document.querySelectorAll('button.bg-primary')].map(
-        (b) => b.textContent,
-      );
+      [
+        ...document.querySelectorAll('button.bg-primary:not([aria-pressed])'),
+      ].map((b) => b.textContent);
     for (const stage of ['facts', 'reflect'] as const) {
       await router.navigate({ to: '/retro', search: { stage } });
       expect(
@@ -1035,6 +1037,8 @@ describe('Retro — 事実を見るを読みやすくする (#108)', () => {
       '持ち越し',
       '計画 5h（基準）',
       '実績 4.5h',
+      // 計画時との差, in the same words as the row (#167).
+      '計画より 30m 少ない',
     ]);
     expect(carryIcon(values[0]!)).toBeTruthy();
     expect(carryIcon(values[1]!)).toBeNull();
@@ -1057,6 +1061,181 @@ describe('Retro — 事実を見るを読みやすくする (#108)', () => {
     ).toBeTruthy();
     expect(within(surface).getByRole('button', { name: '足す' })).toBeTruthy();
     expect(document.body.textContent).not.toMatch(/実績を残す/);
+  });
+});
+
+describe('Retro — the plan against what happened (#167)', () => {
+  const rowOf = (title: string) =>
+    screen.getByRole('rowheader', { name: new RegExp(title) }).parentElement!;
+  const pane = () =>
+    document.querySelector<HTMLElement>('[data-slot="facts-pane"]')!;
+
+  const lineOf = (lead: string) =>
+    screen
+      .getAllByRole('listitem')
+      .find((li) => li.textContent?.startsWith(lead));
+  const reviewing =
+    (edit: (tasks: readonly SprintTask[]) => readonly SprintTask[]) =>
+    (snapshot: StoreSnapshot): StoreSnapshot => ({
+      ...snapshot,
+      records: {
+        ...snapshot.records,
+        sprints: snapshot.records.sprints.map((s) =>
+          s.id === 'sprint-2026-09-28' ? { ...s, tasks: edit(s.tasks) } : s,
+        ),
+      },
+    });
+
+  it('puts both planned totals beside the hours entered when planning, in words only (owner decision)', async () => {
+    await renderAt('/retro?fixture=retro-start');
+    const summary = document.querySelector<HTMLElement>(
+      '[data-slot="sprint-summary"]',
+    )!;
+    const total = within(summary).getByText('計画値の合計').parentElement!;
+    expect(total.textContent).toContain('使える時間 17h');
+    // As confirmed, and with the mid-Sprint addition, against 17h.
+    expect(lineOf('確定時の計画')?.textContent).toBe(
+      '確定時の計画 15.25–17.25h：下限なら 1.75h 残る · 上限なら 0.25h 超える',
+    );
+    expect(lineOf('週の途中の追加を含めて')?.textContent).toBe(
+      '週の途中の追加を含めて 17.25–20.25h：下限でも 0.25h 超える',
+    );
+    // Facts of the week, not an alarm (PRD §12).
+    expect(pane().querySelector('.text-danger')).toBeNull();
+  });
+
+  it('has one line while the plan did not change after confirm', async () => {
+    change = reviewing((tasks) =>
+      tasks.filter((t) => t.origin !== 'midSprint'),
+    );
+    await renderAt('/retro?fixture=retro-start');
+    expect(lineOf('確定時の計画')).toBeTruthy();
+    expect(lineOf('週の途中の追加を含めて')).toBeUndefined();
+  });
+
+  it('has one line when an addition was removed again', async () => {
+    change = reviewing((tasks) =>
+      tasks.map((t) =>
+        t.origin === 'midSprint' ? { ...t, outcome: 'removed' as const } : t,
+      ),
+    );
+    await renderAt('/retro?fixture=retro-start');
+    expect(lineOf('確定時の計画')).toBeTruthy();
+    expect(
+      screen
+        .getAllByRole('listitem')
+        .filter((li) => /を含め|を除いて/.test(li.textContent ?? '')),
+    ).toEqual([]);
+  });
+
+  it('names a removed Task as what the second total leaves out', async () => {
+    change = reviewing((tasks) =>
+      tasks
+        .filter((t) => t.origin !== 'midSprint')
+        .map((t, i) => (i === 0 ? { ...t, outcome: 'removed' as const } : t)),
+    );
+    await renderAt('/retro?fixture=retro-start');
+    expect(lineOf('外したタスクを除いて')).toBeTruthy();
+  });
+
+  it('sums the interrupts and says the actual time leaves them out', async () => {
+    await renderAt('/retro?fixture=retro-start');
+    // 45m and 20m.
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === 'P' &&
+          element.textContent ===
+            '割り込み 2件 · 合計 1.08h（実績には含みません）',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('puts each Task’s difference from its planning value under its actual time', async () => {
+    await renderAt('/retro?fixture=retro-start');
+    // 4.5h against 5h.
+    expect(rowOf('関連論文を 3 本読む').textContent).toContain(
+      '計画より 30m 少ない',
+    );
+    // 4.5h against 3–5h.
+    expect(rowOf('新メンバーのオンボーディング資料').textContent).toContain(
+      '計画の幅の中',
+    );
+    expect(rowOf('API 設計のレビュー').textContent).toContain('計画と同じ');
+  });
+
+  it('has no difference on a row without actual time', async () => {
+    // The actual time of 「API 設計のレビュー」 left out of the records.
+    change = (snapshot) => {
+      const task = snapshot.records.tasks.find(
+        (t) => t.title === 'API 設計のレビュー',
+      )!;
+      return {
+        ...snapshot,
+        records: {
+          ...snapshot.records,
+          sprints: snapshot.records.sprints.map((s) => {
+            const st = s.tasks.find((t) => t.taskId === task.id);
+            return st === undefined
+              ? s
+              : {
+                  ...s,
+                  actualTimes: s.actualTimes.filter(
+                    (a) => a.sprintTaskId !== st.id,
+                  ),
+                };
+          }),
+        },
+      };
+    };
+    await renderAt('/retro?fixture=retro-start');
+    const row = rowOf('API 設計のレビュー');
+    expect(row.textContent).toContain('未入力');
+    expect(row.textContent).not.toMatch(
+      /計画と同じ|計画より|幅の中|より .* (多い|少ない)/,
+    );
+  });
+
+  it('inverts 振り返りに使う when on, and counts what is marked', async () => {
+    await renderAt('/retro?fixture=retro-start');
+    const count = (n: number) =>
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === 'P' &&
+          element.textContent === `振り返りに使う ${n}件`,
+      );
+    expect(count(0)).toBeTruthy();
+    const pin = () =>
+      screen.getAllByRole('button', {
+        name: /振り返りに使う.*障害の問い合わせに対応/,
+      })[0]!;
+    expect(pin().getAttribute('aria-pressed')).toBe('false');
+    expect(pin().className).not.toContain('bg-primary');
+    await userEvent.click(pin());
+    expect(pin().getAttribute('aria-pressed')).toBe('true');
+    // An ink fill with a check in place of the pin (DESIGN.md Selected).
+    expect(pin().className).toContain('bg-primary');
+    expect(pin().querySelector('svg.lucide-check')).toBeTruthy();
+    expect(count(1)).toBeTruthy();
+    await userEvent.click(
+      screen.getAllByRole('button', { name: /振り返りに使う.*関連論文/ })[0]!,
+    );
+    expect(count(2)).toBeTruthy();
+  });
+
+  it('has no count when the Retro is closed, as nothing can be marked', async () => {
+    const router = await renderAt(
+      '/retro?fixture=retro-before-complete&stage=handoff',
+    );
+    await userEvent.click(completeButton());
+    await userEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', {
+        name: '振り返りを完了',
+      }),
+    );
+    await router.navigate({ to: '/retro', search: { stage: 'facts' } });
+    await screen.findByText(/今回の計画基準：/);
+    expect(screen.queryByText(/振り返りに使う \d+件/)).toBeNull();
   });
 });
 

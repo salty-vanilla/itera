@@ -214,6 +214,8 @@ spacing:
   pane-rail: 64px
   pane-list: 384px
   pane-list-slim: 240px
+  pane-list-xl: 480px
+  pane-list-slim-xl: 320px
   pane-sprint: 680px
   pane-today: 720px
   pane-rows: 1280px
@@ -316,7 +318,7 @@ components:
 | 罫 | `border` / `border-soft` | 構造の罫 / リスト内の行区切り | 操作部品の輪郭 |
 | 罫 | `border-strong` | 入力・Checkbox・Radio・Switch・Secondary Button の輪郭 | 装飾の罫 |
 | 確定 | `primary`（墨）/ `on-primary` | Primary Button の塗り、オン状態、完了サークル、Progress、IconButton の pressed | 大きな面 |
-| 現在地 | `here`（黄）/ `here-subtle` / `on-here` | 今日の列・今の段階の印（`here`）、選んだ行・項目の地（`here-subtle`）。必ずチェックか語を伴う（Filter だけは `ink` の 2px の枠と太字。もう 1 つの例外は、Backlog と Planning の選ぶで追加した直後の行の点滅で、2.5 秒でこの地から透明に消える。docs/design/foundations.md） | 注意・警告（→ `warning`）、装飾、フォーカス |
+| 現在地 | `here`（黄）/ `here-subtle` / `on-here` | 今日の列・今の段階・Today で開始した行（作業中）の印（`here`）、選んだ行・項目の地（`here-subtle`）。必ずチェックか語を伴う（Filter だけは `ink` の 2px の枠と太字。もう 1 つの例外は、Backlog と Planning の選ぶで追加した直後の行の点滅で、2.5 秒でこの地から透明に消える。docs/design/foundations.md） | 注意・警告（→ `warning`）、装飾、フォーカス |
 | Focus | `focus`（`ink` の別名） | フォーカスリングだけ。色相を持たず、墨の 2px の輪郭と 2px のアキで示す | それ以外すべて |
 | リンク | `link`（`ink` の別名） | 下線付きの文字リンク | — |
 | Semantic | `danger` `warning` と `*-subtle` | 危険と注意の文字・アイコン・Status Tag・Notice。必ずアイコンか語を伴う。成功と情報は色を持たず、墨の文字＋アイコン（`circle-check` / `info`）＋語で示す | Area の識別、装飾 |
@@ -336,7 +338,7 @@ Primary は色ではなく墨（light は `#16181a` の塗りに白抜き、dark
 
 `here` は駅の案内で現在地を示す黄に当たる。「今どこか」だけに使う。
 
-- 選択 = `here-subtle` の地＋チェック（Filter は幅を変えないため、チェックの代わりに `ink` の 2px の枠と太字）。今日の列・今の段階は `here` の印（太線や塗りの四角）＋語（「今日」「現在」）。
+- 選択 = `here-subtle` の地＋チェック（Filter は幅を変えないため、チェックの代わりに `ink` の 2px の枠と太字）。今日の列・今の段階は `here` の印（太線や塗りの四角）＋語（「今日」「現在」）。Today で開始した行は、今やっているものとして先頭の端に `here` の 4px の縦線＋語（「作業中」）＋タイトル 700（Task Row › In progress、Issue #163）。
 - 注意・警告には使わない（→ `warning` とアイコン）。フォーカスにも使わない（→ `focus` の墨の輪郭）。
 - 黄の上の文字は `on-here`（墨）。
 
@@ -467,6 +469,7 @@ Area（領域）はユーザーが作る。駅の路線記号のように、色�
 | `pane-nav` / `pane-rail` | 224 / 64px | ナビゲーション（1440px 以上 / 768–1439px） |
 | `pane-list` / `pane-side` | 384 / 336px | Planning の Backlog ペイン / 時間の見通しペイン |
 | `pane-list-slim` | 240px | Planning の整える・確かめる段階の Backlog ペイン（タイトルだけ） |
+| `pane-list-xl` / `pane-list-slim-xl` | 480 / 320px | 1920px 以上での `pane-list` / `pane-list-slim`（中央のペインに余りがあるため広げる） |
 | `pane-sprint` | 680px | Planning の Sprint ペインの最大幅 |
 | `pane-today` | 720px | Today の 1 カラムの最大幅 |
 | `pane-rows` | 1280px | 1 行 1 Task の一覧（Backlog、Retro の繰り返しの回）の行の最大幅 |
@@ -482,7 +485,7 @@ Desktop の Planning を中心に設計し、スマートフォンでは Today�
 | --- | --- | --- |
 | 1440px 以上（`bp-nav`） | wide | ナビ 224px ＋ Planning 3 ペイン（Backlog 384 / Sprint / 時間の見通し 336） |
 | 1200–1439px（`bp-wide`） | wide（rail） | ナビを 64px の rail（アイコンと名前）にし、3 ペインを保つ |
-| 1920px 以上（`bp-xl`） | xl | wide のペインの数と役割は変えず、中央のペインを広げる。Planning は Area のブロックを 1〜3 列に並べ、Retro の事実を見るの表は幅いっぱい、Backlog の行は最大 `pane-rows`。Today・実行中の Sprint は変えない（どちらも左のまま） |
+| 1920px 以上（`bp-xl`） | xl | wide のペインの数と役割は変えず、中央のペインを広げる。Planning は Area のブロックを 1〜3 列に並べ、Backlog ペインを `pane-list-xl`（選ぶ）/ `pane-list-slim-xl`（整える・確かめる）に広げ、Retro の事実を見るの表は幅いっぱい、Backlog の行は最大 `pane-rows`。Today・実行中の Sprint は変えない（どちらも左のまま） |
 | 768–1199px（`bp-medium`） | medium | ナビを 64px の rail（アイコンと名前）にし、2 ペイン（Backlog / Sprint）。Capacity は Sprint の上に要約 1 行を sticky で出し、クリックで右 Drawer。Agent 提案も Drawer の中 |
 | 768px 未満 | compact | 1 カラム。下部タブバー（今日 / Sprint / Backlog / 振り返り） |
 
@@ -590,7 +593,7 @@ compact の原則：
 - 面 `surface`＋`border`、`rounded.md`、`elevation-overlay`。項目 32px（アイコン・ラベル・Kbd）、区切り `border-soft`、危険な項目は `danger` で最後。Checked は チェック＋`here-subtle`。
 - 主要な操作を隠さない。サブメニューを入れ子にしない。キーボードは ↓ ↑ Home End、Enter で実行、Esc でトリガーに戻る、Tab で閉じる。
 
-**Kbd** — ショートカットの表示。`code` の書体で Tooltip とメニュー項目の右端に置く。キーを色で強調しない。
+**Kbd** — ショートカットの表示。`code` の書体で Tooltip とメニュー項目の右端に置く。キーを色で強調しない。主な入力がタッチの端末（`pointer: coarse`）では、メニュー項目の Kbd を出さない（押すキーがないため。Issue #163）。
 
 ### 入力（ラベル → サポートテキスト → 入力 → エラーの順）
 
@@ -669,9 +672,10 @@ compact の原則：
 
 **Task Row** — タスク 1 件の行。Backlog・Sprint・Today で同じ構造。
 - 左から：ドラッグハンドル（hover / focus 時のみ、compact は非表示）、コントロール（□ 選ぶ / ○ 完了 / なし）、タイトル（`task`。compact は 2 行まで、medium 以上は 1 行で省略）、Task Metadata、Estimate（右端 `num-s`）、行の操作 `…`（hover / focus 時、compact は常時）。
+- Planning の Backlog ペイン（選ぶ・整える・確かめる）の行は、列が細いので、medium 以上でもタイトルを 1 行で省略しない（Issue #158）。選ぶは compact と同じ 2 行まで、整える・確かめるのタイトルだけの細い列は全文を折り返して、切れたタイトルを作らない。Estimate（Agent の提案を含む）はタイトルの右ではなく、タイトルの下の Task Metadata と同じ行の右端に置き、入らなければ次の行の右端に回す。タイトルの幅を Estimate に削らせない。
 - layout stacked（既定、約 52px）/ inline（40px、`row-task` は最小高さ）。区切りは `border-soft`、行間 0、角丸・影なし、Card で囲まない。
-- 状態：Selected（`here-subtle`＋チェック）、Done（○ を `primary` で塗り、タイトル `ink-subtle`＋取り消し線）、Skipped（○ に「−」＋「スキップ」）、Dragging（`surface`＋`elevation-drag`＋`border`）、Loading（Estimate が「見積中」）、Error（行内に「保存できませんでした · 再試行」）、Disabled（アーカイブ済み、`ink-disabled`）。
-- Today の「今日やる」の行は、日次の操作（開始 / 完了 / 今日はここまで / 今日は見送る / 今日から外す / 繰り返しのスキップ）を持つ。強い操作を常時並べすぎず、完了（○）以外は行の操作 `…` と詳細から出す（PRD §12）。例外として、見送り・外した・スキップの行は `…` の位置に「取り消す」（`undo-2` の IconButton、`…` と同じ大きさ）をどの幅でも常に出す（誤操作から戻る手段を hover の裏に置かない。ドメインモデル F19・F37、Issue #101）。「今週の残り」「昨日の続き」の行は □ ではなく、行の先頭に常に見える「今日へ」のボタンで選ぶ（□ は今週へ選ぶ意味なので使わない）。
+- 状態：Selected（`here-subtle`＋チェック）、In progress（Today で開始した行。先頭の端に `here` の 4px の縦線＋タイトル 700＋メタデータの「作業中 · 10:12 から」。ナビの現在地と同じ印で「今やっているもの」を示す。Issue #163）、Done（○ を `primary` で塗り、タイトル `ink-subtle`＋取り消し線）、Skipped（○ に「−」＋「スキップ」）、Dragging（`surface`＋`elevation-drag`＋`border`）、Loading（Estimate が「見積中」）、Error（行内に「保存できませんでした · 再試行」）、Disabled（アーカイブ済み、`ink-disabled`）。
+- Today の「今日やる」の行は、日次の操作（開始 / 完了 / 今日はここまで / 今日は見送る / 今日の予定から外す / 繰り返しのスキップ）を持つ。強い操作を常時並べすぎず、完了（○）以外は行の操作 `…` と詳細から出す（PRD §12）。例外として、見送り・外した・スキップの行は `…` の位置に「取り消す」（`undo-2` の IconButton、`…` と同じ大きさ）をどの幅でも常に出す（誤操作から戻る手段を hover の裏に置かない。ドメインモデル F19・F37、Issue #101）。「今週の残り」「昨日の続き」の行は □ ではなく、行の先頭に常に見える「今日へ」のボタンで選ぶ（□ は今週へ選ぶ意味なので使わない）。
 - × メタ情報を Badge / Pill にする、□ と ○ を入れ替える、Goal に紐づかない行を薄くする。
 
 **Task Metadata** — タスクの属性を Badge ではなく文字とアイコンで 1 行に並べる（`meta` 12px、要素間 `spacing.3`）。順に Area Indicator（グループ化していない一覧だけ）、Deadline、優先度（高と低だけ「優先度 高」「優先度 低」と語で出す。通常は値がない扱いで出さない。色・アイコンで強調せず、並びも変えない。Issue #97）、持ち越し、繰り返し、Goal（`target`＋Goal 文を省略）、注記（`ink-subtle`）。値がない属性は出さない（「—」で埋めない）。グループ見出しと同じ情報を行に重ねない。
@@ -707,19 +711,20 @@ compact の原則：
 
 **Goal** — Sprint × Area の「今週どんな状態にしたいか」。
 - 上端の罫（`border`）、見出し（Area Indicator heading＋タスク数と時間＋自己判定の Tag）、Goal 文（`goal`、`measure-read`）とその直下の編集（Quiet sm、文の左端に揃える。何を変えるかが分かるように、見出しではなく文の近くに置く）、その Area の選んだタスク。
-- set（確定）/ empty（「+ 目標を書く」＋「この領域の目標は任意です。」）/ editing（`body-l` の Textarea＋保存 / キャンセル）/ 自己判定済み（できた = done の Tag、一部できた・できなかった・判断しない = neutral）。
+- set（確定）/ empty（「+ 目標を書く」＋「この領域の目標は任意です。」。Goal も Task もない Area は、名前と「+ 目標を書く」を 1 行にし、案内は添えない。Issue #161）/ editing（`body-l` の Textarea＋保存 / キャンセル）/ 自己判定済み（できた = done の Tag、一部できた・できなかった・判断しない = neutral）。
 - Goal の間は `spacing.8`。× Card で囲む、Goal がない Area を警告色で示す、Goal 文を太字・大見出しにする、全体 Goal を作る。
 
 **Capacity Indicator** — 使える時間（Sprint.availableHours）と計画値の合計の差を、幅のまま示す。
-- 最上段に残り（`num-l`。下限でも超える場合は「超過」`danger`。差が 0 をまたぐ場合は、範囲の代わりに「下限なら 2.25h 残る」「上限なら 0.75h 超える」を 2 行で出し、数字だけを `num-l` にする。`danger` は使わない）、使える時間（本人が入力。Planning の確かめるでは、入力欄を中央の要約にだけ置く）と計画値の合計（幅。見積もりのない件数はここに添えず、下の文で示す）、状態の文（アイコン＋語）、バー（Area ごとの 8px セグメント。セグメントの間には 2px の `canvas` のアキを入れ、似た色の Area が隣り合っても境目が分かるようにする。Goal に紐づかない Task もその Area に含める＋提案の幅は破線＋残り `border-soft`＋使える時間のマーカー `ink` 2px＋使える時間を超える部分の下線：下限でも超える場合は `danger` の実線、上限側だけ超える可能性がある場合は `warning` の破線）、見積もりのないタスクの件数（数値の直下の文。「見積もりのないタスク 1件は合計に含まれていません。」）、Area ごとの内訳、計画値の説明（内訳の後。「計画値：今回の計画に使う時間。見積もりは変わりません。」。計画値が最初に出る場所なので、ここで 1 行だけ説明する）。
-- 状態：ok（`ink-muted`「使える時間の範囲に収まっています。」）/ tight（上限側だけ超える：`warning`「超える可能性」。数字は最上段の 2 つの文で示し、状態の文では繰り返さない。最上段のない場所（Planning の確かめるの要約、確定の Dialog）では「超える可能性：下限なら 2.25h 残る · 上限なら 0.75h 超える」の 1 行にする）/ over（下限でも超える：`danger`「超過 3 〜 5h」）/ unknown（「使える時間を入力すると、計画との差を表示します。」）。
+- 最上段に残り（`num-l`。下限でも超える場合は「超過」`danger`。差が 0 をまたぐ場合は、範囲の代わりに「下限なら 2.25h 残る」「上限なら 0.75h 超える」を 2 行で出し、数字だけを `num-l` にする。`danger` は使わない）、その下に状態の文（アイコン＋語。最上段の数字を繰り返さない）、計画値の合計（幅。見積もりのない件数はここに添えず、直下の文で示す）、見積もりのないタスクの件数（合計の直下の文。「見積もりのないタスク 1件は合計に含まれていません。」。合計が低く見えないよう、注記の小さい文字にせず `body` の `ink` で出す）、使える時間（本人が入力。合計の直下に置き、選びながら最初の画面で入れられるようにする。ラベルは「使える時間」で、単位は入力欄の末尾の「h」で示す。Planning の確かめるでは、入力欄を中央の要約にだけ置く）、バー（Area ごとの 8px セグメント。セグメントの間には 2px の `canvas` のアキを入れ、似た色の Area が隣り合っても境目が分かるようにする。Goal に紐づかない Task もその Area に含める＋提案の幅は破線＋残り `border-soft`＋使える時間のマーカー `ink` 2px＋使える時間を超える部分の下線：下限でも超える場合は `danger` の実線、上限側だけ超える可能性がある場合は `warning` の破線）、Area ごとの内訳、計画値の説明（内訳の後。「計画値：今回の計画に使う時間。見積もりは変わりません。」。計画値が最初に出る場所なので、ここで 1 行だけ説明する）。
+- 状態：ok（`ink-muted`「使える時間の範囲に収まっています。」。見積もりのないタスクがあるときは、判定がその分を含まないと分かるよう「見積もりのある分は、使える時間の範囲に収まっています。」）/ tight（上限側だけ超える：`warning`「超える可能性」）/ over（下限でも超える：`danger`「下限でも超える」）/ unknown（「使える時間を入力すると、計画との差を表示します。」）。tight と over の数字は最上段で示し、状態の文では繰り返さない。最上段のない場所（Planning の確かめるの要約、確定の Dialog）では、状態の後に最上段の文を続けた 1 行にする（「超える可能性：下限なら 2.25h 残る · 上限なら 0.75h 超える」「下限でも超える：超過 3 〜 5h」）。
+- Planning の確かめるでは、残り・状態・合計・見積もりのない件数・使える時間を中央の要約にだけ出し、右の Capacity はバー・Area ごとの内訳・計画値の説明だけにする（同じ数字を画面に 2 回出さない。Issue #165）。
 - バーは `aria-hidden`、数値と状態の文が正（`role="status"`）。超過でも確定を止めない。Today と Backlog には出さない。× ドーナツ・円グラフ・ゲージ、見積もりのないタスクを 0h として足す。
 
 **Sprint Summary** — Retro の「事実を見る」の最上部で、Sprint の結果を静かな表で示す。上端 `ink` 1px・下端 `border` の罫、項目（ラベル `meta`、値 `num-l`、単位、補足）、項目間の縦罫 `border-soft`。実績は入力済みのものだけを集計したと補足に書く。持ち越しの項目はラベルに `corner-down-right`（12px）を付け、1 件以上なら件数を押せる（下線付き。押すと持ち越しの行へ移る）。× 統計 Card を並べる、点数化、ランキング、Goal に紐づかないタスクの完了率を Goal 達成の代わりに置く。
 
 **改善策（Retro Improvement）** — Retro で決める「次の Sprint で 1 つだけ変えてみること」。上端 `ink` 1px・下端 `border` の罫、ラベル（「次に試す変更」/「前回決めた改善策」）と出所、本文（確定後は `goal`、下書きは `body-l`）。下書き（破線の Tag）→「改善策として確定」。次の Planning の最初（選ぶ段階の右ペインの上部）に表示だけで戻る。改善策そのものに判定や「反映した」の記録はない（ドメインモデル RetroImprovement）。× 複数並べる、達成率で評価する。
 
-**計画基準（Planning Criterion）** — 改善策から作った「提案の幅のどこで計画するか」のルール。名前は「研究：提案の幅の上限で計画する」（すべての領域なら「提案の幅の上限で計画する」）。Planning の選ぶ・整える段階では、前回の改善策の直下に `info` のアイコン＋名前だけを 1 行（`body`、`ink-muted`）で出す。確かめる段階で初めて `canvas-subtle` の地の枠にし、ラベル「計画基準」、`info` のアイコン＋名前、説明「前の振り返りで決めた、提案の幅のどこで計画するかのルール。」、「今回の計画に使う」Switch（説明に「見積もりは変わりません。」）、効果（「研究の幅のあるタスク 1件を上限で計画しています（合計の下限 +2h）。」）を同じ値から出す（不変条件 39）。計画基準がなければ、どの段階でも何も出さない（Issue #105 のオーナー決定 R3）。確定後は Switch を読み取り専用にする（不変条件 37）。Retro では、CriterionUse がある Sprint（確定時に Active な基準があった Sprint）に「続ける / 終える / 置き換える」の RadioGroup を出し、選ぶまで Retro を完了できない（不変条件 36。理由は求めない）。
+**計画基準（Planning Criterion）** — 改善策から作った「提案の幅のどこで計画するか」のルール。名前は「研究：提案の幅の上限で計画する」（すべての領域なら「提案の幅の上限で計画する」）。Planning の選ぶ・整える段階では、前回の改善策の直下に `info` のアイコン＋名前だけを 1 行（`body`、`ink-muted`）で出す。確かめる段階で初めて `canvas-subtle` の地の枠にし、ラベル「計画基準」、`info` のアイコン＋名前、説明「前の振り返りで決めた、提案の幅のどこで計画するかのルール。」、「今回の計画に使う」Switch（説明に「見積もりは変わりません。」）、効果（「研究の幅のあるタスク 1件を上限で計画しています（合計の下限 +2h）。」）を同じ値から出す（不変条件 39）。計画基準がなければ、どの段階でも何も出さない（Issue #105 のオーナー決定 R3）。選んだ Task に基準が効くもの（幅のある計画値で、基準の対象の Area）が 1 件もないときも、Planning ではどの段階にも出さない（確定ダイアログも同じ。確定時に使うかどうかの記録は変えない。Issue #161）。確定後は Switch を読み取り専用にし、確定時に使って基準が効いた計画値がなかった Sprint では枠にせず `help` `ink-muted` の 1 行（「計画基準「研究：提案の幅の上限で計画する」 · 対象なし」）にする（不変条件 37。Issue #161）。Retro では、CriterionUse がある Sprint（確定時に Active な基準があった Sprint）に「続ける / 終える / 置き換える」の RadioGroup を出し、選ぶまで Retro を完了できない（不変条件 36。理由は求めない）。
 
 **振り返りの材料（RetroInsight）** — Retro の 1 つの気づき。fact（「事実」：記録から言えること、`body`＋根拠の列挙）/ reflection（本人の言葉、`reflection`）/ agent（Agent の見立て：破線枠＋折りたたみの根拠＋振り返りに加える / 編集して加える / 却下）。事実には「振り返りに使う」の印を付けられる。× Agent の見立てを本人が加える前に `reflection` で表示する、評価・点数。
 
@@ -764,4 +769,4 @@ compact の原則：
 - **Card**（`border` で囲んだ独立面）：Dialog、Drawer、Popover、Menu、Toast、Agent 提案だけ。単なるグルーピングは余白・Divider・見出し・`canvas-subtle` の背景差で行う。
 - **Shadow**：浮いている・重なっている面だけ（`elevation-overlay` `elevation-modal` `elevation-drag`）。
 - **Area の色**：路線記号の地、Capacity バーのセグメント、Filter の路線記号だけ。
-- **黄（`here`）**：現在地（今日・今の段階・選んだもの）だけ。
+- **黄（`here`）**：現在地（今日・今の段階・選んだもの・作業中の行）だけ。

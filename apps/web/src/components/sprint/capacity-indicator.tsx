@@ -32,6 +32,12 @@ type AreaSegment = {
 
 type CapacityIndicatorProps = {
   total: PlanningTotal;
+  /**
+   * 確かめる: the numbers, the state and the field are in the summary at the
+   * head of the Sprint pane, so only the bar, the Areas and what 計画値 is
+   * are shown here (#165).
+   */
+  breakdownOnly?: boolean | undefined;
   /** Absent while no available hours are entered (unknown). */
   capacity?: Capacity | undefined;
   areas: readonly AreaSegment[];
@@ -68,9 +74,14 @@ const areaLine = {
 
 /**
  * The status sentence and its tone (DESIGN.md: ok / tight / over / unknown),
- * said under the headline.
+ * said under the headline. Words only where the headline has the numbers
+ * (#93, #165). With Tasks left out of the total, ok says that it is the
+ * estimated part that fits (#165).
  */
-export function capacityStatement(capacity: Capacity | undefined): {
+export function capacityStatement(
+  capacity: Capacity | undefined,
+  total?: PlanningTotal,
+): {
   tone: 'ok' | 'tight' | 'over' | 'unknown';
   text: string;
 } {
@@ -80,17 +91,19 @@ export function capacityStatement(capacity: Capacity | undefined): {
       text: '使える時間を入力すると、計画との差を表示します。',
     };
   }
-  const { remaining, status } = capacity;
-  if (status === 'exceeds') {
-    return {
-      tone: 'over',
-      text: `超過 ${formatDifference(-remaining.hi, -remaining.lo)}`,
-    };
-  }
-  // The numbers are in the headline's two sentences; the state does not
-  // say them again (#93).
+  const { status } = capacity;
+  // The numbers are in the headline; the state does not say them again
+  // (#93, #165).
+  if (status === 'exceeds') return { tone: 'over', text: '下限でも超える' };
   if (status === 'mayExceed') return { tone: 'tight', text: '超える可能性' };
-  return { tone: 'ok', text: '使える時間の範囲に収まっています。' };
+  const leftOut =
+    total !== undefined && total.unestimated + total.unestimatedSubtasks > 0;
+  return {
+    tone: 'ok',
+    text: leftOut
+      ? '見積もりのある分は、使える時間の範囲に収まっています。'
+      : '使える時間の範囲に収まっています。',
+  };
 }
 
 /**
@@ -154,16 +167,56 @@ export function capacityHeadlineSentences(
 }
 
 /**
+ * How a planned total stood against the available hours, as a fact of the
+ * week (Retro, #167): 「下限でも 0.25h 超える」, 「下限なら 1.75h 残る · 上限なら
+ * 0.25h 超える」 (the headline's two sentences), 「上限でも 1h 残る」. Words
+ * only: no tone, so never `danger`.
+ */
+export function capacityRelationSentences(
+  capacity: Capacity,
+): readonly string[] {
+  const { remaining, status } = capacity;
+  if (status === 'exceeds') {
+    return [`下限でも ${formatHours(-remaining.hi, { total: true })} 超える`];
+  }
+  if (status === 'mayExceed') {
+    return capacityHeadlineSentences(capacityHeadline(capacity));
+  }
+  return [
+    remaining.lo === 0
+      ? '上限でちょうど収まる'
+      : `上限でも ${formatHours(remaining.lo, { total: true })} 残る`,
+  ];
+}
+
+/**
+ * Short sentences joined by 「 · 」: the line breaks only between them, so a
+ * number never leaves its words.
+ */
+function Sentences({ items }: { items: readonly string[] }) {
+  return items.map((item, i) => (
+    <Fragment key={item}>
+      {i > 0 && ' · '}
+      <span className="whitespace-nowrap">{item}</span>
+    </Fragment>
+  ));
+}
+
+/**
  * The state where no headline is shown (the 確かめる summary, the 確定
- * Dialog): the statement, and while the difference crosses 0 the headline's
- * two sentences after it, each number said once: 「超える可能性：下限なら
- * 1.75h 残る · 上限なら 0.25h 超える」 (#93).
+ * Dialog): the statement, and while the plan may or does go over, the
+ * headline's sentences after it, each number said once: 「超える可能性：下限
+ * なら 1.75h 残る · 上限なら 0.25h 超える」 (#93), 「下限でも超える：超過 3 〜
+ * 5h」 (#165).
  */
 export function capacityStatusLine(
   capacity: Capacity | undefined,
+  total?: PlanningTotal,
 ): CapacityState {
-  const statement = capacityStatement(capacity);
-  if (capacity?.status !== 'mayExceed') return statement;
+  const statement = capacityStatement(capacity, total);
+  if (capacity === undefined || capacity.status === 'within') {
+    return statement;
+  }
   const sentences = capacityHeadlineSentences(capacityHeadline(capacity));
   return {
     ...statement,
@@ -236,12 +289,7 @@ function CapacityStatement({
           <span className="whitespace-nowrap">
             {statement.text.slice(0, statement.text.indexOf('：') + 1)}
           </span>
-          {statement.sentences.map((sentence, i) => (
-            <Fragment key={sentence}>
-              {i > 0 && ' · '}
-              <span className="whitespace-nowrap">{sentence}</span>
-            </Fragment>
-          ))}
+          <Sentences items={statement.sentences} />
         </span>
       )}
     </Tag>
@@ -250,6 +298,7 @@ function CapacityStatement({
 
 function CapacityIndicator({
   total,
+  breakdownOnly = false,
   capacity,
   areas,
   onAvailableHoursChange,
@@ -257,8 +306,9 @@ function CapacityIndicator({
   week,
   className,
 }: CapacityIndicatorProps) {
-  const statement = capacityStatement(capacity);
+  const statement = capacityStatement(capacity, total);
   const leftOut = formatLeftOut(total);
+  const editable = !readOnly && onAvailableHoursChange !== undefined;
   const headingId = useId();
   return (
     <section
@@ -269,36 +319,53 @@ function CapacityIndicator({
       <h2 id={headingId} className="text-subheading text-ink">
         時間の見通し
       </h2>
-      <div className="flex flex-col gap-2">
-        {/* Read out when it changes: the headline and the state only. */}
-        <div role="status" className="flex flex-col gap-2">
-          {capacity !== undefined && (
-            <Headline
-              headline={capacityHeadline(capacity)}
-              over={capacity.status === 'exceeds'}
+      {!breakdownOnly && (
+        <div className="flex flex-col gap-2">
+          {/* Read out when it changes: the headline and the state only. */}
+          <div role="status" className="flex flex-col gap-2">
+            {capacity !== undefined && (
+              <Headline
+                headline={capacityHeadline(capacity)}
+                over={capacity.status === 'exceeds'}
+              />
+            )}
+            <CapacityStatement statement={statement} />
+          </div>
+          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 text-body">
+            <dt className="whitespace-nowrap text-ink-muted">計画値の合計</dt>
+            <dd className="text-right text-num-m text-ink">
+              {/* The count left out is its own sentence below. */}
+              {formatPlanningSum(total)}
+            </dd>
+            {capacity !== undefined && !editable && (
+              <>
+                <dt className="whitespace-nowrap text-ink-muted">使える時間</dt>
+                <dd className="text-right text-num-m text-ink">
+                  {formatHours(capacity.availableHours, { total: true })}
+                </dd>
+              </>
+            )}
+          </dl>
+          {/* As large as the total: what it leaves out is part of it (#165). */}
+          {leftOut !== undefined && (
+            <p className="text-body text-ink [text-wrap:pretty] [word-break:auto-phrase]">
+              {leftOut}
+            </p>
+          )}
+          {/* Right under the total, so that it shows in the first screen
+              (#165). */}
+          {editable && onAvailableHoursChange !== undefined && (
+            <AvailableHoursField
+              value={capacity?.availableHours}
+              onChange={onAvailableHoursChange}
+              description={weekText(
+                week,
+                '、計画に使える時間（h）。本人が決めます',
+              )}
             />
           )}
-          <CapacityStatement statement={statement} />
         </div>
-        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 text-body">
-          <dt className="whitespace-nowrap text-ink-muted">計画値の合計</dt>
-          <dd className="text-right text-num-m text-ink">
-            {/* The count left out is its own sentence below. */}
-            {formatPlanningSum(total)}
-          </dd>
-          {capacity !== undefined && (
-            <>
-              <dt className="whitespace-nowrap text-ink-muted">使える時間</dt>
-              <dd className="text-right text-num-m text-ink">
-                {formatHours(capacity.availableHours, { total: true })}
-              </dd>
-            </>
-          )}
-        </dl>
-        {leftOut !== undefined && (
-          <p className="text-help text-ink-muted">{leftOut}</p>
-        )}
-      </div>
+      )}
 
       <CapacityBar total={total} capacity={capacity} areas={areas} />
 
@@ -322,14 +389,6 @@ function CapacityIndicator({
       <p className="text-help text-ink-muted">
         計画値：今回の計画に使う時間。見積もりは変わりません。
       </p>
-
-      {!readOnly && onAvailableHoursChange !== undefined && (
-        <AvailableHoursField
-          value={capacity?.availableHours}
-          onChange={onAvailableHoursChange}
-          description={weekText(week, '、計画に使える時間。本人が決めます')}
-        />
-      )}
     </section>
   );
 }
@@ -377,8 +436,9 @@ function Headline({
 function AvailableHoursField({
   value,
   onChange,
-  label = '使える時間（時間）',
-  description = '今週、計画に使える時間。本人が決めます',
+  label = '使える時間',
+  // The unit is in the description: the suffix 「h」 is not read out.
+  description = '今週、計画に使える時間（h）。本人が決めます',
 }: {
   value: number | undefined;
   onChange: (hours: number | null) => boolean;
@@ -494,5 +554,5 @@ function CapacityBar({
   );
 }
 
-export { AvailableHoursField, CapacityIndicator, CapacityStatement };
+export { AvailableHoursField, CapacityIndicator, CapacityStatement, Sentences };
 export type { AreaSegment, CapacityIndicatorProps };

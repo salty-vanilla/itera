@@ -1,6 +1,7 @@
 import { Menu as MenuPrimitive } from '@base-ui/react/menu';
 import { Check } from 'lucide-react';
 import type { ComponentProps, ReactNode } from 'react';
+import { Kbd } from '@/components/ui/kbd';
 import { cn } from '@/lib/utils';
 
 // DESIGN.md Components › Menu. The drop-down for secondary actions of a row or
@@ -222,14 +223,17 @@ function MenuSeparator({ className, ...props }: MenuSeparatorProps) {
 }
 
 /**
- * DESIGN.md Kbd: the shortcut at the right end of an item, in the `code`
- * type. Keys are not highlighted with colour.
+ * DESIGN.md Kbd: the shortcut at the right end of an item, a Kbd in the
+ * item's muted text colour. Keys are not highlighted with colour. Not shown
+ * where the primary pointer is a finger, as there is no key to press (#163).
+ * Read out through the item's `aria-keyshortcuts`, not as text.
  */
 function MenuShortcut({ className, ...props }: ComponentProps<'kbd'>) {
   return (
-    <kbd
+    <Kbd
       data-slot="menu-shortcut"
-      className={cn('ms-auto ps-4 text-code text-ink-subtle', className)}
+      aria-hidden
+      className={cn('ms-auto text-ink-muted pointer-coarse:hidden', className)}
       {...props}
     />
   );

@@ -273,17 +273,26 @@ function RetroView({
               onWriteImprovement={() => setStage('reflect')}
             />
           )}
-          <nav aria-label="次の段階" className="flex justify-end">
-            {stage === 'facts' && (
-              <Button onClick={() => setStage('reflect')}>振り返るへ</Button>
+          <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+            {stage === 'facts' && !readOnly && (
+              // How many facts go on as materials (#167), beside the way to
+              // where they gather.
+              <p className="text-help text-ink-muted">
+                振り返りに使う {data.pins.length}件
+              </p>
             )}
-            {stage === 'reflect' && (
-              <Button onClick={() => setStage('handoff')}>引き継ぐへ</Button>
-            )}
-            {stage === 'handoff' && !readOnly && (
-              <CompleteRetro data={data} onComplete={complete} />
-            )}
-          </nav>
+            <nav aria-label="次の段階">
+              {stage === 'facts' && (
+                <Button onClick={() => setStage('reflect')}>振り返るへ</Button>
+              )}
+              {stage === 'reflect' && (
+                <Button onClick={() => setStage('handoff')}>引き継ぐへ</Button>
+              )}
+              {stage === 'handoff' && !readOnly && (
+                <CompleteRetro data={data} onComplete={complete} />
+              )}
+            </nav>
+          </div>
         </div>
         {stage !== 'facts' && (
           <aside className="hidden wide:block">

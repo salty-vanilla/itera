@@ -170,7 +170,9 @@ function BacklogPane({
                     className="min-w-0 text-left text-task text-ink focus-visible:focus-ring"
                     onClick={() => onOpenTask(task.id)}
                   >
-                    <TaskTitleLines>{task.title}</TaskTitleLines>
+                    <TaskTitleLines wrap={slim ? 'all' : 'two'}>
+                      {task.title}
+                    </TaskTitleLines>
                   </button>
                   {!slim && (
                     <EstimateActions
@@ -332,6 +334,7 @@ function CandidateItem({
 }) {
   const { task, area, carry, running, value } = row;
   const chosen = row.chosen !== undefined;
+  const showEstimate = !slim && value.base !== 'none';
   const meta: ReactNode[] = [];
   if (!slim) {
     if (area)
@@ -375,15 +378,24 @@ function CandidateItem({
           data-row-focus
           className="min-w-0 text-left text-task text-ink focus-visible:focus-ring"
         >
-          <TaskTitleLines>{task.title}</TaskTitleLines>
+          <TaskTitleLines wrap={slim ? 'all' : 'two'}>
+            {task.title}
+          </TaskTitleLines>
         </button>
-        {meta.length > 0 && <TaskMetadata>{meta}</TaskMetadata>}
+        {/* The Estimate goes under the title with the attributes, and under
+            them when they leave no room, so that the title keeps its width
+            (Issue #158). */}
+        {(meta.length > 0 || showEstimate) && (
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+            {meta.length > 0 && <TaskMetadata>{meta}</TaskMetadata>}
+            {showEstimate && (
+              <span className="ms-auto shrink-0">
+                <Estimate value={value} />
+              </span>
+            )}
+          </div>
+        )}
       </div>
-      {!slim && value.base !== 'none' && (
-        <span className="shrink-0 pe-2">
-          <Estimate value={value} />
-        </span>
-      )}
       {!slim && <EstimateActions title={task.title} onEstimate={onEstimate} />}
     </li>
   );

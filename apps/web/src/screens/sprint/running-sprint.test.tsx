@@ -12,14 +12,39 @@ import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { StoreSnapshot } from '@/store/record-store';
 
+// For a Sprint whose criterion changed no planned value (#161).
+let criterionHadNoTarget = false;
 afterEach(() => {
   cleanup();
+  criterionHadNoTarget = false;
 });
 beforeEach(() => {
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
 });
 
 let lastSnapshot: () => StoreSnapshot;
+function withoutCriterionTarget(initial: StoreSnapshot): StoreSnapshot {
+  return {
+    ...initial,
+    records: {
+      ...initial.records,
+      sprints: initial.records.sprints.map((s) => ({
+        ...s,
+        tasks: s.tasks.map((t) =>
+          t.planSnapshot === undefined
+            ? t
+            : {
+                ...t,
+                planSnapshot: {
+                  ...t.planSnapshot,
+                  value: { ...t.planSnapshot.value, criterionApplied: false },
+                },
+              },
+        ),
+      })),
+    },
+  };
+}
 vi.mock('@/store/record-store', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/store/record-store')>();
   return {
@@ -33,7 +58,10 @@ vi.mock('@/store/record-store', async (importOriginal) => {
         ? R
         : never
     ) => {
-      const store = actual.createMemoryStore(initial, ...rest);
+      const store = actual.createMemoryStore(
+        criterionHadNoTarget ? withoutCriterionTarget(initial) : initial,
+        ...rest,
+      );
       lastSnapshot = () => store.getSnapshot();
       return store;
     },
@@ -87,6 +115,19 @@ describe('Sprint — running (#51)', () => {
     expect(
       screen.getAllByText('確定したときに、今回の計画値に使いました。').length,
     ).toBeGreaterThan(0);
+  });
+
+  it('folds a criterion that changed no planned value to one line (#161)', async () => {
+    criterionHadNoTarget = true;
+    await renderAt('/sprint?fixture=today-interrupt');
+    const line = document.querySelector('[data-slot="criterion-line"]');
+    expect(line?.textContent).toBe(
+      '計画基準「研究：提案の幅の上限で計画する」 · 対象なし',
+    );
+    expect(
+      screen.queryByText('確定したときに、今回の計画値に使いました。'),
+    ).toBeNull();
+    expect(screen.queryByText(/確定した後は変えられません/)).toBeNull();
   });
 
   it('shows 今週の完了 as Today counts it, with no judgement (#103, F32)', async () => {

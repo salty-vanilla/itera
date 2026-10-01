@@ -307,13 +307,20 @@ describe('Today — the daily operations', () => {
     await renderAt('/today?fixture=today-interrupt');
     await menu('顧客インタビューの設計', '開始');
     expect(selectionOf('task-interview')?.resolution).toBe('started');
-    // #101: in ink with its icon, not only a colour.
-    const started = within(row('今日やる', '顧客インタビューの設計'))
-      .getByText(/開始/)
-      .closest('[data-slot="meta-item"]');
+    // #101: in ink with its icon, not only a colour. #163: 「作業中 · 10:12
+    // から」, the `here` bar and the title in 700.
+    const startedRow = row('今日やる', '顧客インタビューの設計');
+    const started = [
+      ...startedRow.querySelectorAll('[data-slot="meta-item"]'),
+    ].find((m) => /^作業中 · \d\d:\d\d から$/.test(m.textContent ?? ''));
     expect(started?.className).toContain('text-ink');
     expect(started?.className).not.toContain('text-ink-muted');
     expect(started?.querySelector('svg')).toBeTruthy();
+    expect(
+      startedRow
+        .querySelector('[data-slot="task-row"]')
+        ?.hasAttribute('data-in-progress'),
+    ).toBe(true);
     await menu('顧客インタビューの設計', '今日はここまで');
     const hours = await screen.findByRole('textbox', { name: /実績時間/ });
     await userEvent.type(hours, '1.5');
@@ -362,29 +369,98 @@ describe('Today — the daily operations', () => {
 
   it('removes from today without counting a deferral', async () => {
     await renderAt('/today?fixture=today-interrupt');
-    await menu('顧客インタビューの設計', '今日から外す');
+    await menu('顧客インタビューの設計', '今日の予定から外す');
     expect(selectionOf('task-interview')?.resolution).toBe('removed');
     expect(
       within(row('今日はもうやらない', '顧客インタビューの設計')).getByText(
-        '今日から外した',
+        '予定から外した',
       ),
     ).toBeTruthy();
   });
 
-  it('tells what a deferral and a removal count for (#101)', async () => {
+  it('tells where a closed row goes, in one sentence (#101, #163)', async () => {
     await renderAt('/today?fixture=today-interrupt');
-    await menu('顧客インタビューの設計', '今日から外す');
+    await menu('顧客インタビューの設計', '今日の予定から外す');
     const section = screen
       .getByRole('heading', { name: '今日はもうやらない' })
       .closest('section');
-    expect(section?.textContent).toContain(
-      '見送りは「続けて見送り」に数え、外したものは数えません。',
+    expect(section?.querySelector('p')?.textContent).toBe(
+      '明日から、今週の残りに戻ります。',
     );
   });
 
   it.each([
+    ['今日は見送る', 'を見送りました'],
+    ['今日の予定から外す', 'を今日の予定から外しました'],
+  ])(
+    '%s from the `…` says so in a Toast with 元に戻す (#163)',
+    async (action, result) => {
+      await renderAt('/today?fixture=today-interrupt');
+      const id = selectionOf('task-interview')?.id;
+      await menu('顧客インタビューの設計', action);
+      const toast = (
+        await screen.findByText(`「顧客インタビューの設計」${result}`)
+      ).closest<HTMLElement>('[data-slot="toast"]')!;
+      await userEvent.click(
+        within(toast).getByRole('button', { name: '元に戻す' }),
+      );
+      expect(selectionOf('task-interview')).toMatchObject({
+        id,
+        resolution: 'selected',
+      });
+      expect(row('今日やる', '顧客インタビューの設計')).toBeTruthy();
+    },
+  );
+
+  it.each([
+    ['取り消す', '取り消す（見送り）: 顧客インタビューの設計'],
+    ['○', '完了にする: 顧客インタビューの設計'],
+  ])(
+    'closes the Toast once the row itself is undone with %s (#163)',
+    async (_, name) => {
+      await renderAt('/today?fixture=today-interrupt');
+      await menu('顧客インタビューの設計', '今日は見送る');
+      await screen.findByText('「顧客インタビューの設計」を見送りました');
+      await userEvent.click(
+        within(row('今日はもうやらない', '顧客インタビューの設計')).getByRole(
+          'button',
+          { name },
+        ),
+      );
+      await waitFor(() =>
+        expect(
+          screen.queryByText('「顧客インタビューの設計」を見送りました'),
+        ).toBeNull(),
+      );
+      expect(screen.queryByText(/保存できませんでした/)).toBeNull();
+    },
+  );
+
+  it('puts 開始 and 完了にする first in the `…`, with labels alone (#163)', async () => {
+    await renderAt('/today?fixture=today-interrupt');
+    await userEvent.click(
+      screen.getByRole('button', { name: '操作: 顧客インタビューの設計' }),
+    );
+    const items = await screen.findAllByRole('menuitem');
+    expect(
+      [
+        '開始',
+        '完了にする',
+        '今日は見送る',
+        '今日の予定から外す',
+        '見積もりを入れる',
+      ].map((name) => items.indexOf(screen.getByRole('menuitem', { name }))),
+    ).toEqual([0, 1, 2, 3, 4]);
+    expect(items).toHaveLength(5);
+    // Labels alone (#163).
+    expect(items.some((i) => i.hasAttribute('aria-describedby'))).toBe(false);
+    await userEvent.click(screen.getByRole('menuitem', { name: '完了にする' }));
+    expect(selectionOf('task-interview')?.resolution).toBe('done');
+  });
+
+  it.each([
     ['今日は見送る', '見送り'],
-    ['今日から外す', '今日から外した'],
+    ['今日の予定から外す', '予定から外した'],
   ])(
     'F37: %s, then 取り消す the same day: back to 今日やる, the same selection',
     async (action, state) => {

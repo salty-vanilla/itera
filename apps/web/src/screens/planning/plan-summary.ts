@@ -21,7 +21,7 @@ import type {
 export interface PlanSummary {
   /**
    * Whether the plan fits: ok / tight / over / unknown, with the numbers
-   * while the difference crosses 0 (`capacityStatusLine`).
+   * while it may or does go over (`capacityStatusLine`).
    */
   readonly statement: CapacityState;
   /** 「14.75–17.75h」, or 「見積もりなし 3件」 with nothing estimated. */
@@ -42,7 +42,10 @@ export interface PlanSummary {
   readonly unestimated: readonly PlannedTask[];
   /** 「見積もりのないタスク 1件は合計に含まれていません。」 */
   readonly leftOut?: string;
-  /** 「「研究：提案の幅の上限で計画する」を今回の計画に使う」 */
+  /**
+   * 「「研究：提案の幅の上限で計画する」を今回の計画に使う」; absent when no
+   * chosen Task is one it acts on (#161).
+   */
   readonly criterion?: string;
 }
 
@@ -51,7 +54,7 @@ export function planSummary(data: PlanningData): PlanSummary {
   const tasks = data.plan.flatMap((p) => p.tasks);
   const leftOut = formatLeftOut(totals.total);
   return {
-    statement: capacityStatusLine(totals.capacity),
+    statement: capacityStatusLine(totals.capacity, totals.total),
     total: formatPlanningSum(totals.total),
     ...(totals.capacity === undefined
       ? {}
@@ -74,7 +77,7 @@ export function planSummary(data: PlanningData): PlanSummary {
         (t.value.base === 'subtasks' && t.value.unestimatedSubtasks > 0),
     ),
     ...(leftOut === undefined ? {} : { leftOut }),
-    ...(criterion === undefined
+    ...(criterion?.hasTarget !== true
       ? {}
       : {
           criterion: `「${criterionName(criterion.active.policy, criterion.areaName)}」${
