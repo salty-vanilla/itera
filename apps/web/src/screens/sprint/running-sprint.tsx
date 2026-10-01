@@ -148,9 +148,7 @@ function RunningSprint({
         }
       >
         {!running && (
-          <p className="text-help text-ink-muted">
-            確定したときの計画と、それぞれの結果です。ここでは変えられません。
-          </p>
+          <p className="text-help text-ink-muted">ここでは変えられません。</p>
         )}
       </SprintHeader>
       {data.progress !== undefined && (
@@ -188,7 +186,6 @@ function RunningSprint({
                     : (block.goal.plannedText ?? null)
                 }
                 removable={false}
-                optionalNote={false}
                 // An Area with neither a Goal nor a Task is one line (#161).
                 bare={block.tasks.length === 0 && block.goal === undefined}
                 week={week}
@@ -417,7 +414,7 @@ function Outlook({
             value={current}
             onChange={onHours}
             label="使える時間"
-            description="時間（h）で入力します。確定した後も変えられます。確定したときの値は残ります。"
+            description="時間（h）で入力します。確定後も変えられます（確定したときの値は残ります）。"
           />
         )}
       </section>

@@ -1042,7 +1042,7 @@ describe('Retro — 事実を見るを読みやすくする (#108)', () => {
     );
     expect(guide).toHaveLength(1);
     expect(guide[0]?.textContent).toBe(
-      '気になった事実に「振り返りに使う」を付けると、「振り返る」で材料として並びます。付けなくても進めます。',
+      '気になった事実に「振り返りに使う」を付けると、「振り返る」で材料として並びます。',
     );
     // Under the heading, before the summary.
     expect(

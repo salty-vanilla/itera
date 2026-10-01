@@ -95,7 +95,7 @@ function InterruptSheet({
             </DrawerTitle>
             <DrawerDescription>
               {editing === undefined
-                ? '予定外の出来事をメモします。今日のタスクは組み替えません。'
+                ? '予定外の出来事をメモします。'
                 : `${editing.time} の記録`}
             </DrawerDescription>
           </DrawerHeader>
