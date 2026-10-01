@@ -4,6 +4,7 @@
 import {
   activeCriterion,
   addSubtask,
+  addTaskMidSprint,
   addToToday,
   adoptEditedSuggestion,
   adoptSuggestion,
@@ -20,6 +21,7 @@ import {
   setEstimate,
   setSubtaskDone,
   setSubtaskEstimate,
+  undoAddTaskMidSprint,
   undoAdoption,
   undoRejection,
   updateTask,
@@ -253,6 +255,59 @@ export function toToday(taskId: TaskId): Change {
         },
         ctx,
       ),
+      (next) => ({ sprints: [next] }),
+    );
+  };
+}
+
+/**
+ * 今週へ (#155): the Task joins the active Sprint as a mid-Sprint addition
+ * without a day chosen (unlinked, own snapshot, no capacity warning).
+ */
+export function toWeek(taskId: TaskId): Change {
+  return (records, ctx) => {
+    const task = find(records.tasks, taskId, 'Task');
+    if (!task.ok) return task;
+    const sprint = activeSprint(records);
+    if (sprint === undefined) {
+      return {
+        ok: false,
+        error: { code: 'invalidTransition', message: 'No active Sprint.' },
+      };
+    }
+    const criterion = activeCriterion(records.criteria);
+    return changed(
+      addTaskMidSprint(
+        sprint,
+        {
+          sprintTaskId: ctx.newId('SprintTask'),
+          task: task.value,
+          areas: records.areas,
+          ...(criterion === undefined
+            ? {}
+            : { criterion: { id: criterion.id, policy: criterion.policy } }),
+          via: 'backlog',
+        },
+        ctx,
+      ),
+      (next) => ({ sprints: [next] }),
+    );
+  };
+}
+
+/** 元に戻す right after 今週へ (F40): the addition goes with its record. */
+export function undoToWeek(taskId: TaskId): Change {
+  return (records, ctx) => {
+    const sprint = activeSprint(records);
+    const sprintTask = sprint?.tasks.find((t) => t.taskId === taskId);
+    if (sprint === undefined || sprintTask === undefined) {
+      return {
+        ok: false,
+        error: { code: 'notFound', message: 'Not in the active Sprint.' },
+      };
+    }
+    return changed(
+      undoAddTaskMidSprint(sprint, { sprintTaskId: sprintTask.id }, ctx),
       (next) => ({ sprints: [next] }),
     );
   };

@@ -7,6 +7,7 @@ import {
   noteAreaInSprint,
   removeFromSprint,
   restoreToSprint,
+  undoAddTaskMidSprint,
 } from './mid-sprint';
 import {
   completeOccurrence,
@@ -15,6 +16,7 @@ import {
 } from './occurrence';
 import type { ActiveCriterion } from './planning';
 import { createRecurrenceRule } from './recurrence';
+import { selectForToday } from './today';
 import { id, type AreaId } from './shared/ids';
 import { localDate } from './shared/time';
 import { sprintAreaName, type Sprint, type SprintTask } from './sprint';
@@ -156,6 +158,72 @@ describe('addTaskMidSprint', () => {
       ok: false,
       error: { code: 'invalidTransition' },
     });
+  });
+});
+
+describe('undoAddTaskMidSprint (F40)', () => {
+  const sprintTaskId = id<'SprintTask'>('st-task-interview');
+
+  it('takes the addition out with its record; the Task can be added again (invariant 14)', () => {
+    const task = withSuggestion(workId, 2, 3, 'task-interview');
+    const before = activeSprint(false);
+    const added = unwrap(add(before, task));
+    const undone = undoAddTaskMidSprint(added, { sprintTaskId }, ctx);
+    expect(unwrap(undone)).toEqual(before);
+    expect(undone.ok && undone.value.activities).toEqual([
+      {
+        kind: 'sprintTaskAddUndone',
+        at: ctx.now,
+        actor: 'user',
+        sprintId: before.id,
+        sprintTaskId,
+        taskId: task.id,
+      },
+    ]);
+    expect(unwrap(add(unwrap(undone), task)).tasks).toHaveLength(1);
+  });
+
+  it('invariant 26: an addition chosen for a day (今日へ) is not undone', () => {
+    const task = withSuggestion(workId, 2, 3, 'task-interview');
+    const chosen = unwrap(
+      selectForToday(
+        unwrap(add(activeSprint(false), task)),
+        { selectionId: id('sel-1'), date: d('2026-09-30'), sprintTaskId },
+        ctx,
+      ),
+    );
+    expect(undoAddTaskMidSprint(chosen, { sprintTaskId }, ctx)).toMatchObject({
+      ok: false,
+      error: { code: 'invalidTransition' },
+    });
+  });
+
+  it('only a planned mid-Sprint SprintTask of an active Sprint', () => {
+    const task = withSuggestion(workId, 2, 3, 'task-interview');
+    const added = unwrap(add(activeSprint(false), task));
+    const withTask = (change: Partial<SprintTask>): Sprint => ({
+      ...added,
+      tasks: added.tasks.map((t) => ({ ...t, ...change })),
+    });
+    for (const sprint of [
+      withTask({ outcome: 'done' }),
+      withTask({ outcome: 'removed' }),
+      { ...added, state: 'review' as const },
+    ]) {
+      expect(undoAddTaskMidSprint(sprint, { sprintTaskId }, ctx)).toMatchObject(
+        { ok: false, error: { code: 'invalidTransition' } },
+      );
+    }
+    expect(
+      undoAddTaskMidSprint(
+        withTask({ origin: 'planning' }),
+        { sprintTaskId },
+        ctx,
+      ),
+    ).toMatchObject({ ok: false, error: { code: 'invalidInput' } });
+    expect(
+      undoAddTaskMidSprint(added, { sprintTaskId: id('st-none') }, ctx),
+    ).toMatchObject({ ok: false, error: { code: 'notFound' } });
   });
 });
 

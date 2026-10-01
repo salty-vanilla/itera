@@ -10,9 +10,9 @@ import { weekText } from '@/lib/week-text';
 // A `border` rule on top, the heading (Area Indicator heading, the number of
 // Tasks and their time), the Goal text in `goal` within `measure-read` with
 // its edit action right under it (#160), then the Area's chosen Tasks.
-// States: set / empty (「+ Goal を書く」 and that it is optional) / editing
-// (`body-l` Textarea with 保存 / キャンセル). A Goal is optional per Area; an
-// Area without one is never shown as a warning. An Area with neither a Goal
+// States: set / empty (「+ Goal を書く」, and while planning that it is
+// optional, #155) / editing (`body-l` Textarea with 保存 / キャンセル). A Goal
+// is optional per Area; an Area without one is never shown as a warning. An Area with neither a Goal
 // nor a Task is `bare`: its name and 「+ 目標を書く」 on one line, without the
 // note that it is optional (#161). No Card.
 
@@ -220,8 +220,10 @@ function GoalBlock({
               + 目標を書く
             </Button>
           )}
-          {/* Only where a Goal can be written: not read only, not 領域なし. */}
-          {onSave !== undefined && (
+          {/* Only while planning (before confirm, when a Goal is still
+              removable) and where a Goal can be written: not read only, not
+              領域なし. A running Sprint has no planning left to do (#155). */}
+          {onSave !== undefined && removable && (
             <p className="text-help text-ink-muted">
               この領域の目標は任意です。タスクだけでも計画できます。
             </p>

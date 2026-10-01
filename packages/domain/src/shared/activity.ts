@@ -162,9 +162,15 @@ export type Activity =
       readonly carriedFrom: SprintTaskId;
     })
   | (ActivityBase & {
-      /** Unselected in Planning (draft), removed after confirm, or restored (F13). */
+      /**
+       * Unselected in Planning (draft), removed after confirm, restored
+       * (F13), or a mid-Sprint addition undone with its record (F40).
+       */
       readonly kind:
-        'sprintTaskUnselected' | 'sprintTaskRemoved' | 'sprintTaskRestored';
+        | 'sprintTaskUnselected'
+        | 'sprintTaskRemoved'
+        | 'sprintTaskRestored'
+        | 'sprintTaskAddUndone';
       readonly sprintId: SprintId;
       readonly sprintTaskId: SprintTaskId;
       readonly taskId: TaskId;
