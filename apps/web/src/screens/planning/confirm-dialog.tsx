@@ -43,8 +43,7 @@ function ConfirmDialog({
         <DialogHeader>
           <DialogTitle>Sprint {number} を確定しますか？</DialogTitle>
           <DialogDescription>
-            確定すると、各タスクの計画の時間がこの Sprint
-            の値として固定されます。確定後も目標と使える時間は変更できます。
+            確定すると、各タスクの計画の時間は変わらなくなります。目標と使える時間はあとからでも変えられます。
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-4">

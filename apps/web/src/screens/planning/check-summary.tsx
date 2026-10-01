@@ -197,10 +197,10 @@ function CriterionEffect({
       `合計の上限 ${delta.hi > 0 ? '+' : '−'}${formatHours(Math.abs(delta.hi), { total: true })}`,
   ].filter(Boolean);
   return (
-    <p className="text-body text-ink">
+    <p className="text-body text-ink [text-wrap:pretty] [word-break:auto-phrase]">
       {criterion.applied
         ? `${scope}幅のあるタスク ${count}件を${bound}で計画しています${moves.length > 0 ? `（${moves.join('、')}）` : ''}。`
-        : `使わない場合、${scope}幅のあるタスク ${count}件は見積もりの提案の幅のまま計画します。`}
+        : '見積もりの提案の幅のまま合計します。'}
     </p>
   );
 }

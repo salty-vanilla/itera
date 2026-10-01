@@ -62,7 +62,14 @@ describe('Today — any day by date (#90)', () => {
     );
     expect(screen.queryByRole('textbox')).toBeNull();
     // Undoing stays on the running Sprint's 日ごとの記録 (#53).
-    expect(screen.getByText(/「日ごとの記録」でできます/)).toBeTruthy();
+    expect(
+      screen.getByText(
+        (_, el) =>
+          el?.tagName === 'P' &&
+          el.textContent ===
+            '完了・スキップの取り消しは、Sprint の画面の「日ごとの記録」から。',
+      ),
+    ).toBeTruthy();
   });
 
   it('shows the deferrals of a past day', async () => {

@@ -86,9 +86,7 @@ export function SubtaskText({
       {usesSubtasks && hours !== undefined
         ? 'サブタスクの合計'
         : `サブタスク ${count}件`}
-      {!usesSubtasks &&
-        hours !== undefined &&
-        ` · ${hours}（計画には使わない）`}
+      {!usesSubtasks && hours !== undefined && ` · （参考）${hours}`}
     </MetaItem>
   );
 }
