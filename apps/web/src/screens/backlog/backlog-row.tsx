@@ -64,24 +64,36 @@ export function RecurrenceText({
   icon?: boolean;
 }) {
   const Icon = semanticIcons.recurrence;
-  // Each part stays whole; a narrow row breaks only after the "·" (Issue #218).
-  const parts = [
-    formatPattern(recurrence.pattern),
-    recurrence.next && `次は ${formatDate(recurrence.next.scheduledDate)}`,
-    recurrence.upcoming &&
-      `変更：${formatDate(recurrence.upcoming.effectiveFrom)} から ${formatPattern(recurrence.upcoming.pattern)}`,
-    recurrence.endsOn && `${formatDate(recurrence.endsOn)} まで`,
-  ].filter((part): part is string => Boolean(part));
+  // Each phrase stays whole. A narrow row breaks after the "·" first, then
+  // between the phrases of a long part, never inside one (Issue #218).
+  const parts: string[][] = [
+    [formatPattern(recurrence.pattern)],
+    ...(recurrence.next
+      ? [[`次は ${formatDate(recurrence.next.scheduledDate)}`]]
+      : []),
+    ...(recurrence.upcoming
+      ? [
+          [
+            `変更：${formatDate(recurrence.upcoming.effectiveFrom)} から`,
+            formatPattern(recurrence.upcoming.pattern),
+          ],
+        ]
+      : []),
+    ...(recurrence.endsOn ? [[`${formatDate(recurrence.endsOn)} まで`]] : []),
+  ];
   return (
     <MetaItem icon={icon ? <Icon aria-hidden /> : undefined} wrap>
       <span>
-        {parts.map((part, i) => (
-          <Fragment key={part}>
+        {parts.map((phrases, i) => (
+          <Fragment key={phrases.join(' ')}>
             {i > 0 && ' '}
-            <span className="whitespace-nowrap">
-              {part}
-              {i < parts.length - 1 && ' ·'}
-            </span>
+            {phrases.map((phrase, j) => (
+              <Fragment key={phrase}>
+                {j > 0 && ' '}
+                <span className="whitespace-nowrap">{phrase}</span>
+              </Fragment>
+            ))}
+            {i < parts.length - 1 && ' ·'}
           </Fragment>
         ))}
       </span>
