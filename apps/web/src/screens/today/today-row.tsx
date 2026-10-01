@@ -25,7 +25,7 @@ import {
 import { CompletionCircle, TaskRow } from '@/components/task/task-row';
 import { formatDate } from '@/lib/date-format';
 import { formatHours } from '@/lib/time-format';
-import { closingHelp, startedText } from '@/lib/today-words';
+import { closingHelp, startedSince } from '@/lib/today-words';
 import type { TimeZone } from '@itera/domain';
 import type { TodayItem, TodayRow as TodayRowData } from '@/store/today-view';
 
@@ -248,10 +248,18 @@ function RowMetadata({
         return (
           // In `ink`, not muted: the one open state to see at a glance.
           <MetaItem wrap icon={<Play aria-hidden />} className="text-ink">
-            {/* One piece: the Area moves to the next line before it breaks. */}
-            <span className="whitespace-nowrap">
-              {startedText(selection.startedAt, timeZone)}
-            </span>
+            {selection.startedAt === undefined ? (
+              '作業中'
+            ) : (
+              // Breaks only after the separator in a narrow row, so that no
+              // line starts with it.
+              <span>
+                <span className="whitespace-nowrap">作業中 ·</span>{' '}
+                <span className="whitespace-nowrap">
+                  {startedSince(selection.startedAt, timeZone)}
+                </span>
+              </span>
+            )}
           </MetaItem>
         );
       case 'paused':
