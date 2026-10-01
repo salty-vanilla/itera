@@ -115,9 +115,18 @@ function HandoffPane({
         <Switch
           label="計画のルールにもする"
           description={
-            improvement === undefined
-              ? '次に試すことを書くと選べます。'
-              : '次に試すことが「見積もりの提案の上限で計画する」のような形なら、計画のルールにできます。'
+            improvement === undefined ? (
+              '次に試すことを書くと選べます。'
+            ) : (
+              // The example stays whole when the line breaks.
+              <span className="block [text-wrap:pretty] [word-break:auto-phrase]">
+                次に試すことが
+                <span className="whitespace-nowrap">
+                  「見積もりの提案の上限で計画する」
+                </span>
+                のような形なら、計画のルールにできます。
+              </span>
+            )
           }
           disabled={improvement === undefined}
           checked={draft !== undefined}
