@@ -599,7 +599,9 @@ export function completeFromBacklog(
         )
       : undefined;
   // A rule ended this Sprint (F41) leaves the Task one-off, but this
-  // Sprint's occurrences are still done one by one, in Today.
+  // Sprint's occurrences are still done one by one, in Today. The Backlog
+  // is stricter: it offers no completion until the rule's last day
+  // (`recurrenceOf`), which is this Sprint's end.
   if (
     sprint.state === 'active' &&
     sprint.tasks.some(

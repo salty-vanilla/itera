@@ -281,6 +281,8 @@ export function ruleEndsOn(rule: RecurrenceRule): LocalDate | undefined {
  * Task's own rule, or one that has ended (F41) and whose last day has not
  * passed. An ended rule is off the Task, so the Task is one-off for the
  * Sprints after it; until its last day the Backlog still shows it recurring.
+ * The commands guard less: `completeFromBacklog` refuses while the running
+ * Sprint holds the occurrences, and nothing else waits for the last day.
  */
 export function recurrenceOf(
   task: Task,
