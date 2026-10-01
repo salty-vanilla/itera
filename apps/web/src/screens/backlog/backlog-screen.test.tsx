@@ -698,15 +698,13 @@ describe('Backlog', () => {
     );
     const row = () => within(list()).getByText('本棚を整理する').closest('li')!;
     // The Task's own 6h is the plan; the subtask's 1h is beside it, not in it.
-    expect(row().textContent).toContain(
-      'サブタスク 1件 · 1h（計画には使わない）',
-    );
+    expect(row().textContent).toContain('サブタスク 1件 · （参考）1h');
     expect(row().textContent).toContain('6h');
     await userEvent.click(
       within(detail).getByRole('radio', { name: /サブタスクの合計/ }),
     );
     expect(row().textContent).toContain('サブタスクの合計');
-    expect(row().textContent).not.toContain('計画には使わない');
+    expect(row().textContent).not.toContain('（参考）');
   });
 
   it('Detail (#95): a subtask not added or a recurrence not applied holds the close with a notice', async () => {
@@ -1351,7 +1349,7 @@ describe('Backlog — 繰り返しの説明 (#94)', () => {
     });
     expect(
       within(detail).getByText(
-        '繰り返しにしても、今週の Sprint ではこの 1 件のままです。回は次の Sprint から作られます。',
+        '今週はこの 1 件のまま。繰り返しは次の Sprint から始まります。',
       ),
     ).toBeTruthy();
     expect(within(detail).queryByText(/単発のまま/)).toBeNull();

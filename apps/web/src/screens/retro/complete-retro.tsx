@@ -36,13 +36,9 @@ const BLOCKER_WORDS: Readonly<Record<RetroBlocker, ReactNode>> = {
   ),
   continueWithDraft: (
     <>
-      上の「今回の計画のルール」で
-      <span className="whitespace-nowrap">「続ける」</span>
-      を選んでいるときは、
-      <span className="whitespace-nowrap">「計画のルールにもする」</span>
-      をオフにするか、
+      新しいルールを作るなら、上の「今回の計画のルール」で
       <span className="whitespace-nowrap">「置き換える」</span>
-      を選ぶと完了できます。
+      を選んでください。
     </>
   ),
 };

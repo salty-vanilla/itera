@@ -301,8 +301,7 @@ function RecurrenceEditor({
               (F15). */}
           {rule === undefined && item.thisWeek?.confirmed === true && (
             <p className="text-help text-ink-muted">
-              繰り返しにしても、今週の Sprint ではこの 1 件のままです。回は次の
-              Sprint から作られます。
+              今週はこの 1 件のまま。繰り返しは次の Sprint から始まります。
             </p>
           )}
           {rule === undefined && (

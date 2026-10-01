@@ -117,7 +117,7 @@ function HandoffPane({
           description={
             improvement === undefined
               ? '改善策を書くと選べます。'
-              : '改善策が「見積もりの提案のどこで計画するか」で表せるときだけ、次の計画に使うルールにできます。'
+              : '「見積もりの提案の上限で計画する」のような改善策なら、計画のルールにできます。'
           }
           disabled={improvement === undefined}
           checked={draft !== undefined}

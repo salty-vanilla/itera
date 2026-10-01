@@ -1046,7 +1046,7 @@ describe('Today — 計画に使う時間 in the detail (#96)', () => {
       name: /計画に使う時間/,
     });
     expect(group.textContent).toContain(
-      'どちらか一方だけを使います（両方は足しません）。',
+      'タスクの見積もりとサブタスクの合計は、どちらか一方を計画に使います。',
     );
     // This Task has no Estimate of its own; the subtasks add up to 2.5h.
     const own = within(group).getByRole('radio', {

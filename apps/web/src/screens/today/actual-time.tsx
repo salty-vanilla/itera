@@ -60,8 +60,7 @@ const words: Record<
 > = {
   pause: {
     title: '今日はここまで',
-    description:
-      '作業したが終わっていない Task を、今週の残りに戻します。明日は「昨日の続き」に出ます。',
+    description: '途中のタスクは今週の残りに戻り、明日「昨日の続き」に出ます。',
     submit: '今日はここまで',
   },
   record: {

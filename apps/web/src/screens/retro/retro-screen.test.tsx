@@ -74,7 +74,7 @@ const decisionMissingText = reasonText(
   '上の「今回の計画のルール」で、続ける・終える・置き換えるのどれかを選ぶと完了できます。',
 );
 const continueWithDraftText = reasonText(
-  '上の「今回の計画のルール」で「続ける」を選んでいるときは、「計画のルールにもする」をオフにするか、「置き換える」を選ぶと完了できます。',
+  '新しいルールを作るなら、上の「今回の計画のルール」で「置き換える」を選んでください。',
 );
 const completeButton = () =>
   screen.getByRole('button', { name: '振り返りを完了' });
@@ -365,7 +365,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
     const text = dialog.textContent ?? '';
     expect(text).toContain(reviewed().retro?.improvement?.text);
     expect(text).toContain('今回の計画のルール「');
-    expect(text).toContain('2件は Backlog に残っています。');
+    expect(text).toContain('Backlog に 2件');
     expect(text).toContain(
       '完了すると、書いた内容は変えられず、この Sprint には実績を足せなくなります。',
     );
@@ -568,7 +568,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
 
   it('lists the carried-over Tasks by title and where they are decided, first and decides nothing (invariant 20)', async () => {
     await renderAt('/retro?fixture=retro-start&stage=handoff');
-    const words = '2件は Backlog に残っています。';
+    const words = 'Backlog に 2件';
     const list = carryOverLine();
     expect(
       document.querySelector('[data-slot="handoff-pane"]')?.firstElementChild,

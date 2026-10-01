@@ -127,13 +127,12 @@ export const CARRY_OVER_PLACE_WORDS = {
  */
 export function carryOverWords(places: CarryOverPlaces): string {
   const parts = [
-    places.inNext > 0 && `${places.inNext}件は次の計画に入っています。`,
-    places.candidates > 0 &&
-      `${places.candidates}件は Backlog に残っています。`,
-    places.completed > 0 && `${places.completed}件は完了しています。`,
-    places.archived > 0 && `${places.archived}件はアーカイブしています。`,
+    places.inNext > 0 && `次の計画に ${places.inNext}件`,
+    places.candidates > 0 && `Backlog に ${places.candidates}件`,
+    places.completed > 0 && `完了 ${places.completed}件`,
+    places.archived > 0 && `アーカイブ ${places.archived}件`,
   ].filter((p) => p !== false);
   return parts.length > 1
-    ? `${places.total}件のうち、${parts.join('')}`
+    ? `${places.total}件：${parts.join(' · ')}`
     : parts.join('');
 }

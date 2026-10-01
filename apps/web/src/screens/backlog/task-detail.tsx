@@ -575,7 +575,7 @@ function TaskDetail({
               <Saved show={saved === 'timeBasis'}>
                 <RadioGroup<TimeBasis>
                   legend="計画に使う時間"
-                  description="どちらか一方だけを使います（両方は足しません）。"
+                  description="タスクの見積もりとサブタスクの合計は、どちらか一方を計画に使います。"
                   value={task.timeBasis}
                   onValueChange={(timeBasis) =>
                     record('timeBasis', { timeBasis })

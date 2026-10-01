@@ -338,7 +338,11 @@ describe('Sprint — 日ごとの記録 (#53)', () => {
     const dialog = await screen.findByRole('dialog', {
       name: /9\/29 \(火\) の「住民税の支払い」の完了を取り消しますか/,
     });
-    expect(within(dialog).getByText(/未処理になり/)).toBeTruthy();
+    expect(
+      within(dialog).getByText(
+        'その日は未処理になり、タスクは今週の残りに戻ります。あとから、その日を完了にはできません。',
+      ),
+    ).toBeTruthy();
     await userEvent.click(
       within(dialog).getByRole('button', { name: '取り消す' }),
     );
