@@ -182,7 +182,7 @@ function PlanPane({
                     t.occurrenceCount !== undefined &&
                     t.sprintTask.goalLink === 'unlinked',
                 ) && (
-                  <p className="max-w-measure-read text-help text-ink-muted">
+                  <p className="max-w-measure-read text-help text-ink-muted [text-wrap:pretty] [word-break:auto-phrase]">
                     繰り返しのタスクは、はじめは目標に紐づきません。行の …
                     の「目標に紐づける」で変えられます。
                   </p>

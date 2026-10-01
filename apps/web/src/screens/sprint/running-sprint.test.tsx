@@ -117,13 +117,18 @@ describe('Sprint — running (#51)', () => {
     ).toBeGreaterThan(0);
   });
 
-  it('says a Task added mid-Sprint is not linked, in Planning’s words (#159)', async () => {
+  it('says whether a Task is linked, in Planning’s words (#159)', async () => {
     await renderAt('/sprint?fixture=today-interrupt');
     const row = screen
       .getByRole('button', { name: '顧客インタビューの設計' })
       .closest('[data-slot="task-row"]');
     expect(row?.textContent).toContain('目標に紐づかない');
     expect(document.body.textContent).not.toContain('目標なし');
+    // A linked Task says so too, in the same tone.
+    const linked = screen
+      .getByText('関連論文を 3 本読む', { selector: 'main *' })
+      .closest('[data-slot="task-row"]');
+    expect(linked?.textContent).toContain('目標に紐づく');
   });
 
   it('folds a criterion that changed no planned value to one line (#161)', async () => {

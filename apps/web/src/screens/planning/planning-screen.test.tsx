@@ -929,7 +929,7 @@ describe('Planning — review fixes', () => {
     expect(line()?.className).toContain('border-danger');
   });
 
-  it('counts a linked Task in an Area without a Goal as not linked, as confirming will', async () => {
+  it('counts only the unlinked Tasks in an Area with a Goal, as the rows say (#159)', async () => {
     await renderAt('/sprint?fixture=planning-shape&stage=shape');
     await userEvent.click(
       within(backlogPane()).getByRole('checkbox', {
@@ -942,15 +942,35 @@ describe('Planning — review fixes', () => {
       .closest('[data-slot="task-row"]');
     // 学習 has no Goal: the row has no link to show or change (#159).
     expect(row?.textContent).not.toContain('目標に紐づ');
+    const confirm = async () => {
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Sprint 2 を確定' }),
+      );
+      return screen.findByRole('dialog', {
+        name: 'Sprint 2 を確定しますか？',
+      });
+    };
+    // 住民税 (unlinked), the recurring Tasks and TypeScript are in Areas
+    // without a Goal: not counted, though confirming leaves them unlinked
+    // (owner decision, #159).
+    let dialog = await confirm();
+    expect(dialog.textContent).not.toContain('目標に紐づかない');
     await userEvent.click(
-      screen.getByRole('button', { name: 'Sprint 2 を確定' }),
+      within(dialog).getByRole('button', { name: '戻って調整' }),
     );
-    const dialog = await screen.findByRole('dialog', {
-      name: 'Sprint 2 を確定しますか？',
-    });
-    // 住民税 (unlinked), 英語の多読・部屋の掃除 (recurring, unlinked) and
-    // TypeScript (linked, but 学習 has no Goal).
-    expect(dialog.textContent).toContain('（うち目標に紐づかない 4件）');
+
+    // An unlinked Task in an Area with a Goal is counted.
+    const research = within(planPane()).getByRole('region', { name: /研究/ });
+    await userEvent.click(
+      within(research).getByRole('button', {
+        name: '操作: 関連論文を 3 本読む',
+      }),
+    );
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: '目標に紐づけない' }),
+    );
+    dialog = await confirm();
+    expect(dialog.textContent).toContain('（うち目標に紐づかない 1件）');
   });
 
   it('shows the suggestion a planned value came from', async () => {
