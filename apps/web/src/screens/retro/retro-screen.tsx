@@ -163,14 +163,16 @@ function RetroView({
       tone: 'done',
       title: `Sprint ${data.number} の振り返りを完了しました`,
     });
-    // The Complete button goes; the focus moves to what takes its place.
-    requestAnimationFrame(() =>
-      document
-        .querySelector<HTMLElement>(
-          'nav[aria-label="次の段階"] [data-slot="begin-planning"]',
-        )
-        ?.focus(),
-    );
+    // The Complete button goes; the focus moves to what takes its place. It
+    // is brought to the middle: at the foot, the Toast would cover it on a
+    // narrow screen (#168).
+    requestAnimationFrame(() => {
+      const next = document.querySelector<HTMLElement>(
+        'nav[aria-label="次の段階"] [data-slot="begin-planning"]',
+      );
+      next?.focus({ preventScroll: true });
+      next?.scrollIntoView?.({ block: 'center' });
+    });
   };
 
   return (

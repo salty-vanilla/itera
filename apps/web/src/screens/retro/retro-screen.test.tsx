@@ -1472,6 +1472,28 @@ describe('Retro — after completing (#168)', () => {
     ).toHaveLength(1);
   });
 
+  it('draws 「計画を開く」 as the same button once the Planning has started', async () => {
+    const router = await renderAt(
+      '/retro?fixture=retro-before-complete&stage=handoff',
+    );
+    await complete();
+    await userEvent.click(
+      within(nextNav()).getByRole('button', {
+        name: 'Sprint 3 の計画を始める',
+      }),
+    );
+    await waitFor(() => expect(router.state.location.pathname).toBe('/sprint'));
+    await router.navigate({
+      to: '/retro',
+      search: { sprint: 2, stage: 'handoff' },
+    });
+    const open = await within(nextNav()).findByRole('link', {
+      name: 'Sprint 3 の計画を開く',
+    });
+    expect(open.getAttribute('data-slot')).toBe('begin-planning');
+    expect(open.className).toContain('border-primary');
+  });
+
   it('names the stage a button leads to', async () => {
     await renderAt('/retro?fixture=retro-before-complete&stage=facts');
     await userEvent.click(

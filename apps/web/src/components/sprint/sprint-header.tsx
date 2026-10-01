@@ -1,11 +1,11 @@
 import type { MouseEvent, ReactNode } from 'react';
 import { StepLink } from '@/components/ui/step-link';
 import { cn } from '@/lib/utils';
-import type { WeekName } from '@/lib/week-text';
+import type { WeekLabel } from '@/lib/week-text';
 
 // DESIGN.md Components › Sprint Header. The Status Tag, the title
 // (`display-l`「Sprint 14」) between the links to the previous and next
-// Sprints, the week's name (「今週」「来週」) and the period, the actions on
+// Sprints, the week's name (「先週」「今週」「来週」) and the period, the actions on
 // the right (one Primary at most), and the stages drawn like a route map:
 // stations joined by a line, the current one marked in `here` with 「現在」
 // and aria-current="step". The stages are a guide; any of them can be
@@ -22,8 +22,8 @@ type SprintHeaderProps = {
   /** The Sprint's state. The next week has none before its Planning. */
   status?: ReactNode;
   title: string;
-  /** 「今週」「来週」: the Sprint's name next to now (#90). */
-  week?: WeekName | undefined;
+  /** 「先週」「今週」「来週」: the Sprint's name next to now (#90, #168). */
+  week?: WeekLabel | undefined;
   period: string;
   /** The previous and next Sprints (#90); a missing one is shown disabled. */
   steps?:

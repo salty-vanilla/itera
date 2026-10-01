@@ -12,7 +12,7 @@ import {
 import { SprintSummary } from '@/components/sprint/sprint-summary';
 import { criterionName } from '@/lib/criterion-text';
 import { formatDate, formatDateTime } from '@/lib/date-format';
-import { PAST_DAY_WORDS, SELECTION_WORDS } from '@/lib/selection-words';
+import { PAST_DAY_WORDS } from '@/lib/selection-words';
 import {
   formatHours,
   formatPlanningSum,
@@ -415,7 +415,7 @@ function FactsPane({
             {[
               ...facts.deferrals.map((s) => ({
                 s,
-                word: SELECTION_WORDS.deferred,
+                word: PAST_DAY_WORDS.deferred,
               })),
               ...facts.pauses.map((s) => ({
                 s,

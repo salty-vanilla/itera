@@ -12,10 +12,10 @@ import {
   type Sprint,
   type SprintState,
 } from '@itera/domain';
-import type { WeekName } from '@/lib/week-text';
+import type { WeekLabel } from '@/lib/week-text';
 import type { Clock, Records } from './records';
 
-export type { WeekName };
+export type { WeekLabel };
 
 /** A Sprint a screen can open, or the next week before its Planning. */
 export interface SprintRef {
@@ -25,7 +25,7 @@ export interface SprintRef {
   readonly end: LocalDate;
   /** Absent for the next week, whose Planning has not started. */
   readonly sprint?: Sprint;
-  readonly week?: WeekName;
+  readonly week?: WeekLabel;
 }
 
 /** The Sprint a screen shows, and those before and after it. */
@@ -46,7 +46,7 @@ export function weekNameOf(
   start: LocalDate,
   records: Records,
   clock: Clock,
-): WeekName | undefined {
+): WeekLabel | undefined {
   const upcoming = nextUnconfirmedSprintStart(
     records.sprints,
     records.user,
@@ -64,7 +64,7 @@ export function weekOf(
   sprint: Sprint,
   records: Records,
   clock: Clock,
-): { week?: WeekName } {
+): { week?: WeekLabel } {
   const week = weekNameOf(sprint.start, records, clock);
   return week === undefined ? {} : { week };
 }

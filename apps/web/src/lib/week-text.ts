@@ -1,13 +1,23 @@
-/** A Sprint's name next to now (#90, 「先週」 #168). */
-export type WeekName = '先週' | '今週' | '来週';
+/** A Sprint's name next to now, for headings and sentences (#90). */
+export type WeekName = '今週' | '来週';
 
 /**
- * 「今週」「来週」, or 「Sprint N」 for a Sprint that is neither (#90).
- * 「先週」 only goes beside the period in the Sprint Header (#168); the
- * headings and sentences of a past Sprint keep its number.
+ * The name beside the period in the Sprint Header: 「先週」 (#168) goes
+ * nowhere else, so that a sentence takes a WeekName, not this.
  */
-export function weekCall(week: WeekName | undefined, number: number): string {
-  return week === '今週' || week === '来週' ? week : `Sprint ${number}`;
+export type WeekLabel = '先週' | WeekName;
+
+/** The name a sentence may use: 「先週」 stays in the Sprint Header (#168). */
+export function weekNameOnly(
+  week: WeekLabel | undefined,
+): WeekName | undefined {
+  return week === '先週' ? undefined : week;
+}
+
+/** 「今週」「来週」, or 「Sprint N」 for a Sprint that is neither (#90). */
+export function weekCall(week: WeekLabel | undefined, number: number): string {
+  const name = weekNameOnly(week);
+  return name ?? `Sprint ${number}`;
 }
 
 /**
