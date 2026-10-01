@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type {
   AreaId,
   CriterionPolicy,
@@ -6,7 +6,8 @@ import type {
   SuggestionBound,
 } from '@itera/domain';
 import { Link } from '@tanstack/react-router';
-import { Info } from 'lucide-react';
+import { ChevronDown, ChevronRight, Info } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Radio, RadioGroup } from '@/components/ui/radio-group';
 import { Select } from '@/components/ui/select';
@@ -76,7 +77,7 @@ function HandoffPane({
       data-slot="handoff-pane"
       className={cn('flex flex-col gap-12', className)}
     >
-      {carryOver.total > 0 && <CarryOverList data={data} />}
+      {carryOver.total > 0 && <CarryOverList data={data} titleOf={titleOf} />}
       <section
         aria-labelledby="handoff-improvement"
         className="flex flex-col gap-3 border-t border-b border-t-ink border-b-border py-4"
@@ -192,7 +193,14 @@ const CARRY_OVER_SHOWN = 5;
  * The carried-over Tasks, by title, and where they are decided: the next
  * Planning's 選ぶ when it has started, else after this Retro (#169).
  */
-function CarryOverList({ data }: { data: RetroData }) {
+function CarryOverList({
+  data,
+  titleOf,
+}: {
+  data: RetroData;
+  titleOf: (taskId: string) => string;
+}) {
+  const listId = useId();
   const next = useNextPlanning();
   const [open, setOpen] = useState(false);
   const { carryOverTasks: tasks } = data;
@@ -207,10 +215,10 @@ function CarryOverList({ data }: { data: RetroData }) {
       <h2 id="handoff-carry-over" className="text-label text-ink-muted">
         持ち越し {tasks.length}件
       </h2>
-      <ul className="flex flex-col gap-1 text-body text-ink">
+      <ul id={listId} className="flex flex-col gap-1 text-body text-ink">
         {shown.map((t) => (
           <li key={t.taskId}>
-            {t.title}
+            {titleOf(t.taskId)}
             {t.place !== 'candidate' && (
               <span className="ms-2 text-help text-ink-muted">
                 {CARRY_OVER_PLACE_WORDS[t.place]}
@@ -220,19 +228,21 @@ function CarryOverList({ data }: { data: RetroData }) {
         ))}
       </ul>
       {tasks.length > CARRY_OVER_SHOWN && (
-        <button
-          type="button"
+        <Button
+          variant="quiet"
+          className="-ms-3 self-start"
           aria-expanded={open}
+          aria-controls={listId}
           onClick={() => setOpen(!open)}
-          className="self-start text-link underline focus-visible:focus-ring"
         >
+          {open ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
           {open ? '畳む' : `ほか ${tasks.length - CARRY_OVER_SHOWN}件を表示`}
-        </button>
+        </Button>
       )}
-      <p className="text-body text-ink-muted">
-        {next.planning !== undefined ? (
-          <>
-            次の計画の「選ぶ」で決めます。
+      {tasks.some((t) => t.place === 'candidate') && (
+        <p className="text-body text-ink-muted">
+          次の計画の「選ぶ」で決めます。
+          {next.planning !== undefined ? (
             <Link
               to="/sprint"
               search={{ sprint: next.number }}
@@ -240,11 +250,11 @@ function CarryOverList({ data }: { data: RetroData }) {
             >
               Sprint {next.number} を開く
             </Link>
-          </>
-        ) : (
-          '次の計画は、振り返りの完了後に始めます。'
-        )}
-      </p>
+          ) : (
+            '振り返りの完了後に始まります。'
+          )}
+        </p>
+      )}
     </section>
   );
 }

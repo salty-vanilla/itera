@@ -108,10 +108,8 @@ export interface RetroData {
   readonly occurrences: readonly RetroOccurrence[];
   /** Where the carried-over Tasks are now (#107, F35). */
   readonly carryOver: CarryOverPlaces;
-  /** The carried-over Tasks with their titles, for 引き継ぐ (#169). */
-  readonly carryOverTasks: readonly (CarryOverTask & {
-    readonly title: string;
-  })[];
+  /** The carried-over Tasks and their places, for 引き継ぐ (#169). */
+  readonly carryOverTasks: readonly CarryOverTask[];
 }
 
 const NO_AREA: RetroArea = { id: null, name: '領域なし', color: 'none' };
@@ -235,10 +233,7 @@ export function retroData(
       },
     })),
     carryOver: carryOverPlaces(sprint, following, tasks),
-    carryOverTasks: carryOverTasks(sprint, following, tasks).map((c) => ({
-      ...c,
-      title: tasks.find((t) => t.id === c.taskId)?.title ?? '',
-    })),
+    carryOverTasks: carryOverTasks(sprint, following, tasks),
   };
 }
 

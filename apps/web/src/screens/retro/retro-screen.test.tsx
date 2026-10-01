@@ -571,10 +571,10 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
       (li) => li.textContent,
     );
     expect(titles).toHaveLength(2);
-    expect(titles.every((t) => (t ?? '') !== '')).toBe(true);
+    expect(titles).toEqual(['関連論文を 3 本読む', '実験データの前処理']);
     // Not started yet: it says when, and offers nothing to choose.
     expect(list?.textContent).toContain(
-      '次の計画は、振り返りの完了後に始めます。',
+      '次の計画の「選ぶ」で決めます。振り返りの完了後に始まります。',
     );
     expect(list?.querySelector('input, a')).toBeNull();
     await userEvent.click(screen.getByRole('radio', { name: '終える' }));
@@ -586,34 +586,46 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
   });
 
   it('folds a long list of carry-overs behind a button', async () => {
-    change = (snapshot) => ({
-      ...snapshot,
-      records: {
-        ...snapshot.records,
-        sprints: snapshot.records.sprints.map((s) => {
-          if (s.state !== 'review') return s;
-          const carried = s.tasks.find((t) => t.outcome === 'carriedOver');
-          if (carried === undefined) return s;
-          return {
-            ...s,
-            tasks: [
-              ...s.tasks,
-              ...Array.from({ length: 5 }, (_, i) => ({
-                ...carried,
-                id: `st-more-${i}` as typeof carried.id,
-              })),
-            ],
-          };
-        }),
-      },
-    });
+    change = (snapshot) => {
+      const review = snapshot.records.sprints.find((s) => s.state === 'review');
+      const carried = review?.tasks.find((t) => t.outcome === 'carriedOver');
+      const task = snapshot.records.tasks.find((t) => t.id === carried?.taskId);
+      if (review === undefined || carried === undefined || task === undefined) {
+        return snapshot;
+      }
+      const more = Array.from({ length: 5 }, (_, i) => ({
+        task: {
+          ...task,
+          id: `task-more-${i}` as typeof task.id,
+          title: `追加 ${i}`,
+        },
+        sprintTask: {
+          ...carried,
+          id: `st-more-${i}` as typeof carried.id,
+          taskId: `task-more-${i}` as typeof carried.taskId,
+        },
+      }));
+      return {
+        ...snapshot,
+        records: {
+          ...snapshot.records,
+          tasks: [...snapshot.records.tasks, ...more.map((m) => m.task)],
+          sprints: snapshot.records.sprints.map((s) =>
+            s === review
+              ? { ...s, tasks: [...s.tasks, ...more.map((m) => m.sprintTask)] }
+              : s,
+          ),
+        },
+      };
+    };
     await renderAt('/retro?fixture=retro-start&stage=handoff');
     const list = carryOverLine() as HTMLElement;
     expect(list.querySelectorAll('li')).toHaveLength(5);
-    await userEvent.click(
-      within(list).getByRole('button', { name: /ほか 2件/ }),
-    );
+    const more = within(list).getByRole('button', { name: /ほか 2件/ });
+    expect(more.getAttribute('aria-expanded')).toBe('false');
+    await userEvent.click(more);
     expect(list.querySelectorAll('li')).toHaveLength(7);
+    expect(list.textContent).toContain('追加 4');
   });
 
   it('has no line when nothing was carried over', async () => {

@@ -132,7 +132,7 @@ export function carryOverWords(places: CarryOverPlaces): string {
     places.inNext > 0 && `${places.inNext}件は次の計画に入っています。`,
     places.candidates > 0 &&
       (split
-        ? `${places.candidates}件は Backlog に残り、次の計画の候補です。`
+        ? `${places.candidates}件は Backlog に残っています。`
         : `${places.candidates}件は Backlog に残っています。`),
     places.completed > 0 && `${places.completed}件は完了しています。`,
     places.archived > 0 && `${places.archived}件はアーカイブしています。`,
