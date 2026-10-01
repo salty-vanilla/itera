@@ -59,7 +59,7 @@ function SubtaskList({
           const parsed = parseHours(hours);
           if (title.trim() === '') return;
           if (parsed === 'invalid') {
-            setError('0 より大きい数で入力してください（例：0.5）');
+            setError('0 より大きい時間を数字で入れてください（例：0.5）');
             // Focus goes to the field in error (accessibility.md).
             hoursRef.current?.focus();
             return;
@@ -114,7 +114,7 @@ function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
   function commit() {
     const parsed = parseHours(hours);
     if (parsed === 'invalid') {
-      setError('0 より大きい数で入力してください（例：0.5）');
+      setError('0 より大きい時間を数字で入れてください（例：0.5）');
       return;
     }
     setError(undefined);

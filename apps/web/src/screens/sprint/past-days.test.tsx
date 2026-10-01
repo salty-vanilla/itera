@@ -18,7 +18,7 @@ const record = (
 describe('consequence (#209)', () => {
   it('leaves the day unresolved and the Task back in the week (F33)', () => {
     expect(consequence(record('done', { kind: 'unresolved' }))).toBe(
-      'その日の記録は未完了に戻り、タスクは今週の残りに戻ります。あとから、その日を完了にはできません。',
+      'その日の記録は未完了に戻り、タスクは今週の残りに戻ります。取り消したあと、その日の記録をもう一度完了にはできません。',
     );
   });
 
@@ -26,24 +26,24 @@ describe('consequence (#209)', () => {
     expect(
       consequence(record('done', { kind: 'closed', resolution: 'deferred' })),
     ).toBe(
-      'その日の記録は「見送り」に戻り、タスクは今週の残りに戻ります。あとから、その日を完了にはできません。',
+      'その日の記録は「見送り」に戻り、タスクは今週の残りに戻ります。取り消したあと、その日の記録をもう一度完了にはできません。',
     );
     expect(
       consequence(record('done', { kind: 'closed', resolution: 'paused' })),
     ).toBe(
-      'その日の記録は「ここまで」に戻り、タスクは今週の残りに戻ります。あとから、その日を完了にはできません。',
+      'その日の記録は「ここまで」に戻り、タスクは今週の残りに戻ります。取り消したあと、その日の記録をもう一度完了にはできません。',
     );
   });
 
   it('removes the record of a completion from the Backlog (F29)', () => {
     expect(consequence(record('done', { kind: 'gone' }))).toBe(
-      'その日の記録は消え、タスクは今週の残りに戻ります。あとから、その日を完了にはできません。',
+      'その日の記録は消え、タスクは今週の残りに戻ります。取り消したあと、その日の記録をもう一度完了にはできません。',
     );
   });
 
   it('puts a skipped occurrence back to pending', () => {
     expect(consequence(record('skipped', { kind: 'unresolved' }, true))).toBe(
-      'その日の記録と繰り返しは未完了に戻ります。あとから、その日をスキップにはできません。',
+      'その日の記録と繰り返しは未完了に戻ります。取り消したあと、その日の記録をもう一度スキップにはできません。',
     );
   });
 
@@ -53,10 +53,10 @@ describe('consequence (#209)', () => {
         record('done', { kind: 'closed', resolution: 'deferred' }, true),
       ),
     ).toBe(
-      'その日の記録は「見送り」に戻り、繰り返しは未完了に戻ります。あとから、その日を完了にはできません。',
+      'その日の記録は「見送り」に戻り、繰り返しは未完了に戻ります。取り消したあと、その日の記録をもう一度完了にはできません。',
     );
     expect(consequence(record('done', { kind: 'gone' }, true))).toBe(
-      'その日の記録は消え、繰り返しは未完了に戻ります。あとから、その日を完了にはできません。',
+      'その日の記録は消え、繰り返しは未完了に戻ります。取り消したあと、その日の記録をもう一度完了にはできません。',
     );
   });
 });

@@ -291,7 +291,7 @@ function RowMetadata({
     <TaskMetadata>
       {state}
       {selection.origin === 'backlogCompletion' && (
-        <MetaItem>Backlog から完了</MetaItem>
+        <MetaItem>Backlog で完了</MetaItem>
       )}
       <ItemMetadata item={row} />
     </TaskMetadata>
