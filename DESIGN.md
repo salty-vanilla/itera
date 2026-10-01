@@ -593,7 +593,7 @@ compact の原則：
 - 意味が広く共有されたアイコン（閉じる、…、編集、検索）だけ。同じ行に 3 つ以上並べず Menu にまとめる。
 
 **Menu** — 行やヘッダーの補助操作のドロップダウン。トリガーは `…` の IconButton か、Secondary の Button（「並び順: 期限 ⌄」）。
-- 面 `surface`＋`border`、`rounded.md`、`elevation-overlay`。項目 32px（アイコン・ラベル・Kbd）、区切り `border-soft`、破壊的な項目（`danger`）は最後。アーカイブは元に戻せるので `danger` にしない（区切りの後の最後に置く）。Checked は チェック＋`here-subtle`。
+- 面 `surface`＋`border`、`rounded.md`、`elevation-overlay`。項目 32px（アイコン・ラベル・Kbd）、区切り `border-soft`、破壊的な項目（`danger`）は最後。アーカイブと割り込みの「消す」は元に戻せるので `danger` にしない（区切りの後の最後に置く。Issue #164・#197）。Checked は チェック＋`here-subtle`。
 - 主要な操作を隠さない。サブメニューを入れ子にしない。キーボードは ↓ ↑ Home End、Enter で実行、Esc でトリガーに戻る、Tab で閉じる。
 
 **Kbd** — ショートカットの表示。`code` の書体で Tooltip とメニュー項目の右端に置く。キーを色で強調しない。主な入力がタッチの端末（`pointer: coarse`）では、メニュー項目の Kbd を出さない（押すキーがないため。Issue #163）。
