@@ -31,12 +31,26 @@ export function CarryOverText({
 }: NonNullable<BacklogItem['carry']>) {
   const Icon = count >= 3 ? semanticIcons.warning : semanticIcons.carriedOver;
   return (
+    // From 3, it may break only at 「 · 」, so it never runs under the
+    // Estimate (#205).
     <MetaItem
       icon={<Icon aria-hidden />}
+      wrap={count >= 3}
       className={count >= 3 ? 'text-warning' : undefined}
     >
-      持ち越し {count}回（Sprint {fromSprint}から）
-      {count >= 3 && ' · 小さく分けてみる'}
+      {count >= 3 ? (
+        <span>
+          <span className="whitespace-nowrap">
+            持ち越し {count}回（Sprint {fromSprint}から）
+          </span>
+          {' · '}
+          <span className="whitespace-nowrap">小さく分けてみる</span>
+        </span>
+      ) : (
+        <>
+          持ち越し {count}回（Sprint {fromSprint}から）
+        </>
+      )}
     </MetaItem>
   );
 }

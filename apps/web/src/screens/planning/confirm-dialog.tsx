@@ -66,8 +66,12 @@ function ConfirmDialog({
             <dt className="text-ink-muted">タスク</dt>
             <dd className="text-ink">
               {summary.taskCount}件
-              {summary.unlinked > 0 &&
-                `（うち目標に入っていない ${summary.unlinked}件）`}
+              {summary.unlinked > 0 && (
+                // Kept whole: the count stays with its words.
+                <span className="whitespace-nowrap">
+                  （うち目標に入っていない {summary.unlinked}件）
+                </span>
+              )}
             </dd>
             <dt className="text-ink-muted">計画の合計</dt>
             <dd className="text-num-m text-ink">{summary.total}</dd>

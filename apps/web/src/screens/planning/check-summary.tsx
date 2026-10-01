@@ -69,8 +69,12 @@ function CheckSummary({
           <dt className="text-ink-muted">タスク</dt>
           <dd className="text-ink">
             {summary.taskCount}件
-            {summary.unlinked > 0 &&
-              `（うち目標に入っていない ${summary.unlinked}件）`}
+            {summary.unlinked > 0 && (
+              // Kept whole: the count stays with its words.
+              <span className="whitespace-nowrap">
+                （うち目標に入っていない {summary.unlinked}件）
+              </span>
+            )}
           </dd>
         </dl>
         {/* Under the numbers, as in the Capacity: the first screen tells it. */}
