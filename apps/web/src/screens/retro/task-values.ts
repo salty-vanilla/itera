@@ -96,7 +96,7 @@ export function plannedLabel(t: TaskFact): string {
 
 /**
  * 確定したときとの差 of a Task in words (#167): 「計画より 0.5h 少ない」, and against
- * a range 「上限より 1h 多い」「下限より 30m 少ない」「計画の幅の中」. Nothing
+ * a range 「計画の幅より 1h 多い」「計画の幅より 30m 少ない」「計画の幅の中」 (#234). Nothing
  * without actual time or an estimated value. Only the difference: no color
  * and no judgement (invariant 40).
  */
@@ -108,8 +108,8 @@ export function differenceText(t: TaskFact): string | undefined {
     if (d.lo === 0) return '計画と同じ';
     return `計画より ${hours(d.lo)} ${d.lo > 0 ? '多い' : '少ない'}`;
   }
-  if (d.lo > 0) return `上限より ${hours(d.lo)} 多い`;
-  if (d.hi < 0) return `下限より ${hours(d.hi)} 少ない`;
+  if (d.lo > 0) return `計画の幅より ${hours(d.lo)} 多い`;
+  if (d.hi < 0) return `計画の幅より ${hours(d.hi)} 少ない`;
   return '計画の幅の中';
 }
 

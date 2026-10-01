@@ -109,7 +109,7 @@ describe('Retro — 事実を見る', () => {
         (_, element) =>
           element?.tagName === 'P' &&
           element.textContent ===
-            '今回の計画のルール：「研究：見積もりの提案の上限で計画する」（扱いは「引き継ぐ」で決めます）',
+            '今回の計画のルール：「研究：見積もりがないときは提案の多めの値で計画する」（扱いは「引き継ぐ」で決めます）',
       ),
     ).toBeTruthy();
     expect(screen.queryByText(/タスク 1件のうち/)).toBeNull();
@@ -423,7 +423,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
     // The setting, its effect and preview from one value (invariant 39).
     await userEvent.selectOptions(
       screen.getByRole('combobox', {
-        name: '見積もりの提案のどこで計画するか',
+        name: '見積もりがないとき、提案のどの値で計画するか',
       }),
       'mid',
     );
@@ -432,7 +432,8 @@ describe('Retro — 引き継ぐ and 完了', () => {
         .rangePolicy,
     ).toBe('mid');
     expect(
-      screen.getAllByText(/見積もりの提案の中央で計画する/).length,
+      screen.getAllByText(/見積もりがないときは提案のふつうの値で計画する/)
+        .length,
     ).toBeGreaterThan(0);
     await userEvent.click(screen.getByRole('radio', { name: '置き換える' }));
     await userEvent.click(completeButton());
@@ -489,7 +490,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     await renderAt('/retro?fixture=retro-start&stage=handoff');
     const section = criterionSection();
     const outcome = within(section).getByText(
-      '見積もりの提案の上限で計画した研究のタスク 1件のうち、1件を持ち越し（計画 5h・実績 4.5h）',
+      '提案の多めの値で計画した研究のタスク 1件のうち、1件を持ち越し（計画 5h・実績 4.5h）',
     );
     expect(
       within(section).getByText('確定したときに、このルールで計画しました。'),
@@ -510,7 +511,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     const choices = () =>
       within(criterionSection()).getByRole('radiogroup').textContent ?? '';
     expect(choices()).toContain(
-      '次の計画でも、見積もりがない研究のタスクは、見積もりの提案の上限で計画します。使うかどうかは「確かめる」で選べます。',
+      '次の計画でも、見積もりがない研究のタスクは、提案の多めの値で計画します。使うかどうかは「確かめる」で選べます。',
     );
     expect(choices()).toContain('次の計画では、このルールを使いません。');
     await userEvent.click(
@@ -522,7 +523,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     );
     await userEvent.selectOptions(
       screen.getByRole('combobox', {
-        name: '見積もりの提案のどこで計画するか',
+        name: '見積もりがないとき、提案のどの値で計画するか',
       }),
       'mid',
     );
@@ -531,12 +532,14 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     expect(
       lastSnapshot().records.criteria.find((c) => c.id === draftId)?.policy,
     ).toEqual({ scope: { kind: 'all' }, rangePolicy: 'mid' });
-    expect(screen.getByText('見積もりの提案の中央で計画する')).toBeTruthy();
     expect(
-      screen.getByText(/タスク \d+件を、見積もりの提案の中央で計画します/),
+      screen.getByText('見積もりがないときは提案のふつうの値で計画する'),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/タスク \d+件を、提案のふつうの値で計画します/),
     ).toBeTruthy();
     expect(choices()).toContain(
-      '次の計画では代わりに、見積もりがないタスクは、見積もりの提案の中央で計画します。使うかどうかは「確かめる」で選べます。',
+      '次の計画では代わりに、見積もりがないタスクは、提案のふつうの値で計画します。使うかどうかは「確かめる」で選べます。',
     );
   });
 
@@ -552,7 +555,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     );
     expect(
       screen.getByText(
-        '次の計画では、見積もりがない生活のタスクは、見積もりの提案の上限で計画します（今の Backlog にはまだありません）。',
+        '次の計画では、見積もりがない生活のタスクは、提案の多めの値で計画します（今の Backlog にはまだありません）。',
       ),
     ).toBeTruthy();
     expect(screen.queryByText(/0件/)).toBeNull();
@@ -568,14 +571,14 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     expect(screen.getByText(same)).toBeTruthy();
     await userEvent.selectOptions(
       screen.getByRole('combobox', {
-        name: '見積もりの提案のどこで計画するか',
+        name: '見積もりがないとき、提案のどの値で計画するか',
       }),
       'mid',
     );
     expect(screen.queryByText(same)).toBeNull();
     await userEvent.selectOptions(
       screen.getByRole('combobox', {
-        name: '見積もりの提案のどこで計画するか',
+        name: '見積もりがないとき、提案のどの値で計画するか',
       }),
       'hi',
     );
@@ -710,7 +713,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
         (_, element) =>
           element?.tagName === 'P' &&
           element.textContent ===
-            '今回の計画のルール：「研究：見積もりの提案の上限で計画する」（結果と扱いは「引き継ぐ」にあります）',
+            '今回の計画のルール：「研究：見積もりがないときは提案の多めの値で計画する」（結果と扱いは「引き継ぐ」にあります）',
       ),
     ).toBeTruthy();
     // The closed reflection keeps the new name, as text (#109).
@@ -1200,7 +1203,7 @@ describe('Retro — the plan against what happened (#167)', () => {
       '確定したときの計画 15.25–17.25h：少なく済めば 1.75h 残る · 多くかかれば 0.25h 超える',
     );
     expect(lineOf('週の途中の追加を含めて')?.textContent).toBe(
-      '週の途中の追加を含めて 17.25–20.25h：少なく済んでも 0.25h 超える',
+      '週の途中の追加を含めて 17.25–20.25h：少なく済んでも 0.25h 超える · 多くかかれば 3.25h 超える',
     );
     // Facts of the week, not an alarm (PRD §12).
     expect(pane().querySelector('.text-danger')).toBeNull();

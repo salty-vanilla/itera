@@ -113,11 +113,15 @@ export const typographyGroups = [
       ['heading', 'text-heading', '時間の見通し'],
       ['subheading', 'text-subheading', '研究'],
       ['button', 'text-button', 'Sprint を確定'],
-      ['body-l', 'text-body-l', '見積もりの提案のどこで計画するかを決めます。'],
+      [
+        'body-l',
+        'text-body-l',
+        '見積もりがないとき、提案のどの値で計画するかを決めます。',
+      ],
       [
         'body',
         'text-body',
-        '使える時間から計画の合計を引いた残りを、幅のまま示します。',
+        '少なく済めば 2.25h 残る · 多くかかれば 0.75h 超える',
       ],
       ['task', 'text-task', '関連研究のメモを整理する'],
       ['label', 'text-label', '使える時間'],
@@ -131,7 +135,7 @@ export const typographyGroups = [
     description:
       '数字も LINE Seed JP で組む。数字はプロポーショナルなので、並ぶ列は右揃えにする。–（範囲）と −（負号）はハイフンと見分けられる。',
     samples: [
-      ['num-l', 'text-num-l', '残り 1 〜 3h'],
+      ['num-l', 'text-num-l', '2.25h'],
       ['num-m', 'text-num-m', '16.5–18.5h'],
       ['num-s', 'text-num-s', '2–4h / 2-4'],
       ['code', 'text-code', '⌘ Enter'],
