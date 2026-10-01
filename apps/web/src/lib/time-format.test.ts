@@ -52,9 +52,10 @@ describe('formatRange', () => {
     expect(formatRange(0.5, 0.999)).toBe('30分〜1時間');
   });
 
-  it('writes zero without a unit at the lower end', () => {
+  it('writes zero at the lower end as any other value', () => {
     expect(formatRange(0, 0.5)).toBe('0〜30分');
     expect(formatRange(0, 2)).toBe('0〜2時間');
+    expect(formatRange(0, 1.5)).toBe('0時間〜1時間30分');
   });
 
   it('writes ends that round to the same minute as one value', () => {

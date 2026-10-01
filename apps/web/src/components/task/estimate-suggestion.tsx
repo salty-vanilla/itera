@@ -105,7 +105,9 @@ function EstimateSuggestion({
         </span>
         <span className="text-meta text-ink-muted">提案</span>
       </p>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-body">
+      {/* Free text with times in it: broken between phrases, so that
+          「1〜2時間」 is not broken inside (#239). */}
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-body [text-wrap:pretty] [word-break:auto-phrase]">
         <dt className="text-label text-ink-muted">根拠</dt>
         <dd className="text-ink">
           {suggestion.rationale === ''

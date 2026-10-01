@@ -58,19 +58,14 @@ export function formatRange(lo: number, hi: number): string {
   const hiMinutes = inMinutes(hi);
   if (loMinutes === hiMinutes) return signed(loMinutes);
   const hiText = signed(hiMinutes);
-  // 「0〜30分」: zero has no unit of its own.
-  if (loMinutes === 0 && hiMinutes > 0) return `0${WAVE_DASH}${hiText}`;
-  const unit = loMinutes > 0 && sharedUnit(loMinutes, hiMinutes);
-  if (unit)
-    return `${unsigned(loMinutes).slice(0, -unit.length)}${WAVE_DASH}${hiText}`;
+  if (loMinutes >= 0) {
+    // The unit once, when both ends are in it: 「0〜2時間」「0〜30分」.
+    if (loMinutes % 60 === 0 && hiMinutes % 60 === 0) {
+      return `${loMinutes / 60}${WAVE_DASH}${hiText}`;
+    }
+    if (hiMinutes < 60) return `${loMinutes}${WAVE_DASH}${hiText}`;
+  }
   return `${signed(loMinutes)}${WAVE_DASH}${hiText}`;
-}
-
-/** The one unit both ends are written in, if any: 「時間」 or 「分」. */
-function sharedUnit(lo: number, hi: number): string | undefined {
-  if (lo % 60 === 0 && hi % 60 === 0) return '時間';
-  if (lo < 60 && hi < 60) return '分';
-  return undefined;
 }
 
 /** An Estimate or a planning value that may be missing: 「見積もりなし」 then. */

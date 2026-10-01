@@ -218,14 +218,24 @@ function Drivers({ data }: { data: PlanningData }) {
           <li key={d.sprintTask.id}>
             {d.fromRange !== undefined ? (
               <>
-                {`計画のルールで「${d.task.title}」を ${formatHours(d.value.lo)}で計算しています`}
-                {/* The range is not broken at its dash. */}
+                {`計画のルールで「${d.task.title}」を `}
+                {/* A time is never broken inside (#239). */}
+                <span className="whitespace-nowrap">
+                  {formatHours(d.value.lo)}
+                </span>
+                で計算しています
                 <span className="whitespace-nowrap">
                   {`（見積もりの提案 ${formatRange(d.fromRange.lo, d.fromRange.hi)}）。`}
                 </span>
               </>
             ) : (
-              `「${d.task.title}」は ${formatRange(d.value.lo, d.value.hi)}の幅があります。`
+              <>
+                {`「${d.task.title}」は `}
+                <span className="whitespace-nowrap">
+                  {formatRange(d.value.lo, d.value.hi)}
+                </span>
+                の幅があります。
+              </>
             )}
           </li>
         ))}

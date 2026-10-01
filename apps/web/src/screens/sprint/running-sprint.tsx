@@ -385,7 +385,8 @@ function Outlook({
         </h2>
         <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-body">
           <dt className="text-ink-muted">計画の合計</dt>
-          <dd className="text-right text-num-m text-ink">
+          {/* A range of hours is never broken inside (#239). */}
+          <dd className="text-right text-num-m whitespace-nowrap text-ink">
             {formatPlanningSum(data.totals.total)}
           </dd>
           <dt className="text-ink-muted">確定したときの使える時間</dt>

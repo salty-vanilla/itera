@@ -418,9 +418,14 @@ function DraftCriterion({
           <ul className="flex flex-col gap-1 text-body text-ink-muted">
             {preview.map((row) => (
               <li key={row.taskId}>
-                {titleOf(row.taskId)}：見積もりの提案{' '}
-                {formatRange(row.from.lo, row.from.hi)} → 計画{' '}
-                {formatHours(row.to)}
+                {titleOf(row.taskId)}：
+                {/* Each value whole on a line (#239). */}
+                <span className="whitespace-nowrap">
+                  見積もりの提案 {formatRange(row.from.lo, row.from.hi)}
+                </span>{' '}
+                <span className="whitespace-nowrap">
+                  → 計画 {formatHours(row.to)}
+                </span>
               </li>
             ))}
           </ul>
