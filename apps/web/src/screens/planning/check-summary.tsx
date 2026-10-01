@@ -9,7 +9,7 @@ import {
   CapacityStatement,
 } from '@/components/sprint/capacity-indicator';
 import { BOUND_WORDS, criterionName } from '@/lib/criterion-text';
-import { formatDifference, formatHours, formatRange } from '@/lib/time-format';
+import { formatHours, formatRange } from '@/lib/time-format';
 import { weekCall, weekText } from '@/lib/week-text';
 import type { PlanningData } from '@/store/planning-view';
 import { planSummary } from './plan-summary';
@@ -70,7 +70,7 @@ function CheckSummary({
         </dl>
         {/* Under the numbers, as in the Capacity: the first screen tells it. */}
         {summary.leftOut !== undefined && (
-          <p className="text-help text-ink-muted">{summary.leftOut}</p>
+          <p className="text-body text-ink">{summary.leftOut}</p>
         )}
         {/* The one field for the hours in 確かめる; the right pane has none. */}
         <div className="max-w-pane-side">
@@ -209,10 +209,9 @@ function CriterionEffect({ data }: { data: PlanningData }) {
 
 /** 「何が上振れすると超過するか」 (PRD §5 B Check, MVP 完了条件 5). */
 function Drivers({ data }: { data: PlanningData }) {
-  const { drivers, totals } = data;
+  const { drivers } = data;
   const headingId = useId();
   if (drivers.length === 0) return null;
-  const capacity = totals.capacity;
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-2">
       <h3 id={headingId} className="text-subheading text-ink">
@@ -227,13 +226,8 @@ function Drivers({ data }: { data: PlanningData }) {
           </li>
         ))}
       </ul>
-      {/* While the difference crosses 0, the state line above already says
-          what is left at the lower end (#93). */}
-      {capacity?.status === 'exceeds' && (
-        <p className="text-help text-ink-muted">
-          {`計画値が下限どおりでも、超過 ${formatDifference(-capacity.remaining.hi, -capacity.remaining.hi)} です。`}
-        </p>
-      )}
+      {/* What is left or over at the lower end is in the state line above
+          (#93, #165). */}
     </section>
   );
 }

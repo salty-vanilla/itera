@@ -256,6 +256,7 @@ function TaskDetail({
   onComplete,
   focusEstimate,
   leaveRef,
+  footer,
 }: {
   item: BacklogItem;
   /** The Areas to choose from, in the person's order. */
@@ -271,6 +272,11 @@ function TaskDetail({
   focusEstimate?: number | undefined;
   /** From `useTaskDetailLeave`: the screen asks before it closes the detail. */
   leaveRef?: Ref<(then: () => void, opens: boolean) => void> | undefined;
+  /**
+   * Beside 閉じる, always in view: Planning shows what the plan comes to, so
+   * that an Estimate typed here shows its effect before closing (#165).
+   */
+  footer?: ReactNode;
 }) {
   const actions = useTaskActions();
   const newArea = useNewAreaDialog();
@@ -1012,6 +1018,7 @@ function TaskDetail({
         </div>
       )}
       <DrawerFooter>
+        {footer}
         <Button onClick={() => leave(onClose)}>閉じる</Button>
       </DrawerFooter>
     </>
