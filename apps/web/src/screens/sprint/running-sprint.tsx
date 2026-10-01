@@ -198,7 +198,7 @@ function RunningSprint({
                       <li key={t.sprintTask.id}>
                         <RunningRow
                           item={t}
-                          week={data.week}
+                          week={running ? data.week : undefined}
                           ended={!running}
                           hasGoal={block.goal !== undefined}
                           // A completed or archived Task has no detail to

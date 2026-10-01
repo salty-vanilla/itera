@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { semanticIcons } from '@/components/ui/icon';
 import { MetaItem, TaskMetadata } from '@/components/task/task-metadata';
 import { formatDate, formatDateTime } from '@/lib/date-format';
-import { SELECTION_WORDS } from '@/lib/selection-words';
+import { PAST_DAY_WORDS, SELECTION_WORDS } from '@/lib/selection-words';
 import { formatHours } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
 import type { RetroData } from '@/store/retro-view';
@@ -85,7 +85,7 @@ function pinned(pin: RetroPin, data: RetroData): Pinned | undefined {
       if (s === undefined) return undefined;
       const word =
         s.resolution === 'paused' || s.closedBefore?.resolution === 'paused'
-          ? SELECTION_WORDS.paused
+          ? PAST_DAY_WORDS.paused
           : SELECTION_WORDS.deferred;
       const values = [formatDate(s.date), word];
       return withMeta(

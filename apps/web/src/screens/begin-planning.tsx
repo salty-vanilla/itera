@@ -1,5 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { useNextPlanning, useRetroActions } from '@/store/use-retro';
 
 /**
@@ -7,7 +7,7 @@ import { useNextPlanning, useRetroActions } from '@/store/use-retro';
  * week's Planning — allowed even while the previous Retro is open, as only
  * confirming waits for it (invariant 12) — and opens that Sprint on the
  * Sprint screen (#90). With a Planning already started, it links there
- * instead.
+ * instead, drawn as the same button so that it stays as easy to find (#168).
  */
 function BeginPlanning({
   variant = 'primary',
@@ -24,7 +24,7 @@ function BeginPlanning({
         to="/sprint"
         search={{ sprint: next.number }}
         data-slot="begin-planning"
-        className="text-link underline focus-visible:focus-ring"
+        className={buttonVariants({ variant })}
       >
         Sprint {next.number} の計画を開く
       </Link>

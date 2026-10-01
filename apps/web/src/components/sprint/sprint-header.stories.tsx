@@ -40,3 +40,22 @@ export const Steps: Story = {
     steps: { previous: { number: 2, href: '#sprint-2' } },
   },
 };
+
+/**
+ * 完了した振り返り（#168）：段階がすべて済んでいるので「現在」と黄の印は出さない。開いている段階は太字だけで、どの段階も開ける。
+ */
+export const StagesDone: Story = {
+  args: {
+    status: <Tag tone="done">完了</Tag>,
+    title: 'Sprint 2',
+    period: '9/21 (月) – 9/27 (日)',
+    actions: undefined,
+    stages: [
+      { id: 'facts', label: '事実を見る', href: '#facts' },
+      { id: 'reflect', label: '振り返る', href: '#reflect' },
+      { id: 'handoff', label: '引き継ぐ', href: '#handoff' },
+    ],
+    currentStage: 'handoff',
+    stagesDone: true,
+  },
+};

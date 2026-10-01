@@ -163,10 +163,12 @@ function RetroView({
       tone: 'done',
       title: `Sprint ${data.number} の振り返りを完了しました`,
     });
-    // This view goes; the focus moves to what comes next.
+    // The Complete button goes; the focus moves to what takes its place.
     requestAnimationFrame(() =>
       document
-        .querySelector<HTMLElement>('[data-slot="begin-planning"]')
+        .querySelector<HTMLElement>(
+          'nav[aria-label="次の段階"] [data-slot="begin-planning"]',
+        )
         ?.focus(),
     );
   };
@@ -189,6 +191,7 @@ function RetroView({
           )
         }
         title={`Sprint ${data.number}`}
+        week={data.week}
         period={formatDateRange(data.sprint.start, data.sprint.end)}
         steps={steps}
         stages={RETRO_STAGES.map((s) => ({
@@ -200,6 +203,7 @@ function RetroView({
           }).href,
         }))}
         currentStage={stage}
+        stagesDone={readOnly}
         onStage={(stageId, event) => {
           if (
             event.button !== 0 ||
@@ -212,11 +216,19 @@ function RetroView({
           event.preventDefault();
           setStage(stageId as RetroStage);
         }}
-        actions={readOnly && leadsOn ? <BeginPlanning /> : undefined}
+        actions={
+          // The same button ends 引き継ぐ, where it takes the place of
+          // 「振り返りを完了」: one Primary on the screen (#168).
+          readOnly && leadsOn ? (
+            <BeginPlanning
+              variant={stage === 'handoff' ? 'secondary' : 'primary'}
+            />
+          ) : undefined
+        }
       >
         <p className="text-help text-ink-muted">
           {readOnly
-            ? '完了した振り返りです。書いた内容は、ここでは変えられません。'
+            ? '完了した後は、書いた内容を変えられません。'
             : '書いた内容は、途中で閉じても残ります。'}
         </p>
       </SprintHeader>
@@ -283,14 +295,19 @@ function RetroView({
             )}
             <nav aria-label="次の段階">
               {stage === 'facts' && (
-                <Button onClick={() => setStage('reflect')}>振り返るへ</Button>
+                <Button onClick={() => setStage('reflect')}>
+                  次へ：振り返る
+                </Button>
               )}
               {stage === 'reflect' && (
-                <Button onClick={() => setStage('handoff')}>引き継ぐへ</Button>
+                <Button onClick={() => setStage('handoff')}>
+                  次へ：引き継ぐ
+                </Button>
               )}
               {stage === 'handoff' && !readOnly && (
                 <CompleteRetro data={data} onComplete={complete} />
               )}
+              {stage === 'handoff' && readOnly && leadsOn && <BeginPlanning />}
             </nav>
           </div>
         </div>
