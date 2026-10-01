@@ -30,9 +30,8 @@ import { usePlanningActions } from '@/store/use-planning';
 // columns). It holds both limits, so the caller sets no width. One
 // workspace that changes with the stage (PRD §5 B), never a forced wizard:
 // - 選ぶ: 「今週、何を進めますか」, the chosen Tasks per Area.
-// - 整える: 「今週、どんな状態にしたいか」 and what the stage is for (the
-//   Goals and the Estimates, #159), each Area's Goal (optional) with its
-//   Tasks; a Task is linked to the Goal or not, and both count. An Area
+// - 整える: 「今週、どんな状態にしたいか」, each Area's Goal (optional) with
+//   its Tasks; a Task is linked to the Goal or not, and both count. An Area
 //   with neither is one line, so that a Goal can still be written first.
 // - 確かめる: 「この計画で、進められそうか」, the summary first (what the 確定
 //   Dialog sums up, #93), then the Goals, Tasks and their values, to read:
@@ -101,11 +100,9 @@ function PlanPane({
       )}
     >
       <h1 className="text-display-m text-ink">{stageHeading(stage, week)}</h1>
-      {stage !== 'check' && (
+      {stage === 'pick' && (
         <p className="max-w-measure-read text-body text-ink-muted [text-wrap:pretty] [word-break:auto-phrase]">
-          {stage === 'pick'
-            ? pickGuide(week, data.candidates.recurring.length > 0)
-            : SHAPE_GUIDE}
+          {pickGuide(week, data.candidates.recurring.length > 0)}
         </p>
       )}
       {summary}
@@ -173,25 +170,6 @@ function PlanPane({
                   onEstimateTask={onEstimateTask}
                 />
               )}
-              {/* Why a recurring Task is not linked, and how to link it,
-                  where it happens: in an Area with a Goal (#159). */}
-              {stage === 'shape' &&
-                block.goal !== undefined &&
-                block.tasks.some(
-                  (t) =>
-                    t.occurrenceCount !== undefined &&
-                    t.sprintTask.goalLink === 'unlinked',
-                ) && (
-                  <p className="max-w-measure-read text-help text-ink-muted [text-wrap:pretty] [word-break:auto-phrase]">
-                    繰り返しのタスクは、はじめは目標に紐づきません。
-                    {/* The way, kept on one line: 「…」 alone at a line's end
-                        reads as an ellipsis. */}
-                    <span className="whitespace-nowrap">
-                      行の … の「目標に紐づける」
-                    </span>
-                    で変えられます。
-                  </p>
-                )}
             </GoalBlock>
           ),
         )}
@@ -199,13 +177,6 @@ function PlanPane({
     </div>
   );
 }
-
-/**
- * What the 整える stage says under its heading: what is done here, the
- * Goals and the Estimates, and where a Task is linked to a Goal (#159).
- */
-const SHAPE_GUIDE =
-  '領域ごとの目標（任意）と、タスクの見積もりを整えます。目標を書いた領域では、タスクごとに目標に紐づけるかを選べます。';
 
 /**
  * What the 選ぶ stage says under its heading, chosen Tasks or not: why the
