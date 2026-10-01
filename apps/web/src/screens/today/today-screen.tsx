@@ -274,6 +274,22 @@ function TodayView({ data }: { data: TodayData }) {
         ?.focus(),
     );
   };
+  // 今日は見送る and 今日の予定から外す from the `…`: the row moves to
+  // 今日はもうやらない, with 「元に戻す」 in a Toast as well as the row's own
+  // 「取り消す」 (F37, #163).
+  const closed = (row: TodayRowData, result: string, done: boolean) => {
+    const selectionId = row.selection.id;
+    moved(selectionId, done);
+    if (!done) return;
+    toast.show({
+      kind: 'today-closed',
+      title: `「${row.task.title}」${result}`,
+      action: {
+        label: '元に戻す',
+        onClick: () => moved(selectionId, actions.undoClose(selectionId)),
+      },
+    });
+  };
   const editingRow = [...data.rows, ...data.closed].find(
     (r) => r.selection.id === editing?.selectionId,
   );
@@ -305,8 +321,13 @@ function TodayView({ data }: { data: TodayData }) {
         moved(selectionId, actions.undoComplete(selectionId));
       },
       onStart: () => actions.start(selectionId),
-      onDefer: () => moved(selectionId, actions.defer(selectionId)),
-      onRemove: () => moved(selectionId, actions.removeFromToday(selectionId)),
+      onDefer: () => closed(row, 'を見送りました', actions.defer(selectionId)),
+      onRemove: () =>
+        closed(
+          row,
+          'を今日の予定から外しました',
+          actions.removeFromToday(selectionId),
+        ),
       onSkip: () => moved(selectionId, actions.skip(selectionId)),
       onUndoSkip: () => moved(selectionId, actions.undoSkip(selectionId)),
       onUndoClose: () => moved(selectionId, actions.undoClose(selectionId)),
@@ -469,10 +490,7 @@ function TodayView({ data }: { data: TodayData }) {
                 今日はもうやらない
               </h2>
               <p className="text-help text-ink-muted">
-                明日から今週の残りに出ます。今日のうちに終わったら ○
-                で完了にできます。見送った日が続くと、行に
-                <span className="whitespace-nowrap">「2回続けて見送り」</span>
-                と出ます。外した日は入りません。
+                明日から、今週の残りに戻ります。
               </p>
               <ul className="flex flex-col border-t border-border-soft">
                 {data.closed.map((row) => (

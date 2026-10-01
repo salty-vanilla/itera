@@ -1,6 +1,6 @@
 import { Menu as MenuPrimitive } from '@base-ui/react/menu';
 import { Check } from 'lucide-react';
-import { useId, type ComponentProps, type ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { Kbd } from '@/components/ui/kbd';
 import { cn } from '@/lib/utils';
 
@@ -85,57 +85,20 @@ type MenuItemProps = Omit<MenuPrimitive.Item.Props, 'className'> & {
    */
   variant?: 'default' | 'danger';
   className?: string;
-} & (
-    | { description?: undefined }
-    | {
-        /**
-         * One short line under the label that tells what the item does
-         * before it is pressed. Read out as the item's description, not its
-         * name. The children are then the icon and the label, in that order
-         * (the description lines up under the label), with no Kbd.
-         */
-        description: ReactNode;
-        /** The label alone, for typeahead (the description is text too). */
-        label: string;
-      }
-  );
+};
 
-function MenuItem({
-  variant = 'default',
-  description,
-  className,
-  children,
-  ...props
-}: MenuItemProps) {
-  const descriptionId = useId();
-  const described = description !== undefined;
+function MenuItem({ variant = 'default', className, ...props }: MenuItemProps) {
   return (
     <MenuPrimitive.Item
       data-slot="menu-item"
       data-variant={variant}
-      aria-describedby={described ? descriptionId : undefined}
       className={cn(
         itemClassName,
         variant === 'danger' ? 'text-danger' : 'text-ink',
-        // The icon and the label on the first line, the description under
-        // the label.
-        described && 'grid grid-cols-[auto_1fr] gap-y-0 py-1',
         className,
       )}
       {...props}
-    >
-      {children}
-      {described && (
-        // Hidden from the item's name; aria-describedby still reads it.
-        <span
-          id={descriptionId}
-          aria-hidden
-          className="col-start-2 text-help text-ink-muted"
-        >
-          {description}
-        </span>
-      )}
-    </MenuPrimitive.Item>
+    />
   );
 }
 

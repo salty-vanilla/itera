@@ -42,6 +42,8 @@ type ToastKind =
   | 'added-to-today'
   | 'task-archived'
   | 'day-record-undone'
+  /** 今日は見送る / 今日の予定から外す from a Today row, with 元に戻す (#163). */
+  | 'today-closed'
   | 'interrupt-deleted'
   | 'save-failed';
 

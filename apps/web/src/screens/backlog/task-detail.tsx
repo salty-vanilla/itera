@@ -55,7 +55,7 @@ import {
 } from '@/lib/actual-hours';
 import { formatDate, formatTime } from '@/lib/date-format';
 import { formatHours, formatRange } from '@/lib/time-format';
-import { closingHelp, startedText } from '@/lib/today-words';
+import { startedText } from '@/lib/today-words';
 import type { BacklogData, BacklogItem } from '@/store/backlog-view';
 import { useTaskActions } from '@/store/use-task-actions';
 import { useTodayActions } from '@/store/use-today';
@@ -228,7 +228,7 @@ const closedText: Record<
     result: '今日は見送りました。',
     rest: '明日から今週の残りに出ます。',
   },
-  removed: { result: '今日から外しました。' },
+  removed: { result: '今日の予定から外しました。' },
 };
 
 type Outcome =
@@ -348,11 +348,7 @@ function TaskDetail({
   const [openedWith] = useState(() => valuesOf(item));
   const [more, setMore] = useState(false);
   const moreId = useId();
-  // The line under each of 今日はここまで, 今日は見送る, スキップ and 今日から
-  // 外す that tells them apart before they are pressed (#163).
-  const todayHelpId = useId();
-  // Which of the day's operations the section offers: the buttons and the
-  // lines under them come from these alone.
+  // Which of the day's operations the section offers.
   const resolution = facts.today?.resolution;
   const offers = {
     start: resolution === 'selected',
@@ -361,15 +357,6 @@ function TaskDetail({
     skip: resolution === 'selected' && facts.today?.recurring === true,
     remove: resolution === 'selected',
   };
-  const todayHelp = (
-    [
-      ['pause', '今日はここまで'],
-      ['defer', '今日は見送る'],
-      ['skip', '今日はスキップ'],
-      ['remove', '今日から外す'],
-    ] as const
-  ).filter(([key]) => offers[key]);
-  const helpFor = (key: keyof typeof closingHelp) => `${todayHelpId}-${key}`;
   // What was typed in the subtask and recurrence forms but not added or
   // applied: closing asks first, with the operation it would carry out.
   const [held, setHeld] = useState<{
@@ -733,7 +720,6 @@ function TaskDetail({
               {offers.pause && (
                 <Button
                   ref={pauseButtonRef}
-                  aria-describedby={helpFor('pause')}
                   disabled={pausing}
                   focusableWhenDisabled
                   onClick={() => setPausing(true)}
@@ -743,7 +729,6 @@ function TaskDetail({
               )}
               {offers.defer && (
                 <Button
-                  aria-describedby={helpFor('defer')}
                   onClick={() =>
                     runNow(() => todayActions.defer(facts.today!.selectionId))
                   }
@@ -753,7 +738,6 @@ function TaskDetail({
               )}
               {offers.skip && (
                 <Button
-                  aria-describedby={helpFor('skip')}
                   onClick={() =>
                     runNow(() => todayActions.skip(facts.today!.selectionId))
                   }
@@ -763,14 +747,13 @@ function TaskDetail({
               )}
               {offers.remove && (
                 <Button
-                  aria-describedby={helpFor('remove')}
                   onClick={() =>
                     runNow(() =>
                       todayActions.removeFromToday(facts.today!.selectionId),
                     )
                   }
                 >
-                  今日から外す
+                  今日の予定から外す
                 </Button>
               )}
               {facts.canComplete && (
@@ -792,15 +775,6 @@ function TaskDetail({
                 </Link>
               )}
             </div>
-            {todayHelp.length > 0 && (
-              <ul className="flex flex-col text-help text-ink-muted">
-                {todayHelp.map(([key, label]) => (
-                  <li key={key} id={helpFor(key)}>
-                    {label}：{closingHelp[key]}
-                  </li>
-                ))}
-              </ul>
-            )}
             {pausing && facts.today?.resolution === 'started' && (
               <form
                 noValidate

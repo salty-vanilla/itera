@@ -88,17 +88,6 @@ const row = (name: string, title: string) => {
   if (found === undefined) throw new Error(`no row ${title} in ${name}`);
   return found;
 };
-/** The text that `aria-describedby` points to. */
-function description(element: HTMLElement) {
-  const ids = element.getAttribute('aria-describedby');
-  return ids === null
-    ? undefined
-    : ids
-        .split(' ')
-        .map((id) => document.getElementById(id)?.textContent ?? '')
-        .join(' ');
-}
-
 async function menu(title: string, item: string) {
   await userEvent.click(screen.getByRole('button', { name: `操作: ${title}` }));
   await userEvent.click(await screen.findByRole('menuitem', { name: item }));
@@ -375,27 +364,50 @@ describe('Today — the daily operations', () => {
 
   it('removes from today without counting a deferral', async () => {
     await renderAt('/today?fixture=today-interrupt');
-    await menu('顧客インタビューの設計', '今日から外す');
+    await menu('顧客インタビューの設計', '今日の予定から外す');
     expect(selectionOf('task-interview')?.resolution).toBe('removed');
     expect(
       within(row('今日はもうやらない', '顧客インタビューの設計')).getByText(
-        '今日から外した',
+        '予定から外した',
       ),
     ).toBeTruthy();
   });
 
-  it('tells what a deferral and a removal count for (#101)', async () => {
+  it('tells where a closed row goes, in one sentence (#101, #163)', async () => {
     await renderAt('/today?fixture=today-interrupt');
-    await menu('顧客インタビューの設計', '今日から外す');
+    await menu('顧客インタビューの設計', '今日の予定から外す');
     const section = screen
       .getByRole('heading', { name: '今日はもうやらない' })
       .closest('section');
-    expect(section?.textContent).toContain(
-      '見送った日が続くと、行に「2回続けて見送り」と出ます。外した日は入りません。',
+    expect(section?.querySelector('p')?.textContent).toBe(
+      '明日から、今週の残りに戻ります。',
     );
   });
 
-  it('puts 開始 and 完了にする first in the `…`, and tells 見送る, スキップ and 外す apart (#163)', async () => {
+  it.each([
+    ['今日は見送る', 'を見送りました'],
+    ['今日の予定から外す', 'を今日の予定から外しました'],
+  ])(
+    '%s from the `…` says so in a Toast with 元に戻す (#163)',
+    async (action, result) => {
+      await renderAt('/today?fixture=today-interrupt');
+      const id = selectionOf('task-interview')?.id;
+      await menu('顧客インタビューの設計', action);
+      const toast = (
+        await screen.findByText(`「顧客インタビューの設計」${result}`)
+      ).closest<HTMLElement>('[data-slot="toast"]')!;
+      await userEvent.click(
+        within(toast).getByRole('button', { name: '元に戻す' }),
+      );
+      expect(selectionOf('task-interview')).toMatchObject({
+        id,
+        resolution: 'selected',
+      });
+      expect(row('今日やる', '顧客インタビューの設計')).toBeTruthy();
+    },
+  );
+
+  it('puts 開始 and 完了にする first in the `…`, with labels alone (#163)', async () => {
     await renderAt('/today?fixture=today-interrupt');
     await userEvent.click(
       screen.getByRole('button', { name: '操作: 顧客インタビューの設計' }),
@@ -406,28 +418,20 @@ describe('Today — the daily operations', () => {
         '開始',
         '完了にする',
         '今日は見送る',
-        '今日から外す',
+        '今日の予定から外す',
         '見積もりを入れる',
       ].map((name) => items.indexOf(screen.getByRole('menuitem', { name }))),
     ).toEqual([0, 1, 2, 3, 4]);
     expect(items).toHaveLength(5);
-    // The line under the label is the item's description, not its name.
-    expect(
-      description(screen.getByRole('menuitem', { name: '今日は見送る' })),
-    ).toBe('今日はやらないと決めます');
-    expect(
-      description(screen.getByRole('menuitem', { name: '今日から外す' })),
-    ).toBe('選び直します。見送りに入れません');
-    expect(
-      description(screen.getByRole('menuitem', { name: '開始' })),
-    ).toBeUndefined();
+    // Labels alone (#163).
+    expect(items.some((i) => i.hasAttribute('aria-describedby'))).toBe(false);
     await userEvent.click(screen.getByRole('menuitem', { name: '完了にする' }));
     expect(selectionOf('task-interview')?.resolution).toBe('done');
   });
 
   it.each([
     ['今日は見送る', '見送り'],
-    ['今日から外す', '今日から外した'],
+    ['今日の予定から外す', '予定から外した'],
   ])(
     'F37: %s, then 取り消す the same day: back to 今日やる, the same selection',
     async (action, state) => {

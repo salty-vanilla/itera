@@ -26,7 +26,7 @@ v0.2 Final は v0.1 の骨格（恒久的な **Task** と、「この Sprint で
 | 6 | 確定時に適用しなかった Sprint も Retro で決める | Active な基準があれば必ず CriterionUse を作り、retroDecision を必須に | Retro：未適用でも決定欄を出す |
 | 7 | 週の途中の追加にも基準を当てる | 追加時点で planSnapshot を作る。基準は確定時に適用したときだけ当てる。容量警告は出さない | Today / Backlog：超過表示なし |
 | 8 | 週の途中の追加は Goal に自動で紐付けない | role を goalLink（linked / unlinked）に変更。追加は unlinked | 表記「Goal に紐づく / 紐づかない」 |
-| 9 | 「今日は見送る」と「今日から外す」を分ける | DailySelection = Deferred / Removed。Removed は見送りに数えない | Today：操作を 2 つに |
+| 9 | 「今日は見送る」と「今日の予定から外す」を分ける | DailySelection = Deferred / Removed。Removed は見送りに数えない | Today：操作を 2 つに |
 | 10 | Backlog からの完了を Sprint にも反映 | SprintTask = Done、当日の DailySelection（Done）を作る | Today：「済んだもの」に出る |
 | 11 | 持ち越しは自動で次に入れない | 次の Sprint の候補に出すだけ。選ばれたら carriedFrom | なし（v0.1 のまま） |
 | 12 | 前 Retro 未完了でも draft は可、確定は不可 | Sprint 確定の前提条件に「前の Sprint が Closed」 | Planning：確定ボタンに理由を添えて無効化 |
@@ -77,7 +77,7 @@ F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F
 | F34 | Sprint の開始日より前でも、今週の Task は Backlog から完了にできる | 確定済みで開始日前の Sprint にある Task を Backlog で完了にすると、Task は Completed、SprintTask は Done になる。選ぶ日がまだないので DailySelection は作らない（不変条件 27 の例外）。直後の取り消しでは Task は Active、SprintTask は Planned に戻る（F29）。Sprint 外の Task を「今日へ」入れるのは開始日から | Backlog：開始日前は「今日へ」を無効にし、始まる日を添える |
 | F35 | 次の Sprint で先に選んだ Task は、前の Sprint が Review に入るときに持ち越しとしてつなぐ | Sprint N が Review に入るとき、次の Sprint（Planning 中）に同じ Task の単発の SprintTask（Draft、carriedFrom なし）があり、N の SprintTask が CarriedOver になるなら、その draft に carriedFrom（N の SprintTask）を付ける。本人が選んだ Task に後からつなぐだけで、次の Sprint に入れることではないので、不変条件 20 には当たらない。記録の主体はシステム（F23 と同じ扱い）で、Activity に残す。N の週の途中に次の Sprint で選んでも、N の Review 後に「持ち越し」から選んだ場合と同じつながりと回数になる | Planning：実行中の Sprint にまだ完了していない Task は、候補の行に「Sprint N で実行中」と出す（選ぶことは止めない） |
 | F36 | 持ち越し回数は、まだ確定していない draft を数えない | F26 の「最新の SprintTask」から、Planning 中の Sprint の Draft を除く（派生）。次の Sprint の draft で選んでも、確定するまでは今までの SprintTask で数える。持ち越しを使わずに選び直したときの数え直し（F26）は、その Sprint を確定したときから効く | Backlog・Planning：実行中の Sprint の週に次の Sprint で選んでも「持ち越し N回（Sprint M から）」が消えない |
-| F37 | 「今日は見送る」「今日から外す」は、その日のうちなら取り消せる | DailySelection に Deferred → Selected / Started と Removed → Selected（同じ日のうち）を足す。同じ選択を開いた状態に戻す（2 件目は作らない。不変条件 21）。戻る先は閉じる前の状態で、開始してから見送った選択は Started に戻り、開始時刻を残す（オーナーの確認待ち：開始後に見送った選択の取り消しで Started に戻すのは推奨案 A として実装した）。翌日以降は取り消せない（過ぎた日の見送り・外すはそのまま記録に残る）。連続見送りは取り消した後の状態で数える（不変条件 23）ので、取り消した見送りは数えない。見送り・外すと、その取り消しは Activity に残る。「今日はここまで」の取り消しは含めない | Today：見送り・外した行に「取り消す」を出し、押すと「今日やる」に戻る |
+| F37 | 「今日は見送る」「今日の予定から外す」は、その日のうちなら取り消せる | DailySelection に Deferred → Selected / Started と Removed → Selected（同じ日のうち）を足す。同じ選択を開いた状態に戻す（2 件目は作らない。不変条件 21）。戻る先は閉じる前の状態で、開始してから見送った選択は Started に戻り、開始時刻を残す（オーナーの確認待ち：開始後に見送った選択の取り消しで Started に戻すのは推奨案 A として実装した）。翌日以降は取り消せない（過ぎた日の見送り・外すはそのまま記録に残る）。連続見送りは取り消した後の状態で数える（不変条件 23）ので、取り消した見送りは数えない。見送り・外すと、その取り消しは Activity に残る。「今日はここまで」の取り消しは含めない | Today：見送り・外した行に「取り消す」を出し、押すと「今日やる」に戻る |
 | F38 | 割り込みは、Sprint が実行中の間は直せる・消せる | InterruptNote の text と minutes を直せる（minutes は消してもよい。at は記録した時刻のまま）。InterruptNote を消せる。消した直後は元に戻せる（同じ id・at・text・minutes で元の位置に戻す。at が今より後のものは戻さない）。どれも Sprint が実行中の間だけで、Review に入った後は固定する（Retro の事実を Retro で編集しない、不変条件 40）。直した・消した・元に戻したことは Activity に残る。Today・Retro の割り込みは今の記録から出すので、直した内容が出て、消したものは出ない | Today：割り込みの各行の `…` に「直す」「消す」。直すのは記録と同じ面。消すと Toast「割り込み「メモ」を消しました」と「元に戻す」 |
 
 ### 用語
@@ -90,7 +90,7 @@ F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F
 | 計画値 | PlanningValue | この Sprint の時間判断に使う値。Task は変わらない |
 | 計画基準を**適用**する | CriterionUse.appliedAtConfirm | 「今回は上限で計画する」。提案の幅から計画値を作る。Planning の Check で行う |
 | 今日は見送る | DailySelection = Deferred | 今日はやらないと決めた。「N回続けて見送り」に数える |
-| 今日から外す | DailySelection = Removed | 選び直し。見送りに数えない |
+| 今日の予定から外す | DailySelection = Removed | 選び直し。見送りに数えない |
 | 今日はここまで | DailySelection = Paused | 進めたが未完了。実績を任意で残せる。翌日は「昨日の続き」として候補に出る |
 | 持ち越し | SprintTask = CarriedOver | Sprint 終了時に未完了 |
 | スキップ | Occurrence / DailySelection = Skipped | 繰り返しの回だけ |
@@ -208,7 +208,7 @@ stateDiagram-v2
   Started --> Paused: 今日はここまで（実績は任意）
   Selected --> Deferred: 今日は見送る
   Started --> Deferred: 今日は見送る
-  Selected --> Removed: 今日から外す
+  Selected --> Removed: 今日の予定から外す
   Selected --> Skipped: 今日はスキップ（繰り返しの回のみ）
   Selected --> Unresolved: 日付が変わる / Review に入る（システム、F23）
   Started --> Unresolved: 日付が変わる / Review に入る（システム、F23）

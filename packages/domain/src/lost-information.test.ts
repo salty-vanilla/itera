@@ -267,7 +267,7 @@ describe('現在状態だけでは失われる情報', () => {
     );
     // (7 is read here, before the later choices.)
     const streakAfterDeferral = deferralStreak([previous, sprint], paper.id);
-    // 10/1: chosen and taken off again (今日から外す). 10/2: chosen and left
+    // 10/1: chosen and taken off again (今日の予定から外す). 10/2: chosen and left
     // open; the next day's start marks it unresolved.
     sprint = run(
       selectForToday(

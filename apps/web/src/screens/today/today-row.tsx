@@ -25,7 +25,7 @@ import {
 import { CompletionCircle, TaskRow } from '@/components/task/task-row';
 import { formatDate } from '@/lib/date-format';
 import { formatHours } from '@/lib/time-format';
-import { closingHelp, startedSince } from '@/lib/today-words';
+import { startedSince } from '@/lib/today-words';
 import type { TimeZone } from '@itera/domain';
 import type { TodayItem, TodayRow as TodayRowData } from '@/store/today-view';
 
@@ -39,9 +39,9 @@ import type { TodayItem, TodayRow as TodayRowData } from '@/store/today-view';
 //   skipped one does (F19);
 // - a done row stays where it is, struck through; ○ again undoes it;
 // Issue #163 changed the `…`: the most used first (開始 or 今日はここまで, then
-// 完了にする), and a line under 今日はここまで, 今日は見送る, スキップ and
-// 今日から外す that tells them apart before they are pressed. A started row
-// carries the `here` bar, its title in 700 and 「作業中 · 10:12 から」.
+// 完了にする), with labels alone; 今日から外す became 今日の予定から外す. A
+// started row carries the `here` bar, its title in 700 and 「作業中 · 10:12
+// から」.
 
 type TodayRowProps = {
   row: TodayRowData;
@@ -99,12 +99,7 @@ function TodayRow({
       </MenuItem>
     ),
     state === 'started' && (
-      <MenuItem
-        key="pause"
-        onClick={onPause}
-        label="今日はここまで"
-        description={closingHelp.pause}
-      >
+      <MenuItem key="pause" onClick={onPause}>
         <Pause aria-hidden />
         今日はここまで
       </MenuItem>
@@ -117,36 +112,21 @@ function TodayRow({
       </MenuItem>
     ),
     (state === 'selected' || state === 'started') && (
-      <MenuItem
-        key="defer"
-        onClick={onDefer}
-        label="今日は見送る"
-        description={closingHelp.defer}
-      >
+      <MenuItem key="defer" onClick={onDefer}>
         <CalendarX2 aria-hidden />
         今日は見送る
       </MenuItem>
     ),
     state === 'selected' && recurring && (
-      <MenuItem
-        key="skip"
-        onClick={onSkip}
-        label="今日はスキップ"
-        description={closingHelp.skip}
-      >
+      <MenuItem key="skip" onClick={onSkip}>
         <SkipForward aria-hidden />
         今日はスキップ
       </MenuItem>
     ),
     state === 'selected' && (
-      <MenuItem
-        key="remove"
-        onClick={onRemove}
-        label="今日から外す"
-        description={closingHelp.remove}
-      >
+      <MenuItem key="remove" onClick={onRemove}>
         <LogOut aria-hidden />
-        今日から外す
+        今日の予定から外す
       </MenuItem>
     ),
     (done || state === 'paused') && (
@@ -208,7 +188,7 @@ function TodayRow({
                 ? 'スキップ'
                 : state === 'deferred'
                   ? '見送り'
-                  : '今日から外した'
+                  : '予定から外した'
             }）: ${task.title}`}
             icon={<Undo2 />}
             onClick={skipped ? onUndoSkip : onUndoClose}
@@ -288,7 +268,7 @@ function RowMetadata({
       case 'removed':
         return (
           <MetaItem wrap icon={<LogOut aria-hidden />}>
-            今日から外した
+            予定から外した
           </MetaItem>
         );
       case 'skipped':

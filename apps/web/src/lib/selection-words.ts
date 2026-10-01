@@ -13,5 +13,5 @@ export const SELECTION_WORDS: Readonly<
   skipped: 'スキップ',
   paused: '今日はここまで',
   deferred: '見送り',
-  removed: '今日から外した',
+  removed: '予定から外した',
 };

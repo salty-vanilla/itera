@@ -3,12 +3,9 @@ import {
   ArrowDown,
   ArrowUp,
   Archive,
-  CalendarX2,
   ChevronDown,
   Ellipsis,
-  LogOut,
   Pencil,
-  Play,
   Sun,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -39,7 +36,8 @@ type Story = StoryObj<typeof meta>;
 
 /**
  * 行の補助操作。トリガーは `…` の IconButton。項目は 32px（compact は 44px）で、
- * アイコン・ラベル・Kbd を並べる。危険な項目は `danger` で、区切りの後の最後に置く。
+ * アイコン・ラベル・Kbd を並べる。Kbd は、タッチが主な端末（`pointer: coarse`）では出さない。
+ * 危険な項目は `danger` で、区切りの後の最後に置く。
  * 主要な操作（完了の ○ など）はメニューに隠さない。
  */
 export const RowActions: Story = {
@@ -101,50 +99,6 @@ export const RowActions: Story = {
     await userEvent.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
     await expect(trigger).toHaveFocus();
-  },
-};
-
-/**
- * 押す前に違いを読みたい項目には、ラベルの下に 1 行の補足（`help`、`ink-muted`）を
- * 付ける。補足は項目の説明として読み上げ、名前には含めない。Kbd は、タッチが主な
- * 端末（`pointer: coarse`）では出さない。
- */
-export const Described: Story = {
-  render: () => (
-    <div className="pb-72">
-      <Menu>
-        <MenuTrigger
-          render={<IconButton label="今日の操作" icon={<Ellipsis />} />}
-        />
-        <MenuContent>
-          <MenuItem>
-            <Play aria-hidden />
-            開始
-          </MenuItem>
-          <MenuItem label="今日は見送る" description="今日はやらないと決めます">
-            <CalendarX2 aria-hidden />
-            今日は見送る
-          </MenuItem>
-          <MenuItem
-            label="今日から外す"
-            description="選び直します。見送りに入れません"
-          >
-            <LogOut aria-hidden />
-            今日から外す
-          </MenuItem>
-          <MenuItem>
-            <Pencil aria-hidden />
-            見積もりを入れる
-            <MenuShortcut>E</MenuShortcut>
-          </MenuItem>
-        </MenuContent>
-      </Menu>
-    </div>
-  ),
-  play: async ({ canvas }) => {
-    await userEvent.click(canvas.getByRole('button', { name: '今日の操作' }));
-    const defer = await screen.findByRole('menuitem', { name: '今日は見送る' });
-    await expect(defer).toHaveAccessibleDescription('今日はやらないと決めます');
   },
 };
 
