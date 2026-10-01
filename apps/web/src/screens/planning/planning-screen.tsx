@@ -29,6 +29,7 @@ import { isTyping } from '@/lib/row-keys';
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 import { formatPlanningSum } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
+import { useStuckBar } from '@/lib/use-stuck-bar';
 import { cn } from '@/lib/utils';
 import { weekCall, weekText } from '@/lib/week-text';
 import type { PlanningData } from '@/store/planning-view';
@@ -214,6 +215,10 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
   const reasonId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
+  // The Capacity line sticks to the top under 1200px: what takes the focus
+  // scrolls clear of it (#152).
+  const capacityRef = useRef<HTMLDivElement>(null);
+  useStuckBar(capacityRef, 'top');
 
   // docs/design/accessibility.md Planning: N goes to the Quick Add and
   // ⌘/Ctrl+Enter confirms (it opens the Dialog; while confirming is not
@@ -344,7 +349,10 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
       </div>
 
       {/* The Capacity in one line, under 1200px (DESIGN.md Responsive). */}
-      <div className="sticky top-0 z-(--layer-sticky) border-b border-border bg-canvas px-4 py-2 medium:px-6 wide:hidden">
+      <div
+        ref={capacityRef}
+        className="sticky top-0 z-(--layer-sticky) border-b border-border bg-canvas px-4 py-2 medium:px-6 wide:hidden"
+      >
         <button
           type="button"
           onClick={() =>

@@ -85,6 +85,21 @@ describe('Planning — 優先度 (#97)', () => {
   });
 });
 
+describe('Planning — the stuck Capacity line (#152)', () => {
+  it('leaves it out of the scrollport while the screen shows, so that the focus is not under it', async () => {
+    const top = () =>
+      document.documentElement.style.getPropertyValue('--stuck-bar-top');
+    const router = await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    expect(top()).not.toBe('');
+    expect(document.querySelector('main')?.className).toContain(
+      'scroll-pt-[calc(var(--stuck-bar-top,0px)+var(--spacing-2))]',
+    );
+    await router.navigate({ to: '/backlog' });
+    await screen.findByRole('heading', { name: 'Backlog' });
+    expect(top()).toBe('');
+  });
+});
+
 describe('Planning — 選ぶ', () => {
   it('chooses a Task with □, shows it in its Area, and can undo', async () => {
     await renderAt('/sprint?fixture=planning-pick&stage=pick');

@@ -4,6 +4,7 @@ import { useRef, type ReactElement, type ReactNode } from 'react';
 import { Navigation, type NavigationItem } from '@/components/ui/navigation';
 import type { ScreenId } from '@/fixtures/states';
 import { isPlainClick } from '@/lib/plain-click';
+import { cn } from '@/lib/utils';
 import { useToastClearance } from './use-toast-clearance';
 import { useAppOverview } from '@/store/use-app-overview';
 import { screens } from './screens';
@@ -58,8 +59,14 @@ function AppShell({ children }: { children: ReactNode }) {
         data-scroll-restoration-id="main"
         // `relative` makes the `main` the containing block of `sr-only`
         // (absolute) text, so `overflow-auto` clips it and the document
-        // never grows past the shell (#149).
-        className="relative min-h-0 flex-1 overflow-auto pb-[var(--toast-clearance,0px)]"
+        // never grows past the shell (#149). The scrollport leaves out the
+        // bars stuck to its edges (lib/use-stuck-bar.ts) and room for the
+        // focus ring, so that what takes the focus is scrolled clear of
+        // them (#152).
+        className={cn(
+          'relative min-h-0 flex-1 overflow-auto pb-[var(--toast-clearance,0px)]',
+          'scroll-pt-[calc(var(--stuck-bar-top,0px)+var(--spacing-2))] scroll-pb-[calc(var(--stuck-bar-bottom,0px)+var(--spacing-2))]',
+        )}
       >
         {children}
       </main>
