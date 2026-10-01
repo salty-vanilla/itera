@@ -200,7 +200,7 @@ function CriterionEffect({
     <p className="text-body text-ink">
       {criterion.applied
         ? `${scope}幅のあるタスク ${count}件を${bound}で計画しています${moves.length > 0 ? `（${moves.join('、')}）` : ''}。`
-        : '使わないときは、見積もりの幅のまま合計します。'}
+        : '使わないときは、見積もりの提案の幅のまま合計します。'}
     </p>
   );
 }

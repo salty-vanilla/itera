@@ -300,7 +300,7 @@ function RecurrenceEditor({
               the Sprint is still being planned, it becomes recurring there
               (F15). */}
           {rule === undefined && item.thisWeek?.confirmed === true && (
-            <p className="text-help text-ink-muted">
+            <p className="text-help text-ink-muted [text-wrap:pretty] [word-break:auto-phrase]">
               今週はこの 1 件のまま。繰り返しは次の Sprint から始まります。
             </p>
           )}

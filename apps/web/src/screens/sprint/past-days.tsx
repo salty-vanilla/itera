@@ -60,7 +60,7 @@ function PastDays({ days, onUndo }: PastDaysProps) {
         >
           日ごとの記録
         </h2>
-        <p className="text-help text-ink-muted">
+        <p className="text-help text-ink-muted [text-wrap:pretty] [word-break:auto-phrase]">
           取り消すと、その日は完了・スキップする前の状態に戻ります。
         </p>
       </div>
@@ -122,7 +122,9 @@ function PastDays({ days, onUndo }: PastDaysProps) {
                   {formatDate(asking.selection.date)} の「{asking.title}」の
                   {word(asking)}を取り消しますか？
                 </DialogTitle>
-                <DialogDescription>{consequence(asking)}</DialogDescription>
+                <DialogDescription className="[text-wrap:pretty] [word-break:auto-phrase]">
+                  {consequence(asking)}
+                </DialogDescription>
               </DialogHeader>
               <DialogFooter>
                 <DialogClose render={<Button />}>やめる</DialogClose>
@@ -145,8 +147,8 @@ function consequence(r: PastDayRecord): string {
     r.after.kind === 'gone'
       ? 'その日の記録は消え、'
       : r.after.kind === 'closed'
-        ? `その日は「${PAST_DAY_WORDS[r.after.resolution]}」になり、`
-        : 'その日は未処理になり、';
+        ? `その日の記録は「${PAST_DAY_WORDS[r.after.resolution]}」に戻り、`
+        : 'その日の記録は未処理になり、';
   const noWayBack =
     r.selection.resolution === 'skipped'
       ? 'あとから、その日をスキップにはできません。'
@@ -154,4 +156,4 @@ function consequence(r: PastDayRecord): string {
   return `${day}${back}${noWayBack}`;
 }
 
-export { PastDays };
+export { consequence, PastDays };

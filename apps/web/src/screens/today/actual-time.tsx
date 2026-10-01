@@ -150,7 +150,9 @@ function ActualTime({
           >
             <DrawerHeader>
               <DrawerTitle>{heading}</DrawerTitle>
-              <DrawerDescription>{description}</DrawerDescription>
+              <DrawerDescription className="[text-wrap:pretty] [word-break:auto-phrase]">
+                {description}
+              </DrawerDescription>
             </DrawerHeader>
             <DrawerBody>{field}</DrawerBody>
             <DrawerFooter>
@@ -179,7 +181,9 @@ function ActualTime({
         >
           <PopoverHeader>
             <PopoverTitle>{heading}</PopoverTitle>
-            <PopoverDescription>{description}</PopoverDescription>
+            <PopoverDescription className="[text-wrap:pretty] [word-break:auto-phrase]">
+              {description}
+            </PopoverDescription>
           </PopoverHeader>
           <PopoverBody>{field}</PopoverBody>
           <PopoverFooter>

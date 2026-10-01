@@ -340,7 +340,7 @@ describe('Sprint — 日ごとの記録 (#53)', () => {
     });
     expect(
       within(dialog).getByText(
-        'その日は未処理になり、タスクは今週の残りに戻ります。あとから、その日を完了にはできません。',
+        'その日の記録は未処理になり、タスクは今週の残りに戻ります。あとから、その日を完了にはできません。',
       ),
     ).toBeTruthy();
     await userEvent.click(
