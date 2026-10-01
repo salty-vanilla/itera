@@ -7,7 +7,7 @@
 | [PRD](requirements/prd.md) | 何を成立させるか。プロダクト原則、コア体験、MVP 完了条件、対象外、未決事項 |
 | [ドメインモデル](domain/domain-model.md) | 意味をどう矛盾なく表すか。Entity / VO、状態遷移、不変条件、シナリオ |
 | [DESIGN.md](../DESIGN.md) | 見た目と部品。公式の DESIGN.md spec（YAML のトークン＋ 8 セクション） |
-| [docs/design/](design/) | DESIGN.md の形式に収まらない製品固有の指針（パターン、Agent UI、文言と用語、アクセシビリティ、アイコンと動き） |
+| [docs/design/](design/) | DESIGN.md の形式に収まらない製品固有の指針（パターン、Agent UI、文言と用語＝画面の日本語の原則・語彙・型、アクセシビリティ、アイコンと動き） |
 
 意味・状態・用語はドメインモデル → PRD が優先する。食い違いを見つけたら、どの文書を更新するかを決めてから変更する。
 
@@ -15,6 +15,7 @@
 
 - **ドメインロジック**：ドメインモデル（該当する状態遷移と不変条件）→ PRD の該当するコア体験
 - **画面の実装・レビュー**：PRD の該当するコア体験 → [画面のパターン](design/patterns.md) → DESIGN.md（トークン、Components、Do's and Don'ts）→ 必要に応じて [文言と用語](design/content.md)・[アクセシビリティ](design/accessibility.md)・[Agent UI](design/agent-ui.md)
+- **画面の文言を書く・変える**：[文言と用語](design/content.md) の原則 → 語彙（用語・使わない語・「」で囲む語）→ 部品の型
 - **要望の整理・Issue 化**：PRD（原則、対象外、未決事項）→ ドメインモデル（未決事項）→ `CONTRIBUTING.md`
 - **Agent 環境の変更**：[Agent 環境](development/agent-setup.md)
 

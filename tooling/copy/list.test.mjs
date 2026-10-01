@@ -18,6 +18,25 @@ describe('readTerms', () => {
     expect(readTerms(content)).toEqual(['Sprint', '今日へ / 今日やる']);
   });
 
+  it('reads the table under the 用語 subsection of 語彙', () => {
+    const content = [
+      '# 文言と用語',
+      '## 2. 語彙',
+      '### 用語',
+      '',
+      '| 画面の語 | モデル | 意味と表記 |',
+      '| --- | --- | --- |',
+      '| 計画 | Planning | 次の Sprint の計画を立てること |',
+      '',
+      '### 使わない語',
+      '',
+      '| 使わない語 | 使う語 | 例外 |',
+      '| --- | --- | --- |',
+      '| 紐づく | 目標に入っている | — |',
+    ].join('\n');
+    expect(readTerms(content)).toEqual(['計画']);
+  });
+
   it('fails when the term table is missing', () => {
     expect(() => readTerms('# 文言と用語\n## 用語\n\n本文だけ。\n')).toThrow(
       /画面の語/,
