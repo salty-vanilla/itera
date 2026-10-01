@@ -693,6 +693,15 @@ describe('Today — adding and interrupts', () => {
     });
     expect(sprint().dailySelections).toEqual(before);
     expect(within(region('割り込み')).getByText('来客対応')).toBeTruthy();
+    const toast = screen
+      .getByText('割り込みを記録しました')
+      .closest<HTMLElement>('[data-slot="toast"]')!;
+    await userEvent.click(within(toast).getByRole('button', { name: '見る' }));
+    expect(document.activeElement).toBe(
+      within(row('割り込み', '来客対応')).getByRole('button', {
+        name: /^操作: 割り込み/,
+      }),
+    );
   });
 });
 
