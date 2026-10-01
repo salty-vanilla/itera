@@ -87,7 +87,7 @@ export function resultText(t: TaskFact, data: RetroData): string {
   return `繰り返し：完了 ${count(done)} · スキップ ${count(skipped)} · 未完了 ${count(missed)}`;
 }
 
-/** 「計画 5h（ルール）」: the planning value with what it came from. */
+/** 「計画 5時間（ルール）」: the planning value with what it came from. */
 export function plannedLabel(t: TaskFact): string {
   return `計画 ${plannedText(t)}${planNotes(t)
     .map((n) => `（${n}）`)
@@ -95,8 +95,8 @@ export function plannedLabel(t: TaskFact): string {
 }
 
 /**
- * 確定したときとの差 of a Task in words (#167): 「計画より 0.5h 少ない」, and against
- * a range 「計画の幅より 1h 多い」「計画の幅より 30m 少ない」「計画の幅の中」 (#234). Nothing
+ * 確定したときとの差 of a Task in words (#167): 「計画より 30分少ない」, and against
+ * a range 「計画の幅より 1時間多い」「計画の幅より 30分少ない」「計画の幅の中」 (#234). Nothing
  * without actual time or an estimated value. Only the difference: no color
  * and no judgement (invariant 40).
  */
@@ -106,14 +106,14 @@ export function differenceText(t: TaskFact): string | undefined {
   const hours = (h: number) => formatHours(Math.abs(h));
   if (d.lo === d.hi) {
     if (d.lo === 0) return '計画と同じ';
-    return `計画より ${hours(d.lo)} ${d.lo > 0 ? '多い' : '少ない'}`;
+    return `計画より ${hours(d.lo)}${d.lo > 0 ? '多い' : '少ない'}`;
   }
-  if (d.lo > 0) return `計画の幅より ${hours(d.lo)} 多い`;
-  if (d.hi < 0) return `計画の幅より ${hours(d.hi)} 少ない`;
+  if (d.lo > 0) return `計画の幅より ${hours(d.lo)}多い`;
+  if (d.hi < 0) return `計画の幅より ${hours(d.hi)}少ない`;
   return '計画の幅の中';
 }
 
-/** 「実績 4.5h」, or 「実績 未入力」 while none is entered. */
+/** 「実績 4時間30分」, or 「実績 未入力」 while none is entered. */
 export function actualLabel(t: TaskFact): string {
   return `実績 ${t.actualHours > 0 ? formatHours(t.actualHours) : '未入力'}`;
 }

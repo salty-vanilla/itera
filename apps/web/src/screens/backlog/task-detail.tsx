@@ -499,7 +499,7 @@ function TaskDetail({
       kind: 'adopted',
       suggestionId: suggestion.id,
       previous,
-      text: `見積もりを ${formatHours(hours)} にしました`,
+      text: `見積もりを ${formatHours(hours)}にしました`,
     });
   }
 
@@ -514,7 +514,7 @@ function TaskDetail({
       kind: 'adopted',
       suggestionId: suggestion.id,
       previous,
-      text: `見積もりを ${formatHours(hours)} にしました`,
+      text: `見積もりを ${formatHours(hours)}にしました`,
     });
     return true;
   }
@@ -819,7 +819,7 @@ function TaskDetail({
                   <TextInput
                     ref={pauseInputRef}
                     inputMode="decimal"
-                    suffix="h"
+                    suffix="時間"
                     value={pauseText}
                     onChange={(e) => setPauseText(e.currentTarget.value)}
                   />
@@ -931,7 +931,7 @@ function TaskDetail({
                 ref={estimateRef}
                 data-autofocus={focusEstimate !== undefined || undefined}
                 inputMode="decimal"
-                suffix="h"
+                suffix="時間"
                 value={draft.estimate}
                 onChange={(e) => set('estimate', e.currentTarget.value)}
                 data-detail-field

@@ -172,11 +172,11 @@ function Roles() {
           <div className="flex flex-wrap items-center gap-3">
             <span className="inline-flex items-center gap-2 rounded-xs border border-dashed border-proposal-border px-2 py-1 text-ink">
               <span className="text-kicker">提案</span>
-              <span className="text-num-m">2–4h</span>
+              <span className="text-num-m">2〜4時間</span>
             </span>
             <span className="inline-flex items-center gap-2 rounded-xs border border-ink px-2 py-1 text-ink">
               <span className="text-kicker">計画</span>
-              <span className="text-num-m">4h</span>
+              <span className="text-num-m">4時間</span>
             </span>
           </div>
         </Specimen>

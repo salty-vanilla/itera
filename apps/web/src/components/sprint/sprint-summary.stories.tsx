@@ -21,8 +21,9 @@ export const Default: Story = {
       { label: '週の途中の追加', value: 1, unit: '件' },
       {
         label: '計画の合計',
-        value: '17.25–20.25h',
-        note: '使える時間 17h',
+        value: '17時間15分〜20時間15分',
+        fullRow: true,
+        note: '使える時間 17時間',
       },
     ],
   },

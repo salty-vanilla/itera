@@ -32,7 +32,7 @@ describe('Field', () => {
         description="0.5時間単位"
         error="数値で入力してください（例：1.5）"
       >
-        <TextInput defaultValue="abc" suffix="h" />
+        <TextInput defaultValue="abc" suffix="時間" />
       </Field>,
     );
     const input = screen.getByRole('textbox', { name: '見積もり' });
@@ -70,10 +70,10 @@ describe('Field', () => {
   it('focuses the input when the unit is pressed', async () => {
     render(
       <Field label="使える時間">
-        <TextInput suffix="h" />
+        <TextInput suffix="時間" />
       </Field>,
     );
-    await userEvent.click(screen.getByText('h'));
+    await userEvent.click(screen.getByText('時間'));
     expect(document.activeElement).toBe(
       screen.getByRole('textbox', { name: '使える時間' }),
     );

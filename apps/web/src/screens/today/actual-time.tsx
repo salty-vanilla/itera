@@ -135,7 +135,7 @@ function ActualTime({
     >
       <TextInput
         inputMode="decimal"
-        suffix="h"
+        suffix="時間"
         value={text}
         onChange={(e) => setText(e.currentTarget.value)}
       />

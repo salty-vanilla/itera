@@ -1,6 +1,6 @@
 import type { AreaId, RetroPin, SelfAssessment, TaskFact } from '@itera/domain';
 import { Info, Timer } from 'lucide-react';
-import { Fragment, useId, useRef, type ReactNode } from 'react';
+import { useId, useRef, type ReactNode } from 'react';
 import { semanticIcons } from '@/components/ui/icon';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { Button } from '@/components/ui/button';
@@ -15,8 +15,8 @@ import { formatDate, formatDateTime } from '@/lib/date-format';
 import { SELECTION_WORDS } from '@/lib/selection-words';
 import {
   formatHours,
+  formatPlanningAside,
   formatPlanningSum,
-  formatPlanningTotal,
   formatRange,
 } from '@/lib/time-format';
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
@@ -190,7 +190,8 @@ function FactsPane({
             },
             {
               label: '計画の合計',
-              value: formatRange(total.lo, total.hi, { total: true }),
+              value: formatRange(total.lo, total.hi),
+              fullRow: true,
               note: (
                 <Sentences
                   items={[
@@ -201,7 +202,7 @@ function FactsPane({
                       : []),
                     plannedHours === undefined
                       ? '使える時間は未入力'
-                      : `使える時間 ${formatHours(plannedHours, { total: true })}`,
+                      : `使える時間 ${formatHours(plannedHours)}`,
                   ]}
                 />
               ),
@@ -210,9 +211,17 @@ function FactsPane({
         />
         <div className="flex flex-col gap-1 text-body text-ink">
           <p>
-            計画 {formatPlanningTotal(total)}{' '}
+            {/* The sum and the count each whole: 「1」 never leaves 「件」 (#239). */}
             <span className="whitespace-nowrap">
-              → 実績 {formatHours(facts.actualHours, { total: true })}
+              計画 {formatPlanningSum(total)}
+            </span>
+            {formatPlanningAside(total) !== undefined && (
+              <span className="whitespace-nowrap">
+                {formatPlanningAside(total)}
+              </span>
+            )}{' '}
+            <span className="whitespace-nowrap">
+              → 実績 {formatHours(facts.actualHours)}
             </span>
             <span className="text-ink-muted">
               （入力済み {entered}件。実績は入力したものだけを数えています）
@@ -264,7 +273,7 @@ function FactsPane({
             <p>
               割り込み {facts.interrupts.length}件
               {interruptMinutes > 0 &&
-                ` · 合計 ${formatHours(interruptMinutes / 60, { total: true })}`}
+                ` · 合計 ${formatHours(interruptMinutes / 60)}`}
               {interruptNote !== '' && (
                 <span className="text-ink-muted">（{interruptNote}）</span>
               )}
@@ -319,11 +328,11 @@ function FactsPane({
                 確定したとき{' '}
                 {plannedHours === undefined
                   ? '未入力'
-                  : formatHours(plannedHours, { total: true })}{' '}
+                  : formatHours(plannedHours)}{' '}
                 → 今{' '}
                 {currentHours === undefined
                   ? '未入力'
-                  : formatHours(currentHours, { total: true })}
+                  : formatHours(currentHours)}
               </FactRow>
             )}
           </ul>
@@ -750,7 +759,7 @@ function TaskTable({
 
 /**
  * compact: one Task per item, its values in words on wrapping lines
- * (「見積もりの提案 3–5h · 計画 5h（ルール） · 実績 4.5h」), then its outcome and days,
+ * (「見積もりの提案 3〜5時間 · 計画 5時間（ルール） · 実績 4時間30分」), then its outcome and days,
  * then its actions in a row.
  */
 function TaskList({
@@ -799,12 +808,7 @@ function TaskList({
               )}
               <p className="text-body text-ink">
                 {/* Breaks only between the values, never inside one. */}
-                {values.map((v, i) => (
-                  <Fragment key={v}>
-                    {i > 0 && ' · '}
-                    <span className="whitespace-nowrap">{v}</span>
-                  </Fragment>
-                ))}
+                <Sentences items={values} />
               </p>
               <p className="text-meta text-ink-muted">
                 <TaskResult fact={t} data={data} iconSize="xs" />
@@ -883,7 +887,7 @@ function AddActualButton({
 }
 
 /**
- * 「計画より 0.5h 少ない」 under the actual time, if any. Under 1200px the
+ * 「計画より 30分少ない」 under the actual time, if any. Under 1200px the
  * column is narrow and it breaks between phrases, so the table still fits
  * at 1000px.
  */

@@ -390,9 +390,7 @@ function Outlook({
           </dd>
           <dt className="text-ink-muted">確定したときの使える時間</dt>
           <dd className="text-right text-ink">
-            {planned === undefined
-              ? '未入力'
-              : formatHours(planned, { total: true })}
+            {planned === undefined ? '未入力' : formatHours(planned)}
           </dd>
         </dl>
         {formatLeftOut(data.totals.total) !== undefined && (
@@ -404,9 +402,7 @@ function Outlook({
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-body">
             <dt className="text-ink-muted">終わったときの使える時間</dt>
             <dd className="text-right text-ink">
-              {current === undefined
-                ? '未入力'
-                : formatHours(current, { total: true })}
+              {current === undefined ? '未入力' : formatHours(current)}
             </dd>
           </dl>
         ) : (

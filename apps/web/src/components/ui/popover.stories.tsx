@@ -61,7 +61,7 @@ function EstimatePopover({ defaultOpen }: { defaultOpen?: boolean }) {
                 onChange={(event) => setDraft(event.target.value)}
                 className="h-control-lg w-24 rounded-sm border border-border-strong bg-surface px-3 text-right text-body-l text-ink focus-visible:focus-ring medium:h-control-md medium:text-body"
               />
-              <span className="text-body text-ink-muted">h</span>
+              <span className="text-body text-ink-muted">時間</span>
             </div>
           </div>
         </PopoverBody>

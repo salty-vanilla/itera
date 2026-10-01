@@ -46,7 +46,8 @@ export const Tones: Story = {
         計画案を作った後に 2件が追加されました。
       </Notice>
       <Notice tone="warning" title="使える時間を超えるかもしれません">
-        計画の合計は 16.5–19.5h です。上限では使える時間 18h を 1.5h 超えます。
+        計画の合計は 16時間30分〜19時間30分です。上限では使える時間 18時間を
+        1時間30分超えます。
       </Notice>
       <Notice
         tone="danger"

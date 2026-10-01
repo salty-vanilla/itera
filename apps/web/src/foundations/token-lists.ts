@@ -121,7 +121,7 @@ export const typographyGroups = [
       [
         'body',
         'text-body',
-        '少なく済めば 2.25h 残る · 多くかかれば 0.75h 超える',
+        '少なく済めば 2時間15分残る · 多くかかれば 45分超える',
       ],
       ['task', 'text-task', '関連研究のメモを整理する'],
       ['label', 'text-label', '使える時間'],
@@ -133,11 +133,11 @@ export const typographyGroups = [
   {
     title: '数字と Kbd',
     description:
-      '数字も LINE Seed JP で組む。数字はプロポーショナルなので、並ぶ列は右揃えにする。–（範囲）と −（負号）はハイフンと見分けられる。',
+      '数字も LINE Seed JP で組む。数字はプロポーショナルなので、並ぶ列は右揃えにする。〜（範囲）と −（負号）はハイフンと見分けられる。',
     samples: [
-      ['num-l', 'text-num-l', '2.25h'],
-      ['num-m', 'text-num-m', '16.5–18.5h'],
-      ['num-s', 'text-num-s', '2–4h / 2-4'],
+      ['num-l', 'text-num-l', '2時間15分'],
+      ['num-m', 'text-num-m', '16時間30分〜18時間30分'],
+      ['num-s', 'text-num-s', '2〜4時間 / 2-4'],
       ['code', 'text-code', '⌘ Enter'],
     ],
   },

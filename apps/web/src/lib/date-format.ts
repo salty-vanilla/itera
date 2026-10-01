@@ -1,5 +1,5 @@
 // Dates and times as text (docs/design/content.md 日付と時刻):
-// 「9/28 (月)」, headings 「9月29日（火）」, ranges 「9/28 (月) – 10/4 (日)」,
+// 「9/28 (月)」, headings 「9月29日（火）」, ranges 「9/28 (月)〜10/4 (日)」,
 // times in 24 hours 「14:02」, a day with its time 「9/30 (水) 14:02」.
 import {
   dayOfWeek,
@@ -34,9 +34,9 @@ export function formatDateHeading(date: LocalDate): string {
   return `${month}月${day}日（${weekday}）`;
 }
 
-/** 「9/28 (月) – 10/4 (日)」 */
+/** 「9/28 (月)〜10/4 (日)」 */
 export function formatDateRange(start: LocalDate, end: LocalDate): string {
-  return `${formatDate(start)} – ${formatDate(end)}`;
+  return `${formatDate(start)}〜${formatDate(end)}`;
 }
 
 /** 「14:02」 in the user's time zone. */

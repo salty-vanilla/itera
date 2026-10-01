@@ -19,7 +19,7 @@ const meta = {
     label: '見積もり',
     necessity: 'optional',
     description: '時間で入力（例：1.5）',
-    children: <TextInput inputMode="decimal" suffix="h" />,
+    children: <TextInput inputMode="decimal" suffix="時間" />,
   },
   argTypes: {
     necessity: {
@@ -40,7 +40,9 @@ export const Playground: Story = {};
 export const WithError: Story = {
   args: {
     error: '数値で入力してください（例：1.5）',
-    children: <TextInput inputMode="decimal" defaultValue="3時間" suffix="h" />,
+    children: (
+      <TextInput inputMode="decimal" defaultValue="3時間" suffix="時間" />
+    ),
   },
 };
 
@@ -128,7 +130,7 @@ export const ValidateOnBlurAndSubmit: Story = {
           <TextInput
             ref={refs.estimate}
             inputMode="decimal"
-            suffix="h"
+            suffix="時間"
             value={values.estimate}
             onValueChange={change('estimate')}
             onBlur={blur('estimate')}

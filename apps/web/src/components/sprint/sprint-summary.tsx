@@ -21,6 +21,11 @@ type SprintSummaryItem = {
   onSelect?: (() => void) | undefined;
   /** What the button does, read out with it: 「持ち越し 2件の行へ移る」. */
   selectLabel?: string | undefined;
+  /**
+   * On a row of its own under the others, at every width: a value as long
+   * as a range of hours (「17時間15分〜20時間15分」, #239).
+   */
+  fullRow?: boolean;
 };
 
 type SprintSummaryProps = {
@@ -40,7 +45,11 @@ function SprintSummary({ items, className }: SprintSummaryProps) {
       {items.map((item) => (
         <div
           key={item.label}
-          className="flex min-w-0 flex-col gap-1 border-border-soft px-3 py-3 medium:flex-auto medium:border-l medium:first:border-l-0 medium:first:ps-0"
+          className={cn(
+            'flex min-w-0 flex-col gap-1 border-border-soft px-3 py-3 medium:flex-auto medium:border-l medium:first:border-l-0 medium:first:ps-0',
+            item.fullRow &&
+              'col-span-2 medium:basis-full medium:border-t medium:border-l-0 medium:ps-0',
+          )}
         >
           <dt className="flex items-center gap-1 text-meta text-ink-muted [&_svg]:size-3 [&_svg]:shrink-0 [&_svg]:[stroke-width:var(--icon-stroke-s)]">
             {item.icon}

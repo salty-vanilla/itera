@@ -24,9 +24,9 @@ export interface PlanSummary {
    * while it may or does go over (`capacityStatusLine`).
    */
   readonly statement: CapacityState;
-  /** 「14.75–17.75h」, or 「見積もりなし 3件」 with nothing estimated. */
+  /** 「14時間45分〜17時間45分」, or 「見積もりなし 3件」 with nothing estimated. */
   readonly total: string;
-  /** 「18h」; absent while no available hours are entered. */
+  /** 「18時間」; absent while no available hours are entered. */
   readonly available?: string;
   readonly taskCount: number;
   /**
@@ -63,9 +63,7 @@ export function planSummary(data: PlanningData): PlanSummary {
     ...(totals.capacity === undefined
       ? {}
       : {
-          available: formatHours(totals.capacity.availableHours, {
-            total: true,
-          }),
+          available: formatHours(totals.capacity.availableHours),
         }),
     taskCount: tasks.length,
     unlinked: data.plan

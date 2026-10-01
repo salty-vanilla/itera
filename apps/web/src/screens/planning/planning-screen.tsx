@@ -500,29 +500,44 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
 
 /**
  * The headline's sentences in one line, in one form for all three states
- * (#234): 「少なく済めば 3h 残る · 多くかかっても 1h 残る」「少なく済めば 2.25h
- * 残る · 多くかかれば 0.75h 超える」「少なく済んでも 3h 超える · 多くかかれば 5h
+ * (#234): 「少なく済めば 3時間残る · 多くかかっても 1時間残る」「少なく済めば 2時間15分
+ * 残る · 多くかかれば 45分超える」「少なく済んでも 3時間超える · 多くかかれば 5時間
  * 超える」 (patterns.md compact, owner decision S5 in #93).
  */
 function CapacitySummary({ data }: { data: PlanningData }) {
   const capacity = data.totals.capacity;
-  const sentences =
+  // Each sentence is one or more pieces that never break inside; the line
+  // wraps only between them, after a 「·」, so a number never leaves its
+  // words and a 「·」 never stands alone. The name and the value are two
+  // pieces (「計画の合計」「15時間15分〜17時間15分」, 「少なく済めば」「45分残る」),
+  // so that a long time still leaves room for 「時間の見通しを開く」 (#239).
+  const sentences: readonly (readonly string[])[] =
     capacity === undefined
       ? [
-          `計画の合計 ${formatPlanningSum(data.totals.total)}`,
-          '使える時間は未入力',
+          ['計画の合計', formatPlanningSum(data.totals.total)],
+          ['使える時間は未入力'],
         ]
-      : capacityHeadlineSentences(capacityHeadline(capacity));
-  // Each sentence stays whole: the line wraps only at 「·」, so a number
-  // never leaves its words.
+      : capacityHeadline(capacity).map((part) =>
+          part.lead !== undefined && part.value !== undefined
+            ? [part.lead, `${part.value}${part.tail}`]
+            : capacityHeadlineSentences([part]),
+        );
   return (
     <span
       className={capacity?.status === 'exceeds' ? 'text-danger' : undefined}
     >
-      {sentences.map((sentence, i) => (
-        <Fragment key={sentence}>
-          {i > 0 && ' · '}
-          <span className="whitespace-nowrap">{sentence}</span>
+      {sentences.map((pieces, i) => (
+        <Fragment key={pieces.join(' ')}>
+          {i > 0 && ' '}
+          {pieces.map((piece, j) => (
+            <Fragment key={piece}>
+              {j > 0 && ' '}
+              <span className="whitespace-nowrap">
+                {piece}
+                {j === pieces.length - 1 && i < sentences.length - 1 && ' ·'}
+              </span>
+            </Fragment>
+          ))}
         </Fragment>
       ))}
     </span>

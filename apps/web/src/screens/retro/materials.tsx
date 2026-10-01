@@ -123,7 +123,7 @@ function pinned(pin: RetroPin, data: RetroData): Pinned | undefined {
     case 'availableHours': {
       const { planned, current } = facts.availableHours;
       const hours = (h: number | undefined) =>
-        h === undefined ? '未入力' : formatHours(h, { total: true });
+        h === undefined ? '未入力' : formatHours(h);
       const values = [
         `確定したとき ${hours(planned)}`,
         `→ 今 ${hours(current)}`,

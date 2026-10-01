@@ -124,11 +124,30 @@ describe('notation', () => {
   });
 
   it('middle-dot: numbers listed with ・ instead of ·', () => {
-    expect(rulesOf('（計画 5h・実績 4.5h）')).toEqual(['middle-dot']);
+    expect(rulesOf('（計画 5時間・実績 4時間30分）')).toEqual(['middle-dot']);
     expect(rulesOf('完了 3・スキップ 1')).toEqual(['middle-dot']);
     expect(rulesOf('（計画 {plan}・実績 {actual}）')).toEqual(['middle-dot']);
-    expect(rulesOf('計画 5h · 実績 4.5h')).toEqual([]);
+    expect(rulesOf('計画 5時間 · 実績 4時間30分')).toEqual([]);
     expect(rulesOf('毎週 月・水')).toEqual([]);
+  });
+
+  it('time-format: hours with h or m, and ranges with – or a spaced 〜', () => {
+    expect(found('計画 1.5h · 割り込み 30m')).toEqual([
+      ['time-format', '5h'],
+      ['time-format', '0m'],
+    ]);
+    expect(found('{value}h')).toEqual([['time-format', '}h']]);
+    expect(rulesOf('見積もりの提案 2–4h')).toEqual([
+      'time-format',
+      'time-format',
+    ]);
+    expect(rulesOf('9/28 (月) – 10/4 (日)')).toEqual(['time-format']);
+    expect(rulesOf('残り 1 〜 3時間')).toEqual(['time-format']);
+    expect(rulesOf('{lo} 〜 {hi}')).toEqual(['time-format']);
+    expect(rulesOf('計画 1時間30分 · 2〜4時間 · 9/28 (月)〜10/4 (日)')).toEqual(
+      [],
+    );
+    expect(rulesOf('16px の文字 · 200ms · 〜な状態にする')).toEqual([]);
   });
 });
 

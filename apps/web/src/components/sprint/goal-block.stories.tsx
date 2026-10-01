@@ -8,7 +8,7 @@ const meta = {
   args: {
     week: '今週',
     area: { name: '研究', color: 2 },
-    summary: '2件 · 7.5h',
+    summary: '2件 · 7時間30分',
     onSave: () => true,
   },
 } satisfies Meta<typeof GoalBlock>;

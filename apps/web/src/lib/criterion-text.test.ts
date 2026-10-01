@@ -38,13 +38,13 @@ describe('criterionEffectText', () => {
 describe('criterionMoveText (#234)', () => {
   it('says each end that moves, in one sentence', () => {
     expect(criterionMoveText({ lo: 2, hi: 0 })).toBe(
-      '少なく済んだときの合計が 2h 増えます。',
+      '少なく済んだときの合計が 2時間増えます。',
     );
     expect(criterionMoveText({ lo: 0, hi: -1 })).toBe(
-      '多くかかったときの合計が 1h 減ります。',
+      '多くかかったときの合計が 1時間減ります。',
     );
     expect(criterionMoveText({ lo: 1, hi: -1 })).toBe(
-      '少なく済んだときの合計が 1h 増え、多くかかったときの合計が 1h 減ります。',
+      '少なく済んだときの合計が 1時間増え、多くかかったときの合計が 1時間減ります。',
     );
     expect(criterionMoveText({ lo: 0, hi: 0 })).toBe('');
   });
