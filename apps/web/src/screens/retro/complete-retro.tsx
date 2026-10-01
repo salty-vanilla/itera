@@ -39,7 +39,7 @@ const BLOCKER_WORDS: Readonly<Record<RetroBlocker, ReactNode>> = {
       新しいルールを使うなら、
       <span className="whitespace-nowrap">「今回の計画のルール」で</span>
       <span className="whitespace-nowrap">「置き換える」を</span>
-      選んでください。
+      <span className="whitespace-nowrap">選んでください。</span>
       <span className="whitespace-nowrap">使わないなら、</span>
       <span className="whitespace-nowrap">「計画のルールにもする」</span>
       をオフにしてください。
