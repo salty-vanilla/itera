@@ -175,7 +175,7 @@ export interface RuleEnded {
 }
 
 /**
- * 繰り返しをやめる from the Backlog (F40). The rule ends the day before the
+ * 繰り返しをやめる from the Backlog (F41). The rule ends the day before the
  * next Sprint not yet confirmed, so confirmed Sprints and their occurrences
  * stay as they are (invariant 31), and the Task and its past occurrences
  * remain. If that Sprint is in Planning, the draft's occurrences of the rule

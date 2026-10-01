@@ -598,7 +598,7 @@ export function completeFromBacklog(
           (t) => t.taskId === task.id && t.outcome === 'planned',
         )
       : undefined;
-  // A rule ended this Sprint (F40) leaves the Task one-off, but this
+  // A rule ended this Sprint (F41) leaves the Task one-off, but this
   // Sprint's occurrences are still done one by one, in Today.
   if (
     sprint.state === 'active' &&

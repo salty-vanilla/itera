@@ -502,7 +502,7 @@ describe('RecurrenceRule', () => {
   });
 });
 
-describe('endRecurrenceRule (F40)', () => {
+describe('endRecurrenceRule (F41)', () => {
   it('ends the latest version the day before; earlier days keep their version', () => {
     const { rule } = recurring(
       { freq: 'weekly', daysOfWeek: [6] },

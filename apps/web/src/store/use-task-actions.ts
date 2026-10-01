@@ -73,6 +73,8 @@ export function useTaskActions() {
       completeTask: (taskId: TaskId) => run(changes.complete(taskId)),
       undoCompleteTask: (taskId: TaskId) => run(changes.undoComplete(taskId)),
       addToToday: (taskId: TaskId) => run(changes.toToday(taskId)),
+      addToWeek: (taskId: TaskId) => run(changes.toWeek(taskId)),
+      undoAddToWeek: (taskId: TaskId) => run(changes.undoToWeek(taskId)),
       /**
        * Makes the Task recurring or changes its rule. `effectiveFrom` is the
        * day the change takes effect (「次の Sprint から反映」), absent when
@@ -100,7 +102,7 @@ export function useTaskActions() {
           : { ok: true, effectiveFrom: change.effectiveFrom };
       },
       /**
-       * 繰り返しをやめる (F40). `removed` when the rule had made no
+       * 繰り返しをやめる (F41). `removed` when the rule had made no
        * occurrence and was taken off: the Task is one-off again.
        */
       endRecurrence: (taskId: TaskId): { ok: boolean; removed?: boolean } => {

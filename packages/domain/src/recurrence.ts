@@ -47,7 +47,7 @@ export interface RecurrenceRuleVersion {
  * from an earlier version keep their meaning (invariant 31). Only a latest
  * version that has not taken effect yet is replaced (F39). An ended rule's
  * latest version has an `effectiveTo`; the rule is off its Task (which keeps
- * `taskId` here) and is never changed again (F40).
+ * `taskId` here) and is never changed again (F41).
  */
 export interface RecurrenceRule {
   readonly id: RecurrenceRuleId;
@@ -231,7 +231,7 @@ export interface EndRecurrenceRuleInput {
 }
 
 /**
- * Ends the rule (F40): the latest version ends the day before `endFrom`, so
+ * Ends the rule (F41): the latest version ends the day before `endFrom`, so
  * the rule produces no date from then on. Days before keep their version
  * (invariant 31). Versions that would only take effect from `endFrom` on
  * are dropped, as a change to them replaces them (F39). A rule with no
@@ -271,14 +271,14 @@ export function endRecurrenceRule(
   );
 }
 
-/** The last day of an ended rule (F40); `undefined` while it goes on. */
+/** The last day of an ended rule (F41); `undefined` while it goes on. */
 export function ruleEndsOn(rule: RecurrenceRule): LocalDate | undefined {
   return latestVersion(rule).effectiveTo;
 }
 
 /**
  * The rule the Task repeats by on `today`, as the Backlog shows it: the
- * Task's own rule, or one that has ended (F40) and whose last day has not
+ * Task's own rule, or one that has ended (F41) and whose last day has not
  * passed. An ended rule is off the Task, so the Task is one-off for the
  * Sprints after it; until its last day the Backlog still shows it recurring.
  */
@@ -467,7 +467,7 @@ export interface RecurrenceSummary {
     readonly effectiveFrom: LocalDate;
   };
   readonly next?: NextOccurrence;
-  /** The last day of an ended rule (F40). */
+  /** The last day of an ended rule (F41). */
   readonly endsOn?: LocalDate;
 }
 

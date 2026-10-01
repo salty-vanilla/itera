@@ -1,4 +1,4 @@
-import { id, type AreaId, type TaskId } from '@itera/domain';
+import { id, type AreaId, type LocalDate, type TaskId } from '@itera/domain';
 import { Ellipsis } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
@@ -18,7 +18,7 @@ import {
 } from '@/components/task/task-metadata';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
 import { TaskTitleLines } from '@/components/task/task-row';
-import { formatDate } from '@/lib/date-format';
+import { formatDate, formatMonthDay } from '@/lib/date-format';
 import { rowKeyHandlers } from '@/lib/row-keys';
 import { cn } from '@/lib/utils';
 import { weekCall, weekText } from '@/lib/week-text';
@@ -28,7 +28,8 @@ import { useNewAreaDialog } from '../backlog/area-dialog';
 import { CarryOverText } from '../backlog/backlog-row';
 
 // The Backlog pane of Planning (docs/design/patterns.md 選ぶ). Groups: 持ち越し
-// → 期限が近い → 今週発生する繰り返し → そのほか. □ chooses a Task for this
+// → 期限超過 → 期限が近い（〜計画中の Sprint の最終日）→ 今週発生する繰り返し
+// → そのほか (Issue #151). □ chooses a Task for this
 // week (a chosen row is `here-subtle` with its check); a group's checkbox
 // chooses or clears the whole group. This week's occurrences are chosen by
 // default and can be left out one by one. Carried-over Tasks never join by
@@ -137,7 +138,21 @@ function BacklogPane({
         }}
       />
       <Group
+        title="期限超過"
+        rows={candidates.overdue}
+        slim={slim}
+        {...{
+          choose,
+          unchoose,
+          onOpenTask,
+          onEstimateTask,
+          today: data.today,
+          week,
+        }}
+      />
+      <Group
         title="期限が近い"
+        until={candidates.dueSoonUntil}
         rows={candidates.dueSoon}
         slim={slim}
         {...{
@@ -250,6 +265,7 @@ function EstimateActions({
 
 function Group({
   title,
+  until,
   rows,
   slim,
   choose,
@@ -260,6 +276,8 @@ function Group({
   week,
 }: {
   title: string;
+  /** The last day the group reaches, when it is a range of days (#151). */
+  until?: LocalDate;
   rows: readonly CandidateRow[];
   slim: boolean;
   choose: (rows: readonly CandidateRow[]) => void;
@@ -294,6 +312,12 @@ function Group({
             {rows.length}
             <span className="sr-only">件</span>
           </span>
+          {until !== undefined && (
+            <span className="text-ink-subtle">
+              <span aria-hidden> · 〜{formatMonthDay(until)}</span>
+              <span className="sr-only">、{formatMonthDay(until)} まで</span>
+            </span>
+          )}
         </DividerLabel>
       </div>
       <ul className="flex flex-col">

@@ -18,6 +18,7 @@ import { AreaDialog, useNewAreaDialog } from './area-dialog';
 import { BacklogRow } from './backlog-row';
 import { TaskDetail } from './task-detail';
 import { useAddToToday } from './use-add-to-today';
+import { useAddToWeek } from './use-add-to-week';
 import { useTaskDetailLeave } from './use-task-detail-leave';
 
 // Backlog (docs/design/patterns.md Backlog, PRD §5 A). The active Tasks,
@@ -65,6 +66,7 @@ function BacklogScreen() {
   const navigate = useNavigate({ from: '/backlog' });
   const actions = useTaskActions();
   const addToToday = useAddToToday();
+  const addToWeek = useAddToWeek();
   const toast = useToast();
   // The Area of the next Quick Add: the one used last, else the Area filter.
   const [quickArea, setQuickArea] = useState<string>();
@@ -321,6 +323,10 @@ function BacklogScreen() {
                       onToday={() => {
                         endUndo();
                         addToToday(task.id, task.title);
+                      }}
+                      onWeek={() => {
+                        endUndo();
+                        addToWeek(task.id, task.title);
                       }}
                       onArchive={() => archiveWithUndo(task.id, task.title)}
                       onEstimate={() =>

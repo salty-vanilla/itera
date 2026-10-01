@@ -54,7 +54,7 @@ describe('saveTask', () => {
   });
 });
 
-describe('endRule (F40)', () => {
+describe('endRule (F41)', () => {
   it('the Backlog shows the Task recurring until the rule’s last day, one-off after it', () => {
     const store = createMemoryStore(fixtureSnapshot('backlog-recurrence'));
     const taskId = id<'Task'>('task-cleaning');

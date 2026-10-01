@@ -87,7 +87,7 @@ type CommandResult<T> =
 - **effectiveFrom の値と不変条件 31**：作成・変更の入力で受け取る。この関数が守るのは版の順序だけで、「確定済みの Sprint の日を新しい版で上書きしない」ことは、呼び出し側（#22 の Sprint の側）が「まだ確定していない次の Sprint の開始日」を渡すことで保つ。生成済みの回は `ruleVersion` を持つので、どちらにしても動かない。
 - **同じ日から効く変更を 2 回したとき**：最新の版の `effectiveFrom` が新しい版と同じなら、その版はまだ効き始めていないので、版を足さずに型を置き換える。置き換えた型が 1 つ前の版と同じなら、最新の版を消し、1 つ前の版の `effectiveTo` を外して続ける。どちらも `recurrenceRuleChanged` を残し、`version` は置き換えた版（戻したときは戻った先の版）にする（ドメインモデル F39、#192）。
 - **同じパターンへの変更**：最新の版と同じパターンなら、版も Activity も作らない（曜日の順序は問わない）。
-- **繰り返しをやめる（F40、#189）**：`endRecurrenceRule` は、`endFrom` より前に効き始める版だけを残し、その最後の版の `effectiveTo` を `endFrom` の前日にする（`endFrom` から効く版はまだ効き始めていないので消す。F39 と同じ考え方）。`endFrom` より前に効く版がなければ失敗する。やめた Rule（最新の版に `effectiveTo` がある。`ruleEndsOn`）は、`changeRecurrenceRule` でも `endRecurrenceRule` でも変えられない。`recurrenceSummary` は最後の日を `endsOn` で返す。
+- **繰り返しをやめる（F41、#189）**：`endRecurrenceRule` は、`endFrom` より前に効き始める版だけを残し、その最後の版の `effectiveTo` を `endFrom` の前日にする（`endFrom` から効く版はまだ効き始めていないので消す。F39 と同じ考え方）。`endFrom` より前に効く版がなければ失敗する。やめた Rule（最新の版に `effectiveTo` がある。`ruleEndsOn`）は、`changeRecurrenceRule` でも `endRecurrenceRule` でも変えられない。`recurrenceSummary` は最後の日を `endsOn` で返す。
 - **毎月**：`dayOfMonth` が 29〜31 で、その月にその日がないときは、その月の末日にする（31 日指定は 2 月 28 日、4 月 30 日）。毎月必ず 1 回ある。
 - **毎週**：曜日を 1 つ以上指定できる（`daysOfWeek`、0 = 日曜）。週の始まり（`User.weekStartsOn`）には依存しない。複数の曜日を許すことはオーナーが決めた（ドメインモデル F12）。
 - **平日**：月〜金。祝日は考えない。
@@ -112,7 +112,7 @@ type CommandResult<T> =
 - **次の回の `projectFrom`**：`projectFrom(sprints, today)` で求める。
 - **Sprint から外す・戻す（F13・F14）**：`removeFromSprint` は planned → removed。繰り返しなら、その SprintTask の Pending の回を Excluded にする（完了・スキップ済みはそのまま）。`restoreToSprint` は同じ SprintTask を removed → planned に戻し、繰り返しなら Excluded の回を Pending に戻す。外した Task を `addTaskMidSprint` でもう一度足すことはできない（不変条件 14。戻すときは `restoreToSprint`）。 `occurrences` には、その SprintTask の回を漏れなく渡すのは呼び出し側の責任（渡さなかった回は変わらない）。外した繰り返しの回は `addOccurrenceMidSprint` で足せない（1 つの回は 1 つの SprintTask に属する。戻すときは `restoreToSprint`）。
 - **Planning 中に作った Rule（F15）**：Backlog から繰り返しにするときは `createRuleForNextSprint` を使う。Planning 中の Sprint があれば、その期間の回をそのとき作って含める。 その draft で同じ Task を単発として選んでいたら、繰り返しの SprintTask に置き換える（`carriedFrom` と goalLink は引き継がない。その週に回がなければ、Task は今週の計画から外れる）。
-- **繰り返しをやめる（F40）**：Backlog からは `endRuleForNextSprint` を使う。Rule は `nextUnconfirmedSprintStart` の前日で終わり、Task から外れる（結果の `task` に `recurrenceRuleId` がない。Rule は `taskId` で Task を指したまま残る）。そのため後の Sprint では単発として選べ、完了できる。今の Sprint の回は残り、`completeFromBacklog` は今の Sprint に回を束ねた SprintTask があるあいだは完了を拒む。Backlog の表示と切り口「繰り返し」は `recurrenceOf` で、最後の日までやめた Rule を出す。Planning 中の Sprint があれば、その Rule の回と draft の SprintTask を捨てる（呼び出し側は `discarded` の記録を消す）。捨てた後に Rule の回が 1 つも残らなければ `removed` で、呼び出し側は Rule の記録を消す。Activity は `recurrenceRuleEnded`、または `recurrenceRuleRemoved`。
+- **繰り返しをやめる（F41）**：Backlog からは `endRuleForNextSprint` を使う。Rule は `nextUnconfirmedSprintStart` の前日で終わり、Task から外れる（結果の `task` に `recurrenceRuleId` がない。Rule は `taskId` で Task を指したまま残る）。そのため後の Sprint では単発として選べ、完了できる。今の Sprint の回は残り、`completeFromBacklog` は今の Sprint に回を束ねた SprintTask があるあいだは完了を拒む。Backlog の表示と切り口「繰り返し」は `recurrenceOf` で、最後の日までやめた Rule を出す。Planning 中の Sprint があれば、その Rule の回と draft の SprintTask を捨てる（呼び出し側は `discarded` の記録を消す）。捨てた後に Rule の回が 1 つも残らなければ `removed` で、呼び出し側は Rule の記録を消す。Activity は `recurrenceRuleEnded`、または `recurrenceRuleRemoved`。
 - **Goal に紐づく / 紐づかない**：`setGoalLink` で切り替える（PRD §5 B）。Planning 中の draft は Goal を書く前でも linked にでき、確定時に Area に Goal がなければ unlinked になる。Sprint 中に linked にできるのは Area に Goal があるときだけ。変更は `goalLinkChanged` として残す。
 
 ## Today で決めた細部（#23）
@@ -160,6 +160,10 @@ type CommandResult<T> =
 
 - **期限が近い**（F28）：今日を含む Sprint がない日は、その週の終わりまで（`dueSoonUntil`。実装は #39 のまま）。
 - **Backlog からの完了を元に戻す**（`undoCompleteFromBacklog`、F29）：Sprint 外の Task（または active な Sprint がないとき）は Task だけを戻す。今の Sprint の Task で、完了がその日の選択を作った（origin = backlogCompletion）ときは、Task と SprintTask を戻し、その選択を消す（`todayBacklogCompletionUndone`）。完了前からあった選択を完了にしたときは `undoCompleteSelection` と同じく戻す。取り消せるのは完了した日の選択だけ（`date` はその日を渡す）。Today の完了の取り消し（`undoCompleteSelection`）には日付の制限がないが、Backlog の取り消しは完了した直後の操作なのでその日に限る。Sprint が active でない（Review に入った後など）ときは Task だけを戻し、SprintTask は変えない（`completeFromBacklog` も active な Sprint にだけ働くのと対称）。開始日より前に完了した分は、選択がないので Task と SprintTask だけを戻す（F34）。
+
+## Planning の選ぶのグループ（#151）
+
+- **Planning の選ぶ**（`planningCandidates`）：持ち越し → 期限超過（今日より前）→ 期限が近い（今日から、計画中の Sprint の最終日まで）→ 今週発生する繰り返し → そのほか。1 つの Task は 1 つのグループだけで、持ち越しの Task は期限超過でも持ち越しに入る。`today` を渡し、「期限が近い」の最終日を `dueSoonUntil` で返す。期限超過の判定は Backlog の切り口と共通（`isOverdue`）。
 
 ## 対象外
 

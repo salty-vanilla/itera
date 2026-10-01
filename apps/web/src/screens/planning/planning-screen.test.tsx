@@ -197,9 +197,26 @@ describe('Planning — 選ぶ', () => {
       }),
     );
     const chosen = draft().tasks.map((t) => t.taskId);
-    expect(chosen).toEqual(
-      expect.arrayContaining(['task-tax', 'task-passport']),
-    );
+    expect(chosen).toContain('task-tax');
+    // 期限超過 is its own group: choosing 期限が近い leaves it out.
+    expect(chosen).not.toContain('task-passport');
+  });
+
+  it('splits 期限超過 from 期限が近い, and ends 期限が近い at the Sprint’s last day (#151)', async () => {
+    await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    const groups = within(backlogPane())
+      .getAllByRole('region')
+      .map((g) => g.getAttribute('aria-label'));
+    expect(groups.slice(0, 3)).toEqual(['持ち越し', '期限超過', '期限が近い']);
+    const overdue = within(backlogPane()).getByRole('region', {
+      name: '期限超過',
+    });
+    expect(within(overdue).getByText('パスポートの更新')).toBeDefined();
+    const soon = within(backlogPane()).getByRole('region', {
+      name: '期限が近い',
+    });
+    expect(within(soon).getByText('住民税の支払い')).toBeDefined();
+    expect(soon.textContent).toContain('〜10/4');
   });
 
   it('leaves an occurrence out and puts it back (invariant 33)', async () => {

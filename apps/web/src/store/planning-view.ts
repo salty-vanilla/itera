@@ -119,7 +119,10 @@ export interface PlanningData {
   /** 選ぶ: the Backlog in groups. */
   readonly candidates: {
     readonly carriedOver: readonly CandidateRow[];
+    readonly overdue: readonly CandidateRow[];
     readonly dueSoon: readonly CandidateRow[];
+    /** The last day 期限が近い reaches (shown in its heading). */
+    readonly dueSoonUntil: LocalDate;
     readonly recurring: readonly RecurringCandidate[];
     readonly others: readonly CandidateRow[];
   };
@@ -209,6 +212,7 @@ export function planningData(
 
   // 選ぶ
   const groups = planningCandidates(sprint, {
+    today: clock.today,
     tasks,
     sprints: records.sprints,
     occurrences: records.occurrences,
@@ -317,7 +321,9 @@ export function planningData(
       .map((a) => ({ id: a.id, name: a.name, color: a.color })),
     candidates: {
       carriedOver: groups.carriedOver.map(row),
+      overdue: groups.overdue.map(row),
       dueSoon: groups.dueSoon.map(row),
+      dueSoonUntil: groups.dueSoonUntil,
       recurring: groups.recurring.map((r) => {
         const area = areaOf(r.task);
         return { ...r, ...(area === undefined ? {} : { area }) };

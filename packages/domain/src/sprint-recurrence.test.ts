@@ -495,7 +495,7 @@ describe('createRuleForNextSprint (F15)', () => {
   });
 });
 
-describe('endRuleForNextSprint (F40)', () => {
+describe('endRuleForNextSprint (F41)', () => {
   it('ends before the draft and takes the rule out of it; the Task and past occurrences remain', () => {
     const { task, rule, active, draft, occurrences } = setUp();
     const result = endRuleForNextSprint(
@@ -745,7 +745,7 @@ describe('endRuleForNextSprint (F40)', () => {
     );
     expect(next.occurrences).toEqual([]);
     expect(next.sprint.tasks).toEqual([]);
-    // The Task is one-off there: it can be chosen like any other (F40).
+    // The Task is one-off there: it can be chosen like any other (F41).
     const chosen = unwrap(
       selectTask(
         next.sprint,

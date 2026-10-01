@@ -20,7 +20,7 @@ import {
 import type { BacklogItem } from '@/store/backlog-view';
 import { useTaskActions } from '@/store/use-task-actions';
 
-// 繰り返し (PRD §6 Recurrence, F1, F7, F12, F15, F40). Like the other fields
+// 繰り返し (PRD §6 Recurrence, F1, F7, F12, F15, F41). Like the other fields
 // of the Task detail, a change to a rule that exists is saved when it is
 // made (Issue #171): the frequency, a weekday ticked, the day of the month.
 // Making a Task recurring is the exception: it stays a button, 「繰り返しに
@@ -28,7 +28,7 @@ import { useTaskActions } from '@/store/use-task-actions';
 // confirmed Sprint never changes; after saving it the screen says so (「次の
 // Sprint から反映」). A weekly rule may have several days, and needs one
 // before it can be saved. 「繰り返しをやめる」 ends the rule from the next
-// Sprint (F40): until its last day the rule is shown with it and can no
+// Sprint (F41): until its last day the rule is shown with it and can no
 // longer be changed; after it the Task is one-off and can be made recurring
 // again. A rule that has made no occurrence yet is taken off at once, and
 // the editor is back to making one.

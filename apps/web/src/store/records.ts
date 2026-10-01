@@ -42,7 +42,7 @@ export interface RecordChanges {
   readonly deleted?: {
     readonly occurrences?: readonly Occurrence['id'][];
     readonly criteria?: readonly PlanningCriterion['id'][];
-    /** A rule taken off a Task with no occurrence (F40). */
+    /** A rule taken off a Task with no occurrence (F41). */
     readonly rules?: readonly RecurrenceRule['id'][];
   };
 }

@@ -86,6 +86,11 @@ export interface BacklogItem {
   /** 今日へ: only for a Task outside the active Sprint (invariant 26). */
   readonly canAddToToday: boolean;
   /**
+   * 今週へ (#155): a one-off Task outside the active Sprint, without a day.
+   * Also before the Sprint starts, since no day is chosen.
+   */
+  readonly canAddToWeek: boolean;
+  /**
    * 今日へ waits for the Sprint's first day (#59): the Sprint is confirmed
    * but has not started, so there is no day to choose on yet.
    */
@@ -105,7 +110,7 @@ export function backlogItem(
   const area = records.areas.find((a) => a.id === task.areaId);
   const carry = carryOverOf(task.id, records.sprints);
   const carryFrom = records.sprints.find((s) => s.id === carry?.fromSprintId);
-  // An ended rule is shown until its last day (F40).
+  // An ended rule is shown until its last day (F41).
   const rule = recurrenceOf(task, records.rules, clock.today);
   // 「今週」: the active one, or, before one is confirmed, the one being
   // planned (Scenario A step 3); a draft for next week is 「来週」 (#90).
@@ -206,6 +211,7 @@ export function backlogItem(
       { now: clock.now },
     ),
     canAddToToday: canChoose && !beforeStart,
+    canAddToWeek: canChoose,
     ...(canChoose && beforeStart && active !== undefined
       ? {
           todayOpensOn: {

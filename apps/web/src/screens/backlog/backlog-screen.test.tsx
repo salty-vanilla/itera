@@ -904,6 +904,78 @@ describe('Backlog', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/today'));
   });
 
+  it('今週へ from the row: joins the week without a day, and 元に戻す takes it out (#155, F40)', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    const before = records().sprints.find((s) => s.state === 'active');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'その他の操作: 本棚を整理する' }),
+    );
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: '今週へ' }),
+    );
+    const sprint = () => records().sprints.find((s) => s.state === 'active')!;
+    const sprintTask = sprint().tasks.find(
+      (t) => t.taskId === 'task-bookshelf',
+    );
+    expect(sprintTask).toMatchObject({
+      origin: 'midSprint',
+      goalLink: 'unlinked',
+      outcome: 'planned',
+    });
+    // No day chosen.
+    expect(
+      sprint().dailySelections.some((s) => s.sprintTaskId === sprintTask?.id),
+    ).toBe(false);
+    const row = () => within(list()).getByText('本棚を整理する').closest('li')!;
+    expect(row().textContent).toContain('今週 · 週の途中で追加');
+    const toast = (
+      await screen.findByText('「本棚を整理する」を今週に入れました')
+    ).closest<HTMLElement>('[role="dialog"]')!;
+    // Neither a confirmation nor a capacity warning.
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    await userEvent.click(
+      within(toast).getByRole('button', { name: '元に戻す' }),
+    );
+    expect(sprint()).toEqual(before);
+    expect(row().textContent).not.toContain('今週');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'その他の操作: 本棚を整理する' }),
+    );
+    expect(
+      await screen.findByRole('menuitem', { name: '今週へ' }),
+    ).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: '今日へ' })).toBeTruthy();
+  });
+
+  it('今週へ from the detail: then only what the week offers is left (#155)', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    await userEvent.click(
+      within(list()).getByRole('button', { name: '本棚を整理する' }),
+    );
+    const detail = await screen.findByRole('dialog', {
+      name: '本棚を整理する',
+    });
+    const now = within(detail).getByRole('region', { name: '今日と今週' });
+    await userEvent.click(within(now).getByRole('button', { name: '今週へ' }));
+    expect(
+      await screen.findByText('「本棚を整理する」を今週に入れました'),
+    ).toBeTruthy();
+    expect(within(now).queryByRole('button', { name: '今週へ' })).toBeNull();
+    expect(within(now).queryByRole('button', { name: '今日へ' })).toBeNull();
+    const complete = within(now).getByRole('button', { name: '完了にする' });
+    await waitFor(() => expect(document.activeElement).toBe(complete));
+    expect(within(detail).getByText(/今週 · 週の途中で追加/)).toBeTruthy();
+  });
+
+  it('今週へ is not offered for a Task already in the week', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'その他の操作: API 設計のレビュー' }),
+    );
+    await screen.findByRole('menuitem', { name: '完了にする' });
+    expect(screen.queryByRole('menuitem', { name: '今週へ' })).toBeNull();
+  });
+
   it('完了: a Task in the Sprint completes there and today too', async () => {
     await renderAt('/backlog?fixture=backlog-capture');
     await userEvent.click(
@@ -1058,7 +1130,7 @@ describe('Backlog', () => {
     ).toMatchObject({ state: 'pending', ruleVersion: 1 });
   });
 
-  it('Recurrence (F40): 繰り返しをやめる ends the rule with this Sprint; the Task and its occurrences stay', async () => {
+  it('Recurrence (F41): 繰り返しをやめる ends the rule with this Sprint; the Task and its occurrences stay', async () => {
     await renderAt(
       '/backlog?fixture=backlog-recurrence&view=recurring&task=task-cleaning',
     );
@@ -1080,7 +1152,7 @@ describe('Backlog', () => {
       within(section).getByRole('heading', { name: '繰り返し' }),
     );
     const rule = records().rules.find((r) => r.taskId === 'task-cleaning');
-    // The 10/5 version had not taken effect: it goes (F39, F40).
+    // The 10/5 version had not taken effect: it goes (F39, F41).
     expect(rule?.versions).toEqual([
       expect.objectContaining({ version: 1, effectiveTo: '2026-10-04' }),
     ]);
@@ -1096,7 +1168,7 @@ describe('Backlog', () => {
     ).toContain('毎週 土 · 次は 10/3 (土)（10/4 (日) まで）');
   });
 
-  it('Recurrence (F40): a rule that has made no occurrence is taken off; the Task is one-off again', async () => {
+  it('Recurrence (F41): a rule that has made no occurrence is taken off; the Task is one-off again', async () => {
     await renderAt('/backlog?fixture=backlog-capture&task=task-bookshelf');
     const detail = await screen.findByRole('dialog');
     await userEvent.click(
@@ -1250,6 +1322,24 @@ describe('Backlog — before the Sprint starts (#59)', () => {
     ).toBeTruthy();
     await userEvent.click(today);
     expect(screen.queryByText('保存できませんでした')).toBeNull();
+  });
+
+  it('offers 今週へ before the Sprint starts: no day is chosen (#155)', async () => {
+    await confirmedOnSunday();
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: 'その他の操作: 顧客インタビューの設計',
+      }),
+    );
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: '今週へ' }),
+    );
+    expect(screen.queryByText('保存できませんでした')).toBeNull();
+    const sprint = records().sprints.find((s) => s.state === 'active');
+    expect(
+      sprint?.tasks.find((t) => t.taskId === 'task-interview'),
+    ).toMatchObject({ origin: 'midSprint', outcome: 'planned' });
+    expect(sprint?.dailySelections).toEqual([]);
   });
 });
 

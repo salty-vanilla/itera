@@ -112,7 +112,7 @@ export type Activity =
       readonly effectiveFrom: LocalDate;
     })
   | (ActivityBase & {
-      /** F40: the version that now ends, and its last day. */
+      /** F41: the version that now ends, and its last day. */
       readonly kind: 'recurrenceRuleEnded';
       readonly taskId: TaskId;
       readonly ruleId: RecurrenceRuleId;
@@ -120,7 +120,7 @@ export type Activity =
       readonly effectiveTo: LocalDate;
     })
   | (ActivityBase & {
-      /** F40: a rule with no occurrence left, taken off; the Task is one-off again. */
+      /** F41: a rule with no occurrence left, taken off; the Task is one-off again. */
       readonly kind: 'recurrenceRuleRemoved';
       readonly taskId: TaskId;
       readonly ruleId: RecurrenceRuleId;
@@ -176,9 +176,15 @@ export type Activity =
       readonly carriedFrom: SprintTaskId;
     })
   | (ActivityBase & {
-      /** Unselected in Planning (draft), removed after confirm, or restored (F13). */
+      /**
+       * Unselected in Planning (draft), removed after confirm, restored
+       * (F13), or a mid-Sprint addition undone with its record (F40).
+       */
       readonly kind:
-        'sprintTaskUnselected' | 'sprintTaskRemoved' | 'sprintTaskRestored';
+        | 'sprintTaskUnselected'
+        | 'sprintTaskRemoved'
+        | 'sprintTaskRestored'
+        | 'sprintTaskAddUndone';
       readonly sprintId: SprintId;
       readonly sprintTaskId: SprintTaskId;
       readonly taskId: TaskId;
