@@ -1048,6 +1048,8 @@ describe('Backlog', () => {
       pattern: { freq: 'weekly', daysOfWeek: [3] },
       effectiveFrom: '2026-10-05',
     });
+    // The 10/5 version had not taken effect, so it was replaced (F39).
+    expect(rule?.versions.map((v) => v.version)).toEqual([1, 2]);
     // This Sprint's occurrence stays (F1).
     expect(
       records().occurrences.find((o) => o.scheduledDate === '2026-10-03'),

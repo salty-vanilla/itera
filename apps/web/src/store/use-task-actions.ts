@@ -1,4 +1,5 @@
 import type {
+  Activity,
   AreaId,
   Estimate,
   EstimateSuggestionId,
@@ -13,6 +14,11 @@ import { useMemo } from 'react';
 import { useRecordStore } from './store-provider';
 import * as changes from './task-changes';
 import { useRun } from './use-run';
+
+type RuleActivity = Extract<
+  Activity,
+  { kind: 'recurrenceRuleCreated' | 'recurrenceRuleChanged' }
+>;
 
 /**
  * The person's operations on Tasks, one named function each (ADR 0005 API
@@ -69,23 +75,29 @@ export function useTaskActions() {
       addToToday: (taskId: TaskId) => run(changes.toToday(taskId)),
       /**
        * Makes the Task recurring or changes its rule. `effectiveFrom` is the
-       * new version's first day (「次の Sprint から反映」), absent when the
-       * pattern was already the rule's (nothing changed).
+       * day the change takes effect (「次の Sprint から反映」), absent when
+       * the pattern was already the rule's (nothing changed). It is read
+       * from the change's Activity, since a change to a version not in
+       * effect yet replaces it instead of adding one (F39).
        */
       setRecurrence: (
         taskId: TaskId,
         pattern: RecurrencePattern,
       ): { ok: boolean; effectiveFrom?: LocalDate } => {
-        const versionsOf = () =>
-          store.getSnapshot().records.rules.find((r) => r.taskId === taskId)
-            ?.versions ?? [];
-        const before = versionsOf().length;
+        const activitiesOf = () => store.getSnapshot().records.activities;
+        const before = activitiesOf().length;
         if (!run(changes.setRule(taskId, pattern))) return { ok: false };
-        const after = versionsOf();
-        const added = after.length > before ? after.at(-1) : undefined;
-        return added === undefined
+        const change = activitiesOf()
+          .slice(before)
+          .find(
+            (a): a is RuleActivity =>
+              (a.kind === 'recurrenceRuleCreated' ||
+                a.kind === 'recurrenceRuleChanged') &&
+              a.taskId === taskId,
+          );
+        return change === undefined
           ? { ok: true }
-          : { ok: true, effectiveFrom: added.effectiveFrom };
+          : { ok: true, effectiveFrom: change.effectiveFrom };
       },
     }),
     [run, store],

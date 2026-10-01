@@ -104,7 +104,10 @@ export type Activity =
       readonly kind: 'recurrenceRuleCreated' | 'recurrenceRuleChanged';
       readonly taskId: TaskId;
       readonly ruleId: RecurrenceRuleId;
-      /** The version this entry added and the day it takes effect. */
+      /**
+       * The version this entry added or replaced (the one gone back to, when
+       * a replacement drops it, F39) and the day the change takes effect.
+       */
       readonly version: number;
       readonly effectiveFrom: LocalDate;
     })

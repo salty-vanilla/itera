@@ -31,9 +31,7 @@ export type RecurrencePattern =
 
 /**
  * One version of a rule. `effectiveTo` is inclusive: the previous version
- * ends the day before the next one's `effectiveFrom`. A version replaced
- * before it took effect ends before it starts and so never applies; it is
- * still kept as history.
+ * ends the day before the next one's `effectiveFrom`.
  */
 export interface RecurrenceRuleVersion {
   readonly version: number;
@@ -45,8 +43,9 @@ export interface RecurrenceRuleVersion {
 /**
  * How a recurring Task repeats. The rule records no completions or skips;
  * those belong to each Occurrence (invariant 30). A change adds a version
- * and never rewrites an earlier one, so occurrences generated from an
- * earlier version keep their meaning (invariant 31).
+ * and never rewrites one that has taken effect, so occurrences generated
+ * from an earlier version keep their meaning (invariant 31). Only a latest
+ * version that has not taken effect yet is replaced (F39).
  */
 export interface RecurrenceRule {
   readonly id: RecurrenceRuleId;
@@ -138,6 +137,11 @@ export function createRecurrenceRule(
  * Sprint not yet confirmed, F1) and ends the latest version the day before.
  * Days before `effectiveFrom` keep their version, so generated occurrences
  * and the current Sprint are untouched (invariant 31).
+ *
+ * When the latest version starts on `effectiveFrom` too, it has not taken
+ * effect yet, so its pattern is replaced instead of adding another version
+ * (F39). If the replacement is the previous version's pattern, the latest
+ * version is dropped and the previous one goes on.
  */
 export interface ChangeRecurrenceRuleInput {
   readonly pattern: RecurrencePattern;
@@ -166,23 +170,51 @@ export function changeRecurrenceRule(
       `A new version cannot start before the latest one (${latest.effectiveFrom}).`,
     );
   }
-  const version = latest.version + 1;
-  const versions = [
-    ...rule.versions.slice(0, -1),
-    { ...latest, effectiveTo: addDays(effectiveFrom, -1) },
-    { version, pattern, effectiveFrom },
-  ];
-  return applied({ ...rule, versions }, [
+  const versions =
+    effectiveFrom === latest.effectiveFrom
+      ? replaceLatest(rule.versions, latest, pattern)
+      : [
+          ...rule.versions.slice(0, -1),
+          { ...latest, effectiveTo: addDays(effectiveFrom, -1) },
+          { version: latest.version + 1, pattern, effectiveFrom },
+        ];
+  const changed = { ...rule, versions };
+  return applied(changed, [
     {
       kind: 'recurrenceRuleChanged',
       at: ctx.now,
       actor: ctx.actor,
       taskId: rule.taskId,
       ruleId: rule.id,
-      version,
+      version: latestVersion(changed).version,
       effectiveFrom,
     },
   ]);
+}
+
+/**
+ * Replaces the pattern of the latest version, which has not taken effect
+ * yet. Going back to the previous version's pattern drops the latest
+ * version and lets the previous one go on (F39).
+ */
+function replaceLatest(
+  versions: readonly RecurrenceRuleVersion[],
+  latest: RecurrenceRuleVersion,
+  pattern: RecurrencePattern,
+): RecurrenceRuleVersion[] {
+  const earlier = versions.slice(0, -1);
+  const previous = earlier.at(-1);
+  if (previous !== undefined && samePattern(previous.pattern, pattern)) {
+    return [
+      ...earlier.slice(0, -1),
+      {
+        version: previous.version,
+        pattern: previous.pattern,
+        effectiveFrom: previous.effectiveFrom,
+      },
+    ];
+  }
+  return [...earlier, { ...latest, pattern }];
 }
 
 export function samePattern(
