@@ -48,7 +48,7 @@ function underToasts(main: HTMLElement, toasts: DOMRect): boolean {
 function makeRoom(main: HTMLElement): DOMRect | undefined {
   const toasts = toastBox();
   // A bar stuck to the bottom of the screen: the Toasts are lifted above it
-  // (lib/use-toast-offset.ts), and room in `main` would lift the bar over
+  // (lib/use-stuck-bar.ts), and room in `main` would lift the bar over
   // them. The room is left in the content before the bar instead, as
   // --toast-above-room (the Toasts' height and their gap to the bar), where
   // any content lies in the Toasts' columns.
@@ -87,7 +87,7 @@ function makeRoom(main: HTMLElement): DOMRect | undefined {
  *
  * The Toasts are never moved for this; DESIGN.md fixes where they are. (A
  * bar stuck to the bottom of the screen lifts them instead
- * (lib/use-toast-offset.ts). `main` gets no padding there, which would lift
+ * (lib/use-stuck-bar.ts). `main` gets no padding there, which would lift
  * the bar too; the screen puts `--toast-above-room` before the bar.)
  */
 export function useToastClearance(mainRef: RefObject<HTMLElement | null>) {

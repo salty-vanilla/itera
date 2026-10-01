@@ -97,6 +97,18 @@ describe('Planning — 優先度 (#97)', () => {
   });
 });
 
+describe('Planning — the stuck Capacity line (#152)', () => {
+  it('publishes its height while the screen shows, so that the focus is not under it', async () => {
+    const top = () =>
+      document.documentElement.style.getPropertyValue('--stuck-bar-top');
+    const router = await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    expect(top()).not.toBe('');
+    await router.navigate({ to: '/backlog' });
+    await screen.findByRole('heading', { name: 'Backlog' });
+    expect(top()).toBe('');
+  });
+});
+
 describe('Planning — Backlog のタイトル (#158)', () => {
   const titleBox = (title: string) => {
     const button = within(backlogPane())
