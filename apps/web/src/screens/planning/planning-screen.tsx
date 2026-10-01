@@ -174,10 +174,11 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
       setSearch({ task: taskId });
     }, true);
 
-  const outlook = (
+  const outlookOf = (sheet: boolean) => (
     <OutlookPane
       data={data}
       check={stage === 'check'}
+      sheet={sheet}
       // 確かめる takes the hours in its summary only: one field (#93).
       onAvailableHours={
         stage === 'check' ? undefined : actions.setAvailableHours
@@ -433,7 +434,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
           {/* In view while the Backlog scrolls; scrolls on its own when it
               is taller than the screen (#165). */}
           <div className="sticky top-0 max-h-dvh overflow-y-auto px-6 py-8">
-            {outlook}
+            {outlookOf(false)}
           </div>
         </aside>
       </div>
@@ -443,7 +444,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
           <DrawerHeader>
             <DrawerTitle>時間の見通し</DrawerTitle>
           </DrawerHeader>
-          <DrawerBody>{outlook}</DrawerBody>
+          <DrawerBody>{outlookOf(true)}</DrawerBody>
         </DrawerContent>
       </Drawer>
 

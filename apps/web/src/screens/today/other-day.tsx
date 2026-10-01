@@ -5,7 +5,7 @@ import { semanticIcons } from '@/components/ui/icon';
 import { Deadline } from '@/components/task/deadline';
 import { MetaItem, TaskMetadata } from '@/components/task/task-metadata';
 import { formatDate, formatTime } from '@/lib/date-format';
-import { SELECTION_WORDS } from '@/lib/selection-words';
+import { PAST_DAY_WORDS } from '@/lib/selection-words';
 import { formatHours } from '@/lib/time-format';
 import type { DayData } from '@/store/day-view';
 import { useDay } from '@/store/use-today';
@@ -108,7 +108,7 @@ function Past({ data }: { data: DayData }) {
                     <MetaItem icon={<Repeat aria-hidden />}>繰り返し</MetaItem>
                   )}
                   <MetaItem className="text-ink">
-                    {SELECTION_WORDS[r.selection.resolution]}
+                    {PAST_DAY_WORDS[r.selection.resolution]}
                   </MetaItem>
                   {r.actualHours > 0 && (
                     <MetaItem>実績 {formatHours(r.actualHours)}</MetaItem>

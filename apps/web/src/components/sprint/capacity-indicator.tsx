@@ -45,6 +45,8 @@ type CapacityIndicatorProps = {
   onAvailableHoursChange?: ((hours: number | null) => boolean) | undefined;
   /** Read-only after confirm. */
   readOnly?: boolean | undefined;
+  /** Its own 「時間の見通し」 heading. Off under a title that says it (#166). */
+  titled?: boolean | undefined;
   /** 「今週」「来週」: the week the hours are for (#90). */
   week: string;
   className?: string | undefined;
@@ -303,6 +305,7 @@ function CapacityIndicator({
   areas,
   onAvailableHoursChange,
   readOnly = false,
+  titled = true,
   week,
   className,
 }: CapacityIndicatorProps) {
@@ -312,13 +315,15 @@ function CapacityIndicator({
   const headingId = useId();
   return (
     <section
-      aria-labelledby={headingId}
+      aria-labelledby={titled ? headingId : undefined}
       data-slot="capacity-indicator"
       className={cn('flex flex-col gap-4', className)}
     >
-      <h2 id={headingId} className="text-subheading text-ink">
-        時間の見通し
-      </h2>
+      {titled && (
+        <h2 id={headingId} className="text-subheading text-ink">
+          時間の見通し
+        </h2>
+      )}
       {!breakdownOnly && (
         <div className="flex flex-col gap-2">
           {/* Read out when it changes: the headline and the state only. */}

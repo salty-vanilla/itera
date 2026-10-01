@@ -22,6 +22,11 @@ type OutlookPaneProps = {
   data: PlanningData;
   /** 確かめる: the summary at the head of the Sprint pane has the numbers. */
   check?: boolean | undefined;
+  /**
+   * In a Drawer, whose title is already 「時間の見通し」: the Capacity says
+   * it once, with no heading of its own (#166).
+   */
+  sheet?: boolean | undefined;
   /** Absent: no field for the available hours (確かめる has its own). */
   onAvailableHours?: ((hours: number | null) => boolean) | undefined;
   className?: string | undefined;
@@ -30,6 +35,7 @@ type OutlookPaneProps = {
 function OutlookPane({
   data,
   check = false,
+  sheet = false,
   onAvailableHours,
   className,
 }: OutlookPaneProps) {
@@ -86,6 +92,7 @@ function OutlookPane({
 
       <Divider />
       <CapacityIndicator
+        titled={!sheet}
         total={totals.total}
         capacity={totals.capacity}
         areas={areas}
