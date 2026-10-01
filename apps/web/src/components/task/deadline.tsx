@@ -45,7 +45,7 @@ function Deadline({
       <span>
         <span className="sr-only">期限 </span>
         {text}
-        {days <= 2 && <span className="sr-only">（{formatDate(due)}）</span>}
+        {days <= 2 && <span className="sr-only">、{formatDate(due)}</span>}
       </span>
     </span>
   );

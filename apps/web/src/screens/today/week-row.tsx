@@ -30,7 +30,7 @@ function WeekRow({ item, onOpen, onEstimate, onChoose }: WeekRowProps) {
           data-action="choose"
           // The whole name, not a visually hidden 「: タイトル」: browsers
           // read a hidden span apart, as 「今日へ : タイトル」 (#153).
-          aria-label={`今日へ: ${item.task.title}`}
+          aria-label={`今日へ：${item.task.title}`}
           onClick={onChoose}
         >
           <ArrowUp aria-hidden />

@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 // - unset: 「見積もりなし」, never 0h.
 // - unset with `enter`: the same words as a button that opens the Task's
 //   detail at its Estimate, as E does (Planning rows, #96).
-// Read out as 「見積もり 3時間」 and 「見積もりの提案（未確定）: 2〜4時間」.
+// Read out as 「見積もり 3時間」 and 「見積もりの提案（未確定）：2〜4時間」.
 
 type EstimateProps = {
   /** From `planningValueOf` (the Task's own value) or a plan snapshot. */
@@ -58,7 +58,7 @@ function Estimate({
           type="button"
           data-slot="estimate"
           data-variant="unset"
-          aria-label={`見積もりを入れる: ${enter.title}`}
+          aria-label={`見積もりを入れる：${enter.title}`}
           onClick={enter.onEnter}
           className={cn(
             base,
@@ -128,7 +128,7 @@ function Estimate({
         )}
       >
         <span aria-hidden>見積もりの提案 {text}</span>
-        <span className="sr-only">見積もりの提案（未確定）: {spoken}</span>
+        <span className="sr-only">見積もりの提案（未確定）：{spoken}</span>
       </span>
     );
   }

@@ -40,7 +40,7 @@ describe('Today — the heading’s days (#90)', () => {
   it('steps a day at a time, and back to today with no date', async () => {
     const router = await renderAt('/today?fixture=today-daytime');
     await userEvent.click(
-      screen.getByRole('link', { name: '前の日（9/30 (水)）' }),
+      screen.getByRole('link', { name: '前の日：9/30 (水)' }),
     );
     await waitFor(() => expect(heading()).toBe('9月30日（水） 過去'));
     expect(router.state.location.search).toEqual({
@@ -48,7 +48,7 @@ describe('Today — the heading’s days (#90)', () => {
       date: '2026-09-30',
     });
     await userEvent.click(
-      screen.getByRole('link', { name: '次の日（10/1 (木)）' }),
+      screen.getByRole('link', { name: '次の日：10/1 (木)' }),
     );
     await waitFor(() => expect(heading()).toBe('10月1日（木）'));
     expect(router.state.location.search).toEqual({ fixture: 'today-daytime' });
@@ -58,19 +58,19 @@ describe('Today — the heading’s days (#90)', () => {
     await renderAt('/today?fixture=today-daytime');
     // Today to another day, and back: the screen under the heading changes.
     await userEvent.click(
-      screen.getByRole('link', { name: '前の日（9/30 (水)）' }),
+      screen.getByRole('link', { name: '前の日：9/30 (水)' }),
     );
     await waitFor(() =>
       expect(document.activeElement).toBe(
-        screen.getByRole('link', { name: '前の日（9/29 (火)）' }),
+        screen.getByRole('link', { name: '前の日：9/29 (火)' }),
       ),
     );
     await userEvent.click(
-      screen.getByRole('link', { name: '次の日（10/1 (木)）' }),
+      screen.getByRole('link', { name: '次の日：10/1 (木)' }),
     );
     await waitFor(() =>
       expect(document.activeElement).toBe(
-        screen.getByRole('link', { name: '次の日（10/2 (金)）' }),
+        screen.getByRole('link', { name: '次の日：10/2 (金)' }),
       ),
     );
   });

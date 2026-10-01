@@ -95,7 +95,7 @@ export function plannedLabel(t: TaskFact): string {
 }
 
 /**
- * 計画時との差 of a Task in words (#167): 「計画より 0.5h 少ない」, and against
+ * 確定したときとの差 of a Task in words (#167): 「計画より 0.5h 少ない」, and against
  * a range 「上限より 1h 多い」「下限より 30m 少ない」「計画の幅の中」. Nothing
  * without actual time or an estimated value. Only the difference: no color
  * and no judgement (invariant 40).

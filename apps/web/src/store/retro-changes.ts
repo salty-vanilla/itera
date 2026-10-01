@@ -70,7 +70,7 @@ export const pin = (target: RetroPin) =>
 export const reflect = (text: string) =>
   onReview((sprint, ctx) => setReflection(sprint, { text }, ctx));
 
-/** 改善策として確定: one natural-language text (invariant 38). */
+/** 次に試すことを確定: one natural-language text (invariant 38). */
 export const improve = (text: string) =>
   onReview((sprint, ctx) => setImprovement(sprint, { text }, ctx));
 

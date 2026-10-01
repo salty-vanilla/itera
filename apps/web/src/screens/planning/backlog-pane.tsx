@@ -29,7 +29,7 @@ import { CarryOverText } from '../backlog/backlog-row';
 
 // The Backlog pane of Planning (docs/design/patterns.md 選ぶ). Groups: 持ち越し
 // → 期限超過 → 期限が近い（〜計画中の Sprint の最終日）→ 今週発生する繰り返し
-// → そのほか (Issue #151). □ chooses a Task for this
+// → その他 (Issue #151). □ chooses a Task for this
 // week (a chosen row is `here-subtle` with its check); a group's checkbox
 // chooses or clears the whole group. This week's occurrences are chosen by
 // default and can be left out one by one. Carried-over Tasks never join by
@@ -199,7 +199,7 @@ function BacklogPane({
                 {/* The group names the Task; each box is one occurrence. */}
                 <div
                   role="group"
-                  aria-label={`${weekText(week, 'に含める回')}: ${task.title}`}
+                  aria-label={`${weekText(week, 'に含める回')}：${task.title}`}
                   className="flex flex-wrap gap-x-4 gap-y-1"
                 >
                   {occurrences.map((o) => (
@@ -219,7 +219,7 @@ function BacklogPane({
         </section>
       )}
       <Group
-        title="そのほか"
+        title="その他"
         rows={candidates.others}
         slim={slim}
         {...{
@@ -250,7 +250,7 @@ function EstimateActions({
           render={
             <IconButton
               size="sm"
-              label={`その他の操作: ${title}`}
+              label={`その他の操作：${title}`}
               icon={<Ellipsis />}
             />
           }
@@ -390,7 +390,7 @@ function CandidateItem({
         className="grid size-target-touch shrink-0 place-items-center medium:size-target-min"
       >
         <CheckboxControl
-          aria-label={`${weekText(week, 'に入れる')}: ${task.title}`}
+          aria-label={`${weekText(week, 'に入れる')}：${task.title}`}
           checked={chosen}
           onCheckedChange={onToggle}
         />

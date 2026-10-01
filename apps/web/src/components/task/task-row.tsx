@@ -216,7 +216,7 @@ function CompletionCircle({
       type="button"
       onClick={onToggle}
       disabled={disabled}
-      aria-label={`${done ? '完了を取り消す' : '完了にする'}: ${title}`}
+      aria-label={`${done ? '完了を取り消す' : '完了にする'}：${title}`}
       data-slot="completion-circle"
       className={cn(
         'group/circle grid size-target-touch shrink-0 place-items-center rounded-full medium:size-target-min',

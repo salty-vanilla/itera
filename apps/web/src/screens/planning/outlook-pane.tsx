@@ -81,7 +81,7 @@ function OutlookPane({
           className="flex flex-col gap-2 border-t border-ink pt-3"
         >
           <h2 id={`${ids}-improvement`} className="text-label text-ink-muted">
-            前回決めた改善策
+            前回、次に試すと決めたこと
           </h2>
           <p className="text-goal text-ink">{improvement.text}</p>
           {criterionLine}

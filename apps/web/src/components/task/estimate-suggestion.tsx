@@ -73,7 +73,7 @@ function EstimateSuggestion({
   function adoptEdited() {
     const value = Number(hours);
     if (hours.trim() === '' || !Number.isFinite(value) || value <= 0) {
-      setError('0 より大きい数で入力してください（例: 2.5）');
+      setError('0 より大きい数で入力してください（例：2.5）');
       fieldRef.current?.focus();
       return;
     }
@@ -100,7 +100,7 @@ function EstimateSuggestion({
         <span className="text-num-m text-ink">
           <span aria-hidden>{formatRange(suggestion.lo, suggestion.hi)}</span>
           <span className="sr-only">
-            見積もりの提案（未確定）:{' '}
+            見積もりの提案（未確定）：
             {spokenHours(suggestion.lo, suggestion.hi)}
           </span>
         </span>

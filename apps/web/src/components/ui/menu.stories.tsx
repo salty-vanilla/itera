@@ -117,7 +117,7 @@ export const SortOrder: Story = {
       <div className="pb-56">
         <Menu>
           <MenuTrigger render={<Button />}>
-            並び順: {labels[order]}
+            並び順：{labels[order]}
             <ChevronDown aria-hidden />
           </MenuTrigger>
           <MenuContent>

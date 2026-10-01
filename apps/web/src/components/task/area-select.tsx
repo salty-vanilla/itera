@@ -25,7 +25,7 @@ type AreaSelectProps = {
 function AreaSelect({ areas, value, onChange, onNewArea }: AreaSelectProps) {
   const chosen = areas.find((a) => a.id === value);
   return (
-    <Field label="追加する Task の領域" hideLabel className="shrink-0">
+    <Field label="追加するタスクの領域" hideLabel className="shrink-0">
       <Select
         value={value}
         onChange={(e) => {

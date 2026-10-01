@@ -86,7 +86,7 @@ export const WithIcon: Story = {
         タスクを追加
       </Button>
       <Button>
-        並び順: 期限
+        並び順：期限
         <ChevronDown aria-hidden />
       </Button>
     </div>

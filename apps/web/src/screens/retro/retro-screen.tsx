@@ -399,10 +399,10 @@ function NotStarted({
         </h1>
         <p className="text-body text-ink-muted">
           {sprint.state === 'planning'
-            ? `この Sprint はまだ計画中です。振り返りは、確定した後、最終日（${formatDate(sprint.end)}）から始められます。`
+            ? `この Sprint はまだ計画中です。振り返りは、確定した後、最終日の ${formatDate(sprint.end)} から始められます。`
             : lastDay
               ? '今日はこの Sprint の最終日です。振り返りを始められます。'
-              : `この Sprint の振り返りは、最終日（${formatDate(sprint.end)}）から始められます。`}
+              : `この Sprint の振り返りは、最終日の ${formatDate(sprint.end)} から始められます。`}
         </p>
       </div>
     </div>

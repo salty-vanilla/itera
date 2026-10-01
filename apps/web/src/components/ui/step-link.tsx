@@ -12,7 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './tooltip';
 
 type StepLinkProps = {
   direction: 'previous' | 'next';
-  /** Accessible name and Tooltip, 「前の日（9/30 (水)）」. Absent: disabled. */
+  /** Accessible name and Tooltip, 「前の日：9/30 (水)」. Absent: disabled. */
   label?: string | undefined;
   href?: string | undefined;
   /** Lets the router take over a plain click. */

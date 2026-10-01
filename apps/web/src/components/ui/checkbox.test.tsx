@@ -40,14 +40,14 @@ describe('Checkbox', () => {
       <Checkbox
         label="差分を反映する"
         description="反映しても Sprint は確定されません。"
-        error="反映する行を 1 つ以上選んでください"
+        error="反映する行を 1つ以上選んでください"
       />,
     );
     const checkbox = screen.getByRole('checkbox', { name: '差分を反映する' });
     expect(checkbox.getAttribute('aria-invalid')).toBe('true');
     expect(describedBy(checkbox)).toEqual([
       '反映しても Sprint は確定されません。',
-      '反映する行を 1 つ以上選んでください',
+      '反映する行を 1つ以上選んでください',
     ]);
   });
 

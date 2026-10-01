@@ -343,7 +343,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
                     )}
                   {data.blockers.includes('inactiveTasks') && (
                     <p>
-                      完了・アーカイブした Task を
+                      完了・アーカイブしたタスクを
                       {weekText(week, 'から外すと確定できます。')}
                     </p>
                   )}

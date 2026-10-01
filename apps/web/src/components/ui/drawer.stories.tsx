@@ -85,7 +85,7 @@ function TaskDetailDrawer({
               <textarea
                 id={id}
                 rows={12}
-                defaultValue="先行研究を 3 つの観点で分類し、各章で扱う範囲を決める。"
+                defaultValue="先行研究を 3つの観点で分類し、各章で扱う範囲を決める。"
                 className={`${inputClassName} resize-y py-2`}
               />
             )}

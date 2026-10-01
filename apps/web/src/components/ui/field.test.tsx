@@ -30,7 +30,7 @@ describe('Field', () => {
       <Field
         label="見積もり"
         description="0.5時間単位"
-        error="数値で入力してください（例: 1.5）"
+        error="数値で入力してください（例：1.5）"
       >
         <TextInput defaultValue="abc" suffix="h" />
       </Field>,
@@ -39,7 +39,7 @@ describe('Field', () => {
     expect(input.getAttribute('aria-invalid')).toBe('true');
     expect(describedBy(input)).toEqual([
       '0.5時間単位',
-      '数値で入力してください（例: 1.5）',
+      '数値で入力してください（例：1.5）',
     ]);
     // The error does not clear what was entered.
     expect((input as HTMLInputElement).value).toBe('abc');

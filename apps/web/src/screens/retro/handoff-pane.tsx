@@ -83,11 +83,11 @@ function HandoffPane({
         className="flex flex-col gap-3 border-t border-b border-t-ink border-b-border py-4"
       >
         <h2 id="handoff-improvement" className="text-label text-ink-muted">
-          次に試す変更
+          次に試すこと
         </h2>
         {improvement === undefined ? (
           <p className="text-body text-ink-muted">
-            改善策はまだありません。書かなくても振り返りは完了できます。
+            次に試すことはまだありません。書かなくても振り返りは完了できます。
             <button
               type="button"
               onClick={onWriteImprovement}
@@ -116,8 +116,8 @@ function HandoffPane({
           label="計画のルールにもする"
           description={
             improvement === undefined
-              ? '改善策を書くと選べます。任意です。'
-              : '改善策が「見積もりの提案のどこで計画するか」で表せるときだけ、次の計画に使うルールにできます。任意です。'
+              ? '次に試すことを書くと選べます。任意です。'
+              : '次に試すことが「見積もりの提案のどこで計画するか」で表せるときだけ、次の計画に使うルールにできます。任意です。'
           }
           disabled={improvement === undefined}
           checked={draft !== undefined}
@@ -284,10 +284,12 @@ function ClosedHandoff({
         className="flex flex-col gap-3 border-t border-b border-t-ink border-b-border py-4"
       >
         <h2 id="handoff-improvement" className="text-label text-ink-muted">
-          次に試す変更
+          次に試すこと
         </h2>
         {improvement === undefined ? (
-          <p className="text-body text-ink-muted">改善策はありませんでした。</p>
+          <p className="text-body text-ink-muted">
+            次に試すことはありませんでした。
+          </p>
         ) : (
           <p className="max-w-measure-read text-goal text-ink">{improvement}</p>
         )}
@@ -298,8 +300,8 @@ function ClosedHandoff({
         </h2>
         <p className="text-body text-ink">
           {draft === undefined
-            ? '改善策から計画のルールは作りませんでした。'
-            : `改善策から計画のルール「${criterionName(draft.criterion.policy, draft.areaName)}」を作りました。`}
+            ? '次に試すことから計画のルールは作りませんでした。'
+            : `次に試すことから計画のルール「${criterionName(draft.criterion.policy, draft.areaName)}」を作りました。`}
         </p>
       </section>
       {used !== undefined && (

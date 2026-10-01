@@ -45,7 +45,7 @@ type GoalBlockProps = {
   /**
    * After confirm: the text at confirm (plannedText), shown beside the
    * current one when they differ; `null` when the Goal was written after
-   * confirm (「計画時にはなかった」).
+   * confirm (「確定したときにはなかった」).
    */
   planned?: string | null | undefined;
   children?: ReactNode;
@@ -114,7 +114,7 @@ function GoalBlock({
             ref={openRef}
             size="sm"
             variant="quiet"
-            aria-label={`目標を書く: ${area.name}`}
+            aria-label={`目標を書く：${area.name}`}
             onClick={() => {
               setText('');
               setEditing(true);
@@ -184,12 +184,12 @@ function GoalBlock({
           <p className="max-w-measure-read text-goal text-ink">{goal}</p>
           {planned === null && (
             <p className="text-meta text-ink-muted">
-              確定した後に書いた目標です（計画時にはありませんでした）
+              確定した後に書いた目標です
             </p>
           )}
           {planned !== undefined && planned !== null && planned !== goal && (
             <p className="max-w-measure-read text-meta text-ink-muted">
-              計画時：「{planned}」
+              確定したとき：「{planned}」
             </p>
           )}
           {onSave !== undefined && (
@@ -199,7 +199,7 @@ function GoalBlock({
               variant="quiet"
               // The words line up with the Goal text's left edge.
               className="-ms-3 medium:-ms-2"
-              aria-label={`目標を編集: ${area.name}`}
+              aria-label={`目標を編集：${area.name}`}
               onClick={() => {
                 setText(goal);
                 setEditing(true);
@@ -217,7 +217,7 @@ function GoalBlock({
               size="sm"
               variant="quiet"
               className="-ms-3 medium:-ms-2"
-              aria-label={`目標を書く: ${area.name}`}
+              aria-label={`目標を書く：${area.name}`}
               onClick={() => {
                 setText('');
                 setEditing(true);

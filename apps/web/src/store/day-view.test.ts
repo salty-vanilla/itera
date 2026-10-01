@@ -42,8 +42,8 @@ describe('dayData (#90)', () => {
         r.occurrence !== undefined,
       ]),
     ).toEqual([
-      ['英語の多読 30 分', 'done', 0.5, true],
-      ['関連論文を 3 本読む', 'paused', 4.5, false],
+      ['英語の多読 30分', 'done', 0.5, true],
+      ['関連論文を 3本読む', 'paused', 4.5, false],
     ]);
     // Nothing of a future day on a past one.
     expect(data?.occurrences).toEqual([]);
@@ -61,7 +61,7 @@ describe('dayData (#90)', () => {
     const titles = dayData(removed, clock, day('2026-09-30'))?.records.map(
       (r) => r.title,
     );
-    expect(titles).toContain('関連論文を 3 本読む');
+    expect(titles).toContain('関連論文を 3本読む');
   });
 
   it('names the Areas of a closed Sprint as at its confirm (F5)', () => {
@@ -99,7 +99,7 @@ describe('dayData (#90)', () => {
     const data = dayData(records, clock, day('2026-09-30'));
     expect(data?.when).toBe('future');
     expect(data?.within?.sprint?.state).toBe('planning');
-    expect(data?.occurrences.map((o) => o.title)).toEqual(['英語の多読 30 分']);
+    expect(data?.occurrences.map((o) => o.title)).toEqual(['英語の多読 30分']);
     expect(data?.due.map((d) => d.task.title)).toEqual(['住民税の支払い']);
     expect(data?.records).toEqual([]);
   });
@@ -108,7 +108,7 @@ describe('dayData (#90)', () => {
     const { records, clock } = fixtureSnapshot('today-daytime');
     const titles = (r: Records) =>
       dayData(r, clock, day('2026-10-02'))?.occurrences.map((o) => o.title);
-    expect(titles(records)).toEqual(['英語の多読 30 分']);
+    expect(titles(records)).toEqual(['英語の多読 30分']);
     const excluded = {
       ...records,
       occurrences: records.occurrences.map((o) =>
