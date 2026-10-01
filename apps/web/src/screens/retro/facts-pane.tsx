@@ -1,10 +1,20 @@
-import type { AreaId, RetroPin, SelfAssessment, TaskFact } from '@itera/domain';
+import type {
+  AreaId,
+  Capacity,
+  RetroPin,
+  SelfAssessment,
+  TaskFact,
+} from '@itera/domain';
 import { Info, Timer } from 'lucide-react';
 import { Fragment, useId, useRef, type ReactNode } from 'react';
 import { semanticIcons } from '@/components/ui/icon';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { Button } from '@/components/ui/button';
 import { Radio, RadioGroup } from '@/components/ui/radio-group';
+import {
+  capacityHeadline,
+  capacityHeadlineSentences,
+} from '@/components/sprint/capacity-indicator';
 import { SprintSummary } from '@/components/sprint/sprint-summary';
 import { criterionName } from '@/lib/criterion-text';
 import { formatDate, formatDateTime } from '@/lib/date-format';
@@ -29,6 +39,7 @@ import { TaskResult } from './task-result';
 import {
   actualLabel,
   daysText,
+  differenceText,
   estimateOf,
   plannedCellText,
   plannedLabel,
@@ -95,6 +106,13 @@ function FactsPane({
   );
   // Also when the hours were first entered after confirming.
   const hoursChanged = currentHours !== plannedHours;
+  const { minutes: interruptMinutes, withoutMinutes } = facts.interruptTime;
+  const interruptNote = [
+    withoutMinutes > 0 && `時間の記録なし ${withoutMinutes}件`,
+    interruptMinutes > 0 && '実績には含みません',
+  ]
+    .filter(Boolean)
+    .join('。');
 
   // 持ち越し N件 in the summary moves to the rows, one press at a time from
   // the first, and round again after the last.
@@ -151,25 +169,53 @@ function FactsPane({
             {
               label: '計画値の合計',
               value: formatRange(total.lo, total.hi, { total: true }),
-              note: [
-                total.unestimated + total.unestimatedSubtasks > 0 &&
-                  `見積もりなし ${total.unestimated + total.unestimatedSubtasks}件`,
-                plannedHours === undefined
-                  ? '使える時間は未入力'
-                  : `使える時間 ${formatHours(plannedHours, { total: true })}`,
-              ]
-                .filter(Boolean)
-                .join(' · '),
+              // With how it stood against the hours entered when planning
+              // (#167): words only, no danger, as a fact of the week.
+              note: (
+                <>
+                  <Sentences
+                    items={[
+                      ...(total.unestimated + total.unestimatedSubtasks > 0
+                        ? [
+                            `見積もりなし ${total.unestimated + total.unestimatedSubtasks}件`,
+                          ]
+                        : []),
+                      plannedHours === undefined
+                        ? '使える時間は未入力'
+                        : `使える時間 ${formatHours(plannedHours, { total: true })}`,
+                    ]}
+                  />
+                  {facts.capacity !== undefined && (
+                    <span className="block">
+                      <Sentences items={capacityWords(facts.capacity)} />
+                    </span>
+                  )}
+                </>
+              ),
             },
           ]}
         />
-        <p className="text-body text-ink">
-          計画 {formatPlanningTotal(total)} → 実績{' '}
-          {formatHours(facts.actualHours, { total: true })}
-          <span className="text-ink-muted">
-            （入力済み {entered}件。実績は入力したものだけを数えています）
-          </span>
-        </p>
+        <div className="flex flex-col gap-1 text-body text-ink">
+          <p>
+            計画 {formatPlanningTotal(total)} → 実績{' '}
+            {formatHours(facts.actualHours, { total: true })}
+            <span className="text-ink-muted">
+              （入力済み {entered}件。実績は入力したものだけを数えています）
+            </span>
+          </p>
+          {/* Interrupts are not actual time of a Task, so 実績 above
+              leaves their minutes out (#167). */}
+          {facts.interrupts.length > 0 && (
+            <p>
+              割り込み {facts.interrupts.length}件
+              {interruptMinutes > 0 &&
+                ` · 合計 ${formatHours(interruptMinutes / 60, { total: true })}`}
+              {interruptNote !== '' && (
+                <span className="text-ink-muted">（{interruptNote}）</span>
+              )}
+            </p>
+          )}
+        </div>
       </section>
 
       {used !== undefined && (
@@ -534,12 +580,12 @@ function TaskTable({
   const actions = onAddActual !== undefined;
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[53rem] table-fixed border-collapse text-body">
+      <table className="w-full min-w-[58rem] table-fixed border-collapse text-body">
         <colgroup>
           <col className="xl:w-[32%]" />
           <col className="w-[7rem] xl:w-[11%]" />
           <col className="w-[9rem] xl:w-[11%]" />
-          <col className="w-[5rem] xl:w-[11%]" />
+          <col className="w-[10rem] xl:w-[11%]" />
           <col className="w-[13rem] wide:w-[18rem] xl:w-[20%]" />
           {actions && <col className="w-[9rem] wide:w-[13rem] xl:w-[15%]" />}
         </colgroup>
@@ -562,7 +608,7 @@ function TaskTable({
             </th>
             <th
               scope="col"
-              className={cn(cell, 'text-left font-normal xl:ps-8')}
+              className={cn(cell, 'text-left font-normal ps-6 xl:ps-8')}
             >
               結果
             </th>
@@ -599,8 +645,10 @@ function TaskTable({
               </td>
               <td className={num}>
                 {t.actualHours > 0 ? formatHours(t.actualHours) : '未入力'}
+                {/* 計画時との差, under the value it is about (#167). */}
+                <DifferenceNote fact={t} />
               </td>
-              <td className={cn(cell, 'xl:ps-8')}>
+              <td className={cn(cell, 'ps-6 xl:ps-8')}>
                 <TaskResult fact={t} data={data} />
                 <DaysNote fact={t} />
               </td>
@@ -645,6 +693,7 @@ function TaskList({
       <ul className="flex flex-col border-t border-border-soft">
         {tasks.map((t) => {
           const estimate = estimateOf(t);
+          const difference = differenceText(t);
           const values = [
             // A suggestion and 見積もりなし say what they are; a number needs
             // its name.
@@ -653,6 +702,7 @@ function TaskList({
               : estimate.text,
             plannedLabel(t),
             actualLabel(t),
+            ...(difference === undefined ? [] : [difference]),
           ];
           const days = daysText(t);
           return (
@@ -754,6 +804,44 @@ function AddActualButton({
       <span className="sr-only">: {subject}</span>
     </Button>
   );
+}
+
+/** 「計画より 0.5h 少ない」 under the actual time, if any. */
+function DifferenceNote({ fact }: { fact: TaskFact }) {
+  const text = differenceText(fact);
+  return text === undefined ? null : (
+    <span className="block text-meta text-ink-muted">{text}</span>
+  );
+}
+
+/**
+ * The planned total against the hours entered when planning (#167), in the
+ * words of Planning: 「下限でも 0.25h 超える」, 「下限なら 1.75h 残る · 上限なら
+ * 0.25h 超える」, 「上限でも 1h 残る」.
+ */
+function capacityWords(capacity: Capacity): readonly string[] {
+  const { remaining, status } = capacity;
+  if (status === 'exceeds') {
+    return [`下限でも ${formatHours(-remaining.hi, { total: true })} 超える`];
+  }
+  if (status === 'mayExceed') {
+    return capacityHeadlineSentences(capacityHeadline(capacity));
+  }
+  return [
+    remaining.lo === 0
+      ? '上限でちょうど収まる'
+      : `上限でも ${formatHours(remaining.lo, { total: true })} 残る`,
+  ];
+}
+
+/** Short sentences joined by 「 · 」, breaking only between them. */
+function Sentences({ items }: { items: readonly string[] }) {
+  return items.map((item, i) => (
+    <Fragment key={item}>
+      {i > 0 && ' · '}
+      <span className="whitespace-nowrap">{item}</span>
+    </Fragment>
+  ));
 }
 
 /** 「見送り 2回 · 今日はここまで 1回」 under the outcome, if any. */

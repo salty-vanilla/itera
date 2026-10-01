@@ -460,3 +460,76 @@ describe('retroFacts — occurrences as facts (#56)', () => {
     expect(all[1]?.actualHours).toBe(0);
   });
 });
+
+describe('retroFacts — the plan against what happened (#167)', () => {
+  const input = () => ({
+    tasks: tasks(),
+    areas: [research, work],
+    occurrences,
+    sprints: [],
+  });
+
+  it('invariant 40: the interrupts’ minutes are summed apart from the actual time', () => {
+    const sprint: Sprint = {
+      ...reviewSprint(),
+      interrupts: [
+        { id: id('int-1'), at: ctx.now, text: '障害の問い合わせ', minutes: 45 },
+        { id: id('int-2'), at: ctx.now, text: 'レビュー依頼', minutes: 20 },
+        { id: id('int-3'), at: ctx.now, text: '電話' },
+      ],
+    };
+    const facts = retroFacts(sprint, input());
+    expect(facts.interruptTime).toEqual({ minutes: 65, withoutMinutes: 1 });
+    // The actual time is the Tasks' only.
+    expect(facts.actualHours).toBe(4.5);
+  });
+
+  it('compares the planned total with the available hours entered when planning', () => {
+    // 12–14h against 18h planned (15h now): the upper end fits.
+    expect(retroFacts(reviewSprint(), input()).capacity).toEqual({
+      availableHours: 18,
+      remaining: { lo: 4, hi: 6 },
+      status: 'within',
+    });
+    // The mid-Sprint addition counts (invariant 15): 12–14h against 11h.
+    const over = retroFacts(
+      { ...reviewSprint(), plannedAvailableHours: 11 },
+      input(),
+    );
+    expect(over.capacity?.status).toBe('exceeds');
+    // No hours entered when planning: nothing to compare with.
+    const none = retroFacts(
+      sprintFixture('2026-09-28', 'review', { tasks: reviewSprint().tasks }),
+      input(),
+    );
+    expect(none.capacity).toBeUndefined();
+  });
+
+  it('each Task’s actual time against its planning value, only when both are there', () => {
+    const sprint = reviewSprint();
+    const facts = retroFacts(
+      {
+        ...sprint,
+        actualTimes: [
+          ...sprint.actualTimes,
+          {
+            sprintTaskId: id('st-task-done'),
+            hours: 3.5,
+            date: d('2026-09-30'),
+            via: 'later',
+            recordedAt: ctx.now,
+          },
+        ],
+      },
+      input(),
+    );
+    const of = (taskId: string) =>
+      facts.tasks.find((f) => f.taskId === taskId)?.actualVsPlan;
+    // 4.5h against 5h.
+    expect(of('task-paper')).toEqual({ lo: -0.5, hi: -0.5 });
+    // 3.5h against 2–3h: 0.5h over the upper end, 1.5h over the lower.
+    expect(of('task-done')).toEqual({ lo: 0.5, hi: 1.5 });
+    // No actual time entered: no difference.
+    expect(of('task-interview')).toBeUndefined();
+  });
+});

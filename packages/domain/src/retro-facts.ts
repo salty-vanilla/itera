@@ -1,4 +1,5 @@
 import type { Area } from './area';
+import { capacityOf, type Capacity } from './capacity';
 import type { Occurrence } from './occurrence';
 import { totalPlanningValues, type PlanningTotal } from './planning-value';
 import type { AreaId, SprintTaskId, TaskId } from './shared/ids';
@@ -29,6 +30,12 @@ export interface TaskFact {
   readonly estimateNow?: number;
   /** Sum of the recorded actual time (optional records). */
   readonly actualHours: number;
+  /**
+   * 計画時との差 of the Task: its actual time minus its planning value, as a
+   * range (`lo` against the value's upper end). Only when actual time is
+   * entered and the value is estimated; a difference, never a judgement.
+   */
+  readonly actualVsPlan?: { readonly lo: number; readonly hi: number };
   /** 持ち越し回数: how many Sprints this Task was carried over from in a row. */
   readonly carryCount: number;
   /** Days the Task was deferred (including a deferral completed later that day, F17). */
@@ -94,6 +101,15 @@ export interface RetroFacts {
   readonly deferrals: readonly DailySelection[];
   readonly pauses: readonly DailySelection[];
   readonly interrupts: readonly InterruptNote[];
+  /**
+   * The interrupts' recorded minutes, summed. They are not actual time of a
+   * Task, so `actualHours` leaves them out. Interrupts without minutes are
+   * counted, not added.
+   */
+  readonly interruptTime: {
+    readonly minutes: number;
+    readonly withoutMinutes: number;
+  };
   readonly availableHours: {
     readonly planned?: number;
     readonly current?: number;
@@ -104,6 +120,11 @@ export interface RetroFacts {
     /** With the mid-Sprint additions, without removed ones. */
     readonly withAdditions: PlanningTotal;
   };
+  /**
+   * The planned total (with the mid-Sprint additions) against the available
+   * hours entered when planning; absent when none were entered (#167).
+   */
+  readonly capacity?: Capacity;
   readonly actualHours: number;
 }
 
@@ -188,6 +209,7 @@ export function retroFacts(sprint: Sprint, input: RetroFactsInput): RetroFacts {
     totalPlanningValues(
       list.flatMap((f) => (f.plan === undefined ? [] : [f.plan.value])),
     );
+  const withAdditions = totalOf(counted);
 
   return {
     areas,
@@ -237,6 +259,11 @@ export function retroFacts(sprint: Sprint, input: RetroFactsInput): RetroFacts {
     deferrals: sprint.dailySelections.filter(isDeferral),
     pauses: sprint.dailySelections.filter(isPause),
     interrupts: sprint.interrupts,
+    interruptTime: {
+      minutes: sprint.interrupts.reduce((sum, n) => sum + (n.minutes ?? 0), 0),
+      withoutMinutes: sprint.interrupts.filter((n) => n.minutes === undefined)
+        .length,
+    },
     availableHours: {
       ...(sprint.plannedAvailableHours === undefined
         ? {}
@@ -247,8 +274,11 @@ export function retroFacts(sprint: Sprint, input: RetroFactsInput): RetroFacts {
     },
     plannedTotal: {
       atConfirm: totalOf(facts.filter((f) => f.origin === 'planning')),
-      withAdditions: totalOf(counted),
+      withAdditions,
     },
+    ...(sprint.plannedAvailableHours === undefined
+      ? {}
+      : { capacity: capacityOf(withAdditions, sprint.plannedAvailableHours) }),
     actualHours: sprint.actualTimes.reduce((sum, a) => sum + a.hours, 0),
   };
 }
@@ -311,6 +341,10 @@ function taskFact(
   const selections = sprint.dailySelections
     .filter((s) => s.sprintTaskId === sprintTask.id)
     .toSorted((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  const actualHours = sprint.actualTimes
+    .filter((a) => a.sprintTaskId === sprintTask.id)
+    .reduce((sum, a) => sum + a.hours, 0);
+  const value = sprintTask.planSnapshot?.value;
   return {
     sprintTaskId: sprintTask.id,
     taskId: sprintTask.taskId,
@@ -326,14 +360,25 @@ function taskFact(
     ...(task?.estimate === undefined
       ? {}
       : { estimateNow: task.estimate.hours }),
-    actualHours: sprint.actualTimes
-      .filter((a) => a.sprintTaskId === sprintTask.id)
-      .reduce((sum, a) => sum + a.hours, 0),
+    actualHours,
+    ...(actualHours > 0 && value !== undefined && value.base !== 'none'
+      ? {
+          actualVsPlan: {
+            lo: hundredths(actualHours - value.hi),
+            hi: hundredths(actualHours - value.lo),
+          },
+        }
+      : {}),
     carryCount: carryCount(sprintTask, input.sprints),
     deferredDates: selections.filter(isDeferral).map((s) => s.date),
     longestDeferralRun: longestRun(selections),
     pausedDates: selections.filter(isPause).map((s) => s.date),
   };
+}
+
+/** Rounds away the binary noise of a subtraction (4.7 − 4.5). */
+function hundredths(hours: number): number {
+  return Math.round(hours * 100) / 100;
 }
 
 /**

@@ -94,9 +94,18 @@ export function PinToggle({
       variant="quiet"
       aria-pressed={pinned}
       onClick={onToggle}
-      // Pressed: a check replaces the pin and the surface stays pressed, so
-      // the state is not in color alone (no filled icons, foundations.md).
-      className={pinned ? 'bg-surface-pressed text-ink' : 'text-ink-muted'}
+      // On, it inverts like any toggle (DESIGN.md Selected): an ink fill
+      // with a check in place of the pin, so a marked fact stands out among
+      // the many unmarked ones, and not by color alone (#167).
+      className={
+        pinned
+          ? [
+              'border-primary bg-primary text-on-primary',
+              'not-data-disabled:hover:border-primary-hover not-data-disabled:hover:bg-primary-hover',
+              'not-data-disabled:active:border-primary-active not-data-disabled:active:bg-primary-active',
+            ].join(' ')
+          : 'text-ink-muted'
+      }
     >
       {pinned ? <Check aria-hidden /> : <Pin aria-hidden />}
       振り返りに使う
