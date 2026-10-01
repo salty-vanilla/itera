@@ -30,7 +30,7 @@ import {
 } from '@itera/domain';
 import { daysBetween } from '@/lib/date-format';
 import type { Clock, Records } from './records';
-import { weekOf, type WeekName } from './sprint-choice';
+import { nextWeekSprintOf, weekOf, type WeekName } from './sprint-choice';
 
 export interface RunningArea {
   /** `null` for Tasks without an Area (「領域なし」). */
@@ -51,6 +51,11 @@ export interface RunningTask {
    * of the Sprint the run began in (「持ち越し 1回（Sprint 13から）」, F25).
    */
   readonly carry?: { readonly count: number; readonly fromSprint: number };
+  /**
+   * Also in the draft for next week (「来週」, #90): chosen there while this
+   * week runs. Only the running Sprint says it (#150).
+   */
+  readonly nextWeek?: true;
 }
 
 export interface RunningAreaPlan {
@@ -151,6 +156,15 @@ export function runningData(
       color: area?.color ?? 'none',
     };
   };
+  // Only the running Sprint says 「来週にも」: a Sprint that has ended has
+  // no next week to be in (#150).
+  const nextWeekTasks = new Set(
+    sprint.state !== 'active'
+      ? []
+      : (nextWeekSprintOf(records, clock)?.tasks ?? [])
+          .filter(isCounted)
+          .map((t) => t.taskId),
+  );
   const counted: RunningTask[] = sprint.tasks
     // Carried over at the end (Review): still part of what was planned.
     .filter((t) => isCounted(t) || t.outcome === 'carriedOver')
@@ -166,6 +180,7 @@ export function runningData(
           sprintTask,
           task,
           value,
+          ...(nextWeekTasks.has(task.id) ? { nextWeek: true as const } : {}),
           ...(occurrences === undefined ? {} : { occurrences }),
           ...(carry === undefined || from === undefined
             ? {}

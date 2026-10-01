@@ -81,6 +81,19 @@ export function thisWeekSprintOf(
 }
 
 /**
+ * The Sprint called 「来週」, once its Planning has started: the draft that
+ * exists while this week runs (#90). Tasks in it are marked 「来週」 (#150).
+ */
+export function nextWeekSprintOf(
+  records: Records,
+  clock: Clock,
+): Sprint | undefined {
+  return records.sprints.find(
+    (s) => weekNameOf(s.start, records, clock) === '来週',
+  );
+}
+
+/**
  * Every Sprint in order and, while no Planning has started, the next week
  * after them: that is where its Planning starts (invariant 11).
  */
