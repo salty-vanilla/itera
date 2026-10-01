@@ -916,7 +916,8 @@ describe('Today — outside the period (#54)', () => {
     expect(screen.queryByText(/日目/)).toBeNull();
     // The week's plan, read only (#156).
     const plan = screen.getByRole('region', { name: '今週の計画' });
-    expect(within(plan).getAllByRole('listitem').length).toBeGreaterThan(0);
+    expect(within(plan).getAllByRole('listitem')).toHaveLength(9);
+    expect(within(plan).getByText('9/28 (月) の回')).toBeTruthy();
     expect(within(plan).queryByRole('button')).toBeNull();
     // One step to the Sprint (#90).
     const open = screen.getByRole('link', { name: 'Sprint 2 を開く' });

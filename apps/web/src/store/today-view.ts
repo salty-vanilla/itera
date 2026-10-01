@@ -82,6 +82,11 @@ export interface TodayData {
   readonly continuation: readonly TodayItem[];
   /** 今週の残り: planned and not chosen today (occurrences of any day, F18). */
   readonly rest: readonly TodayItem[];
+  /**
+   * The planned Tasks and pending occurrences, whether or not chosen or
+   * continued: what 今週の計画 shows before the first day (#156).
+   */
+  readonly plan: readonly TodayItem[];
   /** Today's interrupts, oldest first. */
   readonly interrupts: readonly InterruptNote[];
   /** Areas for the quick add, in the person's order. */
@@ -207,14 +212,10 @@ export function todayData(
   const planned = sprint.tasks.filter((t) => t.outcome === 'planned');
   // The Tasks first, then each pending occurrence, which can be chosen on
   // any day of the Sprint (F18), in the order of their dates.
-  const rest = [
+  const plan = [
     ...planned
       .filter((t) => t.occurrenceIds === undefined)
-      .flatMap((sprintTask) =>
-        chosenToday(sprintTask) || inContinuation(sprintTask)
-          ? []
-          : (item(sprintTask) ?? []),
-      ),
+      .flatMap((sprintTask) => item(sprintTask) ?? []),
     ...planned
       .filter((t) => t.occurrenceIds !== undefined)
       .flatMap((sprintTask) =>
@@ -222,9 +223,7 @@ export function todayData(
           .filter(
             (o) =>
               (sprintTask.occurrenceIds ?? []).includes(o.id) &&
-              o.state === 'pending' &&
-              !chosenToday(sprintTask, o.id) &&
-              !inContinuation(sprintTask, o.id),
+              o.state === 'pending',
           )
           .flatMap((o) => item(sprintTask, o.id) ?? []),
       )
@@ -235,6 +234,11 @@ export function todayData(
           : 1,
       ),
   ];
+  const rest = plan.filter(
+    (i) =>
+      !chosenToday(i.sprintTask, i.occurrence?.id) &&
+      !inContinuation(i.sprintTask, i.occurrence?.id),
+  );
 
   const areas = records.areas
     .filter((a) => !a.archived)
@@ -275,6 +279,7 @@ export function todayData(
     closed,
     continuation,
     rest,
+    plan,
     interrupts: sprint.interrupts.filter(
       (n) => toLocalDate(n.at, records.user.timeZone) === today,
     ),

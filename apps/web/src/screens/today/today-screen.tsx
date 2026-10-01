@@ -130,13 +130,13 @@ function BeforeStart({ data }: { data: TodayData }) {
           </ul>
         </section>
       )}
-      {data.rest.length > 0 && (
+      {data.plan.length > 0 && (
         <section aria-labelledby="before-plan" className="flex flex-col gap-2">
           <h2 id="before-plan" className="text-subheading text-ink-muted">
             今週の計画
           </h2>
           <ul className="flex flex-col border-t border-border-soft">
-            {data.rest.map((item) => (
+            {data.plan.map((item) => (
               <li key={`${item.sprintTask.id}-${item.occurrence?.id ?? ''}`}>
                 <TaskRow
                   title={item.task.title}
