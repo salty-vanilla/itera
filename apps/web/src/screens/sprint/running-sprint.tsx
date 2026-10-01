@@ -30,6 +30,7 @@ import type { RunningData, RunningTask } from '@/store/running-view';
 import { useBacklog } from '@/store/use-backlog';
 import { useRunningSprintActions } from '@/store/use-running-sprint';
 import { useTaskActions } from '@/store/use-task-actions';
+import { CarryOverText } from '../backlog/backlog-row';
 import { TaskDetail } from '../backlog/task-detail';
 import { useTaskDetailLeave } from '../backlog/use-task-detail-leave';
 import { PastDays } from './past-days';
@@ -205,7 +206,7 @@ function RunningSprint({
                               ? () => openTask(t.task.id)
                               : undefined
                           }
-                          current={search.task === t.task.id}
+                          current={running && search.task === t.task.id}
                         />
                       </li>
                     ))}
@@ -273,20 +274,16 @@ function RunningRow({
   onOpen: (() => void) | undefined;
   current: boolean;
 }) {
-  const { sprintTask, task, value, occurrences, carriedFrom } = item;
+  const { sprintTask, task, value, occurrences, carry } = item;
   const Repeat = semanticIcons.recurrence;
-  const Carry = semanticIcons.carriedOver;
   const count = sprintTask.planSnapshot?.occurrenceCount;
+  const done = sprintTask.outcome === 'done';
   // DESIGN.md Task Metadata order: carry-over, recurrence, Goal, notes.
-  // Where it came from goes before how it ended, so that 「完了」 is not read
-  // as carried over (#160).
+  // The carry-over into this Sprint, as the Backlog shows it, goes before
+  // how it ended, so that 「完了」 is not read as carried over (#160).
   const meta = [
-    carriedFrom !== undefined && (
-      <MetaItem key="c" icon={<Carry aria-hidden />}>
-        Sprint {carriedFrom} から持ち越し
-      </MetaItem>
-    ),
-    sprintTask.outcome === 'done' && <MetaItem key="d">完了</MetaItem>,
+    carry !== undefined && <CarryOverText key="c" {...carry} />,
+    done && <MetaItem key="d">完了</MetaItem>,
     // How it ended; 「持ち越し」 alone reads as coming from the week before.
     ended && sprintTask.outcome === 'carriedOver' && (
       <MetaItem key="d">持ち越し（未完了）</MetaItem>
@@ -294,7 +291,7 @@ function RunningRow({
     (occurrences !== undefined || count !== undefined) && (
       <MetaItem key="r" icon={<Repeat aria-hidden />}>
         {/* 「今週 3回中 1回完了」; an ended Sprint's needs no name. */}
-        {[week, ...occurrenceText(occurrences, count)]
+        {[week, ...occurrenceText(occurrences, count, done)]
           .filter(Boolean)
           .join(' ')}
       </MetaItem>
@@ -311,7 +308,7 @@ function RunningRow({
   return (
     <TaskRow
       title={task.title}
-      done={sprintTask.outcome === 'done'}
+      done={done}
       onOpen={onOpen}
       current={current}
       metadata={
@@ -327,18 +324,21 @@ function RunningRow({
 /**
  * A recurring row's occurrences as 「今週の完了」 counts them (F32), so
  * that the rows add up to it: 「3回中 1回完了」, and the skipped ones
- * apart, as they leave the count (#160).
+ * apart, as they leave the count (#160). A row that says 「完了」 already
+ * gives the count alone.
  */
 function occurrenceText(
   occurrences: RunningTask['occurrences'],
   count: number | undefined,
+  rowDone: boolean,
 ): string[] {
   if (occurrences === undefined) return [`${count}回`];
   const { done, total, skipped } = occurrences;
-  return [
-    ...(total > 0 ? [`${total}回中 ${done}回完了`] : []),
-    ...(skipped > 0 ? [`${total > 0 ? '· ' : ''}スキップ ${skipped}回`] : []),
+  const parts = [
+    ...(total > 0 ? [`${total}回中 ${done}回${rowDone ? '' : '完了'}`] : []),
+    ...(skipped > 0 ? [`スキップ ${skipped}回`] : []),
   ];
+  return [parts.join(' · ')];
 }
 
 /**

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   backlogView,
+  carryOriginOf,
   carryOverOf,
   dueSoonUntil,
   inBacklogSlice,
@@ -166,6 +167,22 @@ describe('carryOverOf (F26)', () => {
       tasks: [st('st-9', 'draft')],
     });
     expect(carryOverOf(taskId, [onlyDraft])).toBeUndefined();
+  });
+  it('carryOriginOf: where the run behind a SprintTask began, not counting itself', () => {
+    const s1 = sprintFixture('2026-09-14', 'closed', {
+      tasks: [st('st-1', 'carriedOver')],
+    });
+    const s2 = sprintFixture('2026-09-21', 'closed', {
+      tasks: [st('st-2', 'carriedOver', 'st-1')],
+    });
+    const third = st('st-3', 'done', 'st-2');
+    const s3 = sprintFixture('2026-09-28', 'active', { tasks: [third] });
+    expect(carryOriginOf(third, [s1, s2, s3])).toEqual({
+      count: 2,
+      fromSprintId: s1.id,
+    });
+    // Carried over itself, with nothing behind it.
+    expect(carryOriginOf(s1.tasks[0]!, [s1, s2, s3])).toBeUndefined();
   });
 });
 

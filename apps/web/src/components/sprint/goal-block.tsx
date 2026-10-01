@@ -9,10 +9,10 @@ import { weekText } from '@/lib/week-text';
 // DESIGN.md Components › Goal. Sprint × Area: 「今週どんな状態にしたいか」.
 // A `border` rule on top, the heading (Area Indicator heading, the number of
 // Tasks and their time), the Goal text in `goal` within `measure-read` with
-// its edit action right under it (#160), then the Area's chosen Tasks. States: set / empty (「+
-// Goal を書く」 and that it is optional) / editing (`body-l` Textarea with
-// 保存 / キャンセル). A Goal is optional per Area; an Area without one is
-// never shown as a warning. No Card.
+// its edit action right under it (#160), then the Area's chosen Tasks.
+// States: set / empty (「+ Goal を書く」 and that it is optional) / editing
+// (`body-l` Textarea with 保存 / キャンセル). A Goal is optional per Area; an
+// Area without one is never shown as a warning. No Card.
 
 type GoalBlockProps = {
   area: { name: string; color: AreaColor };
@@ -160,6 +160,8 @@ function GoalBlock({
               ref={openRef}
               size="sm"
               variant="quiet"
+              // The words line up with the Goal text's left edge.
+              className="-ms-3 medium:-ms-2"
               aria-label={`目標を編集: ${area.name}`}
               onClick={() => {
                 setText(goal);
@@ -177,6 +179,7 @@ function GoalBlock({
               ref={openRef}
               size="sm"
               variant="quiet"
+              className="-ms-3 medium:-ms-2"
               aria-label={`目標を書く: ${area.name}`}
               onClick={() => {
                 setText('');

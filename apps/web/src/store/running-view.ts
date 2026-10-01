@@ -5,6 +5,7 @@
 // change after confirm and their planned values stay beside them
 // (invariant 18, F16).
 import {
+  carryOriginOf,
   isCounted,
   occurrenceProgress,
   sprintAreaName,
@@ -45,8 +46,11 @@ export interface RunningTask {
   readonly value: PlanningValue;
   /** Recurring only: its occurrences done of the week's (F32). */
   readonly occurrences?: OccurrenceProgress;
-  /** Carried over from an earlier Sprint: that Sprint's number (F25). */
-  readonly carriedFrom?: number;
+  /**
+   * Carried over into this Sprint: how many times in a row, and the number
+   * of the Sprint the run began in (「持ち越し 1回（Sprint 13から）」, F25).
+   */
+  readonly carry?: { readonly count: number; readonly fromSprint: number };
 }
 
 export interface RunningAreaPlan {
@@ -149,18 +153,22 @@ export function runningData(
       const value = sprintTask.planSnapshot?.value;
       if (task === undefined || value === undefined) return [];
       const occurrences = occurrenceProgress(sprintTask, records.occurrences);
-      const from = records.sprints.find((s) =>
-        s.tasks.some((t) => t.id === sprintTask.carriedFrom),
-      );
+      const carry = carryOriginOf(sprintTask, records.sprints);
+      const from = records.sprints.find((s) => s.id === carry?.fromSprintId);
       return [
         {
           sprintTask,
           task,
           value,
           ...(occurrences === undefined ? {} : { occurrences }),
-          ...(from === undefined
+          ...(carry === undefined || from === undefined
             ? {}
-            : { carriedFrom: sprintNumber(from, records.sprints) }),
+            : {
+                carry: {
+                  count: carry.count,
+                  fromSprint: sprintNumber(from, records.sprints),
+                },
+              }),
         },
       ];
     });

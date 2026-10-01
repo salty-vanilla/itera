@@ -207,13 +207,16 @@ describe('Sprint — the rows (#160)', () => {
     expect(within(reading).getByText(/^今週 \d+回中 \d+回完了/)).toBeTruthy();
   });
 
-  it('marks a carry-over by where it came from, apart from how it ended', async () => {
+  it('marks a carry-over as the Backlog does, before how it ended', async () => {
     await renderAt('/sprint?fixture=today-daytime');
-    const carried = screen.getAllByText(/^Sprint \d+ から持ち越し$/);
-    expect(carried.length).toBeGreaterThan(0);
-    // Where it came from comes first, before 「完了」.
-    const meta = carried[0]!.parentElement as HTMLElement;
-    expect(meta.firstElementChild?.textContent).toMatch(/から持ち越し/);
+    // Carried over from Sprint 1 and done this week.
+    const row = screen
+      .getByText('API 設計のレビュー')
+      .closest('[data-slot="task-row"]') as HTMLElement;
+    const carried = within(row).getByText('持ち越し 1回（Sprint 1から）');
+    const meta = carried.parentElement as HTMLElement;
+    expect(meta.firstElementChild).toBe(carried);
+    expect(within(meta).getByText('完了')).toBeTruthy();
   });
 
   it("opens a Task's detail from its title, and closes it", async () => {
@@ -240,9 +243,10 @@ describe('Sprint — the rows (#160)', () => {
 
   it('opens no detail for a completed Task or an ended Sprint', async () => {
     await renderAt('/sprint?fixture=today-daytime');
-    for (const row of document.querySelectorAll('[data-slot="task-row"]')) {
-      const done = row.querySelector('.line-through');
-      if (done !== null) expect(done.tagName).not.toBe('BUTTON');
+    // 住民税の支払い and API 設計のレビュー are done this week.
+    for (const title of ['住民税の支払い', 'API 設計のレビュー']) {
+      expect(screen.queryByRole('button', { name: title })).toBeNull();
+      expect(screen.getAllByText(title).length).toBeGreaterThan(0);
     }
     cleanup();
     await renderAt('/sprint?fixture=today-daytime&sprint=1');
