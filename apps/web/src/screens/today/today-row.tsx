@@ -33,15 +33,17 @@ import type { TodayItem, TodayRow as TodayRowData } from '@/store/today-view';
 // Today). ○ is always there; the other daily operations are in the `…`
 // (always visible under 768px). Owner decisions in #41 and #101:
 // - the state and its time go in the metadata line (「作業中 · 10:12 から」
-//   「今日はここまで · 1.5h」「今日は見送り」) with an icon, in `ink-muted`,
-//   except 作業中 in `ink` (#101; its words from #163);
-// - a deferred or removed row has 「取り消す」 the same day (F37), as a
-//   skipped one does (F19);
+//   「中断 · 1.5h」「見送り」) with an icon, in `ink-muted`, except 作業中 in
+//   `ink` (#101; its words from #163 and #233);
+// - a deferred row has 「取り消す」 the same day (F37), as a skipped one
+//   does (F19);
 // - a done row stays where it is, struck through; ○ again undoes it;
-// Issue #163 changed the `…`: the most used first (開始 or 今日はここまで, then
-// 完了にする), with labels alone; 今日から外す became 今日の予定から外す. A
-// started row carries the `here` bar, its title in 700 and 「作業中 · 10:12
-// から」.
+// Issue #163 changed the `…`: the most used first (開始 or 今日は中断する,
+// then 完了にする), with labels alone. A started row carries the `here` bar,
+// its title in 700 and 「作業中 · 10:12 から」.
+// Issue #233 renamed the day's operations and left 今日は見送る out for an
+// occurrence of a recurring Task, which has 今日の回をスキップする instead.
+// 今週の残りに戻す takes the row out of today (today-view.ts).
 
 type TodayRowProps = {
   row: TodayRowData;
@@ -57,9 +59,9 @@ type TodayRowProps = {
   onRemove: () => void;
   onSkip: () => void;
   onUndoSkip: () => void;
-  /** 見送り・外すを取り消す (F37). */
+  /** 見送りを取り消す (F37). */
   onUndoClose: () => void;
-  /** 今日はここまで: opens the actual time surface. */
+  /** 今日は中断する: opens the actual time surface. */
   onPause: () => void;
   /** かかった時間を記録: opens the actual time surface. */
   onRecord: () => void;
@@ -88,7 +90,7 @@ function TodayRow({
   const state = selection.resolution;
   const done = state === 'done';
   const skipped = state === 'skipped';
-  const undoable = state === 'deferred' || state === 'removed';
+  const undoable = state === 'deferred';
   const recurring = occurrence !== undefined;
 
   const items = [
@@ -101,7 +103,7 @@ function TodayRow({
     state === 'started' && (
       <MenuItem key="pause" onClick={onPause}>
         <Pause aria-hidden />
-        今日はここまで
+        今日は中断する
       </MenuItem>
     ),
     // The same as ○ (F17 for a paused row), for those who look here first.
@@ -111,7 +113,7 @@ function TodayRow({
         完了にする
       </MenuItem>
     ),
-    (state === 'selected' || state === 'started') && (
+    (state === 'selected' || state === 'started') && !recurring && (
       <MenuItem key="defer" onClick={onDefer}>
         <CalendarX2 aria-hidden />
         今日は見送る
@@ -120,13 +122,13 @@ function TodayRow({
     state === 'selected' && recurring && (
       <MenuItem key="skip" onClick={onSkip}>
         <SkipForward aria-hidden />
-        今日はスキップ
+        今日の回をスキップする
       </MenuItem>
     ),
     state === 'selected' && (
       <MenuItem key="remove" onClick={onRemove}>
         <LogOut aria-hidden />
-        今日の予定から外す
+        今週の残りに戻す
       </MenuItem>
     ),
     (done || state === 'paused') && (
@@ -183,13 +185,7 @@ function TodayRow({
           <IconButton
             size="sm"
             data-action={skipped ? 'undo-skip' : 'undo-close'}
-            label={`取り消す（${
-              skipped
-                ? 'スキップ'
-                : state === 'deferred'
-                  ? '見送り'
-                  : '予定から外した'
-            }）：${task.title}`}
+            label={`取り消す（${skipped ? 'スキップ' : '見送り'}）：${task.title}`}
             icon={<Undo2 />}
             onClick={skipped ? onUndoSkip : onUndoClose}
           />
@@ -247,7 +243,7 @@ function RowMetadata({
           <MetaItem wrap icon={<Pause aria-hidden />}>
             <span>
               {/* Breaks only at the separator in a narrow row. */}
-              <span className="whitespace-nowrap">今日はここまで</span>
+              <span className="whitespace-nowrap">中断</span>
               {actual !== undefined && (
                 // The value stays with its separator when the line wraps;
                 // the space before it is where the line may break.
@@ -262,13 +258,7 @@ function RowMetadata({
       case 'deferred':
         return (
           <MetaItem wrap icon={<CalendarX2 aria-hidden />}>
-            今日は見送り
-          </MetaItem>
-        );
-      case 'removed':
-        return (
-          <MetaItem wrap icon={<LogOut aria-hidden />}>
-            予定から外した
+            見送り
           </MetaItem>
         );
       case 'skipped':

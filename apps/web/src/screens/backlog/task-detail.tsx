@@ -208,7 +208,7 @@ function dayText(
     case 'done':
       return '「今日やる」に入っています（完了）';
     case 'skipped':
-      return '「今日やる」に入っています（今日の分はスキップ）';
+      return '「今日やる」に入っています（今日の回はスキップ）';
     case 'selected':
       return '「今日やる」に入っています';
   }
@@ -220,14 +220,15 @@ const closedText: Record<
   { result: string; rest?: string }
 > = {
   paused: {
-    result: '今日はここまでにしました。',
+    result: '今日は中断しました。',
     rest: '明日から今週の残りに出ます。',
   },
   deferred: {
     result: '今日は見送りました。',
     rest: '明日から今週の残りに出ます。',
   },
-  removed: { result: '今日の予定から外しました。' },
+  // Back in the week at once: no 「明日から」 (#233).
+  removed: { result: '今週の残りに戻しました。' },
 };
 
 type Outcome =
@@ -301,7 +302,7 @@ function TaskDetail({
   const nowRef = useRef<HTMLElement>(null);
   const openTodayRef = useRef<HTMLAnchorElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
-  // 今日はここまで asks for the actual time in the section itself: a Drawer
+  // 今日は中断する asks for the actual time in the section itself: a Drawer
   // is never opened inside a Drawer (DESIGN.md Drawer).
   const [pausing, setPausing] = useState(false);
   const [pauseText, setPauseText] = useState('');
@@ -365,7 +366,10 @@ function TaskDetail({
   const offers = {
     start: resolution === 'selected',
     pause: resolution === 'started',
-    defer: resolution === 'selected' || resolution === 'started',
+    // 今日は見送る is not for an occurrence: it is skipped instead (#233).
+    defer:
+      (resolution === 'selected' || resolution === 'started') &&
+      facts.today?.recurring !== true,
     skip: resolution === 'selected' && facts.today?.recurring === true,
     remove: resolution === 'selected',
   };
@@ -722,7 +726,7 @@ function TaskDetail({
                   開始
                 </Button>
               )}
-              {/* While the field is open, its own 今日はここまで records: this one
+              {/* While the field is open, its own 今日は中断する records: this one
                   stays where it is, disabled, so that the buttons after it do
                   not move under a second press. */}
               {offers.pause && (
@@ -732,7 +736,7 @@ function TaskDetail({
                   focusableWhenDisabled
                   onClick={() => setPausing(true)}
                 >
-                  今日はここまで
+                  今日は中断する
                 </Button>
               )}
               {offers.defer && (
@@ -750,7 +754,7 @@ function TaskDetail({
                     runNow(() => todayActions.skip(facts.today!.selectionId))
                   }
                 >
-                  今日はスキップ
+                  今日の回をスキップする
                 </Button>
               )}
               {offers.remove && (
@@ -761,7 +765,7 @@ function TaskDetail({
                     )
                   }
                 >
-                  今日の予定から外す
+                  今週の残りに戻す
                 </Button>
               )}
               {facts.canComplete && (
@@ -821,7 +825,7 @@ function TaskDetail({
                   />
                 </Field>
                 <div className="flex flex-wrap gap-2">
-                  <Button type="submit">今日はここまで</Button>
+                  <Button type="submit">今日は中断する</Button>
                   <Button variant="quiet" onClick={closePause}>
                     キャンセル
                   </Button>

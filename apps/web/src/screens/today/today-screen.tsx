@@ -4,6 +4,7 @@ import {
   type DailySelectionId,
   type InterruptNote,
   type LocalDate,
+  type OccurrenceId,
   type TaskId,
 } from '@itera/domain';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
@@ -227,7 +228,10 @@ function TodayView({ data }: { data: TodayData }) {
   const focusNext = useRef<
     | { selection: DailySelectionId }
     | { chosenAfter: ReadonlySet<DailySelectionId> }
-    | { rest: TodayRowData['sprintTask']['id'] }
+    | {
+        rest: TodayRowData['sprintTask']['id'];
+        occurrence?: OccurrenceId | undefined;
+      }
     | undefined
   >(undefined);
 
@@ -264,7 +268,11 @@ function TodayView({ data }: { data: TodayData }) {
     if ('selection' in next) {
       selector = `[data-selection="${next.selection}"] :is([data-slot="completion-circle"], [data-action="undo-skip"])`;
     } else if ('rest' in next) {
-      selector = `[data-item="${next.rest}"] [data-action="choose"]`;
+      selector = `[data-item="${next.rest}"]${
+        next.occurrence === undefined
+          ? ''
+          : `[data-occurrence="${next.occurrence}"]`
+      } [data-action="choose"]`;
     } else {
       const added = data.rows.find(
         (r) => !next.chosenAfter.has(r.selection.id),
@@ -323,18 +331,29 @@ function TodayView({ data }: { data: TodayData }) {
     });
     return true;
   };
-  // 今日は見送る and 今日の予定から外す from the `…`: the row moves to
-  // 今日はもうやらない, with 「元に戻す」 in a Toast as well as the row's own
-  // 「取り消す」 (F37, #163).
+  // 今日は見送る and 今週の残りに戻す from the `…`, with 「元に戻す」 in a
+  // Toast (F37, #163). A deferred row moves to 今日はもうやらない with its
+  // own 「取り消す」; one put back leaves today for 今週の残り, where the
+  // focus goes to its 「今日へ」 (#233).
   // Once the row itself is undone or completed, its 「元に戻す」 would point
   // to a state that is gone: the Toast closes.
   const closedToast = useRef<{ selection: DailySelectionId; toast: string }>(
     undefined,
   );
-  const closed = (row: TodayRowData, result: string, done: boolean) => {
+  const closed = (
+    row: TodayRowData,
+    result: string,
+    done: boolean,
+    backToWeek = false,
+  ) => {
     const selectionId = row.selection.id;
-    moved(selectionId, done);
     if (!done) return;
+    if (backToWeek) {
+      focusNext.current = {
+        rest: row.sprintTask.id,
+        occurrence: row.occurrence?.id,
+      };
+    } else moved(selectionId, done);
     const shown = toast.show({
       kind: 'today-closed',
       title: `「${row.task.title}」${result}`,
@@ -391,8 +410,9 @@ function TodayView({ data }: { data: TodayData }) {
       onRemove: () =>
         closed(
           row,
-          'を今日の予定から外しました',
+          'を今週の残りに戻しました',
           actions.removeFromToday(selectionId),
+          true,
         ),
       onSkip: () => moved(selectionId, actions.skip(selectionId)),
       onUndoSkip: () => moved(selectionId, actions.undoSkip(selectionId)),
@@ -421,6 +441,12 @@ function TodayView({ data }: { data: TodayData }) {
 
   // 今日へ: the new row in 今日やる takes the focus.
   const choose = (item: TodayData['rest'][number]) => {
+    // Put back today: the same choice comes back (F37), its row where it was.
+    if (item.removedToday !== undefined) {
+      dropClosedToast(item.removedToday);
+      moved(item.removedToday, actions.undoClose(item.removedToday));
+      return;
+    }
     const before = new Set(data.rows.map((r) => r.selection.id));
     if (actions.chooseForToday(item.sprintTask.id, item.occurrence?.id)) {
       focusNext.current = { chosenAfter: before };
@@ -611,6 +637,7 @@ function TodayView({ data }: { data: TodayData }) {
                   <li
                     key={`${item.sprintTask.id}-${item.occurrence?.id ?? ''}`}
                     data-item={item.sprintTask.id}
+                    data-occurrence={item.occurrence?.id}
                   >
                     <WeekRow
                       item={item}

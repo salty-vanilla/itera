@@ -31,7 +31,15 @@ describe('consequence (#209)', () => {
     expect(
       consequence(record('done', { kind: 'closed', resolution: 'paused' })),
     ).toBe(
-      'その日の記録は「ここまで」に戻り、タスクは今週の残りに戻ります。取り消したあと、その日の記録をもう一度完了にはできません。',
+      'その日の記録は「中断」に戻り、タスクは今週の残りに戻ります。取り消したあと、その日の記録をもう一度完了にはできません。',
+    );
+  });
+
+  it('says the record goes for a choice put back to the week, which no other day lists (#233)', () => {
+    expect(
+      consequence(record('done', { kind: 'closed', resolution: 'removed' })),
+    ).toBe(
+      'その日の記録は消え、タスクは今週の残りに戻ります。取り消したあと、その日の記録をもう一度完了にはできません。',
     );
   });
 

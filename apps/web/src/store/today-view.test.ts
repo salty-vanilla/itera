@@ -55,6 +55,33 @@ describe('todayData', () => {
     expect(data?.remaining.count).toBe(1);
   });
 
+  it('puts a choice put back today in 今週の残り, not in 今日はもうやらない (#233)', () => {
+    const { records, clock } = fixtureSnapshot('today-interrupt');
+    let id: string | undefined;
+    const putBack = withSprint(records, (s) => ({
+      ...s,
+      dailySelections: s.dailySelections.map((d) => {
+        if (
+          d.date !== clock.today ||
+          s.tasks.find((t) => t.id === d.sprintTaskId)?.taskId !==
+            'task-interview'
+        )
+          return d;
+        id = d.id;
+        return { ...d, resolution: 'removed' as const };
+      }),
+    }));
+    const data = todayData(putBack, clock);
+    expect(data?.closed).toEqual([]);
+    expect(data?.rows.some((r) => r.task.id === 'task-interview')).toBe(false);
+    const item = data?.rest.find((r) => r.task.id === 'task-interview');
+    expect(item?.removedToday).toBe(id);
+    // The others in the rest were not chosen today.
+    expect(data?.rest.filter((r) => r.removedToday !== undefined)).toHaveLength(
+      1,
+    );
+  });
+
   it('puts the Backlog’s completions last in 今日やる', () => {
     const { records, clock } = fixtureSnapshot('today-interrupt');
     const early = withSprint(records, (s) => ({

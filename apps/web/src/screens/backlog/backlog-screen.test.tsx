@@ -1384,7 +1384,7 @@ describe('Backlog — the detail of a Task in 今日やる (#94)', () => {
       within(section)
         .getAllByRole('button')
         .map((b) => b.textContent),
-    ).toEqual(['開始', '今日は見送る', '今日の予定から外す', '完了にする']);
+    ).toEqual(['開始', '今日は見送る', '今週の残りに戻す', '完了にする']);
     // #163: labels alone, no line under them.
     expect(section.querySelector('[aria-describedby]')).toBeNull();
     // Not a recurring Task: no スキップ.
@@ -1396,7 +1396,7 @@ describe('Backlog — the detail of a Task in 今日やる (#94)', () => {
       /「今日やる」に入っています（作業中 · \d\d:\d\d から）/,
     );
     expect(
-      within(section).getByRole('button', { name: '今日はここまで' }),
+      within(section).getByRole('button', { name: '今日は中断する' }),
     ).toBeTruthy();
     expect(within(section).queryByRole('button', { name: '開始' })).toBeNull();
   });
@@ -1420,24 +1420,26 @@ describe('Backlog — the detail of a Task in 今日やる (#94)', () => {
     expect(row.textContent).not.toContain('今日');
   });
 
-  it('今日の予定から外す records the same removal as the row’s menu', async () => {
+  it('今週の残りに戻す records the same removal as the row’s menu, without a Toast (#233)', async () => {
     await renderAt('/backlog?fixture=backlog-detail&task=task-interview');
     const section = await now();
     await userEvent.click(
-      within(section).getByRole('button', { name: '今日の予定から外す' }),
+      within(section).getByRole('button', { name: '今週の残りに戻す' }),
     );
     expect(selectionOf('task-interview')?.resolution).toBe('removed');
-    expect(section.textContent).toContain('今日の予定から外しました。');
+    expect(section.textContent).toContain('今週の残りに戻しました。');
+    expect(section.textContent).not.toContain('明日から');
+    expect(screen.queryByText(/を今週の残りに戻しました/)).toBeNull();
   });
 
-  it('今日はここまで asks for the actual time in the section, without another surface, then pauses', async () => {
+  it('今日は中断する asks for the actual time in the section, without another surface, then pauses', async () => {
     await renderAt('/backlog?fixture=backlog-detail&task=task-dataset');
     const detail = await screen.findByRole('dialog', {
       name: '実験データの前処理',
     });
     const section = within(detail).getByRole('region', { name: '今日と今週' });
     await userEvent.click(
-      within(section).getByRole('button', { name: '今日はここまで' }),
+      within(section).getByRole('button', { name: '今日は中断する' }),
     );
     // No Drawer inside the Drawer.
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
@@ -1457,7 +1459,7 @@ describe('Backlog — the detail of a Task in 今日やる (#94)', () => {
     expect(sprint.actualTimes.at(-1)?.hours).toBe(1.5);
     // What happened stays.
     expect(section.textContent).toContain(
-      '今日はここまでにしました。明日から今週の残りに出ます。',
+      '今日は中断しました。明日から今週の残りに出ます。',
     );
   });
 
@@ -1468,7 +1470,7 @@ describe('Backlog — the detail of a Task in 今日やる (#94)', () => {
     });
     const section = within(detail).getByRole('region', { name: '今日と今週' });
     await userEvent.click(
-      within(section).getByRole('button', { name: '今日はここまで' }),
+      within(section).getByRole('button', { name: '今日は中断する' }),
     );
     await userEvent.keyboard('{Escape}');
     expect(

@@ -30,11 +30,11 @@ import {
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 
 // かかった時間 (実績時間, patterns.md Today): optional, added lightly after completing or
-// with 今日はここまで; never a stopwatch. Owner decision in #41: a Bottom
+// with 今日は中断する; never a stopwatch. Owner decision in #41: a Bottom
 // Sheet on compact, a Popover by the row's `…` from medium up.
 
 export type ActualTimeMode =
-  /** 今日はここまで, with the day's hours if given. */
+  /** 今日は中断する, with the day's hours if given. */
   | 'pause'
   /** かかった時間を記録 after completing or pausing: the hours are the point. */
   | 'record'
@@ -59,7 +59,7 @@ const words: Record<
   { title: string; description?: ReactNode; submit: string }
 > = {
   pause: {
-    title: '今日はここまで',
+    title: '今日は中断する',
     // The screen's word stays whole when the line breaks.
     description: (
       <>
@@ -68,7 +68,7 @@ const words: Record<
         に出ます。
       </>
     ),
-    submit: '今日はここまで',
+    submit: '今日は中断する',
   },
   record: {
     title: 'かかった時間を記録',

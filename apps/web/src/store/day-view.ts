@@ -97,12 +97,13 @@ export function dayData(
 
   const past = date < clock.today;
   // What happened that day, even for a Task removed from the Sprint since
-  // (Today shows the week as it is now, F13).
+  // (Today shows the week as it is now, F13). A choice put back with
+  // 今週の残りに戻す is not listed: it went back to the week (#233).
   const dayRecords: DayRecord[] =
     !past || sprint === undefined
       ? []
       : sprint.dailySelections
-          .filter((s) => s.date === date)
+          .filter((s) => s.date === date && s.resolution !== 'removed')
           .toSorted((a, b) => (a.selectedAt < b.selectedAt ? -1 : 1))
           .flatMap((selection) => {
             const task = taskOf(selection.sprintTaskId, sprint);

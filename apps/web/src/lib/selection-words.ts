@@ -1,7 +1,8 @@
 // How a day's choice ended, in the screens' words: a past day on Today, the
 // running Sprint's 「日ごとの記録」, and the Retro's facts. A choice still
 // open at the end of its day is closed by the system as unresolved (F33).
-// A day that is not today says 「ここまで」, not 「今日はここまで」 (#166).
+// The same words for today and for another day (#233). A choice put back
+// with 今週の残りに戻す (Removed) is not listed on another day (#233).
 import type { DailySelection } from '@itera/domain';
 
 export const SELECTION_WORDS: Readonly<
@@ -12,12 +13,9 @@ export const SELECTION_WORDS: Readonly<
   unresolved: '未完了',
   done: '完了',
   skipped: 'スキップ',
-  paused: '今日はここまで',
+  paused: '中断',
   deferred: '見送り',
-  removed: '予定から外した',
+  // Not shown: a choice put back is left out of another day's records, and
+  // the day records' undo words say the record goes (#233).
+  removed: '今週の残りに戻した',
 };
-
-/** The same words for a record of another day: it is not 「今日」. */
-export const PAST_DAY_WORDS: Readonly<
-  Record<DailySelection['resolution'], string>
-> = { ...SELECTION_WORDS, paused: 'ここまで' };

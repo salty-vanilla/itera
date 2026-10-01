@@ -12,7 +12,7 @@ import {
 import { SprintSummary } from '@/components/sprint/sprint-summary';
 import { criterionName } from '@/lib/criterion-text';
 import { formatDate, formatDateTime } from '@/lib/date-format';
-import { PAST_DAY_WORDS } from '@/lib/selection-words';
+import { SELECTION_WORDS } from '@/lib/selection-words';
 import {
   formatHours,
   formatPlanningSum,
@@ -419,17 +419,17 @@ function FactsPane({
       {(facts.deferrals.length > 0 || facts.pauses.length > 0) && (
         <section aria-labelledby="retro-days" className="flex flex-col gap-3">
           <h2 id="retro-days" className="text-heading text-ink">
-            見送り・ここまで
+            見送り・中断
           </h2>
           <ul className="flex flex-col border-t border-border-soft">
             {[
               ...facts.deferrals.map((s) => ({
                 s,
-                word: PAST_DAY_WORDS.deferred,
+                word: SELECTION_WORDS.deferred,
               })),
               ...facts.pauses.map((s) => ({
                 s,
-                word: PAST_DAY_WORDS.paused,
+                word: SELECTION_WORDS.paused,
               })),
             ]
               .toSorted((a, b) => (a.s.date < b.s.date ? -1 : 1))
@@ -896,7 +896,7 @@ function DifferenceNote({ fact }: { fact: TaskFact }) {
   );
 }
 
-/** 「見送り 2回 · ここまで 1回」 under the outcome, if any. */
+/** 「見送り 2回 · 中断 1回」 under the outcome, if any. */
 function DaysNote({ fact }: { fact: TaskFact }) {
   const text = daysText(fact);
   return text === undefined ? null : (
