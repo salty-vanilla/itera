@@ -9,6 +9,7 @@ import type {
 } from './sprint';
 import {
   deferralStreak,
+  occurrenceProgress,
   todayRemaining,
   weekProgress,
   yesterdaysContinuation,
@@ -256,5 +257,48 @@ describe('weekProgress (F32)', () => {
     expect(weekProgress(sprintFixture('2026-09-28', 'active', {}), [])).toEqual(
       { done: 0, total: 0 },
     );
+  });
+});
+
+describe('occurrenceProgress (F32)', () => {
+  function occurrence(n: number, state: OccurrenceState): Occurrence {
+    return {
+      id: id(`occ-${n}`),
+      taskId: id('task-r'),
+      ruleId: id('rule-r'),
+      scheduledDate: localDate(`2026-09-2${8 + (n % 2)}`),
+      ruleVersion: 1,
+      materializedAt: ctx.now,
+      state,
+      stateChangedAt: ctx.now,
+    };
+  }
+
+  it('counts a recurring Task the way weekProgress does, skips apart', () => {
+    const occurrences = [
+      occurrence(1, 'done'),
+      occurrence(2, 'pending'),
+      occurrence(3, 'missed'),
+      occurrence(4, 'skipped'),
+      occurrence(5, 'excluded'),
+    ];
+    const recurring = sprintTask('st-4', {
+      taskId: id('task-r'),
+      occurrenceIds: occurrences.map((o) => o.id),
+    });
+    expect(occurrenceProgress(recurring, occurrences)).toEqual({
+      done: 1,
+      total: 3,
+      skipped: 1,
+    });
+    // The rows add up to the week.
+    const sprint = sprintFixture('2026-09-28', 'active', {
+      tasks: [recurring],
+    });
+    expect(weekProgress(sprint, occurrences)).toEqual({ done: 1, total: 3 });
+  });
+
+  it('is undefined for a non-recurring Task', () => {
+    expect(occurrenceProgress(sprintTask('st-1'), [])).toBeUndefined();
   });
 });

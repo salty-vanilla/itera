@@ -56,7 +56,10 @@ function AppShell({ children }: { children: ReactNode }) {
         ref={mainRef}
         // The router resets and restores this element's scroll (router.tsx).
         data-scroll-restoration-id="main"
-        className="min-h-0 flex-1 overflow-auto pb-[var(--toast-clearance,0px)]"
+        // `relative` makes the `main` the containing block of `sr-only`
+        // (absolute) text, so `overflow-auto` clips it and the document
+        // never grows past the shell (#149).
+        className="relative min-h-0 flex-1 overflow-auto pb-[var(--toast-clearance,0px)]"
       >
         {children}
       </main>

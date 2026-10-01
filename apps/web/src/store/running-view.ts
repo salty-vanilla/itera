@@ -5,7 +5,9 @@
 // change after confirm and their planned values stay beside them
 // (invariant 18, F16).
 import {
+  carryOriginOf,
   isCounted,
+  occurrenceProgress,
   sprintAreaName,
   sprintNumber,
   sprintTotals,
@@ -16,6 +18,7 @@ import {
   type CriterionPolicy,
   type DailySelection,
   type LocalDate,
+  type OccurrenceProgress,
   type PlanningValue,
   type Sprint,
   type SprintGoal,
@@ -41,6 +44,13 @@ export interface RunningTask {
   readonly task: Task;
   /** The planning value fixed for this Sprint (the whole week for a recurring Task). */
   readonly value: PlanningValue;
+  /** Recurring only: its occurrences done of the week's (F32). */
+  readonly occurrences?: OccurrenceProgress;
+  /**
+   * Carried over into this Sprint: how many times in a row, and the number
+   * of the Sprint the run began in (「持ち越し 1回（Sprint 13から）」, F25).
+   */
+  readonly carry?: { readonly count: number; readonly fromSprint: number };
 }
 
 export interface RunningAreaPlan {
@@ -141,9 +151,26 @@ export function runningData(
     .flatMap((sprintTask) => {
       const task = tasks.find((t) => t.id === sprintTask.taskId);
       const value = sprintTask.planSnapshot?.value;
-      return task === undefined || value === undefined
-        ? []
-        : [{ sprintTask, task, value }];
+      if (task === undefined || value === undefined) return [];
+      const occurrences = occurrenceProgress(sprintTask, records.occurrences);
+      const carry = carryOriginOf(sprintTask, records.sprints);
+      const from = records.sprints.find((s) => s.id === carry?.fromSprintId);
+      return [
+        {
+          sprintTask,
+          task,
+          value,
+          ...(occurrences === undefined ? {} : { occurrences }),
+          ...(carry === undefined || from === undefined
+            ? {}
+            : {
+                carry: {
+                  count: carry.count,
+                  fromSprint: sprintNumber(from, records.sprints),
+                },
+              }),
+        },
+      ];
     });
 
   // The Sprint's Area order (snapshot), then Areas first seen later (F9).

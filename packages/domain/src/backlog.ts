@@ -1,7 +1,7 @@
 import { carryCount } from './retro-facts';
 import type { AreaId, SprintId, TaskId } from './shared/ids';
 import type { LocalDate } from './shared/time';
-import { sprintEnd, weekStartOf, type Sprint } from './sprint';
+import { sprintEnd, weekStartOf, type Sprint, type SprintTask } from './sprint';
 import type { User } from './user';
 import type { Task } from './task';
 
@@ -71,12 +71,27 @@ export function carryOverOf(
   }
   if (latest === undefined) return undefined;
   const { sprintTask } = latest;
+  const behind = carryOriginOf(sprintTask, sprints);
   const count =
-    carryCount(sprintTask, sprints) +
-    (sprintTask.outcome === 'carriedOver' ? 1 : 0);
+    (behind?.count ?? 0) + (sprintTask.outcome === 'carriedOver' ? 1 : 0);
+  if (count === 0) return undefined;
+  return { count, fromSprintId: behind?.fromSprintId ?? latest.sprint.id };
+}
+
+/**
+ * Where a SprintTask's carry-over began (F26): the carriedFrom chain behind
+ * it, as the Sprint screen shows a Task carried into it (「持ち越し 1回
+ * （Sprint 13から）」, #160). Unlike `carryOverOf`, it does not count the
+ * SprintTask itself being carried over. `undefined` when nothing is behind.
+ */
+export function carryOriginOf(
+  sprintTask: SprintTask,
+  sprints: readonly Sprint[],
+): CarryOver | undefined {
+  const count = carryCount(sprintTask, sprints);
   if (count === 0) return undefined;
   // Walk back to the first SprintTask of the run.
-  let first = latest.sprint;
+  let first: Sprint | undefined;
   let from = sprintTask.carriedFrom;
   const seen = new Set<string>();
   while (from !== undefined && !seen.has(from)) {
@@ -87,7 +102,7 @@ export function carryOverOf(
     first = sprint;
     from = sprint.tasks.find((t) => t.id === id)?.carriedFrom;
   }
-  return { count, fromSprintId: first.id };
+  return first === undefined ? undefined : { count, fromSprintId: first.id };
 }
 
 /** The Backlog's 切り口 besides すべて (PRD §5 A Browse). */

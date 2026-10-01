@@ -142,3 +142,13 @@ describe('scroll (#111)', () => {
     expect(mainTops().length).toBeGreaterThan(inRetro);
   });
 });
+
+describe('shell (#149)', () => {
+  // jsdom has no layout: the `main` must be the containing block of `sr-only`
+  // text, or it escapes `overflow-auto` and stretches the document.
+  it('makes the main the containing block of absolute text', async () => {
+    renderAt('/sprint?fixture=planning-pick');
+    await screen.findByRole('heading', { level: 1 });
+    expect(screen.getByRole('main').classList.contains('relative')).toBe(true);
+  });
+});
