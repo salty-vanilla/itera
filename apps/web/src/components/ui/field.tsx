@@ -80,6 +80,8 @@ type FieldProps = {
    * (aria-invalid). Set it on blur or submit, not while typing.
    */
   error?: ReactNode | undefined;
+  /** Classes for the error line, e.g. to let it span a row the field only shares. */
+  errorClassName?: string | undefined;
   /**
    * Hides the label visually but keeps it as the accessible name. Only for
    * the search field and Quick Add (docs/design/accessibility.md).
@@ -102,6 +104,7 @@ function Field({
   necessity,
   description,
   error,
+  errorClassName,
   hideLabel = false,
   disabled,
   name,
@@ -128,7 +131,7 @@ function Field({
         <FieldDescription>{description}</FieldDescription>
       )}
       {children}
-      {invalid && <FieldError>{error}</FieldError>}
+      {invalid && <FieldError className={errorClassName}>{error}</FieldError>}
     </FieldPrimitive.Root>
   );
 }

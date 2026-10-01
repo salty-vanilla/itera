@@ -88,9 +88,13 @@ function SubtaskList({
           label="サブタスクの見積もり（時間、任意）"
           hideLabel
           error={error}
-          className="w-1/4 min-w-16 shrink-0"
+          // The field's box stays one quarter wide; the error takes the whole
+          // row, after the button, so it does not break inside a word (Issue #226).
+          className="contents"
+          errorClassName="order-last basis-full"
         >
           <TextInput
+            className="w-1/4 min-w-16 shrink-0"
             inputMode="decimal"
             suffix="h"
             ref={hoursRef}
@@ -124,7 +128,7 @@ function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
   }
 
   return (
-    <li className="flex items-start gap-2 border-b border-border-soft py-2">
+    <li className="flex flex-wrap items-start gap-2 border-b border-border-soft py-2">
       <span className="grid size-target-touch shrink-0 place-items-center medium:size-target-min">
         <CheckboxControl
           checked={subtask.done}
@@ -147,9 +151,11 @@ function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
         label={`見積もり（時間）：${subtask.title}`}
         hideLabel
         error={error}
-        className="w-1/4 min-w-16 shrink-0"
+        className="contents"
+        errorClassName="basis-full"
       >
         <TextInput
+          className="w-1/4 min-w-16 shrink-0"
           size="sm"
           inputMode="decimal"
           suffix="h"
