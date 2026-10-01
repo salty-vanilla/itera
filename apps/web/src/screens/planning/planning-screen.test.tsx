@@ -97,6 +97,39 @@ describe('Planning — 優先度 (#97)', () => {
   });
 });
 
+describe('Planning — Backlog のタイトル (#158)', () => {
+  const titleBox = (title: string) => {
+    const button = within(backlogPane())
+      .getByText(title)
+      .closest('button') as HTMLElement;
+    return { button, text: button.firstElementChild as HTMLElement };
+  };
+
+  it('wraps a title to two lines in 選ぶ, with the Estimate under it', async () => {
+    await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    const { button, text } = titleBox('顧客インタビューの設計');
+    expect(text.className).toContain('line-clamp-2');
+    // Not the one-line truncation a Task Row has from 768px.
+    expect(text.className).not.toContain('truncate');
+    // The suggestion is in the column of the title, not a column of its own.
+    const estimate = button
+      .closest('li')!
+      .querySelector('[data-slot="estimate"]');
+    expect(estimate).not.toBeNull();
+    expect(button.parentElement!.contains(estimate)).toBe(true);
+  });
+
+  it('keeps the whole title in the slim 整える and 確かめる', async () => {
+    for (const stage of ['shape', 'check']) {
+      await renderAt(`/sprint?fixture=planning-${stage}&stage=${stage}`);
+      const { text } = titleBox('TypeScript 6 の変更点を読む');
+      expect(text.className).not.toContain('line-clamp');
+      expect(text.className).not.toContain('truncate');
+      cleanup();
+    }
+  });
+});
+
 describe('Planning — 選ぶ', () => {
   it('chooses a Task with □, shows it in its Area, and can undo', async () => {
     await renderAt('/sprint?fixture=planning-pick&stage=pick');

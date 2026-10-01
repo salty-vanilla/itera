@@ -139,10 +139,28 @@ function TaskRow({
  * (DESIGN.md Task Row). The clamp is on this inner box, as a button's own
  * box does not take it in every browser; `pretty` keeps a lone character
  * off the second line.
+ *
+ * `wrap` is for the Planning Backlog pane, whose column is narrow at every
+ * width: `two` clamps at two lines and `all` keeps the whole title, in
+ * both from 768px up too (Issue #158).
  */
-function TaskTitleLines({ children }: { children: ReactNode }) {
+function TaskTitleLines({
+  children,
+  wrap,
+}: {
+  children: ReactNode;
+  wrap?: 'two' | 'all';
+}) {
   return (
-    <span className="line-clamp-2 text-pretty medium:block medium:truncate">
+    <span
+      className={cn(
+        'text-pretty',
+        wrap === undefined && 'line-clamp-2 medium:block medium:truncate',
+        wrap === 'two' && 'line-clamp-2',
+        // `anywhere` so that a long word (TypeScript) cannot push the row wider.
+        wrap === 'all' && 'block [overflow-wrap:anywhere]',
+      )}
+    >
       {children}
     </span>
   );
