@@ -1,8 +1,9 @@
-import { createArea, id } from '@itera/domain';
+import { createArea, id, localDate } from '@itera/domain';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from '@/fixtures/states';
 import { changed, createMemoryStore } from '@/store/record-store';
-import { saveTask } from './task-changes';
+import { backlogData } from './backlog-view';
+import { endRule, saveTask } from './task-changes';
 
 describe('saveTask', () => {
   it('F9: moving a Task of the active Sprint to a new Area notes its name in the Sprint', () => {
@@ -50,5 +51,34 @@ describe('saveTask', () => {
       areaId: 'area-life',
       estimate: { hours: 2 },
     });
+  });
+});
+
+describe('endRule (F40)', () => {
+  it('the Backlog shows the Task recurring until the rule’s last day, one-off after it', () => {
+    const store = createMemoryStore(fixtureSnapshot('backlog-recurrence'));
+    const taskId = id<'Task'>('task-cleaning');
+    expect(store.run(endRule(taskId)).ok).toBe(true);
+    const { records, clock } = store.getSnapshot();
+    expect(records.tasks.find((t) => t.id === taskId)).not.toHaveProperty(
+      'recurrenceRuleId',
+    );
+    const on = (today: string) =>
+      backlogData(
+        records,
+        { ...clock, today: localDate(today) },
+        { view: 'recurring' },
+      );
+    const lastDay = on('2026-10-04');
+    expect(lastDay.item(taskId)).toMatchObject({
+      recurrence: { endsOn: '2026-10-04' },
+      canComplete: false,
+      canAddToToday: false,
+    });
+    expect(lastDay.items.map((i) => i.task.id)).toContain(taskId);
+    const after = on('2026-10-05');
+    expect(after.item(taskId)).not.toHaveProperty('recurrence');
+    expect(after.item(taskId)?.canComplete).toBe(true);
+    expect(after.items.map((i) => i.task.id)).not.toContain(taskId);
   });
 });

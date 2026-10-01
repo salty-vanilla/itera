@@ -598,6 +598,22 @@ export function completeFromBacklog(
           (t) => t.taskId === task.id && t.outcome === 'planned',
         )
       : undefined;
+  // A rule ended this Sprint (F40) leaves the Task one-off, but this
+  // Sprint's occurrences are still done one by one, in Today.
+  if (
+    sprint.state === 'active' &&
+    sprint.tasks.some(
+      (t) =>
+        t.taskId === task.id &&
+        t.occurrenceIds !== undefined &&
+        t.outcome !== 'removed',
+    )
+  ) {
+    return err(
+      'recurringTaskCannotComplete',
+      'This Sprint has the Task’s occurrences; they are completed one by one.',
+    );
+  }
   if (sprintTask === undefined) {
     const completed = completeTask(task, ctx);
     if (!completed.ok) return completed;

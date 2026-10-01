@@ -46,7 +46,8 @@ export interface RecurrenceRuleVersion {
  * and never rewrites one that has taken effect, so occurrences generated
  * from an earlier version keep their meaning (invariant 31). Only a latest
  * version that has not taken effect yet is replaced (F39). An ended rule's
- * latest version has an `effectiveTo` and is never changed again (F40).
+ * latest version has an `effectiveTo`; the rule is off its Task (which keeps
+ * `taskId` here) and is never changed again (F40).
  */
 export interface RecurrenceRule {
   readonly id: RecurrenceRuleId;
@@ -162,10 +163,10 @@ export function changeRecurrenceRule(
   const { pattern, effectiveFrom } = input;
   const problem = validatePattern(pattern);
   if (problem !== null) return err('invalidInput', problem);
-  const latest = latestVersion(rule);
-  if (latest.effectiveTo !== undefined) {
+  if (ruleEndsOn(rule) !== undefined) {
     return err('invalidTransition', 'The rule has ended.');
   }
+  const latest = latestVersion(rule);
   // Changing to the pattern already in place changes nothing.
   if (samePattern(latest.pattern, pattern)) return applied(rule, []);
   if (effectiveFrom < latest.effectiveFrom) {
@@ -273,6 +274,26 @@ export function endRecurrenceRule(
 /** The last day of an ended rule (F40); `undefined` while it goes on. */
 export function ruleEndsOn(rule: RecurrenceRule): LocalDate | undefined {
   return latestVersion(rule).effectiveTo;
+}
+
+/**
+ * The rule the Task repeats by on `today`, as the Backlog shows it: the
+ * Task's own rule, or one that has ended (F40) and whose last day has not
+ * passed. An ended rule is off the Task, so the Task is one-off for the
+ * Sprints after it; until its last day the Backlog still shows it recurring.
+ */
+export function recurrenceOf(
+  task: Task,
+  rules: readonly RecurrenceRule[],
+  today: LocalDate,
+): RecurrenceRule | undefined {
+  if (task.recurrenceRuleId !== undefined) {
+    return rules.find((r) => r.id === task.recurrenceRuleId);
+  }
+  return rules.find((r) => {
+    const endsOn = r.taskId === task.id ? ruleEndsOn(r) : undefined;
+    return endsOn !== undefined && today <= endsOn;
+  });
 }
 
 export function samePattern(

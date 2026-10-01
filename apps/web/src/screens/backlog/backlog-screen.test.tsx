@@ -1084,7 +1084,9 @@ describe('Backlog', () => {
     expect(rule?.versions).toEqual([
       expect.objectContaining({ version: 1, effectiveTo: '2026-10-04' }),
     ]);
-    expect(task('task-cleaning')?.recurrenceRuleId).toBe(rule?.id);
+    // Off the Task, which is one-off after the last day; the rule keeps it.
+    expect(task('task-cleaning')?.recurrenceRuleId).toBeUndefined();
+    expect(rule?.taskId).toBe('task-cleaning');
     expect(
       records().occurrences.find((o) => o.scheduledDate === '2026-10-03'),
     ).toMatchObject({ state: 'pending', ruleVersion: 1 });

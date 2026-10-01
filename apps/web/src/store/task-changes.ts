@@ -319,7 +319,7 @@ export function setRule(taskId: TaskId, pattern: RecurrencePattern): Change {
 
 /**
  * 繰り返しをやめる (F40): the rule ends before the next Sprint not confirmed
- * yet, or, with no occurrence made yet, is taken off the Task.
+ * yet and comes off the Task, or, with no occurrence made yet, is deleted.
  */
 export function endRule(taskId: TaskId): Change {
   return (records, ctx) => {
@@ -344,11 +344,11 @@ export function endRule(taskId: TaskId): Change {
     );
     return changed(result, (applied) => ({
       tasks: [applied.task],
-      ...(applied.rule === undefined ? {} : { rules: [applied.rule] }),
+      ...(applied.removed ? {} : { rules: [applied.rule] }),
       ...(applied.sprint === undefined ? {} : { sprints: [applied.sprint] }),
       deleted: {
         occurrences: applied.discarded,
-        ...(applied.rule === undefined ? { rules: [ruleId] } : {}),
+        ...(applied.removed ? { rules: [applied.rule.id] } : {}),
       },
     }));
   };

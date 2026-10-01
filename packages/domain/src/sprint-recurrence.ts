@@ -160,9 +160,14 @@ export interface EndRuleForNextSprintInput {
 }
 
 export interface RuleEnded {
+  /** The Task, off the rule: one-off for the Sprints after the rule. */
   readonly task: Task;
-  /** The ended rule; absent when it was removed (the Task is one-off again). */
-  readonly rule?: RecurrenceRule;
+  /**
+   * The ended rule, which keeps its `taskId` and its last day. When it had
+   * no occurrence, `removed`: delete this record instead.
+   */
+  readonly rule: RecurrenceRule;
+  readonly removed: boolean;
   /** The draft Sprint, without the Task's occurrences, if there is one. */
   readonly sprint?: Sprint;
   /** Draft occurrences thrown away; delete these records. */
@@ -174,8 +179,10 @@ export interface RuleEnded {
  * next Sprint not yet confirmed, so confirmed Sprints and their occurrences
  * stay as they are (invariant 31), and the Task and its past occurrences
  * remain. If that Sprint is in Planning, the draft's occurrences of the rule
- * and its recurring SprintTask are discarded. A rule left with no occurrence
- * at all (just made) is removed instead, and the Task is one-off again.
+ * and its recurring SprintTask are discarded. The rule comes off the Task,
+ * so the Task is one-off for the Sprints after it; the running Sprint keeps
+ * its recurring SprintTask and occurrences. A rule left with no occurrence
+ * at all (just made) is removed instead.
  */
 export function endRuleForNextSprint(
   input: EndRuleForNextSprintInput,
@@ -217,25 +224,34 @@ export function endRuleForNextSprint(
   const remains = input.occurrences.some(
     (o) => o.ruleId === rule.id && !discarded.includes(o.id),
   );
+  const oneOff = omit(task, 'recurrenceRuleId');
   if (!remains) {
-    const oneOff = omit(task, 'recurrenceRuleId');
-    return applied({ task: oneOff, ...sprint, discarded }, [
-      {
-        kind: 'recurrenceRuleRemoved',
-        at: ctx.now,
-        actor: ctx.actor,
-        taskId: task.id,
-        ruleId: rule.id,
-      },
-      ...after,
-    ]);
+    return applied(
+      { task: oneOff, rule, removed: true, ...sprint, discarded },
+      [
+        {
+          kind: 'recurrenceRuleRemoved',
+          at: ctx.now,
+          actor: ctx.actor,
+          taskId: task.id,
+          ruleId: rule.id,
+        },
+        ...after,
+      ],
+    );
   }
   const ended = endRecurrenceRule(rule, { endFrom }, ctx);
   if (!ended.ok) return ended;
-  return applied({ task, rule: ended.value.record, ...sprint, discarded }, [
-    ...ended.value.activities,
-    ...after,
-  ]);
+  return applied(
+    {
+      task: oneOff,
+      rule: ended.value.record,
+      removed: false,
+      ...sprint,
+      discarded,
+    },
+    [...ended.value.activities, ...after],
+  );
 }
 
 /**

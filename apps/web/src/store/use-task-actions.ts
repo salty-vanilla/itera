@@ -109,7 +109,9 @@ export function useTaskActions() {
         if (!run(changes.endRule(taskId))) return { ok: false };
         const removed = activitiesOf()
           .slice(before)
-          .some((a) => a.kind === 'recurrenceRuleRemoved');
+          .some(
+            (a) => a.kind === 'recurrenceRuleRemoved' && a.taskId === taskId,
+          );
         return { ok: true, removed };
       },
     }),

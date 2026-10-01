@@ -28,8 +28,9 @@ import { useTaskActions } from '@/store/use-task-actions';
 // confirmed Sprint never changes; after saving it the screen says so (「次の
 // Sprint から反映」). A weekly rule may have several days, and needs one
 // before it can be saved. 「繰り返しをやめる」 ends the rule from the next
-// Sprint (F40): the rule stays with its last day and can no longer be
-// changed. A rule that has made no occurrence yet is taken off instead, and
+// Sprint (F40): until its last day the rule is shown with it and can no
+// longer be changed; after it the Task is one-off and can be made recurring
+// again. A rule that has made no occurrence yet is taken off at once, and
 // the editor is back to making one.
 
 type Freq = RecurrencePattern['freq'];
@@ -62,6 +63,18 @@ type Result =
   | { kind: 'unchanged' }
   | { kind: 'ended' }
   | { kind: 'removed' };
+
+function resultText(result: Result): string {
+  switch (result.kind) {
+    case 'applied':
+      return `次の Sprint から反映（${formatDate(result.effectiveFrom)} から）`;
+    case 'unchanged':
+      return '今のルールと同じなので、変わっていません';
+    case 'ended':
+    case 'removed':
+      return '繰り返しをやめました';
+  }
+}
 
 /** The choice the editor starts from: the latest version, or none yet. */
 function choiceOf(latest: RecurrencePattern | undefined) {
@@ -217,11 +230,7 @@ function RecurrenceEditor({
             className="flex items-center gap-1 text-help text-ink-muted [&_svg]:size-icon-s [&_svg]:[stroke-width:var(--icon-stroke-s)]"
           >
             <Check aria-hidden />
-            {result.kind === 'applied'
-              ? `次の Sprint から反映（${formatDate(result.effectiveFrom)} から）`
-              : result.kind === 'unchanged'
-                ? '今のルールと同じなので、変わっていません'
-                : '繰り返しをやめました'}
+            {resultText(result)}
           </p>
         )}
       </div>
