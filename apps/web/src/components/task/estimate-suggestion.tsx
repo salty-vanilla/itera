@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
+import { BOUND_WORDS } from '@/lib/criterion-text';
 import {
   HOURS_HINT,
   formatHours,
@@ -17,18 +18,15 @@ import { cn } from '@/lib/utils';
 
 // DESIGN.md Components › Agent 提案 and docs/design/agent-ui.md, for an
 // Estimate suggestion. A dashed box with 「Agent 提案 · Estimate」, the
-// source and time, the range with its middle, the rationale and the
-// uncertain points. The person adopts (採用) one end as their Estimate, or
+// source and time, the range with its middle (ふつう), the rationale and the
+// uncertain points. The person adopts (採用) one of the three values
+// (少なめ / ふつう / 多め, #234) as their Estimate, or
 // edits the value first (編集して採用, F31): adopting is Secondary, editing
 // and rejecting are Quiet, never Primary. Nothing changes
 // until they choose. This is 採用 (the Task's Estimate changes), never 適用
 // of a planning criterion (invariant 7).
 
-const bounds: readonly { bound: SuggestionBound; word: string }[] = [
-  { bound: 'lo', word: '下限' },
-  { bound: 'mid', word: '中央' },
-  { bound: 'hi', word: '上限' },
-];
+const bounds: readonly SuggestionBound[] = ['lo', 'mid', 'hi'];
 
 type EstimateSuggestionProps = {
   suggestion: Suggestion;
@@ -108,7 +106,7 @@ function EstimateSuggestion({
           </span>
         </span>
         <span className="text-meta text-ink-muted">
-          中央 {formatHours(mid)}
+          {BOUND_WORDS.mid} {formatHours(mid)}
         </span>
         <span className="text-meta text-ink-muted">提案</span>
       </p>
@@ -165,14 +163,14 @@ function EstimateSuggestion({
         </form>
       ) : (
         <div className="flex flex-wrap gap-2">
-          {bounds.map(({ bound, word }, index) => (
+          {bounds.map((bound, index) => (
             <Button
               key={bound}
               ref={index === 0 ? firstRef : undefined}
               size="sm"
               onClick={() => onAdopt(bound)}
             >
-              {word} {formatHours(boundValue(suggestion, bound))} を使う
+              {`${BOUND_WORDS[bound]}の ${formatHours(boundValue(suggestion, bound))} を使う`}
             </Button>
           ))}
           <Button

@@ -64,7 +64,7 @@ function HandoffPane({
   className,
 }: HandoffPaneProps) {
   const { improvement, draft, used, carryOver } = data;
-  // A new criterion starts where this Sprint's left off, or at 上限 for
+  // A new criterion starts where this Sprint's left off, or at 多め for
   // every Area. While it is the same, the draft says so (#107).
   const initial: CriterionPolicy = used?.criterion.policy ?? {
     scope: { kind: 'all' },
@@ -122,7 +122,7 @@ function HandoffPane({
               <span className="block [text-wrap:pretty] [word-break:auto-phrase]">
                 次に試すことが
                 <span className="whitespace-nowrap">
-                  「見積もりの提案の上限で計画する」
+                  「見積もりがないときは提案の多めの値で計画する」
                 </span>
                 のような形なら、計画のルールにできます。
               </span>
@@ -391,7 +391,7 @@ function DraftCriterion({
             ))}
           </Select>
         </Field>
-        <Field label="見積もりの提案のどこで計画するか">
+        <Field label="見積もりがないとき、提案のどの値で計画するか">
           <Select
             value={policy.rangePolicy}
             onChange={(e) =>

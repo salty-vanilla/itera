@@ -289,11 +289,11 @@ describe('Retro — by number (#90)', () => {
 
     await userEvent.click(screen.getByRole('link', { name: /引き継ぐ/ }));
     expect(
-      await screen.findByText('研究の見積もりは幅の上限で計画する'),
+      await screen.findByText('研究の見積もりは提案の多めの値で計画する'),
     ).toBeTruthy();
     expect(
       screen.getByText(
-        /次に試すことから計画のルール「研究：見積もりの提案の上限で計画する」/,
+        /次に試すことから計画のルール「研究：見積もりがないときは提案の多めの値で計画する」/,
       ),
     ).toBeTruthy();
     expect(screen.queryByRole('switch')).toBeNull();

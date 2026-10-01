@@ -176,7 +176,8 @@ function CheckSummary({
 
 /**
  * The criterion's effect, from the same policy as its name (invariant 39):
- * 「研究のタスク 1件を、見積もりの提案の上限で計画しています（合計の下限 +2h）。」.
+ * 「研究のタスク 1件を、提案の多めの値で計画しています。少なく済んだときの合計
+ * が 2h 増えます。」, a sentence for each end of the total that moves (#234).
  */
 function CriterionEffect({
   criterion,
@@ -187,17 +188,14 @@ function CriterionEffect({
   const bound = criterionBoundText(criterion.active.policy.rangePolicy);
   const scope =
     criterion.areaName === undefined ? '' : `${criterion.areaName}の`;
-  // How the total moves: the lower end rises, the upper end falls, or both.
-  const moves = [
-    delta.lo !== 0 &&
-      `合計の下限 ${delta.lo > 0 ? '+' : '−'}${formatHours(Math.abs(delta.lo), { total: true })}`,
-    delta.hi !== 0 &&
-      `合計の上限 ${delta.hi > 0 ? '+' : '−'}${formatHours(Math.abs(delta.hi), { total: true })}`,
-  ].filter(Boolean);
+  const move = (end: string, by: number) =>
+    by === 0
+      ? ''
+      : `${end}の合計が ${formatHours(Math.abs(by), { total: true })} ${by > 0 ? '増えます' : '減ります'}。`;
   return (
     <p className="text-body text-ink [text-wrap:pretty] [word-break:auto-phrase]">
       {criterion.applied
-        ? `${scope}タスク ${count}件を、${bound}で計画しています${moves.length > 0 ? `（${moves.join('、')}）` : ''}。`
+        ? `${scope}タスク ${count}件を、${bound}で計画しています。${move('少なく済んだとき', delta.lo)}${move('多くかかったとき', delta.hi)}`
         : '見積もりの提案の幅のまま合計します。'}
     </p>
   );

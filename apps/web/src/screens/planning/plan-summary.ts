@@ -47,7 +47,7 @@ export interface PlanSummary {
   /** 「見積もりのないタスク 1件は合計に含まれていません。」 */
   readonly leftOut?: string;
   /**
-   * 「「研究：見積もりの提案の上限で計画する」を使う」; absent when no
+   * 「「研究：見積もりがないときは提案の多めの値で計画する」を使う」; absent when no
    * chosen Task is one it acts on (#161).
    */
   readonly criterion?: string;

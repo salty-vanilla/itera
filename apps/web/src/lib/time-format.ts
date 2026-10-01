@@ -4,15 +4,14 @@
 // - under 1h in minutes (`30m`), otherwise in hours (`1.5h`);
 // - a total is always in hours (`0.5h`);
 // - a range uses an en dash without spaces (`2–4h`);
-// - a range that includes a negative value, and any difference from the
-//   available hours (残り・超過), uses `〜` with spaces and the minus sign
-//   U+2212 (`−1 〜 1h`, `残り 1 〜 3h`, `超過 3 〜 5h`); a difference that
-//   crosses 0 is not a headline range but two sentences, made by the
-//   Capacity Indicator (#93);
+// - a range that includes a negative value uses `〜` with spaces and the
+//   minus sign U+2212 (`−1 〜 1h`); the difference from the available hours
+//   is not a range but a sentence for each end of the total, made by the
+//   Capacity Indicator (#93, #234);
 // - no value is 「見積もりなし」, never 0h, and unestimated parts left out of
 //   a sum are counted after it (`2.5h（サブタスク 1件は見積もりなし）`,
 //   `12–16h（ほかに見積もりなし 2件）`).
-// The words around a value (「提案」「計画」「残り」「超過」) belong to the screen.
+// The words around a value (「提案」「計画」「残る」「超える」) belong to the screen.
 
 import type { PlanningTotal, PlanningValue } from '@itera/domain';
 
@@ -72,15 +71,6 @@ export function formatRange(
   }
   if (loInMinutes) return `${minutes(lo)}m${EN_DASH}${number(hi)}h`;
   return `${number(lo)}${EN_DASH}${number(hi)}h`;
-}
-
-/**
- * A difference from the available hours (残り, 超過), in hours. Its sign can
- * flip within the range, so it always uses `〜` (DESIGN.md 原則 4).
- */
-export function formatDifference(lo: number, hi: number): string {
-  if (lo === hi) return formatHours(lo, { total: true });
-  return `${number(lo)} 〜 ${number(hi)}h`;
 }
 
 /** An Estimate or a planning value that may be missing: 「見積もりなし」 then. */

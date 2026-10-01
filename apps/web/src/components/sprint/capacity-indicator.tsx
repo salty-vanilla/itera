@@ -5,7 +5,6 @@ import { Field } from '@/components/ui/field';
 import { semanticIcons } from '@/components/ui/icon';
 import { TextInput } from '@/components/ui/text-input';
 import {
-  formatDifference,
   formatHours,
   formatLeftOut,
   formatPlanningSum,
@@ -14,8 +13,8 @@ import {
 import { cn } from '@/lib/utils';
 
 // DESIGN.md Components › Capacity Indicator. The difference between the
-// available hours and the planned total, as a range, or as two sentences
-// when it crosses 0. The numbers and the
+// available hours and the planned total, as what is left or over at each
+// end of the total (#234). The numbers and the
 // state sentence are the truth (role="status"); the bar repeats them and
 // is aria-hidden. `danger` only when even the lower end is over
 // (確定的な容量超過); the possibility of going over is `warning`. It never
@@ -92,9 +91,8 @@ export function capacityStatement(
   }
   const { status } = capacity;
   // The numbers are in the headline; the state does not say them again
-  // (#93, #165).
-  if (status === 'exceeds')
-    return { tone: 'over', text: '少なく済んでも超える' };
+  // (#93, #165, #234).
+  if (status === 'exceeds') return { tone: 'over', text: '超える' };
   if (status === 'mayExceed') return { tone: 'tight', text: '超える可能性' };
   const leftOut =
     total !== undefined && total.unestimated + total.unestimatedSubtasks > 0;
@@ -107,88 +105,72 @@ export function capacityStatement(
 }
 
 /**
- * The headline. 残り or, when even the lower end is over, 超過, as a range.
- * When the difference crosses 0 (mayExceed), no range with a negative end:
- * two sentences instead, 「少なく済めば 2.25h 残る」「多くかかれば 0.75h 超える」
- * (owner decision S5 in #93).
+ * The headline: what is left or over at each end of the planned total, in
+ * one form for all three states (#234, after 「少なく済めば / 多くかかれば」 of
+ * #162): 「少なく済めば 3h 残る · 多くかかっても 1h 残る」, 「少なく済めば 2.25h
+ * 残る · 多くかかれば 0.75h 超える」 (owner decision S5 in #93), 「少なく済んで
+ * も 3h 超える · 多くかかれば 5h 超える」. A total without a range is one
+ * sentence: 「3h 残る」.
  */
-export type CapacityHeadline =
-  | { kind: 'range'; label: '残り' | '超過'; value: string }
-  | { kind: 'split'; lower: HeadlinePart; upper: HeadlinePart };
+export type CapacityHeadline = readonly HeadlinePart[];
 
 /** 「少なく済めば」「2.25h」「残る」; `value` is absent for 「ちょうど収まる」. */
-type HeadlinePart = { lead: string; value?: string; tail: string };
+type HeadlinePart = { lead?: string; value?: string; tail: string };
+
+/**
+ * One end: `left` is the available hours minus the total at that end. The
+ * lead turns to 「〜ても」 where the end goes against what it suggests: over
+ * even if it goes well, or left even if it takes long.
+ */
+function headlinePart(left: number, lead?: string): HeadlinePart {
+  const part =
+    left === 0
+      ? { tail: 'ちょうど収まる' }
+      : {
+          value: formatHours(Math.abs(left), { total: true }),
+          tail: left > 0 ? '残る' : '超える',
+        };
+  return lead === undefined ? part : { lead, ...part };
+}
 
 export function capacityHeadline(capacity: Capacity): CapacityHeadline {
-  const { remaining, status } = capacity;
-  if (status === 'exceeds') {
-    return {
-      kind: 'range',
-      label: '超過',
-      value: formatDifference(-remaining.hi, -remaining.lo),
-    };
-  }
-  if (status === 'mayExceed') {
-    return {
-      kind: 'split',
-      lower:
-        remaining.hi === 0
-          ? { lead: '少なく済めば', tail: 'ちょうど収まる' }
-          : {
-              lead: '少なく済めば',
-              value: formatHours(remaining.hi, { total: true }),
-              tail: '残る',
-            },
-      upper: {
-        lead: '多くかかれば',
-        value: formatHours(-remaining.lo, { total: true }),
-        tail: '超える',
-      },
-    };
-  }
-  return {
-    kind: 'range',
-    label: '残り',
-    value: formatDifference(remaining.lo, remaining.hi),
-  };
+  const { remaining } = capacity;
+  // The lower end of the total leaves the most (remaining.hi).
+  if (remaining.lo === remaining.hi) return [headlinePart(remaining.hi)];
+  return [
+    headlinePart(
+      remaining.hi,
+      remaining.hi < 0 ? '少なく済んでも' : '少なく済めば',
+    ),
+    headlinePart(
+      remaining.lo,
+      remaining.lo < 0 ? '多くかかれば' : '多くかかっても',
+    ),
+  ];
 }
 
 function partText({ lead, value, tail }: HeadlinePart): string {
-  return value === undefined ? `${lead}${tail}` : `${lead} ${value} ${tail}`;
+  const body = value === undefined ? tail : `${value} ${tail}`;
+  if (lead === undefined) return body;
+  return value === undefined ? `${lead}${body}` : `${lead} ${body}`;
 }
 
-/** 「残り 1 〜 3h」, or the two sentences 「少なく済めば 2.25h 残る」「多くかかれば 0.75h 超える」. */
+/** 「少なく済めば 2.25h 残る」「多くかかれば 0.75h 超える」, or 「3h 残る」. */
 export function capacityHeadlineSentences(
   headline: CapacityHeadline,
 ): readonly string[] {
-  return headline.kind === 'range'
-    ? [`${headline.label} ${headline.value}`]
-    : [partText(headline.lower), partText(headline.upper)];
+  return headline.map(partText);
 }
 
 /**
  * How a planned total stood against the available hours, as a fact of the
- * week (Retro, #167): 「少なく済んでも 0.25h 超える」, 「少なく済めば 1.75h 残る · 多くかかれば
- * 0.25h 超える」 (the headline's two sentences), 「多くかかっても 1h 残る」. Words
- * only: no tone, so never `danger`.
+ * week (Retro, #167): the headline's sentences, in the same form as in
+ * Planning (#234). Words only: no tone, so never `danger`.
  */
 export function capacityRelationSentences(
   capacity: Capacity,
 ): readonly string[] {
-  const { remaining, status } = capacity;
-  if (status === 'exceeds') {
-    return [
-      `少なく済んでも ${formatHours(-remaining.hi, { total: true })} 超える`,
-    ];
-  }
-  if (status === 'mayExceed') {
-    return capacityHeadlineSentences(capacityHeadline(capacity));
-  }
-  return [
-    remaining.lo === 0
-      ? '多くかかってもちょうど収まる'
-      : `多くかかっても ${formatHours(remaining.lo, { total: true })} 残る`,
-  ];
+  return capacityHeadlineSentences(capacityHeadline(capacity));
 }
 
 /**
@@ -208,8 +190,8 @@ function Sentences({ items }: { items: readonly string[] }) {
  * The state where no headline is shown (the 確かめる summary, the 確定
  * Dialog): the statement, and while the plan may or does go over, the
  * headline's sentences after it, each number said once: 「超える可能性：少なく
- * 済めば 1.75h 残る · 多くかかれば 0.25h 超える」 (#93), 「少なく済んでも超える：超過 3 〜
- * 5h」 (#165).
+ * 済めば 1.75h 残る · 多くかかれば 0.25h 超える」 (#93), 「超える：少なく済んでも
+ * 3h 超える · 多くかかれば 5h 超える」 (#165, #234).
  */
 export function capacityStatusLine(
   capacity: Capacity | undefined,
@@ -395,28 +377,36 @@ function Headline({
   headline: CapacityHeadline;
   over: boolean;
 }) {
-  if (headline.kind === 'range') {
-    return (
-      <p className="flex items-baseline gap-2">
-        <span className="text-label text-ink-muted">{headline.label}</span>
-        <span className={cn('text-num-l', over ? 'text-danger' : 'text-ink')}>
-          {headline.value}
-        </span>
-      </p>
-    );
-  }
-  // Two sentences, one per line; the words are quieter than the number.
+  // One sentence per line, the numbers in one right-aligned column; the
+  // words are quieter than the number, which is `danger` only when even the
+  // lower end is over.
   return (
-    <p className="flex flex-col gap-1">
-      {[headline.lower, headline.upper].map((part) => (
-        <span key={part.lead} className="flex items-baseline gap-2">
-          <span className="text-label text-ink-muted">{part.lead}</span>
-          {part.value !== undefined && (
-            <span className="text-num-l text-ink">{part.value}</span>
+    <p className="grid grid-cols-[auto_auto_minmax(0,1fr)] items-baseline gap-x-2 gap-y-1">
+      {headline.map((part) => (
+        <span key={partText(part)} className="contents">
+          {part.lead !== undefined && (
+            <span className="text-label text-ink-muted">{part.lead}</span>
           )}
-          <span className="text-label text-ink-muted">{part.tail}</span>
-          {/* A pause between the two sentences when read out. */}
-          <span className="sr-only">。</span>
+          {part.value !== undefined && (
+            <span
+              className={cn(
+                'text-right text-num-l',
+                over ? 'text-danger' : 'text-ink',
+              )}
+            >
+              {part.value}
+            </span>
+          )}
+          <span
+            className={cn(
+              'text-label text-ink-muted',
+              part.value === undefined && 'col-span-2',
+            )}
+          >
+            {part.tail}
+            {/* A pause between the two sentences when read out. */}
+            <span className="sr-only">。</span>
+          </span>
         </span>
       ))}
     </p>

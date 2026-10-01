@@ -13,10 +13,14 @@ const headline = (lo: number, hi: number, available: number) =>
     capacityHeadline(capacityOf({ lo, hi }, available)),
   ).join(' · ');
 
-describe('capacityHeadline (owner decision S5 in #93)', () => {
-  it('is a range while the plan fits', () => {
-    expect(headline(15, 17, 18)).toBe('残り 1 〜 3h');
-    expect(headline(16, 18, 18)).toBe('残り 0 〜 2h');
+describe('capacityHeadline (owner decision S5 in #93, #234)', () => {
+  it('says each end while the plan fits', () => {
+    expect(headline(15, 17, 18)).toBe(
+      '少なく済めば 3h 残る · 多くかかっても 1h 残る',
+    );
+    expect(headline(16, 18, 18)).toBe(
+      '少なく済めば 2h 残る · 多くかかってもちょうど収まる',
+    );
   });
 
   it('is two sentences while the difference crosses 0', () => {
@@ -29,8 +33,16 @@ describe('capacityHeadline (owner decision S5 in #93)', () => {
     );
   });
 
-  it('is 超過 as a range when even the lower end is over', () => {
-    expect(headline(17, 19, 14)).toBe('超過 3 〜 5h');
+  it('says each end when even the lower end is over', () => {
+    expect(headline(17, 19, 14)).toBe(
+      '少なく済んでも 3h 超える · 多くかかれば 5h 超える',
+    );
+  });
+
+  it('is one sentence for a total without a range', () => {
+    expect(headline(15, 15, 18)).toBe('3h 残る');
+    expect(headline(18, 18, 18)).toBe('ちょうど収まる');
+    expect(headline(19, 19, 18)).toBe('1h 超える');
   });
 
   it('does not say the numbers again in the state while the difference crosses 0', () => {
@@ -51,11 +63,11 @@ describe('capacityHeadline (owner decision S5 in #93)', () => {
     const over = capacityOf({ lo: 17, hi: 19 }, 14);
     expect(capacityStatement(over)).toEqual({
       tone: 'over',
-      text: '少なく済んでも超える',
+      text: '超える',
     });
     // Where no headline is shown, the numbers follow, once.
     expect(capacityStatusLine(over).text).toBe(
-      '少なく済んでも超える：超過 3 〜 5h',
+      '超える：少なく済んでも 3h 超える · 多くかかれば 5h 超える',
     );
   });
 
@@ -75,12 +87,18 @@ describe('capacityRelationSentences (Retro, #167)', () => {
   const relation = (lo: number, hi: number, available: number) =>
     capacityRelationSentences(capacityOf({ lo, hi }, available)).join(' · ');
 
-  it('says how the plan stood, with the end that decides it', () => {
-    expect(relation(17.25, 20.25, 17)).toBe('少なく済んでも 0.25h 超える');
+  it('says how the plan stood, as the headline does (#234)', () => {
+    expect(relation(17.25, 20.25, 17)).toBe(
+      '少なく済んでも 0.25h 超える · 多くかかれば 3.25h 超える',
+    );
     expect(relation(15.25, 17.25, 17)).toBe(
       '少なく済めば 1.75h 残る · 多くかかれば 0.25h 超える',
     );
-    expect(relation(15, 16, 17)).toBe('多くかかっても 1h 残る');
-    expect(relation(15, 17, 17)).toBe('多くかかってもちょうど収まる');
+    expect(relation(15, 16, 17)).toBe(
+      '少なく済めば 2h 残る · 多くかかっても 1h 残る',
+    );
+    expect(relation(15, 17, 17)).toBe(
+      '少なく済めば 2h 残る · 多くかかってもちょうど収まる',
+    );
   });
 });

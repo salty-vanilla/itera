@@ -28,7 +28,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** 提示中：破線の枠。「下限・中央・上限を使う」は Secondary、「直して使う」と「使わない」は Quiet。 */
+/** 提示中：破線の枠。「少なめ・ふつう・多めの値を使う」は Secondary、「直して使う」と「使わない」は Quiet。 */
 export const Pending: Story = {};
 
 /** 根拠がないとき。 */

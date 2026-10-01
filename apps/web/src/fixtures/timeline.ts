@@ -5,7 +5,7 @@
 // Based on the Scenarios of docs/domain/domain-model.md, on one user and one
 // timeline (Asia/Tokyo, weeks start on Monday):
 // - Sprint 9/21–9/27 is the previous week. Its Retro makes the criterion
-//   「研究：見積もりの提案の上限で計画する」 active.
+//   「研究：見積もりがないときは提案の多めの値で計画する」 active.
 // - Sprint 9/28–10/4 follows Scenario A (関連論文を 3本読む: deferred twice,
 //   4.5h then 今日はここまで, 昨日の続き, carried over; the available hours
 //   differ, see the Check) and Scenario B
@@ -620,7 +620,11 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
   at(
     '09-27 18:20',
     onSprint(previous, (s, ctx) =>
-      setImprovement(s, { text: '研究の見積もりは幅の上限で計画する' }, ctx),
+      setImprovement(
+        s,
+        { text: '研究の見積もりは提案の多めの値で計画する' },
+        ctx,
+      ),
     ),
   );
   at('09-27 18:21', (r, ctx) =>
