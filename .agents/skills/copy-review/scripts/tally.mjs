@@ -105,12 +105,14 @@ export function tally(reports, items) {
       (a, b) =>
         b.evaluators.length - a.evaluators.length || a.id.localeCompare(b.id),
     );
-  return { perEvaluator, rows, total: items.length };
+  // IDs not in the list (typos by an evaluator) stay in the rows with no text.
+  const unknown = rows.filter((row) => !texts.has(row.id)).map((row) => row.id);
+  return { perEvaluator, rows, unknown, total: items.length };
 }
 
 const escape = (text) => text.replace(/\|/g, '\\|').replace(/\n/g, ' ');
 
-export function renderTally({ perEvaluator, rows, total }) {
+export function renderTally({ perEvaluator, rows, unknown, total }) {
   const histogram = new Map();
   for (const row of rows)
     histogram.set(
@@ -132,6 +134,9 @@ export function renderTally({ perEvaluator, rows, total }) {
       .sort(([a], [b]) => b - a)
       .map(([people, count]) => `${people} 人 ${count} 件`)
       .join('、')}。`,
+    ...(unknown.length > 0
+      ? ['', `一覧にない ID（評価役の書き間違いの可能性）：${unknown.join('、')}`]
+      : []),
     '',
     '| ID | 原文 | 人数 | 挙げた評価役 | 重さ | 言い換え案 |',
     '| --- | --- | --- | --- | --- | --- |',
@@ -176,6 +181,6 @@ if (resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) {
     `${JSON.stringify(result, null, 2)}\n`,
   );
   console.log(
-    `${reports.length} reports, ${result.rows.length} of ${result.total} strings named → ${join(directory, 'tally.md')}`,
+    `${reports.length} reports, ${result.rows.length} of ${result.total} strings named, ${result.unknown.length} unknown IDs → ${join(directory, 'tally.md')}`,
   );
 }

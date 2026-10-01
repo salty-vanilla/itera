@@ -98,8 +98,25 @@ describe('tally', () => {
     const markdown = renderTally(result);
     expect(markdown).toContain('実際の利用者ではなく');
     expect(markdown).toContain('3 件のうち 2 件');
+    expect(markdown).not.toContain('一覧にない ID');
     expect(markdown).toContain(
       '| J002 | 足す | 3 | parent、student、teacher | 中・低・中 | 記録する ／ 時間を足す ／ 消す |',
+    );
+  });
+
+  it('lists IDs that are not in the list', () => {
+    const result = tally(
+      [
+        {
+          name: 'student',
+          markdown: report(['| J999 | ? | 誤り | 高 | x | y |']),
+        },
+      ],
+      [{ id: 'J001', text: '残す' }],
+    );
+    expect(result.unknown).toEqual(['J999']);
+    expect(renderTally(result)).toContain(
+      '一覧にない ID（評価役の書き間違いの可能性）：J999',
     );
   });
 });

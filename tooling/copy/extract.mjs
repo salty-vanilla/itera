@@ -2,7 +2,8 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import ts from 'typescript';
 
-// Hiragana, katakana, CJK ideographs and full-width forms (「」（）！ etc.).
+// Hiragana, katakana, CJK ideographs and full-width forms (（）！：etc.).
+// Text with only Japanese punctuation such as 「」、。 is not counted.
 const JAPANESE = /[\u3040-\u30ff\u3400-\u9fff\uff01-\uff60]/;
 
 export const SOURCE_DIRECTORIES = ['apps/web/src', 'packages/domain/src'];

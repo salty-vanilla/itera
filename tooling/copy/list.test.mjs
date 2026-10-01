@@ -17,6 +17,12 @@ describe('readTerms', () => {
     ].join('\n');
     expect(readTerms(content)).toEqual(['Sprint', '今日へ / 今日やる']);
   });
+
+  it('fails when the term table is missing', () => {
+    expect(() => readTerms('# 文言と用語\n## 用語\n\n本文だけ。\n')).toThrow(
+      /画面の語/,
+    );
+  });
 });
 
 describe('numberItems', () => {

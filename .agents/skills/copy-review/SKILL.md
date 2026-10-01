@@ -44,4 +44,4 @@ description: Itera の画面に出る日本語を `pnpm copy:list` で一覧に�
 
 ## 1 体だけで試すとき
 
-依頼文やペルソナを変えたあとは、7 体を回す前に 1 体（Sonnet）で回し、報告が集計できる形か（`tally.mjs` が評価役の ID の数を 0 より大きく数えるか）を確かめる。
+依頼文やペルソナを変えたあとは、7 体を回す前に 1 体（Sonnet）で回し、報告が集計できる形か（`tally.mjs` が評価役の ID の数を 0 より大きく数え、一覧にない ID が 0 件か）を確かめる。`tally.mjs` を変えたら `tooling/copy/tally.test.mjs` も直す。

@@ -79,15 +79,22 @@ export function numberItems(items) {
   }));
 }
 
-// The screen words of the term table in docs/design/content.md.
+// The screen words of the term table in docs/design/content.md: the first
+// table under `## 用語`, whose first column is 画面の語. Fails loudly when the
+// document no longer has that shape, so the list never ships without terms.
 export function readTerms(content) {
   const section = content.split(/^## 用語$/m)[1]?.split(/^## /m)[0] ?? '';
-  return section
-    .split('\n')
-    .filter((line) => line.startsWith('| '))
-    .slice(2)
-    .map((line) => line.split('|')[1].trim())
-    .filter((term) => term !== '');
+  const rows = [];
+  for (const line of section.split('\n')) {
+    if (line.startsWith('|')) rows.push(line.split('|')[1]?.trim() ?? '');
+    else if (rows.length > 0) break;
+  }
+  const terms = rows.slice(2).filter((term) => term !== '');
+  if (rows[0] !== '画面の語' || terms.length === 0)
+    throw new Error(
+      'No term table (first column 画面の語) under "## 用語" in docs/design/content.md. Update readTerms in tooling/copy/list.mjs.',
+    );
+  return terms;
 }
 
 function kindLabel(item) {
@@ -110,7 +117,7 @@ export function renderList({ items, terms, source }) {
     '',
     '- **Itera**：仕事・研究・学習・生活などを並行する個人が、1 週間ごとに「やることをためる（Backlog）→ 今週の計画（Planning）→ 毎日こなす（今日）→ 週末に振り返る」を回す Web アプリ。PC とスマートフォンで使う。',
     '- `{…}` は差し込まれる値（件数・日付・時間・タスク名など）。例：`{n}件` → 「3件」。`<Icon/>` は文の中のアイコン。',
-    '- 「組み立て」の行は、文の一部（前後の語と組み合わせて 1 文になる）。`コード：` に、その行のコードを添えた。',
+    '- 「組み立て」の行は、JSX・属性・設定の外にあるコードの中の文字列。文の一部のことも、それだけで 1 文のこともある。`コード：` に、その行のコードを添えた。',
     `- 種類：${Object.values(KINDS).join('／')}。読み上げ名はスクリーンリーダーだけが読む。設定は、ボタン名・Toast・見出しなどを部品に渡す値。`,
     `- 決めてある語（\`docs/design/content.md\` の用語表）：${terms.map((term) => `「${term}」`).join('')}。画面名「Sprint」「Backlog」は英語のまま。`,
     '',

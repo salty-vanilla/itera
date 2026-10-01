@@ -95,10 +95,10 @@
     }
   ],
   "skillFiles": {
-    ".agents/skills/copy-review/SKILL.md": "d26edd540a551b98ddcbd690ee4259b179d9d9b3c764951c6d6b878d2b5ce932",
+    ".agents/skills/copy-review/SKILL.md": "2d5946fbce648bb3aaecf05162aafbd33df7cdbcbf16c7532fc975c3979f5b55",
     ".agents/skills/copy-review/references/personas.md": "daee91d871cce82c4c1a44d9e50884fc5df82a58868432a4028118f259b4e1ef",
-    ".agents/skills/copy-review/references/prompt.md": "8ee7dad98a6b837a8e6d46c047198cd38aa8aa5f073a70af4988769303368e8c",
-    ".agents/skills/copy-review/scripts/tally.mjs": "a2e8dad53ac966448c9f938ec5ade3e38f7f34c2e8c5d3a90148f71173baeee1",
+    ".agents/skills/copy-review/references/prompt.md": "8791142a97c08070b62e949f7574d0660de06e1738f8976c797125a0c1e3c045",
+    ".agents/skills/copy-review/scripts/tally.mjs": "e00b0ba7c549163da3298f217b8bf25152155ae00696615ed93f10adb4f320b6",
     ".agents/skills/design-references/SKILL.md": "874133903f9517d5e8d82a826e05c66734d729b42c40f35eab94a670ecfe251f",
     ".agents/skills/design-references/scripts/hig.mjs": "75f2c96df21f1558489402c437e37580da9f62adc1a52d166332d7511ccfbd4c",
     ".agents/skills/hono/LICENSE": "5cddf05ab7955c91818508831a233df4df502bd9fcdd1d8c9c01f53bba095d4b",
