@@ -1,5 +1,5 @@
 import type { LocalDate } from '@itera/domain';
-import { useEffect, useRef } from 'react';
+import { Fragment, useEffect, useRef } from 'react';
 import { Archive, CircleCheck, Ellipsis, Route, Sun } from 'lucide-react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { IconButton } from '@/components/ui/icon-button';
@@ -64,14 +64,43 @@ export function RecurrenceText({
   icon?: boolean;
 }) {
   const Icon = semanticIcons.recurrence;
+  // A narrow row moves a whole part to the next line first; only a part wider
+  // than the row breaks, between its phrases, never inside one (Issue #218).
+  const parts: string[][] = [
+    [formatPattern(recurrence.pattern)],
+    ...(recurrence.next
+      ? [[`次は ${formatDate(recurrence.next.scheduledDate)}`]]
+      : []),
+    ...(recurrence.upcoming
+      ? [
+          [
+            `変更：${formatDate(recurrence.upcoming.effectiveFrom)} から`,
+            formatPattern(recurrence.upcoming.pattern),
+          ],
+        ]
+      : []),
+    ...(recurrence.endsOn ? [[`${formatDate(recurrence.endsOn)} まで`]] : []),
+  ];
   return (
     <MetaItem icon={icon ? <Icon aria-hidden /> : undefined} wrap>
-      {formatPattern(recurrence.pattern)}
-      {recurrence.next &&
-        ` · 次は ${formatDate(recurrence.next.scheduledDate)}`}
-      {recurrence.upcoming &&
-        ` · 変更：${formatDate(recurrence.upcoming.effectiveFrom)} から ${formatPattern(recurrence.upcoming.pattern)}`}
-      {recurrence.endsOn && ` · ${formatDate(recurrence.endsOn)} まで`}
+      <span>
+        {parts.map((phrases, i) => (
+          <Fragment key={phrases.join(' ')}>
+            {i > 0 && ' '}
+            <span className="inline-block max-w-full align-top">
+              {phrases.map((phrase, j) => (
+                <Fragment key={phrase}>
+                  {j > 0 && ' '}
+                  <span className="whitespace-nowrap">
+                    {phrase}
+                    {j === phrases.length - 1 && i < parts.length - 1 && ' ·'}
+                  </span>
+                </Fragment>
+              ))}
+            </span>
+          </Fragment>
+        ))}
+      </span>
     </MetaItem>
   );
 }
