@@ -53,8 +53,9 @@ import { PlanPane, type Stage } from './plan-pane';
 // Layout (DESIGN.md Layout › Responsive):
 // - wide (1200px and up): Backlog / Sprint (at most 680px; from 1920px it
 //   takes the width that is left) / 時間の見通し (336px). The Backlog is
-//   384px in 選ぶ and 240px, titles only, later. 時間の見通し stays in view
-//   while the Backlog scrolls (#165).
+//   384px in 選ぶ and 240px, titles only, later; from 1920px, 480px and
+//   320px (#158). 時間の見通し stays in view while the Backlog scrolls
+//   (#165).
 // - medium: Backlog / Sprint. The Capacity is one sticky line above the
 //   Sprint that opens a right Drawer. In 確かめる the summary has the
 //   numbers, so the line only opens the Drawer (#165).
@@ -379,8 +380,8 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
             ? 'medium:grid-cols-[var(--spacing-pane-list)_minmax(0,1fr)]'
             : 'medium:grid-cols-[var(--spacing-pane-list-slim)_minmax(0,1fr)]',
           stage === 'pick'
-            ? 'wide:grid-cols-[var(--spacing-pane-list)_minmax(0,1fr)_var(--spacing-pane-side)]'
-            : 'wide:grid-cols-[var(--spacing-pane-list-slim)_minmax(0,1fr)_var(--spacing-pane-side)]',
+            ? 'wide:grid-cols-[var(--spacing-pane-list)_minmax(0,1fr)_var(--spacing-pane-side)] xl:grid-cols-[var(--spacing-pane-list-xl)_minmax(0,1fr)_var(--spacing-pane-side)]'
+            : 'wide:grid-cols-[var(--spacing-pane-list-slim)_minmax(0,1fr)_var(--spacing-pane-side)] xl:grid-cols-[var(--spacing-pane-list-slim-xl)_minmax(0,1fr)_var(--spacing-pane-side)]',
         )}
       >
         <BacklogPane

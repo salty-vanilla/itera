@@ -137,6 +137,8 @@
   --spacing-pane-rail: 64px;
   --spacing-pane-list: 384px;
   --spacing-pane-list-slim: 240px;
+  --spacing-pane-list-xl: 480px;
+  --spacing-pane-list-slim-xl: 320px;
   --spacing-pane-sprint: 680px;
   --spacing-pane-today: 720px;
   --spacing-pane-rows: 1280px;
