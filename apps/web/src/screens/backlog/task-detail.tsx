@@ -157,11 +157,10 @@ function readField(key: TextKey, draft: Draft, task: Task): Reading {
 }
 
 /** The items folded under 詳しく, in their order (Issue #95). */
-type MoreKey = 'description' | 'priority' | 'subtasks' | 'recurrence';
+type MoreKey = 'description' | 'subtasks' | 'recurrence';
 
 const moreNames: Record<MoreKey, string> = {
   description: '説明',
-  priority: '優先度',
   subtasks: 'サブタスク',
   recurrence: '繰り返し',
 };
@@ -169,7 +168,6 @@ const moreNames: Record<MoreKey, string> = {
 function valuesOf(item: BacklogItem): Record<MoreKey, boolean> {
   return {
     description: item.task.description !== '',
-    priority: item.task.priority !== 'normal',
     subtasks: item.task.subtasks.length > 0,
     recurrence: item.rule !== undefined,
   };
@@ -286,6 +284,12 @@ function TaskDetail({
   const toast = useToast();
   // 今日と今週: Today is where 今日を開く leads, so it is not offered there.
   const onTodayScreen = useLocation({ select: (l) => l.pathname === '/today' });
+  // A recurring Task in the week is done per occurrence, in Today (#171).
+  const opensOccurrences =
+    facts.recurrence !== undefined &&
+    facts.thisWeek?.confirmed === true &&
+    facts.today === undefined &&
+    !onTodayScreen;
   const nowRef = useRef<HTMLElement>(null);
   const openTodayRef = useRef<HTMLAnchorElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -555,27 +559,6 @@ function TaskDetail({
             </Field>
           </Saved>
         );
-      case 'priority':
-        return (
-          <Saved show={saved === 'priority'}>
-            <Field label="優先度">
-              <Select
-                value={task.priority}
-                onChange={(e) =>
-                  record('priority', {
-                    priority: e.currentTarget.value as TaskPriority,
-                  })
-                }
-              >
-                {priorities.map((p) => (
-                  <option key={p.value} value={p.value}>
-                    {p.label}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </Saved>
-        );
       case 'subtasks':
         return (
           <>
@@ -662,7 +645,8 @@ function TaskDetail({
           facts.todayOpensOn !== undefined ||
           facts.today !== undefined ||
           facts.closedToday !== undefined ||
-          facts.canComplete) && (
+          facts.canComplete ||
+          opensOccurrences) && (
           <section
             ref={nowRef}
             aria-labelledby="task-detail-now"
@@ -778,6 +762,15 @@ function TaskDetail({
                   今日を開く
                 </Link>
               )}
+              {opensOccurrences && (
+                <Link
+                  ref={openTodayRef}
+                  to="/today"
+                  className="inline-flex min-h-target-touch items-center rounded-sm pe-2 text-link underline focus-visible:focus-ring medium:min-h-target-min"
+                >
+                  今週の回を開く
+                </Link>
+              )}
             </div>
             {pausing && facts.today?.resolution === 'started' && (
               <form
@@ -883,6 +876,24 @@ function TaskDetail({
                 onBlur={() => commit('due')}
                 onKeyDown={leaveOnEnter('due')}
               />
+            </Field>
+          </Saved>
+          <Saved show={saved === 'priority'}>
+            <Field label="優先度">
+              <Select
+                value={task.priority}
+                onChange={(e) =>
+                  record('priority', {
+                    priority: e.currentTarget.value as TaskPriority,
+                  })
+                }
+              >
+                {priorities.map((p) => (
+                  <option key={p.value} value={p.value}>
+                    {p.label}
+                  </option>
+                ))}
+              </Select>
             </Field>
           </Saved>
           <Saved show={saved === 'estimate'}>
