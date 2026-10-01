@@ -117,6 +117,15 @@ describe('Sprint — running (#51)', () => {
     ).toBeGreaterThan(0);
   });
 
+  it('says a Task added mid-Sprint is not linked, in Planning’s words (#159)', async () => {
+    await renderAt('/sprint?fixture=today-interrupt');
+    const row = screen
+      .getByRole('button', { name: '顧客インタビューの設計' })
+      .closest('[data-slot="task-row"]');
+    expect(row?.textContent).toContain('目標に紐づかない');
+    expect(document.body.textContent).not.toContain('目標なし');
+  });
+
   it('folds a criterion that changed no planned value to one line (#161)', async () => {
     criterionHadNoTarget = true;
     await renderAt('/sprint?fixture=today-interrupt');
