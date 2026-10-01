@@ -128,6 +128,11 @@ export function dueSoonUntil(context: BacklogSliceContext): LocalDate {
   return current?.end ?? sprintEnd(weekStartOf(today, context.user));
 }
 
+/** 期限超過: due before today. Backlog and Planning share it (Issue #151). */
+export function isOverdue(task: Task, today: LocalDate): boolean {
+  return task.due !== undefined && task.due < today;
+}
+
 /** Whether a Task falls in a 切り口. Tasks with no due date are never due. */
 export function inBacklogSlice(
   task: Task,
@@ -142,7 +147,7 @@ export function inBacklogSlice(
         task.due <= dueSoonUntil(context)
       );
     case 'overdue':
-      return task.due !== undefined && task.due < context.today;
+      return isOverdue(task, context.today);
     case 'carriedOver':
       return carryOverOf(task.id, context.sprints) !== undefined;
     case 'recurring':

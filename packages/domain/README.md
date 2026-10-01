@@ -159,6 +159,10 @@ type CommandResult<T> =
 - **期限が近い**（F28）：今日を含む Sprint がない日は、その週の終わりまで（`dueSoonUntil`。実装は #39 のまま）。
 - **Backlog からの完了を元に戻す**（`undoCompleteFromBacklog`、F29）：Sprint 外の Task（または active な Sprint がないとき）は Task だけを戻す。今の Sprint の Task で、完了がその日の選択を作った（origin = backlogCompletion）ときは、Task と SprintTask を戻し、その選択を消す（`todayBacklogCompletionUndone`）。完了前からあった選択を完了にしたときは `undoCompleteSelection` と同じく戻す。取り消せるのは完了した日の選択だけ（`date` はその日を渡す）。Today の完了の取り消し（`undoCompleteSelection`）には日付の制限がないが、Backlog の取り消しは完了した直後の操作なのでその日に限る。Sprint が active でない（Review に入った後など）ときは Task だけを戻し、SprintTask は変えない（`completeFromBacklog` も active な Sprint にだけ働くのと対称）。開始日より前に完了した分は、選択がないので Task と SprintTask だけを戻す（F34）。
 
+## Planning の選ぶのグループ（#151）
+
+- **Planning の選ぶ**（`planningCandidates`）：持ち越し → 期限超過（今日より前）→ 期限が近い（今日から、計画中の Sprint の最終日まで）→ 今週発生する繰り返し → そのほか。1 つの Task は 1 つのグループだけで、持ち越しの Task は期限超過でも持ち越しに入る。`today` を渡し、「期限が近い」の最終日を `dueSoonUntil` で返す。期限超過の判定は Backlog の切り口と共通（`isOverdue`）。
+
 ## 対象外
 
 PlanProposal（不変条件 41）は、外部 Agent を MVP に含めるかが PRD §14 で未決のため作らない。提案の中身を作る処理と、永続化も対象外。
