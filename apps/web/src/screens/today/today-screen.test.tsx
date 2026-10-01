@@ -899,6 +899,10 @@ describe('Today — outside the period (#54)', () => {
         name: 'Sprint 2 を確定',
       }),
     );
+    // Confirmed before its first day, the Sprint's screen stays: Today has
+    // nothing to open yet (#156).
+    expect(await screen.findByText('実行中')).toBeTruthy();
+    expect(screen.queryByRole('link', { name: '今日を開く' })).toBeNull();
     await userEvent.click(screen.getAllByRole('link', { name: '今日' })[0]!);
     expect(
       await screen.findByText('Sprint 2 は 9/28 (月) から始まります。'),
@@ -910,6 +914,11 @@ describe('Today — outside the period (#54)', () => {
       screen.queryByRole('textbox', { name: '今日やるタスクを追加' }),
     ).toBeNull();
     expect(screen.queryByText(/日目/)).toBeNull();
+    // The week's plan, read only (#156).
+    const plan = screen.getByRole('region', { name: '今週の計画' });
+    expect(within(plan).getAllByRole('listitem')).toHaveLength(9);
+    expect(within(plan).getByText('9/28 (月) の回')).toBeTruthy();
+    expect(within(plan).queryByRole('button')).toBeNull();
     // One step to the Sprint (#90).
     const open = screen.getByRole('link', { name: 'Sprint 2 を開く' });
     expect(open.getAttribute('href')).toContain('sprint=2');
