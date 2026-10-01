@@ -178,6 +178,9 @@ function BacklogRow({
       }
       onOpen={onOpen}
       keys={{ onEstimate, onArchive }}
+      // Always shown, not only on hover and focus: the ○ is the one control
+      // in view, and 今日へ is not found behind the pointer (Issue #164).
+      actionsVisible
       control={
         item.canComplete ? (
           <CompletionCircle
@@ -259,7 +262,8 @@ function BacklogRow({
             )}
             <EstimateMenuItem onSelect={onEstimate} />
             <MenuSeparator />
-            <MenuItem variant="danger" onClick={onArchive}>
+            {/* Not `danger`: it can be undone (Issue #164). */}
+            <MenuItem onClick={onArchive}>
               <Archive aria-hidden />
               アーカイブ
             </MenuItem>

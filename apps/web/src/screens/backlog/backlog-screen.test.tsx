@@ -1078,6 +1078,18 @@ describe('Backlog', () => {
     ).toHaveLength(versions ?? 0);
   });
 
+  it('keeps the … on every row shown, and the archive is not danger (#164)', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    const more = screen.getByRole('button', {
+      name: 'その他の操作: 歯医者の予約',
+    });
+    // Not hidden until hover or focus at medium and up (TaskRow).
+    expect(more.parentElement?.className).not.toContain('opacity-0');
+    await userEvent.click(more);
+    const archive = await screen.findByRole('menuitem', { name: 'アーカイブ' });
+    expect(archive.className).not.toContain('text-danger');
+  });
+
   it('archives with an undo in the Toast', async () => {
     await renderAt('/backlog?fixture=backlog-capture');
     await userEvent.click(
@@ -1405,9 +1417,12 @@ describe('Backlog › Areas', () => {
     );
   const archiveArea = async (name: string) => {
     await edit(name);
-    await userEvent.click(
-      within(areaDialog()).getByRole('button', { name: 'アーカイブ' }),
-    );
+    const archive = within(areaDialog()).getByRole('button', {
+      name: 'アーカイブ',
+    });
+    // It can be undone, so it is not `danger` (#164).
+    expect(archive.className).not.toContain('text-danger');
+    await userEvent.click(archive);
   };
   const optionNames = (select: HTMLElement) =>
     within(select)
@@ -1522,9 +1537,7 @@ describe('Backlog › Areas', () => {
       name: '「研究」の名前',
     });
     expect(
-      within(dialog).getByText(
-        'Sprint の画面には、次の Sprint から反映されます。',
-      ),
+      within(dialog).getByText('確定済みの Sprint では、前の名前のままです。'),
     ).toBeTruthy();
     // The field takes the focus and selects its name two frames after it
     // opens; typing before that would be replaced by the selection.

@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 // The title is a button that opens the Task; it stretches over the row so
 // that the whole row opens it, while the control and the actions sit above
 // it. The actions show on hover and focus, and always under 768px (no
-// hover there).
+// hover there); a screen can keep them shown at every width (Backlog).
 //
 // The row takes the list keys of docs/design/accessibility.md while the
 // focus is in it (`@/lib/row-keys`): Space presses the control, Enter opens
@@ -35,7 +35,8 @@ type TaskRowProps = {
   reserveActions?: boolean;
   /**
    * Shows the `actions` at every width, not only on hover and focus: for
-   * a way back (「取り消す」) that must not be hidden behind the pointer.
+   * a way back (「取り消す」) that must not be hidden behind the pointer, and
+   * for Backlog's `…`, where 今日へ is looked for (Issue #164).
    */
   actionsVisible?: boolean;
   /** Opens the Task (its detail). Without it the title is plain text. */
