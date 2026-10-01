@@ -316,9 +316,9 @@ describe('Today — the daily operations', () => {
     // #101: in ink with its icon, not only a colour. #163: 「作業中 · 10:12
     // から」, the `here` bar and the title in 700.
     const startedRow = row('今日やる', '顧客インタビューの設計');
-    const started = within(startedRow)
-      .getByText(/^作業中 · \d\d:\d\d から$/)
-      .closest('[data-slot="meta-item"]');
+    const started = [
+      ...startedRow.querySelectorAll('[data-slot="meta-item"]'),
+    ].find((m) => /^作業中 · \d\d:\d\d から$/.test(m.textContent ?? ''));
     expect(started?.className).toContain('text-ink');
     expect(started?.className).not.toContain('text-ink-muted');
     expect(started?.querySelector('svg')).toBeTruthy();

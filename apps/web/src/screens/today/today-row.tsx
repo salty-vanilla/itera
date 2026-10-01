@@ -23,9 +23,9 @@ import {
   TaskMetadata,
 } from '@/components/task/task-metadata';
 import { CompletionCircle, TaskRow } from '@/components/task/task-row';
-import { formatDate } from '@/lib/date-format';
+import { formatDate, formatTime } from '@/lib/date-format';
 import { formatHours } from '@/lib/time-format';
-import { closingHelp, startedText } from '@/lib/today-words';
+import { closingHelp } from '@/lib/today-words';
 import type { TimeZone } from '@itera/domain';
 import type { TodayItem, TodayRow as TodayRowData } from '@/store/today-view';
 
@@ -248,7 +248,18 @@ function RowMetadata({
         return (
           // In `ink`, not muted: the one open state to see at a glance.
           <MetaItem wrap icon={<Play aria-hidden />} className="text-ink">
-            {startedText(selection.startedAt, timeZone)}
+            <span>
+              作業中
+              {selection.startedAt !== undefined && (
+                // Breaks only before the separator in a narrow row.
+                <>
+                  {' '}
+                  <span className="whitespace-nowrap">
+                    · {formatTime(selection.startedAt, timeZone)} から
+                  </span>
+                </>
+              )}
+            </span>
           </MetaItem>
         );
       case 'paused':
