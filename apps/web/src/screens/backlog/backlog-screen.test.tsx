@@ -1377,7 +1377,7 @@ describe('Backlog › Areas', () => {
     await userEvent.click(screen.getByRole('button', { name: '領域を編集' }));
     const dialog = areaDialog();
     await edit('研究');
-    const field = within(dialog).getByRole('textbox', {
+    const field = within(dialog).getByRole<HTMLInputElement>('textbox', {
       name: '「研究」の名前',
     });
     expect(
@@ -1385,6 +1385,12 @@ describe('Backlog › Areas', () => {
         'Sprint の画面には、次の Sprint から反映されます。',
       ),
     ).toBeTruthy();
+    // The field takes the focus and selects its name two frames after it
+    // opens; typing before that would be replaced by the selection.
+    await waitFor(() => {
+      expect(document.activeElement).toBe(field);
+      expect([field.selectionStart, field.selectionEnd]).toEqual([0, 2]);
+    });
     // An empty name is not saved.
     await userEvent.clear(field);
     await userEvent.keyboard('{Enter}');
