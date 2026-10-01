@@ -80,10 +80,11 @@ export function numberItems(items) {
 }
 
 // The screen words of the term table in docs/design/content.md: the first
-// table under `## 用語`, whose first column is 画面の語. Fails loudly when the
+// table under `### 用語` (in 語彙), whose first column is 画面の語. Fails loudly when the
 // document no longer has that shape, so the list never ships without terms.
 export function readTerms(content) {
-  const section = content.split(/^## 用語$/m)[1]?.split(/^## /m)[0] ?? '';
+  const section =
+    content.split(/^#{2,3} 用語$/m)[1]?.split(/^#{1,3} /m)[0] ?? '';
   const rows = [];
   for (const line of section.split('\n')) {
     if (line.startsWith('|')) rows.push(line.split('|')[1]?.trim() ?? '');
@@ -92,7 +93,7 @@ export function readTerms(content) {
   const terms = rows.slice(2).filter((term) => term !== '');
   if (rows[0] !== '画面の語' || terms.length === 0)
     throw new Error(
-      'No term table (first column 画面の語) under "## 用語" in docs/design/content.md. Update readTerms in tooling/copy/list.mjs.',
+      'No term table (first column 画面の語) under "### 用語" in docs/design/content.md. Update readTerms in tooling/copy/list.mjs.',
     );
   return terms;
 }
