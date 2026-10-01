@@ -67,6 +67,7 @@ function AppShell({ children }: { children: ReactNode }) {
       </a>
       <Navigation
         items={items}
+        brand="Itera"
         current={current}
         onNavigate={(id, event) => {
           const screen = screens.find((s) => s.id === id);

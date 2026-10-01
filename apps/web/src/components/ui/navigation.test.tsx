@@ -36,6 +36,16 @@ describe('Navigation', () => {
     expect(backlog.getAttribute('aria-current')).toBeNull();
   });
 
+  it('shows the app name at the top of the sidebar, not in the tab bar', () => {
+    const { container } = render(
+      <Navigation items={items} current="today" brand="Itera" />,
+    );
+    const brands = container.querySelectorAll('[data-slot="navigation-brand"]');
+    expect(brands).toHaveLength(1);
+    expect(brands[0]?.textContent).toBe('Itera');
+    expect(brands[0]?.closest('[data-layout="tab-bar"]')).toBeNull();
+  });
+
   it('keeps a disabled item focusable and ignores presses', async () => {
     const visited: string[] = [];
     render(
