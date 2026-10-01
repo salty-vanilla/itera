@@ -266,7 +266,10 @@ describe('Toast on leaving a screen (#170)', () => {
     await act(() =>
       router.navigate({ to: '/backlog', search: { view: 'overdue' } }),
     );
-    expect(screen.queryByText(text)).not.toBeNull();
+    // Not closing either: a closing Toast stays in the DOM until it has faded.
+    const toast = screen.getByText(text).closest('[data-slot="toast"]');
+    expect(toast).not.toBeNull();
+    expect(toast?.hasAttribute('data-ending-style')).toBe(false);
   });
 
   it('closes them when the screen changes by the router (back and forward go the same way)', async () => {

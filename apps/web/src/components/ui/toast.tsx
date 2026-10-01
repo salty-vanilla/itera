@@ -90,7 +90,8 @@ function ToastProvider({ children }: { children: ReactNode }) {
             // and short of an open Drawer (400px at the right edge, 24px from
             // the left edge, 8px between): 336px at 768px (#170).
             'inset-x-4 bottom-[calc(var(--toast-offset-bottom,0px)+var(--toast-offset-above,0px)+var(--spacing-4))]',
-            'medium:right-auto medium:bottom-[calc(var(--toast-offset-above,0px)+var(--spacing-6))] medium:left-6 medium:w-[min(var(--spacing-toast),calc(100vw-var(--spacing-drawer)-var(--spacing-8)))]',
+            'medium:right-auto medium:bottom-[calc(var(--toast-offset-above,0px)+var(--spacing-6))] medium:left-6 medium:w-toast',
+            'medium:[body:has([data-slot=drawer-content])_&]:w-[min(var(--spacing-toast),calc(100vw-var(--spacing-drawer)-var(--spacing-8)))]',
           )}
         >
           <ToastList />

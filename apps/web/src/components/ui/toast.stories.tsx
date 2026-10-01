@@ -60,7 +60,7 @@ function Triggers() {
 /**
  * 面 surface＋border、rounded.md、elevation-overlay。desktop は左下、
  * compact は下部タブバーの上（高さは画面側が --toast-offset-bottom で渡す）。
- * 8 秒で消え、pointer が載っている間とフォーカスが中にある間は止まる
+ * 8 秒（操作付きは 16 秒）で消え、pointer が載っている間とフォーカスが中にある間は止まる
  * （F6 で Toast へ移れる）。同じ種類は最新の 1 つに置き換え、種類が違うものは同時に 3 つまで。danger は role="alert" で
  * 読み上げる。ボタンを押すと Toast が出る。
  */

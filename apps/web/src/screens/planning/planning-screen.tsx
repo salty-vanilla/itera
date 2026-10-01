@@ -405,7 +405,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
             stage !== 'pick' && 'hidden medium:flex',
           )}
         />
-        <div className="order-1 flex flex-col gap-8 px-4 pt-8 pb-[calc(var(--spacing-8)+var(--toast-clearance,0px))] medium:order-none medium:px-6 medium:pb-8">
+        <div className="order-1 flex flex-col gap-8 px-4 pt-8 pb-[calc(var(--spacing-8)+var(--toast-clearance,0px))] medium:order-none medium:px-6 medium:pb-[calc(var(--spacing-8)+var(--toast-clearance,0px))]">
           <PlanPane
             data={data}
             stage={stage}
