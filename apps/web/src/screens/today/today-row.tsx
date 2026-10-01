@@ -1,4 +1,5 @@
 import {
+  CircleCheck,
   Ellipsis,
   LogOut,
   Minus,
@@ -22,8 +23,9 @@ import {
   TaskMetadata,
 } from '@/components/task/task-metadata';
 import { CompletionCircle, TaskRow } from '@/components/task/task-row';
-import { formatDate, formatTime } from '@/lib/date-format';
+import { formatDate } from '@/lib/date-format';
 import { formatHours } from '@/lib/time-format';
+import { closingHelp, startedText } from '@/lib/today-words';
 import type { TimeZone } from '@itera/domain';
 import type { TodayItem, TodayRow as TodayRowData } from '@/store/today-view';
 
@@ -36,7 +38,10 @@ import type { TodayItem, TodayRow as TodayRowData } from '@/store/today-view';
 // - a deferred or removed row has 「取り消す」 the same day (F37), as a
 //   skipped one does (F19);
 // - a done row stays where it is, struck through; ○ again undoes it;
-// - 「今日は見送る」 comes first in the `…`, nearest the thumb.
+// Issue #163 changed the `…`: the most used first (開始 or 今日はここまで, then
+// 完了にする), and a line under 今日はここまで, 今日は見送る, スキップ and
+// 今日から外す that tells them apart before they are pressed. A started row
+// carries the `here` bar, its title in 700 and 「作業中 · 10:12 から」.
 
 type TodayRowProps = {
   row: TodayRowData;
@@ -87,12 +92,6 @@ function TodayRow({
   const recurring = occurrence !== undefined;
 
   const items = [
-    (state === 'selected' || state === 'started') && (
-      <MenuItem key="defer" onClick={onDefer}>
-        <CalendarX2 aria-hidden />
-        今日は見送る
-      </MenuItem>
-    ),
     state === 'selected' && (
       <MenuItem key="start" onClick={onStart}>
         <Play aria-hidden />
@@ -100,19 +99,52 @@ function TodayRow({
       </MenuItem>
     ),
     state === 'started' && (
-      <MenuItem key="pause" onClick={onPause}>
+      <MenuItem
+        key="pause"
+        onClick={onPause}
+        label="今日はここまで"
+        description={closingHelp.pause}
+      >
         <Pause aria-hidden />
         今日はここまで
       </MenuItem>
     ),
+    // The same as ○ (F17 for a paused row), for those who look here first.
+    (state === 'selected' || state === 'started' || state === 'paused') && (
+      <MenuItem key="complete" onClick={onComplete}>
+        <CircleCheck aria-hidden />
+        完了にする
+      </MenuItem>
+    ),
+    (state === 'selected' || state === 'started') && (
+      <MenuItem
+        key="defer"
+        onClick={onDefer}
+        label="今日は見送る"
+        description={closingHelp.defer}
+      >
+        <CalendarX2 aria-hidden />
+        今日は見送る
+      </MenuItem>
+    ),
     state === 'selected' && recurring && (
-      <MenuItem key="skip" onClick={onSkip}>
+      <MenuItem
+        key="skip"
+        onClick={onSkip}
+        label="今日はスキップ"
+        description={closingHelp.skip}
+      >
         <SkipForward aria-hidden />
         今日はスキップ
       </MenuItem>
     ),
     state === 'selected' && (
-      <MenuItem key="remove" onClick={onRemove}>
+      <MenuItem
+        key="remove"
+        onClick={onRemove}
+        label="今日から外す"
+        description={closingHelp.remove}
+      >
         <LogOut aria-hidden />
         今日から外す
       </MenuItem>
@@ -135,6 +167,7 @@ function TodayRow({
       onOpen={onOpen}
       keys={{ onEstimate }}
       done={done}
+      inProgress={state === 'started'}
       control={
         skipped ? (
           // ○ with 「−」 (DESIGN.md Task Row › Skipped). Not a control:
@@ -215,9 +248,7 @@ function RowMetadata({
         return (
           // In `ink`, not muted: the one open state to see at a glance.
           <MetaItem wrap icon={<Play aria-hidden />} className="text-ink">
-            開始
-            {selection.startedAt !== undefined &&
-              ` ${formatTime(selection.startedAt, timeZone)}`}
+            {startedText(selection.startedAt, timeZone)}
           </MetaItem>
         );
       case 'paused':

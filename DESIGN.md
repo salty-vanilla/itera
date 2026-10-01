@@ -588,9 +588,10 @@ compact の原則：
 
 **Menu** — 行やヘッダーの補助操作のドロップダウン。トリガーは `…` の IconButton か、Secondary の Button（「並び順: 期限 ⌄」）。
 - 面 `surface`＋`border`、`rounded.md`、`elevation-overlay`。項目 32px（アイコン・ラベル・Kbd）、区切り `border-soft`、危険な項目は `danger` で最後。Checked は チェック＋`here-subtle`。
+- 押す前に違いを読みたい項目（Today の今日はここまで・今日は見送る・今日から外すなど）は、ラベルの下に 1 行の補足（`help`、`ink-muted`）を付けてよい。補足は項目の説明として読み上げ、名前には含めない（Issue #163）。
 - 主要な操作を隠さない。サブメニューを入れ子にしない。キーボードは ↓ ↑ Home End、Enter で実行、Esc でトリガーに戻る、Tab で閉じる。
 
-**Kbd** — ショートカットの表示。`code` の書体で Tooltip とメニュー項目の右端に置く。キーを色で強調しない。
+**Kbd** — ショートカットの表示。`code` の書体で Tooltip とメニュー項目の右端に置く。キーを色で強調しない。主な入力がタッチの端末（`pointer: coarse`）では、メニュー項目の Kbd を出さない（押すキーがないため。Issue #163）。
 
 ### 入力（ラベル → サポートテキスト → 入力 → エラーの順）
 
@@ -670,7 +671,7 @@ compact の原則：
 **Task Row** — タスク 1 件の行。Backlog・Sprint・Today で同じ構造。
 - 左から：ドラッグハンドル（hover / focus 時のみ、compact は非表示）、コントロール（□ 選ぶ / ○ 完了 / なし）、タイトル（`task`。compact は 2 行まで、medium 以上は 1 行で省略）、Task Metadata、Estimate（右端 `num-s`）、行の操作 `…`（hover / focus 時、compact は常時）。
 - layout stacked（既定、約 52px）/ inline（40px、`row-task` は最小高さ）。区切りは `border-soft`、行間 0、角丸・影なし、Card で囲まない。
-- 状態：Selected（`here-subtle`＋チェック）、Done（○ を `primary` で塗り、タイトル `ink-subtle`＋取り消し線）、Skipped（○ に「−」＋「スキップ」）、Dragging（`surface`＋`elevation-drag`＋`border`）、Loading（Estimate が「見積中」）、Error（行内に「保存できませんでした · 再試行」）、Disabled（アーカイブ済み、`ink-disabled`）。
+- 状態：Selected（`here-subtle`＋チェック）、In progress（Today で開始した行。先頭の端に `here` の 4px の縦線＋タイトル 700＋メタデータの「作業中 · 10:12 から」。ナビの現在地と同じ印で「今やっているもの」を示す。Issue #163）、Done（○ を `primary` で塗り、タイトル `ink-subtle`＋取り消し線）、Skipped（○ に「−」＋「スキップ」）、Dragging（`surface`＋`elevation-drag`＋`border`）、Loading（Estimate が「見積中」）、Error（行内に「保存できませんでした · 再試行」）、Disabled（アーカイブ済み、`ink-disabled`）。
 - Today の「今日やる」の行は、日次の操作（開始 / 完了 / 今日はここまで / 今日は見送る / 今日から外す / 繰り返しのスキップ）を持つ。強い操作を常時並べすぎず、完了（○）以外は行の操作 `…` と詳細から出す（PRD §12）。例外として、見送り・外した・スキップの行は `…` の位置に「取り消す」（`undo-2` の IconButton、`…` と同じ大きさ）をどの幅でも常に出す（誤操作から戻る手段を hover の裏に置かない。ドメインモデル F19・F37、Issue #101）。「今週の残り」「昨日の続き」の行は □ ではなく、行の先頭に常に見える「今日へ」のボタンで選ぶ（□ は今週へ選ぶ意味なので使わない）。
 - × メタ情報を Badge / Pill にする、□ と ○ を入れ替える、Goal に紐づかない行を薄くする。
 

@@ -1,6 +1,6 @@
 import { Menu as MenuPrimitive } from '@base-ui/react/menu';
 import { Check } from 'lucide-react';
-import type { ComponentProps, ReactNode } from 'react';
+import { useId, type ComponentProps, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 // DESIGN.md Components › Menu. The drop-down for secondary actions of a row or
@@ -83,21 +83,51 @@ type MenuItemProps = Omit<MenuPrimitive.Item.Props, 'className'> & {
    * last, after a MenuSeparator.
    */
   variant?: 'default' | 'danger';
+  /**
+   * One short line under the label that tells what the item does before it
+   * is pressed. Read out as the item's description, not its name; pass the
+   * label as `label` for typeahead.
+   */
+  description?: ReactNode;
   className?: string;
 };
 
-function MenuItem({ variant = 'default', className, ...props }: MenuItemProps) {
+function MenuItem({
+  variant = 'default',
+  description,
+  className,
+  children,
+  ...props
+}: MenuItemProps) {
+  const descriptionId = useId();
+  const described = description !== undefined;
   return (
     <MenuPrimitive.Item
       data-slot="menu-item"
       data-variant={variant}
+      aria-describedby={described ? descriptionId : undefined}
       className={cn(
         itemClassName,
         variant === 'danger' ? 'text-danger' : 'text-ink',
+        // The icon and the label on the first line, the description under
+        // the label.
+        described && 'grid grid-cols-[auto_1fr] gap-y-0 py-1',
         className,
       )}
       {...props}
-    />
+    >
+      {children}
+      {described && (
+        // Hidden from the item's name; aria-describedby still reads it.
+        <span
+          id={descriptionId}
+          aria-hidden
+          className="col-start-2 text-help text-ink-muted"
+        >
+          {description}
+        </span>
+      )}
+    </MenuPrimitive.Item>
   );
 }
 
@@ -223,13 +253,17 @@ function MenuSeparator({ className, ...props }: MenuSeparatorProps) {
 
 /**
  * DESIGN.md Kbd: the shortcut at the right end of an item, in the `code`
- * type. Keys are not highlighted with colour.
+ * type. Keys are not highlighted with colour. Not shown where the primary
+ * pointer is a finger, as there is no key to press (#163).
  */
 function MenuShortcut({ className, ...props }: ComponentProps<'kbd'>) {
   return (
     <kbd
       data-slot="menu-shortcut"
-      className={cn('ms-auto ps-4 text-code text-ink-subtle', className)}
+      className={cn(
+        'ms-auto ps-4 text-code text-ink-subtle pointer-coarse:hidden',
+        className,
+      )}
       {...props}
     />
   );

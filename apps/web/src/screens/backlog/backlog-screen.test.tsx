@@ -58,6 +58,13 @@ const footerClose = (detail: HTMLElement) =>
   ).getByRole('button', { name: '閉じる' });
 const completedLine = () =>
   list().querySelector<HTMLElement>('[data-slot="completed-line"]');
+/** The text that `aria-describedby` points to. */
+const describedBy = (element: HTMLElement) =>
+  element
+    .getAttribute('aria-describedby')
+    ?.split(' ')
+    .map((id) => document.getElementById(id)?.textContent ?? '')
+    .join(' ');
 
 describe('Backlog', () => {
   it('Capture: adds a Task by its title alone and keeps the field for the next', async () => {
@@ -1048,17 +1055,30 @@ describe('Backlog — the detail of a Task in 今日やる (#94)', () => {
         .getAllByRole('button')
         .map((b) => b.textContent),
     ).toEqual(['開始', '今日は見送る', '今日から外す', '完了にする']);
+    // #163: what 見送る and 外す do, under the buttons, before pressing.
+    expect(
+      describedBy(
+        within(section).getByRole('button', { name: '今日は見送る' }),
+      ),
+    ).toBe('今日は見送る：今日はやらないと決めます');
+    expect(
+      describedBy(
+        within(section).getByRole('button', { name: '今日から外す' }),
+      ),
+    ).toBe('今日から外す：選び直します。見送りに入れません');
     // Not a recurring Task: no スキップ.
     await userEvent.click(
       within(section).getByRole('button', { name: '開始' }),
     );
     expect(selectionOf('task-interview')?.resolution).toBe('started');
     expect(section.textContent).toMatch(
-      /今日やるに入っています（開始 \d\d:\d\d）/,
+      /今日やるに入っています（作業中 · \d\d:\d\d から）/,
     );
     expect(
-      within(section).getByRole('button', { name: '今日はここまで' }),
-    ).toBeTruthy();
+      describedBy(
+        within(section).getByRole('button', { name: '今日はここまで' }),
+      ),
+    ).toBe('今日はここまで：進めた分を残し、明日に続けます');
     expect(within(section).queryByRole('button', { name: '開始' })).toBeNull();
   });
 

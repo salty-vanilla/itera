@@ -88,6 +88,17 @@ const row = (name: string, title: string) => {
   if (found === undefined) throw new Error(`no row ${title} in ${name}`);
   return found;
 };
+/** The text that `aria-describedby` points to. */
+function description(element: HTMLElement) {
+  const ids = element.getAttribute('aria-describedby');
+  return ids === null
+    ? undefined
+    : ids
+        .split(' ')
+        .map((id) => document.getElementById(id)?.textContent ?? '')
+        .join(' ');
+}
+
 async function menu(title: string, item: string) {
   await userEvent.click(screen.getByRole('button', { name: `操作: ${title}` }));
   await userEvent.click(await screen.findByRole('menuitem', { name: item }));
@@ -302,13 +313,20 @@ describe('Today — the daily operations', () => {
     await renderAt('/today?fixture=today-interrupt');
     await menu('顧客インタビューの設計', '開始');
     expect(selectionOf('task-interview')?.resolution).toBe('started');
-    // #101: in ink with its icon, not only a colour.
-    const started = within(row('今日やる', '顧客インタビューの設計'))
-      .getByText(/開始/)
+    // #101: in ink with its icon, not only a colour. #163: 「作業中 · 10:12
+    // から」, the `here` bar and the title in 700.
+    const startedRow = row('今日やる', '顧客インタビューの設計');
+    const started = within(startedRow)
+      .getByText(/^作業中 · \d\d:\d\d から$/)
       .closest('[data-slot="meta-item"]');
     expect(started?.className).toContain('text-ink');
     expect(started?.className).not.toContain('text-ink-muted');
     expect(started?.querySelector('svg')).toBeTruthy();
+    expect(
+      startedRow
+        .querySelector('[data-slot="task-row"]')
+        ?.hasAttribute('data-in-progress'),
+    ).toBe(true);
     await menu('顧客インタビューの設計', '今日はここまで');
     const hours = await screen.findByRole('textbox', { name: /実績時間/ });
     await userEvent.type(hours, '1.5');
@@ -373,8 +391,38 @@ describe('Today — the daily operations', () => {
       .getByRole('heading', { name: '今日はもうやらない' })
       .closest('section');
     expect(section?.textContent).toContain(
-      '見送りは「続けて見送り」に数え、外したものは数えません。',
+      '見送った日が続くと、行に「2回続けて見送り」と出ます。外した日は入りません。',
     );
+  });
+
+  it('puts 開始 and 完了にする first in the `…`, and tells 見送る, スキップ and 外す apart (#163)', async () => {
+    await renderAt('/today?fixture=today-interrupt');
+    await userEvent.click(
+      screen.getByRole('button', { name: '操作: 顧客インタビューの設計' }),
+    );
+    const items = await screen.findAllByRole('menuitem');
+    expect(
+      [
+        '開始',
+        '完了にする',
+        '今日は見送る',
+        '今日から外す',
+        '見積もりを入れる',
+      ].map((name) => items.indexOf(screen.getByRole('menuitem', { name }))),
+    ).toEqual([0, 1, 2, 3, 4]);
+    expect(items).toHaveLength(5);
+    // The line under the label is the item's description, not its name.
+    expect(
+      description(screen.getByRole('menuitem', { name: '今日は見送る' })),
+    ).toBe('今日はやらないと決めます');
+    expect(
+      description(screen.getByRole('menuitem', { name: '今日から外す' })),
+    ).toBe('選び直します。見送りに入れません');
+    expect(
+      description(screen.getByRole('menuitem', { name: '開始' })),
+    ).toBeUndefined();
+    await userEvent.click(screen.getByRole('menuitem', { name: '完了にする' }));
+    expect(selectionOf('task-interview')?.resolution).toBe('done');
   });
 
   it.each([
