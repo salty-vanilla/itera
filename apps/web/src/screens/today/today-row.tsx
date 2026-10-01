@@ -318,7 +318,7 @@ function ItemMetadata({
       {item.occurrence !== undefined && (
         <MetaItem icon={<Repeat aria-hidden />}>
           {occurrenceDate
-            ? `${formatDate(item.occurrence.scheduledDate)} の回`
+            ? `${formatDate(item.occurrence.scheduledDate)} の分`
             : '繰り返し'}
         </MetaItem>
       )}

@@ -173,7 +173,15 @@ function FactsPane({
               label: 'スキップ',
               value: facts.occurrences.skipped.length,
               unit: '回',
-              note: `繰り返しの回：完了 ${facts.occurrences.done.length} · 未処理 ${facts.occurrences.missed.length}`,
+              // Breaks only at 「 · 」, as 計画の合計's note does.
+              note: (
+                <Sentences
+                  items={[
+                    `繰り返し：完了 ${facts.occurrences.done.length}`,
+                    `未完了 ${facts.occurrences.missed.length}`,
+                  ]}
+                />
+              ),
             },
             {
               label: '週の途中の追加',
@@ -341,7 +349,7 @@ function FactsPane({
           className="flex flex-col gap-3 xl:max-w-pane-rows"
         >
           <h2 id="retro-occurrences" className="text-heading text-ink">
-            繰り返しの回
+            繰り返し
           </h2>
           <ul className="flex flex-col border-t border-border-soft">
             {data.occurrences.map(
@@ -360,7 +368,7 @@ function FactsPane({
                             onClick={(anchor) =>
                               onAddActual(
                                 target,
-                                `${title} · ${formatDate(o.scheduledDate)} の回`,
+                                `${title} · ${formatDate(o.scheduledDate)} の分`,
                                 anchor,
                               )
                             }
@@ -534,7 +542,7 @@ function AreaFacts({
           </div>
           {onAssess === undefined ? (
             goal.selfAssessment === undefined && (
-              <p className="text-meta text-ink-muted">自己判定：未判定</p>
+              <p className="text-meta text-ink-muted">自分の評価：まだ</p>
             )
           ) : (
             <RadioGroup<SelfAssessment | null>
@@ -559,7 +567,7 @@ function AreaFacts({
       {area.linked.length > 0 && (
         <TaskFacts
           compact={compact}
-          caption={goal === undefined ? 'タスク' : '目標に紐づくタスク'}
+          caption={goal === undefined ? 'タスク' : '目標に入っているタスク'}
           tasks={area.linked}
           data={data}
           toggle={toggle}
@@ -569,7 +577,9 @@ function AreaFacts({
       {area.unlinked.length > 0 && (
         <TaskFacts
           compact={compact}
-          caption={goal === undefined ? 'タスク' : '目標に紐づかなかったタスク'}
+          caption={
+            goal === undefined ? 'タスク' : '目標に入っていなかったタスク'
+          }
           tasks={area.unlinked}
           data={data}
           toggle={toggle}

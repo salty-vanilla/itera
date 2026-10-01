@@ -164,7 +164,7 @@ function Materials({
       {items.length === 0 ? (
         <p className="text-help text-ink-muted">
           {onPin === undefined
-            ? '「振り返りに使う」の印を付けた事実はありません。'
+            ? '「振り返りに使う」の印を付けた記録はありません。'
             : '「振り返りに使う」を付けた記録が、ここに集まります。'}
         </p>
       ) : (

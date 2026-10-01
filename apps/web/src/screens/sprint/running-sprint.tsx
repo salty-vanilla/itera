@@ -41,7 +41,7 @@ import { useTaskDetailLeave } from '../backlog/use-task-detail-leave';
 import { PastDays } from './past-days';
 
 // A confirmed Sprint (#51, patterns.md Sprint Planning › 確定).
-// Running: Status 「実行中」 (solid) with no stages, the way to Today, and
+// Running: Status 「進行中」 (solid) with no stages, the way to Today, and
 // what may still change — the Goals' text (never removed, F16) and the
 // available hours — with the planned values beside them (invariant 18,
 // MVP 16). The Tasks' values are the plan fixed at confirm (invariant 16)
@@ -101,7 +101,7 @@ function RunningSprint({
         status={
           state === 'active' ? (
             <Tag tone="neutral" icon={Route}>
-              実行中
+              進行中
             </Tag>
           ) : state === 'review' ? (
             <Tag tone="neutral" icon={Rewind}>
@@ -310,10 +310,10 @@ function RunningRow({
     hasGoal &&
       (sprintTask.goalLink === 'linked' ? (
         <MetaItem key="g" icon={<GoalLink aria-hidden />}>
-          目標に紐づく
+          目標に入っている
         </MetaItem>
       ) : (
-        <MetaItem key="g">目標に紐づかない</MetaItem>
+        <MetaItem key="g">目標に入っていない</MetaItem>
       )),
     sprintTask.origin === 'midSprint' && (
       <MetaItem key="m">週の途中で追加</MetaItem>

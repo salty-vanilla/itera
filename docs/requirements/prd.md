@@ -90,7 +90,7 @@ Backlog は `active` な Task を眺めるビューである。Task が Sprint �
 #### Browse
 
 - Area で絞り込める。
-- 少なくとも `すべて / 期限が近い / 期限超過 / 持ち越し / 繰り返し / 領域なし` の切り口を持つ。
+- 少なくとも `すべて / 期限が近い / 期限切れ / 持ち越し / 繰り返し / 領域なし` の絞り込みを持つ。
 - 一覧には情報が存在するものだけ表示し、空欄を `—` で埋めない。
 - 既に現在 Sprint に入っている Task は `今週` と分かる。
 - 優先度だけを根拠に既定順序を決めない。
@@ -121,7 +121,7 @@ Area（領域）は本人が作る。Backlog の Area の絞り込みと、Task 
 - 本人が確定した点の値を **Estimate** とする。
 - 製品が出す幅付き候補を **Estimate Suggestion** とし、本人の Estimate を自動で上書きしない。
 - Suggestion の下限 / 中央 / 上限を本人の Estimate として**採用**できる。値を直してから採用する（**編集して採用**）こともでき、その Estimate は元の提案を覚えておく。
-- Suggestion には必要に応じて根拠と不確実な点を表示する。
+- Suggestion には必要に応じて根拠とわからない点を表示する。
 - Estimate がなくても Task は正常であり、Planning で必要になった時点で補える。
 
 #### Sprint / Today との接続
@@ -148,7 +148,7 @@ Planning は **ひとつの workspace が Pick → Shape → Check と自然に�
 - Area ごとに Goal と選んだ Task を同時に見ながら編集する。
 - Goal は「今週どんな状態にしたいか」を表す自然文とする。
 - 全 Area に Goal は必要ない。
-- Task は `Goal に紐づく / 紐づかない` を選べる。
+- Task は `目標に入っている / 入っていない` を選べる。
 - Chore・定常 Task・週の途中の追加など Goal に紐づかない Task も正常であり、時間合計に含める。
 - Task を見て Goal を書き、Goal を書いた後に Task を増減できる。
 - AI による Goal 文案は小さな補助として提供できるが、自動確定しない。
@@ -241,15 +241,15 @@ Retro は反省文や成績表ではなく、**今週の事実から次の Sprin
 
 #### 事実を見る
 
-Sprint の最終日から本人が Retro を始められ、終了日を過ぎるとシステムが Retro の状態にする。繰り返し Task は持ち越しにせず、回ごとの完了 / スキップ / 未処理で見せる。Retro 中（完了前）も実績時間を後から足せる。
+Sprint の最終日から本人が Retro を始められ、終了日を過ぎるとシステムが Retro の状態にする。繰り返し Task は持ち越しにせず、1 回ずつの完了 / スキップ / 未完了で見せる。Retro 中（完了前）も実績時間を後から足せる。
 
 Area ごとに以下を確認できる。
 
 - Sprint Goal
-- Goal の自己判定: `できた / 一部できた / できなかった / 判断しない`
+- Goal の自己判定: `できた / 一部できた / できなかった / 決めない`
 - 完了・持ち越し
 - Goal に紐づかなかった Task
-- 繰り返し Occurrence の完了 / スキップ / 未処理
+- 繰り返し Occurrence の完了 / スキップ / 未完了
 - 週の途中の追加
 - Today での見送り / 今日はここまで
 - Interrupt
@@ -322,7 +322,7 @@ Planning で明示的に外した繰り返し Occurrence は通常の Retro 事�
 
 MVP の第一候補は Task 単位の Estimate 支援。
 
-- Estimate Suggestion は幅、根拠、不確実な点を提示する。
+- Estimate Suggestion は幅、根拠、わからない点を提示する。
 - 曖昧な Task には具体化や分解を提案できる。
 - Goal 文案や Retro Improvement 文案は小さな補助として追加できる。
 - AI の Suggestion は本人の値を自動で上書きしない。
@@ -441,7 +441,7 @@ Actual Time が入力された Task だけを対象に、以下を比較する�
 - Domain Model の厳密さを UI の複雑さとして露出させない。内部では状態を分けても、本人に毎回分類を要求しない。
 - Estimate Suggestion と Planning Value が混同されると、本人の見積もりを AI が勝手に変えたように見える。`採用` と `適用` の違いを守る。
 - Planning Criterion を増やしすぎると Rule Engine 化する。MVP は Estimate の幅の扱いだけに限定する。
-- Recurrence は Rule / Occurrence / Sprint 参加を分けるが、利用者には「今週の回」として自然に見せる。
+- Recurrence は Rule / Occurrence / Sprint 参加を分けるが、利用者には「今週の分」として自然に見せる。
 - 履歴を残す目的は説明可能性と Retro であり、監査ログをユーザーへ常時見せることではない。
 - Agent Native の見せ場を増やしすぎず、通常の ToDo と週次サイクルが先に成立することを優先する。
 - 機微な仕事・私生活の情報を扱うため、Agent に渡すデータ、保存・削除・エクスポート方針は Backend 実装前に確定する。

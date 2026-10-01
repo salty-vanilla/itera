@@ -65,20 +65,20 @@ export const Areas: Story = {
 
 const views = [
   ['期限が近い', 5],
-  ['期限超過', 0],
+  ['期限切れ', 0],
   ['持ち越し', 3],
   ['繰り返し', 4],
 ] as const;
 
 /**
- * 路線記号のない Filter。Backlog の切り口（docs/design/patterns.md の Browse）を
+ * 路線記号のない Filter。Backlog の絞り込み（docs/design/patterns.md の Browse）を
  * 重ねて絞り込む例。Filter はトグルなので、1 つだけを選ぶ排他の切り替えには使わない。
  */
 export const WithoutArea: Story = {
   render: function WithoutAreaDemo() {
     const [selected, setSelected] = useState<string[]>(['期限が近い']);
     return (
-      <FilterGroup label="切り口で絞り込む">
+      <FilterGroup label="絞り込み">
         {views.map(([name, count]) => (
           <Filter
             key={name}

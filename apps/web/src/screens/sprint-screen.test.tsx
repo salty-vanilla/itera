@@ -53,7 +53,7 @@ describe('Sprint — by number (#90)', () => {
 
     await renderAt('/sprint?fixture=today-daytime&sprint=2');
     expect(title()).toBe('Sprint 2');
-    expect(status()).toBe('実行中');
+    expect(status()).toBe('進行中');
     cleanup();
 
     await renderAt('/sprint?fixture=today-daytime&sprint=3');
@@ -71,7 +71,7 @@ describe('Sprint — by number (#90)', () => {
     async (value) => {
       await renderAt(`/sprint?fixture=today-daytime&sprint=${value}`);
       expect(title()).toBe('Sprint 2');
-      expect(status()).toBe('実行中');
+      expect(status()).toBe('進行中');
     },
   );
 
@@ -171,7 +171,7 @@ describe('Sprint — the next week (#90)', () => {
     );
     await userEvent.click(nav('Sprint'));
     await waitFor(() => expect(title()).toBe('Sprint 2'));
-    expect(status()).toBe('実行中');
+    expect(status()).toBe('進行中');
     expect(router.state.location.search).toEqual({ fixture: 'today-daytime' });
 
     await userEvent.click(step('次の Sprint（Sprint 3）'));
@@ -220,7 +220,7 @@ describe('Sprint — the next week (#90)', () => {
     expect(
       await screen.findByText('「歯医者の予約」を来週に入れました'),
     ).toBeTruthy();
-    expect(within(backlog).getByText('来週発生する繰り返し')).toBeTruthy();
+    expect(within(backlog).getByText('来週の繰り返し')).toBeTruthy();
     // Its confirm waits for this week's Retro, from its last day (F21).
     expect(
       screen.getByText(/Sprint 2 の振り返りは 10\/4 \(日\) から始められます。/),

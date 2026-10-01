@@ -185,7 +185,7 @@ function NoActiveSprint() {
             </Link>
           </>
         ) : (
-          '実行中の Sprint はありません。'
+          '進行中の Sprint はありません。'
         )}
       </p>
     </DayFrame>
@@ -453,7 +453,7 @@ function TodayView({ data }: { data: TodayData }) {
       <DayColumns
         side={
           <aside
-            aria-label="今週の目標の要約"
+            aria-label="今週の目標のまとめ"
             className="hidden w-pane-side shrink-0 pt-8 wide:block"
           >
             <div className="sticky top-8">{goals('today-goals-side')}</div>

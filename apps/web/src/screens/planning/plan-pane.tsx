@@ -187,7 +187,7 @@ function pickGuide(week: string, hasRecurring: boolean): string {
   return hasRecurring
     ? weekText(
         week,
-        '発生する繰り返しは最初から入っています。外すと今日の画面にも出ません。',
+        'の繰り返しは最初から入っています。外すと今日の画面にも出ません。',
       ) + choosing
     : choosing;
 }
@@ -291,10 +291,10 @@ function PlannedRow({
     showLink &&
       (linked ? (
         <MetaItem key="g" icon={<GoalLink aria-hidden />}>
-          目標に紐づく
+          目標に入っている
         </MetaItem>
       ) : (
-        <MetaItem key="g">目標に紐づかない</MetaItem>
+        <MetaItem key="g">目標に入っていない</MetaItem>
       )),
   ].filter(Boolean);
 
@@ -338,7 +338,7 @@ function PlannedRow({
         }
       >
         <Target aria-hidden />
-        {linked ? '目標に紐づけない' : '目標に紐づける'}
+        {linked ? '目標から外す' : '目標に入れる'}
       </MenuItem>
     ),
     // A completed or archived Task has no detail to open (as in Today).

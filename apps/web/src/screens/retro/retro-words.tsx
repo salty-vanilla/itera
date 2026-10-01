@@ -23,26 +23,34 @@ import { Tag } from '@/components/ui/tag';
 /**
  * Goal の自己判定 (owner decision in #42): the circle's fill tells them
  * apart with the word, never color. できなかった is not red and has no ×.
+ * The Tag says what was chosen, so 決めない reads 決めなかった there (#205).
  */
 export const ASSESSMENTS: readonly {
   value: SelfAssessment;
   label: string;
+  /** The Tag's word, when it differs from the choice's. */
+  tag?: string;
   icon: LucideIcon;
 }[] = [
   { value: 'achieved', label: 'できた', icon: CircleCheck },
   { value: 'partly', label: '一部できた', icon: Contrast },
   { value: 'notAchieved', label: 'できなかった', icon: Circle },
-  { value: 'notJudged', label: '判断しない', icon: CircleMinus },
+  {
+    value: 'notJudged',
+    label: '決めない',
+    tag: '決めなかった',
+    icon: CircleMinus,
+  },
 ];
 
 export function AssessmentTag({ value }: { value: SelfAssessment }) {
   const found = ASSESSMENTS.find((a) => a.value === value);
   if (found === undefined) return null;
   return value === 'achieved' ? (
-    <Tag tone="done">{found.label}</Tag>
+    <Tag tone="done">{found.tag ?? found.label}</Tag>
   ) : (
     <Tag tone="neutral" icon={found.icon}>
-      {found.label}
+      {found.tag ?? found.label}
     </Tag>
   );
 }
@@ -61,7 +69,7 @@ export const OCCURRENCE_WORDS: Readonly<
 > = {
   done: '完了',
   skipped: 'スキップ',
-  missed: '未処理',
+  missed: '未完了',
 };
 
 /** An occurrence's state in words; Retro lists only these three. */

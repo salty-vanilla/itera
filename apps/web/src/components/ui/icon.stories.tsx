@@ -43,7 +43,7 @@ export const Sizes: Story = {
 const meanings: [keyof typeof semanticIcons, string, string?][] = [
   ['deadline', '期限'],
   ['deadlineSoon', '期限が近い'],
-  ['overdue', '期限超過', 'text-danger'],
+  ['overdue', '期限切れ', 'text-danger'],
   ['carriedOver', '持ち越し'],
   ['recurrence', '繰り返し'],
   ['goalLink', '目標への紐づけ'],

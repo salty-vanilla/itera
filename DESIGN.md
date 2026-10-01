@@ -455,7 +455,7 @@ Area（領域）はユーザーが作る。駅の路線記号のように、色�
 - 大きい画面（`bp-xl` 1920px 以上）で変えてよいのは、ペインの広さと、その中に並ぶ数だけ。どのペインに何があるかは、画面の大きさで変えない。中央のペインは固定幅にせず、左右のペインを除いた幅を使い、上限は中身の種類で決める。
   - ブロック（Planning の Area）：幅に応じて 1〜3 列に並べる（1 列は `pane-sprint` まで）。
   - 表（Retro の事実を見る）：幅いっぱい。
-  - 1 行 1 Task の一覧（Backlog、Retro の繰り返しの回）：行は最大 `pane-rows` 1280px。
+  - 1 行 1 Task の一覧（Backlog、Retro の繰り返し）：行は最大 `pane-rows` 1280px。
   - 文章（Goal、次に試すこと、振り返り）：`measure-read` のまま。
 
 ### 寸法
@@ -474,7 +474,7 @@ Area（領域）はユーザーが作る。駅の路線記号のように、色�
 | `pane-list-xl` / `pane-list-slim-xl` | 480 / 320px | 1920px 以上での `pane-list` / `pane-list-slim`（中央のペインに余りがあるため広げる） |
 | `pane-sprint` | 680px | Planning の Sprint ペインの最大幅 |
 | `pane-today` | 720px | Today の 1 カラムの最大幅 |
-| `pane-rows` | 1280px | 1 行 1 Task の一覧（Backlog、Retro の繰り返しの回）の行の最大幅 |
+| `pane-rows` | 1280px | 1 行 1 Task の一覧（Backlog、Retro の繰り返し）の行の最大幅 |
 | `drawer` | 400px | 右 Drawer |
 | `popover` | 320px | Popover の幅 |
 | `toast` | 480px | Toast の幅（medium 以上。開いた Drawer に重ならない幅まで。compact は幅 100% − 32px） |
@@ -624,7 +624,7 @@ compact の原則：
 
 **Tag** — Status（Sprint の状態、Goal の自己判定）と本人のラベルだけに使う小さな Pill。
 - 20px、`rounded.full`、Status はアイコン必須、語は 1〜2 語（本人のラベルは 12em で省略し、全文を title で読める）。Variant：neutral / done（墨の文字＋`circle-check`）/ warning（`triangle-alert`）/ danger（`circle-alert`）/ draft（破線＋`circle-dashed`。「計画中 · 未確定」）。neutral の Status は意味に合うアイコンを画面側で選ぶ（同期中・次の Sprint で試すは `info`）。アイコンのない neutral は本人のラベルで、`border` の輪郭だけにする。
-- tone の使い分け：neutral = 本人のラベル・一部できた・できなかった・判断しない・同期中・次の Sprint で試す、done = できた・保存済み、warning = 超過の可能性、danger = 同期エラーなど保存・同期の失敗、draft = 未確定。期限超過は Tag にせず、Task Metadata の文字（`circle-alert`＋「2日超過」）で示す。Goal の自己判定は円の形と語で区別し、色で区別しない（Issue #42）：できた `circle-check`（done）/ 一部できた `contrast`（半分を描いた円、neutral）/ できなかった `circle`（空の円、neutral）/ 判断しない `circle-minus`（neutral）。できなかったに赤や × を使わない。
+- tone の使い分け：neutral = 本人のラベル・一部できた・できなかった・決めなかった・同期中・次の Sprint で試す、done = できた・保存済み、warning = 超過の可能性、danger = 同期エラーなど保存・同期の失敗、draft = 未確定。期限超過は Tag にせず、Task Metadata の文字（`circle-alert`＋「2日過ぎ」）で示す。Goal の自己判定は円の形と語で区別し、色で区別しない（Issue #42）：できた `circle-check`（done）/ 一部できた `contrast`（半分を描いた円、neutral）/ できなかった `circle`（空の円、neutral）/ 決めなかった `circle-minus`（neutral）。できなかったに赤や × を使わない。
 - 期限・Estimate・持ち越し・繰り返し・Area を Tag にしない（→ Task Metadata の文字）。1 行に 3 つ以上並べない。
 
 **Divider** — Card の代わりにグループを区切る、構造の主役。default（`border`）/ soft（`border-soft`、リスト内）/ rule（`ink` 1px、考える領域の上端、1 画面に 1〜2 本）/ label（ラベル付き。グループ見出し）。× 2px 以上の太い罫、二重線、点線。
@@ -666,7 +666,7 @@ compact の原則：
 - 前後の移動：タイトルの左右に、前の Sprint・次の Sprint へ移る矢印（`chevron-left` / `chevron-right`、IconButton と同じ Quiet の見た目のリンク、Tooltip と読み上げは「前の Sprint（Sprint 13）」）。端で行き先がなければ、矢印を無効の形（`ink-disabled`）で同じ位置に残す。
 - 呼び名：今と比べた呼び名（「先週」「今週」「来週」）があれば、期間の前に `ink` の太字で添える（「来週 · 10/5 (月) – 10/11 (日)」）。呼び名の規則は `docs/design/content.md`「週の呼び名」。
 - Planning：選ぶ / 整える / 確かめる（PRD §5.B の Pick / Shape / Check）
-- 実行中：Status「実行中」、段階なし
+- 実行中：Status「進行中」、段階なし
 - 振り返り中・完了の Sprint の画面：Status「振り返り中」/「完了」（`done`）、段階なし、確定したときの計画と結果を読み取り専用で出す
 - 次の週（計画を始める前）：Status なし、操作は「Sprint N の計画を始める」
 - Retro：事実を見る / 振り返る / 引き継ぐ（PRD §5.D）。完了した Retro も同じ段階を読み取り専用で出し、「現在」は出さない
@@ -674,14 +674,14 @@ compact の原則：
 ### タスク
 
 **Task Row** — タスク 1 件の行。Backlog・Sprint・Today で同じ構造。
-- 左から：ドラッグハンドル（hover / focus 時のみ、compact は非表示）、コントロール（□ 選ぶ / ○ 完了 / なし。Backlog の繰り返しの Task は、回ごとに完了するので ○ の位置に `repeat` の印を置く。押せず、読み上げは「完了は回ごと」。Issue #171）、タイトル（`task`。compact は 2 行まで、medium 以上は 1 行で省略）、Task Metadata、Estimate（右端 `num-s`）、行の操作 `…`（Backlog は常時。Backlog 以外の行は hover / focus 時、compact は常時。Backlog は「今日へ」を探す行なので hover の裏に置かない。Issue #164）。
+- 左から：ドラッグハンドル（hover / focus 時のみ、compact は非表示）、コントロール（□ 選ぶ / ○ 完了 / なし。Backlog の繰り返しの Task は、回ごとに完了するので ○ の位置に `repeat` の印を置く。押せず、読み上げは「1回ずつ完了」。Issue #171）、タイトル（`task`。compact は 2 行まで、medium 以上は 1 行で省略）、Task Metadata、Estimate（右端 `num-s`）、行の操作 `…`（Backlog は常時。Backlog 以外の行は hover / focus 時、compact は常時。Backlog は「今日へ」を探す行なので hover の裏に置かない。Issue #164）。
 - Planning の Backlog ペイン（選ぶ・整える・確かめる）の行は、列が細いので、medium 以上でもタイトルを 1 行で省略しない（Issue #158）。選ぶは compact と同じ 2 行まで、整える・確かめるのタイトルだけの細い列は全文を折り返して、切れたタイトルを作らない。Estimate（見積もりの提案を含む）はタイトルの右ではなく、タイトルの下の Task Metadata と同じ行の右端に置き、入らなければ次の行の右端に回す。タイトルの幅を Estimate に削らせない。
 - layout stacked（既定、約 52px）/ inline（40px、`row-task` は最小高さ）。区切りは `border-soft`、行間 0、角丸・影なし、Card で囲まない。
 - 状態：Selected（`here-subtle`＋チェック）、In progress（Today で開始した行。先頭の端に `here` の 4px の縦線＋タイトル 700＋メタデータの「作業中 · 10:12 から」。ナビの現在地と同じ印で「今やっているもの」を示す。Issue #163）、Done（○ を `primary` で塗り、タイトル `ink-subtle`＋取り消し線）、Skipped（○ に「−」＋「スキップ」）、Dragging（`surface`＋`elevation-drag`＋`border`）、Loading（Estimate が「見積中」）、Error（行内に「保存できませんでした · 再試行」）、Disabled（アーカイブ済み、`ink-disabled`）。
 - Today の「今日やる」の行は、日次の操作（開始 / 完了 / 今日はここまで / 今日は見送る / 今日の予定から外す / 繰り返しのスキップ）を持つ。強い操作を常時並べすぎず、完了（○）以外は行の操作 `…` と詳細から出す（PRD §12）。例外として、見送り・外した・スキップの行は `…` の位置に「取り消す」（`undo-2` の IconButton、`…` と同じ大きさ）をどの幅でも常に出す（誤操作から戻る手段を hover の裏に置かない。ドメインモデル F19・F37、Issue #101）。「今週の残り」「昨日の続き」の行は □ ではなく、行の先頭に常に見える「今日へ」のボタンで選ぶ（□ は今週へ選ぶ意味なので使わない）。
 - × メタ情報を Badge / Pill にする、□ と ○ を入れ替える、Goal に紐づかない行を薄くする。
 
-**Task Metadata** — タスクの属性を Badge ではなく文字とアイコンで 1 行に並べる（`meta` 12px、要素間 `spacing.3`）。順に Area Indicator（グループ化していない一覧だけ）、Deadline、優先度（高と低だけ「優先度 高」「優先度 低」と語で出す。通常は値がない扱いで出さない。色・アイコンで強調せず、並びも変えない。Issue #97）、持ち越し、繰り返し、サブタスク（Backlog の行だけ。アイコンなしの注記。「サブタスク 2件 · （参考）1h」。計画に使う時間がサブタスクの合計のときは「サブタスクの合計」。Issue #171）、Goal（`target`＋Goal 文を省略。領域ごとにまとめ、見出しに Goal 文がある一覧では、Goal 文の代わりに「目標に紐づく」、紐づかない Task には同じ調子で「目標に紐づかない」と出す。Issue #159）、注記（`ink-subtle`）。値がない属性は出さない（「—」で埋めない）。グループ見出しと同じ情報を行に重ねない。
+**Task Metadata** — タスクの属性を Badge ではなく文字とアイコンで 1 行に並べる（`meta` 12px、要素間 `spacing.3`）。順に Area Indicator（グループ化していない一覧だけ）、Deadline、優先度（高と低だけ「優先度 高」「優先度 低」と語で出す。通常は値がない扱いで出さない。色・アイコンで強調せず、並びも変えない。Issue #97）、持ち越し、繰り返し、サブタスク（Backlog の行だけ。アイコンなしの注記。「サブタスク 2件 · （参考）1h」。計画に使う時間がサブタスクの合計のときは「サブタスクの合計」。Issue #171）、Goal（`target`＋Goal 文を省略。領域ごとにまとめ、見出しに Goal 文がある一覧では、Goal 文の代わりに「目標に入っている」、目標に入っていない Task には同じ調子で「目標に入っていない」と出す。Issue #159）、注記（`ink-subtle`）。値がない属性は出さない（「—」で埋めない）。グループ見出しと同じ情報を行に重ねない。
 
 **Task Quick Add** — 画面を中断せずにタイトルだけでタスクを追加する入力。`plus` の接頭アイコン、視覚ラベルなし（`aria-label` あり）。`aria-label` とプレースホルダーには同じ語で入り先を書く（Backlog「Backlog にタスクを追加」、Today「今日やるタスクを追加」、Planning「今週のタスクを追加」。週の語は週の呼び名に従う）。任意で Area の Select（既定は直前に使った Area）、Secondary の「追加」ボタン（すべての画面・すべての幅に置く。compact では 44px。空のときに押しても何も起きない）、ヒント（Enter で追加 / Esc で取り消し。compact には出さない）。ボタンも Enter も同じ追加で、追加後も入力にフォーカスを残す。768px 以上では、入力・Area の Select・ボタンを 1 行に並べる。compact と Planning の Backlog の枠（細いので）では、入力を 1 行目に広げ、2 行目に Select とボタンを置く（プレースホルダーが切れないように）。Backlog 上部、Planning、Today の下部（幅に関係なく下端に固定（sticky）。compact はタブバーの上）で同じ形。モーダルで追加させない。
 
@@ -702,9 +702,9 @@ compact の原則：
 
 **EstimateRange** — 提案の幅を 0〜8h の目盛り上の帯で見せる。数値（「2–4h」「中央 3h」）、1h ごとの `border` の刻み、提案の帯（破線＋`canvas-subtle`）、中央値のマーカー（`ink` 2px）、目盛りの数値（0 / 4h / 8h）。同じ値を必ず数値でも示す。行内では使わない（→ Estimate）。確率・confidence を % で出さない。
 
-**Deadline** — 日付＋曜日＋相対表現。upcoming（`calendar`＋「10/5 (月)」`ink-muted`）/ soon（2日以内）・today（`clock`＋「あと2日」「今日まで」`warning`）/ overdue（`circle-alert`＋「2日超過」`danger`）。色だけで超過を示さない。
+**Deadline** — 日付＋曜日＋相対表現。upcoming（`calendar`＋「10/5 (月)」`ink-muted`）/ soon（2日以内）・today（`clock`＋「あと2日」「今日まで」`warning`）/ overdue（`circle-alert`＋「2日過ぎ」`danger`）。色だけで超過を示さない。
 
-**持ち越し（CarryOverIndicator）** — `corner-down-right`＋「持ち越し 1回（Sprint 13から）」`ink-muted`。3 回以上は `warning`＋「持ち越し 3回 · 分割を検討」。`danger` と「遅れ」「失敗」の語を使わない。
+**持ち越し（CarryOverIndicator）** — `corner-down-right`＋「持ち越し 1回（Sprint 13から）」`ink-muted`。3 回以上は `warning`＋「持ち越し 3回 · 小さく分けてみる」。`danger` と「遅れ」「失敗」の語を使わない。
 
 **繰り返し（RecurringIndicator）** — `repeat`＋ルール（「毎週 土」「毎週 月・木」「平日」）＋任意で今週の回（「今週 2/5」）。ルールと回を区別する（ルールを変えても確定済みの Sprint の回は変わらない）。Backlog の行では `repeat` を行の先頭（○ の位置）に置き、ルールの語の前には重ねない（Issue #171）。
 
@@ -714,7 +714,7 @@ compact の原則：
 
 **Goal** — Sprint × Area の「今週どんな状態にしたいか」。
 - 上端の罫（`border`）、見出し（Area Indicator heading＋タスク数と時間＋自己判定の Tag）、Goal 文（`goal`、`measure-read`）とその直下の編集（Quiet sm、文の左端に揃える。何を変えるかが分かるように、見出しではなく文の近くに置く）、その Area の選んだタスク。
-- set（確定）/ empty（「+ 目標を書く」だけ。「目標は任意です」のような案内は、計画中も確定後も置かない、Issue #155・#208。Goal も Task もない Area は、名前と「+ 目標を書く」を 1 行にする。Issue #161）/ editing（`body-l` の Textarea＋保存 / キャンセル）/ 自己判定済み（できた = done の Tag、一部できた・できなかった・判断しない = neutral）。
+- set（確定）/ empty（「+ 目標を書く」だけ。「目標は任意です」のような案内は、計画中も確定後も置かない、Issue #155・#208。Goal も Task もない Area は、名前と「+ 目標を書く」を 1 行にする。Issue #161）/ editing（`body-l` の Textarea＋保存 / キャンセル）/ 自己判定済み（できた = done の Tag、一部できた・できなかった・決めなかった = neutral）。
 - Goal の間は `spacing.8`。× Card で囲む、Goal がない Area を警告色で示す、Goal 文を太字・大見出しにする、全体 Goal を作る。
 
 **Capacity Indicator** — 使える時間（Sprint.availableHours）と計画の合計の差を、幅のまま示す。
@@ -738,9 +738,9 @@ compact の原則：
 **Agent 提案（AgentSuggestion）** — Estimate の提案、Goal の文案、計画案の入口。
 - 破線の枠（`proposal-border`、`rounded.md`、`surface`）、ヘッダー（`kicker` で何の提案か（「見積もりの提案」）＋出所と時刻）、対象、提案の値（EstimateRange / suggestion の Estimate / `body` の文）、根拠、操作。
 - Estimate の提案は、下限・中央・上限のどれかを本人の Estimate として **採用** できる（PRD §5.A）。採用は Secondary、編集して採用・却下は Quiet。
-- 状態：pending / loading（「過去の類似タスクを調べています…」＋取り消す）/ insufficient（幅を広く、不確実な点に理由）/ error（「提案を作れませんでした。手入力でそのまま計画を続けられます。」＋もう一度試す）/ 採用・編集・却下の後（実線の `canvas-subtle` の 1 行＋元に戻す）。
+- 状態：pending / loading（「過去の類似タスクを調べています…」＋取り消す）/ insufficient（幅を広く、わからない点に理由）/ error（「提案を作れませんでした。手入力でそのまま計画を続けられます。」＋もう一度試す）/ 採用・編集・却下の後（実線の `canvas-subtle` の 1 行＋元に戻す）。
 
-**根拠（AgentRationale）** — 「根拠 / 不確実な点 / 参照していない情報」の 3 行。columns（既定）/ stacked（狭い場所）/ collapsible（「根拠を見る」）。根拠がないときは「根拠となるデータがありません」。× confidence を % で出す、「高精度」と書く。
+**根拠（AgentRationale）** — 「根拠 / わからない点 / 参照していない情報」の 3 行。columns（既定）/ stacked（狭い場所）/ collapsible（「根拠を見る」）。根拠がないときは「根拠となるデータがありません」。× confidence を % で出す、「高精度」と書く。
 
 **計画案の差分（ProposalDiff）** — Agent の計画案と今の計画の差を、行ごとに選んで反映する。要約（追加 / 除外 / 変更の件数、計画の合計の前後、使える時間）、行（□ 反映する＋記号と語「＋追加 / −除外 / →変更」＋タスク名＋Area と理由＋値）、フッター（「選んだ N件を計画に反映」Secondary / すべて却下 /「反映しても Sprint は確定されません」）。除外と変更前の値は取り消し線。desktop は右 Drawer、compact は全画面。× 追加を緑・除外を赤に塗る。
 

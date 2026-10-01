@@ -52,7 +52,7 @@ function CheckSummary({
     >
       <div className="flex flex-col gap-3">
         <h2 id={`${ids}-heading`} className="text-label text-ink-muted">
-          要約
+          まとめ
         </h2>
         {/* The one place in 確かめる that reads out the state when it
             changes: the right pane shows no numbers here (#165). */}
@@ -69,8 +69,12 @@ function CheckSummary({
           <dt className="text-ink-muted">タスク</dt>
           <dd className="text-ink">
             {summary.taskCount}件
-            {summary.unlinked > 0 &&
-              `（うち目標に紐づかない ${summary.unlinked}件）`}
+            {summary.unlinked > 0 && (
+              // Kept whole: the count stays with its words.
+              <span className="whitespace-nowrap">
+                （うち目標に入っていない {summary.unlinked}件）
+              </span>
+            )}
           </dd>
         </dl>
         {/* Under the numbers, as in the Capacity: the first screen tells it. */}

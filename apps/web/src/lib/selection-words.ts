@@ -7,9 +7,9 @@ import type { DailySelection } from '@itera/domain';
 export const SELECTION_WORDS: Readonly<
   Record<DailySelection['resolution'], string>
 > = {
-  selected: '未処理',
-  started: '未処理',
-  unresolved: '未処理',
+  selected: '未完了',
+  started: '未完了',
+  unresolved: '未完了',
   done: '完了',
   skipped: 'スキップ',
   paused: '今日はここまで',

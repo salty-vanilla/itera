@@ -25,7 +25,7 @@ v0.2 Final は v0.1 の骨格（恒久的な **Task** と、「この Sprint で
 | 5 | 確定後の基準 OFF は扱わない | CriterionUse から disabledAt を削除 | Retro：「途中で使わなくなった」表示を削除 |
 | 6 | 確定時に適用しなかった Sprint も Retro で決める | Active な基準があれば必ず CriterionUse を作り、retroDecision を必須に | Retro：未適用でも決定欄を出す |
 | 7 | 週の途中の追加にも基準を当てる | 追加時点で planSnapshot を作る。基準は確定時に適用したときだけ当てる。容量警告は出さない | Today / Backlog：超過表示なし |
-| 8 | 週の途中の追加は Goal に自動で紐付けない | role を goalLink（linked / unlinked）に変更。追加は unlinked | 表記「Goal に紐づく / 紐づかない」 |
+| 8 | 週の途中の追加は Goal に自動で紐付けない | role を goalLink（linked / unlinked）に変更。追加は unlinked | 表記「目標に入っている / 入っていない」（Issue #205） |
 | 9 | 「今日は見送る」と「今日の予定から外す」を分ける | DailySelection = Deferred / Removed。Removed は見送りに数えない | Today：操作を 2 つに |
 | 10 | Backlog からの完了を Sprint にも反映 | SprintTask = Done、当日の DailySelection（Done）を作る | Today：「済んだもの」に出る |
 | 11 | 持ち越しは自動で次に入れない | 次の Sprint の候補に出すだけ。選ばれたら carriedFrom | なし（v0.1 のまま） |
@@ -55,7 +55,7 @@ F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F
 | F12 | 毎週の繰り返しは曜日を複数指定できる | RecurrenceRule の版の曜日は 1 つ以上（例：毎週 月・木）。その Sprint で発生する回は指定した曜日の数（1〜7 回） | Backlog・Planning：「毎週 月・木」のように曜日を並べる |
 | F13 | Sprint から外した Task は同じ Sprint に戻せる | SprintTask に Removed → Planned（Sprint に戻す）を足す。同じ SprintTask を戻すので「同じ Sprint に 1 件まで」（不変条件 14）は保たれ、origin と planSnapshot は変わらない | 確定後に外した Task を元に戻せる |
 | F14 | 繰り返しの SprintTask を外すと、残りの回は外した回になる | Sprint 中に Removed にすると、その SprintTask の Pending の回を Excluded にする（完了・スキップ済みの回はそのまま）。Today に出ず、Retro の事実（未処理）にも出ない（F2）。F13 で戻すと Pending に戻る | なし |
-| F15 | Planning 中に作った Rule は、その draft の週にも回を作る | まだ確定していない次の Sprint が Planning 中なら、Rule を作ったときにその期間の回を生成し、既定で Sprint に含める（F7 と同じ考え方）。その draft で同じ Task を単発として選んでいたら、繰り返しの SprintTask に置き換える（持ち越しのつながりと Goal への紐づけは引き継がない） | Planning：作った繰り返しがすぐに「今週発生する繰り返し」に出る |
+| F15 | Planning 中に作った Rule は、その draft の週にも回を作る | まだ確定していない次の Sprint が Planning 中なら、Rule を作ったときにその期間の回を生成し、既定で Sprint に含める（F7 と同じ考え方）。その draft で同じ Task を単発として選んでいたら、繰り返しの SprintTask に置き換える（持ち越しのつながりと Goal への紐づけは引き継がない） | Planning：作った繰り返しがすぐに「今週の繰り返し」に出る |
 | F16 | 確定後の Goal は、文を変えることと新しく書くことができ、消すことはできない | 確定後に新しく書いた Goal は plannedText を持たない（計画時にはなかった）。確定後は Goal を消さない | Retro：確定後に書いた Goal は「確定したときにはなかった」として差分に出る |
 | F17 | 「今日はここまで」「見送り」「外す」にした選択も、その日のうちなら完了にできる | DailySelection に Paused / Deferred / Removed → Done（同じ日のうち）を足す。Today でも Backlog からの完了でも、その日の選択を Done にする（2 件目は作らない。不変条件 21・27）。見送りだった選択が Done になると、連続見送りはそこで途切れる（見送った事実は Activity に残る）。同じ日に選び直す（2 件目の選択を作る）ことはできない（見送り・外すの取り消しは F37）。この完了を取り消すと、元の閉じた状態（見送りなど）に戻る | Today：閉じた行にも「完了」を出せる。Backlog の「完了にする」がその日も通る |
 | F18 | 繰り返しの回は、同じ Sprint のほかの日にも「今日へ」選べる | 予定日と違う日の DailySelection を作れる（前倒し・後ろ倒し）。前倒しで済ませた回は予定日に Done なので、当日の繰り返しとして Today に出ない | Today：今週の残りの繰り返しから選べる |
@@ -75,7 +75,7 @@ F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F
 | F32 | 「今週の完了」は、繰り返しを回で数える | 派生（`weekProgress`）。繰り返しでない Task は 1 件（今週から外したものと持ち越しは数えない）、繰り返しは今週の回を 1 件ずつ数える（Planning で外した回とスキップした回は数えない。Missed は数える）。完了は Done の Task と Done の回。保存しない。点数にしない | Today：上部の Progress「今週の完了 N / M件」。実行中の Sprint の画面：Sprint Header の下に同じ Progress（Sprint の画面は実行中の Sprint を開いたときだけ） |
 | F33 | 過去の日の完了・スキップは、Sprint 中なら取り消せる。取り消した日は未処理になる（F17・F29 の場合を除く） | 本人が完了の取り消し（Done → Selected、F17 で閉じていた選択は元の閉じた状態）かスキップの取り消し（Skipped → Selected、F19）をし、同じ操作の中でシステムが、過ぎた日の開いた選択を Unresolved にする（不変条件 24）。Backlog からの完了で作った選択は、F29 と同じく記録ごと消す。Task は Active・SprintTask は Planned に、回は Pending に戻る。Sprint が Review に入った後は取り消せない。取り消しと Unresolved は Activity に残る | Sprint（実行中）：「日ごとの記録」に昨日までの完了・スキップと「取り消す」 |
 | F34 | Sprint の開始日より前でも、今週の Task は Backlog から完了にできる | 確定済みで開始日前の Sprint にある Task を Backlog で完了にすると、Task は Completed、SprintTask は Done になる。選ぶ日がまだないので DailySelection は作らない（不変条件 27 の例外）。直後の取り消しでは Task は Active、SprintTask は Planned に戻る（F29）。Sprint 外の Task を「今日へ」入れるのは開始日から | Backlog：開始日前は「今日へ」を無効にし、始まる日を添える |
-| F35 | 次の Sprint で先に選んだ Task は、前の Sprint が Review に入るときに持ち越しとしてつなぐ | Sprint N が Review に入るとき、次の Sprint（Planning 中）に同じ Task の単発の SprintTask（Draft、carriedFrom なし）があり、N の SprintTask が CarriedOver になるなら、その draft に carriedFrom（N の SprintTask）を付ける。本人が選んだ Task に後からつなぐだけで、次の Sprint に入れることではないので、不変条件 20 には当たらない。記録の主体はシステム（F23 と同じ扱い）で、Activity に残す。N の週の途中に次の Sprint で選んでも、N の Review 後に「持ち越し」から選んだ場合と同じつながりと回数になる | Planning：実行中の Sprint にまだ完了していない Task は、候補の行に「Sprint N で実行中」と出す（選ぶことは止めない） |
+| F35 | 次の Sprint で先に選んだ Task は、前の Sprint が Review に入るときに持ち越しとしてつなぐ | Sprint N が Review に入るとき、次の Sprint（Planning 中）に同じ Task の単発の SprintTask（Draft、carriedFrom なし）があり、N の SprintTask が CarriedOver になるなら、その draft に carriedFrom（N の SprintTask）を付ける。本人が選んだ Task に後からつなぐだけで、次の Sprint に入れることではないので、不変条件 20 には当たらない。記録の主体はシステム（F23 と同じ扱い）で、Activity に残す。N の週の途中に次の Sprint で選んでも、N の Review 後に「持ち越し」から選んだ場合と同じつながりと回数になる | Planning：実行中の Sprint にまだ完了していない Task は、候補の行に「Sprint N で進行中」と出す（選ぶことは止めない） |
 | F36 | 持ち越し回数は、まだ確定していない draft を数えない | F26 の「最新の SprintTask」から、Planning 中の Sprint の Draft を除く（派生）。次の Sprint の draft で選んでも、確定するまでは今までの SprintTask で数える。持ち越しを使わずに選び直したときの数え直し（F26）は、その Sprint を確定したときから効く | Backlog・Planning：実行中の Sprint の週に次の Sprint で選んでも「持ち越し N回（Sprint M から）」が消えない |
 | F37 | 「今日は見送る」「今日の予定から外す」は、その日のうちなら取り消せる | DailySelection に Deferred → Selected / Started と Removed → Selected（同じ日のうち）を足す。同じ選択を開いた状態に戻す（2 件目は作らない。不変条件 21）。戻る先は閉じる前の状態で、開始してから見送った選択は Started に戻り、開始時刻を残す（オーナーの確認待ち：開始後に見送った選択の取り消しで Started に戻すのは推奨案 A として実装した）。翌日以降は取り消せない（過ぎた日の見送り・外すはそのまま記録に残る）。連続見送りは取り消した後の状態で数える（不変条件 23）ので、取り消した見送りは数えない。見送り・外すと、その取り消しは Activity に残る。「今日はここまで」の取り消しは含めない | Today：見送り・外した行に「取り消す」を出し、押すと「今日やる」に戻る |
 | F38 | 割り込みは、Sprint が実行中の間は直せる・消せる | InterruptNote の text と minutes を直せる（minutes は消してもよい。at は記録した時刻のまま）。InterruptNote を消せる。消した直後は元に戻せる（同じ id・at・text・minutes で元の位置に戻す。at が今より後のものは戻さない）。どれも Sprint が実行中の間だけで、Review に入った後は固定する（Retro の事実を Retro で編集しない、不変条件 40）。直した・消した・元に戻したことは Activity に残る。Today・Retro の割り込みは今の記録から出すので、直した内容が出て、消したものは出ない | Today：割り込みの各行の `…` に「編集」「消す」。編集は記録と同じ面。消すと Toast「割り込み「メモ」を消しました」と「元に戻す」 |
@@ -421,7 +421,7 @@ v0.2 Final でも 3 つとも、UI に入口のない操作を使わずに最後
 | --- | --- | --- | --- |
 | 1–3 | Backlog の詳細で「今日へ」（1 操作） | 同時に SprintTask（Planned、origin = midSprint、goalLink = unlinked、planSnapshot = 追加時点。仕事は基準の対象外なので計画値 2–3h）と DailySelection（当日、origin = 週の途中の追加）。Activity：Sprint への追加（経路 = Backlog→今日） | 確認ダイアログなし、容量の警告なし。Toast「「顧客インタビューの設計」を「今日やる」に入れました」（今週の Sprint にも入ったことを添え、「今日を開く」を出す）。Backlog の行に「今日」「週の途中で追加」（「今日やる」に入っているあいだ。「今日やる」から外れたら「今週」） |
 | 4 | Today で完了 | DailySelection → Done、SprintTask → Done、Task → Completed。実績は任意で ActualTime | 「実績時間を残す（任意）」 |
-| 5 | Retro | origin = midSprint の SprintTask を数える | 「週の途中の追加 1件（Goal に紐づかない）」。InterruptNote とは別に表示。計画値の合計には含め、確定時の合計との差を見せる |
+| 5 | Retro | origin = midSprint の SprintTask を数える | 「週の途中の追加 1件（目標に入っていない）」。InterruptNote とは別に表示。計画値の合計には含め、確定時の合計との差を見せる |
 
 今日を選ばずに今週に足す場合（今週へ、F40）は次のとおり。前提は同じで、9/29 (火) に Backlog を開いている。
 
@@ -430,7 +430,7 @@ v0.2 Final でも 3 つとも、UI に入口のない操作を使わずに最後
 | 1 | Backlog の行の `…` で「今週へ」（1 操作） | SprintTask（Planned、origin = midSprint、goalLink = unlinked、planSnapshot = 追加時点、計画値 2–3h）だけ。DailySelection は作らない。Activity：Sprint への追加（経路 = Backlog） | 確認ダイアログなし、容量の警告なし。Toast「「顧客インタビューの設計」を今週に入れました」と「元に戻す」。Backlog の行に「今週」「週の途中で追加」 |
 | 2 | Toast の「元に戻す」 | SprintTask を記録ごと消す。Activity：Sprint への追加の取り消し | Backlog の行から「今週」が消え、「今週へ」「今日へ」がまた出る |
 | 3 | もう一度「今週へ」、10/1 (木) に Today の今週の残りから「今日へ」 | 新しい SprintTask（1 と同じ）。木曜に DailySelection（10/1、origin = 手動） | 今週へで入れた Task は、ほかの今週の Task と同じく今週の残りに出る |
-| 4 | Retro | origin = midSprint の SprintTask を数える | 今日へで入れた場合と同じく「週の途中の追加 1件（Goal に紐づかない）」 |
+| 4 | Retro | origin = midSprint の SprintTask を数える | 今日へで入れた場合と同じく「週の途中の追加 1件（目標に入っていない）」 |
 
 同じ操作を研究の提案を持つ Task に行えば、appliedAtConfirm = true なので追加時にも基準が当たり、計画値は上限になる。確定時に基準を適用しなかった Sprint（appliedAtConfirm = false）なら、研究でも基準は当たらず、計画値は提案の幅のまま。Backlog の詳細から今の Sprint の Task を「完了にする」場合は、Task = Completed、SprintTask = Done、その日の DailySelection（origin = Backlog からの完了、Done）が同時にでき、Today の「済んだもの」に出る。
 
@@ -440,13 +440,13 @@ v0.2 Final でも 3 つとも、UI に入口のない操作を使わずに最後
 | --- | --- | --- | --- |
 | 1 | 毎週土曜で作成 | Task + RecurrenceRule v1（毎週 土、effectiveFrom）。Occurrence はまだ作らない | Backlog に 1 行「毎週 土 · 次は 8/8 (土)」 |
 | 2 | 2 回完了 | 8/3 週・8/10 週の Planning 開始時に Occurrence（8/8、8/15、v1）を生成し、既定で SprintTask（goalLink = unlinked）に。当日 Today に自動で出て、完了 → Occurrence・DailySelection が Done | 発生した回：完了 × 2 |
-| 3 | 1 回スキップ | 8/17 週の Occurrence（8/22）→ Skipped、DailySelection → Skipped。Rule は変化なし | Retro：「8/22 の回をスキップ」 |
+| 3 | 1 回スキップ | 8/17 週の Occurrence（8/22）→ Skipped、DailySelection → Skipped。Rule は変化なし | Retro：「8/22 の分をスキップ」 |
 | 4 | 毎週日曜へ変更（8/24 朝、8/17 週の Retro 完了後、8/24 週の Planning 前） | v1 に effectiveTo、v2（毎週 日、effectiveFrom = 8/24）を追加。まだ確定していない次の Sprint は 8/24 週。Activity：Rule の変更 | Backlog：「次の Sprint から反映」 |
 | 5 | 過去の回はそのまま | 生成済みの 8/8・8/15・8/22 は v1・土曜のまま動かない | 「変更前のルール「毎週 土」の回」 |
-| 6 | 8/24 週の Planning | Occurrence（8/30 日、v2、Pending）を生成し、既定で SprintTask（Draft）に。確定後、8/30 に Today へ自動で出る（DailySelection origin = 当日の繰り返し） | 「今週発生する繰り返し」に選択済みで出る |
+| 6 | 8/24 週の Planning | Occurrence（8/30 日、v2、Pending）を生成し、既定で SprintTask（Draft）に。確定後、8/30 に Today へ自動で出る（DailySelection origin = 当日の繰り返し） | 「今週の繰り返し」に選択済みで出る |
 | 7 | 8/31 週の Planning で今週の回を外す | Occurrence（9/6 日、v2）を生成 → Excluded。SprintTask（Draft）は確定前になくなる | Today に出ない。8/31 週の Retro の事実にも出ない（記録には残る） |
 | 8 | 9/2 (水)、Active な Sprint の途中で「毎週 土」に戻す | v2 に effectiveTo、v3（毎週 土、effectiveFrom = 9/7）を追加。今の Sprint（8/31–9/6）の生成済みの回と SprintTask はそのままで、9/5 (土) の回は作らない | Backlog：「次の Sprint から反映」「次は 9/12 (土)」 |
-| 9 | 9/7 週の Planning | Occurrence（9/12 土、v3、Pending）を生成し、既定で SprintTask（Draft）に | 「今週発生する繰り返し」に選択済みで出る |
+| 9 | 9/7 週の Planning | Occurrence（9/12 土、v3、Pending）を生成し、既定で SprintTask（Draft）に | 「今週の繰り返し」に選択済みで出る |
 
 Excluded の回は Occurrence の記録として残るが、通常の Retro 事実（発生した回・完了・スキップ・未処理）には数えず、表示もしない。手順 8 のように Sprint の途中で Rule を変えても、その Sprint の計画は変わらない。
 

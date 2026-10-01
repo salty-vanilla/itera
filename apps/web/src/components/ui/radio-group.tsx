@@ -16,7 +16,7 @@ import {
 // that are all shown (the Goal self-assessment, the Sprint length). It is a
 // fieldset (role="radiogroup") named by its legend. Arrow keys move the
 // choice. A group may start with nothing chosen: the self-assessment has no
-// default, and 「未判定」 is the absence of a value, not a choice.
+// default, and 「まだ」 is the absence of a value, not a choice.
 
 type RadioGroupProps<Value> = Omit<
   RadioGroupPrimitive.Props<Value>,

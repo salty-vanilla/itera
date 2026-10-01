@@ -245,7 +245,9 @@ function CarryOverList({
           onClick={() => setOpen(!open)}
         >
           {open ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}
-          {open ? '畳む' : `ほか ${tasks.length - CARRY_OVER_SHOWN}件を表示`}
+          {open
+            ? '折りたたむ'
+            : `ほか ${tasks.length - CARRY_OVER_SHOWN}件を表示`}
         </Button>
       )}
       {tasks.some((t) => t.place === 'candidate') && (

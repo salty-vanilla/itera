@@ -208,7 +208,7 @@ function dayText(
     case 'done':
       return '「今日やる」に入っています（完了）';
     case 'skipped':
-      return '「今日やる」に入っています（この回はスキップ）';
+      return '「今日やる」に入っています（今日の分はスキップ）';
     case 'selected':
       return '「今日やる」に入っています';
   }
@@ -788,7 +788,7 @@ function TaskDetail({
                   to="/today"
                   className="inline-flex min-h-target-touch items-center rounded-sm pe-2 text-link underline focus-visible:focus-ring medium:min-h-target-min"
                 >
-                  今週の回を開く
+                  今週の分を開く
                 </Link>
               )}
             </div>

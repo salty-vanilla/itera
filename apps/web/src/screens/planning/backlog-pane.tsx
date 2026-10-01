@@ -138,7 +138,7 @@ function BacklogPane({
         }}
       />
       <Group
-        title="期限超過"
+        title="期限切れ"
         rows={candidates.overdue}
         slim={slim}
         {...{
@@ -166,9 +166,7 @@ function BacklogPane({
       />
       {candidates.recurring.length > 0 && (
         <section className="flex flex-col gap-2">
-          <DividerLabel level={3}>
-            {weekText(week, '発生する繰り返し')}
-          </DividerLabel>
+          <DividerLabel level={3}>{weekText(week, 'の繰り返し')}</DividerLabel>
           <ul className="flex flex-col">
             {candidates.recurring.map(({ task, occurrences }) => (
               <li
@@ -199,7 +197,7 @@ function BacklogPane({
                 {/* The group names the Task; each box is one occurrence. */}
                 <div
                   role="group"
-                  aria-label={`${weekText(week, 'に含める回')}：${task.title}`}
+                  aria-label={`${weekText(week, 'に入れる日')}：${task.title}`}
                   className="flex flex-wrap gap-x-4 gap-y-1"
                 >
                   {occurrences.map((o) => (
@@ -368,7 +366,7 @@ function CandidateItem({
       meta.push(<PriorityText key="p" priority={task.priority} />);
     if (carry) meta.push(<CarryOverText key="c" {...carry} />);
     if (running)
-      meta.push(<MetaItem key="r">Sprint {running.sprint} で実行中</MetaItem>);
+      meta.push(<MetaItem key="r">Sprint {running.sprint} で進行中</MetaItem>);
     if (chosen)
       meta.push(
         <MetaItem key="w" className="text-ink-subtle">

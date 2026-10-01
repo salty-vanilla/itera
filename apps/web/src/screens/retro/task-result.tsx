@@ -7,7 +7,7 @@ import { resultText } from './task-values';
 // How a Task ended, in words (task-values `resultText`). A carry-over has its
 // fixed icon and `ink-muted` beside the word, so it is not read as done
 // (DESIGN.md CarryOverIndicator, foundations.md 意味の固定); never `danger`.
-// It breaks only between its parts (「回：完了 2 · スキップ 1」).
+// It breaks only between its parts (「繰り返し：完了 2 · スキップ 1」).
 
 function TaskResult({
   fact,

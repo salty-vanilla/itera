@@ -6,13 +6,13 @@ const assessments = (
     <Radio value="achieved" label="できた" />
     <Radio value="partial" label="一部できた" />
     <Radio value="notAchieved" label="できなかった" />
-    <Radio value="noJudgement" label="判断しない" />
+    <Radio value="noJudgement" label="決めない" />
   </>
 );
 
 /**
  * 2〜5 個の排他的な選択肢をすべて見せる。fieldset と legend で組み、矢印キーで
- * 選択を移す。Goal の自己判定には既定値を置かない（未選択は「未判定」）。
+ * 選択を移す。Goal の自己判定には既定値を置かない（未選択は「まだ」）。
  */
 const meta = {
   title: 'Components/RadioGroup',

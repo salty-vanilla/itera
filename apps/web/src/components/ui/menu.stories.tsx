@@ -210,7 +210,7 @@ export const States: Story = {
             </span>
           </MenuItem>
           <MenuSeparator />
-          <MenuCheckboxItem defaultChecked>目標に紐づける</MenuCheckboxItem>
+          <MenuCheckboxItem defaultChecked>目標に入れる</MenuCheckboxItem>
           <MenuCheckboxItem defaultChecked data-demo="hover">
             完了したタスク
             <StateLabel>hover</StateLabel>

@@ -175,7 +175,7 @@ export const Composition: Story = {
         <Radio value="achieved" label="できた" />
         <Radio value="partial" label="一部できた" />
         <Radio value="notAchieved" label="できなかった" />
-        <Radio value="noJudgement" label="判断しない" />
+        <Radio value="noJudgement" label="決めない" />
       </RadioGroup>
       <Field label="気づいたこと" necessity="optional">
         <Textarea text="body-l" maxLength={400} />
