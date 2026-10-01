@@ -63,7 +63,7 @@ export const WithSupportTextAndUnit: Story = {
       <Field
         label="見積もり"
         necessity="optional"
-        description="時間で入力（例: 1.5）"
+        description="時間で入力（例：1.5）"
       >
         <TextInput inputMode="decimal" suffix="h" />
       </Field>
@@ -122,7 +122,7 @@ export const States: Story = {
       <Field
         label="error"
         description="0.5時間単位"
-        error="数値で入力してください（例: 1.5）"
+        error="数値で入力してください（例：1.5）"
       >
         <TextInput defaultValue="3時間" suffix="h" />
       </Field>

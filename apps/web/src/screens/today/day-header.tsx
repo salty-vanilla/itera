@@ -93,7 +93,7 @@ function DayHeader({
     void navigate({ to: '/today', search: searchOf(day) });
   };
   const step = (day: LocalDate, side: '前' | '次') => ({
-    label: `${side}の日（${formatDate(day)}）`,
+    label: `${side}の日：${formatDate(day)}`,
     href: router.buildLocation({ to: '/today', search: searchOf(day) }).href,
     onClick: (event: MouseEvent<HTMLAnchorElement>) => {
       if (!isPlainClick(event)) return;

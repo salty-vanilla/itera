@@ -61,12 +61,12 @@ const words: Record<
   pause: {
     title: '今日はここまで',
     description:
-      '作業したが終わっていない Task を、今週の残りに戻します。明日は「昨日の続き」に出ます。',
+      '作業したが終わっていないタスクを、今週の残りに戻します。明日は「昨日の続き」に出ます。',
     submit: '今日はここまで',
   },
   record: {
     title: '実績を残す',
-    description: '今日この Task にかけた時間を足します。',
+    description: '今日このタスクにかけた時間を足します。',
     submit: '残す',
   },
   add: {
@@ -137,7 +137,7 @@ function ActualTime({
       />
     </Field>
   );
-  const heading = `${title}: ${taskTitle}`;
+  const heading = `${title}：${taskTitle}`;
 
   if (sheet) {
     return (

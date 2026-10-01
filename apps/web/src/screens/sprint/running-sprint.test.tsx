@@ -135,7 +135,7 @@ describe('Sprint — running (#51)', () => {
     expect(document.body.textContent).not.toContain('目標なし');
     // A linked Task says so too, in the same tone.
     const linked = screen
-      .getByText('関連論文を 3 本読む', { selector: 'main *' })
+      .getByText('関連論文を 3本読む', { selector: 'main *' })
       .closest('[data-slot="task-row"]');
     expect(linked?.textContent).toContain('目標に紐づく');
   });
@@ -179,23 +179,25 @@ describe('Sprint — running (#51)', () => {
   it('rewords a Goal and keeps the planned text beside it (invariant 18, MVP 16)', async () => {
     await renderAt('/sprint?fixture=today-interrupt');
     await userEvent.click(
-      screen.getByRole('button', { name: '目標を編集: 研究' }),
+      screen.getByRole('button', { name: '目標を編集：研究' }),
     );
     const field = screen.getByRole('textbox', { name: /目標/ });
     await userEvent.clear(field);
-    await userEvent.type(field, '先行研究を 2 本押さえる');
+    await userEvent.type(field, '先行研究を 2本押さえる');
     await userEvent.click(screen.getByRole('button', { name: '保存' }));
     expect(goalOf('area-research')).toMatchObject({
-      text: '先行研究を 2 本押さえる',
+      text: '先行研究を 2本押さえる',
       plannedText: '先行研究を押さえる',
     });
-    expect(screen.getByText('計画時：「先行研究を押さえる」')).toBeTruthy();
+    expect(
+      screen.getByText('確定したとき：「先行研究を押さえる」'),
+    ).toBeTruthy();
   });
 
   it('does not remove a Goal after confirm (F16)', async () => {
     await renderAt('/sprint?fixture=today-interrupt');
     await userEvent.click(
-      screen.getByRole('button', { name: '目標を編集: 研究' }),
+      screen.getByRole('button', { name: '目標を編集：研究' }),
     );
     await userEvent.clear(screen.getByRole('textbox', { name: /目標/ }));
     await userEvent.click(screen.getByRole('button', { name: '保存' }));
@@ -211,7 +213,7 @@ describe('Sprint — running (#51)', () => {
   it('writes a new Goal after confirm, without a planned text (F16)', async () => {
     await renderAt('/sprint?fixture=today-interrupt');
     await userEvent.click(
-      screen.getByRole('button', { name: '目標を書く: 学習' }),
+      screen.getByRole('button', { name: '目標を書く：学習' }),
     );
     await userEvent.type(
       screen.getByRole('textbox', { name: /目標/ }),
@@ -241,13 +243,13 @@ describe('Sprint — running (#51)', () => {
   it('closes an empty new Goal without an error', async () => {
     await renderAt('/sprint?fixture=today-interrupt');
     await userEvent.click(
-      screen.getByRole('button', { name: '目標を書く: 学習' }),
+      screen.getByRole('button', { name: '目標を書く：学習' }),
     );
     await userEvent.click(screen.getByRole('button', { name: '保存' }));
     expect(screen.queryByText(/消せません/)).toBeNull();
     expect(goalOf('area-study')).toBeUndefined();
     expect(
-      screen.getByRole('button', { name: '目標を書く: 学習' }),
+      screen.getByRole('button', { name: '目標を書く：学習' }),
     ).toBeTruthy();
   });
 
@@ -266,7 +268,7 @@ describe('Sprint — the rows (#160)', () => {
   it("tells a recurring row's occurrences as 今週の完了 counts them (F32)", async () => {
     await renderAt('/sprint?fixture=today-daytime');
     const reading = screen
-      .getByRole('button', { name: '英語の多読 30 分' })
+      .getByRole('button', { name: '英語の多読 30分' })
       .closest('[data-slot="task-row"]') as HTMLElement;
     expect(within(reading).getByText(/^今週 \d+回中 \d+回完了/)).toBeTruthy();
   });
@@ -286,12 +288,12 @@ describe('Sprint — the rows (#160)', () => {
   it("opens a Task's detail from its title, and closes it", async () => {
     const router = await renderAt('/sprint?fixture=today-daytime');
     await userEvent.click(
-      screen.getByRole('button', { name: '英語の多読 30 分' }),
+      screen.getByRole('button', { name: '英語の多読 30分' }),
     );
     const detail = await screen.findByRole('dialog');
     expect(
       within(detail).getByRole('textbox', { name: /タイトル/ }),
-    ).toHaveProperty('value', '英語の多読 30 分');
+    ).toHaveProperty('value', '英語の多読 30分');
     expect(router.state.location.search).toMatchObject({
       task: 'task-reading',
     });
@@ -340,7 +342,7 @@ describe('Sprint — 日ごとの記録 (#53)', () => {
     });
     expect(within(dialog).getByText(/未処理になり/)).toBeTruthy();
     await userEvent.click(
-      within(dialog).getByRole('button', { name: '取り消す' }),
+      within(dialog).getByRole('button', { name: '完了を取り消す' }),
     );
     const s = running();
     const st = s.tasks.find((t) => t.taskId === 'task-tax');
@@ -371,7 +373,7 @@ describe('Sprint — 日ごとの記録 (#53)', () => {
       name: /取り消しますか/,
     });
     await userEvent.click(
-      within(dialog).getByRole('button', { name: 'やめる' }),
+      within(dialog).getByRole('button', { name: 'キャンセル' }),
     );
     const s = running();
     expect(s.tasks.find((t) => t.taskId === 'task-tax')?.outcome).toBe('done');

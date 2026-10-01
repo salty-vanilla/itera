@@ -51,13 +51,13 @@ export function RecurrenceText({
 }) {
   const Icon = semanticIcons.recurrence;
   return (
-    <MetaItem icon={icon ? <Icon aria-hidden /> : undefined}>
+    <MetaItem icon={icon ? <Icon aria-hidden /> : undefined} wrap>
       {formatPattern(recurrence.pattern)}
       {recurrence.next &&
         ` · 次は ${formatDate(recurrence.next.scheduledDate)}`}
       {recurrence.upcoming &&
-        `（${formatDate(recurrence.upcoming.effectiveFrom)} から ${formatPattern(recurrence.upcoming.pattern)}）`}
-      {recurrence.endsOn && `（${formatDate(recurrence.endsOn)} まで）`}
+        ` · 変更：${formatDate(recurrence.upcoming.effectiveFrom)} から ${formatPattern(recurrence.upcoming.pattern)}`}
+      {recurrence.endsOn && ` · ${formatDate(recurrence.endsOn)} まで`}
     </MetaItem>
   );
 }
@@ -238,7 +238,7 @@ function BacklogRow({
             render={
               <IconButton
                 size="sm"
-                label={`その他の操作: ${task.title}`}
+                label={`その他の操作：${task.title}`}
                 icon={<Ellipsis />}
               />
             }
@@ -254,7 +254,7 @@ function BacklogRow({
             {item.todayOpensOn !== undefined && (
               <MenuItem disabled>
                 <Sun aria-hidden />
-                今日へ（{formatDate(item.todayOpensOn.start)} から）
+                今日へ · {formatDate(item.todayOpensOn.start)} から
               </MenuItem>
             )}
             {item.canAddToWeek && (

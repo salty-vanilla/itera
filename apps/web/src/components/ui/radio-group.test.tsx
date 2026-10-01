@@ -53,9 +53,9 @@ describe('RadioGroup', () => {
   });
 
   it('ties the error to the group', () => {
-    render(<SelfAssessment error="どれか 1 つを選んでください" />);
+    render(<SelfAssessment error="どれか 1つを選んでください" />);
     const group = screen.getByRole('radiogroup', { name: '目標の自己判定' });
     expect(group.getAttribute('aria-invalid')).toBe('true');
-    expect(describedBy(group)).toContain('どれか 1 つを選んでください');
+    expect(describedBy(group)).toContain('どれか 1つを選んでください');
   });
 });

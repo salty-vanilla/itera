@@ -93,11 +93,11 @@ export const typographyGroups = [
   {
     title: '見出しと確定した言葉',
     description:
-      '階層は 700 とサイズの差で作る。本人が確定した言葉（Goal、改善策、振り返り）は goal / reflection で本文より一段大きく組む。',
+      '階層は 700 とサイズの差で作る。本人が確定した言葉（Goal、次に試すこと、振り返り）は goal / reflection で本文より一段大きく組む。',
     samples: [
       ['display-l', 'text-display-l', 'Sprint 14'],
-      ['display-m', 'text-display-m', '今週、何を進めますか'],
-      ['goal', 'text-goal', '論文の第 3 章の草稿を終える'],
+      ['display-m', 'text-display-m', '今週、何を進めるか'],
+      ['goal', 'text-goal', '論文の第3章の草稿を終える'],
       [
         'reflection',
         'text-reflection',

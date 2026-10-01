@@ -29,7 +29,7 @@ import { usePlanningActions } from '@/store/use-planning';
 // (bp-xl) it takes the width that is left, and the Area blocks sit in
 // columns). It holds both limits, so the caller sets no width. One
 // workspace that changes with the stage (PRD §5 B), never a forced wizard:
-// - 選ぶ: 「今週、何を進めますか」, the chosen Tasks per Area.
+// - 選ぶ: 「今週、何を進めるか」, the chosen Tasks per Area.
 // - 整える: 「今週、どんな状態にしたいか」, each Area's Goal (optional) with
 //   its Tasks; a Task is linked to the Goal or not, and both count. An Area
 //   with neither is one line, so that a Goal can still be written first.
@@ -43,11 +43,11 @@ import { usePlanningActions } from '@/store/use-planning';
 
 export type Stage = 'pick' | 'shape' | 'check';
 
-/** The stage's heading, in the week's words (「来週、何を進めますか」). */
+/** The stage's heading, in the week's words (「来週、何を進めるか」). */
 export function stageHeading(stage: Stage, week: string): string {
   switch (stage) {
     case 'pick':
-      return weekText(week, '、何を進めますか');
+      return weekText(week, '、何を進めるか');
     case 'shape':
       return weekText(week, '、どんな状態にしたいか');
     case 'check':
@@ -403,7 +403,7 @@ function PlannedRow({
               render={
                 <IconButton
                   size="sm"
-                  label={`その他の操作: ${task.title}`}
+                  label={`その他の操作：${task.title}`}
                   icon={<Ellipsis />}
                 />
               }

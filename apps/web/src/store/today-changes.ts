@@ -293,7 +293,7 @@ export const interrupt = (text: string, minutes?: number): Change =>
     ),
   );
 
-/** 割り込みを直す: its note and minutes; the time stays (F38). */
+/** 割り込みを編集: its note and minutes; the time stays (F38). */
 export const editNote = (
   id: InterruptNoteId,
   text: string,

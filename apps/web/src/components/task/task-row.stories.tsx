@@ -19,7 +19,7 @@ const meta = {
   title: 'Components/Task Row',
   component: TaskRow,
   parameters: { layout: 'padded' },
-  args: { title: '関連論文を 3 本読む' },
+  args: { title: '関連論文を 3本読む' },
 } satisfies Meta<typeof TaskRow>;
 
 export default meta;
@@ -35,13 +35,13 @@ function Row({
   const [done, setDone] = useState(initial);
   return (
     <TaskRow
-      title="関連論文を 3 本読む"
+      title="関連論文を 3本読む"
       done={done}
       current={current}
       onOpen={() => {}}
       control={
         <CompletionCircle
-          title="関連論文を 3 本読む"
+          title="関連論文を 3本読む"
           done={done}
           onToggle={() => setDone((d) => !d)}
         />
@@ -70,7 +70,7 @@ function Row({
       actions={
         <IconButton
           size="sm"
-          label="その他の操作: 関連論文を 3 本読む"
+          label="その他の操作：関連論文を 3本読む"
           icon={<Ellipsis />}
         />
       }

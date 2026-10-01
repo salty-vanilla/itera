@@ -9,7 +9,7 @@ import type { RetroData } from '@/store/retro-view';
 import { Materials } from './materials';
 
 // 振り返る (patterns.md Retro): two inputs only — 「気づいたこと」
-// (optional) and 「次の Sprint で 1 つだけ変えてみること」. No KPT and no
+// (optional) and 「次に試すこと」. No KPT and no
 // reasons for carry-overs. What is typed is saved when the field is left,
 // so it stays even if the Retro is closed half way.
 
@@ -97,10 +97,12 @@ function ClosedReflection({ data }: { data: RetroData }) {
         className="flex flex-col gap-3 border-t border-b border-t-ink border-b-border py-4"
       >
         <h2 id="closed-improvement" className="text-label">
-          次の Sprint で 1 つだけ変えてみること
+          次に試すこと
         </h2>
         {data.improvement === undefined ? (
-          <p className="text-body text-ink-muted">改善策はありませんでした。</p>
+          <p className="text-body text-ink-muted">
+            次に試すことはありませんでした。
+          </p>
         ) : (
           <p className="max-w-measure-read text-goal text-ink">
             {data.improvement}
@@ -112,9 +114,9 @@ function ClosedReflection({ data }: { data: RetroData }) {
 }
 
 /**
- * DESIGN.md 改善策（Retro Improvement）: an `ink` rule on top and a
+ * DESIGN.md 次に試すこと（Retro Improvement）: an `ink` rule on top and a
  * `border` rule below, the label, and the text (`goal` once set, `body-l`
- * while written, with the dashed 下書き Tag) → 「改善策として確定」.
+ * while written, with the dashed 下書き Tag) → 「次に試すことを確定」.
  */
 function Improvement({
   data,
@@ -152,7 +154,7 @@ function Improvement({
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id={headingId} className="flex items-center gap-2 text-label">
-          次の Sprint で 1 つだけ変えてみること
+          次に試すこと
           {editing && <Tag tone="draft">下書き</Tag>}
         </h2>
         {!editing && (
@@ -179,18 +181,18 @@ function Improvement({
           }}
         >
           <Field
-            label="次の Sprint で 1 つだけ変えてみること"
+            label="次に試すこと"
             hideLabel
             description={
               data.draft === undefined
                 ? '次の計画のはじめに表示されます。'
-                : 'この改善策から計画のルールを作っています。改善策を消すときは、先に「引き継ぐ」で「計画のルールにもする」をオフにしてください。'
+                : '計画のルールの元にしています。消すときは、先に「引き継ぐ」で「計画のルールにもする」をオフにしてください。'
             }
           >
             <Textarea
               text="body-l"
               value={text}
-              placeholder="例: 論文は 1 本ずつ Task に分ける"
+              placeholder="例：論文は 1本ずつタスクに分ける"
               onChange={(e) => setText(e.currentTarget.value)}
               // Kept as it is typed; 確定 only ends the editing.
               onBlur={save}
@@ -198,7 +200,7 @@ function Improvement({
           </Field>
           <div>
             <Button type="submit" disabled={text.trim() === ''}>
-              改善策として確定
+              次に試すことを確定
             </Button>
           </div>
         </form>

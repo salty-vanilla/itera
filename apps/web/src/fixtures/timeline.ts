@@ -6,7 +6,7 @@
 // timeline (Asia/Tokyo, weeks start on Monday):
 // - Sprint 9/21–9/27 is the previous week. Its Retro makes the criterion
 //   「研究：見積もりの提案の上限で計画する」 active.
-// - Sprint 9/28–10/4 follows Scenario A (関連論文を 3 本読む: deferred twice,
+// - Sprint 9/28–10/4 follows Scenario A (関連論文を 3本読む: deferred twice,
 //   4.5h then 今日はここまで, 昨日の続き, carried over; the available hours
 //   differ, see the Check) and Scenario B
 //   (顧客インタビューの設計 added to Today from the Backlog). Scenario C's
@@ -524,9 +524,9 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
   // The Backlog grows during the week.
   at(
     '09-24 12:00',
-    newTask(task.paper, '関連論文を 3 本読む', { areaId: area.research }),
+    newTask(task.paper, '関連論文を 3本読む', { areaId: area.research }),
   );
-  at('09-24 12:01', suggest(task.paper, 3, 5, '1 本 1–1.5h', ['論文の長さ']));
+  at('09-24 12:01', suggest(task.paper, 3, 5, '1本 1–1.5h', ['論文の長さ']));
   at(
     '09-24 12:10',
     newTask(task.interview, '顧客インタビューの設計', {
@@ -590,7 +590,7 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
   at('09-25 09:13', subtask(task.dataset, '結果を共有する'));
   at(
     '09-25 09:20',
-    newTask(task.reading, '英語の多読 30 分', { areaId: area.study }),
+    newTask(task.reading, '英語の多読 30分', { areaId: area.study }),
   );
   at('09-25 09:21', estimate(task.reading, 0.5));
   at('09-25 09:22', recurring(task.reading, monWedFri, '09-28'));
@@ -606,7 +606,7 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
     onSprint(previous, (s, ctx) =>
       setReflection(
         s,
-        { text: '研究の Task は提案の幅の上のほうまでかかった。' },
+        { text: '研究のタスクは提案の幅の上のほうまでかかった。' },
         ctx,
       ),
     ),
@@ -846,7 +846,7 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
       setReflection(
         s,
         {
-          text: '論文は 3 本まとめてだと手が止まる。割り込みがあった日は午後が崩れた。',
+          text: '論文は 3本まとめてだと手が止まる。割り込みがあった日は午後が崩れた。',
         },
         ctx,
       ),
@@ -869,7 +869,7 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
   at(
     '10-05 09:45',
     onSprint(current, (s, ctx) =>
-      setImprovement(s, { text: '論文は 1 本ずつ Task に分ける' }, ctx),
+      setImprovement(s, { text: '論文は 1本ずつタスクに分ける' }, ctx),
     ),
   );
   at(

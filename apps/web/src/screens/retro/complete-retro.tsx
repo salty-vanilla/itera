@@ -79,7 +79,7 @@ function CompleteRetro({ data, onComplete }: CompleteRetroProps) {
           <p key={b}>{BLOCKER_WORDS[b]}</p>
         ))}
         {!blocked && data.improvement === undefined && (
-          <p>改善策がないまま完了します。次の計画には何も出ません。</p>
+          <p>次に試すことがないまま完了します。次の計画には何も出ません。</p>
         )}
       </div>
       <CompleteDialog
@@ -142,7 +142,7 @@ function CompleteDialog({
         </DialogHeader>
         <DialogBody>
           <dl className="grid grid-cols-1 gap-x-6 gap-y-1 text-body medium:grid-cols-[auto_1fr] medium:gap-y-2">
-            <dt className="text-ink-muted">次に試す変更</dt>
+            <dt className="text-ink-muted">次に試すこと</dt>
             <dd className="mb-2 text-ink medium:mb-0">
               {improvement ?? 'なし'}
             </dd>

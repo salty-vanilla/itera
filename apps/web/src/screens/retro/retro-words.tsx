@@ -96,7 +96,7 @@ export function PinToggle({
       // place of the pin: a marked fact stands out among the many unmarked
       // ones, and not by color alone (#167).
       pressed={pinned}
-      aria-label={`振り返りに使う: ${subject}`}
+      aria-label={`振り返りに使う：${subject}`}
       onClick={onToggle}
       {...(!pinned && { className: 'text-ink-muted' })}
     >

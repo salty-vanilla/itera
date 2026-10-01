@@ -18,7 +18,7 @@ const meta = {
   args: {
     label: '見積もり',
     necessity: 'optional',
-    description: '時間で入力（例: 1.5）',
+    description: '時間で入力（例：1.5）',
     children: <TextInput inputMode="decimal" suffix="h" />,
   },
   argTypes: {
@@ -39,7 +39,7 @@ export const Playground: Story = {};
 /** エラーはアイコンと「何が問題で、どう直すか」の文で、入力の直下に出す。 */
 export const WithError: Story = {
   args: {
-    error: '数値で入力してください（例: 1.5）',
+    error: '数値で入力してください（例：1.5）',
     children: <TextInput inputMode="decimal" defaultValue="3時間" suffix="h" />,
   },
 };
@@ -52,7 +52,7 @@ function validate(name: keyof Values, value: string): string | undefined {
     return 'タイトルを入力してください';
   }
   if (name === 'estimate' && value !== '' && !/^\d+(\.\d+)?$/.test(value)) {
-    return '数値で入力してください（例: 1.5）';
+    return '数値で入力してください（例：1.5）';
   }
   return undefined;
 }
@@ -122,7 +122,7 @@ export const ValidateOnBlurAndSubmit: Story = {
         <Field
           label="見積もり"
           necessity="optional"
-          description="時間で入力（例: 1.5）。空欄なら見積もりなし"
+          description="時間で入力（例：1.5）。空欄なら見積もりなし"
           error={errors.estimate}
         >
           <TextInput

@@ -36,7 +36,7 @@ describe('routes', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: '今週、何を進めますか',
+        name: '今週、何を進めるか',
       }),
     ).toBeTruthy();
   });

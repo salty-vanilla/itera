@@ -35,7 +35,7 @@ export const Tones: Story = {
       <dt className="text-label text-ink-muted">neutral</dt>
       <dd className="flex gap-2">
         <Tag icon={Info}>同期中</Tag>
-        <Tag icon={Info}>次の Sprint で試す</Tag>
+        <Tag icon={Info}>次に試す</Tag>
       </dd>
       <dt className="text-label text-ink-muted">warning</dt>
       <dd className="flex gap-2">

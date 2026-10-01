@@ -114,7 +114,7 @@ function CheckSummary({
                 <Button
                   size="sm"
                   variant="quiet"
-                  aria-label={`見積もる: ${planned.task.title}`}
+                  aria-label={`見積もる：${planned.task.title}`}
                   onClick={() =>
                     planned.value.base === 'none'
                       ? onEstimateTask(planned.task.id)

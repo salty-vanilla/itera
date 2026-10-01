@@ -280,7 +280,7 @@ function BacklogScreen() {
       </div>
 
       <section
-        aria-label="Task の一覧"
+        aria-label="タスクの一覧"
         className="flex-1 pb-10 xl:max-w-pane-rows"
       >
         <p
@@ -291,7 +291,7 @@ function BacklogScreen() {
         </p>
         {items.length === 0 && completed === undefined ? (
           <p className="px-4 py-6 text-body text-ink-muted medium:px-6">
-            この切り口の Task はありません。
+            この切り口のタスクはありません。
           </p>
         ) : (
           <ul className="border-t border-border-soft medium:mx-3">

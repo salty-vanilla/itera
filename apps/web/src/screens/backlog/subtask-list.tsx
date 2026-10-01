@@ -59,7 +59,7 @@ function SubtaskList({
           const parsed = parseHours(hours);
           if (title.trim() === '') return;
           if (parsed === 'invalid') {
-            setError('0 より大きい数で入力してください（例: 0.5）');
+            setError('0 より大きい数で入力してください（例：0.5）');
             // Focus goes to the field in error (accessibility.md).
             hoursRef.current?.focus();
             return;
@@ -114,7 +114,7 @@ function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
   function commit() {
     const parsed = parseHours(hours);
     if (parsed === 'invalid') {
-      setError('0 より大きい数で入力してください（例: 0.5）');
+      setError('0 より大きい数で入力してください（例：0.5）');
       return;
     }
     setError(undefined);
@@ -128,7 +128,7 @@ function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
       <span className="grid size-target-touch shrink-0 place-items-center medium:size-target-min">
         <CheckboxControl
           checked={subtask.done}
-          aria-label={`完了: ${subtask.title}`}
+          aria-label={`完了：${subtask.title}`}
           onCheckedChange={(done) =>
             actions.setSubtaskDone(task.id, subtask.id, done)
           }
@@ -144,7 +144,7 @@ function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
         {subtask.title}
       </span>
       <Field
-        label={`見積もり（時間）: ${subtask.title}`}
+        label={`見積もり（時間）：${subtask.title}`}
         hideLabel
         error={error}
         className="w-1/4 min-w-16 shrink-0"

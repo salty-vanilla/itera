@@ -125,7 +125,7 @@ function pinned(pin: RetroPin, data: RetroData): Pinned | undefined {
       const hours = (h: number | undefined) =>
         h === undefined ? '未入力' : formatHours(h, { total: true });
       const values = [
-        `計画したとき ${hours(planned)}`,
+        `確定したとき ${hours(planned)}`,
         `→ 今 ${hours(current)}`,
       ];
       return withMeta(

@@ -144,7 +144,7 @@ function Roles() {
       <div className="grid gap-8 medium:grid-cols-2">
         <Specimen
           title="墨：確定"
-          note="塗りを持つのは確定の操作だけ。1 画面に 1 つ。"
+          note="塗りを持つのは確定の操作だけ。1 画面に 1つ。"
         >
           <div className="flex gap-2">
             <Button variant="quiet">キャンセル</Button>
@@ -270,7 +270,7 @@ function ColorsPage() {
   return (
     <TokenPage
       title="色"
-      lead={`色は予約語で、1 つの色に 1 つの意味だけを持たせる。表の値はこの画面の CSS 変数（${theme}）。ツールバーの theme で light / dark を切り替えられる。値が DESIGN.md の YAML と一致することは tokens.test.ts が確かめている。`}
+      lead={`色は予約語で、1つの色に 1つの意味だけを持たせる。表の値はこの画面の CSS 変数（${theme}）。ツールバーの theme で light / dark を切り替えられる。値が DESIGN.md の YAML と一致することは tokens.test.ts が確かめている。`}
     >
       <Roles />
       {colorGroups.map((group) => {

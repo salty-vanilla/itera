@@ -336,7 +336,7 @@ function ArchivedLine({
           id={textId}
           className="min-w-0 flex-[1_1_12em] [word-break:auto-phrase]"
         >
-          「{area.name}」をアーカイブしました。Task と過去の記録には残ります。
+          「{area.name}」をアーカイブしました。タスクと過去の記録には残ります。
         </span>
         <Button
           size="sm"
