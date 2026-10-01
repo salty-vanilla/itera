@@ -1,6 +1,6 @@
 # アイコンと動き
 
-更新：2026-10-01（ナビのアイコンを固定し、振り返りを `rewind` に替えた、Issue #112）。2026-09-26（DESIGN.md v0.2 から分離）。DESIGN.md の spec に対応する節がないため、ここに置く。
+更新：2026-10-01（操作付きの Toast の表示時間、Issue #170。ナビのアイコンを固定し、振り返りを `rewind` に替えた、Issue #112）。2026-09-26（DESIGN.md v0.2 から分離）。DESIGN.md の spec に対応する節がないため、ここに置く。
 
 ## アイコン
 
@@ -42,6 +42,7 @@
 | `duration-base` | 160ms | Menu・Popover・Tooltip の出現、行の追加・除外、Toast の出現 |
 | `duration-slow` | 240ms | Dialog・Drawer の出入り（最大） |
 | `duration-toast` | 8000ms | Toast の表示時間（hover / focus 中は止める） |
+| `duration-toast-action` | 16000ms | 操作付き（元に戻す・今日を開く）の Toast の表示時間 |
 | `easing-standard` | `cubic-bezier(0.2, 0, 0, 1)` | 既定 |
 | `easing-enter` | `cubic-bezier(0, 0, 0.2, 1)` | 出現 |
 | `easing-exit` | `cubic-bezier(0.4, 0, 1, 1)` | 退場 |

@@ -1,6 +1,6 @@
 import { Toast as ToastPrimitive } from '@base-ui/react/toast';
 import { X } from 'lucide-react';
-import { useMemo, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from './button';
 import { Icon, semanticIcons } from './icon';
@@ -23,6 +23,11 @@ import { IconButton } from './icon-button';
 
 /** docs/design/foundations.md `duration-toast`. */
 const TOAST_TIMEOUT = 8000;
+/**
+ * `duration-toast-action`: a Toast with an action (元に戻す, 今日を開く) is
+ * pressed after it is read, and it takes longer to reach (#170).
+ */
+const TOAST_ACTION_TIMEOUT = 16000;
 /** Three at a time at most (Issue #8). Older ones are hidden. */
 const TOAST_LIMIT = 3;
 
@@ -81,9 +86,11 @@ function ToastProvider({ children }: { children: ReactNode }) {
             // compact: full width above the bottom tab bar, whose height the
             // screen sets in --toast-offset-bottom, and above a bar the screen
             // sticks over it (--toast-offset-above, lib/use-stuck-bar.ts).
-            // medium and up: bottom left, and above such a bar too.
+            // medium and up: bottom left, and above such a bar too. 480px wide,
+            // and short of an open Drawer (400px at the right edge, 24px from
+            // the left edge, 8px between): 336px at 768px (#170).
             'inset-x-4 bottom-[calc(var(--toast-offset-bottom,0px)+var(--toast-offset-above,0px)+var(--spacing-4))]',
-            'medium:right-auto medium:bottom-[calc(var(--toast-offset-above,0px)+var(--spacing-6))] medium:left-6 medium:w-pane-side',
+            'medium:right-auto medium:bottom-[calc(var(--toast-offset-above,0px)+var(--spacing-6))] medium:left-6 medium:w-[min(var(--spacing-toast),calc(100vw-var(--spacing-drawer)-var(--spacing-8)))]',
           )}
         >
           <ToastList />
@@ -196,7 +203,12 @@ function useToast() {
           priority: tone === 'danger' ? 'high' : 'low',
           // A failure stays until it is closed, so that 「再試行」 does not
           // disappear with it (DESIGN.md common states › Error).
-          timeout: tone === 'danger' ? 0 : TOAST_TIMEOUT,
+          timeout:
+            tone === 'danger'
+              ? 0
+              : action
+                ? TOAST_ACTION_TIMEOUT
+                : TOAST_TIMEOUT,
           actionProps: action && {
             children: action.label,
             onClick: () => {
@@ -221,5 +233,32 @@ function useToasts() {
   return ToastPrimitive.useToastManager().toasts;
 }
 
-export { TOAST_LIMIT, TOAST_TIMEOUT, ToastProvider, useToast, useToasts };
+/**
+ * Closes the Toasts of the screen that was left (#170). A failure (danger)
+ * stays: its 「再試行」 is not to be lost, and it is closed by the person.
+ * The returned function is stable and acts on the Toasts showing when it is
+ * called.
+ */
+function useCloseToastsOnLeave(): () => void {
+  const manager = ToastPrimitive.useToastManager();
+  const latest = useRef(manager);
+  useEffect(() => {
+    latest.current = manager;
+  }, [manager]);
+  return useCallback(() => {
+    for (const toast of latest.current.toasts) {
+      if (toast.type !== 'danger') latest.current.close(toast.id);
+    }
+  }, []);
+}
+
+export {
+  TOAST_ACTION_TIMEOUT,
+  TOAST_LIMIT,
+  TOAST_TIMEOUT,
+  ToastProvider,
+  useCloseToastsOnLeave,
+  useToast,
+  useToasts,
+};
 export type { ToastKind, ToastOptions, ToastTone };
