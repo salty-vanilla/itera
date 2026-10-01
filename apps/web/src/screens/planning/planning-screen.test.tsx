@@ -543,9 +543,12 @@ describe('Planning — 計画のルールの見せ方 (#105)', () => {
     expect(
       within(frame).getByRole('switch', { name: /このルールで計画する/ }),
     ).toBeTruthy();
-    expect(within(frame).getByText(/幅のあるタスク 1件を上限で/)).toBeTruthy();
-    // 適用 happens here; 採用 (the Estimate) stays in the Task’s detail (invariant 7).
-    expect(frame.textContent).not.toMatch(/採用/);
+    expect(
+      within(frame).getByText(/タスク 1件を、見積もりの提案の上限で/),
+    ).toBeTruthy();
+    // 適用 happens here; 採用 (the Estimate, 「上限 4h を使う」) stays in the
+    // Task’s detail (invariant 7).
+    expect(frame.textContent).not.toMatch(/採用|を使う|直して使う/);
   });
 
   it.each(['pick', 'shape', 'check'])(
@@ -851,7 +854,7 @@ describe('Planning — 確かめる', () => {
       }),
     );
     const estimate = await screen.findByRole('textbox', {
-      name: /^見積もり（時間）(?!：)/,
+      name: /^見積もり(?!（時間）)/,
     });
     await waitFor(() => expect(document.activeElement).toBe(estimate));
   });
@@ -1029,7 +1032,7 @@ describe('Planning — review fixes', () => {
     await renderAt('/sprint?fixture=planning-check&stage=check');
     expect(
       within(summary()).getByText(
-        '研究の幅のあるタスク 1件を上限で計画しています（合計の下限 +2h）。',
+        '研究のタスク 1件を、見積もりの提案の上限で計画しています（合計の下限 +2h）。',
       ),
     ).toBeTruthy();
   });
@@ -1179,7 +1182,7 @@ describe('Planning — keys (#48)', () => {
     await userEvent.keyboard('e');
     // The Task's own, not a subtask's (「Estimate（時間）: …」).
     const estimate = await screen.findByRole('textbox', {
-      name: /^見積もり（時間）(?!：)/,
+      name: /^見積もり(?!（時間）)/,
     });
     await waitFor(() => expect(document.activeElement).toBe(estimate));
   });
@@ -1238,7 +1241,7 @@ describe('Planning — the Task detail (#95)', () => {
     );
     const detail = await screen.findByRole('dialog');
     const estimate = within(detail).getByRole('textbox', {
-      name: /見積もり（時間）/,
+      name: /^見積もり(?!（時間）)/,
     });
     await userEvent.clear(estimate);
     await userEvent.type(estimate, 'x');
@@ -1261,7 +1264,7 @@ describe('Planning — the Task detail (#95)', () => {
     );
     const detail = await screen.findByRole('dialog');
     const estimate = within(detail).getByRole('textbox', {
-      name: /見積もり（時間）/,
+      name: /^見積もり(?!（時間）)/,
     });
     await userEvent.type(estimate, 'x');
     const other =
@@ -1286,7 +1289,7 @@ describe('Planning — the Task detail (#95)', () => {
 
 describe('Planning — 見積もりを入れる (#96)', () => {
   const ownEstimate = () =>
-    screen.findByRole('textbox', { name: /^見積もり（時間）(?!：)/ });
+    screen.findByRole('textbox', { name: /^見積もり(?!（時間）)/ });
 
   async function addUnestimated() {
     await renderAt('/sprint?fixture=planning-pick&stage=pick');
@@ -1328,7 +1331,7 @@ describe('Planning — 見積もりを入れる (#96)', () => {
     );
   });
 
-  it('only the chosen side of 計画に使う時間 is in the plan (invariant 10)', async () => {
+  it('only the chosen side of 計画の時間 is in the plan (invariant 10)', async () => {
     await renderAt(
       '/sprint?fixture=planning-check&stage=check&task=task-dataset',
     );

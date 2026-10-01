@@ -252,7 +252,7 @@ export const skip = (selectionId: DailySelectionId): Change =>
 export const undoSkip = (selectionId: DailySelectionId): Change =>
   withOccurrence(undoSkipSelection, selectionId);
 
-/** 実績を残す, after completing or pausing (append-only). */
+/** かかった時間を記録 (実績), after completing or pausing (append-only). */
 export const recordActual = (
   selectionId: DailySelectionId,
   hours: number,

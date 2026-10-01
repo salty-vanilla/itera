@@ -64,7 +64,7 @@ type FactsPaneProps = {
   onPin: (pin: RetroPin) => void;
   onAssess: (areaId: AreaId, assessment: SelfAssessment | null) => void;
   /**
-   * 実績を足す: opens the actual time surface by the pressed button;
+   * かかった時間を記録: opens the actual time surface by the pressed button;
    * `title` names it on the surface.
    */
   onAddActual: AddActual;
@@ -828,7 +828,7 @@ function TaskList({
   );
 }
 
-/** 振り返りに使う, and 実績を足す for a non-recurring Task (F22). */
+/** 振り返りに使う, and かかった時間を記録 for a non-recurring Task (F22). */
 function TaskActions({
   fact,
   actualDate,
@@ -861,7 +861,7 @@ function TaskActions({
   );
 }
 
-/** 実績を足す, named with what it adds to. */
+/** かかった時間を記録, named with what it adds to. */
 function AddActualButton({
   subject,
   onClick,
@@ -873,11 +873,11 @@ function AddActualButton({
     <Button
       size="sm"
       variant="quiet"
-      aria-label={`実績を足す：${subject}`}
+      aria-label={`かかった時間を記録：${subject}`}
       onClick={(event) => onClick(event.currentTarget)}
     >
       <Timer aria-hidden />
-      実績を足す
+      かかった時間を記録
     </Button>
   );
 }

@@ -62,7 +62,7 @@ F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F
 | F19 | 繰り返しの回のスキップは取り消せる | DailySelection に Skipped → Selected（スキップを取り消す）を足す。回は Skipped → Pending に戻る（完了の取り消しと同じ扱い） | Today：スキップした行に「取り消す」を出す |
 | F20 | 繰り返しの SprintTask は Review で Done として閉じる | 回を束ねた SprintTask は、Review に入ると Done にする（持ち越しにしない。結果は回ごとの Done / Skipped / Missed に残る）。次の Sprint は自分の回を生成する | Retro：繰り返しは「完了・持ち越し」ではなく、回の数で見せる |
 | F21 | Retro は最終日から始められる | 本人は Sprint の最終日から「Retro を始める」で Review に入れる。終了日を過ぎたら、システムが Review にする | Today：最終日に「Retro を始める」を出す |
-| F22 | Review 中も実績時間を後から足せる | ActualTime は Sprint が Active か Review の間に追記できる。Closed になったら足せない | Retro：事実を見ながら実績を足せる |
+| F22 | Review 中も実績時間を後から足せる | ActualTime は Sprint が Active か Review の間に追記できる。Closed になったら足せない | Retro：事実を見ながら「かかった時間を記録」で足せる |
 | F23 | Review に入るときの未処理・Missed はシステムが付ける | 本人が最終日に Retro を始めた場合も、開いたままの DailySelection の Unresolved と、未処理の Occurrence の Missed は、システムの記録（actor = システム）として付ける。不変条件 24 に Review への移行を加える | なし |
 | F24 | Sprint から外した繰り返しの、外す前に済ませた回も Retro の事実に出す | 外す前に完了・スキップした回は Retro の事実（完了・スキップ）に出す。外したときに Excluded になった残りの回は出さない（F2・F14） | Retro：途中で外した繰り返しも、やった回は見える |
 | F25 | Sprint の番号は作成順の通し番号 | 「Sprint 14」の番号は保存せず、本人の Sprint を作成順に並べた位置（1 から）として派生させる。Sprint は重ならず、新しい Sprint はそれまでのどの Sprint よりも後に始まる（不変条件 11）ので、作成順は開始日の順と同じで、番号は変わらない | 持ち越し「（Sprint 13から）」、Sprint Header の「Sprint 14」 |
@@ -71,7 +71,7 @@ F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F
 | F28 | 今日を含む Sprint がない日の「期限が近い」は、その週の終わりまで | 「期限が近い」は今日から今日を含む Sprint の終わりまで（#39 のオーナー決定）。Review に入った日や最初の Sprint の前など、今日を含む Sprint がない日は、User の週の始まりから数えたその週の終わりまでとする（派生） | Backlog：Retro の日にも「期限が近い」が空にならない |
 | F29 | Backlog からの完了は、直後に元に戻せる | Backlog の「完了にする」を取り消すと、完了前の状態に戻す。Task は Active に、今の Sprint の SprintTask は Planned に戻る。完了の操作で作った今日の選択（origin = Backlog からの完了）は、完了前には無かったので記録ごと消す。完了前からあった選択は、完了の取り消しと同じく元の状態（Selected、または F17 で閉じていた状態）に戻す。完了と取り消しは Activity に残る | Backlog：完了した行の位置に「完了にしました」の 1 行と「元に戻す」を残す（Toast にはしない） |
 | F30 | 提案の却下は、直後に元に戻せる | EstimateSuggestion に 却下 → 提示中（却下を元に戻す）を足す。ほかに提示中の提案がないときだけ（提示中は 1 つまで）。Estimate は却下で変わらないので、戻しても変わらない。Activity に残す | Backlog・Planning の Task 詳細：却下後の 1 行に「元に戻す」 |
-| F31 | 提案は、値を直してから採用できる（編集して採用） | 提示中の提案から、本人が直した値を Estimate にする。Estimate.source は「提案を編集して採用」で、元の提案を指す（下限・中央・上限のどれでもない）。提案は採用になる。値は幅の外でもよい（本人の値なので）。F27 と同じく直後に元に戻せる | Backlog・Planning の Task 詳細：Agent 提案に「編集して採用」（Quiet） |
+| F31 | 提案は、値を直してから採用できる（編集して採用） | 提示中の提案から、本人が直した値を Estimate にする。Estimate.source は「提案を編集して採用」で、元の提案を指す（下限・中央・上限のどれでもない）。提案は採用になる。値は幅の外でもよい（本人の値なので）。F27 と同じく直後に元に戻せる | Backlog・Planning の Task 詳細：Agent 提案に「直して使う」（Quiet。Issue #206） |
 | F32 | 「今週の完了」は、繰り返しを回で数える | 派生（`weekProgress`）。繰り返しでない Task は 1 件（今週から外したものと持ち越しは数えない）、繰り返しは今週の回を 1 件ずつ数える（Planning で外した回とスキップした回は数えない。Missed は数える）。完了は Done の Task と Done の回。保存しない。点数にしない | Today：上部の Progress「今週の完了 N / M件」。実行中の Sprint の画面：Sprint Header の下に同じ Progress（Sprint の画面は実行中の Sprint を開いたときだけ） |
 | F33 | 過去の日の完了・スキップは、Sprint 中なら取り消せる。取り消した日は未処理になる（F17・F29 の場合を除く） | 本人が完了の取り消し（Done → Selected、F17 で閉じていた選択は元の閉じた状態）かスキップの取り消し（Skipped → Selected、F19）をし、同じ操作の中でシステムが、過ぎた日の開いた選択を Unresolved にする（不変条件 24）。Backlog からの完了で作った選択は、F29 と同じく記録ごと消す。Task は Active・SprintTask は Planned に、回は Pending に戻る。Sprint が Review に入った後は取り消せない。取り消しと Unresolved は Activity に残る | Sprint（実行中）：「日ごとの記録」に昨日までの完了・スキップと「取り消す」 |
 | F34 | Sprint の開始日より前でも、今週の Task は Backlog から完了にできる | 確定済みで開始日前の Sprint にある Task を Backlog で完了にすると、Task は Completed、SprintTask は Done になる。選ぶ日がまだないので DailySelection は作らない（不変条件 27 の例外）。直後の取り消しでは Task は Active、SprintTask は Planned に戻る（F29）。Sprint 外の Task を「今日へ」入れるのは開始日から | Backlog：開始日前は「今日へ」を無効にし、始まる日を添える |
@@ -420,7 +420,7 @@ v0.2 Final でも 3 つとも、UI に入口のない操作を使わずに最後
 | # | 操作（画面） | 作られる / 変わるもの | 表示・事実 |
 | --- | --- | --- | --- |
 | 1–3 | Backlog の詳細で「今日へ」（1 操作） | 同時に SprintTask（Planned、origin = midSprint、goalLink = unlinked、planSnapshot = 追加時点。仕事は基準の対象外なので計画値 2–3h）と DailySelection（当日、origin = 週の途中の追加）。Activity：Sprint への追加（経路 = Backlog→今日） | 確認ダイアログなし、容量の警告なし。Toast「「顧客インタビューの設計」を「今日やる」に入れました」（今週の Sprint にも入ったことを添え、「今日を開く」を出す）。Backlog の行に「今日」「週の途中で追加」（「今日やる」に入っているあいだ。「今日やる」から外れたら「今週」） |
-| 4 | Today で完了 | DailySelection → Done、SprintTask → Done、Task → Completed。実績は任意で ActualTime | 「実績時間を残す（任意）」 |
+| 4 | Today で完了 | DailySelection → Done、SprintTask → Done、Task → Completed。実績は任意で ActualTime | 「かかった時間を記録」（任意） |
 | 5 | Retro | origin = midSprint の SprintTask を数える | 「週の途中の追加 1件（目標に入っていない）」。InterruptNote とは別に表示。計画値の合計には含め、確定時の合計との差を見せる |
 
 今日を選ばずに今週に足す場合（今週へ、F40）は次のとおり。前提は同じで、9/29 (火) に Backlog を開いている。

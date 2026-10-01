@@ -168,7 +168,9 @@ describe('spokenHours', () => {
     expect(spokenHours(3)).toBe('3時間');
     expect(spokenHours(0.5)).toBe('30分');
     expect(spokenHours(2, 4)).toBe('2〜4時間');
-    expect(spokenHours(0.5, 1.5)).toBe('30分〜1.5時間');
+    expect(spokenHours(0.5, 1.5)).toBe('30分〜1時間30分');
+    expect(spokenHours(1.25)).toBe('1時間15分');
+    expect(spokenHours(1.25, 2)).toBe('1時間15分〜2時間');
   });
 });
 

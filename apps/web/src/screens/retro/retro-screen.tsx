@@ -331,7 +331,7 @@ function RetroView({
           mode="add"
           taskTitle={editing.title}
           // The day it goes to, which is not always today in Retro (F22).
-          description={`${formatDate(editing.target.date)} の実績として足します。`}
+          description={`${formatDate(editing.target.date)} に記録します。`}
           open
           onOpenChange={(open) => {
             if (!open) setEditing(undefined);

@@ -58,7 +58,11 @@ function FieldDescription({
   return (
     <FieldPrimitive.Description
       data-slot="field-description"
-      className={cn('text-help text-ink-muted', className)}
+      // A phrase stays whole when the line breaks (「確かめる」, 「できます」).
+      className={cn(
+        'text-help text-ink-muted [text-wrap:pretty] [word-break:auto-phrase]',
+        className,
+      )}
       {...props}
     />
   );
@@ -69,7 +73,7 @@ type FieldProps = {
   label: ReactNode;
   /** Adds 「必須」 or 「任意」 after the label. */
   necessity?: Necessity | undefined;
-  /** Support text above the control: units or an example (「0.5時間単位」). */
+  /** Support text above the control: units or an example (「時間で入力（例：1.5）」). */
   description?: ReactNode | undefined;
   /**
    * Error message below the control. Setting it marks the field invalid

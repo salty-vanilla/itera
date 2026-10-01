@@ -5,7 +5,6 @@ import { CapacityIndicator } from '@/components/sprint/capacity-indicator';
 import { criterionName } from '@/lib/criterion-text';
 import type { PlanningData } from '@/store/planning-view';
 import { cn } from '@/lib/utils';
-import { weekCall } from '@/lib/week-text';
 
 // 時間の見通し (docs/design/patterns.md Sprint Planning, right pane): the
 // previous improvement (shown only), the active planning criterion, and the
@@ -98,7 +97,6 @@ function OutlookPane({
         areas={areas}
         breakdownOnly={check}
         onAvailableHoursChange={onAvailableHours}
-        week={weekCall(data.week, data.number)}
       />
     </div>
   );

@@ -50,7 +50,7 @@ function EstimatePopover({ defaultOpen }: { defaultOpen?: boolean }) {
               見積もり
             </label>
             <p id={`${id}-help`} className="text-help text-ink-muted">
-              0.5時間単位
+              時間で入力（例：1.5）
             </p>
             <div className="flex items-center gap-2">
               <input

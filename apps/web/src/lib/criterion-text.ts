@@ -18,9 +18,16 @@ export function criterionName(
   return `${scope}見積もりの提案の${BOUND_WORDS[policy.rangePolicy]}で計画する`;
 }
 
+/** 「見積もりの提案の上限」: where in the suggestion the criterion plans. */
+export function criterionBoundText(bound: SuggestionBound): string {
+  return `見積もりの提案の${BOUND_WORDS[bound]}`;
+}
+
 /**
- * What the criterion does to a Planning: 「研究の幅のあるタスクを上限で
- * 計画します」, or with `count`, 「研究の幅のあるタスク 1件を…」. From the
+ * What the criterion does to a Planning, said by how it plans (#206):
+ * 「見積もりがない研究のタスクは、見積もりの提案の上限で計画します」, or with
+ * `count`, 「研究のタスク 1件を、見積もりの提案の上限で計画します」. Without a
+ * count, 「見積もりがない」 says that a Task's own Estimate stays. From the
  * same policy as its name (invariant 39).
  */
 export function criterionEffectText(
@@ -29,7 +36,8 @@ export function criterionEffectText(
   count?: number,
 ): string {
   const scope = policy.scope.kind === 'all' ? '' : `${areaName ?? '領域'}の`;
-  const tasks =
-    count === undefined ? '幅のあるタスク' : `幅のあるタスク ${count}件`;
-  return `${scope}${tasks}を${BOUND_WORDS[policy.rangePolicy]}で計画します`;
+  const bound = criterionBoundText(policy.rangePolicy);
+  return count === undefined
+    ? `見積もりがない${scope}タスクは、${bound}で計画します`
+    : `${scope}タスク ${count}件を、${bound}で計画します`;
 }

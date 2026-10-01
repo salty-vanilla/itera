@@ -1,10 +1,11 @@
+import { HOURS_HINT } from './time-format';
+
 /**
- * The actual time typed for a day (実績時間), in hours. One reading for the
+ * The actual time typed for a day (かかった時間), in hours. One reading for the
  * surface of Today's rows and the Task detail's 今日はここまで, so that both
  * leave the same record.
  */
-export const ACTUAL_HOURS_HINT =
-  '時間単位（例：1.5）。記録は残り、あとから足せます';
+export const ACTUAL_HOURS_HINT = `${HOURS_HINT}。あとから追加もできます`;
 export const ACTUAL_HOURS_ERROR =
   '0 より大きい時間を数字で入れてください（例：1.5）';
 

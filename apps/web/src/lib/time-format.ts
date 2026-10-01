@@ -21,6 +21,12 @@ const EN_DASH = '–';
 
 export const UNESTIMATED = '見積もりなし';
 
+/**
+ * The description of a field typed in hours. The unit is written here once,
+ * not in the label: the suffix 「h」 is not read out.
+ */
+export const HOURS_HINT = '時間で入力（例：1.5）';
+
 type HoursOptions = {
   /** A total (合計): always in hours, even under 1h. */
   total?: boolean;
@@ -152,14 +158,18 @@ export function formatLeftOut(total: PlanningTotal): string | undefined {
   return sentences.length === 0 ? undefined : sentences.join(' ');
 }
 
+/** 「30分」「3時間」「1時間15分」: hours and minutes, not 「1.25時間」. */
 function spokenOne(hours: number): string {
   const minutes = Math.round(hours * 60);
-  return minutes < 60 ? `${minutes}分` : `${Math.round(hours * 100) / 100}時間`;
+  if (minutes < 60) return `${minutes}分`;
+  const rest = minutes % 60;
+  return `${Math.floor(minutes / 60)}時間${rest === 0 ? '' : `${rest}分`}`;
 }
 
 /**
  * The value as it is read out (DESIGN.md Estimate: 「見積もり 3時間」
- * 「2〜4時間」): the symbols and units are spelled as words.
+ * 「2〜4時間」「1時間15分〜2時間」): the symbols and units are spelled as
+ * words. Both ends in whole hours write the unit once.
  */
 export function spokenHours(lo: number, hi: number = lo): string {
   if (lo === hi) return spokenOne(lo);

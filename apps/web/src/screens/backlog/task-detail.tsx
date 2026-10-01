@@ -54,7 +54,7 @@ import {
   readActualHours,
 } from '@/lib/actual-hours';
 import { formatDate, formatTime } from '@/lib/date-format';
-import { formatHours, formatRange } from '@/lib/time-format';
+import { HOURS_HINT, formatHours } from '@/lib/time-format';
 import { startedText } from '@/lib/today-words';
 import type { BacklogData, BacklogItem } from '@/store/backlog-view';
 import { useTaskActions } from '@/store/use-task-actions';
@@ -91,7 +91,7 @@ const fieldNames: Record<FieldKey, string> = {
   due: '期限',
   priority: '優先度',
   estimate: '見積もり',
-  timeBasis: '計画に使う時間',
+  timeBasis: '計画の時間',
 };
 
 function draftOf(task: Task): Draft {
@@ -495,7 +495,7 @@ function TaskDetail({
       kind: 'adopted',
       suggestionId: suggestion.id,
       previous,
-      text: `見積もり ${formatHours(hours)} を採用しました（提案 ${formatRange(suggestion.lo, suggestion.hi)}）`,
+      text: `見積もりを ${formatHours(hours)} にしました`,
     });
   }
 
@@ -510,7 +510,7 @@ function TaskDetail({
       kind: 'adopted',
       suggestionId: suggestion.id,
       previous,
-      text: `見積もり ${formatHours(hours)} を採用しました（提案 ${formatRange(suggestion.lo, suggestion.hi)} を編集）`,
+      text: `見積もりを ${formatHours(hours)} にしました`,
     });
     return true;
   }
@@ -532,7 +532,7 @@ function TaskDetail({
     setOutcome({
       kind: 'rejected',
       suggestionId: suggestion.id,
-      text: `見積もりの提案 ${formatRange(suggestion.lo, suggestion.hi)} を却下しました`,
+      text: '提案を使いませんでした',
     });
   }
 
@@ -574,7 +574,7 @@ function TaskDetail({
             {task.subtasks.length > 0 && (
               <Saved show={saved === 'timeBasis'}>
                 <RadioGroup<TimeBasis>
-                  legend="計画に使う時間"
+                  legend="計画の時間"
                   description="タスクの見積もりとサブタスクの合計は、どちらか一方を計画に使います。"
                   value={task.timeBasis}
                   onValueChange={(timeBasis) =>
@@ -807,7 +807,7 @@ function TaskDetail({
                 className="flex flex-col gap-2"
               >
                 <Field
-                  label="実績時間"
+                  label="かかった時間"
                   necessity="optional"
                   description={ACTUAL_HOURS_HINT}
                   error={pauseError}
@@ -918,9 +918,9 @@ function TaskDetail({
           </Saved>
           <Saved show={saved === 'estimate'}>
             <Field
-              label="見積もり（時間）"
+              label="見積もり"
               necessity="optional"
-              description="本人の見積もり。0.25時間単位など（例：1.5）"
+              description={HOURS_HINT}
               error={errors.estimate}
             >
               <TextInput

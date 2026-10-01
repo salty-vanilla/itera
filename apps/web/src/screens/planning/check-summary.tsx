@@ -8,9 +8,8 @@ import {
   AvailableHoursField,
   CapacityStatement,
 } from '@/components/sprint/capacity-indicator';
-import { BOUND_WORDS, criterionName } from '@/lib/criterion-text';
+import { criterionBoundText, criterionName } from '@/lib/criterion-text';
 import { formatHours, formatRange } from '@/lib/time-format';
-import { weekCall, weekText } from '@/lib/week-text';
 import type { PlanningData } from '@/store/planning-view';
 import { planSummary } from './plan-summary';
 
@@ -42,7 +41,6 @@ function CheckSummary({
   onOpenTask,
 }: CheckSummaryProps) {
   const summary = planSummary(data);
-  const week = weekCall(data.week, data.number);
   const ids = useId();
   return (
     <section
@@ -88,10 +86,6 @@ function CheckSummary({
           <AvailableHoursField
             value={data.totals.capacity?.availableHours}
             onChange={onAvailableHours}
-            description={weekText(
-              week,
-              '、計画に使える時間（h）。本人が決めます',
-            )}
           />
         </div>
       </div>
@@ -182,7 +176,7 @@ function CheckSummary({
 
 /**
  * The criterion's effect, from the same policy as its name (invariant 39):
- * 「研究の幅のあるタスク 1件を上限で計画しています（合計の下限 +2h）」.
+ * 「研究のタスク 1件を、見積もりの提案の上限で計画しています（合計の下限 +2h）。」.
  */
 function CriterionEffect({
   criterion,
@@ -190,7 +184,7 @@ function CriterionEffect({
   criterion: NonNullable<PlanningData['criterion']>;
 }) {
   const { count, delta } = criterion.effect;
-  const bound = BOUND_WORDS[criterion.active.policy.rangePolicy];
+  const bound = criterionBoundText(criterion.active.policy.rangePolicy);
   const scope =
     criterion.areaName === undefined ? '' : `${criterion.areaName}の`;
   // How the total moves: the lower end rises, the upper end falls, or both.
@@ -203,7 +197,7 @@ function CriterionEffect({
   return (
     <p className="text-body text-ink [text-wrap:pretty] [word-break:auto-phrase]">
       {criterion.applied
-        ? `${scope}幅のあるタスク ${count}件を${bound}で計画しています${moves.length > 0 ? `（${moves.join('、')}）` : ''}。`
+        ? `${scope}タスク ${count}件を、${bound}で計画しています${moves.length > 0 ? `（${moves.join('、')}）` : ''}。`
         : '見積もりの提案の幅のまま合計します。'}
     </p>
   );
