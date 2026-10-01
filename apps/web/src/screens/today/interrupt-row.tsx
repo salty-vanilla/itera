@@ -62,7 +62,8 @@ function InterruptRow({ note, time, onEdit, onDelete }: InterruptRowProps) {
             直す
           </MenuItem>
           <MenuSeparator />
-          <MenuItem variant="danger" onClick={onDelete}>
+          {/* Not `danger`: it can be undone from the Toast (Issue #197). */}
+          <MenuItem onClick={onDelete}>
             <Trash2 aria-hidden />
             消す
           </MenuItem>
