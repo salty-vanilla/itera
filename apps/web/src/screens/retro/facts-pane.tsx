@@ -539,7 +539,7 @@ function AreaFacts({
           ) : (
             <RadioGroup<SelfAssessment | null>
               legend="この目標を自分でどう見ますか"
-              description="システムは判定しません。選ばなくても次へ進めます。"
+              description="選ばなくても進めます。"
               value={goal.selfAssessment ?? null}
               onValueChange={(value) => onAssess(areaId, value)}
               className="flex flex-col gap-2"

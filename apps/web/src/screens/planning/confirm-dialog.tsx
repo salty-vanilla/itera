@@ -51,9 +51,7 @@ function ConfirmDialog({
           <section aria-label="目標" className="flex flex-col gap-1">
             <h3 className="text-label text-ink-muted">目標</h3>
             {goals.length === 0 ? (
-              <p className="text-body text-ink">
-                目標はありません（領域ごとに任意です）。
-              </p>
+              <p className="text-body text-ink">目標はありません。</p>
             ) : (
               <ul className="flex flex-col gap-1 text-body text-ink">
                 {goals.map((p) => (

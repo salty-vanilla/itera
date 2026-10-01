@@ -342,7 +342,9 @@ describe('Planning — 選ぶ', () => {
     const note = within(planPane()).getByText(
       /今週発生する繰り返しは最初から入っています。外すと今日の画面にも出ません。/,
     );
-    expect(note.textContent).toContain('行が黄色の地とチェックになり');
+    expect(note.textContent).toContain(
+      'Backlog でチェックしたタスクが、ここに領域ごとに並びます。',
+    );
   });
 
   // Issue #98: the pane is narrow at every stage, so the field has a row to
@@ -397,11 +399,9 @@ describe('Planning — 整える', () => {
     expect(
       within(study).getByRole('button', { name: '目標を書く: 学習' }),
     ).toBeTruthy();
-    expect(study.textContent).not.toContain('目標は任意です');
+    expect(study.textContent).not.toContain('目標なしでも計画できます');
     // An Area with Tasks and no Goal keeps its note.
-    expect(planPane().textContent).toContain(
-      'この領域の目標は任意です。タスクだけでも計画できます。',
-    );
+    expect(planPane().textContent).toContain('目標なしでも計画できます。');
 
     // Cancelling goes back to the line, with the focus on the way in.
     await userEvent.click(
@@ -820,7 +820,7 @@ describe('Planning — 確かめる', () => {
     expect(
       within(planPane()).queryByRole('button', { name: /目標を編集/ }),
     ).toBeNull();
-    expect(planPane().textContent).not.toMatch(/目標は任意です/);
+    expect(planPane().textContent).not.toMatch(/目標なしでも計画できます/);
     await userEvent.click(
       within(summary()).getByRole('link', { name: '整えるで書く' }),
     );

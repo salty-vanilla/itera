@@ -183,8 +183,7 @@ function PlanPane({
  * occurrences are in already, and what choosing does (Issue #92).
  */
 function pickGuide(week: string, hasRecurring: boolean): string {
-  const choosing =
-    'Backlog の □ で選ぶと、行が黄色の地とチェックになり、この下に領域ごとに並びます。';
+  const choosing = 'Backlog でチェックしたタスクが、ここに領域ごとに並びます。';
   return hasRecurring
     ? weekText(
         week,

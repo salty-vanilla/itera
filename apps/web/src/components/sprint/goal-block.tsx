@@ -38,7 +38,7 @@ type GoalBlockProps = {
    */
   removable?: boolean | undefined;
   /**
-   * 「この領域の目標は任意です。…」 under 「+ 目標を書く」: while planning
+   * 「目標なしでも計画できます。」 under 「+ 目標を書く」: while planning
    * only. A running Sprint passes false (#155).
    */
   optionalNote?: boolean | undefined;
@@ -229,7 +229,7 @@ function GoalBlock({
           {/* Only where a Goal can be written: not read only, not 領域なし. */}
           {onSave !== undefined && optionalNote && (
             <p className="text-help text-ink-muted">
-              この領域の目標は任意です。タスクだけでも計画できます。
+              目標なしでも計画できます。
             </p>
           )}
         </div>

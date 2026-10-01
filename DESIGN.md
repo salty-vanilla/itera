@@ -714,7 +714,7 @@ compact の原則：
 
 **Goal** — Sprint × Area の「今週どんな状態にしたいか」。
 - 上端の罫（`border`）、見出し（Area Indicator heading＋タスク数と時間＋自己判定の Tag）、Goal 文（`goal`、`measure-read`）とその直下の編集（Quiet sm、文の左端に揃える。何を変えるかが分かるように、見出しではなく文の近くに置く）、その Area の選んだタスク。
-- set（確定）/ empty（「+ 目標を書く」。計画中は「この領域の目標は任意です。」を添える。確定後は添えない、Issue #155。Goal も Task もない Area は、名前と「+ 目標を書く」を 1 行にし、案内は添えない。Issue #161）/ editing（`body-l` の Textarea＋保存 / キャンセル）/ 自己判定済み（できた = done の Tag、一部できた・できなかった・判断しない = neutral）。
+- set（確定）/ empty（「+ 目標を書く」。計画中は「目標なしでも計画できます。」を添える。確定後は添えない、Issue #155。Goal も Task もない Area は、名前と「+ 目標を書く」を 1 行にし、案内は添えない。Issue #161）/ editing（`body-l` の Textarea＋保存 / キャンセル）/ 自己判定済み（できた = done の Tag、一部できた・できなかった・判断しない = neutral）。
 - Goal の間は `spacing.8`。× Card で囲む、Goal がない Area を警告色で示す、Goal 文を太字・大見出しにする、全体 Goal を作る。
 
 **Capacity Indicator** — 使える時間（Sprint.availableHours）と計画の合計の差を、幅のまま示す。
