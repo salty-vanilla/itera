@@ -12,11 +12,16 @@ import {
 } from '@/components/ui/drawer';
 import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
+import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 
 // 割り込みを記録 (patterns.md Today): a short note and optional minutes,
 // from its own entry, not a Task row. A Bottom Sheet on compact, the right
 // Drawer from medium up. Recording it rearranges nothing (invariant 29).
 // 直す uses the same surface, filled with the note (F38).
+// Modal at every width: a short form with nothing to use behind it, so Tab
+// stays inside, the scrim shows and closing returns focus to what opened it
+// (#153). From medium up a click on the scrim does not close it, as before it
+// was modal, so that it does not throw away what is typed.
 
 type InterruptSheetProps = {
   open: boolean;
@@ -39,6 +44,7 @@ function InterruptSheet({
   );
   const [errors, setErrors] = useState<{ text?: string; minutes?: string }>({});
   const formRef = useRef<HTMLFormElement>(null);
+  const medium = useMediaQuery(MEDIUM_UP, true);
   const change = (next: boolean) => {
     if (!next) {
       setText('');
@@ -70,7 +76,12 @@ function InterruptSheet({
     if (onSubmit(note, m)) change(false);
   };
   return (
-    <Drawer open={open} onOpenChange={change}>
+    <Drawer
+      modal
+      disablePointerDismissal={medium}
+      open={open}
+      onOpenChange={change}
+    >
       <DrawerContent>
         <form
           ref={formRef}

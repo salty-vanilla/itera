@@ -74,7 +74,7 @@ async function leaveWeek(area: string, title: string) {
     name: new RegExp(area),
   });
   await userEvent.click(
-    within(block).getByRole('button', { name: `操作: ${title}` }),
+    within(block).getByRole('button', { name: `その他の操作: ${title}` }),
   );
   await userEvent.click(
     await screen.findByRole('menuitem', { name: /^今週から外す/ }),
@@ -420,7 +420,7 @@ describe('Planning — 整える', () => {
     const research = within(planPane()).getByRole('region', { name: /研究/ });
     await userEvent.click(
       within(research).getByRole('button', {
-        name: '操作: 関連論文を 3 本読む',
+        name: 'その他の操作: 関連論文を 3 本読む',
       }),
     );
     await userEvent.click(
@@ -438,7 +438,7 @@ describe('Planning — 整える', () => {
     // The menu now offers the other way, in the row's words (#159).
     await userEvent.click(
       within(research).getByRole('button', {
-        name: '操作: 関連論文を 3 本読む',
+        name: 'その他の操作: 関連論文を 3 本読む',
       }),
     );
     await userEvent.click(
@@ -458,7 +458,9 @@ describe('Planning — 整える', () => {
     expect(reading().textContent).not.toContain('目標に紐づ');
     expect(reading().textContent).not.toContain('目標なし');
     await userEvent.click(
-      within(study).getByRole('button', { name: '操作: 英語の多読 30 分' }),
+      within(study).getByRole('button', {
+        name: 'その他の操作: 英語の多読 30 分',
+      }),
     );
     await screen.findByRole('menuitem', { name: /から外す/ });
     expect(screen.queryByRole('menuitem', { name: /目標に紐づ/ })).toBeNull();
@@ -478,7 +480,9 @@ describe('Planning — 整える', () => {
     expect(study.textContent).not.toContain('はじめは目標に紐づきません');
 
     await userEvent.click(
-      within(study).getByRole('button', { name: '操作: 英語の多読 30 分' }),
+      within(study).getByRole('button', {
+        name: 'その他の操作: 英語の多読 30 分',
+      }),
     );
     await userEvent.click(
       await screen.findByRole('menuitem', { name: '目標に紐づける' }),
@@ -981,7 +985,7 @@ describe('Planning — review fixes', () => {
     const research = within(planPane()).getByRole('region', { name: /研究/ });
     await userEvent.click(
       within(research).getByRole('button', {
-        name: '操作: 関連論文を 3 本読む',
+        name: 'その他の操作: 関連論文を 3 本読む',
       }),
     );
     await userEvent.click(
@@ -1032,7 +1036,7 @@ describe('Planning — review fixes', () => {
     expect(work.textContent).toContain('完了済み');
     await userEvent.click(
       within(work).getByRole('button', {
-        name: '操作: 新メンバーのオンボーディング資料',
+        name: 'その他の操作: 新メンバーのオンボーディング資料',
       }),
     );
     // No detail to open, so no way in to the Estimate either (#96).
@@ -1109,7 +1113,9 @@ describe('Planning — review fixes (2)', () => {
     ).toBeTruthy();
     const study = within(planPane()).getByRole('region', { name: /学習/ });
     await userEvent.click(
-      within(study).getByRole('button', { name: '操作: 英語の多読 30 分' }),
+      within(study).getByRole('button', {
+        name: 'その他の操作: 英語の多読 30 分',
+      }),
     );
     await userEvent.click(
       await screen.findByRole('menuitem', {
@@ -1289,7 +1295,7 @@ describe('Planning — 見積もりを入れる (#96)', () => {
     await addUnestimated();
     await userEvent.click(
       within(planPane()).getByRole('button', {
-        name: '操作: 発表資料を見直す',
+        name: 'その他の操作: 発表資料を見直す',
       }),
     );
     const item = await screen.findByRole('menuitem', {
@@ -1327,7 +1333,7 @@ describe('Planning — 見積もりを入れる (#96)', () => {
     await renderAt('/sprint?fixture=planning-pick&stage=pick');
     await userEvent.click(
       within(backlogPane()).getByRole('button', {
-        name: '操作: 顧客インタビューの設計',
+        name: 'その他の操作: 顧客インタビューの設計',
       }),
     );
     await userEvent.click(

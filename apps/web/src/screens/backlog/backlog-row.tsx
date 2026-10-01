@@ -181,7 +181,7 @@ function BacklogRow({
             render={
               <IconButton
                 size="sm"
-                label={`操作: ${task.title}`}
+                label={`その他の操作: ${task.title}`}
                 icon={<Ellipsis />}
               />
             }
