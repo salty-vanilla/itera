@@ -86,9 +86,9 @@ function ToastProvider({ children }: { children: ReactNode }) {
             // compact: full width above the bottom tab bar, whose height the
             // screen sets in --toast-offset-bottom, and above a bar the screen
             // sticks over it (--toast-offset-above, lib/use-stuck-bar.ts).
-            // medium and up: bottom left, and above such a bar too. 480px wide,
-            // and short of an open Drawer (400px at the right edge, 24px from
-            // the left edge, 8px between): 336px at 768px (#170).
+            // medium and up: bottom left, and above such a bar too. 480px wide;
+            // while a Drawer is open (400px at the right edge) short of it, 24px
+            // from the left edge and 8px between: 336px at 768px (#170).
             'inset-x-4 bottom-[calc(var(--toast-offset-bottom,0px)+var(--toast-offset-above,0px)+var(--spacing-4))]',
             'medium:right-auto medium:bottom-[calc(var(--toast-offset-above,0px)+var(--spacing-6))] medium:left-6 medium:w-toast',
             'medium:[body:has([data-slot=drawer-content])_&]:w-[min(var(--spacing-toast),calc(100vw-var(--spacing-drawer)-var(--spacing-8)))]',
