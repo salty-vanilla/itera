@@ -201,6 +201,74 @@ describe('changeRuleForNextSprint (F1, F7)', () => {
   });
 });
 
+describe('changeRuleForNextSprint (F39)', () => {
+  it('F39 / invariant 31: changes before the draft is confirmed replace one version and rebuild only the draft', () => {
+    const { task, rule, active, draft, occurrences, newOccurrenceId } = setUp();
+    const change = (
+      state: { rule: typeof rule; sprint: Sprint; occurrences: Occurrence[] },
+      pattern: Parameters<typeof changeRuleForNextSprint>[0]['pattern'],
+    ) => {
+      const result = changeRuleForNextSprint(
+        {
+          task,
+          rule: state.rule,
+          pattern,
+          user,
+          today: d('2026-10-04'),
+          sprints: [active, state.sprint],
+          occurrences: state.occurrences,
+          newOccurrenceId,
+          newSprintTaskId: ids('st-new'),
+        },
+        ctx,
+      );
+      const applied = unwrap(result);
+      const gone = new Set(applied.discarded);
+      return {
+        result,
+        rule: applied.rule,
+        sprint: applied.sprint ?? state.sprint,
+        occurrences: [
+          ...state.occurrences.filter((o) => !gone.has(o.id)),
+          ...applied.generated,
+        ],
+      };
+    };
+    const first = change({ rule, sprint: draft, occurrences }, sunday);
+    const second = change(first, { freq: 'weekly', daysOfWeek: [0, 3] });
+    expect(second.rule.versions.map((v) => v.version)).toEqual([1, 2]);
+    expect(second.rule.versions.at(-1)).toEqual({
+      version: 2,
+      pattern: { freq: 'weekly', daysOfWeek: [0, 3] },
+      effectiveFrom: '2026-10-05',
+    });
+    expect(
+      second.occurrences.map((o) => [o.scheduledDate, o.ruleVersion, o.state]),
+    ).toEqual([
+      ['2026-10-03', 1, 'done'],
+      ['2026-10-07', 2, 'pending'],
+      ['2026-10-11', 2, 'pending'],
+    ]);
+
+    // Back to Saturdays: the draft is rebuilt from version 1 again.
+    const back = change(second, saturday);
+    expect(back.rule).toEqual(rule);
+    expect(
+      back.occurrences.map((o) => [o.scheduledDate, o.ruleVersion, o.state]),
+    ).toEqual([
+      ['2026-10-03', 1, 'done'],
+      ['2026-10-10', 1, 'pending'],
+    ]);
+    expect(back.result.ok && back.result.value.activities[0]).toMatchObject({
+      kind: 'recurrenceRuleChanged',
+      version: 1,
+      effectiveFrom: '2026-10-05',
+    });
+    // The confirmed Sprint's occurrence is the same record throughout.
+    expect(back.occurrences[0]).toBe(occurrences[0]);
+  });
+});
+
 describe('changeRuleForNextSprint — guards and edges', () => {
   function change(
     input: Partial<Parameters<typeof changeRuleForNextSprint>[0]>,
@@ -318,15 +386,9 @@ describe('changeRuleForNextSprint — guards and edges', () => {
       ),
     );
     expect(applied.effectiveFrom).toBe('2026-10-12');
-    expect(
-      applied.rule.versions.map((v) => [
-        v.version,
-        v.effectiveFrom,
-        v.effectiveTo,
-      ]),
-    ).toEqual([
-      [1, '2026-10-12', '2026-10-11'],
-      [2, '2026-10-12', undefined],
+    // Version 1 has not taken effect, so it is replaced (F39).
+    expect(applied.rule.versions).toEqual([
+      { version: 1, pattern: sunday, effectiveFrom: '2026-10-12' },
     ]);
   });
 });
