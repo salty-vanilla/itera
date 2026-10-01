@@ -70,7 +70,7 @@ function Row({
       actions={
         <IconButton
           size="sm"
-          label="操作: 関連論文を 3 本読む"
+          label="その他の操作: 関連論文を 3 本読む"
           icon={<Ellipsis />}
         />
       }

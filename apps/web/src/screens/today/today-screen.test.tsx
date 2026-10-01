@@ -90,7 +90,9 @@ const row = (name: string, title: string) => {
   return found;
 };
 async function menu(title: string, item: string) {
-  await userEvent.click(screen.getByRole('button', { name: `操作: ${title}` }));
+  await userEvent.click(
+    screen.getByRole('button', { name: `その他の操作: ${title}` }),
+  );
   await userEvent.click(await screen.findByRole('menuitem', { name: item }));
 }
 
@@ -440,7 +442,9 @@ describe('Today — the daily operations', () => {
   it('puts 開始 and 完了にする first in the `…`, with labels alone (#163)', async () => {
     await renderAt('/today?fixture=today-interrupt');
     await userEvent.click(
-      screen.getByRole('button', { name: '操作: 顧客インタビューの設計' }),
+      screen.getByRole('button', {
+        name: 'その他の操作: 顧客インタビューの設計',
+      }),
     );
     const items = await screen.findAllByRole('menuitem');
     expect(
@@ -607,7 +611,7 @@ describe('Today — completed from the Backlog', () => {
     // Nor does its `…` offer 見積もりを入れる (#96).
     await userEvent.click(
       within(last).getByRole('button', {
-        name: '操作: 新メンバーのオンボーディング資料',
+        name: 'その他の操作: 新メンバーのオンボーディング資料',
       }),
     );
     await screen.findByRole('menuitem', { name: /実績を残す/ });
@@ -673,6 +677,30 @@ describe('Today — adding and interrupts', () => {
     expect(selectionOf(task?.id ?? '')?.origin).toBe('midSprint');
   });
 
+  it('opens the interrupt sheet modal and returns focus on close (#153)', async () => {
+    await renderAt('/today?fixture=today-daytime');
+    const open = screen.getByRole('button', { name: '割り込みを記録' });
+    await userEvent.click(open);
+    // Named by its heading, and modal at every width: the scrim shows.
+    const sheet = await screen.findByRole('dialog', { name: '割り込みを記録' });
+    expect(sheet.getAttribute('aria-modal')).toBe('true');
+    expect(
+      document.querySelector('[data-slot="drawer-backdrop"]'),
+    ).not.toBeNull();
+    const note = within(sheet).getByRole('textbox', { name: /メモ/ });
+    await waitFor(() => expect(document.activeElement).toBe(note));
+    // A click on the scrim keeps it open with what is typed.
+    await userEvent.type(note, '来客対応');
+    await userEvent.click(
+      document.querySelector<HTMLElement>('[data-slot="drawer-backdrop"]')!,
+    );
+    expect(screen.getByRole('dialog', { name: '割り込みを記録' })).toBe(sheet);
+    expect((note as HTMLInputElement).value).toBe('来客対応');
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(document.activeElement).toBe(open);
+  });
+
   it.each([
     ['compact', false],
     ['medium and up', true],
@@ -719,7 +747,7 @@ describe('Today — adding and interrupts', () => {
       );
       expect(document.activeElement).toBe(
         within(row('割り込み', '来客対応')).getByRole('button', {
-          name: /^操作: 割り込み/,
+          name: /^その他の操作: 割り込み/,
         }),
       );
     },
@@ -730,7 +758,7 @@ describe('Today — editing and deleting interrupts (F38)', () => {
   const openActions = async (text: string) => {
     await userEvent.click(
       within(row('割り込み', text)).getByRole('button', {
-        name: /^操作: 割り込み/,
+        name: /^その他の操作: 割り込み/,
       }),
     );
   };
@@ -743,7 +771,7 @@ describe('Today — editing and deleting interrupts (F38)', () => {
       await screen.findByRole('menuitem', { name: '直す' }),
     );
     expect(
-      await screen.findByRole('heading', { name: '割り込みを直す' }),
+      await screen.findByRole('dialog', { name: '割り込みを直す' }),
     ).toBeTruthy();
     const note = screen.getByRole('textbox', { name: /メモ/ });
     expect((note as HTMLInputElement).value).toBe('障害の問い合わせに対応');
@@ -789,7 +817,7 @@ describe('Today — editing and deleting interrupts (F38)', () => {
     await waitFor(() =>
       expect(document.activeElement).toBe(
         within(row('割り込み', '急ぎのレビュー依頼')).getByRole('button', {
-          name: /^操作: 割り込み/,
+          name: /^その他の操作: 割り込み/,
         }),
       ),
     );
@@ -808,7 +836,7 @@ describe('Today — interrupts after the Review starts (F38, invariant 40)', () 
     await waitFor(() => expect(sprint).toThrow());
     expect(await screen.findByText('障害の問い合わせに対応')).toBeTruthy();
     expect(
-      screen.queryByRole('button', { name: /^操作: 割り込み/ }),
+      screen.queryByRole('button', { name: /^その他の操作: 割り込み/ }),
     ).toBeNull();
   });
 });
@@ -985,7 +1013,7 @@ describe('Today — 見積もりを入れる (#96)', () => {
     await renderAt('/today?fixture=today-interrupt');
     await userEvent.click(
       within(region('今日やる')).getByRole('button', {
-        name: '操作: 顧客インタビューの設計',
+        name: 'その他の操作: 顧客インタビューの設計',
       }),
     );
     const item = await screen.findByRole('menuitem', {

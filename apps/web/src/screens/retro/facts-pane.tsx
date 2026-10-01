@@ -844,11 +844,11 @@ function AddActualButton({
     <Button
       size="sm"
       variant="quiet"
+      aria-label={`実績を足す: ${subject}`}
       onClick={(event) => onClick(event.currentTarget)}
     >
       <Timer aria-hidden />
       実績を足す
-      <span className="sr-only">: {subject}</span>
     </Button>
   );
 }

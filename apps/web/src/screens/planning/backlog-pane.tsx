@@ -235,7 +235,7 @@ function EstimateActions({
           render={
             <IconButton
               size="sm"
-              label={`操作: ${title}`}
+              label={`その他の操作: ${title}`}
               icon={<Ellipsis />}
             />
           }

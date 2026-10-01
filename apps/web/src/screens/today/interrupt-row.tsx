@@ -51,7 +51,7 @@ function InterruptRow({ note, time, onEdit, onDelete }: InterruptRowProps) {
             <IconButton
               size="sm"
               data-action="interrupt-actions"
-              label={`操作: 割り込み ${time}「${note.text}」`}
+              label={`その他の操作: 割り込み ${time}「${note.text}」`}
               icon={<Ellipsis />}
             />
           }

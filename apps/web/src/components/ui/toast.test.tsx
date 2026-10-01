@@ -4,6 +4,7 @@ import {
   fireEvent,
   render,
   screen,
+  within,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -246,6 +247,21 @@ describe('Toast', () => {
     expect(
       document.querySelectorAll('[data-slot="toast"]:not([data-ending-style])'),
     ).toHaveLength(4);
+  });
+
+  it('announces a Toast politely in the 通知 region, named by its sentence', async () => {
+    const { show } = setup({ title: '「本棚を整理する」を見送りました' });
+    await show();
+    // The viewport is a polite live region (the role="status" of
+    // accessibility.md): a Toast added to it is read out once (#153).
+    const region = screen.getByRole('region', { name: '通知' });
+    expect(region.getAttribute('aria-live')).toBe('polite');
+    expect(
+      await within(region).findByRole('dialog', {
+        name: '「本棚を整理する」を見送りました',
+      }),
+    ).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('announces danger with role="alert"', async () => {
