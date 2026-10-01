@@ -77,6 +77,7 @@ describe('planningCandidates', () => {
     occurrence('o-old', 'cleaning', '2026-09-26', 'done'),
   ];
   const groups = planningCandidates(sprint, {
+    today: localDate('2026-09-29'),
     tasks,
     sprints: [previous, sprint],
     occurrences,
@@ -87,8 +88,41 @@ describe('planningCandidates', () => {
     expect(ids(groups.carriedOver)).toEqual(['carried']);
   });
 
-  it('期限が近い: due by the end of the planned Sprint, overdue included', () => {
-    expect(ids(groups.dueSoon)).toEqual(['due', 'overdue']);
+  it('期限超過: due before today, apart from 期限が近い', () => {
+    expect(ids(groups.overdue)).toEqual(['overdue']);
+  });
+
+  it('期限が近い: from today to the end of the planned Sprint', () => {
+    expect(ids(groups.dueSoon)).toEqual(['due']);
+  });
+
+  it('期限が近い: a Task due today is not overdue; one due after the Sprint is neither', () => {
+    const today = localDate('2026-10-02');
+    const edge = planningCandidates(sprint, {
+      today,
+      tasks: [
+        task('on-today', '2026-09-10T00:00:00.000Z', '2026-10-02'),
+        task('on-end', '2026-09-11T00:00:00.000Z', '2026-10-04'),
+        task('day-before', '2026-09-12T00:00:00.000Z', '2026-10-01'),
+        task('after', '2026-09-13T00:00:00.000Z', '2026-10-05'),
+      ],
+      sprints: [previous, sprint],
+      occurrences: [],
+    });
+    expect(ids(edge.overdue)).toEqual(['day-before']);
+    expect(ids(edge.dueSoon)).toEqual(['on-today', 'on-end']);
+    expect(ids(edge.others)).toEqual(['after']);
+  });
+
+  it('a carried-over Task stays in 持ち越し when it is overdue (each Task in one group)', () => {
+    const late = planningCandidates(sprint, {
+      today: localDate('2026-10-02'),
+      tasks,
+      sprints: [previous, sprint],
+      occurrences,
+    });
+    expect(ids(late.carriedOver)).toEqual(['carried']);
+    expect(ids(late.overdue)).not.toContain('carried');
   });
 
   it('今週発生する繰り返し: this period’s pending and excluded occurrences', () => {
@@ -289,6 +323,7 @@ describe('planningCandidates and carryOverCandidates agree (invariant 20)', () =
       (t) => t.taskId,
     );
     const group = planningCandidates(sprint, {
+      today: localDate('2026-09-29'),
       tasks,
       sprints: [previous, sprint],
       occurrences: [],

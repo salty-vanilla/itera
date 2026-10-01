@@ -30,6 +30,7 @@ describe('planning the next Sprint mid-week', () => {
     const data = planningData(records, clock, { applyCriterion: false });
     const rows = [
       ...(data?.candidates.carriedOver ?? []),
+      ...(data?.candidates.overdue ?? []),
       ...(data?.candidates.dueSoon ?? []),
       ...(data?.candidates.others ?? []),
     ];

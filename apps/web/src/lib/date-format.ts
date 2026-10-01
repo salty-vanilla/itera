@@ -22,6 +22,12 @@ export function formatDate(date: LocalDate): string {
   return `${month}/${day} (${weekday})`;
 }
 
+/** 「9/28」, where the weekday would only add width. */
+export function formatMonthDay(date: LocalDate): string {
+  const { month, day } = parts(date);
+  return `${month}/${day}`;
+}
+
 /** 「9月29日（火）」, for a heading. */
 export function formatDateHeading(date: LocalDate): string {
   const { month, day, weekday } = parts(date);

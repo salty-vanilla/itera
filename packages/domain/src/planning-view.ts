@@ -4,11 +4,13 @@
 import type { Occurrence } from './occurrence';
 import { sprintTaskValue, type ActiveCriterion } from './planning';
 import type { PlanningValue } from './planning-value';
-import type { Instant } from './shared/time';
+import type { Instant, LocalDate } from './shared/time';
 import { isCounted, type Sprint, type SprintTask } from './sprint';
 import { isRecurring, type Task } from './task';
 
 export interface PlanningCandidatesInput {
+  /** Today, in the user's time zone: 期限超過 is before it, as in Backlog. */
+  readonly today: LocalDate;
   /** Every Task of the user. */
   readonly tasks: readonly Task[];
   /** Every Sprint of the user, to find the previous one. */
@@ -23,7 +25,12 @@ export interface PlanningCandidates {
    * this Sprint yet or not. Nothing joins automatically (invariant 20).
    */
   readonly carriedOver: readonly Task[];
-  /** 期限が近い: due by the end of this Sprint (overdue included). */
+  /** 期限超過: due before today, apart from 期限が近い as in Backlog. */
+  readonly overdue: readonly Task[];
+  /**
+   * 期限が近い: due from today to the end of the Sprint being planned.
+   * The Backlog's 切り口 ends with the Sprint that holds today instead (F28).
+   */
   readonly dueSoon: readonly Task[];
   /**
    * 今週発生する繰り返し: recurring Tasks with occurrences in this period,
@@ -38,7 +45,7 @@ export interface PlanningCandidates {
 }
 
 /**
- * The Backlog pane of 選ぶ: the active Tasks in four groups, each Task in
+ * The Backlog pane of 選ぶ: the active Tasks in five groups, each Task in
  * one group only, in creation order within a group (invariant 5).
  */
 export function planningCandidates(
@@ -64,6 +71,7 @@ export function planningCandidates(
     (o.state === 'pending' || o.state === 'excluded');
 
   const carriedOver: Task[] = [];
+  const overdue: Task[] = [];
   const dueSoon: Task[] = [];
   const recurring: { task: Task; occurrences: Occurrence[] }[] = [];
   const others: Task[] = [];
@@ -76,11 +84,13 @@ export function planningCandidates(
       continue;
     }
     if (carried.has(task.id)) carriedOver.push(task);
+    else if (task.due !== undefined && task.due < input.today)
+      overdue.push(task);
     else if (task.due !== undefined && task.due <= sprint.end)
       dueSoon.push(task);
     else others.push(task);
   }
-  return { carriedOver, dueSoon, recurring, others };
+  return { carriedOver, overdue, dueSoon, recurring, others };
 }
 
 export interface CapacityDriver {
