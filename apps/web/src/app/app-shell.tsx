@@ -1,9 +1,12 @@
 import { useLocation, useNavigate, useRouter } from '@tanstack/react-router';
 import { Inbox, Rewind, Route, Sun } from 'lucide-react';
 import { useRef, type ReactElement, type ReactNode } from 'react';
+import { buttonVariants } from '@/components/ui/button';
 import { Navigation, type NavigationItem } from '@/components/ui/navigation';
 import type { ScreenId } from '@/fixtures/states';
 import { isPlainClick } from '@/lib/plain-click';
+import { cn } from '@/lib/utils';
+import { useScreenFocus } from './use-screen-focus';
 import { useToastClearance } from './use-toast-clearance';
 import { useAppOverview } from '@/store/use-app-overview';
 import { screens } from './screens';
@@ -27,6 +30,7 @@ function AppShell({ children }: { children: ReactNode }) {
   const { backlogCount } = useAppOverview();
   const mainRef = useRef<HTMLElement>(null);
   useToastClearance(mainRef);
+  useScreenFocus(mainRef);
 
   const items: NavigationItem[] = screens.map((screen) => ({
     id: screen.id,
@@ -42,6 +46,23 @@ function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-dvh flex-col-reverse bg-canvas text-ink medium:flex-row">
+      {/* WCAG 2.4.1 (#154): first in the Tab order, seen only with the
+          focus. It focuses the `main` itself rather than following the
+          hash, which would add a history entry. */}
+      <a
+        href="#main"
+        onClick={(event) => {
+          if (!isPlainClick(event)) return;
+          event.preventDefault();
+          mainRef.current?.focus();
+        }}
+        className={cn(
+          buttonVariants({ variant: 'secondary' }),
+          'fixed start-2 top-2 z-(--layer-tooltip) not-focus:sr-only',
+        )}
+      >
+        本文へ移動
+      </a>
       <Navigation
         items={items}
         current={current}
@@ -54,12 +75,15 @@ function AppShell({ children }: { children: ReactNode }) {
       />
       <main
         ref={mainRef}
+        id="main"
+        // The skip link's target: focusable by script, not by Tab.
+        tabIndex={-1}
         // The router resets and restores this element's scroll (router.tsx).
         data-scroll-restoration-id="main"
         // `relative` makes the `main` the containing block of `sr-only`
         // (absolute) text, so `overflow-auto` clips it and the document
         // never grows past the shell (#149).
-        className="relative min-h-0 flex-1 overflow-auto pb-[var(--toast-clearance,0px)]"
+        className="relative min-h-0 flex-1 overflow-auto pb-[var(--toast-clearance,0px)] focus-visible:focus-ring-inset"
       >
         {children}
       </main>

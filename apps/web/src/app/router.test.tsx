@@ -1,5 +1,5 @@
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -150,5 +150,76 @@ describe('shell (#149)', () => {
     renderAt('/sprint?fixture=planning-pick');
     await screen.findByRole('heading', { level: 1 });
     expect(screen.getByRole('main').classList.contains('relative')).toBe(true);
+  });
+});
+
+describe('keyboard (#154)', () => {
+  const screensAt = [
+    '/today?fixture=today-morning',
+    '/backlog?fixture=backlog-capture',
+    '/sprint?fixture=today-morning',
+    '/retro?fixture=retro-reflect',
+  ];
+
+  it.each(screensAt)(
+    'shows the skip link on the first Tab of %s and moves to the main',
+    async (url) => {
+      renderAt(url);
+      await screen.findByRole('heading', { level: 1 });
+      await userEvent.tab();
+      const skip = screen.getByRole('link', { name: '本文へ移動' });
+      expect(document.activeElement).toBe(skip);
+      await userEvent.keyboard('{Enter}');
+      expect(document.activeElement).toBe(screen.getByRole('main'));
+    },
+  );
+
+  it('keeps the browser’s start on the first screen, even after a redirect', async () => {
+    renderAt('/?fixture=today-morning');
+    await screen.findByRole('heading', { level: 1, name: '10月1日（木）' });
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it('puts the focus on the heading of the screen the navigation opens', async () => {
+    renderAt('/today?fixture=today-morning');
+    await screen.findByRole('heading', { level: 1 });
+    for (const label of ['Backlog', '振り返り', 'Sprint', '今日']) {
+      const [link] = screen.getAllByRole('link', { name: new RegExp(label) });
+      await userEvent.click(link!);
+      await waitFor(() =>
+        expect(document.activeElement).toBe(
+          screen.getByRole('heading', { level: 1 }),
+        ),
+      );
+    }
+  });
+
+  it('puts the focus on the heading on back and forward, and not on a filter', async () => {
+    const router = renderAt('/today?fixture=backlog-capture');
+    await screen.findByRole('heading', { level: 1 });
+    await act(() => router.navigate({ to: '/backlog' }));
+    const backlog = await screen.findByRole('heading', {
+      level: 1,
+      name: 'Backlog',
+    });
+    expect(document.activeElement).toBe(backlog);
+
+    const all = screen.getAllByRole('button', { pressed: true })[0]!;
+    all.focus();
+    await act(() =>
+      router.navigate({ to: '/backlog', search: { view: 'overdue' } }),
+    );
+    expect(document.activeElement).toBe(all);
+
+    await act(() => router.history.back());
+    await act(() => router.history.back());
+    const today = await screen.findByRole('heading', { level: 1 });
+    await waitFor(() => expect(document.activeElement).toBe(today));
+    await act(() => router.history.forward());
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole('heading', { level: 1, name: 'Backlog' }),
+      ),
+    );
   });
 });
