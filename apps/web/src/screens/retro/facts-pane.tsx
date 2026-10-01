@@ -231,7 +231,14 @@ function FactsPane({
               ].map((line) => (
                 <li key={line.lead}>
                   <span className="text-ink-muted">
-                    <span className="whitespace-nowrap">{line.lead}</span>{' '}
+                    {/* Whole words, breaking only after 「、」 (the longest
+                        lead is wider than 375px). */}
+                    {line.lead.split('、').map((part, i, parts) => (
+                      <span key={part} className="whitespace-nowrap">
+                        {part}
+                        {i < parts.length - 1 && '、'}
+                      </span>
+                    ))}{' '}
                     <span className="whitespace-nowrap">
                       {formatPlanningSum(line.total)}：
                     </span>
