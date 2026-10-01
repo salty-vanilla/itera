@@ -104,13 +104,7 @@ export function planningValueOf(
   }
 
   const criterion = options.criterion;
-  // A criterion only acts on a real range; a suggestion with lo = hi is a
-  // point (invariant 9).
-  if (
-    criterion !== undefined &&
-    suggestion.lo < suggestion.hi &&
-    criterionCovers(criterion, task)
-  ) {
+  if (criterion !== undefined && criterionActsOn(criterion, task, suggestion)) {
     const value = boundValue(suggestion, criterion.rangePolicy);
     return {
       base: 'suggestion',
@@ -127,6 +121,18 @@ export function planningValueOf(
     criterionApplied: false,
     computedAt,
   };
+}
+
+/**
+ * Whether a criterion acts on this suggestion of the Task: only a real range
+ * in its scope. A suggestion with lo = hi is a point (invariant 9).
+ */
+export function criterionActsOn(
+  criterion: CriterionPolicy,
+  task: Task,
+  suggestion: { readonly lo: number; readonly hi: number },
+): boolean {
+  return suggestion.lo < suggestion.hi && criterionCovers(criterion, task);
 }
 
 export function criterionCovers(

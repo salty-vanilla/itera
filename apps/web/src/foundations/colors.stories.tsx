@@ -175,7 +175,7 @@ function Roles() {
               <span className="text-num-m">2–4h</span>
             </span>
             <span className="inline-flex items-center gap-2 rounded-xs border border-ink px-2 py-1 text-ink">
-              <span className="text-kicker">計画値</span>
+              <span className="text-kicker">計画</span>
               <span className="text-num-m">4h</span>
             </span>
           </div>

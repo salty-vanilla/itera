@@ -409,4 +409,47 @@ describe('criterionHasTarget (#161, F42)', () => {
       false,
     );
   });
+
+  it('has none on a point suggestion; every Area is in scope for 「all」', () => {
+    const point = unwrap(
+      updateTask(
+        unwrap(
+          presentSuggestion(
+            newTask('point', 'point'),
+            {
+              id: id('sug-point'),
+              lo: 3,
+              hi: 3,
+              rationale: '',
+              uncertainties: [],
+            },
+            ctx,
+          ),
+        ),
+        { areaId: researchId },
+        ctx,
+      ),
+    );
+    expect(
+      criterionHasTarget(
+        {
+          ...sprintFixture('2026-09-28', 'active'),
+          tasks: [planned(point, false)],
+        },
+        { tasks: [point], policy: criterion.policy },
+      ),
+    ).toBe(false);
+    expect(
+      criterionHasTarget(
+        {
+          ...sprintFixture('2026-09-28', 'active'),
+          tasks: [planned(other, false)],
+        },
+        {
+          tasks: [other],
+          policy: { scope: { kind: 'all' }, rangePolicy: 'hi' },
+        },
+      ),
+    ).toBe(true);
+  });
 });

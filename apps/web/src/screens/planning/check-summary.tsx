@@ -200,7 +200,7 @@ function CriterionEffect({
     <p className="text-body text-ink">
       {criterion.applied
         ? `${scope}幅のあるタスク ${count}件を${bound}で計画しています${moves.length > 0 ? `（${moves.join('、')}）` : ''}。`
-        : `使わない場合、${scope}幅のあるタスク ${count}件は提案の幅のまま計画します。`}
+        : `使わない場合、${scope}幅のあるタスク ${count}件は見積もりの提案の幅のまま計画します。`}
     </p>
   );
 }
@@ -218,9 +218,17 @@ function Drivers({ data }: { data: PlanningData }) {
       <ul className="flex flex-col gap-1 text-body text-ink">
         {drivers.map((d) => (
           <li key={d.sprintTask.id}>
-            {d.fromRange !== undefined
-              ? `計画のルールで「${d.task.title}」を ${formatHours(d.value.lo)} で計算しています（見積もりの提案 ${formatRange(d.fromRange.lo, d.fromRange.hi)}）。`
-              : `「${d.task.title}」は ${formatRange(d.value.lo, d.value.hi)} の幅があります。`}
+            {d.fromRange !== undefined ? (
+              <>
+                {`計画のルールで「${d.task.title}」を ${formatHours(d.value.lo)} で計算しています`}
+                {/* The range is not broken at its dash. */}
+                <span className="whitespace-nowrap">
+                  {`（見積もりの提案 ${formatRange(d.fromRange.lo, d.fromRange.hi)}）。`}
+                </span>
+              </>
+            ) : (
+              `「${d.task.title}」は ${formatRange(d.value.lo, d.value.hi)} の幅があります。`
+            )}
           </li>
         ))}
       </ul>

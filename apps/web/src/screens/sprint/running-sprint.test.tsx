@@ -35,8 +35,17 @@ function withoutCriterionTarget(initial: StoreSnapshot): StoreSnapshot {
             ? t
             : {
                 ...t,
+                // A point suggestion: nothing for the criterion to act on.
                 planSnapshot: {
                   ...t.planSnapshot,
+                  ...(t.planSnapshot.suggestion === undefined
+                    ? {}
+                    : {
+                        suggestion: {
+                          ...t.planSnapshot.suggestion,
+                          hi: t.planSnapshot.suggestion.lo,
+                        },
+                      }),
                   value: { ...t.planSnapshot.value, criterionApplied: false },
                 },
               },

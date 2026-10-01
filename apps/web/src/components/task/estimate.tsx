@@ -2,7 +2,6 @@ import type { PlanningValue } from '@itera/domain';
 import {
   formatPlanningValue,
   formatRange,
-  formatUnestimatedSubtasks,
   spokenHours,
   UNESTIMATED,
 } from '@/lib/time-format';
@@ -84,9 +83,12 @@ function Estimate({
     ? formatRange(value.lo, value.hi)
     : formatPlanningValue(value);
   const stacked = stack && 'flex-col items-end gap-0';
+  // Two lines under 768px, so that the note does not take the title's
+  // room (#162).
   const missingNote = stack && (
-    <span aria-hidden className="text-meta text-ink-muted">
-      {formatUnestimatedSubtasks(missing)}
+    <span aria-hidden className="text-right text-meta text-ink-muted">
+      サブタスク {missing}件は
+      <span className="block medium:inline">{UNESTIMATED}</span>
     </span>
   );
   const missingSpoken =

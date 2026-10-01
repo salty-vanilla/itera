@@ -62,7 +62,7 @@ export const Unknown: Story = {};
 
 /**
  * Planning の確かめるの右列：数字・状態・入力欄は中央の要約にだけ置き、ここは
- * バー・領域ごとの内訳・計画値の説明だけ（Issue #165）。
+ * バーと領域ごとの内訳だけ（Issue #165）。
  */
 export const BreakdownOnly: Story = {
   args: {

@@ -34,8 +34,8 @@ type CapacityIndicatorProps = {
   total: PlanningTotal;
   /**
    * 確かめる: the numbers, the state and the field are in the summary at the
-   * head of the Sprint pane, so only the bar, the Areas and what 計画値 is
-   * are shown here (#165).
+   * head of the Sprint pane, so only the bar and the Areas are shown here
+   * (#165).
    */
   breakdownOnly?: boolean | undefined;
   /** Absent while no available hours are entered (unknown). */
@@ -210,8 +210,8 @@ function Sentences({ items }: { items: readonly string[] }) {
 /**
  * The state where no headline is shown (the 確かめる summary, the 確定
  * Dialog): the statement, and while the plan may or does go over, the
- * headline's sentences after it, each number said once: 「超える可能性：下限
- * なら 1.75h 残る · 多くかかれば 0.25h 超える」 (#93), 「少なく済んでも超える：超過 3 〜
+ * headline's sentences after it, each number said once: 「超える可能性：少なく
+ * 済めば 1.75h 残る · 多くかかれば 0.25h 超える」 (#93), 「少なく済んでも超える：超過 3 〜
  * 5h」 (#165).
  */
 export function capacityStatusLine(

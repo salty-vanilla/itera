@@ -202,8 +202,10 @@ function FactsPane({
         />
         <div className="flex flex-col gap-1 text-body text-ink">
           <p>
-            計画 {formatPlanningTotal(total)} → 実績{' '}
-            {formatHours(facts.actualHours, { total: true })}
+            計画 {formatPlanningTotal(total)}{' '}
+            <span className="whitespace-nowrap">
+              → 実績 {formatHours(facts.actualHours, { total: true })}
+            </span>
             <span className="text-ink-muted">
               （入力済み {entered}件。実績は入力したものだけを数えています）
             </span>

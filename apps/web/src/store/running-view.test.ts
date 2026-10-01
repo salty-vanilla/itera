@@ -72,7 +72,8 @@ describe('runningData', () => {
       applied: true,
       noEffect: false,
     });
-    // Applied at confirm, but no planned value came from it.
+    // Applied at confirm, but no planned value came from it (the
+    // suggestions were points).
     const none = withActive(records, (s) => ({
       ...s,
       tasks: s.tasks.map((t) =>
@@ -82,6 +83,14 @@ describe('runningData', () => {
               ...t,
               planSnapshot: {
                 ...t.planSnapshot,
+                ...(t.planSnapshot.suggestion === undefined
+                  ? {}
+                  : {
+                      suggestion: {
+                        ...t.planSnapshot.suggestion,
+                        hi: t.planSnapshot.suggestion.lo,
+                      },
+                    }),
                 value: { ...t.planSnapshot.value, criterionApplied: false },
               },
             },
@@ -100,13 +109,15 @@ describe('runningData', () => {
           const snapshot = t.planSnapshot;
           if (snapshot?.suggestion === undefined) return t;
           if (snapshot.value.base !== 'suggestion') return t;
+          // Without a range, the suggestion was a point (invariant 9).
           const { lo, hi } = range
             ? snapshot.suggestion
-            : { lo: snapshot.value.lo, hi: snapshot.value.lo };
+            : { lo: snapshot.suggestion.lo, hi: snapshot.suggestion.lo };
           return {
             ...t,
             planSnapshot: {
               ...snapshot,
+              suggestion: { ...snapshot.suggestion, lo, hi },
               value: { ...snapshot.value, lo, hi, criterionApplied: false },
             },
           };

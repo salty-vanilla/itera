@@ -409,7 +409,7 @@ v0.2 Final でも 3 つとも、UI に入口のない操作を使わずに最後
 | 10 | 4.5h 作業して「今日はここまで」 | DailySelection（9/30）→ Paused。ActualTime（4.5h、9/30、via = 今日はここまで）を SprintTask に追記。SprintTask は Planned（未完了）のまま | 「今週の残り」に「実績 4.5h」付きで戻る。Paused が挟まったので連続見送りはここで途切れる |
 | 11 | 10/1 (木) の朝、Today を開く | DailySelection は自動で作らない（前日の Paused からの派生だけ） | 「昨日の続き」として候補の上に出る（実績 4.5h）。この日は「今日へ」を押さない |
 | 12 | 10/2 (金) 〜 10/4 (日) | 選ばなかった日は DailySelection がない | 選ばなかった日は見送りの回数に影響しない。前日に Paused がないので「昨日の続き」にも出ない |
-| 13 | Sprint 終了 | 10/5 に Sprint → Review。SprintTask → CarriedOver。Task は active のまま Backlog に残る | Retro の事実：持ち越し、提案 3–5h · 計画値 5h · 実績 4.5h、2回続けて見送り（9/28・9/29）、9/30 は「今日はここまで」 |
+| 13 | Sprint 終了 | 10/5 に Sprint → Review。SprintTask → CarriedOver。Task は active のまま Backlog に残る | Retro の事実：持ち越し、見積もりの提案 3–5h · 計画 5h（ルール） · 実績 4.5h、2回続けて見送り（9/28・9/29）、9/30 は「今日はここまで」 |
 | 14 | Retro で「1 本ずつに分ける」を決める | Retro（印、ReflectionNote）、RetroImprovement（文）。CriterionUse.retroDecision を本人が選ぶ（例：続ける）。完了で Sprint → Closed | 次の Sprint が確定できるようになる |
 | 15 | 次の Planning | Task は「持ち越し」候補に出るだけ。選べば新しい SprintTask（carriedFrom = 前のもの） | 入口に Improvement。Task を分けるかは本人が決める（自動で分割しない） |
 

@@ -417,13 +417,13 @@ function Outlook({
             value={current}
             onChange={onHours}
             label="使える時間"
-            description="時間（h）で入力します。確定した後も変えられます。計画時の値は残ります。"
+            description="時間（h）で入力します。確定した後も変えられます。確定したときの値は残ります。"
           />
         )}
       </section>
       {data.criterion?.noEffect === true && (
-        // Applied, and no planned value came from it: a line, not a frame
-        // (#161).
+        // Nothing it acted on or would have acted on: a line, not a frame
+        // (#161). Not applied then (F42).
         <p
           data-slot="criterion-line"
           className="flex items-start gap-2 text-help text-ink-muted"

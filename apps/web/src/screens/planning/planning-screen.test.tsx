@@ -886,7 +886,10 @@ describe('Planning — 確かめる', () => {
     await renderAt('/sprint?fixture=planning-check&stage=check');
     expect(
       within(summary()).getByText(
-        '計画のルールで「関連論文を 3 本読む」を 5h で計算しています（見積もりの提案 3–5h）。',
+        (_, el) =>
+          el?.tagName === 'LI' &&
+          el.textContent ===
+            '計画のルールで「関連論文を 3 本読む」を 5h で計算しています（見積もりの提案 3–5h）。',
       ),
     ).toBeTruthy();
   });

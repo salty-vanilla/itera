@@ -10,7 +10,8 @@
 //   crosses 0 is not a headline range but two sentences, made by the
 //   Capacity Indicator (#93);
 // - no value is 「見積もりなし」, never 0h, and unestimated parts left out of
-//   a sum are counted after it (`2.5h（サブタスク 1件は見積もりなし）`).
+//   a sum are counted after it (`2.5h（サブタスク 1件は見積もりなし）`,
+//   `12–16h（ほかに見積もりなし 2件）`).
 // The words around a value (「提案」「計画」「残り」「超過」) belong to the screen.
 
 import type { PlanningTotal, PlanningValue } from '@itera/domain';
@@ -96,7 +97,7 @@ function withUnestimated(text: string, count: number): string {
   return count === 0 ? text : `${text}（ほかに${UNESTIMATED} ${count}件）`;
 }
 
-/** A planning value (計画値), with the subtasks left out of a subtask sum. */
+/** A planning value (計画の時間), with the subtasks left out of a subtask sum. */
 export function formatPlanningValue(value: PlanningValue): string {
   if (value.base === 'none') return UNESTIMATED;
   const text = formatRange(value.lo, value.hi);
