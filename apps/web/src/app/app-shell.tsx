@@ -6,7 +6,7 @@ import { Navigation, type NavigationItem } from '@/components/ui/navigation';
 import type { ScreenId } from '@/fixtures/states';
 import { isPlainClick } from '@/lib/plain-click';
 import { cn } from '@/lib/utils';
-import { useScreenFocus } from './use-screen-focus';
+import { focusScreenHeading, useScreenFocus } from './use-screen-focus';
 import { useToastClearance } from './use-toast-clearance';
 import { useAppOverview } from '@/store/use-app-overview';
 import { screens } from './screens';
@@ -47,14 +47,14 @@ function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex h-dvh flex-col-reverse bg-canvas text-ink medium:flex-row">
       {/* WCAG 2.4.1 (#154): first in the Tab order, seen only with the
-          focus. It focuses the `main` itself rather than following the
-          hash, which would add a history entry. */}
+          focus. It goes to the screen's heading, as moving to a screen does,
+          rather than following the hash, which would add a history entry. */}
       <a
         href="#main"
         onClick={(event) => {
           if (!isPlainClick(event)) return;
           event.preventDefault();
-          mainRef.current?.focus();
+          focusScreenHeading(mainRef.current);
         }}
         className={cn(
           buttonVariants({ variant: 'secondary' }),
@@ -76,14 +76,12 @@ function AppShell({ children }: { children: ReactNode }) {
       <main
         ref={mainRef}
         id="main"
-        // The skip link's target: focusable by script, not by Tab.
-        tabIndex={-1}
         // The router resets and restores this element's scroll (router.tsx).
         data-scroll-restoration-id="main"
         // `relative` makes the `main` the containing block of `sr-only`
         // (absolute) text, so `overflow-auto` clips it and the document
         // never grows past the shell (#149).
-        className="relative min-h-0 flex-1 overflow-auto pb-[var(--toast-clearance,0px)] focus-visible:focus-ring-inset"
+        className="relative min-h-0 flex-1 overflow-auto pb-[var(--toast-clearance,0px)]"
       >
         {children}
       </main>

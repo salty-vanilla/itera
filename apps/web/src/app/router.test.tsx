@@ -162,7 +162,7 @@ describe('keyboard (#154)', () => {
   ];
 
   it.each(screensAt)(
-    'shows the skip link on the first Tab of %s and moves to the main',
+    'shows the skip link on the first Tab of %s and moves to the heading',
     async (url) => {
       renderAt(url);
       await screen.findByRole('heading', { level: 1 });
@@ -170,9 +170,26 @@ describe('keyboard (#154)', () => {
       const skip = screen.getByRole('link', { name: '本文へ移動' });
       expect(document.activeElement).toBe(skip);
       await userEvent.keyboard('{Enter}');
-      expect(document.activeElement).toBe(screen.getByRole('main'));
+      expect(document.activeElement).toBe(
+        screen.getByRole('heading', { level: 1 }),
+      );
     },
   );
+
+  it('keeps the Planning keys after the skip link and after a click on the screen', async () => {
+    renderAt('/sprint?fixture=planning-pick&stage=pick');
+    await screen.findByRole('heading', { level: 1 });
+    const field = screen.getByRole('textbox', { name: '今週のタスクを追加' });
+    await userEvent.tab();
+    await userEvent.keyboard('{Enter}n');
+    expect(document.activeElement).toBe(field);
+
+    // A click where nothing takes the focus leaves it on the body, not the main.
+    await userEvent.click(screen.getByRole('main'));
+    expect(document.activeElement).toBe(document.body);
+    await userEvent.keyboard('n');
+    expect(document.activeElement).toBe(field);
+  });
 
   it('keeps the browser’s start on the first screen, even after a redirect', async () => {
     renderAt('/?fixture=today-morning');
