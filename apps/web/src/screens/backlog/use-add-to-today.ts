@@ -17,7 +17,7 @@ export function useAddToToday() {
     if (!actions.addToToday(taskId)) return false;
     toast.show({
       kind: 'added-to-today',
-      title: `「${title}」を今日やるに入れました`,
+      title: `「${title}」を「今日やる」に入れました`,
       description: '今週にも入りました。',
       action: {
         label: '今日を開く',

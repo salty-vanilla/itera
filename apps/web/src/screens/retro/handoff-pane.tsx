@@ -93,7 +93,7 @@ function HandoffPane({
               onClick={onWriteImprovement}
               className="ms-1 text-link underline focus-visible:focus-ring"
             >
-              振り返るで書く
+              「振り返る」で書く
             </button>
           </p>
         ) : (
@@ -162,7 +162,7 @@ function HandoffPane({
             <Radio<RetroDecision | null>
               value="continue"
               label="続ける"
-              description={`次の計画でも、${criterionEffectText(used.criterion.policy, used.areaName)}。確かめるで、使うかどうかを選べます。`}
+              description={`次の計画でも、${criterionEffectText(used.criterion.policy, used.areaName)}。使うかどうかは「確かめる」で選べます。`}
             />
             <Radio<RetroDecision | null>
               value="end"
@@ -176,7 +176,7 @@ function HandoffPane({
               description={
                 draft === undefined
                   ? '上で「計画のルールにもする」をオンにして新しいルールを作ると選べます。'
-                  : `次の計画では、代わりに${criterionEffectText(draft.criterion.policy, draft.areaName)}。確かめるで、使うかどうかを選べます。`
+                  : `次の計画では、代わりに${criterionEffectText(draft.criterion.policy, draft.areaName)}。使うかどうかは「確かめる」で選べます。`
               }
             />
           </RadioGroup>

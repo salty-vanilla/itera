@@ -139,7 +139,7 @@ function CheckSummary({
             search={(prev) => ({ ...prev, stage: 'shape' })}
             className="ms-1 text-link underline focus-visible:focus-ring"
           >
-            整えるで書く
+            「整える」で書く
           </Link>
         </p>
       )}
