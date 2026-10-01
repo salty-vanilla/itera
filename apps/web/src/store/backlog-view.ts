@@ -24,7 +24,7 @@ import {
   type Task,
 } from '@itera/domain';
 import type { Clock, Records } from './records';
-import { thisWeekSprintOf } from './sprint-choice';
+import { nextWeekSprintOf, thisWeekSprintOf } from './sprint-choice';
 import { activeSprint } from './task-changes';
 import {
   isClosedResolution,
@@ -53,6 +53,11 @@ export interface BacklogItem {
     readonly midSprint: boolean;
     readonly confirmed: boolean;
   };
+  /**
+   * In the draft for next week (「来週」, #90): chosen while this week runs.
+   * It may also be in this week's (`thisWeek`); the row says both (#150).
+   */
+  readonly nextWeek?: true;
   /**
    * In today's 今日やる (a selection made today that is open, done or
    * skipped: what Today lists there). The Backlog row says 「今日」 instead
@@ -105,6 +110,9 @@ export function backlogItem(
   // planned (Scenario A step 3); a draft for next week is 「来週」 (#90).
   const week = thisWeekSprintOf(records, clock);
   const inWeek: SprintTask | undefined = week?.tasks.find(
+    (t) => t.taskId === task.id && isCounted(t),
+  );
+  const inNextWeek = nextWeekSprintOf(records, clock)?.tasks.some(
     (t) => t.taskId === task.id && isCounted(t),
   );
   const active = activeSprint(records);
@@ -169,6 +177,7 @@ export function backlogItem(
             confirmed: week?.state === 'active',
           },
         }),
+    ...(inNextWeek === true ? { nextWeek: true as const } : {}),
     ...(chosen === undefined || !isListedResolution(chosen.resolution)
       ? {}
       : {

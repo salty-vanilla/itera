@@ -59,18 +59,28 @@ export function RecurrenceText({
 
 /**
  * 「今週」, or 「今日」 for a Task in today's 今日やる: in today implies in
- * the week (invariant 26), so the row says the nearer one (Issue #94).
+ * the week (invariant 26), so the row says the nearer one (Issue #94). A
+ * Task also in the draft for next week adds 「来週」 (#150); one only in it
+ * says just that.
  */
 export function SprintText({
-  midSprint,
+  thisWeek,
+  nextWeek,
   today,
-}: Pick<NonNullable<BacklogItem['thisWeek']>, 'midSprint'> & {
+}: {
+  thisWeek: BacklogItem['thisWeek'] | undefined;
+  nextWeek: BacklogItem['nextWeek'] | undefined;
   today: boolean;
 }) {
   return (
     <MetaItem className="text-ink-subtle">
-      {today ? '今日' : '今週'}
-      {midSprint && ' · 週の途中で追加'}
+      {[
+        thisWeek && (today ? '今日' : '今週'),
+        thisWeek?.midSprint && '週の途中で追加',
+        nextWeek && '来週',
+      ]
+        .filter(Boolean)
+        .join(' · ')}
     </MetaItem>
   );
 }
@@ -107,14 +117,15 @@ function BacklogRow({
   useEffect(() => {
     if (focusControl) circleRef.current?.focus();
   }, [focusControl]);
-  const { task, area, carry, recurrence, thisWeek, value } = item;
+  const { task, area, carry, recurrence, thisWeek, nextWeek, value } = item;
   const hasMeta =
     area !== undefined ||
     task.due !== undefined ||
     task.priority !== 'normal' ||
     carry !== undefined ||
     recurrence !== undefined ||
-    thisWeek !== undefined;
+    thisWeek !== undefined ||
+    nextWeek !== undefined;
   return (
     <TaskRow
       title={task.title}
@@ -152,8 +163,12 @@ function BacklogRow({
             <PriorityText priority={task.priority} />
             {carry && <CarryOverText {...carry} />}
             {recurrence && <RecurrenceText recurrence={recurrence} />}
-            {thisWeek && (
-              <SprintText {...thisWeek} today={item.today !== undefined} />
+            {(thisWeek || nextWeek) && (
+              <SprintText
+                thisWeek={thisWeek}
+                nextWeek={nextWeek}
+                today={item.today !== undefined}
+              />
             )}
           </TaskMetadata>
         ) : undefined

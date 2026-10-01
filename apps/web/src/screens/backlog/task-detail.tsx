@@ -638,11 +638,15 @@ function TaskDetail({
         >
           {task.title}
         </DrawerTitle>
-        {(facts.thisWeek || facts.carry || facts.recurrence) && (
+        {(facts.thisWeek ||
+          facts.nextWeek ||
+          facts.carry ||
+          facts.recurrence) && (
           <DrawerDescription className="flex flex-wrap gap-x-3 text-meta">
-            {facts.thisWeek && (
+            {(facts.thisWeek || facts.nextWeek) && (
               <SprintText
-                {...facts.thisWeek}
+                thisWeek={facts.thisWeek}
+                nextWeek={facts.nextWeek}
                 today={facts.today !== undefined}
               />
             )}
