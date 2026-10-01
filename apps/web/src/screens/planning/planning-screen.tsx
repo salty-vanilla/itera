@@ -5,6 +5,7 @@ import {
   useRouter,
   useSearch,
 } from '@tanstack/react-router';
+import { ChevronRight } from 'lucide-react';
 import { Fragment, useEffect, useId, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -360,8 +361,13 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
         >
           {/* 確かめる says the numbers once, in its summary (#165). */}
           {stage !== 'check' && <CapacitySummary data={data} />}
-          <span className="shrink-0 text-meta text-ink-muted">
+          {/* At the right end in every stage, with a mark that it opens. */}
+          <span className="ms-auto flex shrink-0 items-center gap-1 text-meta text-ink-muted">
             時間の見通しを開く
+            <ChevronRight
+              aria-hidden
+              className="size-icon-s [stroke-width:var(--icon-stroke-s)]"
+            />
           </span>
         </button>
       </div>

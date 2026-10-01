@@ -53,11 +53,15 @@ function CheckSummary({
         <h2 id={`${ids}-heading`} className="text-label text-ink-muted">
           要約
         </h2>
-        <CapacityStatement
-          statement={summary.statement}
-          strong
-          className="text-subheading"
-        />
+        {/* The one place in 確かめる that reads out the state when it
+            changes: the right pane shows no numbers here (#165). */}
+        <div role="status">
+          <CapacityStatement
+            statement={summary.statement}
+            strong
+            className="text-subheading"
+          />
+        </div>
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-1 text-body">
           <dt className="text-ink-muted">計画値の合計</dt>
           <dd className="text-num-m text-ink">{summary.total}</dd>
@@ -70,14 +74,19 @@ function CheckSummary({
         </dl>
         {/* Under the numbers, as in the Capacity: the first screen tells it. */}
         {summary.leftOut !== undefined && (
-          <p className="text-body text-ink">{summary.leftOut}</p>
+          <p className="text-body text-ink [text-wrap:pretty] [word-break:auto-phrase]">
+            {summary.leftOut}
+          </p>
         )}
         {/* The one field for the hours in 確かめる; the right pane has none. */}
         <div className="max-w-pane-side">
           <AvailableHoursField
             value={data.totals.capacity?.availableHours}
             onChange={onAvailableHours}
-            description={weekText(week, '、計画に使える時間。本人が決めます')}
+            description={weekText(
+              week,
+              '、計画に使える時間（h）。本人が決めます',
+            )}
           />
         </div>
       </div>

@@ -317,7 +317,9 @@ function CapacityIndicator({
           </dl>
           {/* As large as the total: what it leaves out is part of it (#165). */}
           {leftOut !== undefined && (
-            <p className="text-body text-ink">{leftOut}</p>
+            <p className="text-body text-ink [text-wrap:pretty] [word-break:auto-phrase]">
+              {leftOut}
+            </p>
           )}
           {/* Right under the total, so that it shows in the first screen
               (#165). */}
@@ -325,7 +327,10 @@ function CapacityIndicator({
             <AvailableHoursField
               value={capacity?.availableHours}
               onChange={onAvailableHoursChange}
-              description={weekText(week, '、計画に使える時間。本人が決めます')}
+              description={weekText(
+                week,
+                '、計画に使える時間（h）。本人が決めます',
+              )}
             />
           )}
         </div>
@@ -401,7 +406,8 @@ function AvailableHoursField({
   value,
   onChange,
   label = '使える時間',
-  description = '今週、計画に使える時間。本人が決めます',
+  // The unit is in the description: the suffix 「h」 is not read out.
+  description = '今週、計画に使える時間（h）。本人が決めます',
 }: {
   value: number | undefined;
   onChange: (hours: number | null) => boolean;

@@ -480,6 +480,10 @@ describe('Planning — 確かめる', () => {
     await userEvent.type(hours, '14{Enter}');
     const state = summary().querySelector('[data-slot="capacity-statement"]')!;
     expect(state.textContent).toBe('下限でも超える：超過 1.25 〜 3.25h');
+    // Read out from the summary, the one live region in 確かめる.
+    expect(within(summary()).getByRole('status').textContent).toBe(
+      '下限でも超える：超過 1.25 〜 3.25h',
+    );
     expect(state.className).toContain('text-danger');
     // 「計画値が下限どおりでも、超過 1.25h です。」 would say it again.
     expect(summary().textContent?.match(/1\.25/g)).toHaveLength(1);

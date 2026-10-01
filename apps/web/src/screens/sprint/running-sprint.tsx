@@ -394,7 +394,7 @@ function Outlook({
             value={current}
             onChange={onHours}
             label="今の使える時間"
-            description="確定した後も変えられます。計画時の値は残ります。"
+            description="時間（h）で入力します。確定した後も変えられます。計画時の値は残ります。"
           />
         )}
       </section>
