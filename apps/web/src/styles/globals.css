@@ -296,6 +296,23 @@
   }
 
   /*
+   * WCAG 2.4.11 (#152): what takes the focus in `main` scrolls clear of the
+   * bars stuck to its edges (lib/use-stuck-bar.ts), with room for the focus
+   * ring. A margin on the content rather than padding on `main`: the bars'
+   * own controls are in view already, and focusing them does not move the
+   * screen.
+   */
+  main * {
+    scroll-margin-top: calc(var(--stuck-bar-top, 0px) + var(--spacing-2));
+    scroll-margin-bottom: calc(var(--stuck-bar-bottom, 0px) + var(--spacing-2));
+  }
+
+  main [data-stuck-bar],
+  main [data-stuck-bar] * {
+    scroll-margin-block: 0;
+  }
+
+  /*
    * docs/design/accessibility.md: in forced colors the outline of controls is
    * CanvasText, so quiet buttons with a transparent border stay visible.
    */

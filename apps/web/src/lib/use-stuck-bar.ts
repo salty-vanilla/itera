@@ -5,9 +5,10 @@ import { useEffect, type RefObject } from 'react';
  * (the Quick Add of Today; of Backlog under 768px; the Capacity line of
  * Planning under 1200px) while `active`, and removes it when the bar goes.
  *
- * - `--stuck-bar-top` / `--stuck-bar-bottom`: `main` pads its scrollport by
- *   them (app/app-shell.tsx), so that what takes the focus scrolls clear of
- *   the bar instead of staying under it (WCAG 2.4.11, #152).
+ * - `--stuck-bar-top` / `--stuck-bar-bottom`: what is in `main` and not in
+ *   the bar (marked `data-stuck-bar`) takes them as its scroll margin
+ *   (styles/globals.css), so that what takes the focus scrolls clear of the
+ *   bar instead of staying under it (WCAG 2.4.11, #152).
  * - `--toast-offset-above` (bottom only): the Toast is lifted above the bar
  *   (components/ui/toast.tsx), so that it does not cover it, at any width.
  *
@@ -26,6 +27,7 @@ export function useStuckBar(
       edge === 'top'
         ? ['--stuck-bar-top']
         : ['--stuck-bar-bottom', '--toast-offset-above'];
+    el.dataset.stuckBar = edge;
     const set = () => {
       for (const name of names) {
         root.style.setProperty(name, `${el.offsetHeight}px`);
@@ -40,6 +42,7 @@ export function useStuckBar(
     observer?.observe(el);
     return () => {
       observer?.disconnect();
+      delete el.dataset.stuckBar;
       for (const name of names) root.style.removeProperty(name);
     };
   }, [ref, edge, active]);

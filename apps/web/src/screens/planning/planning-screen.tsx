@@ -62,9 +62,6 @@ import { PlanPane, type Stage } from './plan-pane';
 /** How long the row just added flashes; the same as `added-flash` in the CSS. */
 const ADDED_MS = 2500;
 
-/** The room the sticky Capacity line takes at the top of the screen. */
-const STICKY_ROOM = 72;
-
 /** Scrolls `main` so that the added row shows, keeping the Quick Add in view. */
 function revealAdded(taskId: TaskId) {
   const main = document.querySelector('main');
@@ -77,13 +74,16 @@ function revealAdded(taskId: TaskId) {
   if (main === null || row === null || quickAdd === null) return;
   const view = main.getBoundingClientRect();
   const rowRect = row.getBoundingClientRect();
-  const above = rowRect.top - (view.top + STICKY_ROOM);
+  // The room the sticky Capacity line takes at the top of the screen, and
+  // the gap below it: the row's scroll margin (lib/use-stuck-bar.ts).
+  const room = parseFloat(getComputedStyle(row).scrollMarginTop) || 0;
+  const above = rowRect.top - (view.top + room);
   if (above < 0) {
     main.scrollBy?.({ top: above });
     return;
   }
   const below = rowRect.bottom + 16 - view.bottom;
-  const spare = quickAdd.getBoundingClientRect().top - (view.top + STICKY_ROOM);
+  const spare = quickAdd.getBoundingClientRect().top - (view.top + room);
   const by = Math.min(below, spare);
   if (by > 0) main.scrollBy?.({ top: by });
 }
