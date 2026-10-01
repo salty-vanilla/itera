@@ -7,10 +7,15 @@
     "enabled": true,
     "traces": { "enabled": true },
   },
-  // WorkOS settings come from .dev.vars locally and from `wrangler secret`
+  // Better Auth settings come from .dev.vars locally and from `wrangler secret`
   // when deployed. Never put their values here (see .dev.vars.example).
   "secrets": {
-    "required": ["WORKOS_CLIENT_ID", "WORKOS_ISSUER", "WORKOS_AUDIENCE"],
+    "required": [
+      "BETTER_AUTH_SECRET",
+      "BETTER_AUTH_URL",
+      "GOOGLE_CLIENT_ID",
+      "GOOGLE_CLIENT_SECRET",
+    ],
   },
   "d1_databases": [
     {

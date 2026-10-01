@@ -461,7 +461,7 @@ v0.2 で残した 3 件は、2026-09-27 に次のとおり決めた（Issue #18�
 
 - API は Hono で書き、Cloudflare Workers で動かす。
 - DB は Cloudflare D1、ORM は Drizzle。障害・誤操作からの復元は D1 の Time Travel に任せる。
-- 認証は WorkOS AuthKit。ログイン画面は WorkOS がホストする画面を使う。
+- 認証は Better Auth（自前でホストする OSS）。利用者とセッションを D1 に置き、ログイン画面は自前で作る。最初のサインイン方法はパスキーと Google だけ（2026-09-30 に変更。Issue #121、ADR 0004）。
 
 ### クライアントとデータの方式（決定済み）
 

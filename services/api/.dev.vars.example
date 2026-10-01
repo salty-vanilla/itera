@@ -1,7 +1,13 @@
 # Copy to .dev.vars (ignored by Git) for `pnpm dev`. Never commit real values.
-# Client ID of the WorkOS environment (starts with client_).
-WORKOS_CLIENT_ID=
-# Issuer of access tokens: https://api.workos.com/ or the custom auth domain.
-WORKOS_ISSUER=https://api.workos.com/
-# Audience added to access tokens by a WorkOS JWT template (the API's URI).
-WORKOS_AUDIENCE=
+# Signs cookies and encrypts stored Google tokens. At least 32 characters;
+# generate with `openssl rand -base64 32`.
+BETTER_AUTH_SECRET=
+# The origin the browser sees (Web and API are served from it together).
+# Passkeys are bound to its host name, so `localhost` works for local use.
+BETTER_AUTH_URL=http://localhost:8787
+# Google OAuth client (Google Cloud Console, type "Web application"). Its
+# authorized redirect URI is <BETTER_AUTH_URL>/api/auth/callback/google.
+# Without a client, put any non-empty placeholder: everything but the Google
+# round trip still works.
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=

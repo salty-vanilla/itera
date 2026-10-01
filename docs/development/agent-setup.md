@@ -78,7 +78,7 @@ direnv のシェル hook は対話シェルのプロンプトでしか動かな�
 
 共有しないもの：
 
-- アカウントの資源やデータを変更できる MCP（Cloudflare の bindings 用、WorkOS の MCP など）。
+- アカウントの資源やデータを変更できる MCP（Cloudflare の bindings 用の MCP など）。
 - API キーが必要な MCP（Context7 など）。各自のユーザー設定で接続する。
 - Cloudflare の observability 用 MCP は、デプロイ先ができる Issue で追加を判断する。
 
