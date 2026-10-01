@@ -407,6 +407,30 @@ describe('Today — the daily operations', () => {
     },
   );
 
+  it.each([
+    ['取り消す', '取り消す（見送り）: 顧客インタビューの設計'],
+    ['○', '完了にする: 顧客インタビューの設計'],
+  ])(
+    'closes the Toast once the row itself is undone with %s (#163)',
+    async (_, name) => {
+      await renderAt('/today?fixture=today-interrupt');
+      await menu('顧客インタビューの設計', '今日は見送る');
+      await screen.findByText('「顧客インタビューの設計」を見送りました');
+      await userEvent.click(
+        within(row('今日はもうやらない', '顧客インタビューの設計')).getByRole(
+          'button',
+          { name },
+        ),
+      );
+      await waitFor(() =>
+        expect(
+          screen.queryByText('「顧客インタビューの設計」を見送りました'),
+        ).toBeNull(),
+      );
+      expect(screen.queryByText(/保存できませんでした/)).toBeNull();
+    },
+  );
+
   it('puts 開始 and 完了にする first in the `…`, with labels alone (#163)', async () => {
     await renderAt('/today?fixture=today-interrupt');
     await userEvent.click(
