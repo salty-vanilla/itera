@@ -1,5 +1,6 @@
-import { cleanup, render } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TaskRow } from './task-row';
 
 afterEach(cleanup);
@@ -51,5 +52,49 @@ describe('TaskRow actionsVisible', () => {
       />,
     );
     expect(slot(container)?.className).not.toContain('opacity-0');
+  });
+});
+
+describe('TaskRow — the focus ring round the row (#152)', () => {
+  // jsdom has no scrollIntoView: each test puts a mock in its place.
+  const original = Element.prototype.scrollIntoView;
+  afterEach(() => {
+    Element.prototype.scrollIntoView = original;
+  });
+
+  const row = () => (
+    <>
+      <button type="button">前</button>
+      <TaskRow
+        title="実験データの前処理"
+        onOpen={() => {}}
+        actions={<button type="button">操作</button>}
+      />
+    </>
+  );
+
+  it('scrolls the whole row in when its title takes the focus by the keyboard', async () => {
+    const scrolled = vi.fn();
+    Element.prototype.scrollIntoView = scrolled;
+    const { container } = render(row());
+    await userEvent.tab();
+    expect(scrolled).not.toHaveBeenCalled();
+    await userEvent.tab();
+    expect(scrolled).toHaveBeenCalledTimes(1);
+    expect(scrolled.mock.contexts[0]).toBe(
+      container.querySelector('[data-slot="task-row"]'),
+    );
+    expect(scrolled).toHaveBeenCalledWith({ block: 'nearest' });
+    // Other controls of the row are scrolled in by the browser alone.
+    await userEvent.tab();
+    expect(scrolled).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves the row where it is when the title is clicked', async () => {
+    const scrolled = vi.fn();
+    Element.prototype.scrollIntoView = scrolled;
+    render(row());
+    await userEvent.click(screen.getByText('実験データの前処理'));
+    expect(scrolled).not.toHaveBeenCalled();
   });
 });

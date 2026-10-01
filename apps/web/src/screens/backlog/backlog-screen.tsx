@@ -10,7 +10,7 @@ import { AreaSelect, chosenArea } from '@/components/task/area-select';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
-import { useToastOffsetAbove } from '@/lib/use-toast-offset';
+import { useStuckBar } from '@/lib/use-stuck-bar';
 import { cn } from '@/lib/utils';
 import { useBacklog } from '@/store/use-backlog';
 import { useTaskActions } from '@/store/use-task-actions';
@@ -92,7 +92,7 @@ function BacklogScreen() {
   const undoRef = useRef<HTMLButtonElement>(null);
   // Under 768px the Quick Add sticks to the bottom: the Toast goes above it.
   const quickAddRef = useRef<HTMLDivElement>(null);
-  useToastOffsetAbove(quickAddRef, !useMediaQuery(MEDIUM_UP, true));
+  useStuckBar(quickAddRef, 'bottom', !useMediaQuery(MEDIUM_UP, true));
   // The Task just added: its row flashes for a moment (ADDED_MS), and a Toast says
   // so (Issue #86). A Task the current 切り口 or Area does not show has no
   // row to mark: the Toast says why it is not in the list.

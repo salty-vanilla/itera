@@ -1,5 +1,5 @@
 import { Check } from 'lucide-react';
-import type { ReactNode, Ref } from 'react';
+import type { FocusEvent, ReactNode, Ref } from 'react';
 import { rowKeyHandlers, type RowKeys } from '@/lib/row-keys';
 import { cn } from '@/lib/utils';
 
@@ -54,6 +54,20 @@ type TaskRowProps = {
   className?: string | undefined;
 };
 
+/**
+ * The ring goes round the row, but the browser scrolls only the title into
+ * view: when the focus comes by the keyboard, the row is scrolled in as well,
+ * so that its ring is not left under a bar stuck to the edge of the screen
+ * (#152). The row's scroll margin keeps it clear of the bar
+ * (styles/globals.css).
+ */
+function revealRow(event: FocusEvent<HTMLButtonElement>) {
+  if (!event.currentTarget.matches(':focus-visible')) return;
+  event.currentTarget
+    .closest('[data-slot="task-row"]')
+    ?.scrollIntoView?.({ block: 'nearest' });
+}
+
 function TaskRow({
   title,
   control,
@@ -100,6 +114,7 @@ function TaskRow({
           <button
             type="button"
             onClick={onOpen}
+            onFocus={revealRow}
             data-row-focus
             aria-current={current || undefined}
             className={cn(

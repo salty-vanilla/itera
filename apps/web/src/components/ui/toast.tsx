@@ -78,7 +78,7 @@ function ToastProvider({ children }: { children: ReactNode }) {
             'fixed z-(--layer-toast) flex flex-col-reverse gap-2 focus-visible:focus-ring',
             // compact: full width above the bottom tab bar, whose height the
             // screen sets in --toast-offset-bottom, and above a bar the screen
-            // sticks over it (--toast-offset-above, lib/use-toast-offset.ts).
+            // sticks over it (--toast-offset-above, lib/use-stuck-bar.ts).
             // medium and up: bottom left, and above such a bar too.
             'inset-x-4 bottom-[calc(var(--toast-offset-bottom,0px)+var(--toast-offset-above,0px)+var(--spacing-4))]',
             'medium:right-auto medium:bottom-[calc(var(--toast-offset-above,0px)+var(--spacing-6))] medium:left-6 medium:w-pane-side',

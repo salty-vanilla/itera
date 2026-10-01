@@ -122,11 +122,16 @@ describe('Today — the Toast above the Quick Add (#79)', () => {
   it('lifts the Toast above the stuck Quick Add at every width, and stops when the screen goes', async () => {
     const offset = () =>
       document.documentElement.style.getPropertyValue('--toast-offset-above');
+    // The same height leaves the Quick Add out of the scrollport (#152).
+    const room = () =>
+      document.documentElement.style.getPropertyValue('--stuck-bar-bottom');
     const router = await renderAt('/today?fixture=today-interrupt');
     expect(offset()).not.toBe('');
+    expect(room()).toBe(offset());
     await router.navigate({ to: '/backlog' });
     await screen.findByRole('heading', { name: 'Backlog' });
     expect(offset()).toBe('');
+    expect(room()).toBe('');
   });
 });
 
