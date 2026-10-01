@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import type {
   AreaId,
   CriterionPolicy,
   RetroDecision,
   SuggestionBound,
 } from '@itera/domain';
+import { Link } from '@tanstack/react-router';
 import { Info } from 'lucide-react';
 import { Field } from '@/components/ui/field';
 import { Radio, RadioGroup } from '@/components/ui/radio-group';
@@ -18,7 +20,8 @@ import {
 import { formatHours, formatRange } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
 import type { RetroCriterion, RetroData } from '@/store/retro-view';
-import { carryOverWords, DECISION_WORDS } from './retro-words';
+import { useNextPlanning } from '@/store/use-retro';
+import { CARRY_OVER_PLACE_WORDS, DECISION_WORDS } from './retro-words';
 import { UsedCriterion } from './used-criterion';
 
 // 引き継ぐ (patterns.md Retro, DESIGN.md 計画基準): the improvement goes to
@@ -28,8 +31,8 @@ import { UsedCriterion } from './used-criterion';
 // (invariant 36), right after what it did this Sprint; each choice says
 // what the next Planning does (#107). The setting, its effect and the next
 // Planning's preview all come from the one policy (invariant 39).
-// Carry-overs are not decided here (invariant 20): the first line only says
-// where they are.
+// Carry-overs are not decided here (invariant 20): the first block lists
+// them and says where they are decided, the next Planning (#169).
 
 type HandoffPaneProps = {
   data: RetroData;
@@ -73,11 +76,7 @@ function HandoffPane({
       data-slot="handoff-pane"
       className={cn('flex flex-col gap-12', className)}
     >
-      {carryOver.total > 0 && (
-        <p data-slot="carry-over-place" className="text-body text-ink">
-          持ち越し {carryOverWords(carryOver)}
-        </p>
-      )}
+      {carryOver.total > 0 && <CarryOverList data={data} />}
       <section
         aria-labelledby="handoff-improvement"
         className="flex flex-col gap-3 border-t border-b border-t-ink border-b-border py-4"
@@ -183,6 +182,70 @@ function HandoffPane({
         </section>
       )}
     </div>
+  );
+}
+
+/** More than this, and the Tasks are folded behind a button. */
+const CARRY_OVER_SHOWN = 5;
+
+/**
+ * The carried-over Tasks, by title, and where they are decided: the next
+ * Planning's 選ぶ when it has started, else after this Retro (#169).
+ */
+function CarryOverList({ data }: { data: RetroData }) {
+  const next = useNextPlanning();
+  const [open, setOpen] = useState(false);
+  const { carryOverTasks: tasks } = data;
+  const folded = tasks.length > CARRY_OVER_SHOWN && !open;
+  const shown = folded ? tasks.slice(0, CARRY_OVER_SHOWN) : tasks;
+  return (
+    <section
+      data-slot="carry-over-place"
+      aria-labelledby="handoff-carry-over"
+      className="flex flex-col gap-2"
+    >
+      <h2 id="handoff-carry-over" className="text-heading text-ink">
+        持ち越し {tasks.length}件
+      </h2>
+      <ul className="flex flex-col gap-1 text-body text-ink">
+        {shown.map((t) => (
+          <li key={t.taskId}>
+            {t.title}
+            {t.place !== 'candidate' && (
+              <span className="ms-2 text-help text-ink-muted">
+                {CARRY_OVER_PLACE_WORDS[t.place]}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+      {tasks.length > CARRY_OVER_SHOWN && (
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+          className="self-start text-link underline focus-visible:focus-ring"
+        >
+          {open ? '畳む' : `ほか ${tasks.length - CARRY_OVER_SHOWN}件を表示`}
+        </button>
+      )}
+      <p className="text-body text-ink-muted">
+        {next.planning !== undefined ? (
+          <>
+            次の計画の「選ぶ」で決めます。
+            <Link
+              to="/sprint"
+              search={{ sprint: next.number }}
+              className="ms-1 text-link underline focus-visible:focus-ring"
+            >
+              Sprint {next.number} を開く
+            </Link>
+          </>
+        ) : (
+          '次の計画は、振り返りの完了後に始めます。'
+        )}
+      </p>
+    </section>
   );
 }
 

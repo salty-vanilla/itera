@@ -6,6 +6,7 @@ import type { Occurrence } from './occurrence';
 import {
   carryOverCandidates,
   carryOverPlaces,
+  carryOverTasks,
   confirmSprint,
   excludeFromPlan,
   includeInPlan,
@@ -258,6 +259,13 @@ describe('startPlanning', () => {
       completed: 1,
       archived: 1,
     });
+    // Per Task, in the Sprint's order, with the same places.
+    expect(carryOverTasks(previous, undefined, tasks)).toEqual([
+      { taskId: 'task-paper-1', place: 'candidate' },
+      { taskId: 'task-paper-2', place: 'candidate' },
+      { taskId: 'task-paper-3', place: 'completed' },
+      { taskId: 'task-paper-4', place: 'archived' },
+    ]);
     // The next Sprint chose one before Review (F35).
     const { sprint } = plan([previous]);
     const chosen = unwrap(

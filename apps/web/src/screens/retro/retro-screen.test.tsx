@@ -364,9 +364,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
     const text = dialog.textContent ?? '';
     expect(text).toContain(reviewed().retro?.improvement?.text);
     expect(text).toContain('今回の計画基準「');
-    expect(text).toContain(
-      '2件は Backlog に残っています。次の計画の「持ち越し」に候補として出ます。',
-    );
+    expect(text).toContain('2件は Backlog に残っています。');
     expect(text).toContain(
       '完了すると、書いた内容は変えられず、この Sprint には実績を足せなくなります。',
     );
@@ -559,23 +557,63 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     expect(screen.getByText(same)).toBeTruthy();
   });
 
-  it('says where the carry-overs are, first and in the Dialog alike, and decides nothing (invariant 20)', async () => {
+  it('lists the carried-over Tasks by title and where they are decided, first and decides nothing (invariant 20)', async () => {
     await renderAt('/retro?fixture=retro-start&stage=handoff');
-    const words =
-      '2件は Backlog に残っています。次の計画の「持ち越し」に候補として出ます。';
-    const line = carryOverLine();
-    expect(line?.textContent).toBe(`持ち越し ${words}`);
-    // The first thing in 引き継ぐ, and not something to choose.
+    const words = '2件は Backlog に残っています。';
+    const list = carryOverLine();
     expect(
       document.querySelector('[data-slot="handoff-pane"]')?.firstElementChild,
-    ).toBe(line);
-    expect(line?.querySelector('input, button')).toBeNull();
+    ).toBe(list);
+    expect(within(list as HTMLElement).getByRole('heading').textContent).toBe(
+      '持ち越し 2件',
+    );
+    const titles = Array.from(list?.querySelectorAll('li') ?? []).map(
+      (li) => li.textContent,
+    );
+    expect(titles).toHaveLength(2);
+    expect(titles.every((t) => (t ?? '') !== '')).toBe(true);
+    // Not started yet: it says when, and offers nothing to choose.
+    expect(list?.textContent).toContain(
+      '次の計画は、振り返りの完了後に始めます。',
+    );
+    expect(list?.querySelector('input, a')).toBeNull();
     await userEvent.click(screen.getByRole('radio', { name: '終える' }));
     await userEvent.click(completeButton());
     const dialog = await screen.findByRole('dialog');
     expect(
       within(dialog).getByText('持ち越し').nextElementSibling?.textContent,
     ).toBe(words);
+  });
+
+  it('folds a long list of carry-overs behind a button', async () => {
+    change = (snapshot) => ({
+      ...snapshot,
+      records: {
+        ...snapshot.records,
+        sprints: snapshot.records.sprints.map((s) => {
+          if (s.state !== 'review') return s;
+          const carried = s.tasks.find((t) => t.outcome === 'carriedOver');
+          if (carried === undefined) return s;
+          return {
+            ...s,
+            tasks: [
+              ...s.tasks,
+              ...Array.from({ length: 5 }, (_, i) => ({
+                ...carried,
+                id: `st-more-${i}` as typeof carried.id,
+              })),
+            ],
+          };
+        }),
+      },
+    });
+    await renderAt('/retro?fixture=retro-start&stage=handoff');
+    const list = carryOverLine() as HTMLElement;
+    expect(list.querySelectorAll('li')).toHaveLength(5);
+    await userEvent.click(
+      within(list).getByRole('button', { name: /ほか 2件/ }),
+    );
+    expect(list.querySelectorAll('li')).toHaveLength(7);
   });
 
   it('has no line when nothing was carried over', async () => {
@@ -683,9 +721,17 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
       };
     };
     await renderAt('/retro?fixture=retro-start&stage=handoff');
-    expect(carryOverLine()?.textContent).toBe(
-      '持ち越し 2件のうち、1件は次の計画に入っています。1件は Backlog に残り、次の計画の「持ち越し」に候補として出ます。',
+    const list = carryOverLine() as HTMLElement;
+    const rows = Array.from(list.querySelectorAll('li')).map(
+      (li) => li.textContent ?? '',
     );
+    expect(rows).toHaveLength(2);
+    expect(
+      rows.filter((r) => r.endsWith('次の計画に入っています')),
+    ).toHaveLength(1);
+    // Planning has started: it links to that Sprint, to decide there.
+    expect(within(list).getByRole('link').textContent).toBe('Sprint 3 を開く');
+    expect(list.textContent).toContain('次の計画の「選ぶ」で決めます。');
   });
 });
 
