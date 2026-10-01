@@ -15,5 +15,7 @@ export const SELECTION_WORDS: Readonly<
   skipped: 'スキップ',
   paused: '中断',
   deferred: '見送り',
+  // Not shown: a choice put back is left out of another day's records, and
+  // the day records' undo words say the record goes (#233).
   removed: '今週の残りに戻した',
 };
