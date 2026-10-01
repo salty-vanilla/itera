@@ -36,7 +36,7 @@ export function CarryOverText({
       className={count >= 3 ? 'text-warning' : undefined}
     >
       持ち越し {count}回（Sprint {fromSprint}から）
-      {count >= 3 && ' · 分割を検討'}
+      {count >= 3 && ' · 小さく分けてみる'}
     </MetaItem>
   );
 }
@@ -197,7 +197,7 @@ function BacklogRow({
             className="grid size-target-touch place-items-center text-ink-subtle medium:size-target-min [&_svg]:size-icon-s [&_svg]:[stroke-width:var(--icon-stroke-s)]"
           >
             <RecurrenceIcon aria-hidden />
-            <span className="sr-only">完了は回ごと</span>
+            <span className="sr-only">1回ずつ完了</span>
           </span>
         )
       }

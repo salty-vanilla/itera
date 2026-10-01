@@ -84,7 +84,7 @@ export interface CandidateRow {
   /** 持ち越し N回（Sprint M から）(F25, F26). */
   readonly carry?: { readonly count: number; readonly fromSprint: number };
   /**
-   * 「Sprint N で実行中」: the Task is still unfinished in the running Sprint
+   * 「Sprint N で進行中」: the Task is still unfinished in the running Sprint
    * (#89). Choosing it stays possible; when that Sprint enters Review, the
    * choice is linked to its carry-over (F35).
    */

@@ -455,7 +455,7 @@ Area（領域）はユーザーが作る。駅の路線記号のように、色�
 - 大きい画面（`bp-xl` 1920px 以上）で変えてよいのは、ペインの広さと、その中に並ぶ数だけ。どのペインに何があるかは、画面の大きさで変えない。中央のペインは固定幅にせず、左右のペインを除いた幅を使い、上限は中身の種類で決める。
   - ブロック（Planning の Area）：幅に応じて 1〜3 列に並べる（1 列は `pane-sprint` まで）。
   - 表（Retro の事実を見る）：幅いっぱい。
-  - 1 行 1 Task の一覧（Backlog、Retro の繰り返しの回）：行は最大 `pane-rows` 1280px。
+  - 1 行 1 Task の一覧（Backlog、Retro の繰り返し）：行は最大 `pane-rows` 1280px。
   - 文章（Goal、次に試すこと、振り返り）：`measure-read` のまま。
 
 ### 寸法
@@ -474,7 +474,7 @@ Area（領域）はユーザーが作る。駅の路線記号のように、色�
 | `pane-list-xl` / `pane-list-slim-xl` | 480 / 320px | 1920px 以上での `pane-list` / `pane-list-slim`（中央のペインに余りがあるため広げる） |
 | `pane-sprint` | 680px | Planning の Sprint ペインの最大幅 |
 | `pane-today` | 720px | Today の 1 カラムの最大幅 |
-| `pane-rows` | 1280px | 1 行 1 Task の一覧（Backlog、Retro の繰り返しの回）の行の最大幅 |
+| `pane-rows` | 1280px | 1 行 1 Task の一覧（Backlog、Retro の繰り返し）の行の最大幅 |
 | `drawer` | 400px | 右 Drawer |
 | `popover` | 320px | Popover の幅 |
 | `toast` | 480px | Toast の幅（medium 以上。開いた Drawer に重ならない幅まで。compact は幅 100% − 32px） |
@@ -624,7 +624,7 @@ compact の原則：
 
 **Tag** — Status（Sprint の状態、Goal の自己判定）と本人のラベルだけに使う小さな Pill。
 - 20px、`rounded.full`、Status はアイコン必須、語は 1〜2 語（本人のラベルは 12em で省略し、全文を title で読める）。Variant：neutral / done（墨の文字＋`circle-check`）/ warning（`triangle-alert`）/ danger（`circle-alert`）/ draft（破線＋`circle-dashed`。「計画中 · 未確定」）。neutral の Status は意味に合うアイコンを画面側で選ぶ（同期中・次の Sprint で試すは `info`）。アイコンのない neutral は本人のラベルで、`border` の輪郭だけにする。
-- tone の使い分け：neutral = 本人のラベル・一部できた・できなかった・判断しない・同期中・次の Sprint で試す、done = できた・保存済み、warning = 超過の可能性、danger = 同期エラーなど保存・同期の失敗、draft = 未確定。期限超過は Tag にせず、Task Metadata の文字（`circle-alert`＋「2日超過」）で示す。Goal の自己判定は円の形と語で区別し、色で区別しない（Issue #42）：できた `circle-check`（done）/ 一部できた `contrast`（半分を描いた円、neutral）/ できなかった `circle`（空の円、neutral）/ 判断しない `circle-minus`（neutral）。できなかったに赤や × を使わない。
+- tone の使い分け：neutral = 本人のラベル・一部できた・できなかった・決めない・同期中・次の Sprint で試す、done = できた・保存済み、warning = 超過の可能性、danger = 同期エラーなど保存・同期の失敗、draft = 未確定。期限超過は Tag にせず、Task Metadata の文字（`circle-alert`＋「2日過ぎ」）で示す。Goal の自己判定は円の形と語で区別し、色で区別しない（Issue #42）：できた `circle-check`（done）/ 一部できた `contrast`（半分を描いた円、neutral）/ できなかった `circle`（空の円、neutral）/ 判断しない `circle-minus`（neutral）。できなかったに赤や × を使わない。
 - 期限・Estimate・持ち越し・繰り返し・Area を Tag にしない（→ Task Metadata の文字）。1 行に 3 つ以上並べない。
 
 **Divider** — Card の代わりにグループを区切る、構造の主役。default（`border`）/ soft（`border-soft`、リスト内）/ rule（`ink` 1px、考える領域の上端、1 画面に 1〜2 本）/ label（ラベル付き。グループ見出し）。× 2px 以上の太い罫、二重線、点線。
@@ -666,7 +666,7 @@ compact の原則：
 - 前後の移動：タイトルの左右に、前の Sprint・次の Sprint へ移る矢印（`chevron-left` / `chevron-right`、IconButton と同じ Quiet の見た目のリンク、Tooltip と読み上げは「前の Sprint（Sprint 13）」）。端で行き先がなければ、矢印を無効の形（`ink-disabled`）で同じ位置に残す。
 - 呼び名：今と比べた呼び名（「先週」「今週」「来週」）があれば、期間の前に `ink` の太字で添える（「来週 · 10/5 (月) – 10/11 (日)」）。呼び名の規則は `docs/design/content.md`「週の呼び名」。
 - Planning：選ぶ / 整える / 確かめる（PRD §5.B の Pick / Shape / Check）
-- 実行中：Status「実行中」、段階なし
+- 実行中：Status「進行中」、段階なし
 - 振り返り中・完了の Sprint の画面：Status「振り返り中」/「完了」（`done`）、段階なし、確定したときの計画と結果を読み取り専用で出す
 - 次の週（計画を始める前）：Status なし、操作は「Sprint N の計画を始める」
 - Retro：事実を見る / 振り返る / 引き継ぐ（PRD §5.D）。完了した Retro も同じ段階を読み取り専用で出し、「現在」は出さない
@@ -702,9 +702,9 @@ compact の原則：
 
 **EstimateRange** — 提案の幅を 0〜8h の目盛り上の帯で見せる。数値（「2–4h」「中央 3h」）、1h ごとの `border` の刻み、提案の帯（破線＋`canvas-subtle`）、中央値のマーカー（`ink` 2px）、目盛りの数値（0 / 4h / 8h）。同じ値を必ず数値でも示す。行内では使わない（→ Estimate）。確率・confidence を % で出さない。
 
-**Deadline** — 日付＋曜日＋相対表現。upcoming（`calendar`＋「10/5 (月)」`ink-muted`）/ soon（2日以内）・today（`clock`＋「あと2日」「今日まで」`warning`）/ overdue（`circle-alert`＋「2日超過」`danger`）。色だけで超過を示さない。
+**Deadline** — 日付＋曜日＋相対表現。upcoming（`calendar`＋「10/5 (月)」`ink-muted`）/ soon（2日以内）・today（`clock`＋「あと2日」「今日まで」`warning`）/ overdue（`circle-alert`＋「2日過ぎ」`danger`）。色だけで超過を示さない。
 
-**持ち越し（CarryOverIndicator）** — `corner-down-right`＋「持ち越し 1回（Sprint 13から）」`ink-muted`。3 回以上は `warning`＋「持ち越し 3回 · 分割を検討」。`danger` と「遅れ」「失敗」の語を使わない。
+**持ち越し（CarryOverIndicator）** — `corner-down-right`＋「持ち越し 1回（Sprint 13から）」`ink-muted`。3 回以上は `warning`＋「持ち越し 3回 · 小さく分けてみる」。`danger` と「遅れ」「失敗」の語を使わない。
 
 **繰り返し（RecurringIndicator）** — `repeat`＋ルール（「毎週 土」「毎週 月・木」「平日」）＋任意で今週の回（「今週 2/5」）。ルールと回を区別する（ルールを変えても確定済みの Sprint の回は変わらない）。Backlog の行では `repeat` を行の先頭（○ の位置）に置き、ルールの語の前には重ねない（Issue #171）。
 
@@ -714,7 +714,7 @@ compact の原則：
 
 **Goal** — Sprint × Area の「今週どんな状態にしたいか」。
 - 上端の罫（`border`）、見出し（Area Indicator heading＋タスク数と時間＋自己判定の Tag）、Goal 文（`goal`、`measure-read`）とその直下の編集（Quiet sm、文の左端に揃える。何を変えるかが分かるように、見出しではなく文の近くに置く）、その Area の選んだタスク。
-- set（確定）/ empty（「+ 目標を書く」だけ。「目標は任意です」のような案内は、計画中も確定後も置かない、Issue #155・#208。Goal も Task もない Area は、名前と「+ 目標を書く」を 1 行にする。Issue #161）/ editing（`body-l` の Textarea＋保存 / キャンセル）/ 自己判定済み（できた = done の Tag、一部できた・できなかった・判断しない = neutral）。
+- set（確定）/ empty（「+ 目標を書く」だけ。「目標は任意です」のような案内は、計画中も確定後も置かない、Issue #155・#208。Goal も Task もない Area は、名前と「+ 目標を書く」を 1 行にする。Issue #161）/ editing（`body-l` の Textarea＋保存 / キャンセル）/ 自己判定済み（できた = done の Tag、一部できた・できなかった・決めない = neutral）。
 - Goal の間は `spacing.8`。× Card で囲む、Goal がない Area を警告色で示す、Goal 文を太字・大見出しにする、全体 Goal を作る。
 
 **Capacity Indicator** — 使える時間（Sprint.availableHours）と計画の合計の差を、幅のまま示す。
@@ -738,9 +738,9 @@ compact の原則：
 **Agent 提案（AgentSuggestion）** — Estimate の提案、Goal の文案、計画案の入口。
 - 破線の枠（`proposal-border`、`rounded.md`、`surface`）、ヘッダー（`kicker` で何の提案か（「見積もりの提案」）＋出所と時刻）、対象、提案の値（EstimateRange / suggestion の Estimate / `body` の文）、根拠、操作。
 - Estimate の提案は、下限・中央・上限のどれかを本人の Estimate として **採用** できる（PRD §5.A）。採用は Secondary、編集して採用・却下は Quiet。
-- 状態：pending / loading（「過去の類似タスクを調べています…」＋取り消す）/ insufficient（幅を広く、不確実な点に理由）/ error（「提案を作れませんでした。手入力でそのまま計画を続けられます。」＋もう一度試す）/ 採用・編集・却下の後（実線の `canvas-subtle` の 1 行＋元に戻す）。
+- 状態：pending / loading（「過去の類似タスクを調べています…」＋取り消す）/ insufficient（幅を広く、わからない点に理由）/ error（「提案を作れませんでした。手入力でそのまま計画を続けられます。」＋もう一度試す）/ 採用・編集・却下の後（実線の `canvas-subtle` の 1 行＋元に戻す）。
 
-**根拠（AgentRationale）** — 「根拠 / 不確実な点 / 参照していない情報」の 3 行。columns（既定）/ stacked（狭い場所）/ collapsible（「根拠を見る」）。根拠がないときは「根拠となるデータがありません」。× confidence を % で出す、「高精度」と書く。
+**根拠（AgentRationale）** — 「根拠 / わからない点 / 参照していない情報」の 3 行。columns（既定）/ stacked（狭い場所）/ collapsible（「根拠を見る」）。根拠がないときは「根拠となるデータがありません」。× confidence を % で出す、「高精度」と書く。
 
 **計画案の差分（ProposalDiff）** — Agent の計画案と今の計画の差を、行ごとに選んで反映する。要約（追加 / 除外 / 変更の件数、計画の合計の前後、使える時間）、行（□ 反映する＋記号と語「＋追加 / −除外 / →変更」＋タスク名＋Area と理由＋値）、フッター（「選んだ N件を計画に反映」Secondary / すべて却下 /「反映しても Sprint は確定されません」）。除外と変更前の値は取り消し線。desktop は右 Drawer、compact は全画面。× 追加を緑・除外を赤に塗る。
 

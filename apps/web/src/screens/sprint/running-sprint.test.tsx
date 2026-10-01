@@ -99,9 +99,9 @@ const goalOf = (areaId: string) =>
   running().goals.find((g) => g.areaId === areaId);
 
 describe('Sprint — running (#51)', () => {
-  it('shows 実行中, the fixed plan and the way to Today, with no over-capacity', async () => {
+  it('shows 進行中, the fixed plan and the way to Today, with no over-capacity', async () => {
     await renderAt('/sprint?fixture=today-interrupt');
-    expect(screen.getByText('実行中')).toBeTruthy();
+    expect(screen.getByText('進行中')).toBeTruthy();
     // Its name next to now, then the period (#90).
     expect(
       screen.getByText(
@@ -131,13 +131,13 @@ describe('Sprint — running (#51)', () => {
     const row = screen
       .getByRole('button', { name: '顧客インタビューの設計' })
       .closest('[data-slot="task-row"]');
-    expect(row?.textContent).toContain('目標に紐づかない');
+    expect(row?.textContent).toContain('目標に入っていない');
     expect(document.body.textContent).not.toContain('目標なし');
     // A linked Task says so too, in the same tone.
     const linked = screen
       .getByText('関連論文を 3本読む', { selector: 'main *' })
       .closest('[data-slot="task-row"]');
-    expect(linked?.textContent).toContain('目標に紐づく');
+    expect(linked?.textContent).toContain('目標に入っている');
   });
 
   it('folds a criterion that changed no planned value to one line (#161)', async () => {
@@ -342,7 +342,7 @@ describe('Sprint — 日ごとの記録 (#53)', () => {
     });
     expect(
       within(dialog).getByText(
-        'その日の記録は未処理になり、タスクは今週の残りに戻ります。あとから、その日を完了にはできません。',
+        'その日の記録は未完了に戻り、タスクは今週の残りに戻ります。あとから、その日を完了にはできません。',
       ),
     ).toBeTruthy();
     await userEvent.click(

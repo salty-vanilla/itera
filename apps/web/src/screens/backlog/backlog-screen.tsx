@@ -33,7 +33,7 @@ export const slices: readonly { value: BacklogSlice | 'all'; label: string }[] =
   [
     { value: 'all', label: 'すべて' },
     { value: 'dueSoon', label: '期限が近い' },
-    { value: 'overdue', label: '期限超過' },
+    { value: 'overdue', label: '期限切れ' },
     { value: 'carriedOver', label: '持ち越し' },
     { value: 'recurring', label: '繰り返し' },
     { value: 'noArea', label: '領域なし' },
@@ -202,7 +202,7 @@ function BacklogScreen() {
     <div className={cn('flex min-h-full flex-col', open && 'wide:pr-drawer')}>
       <div className="flex flex-col gap-4 px-4 pt-10 pb-4 medium:px-6 xl:max-w-pane-rows">
         <h1 className="text-display-m text-ink">Backlog</h1>
-        <FilterGroup label="切り口">
+        <FilterGroup label="絞り込み">
           {slices.map((s) => {
             const pressed = (search.view ?? 'all') === s.value;
             return (
@@ -291,7 +291,7 @@ function BacklogScreen() {
         </p>
         {items.length === 0 && completed === undefined ? (
           <p className="px-4 py-6 text-body text-ink-muted medium:px-6">
-            この切り口のタスクはありません。
+            該当するタスクはありません。
           </p>
         ) : (
           <ul className="border-t border-border-soft medium:mx-3">

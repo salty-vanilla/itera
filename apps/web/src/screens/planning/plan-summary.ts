@@ -31,7 +31,7 @@ export interface PlanSummary {
   readonly taskCount: number;
   /**
    * Tasks not linked to their Area's Goal, in the Areas with one: the rows
-   * that say 「目標に紐づかない」. A Task in an Area without a Goal is not
+   * that say 「目標に入っていない」. A Task in an Area without a Goal is not
    * counted, though confirming leaves it unlinked (owner decision, #159).
    */
   readonly unlinked: number;

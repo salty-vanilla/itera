@@ -902,7 +902,7 @@ describe('Today — outside the period (#54)', () => {
     );
     // Confirmed before its first day, the Sprint's screen stays: Today has
     // nothing to open yet (#156).
-    expect(await screen.findByText('実行中')).toBeTruthy();
+    expect(await screen.findByText('進行中')).toBeTruthy();
     expect(screen.queryByRole('link', { name: '今日を開く' })).toBeNull();
     await userEvent.click(screen.getAllByRole('link', { name: '今日' })[0]!);
     expect(
@@ -918,13 +918,13 @@ describe('Today — outside the period (#54)', () => {
     // The week's plan, read only (#156).
     const plan = screen.getByRole('region', { name: '今週の計画' });
     expect(within(plan).getAllByRole('listitem')).toHaveLength(9);
-    expect(within(plan).getByText('9/28 (月) の回')).toBeTruthy();
+    expect(within(plan).getByText('9/28 (月) の分')).toBeTruthy();
     expect(within(plan).queryByRole('button')).toBeNull();
     // One step to the Sprint (#90).
     const open = screen.getByRole('link', { name: 'Sprint 2 を開く' });
     expect(open.getAttribute('href')).toContain('sprint=2');
     await userEvent.click(open);
-    expect(await screen.findByText('実行中')).toBeTruthy();
+    expect(await screen.findByText('進行中')).toBeTruthy();
   });
 
   it('puts a Sprint past its end into Review when the app opens (F21, F23)', async () => {

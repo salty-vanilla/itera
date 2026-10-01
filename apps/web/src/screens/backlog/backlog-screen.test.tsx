@@ -668,10 +668,10 @@ describe('Backlog', () => {
       within(row).queryByRole('button', { name: /^完了にする/ }),
     ).toBeNull();
     expect(row.querySelector('[data-slot="occurrence-mark"]')).not.toBeNull();
-    expect(row.textContent).toContain('完了は回ごと');
+    expect(row.textContent).toContain('1回ずつ完了');
     await userEvent.click(within(row).getByText('英語の多読 30分'));
     const detail = await screen.findByRole('dialog');
-    const link = within(detail).getByRole('link', { name: '今週の回を開く' });
+    const link = within(detail).getByRole('link', { name: '今週の分を開く' });
     expect(link.getAttribute('href')).toContain('/today');
   });
 
@@ -1048,7 +1048,7 @@ describe('Backlog', () => {
       within(list()).getByRole('button', { name: '元に戻す' }),
     );
     // Hide the row with a 切り口, then show it again.
-    await userEvent.click(screen.getByRole('button', { name: /^期限超過/ }));
+    await userEvent.click(screen.getByRole('button', { name: /^期限切れ/ }));
     const all = screen.getByRole('button', { name: /^すべて/ });
     await userEvent.click(all);
     expect(within(list()).getByText('本棚を整理する')).toBeTruthy();
@@ -1072,7 +1072,7 @@ describe('Backlog', () => {
       screen.getByRole('button', { name: '完了にする：本棚を整理する' }),
     );
     expect(completedLine()).not.toBeNull();
-    await userEvent.click(screen.getByRole('button', { name: /^期限超過/ }));
+    await userEvent.click(screen.getByRole('button', { name: /^期限切れ/ }));
     expect(completedLine()).toBeNull();
   });
 

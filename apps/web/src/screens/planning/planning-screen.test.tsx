@@ -198,18 +198,18 @@ describe('Planning — 選ぶ', () => {
     );
     const chosen = draft().tasks.map((t) => t.taskId);
     expect(chosen).toContain('task-tax');
-    // 期限超過 is its own group: choosing 期限が近い leaves it out.
+    // 期限切れ is its own group: choosing 期限が近い leaves it out.
     expect(chosen).not.toContain('task-passport');
   });
 
-  it('splits 期限超過 from 期限が近い, and ends 期限が近い at the Sprint’s last day (#151)', async () => {
+  it('splits 期限切れ from 期限が近い, and ends 期限が近い at the Sprint’s last day (#151)', async () => {
     await renderAt('/sprint?fixture=planning-pick&stage=pick');
     const groups = within(backlogPane())
       .getAllByRole('region')
       .map((g) => g.getAttribute('aria-label'));
-    expect(groups.slice(0, 3)).toEqual(['持ち越し', '期限超過', '期限が近い']);
+    expect(groups.slice(0, 3)).toEqual(['持ち越し', '期限切れ', '期限が近い']);
     const overdue = within(backlogPane()).getByRole('region', {
-      name: '期限超過',
+      name: '期限切れ',
     });
     expect(within(overdue).getByText('パスポートの更新')).toBeDefined();
     const soon = within(backlogPane()).getByRole('region', {
@@ -223,7 +223,7 @@ describe('Planning — 選ぶ', () => {
     await renderAt('/sprint?fixture=planning-pick&stage=pick');
     const box = within(
       within(backlogPane()).getByRole('group', {
-        name: '今週に含める回：英語の多読 30分',
+        name: '今週に入れる日：英語の多読 30分',
       }),
     ).getByRole('checkbox', { name: '9/30 (水)' });
     await userEvent.click(box);
@@ -340,7 +340,7 @@ describe('Planning — 選ぶ', () => {
     await renderAt('/sprint?fixture=planning-pick&stage=pick');
     expect(draft().tasks.length).toBeGreaterThan(0);
     const note = within(planPane()).getByText(
-      /今週発生する繰り返しは最初から入っています。外すと今日の画面にも出ません。/,
+      /今週の繰り返しは最初から入っています。外すと今日の画面にも出ません。/,
     );
     expect(note.textContent).toContain(
       'Backlog でチェックしたタスクが、ここに領域ごとに並びます。',
@@ -439,7 +439,7 @@ describe('Planning — 整える', () => {
       }),
     );
     await userEvent.click(
-      await screen.findByRole('menuitem', { name: '目標に紐づけない' }),
+      await screen.findByRole('menuitem', { name: '目標から外す' }),
     );
     expect(draft().tasks.find((t) => t.taskId === 'task-paper')?.goalLink).toBe(
       'unlinked',
@@ -447,7 +447,7 @@ describe('Planning — 整える', () => {
     const row = within(research)
       .getByText('関連論文を 3本読む')
       .closest('[data-slot="task-row"]') as HTMLElement;
-    expect(within(row).getByText('目標に紐づかない')).toBeTruthy();
+    expect(within(row).getByText('目標に入っていない')).toBeTruthy();
     expect(within(research).getByText(/2件/)).toBeTruthy();
 
     // The menu now offers the other way, in the row's words (#159).
@@ -457,9 +457,9 @@ describe('Planning — 整える', () => {
       }),
     );
     await userEvent.click(
-      await screen.findByRole('menuitem', { name: '目標に紐づける' }),
+      await screen.findByRole('menuitem', { name: '目標に入れる' }),
     );
-    expect(within(row).getByText('目標に紐づく')).toBeTruthy();
+    expect(within(row).getByText('目標に入っている')).toBeTruthy();
   });
 
   it('shows the link only in an Area with a Goal, on the row and in its menu (#159)', async () => {
@@ -470,7 +470,7 @@ describe('Planning — 整える', () => {
         .getByText('英語の多読 30分')
         .closest('[data-slot="task-row"]') as HTMLElement;
     // 学習 has no Goal: no state on the row and nothing to choose.
-    expect(reading().textContent).not.toContain('目標に紐づ');
+    expect(reading().textContent).not.toMatch(/目標に入|目標から外/);
     expect(reading().textContent).not.toContain('目標なし');
     await userEvent.click(
       within(study).getByRole('button', {
@@ -478,7 +478,9 @@ describe('Planning — 整える', () => {
       }),
     );
     await screen.findByRole('menuitem', { name: /から外す/ });
-    expect(screen.queryByRole('menuitem', { name: /目標に紐づ/ })).toBeNull();
+    expect(
+      screen.queryByRole('menuitem', { name: /目標に入|目標から外/ }),
+    ).toBeNull();
     await userEvent.keyboard('{Escape}');
 
     await userEvent.click(
@@ -491,8 +493,8 @@ describe('Planning — 整える', () => {
     await userEvent.click(within(study).getByRole('button', { name: '保存' }));
     // The recurring Task stays unlinked; the row says so, and no note is
     // added to explain it (owner decision, #159).
-    expect(within(reading()).getByText('目標に紐づかない')).toBeTruthy();
-    expect(study.textContent).not.toContain('はじめは目標に紐づきません');
+    expect(within(reading()).getByText('目標に入っていない')).toBeTruthy();
+    expect(study.textContent).not.toContain('はじめは目標に入りません');
 
     await userEvent.click(
       within(study).getByRole('button', {
@@ -500,9 +502,9 @@ describe('Planning — 整える', () => {
       }),
     );
     await userEvent.click(
-      await screen.findByRole('menuitem', { name: '目標に紐づける' }),
+      await screen.findByRole('menuitem', { name: '目標に入れる' }),
     );
-    expect(within(reading()).getByText('目標に紐づく')).toBeTruthy();
+    expect(within(reading()).getByText('目標に入っている')).toBeTruthy();
   });
 });
 
@@ -981,7 +983,7 @@ describe('Planning — review fixes', () => {
       .getByText('TypeScript 6 の変更点を読む')
       .closest('[data-slot="task-row"]');
     // 学習 has no Goal: the row has no link to show or change (#159).
-    expect(row?.textContent).not.toContain('目標に紐づ');
+    expect(row?.textContent).not.toMatch(/目標に入|目標から外/);
     const confirm = async () => {
       await userEvent.click(
         screen.getByRole('button', { name: 'Sprint 2 を確定' }),
@@ -994,7 +996,7 @@ describe('Planning — review fixes', () => {
     // without a Goal: not counted, though confirming leaves them unlinked
     // (owner decision, #159).
     let dialog = await confirm();
-    expect(dialog.textContent).not.toContain('目標に紐づかない');
+    expect(dialog.textContent).not.toContain('目標に入っていない');
     await userEvent.click(
       within(dialog).getByRole('button', { name: '戻って調整' }),
     );
@@ -1007,10 +1009,10 @@ describe('Planning — review fixes', () => {
       }),
     );
     await userEvent.click(
-      await screen.findByRole('menuitem', { name: '目標に紐づけない' }),
+      await screen.findByRole('menuitem', { name: '目標から外す' }),
     );
     dialog = await confirm();
-    expect(dialog.textContent).toContain('（うち目標に紐づかない 1件）');
+    expect(dialog.textContent).toContain('（うち目標に入っていない 1件）');
   });
 
   it('shows the suggestion a planned value came from', async () => {

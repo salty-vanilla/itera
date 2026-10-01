@@ -84,7 +84,7 @@ export function resultText(t: TaskFact, data: RetroData): string {
   const { done, skipped, missed } = data.facts.occurrences;
   const count = (list: readonly { taskId: string }[]) =>
     list.filter((o) => o.taskId === t.taskId).length;
-  return `回：完了 ${count(done)} · スキップ ${count(skipped)} · 未処理 ${count(missed)}`;
+  return `繰り返し：完了 ${count(done)} · スキップ ${count(skipped)} · 未完了 ${count(missed)}`;
 }
 
 /** 「計画 5h（ルール）」: the planning value with what it came from. */

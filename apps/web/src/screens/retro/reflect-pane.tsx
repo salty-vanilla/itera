@@ -54,7 +54,7 @@ function ReflectPane({
           <Field
             label="気づいたこと"
             necessity="optional"
-            description="うまくいったこと、気になったこと。事実を見て思ったことを、そのまま書きます。"
+            description="うまくいったこと、気になったこと。記録を見て思ったことを、そのまま書きます。"
           >
             <Textarea
               text="body-l"

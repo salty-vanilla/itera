@@ -18,7 +18,7 @@ const record = (
 describe('consequence (#209)', () => {
   it('leaves the day unresolved and the Task back in the week (F33)', () => {
     expect(consequence(record('done', { kind: 'unresolved' }))).toBe(
-      'その日の記録は未処理になり、タスクは今週の残りに戻ります。あとから、その日を完了にはできません。',
+      'その日の記録は未完了に戻り、タスクは今週の残りに戻ります。あとから、その日を完了にはできません。',
     );
   });
 
@@ -43,7 +43,7 @@ describe('consequence (#209)', () => {
 
   it('puts a skipped occurrence back to pending', () => {
     expect(consequence(record('skipped', { kind: 'unresolved' }, true))).toBe(
-      'その日の記録は未処理になり、この回は未完了に戻ります。あとから、その日をスキップにはできません。',
+      'その日の記録と繰り返しは未完了に戻ります。あとから、その日をスキップにはできません。',
     );
   });
 });

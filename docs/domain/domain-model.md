@@ -25,7 +25,7 @@ v0.2 Final は v0.1 の骨格（恒久的な **Task** と、「この Sprint で
 | 5 | 確定後の基準 OFF は扱わない | CriterionUse から disabledAt を削除 | Retro：「途中で使わなくなった」表示を削除 |
 | 6 | 確定時に適用しなかった Sprint も Retro で決める | Active な基準があれば必ず CriterionUse を作り、retroDecision を必須に | Retro：未適用でも決定欄を出す |
 | 7 | 週の途中の追加にも基準を当てる | 追加時点で planSnapshot を作る。基準は確定時に適用したときだけ当てる。容量警告は出さない | Today / Backlog：超過表示なし |
-| 8 | 週の途中の追加は Goal に自動で紐付けない | role を goalLink（linked / unlinked）に変更。追加は unlinked | 表記「Goal に紐づく / 紐づかない」 |
+| 8 | 週の途中の追加は Goal に自動で紐付けない | role を goalLink（linked / unlinked）に変更。追加は unlinked | 表記「目標に入っている / 入っていない」（Issue #205） |
 | 9 | 「今日は見送る」と「今日の予定から外す」を分ける | DailySelection = Deferred / Removed。Removed は見送りに数えない | Today：操作を 2 つに |
 | 10 | Backlog からの完了を Sprint にも反映 | SprintTask = Done、当日の DailySelection（Done）を作る | Today：「済んだもの」に出る |
 | 11 | 持ち越しは自動で次に入れない | 次の Sprint の候補に出すだけ。選ばれたら carriedFrom | なし（v0.1 のまま） |
@@ -421,7 +421,7 @@ v0.2 Final でも 3 つとも、UI に入口のない操作を使わずに最後
 | --- | --- | --- | --- |
 | 1–3 | Backlog の詳細で「今日へ」（1 操作） | 同時に SprintTask（Planned、origin = midSprint、goalLink = unlinked、planSnapshot = 追加時点。仕事は基準の対象外なので計画値 2–3h）と DailySelection（当日、origin = 週の途中の追加）。Activity：Sprint への追加（経路 = Backlog→今日） | 確認ダイアログなし、容量の警告なし。Toast「「顧客インタビューの設計」を「今日やる」に入れました」（今週の Sprint にも入ったことを添え、「今日を開く」を出す）。Backlog の行に「今日」「週の途中で追加」（「今日やる」に入っているあいだ。「今日やる」から外れたら「今週」） |
 | 4 | Today で完了 | DailySelection → Done、SprintTask → Done、Task → Completed。実績は任意で ActualTime | 「実績時間を残す（任意）」 |
-| 5 | Retro | origin = midSprint の SprintTask を数える | 「週の途中の追加 1件（Goal に紐づかない）」。InterruptNote とは別に表示。計画値の合計には含め、確定時の合計との差を見せる |
+| 5 | Retro | origin = midSprint の SprintTask を数える | 「週の途中の追加 1件（目標に入っていない）」。InterruptNote とは別に表示。計画値の合計には含め、確定時の合計との差を見せる |
 
 今日を選ばずに今週に足す場合（今週へ、F40）は次のとおり。前提は同じで、9/29 (火) に Backlog を開いている。
 
@@ -430,7 +430,7 @@ v0.2 Final でも 3 つとも、UI に入口のない操作を使わずに最後
 | 1 | Backlog の行の `…` で「今週へ」（1 操作） | SprintTask（Planned、origin = midSprint、goalLink = unlinked、planSnapshot = 追加時点、計画値 2–3h）だけ。DailySelection は作らない。Activity：Sprint への追加（経路 = Backlog） | 確認ダイアログなし、容量の警告なし。Toast「「顧客インタビューの設計」を今週に入れました」と「元に戻す」。Backlog の行に「今週」「週の途中で追加」 |
 | 2 | Toast の「元に戻す」 | SprintTask を記録ごと消す。Activity：Sprint への追加の取り消し | Backlog の行から「今週」が消え、「今週へ」「今日へ」がまた出る |
 | 3 | もう一度「今週へ」、10/1 (木) に Today の今週の残りから「今日へ」 | 新しい SprintTask（1 と同じ）。木曜に DailySelection（10/1、origin = 手動） | 今週へで入れた Task は、ほかの今週の Task と同じく今週の残りに出る |
-| 4 | Retro | origin = midSprint の SprintTask を数える | 今日へで入れた場合と同じく「週の途中の追加 1件（Goal に紐づかない）」 |
+| 4 | Retro | origin = midSprint の SprintTask を数える | 今日へで入れた場合と同じく「週の途中の追加 1件（目標に入っていない）」 |
 
 同じ操作を研究の提案を持つ Task に行えば、appliedAtConfirm = true なので追加時にも基準が当たり、計画値は上限になる。確定時に基準を適用しなかった Sprint（appliedAtConfirm = false）なら、研究でも基準は当たらず、計画値は提案の幅のまま。Backlog の詳細から今の Sprint の Task を「完了にする」場合は、Task = Completed、SprintTask = Done、その日の DailySelection（origin = Backlog からの完了、Done）が同時にでき、Today の「済んだもの」に出る。
 
@@ -440,13 +440,13 @@ v0.2 Final でも 3 つとも、UI に入口のない操作を使わずに最後
 | --- | --- | --- | --- |
 | 1 | 毎週土曜で作成 | Task + RecurrenceRule v1（毎週 土、effectiveFrom）。Occurrence はまだ作らない | Backlog に 1 行「毎週 土 · 次は 8/8 (土)」 |
 | 2 | 2 回完了 | 8/3 週・8/10 週の Planning 開始時に Occurrence（8/8、8/15、v1）を生成し、既定で SprintTask（goalLink = unlinked）に。当日 Today に自動で出て、完了 → Occurrence・DailySelection が Done | 発生した回：完了 × 2 |
-| 3 | 1 回スキップ | 8/17 週の Occurrence（8/22）→ Skipped、DailySelection → Skipped。Rule は変化なし | Retro：「8/22 の回をスキップ」 |
+| 3 | 1 回スキップ | 8/17 週の Occurrence（8/22）→ Skipped、DailySelection → Skipped。Rule は変化なし | Retro：「8/22 の分をスキップ」 |
 | 4 | 毎週日曜へ変更（8/24 朝、8/17 週の Retro 完了後、8/24 週の Planning 前） | v1 に effectiveTo、v2（毎週 日、effectiveFrom = 8/24）を追加。まだ確定していない次の Sprint は 8/24 週。Activity：Rule の変更 | Backlog：「次の Sprint から反映」 |
 | 5 | 過去の回はそのまま | 生成済みの 8/8・8/15・8/22 は v1・土曜のまま動かない | 「変更前のルール「毎週 土」の回」 |
-| 6 | 8/24 週の Planning | Occurrence（8/30 日、v2、Pending）を生成し、既定で SprintTask（Draft）に。確定後、8/30 に Today へ自動で出る（DailySelection origin = 当日の繰り返し） | 「今週発生する繰り返し」に選択済みで出る |
+| 6 | 8/24 週の Planning | Occurrence（8/30 日、v2、Pending）を生成し、既定で SprintTask（Draft）に。確定後、8/30 に Today へ自動で出る（DailySelection origin = 当日の繰り返し） | 「今週の繰り返し」に選択済みで出る |
 | 7 | 8/31 週の Planning で今週の回を外す | Occurrence（9/6 日、v2）を生成 → Excluded。SprintTask（Draft）は確定前になくなる | Today に出ない。8/31 週の Retro の事実にも出ない（記録には残る） |
 | 8 | 9/2 (水)、Active な Sprint の途中で「毎週 土」に戻す | v2 に effectiveTo、v3（毎週 土、effectiveFrom = 9/7）を追加。今の Sprint（8/31–9/6）の生成済みの回と SprintTask はそのままで、9/5 (土) の回は作らない | Backlog：「次の Sprint から反映」「次は 9/12 (土)」 |
-| 9 | 9/7 週の Planning | Occurrence（9/12 土、v3、Pending）を生成し、既定で SprintTask（Draft）に | 「今週発生する繰り返し」に選択済みで出る |
+| 9 | 9/7 週の Planning | Occurrence（9/12 土、v3、Pending）を生成し、既定で SprintTask（Draft）に | 「今週の繰り返し」に選択済みで出る |
 
 Excluded の回は Occurrence の記録として残るが、通常の Retro 事実（発生した回・完了・スキップ・未処理）には数えず、表示もしない。手順 8 のように Sprint の途中で Rule を変えても、その Sprint の計画は変わらない。
 

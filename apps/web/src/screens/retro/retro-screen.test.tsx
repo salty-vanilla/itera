@@ -250,7 +250,7 @@ describe('Retro — 振り返る', () => {
       field.getAttribute('aria-describedby')!.split(' ')[0]!,
     );
     expect(description?.textContent).toBe(
-      'うまくいったこと、気になったこと。事実を見て思ったことを、そのまま書きます。',
+      'うまくいったこと、気になったこと。記録を見て思ったことを、そのまま書きます。',
     );
     expect(screen.queryByText('何が気になったか')).toBeNull();
     expect(
@@ -936,7 +936,8 @@ describe('Retro — compact (#57)', () => {
       expect(document.querySelector('table')).toBeNull();
       // Each Area's list is a region named by its caption.
       expect(
-        screen.getAllByRole('region', { name: '目標に紐づくタスク' }).length,
+        screen.getAllByRole('region', { name: '目標に入っているタスク' })
+          .length,
       ).toBeGreaterThan(0);
       const paper = screen
         .getAllByRole('listitem')
@@ -1036,11 +1037,11 @@ describe('Retro — 事実を見るを読みやすくする (#108)', () => {
   it('says once, under the heading, what 振り返りに使う leads to, and not when closed', async () => {
     await renderAt('/retro?fixture=retro-start');
     const guide = screen.getAllByText(
-      /気になった事実に「振り返りに使う」を付けると/,
+      /気になった記録に「振り返りに使う」を付けると/,
     );
     expect(guide).toHaveLength(1);
     expect(guide[0]?.textContent).toBe(
-      '気になった事実に「振り返りに使う」を付けると、「振り返る」で材料として並びます。',
+      '気になった記録に「振り返りに使う」を付けると、「振り返る」で材料として並びます。',
     );
     // Under the heading, before the summary.
     expect(
@@ -1052,7 +1053,7 @@ describe('Retro — 事実を見るを読みやすくする (#108)', () => {
       screen.getByRole('button', { name: '次へ：振り返る' }),
     );
     expect(
-      screen.queryByText(/気になった事実に「振り返りに使う」を付けると/),
+      screen.queryByText(/気になった記録に「振り返りに使う」を付けると/),
     ).toBeNull();
     cleanup();
 
@@ -1068,7 +1069,7 @@ describe('Retro — 事実を見るを読みやすくする (#108)', () => {
     await router.navigate({ to: '/retro', search: { stage: 'facts' } });
     await screen.findByText(/今回の計画のルール：/);
     expect(
-      screen.queryByText(/気になった事実に「振り返りに使う」を付けると/),
+      screen.queryByText(/気になった記録に「振り返りに使う」を付けると/),
     ).toBeNull();
   });
 
@@ -1322,7 +1323,7 @@ describe('Retro — the plan against what happened (#167)', () => {
 describe('Retro — actual time per occurrence (#56)', () => {
   it('adds to one occurrence, on the day it was done, and shows it on its row', async () => {
     await renderAt('/retro?fixture=retro-start');
-    const list = screen.getByRole('region', { name: '繰り返しの回' });
+    const list = screen.getByRole('region', { name: '繰り返し' });
     const row = within(list)
       .getAllByRole('listitem')
       .find((li) => li.textContent?.startsWith('9/28 (月) 英語の多読 30分'))!;
@@ -1355,7 +1356,7 @@ describe('Retro — actual time per occurrence (#56)', () => {
       via: 'later',
     });
     expect(
-      within(screen.getByRole('region', { name: '繰り返しの回' }))
+      within(screen.getByRole('region', { name: '繰り返し' }))
         .getAllByRole('listitem')
         .find((li) => li.textContent?.startsWith('9/28 (月) 英語の多読 30分'))
         ?.textContent,
@@ -1364,7 +1365,7 @@ describe('Retro — actual time per occurrence (#56)', () => {
 
   it('adds to a skipped occurrence on its own day', async () => {
     await renderAt('/retro?fixture=retro-start');
-    const row = within(screen.getByRole('region', { name: '繰り返しの回' }))
+    const row = within(screen.getByRole('region', { name: '繰り返し' }))
       .getAllByRole('listitem')
       .find((li) => li.textContent?.includes('スキップ'))!;
     await userEvent.click(

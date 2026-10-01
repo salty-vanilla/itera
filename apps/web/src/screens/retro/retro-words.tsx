@@ -32,7 +32,7 @@ export const ASSESSMENTS: readonly {
   { value: 'achieved', label: 'できた', icon: CircleCheck },
   { value: 'partly', label: '一部できた', icon: Contrast },
   { value: 'notAchieved', label: 'できなかった', icon: Circle },
-  { value: 'notJudged', label: '判断しない', icon: CircleMinus },
+  { value: 'notJudged', label: '決めない', icon: CircleMinus },
 ];
 
 export function AssessmentTag({ value }: { value: SelfAssessment }) {
@@ -61,7 +61,7 @@ export const OCCURRENCE_WORDS: Readonly<
 > = {
   done: '完了',
   skipped: 'スキップ',
-  missed: '未処理',
+  missed: '未完了',
 };
 
 /** An occurrence's state in words; Retro lists only these three. */

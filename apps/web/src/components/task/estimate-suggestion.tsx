@@ -118,7 +118,7 @@ function EstimateSuggestion({
         </dd>
         {suggestion.uncertainties.length > 0 && (
           <>
-            <dt className="text-label text-ink-muted">不確実な点</dt>
+            <dt className="text-label text-ink-muted">わからない点</dt>
             <dd className="text-ink">{suggestion.uncertainties.join('、')}</dd>
           </>
         )}
