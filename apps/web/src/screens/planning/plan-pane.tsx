@@ -142,8 +142,6 @@ function PlanPane({
           ) : (
             <GoalBlock
               key={block.area.id ?? 'none'}
-              // From 1920px the blocks sit side by side (see above).
-              headingRowClassName="xl:min-h-control-sm"
               area={{ name: block.area.name, color: block.area.color }}
               summary={block.tasks.length > 0 ? summaryOf(block) : undefined}
               goal={block.goal?.text}

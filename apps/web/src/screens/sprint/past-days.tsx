@@ -1,6 +1,7 @@
 import { CircleCheck, SkipForward, Undo2 } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import {
   Dialog,
   DialogClose,
@@ -16,10 +17,11 @@ import { SELECTION_WORDS } from '@/lib/selection-words';
 import type { PastDayRecord, RunningData } from '@/store/running-view';
 
 // 日ごとの記録 (#53, owner decisions): the days before today with their
-// completions and skips, each with 「取り消す」. Undoing leaves that day's
-// choice unresolved (F33: the system closes it, invariant 24); a Task goes
-// back to the week, an occurrence to pending. Only during the Sprint.
-// Today stays about today alone.
+// completions and skips, each with 「取り消す」, an IconButton that keeps a
+// list read back quiet (#160). Undoing leaves that day's choice unresolved
+// (F33: the system closes it, invariant 24); a Task goes back to the week,
+// an occurrence to pending. Only during the Sprint. Today stays about today
+// alone.
 
 type PastDaysProps = {
   days: RunningData['pastDays'];
@@ -90,18 +92,15 @@ function PastDays({ days, onUndo }: PastDaysProps) {
                       <span className="text-ink-muted"> · {word(r)}</span>
                     </span>
                   </span>
-                  <Button
+                  {/* Quiet, as a list read back rather than worked in
+                      (#160): the icon of Today's way back, always shown. */}
+                  <IconButton
                     size="sm"
-                    variant="quiet"
                     className="ms-auto"
+                    label={`取り消す（${word(r)}）: ${formatDate(r.selection.date)} ${r.title}`}
+                    icon={<Undo2 />}
                     onClick={() => setAsking(r)}
-                  >
-                    <Undo2 aria-hidden />
-                    取り消す
-                    <span className="sr-only">
-                      : {formatDate(r.selection.date)} {r.title} の{word(r)}
-                    </span>
-                  </Button>
+                  />
                 </li>
               );
             })}

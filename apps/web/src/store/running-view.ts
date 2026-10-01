@@ -6,6 +6,7 @@
 // (invariant 18, F16).
 import {
   isCounted,
+  occurrenceProgress,
   sprintAreaName,
   sprintNumber,
   sprintTotals,
@@ -16,6 +17,7 @@ import {
   type CriterionPolicy,
   type DailySelection,
   type LocalDate,
+  type OccurrenceProgress,
   type PlanningValue,
   type Sprint,
   type SprintGoal,
@@ -41,6 +43,10 @@ export interface RunningTask {
   readonly task: Task;
   /** The planning value fixed for this Sprint (the whole week for a recurring Task). */
   readonly value: PlanningValue;
+  /** Recurring only: its occurrences done of the week's (F32). */
+  readonly occurrences?: OccurrenceProgress;
+  /** Carried over from an earlier Sprint: that Sprint's number (F25). */
+  readonly carriedFrom?: number;
 }
 
 export interface RunningAreaPlan {
@@ -141,9 +147,22 @@ export function runningData(
     .flatMap((sprintTask) => {
       const task = tasks.find((t) => t.id === sprintTask.taskId);
       const value = sprintTask.planSnapshot?.value;
-      return task === undefined || value === undefined
-        ? []
-        : [{ sprintTask, task, value }];
+      if (task === undefined || value === undefined) return [];
+      const occurrences = occurrenceProgress(sprintTask, records.occurrences);
+      const from = records.sprints.find((s) =>
+        s.tasks.some((t) => t.id === sprintTask.carriedFrom),
+      );
+      return [
+        {
+          sprintTask,
+          task,
+          value,
+          ...(occurrences === undefined ? {} : { occurrences }),
+          ...(from === undefined
+            ? {}
+            : { carriedFrom: sprintNumber(from, records.sprints) }),
+        },
+      ];
     });
 
   // The Sprint's Area order (snapshot), then Areas first seen later (F9).

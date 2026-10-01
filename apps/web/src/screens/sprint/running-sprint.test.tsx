@@ -198,6 +198,62 @@ describe('Sprint — running (#51)', () => {
   });
 });
 
+describe('Sprint — the rows (#160)', () => {
+  it("tells a recurring row's occurrences as 今週の完了 counts them (F32)", async () => {
+    await renderAt('/sprint?fixture=today-daytime');
+    const reading = screen
+      .getByRole('button', { name: '英語の多読 30 分' })
+      .closest('[data-slot="task-row"]') as HTMLElement;
+    expect(within(reading).getByText(/^今週 \d+回中 \d+回完了/)).toBeTruthy();
+  });
+
+  it('marks a carry-over by where it came from, apart from how it ended', async () => {
+    await renderAt('/sprint?fixture=today-daytime');
+    const carried = screen.getAllByText(/^Sprint \d+ から持ち越し$/);
+    expect(carried.length).toBeGreaterThan(0);
+    // Where it came from comes first, before 「完了」.
+    const meta = carried[0]!.parentElement as HTMLElement;
+    expect(meta.firstElementChild?.textContent).toMatch(/から持ち越し/);
+  });
+
+  it("opens a Task's detail from its title, and closes it", async () => {
+    const router = await renderAt('/sprint?fixture=today-daytime');
+    await userEvent.click(
+      screen.getByRole('button', { name: '英語の多読 30 分' }),
+    );
+    const detail = await screen.findByRole('dialog');
+    expect(
+      within(detail).getByRole('textbox', { name: /タイトル/ }),
+    ).toHaveProperty('value', '英語の多読 30 分');
+    expect(router.state.location.search).toMatchObject({
+      task: 'task-reading',
+    });
+    // 閉じる in the footer (the header's × has the same name).
+    await userEvent.click(
+      within(
+        detail.querySelector<HTMLElement>('[data-slot="drawer-footer"]')!,
+      ).getByRole('button', { name: '閉じる' }),
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(router.state.location.search).not.toHaveProperty('task');
+  });
+
+  it('opens no detail for a completed Task or an ended Sprint', async () => {
+    await renderAt('/sprint?fixture=today-daytime');
+    for (const row of document.querySelectorAll('[data-slot="task-row"]')) {
+      const done = row.querySelector('.line-through');
+      if (done !== null) expect(done.tagName).not.toBe('BUTTON');
+    }
+    cleanup();
+    await renderAt('/sprint?fixture=today-daytime&sprint=1');
+    const rows = document.querySelectorAll('[data-slot="task-row"]');
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row.querySelector('button')).toBeNull();
+    }
+  });
+});
+
 describe('Sprint — 日ごとの記録 (#53)', () => {
   it('lists past completions by day and undoes one after asking', async () => {
     await renderAt('/sprint?fixture=today-interrupt');

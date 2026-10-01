@@ -1,7 +1,9 @@
-import { Link } from '@tanstack/react-router';
+import type { TaskId } from '@itera/domain';
+import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { Info, Rewind, Route } from 'lucide-react';
 import { useId } from 'react';
 import { buttonVariants } from '@/components/ui/button';
+import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Progress } from '@/components/ui/progress';
 import { Tag } from '@/components/ui/tag';
 import { AvailableHoursField } from '@/components/sprint/capacity-indicator';
@@ -25,7 +27,11 @@ import {
 import { cn } from '@/lib/utils';
 import { weekCall, weekText, type WeekName } from '@/lib/week-text';
 import type { RunningData, RunningTask } from '@/store/running-view';
+import { useBacklog } from '@/store/use-backlog';
 import { useRunningSprintActions } from '@/store/use-running-sprint';
+import { useTaskActions } from '@/store/use-task-actions';
+import { TaskDetail } from '../backlog/task-detail';
+import { useTaskDetailLeave } from '../backlog/use-task-detail-leave';
 import { PastDays } from './past-days';
 
 // A confirmed Sprint (#51, patterns.md Sprint Planning › 確定).
@@ -34,6 +40,8 @@ import { PastDays } from './past-days';
 // available hours — with the planned values beside them (invariant 18,
 // MVP 16). The Tasks' values are the plan fixed at confirm (invariant 16)
 // and the criterion's use is read only (invariant 37).
+// Running, a row opens its Task's detail (#160), the one of the Backlog and
+// Today: the Task itself may change, its planned value here does not.
 // In Review or closed (#90): the same plan, read only, with how each Task
 // ended, and the way to its Retro. Nothing changes here any more.
 
@@ -51,6 +59,28 @@ function RunningSprint({
   const { state } = data.sprint;
   const running = state === 'active';
   const week = weekCall(data.week, data.number);
+
+  const search = useSearch({ from: '/sprint' });
+  const navigate = useNavigate({ from: '/sprint' });
+  const backlog = useBacklog({});
+  const taskActions = useTaskActions();
+  const showTask = (taskId: TaskId | undefined) =>
+    void navigate({
+      search: (prev) =>
+        taskId === undefined
+          ? Object.fromEntries(
+              Object.entries(prev).filter(([key]) => key !== 'task'),
+            )
+          : { ...prev, task: taskId },
+    });
+  // Closing the detail or opening another Task asks the detail first.
+  const detail = useTaskDetailLeave();
+  const openTask = (taskId: TaskId | undefined) =>
+    detail.leave(() => showTask(taskId), taskId !== undefined);
+  const openItem =
+    !running || search.task === undefined
+      ? undefined
+      : backlog.item(search.task);
 
   const outlook = (
     <Outlook
@@ -168,6 +198,14 @@ function RunningSprint({
                           week={data.week}
                           ended={!running}
                           hasGoal={block.goal !== undefined}
+                          // A completed or archived Task has no detail to
+                          // open (as in Today).
+                          onOpen={
+                            running && t.task.lifecycle === 'active'
+                              ? () => openTask(t.task.id)
+                              : undefined
+                          }
+                          current={search.task === t.task.id}
                         />
                       </li>
                     ))}
@@ -188,6 +226,31 @@ function RunningSprint({
           <div className="wide:sticky wide:top-8">{outlook}</div>
         </aside>
       </div>
+
+      <Drawer
+        open={openItem !== undefined}
+        onOpenChange={(next) => {
+          if (!next) openTask(undefined);
+        }}
+      >
+        <DrawerContent>
+          {openItem !== undefined && (
+            <TaskDetail
+              key={openItem.task.id}
+              item={openItem}
+              areas={backlog.areas}
+              timeZone={backlog.timeZone}
+              onClose={() => showTask(undefined)}
+              onComplete={() => {
+                if (taskActions.completeTask(openItem.task.id)) {
+                  showTask(undefined);
+                }
+              }}
+              leaveRef={detail.ref}
+            />
+          )}
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }
@@ -197,6 +260,8 @@ function RunningRow({
   week,
   ended,
   hasGoal,
+  onOpen,
+  current,
 }: {
   item: RunningTask;
   /** 「今週」; none once ended (#90). */
@@ -204,27 +269,34 @@ function RunningRow({
   /** In Review or closed: each Task says how it ended. */
   ended: boolean;
   hasGoal: boolean;
+  /** Opens the Task's detail; absent where there is none to open. */
+  onOpen: (() => void) | undefined;
+  current: boolean;
 }) {
-  const { sprintTask, task, value } = item;
+  const { sprintTask, task, value, occurrences, carriedFrom } = item;
   const Repeat = semanticIcons.recurrence;
   const Carry = semanticIcons.carriedOver;
   const count = sprintTask.planSnapshot?.occurrenceCount;
   // DESIGN.md Task Metadata order: carry-over, recurrence, Goal, notes.
+  // Where it came from goes before how it ended, so that 「完了」 is not read
+  // as carried over (#160).
   const meta = [
+    carriedFrom !== undefined && (
+      <MetaItem key="c" icon={<Carry aria-hidden />}>
+        Sprint {carriedFrom} から持ち越し
+      </MetaItem>
+    ),
     sprintTask.outcome === 'done' && <MetaItem key="d">完了</MetaItem>,
     // How it ended; 「持ち越し」 alone reads as coming from the week before.
     ended && sprintTask.outcome === 'carriedOver' && (
       <MetaItem key="d">持ち越し（未完了）</MetaItem>
     ),
-    sprintTask.carriedFrom !== undefined && (
-      <MetaItem key="c" icon={<Carry aria-hidden />}>
-        持ち越し
-      </MetaItem>
-    ),
-    count !== undefined && (
+    (occurrences !== undefined || count !== undefined) && (
       <MetaItem key="r" icon={<Repeat aria-hidden />}>
-        {/* 「今週 3回」; an ended Sprint's count needs no name. */}
-        {week === undefined ? `${count}回` : `${week} ${count}回`}
+        {/* 「今週 3回中 1回完了」; an ended Sprint's needs no name. */}
+        {[week, ...occurrenceText(occurrences, count)]
+          .filter(Boolean)
+          .join(' ')}
       </MetaItem>
     ),
     hasGoal && sprintTask.goalLink === 'unlinked' && (
@@ -240,6 +312,8 @@ function RunningRow({
     <TaskRow
       title={task.title}
       done={sprintTask.outcome === 'done'}
+      onOpen={onOpen}
+      current={current}
       metadata={
         meta.length > 0 ? <TaskMetadata>{meta}</TaskMetadata> : undefined
       }
@@ -248,6 +322,23 @@ function RunningRow({
       }
     />
   );
+}
+
+/**
+ * A recurring row's occurrences as 「今週の完了」 counts them (F32), so
+ * that the rows add up to it: 「3回中 1回完了」, and the skipped ones
+ * apart, as they leave the count (#160).
+ */
+function occurrenceText(
+  occurrences: RunningTask['occurrences'],
+  count: number | undefined,
+): string[] {
+  if (occurrences === undefined) return [`${count}回`];
+  const { done, total, skipped } = occurrences;
+  return [
+    ...(total > 0 ? [`${total}回中 ${done}回完了`] : []),
+    ...(skipped > 0 ? [`${total > 0 ? '· ' : ''}スキップ ${skipped}回`] : []),
+  ];
 }
 
 /**
