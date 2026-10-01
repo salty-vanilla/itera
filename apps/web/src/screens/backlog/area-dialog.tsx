@@ -21,8 +21,9 @@ import { useAreaActions, useAreas, type EditableArea } from '@/store/use-areas';
 // Select. From a Select, the Area made is handed back to be chosen and the
 // Dialog closes. Areas are the person's, so the names here are the current
 // ones; a Sprint screen keeps its Sprint's names (F5). A row has one quiet
-// 編集; it opens to the name's field, with アーカイブ, so that the one
-// danger button shows only on the row being edited.
+// 編集; it opens to the name's field, with アーカイブ, so that the buttons
+// show only on the row being edited. アーカイブ is not `danger`: it can be
+// undone (Issue #164).
 //
 // An archived Area may still be what a screen has chosen (a filter, a Quick
 // Add's Area): the screen treats a choice that is not among its Areas as
@@ -271,7 +272,7 @@ function EditRow({
           label={`「${area.name}」の名前`}
           description={
             <span className="[word-break:auto-phrase]">
-              Sprint の画面には、次の Sprint から反映されます。
+              確定済みの Sprint では、前の名前のままです。
             </span>
           }
           error={error}
@@ -297,7 +298,7 @@ function EditRow({
             stay right under the field and アーカイブ goes below them. */}
         <div className="flex flex-wrap-reverse items-center gap-2">
           {/* No confirmation: the line left in its place has 元に戻す. */}
-          <Button size="sm" variant="danger" type="button" onClick={onArchive}>
+          <Button size="sm" type="button" onClick={onArchive}>
             アーカイブ
           </Button>
           {/* Together at the right. */}

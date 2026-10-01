@@ -581,7 +581,7 @@ compact の原則：
 
 **Button** — 既定は Secondary。Primary は 1 画面に 1 つ。
 - 36px、`rounded.sm`、1px 枠、ラベルは `button`（14/20 700）で動詞で終える（「Sprint を確定」「差分を確認」）。先頭・末尾に 16px アイコン（任意）。
-- Variant：primary（墨の塗り `primary`、文字 `on-primary`。hover `primary-hover`、押下 `primary-active`）/ secondary（`surface`＋`border-strong`）/ quiet（枠なし。キャンセル、編集して採用、却下）/ danger（`danger` の枠と文字。アーカイブの入口）/ danger-solid（破壊的操作の確認 Dialog の実行ボタンだけ）。サイズ sm 28 / md 36 / lg 44px（compact は lg）。
+- Variant：primary（墨の塗り `primary`、文字 `on-primary`。hover `primary-hover`、押下 `primary-active`）/ secondary（`surface`＋`border-strong`）/ quiet（枠なし。キャンセル、編集して採用、却下）/ danger（`danger` の枠と文字。破壊的操作の入口。アーカイブは元に戻せるので使わず、secondary にする。Issue #164）/ danger-solid（破壊的操作の確認 Dialog の実行ボタンだけ）。サイズ sm 28 / md 36 / lg 44px（compact は lg）。
 - Hover / Active：secondary と danger は `surface-hover` / `surface-pressed`（secondary は輪郭も `ink-muted`）、quiet は枠なしのまま `surface-hover` / `surface-pressed`、danger-solid は `danger-hover` / `danger-active`。
 - Disabled は共通の状態どおり（quiet だけは地と枠を付けず、文字を `ink-disabled` にする）。無効にしてもフォーカスでき、近くに書いた理由を読み上げられる。
 - Loading は先頭にスピナー、ラベルを「確定中…」に、幅は保つ。Loading 中は押しても反応しないが、Disabled の見た目にはしない。
@@ -593,7 +593,7 @@ compact の原則：
 - 意味が広く共有されたアイコン（閉じる、…、編集、検索）だけ。同じ行に 3 つ以上並べず Menu にまとめる。
 
 **Menu** — 行やヘッダーの補助操作のドロップダウン。トリガーは `…` の IconButton か、Secondary の Button（「並び順: 期限 ⌄」）。
-- 面 `surface`＋`border`、`rounded.md`、`elevation-overlay`。項目 32px（アイコン・ラベル・Kbd）、区切り `border-soft`、危険な項目は `danger` で最後。Checked は チェック＋`here-subtle`。
+- 面 `surface`＋`border`、`rounded.md`、`elevation-overlay`。項目 32px（アイコン・ラベル・Kbd）、区切り `border-soft`、破壊的な項目（`danger`）は最後。アーカイブは元に戻せるので `danger` にしない（区切りの後の最後に置く）。Checked は チェック＋`here-subtle`。
 - 主要な操作を隠さない。サブメニューを入れ子にしない。キーボードは ↓ ↑ Home End、Enter で実行、Esc でトリガーに戻る、Tab で閉じる。
 
 **Kbd** — ショートカットの表示。`code` の書体で Tooltip とメニュー項目の右端に置く。キーを色で強調しない。主な入力がタッチの端末（`pointer: coarse`）では、メニュー項目の Kbd を出さない（押すキーがないため。Issue #163）。
@@ -674,7 +674,7 @@ compact の原則：
 ### タスク
 
 **Task Row** — タスク 1 件の行。Backlog・Sprint・Today で同じ構造。
-- 左から：ドラッグハンドル（hover / focus 時のみ、compact は非表示）、コントロール（□ 選ぶ / ○ 完了 / なし。Backlog の繰り返しの Task は、回ごとに完了するので ○ の位置に `repeat` の印を置く。押せず、読み上げは「完了は回ごと」。Issue #171）、タイトル（`task`。compact は 2 行まで、medium 以上は 1 行で省略）、Task Metadata、Estimate（右端 `num-s`）、行の操作 `…`（hover / focus 時、compact は常時）。
+- 左から：ドラッグハンドル（hover / focus 時のみ、compact は非表示）、コントロール（□ 選ぶ / ○ 完了 / なし。Backlog の繰り返しの Task は、回ごとに完了するので ○ の位置に `repeat` の印を置く。押せず、読み上げは「完了は回ごと」。Issue #171）、タイトル（`task`。compact は 2 行まで、medium 以上は 1 行で省略）、Task Metadata、Estimate（右端 `num-s`）、行の操作 `…`（Backlog は常時。Backlog 以外の行は hover / focus 時、compact は常時。Backlog は「今日へ」を探す行なので hover の裏に置かない。Issue #164）。
 - Planning の Backlog ペイン（選ぶ・整える・確かめる）の行は、列が細いので、medium 以上でもタイトルを 1 行で省略しない（Issue #158）。選ぶは compact と同じ 2 行まで、整える・確かめるのタイトルだけの細い列は全文を折り返して、切れたタイトルを作らない。Estimate（Agent の提案を含む）はタイトルの右ではなく、タイトルの下の Task Metadata と同じ行の右端に置き、入らなければ次の行の右端に回す。タイトルの幅を Estimate に削らせない。
 - layout stacked（既定、約 52px）/ inline（40px、`row-task` は最小高さ）。区切りは `border-soft`、行間 0、角丸・影なし、Card で囲まない。
 - 状態：Selected（`here-subtle`＋チェック）、In progress（Today で開始した行。先頭の端に `here` の 4px の縦線＋タイトル 700＋メタデータの「作業中 · 10:12 から」。ナビの現在地と同じ印で「今やっているもの」を示す。Issue #163）、Done（○ を `primary` で塗り、タイトル `ink-subtle`＋取り消し線）、Skipped（○ に「−」＋「スキップ」）、Dragging（`surface`＋`elevation-drag`＋`border`）、Loading（Estimate が「見積中」）、Error（行内に「保存できませんでした · 再試行」）、Disabled（アーカイブ済み、`ink-disabled`）。

@@ -2,11 +2,11 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import {
   ArrowDown,
   ArrowUp,
-  Archive,
   ChevronDown,
   Ellipsis,
   Pencil,
   Sun,
+  Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
 import { expect, screen, userEvent, waitFor } from 'storybook/test';
@@ -37,7 +37,8 @@ type Story = StoryObj<typeof meta>;
 /**
  * 行の補助操作。トリガーは `…` の IconButton。項目は 32px（compact は 44px）で、
  * アイコン・ラベル・Kbd を並べる。Kbd は、タッチが主な端末（`pointer: coarse`）では出さない。
- * 危険な項目は `danger` で、区切りの後の最後に置く。
+ * 破壊的な項目は `danger` で、
+ * 区切りの後の最後に置く。
  * 主要な操作（完了の ○ など）はメニューに隠さない。
  */
 export const RowActions: Story = {
@@ -70,8 +71,8 @@ export const RowActions: Story = {
           </MenuItem>
           <MenuSeparator />
           <MenuItem variant="danger">
-            <Archive aria-hidden />
-            アーカイブ
+            <Trash2 aria-hidden />
+            削除
             <MenuShortcut>Delete</MenuShortcut>
           </MenuItem>
         </MenuContent>
@@ -91,9 +92,7 @@ export const RowActions: Story = {
       screen.getByRole('menuitem', { name: /見積もりを編集/ }),
     ).toHaveFocus();
     await userEvent.keyboard('{End}');
-    await expect(
-      screen.getByRole('menuitem', { name: /アーカイブ/ }),
-    ).toHaveFocus();
+    await expect(screen.getByRole('menuitem', { name: /削除/ })).toHaveFocus();
     await userEvent.keyboard('{Home}');
     await expect(first).toHaveFocus();
     await userEvent.keyboard('{Escape}');
@@ -217,9 +216,9 @@ export const States: Story = {
             <StateLabel>hover</StateLabel>
           </MenuCheckboxItem>
           <MenuSeparator />
-          <MenuItem variant="danger">アーカイブ</MenuItem>
+          <MenuItem variant="danger">削除</MenuItem>
           <MenuItem variant="danger" data-demo="hover-focus">
-            アーカイブ
+            削除
             <StateLabel>hover-focus</StateLabel>
           </MenuItem>
         </MenuContent>

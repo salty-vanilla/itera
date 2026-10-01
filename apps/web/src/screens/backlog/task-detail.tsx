@@ -977,7 +977,6 @@ function TaskDetail({
 
         <div className="border-t border-border-soft pt-4">
           <Button
-            variant="danger"
             onClick={() => {
               if (!actions.archiveTask(task.id)) return;
               onClose();
