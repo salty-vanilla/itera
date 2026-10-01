@@ -126,14 +126,10 @@ export const CARRY_OVER_PLACE_WORDS = {
  * moves none of them (invariant 20).
  */
 export function carryOverWords(places: CarryOverPlaces): string {
-  // Split, it keeps to one short sentence per place.
-  const split = places.candidates < places.total;
   const parts = [
     places.inNext > 0 && `${places.inNext}件は次の計画に入っています。`,
     places.candidates > 0 &&
-      (split
-        ? `${places.candidates}件は Backlog に残っています。`
-        : `${places.candidates}件は Backlog に残っています。`),
+      `${places.candidates}件は Backlog に残っています。`,
     places.completed > 0 && `${places.completed}件は完了しています。`,
     places.archived > 0 && `${places.archived}件はアーカイブしています。`,
   ].filter((p) => p !== false);

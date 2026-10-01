@@ -262,10 +262,13 @@ export interface CarryOverPlaces {
   readonly archived: number;
 }
 
+/** Where a carried-over Task is: the next Sprint, offered, or closed. */
+export type CarryOverPlace = 'inNext' | 'candidate' | 'completed' | 'archived';
+
 /** One carried-over Task and where it is now (Retro 引き継ぐ, #169). */
 export interface CarryOverTask {
   readonly taskId: TaskId;
-  readonly place: 'inNext' | 'candidate' | 'completed' | 'archived';
+  readonly place: CarryOverPlace;
 }
 
 /**
@@ -309,7 +312,7 @@ function carryOverPlace(
   carried: SprintTask,
   next: Sprint | undefined,
   tasks: readonly Task[],
-): 'inNext' | 'candidate' | 'completed' | 'archived' | undefined {
+): CarryOverPlace | undefined {
   if (carried.outcome !== 'carriedOver') return undefined;
   const task = tasks.find((x) => x.id === carried.taskId);
   if (task === undefined || isRecurring(task)) return undefined;
