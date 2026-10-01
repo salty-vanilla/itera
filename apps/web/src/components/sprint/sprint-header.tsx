@@ -138,7 +138,7 @@ function SprintHeader({
                     // (#166).
                     <span
                       aria-hidden
-                      className="mx-1 h-px w-3 bg-border-strong medium:mx-2 medium:w-10"
+                      className="mx-1 h-px w-4 bg-border-strong medium:mx-2 medium:w-10"
                     />
                   )}
                 </li>

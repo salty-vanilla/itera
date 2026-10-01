@@ -90,7 +90,7 @@ function OutlookPane({
 
       {improvement === undefined && criterionLine}
 
-      {!sheet && <Divider />}
+      <Divider />
       <CapacityIndicator
         titled={!sheet}
         total={totals.total}
