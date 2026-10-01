@@ -410,7 +410,7 @@ function DraftCriterion({
         </Field>
       </div>
       <div className="flex flex-col gap-1">
-        <p className="text-body text-ink">
+        <p className="text-body text-ink [text-wrap:pretty] [word-break:auto-phrase]">
           次の計画では、
           {/* None now: the rule in words, not 「0件」 (#206). */}
           {preview.length === 0
