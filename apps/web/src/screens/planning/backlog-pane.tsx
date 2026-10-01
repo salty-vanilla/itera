@@ -308,16 +308,16 @@ function Group({
         </span>
         <DividerLabel level={3} className="flex-1">
           {title}
+          <span className="ms-1 text-num-s text-ink-subtle">
+            {rows.length}
+            <span className="sr-only">件</span>
+          </span>
           {until !== undefined && (
             <span className="text-ink-subtle">
               <span aria-hidden> · 〜{formatMonthDay(until)}</span>
               <span className="sr-only">、{formatMonthDay(until)} まで</span>
             </span>
           )}
-          <span className="ms-1 text-num-s text-ink-subtle">
-            {rows.length}
-            <span className="sr-only">件</span>
-          </span>
         </DividerLabel>
       </div>
       <ul className="flex flex-col">
