@@ -161,11 +161,11 @@
     ".agents/skills/impeccable/scripts/live-browser-session.js": "edddeb3fad88adec9a055b1bf9d5c75418cbe97a13b1a7f6765e73249e482563",
     ".agents/skills/impeccable/scripts/live-browser.js": "7af0a8665057c83b39bca2c8c7427ef2343734f70d4128c377113a6726a1e3b1",
     ".agents/skills/impeccable/scripts/modern-screenshot.umd.js": "bb36665889124a0b6e15f16045265737449c3bdcf2712cdb08af3cfa01563e2b",
-    ".agents/skills/issue-harness/SKILL.md": "57599dc3b3c78fa3cc7d0f20fb9d14847b2930e033d957036981cb6cb717f3c0",
+    ".agents/skills/issue-harness/SKILL.md": "f356436272d2e5a19ccba02683e3a6029a6aa4fa93edc10c3add91bd026bfd1f",
     ".agents/skills/issue-harness/assets/run.md": "d4e19e457fcefaea92725eab212c6be3038d6eb83d066ea1fa4273a510c765a1",
-    ".agents/skills/issue-harness/references/implement.md": "8a960e652c95b618e85ba3bc033aa4cfaee701df675b22294f3af99fc5c6f64f",
+    ".agents/skills/issue-harness/references/implement.md": "b760e5719a3181eef4637a17c2029ad03a63596f68453ea25867ec79bc7a7714",
     ".agents/skills/issue-harness/references/plan.md": "c5e2630edbdd6272b70ce56075af20c65f618613d7a2851534dd8fff27ef8024",
-    ".agents/skills/issue-harness/references/review.md": "bcd79fc2576a953891d362cc3e6b41bd60d4143a941a8d0361b0add91b539c2a",
+    ".agents/skills/issue-harness/references/review.md": "4a31ced32da2c3d4e44b75ce50be7120a71e0284e1fb1e2471d0fe4e9441a077",
     ".agents/skills/playwright-cli/LICENSE": "9a7110fc2d2f964038e5dc49128f908f29f47a574c961cba16085914e879cbda",
     ".agents/skills/playwright-cli/SKILL.md": "85ef187460f776a4e9b44ffbf4a0293e5585d4192d0858c23fb011c72784f347",
     ".agents/skills/playwright-cli/references/element-attributes.md": "bf19aa4671e0a50a0fefa9c790f39124e803060eefe395042b723c29fcb7faa2",
@@ -194,6 +194,7 @@
     ".agents/skills/shadcn/rules/forms.md": "29593e14381e34626f8e0e9c15c59f3394b92a0623af6a6ec94585400123853c",
     ".agents/skills/shadcn/rules/icons.md": "d4a58266648872d9ee07d0c2368843a1cb88b8253b7f528dd7bda9d68b6c2535",
     ".agents/skills/shadcn/rules/styling.md": "f88fbd72dff862805b786dc7d7e4c74c83030fc278c5b97c993e4e665001798c",
+    ".agents/skills/ui-copy/SKILL.md": "44ae9b7087f32478a8c0163625e6b3558b4a9b65747960b74c57901f0466fbca",
     ".agents/skills/workers-best-practices/LICENSE": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
     ".agents/skills/workers-best-practices/SKILL.md": "8406eabf6375a3e79c77b951d00f3996f4c703c1a852579c38b171188bd19f1f",
     ".agents/skills/workers-best-practices/references/configuration.md": "a9ae6018d514324159aabd25004e7f80b69df694c850bce97f7b68e30a72a73e",
@@ -220,6 +221,12 @@
       "destination": ".agents/skills/copy-review",
       "origin": "authored-in-repository",
       "note": "Lists the Japanese UI copy and runs persona evaluators over it."
+    },
+    {
+      "name": "ui-copy",
+      "destination": ".agents/skills/ui-copy",
+      "origin": "authored-in-repository",
+      "note": "What to read and check before writing Japanese UI copy."
     }
   ],
   "vendoredFiles": {

@@ -35,6 +35,7 @@ const BLOCKER_WORDS: Readonly<Record<RetroBlocker, ReactNode>> = {
     </>
   ),
   continueWithDraft: (
+    // copy-lint-ignore long-sentence -- PR #216 でオーナーが「いったん」と決めた文（content.md の操作できない理由）
     <>
       新しいルールを作るなら
       <span className="whitespace-nowrap">「置き換える」を、</span>
@@ -133,6 +134,7 @@ function CompleteDialog({
           <DialogTitle>
             Sprint {data.number} の振り返りを完了しますか？
           </DialogTitle>
+          {/* copy-lint-ignore long-sentence -- content.md の型「補足」で決めた完了の確認の説明（Issue #168） */}
           <DialogDescription className="[text-wrap:pretty] [word-break:auto-phrase]">
             完了すると、書いた内容は変えられず、この Sprint
             にはかかった時間を記録できなくなります。

@@ -22,6 +22,9 @@ const EXCLUDED_FILES = new Set([
   'packages/domain/src/testing.ts',
 ]);
 const SOURCE_FILE = /\.tsx?$/;
+// CSS selectors that find an element by its Japanese label
+// (`nav[aria-label="次の段階"]`) are code, not copy.
+const SELECTOR = /\[[\w-]+=["']/;
 const NOT_PRODUCT = /\.(?:test|spec|stories)\.tsx?$|\.d\.ts$/;
 
 export const KINDS = {
@@ -121,7 +124,7 @@ export function extractFromSource(source, file) {
 
   const add = (node, raw, kind, extra = {}) => {
     const text = raw.replace(/\s+/g, ' ').trim();
-    if (!JAPANESE.test(text)) return;
+    if (!JAPANESE.test(text) || SELECTOR.test(text)) return;
     const line = lineOf(node);
     items.push({ file, line, kind, ...extra, text });
   };

@@ -100,6 +100,14 @@ describe('extractFromSource', () => {
     `);
     expect(items).toEqual([]);
   });
+
+  it('leaves out CSS selectors that name an element by its label', () => {
+    const items = extract(`
+      const next = root.querySelector('nav[aria-label="次の段階"] a');
+      const label = '次の段階';
+    `);
+    expect(items.map(({ text }) => text)).toEqual(['次の段階']);
+  });
 });
 
 describe('collectFiles', () => {

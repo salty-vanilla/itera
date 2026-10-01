@@ -13,6 +13,7 @@
 | `quality` | B |
 | `specialist:<領域>` | C の該当する領域 |
 | `visual` | D |
+| `copy` | E |
 
 ## 入力と探索
 
@@ -71,15 +72,29 @@ apps/web のスクリーンショットで、要素があるかではなく、�
 
 画像のファイル名は `<画面>-<状態>-<幅>[-dark].png`。開発用メニュー（DevMenu）など検証用の要素が写っていても評価しない。画像から判断できない点は、欲しい画面・状態・幅を `unverified` に書く。
 
+## E. Copy
+
+apps/web の画面に出る日本語（本文・ラベル・ボタン・Toast・placeholder・読み上げ名）の変わった箇所を、`docs/design/content.md` と照合する。差分の文言を読み、必要なら `pnpm copy:list` の一覧や画面の証拠で前後の文脈を確かめる。変わっていない文言の指摘は出さない。
+
+- 原則・語彙・型：content.md の書き方の決まり 10 項目、用語表の「画面の語」、使わない語、「」で囲む語、未決の語、部品ごとの型（ボタン・Toast・見出し・空の状態・補足・入力欄・確認の Dialog・操作できない理由・読み上げ名・記号の表記）に合っているか。
+- `pnpm copy:lint`：変わった文言に警告が残っていないか。残した警告と `copy-lint-ignore` には理由があるか。確実の規則の警告が理由なしに残っていれば `MUST`。
+- ふだんの言葉か：仕様やモデルの語、社内の言い方が出ていないか。ふだんの会話でそう言うか。
+- AI が書いたように読める型：状態を言い直すだけの文、安心させる一文、見た目の実況、起きないことの断り、段階や仕組みの説明、項目ごとにくり返す補足、条件を詰めた長い文。行き先・期限・数のように情報が増える文は残してよい。
+- 同じものを同じ語で：見出し・ラベル・本文・Toast・読み上げ名、ほかの画面の同じものと語が揃っているか。
+- 読み上げ名：画面の語と同じか。操作は「操作：対象」の形か。
+- PR の旧 → 新の表：変えた語がすべて載っているか。表と差分が一致しているか。
+
+content.md で決まらない語や、content.md と画面のどちらを直すか決まらない食い違いは、`MUST` にせず `blocked`（`requirements`）にしてオーナーの判断へ戻す。
+
 ## 返す形式
 
 - `verdict`: `pass` / `changes_requested` / `blocked`
 - `target`: 観点、Issue の条件版、base / head、未コミットなら差分と追加ファイル
 - `acceptance`（`general` と `acceptance` のみ）: 条件ごとの充足・根拠（パス:行、再現結果、ログ）
 - `findings`: 指摘ごとに次を書く。コードの修正そのものは書かない。
-  - `category`: 例 `acceptance` / `architecture` / `responsibility` / `duplication` / `public-api` / `coupling` / `error-handling` / `testability` / `readability` / `security` / `visual` など
+  - `category`: 例 `acceptance` / `architecture` / `responsibility` / `duplication` / `public-api` / `coupling` / `error-handling` / `testability` / `readability` / `security` / `visual` / `copy` など
   - `severity`: `MUST` / `SHOULD` / `NOTE`
-  - `location`: パス:行、シンボル（`visual` では画像ファイル名と画面上の場所）
+  - `location`: パス:行、シンボル（`visual` では画像ファイル名と画面上の場所、`copy` では文言と、パス:行）
   - `problem` / `why`（起こること・影響） / `direction`（修正の方向）
 - `unverified`: 確認できなかった点と理由
 - `next`: 次の担当と具体的な作業
