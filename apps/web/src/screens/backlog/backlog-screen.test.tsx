@@ -1038,6 +1038,8 @@ describe('Backlog', () => {
     expect(within(section).getByRole('status').textContent).toBe(
       '次の Sprint から反映（10/5 (月) から）',
     );
+    // The rule that takes over is read whole, below the inputs.
+    expect(within(section).getByText('次の Sprint から: 毎週 水')).toBeTruthy();
     const rule = records().rules.find((r) => r.taskId === 'task-cleaning');
     expect(rule?.versions.at(-1)).toMatchObject({
       pattern: { freq: 'weekly', daysOfWeek: [3] },

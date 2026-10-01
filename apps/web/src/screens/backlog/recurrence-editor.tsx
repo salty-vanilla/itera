@@ -238,6 +238,13 @@ function RecurrenceEditor({
           </Select>
         </Field>
       )}
+      {/* Below the inputs, so that it may grow without moving the one being
+          pressed, and whole: the line under the title cuts a long rule. */}
+      {rule !== undefined && rule.latest !== rule.current && (
+        <p className="text-body text-ink">
+          次の Sprint から: {formatPattern(rule.latest)}
+        </p>
+      )}
       {/* A one-off in the running Sprint stays so this week (F1). While the
           Sprint is still being planned, it becomes recurring there (F15). */}
       {rule === undefined && item.thisWeek?.confirmed === true && (
