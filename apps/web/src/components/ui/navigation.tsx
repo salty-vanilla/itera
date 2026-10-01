@@ -47,6 +47,11 @@ type NavigationProps = {
   onNavigate?: (id: string, event: MouseEvent<HTMLAnchorElement>) => void;
   /** Accessible name of the landmark. */
   label?: string;
+  /**
+   * The app's name, at the top of the sidebar and the rail (plain text, not a
+   * link). The bottom tab bar does not show it.
+   */
+  brand?: string;
   layout?: NavigationLayout;
   /** Classes for the sidebar or rail. */
   className?: string | undefined;
@@ -85,6 +90,13 @@ const side = {
     sidebar: '',
     rail: 'sr-only',
     responsive: 'sr-only nav:not-sr-only',
+  },
+  // Aligned with the item's icon and name (px-3 = 12px in the sidebar).
+  brand: {
+    sidebar: 'px-3 pt-2 text-body',
+    rail: 'pt-2 text-center text-meta',
+    responsive:
+      'pt-2 text-center text-meta nav:px-3 nav:text-left nav:text-body',
   },
   tooltip: {
     sidebar: 'hidden',
@@ -166,6 +178,7 @@ function NavigationSide({
   current,
   onNavigate,
   label = 'メイン',
+  brand,
   layout,
   className,
 }: Omit<NavigationProps, 'layout' | 'tabBarClassName'> & {
@@ -182,6 +195,14 @@ function NavigationSide({
         className,
       )}
     >
+      {brand !== undefined && (
+        <p
+          data-slot="navigation-brand"
+          className={cn('mb-2 font-bold text-ink', side.brand[layout])}
+        >
+          {brand}
+        </p>
+      )}
       <ul className="flex flex-col gap-1">
         {items.map((item) => (
           <li key={item.id}>
@@ -228,7 +249,7 @@ function NavigationTabBar({
   onNavigate,
   label = 'メイン',
   className,
-}: Omit<NavigationProps, 'layout' | 'tabBarClassName'>) {
+}: Omit<NavigationProps, 'layout' | 'tabBarClassName' | 'brand'>) {
   const tabs = items.filter((item) => item.inTabBar !== false);
   return (
     <nav
