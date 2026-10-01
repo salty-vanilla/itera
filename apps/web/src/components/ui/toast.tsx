@@ -43,7 +43,7 @@ type ToastKind =
   | 'sprint-confirmed'
   | 'retro-completed'
   | 'task-added'
-  /** 今日へ (a Backlog row or a Task detail): 「「タイトル」を今日やるに入れました」. */
+  /** 今日へ (a Backlog row or a Task detail): 「「タイトル」を「今日やる」に入れました」. */
   | 'added-to-today'
   /** 今週へ (a Backlog row or a Task detail), with 元に戻す (#155). */
   | 'added-to-week'
