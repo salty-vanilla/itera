@@ -152,7 +152,7 @@ function BacklogPane({
       />
       <Group
         title="期限が近い"
-        until={data.sprint.end}
+        until={candidates.dueSoonUntil}
         rows={candidates.dueSoon}
         slim={slim}
         {...{

@@ -94,6 +94,7 @@ describe('planningCandidates', () => {
 
   it('期限が近い: from today to the end of the planned Sprint', () => {
     expect(ids(groups.dueSoon)).toEqual(['due']);
+    expect(groups.dueSoonUntil).toBe(sprint.end);
   });
 
   it('期限が近い: a Task due today is not overdue; one due after the Sprint is neither', () => {

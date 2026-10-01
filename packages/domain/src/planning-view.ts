@@ -1,6 +1,7 @@
 // What the Planning screen reads (PRD §5 B): the Backlog grouped for 選ぶ,
 // and, for 確かめる, which values make the total a range (「何が上振れすると
 // 超過するか」). Derived from records, never stored.
+import { isOverdue } from './backlog';
 import type { Occurrence } from './occurrence';
 import { sprintTaskValue, type ActiveCriterion } from './planning';
 import type { PlanningValue } from './planning-value';
@@ -32,6 +33,8 @@ export interface PlanningCandidates {
    * The Backlog's 切り口 ends with the Sprint that holds today instead (F28).
    */
   readonly dueSoon: readonly Task[];
+  /** The last day 期限が近い reaches: the end of the Sprint being planned. */
+  readonly dueSoonUntil: LocalDate;
   /**
    * 今週発生する繰り返し: recurring Tasks with occurrences in this period,
    * included (pending) or left out (excluded), in date order.
@@ -84,13 +87,19 @@ export function planningCandidates(
       continue;
     }
     if (carried.has(task.id)) carriedOver.push(task);
-    else if (task.due !== undefined && task.due < input.today)
-      overdue.push(task);
+    else if (isOverdue(task, input.today)) overdue.push(task);
     else if (task.due !== undefined && task.due <= sprint.end)
       dueSoon.push(task);
     else others.push(task);
   }
-  return { carriedOver, overdue, dueSoon, recurring, others };
+  return {
+    carriedOver,
+    overdue,
+    dueSoon,
+    dueSoonUntil: sprint.end,
+    recurring,
+    others,
+  };
 }
 
 export interface CapacityDriver {
