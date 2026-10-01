@@ -1,13 +1,6 @@
 import type { LocalDate } from '@itera/domain';
 import { useEffect, useRef } from 'react';
-import {
-  Archive,
-  CircleCheck,
-  Ellipsis,
-  ListTree,
-  Repeat,
-  Sun,
-} from 'lucide-react';
+import { Archive, CircleCheck, Ellipsis, Sun } from 'lucide-react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { IconButton } from '@/components/ui/icon-button';
 import { semanticIcons } from '@/components/ui/icon';
@@ -87,7 +80,8 @@ export function SubtaskText({
 }) {
   const hours = value.base === 'subtasks' ? formatHours(value.lo) : undefined;
   return (
-    <MetaItem icon={<ListTree aria-hidden />}>
+    // A note (DESIGN.md Task Metadata 注記), so no icon.
+    <MetaItem className="text-ink-subtle">
       {usesSubtasks && hours !== undefined
         ? 'サブタスクの合計'
         : `サブタスク ${count}件`}
@@ -141,6 +135,8 @@ type BacklogRowProps = {
   /** Moves focus to the ○, e.g. when the row comes back by 元に戻す. */
   focusControl?: boolean | undefined;
 };
+
+const RecurrenceIcon = semanticIcons.recurrence;
 
 function BacklogRow({
   item,
@@ -196,7 +192,7 @@ function BacklogRow({
             data-slot="occurrence-mark"
             className="grid size-target-touch place-items-center text-ink-subtle medium:size-target-min [&_svg]:size-icon-s [&_svg]:[stroke-width:var(--icon-stroke-s)]"
           >
-            <Repeat aria-hidden />
+            <RecurrenceIcon aria-hidden />
             <span className="sr-only">完了は回ごと</span>
           </span>
         )

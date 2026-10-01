@@ -539,14 +539,19 @@ describe('Backlog', () => {
       within(recurrence).getByRole('combobox', { name: '頻度' }),
       'daily',
     );
-    // Chosen, so saved: no button to press.
-    expect(
-      within(recurrence).queryByRole('button', { name: '繰り返しにする' }),
-    ).toBeNull();
+    // Making it recurring cannot be undone: the button stays for that.
+    expect(task('task-bookshelf')?.recurrenceRuleId).toBeUndefined();
+    await userEvent.click(
+      within(recurrence).getByRole('button', { name: '繰り返しにする' }),
+    );
     expect(within(recurrence).getByRole('status').textContent).toContain(
       '次の Sprint から反映',
     );
     expect(task('task-bookshelf')?.recurrenceRuleId).toBeDefined();
+    // Once it has a rule, the button is gone: changes are saved as made.
+    expect(
+      within(recurrence).queryByRole('button', { name: '繰り返しにする' }),
+    ).toBeNull();
   });
 
   it('Detail (#171): the priority is among the first fields, saved when chosen', async () => {
@@ -574,19 +579,45 @@ describe('Backlog', () => {
     ).toBeTruthy();
   });
 
-  it('Detail (#171): a weekly choice is saved with its first weekday, and holds the close until then', async () => {
-    await renderAt('/backlog?fixture=backlog-capture&task=task-bookshelf');
-    const detail = await screen.findByRole('dialog');
-    await userEvent.click(
-      within(detail).getByRole('button', { name: '詳しく' }),
+  it('Detail (#171): a rule that exists is changed as it is chosen, with no button', async () => {
+    await renderAt(
+      '/backlog?fixture=backlog-recurrence&view=recurring&task=task-cleaning',
     );
-    const recurrence = within(detail).getByRole('region', { name: '繰り返し' });
+    const detail = await screen.findByRole('dialog');
+    const section = within(detail).getByRole('region', { name: '繰り返し' });
+    expect(within(section).queryByRole('button')).toBeNull();
+    const latest = () =>
+      records()
+        .rules.find((r) => r.taskId === 'task-cleaning')
+        ?.versions.at(-1)?.pattern;
     await userEvent.selectOptions(
-      within(recurrence).getByRole('combobox', { name: '頻度' }),
+      within(section).getByRole('combobox', { name: '頻度' }),
+      'monthly',
+    );
+    expect(latest()).toEqual({ freq: 'monthly', dayOfMonth: 1 });
+    await userEvent.selectOptions(
+      within(section).getByRole('combobox', { name: '日' }),
+      '15',
+    );
+    expect(latest()).toEqual({ freq: 'monthly', dayOfMonth: 15 });
+    expect(within(section).getByRole('status').textContent).toContain(
+      '次の Sprint から反映',
+    );
+    // Back to weekly with the days it had: saved at once.
+    await userEvent.selectOptions(
+      within(section).getByRole('combobox', { name: '頻度' }),
       'weekly',
     );
-    // No weekday yet: nothing saved, and closing asks.
-    expect(task('task-bookshelf')?.recurrenceRuleId).toBeUndefined();
+    expect(latest()).toEqual({ freq: 'weekly', daysOfWeek: [0] });
+    // Taking off the last weekday saves nothing and says why.
+    await userEvent.click(
+      within(section).getByRole('checkbox', { name: '日' }),
+    );
+    expect(
+      within(section).getByText('曜日を 1 つ以上選んでください'),
+    ).toBeTruthy();
+    expect(latest()).toEqual({ freq: 'weekly', daysOfWeek: [0] });
+    // The choice has no day: closing asks first.
     await userEvent.click(footerClose(detail));
     expect(screen.getByRole('dialog')).toBe(detail);
     expect(
@@ -594,27 +625,31 @@ describe('Backlog', () => {
     ).toBeTruthy();
     await userEvent.click(within(detail).getByRole('button', { name: '戻る' }));
     expect(document.activeElement?.getAttribute('role')).toBe('checkbox');
+  });
 
+  it('Detail (#171): a weekly rule needs a weekday before 繰り返しにする saves it', async () => {
+    await renderAt('/backlog?fixture=backlog-capture&task=task-bookshelf');
+    const detail = await screen.findByRole('dialog');
     await userEvent.click(
-      within(recurrence).getByRole('checkbox', { name: '月' }),
+      within(detail).getByRole('button', { name: '詳しく' }),
     );
-    const rule = records().rules.find((r) => r.taskId === 'task-bookshelf');
-    expect(rule?.versions.at(-1)?.pattern).toEqual({
-      freq: 'weekly',
-      daysOfWeek: [1],
-    });
-    // Unticking the last weekday is an error, and the rule stays.
+    const section = within(detail).getByRole('region', { name: '繰り返し' });
     await userEvent.click(
-      within(recurrence).getByRole('checkbox', { name: '月' }),
+      within(section).getByRole('button', { name: '繰り返しにする' }),
     );
     expect(
-      within(recurrence).getByText('曜日を 1 つ以上選んでください'),
+      within(section).getByText('曜日を 1 つ以上選んでください'),
     ).toBeTruthy();
-    expect(
-      records()
-        .rules.find((r) => r.taskId === 'task-bookshelf')
-        ?.versions.at(-1)?.pattern,
-    ).toEqual({ freq: 'weekly', daysOfWeek: [1] });
+    expect(task('task-bookshelf')?.recurrenceRuleId).toBeUndefined();
+    await userEvent.click(
+      within(section).getByRole('checkbox', { name: '月' }),
+    );
+    // Ticking a day saves nothing yet while there is no rule.
+    expect(task('task-bookshelf')?.recurrenceRuleId).toBeUndefined();
+    await userEvent.click(
+      within(section).getByRole('button', { name: '繰り返しにする' }),
+    );
+    expect(task('task-bookshelf')?.recurrenceRuleId).toBeDefined();
   });
 
   it('Backlog row (#171): a recurring Task has a ↻ where the ○ would be, and its detail leads to the week’s occurrences', async () => {
@@ -702,7 +737,7 @@ describe('Backlog', () => {
     // Opening another row asks the same; 破棄して開く carries it out.
     await userEvent.selectOptions(
       within(detail).getByRole('combobox', { name: '頻度' }),
-      'weekly',
+      'daily',
     );
     await userEvent.click(within(list()).getByText('歯医者の予約'));
     expect(screen.getByRole('dialog').textContent).toContain('本棚を整理する');
