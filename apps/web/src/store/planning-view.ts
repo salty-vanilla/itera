@@ -139,6 +139,12 @@ export interface PlanningData {
     readonly applied: boolean;
     /** What applying it does to the chosen Tasks (`criterionEffect`). */
     readonly effect: CriterionEffect;
+    /**
+     * Whether any chosen Task is one it acts on (`effect.count` > 0). The
+     * screens show the criterion only then (#161); whether it is applied at
+     * confirm is not changed by it.
+     */
+    readonly hasTarget: boolean;
   };
   /**
    * Why 確定 is not possible yet, if it is not. Editing the draft stays
@@ -293,6 +299,10 @@ export function planningData(
     scope?.kind === 'area'
       ? records.areas.find((a) => a.id === scope.areaId)?.name
       : undefined;
+  const effect =
+    criterion === undefined
+      ? undefined
+      : criterionEffect(sprint, { tasks, now, criterion });
 
   return {
     sprint,
@@ -319,7 +329,7 @@ export function planningData(
     totals,
     drivers: capacityDrivers(sprint, valueOptions),
     ...(improvement === undefined ? {} : { improvement }),
-    ...(criterion === undefined
+    ...(criterion === undefined || effect === undefined
       ? {}
       : {
           criterion: {
@@ -327,7 +337,8 @@ export function planningData(
             view: criterionView(criterion.policy, tasks, now),
             ...(scopeArea === undefined ? {} : { areaName: scopeArea }),
             applied: options.applyCriterion,
-            effect: criterionEffect(sprint, { tasks, now, criterion }),
+            effect,
+            hasTarget: effect.count > 0,
           },
         }),
     blockers: [

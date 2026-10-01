@@ -21,7 +21,8 @@ import { planSummary } from './plan-summary';
 // what may push the total over, the Tasks left out of the total (each opens
 // its Estimate, or its detail for subtasks), the Areas without a Goal
 // (written in 整える), and the planning criterion with its Switch and effect
-// (#105). The Area blocks under it are for reading.
+// (#105), when a chosen Task is one it acts on (#161). The Area blocks under
+// it are for reading.
 
 type CheckSummaryProps = {
   data: PlanningData;
@@ -143,7 +144,7 @@ function CheckSummary({
         </p>
       )}
 
-      {data.criterion !== undefined && (
+      {data.criterion?.hasTarget === true && (
         <section
           aria-labelledby={`${ids}-criterion`}
           className="flex flex-col gap-3 rounded-sm bg-canvas-subtle p-4"
@@ -172,7 +173,7 @@ function CheckSummary({
             checked={data.criterion.applied}
             onCheckedChange={(checked) => onApplyCriterion(checked)}
           />
-          <CriterionEffect data={data} />
+          <CriterionEffect criterion={data.criterion} />
         </section>
       )}
     </section>
@@ -183,23 +184,15 @@ function CheckSummary({
  * The criterion's effect, from the same policy as its name (invariant 39):
  * 「研究の幅のあるタスク 1件を上限で計画しています（合計の下限 +2h）」.
  */
-function CriterionEffect({ data }: { data: PlanningData }) {
-  const { criterion } = data;
-  if (criterion === undefined) return null;
+function CriterionEffect({
+  criterion,
+}: {
+  criterion: NonNullable<PlanningData['criterion']>;
+}) {
   const { count, delta } = criterion.effect;
   const bound = BOUND_WORDS[criterion.active.policy.rangePolicy];
   const scope =
     criterion.areaName === undefined ? '' : `${criterion.areaName}の`;
-  if (count === 0) {
-    return (
-      <p className="text-body text-ink-muted">
-        {weekText(
-          weekCall(data.week, data.number),
-          '選んだタスクに、この基準の対象はありません。',
-        )}
-      </p>
-    );
-  }
   // How the total moves: the lower end rises, the upper end falls, or both.
   const moves = [
     delta.lo !== 0 &&

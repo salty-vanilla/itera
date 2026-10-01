@@ -12,7 +12,9 @@ import { weekText } from '@/lib/week-text';
 // its edit action right under it (#160), then the Area's chosen Tasks.
 // States: set / empty (「+ Goal を書く」 and that it is optional) / editing
 // (`body-l` Textarea with 保存 / キャンセル). A Goal is optional per Area; an
-// Area without one is never shown as a warning. No Card.
+// Area without one is never shown as a warning. An Area with neither a Goal
+// nor a Task is `bare`: its name and 「+ 目標を書く」 on one line, without the
+// note that it is optional (#161). No Card.
 
 type GoalBlockProps = {
   area: { name: string; color: AreaColor };
@@ -21,6 +23,11 @@ type GoalBlockProps = {
   goal?: string | undefined;
   /** 「今週」「来週」, or 「Sprint N」: the week the Goal is for (#90). */
   week: string;
+  /**
+   * An Area with no Goal and no Task: one line (the name and 「+ 目標を
+   * 書く」). Writing a Goal opens the form below it, as in any empty Area.
+   */
+  bare?: boolean | undefined;
   /** The heading level; the screen's h1 is followed by h2 by default. */
   level?: 2 | 3 | undefined;
   /** Saves the text; an empty text removes the Goal. Returns success. */
@@ -45,6 +52,7 @@ function GoalBlock({
   summary,
   goal,
   week,
+  bare = false,
   level = 2,
   onSave,
   removable = true,
@@ -57,6 +65,8 @@ function GoalBlock({
   const [text, setText] = useState(goal ?? '');
   const [error, setError] = useState<string | undefined>(undefined);
   const headingId = useId();
+  // The one-line form, until a Goal is being written.
+  const line = bare && !editing && goal === undefined;
   const openRef = useRef<HTMLButtonElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const backToOpen = useRef(false);
@@ -78,15 +88,36 @@ function GoalBlock({
       data-slot="goal-block"
       className={cn(
         'flex flex-col gap-3 border-t border-border pt-4',
+        line && 'gap-0 pt-2',
         className,
       )}
     >
-      <Heading id={headingId} className="flex items-center gap-2">
-        <AreaIndicator name={area.name} color={area.color} variant="heading" />
-        {summary !== undefined && (
-          <span className="text-meta text-ink-muted">{summary}</span>
+      <div className={cn(line && 'flex flex-wrap items-center gap-x-3')}>
+        <Heading id={headingId} className="flex items-center gap-2">
+          <AreaIndicator
+            name={area.name}
+            color={area.color}
+            variant="heading"
+          />
+          {summary !== undefined && (
+            <span className="text-meta text-ink-muted">{summary}</span>
+          )}
+        </Heading>
+        {line && onSave !== undefined && (
+          <Button
+            ref={openRef}
+            size="sm"
+            variant="quiet"
+            aria-label={`目標を書く: ${area.name}`}
+            onClick={() => {
+              setText('');
+              setEditing(true);
+            }}
+          >
+            + 目標を書く
+          </Button>
         )}
-      </Heading>
+      </div>
 
       {editing ? (
         <form
@@ -172,7 +203,7 @@ function GoalBlock({
             </Button>
           )}
         </div>
-      ) : (
+      ) : line ? null : (
         <div className="flex flex-col items-start gap-1">
           {onSave !== undefined && (
             <Button
