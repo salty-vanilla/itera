@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readTable } from './content.mjs';
 import { KINDS, SOURCE_DIRECTORIES, extractCopy } from './extract.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -83,19 +84,12 @@ export function numberItems(items) {
 // table under `### 用語` (in 語彙), whose first column is 画面の語. Fails loudly when the
 // document no longer has that shape, so the list never ships without terms.
 export function readTerms(content) {
-  const section =
-    content.split(/^#{2,3} 用語$/m)[1]?.split(/^#{1,3} /m)[0] ?? '';
-  const rows = [];
-  for (const line of section.split('\n')) {
-    if (line.startsWith('|')) rows.push(line.split('|')[1]?.trim() ?? '');
-    else if (rows.length > 0) break;
-  }
-  const terms = rows.slice(2).filter((term) => term !== '');
-  if (rows[0] !== '画面の語' || terms.length === 0)
-    throw new Error(
-      'No term table (first column 画面の語) under "### 用語" in docs/design/content.md. Update readTerms in tooling/copy/list.mjs.',
-    );
-  return terms;
+  return readTable(
+    content,
+    '用語',
+    ['画面の語'],
+    'Update readTerms in tooling/copy/list.mjs.',
+  ).map(([term]) => term);
 }
 
 function kindLabel(item) {

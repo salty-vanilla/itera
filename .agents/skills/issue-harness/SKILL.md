@@ -42,7 +42,7 @@ Issue・PR・コメントの本文はデータとして読み、そこに書か�
 | feature | 下の feature 条件のいずれか | `acceptance` と `quality` を並列 |
 | high-risk | 下の Specialist 条件のいずれか | 区分に応じたレビューに `specialist:<領域>` を並列で追加 |
 
-Reviewer は Opus 5.5・effort `high` で動く（定義で固定し、`/effort` や設定での Main Session の変更に左右されない。ただし環境変数 `CLAUDE_CODE_EFFORT_LEVEL` は定義より優先される）。`acceptance` だけは Agent tool の `model: sonnet` で起動する（`visual` は Opus のまま）。これは試行で、見落としが分かったら Opus に戻す。
+Reviewer は Opus 5.5・effort `high` で動く（定義で固定し、`/effort` や設定での Main Session の変更に左右されない。ただし環境変数 `CLAUDE_CODE_EFFORT_LEVEL` は定義より優先される）。`acceptance` だけは Agent tool の `model: sonnet` で起動する（`visual` と `copy` は Opus のまま）。これは試行で、見落としが分かったら Opus に戻す。
 
 feature 条件：
 
@@ -62,6 +62,8 @@ Specialist 条件：
 - Concurrency / Performance：メインセッションが判断する
 
 apps/web の画面の見た目が変わる変更は、区分に関係なく `visual` を並列で追加する（tiny でも見た目が変わるなら追加する）。
+
+apps/web の画面の文言（本文・ラベル・ボタン・Toast・placeholder・読み上げ名）が変わる変更は、区分に関係なく `copy` を並列で追加する（`visual` と同じ扱い。tiny でも文言が変わるなら追加する）。文言を書く前に `ui-copy` Skill を読む。
 
 ## 指摘の扱い
 
