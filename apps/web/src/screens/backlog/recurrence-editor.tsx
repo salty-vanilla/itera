@@ -1,6 +1,5 @@
 import type { DayOfWeek, LocalDate, RecurrencePattern } from '@itera/domain';
 import { useImperativeHandle, useRef, useState, type Ref } from 'react';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
 import { Select } from '@/components/ui/select';
@@ -13,12 +12,16 @@ import {
 import type { BacklogItem } from '@/store/backlog-view';
 import { useTaskActions } from '@/store/use-task-actions';
 
-// 繰り返し (PRD §6 Recurrence, F1, F7, F12, F15). A rule takes effect from
+// 繰り返し (PRD §6 Recurrence, F1, F7, F12, F15). Like the other fields of
+// the Task detail, a choice is saved when it is made (Issue #171): the
+// frequency, a weekday ticked, the day of the month. A rule takes effect from
 // the next Sprint not confirmed yet, so the confirmed Sprint never changes;
-// after setting it the screen says so (「次の Sprint から反映」). A weekly
-// rule may have several days.
+// after saving it the screen says so (「次の Sprint から反映」). A weekly
+// rule may have several days, and needs one before it can be saved.
 
 type Freq = RecurrencePattern['freq'];
+/** `none`: no rule yet. */
+type Choice = Freq | 'none';
 
 const freqs: readonly { value: Freq; label: string }[] = [
   { value: 'daily', label: '毎日' },
@@ -49,10 +52,10 @@ type Result =
 /** The choice the editor starts from: the latest version, or none yet. */
 function choiceOf(latest: RecurrencePattern | undefined) {
   return {
-    freq: latest?.freq ?? 'weekly',
+    freq: latest?.freq ?? 'none',
     days: latest?.freq === 'weekly' ? latest.daysOfWeek : [],
     dayOfMonth: latest?.freq === 'monthly' ? latest.dayOfMonth : 1,
-  } satisfies { freq: Freq; days: readonly DayOfWeek[]; dayOfMonth: number };
+  } satisfies { freq: Choice; days: readonly DayOfWeek[]; dayOfMonth: number };
 }
 
 function RecurrenceEditor({
@@ -61,8 +64,8 @@ function RecurrenceEditor({
 }: {
   item: BacklogItem;
   /**
-   * For the Task detail's close (Issue #95): the button that applies a
-   * choice changed but not applied yet, or null.
+   * For the Task detail's close (Issue #95): the first weekday while a weekly
+   * choice has no day yet (it cannot be saved), or null.
    */
   pendingRef?: Ref<() => HTMLElement | null> | undefined;
 }) {
@@ -70,36 +73,33 @@ function RecurrenceEditor({
   const { task, rule } = item;
   // A change starts from the latest version (it may begin next Sprint).
   const latest = rule?.latest;
-  const [freq, setFreq] = useState<Freq>(() => choiceOf(latest).freq);
+  const [freq, setFreq] = useState<Choice>(() => choiceOf(latest).freq);
   const [days, setDays] = useState<readonly DayOfWeek[]>(
     () => choiceOf(latest).days,
   );
   const [dayOfMonth, setDayOfMonth] = useState(
     () => choiceOf(latest).dayOfMonth,
   );
-  const applyRef = useRef<HTMLButtonElement>(null);
+  const daysRef = useRef<HTMLFieldSetElement>(null);
   useImperativeHandle(pendingRef, () => () => {
-    const base = choiceOf(latest);
-    const changed =
-      freq !== base.freq ||
-      (freq === 'weekly' &&
-        (days.length !== base.days.length ||
-          days.some((d) => !base.days.includes(d)))) ||
-      (freq === 'monthly' && dayOfMonth !== base.dayOfMonth);
-    return changed ? applyRef.current : null;
+    return freq === 'weekly' && days.length === 0
+      ? (daysRef.current?.querySelector<HTMLElement>('[role="checkbox"]') ??
+          null)
+      : null;
   });
   const [result, setResult] = useState<Result>();
   const [error, setError] = useState<string>();
 
-  function submit() {
-    if (freq === 'weekly' && days.length === 0) {
-      setError('曜日を 1 つ以上選んでください');
-      return;
-    }
-    setError(undefined);
+  /** Saves the choice as it now stands, when it is complete. */
+  function save(
+    next: Freq,
+    nextDays: readonly DayOfWeek[],
+    nextDayOfMonth: number,
+  ) {
+    if (next === 'weekly' && nextDays.length === 0) return;
     const outcome = actions.setRecurrence(
       task.id,
-      patternOf(freq, days, dayOfMonth),
+      patternOf(next, nextDays, nextDayOfMonth),
     );
     if (!outcome.ok) return;
     setResult(
@@ -107,6 +107,28 @@ function RecurrenceEditor({
         ? { kind: 'unchanged' }
         : { kind: 'applied', effectiveFrom: outcome.effectiveFrom },
     );
+  }
+
+  function onFreq(next: Choice) {
+    setFreq(next);
+    setError(undefined);
+    if (next !== 'none') save(next, days, dayOfMonth);
+  }
+
+  function onDay(day: DayOfWeek, checked: boolean) {
+    const next = checked ? [...days, day] : days.filter((x) => x !== day);
+    setDays(next);
+    if (next.length === 0) {
+      setError('曜日を 1 つ以上選んでください');
+      return;
+    }
+    setError(undefined);
+    save('weekly', next, dayOfMonth);
+  }
+
+  function onDayOfMonth(next: number) {
+    setDayOfMonth(next);
+    save('monthly', days, next);
   }
 
   return (
@@ -127,8 +149,9 @@ function RecurrenceEditor({
       <Field label="頻度">
         <Select
           value={freq}
-          onChange={(e) => setFreq(e.currentTarget.value as Freq)}
+          onChange={(e) => onFreq(e.currentTarget.value as Choice)}
         >
+          {rule === undefined && <option value="none">繰り返さない</option>}
           {freqs.map((f) => (
             <option key={f.value} value={f.value}>
               {f.label}
@@ -137,7 +160,7 @@ function RecurrenceEditor({
         </Select>
       </Field>
       {freq === 'weekly' && (
-        <fieldset className="flex flex-col gap-2">
+        <fieldset ref={daysRef} className="flex flex-col gap-2">
           <legend className="text-label text-ink">曜日</legend>
           <div className="flex flex-wrap gap-x-4 gap-y-2">
             {WEEK_ORDER.map((d) => (
@@ -145,11 +168,7 @@ function RecurrenceEditor({
                 key={d}
                 label={WEEKDAY_NAMES[d]}
                 checked={days.includes(d)}
-                onCheckedChange={(checked) =>
-                  setDays((prev) =>
-                    checked ? [...prev, d] : prev.filter((x) => x !== d),
-                  )
-                }
+                onCheckedChange={(checked) => onDay(d, checked)}
               />
             ))}
           </div>
@@ -163,7 +182,7 @@ function RecurrenceEditor({
         >
           <Select
             value={String(dayOfMonth)}
-            onChange={(e) => setDayOfMonth(Number(e.currentTarget.value))}
+            onChange={(e) => onDayOfMonth(Number(e.currentTarget.value))}
           >
             {Array.from({ length: 31 }, (_, i) => i + 1).map((n) => (
               <option key={n} value={n}>
@@ -181,11 +200,6 @@ function RecurrenceEditor({
           Sprint から作られます。
         </p>
       )}
-      <div>
-        <Button ref={applyRef} onClick={submit}>
-          {rule === undefined ? '繰り返しにする' : 'ルールを変更'}
-        </Button>
-      </div>
       {result !== undefined && (
         <p
           role="status"

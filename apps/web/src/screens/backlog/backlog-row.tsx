@@ -1,6 +1,13 @@
 import type { LocalDate } from '@itera/domain';
 import { useEffect, useRef } from 'react';
-import { Archive, CircleCheck, Ellipsis, Sun } from 'lucide-react';
+import {
+  Archive,
+  CircleCheck,
+  Ellipsis,
+  ListTree,
+  Repeat,
+  Sun,
+} from 'lucide-react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { IconButton } from '@/components/ui/icon-button';
 import { semanticIcons } from '@/components/ui/icon';
@@ -22,6 +29,7 @@ import {
 import { CompletionCircle, TaskRow } from '@/components/task/task-row';
 import { formatDate } from '@/lib/date-format';
 import { formatPattern } from '@/lib/recurrence-text';
+import { formatHours } from '@/lib/time-format';
 import type { BacklogItem } from '@/store/backlog-view';
 
 export function CarryOverText({
@@ -42,17 +50,50 @@ export function CarryOverText({
 
 export function RecurrenceText({
   recurrence,
+  icon = true,
 }: {
   recurrence: NonNullable<BacklogItem['recurrence']>;
+  /** The row has the ↻ at its left already (Issue #171). */
+  icon?: boolean;
 }) {
   const Icon = semanticIcons.recurrence;
   return (
-    <MetaItem icon={<Icon aria-hidden />}>
+    <MetaItem icon={icon ? <Icon aria-hidden /> : undefined}>
       {formatPattern(recurrence.pattern)}
       {recurrence.next &&
         ` · 次は ${formatDate(recurrence.next.scheduledDate)}`}
       {recurrence.upcoming &&
         `（${formatDate(recurrence.upcoming.effectiveFrom)} から ${formatPattern(recurrence.upcoming.pattern)}）`}
+    </MetaItem>
+  );
+}
+
+/**
+ * The subtasks beside the Estimate: how many, and their hours, so that the
+ * number at the right end can be read against them (Issue #171). The time
+ * basis is one or the other (invariant 10): when it is the subtask sum the
+ * Estimate is that sum; when it is the Task's own, the sum is said not to be
+ * in the plan.
+ */
+export function SubtaskText({
+  count,
+  value,
+  usesSubtasks,
+}: {
+  count: number;
+  /** The subtask sum (`BacklogItem['subtaskValue']`). */
+  value: BacklogItem['subtaskValue'];
+  usesSubtasks: boolean;
+}) {
+  const hours = value.base === 'subtasks' ? formatHours(value.lo) : undefined;
+  return (
+    <MetaItem icon={<ListTree aria-hidden />}>
+      {usesSubtasks && hours !== undefined
+        ? 'サブタスクの合計'
+        : `サブタスク ${count}件`}
+      {!usesSubtasks &&
+        hours !== undefined &&
+        ` · ${hours}（計画には使わない）`}
     </MetaItem>
   );
 }
@@ -124,6 +165,7 @@ function BacklogRow({
     task.priority !== 'normal' ||
     carry !== undefined ||
     recurrence !== undefined ||
+    task.subtasks.length > 0 ||
     thisWeek !== undefined ||
     nextWeek !== undefined;
   return (
@@ -148,11 +190,15 @@ function BacklogRow({
             onToggle={onComplete}
           />
         ) : (
-          // Keeps the titles aligned; a recurring Task is done in Today.
+          // A recurring Task is done per occurrence, in Today: the ↻ stands
+          // where the ○ would, and keeps the titles aligned (Issue #171).
           <span
-            aria-hidden
-            className="size-target-touch medium:size-target-min"
-          />
+            data-slot="occurrence-mark"
+            className="grid size-target-touch place-items-center text-ink-subtle medium:size-target-min [&_svg]:size-icon-s [&_svg]:[stroke-width:var(--icon-stroke-s)]"
+          >
+            <Repeat aria-hidden />
+            <span className="sr-only">完了は回ごと</span>
+          </span>
         )
       }
       metadata={
@@ -162,7 +208,16 @@ function BacklogRow({
             {task.due && <Deadline due={task.due} today={today} />}
             <PriorityText priority={task.priority} />
             {carry && <CarryOverText {...carry} />}
-            {recurrence && <RecurrenceText recurrence={recurrence} />}
+            {recurrence && (
+              <RecurrenceText recurrence={recurrence} icon={false} />
+            )}
+            {task.subtasks.length > 0 && (
+              <SubtaskText
+                count={task.subtasks.length}
+                value={item.subtaskValue}
+                usesSubtasks={task.timeBasis === 'subtasks'}
+              />
+            )}
             {(thisWeek || nextWeek) && (
               <SprintText
                 thisWeek={thisWeek}
