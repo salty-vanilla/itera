@@ -2,7 +2,6 @@
 // (and the system's start of a day). Each calls `@itera/domain` commands
 // only. Screens go through `useTodayActions` (ADR 0005).
 import {
-  activeCriterion,
   addToToday,
   completeSelection,
   createTask,
@@ -47,6 +46,7 @@ import {
 } from './record-store';
 import type { Records } from './records';
 import { reviewSprint } from './review-changes';
+import { midSprintAddition } from './task-changes';
 import { activeSprintOf } from './today-view';
 
 function active(records: Records): Result<Sprint> {
@@ -339,16 +339,10 @@ export function addAndChoose(
       task = placed.value.record;
       activities.push(...placed.value.activities);
     }
-    const criterion = activeCriterion(records.criteria);
     const added = addToToday(
       sprint.value,
       {
-        sprintTaskId: ctx.newId('SprintTask'),
-        task,
-        areas: records.areas,
-        ...(criterion === undefined
-          ? {}
-          : { criterion: { id: criterion.id, policy: criterion.policy } }),
+        ...midSprintAddition(records, task, ctx),
         via: 'today',
         selectionId: ctx.newId('DailySelection'),
         date: ctx.today,

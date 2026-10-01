@@ -184,6 +184,7 @@ function RunningSprint({
                     : (block.goal.plannedText ?? null)
                 }
                 removable={false}
+                optionalNote={false}
                 // An Area with neither a Goal nor a Task is one line (#161).
                 bare={block.tasks.length === 0 && block.goal === undefined}
                 week={week}

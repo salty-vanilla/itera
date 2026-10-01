@@ -181,6 +181,25 @@ describe('Sprint — the next week (#90)', () => {
     await waitFor(() => expect(title()).toBe('Sprint 2'));
   });
 
+  it('does not offer 今週へ in a Task detail opened while planning next week (#155)', async () => {
+    await renderAt('/sprint?fixture=today-daytime&sprint=3');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Sprint 3 の計画を始める' }),
+    );
+    const backlog = await waitFor(() =>
+      document.querySelector<HTMLElement>('[data-slot="planning-backlog"]')!,
+    );
+    await userEvent.click(
+      within(backlog).getByRole('button', { name: /^本棚を整理する$/ }),
+    );
+    const detail = await screen.findByRole('dialog', {
+      name: '本棚を整理する',
+    });
+    // The Task is outside the running Sprint: 今日へ is there, 今週へ is not.
+    expect(within(detail).getByRole('button', { name: '今日へ' })).toBeTruthy();
+    expect(within(detail).queryByRole('button', { name: '今週へ' })).toBeNull();
+  });
+
   it('plans next week in 「来週」 words while this week runs', async () => {
     await renderAt('/sprint?fixture=today-daytime&sprint=3');
     await userEvent.click(

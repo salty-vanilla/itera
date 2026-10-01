@@ -183,6 +183,17 @@ describe('undoAddTaskMidSprint (F40)', () => {
     expect(unwrap(add(unwrap(undone), task)).tasks).toHaveLength(1);
   });
 
+  it('F9: an Area the addition appended to the snapshot stays', () => {
+    const task = withSuggestion(workId, 2, 3, 'task-interview');
+    const added = unwrap(
+      add({ ...activeSprint(false), areaSnapshot: [] }, task),
+    );
+    expect(added.areaSnapshot.map((e) => e.areaId)).toEqual([workId]);
+    const undone = unwrap(undoAddTaskMidSprint(added, { sprintTaskId }, ctx));
+    expect(undone.tasks).toEqual([]);
+    expect(undone.areaSnapshot).toEqual(added.areaSnapshot);
+  });
+
   it('invariant 26: an addition chosen for a day (今日へ) is not undone', () => {
     const task = withSuggestion(workId, 2, 3, 'task-interview');
     const chosen = unwrap(
@@ -217,6 +228,14 @@ describe('undoAddTaskMidSprint (F40)', () => {
     expect(
       undoAddTaskMidSprint(
         withTask({ origin: 'planning' }),
+        { sprintTaskId },
+        ctx,
+      ),
+    ).toMatchObject({ ok: false, error: { code: 'invalidInput' } });
+    // Only a one-off Task's addition: a recurring one is not undone here.
+    expect(
+      undoAddTaskMidSprint(
+        withTask({ occurrenceIds: [id('occ-1')] }),
         { sprintTaskId },
         ctx,
       ),

@@ -38,6 +38,11 @@ type GoalBlockProps = {
    */
   removable?: boolean | undefined;
   /**
+   * 「この領域の目標は任意です。…」 under 「+ 目標を書く」: while planning
+   * only. A running Sprint passes false (#155).
+   */
+  optionalNote?: boolean | undefined;
+  /**
    * After confirm: the text at confirm (plannedText), shown beside the
    * current one when they differ; `null` when the Goal was written after
    * confirm (「計画時にはなかった」).
@@ -56,6 +61,7 @@ function GoalBlock({
   level = 2,
   onSave,
   removable = true,
+  optionalNote = true,
   planned,
   children,
   className,
@@ -220,10 +226,8 @@ function GoalBlock({
               + 目標を書く
             </Button>
           )}
-          {/* Only while planning (before confirm, when a Goal is still
-              removable) and where a Goal can be written: not read only, not
-              領域なし. A running Sprint has no planning left to do (#155). */}
-          {onSave !== undefined && removable && (
+          {/* Only where a Goal can be written: not read only, not 領域なし. */}
+          {onSave !== undefined && optionalNote && (
             <p className="text-help text-ink-muted">
               この領域の目標は任意です。タスクだけでも計画できます。
             </p>
