@@ -37,7 +37,7 @@ type Story = StoryObj<typeof meta>;
 /**
  * 行の補助操作。トリガーは `…` の IconButton。項目は 32px（compact は 44px）で、
  * アイコン・ラベル・Kbd を並べる。Kbd は、タッチが主な端末（`pointer: coarse`）では出さない。
- * 破壊的な項目（取り消せないもの。アーカイブは含まない）は `danger` で、
+ * 破壊的な項目は `danger` で、
  * 区切りの後の最後に置く。
  * 主要な操作（完了の ○ など）はメニューに隠さない。
  */

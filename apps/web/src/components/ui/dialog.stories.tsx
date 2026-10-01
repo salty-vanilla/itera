@@ -88,7 +88,7 @@ export const DestructiveConfirm: Story = {
       </AlertDialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>選んだ 3件の割り込みを削除しますか？</DialogTitle>
+          <DialogTitle>選んだ 3件を削除しますか？</DialogTitle>
           <DialogDescription>取り消せません。</DialogDescription>
         </DialogHeader>
         <DialogFooter>

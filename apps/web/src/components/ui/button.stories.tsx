@@ -27,8 +27,8 @@ type Story = StoryObj<typeof meta>;
 export const Playground: Story = {};
 
 /**
- * 既定は Secondary。Primary は 1 画面に 1 つ。danger と danger-solid は破壊的操作（取り消せないもの）だけに使う。
- * danger-solid は確認 Dialog の実行ボタンだけ。アーカイブは取り消せるので使わない。
+ * 既定は Secondary。Primary は 1 画面に 1 つ。danger と danger-solid は破壊的操作だけに使う。
+ * danger-solid は確認 Dialog の実行ボタンだけ。アーカイブには使わない。
  */
 export const Variants: Story = {
   render: () => (
@@ -36,7 +36,7 @@ export const Variants: Story = {
       <Button variant="primary">Sprint を確定</Button>
       <Button variant="secondary">差分を確認</Button>
       <Button variant="quiet">キャンセル</Button>
-      <Button variant="danger">割り込みを削除</Button>
+      <Button variant="danger">削除</Button>
       <Button variant="danger-solid">完全に削除</Button>
     </div>
   ),
@@ -97,7 +97,7 @@ const variants = [
   ['primary', 'Sprint を確定', '確定中…'],
   ['secondary', '下書きを保存', '保存中…'],
   ['quiet', '計画案を取り消す', '取り消し中…'],
-  ['danger', '割り込みを削除', '削除中…'],
+  ['danger', '削除', '削除中…'],
   ['danger-solid', '完全に削除', '削除中…'],
 ] as const;
 
