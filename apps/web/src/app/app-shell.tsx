@@ -6,6 +6,7 @@ import { Navigation, type NavigationItem } from '@/components/ui/navigation';
 import type { ScreenId } from '@/fixtures/states';
 import { isPlainClick } from '@/lib/plain-click';
 import { cn } from '@/lib/utils';
+import { useCloseToastsOnScreenChange } from './use-close-toasts-on-screen-change';
 import { focusScreenHeading, useScreenFocus } from './use-screen-focus';
 import { useToastClearance } from './use-toast-clearance';
 import { useAppOverview } from '@/store/use-app-overview';
@@ -31,6 +32,7 @@ function AppShell({ children }: { children: ReactNode }) {
   const mainRef = useRef<HTMLElement>(null);
   useToastClearance(mainRef);
   useScreenFocus(mainRef);
+  useCloseToastsOnScreenChange();
 
   const items: NavigationItem[] = screens.map((screen) => ({
     id: screen.id,

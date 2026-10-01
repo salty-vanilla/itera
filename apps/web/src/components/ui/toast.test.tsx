@@ -4,14 +4,17 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Button } from './button';
 import {
+  TOAST_ACTION_TIMEOUT,
   TOAST_TIMEOUT,
   ToastProvider,
+  useCloseToastsOnLeave,
   useToast,
   type ToastOptions,
 } from './toast';
@@ -297,5 +300,63 @@ describe('Toast', () => {
     expect(
       document.querySelector('[data-slot="toast"]:not([data-ending-style])'),
     ).toBeNull();
+  });
+});
+
+describe('Toast with an action (#170)', () => {
+  it('stays twice as long, and a Toast without one still closes after 8 seconds', async () => {
+    vi.useFakeTimers();
+    render(
+      <ToastProvider>
+        <Trigger
+          options={{
+            title: '「本棚を整理する」を今日やるに入れました',
+            action: { label: '今日を開く', onClick: () => {} },
+          }}
+        />
+        <Trigger options={{ title: '3件を今週に入れました' }} />
+      </ToastProvider>,
+    );
+    for (const button of screen.getAllByRole('button', { name: '出す' })) {
+      fireEvent.click(button);
+    }
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(visibleToasts()).toHaveLength(2);
+    await act(() => vi.advanceTimersByTimeAsync(TOAST_TIMEOUT + 500));
+    expect(screen.queryByText('3件を今週に入れました')).toBeNull();
+    expect(screen.queryByText(/今日やるに入れました/)).not.toBeNull();
+    await act(() =>
+      vi.advanceTimersByTimeAsync(TOAST_ACTION_TIMEOUT - TOAST_TIMEOUT),
+    );
+    expect(screen.queryByText(/今日やるに入れました/)).toBeNull();
+  });
+
+  it('closing for a screen change keeps a failure and its 再試行', async () => {
+    function Leave() {
+      const leave = useCloseToastsOnLeave();
+      return <Button onClick={leave}>移る</Button>;
+    }
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <Trigger options={{ title: '結果' }} />
+        <Trigger
+          options={{
+            tone: 'danger',
+            title: '保存できませんでした',
+            action: { label: '再試行', onClick: () => {} },
+          }}
+        />
+        <Leave />
+      </ToastProvider>,
+    );
+    for (const button of screen.getAllByRole('button', { name: '出す' })) {
+      await user.click(button);
+    }
+    await user.click(screen.getByRole('button', { name: '移る' }));
+    await waitFor(() => expect(screen.queryByText('結果')).toBeNull());
+    expect(
+      screen.queryAllByText('保存できませんでした').length,
+    ).toBeGreaterThan(0);
   });
 });

@@ -83,6 +83,7 @@
   --duration-base: 160ms;
   --duration-slow: 240ms;
   --duration-toast: 8000ms;
+  --duration-toast-action: 16000ms;
   --tooltip-delay: 400ms;
 }
 

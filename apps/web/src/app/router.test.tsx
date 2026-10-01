@@ -240,3 +240,42 @@ describe('keyboard (#154)', () => {
     );
   });
 });
+
+describe('Toast on leaving a screen (#170)', () => {
+  const text = '「請求書を送る」を追加しました';
+  const add = async () => {
+    await userEvent.type(
+      await screen.findByRole('textbox', { name: 'Backlog にタスクを追加' }),
+      '請求書を送る{Enter}',
+    );
+    await screen.findByText(text);
+  };
+
+  it('closes the Toasts when the navigation opens another screen', async () => {
+    const router = renderAt('/backlog?fixture=backlog-capture');
+    await add();
+    const [today] = screen.getAllByRole('link', { name: /今日/ });
+    await userEvent.click(today!);
+    await waitFor(() => expect(router.state.location.pathname).toBe('/today'));
+    await waitFor(() => expect(screen.queryByText(text)).toBeNull());
+  });
+
+  it('keeps them for a filter, a day or a detail (the search)', async () => {
+    const router = renderAt('/backlog?fixture=backlog-capture');
+    await add();
+    await act(() =>
+      router.navigate({ to: '/backlog', search: { view: 'overdue' } }),
+    );
+    // Not closing either: a closing Toast stays in the DOM until it has faded.
+    const toast = screen.getByText(text).closest('[data-slot="toast"]');
+    expect(toast).not.toBeNull();
+    expect(toast?.hasAttribute('data-ending-style')).toBe(false);
+  });
+
+  it('closes them when the screen changes by the router (back and forward go the same way)', async () => {
+    const router = renderAt('/backlog?fixture=backlog-capture');
+    await add();
+    await act(() => router.navigate({ to: '/sprint' }));
+    await waitFor(() => expect(screen.queryByText(text)).toBeNull());
+  });
+});
