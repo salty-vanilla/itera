@@ -183,8 +183,13 @@ function PlanPane({
                     t.sprintTask.goalLink === 'unlinked',
                 ) && (
                   <p className="max-w-measure-read text-help text-ink-muted [text-wrap:pretty] [word-break:auto-phrase]">
-                    繰り返しのタスクは、はじめは目標に紐づきません。行の …
-                    の「目標に紐づける」で変えられます。
+                    繰り返しのタスクは、はじめは目標に紐づきません。
+                    {/* The way, kept on one line: 「…」 alone at a line's end
+                        reads as an ellipsis. */}
+                    <span className="whitespace-nowrap">
+                      行の … の「目標に紐づける」
+                    </span>
+                    で変えられます。
                   </p>
                 )}
             </GoalBlock>
