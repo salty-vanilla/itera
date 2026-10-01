@@ -44,7 +44,7 @@ PRD §14「クライアントとデータの方式」に従う。規則の正本
 ## ドメインの扱い
 
 - コードの識別子はドメインモデルの英語名（`Task`、`SprintTask`、`DailySelection`、`Occurrence`、`PlanningValue`、`CriterionUse` など）を使う。
-- 「採用」（EstimateSuggestion → Estimate。Task の値が変わる）と「適用」（PlanningCriterion → PlanningValue。Task は変わらない）を、コードでも画面でも混ぜない。
+- 「採用」（EstimateSuggestion → Estimate。Task の値が変わる）と「適用」（PlanningCriterion → PlanningValue。Task は変わらない）を、コードでも画面でも混ぜない。コードとモデル名は「採用」「適用」のまま、画面の語は採用が「使う」（「上限 4h を使う」「直して使う」）、適用が「このルールで計画する」。
 - 「持ち越し回数」「連続見送り」「Retro の事実」「計画時との差分」「昨日の続き」は保存せず、記録から派生させる。
 - 生産性スコアや点数による評価を作らない。`danger`（赤）はエラー・期限超過・確定的な容量超過（下限でも超える場合）・破壊的操作だけに使い、持ち越し・見送り・未達・超過の可能性には使わない（PRD §12、DESIGN.md Colors）。
 - ドメインモデルの厳密さを UI の複雑さとして見せない。内部で状態を分けても、利用者に毎回分類を求めない（PRD §13）。

@@ -60,7 +60,7 @@ function InterruptSheet({
     const next = {
       ...(note === '' ? { text: '何があったかを短く書いてください' } : {}),
       ...(m !== undefined && (!Number.isFinite(m) || m <= 0)
-        ? { minutes: '0 より大きい分数を数字で入れてください（例：30）' }
+        ? { minutes: '何分かを数字で入れてください（例：30）' }
         : {}),
     };
     setErrors(next);
@@ -108,8 +108,9 @@ function InterruptSheet({
               />
             </Field>
             <Field
-              label="かかった時間（分）"
+              label="かかった時間"
               necessity="optional"
+              description="分で入力（例：30）"
               error={errors.minutes}
             >
               <TextInput

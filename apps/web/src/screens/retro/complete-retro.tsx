@@ -135,7 +135,7 @@ function CompleteDialog({
           </DialogTitle>
           <DialogDescription>
             完了すると、書いた内容は変えられず、この Sprint
-            には実績を足せなくなります。
+            にはかかった時間を記録できなくなります。
           </DialogDescription>
         </DialogHeader>
         <DialogBody>

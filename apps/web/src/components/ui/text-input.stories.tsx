@@ -53,11 +53,7 @@ export const Sizes: Story = {
 export const WithSupportTextAndUnit: Story = {
   render: () => (
     <div className="flex max-w-drawer flex-col gap-6">
-      <Field
-        label="使える時間"
-        necessity="required"
-        description="今週、計画に使える時間。0.5時間単位"
-      >
+      <Field label="使える時間" necessity="required" description="時間で入力">
         <TextInput inputMode="decimal" defaultValue="18" suffix="h" />
       </Field>
       <Field
@@ -113,7 +109,7 @@ export const States: Story = {
         <Field
           key={state}
           label={state}
-          description="0.5時間単位"
+          description="時間で入力（例：1.5）"
           disabled={state === 'disabled'}
         >
           <TextInput defaultValue="3" suffix="h" {...props} />
@@ -121,7 +117,7 @@ export const States: Story = {
       ))}
       <Field
         label="error"
-        description="0.5時間単位"
+        description="時間で入力（例：1.5）"
         error="数値で入力してください（例：1.5）"
       >
         <TextInput defaultValue="3時間" suffix="h" />

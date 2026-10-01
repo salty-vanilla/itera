@@ -112,7 +112,7 @@ describe('Retro — 事実を見る', () => {
             '今回の計画のルール：「研究：見積もりの提案の上限で計画する」（扱いは「引き継ぐ」で決めます）',
       ),
     ).toBeTruthy();
-    expect(screen.queryByText(/幅のあるタスク 1件のうち/)).toBeNull();
+    expect(screen.queryByText(/タスク 1件のうち/)).toBeNull();
     // Estimate / 計画 / 実績 / 結果 per Task, carry-overs and deferrals.
     const paper = screen.getByRole('rowheader', {
       name: '関連論文を 3本読む',
@@ -179,13 +179,15 @@ describe('Retro — 事実を見る', () => {
   it('adds actual time during Review (F22)', async () => {
     await renderAt('/retro?fixture=retro-start');
     await userEvent.click(
-      screen.getByRole('button', { name: /実績を足す.*住民税の支払い/ }),
+      screen.getByRole('button', {
+        name: /かかった時間を記録.*住民税の支払い/,
+      }),
     );
     await userEvent.type(
-      await screen.findByRole('textbox', { name: /実績時間/ }),
+      await screen.findByRole('textbox', { name: /かかった時間/ }),
       '0.5',
     );
-    await userEvent.click(screen.getByRole('button', { name: '足す' }));
+    await userEvent.click(screen.getByRole('button', { name: '記録する' }));
     expect(reviewed().actualTimes.at(-1)).toMatchObject({
       hours: 0.5,
       via: 'later',
@@ -365,7 +367,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
     expect(text).toContain('今回の計画のルール「');
     expect(text).toContain('Backlog に 2件');
     expect(text).toContain(
-      '完了すると、書いた内容は変えられず、この Sprint には実績を足せなくなります。',
+      '完了すると、書いた内容は変えられず、この Sprint にはかかった時間を記録できなくなります。',
     );
 
     await userEvent.click(within(dialog).getByRole('button', { name: '戻る' }));
@@ -489,7 +491,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     await renderAt('/retro?fixture=retro-start&stage=handoff');
     const section = criterionSection();
     const outcome = within(section).getByText(
-      '研究の幅のあるタスク 1件のうち 1件を持ち越し（計画 5h・実績 4.5h）',
+      '見積もりの提案の上限で計画した研究のタスク 1件のうち、1件を持ち越し（計画 5h・実績 4.5h）',
     );
     expect(
       within(section).getByText('確定したときに、このルールで計画しました。'),
@@ -510,7 +512,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     const choices = () =>
       within(criterionSection()).getByRole('radiogroup').textContent ?? '';
     expect(choices()).toContain(
-      '次の計画でも、研究の幅のあるタスクを上限で計画します。使うかどうかは「確かめる」で選べます。',
+      '次の計画でも、見積もりがない研究のタスクは、見積もりの提案の上限で計画します。使うかどうかは「確かめる」で選べます。',
     );
     expect(choices()).toContain('次の計画では、このルールを使いません。');
     await userEvent.click(
@@ -533,10 +535,10 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     ).toEqual({ scope: { kind: 'all' }, rangePolicy: 'mid' });
     expect(screen.getByText('見積もりの提案の中央で計画する')).toBeTruthy();
     expect(
-      screen.getByText(/幅のあるタスク \d+件を中央で計画します/),
+      screen.getByText(/タスク \d+件を、見積もりの提案の中央で計画します/),
     ).toBeTruthy();
     expect(choices()).toContain(
-      '次の計画では、代わりに幅のあるタスクを中央で計画します。使うかどうかは「確かめる」で選べます。',
+      '次の計画では、代わりに見積もりがないタスクは、見積もりの提案の中央で計画します。使うかどうかは「確かめる」で選べます。',
     );
   });
 
@@ -680,7 +682,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
       name: '今回の計画のルール',
     });
     expect(
-      within(section).getByText(/幅のあるタスク 1件のうち 1件を持ち越し/),
+      within(section).getByText(/タスク 1件のうち、1件を持ち越し/),
     ).toBeTruthy();
     expect(within(section).getByText('「続ける」にしました。')).toBeTruthy();
     expect(within(section).queryByRole('radiogroup')).toBeNull();
@@ -949,7 +951,9 @@ describe('Retro — compact (#57)', () => {
         '持ち越し · 見送り 2回 · ここまで 1回',
       );
       expect(
-        within(paper!).getByRole('button', { name: /実績を足す.*関連論文/ }),
+        within(paper!).getByRole('button', {
+          name: /かかった時間を記録.*関連論文/,
+        }),
       ).toBeTruthy();
       // The person's own value is named in words too (#104).
       const review = screen
@@ -1131,17 +1135,20 @@ describe('Retro — 事実を見るを読みやすくする (#108)', () => {
     ).toBeTruthy();
   });
 
-  it('opens 実績を足す by the same words on its face: 「実績を足す」 and 「足す」', async () => {
+  it('opens かかった時間を記録 by the same words on its face', async () => {
     await renderAt('/retro?fixture=retro-start');
     await userEvent.click(
-      screen.getByRole('button', { name: /実績を足す.*住民税の支払い/ }),
+      screen.getByRole('button', {
+        name: /かかった時間を記録.*住民税の支払い/,
+      }),
     );
     const surface = await screen.findByRole('dialog');
     expect(
-      within(surface).getByText('実績を足す：住民税の支払い'),
+      within(surface).getByText('かかった時間を記録：住民税の支払い'),
     ).toBeTruthy();
-    expect(within(surface).getByRole('button', { name: '足す' })).toBeTruthy();
-    expect(document.body.textContent).not.toMatch(/実績を残す/);
+    expect(
+      within(surface).getByRole('button', { name: '記録する' }),
+    ).toBeTruthy();
   });
 });
 
@@ -1329,17 +1336,15 @@ describe('Retro — actual time per occurrence (#56)', () => {
       .find((li) => li.textContent?.startsWith('9/28 (月) 英語の多読 30分'))!;
     expect(row.textContent).toContain('実績 30m');
     await userEvent.click(
-      within(row).getByRole('button', { name: /実績を足す/ }),
+      within(row).getByRole('button', { name: /かかった時間を記録/ }),
     );
     // It says which day it goes to (not today in Retro).
-    expect(
-      await screen.findByText('9/28 (月) の実績として足します。'),
-    ).toBeTruthy();
+    expect(await screen.findByText('9/28 (月) に記録します。')).toBeTruthy();
     await userEvent.type(
-      await screen.findByRole('textbox', { name: /実績時間/ }),
+      await screen.findByRole('textbox', { name: /かかった時間/ }),
       '0.25',
     );
-    await userEvent.click(screen.getByRole('button', { name: '足す' }));
+    await userEvent.click(screen.getByRole('button', { name: '記録する' }));
     // The Task's row and the week's total follow (Issue #56).
     expect(
       screen.getByRole('rowheader', { name: '英語の多読 30分' }).parentElement
@@ -1369,13 +1374,13 @@ describe('Retro — actual time per occurrence (#56)', () => {
       .getAllByRole('listitem')
       .find((li) => li.textContent?.includes('スキップ'))!;
     await userEvent.click(
-      within(row).getByRole('button', { name: /実績を足す/ }),
+      within(row).getByRole('button', { name: /かかった時間を記録/ }),
     );
     await userEvent.type(
-      await screen.findByRole('textbox', { name: /実績時間/ }),
+      await screen.findByRole('textbox', { name: /かかった時間/ }),
       '0.5',
     );
-    await userEvent.click(screen.getByRole('button', { name: '足す' }));
+    await userEvent.click(screen.getByRole('button', { name: '記録する' }));
     expect(reviewed().actualTimes.at(-1)).toMatchObject({
       date: '2026-10-02',
       hours: 0.5,

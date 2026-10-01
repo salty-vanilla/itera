@@ -1,5 +1,5 @@
 import { Info } from 'lucide-react';
-import { criterionName } from '@/lib/criterion-text';
+import { criterionBoundText, criterionName } from '@/lib/criterion-text';
 import { formatHours, formatPlanningTotal } from '@/lib/time-format';
 import type { RetroData } from '@/store/retro-view';
 
@@ -32,7 +32,10 @@ function UsedCriterion({ used }: UsedCriterionProps) {
   );
 }
 
-/** 「研究の幅のあるタスク 1件のうち 1 件を持ち越し（計画値 5h・実績 4.5h）」. */
+/**
+ * 「見積もりの提案の上限で計画した研究のタスク 2件のうち、1件を持ち越し（計画 5h・
+ * 実績 4.5h）」.
+ */
 function CriterionOutcome({ used }: UsedCriterionProps) {
   const { result } = used;
   const scope = used.areaName === undefined ? '' : `${used.areaName}の`;
@@ -49,7 +52,8 @@ function CriterionOutcome({ used }: UsedCriterionProps) {
   ].filter(Boolean);
   return (
     <p className="text-body text-ink">
-      {scope}幅のあるタスク {result.tasks.length}件のうち {parts.join('、')}
+      {criterionBoundText(used.criterion.policy.rangePolicy)}で計画した{scope}
+      タスク {result.tasks.length}件のうち、{parts.join('、')}
       （計画 {formatPlanningTotal(result.planned)}・実績{' '}
       {result.actualHours > 0
         ? formatHours(result.actualHours, { total: true })

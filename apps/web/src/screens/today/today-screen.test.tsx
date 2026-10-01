@@ -325,7 +325,7 @@ describe('Today — the daily operations', () => {
         ?.hasAttribute('data-in-progress'),
     ).toBe(true);
     await menu('顧客インタビューの設計', '今日はここまで');
-    const hours = await screen.findByRole('textbox', { name: /実績時間/ });
+    const hours = await screen.findByRole('textbox', { name: /かかった時間/ });
     await userEvent.type(hours, '1.5');
     await userEvent.click(
       screen.getByRole('button', { name: '今日はここまで' }),
@@ -511,12 +511,12 @@ describe('Today — the daily operations', () => {
 
   it('records actual hours after completing (append-only)', async () => {
     await renderAt('/today?fixture=today-interrupt');
-    await menu('API 設計のレビュー', '実績を残す');
+    await menu('API 設計のレビュー', 'かかった時間を記録');
     await userEvent.type(
-      await screen.findByRole('textbox', { name: /実績時間/ }),
+      await screen.findByRole('textbox', { name: /かかった時間/ }),
       '0.5',
     );
-    await userEvent.click(screen.getByRole('button', { name: '残す' }));
+    await userEvent.click(screen.getByRole('button', { name: '記録する' }));
     expect(
       within(row('今日やる', 'API 設計のレビュー')).getByText('実績 2.5h'),
     ).toBeTruthy();
@@ -529,13 +529,15 @@ describe('Today — the daily operations', () => {
 
   it('asks for hours when recording and none are given', async () => {
     await renderAt('/today?fixture=today-interrupt');
-    await menu('API 設計のレビュー', '実績を残す');
-    await userEvent.click(await screen.findByRole('button', { name: '残す' }));
+    await menu('API 設計のレビュー', 'かかった時間を記録');
+    await userEvent.click(
+      await screen.findByRole('button', { name: '記録する' }),
+    );
     expect(screen.getByText(/0 より大きい時間/)).toBeTruthy();
     // The field in error takes the focus (accessibility.md).
     await waitFor(() =>
       expect(document.activeElement).toBe(
-        screen.getByRole('textbox', { name: /実績時間/ }),
+        screen.getByRole('textbox', { name: /かかった時間/ }),
       ),
     );
     expect(sprint().actualTimes.filter((a) => a.via === 'later')).toEqual([]);
@@ -614,7 +616,7 @@ describe('Today — completed from the Backlog', () => {
         name: 'その他の操作：新メンバーのオンボーディング資料',
       }),
     );
-    await screen.findByRole('menuitem', { name: /実績を残す/ });
+    await screen.findByRole('menuitem', { name: /かかった時間を記録/ });
     expect(
       screen.queryByRole('menuitem', { name: /見積もりを入れる/ }),
     ).toBeNull();
@@ -1012,7 +1014,7 @@ describe('Today — keys of the lists (#48)', () => {
     await userEvent.keyboard('e');
     // The Task's own, not a subtask's (「Estimate（時間）: …」).
     const estimate = await screen.findByRole('textbox', {
-      name: /^見積もり（時間）(?!：)/,
+      name: /^見積もり(?!（時間）)/,
     });
     await waitFor(() => expect(document.activeElement).toBe(estimate));
   });
@@ -1032,18 +1034,18 @@ describe('Today — 見積もりを入れる (#96)', () => {
     expect(item.textContent).toContain('E');
     await userEvent.click(item);
     const estimate = await screen.findByRole('textbox', {
-      name: /^見積もり（時間）(?!：)/,
+      name: /^見積もり(?!（時間）)/,
     });
     await waitFor(() => expect(document.activeElement).toBe(estimate));
   });
 });
 
-describe('Today — 計画に使う時間 in the detail (#96)', () => {
+describe('Today — 計画の時間 in the detail (#96)', () => {
   it('shows both values under the subtasks, and says only one is used', async () => {
     await renderAt('/today?fixture=today-daytime&task=task-dataset');
     const detail = await screen.findByRole('dialog');
     const group = within(detail).getByRole('radiogroup', {
-      name: /計画に使う時間/,
+      name: /計画の時間/,
     });
     expect(group.textContent).toContain(
       'タスクの見積もりとサブタスクの合計は、どちらか一方を計画に使います。',
@@ -1078,7 +1080,7 @@ describe('Today — the Task detail (#95)', () => {
     await renderAt('/today?fixture=today-daytime&task=task-bookshelf');
     const detail = await screen.findByRole('dialog');
     const estimate = within(detail).getByRole('textbox', {
-      name: /見積もり（時間）/,
+      name: /^見積もり(?!（時間）)/,
     });
     await userEvent.clear(estimate);
     await userEvent.type(estimate, 'x');
@@ -1099,7 +1101,7 @@ describe('Today — the Task detail (#95)', () => {
     await renderAt('/today?fixture=today-daytime&task=task-bookshelf');
     const detail = await screen.findByRole('dialog');
     const estimate = within(detail).getByRole('textbox', {
-      name: /見積もり（時間）/,
+      name: /^見積もり(?!（時間）)/,
     });
     await userEvent.type(estimate, 'x');
     const other = within(row('今日やる', '実験データの前処理')).getByText(

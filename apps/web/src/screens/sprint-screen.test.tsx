@@ -262,7 +262,7 @@ describe('Sprint — the next week (#90)', () => {
 });
 
 describe('Retro — by number (#90)', () => {
-  it('opens a closed Retro read only: no inputs, 気になる or 実績を足す', async () => {
+  it('opens a closed Retro read only: no inputs, 気になる or かかった時間を記録', async () => {
     await renderAt('/retro?sprint=1&fixture=today-daytime');
     expect(title()).toBe('Sprint 1');
     expect(status()).toBe('完了');
@@ -274,7 +274,9 @@ describe('Retro — by number (#90)', () => {
     ).toBeTruthy();
     expect(screen.queryByRole('radio')).toBeNull();
     expect(screen.queryByRole('button', { name: /振り返りに使う/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: /実績を足す/ })).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: /かかった時間を記録/ }),
+    ).toBeNull();
     expect(screen.queryByRole('button', { name: '振り返りを完了' })).toBeNull();
     // Its self-assessment, as a Tag.
     expect(screen.getByText('できた')).toBeTruthy();

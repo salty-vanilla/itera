@@ -121,7 +121,7 @@ export const typographyGroups = [
       ],
       ['task', 'text-task', '関連研究のメモを整理する'],
       ['label', 'text-label', '使える時間'],
-      ['help', 'text-help', '0.5時間単位で入力します'],
+      ['help', 'text-help', '時間で入力（例：1.5）'],
       ['meta', 'text-meta', '10/5 (月) · 持ち越し 1回'],
       ['kicker', 'text-kicker', 'Agent 提案'],
     ],

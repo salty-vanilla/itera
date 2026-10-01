@@ -7,7 +7,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
-import { formatHours, formatRange, spokenHours } from '@/lib/time-format';
+import {
+  HOURS_HINT,
+  formatHours,
+  formatRange,
+  spokenHours,
+} from '@/lib/time-format';
 import { cn } from '@/lib/utils';
 
 // DESIGN.md Components › Agent 提案 and docs/design/agent-ui.md, for an
@@ -30,7 +35,7 @@ type EstimateSuggestionProps = {
   /** When it was made, as text (「9/24 (木) 12:01」). */
   madeAt: string;
   onAdopt: (bound: SuggestionBound) => void;
-  /** 編集して採用: the person's hours. Returns whether it went through. */
+  /** 直して使う (編集して採用): the person's hours. Returns whether it went through. */
   onAdoptEdited: (hours: number) => boolean;
   onReject: () => void;
   /**
@@ -92,9 +97,7 @@ function EstimateSuggestion({
     >
       <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <p className="text-kicker text-ink-muted">見積もりの提案</p>
-        <p className="text-meta text-ink-subtle">
-          製品内の見積もり支援 · {madeAt}
-        </p>
+        <p className="text-meta text-ink-subtle">Itera · {madeAt}</p>
       </header>
       <p className="flex flex-wrap items-baseline gap-x-3">
         <span className="text-num-m text-ink">
@@ -132,11 +135,7 @@ function EstimateSuggestion({
             adoptEdited();
           }}
         >
-          <Field
-            label="採用する見積もり（時間）"
-            description="提案の値を直して、本人の見積もりにします"
-            error={error}
-          >
+          <Field label="使う見積もり" description={HOURS_HINT} error={error}>
             <TextInput
               ref={fieldRef}
               size="sm"
@@ -149,7 +148,7 @@ function EstimateSuggestion({
           </Field>
           <div className="flex gap-2">
             <Button size="sm" type="submit">
-              採用
+              使う
             </Button>
             <Button
               size="sm"
@@ -173,7 +172,7 @@ function EstimateSuggestion({
               size="sm"
               onClick={() => onAdopt(bound)}
             >
-              {word} {formatHours(boundValue(suggestion, bound))} を採用
+              {word} {formatHours(boundValue(suggestion, bound))} を使う
             </Button>
           ))}
           <Button
@@ -187,10 +186,10 @@ function EstimateSuggestion({
               setEditing(true);
             }}
           >
-            編集して採用
+            直して使う
           </Button>
           <Button size="sm" variant="quiet" onClick={onReject}>
-            却下
+            使わない
           </Button>
         </div>
       )}

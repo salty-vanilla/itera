@@ -297,7 +297,7 @@ components:
 ### 原則
 
 1. **Clarity — 今どこで何を決めているかが分かる。** 画面ごとに「決めていること」を 1 つだけ見出しにする（例：「今週、何を進めるか」）。現在地（今日、今の段階、選んだもの）は `here` の黄 **と** チェック・語で示し、色だけにしない（Filter の選択は幅を変えないため、チェックの代わりに `ink` の 2px の枠と太字）。幅がある時間は幅のまま出す（`2–4h`、`残り 1 〜 3h`）。
-2. **Agency — 決めるのは本人。** Agent・AI の値は破線と「提案」「Agent 提案」の語で区別し、本人の値は実線・ラベルなし。「採用」は Secondary、「編集して採用」「却下」は Quiet にし、Primary で採用を誘導しない。
+2. **Agency — 決めるのは本人。** Agent・AI の値は破線と「提案」「Agent 提案」の語で区別し、本人の値は実線・ラベルなし。採用（見積もりの提案では「上限 4h を使う」）は Secondary、「直して使う」「使わない」は Quiet にし、Primary で採用を誘導しない。
 3. **Calmness — 注意を奪わない。** Primary Button（墨の塗り）は 1 画面に 1 つ。色面は状態と現在地だけ。Area の色は路線記号と容量バーだけ。考える領域（Goal、Capacity、Retro）には意図的に余白を取る。
 4. **Precision — 小さな数値ほど丁寧に。** 数値は `num-*` で組み、並ぶ列は右揃え。1h 未満は `30m`、合計は常に h、範囲は en dash（`2–4h`）、負を含む範囲と、使える時間との差（残り・超過）は `〜`（`残り 1 〜 3h`、`超過 3 〜 5h`）。ただし、使える時間との差が 0 をまたぐときは、負の値を含む範囲を見出しにせず、「少なく済めば 2.25h 残る · 多くかかれば 0.75h 超える」の 2 つの文で出す（Issue #93、#162）。見積もりがないものは「0」ではなく「見積もりなし」と書き、合計に含めないことを示す。
 5. **Continuity — Planning → Today → Retro → 次の Planning。** Task Row・Goal・Estimate・Area の路線記号はすべての画面で同じ見た目。本人が確定した言葉（Goal、次に試すこと、振り返り）は `goal` / `reflection` で本文より一段大きく組み、確定したことを実線の罫の下に置いて示す。
@@ -574,14 +574,14 @@ compact の原則：
 | Menu の項目 | ● | ● | ● | — | checked | ● | — | —（危険な項目あり） |
 | Task Row | ● | ●（ハンドルと操作を表示） | ●（focus-within） | dragging | selected / done / skipped | ● | Estimate の見積中 | 保存エラー |
 | Estimate | 値 | — | 編集時 | — | — | — | 見積中 | 推定できません |
-| Agent 提案 | pending | — | 内部の Button | — | 採用 / 編集して採用 / 却下の後 | — | loading（取り消す） | error（もう一度試す・手入力で続ける） |
+| Agent 提案 | pending | — | 内部の Button | — | 使う / 直して使う / 使わないの後 | — | loading（取り消す） | error（もう一度試す・手入力で続ける） |
 | Capacity Indicator | ok | — | 使える時間の入力 | — | — | — | — | tight / over / unknown |
 
 ### 操作
 
 **Button** — 既定は Secondary。Primary は 1 画面に 1 つ。
 - 36px、`rounded.sm`、1px 枠、ラベルは `button`（14/20 700）で動詞で終える（「Sprint を確定」「差分を確認」）。先頭・末尾に 16px アイコン（任意）。
-- Variant：primary（墨の塗り `primary`、文字 `on-primary`。hover `primary-hover`、押下 `primary-active`）/ secondary（`surface`＋`border-strong`）/ quiet（枠なし。キャンセル、編集して採用、却下）/ danger（`danger` の枠と文字。破壊的操作の入口。アーカイブは元に戻せるので使わず、secondary にする。Issue #164）/ danger-solid（破壊的操作の確認 Dialog の実行ボタンだけ）。サイズ sm 28 / md 36 / lg 44px（compact は lg）。
+- Variant：primary（墨の塗り `primary`、文字 `on-primary`。hover `primary-hover`、押下 `primary-active`）/ secondary（`surface`＋`border-strong`）/ quiet（枠なし。キャンセル、直して使う、使わない）/ danger（`danger` の枠と文字。破壊的操作の入口。アーカイブは元に戻せるので使わず、secondary にする。Issue #164）/ danger-solid（破壊的操作の確認 Dialog の実行ボタンだけ）。サイズ sm 28 / md 36 / lg 44px（compact は lg）。
 - Hover / Active：secondary と danger は `surface-hover` / `surface-pressed`（secondary は輪郭も `ink-muted`）、quiet は枠なしのまま `surface-hover` / `surface-pressed`、danger-solid は `danger-hover` / `danger-active`。
 - Disabled は共通の状態どおり（quiet だけは地と枠を付けず、文字を `ink-disabled` にする）。無効にしてもフォーカスでき、近くに書いた理由を読み上げられる。
 - Loading は先頭にスピナー、ラベルを「確定中…」に、幅は保つ。Loading 中は押しても反応しないが、Disabled の見た目にはしない。
@@ -727,7 +727,7 @@ compact の原則：
 
 **次に試すこと（Retro Improvement）** — Retro で決める「次に試すこと」。上端 `ink` 1px・下端 `border` の罫、ラベル（「次に試すこと」/「前回、次に試すと決めたこと」）と出所、本文（確定後は `goal`、下書きは `body-l`）。下書き（破線の Tag）→「次に試すことを確定」。次の Planning の最初（選ぶ段階の右ペインの上部）に表示だけで戻る。次に試すことそのものに判定や「反映した」の記録はない（ドメインモデル RetroImprovement）。× 複数並べる、達成率で評価する。
 
-**計画のルール（Planning Criterion）** — 次に試すことから作った「見積もりの提案のどこで計画するか」のルール。名前は「研究：見積もりの提案の上限で計画する」（すべての領域なら「見積もりの提案の上限で計画する」）。Planning の選ぶ・整える段階では、前回、次に試すと決めたことの直下に `info` のアイコン＋名前だけを 1 行（`body`、`ink-muted`）で出す。確かめる段階で初めて `canvas-subtle` の地の枠にし、ラベル「計画のルール」、`info` のアイコン＋名前、「このルールで計画する」Switch、効果（「研究の幅のあるタスク 1件を上限で計画しています（合計の下限 +2h）。」）を同じ値から出す（不変条件 39）。計画のルールがなければ、どの段階でも何も出さない（Issue #105 のオーナー決定 R3）。選んだ Task にルールが効くもの（幅のある計画値で、ルールの対象の Area）が 1 件もないときも、Planning ではどの段階にも出さない（確定ダイアログも同じ。Issue #161）。そのまま確定してもルールは使わない（ドメインモデル F42、Issue #162）。確定後は Switch を読み取り専用にし、ルールが効く計画値がなかった Sprint では枠にせず `help` `ink-muted` の 1 行（「計画のルール「研究：見積もりの提案の上限で計画する」 · 対象なし」）にする（不変条件 37。Issue #161）。Retro では、CriterionUse がある Sprint（確定時に Active なルールがあった Sprint）に「続ける / 終える / 置き換える」の RadioGroup を出し、選ぶまで Retro を完了できない（不変条件 36。理由は求めない）。
+**計画のルール（Planning Criterion）** — 次に試すことから作った「見積もりの提案のどこで計画するか」のルール。名前は「研究：見積もりの提案の上限で計画する」（すべての領域なら「見積もりの提案の上限で計画する」）。Planning の選ぶ・整える段階では、前回、次に試すと決めたことの直下に `info` のアイコン＋名前だけを 1 行（`body`、`ink-muted`）で出す。確かめる段階で初めて `canvas-subtle` の地の枠にし、ラベル「計画のルール」、`info` のアイコン＋名前、「このルールで計画する」Switch、効果（「研究のタスク 1件を、見積もりの提案の上限で計画しています（合計の下限 +2h）。」）を同じ値から出す（不変条件 39）。計画のルールがなければ、どの段階でも何も出さない（Issue #105 のオーナー決定 R3）。選んだ Task にルールが効くもの（幅のある計画値で、ルールの対象の Area）が 1 件もないときも、Planning ではどの段階にも出さない（確定ダイアログも同じ。Issue #161）。そのまま確定してもルールは使わない（ドメインモデル F42、Issue #162）。確定後は Switch を読み取り専用にし、ルールが効く計画値がなかった Sprint では枠にせず `help` `ink-muted` の 1 行（「計画のルール「研究：見積もりの提案の上限で計画する」 · 対象なし」）にする（不変条件 37。Issue #161）。Retro では、CriterionUse がある Sprint（確定時に Active なルールがあった Sprint）に「続ける / 終える / 置き換える」の RadioGroup を出し、選ぶまで Retro を完了できない（不変条件 36。理由は求めない）。
 
 **振り返りの材料（RetroInsight）** — Retro の 1 つの気づき。fact（「事実」：記録から言えること、`body`＋根拠の列挙）/ reflection（本人の言葉、`reflection`）/ agent（Agent の見立て：破線枠＋折りたたみの根拠＋振り返りに加える / 編集して加える / 却下）。事実には「振り返りに使う」の印を付けられる。× Agent の見立てを本人が加える前に `reflection` で表示する、評価・点数。
 
@@ -737,8 +737,8 @@ compact の原則：
 
 **Agent 提案（AgentSuggestion）** — Estimate の提案、Goal の文案、計画案の入口。
 - 破線の枠（`proposal-border`、`rounded.md`、`surface`）、ヘッダー（`kicker` で何の提案か（「見積もりの提案」）＋出所と時刻）、対象、提案の値（EstimateRange / suggestion の Estimate / `body` の文）、根拠、操作。
-- Estimate の提案は、下限・中央・上限のどれかを本人の Estimate として **採用** できる（PRD §5.A）。採用は Secondary、編集して採用・却下は Quiet。
-- 状態：pending / loading（「過去の類似タスクを調べています…」＋取り消す）/ insufficient（幅を広く、わからない点に理由）/ error（「提案を作れませんでした。手入力でそのまま計画を続けられます。」＋もう一度試す）/ 採用・編集・却下の後（実線の `canvas-subtle` の 1 行＋元に戻す）。
+- Estimate の提案は、下限・中央・上限のどれかを本人の Estimate として **採用** できる（PRD §5.A。画面の語は「上限 4h を使う」。Issue #206）。採用は Secondary、「直して使う」「使わない」は Quiet。
+- 状態：pending / loading（「過去の類似タスクを調べています…」＋取り消す）/ insufficient（幅を広く、わからない点に理由）/ error（「提案を作れませんでした。手入力でそのまま計画を続けられます。」＋もう一度試す）/ 使う・直して使う・使わないの後（実線の `canvas-subtle` の 1 行＋元に戻す）。
 
 **根拠（AgentRationale）** — 「根拠 / わからない点 / 参照していない情報」の 3 行。columns（既定）/ stacked（狭い場所）/ collapsible（「根拠を見る」）。根拠がないときは「根拠となるデータがありません」。× confidence を % で出す、「高精度」と書く。
 
@@ -752,7 +752,7 @@ compact の原則：
 - 選択・状態・Area・エラー・提案は、色に加えてチェック・アイコン・語・形・破線のどれかで示す。
 - 現在地は黄、確定は墨、計画中は破線。本人が確定した言葉（Goal、次に試すこと、振り返り）は `goal` / `reflection` で一段大きく組む。数値は `num-*`。
 - 幅のある時間は幅のまま示し、見積もりのないものは合計に含めないことを書く。
-- Agent の値は破線と「提案」で示し、採用は Secondary、編集して採用・却下は Quiet にして、Primary で誘導しない。
+- Agent の値は破線と「提案」で示し、「使う」は Secondary、「直して使う」「使わない」は Quiet にして、Primary で誘導しない。
 - 持ち越し・見送り・未達は事実として中立に書く。
 
 ### Don't

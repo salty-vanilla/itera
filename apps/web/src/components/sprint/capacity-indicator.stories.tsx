@@ -15,7 +15,6 @@ const meta = {
   args: {
     total,
     areas,
-    week: '今週',
     onAvailableHoursChange: () => true,
   },
   decorators: [(Story) => <div className="max-w-pane-side">{Story()}</div>],

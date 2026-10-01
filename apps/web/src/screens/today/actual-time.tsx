@@ -29,16 +29,16 @@ import {
 } from '@/lib/actual-hours';
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 
-// 実績時間 (patterns.md Today): optional, added lightly after completing or
+// かかった時間 (実績時間, patterns.md Today): optional, added lightly after completing or
 // with 今日はここまで; never a stopwatch. Owner decision in #41: a Bottom
 // Sheet on compact, a Popover by the row's `…` from medium up.
 
 export type ActualTimeMode =
   /** 今日はここまで, with the day's hours if given. */
   | 'pause'
-  /** 実績を残す after completing or pausing: the hours are the point. */
+  /** かかった時間を記録 after completing or pausing: the hours are the point. */
   | 'record'
-  /** 実績を足す from Retro, where the time goes to a day of the Sprint. */
+  /** かかった時間を記録 from Retro, where the time goes to a day of the Sprint. */
   | 'add';
 
 type ActualTimeProps = {
@@ -56,7 +56,7 @@ type ActualTimeProps = {
 
 const words: Record<
   ActualTimeMode,
-  { title: string; description: ReactNode; submit: string }
+  { title: string; description?: ReactNode; submit: string }
 > = {
   pause: {
     title: '今日はここまで',
@@ -71,14 +71,12 @@ const words: Record<
     submit: '今日はここまで',
   },
   record: {
-    title: '実績を残す',
-    description: '今日このタスクにかけた時間を足します。',
-    submit: '残す',
+    title: 'かかった時間を記録',
+    submit: '記録する',
   },
   add: {
-    title: '実績を足す',
-    description: '足す時間を入力します。',
-    submit: '足す',
+    title: 'かかった時間を記録',
+    submit: '記録する',
   },
 };
 
@@ -130,7 +128,7 @@ function ActualTime({
 
   const field = (
     <Field
-      label="実績時間"
+      label="かかった時間"
       necessity={optional ? 'optional' : 'required'}
       description={ACTUAL_HOURS_HINT}
       error={error}
@@ -157,9 +155,11 @@ function ActualTime({
           >
             <DrawerHeader>
               <DrawerTitle>{heading}</DrawerTitle>
-              <DrawerDescription className="[text-wrap:pretty] [word-break:auto-phrase]">
-                {description}
-              </DrawerDescription>
+              {description !== undefined && (
+                <DrawerDescription className="[text-wrap:pretty] [word-break:auto-phrase]">
+                  {description}
+                </DrawerDescription>
+              )}
             </DrawerHeader>
             <DrawerBody>{field}</DrawerBody>
             <DrawerFooter>
@@ -188,9 +188,11 @@ function ActualTime({
         >
           <PopoverHeader>
             <PopoverTitle>{heading}</PopoverTitle>
-            <PopoverDescription className="[text-wrap:pretty] [word-break:auto-phrase]">
-              {description}
-            </PopoverDescription>
+            {description !== undefined && (
+              <PopoverDescription className="[text-wrap:pretty] [word-break:auto-phrase]">
+                {description}
+              </PopoverDescription>
+            )}
           </PopoverHeader>
           <PopoverBody>{field}</PopoverBody>
           <PopoverFooter>

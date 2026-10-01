@@ -28,7 +28,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** 提示中：破線の枠。採用（下限・中央・上限）は Secondary、編集して採用と却下は Quiet。 */
+/** 提示中：破線の枠。「下限・中央・上限を使う」は Secondary、「直して使う」と「使わない」は Quiet。 */
 export const Pending: Story = {};
 
 /** 根拠がないとき。 */
@@ -36,18 +36,15 @@ export const NoRationale: Story = {
   args: { suggestion: { ...suggestion, rationale: '', uncertainties: [] } },
 };
 
-/** 採用・却下の後：実線の canvas-subtle の 1 行と「元に戻す」。 */
+/** 使う・使わないの後：実線の canvas-subtle の 1 行と「元に戻す」。 */
 export const Outcome: Story = {
   render: () => (
     <div className="flex flex-col gap-2">
       <SuggestionOutcome onUndo={() => {}}>
-        見積もり 3h を採用しました（提案 2–4h）
+        見積もりを 3h にしました
       </SuggestionOutcome>
       <SuggestionOutcome onUndo={() => {}}>
-        見積もり 2.5h を採用しました（提案 2–4h を編集）
-      </SuggestionOutcome>
-      <SuggestionOutcome onUndo={() => {}}>
-        見積もりの提案 2–4h を却下しました
+        提案を使いませんでした
       </SuggestionOutcome>
     </div>
   ),

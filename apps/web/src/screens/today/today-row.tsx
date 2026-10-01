@@ -61,7 +61,7 @@ type TodayRowProps = {
   onUndoClose: () => void;
   /** 今日はここまで: opens the actual time surface. */
   onPause: () => void;
-  /** 実績を残す: opens the actual time surface. */
+  /** かかった時間を記録: opens the actual time surface. */
   onRecord: () => void;
   /** The `…`, for the actual time surface to sit by. */
   actionsRef?: Ref<HTMLButtonElement> | undefined;
@@ -132,7 +132,7 @@ function TodayRow({
     (done || state === 'paused') && (
       <MenuItem key="record" onClick={onRecord}>
         <Timer aria-hidden />
-        実績を残す
+        かかった時間を記録
       </MenuItem>
     ),
     // Where the detail opens (the rows E works on).
