@@ -14,7 +14,10 @@ import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/toast';
 import { AreaSelect, chosenArea } from '@/components/task/area-select';
+import { Estimate } from '@/components/task/estimate';
+import { TaskMetadata } from '@/components/task/task-metadata';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
+import { TaskRow } from '@/components/task/task-row';
 import { formatDate, formatTime } from '@/lib/date-format';
 import { formatPlanningTotal } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
@@ -34,7 +37,7 @@ import { ActualTime, type ActualTimeMode } from './actual-time';
 import { InterruptRow } from './interrupt-row';
 import { InterruptSheet } from './interrupt-sheet';
 import { OtherDay } from './other-day';
-import { TodayRow } from './today-row';
+import { ItemMetadata, TodayRow } from './today-row';
 import { WeekRow } from './week-row';
 
 // Today (docs/design/patterns.md Today, PRD §5 C). The light screen used
@@ -93,9 +96,10 @@ function ThisDay() {
 
 /**
  * Before the Sprint's first day (confirmed on Sunday evening, say): the
- * date, when it starts, and the week's Goals. Choosing and adding wait for
- * the first day, as the domain keeps them within the period (owner
- * decision in #54).
+ * date, when it starts, the week's Goals and the planned Tasks, read only.
+ * Choosing and adding wait for the first day, as the domain keeps them
+ * within the period (owner decision in #54); the Tasks are what that day's
+ * 今週の残り will hold (#156).
  */
 function BeforeStart({ data }: { data: TodayData }) {
   return (
@@ -121,6 +125,32 @@ function BeforeStart({ data }: { data: TodayData }) {
               <li key={g.area.id} className="flex flex-col gap-1">
                 <AreaIndicator name={g.area.name} color={g.area.color} />
                 <p className="text-reflection text-ink">{g.text}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {data.rest.length > 0 && (
+        <section aria-labelledby="before-plan" className="flex flex-col gap-2">
+          <h2 id="before-plan" className="text-subheading text-ink-muted">
+            今週の計画
+          </h2>
+          <ul className="flex flex-col border-t border-border-soft">
+            {data.rest.map((item) => (
+              <li key={`${item.sprintTask.id}-${item.occurrence?.id ?? ''}`}>
+                <TaskRow
+                  title={item.task.title}
+                  metadata={
+                    <TaskMetadata>
+                      <ItemMetadata item={item} occurrenceDate />
+                    </TaskMetadata>
+                  }
+                  estimate={
+                    item.value.base === 'none' ? undefined : (
+                      <Estimate value={item.value} planned />
+                    )
+                  }
+                />
               </li>
             ))}
           </ul>
