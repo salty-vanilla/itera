@@ -25,7 +25,12 @@ import {
   formatPlanningTotal,
 } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
-import { weekCall, weekText, type WeekName } from '@/lib/week-text';
+import {
+  weekCall,
+  weekNameOnly,
+  weekText,
+  type WeekName,
+} from '@/lib/week-text';
 import type { RunningData, RunningTask } from '@/store/running-view';
 import { useBacklog } from '@/store/use-backlog';
 import { useRunningSprintActions } from '@/store/use-running-sprint';
@@ -198,7 +203,7 @@ function RunningSprint({
                       <li key={t.sprintTask.id}>
                         <RunningRow
                           item={t}
-                          week={data.week}
+                          week={weekNameOnly(data.week)}
                           ended={!running}
                           hasGoal={block.goal !== undefined}
                           // A completed or archived Task has no detail to

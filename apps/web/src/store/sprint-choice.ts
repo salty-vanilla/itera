@@ -1,8 +1,10 @@
 // Which Sprint the Sprint and Retro screens open, and what it is called
 // (#90). Any Sprint can be opened by its number (F25) in the URL
 // (`/sprint?sprint=3`); without one, a screen opens the current Sprint.
-// 「今週」 and 「来週」 are names relative to now, not separate screens.
+// 「先週」, 「今週」 and 「来週」 are names relative to now, not separate
+// screens.
 import {
+  addDays,
   nextUnconfirmedSprintStart,
   sprintEnd,
   sprintNumber,
@@ -10,10 +12,10 @@ import {
   type Sprint,
   type SprintState,
 } from '@itera/domain';
-import type { WeekName } from '@/lib/week-text';
+import type { WeekLabel } from '@/lib/week-text';
 import type { Clock, Records } from './records';
 
-export type { WeekName };
+export type { WeekLabel };
 
 /** A Sprint a screen can open, or the next week before its Planning. */
 export interface SprintRef {
@@ -23,7 +25,7 @@ export interface SprintRef {
   readonly end: LocalDate;
   /** Absent for the next week, whose Planning has not started. */
   readonly sprint?: Sprint;
-  readonly week?: WeekName;
+  readonly week?: WeekLabel;
 }
 
 /** The Sprint a screen shows, and those before and after it. */
@@ -37,24 +39,24 @@ export interface SprintChoice {
  * 「今週」「来週」 (the rule of #90): while a Sprint runs, it is 「今週」
  * and the one after it 「来週」. With none running (the last one in Review
  * or closed), the next to start is 「今週」, so planning next week on
- * Sunday evening keeps its usual words. Any other Sprint has none.
+ * Sunday evening keeps its usual words. The week before 「今週」 is 「先週」
+ * (#168: it only goes in the Sprint Header). Any other Sprint has none.
  */
 export function weekNameOf(
   start: LocalDate,
   records: Records,
   clock: Clock,
-): WeekName | undefined {
+): WeekLabel | undefined {
   const upcoming = nextUnconfirmedSprintStart(
     records.sprints,
     records.user,
     clock.today,
   );
   const active = records.sprints.find((s) => s.state === 'active');
-  if (active !== undefined) {
-    if (start === active.start) return '今週';
-    return start === upcoming ? '来週' : undefined;
-  }
-  return start === upcoming ? '今週' : undefined;
+  const thisWeek = active?.start ?? upcoming;
+  if (start === thisWeek) return '今週';
+  if (active !== undefined && start === upcoming) return '来週';
+  return start === addDays(thisWeek, -7) ? '先週' : undefined;
 }
 
 /** `{ week }` for a view's data, left out for a Sprint with no name. */
@@ -62,7 +64,7 @@ export function weekOf(
   sprint: Sprint,
   records: Records,
   clock: Clock,
-): { week?: WeekName } {
+): { week?: WeekLabel } {
   const week = weekNameOf(sprint.start, records, clock);
   return week === undefined ? {} : { week };
 }

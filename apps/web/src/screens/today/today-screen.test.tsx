@@ -954,8 +954,12 @@ describe('Today — outside the period (#54)', () => {
         name: '振り返りを完了',
       }),
     );
+    // After the Retro, the button is also where 「振り返りを完了」 was (#168).
     await userEvent.click(
-      screen.getByRole('button', { name: 'Sprint 3 の計画を始める' }),
+      within(screen.getByRole('navigation', { name: '次の段階' })).getByRole(
+        'button',
+        { name: 'Sprint 3 の計画を始める' },
+      ),
     );
     await userEvent.click(
       (await screen.findAllByRole('button', { name: 'Sprint 3 を確定' }))[0]!,

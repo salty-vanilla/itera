@@ -9,17 +9,17 @@ const names = (records: Records, clock: Clock) =>
 describe('week names (#90)', () => {
   it('calls the running Sprint 「今週」 and the next week 「来週」', () => {
     const { records, clock } = fixtureSnapshot('today-daytime');
-    expect(names(records, clock)).toEqual(['1:-', '2:今週', '3:来週']);
+    expect(names(records, clock)).toEqual(['1:先週', '2:今週', '3:来週']);
   });
 
   it('calls the next to start 「今週」 while the last is in Review', () => {
     const { records, clock } = fixtureSnapshot('retro-start');
-    expect(names(records, clock)).toEqual(['1:-', '2:-', '3:今週']);
+    expect(names(records, clock)).toEqual(['1:-', '2:先週', '3:今週']);
   });
 
   it('calls the Sprint being planned 「今週」 when none runs', () => {
     const { records, clock } = fixtureSnapshot('planning-pick');
-    expect(names(records, clock)).toEqual(['1:-', '2:今週']);
+    expect(names(records, clock)).toEqual(['1:先週', '2:今週']);
     const planning = records.sprints.find((s) => s.state === 'planning')!;
     expect(weekNameOf(planning.start, records, clock)).toBe('今週');
   });

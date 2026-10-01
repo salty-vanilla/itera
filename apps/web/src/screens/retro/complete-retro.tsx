@@ -136,7 +136,8 @@ function CompleteDialog({
             Sprint {data.number} の振り返りを完了しますか？
           </DialogTitle>
           <DialogDescription>
-            完了すると、この Sprint には実績を足せなくなります。
+            完了すると、書いた内容は変えられず、この Sprint
+            には実績を足せなくなります。
           </DialogDescription>
         </DialogHeader>
         <DialogBody>

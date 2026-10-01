@@ -30,7 +30,7 @@ import {
 } from '@itera/domain';
 import { daysBetween } from '@/lib/date-format';
 import type { Clock, Records } from './records';
-import { nextWeekSprintOf, weekOf, type WeekName } from './sprint-choice';
+import { nextWeekSprintOf, weekOf, type WeekLabel } from './sprint-choice';
 
 export interface RunningArea {
   /** `null` for Tasks without an Area (「領域なし」). */
@@ -93,7 +93,7 @@ export interface RunningData {
   /** 「Sprint 14」 (F25). */
   readonly number: number;
   /** 「今週」; none for one that has ended (#90). */
-  readonly week?: WeekName;
+  readonly week?: WeekLabel;
   readonly today: LocalDate;
   /** 「2日目 / 7日」, absent before the first day and once it has ended. */
   readonly day?: { readonly index: number; readonly count: number };
