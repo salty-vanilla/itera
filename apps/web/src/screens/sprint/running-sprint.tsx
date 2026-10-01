@@ -179,6 +179,8 @@ function RunningSprint({
                     : (block.goal.plannedText ?? null)
                 }
                 removable={false}
+                // An Area with neither a Goal nor a Task is one line (#161).
+                bare={block.tasks.length === 0 && block.goal === undefined}
                 week={week}
                 onSave={
                   block.area.id === null || !running
@@ -398,7 +400,7 @@ function Outlook({
           />
         )}
       </section>
-      {data.criterion?.hadTarget === false && (
+      {data.criterion?.noEffect === true && (
         // Applied, and no planned value came from it: a line, not a frame
         // (#161).
         <p
@@ -416,7 +418,7 @@ function Outlook({
           </span>
         </p>
       )}
-      {data.criterion?.hadTarget === true && (
+      {data.criterion?.noEffect === false && (
         <section
           aria-labelledby={`${ids}-criterion`}
           className="flex flex-col gap-2 rounded-sm bg-canvas-subtle p-4"

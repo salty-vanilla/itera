@@ -341,6 +341,17 @@ describe('Planning — 整える', () => {
       'この領域の目標は任意です。タスクだけでも計画できます。',
     );
 
+    // Cancelling goes back to the line, with the focus on the way in.
+    await userEvent.click(
+      within(study).getByRole('button', { name: '目標を書く: 学習' }),
+    );
+    await userEvent.click(
+      within(study).getByRole('button', { name: 'キャンセル' }),
+    );
+    expect(document.activeElement).toBe(
+      within(study).getByRole('button', { name: '目標を書く: 学習' }),
+    );
+
     await userEvent.click(
       within(study).getByRole('button', { name: '目標を書く: 学習' }),
     );
@@ -353,6 +364,10 @@ describe('Planning — 整える', () => {
       '英語に触れる状態にする',
     );
     expect(within(study).getByText('英語に触れる状態にする')).toBeTruthy();
+    // Saving puts the focus on 編集, where the Goal is.
+    expect(document.activeElement).toBe(
+      within(study).getByRole('button', { name: '目標を編集: 学習' }),
+    );
   });
 
   it('links a Task to the Goal or not; both count in the total (invariant 15)', async () => {

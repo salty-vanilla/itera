@@ -117,11 +117,11 @@ export interface RunningData {
     readonly areaName?: string;
     readonly applied: boolean;
     /**
-     * False when it was applied at confirm and no planned value came from it:
-     * the screen folds it to a line (#161). Not applied: the person chose
-     * that at the Check, so it stays whole.
+     * Applied at confirm, and no planned value came from it: the screen
+     * folds it to a line (#161). Not applied: the person chose that at the
+     * Check, so it stays whole whether or not it had a Task to act on.
      */
-    readonly hadTarget: boolean;
+    readonly noEffect: boolean;
   };
 }
 
@@ -271,9 +271,9 @@ export function runningData(
               ? { areaName: areaOf(scope.areaId).name }
               : {}),
             applied: use.appliedAtConfirm,
-            hadTarget:
-              !use.appliedAtConfirm ||
-              counted.some((t) => t.value.criterionApplied),
+            noEffect:
+              use.appliedAtConfirm &&
+              !counted.some((t) => t.value.criterionApplied),
           },
         }),
   };

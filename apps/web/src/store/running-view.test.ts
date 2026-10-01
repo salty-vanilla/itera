@@ -66,11 +66,11 @@ describe('runningData', () => {
     expect(data?.criterion).toBeUndefined();
   });
 
-  it('knows whether the criterion changed a planned value (#161)', () => {
+  it('knows whether an applied criterion changed a planned value (#161)', () => {
     const { records, clock } = fixtureSnapshot('today-interrupt');
     expect(runningData(records, clock)?.criterion).toMatchObject({
       applied: true,
-      hadTarget: true,
+      noEffect: false,
     });
     // Applied at confirm, but no planned value came from it.
     const none = withActive(records, (s) => ({
@@ -89,9 +89,9 @@ describe('runningData', () => {
     }));
     expect(runningData(none, clock)?.criterion).toMatchObject({
       applied: true,
-      hadTarget: false,
+      noEffect: true,
     });
-    // Switched off by the person: it stays whole.
+    // Switched off by the person: it stays whole, with a Task or without.
     const off = withActive(none, (s) => ({
       ...s,
       ...(s.criterionUse === undefined
@@ -100,7 +100,7 @@ describe('runningData', () => {
     }));
     expect(runningData(off, clock)?.criterion).toMatchObject({
       applied: false,
-      hadTarget: true,
+      noEffect: false,
     });
   });
 
