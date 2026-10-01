@@ -75,6 +75,7 @@ function NextSprint({ choice, steps }: { choice: SprintChoice; steps: Steps }) {
           {weekText(week, 'やることを選び、確定すると Sprint が始まります。')}
         </p>
         {before !== undefined && before.sprint.state !== 'closed' && (
+          // copy-lint-ignore long-sentence -- content.md の型「操作できない理由」の表の文（Issue #90）
           <p className="text-body text-ink-muted">
             確定できるのは、前の Sprint（Sprint {before.number}
             ）の振り返りを完了してからです。
