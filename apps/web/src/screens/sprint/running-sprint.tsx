@@ -409,9 +409,11 @@ function Outlook({
             aria-hidden
             className="mt-0.5 size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
           />
-          計画基準「
-          {criterionName(data.criterion.policy, data.criterion.areaName)}」 ·
-          対象なし
+          <span className="[word-break:auto-phrase]">
+            計画基準「
+            {criterionName(data.criterion.policy, data.criterion.areaName)}」
+            <span className="whitespace-nowrap"> · 対象なし</span>
+          </span>
         </p>
       )}
       {data.criterion?.hadTarget === true && (
