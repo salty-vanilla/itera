@@ -338,7 +338,7 @@ describe('Planning — 計画基準の見せ方 (#105)', () => {
   const outlook = () =>
     screen.getByRole('complementary', { name: '時間の見通し' });
 
-  it.each(['pick', 'shape', 'check'])(
+  it.each(['pick', 'shape'])(
     'shows only the criterion’s name on one line in %s',
     async (stage) => {
       await renderAt(`/sprint?fixture=planning-check&stage=${stage}`);
@@ -359,6 +359,8 @@ describe('Planning — 計画基準の見せ方 (#105)', () => {
 
   it('shows the frame, the Switch and the effect in the check summary', async () => {
     await renderAt('/sprint?fixture=planning-check&stage=check');
+    // The right pane does not say it again (#165).
+    expect(outlook().querySelector('[data-slot="criterion-line"]')).toBeNull();
     const frame = within(summary()).getByRole('region', { name: '計画基準' });
     expect(
       within(frame).getByText(
@@ -398,16 +400,15 @@ describe('Planning — 確かめる', () => {
   // three states (owner decision S5 in #93): a range while it fits or even
   // the lower end is over, two sentences while the difference crosses 0.
   it('compares the total with the available hours in the three states', async () => {
-    await renderAt('/sprint?fixture=planning-check&stage=check');
+    await renderAt('/sprint?fixture=planning-check&stage=pick');
     const outlook = screen.getByRole('complementary', { name: '時間の見通し' });
     const headline = () =>
       within(outlook).getByRole('status').querySelector('p')!;
-    // 確かめる has one field for the hours, in its summary.
-    expect(within(outlook).queryByRole('textbox')).toBeNull();
     const line = () =>
       screen.getByRole('button', { name: /時間の見通しを開く/ });
-    const hours = within(summary()).getByRole('textbox', {
-      name: /使える時間/,
+    // Right under the total, without 「（時間）」 after the name (#165).
+    const hours = within(outlook).getByRole('textbox', {
+      name: /^使える時間/,
     });
     const setHours = async (value: string) => {
       await userEvent.clear(hours);
@@ -445,7 +446,47 @@ describe('Planning — 確かめる', () => {
     expect(within(outlook).getByText('1.25 〜 3.25h').className).toContain(
       'text-danger',
     );
+    // The state says the words only: each number once (#165).
+    expect(
+      within(within(outlook).getByRole('status')).getByText('下限でも超える'),
+    ).toBeTruthy();
+    expect(outlook.textContent?.match(/3\.25h/g)).toHaveLength(1);
     expect(line().textContent).toMatch(/^超過 1.25 〜 3.25h · 下限でも超える/);
+  });
+
+  it('says the numbers in the summary only, in 確かめる (#165)', async () => {
+    await renderAt('/sprint?fixture=planning-check&stage=check');
+    const outlook = screen.getByRole('complementary', { name: '時間の見通し' });
+    // The improvement, the bar and the Areas: no numbers of the difference,
+    // no state, no field.
+    expect(within(outlook).queryByRole('status')).toBeNull();
+    expect(within(outlook).queryByRole('textbox')).toBeNull();
+    expect(outlook.textContent).not.toMatch(/計画値の合計|1\.75h|0\.25h/);
+    expect(
+      within(outlook).getByRole('region', { name: '前回決めた改善策' }),
+    ).toBeTruthy();
+    expect(
+      within(outlook).getByRole('list', { name: '領域ごとの計画値' }),
+    ).toBeTruthy();
+    // Under 1200px the line only opens the Drawer (#139).
+    expect(
+      screen.getByRole('button', { name: /時間の見通しを開く/ }).textContent,
+    ).toBe('時間の見通しを開く');
+
+    const hours = within(summary()).getByRole('textbox', {
+      name: /^使える時間/,
+    });
+    await userEvent.clear(hours);
+    await userEvent.type(hours, '14{Enter}');
+    const state = summary().querySelector('[data-slot="capacity-statement"]')!;
+    expect(state.textContent).toBe('下限でも超える：超過 1.25 〜 3.25h');
+    // Read out from the summary, the one live region in 確かめる.
+    expect(within(summary()).getByRole('status').textContent).toBe(
+      '下限でも超える：超過 1.25 〜 3.25h',
+    );
+    expect(state.className).toContain('text-danger');
+    // 「計画値が下限どおりでも、超過 1.25h です。」 would say it again.
+    expect(summary().textContent?.match(/1\.25/g)).toHaveLength(1);
   });
 
   it('opens with the summary the 確定 Dialog shows, from the same values (#93)', async () => {
@@ -762,6 +803,22 @@ describe('Planning — review fixes', () => {
         '完了・アーカイブした Task を今週から外すと確定できます。',
       ),
     ).toBeNull();
+  });
+
+  it('shows what an Estimate typed in the detail does to the plan, before closing (#165)', async () => {
+    await renderAt(
+      '/sprint?fixture=planning-check&stage=pick&task=task-onboarding',
+    );
+    const detail = await screen.findByRole('dialog');
+    const line = detail.querySelector('[data-slot="detail-capacity"]')!;
+    expect(line.getAttribute('role')).toBe('status');
+    // 15.25–17.25h against 17h; the onboarding Task plans 3–5h.
+    expect(line.textContent).toBe(
+      '時間の見通し下限なら 1.75h 残る · 上限なら 0.25h 超える',
+    );
+    const estimate = within(detail).getByRole('textbox', { name: /見積もり/ });
+    await userEvent.type(estimate, '1{Enter}');
+    expect(line.textContent).toBe('時間の見通し残り 3.75h · 収まる');
   });
 
   it('confirming copies what may change later (invariants 16, 18; MVP 16)', async () => {

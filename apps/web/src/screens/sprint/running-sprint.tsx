@@ -393,8 +393,8 @@ function Outlook({
           <AvailableHoursField
             value={current}
             onChange={onHours}
-            label="今の使える時間（時間）"
-            description="確定した後も変えられます。計画時の値は残ります。"
+            label="今の使える時間"
+            description="時間（h）で入力します。確定した後も変えられます。計画時の値は残ります。"
           />
         )}
       </section>
