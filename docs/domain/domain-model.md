@@ -37,7 +37,7 @@ v0.2 Final は v0.1 の骨格（恒久的な **Task** と、「この Sprint で
 
 ### v0.2 Final で決めたこと
 
-F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F11 は同じ日に、`packages/domain` の実装で見つかった食い違いについて決めた（Issue #20）。F12 も同じ日に決めた（Issue #21）。F13〜F16 も同じ日に、Sprint と Planning の実装で出た境界の場合について決めた（Issue #22）。F17〜F19 も同じ日に、Today の実装で出た境界の場合について決めた（Issue #23）。F20〜F24 も同じ日に、Review と Retro の実装で出た境界の場合について決めた（Issue #24）。F25〜F27 も同じ日に、Backlog の画面の実装で出た表示と操作について決めた（Issue #39）。F28・F29 も同じ日に、Backlog の実装の後に残った点について決めた（Issue #47）。F30・F31 は 2026-09-28 に、Agent 提案の操作について決めた（Issue #40、決定 4A）。F32 も同じ日に、Today の画面の実装で出た数え方について決めた（Issue #41）。F33 は 2026-09-29 に、過去の日の取り消しについて決めた（Issue #53）。F34 も同じ日に、Sprint の開始日より前の Backlog からの完了について決めた（Issue #59）。F35・F36 は 2026-09-30 に、実行中の Sprint の週のうちに次の Sprint を計画したときの持ち越しについて決めた（Issue #89）。F37 は 2026-10-01 に、Today の見送り・外すの取り消しについて決めた（Issue #101、決定シート B12=B）。F38 も同じ日に、記録した割り込みを直す・消すことについて決めた（Issue #102、決定シート B13=A）。F39 も同じ日に、まだ効き始めていない Rule の版を変えることについて決めた（Issue #192）。F40 も同じ日に、今日を選ばずに今週に足す操作の取り消しについて決めた（Issue #155）。F41 も同じ日に、繰り返しをやめることについて決めた（Issue #189）。
+F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F11 は同じ日に、`packages/domain` の実装で見つかった食い違いについて決めた（Issue #20）。F12 も同じ日に決めた（Issue #21）。F13〜F16 も同じ日に、Sprint と Planning の実装で出た境界の場合について決めた（Issue #22）。F17〜F19 も同じ日に、Today の実装で出た境界の場合について決めた（Issue #23）。F20〜F24 も同じ日に、Review と Retro の実装で出た境界の場合について決めた（Issue #24）。F25〜F27 も同じ日に、Backlog の画面の実装で出た表示と操作について決めた（Issue #39）。F28・F29 も同じ日に、Backlog の実装の後に残った点について決めた（Issue #47）。F30・F31 は 2026-09-28 に、Agent 提案の操作について決めた（Issue #40、決定 4A）。F32 も同じ日に、Today の画面の実装で出た数え方について決めた（Issue #41）。F33 は 2026-09-29 に、過去の日の取り消しについて決めた（Issue #53）。F34 も同じ日に、Sprint の開始日より前の Backlog からの完了について決めた（Issue #59）。F35・F36 は 2026-09-30 に、実行中の Sprint の週のうちに次の Sprint を計画したときの持ち越しについて決めた（Issue #89）。F37 は 2026-10-01 に、Today の見送り・外すの取り消しについて決めた（Issue #101、決定シート B12=B）。F38 も同じ日に、記録した割り込みを直す・消すことについて決めた（Issue #102、決定シート B13=A）。F39 も同じ日に、まだ効き始めていない Rule の版を変えることについて決めた（Issue #192）。F40 も同じ日に、今日を選ばずに今週に足す操作の取り消しについて決めた（Issue #155）。F41 も同じ日に、繰り返しをやめることについて決めた（Issue #189）。F42 も同じ日に、選んだ Task に効かない計画基準の確定時の扱いについて決めた（Issue #162）。
 
 | # | 決定 | モデルへの反映 | UI への影響 |
 | --- | --- | --- | --- |
@@ -82,6 +82,7 @@ F7〜F9 は v0.2 Final の後、2026-09-27 に決めた（Issue #18）。F10・F
 | F39 | まだ効き始めていない版を変えるときは、版を増やさずに置き換える | 最新の版の effectiveFrom が新しい版と同じ（まだ効き始めていない）なら、新しい版を足さず、最新の版の型を置き換える。置き換えた型が 1 つ前の版と同じなら、最新の版を消し、1 つ前の版の effectiveTo を外して版を戻す。どちらも Activity に Rule の変更として残す（版は置き換えた版、戻したときは戻った先の版）。効き始めた版は変えない（不変条件 31）。draft が生成済みの回は F7 のとおり作り直す | Backlog：選ぶたびに保存しても、版は次の Sprint の分の 1 つだけ増える |
 | F40 | 今日を選ばずに今週に足した Task（今週へ）は、直後に元に戻せる | 今週へは、今日の選択を作らない週の途中の追加（origin = midSprint、goalLink = unlinked、planSnapshot は追加時、容量の警告なし）。元に戻すと、その SprintTask を記録ごと消す（SprintTask に Planned → [*] を足す）。Task は Sprint 外に戻るので、もう一度今週へ・今日へ入れられる（不変条件 14）。SprintTask が Planned のままで、その SprintTask を選んだ DailySelection がないときだけ。今日へ（SprintTask と DailySelection を同時に作る、不変条件 26）は取り消さない。追加で SprintAreaSnapshot に足した Area はそのまま（F9）。追加と取り消しは Activity に残す | Backlog：行の `…` と Task の詳細に「今週へ」。Toast「「タイトル」を今週に入れました」と「元に戻す」 |
 | F41 | 繰り返しをやめると、まだ確定していない次の Sprint から回を作らず、Task はその後単発になる。回を 1 つも作っていない Rule は外して単発の Task に戻す | 本人が「繰り返しをやめる」と、Rule の最新の版に effectiveTo（まだ確定していない次の Sprint の開始日の前日）を入れ、Rule を Task から外す（Rule は taskId で Task を指したまま残る）。その日より後に効き始める版（まだ効き始めていない版）は消す（F39 と同じ考え方）。その Sprint の Planning（draft）が回を生成していれば、その Task の回（Pending / Excluded）と SprintTask（Draft）を捨てる（F7 と同じく、F15 で置き換えた単発の選択は戻さない）。確定済みの Sprint の回と SprintTask は変えない（不変条件 31）。Task と過去の回の記録は残る。effectiveTo までは今までどおり繰り返しとして扱う（その Sprint の回は Today で回ごとに完了し、Backlog からは完了にも今日へにもできない）。effectiveTo より後の Sprint では単発の Task として扱う（Planning で選べ、完了できる。もう一度繰り返しにもできる）。やめた Rule は変えられず、もう一度やめることもできない。draft の回を捨てた後に Rule の回が 1 つも残らない（作ったばかり）なら、Rule を消し、すぐに単発に戻す。どちらも Activity に残す（やめた版と最後の日、または Rule を外したこと） | Backlog の Task 詳細：繰り返しの欄に「繰り返しをやめる」。最後の日までは行を「毎週 土 · 次は 10/3 (土)（10/4 (日) まで）」と出して切り口「繰り返し」に残し、過ぎたら行の ○ が戻る。外したときはすぐ ○ が戻る |
+| F42 | 選んだ Task に効かない計画基準は、確定時に適用しない | 確定時に、Check で使うとしていても、基準が当たった計画値（幅のある提案から、基準の対象の Area で作った計画値）が 1 件もなければ、CriterionUse.appliedAtConfirm = false にする。CriterionUse はできる（不変条件 36）。週の途中の追加にも基準は当たらない（F3） | Planning：対象がなければ基準を出さない（Issue #161）。週の途中に足した幅のある Task にも当たらない |
 
 ### 用語
 
@@ -277,7 +278,7 @@ stateDiagram-v2
   Active --> Replaced: Retro で「置き換える」（replacedBy）
 ```
 
-- Active は同時に 1 つまで。Active がある間に確定した Sprint には必ず CriterionUse が 1 件できる。Planning の Check で外した場合は appliedAtConfirm = false。週の途中の追加も appliedAtConfirm に従い、true なら追加分にも基準を当て、false なら当てない。
+- Active は同時に 1 つまで。Active がある間に確定した Sprint には必ず CriterionUse が 1 件できる。Planning の Check で外した場合と、基準が当たる計画値が 1 件もない場合（F42）は appliedAtConfirm = false。週の途中の追加も appliedAtConfirm に従い、true なら追加分にも基準を当て、false なら当てない。
 - 確定後に基準を外す操作はない（MVP）。適用しなかった Sprint でも、Retro で続ける / 終える / 置き換えるを選ぶ。
 
 ### Sprint

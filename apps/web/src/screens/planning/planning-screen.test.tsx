@@ -598,12 +598,12 @@ describe('Planning — 計画基準の見せ方 (#105)', () => {
     await userEvent.click(
       within(dialog).getByRole('button', { name: 'Sprint 2 を確定' }),
     );
-    // How it is applied is not changed by what the screens show (CriterionUse).
+    // With no Task it acts on, the criterion is not applied (F42, #162).
     await waitFor(() =>
       expect(
         lastSnapshot().records.sprints.find((x) => x.state === 'active')
           ?.criterionUse,
-      ).toMatchObject({ appliedAtConfirm: true }),
+      ).toMatchObject({ appliedAtConfirm: false }),
     );
   });
 

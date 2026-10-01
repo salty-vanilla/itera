@@ -4,7 +4,11 @@
 import { isOverdue } from './backlog';
 import type { Occurrence } from './occurrence';
 import { sprintTaskValue, type ActiveCriterion } from './planning';
-import type { PlanningValue } from './planning-value';
+import {
+  criterionCovers,
+  type CriterionPolicy,
+  type PlanningValue,
+} from './planning-value';
 import type { Instant, LocalDate } from './shared/time';
 import { isCounted, type Sprint, type SprintTask } from './sprint';
 import { isRecurring, type Task } from './task';
@@ -214,4 +218,33 @@ export function criterionEffect(
     hi += withIt.hi - without.hi;
   }
   return { count, delta: { lo, hi } };
+}
+
+/**
+ * Whether a confirmed Sprint has a value the criterion acted on, or one
+ * planned at confirm from a range in its scope (so it would have acted on
+ * it, had it been applied). False when the criterion had nothing to act on:
+ * the running Sprint shows it as 「対象なし」 (#161, F42).
+ */
+export function criterionHasTarget(
+  sprint: Sprint,
+  input: {
+    readonly tasks: readonly Task[];
+    readonly policy: CriterionPolicy;
+  },
+): boolean {
+  return sprint.tasks.some((sprintTask) => {
+    const value = sprintTask.planSnapshot?.value;
+    if (!isCounted(sprintTask) || value === undefined) return false;
+    if (value.criterionApplied) return true;
+    if (sprintTask.origin !== 'planning' || value.base !== 'suggestion') {
+      return false;
+    }
+    const task = input.tasks.find((t) => t.id === sprintTask.taskId);
+    return (
+      task !== undefined &&
+      value.lo < value.hi &&
+      criterionCovers(input.policy, task)
+    );
+  });
 }

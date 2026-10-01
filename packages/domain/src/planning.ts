@@ -579,7 +579,8 @@ export interface ConfirmSprintInput {
  * no other Sprint is active (invariant 11). Copies what may change later:
  * each SprintTask's plan (invariant 16), Goal texts, available hours and
  * Area names (invariant 18), and how the active criterion was treated
- * (invariant 36). A linked SprintTask whose Area has no Goal becomes
+ * (invariant 36). The criterion counts as applied only if it acted on a
+ * planned value (F42). A linked SprintTask whose Area has no Goal becomes
  * unlinked.
  */
 export function confirmSprint(
@@ -612,6 +613,9 @@ export function confirmSprint(
   const criterion = input.applyCriterion ? input.criterion : undefined;
 
   const planned: SprintTask[] = [];
+  // Whether the criterion acted on any planned value: if it covers none of
+  // the chosen Tasks, it is not applied (F42).
+  let criterionActed = false;
   for (const sprintTask of sprint.tasks) {
     if (sprintTask.outcome !== 'draft') {
       planned.push(sprintTask);
@@ -628,11 +632,13 @@ export function confirmSprint(
         `Task ${task.id} is ${task.lifecycle}; unselect it before confirming.`,
       );
     }
+    const planSnapshot = planSnapshotOf(task, sprintTask, criterion, ctx);
+    if (planSnapshot.value.criterionApplied) criterionActed = true;
     planned.push({
       ...sprintTask,
       outcome: 'planned',
       goalLink: goalLinkAtConfirm(sprint, sprintTask, task),
-      planSnapshot: planSnapshotOf(task, sprintTask, criterion, ctx),
+      planSnapshot,
     });
   }
 
@@ -652,7 +658,7 @@ export function confirmSprint(
       ? undefined
       : {
           criterionId: input.criterion.id,
-          appliedAtConfirm: input.applyCriterion,
+          appliedAtConfirm: criterionActed,
         };
 
   const confirmed: Sprint = {
