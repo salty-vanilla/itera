@@ -24,6 +24,21 @@ describe('todayData', () => {
     expect(rest.some((r) => r.task.id === 'task-paper')).toBe(false);
   });
 
+  it('keeps 昨日の続き and today’s choices in the plan, which is the week before its first day (#156)', () => {
+    const { records, clock } = fixtureSnapshot('today-interrupt');
+    const data = todayData(records, clock);
+    const plan = data?.plan ?? [];
+    // The plan is every planned Task and pending occurrence; the rest is the
+    // plan less what is chosen today or continued from yesterday.
+    expect(plan.some((p) => p.task.id === 'task-paper')).toBe(true);
+    expect(plan.length).toBeGreaterThan(data?.rest.length ?? 0);
+    expect(plan.filter((p) => data?.rest.includes(p))).toEqual(data?.rest);
+    const ids = plan.map((p) => p.sprintTask.id);
+    expect(data?.continuation.every((c) => ids.includes(c.sprintTask.id))).toBe(
+      true,
+    );
+  });
+
   it('hides a SprintTask removed from the Sprint, with its selection (F13)', () => {
     const { records, clock } = fixtureSnapshot('today-interrupt');
     const removed = withSprint(records, (s) => ({
