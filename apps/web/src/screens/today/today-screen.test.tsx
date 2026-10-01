@@ -17,6 +17,7 @@ import type { StoreSnapshot } from '@/store/record-store';
 afterEach(() => {
   cleanup();
   clockOverride = undefined;
+  vi.unstubAllGlobals();
 });
 beforeEach(() => {
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
@@ -672,28 +673,57 @@ describe('Today — adding and interrupts', () => {
     expect(selectionOf(task?.id ?? '')?.origin).toBe('midSprint');
   });
 
-  it('notes an interrupt without changing today (invariant 29)', async () => {
-    await renderAt('/today?fixture=today-daytime');
-    const before = sprint().dailySelections;
-    await userEvent.click(
-      screen.getByRole('button', { name: '割り込みを記録' }),
-    );
-    await userEvent.type(
-      await screen.findByRole('textbox', { name: /メモ/ }),
-      '来客対応',
-    );
-    await userEvent.type(
-      screen.getByRole('textbox', { name: /かかった時間/ }),
-      '15',
-    );
-    await userEvent.click(screen.getByRole('button', { name: '記録する' }));
-    expect(sprint().interrupts.at(-1)).toMatchObject({
-      text: '来客対応',
-      minutes: 15,
-    });
-    expect(sprint().dailySelections).toEqual(before);
-    expect(within(region('割り込み')).getByText('来客対応')).toBeTruthy();
-  });
+  it.each([
+    ['compact', false],
+    ['medium and up', true],
+  ])(
+    'notes an interrupt without changing today, with a Toast and 見る (invariant 29, #157), %s',
+    async (_name, medium) => {
+      if (!medium) {
+        vi.stubGlobal(
+          'matchMedia',
+          (query: string) =>
+            ({
+              matches: false,
+              media: query,
+              addEventListener: () => {},
+              removeEventListener: () => {},
+            }) as unknown as MediaQueryList,
+        );
+      }
+      await renderAt('/today?fixture=today-daytime');
+      const before = sprint().dailySelections;
+      await userEvent.click(
+        screen.getByRole('button', { name: '割り込みを記録' }),
+      );
+      await userEvent.type(
+        await screen.findByRole('textbox', { name: /メモ/ }),
+        '来客対応',
+      );
+      await userEvent.type(
+        screen.getByRole('textbox', { name: /かかった時間/ }),
+        '15',
+      );
+      await userEvent.click(screen.getByRole('button', { name: '記録する' }));
+      expect(sprint().interrupts.at(-1)).toMatchObject({
+        text: '来客対応',
+        minutes: 15,
+      });
+      expect(sprint().dailySelections).toEqual(before);
+      expect(within(region('割り込み')).getByText('来客対応')).toBeTruthy();
+      const toast = screen
+        .getByText('割り込みを記録しました')
+        .closest<HTMLElement>('[data-slot="toast"]')!;
+      await userEvent.click(
+        within(toast).getByRole('button', { name: '見る' }),
+      );
+      expect(document.activeElement).toBe(
+        within(row('割り込み', '来客対応')).getByRole('button', {
+          name: /^操作: 割り込み/,
+        }),
+      );
+    },
+  );
 });
 
 describe('Today — editing and deleting interrupts (F38)', () => {

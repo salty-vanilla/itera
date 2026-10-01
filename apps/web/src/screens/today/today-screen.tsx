@@ -274,6 +274,25 @@ function TodayView({ data }: { data: TodayData }) {
         ?.focus(),
     );
   };
+  // 記録する: the list is below the fold, so the Toast says it went through
+  // and 「見る」 takes the focus to the new note (#157).
+  const noteInterrupt = (text: string, minutes: number | undefined) => {
+    if (!actions.noteInterrupt(text, minutes)) return false;
+    toast.show({
+      kind: 'interrupt-noted',
+      title: '割り込みを記録しました',
+      action: {
+        label: '見る',
+        onClick: () =>
+          document
+            .querySelector<HTMLElement>(
+              '[data-interrupt]:last-child [data-action="interrupt-actions"]',
+            )
+            ?.focus(),
+      },
+    });
+    return true;
+  };
   // 今日は見送る and 今日の予定から外す from the `…`: the row moves to
   // 今日はもうやらない, with 「元に戻す」 in a Toast as well as the row's own
   // 「取り消す」 (F37, #163).
@@ -660,7 +679,7 @@ function TodayView({ data }: { data: TodayData }) {
       <InterruptSheet
         open={interrupting}
         onOpenChange={setInterrupting}
-        onSubmit={(text, minutes) => actions.noteInterrupt(text, minutes)}
+        onSubmit={noteInterrupt}
       />
       {editingNote !== undefined && (
         <InterruptSheet
