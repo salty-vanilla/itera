@@ -29,6 +29,11 @@ type EstimateProps = {
    */
   inline?: boolean;
   /**
+   * Inline beside 「サブタスクの合計」: the count does not say 「サブタスク」
+   * again (「2.5h（1件は見積もりなし）」).
+   */
+  subtasksNamed?: boolean;
+  /**
    * For an unset value on a row: the words are a button, named
    * 「見積もりを入れる: タスク名」, that opens the Task at its Estimate.
    */
@@ -40,6 +45,7 @@ function Estimate({
   value,
   planned = false,
   inline = false,
+  subtasksNamed = false,
   enter,
   className,
 }: EstimateProps) {
@@ -81,7 +87,7 @@ function Estimate({
   const stack = missing > 0 && !inline;
   const text = stack
     ? formatRange(value.lo, value.hi)
-    : formatPlanningValue(value);
+    : formatPlanningValue(value, { subtasksNamed });
   const stacked = stack && 'flex-col items-end gap-0';
   // Two lines under 768px, so that the note does not take the title's
   // room (#162).

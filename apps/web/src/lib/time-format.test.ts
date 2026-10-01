@@ -102,6 +102,20 @@ describe('formatPlanningValue', () => {
         computedAt,
       }),
     ).toBe('2.5h（サブタスク 1件は見積もりなし）');
+    // Beside 「サブタスクの合計」, 「サブタスク」 is not said twice (#162).
+    expect(
+      formatPlanningValue(
+        {
+          base: 'subtasks',
+          lo: 2.5,
+          hi: 2.5,
+          unestimatedSubtasks: 1,
+          criterionApplied: false,
+          computedAt,
+        },
+        { subtasksNamed: true },
+      ),
+    ).toBe('2.5h（1件は見積もりなし）');
   });
 
   it('writes a suggestion range as it is', () => {

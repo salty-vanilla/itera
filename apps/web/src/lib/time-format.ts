@@ -97,13 +97,22 @@ function withUnestimated(text: string, count: number): string {
   return count === 0 ? text : `${text}（ほかに${UNESTIMATED} ${count}件）`;
 }
 
-/** A planning value (計画の時間), with the subtasks left out of a subtask sum. */
-export function formatPlanningValue(value: PlanningValue): string {
+/**
+ * A planning value (計画の時間), with the subtasks left out of a subtask sum.
+ * Where the value is already named 「サブタスクの合計」, `subtasksNamed` leaves
+ * 「サブタスク」 out of the count: 「2.5h（1件は見積もりなし）」.
+ */
+export function formatPlanningValue(
+  value: PlanningValue,
+  options: { subtasksNamed?: boolean } = {},
+): string {
   if (value.base === 'none') return UNESTIMATED;
   const text = formatRange(value.lo, value.hi);
-  return value.base === 'subtasks' && value.unestimatedSubtasks > 0
-    ? `${text}（${formatUnestimatedSubtasks(value.unestimatedSubtasks)}）`
-    : text;
+  const missing = value.base === 'subtasks' ? value.unestimatedSubtasks : 0;
+  if (missing === 0) return text;
+  return options.subtasksNamed === true
+    ? `${text}（${missing}件は${UNESTIMATED}）`
+    : `${text}（${formatUnestimatedSubtasks(missing)}）`;
 }
 
 /**

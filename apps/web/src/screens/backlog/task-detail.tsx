@@ -602,7 +602,11 @@ function TaskDetail({
                     label={
                       <span className="inline-flex flex-wrap items-center gap-2">
                         サブタスクの合計
-                        <Estimate value={facts.subtaskValue} inline />
+                        <Estimate
+                          value={facts.subtaskValue}
+                          inline
+                          subtasksNamed
+                        />
                       </span>
                     }
                   />

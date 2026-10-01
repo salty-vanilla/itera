@@ -1058,7 +1058,11 @@ describe('Today — 計画に使う時間 in the detail (#96)', () => {
     );
     const sum = within(group).getByRole('radio', { name: /サブタスクの合計/ });
     expect(sum.closest('[data-slot="radio-item"]')?.textContent).toContain(
-      '2.5h（サブタスク 1件は見積もりなし）',
+      '2.5h（1件は見積もりなし）',
+    );
+    // 「サブタスク」 is not said twice (#162).
+    expect(sum.closest('[data-slot="radio-item"]')?.textContent).not.toContain(
+      '（サブタスク',
     );
     // Right under the subtasks, not above them.
     const subtasks = within(detail).getByText('結果を共有する');
