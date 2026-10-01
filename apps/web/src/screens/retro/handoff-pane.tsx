@@ -118,13 +118,10 @@ function HandoffPane({
             improvement === undefined ? (
               '次に試すことを書くと選べます。'
             ) : (
-              // The example stays whole when the line breaks.
+              // The example breaks between phrases: kept whole, it is wider
+              // than the column at 390px.
               <span className="block [text-wrap:pretty] [word-break:auto-phrase]">
-                次に試すことが
-                <span className="whitespace-nowrap">
-                  「見積もりがないときは提案の多めの値で計画する」
-                </span>
-                のような形なら、計画のルールにできます。
+                次に試すことが「見積もりがないときは提案の多めの値で計画する」のような形なら、計画のルールにできます。
               </span>
             )
           }

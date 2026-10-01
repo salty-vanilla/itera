@@ -385,7 +385,11 @@ function Headline({
       {headline.map((part) => (
         <span key={partText(part)} className="contents">
           {part.lead !== undefined && (
-            <span className="text-label text-ink-muted">{part.lead}</span>
+            // As wide as the longest lead, so that the numbers stay put
+            // when the state changes.
+            <span className="min-w-[7em] text-label text-ink-muted">
+              {part.lead}
+            </span>
           )}
           {part.value !== undefined && (
             <span

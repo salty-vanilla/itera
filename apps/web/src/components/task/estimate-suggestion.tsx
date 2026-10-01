@@ -162,33 +162,39 @@ function EstimateSuggestion({
           </div>
         </form>
       ) : (
-        <div className="flex flex-wrap gap-2">
-          {bounds.map((bound, index) => (
+        <div className="flex flex-col gap-2">
+          {/* The three values together, one under another, so that they
+              never break apart at any width (#234). */}
+          <div className="flex flex-col items-start gap-2">
+            {bounds.map((bound, index) => (
+              <Button
+                key={bound}
+                ref={index === 0 ? firstRef : undefined}
+                size="sm"
+                onClick={() => onAdopt(bound)}
+              >
+                {`${BOUND_WORDS[bound]}の ${formatHours(boundValue(suggestion, bound))} を使う`}
+              </Button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2">
             <Button
-              key={bound}
-              ref={index === 0 ? firstRef : undefined}
+              ref={editRef}
               size="sm"
-              onClick={() => onAdopt(bound)}
+              variant="quiet"
+              onClick={() => {
+                // Always start from the middle of this suggestion.
+                setHours(String(mid));
+                setError(undefined);
+                setEditing(true);
+              }}
             >
-              {`${BOUND_WORDS[bound]}の ${formatHours(boundValue(suggestion, bound))} を使う`}
+              直して使う
             </Button>
-          ))}
-          <Button
-            ref={editRef}
-            size="sm"
-            variant="quiet"
-            onClick={() => {
-              // Always start from the middle of this suggestion.
-              setHours(String(mid));
-              setError(undefined);
-              setEditing(true);
-            }}
-          >
-            直して使う
-          </Button>
-          <Button size="sm" variant="quiet" onClick={onReject}>
-            使わない
-          </Button>
+            <Button size="sm" variant="quiet" onClick={onReject}>
+              使わない
+            </Button>
+          </div>
         </div>
       )}
     </section>
