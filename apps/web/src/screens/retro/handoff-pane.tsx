@@ -204,7 +204,7 @@ function CarryOverList({ data }: { data: RetroData }) {
       aria-labelledby="handoff-carry-over"
       className="flex flex-col gap-2"
     >
-      <h2 id="handoff-carry-over" className="text-heading text-ink">
+      <h2 id="handoff-carry-over" className="text-label text-ink-muted">
         持ち越し {tasks.length}件
       </h2>
       <ul className="flex flex-col gap-1 text-body text-ink">
