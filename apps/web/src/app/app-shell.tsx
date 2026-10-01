@@ -4,6 +4,7 @@ import { useRef, type ReactElement, type ReactNode } from 'react';
 import { Navigation, type NavigationItem } from '@/components/ui/navigation';
 import type { ScreenId } from '@/fixtures/states';
 import { isPlainClick } from '@/lib/plain-click';
+import { useFocusedRowInView } from './use-focused-row-in-view';
 import { useToastClearance } from './use-toast-clearance';
 import { useAppOverview } from '@/store/use-app-overview';
 import { screens } from './screens';
@@ -27,6 +28,7 @@ function AppShell({ children }: { children: ReactNode }) {
   const { backlogCount } = useAppOverview();
   const mainRef = useRef<HTMLElement>(null);
   useToastClearance(mainRef);
+  useFocusedRowInView(mainRef);
 
   const items: NavigationItem[] = screens.map((screen) => ({
     id: screen.id,
