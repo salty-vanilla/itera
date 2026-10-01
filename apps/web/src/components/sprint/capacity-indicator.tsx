@@ -154,6 +154,42 @@ export function capacityHeadlineSentences(
 }
 
 /**
+ * How a planned total stood against the available hours, as a fact of the
+ * week (Retro, #167): 「下限でも 0.25h 超える」, 「下限なら 1.75h 残る · 上限なら
+ * 0.25h 超える」 (the headline's two sentences), 「上限でも 1h 残る」. Words
+ * only: no tone, so never `danger`.
+ */
+export function capacityRelationSentences(
+  capacity: Capacity,
+): readonly string[] {
+  const { remaining, status } = capacity;
+  if (status === 'exceeds') {
+    return [`下限でも ${formatHours(-remaining.hi, { total: true })} 超える`];
+  }
+  if (status === 'mayExceed') {
+    return capacityHeadlineSentences(capacityHeadline(capacity));
+  }
+  return [
+    remaining.lo === 0
+      ? '上限でちょうど収まる'
+      : `上限でも ${formatHours(remaining.lo, { total: true })} 残る`,
+  ];
+}
+
+/**
+ * Short sentences joined by 「 · 」: the line breaks only between them, so a
+ * number never leaves its words.
+ */
+function Sentences({ items }: { items: readonly string[] }) {
+  return items.map((item, i) => (
+    <Fragment key={item}>
+      {i > 0 && ' · '}
+      <span className="whitespace-nowrap">{item}</span>
+    </Fragment>
+  ));
+}
+
+/**
  * The state where no headline is shown (the 確かめる summary, the 確定
  * Dialog): the statement, and while the difference crosses 0 the headline's
  * two sentences after it, each number said once: 「超える可能性：下限なら
@@ -236,12 +272,7 @@ function CapacityStatement({
           <span className="whitespace-nowrap">
             {statement.text.slice(0, statement.text.indexOf('：') + 1)}
           </span>
-          {statement.sentences.map((sentence, i) => (
-            <Fragment key={sentence}>
-              {i > 0 && ' · '}
-              <span className="whitespace-nowrap">{sentence}</span>
-            </Fragment>
-          ))}
+          <Sentences items={statement.sentences} />
         </span>
       )}
     </Tag>
@@ -494,5 +525,5 @@ function CapacityBar({
   );
 }
 
-export { AvailableHoursField, CapacityIndicator, CapacityStatement };
+export { AvailableHoursField, CapacityIndicator, CapacityStatement, Sentences };
 export type { AreaSegment, CapacityIndicatorProps };

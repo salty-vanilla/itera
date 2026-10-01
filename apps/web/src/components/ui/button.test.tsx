@@ -13,6 +13,32 @@ describe('Button', () => {
     expect(button.className).toContain('border-border-strong');
   });
 
+  it('is a plain action without pressed, and an inverted toggle while on', () => {
+    const { rerender } = render(
+      <Button variant="quiet">振り返りに使う</Button>,
+    );
+    const button = screen.getByRole('button', { name: '振り返りに使う' });
+    expect(button.hasAttribute('aria-pressed')).toBe(false);
+    rerender(
+      <Button variant="quiet" pressed={false}>
+        振り返りに使う
+      </Button>,
+    );
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+    expect(button.className).not.toContain('bg-primary');
+    rerender(
+      <Button variant="quiet" pressed>
+        振り返りに使う
+      </Button>,
+    );
+    expect(button.getAttribute('aria-pressed')).toBe('true');
+    // The ink fill and its own hover win over the quiet ones (DESIGN.md
+    // Selected).
+    expect(button.className).toContain('bg-primary');
+    expect(button.className).toContain('hover:bg-primary-hover');
+    expect(button.className).not.toContain('hover:bg-surface-hover');
+  });
+
   it('stays focusable when disabled and ignores presses', async () => {
     const onClick = vi.fn();
     render(

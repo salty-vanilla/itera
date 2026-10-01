@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   capacityHeadline,
   capacityHeadlineSentences,
+  capacityRelationSentences,
   capacityStatement,
   capacityStatusLine,
 } from './capacity-indicator';
@@ -44,5 +45,19 @@ describe('capacityHeadline (owner decision S5 in #93)', () => {
     // Otherwise the line is the statement itself.
     const over = capacityOf({ lo: 17, hi: 19 }, 14);
     expect(capacityStatusLine(over)).toEqual(capacityStatement(over));
+  });
+});
+
+describe('capacityRelationSentences (Retro, #167)', () => {
+  const relation = (lo: number, hi: number, available: number) =>
+    capacityRelationSentences(capacityOf({ lo, hi }, available)).join(' · ');
+
+  it('says how the plan stood, with the end that decides it', () => {
+    expect(relation(17.25, 20.25, 17)).toBe('下限でも 0.25h 超える');
+    expect(relation(15.25, 17.25, 17)).toBe(
+      '下限なら 1.75h 残る · 上限なら 0.25h 超える',
+    );
+    expect(relation(15, 16, 17)).toBe('上限でも 1h 残る');
+    expect(relation(15, 17, 17)).toBe('上限でちょうど収まる');
   });
 });

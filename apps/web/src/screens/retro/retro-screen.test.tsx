@@ -1107,8 +1107,38 @@ describe('Retro — the plan against what happened (#167)', () => {
       '計画の幅の中',
     );
     expect(rowOf('API 設計のレビュー').textContent).toContain('計画と同じ');
-    // No actual time, no difference.
-    expect(document.body.textContent).not.toMatch(/多い|少ない.*未入力/);
+  });
+
+  it('has no difference on a row without actual time', async () => {
+    // The actual time of 「API 設計のレビュー」 left out of the records.
+    change = (snapshot) => {
+      const task = snapshot.records.tasks.find(
+        (t) => t.title === 'API 設計のレビュー',
+      )!;
+      return {
+        ...snapshot,
+        records: {
+          ...snapshot.records,
+          sprints: snapshot.records.sprints.map((s) => {
+            const st = s.tasks.find((t) => t.taskId === task.id);
+            return st === undefined
+              ? s
+              : {
+                  ...s,
+                  actualTimes: s.actualTimes.filter(
+                    (a) => a.sprintTaskId !== st.id,
+                  ),
+                };
+          }),
+        },
+      };
+    };
+    await renderAt('/retro?fixture=retro-start');
+    const row = rowOf('API 設計のレビュー');
+    expect(row.textContent).toContain('未入力');
+    expect(row.textContent).not.toMatch(
+      /計画と同じ|計画より|幅の中|より .* (多い|少ない)/,
+    );
   });
 
   it('inverts 振り返りに使う when on, and counts what is marked', async () => {

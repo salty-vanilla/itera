@@ -1,10 +1,4 @@
-import type {
-  AreaId,
-  Capacity,
-  RetroPin,
-  SelfAssessment,
-  TaskFact,
-} from '@itera/domain';
+import type { AreaId, RetroPin, SelfAssessment, TaskFact } from '@itera/domain';
 import { Info, Timer } from 'lucide-react';
 import { Fragment, useId, useRef, type ReactNode } from 'react';
 import { semanticIcons } from '@/components/ui/icon';
@@ -12,8 +6,8 @@ import { AreaIndicator } from '@/components/ui/area-indicator';
 import { Button } from '@/components/ui/button';
 import { Radio, RadioGroup } from '@/components/ui/radio-group';
 import {
-  capacityHeadline,
-  capacityHeadlineSentences,
+  capacityRelationSentences,
+  Sentences,
 } from '@/components/sprint/capacity-indicator';
 import { SprintSummary } from '@/components/sprint/sprint-summary';
 import { criterionName } from '@/lib/criterion-text';
@@ -187,7 +181,9 @@ function FactsPane({
                   />
                   {facts.capacity !== undefined && (
                     <span className="block">
-                      <Sentences items={capacityWords(facts.capacity)} />
+                      <Sentences
+                        items={capacityRelationSentences(facts.capacity)}
+                      />
                     </span>
                   )}
                 </>
@@ -603,7 +599,9 @@ function TaskTable({
             <th scope="col" className={cn(num, 'font-normal')}>
               計画値
             </th>
-            <th scope="col" className={cn(num, 'font-normal')}>
+            {/* The end padding keeps 実績 and its difference apart from
+                the result's words, which start right after (#167). */}
+            <th scope="col" className={cn(num, 'pe-4 font-normal')}>
               実績
             </th>
             <th
@@ -643,7 +641,7 @@ function TaskTable({
                   </span>
                 ))}
               </td>
-              <td className={num}>
+              <td className={cn(num, 'pe-4')}>
                 {t.actualHours > 0 ? formatHours(t.actualHours) : '未入力'}
                 {/* 計画時との差, under the value it is about (#167). */}
                 <DifferenceNote fact={t} />
@@ -818,36 +816,6 @@ function DifferenceNote({ fact }: { fact: TaskFact }) {
       {text}
     </span>
   );
-}
-
-/**
- * The planned total against the hours entered when planning (#167), in the
- * words of Planning: 「下限でも 0.25h 超える」, 「下限なら 1.75h 残る · 上限なら
- * 0.25h 超える」, 「上限でも 1h 残る」.
- */
-function capacityWords(capacity: Capacity): readonly string[] {
-  const { remaining, status } = capacity;
-  if (status === 'exceeds') {
-    return [`下限でも ${formatHours(-remaining.hi, { total: true })} 超える`];
-  }
-  if (status === 'mayExceed') {
-    return capacityHeadlineSentences(capacityHeadline(capacity));
-  }
-  return [
-    remaining.lo === 0
-      ? '上限でちょうど収まる'
-      : `上限でも ${formatHours(remaining.lo, { total: true })} 残る`,
-  ];
-}
-
-/** Short sentences joined by 「 · 」, breaking only between them. */
-function Sentences({ items }: { items: readonly string[] }) {
-  return items.map((item, i) => (
-    <Fragment key={item}>
-      {i > 0 && ' · '}
-      <span className="whitespace-nowrap">{item}</span>
-    </Fragment>
-  ));
 }
 
 /** 「見送り 2回 · 今日はここまで 1回」 under the outcome, if any. */
