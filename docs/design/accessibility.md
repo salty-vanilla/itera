@@ -1,6 +1,6 @@
 # アクセシビリティ
 
-更新：2026-10-01（今日以外の日の「過去」「未来」の読み上げ、日付の入力、Issue #90）。2026-09-30（タスクの詳細を開いたときのフォーカス、Issue #95。□ の読み上げの週の語、Sprint Header と今日の日付の前後の矢印、Issue #90）。2026-09-27（Dialog の初期フォーカスと `menuitemradio`、Issue #9。リストの Space の対象を Backlog 画面と Planning で分けた、Issue #47）。2026-09-26 に DESIGN.md v0.2 から分離。
+更新：2026-10-01（スキップリンクと画面を移ったときのフォーカス、Issue #154。今日以外の日の「過去」「未来」の読み上げ、日付の入力、Issue #90）。2026-09-30（タスクの詳細を開いたときのフォーカス、Issue #95。□ の読み上げの週の語、Sprint Header と今日の日付の前後の矢印、Issue #90）。2026-09-27（Dialog の初期フォーカスと `menuitemradio`、Issue #9。リストの Space の対象を Backlog 画面と Planning で分けた、Issue #47）。2026-09-26 に DESIGN.md v0.2 から分離。
 
 DADS の品質基準（WCAG 2.2 AA）を下限にする。後から足すのではなく、部品の仕様に含める。色のコントラストと状態の見た目は [DESIGN.md](../../DESIGN.md) の Colors と Components。一次資料の引き方は `design-references` Skill。
 
@@ -15,6 +15,8 @@ DADS の品質基準（WCAG 2.2 AA）を下限にする。後から足すので�
 - 全要素共通：`outline: 2px solid var(--focus); outline-offset: 2px`（`:focus-visible`）。リスト内・タブ・メニュー項目は `outline-offset: -2px`。
 - フォーカスを消すスタイル（`outline: none` だけ）を書かない。
 - Dialog とモーダル Drawer は、開いたらフォーカスを中に移し、Tab を閉じ込め、閉じたら呼び出し元に戻す。Esc で閉じる。移す先は、Dialog は入力があっても最も安全な操作（[DESIGN.md](../../DESIGN.md) の Dialog。確定では「戻って調整」）、Drawer と Popover は最初の入力（なければ最も安全な操作）。ただしタスクの詳細の Drawer は、見出し（Task のタイトル。`tabindex="-1"`）に移し、どの欄にも入れない（見るだけで開いたときに書き換えそうにならず、compact でキーボードが出ない）。行の E で開いたときだけ Estimate の欄に移す（[patterns.md](patterns.md) の Backlog Organize）。
+- アプリのシェルの先頭に「本文へ移動」のスキップリンクを置く。フォーカスがあるときだけ左上に Secondary Button の形で見え、押すと、画面を移ったときと同じく本文の見出し（`h1`）にフォーカスを移す。`main` 自体はフォーカスを受けない（受けると、そこで押したキーが Planning の N などのショートカットに届かない）。
+- ナビやブラウザの戻る・進むで画面を移ったら、フォーカスを移った先の画面の見出し（`h1`。`tabindex="-1"`）に置き、見出しを読ませる。最初に開いた画面ではフォーカスを動かさない（最初の Tab でスキップリンクに届く）。Filter・日付・詳細のように同じ画面の中で変わるときは動かさない。
 
 ## キーボード
 

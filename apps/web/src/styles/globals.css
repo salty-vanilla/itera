@@ -315,6 +315,16 @@
   }
 
   /*
+   * #154: a new screen puts the focus on its heading (app/use-screen-focus.ts).
+   * The ring fits the words, as on the Task's heading in the detail, rather
+   * than the column. Every heading, so taking the focus moves nothing.
+   */
+  main h1 {
+    width: fit-content;
+    border-radius: var(--radius-sm);
+  }
+
+  /*
    * docs/design/accessibility.md: in forced colors the outline of controls is
    * CanvasText, so quiet buttons with a transparent border stay visible.
    */
