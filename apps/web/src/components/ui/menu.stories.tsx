@@ -36,7 +36,8 @@ type Story = StoryObj<typeof meta>;
 
 /**
  * 行の補助操作。トリガーは `…` の IconButton。項目は 32px（compact は 44px）で、
- * アイコン・ラベル・Kbd を並べる。危険な項目は `danger` で、区切りの後の最後に置く。
+ * アイコン・ラベル・Kbd を並べる。Kbd は、タッチが主な端末（`pointer: coarse`）では出さない。
+ * 危険な項目は `danger` で、区切りの後の最後に置く。
  * 主要な操作（完了の ○ など）はメニューに隠さない。
  */
 export const RowActions: Story = {

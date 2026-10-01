@@ -43,6 +43,12 @@ type TaskRowProps = {
   /** Read out with the title, e.g. that the detail is open. */
   current?: boolean | undefined;
   done?: boolean | undefined;
+  /**
+   * The Task being worked on now (Today: 開始 and not yet closed): a `here`
+   * 4px bar on the leading edge and the title in 700, with the word in the
+   * metadata, as the nav marks where you are (#163).
+   */
+  inProgress?: boolean | undefined;
   /** E and Delete on the row; Space and Enter need nothing. */
   keys?: RowKeys | undefined;
   className?: string | undefined;
@@ -59,23 +65,28 @@ function TaskRow({
   onOpen,
   current = false,
   done = false,
+  inProgress = false,
   keys,
   className,
 }: TaskRowProps) {
   const titleClass = cn(
     'min-w-0 text-left text-task',
     done ? 'text-ink-subtle line-through' : 'text-ink',
+    inProgress && 'font-bold',
   );
   return (
     <div
       data-slot="task-row"
       data-current={current || undefined}
+      data-in-progress={inProgress || undefined}
       {...rowKeyHandlers(keys)}
       className={cn(
         'group/row relative flex min-h-row-touch items-center gap-2 border-b border-border-soft px-2 py-2 medium:min-h-row-task medium:px-3',
         'transition-colors duration-(--duration-fast) ease-standard',
         onOpen && 'hover:bg-surface-hover',
         current && 'bg-here-subtle hover:bg-here-subtle',
+        inProgress &&
+          'before:absolute before:inset-y-0 before:start-0 before:w-1 before:bg-here',
         className,
       )}
     >

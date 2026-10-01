@@ -1,4 +1,5 @@
 import {
+  CircleCheck,
   Ellipsis,
   LogOut,
   Minus,
@@ -22,21 +23,25 @@ import {
   TaskMetadata,
 } from '@/components/task/task-metadata';
 import { CompletionCircle, TaskRow } from '@/components/task/task-row';
-import { formatDate, formatTime } from '@/lib/date-format';
+import { formatDate } from '@/lib/date-format';
 import { formatHours } from '@/lib/time-format';
+import { startedSince } from '@/lib/today-words';
 import type { TimeZone } from '@itera/domain';
 import type { TodayItem, TodayRow as TodayRowData } from '@/store/today-view';
 
 // A row of 今日やる, or one closed today (DESIGN.md Task Row, patterns.md
 // Today). ○ is always there; the other daily operations are in the `…`
 // (always visible under 768px). Owner decisions in #41 and #101:
-// - the state and its time go in the metadata line (「開始 10:12」「今日は
-//   ここまで · 1.5h」「今日は見送り」) with an icon, in `ink-muted`, except
-//   開始 in `ink` (#101);
+// - the state and its time go in the metadata line (「作業中 · 10:12 から」
+//   「今日はここまで · 1.5h」「今日は見送り」) with an icon, in `ink-muted`,
+//   except 作業中 in `ink` (#101; its words from #163);
 // - a deferred or removed row has 「取り消す」 the same day (F37), as a
 //   skipped one does (F19);
 // - a done row stays where it is, struck through; ○ again undoes it;
-// - 「今日は見送る」 comes first in the `…`, nearest the thumb.
+// Issue #163 changed the `…`: the most used first (開始 or 今日はここまで, then
+// 完了にする), with labels alone; 今日から外す became 今日の予定から外す. A
+// started row carries the `here` bar, its title in 700 and 「作業中 · 10:12
+// から」.
 
 type TodayRowProps = {
   row: TodayRowData;
@@ -87,12 +92,6 @@ function TodayRow({
   const recurring = occurrence !== undefined;
 
   const items = [
-    (state === 'selected' || state === 'started') && (
-      <MenuItem key="defer" onClick={onDefer}>
-        <CalendarX2 aria-hidden />
-        今日は見送る
-      </MenuItem>
-    ),
     state === 'selected' && (
       <MenuItem key="start" onClick={onStart}>
         <Play aria-hidden />
@@ -105,6 +104,19 @@ function TodayRow({
         今日はここまで
       </MenuItem>
     ),
+    // The same as ○ (F17 for a paused row), for those who look here first.
+    (state === 'selected' || state === 'started' || state === 'paused') && (
+      <MenuItem key="complete" onClick={onComplete}>
+        <CircleCheck aria-hidden />
+        完了にする
+      </MenuItem>
+    ),
+    (state === 'selected' || state === 'started') && (
+      <MenuItem key="defer" onClick={onDefer}>
+        <CalendarX2 aria-hidden />
+        今日は見送る
+      </MenuItem>
+    ),
     state === 'selected' && recurring && (
       <MenuItem key="skip" onClick={onSkip}>
         <SkipForward aria-hidden />
@@ -114,7 +126,7 @@ function TodayRow({
     state === 'selected' && (
       <MenuItem key="remove" onClick={onRemove}>
         <LogOut aria-hidden />
-        今日から外す
+        今日の予定から外す
       </MenuItem>
     ),
     (done || state === 'paused') && (
@@ -135,6 +147,7 @@ function TodayRow({
       onOpen={onOpen}
       keys={{ onEstimate }}
       done={done}
+      inProgress={state === 'started'}
       control={
         skipped ? (
           // ○ with 「−」 (DESIGN.md Task Row › Skipped). Not a control:
@@ -175,7 +188,7 @@ function TodayRow({
                 ? 'スキップ'
                 : state === 'deferred'
                   ? '見送り'
-                  : '今日から外した'
+                  : '予定から外した'
             }）: ${task.title}`}
             icon={<Undo2 />}
             onClick={skipped ? onUndoSkip : onUndoClose}
@@ -215,9 +228,18 @@ function RowMetadata({
         return (
           // In `ink`, not muted: the one open state to see at a glance.
           <MetaItem wrap icon={<Play aria-hidden />} className="text-ink">
-            開始
-            {selection.startedAt !== undefined &&
-              ` ${formatTime(selection.startedAt, timeZone)}`}
+            {selection.startedAt === undefined ? (
+              '作業中'
+            ) : (
+              // Breaks only after the separator in a narrow row, so that no
+              // line starts with it.
+              <span>
+                <span className="whitespace-nowrap">作業中 ·</span>{' '}
+                <span className="whitespace-nowrap">
+                  {startedSince(selection.startedAt, timeZone)}
+                </span>
+              </span>
+            )}
           </MetaItem>
         );
       case 'paused':
@@ -246,7 +268,7 @@ function RowMetadata({
       case 'removed':
         return (
           <MetaItem wrap icon={<LogOut aria-hidden />}>
-            今日から外した
+            予定から外した
           </MetaItem>
         );
       case 'skipped':

@@ -1047,14 +1047,16 @@ describe('Backlog — the detail of a Task in 今日やる (#94)', () => {
       within(section)
         .getAllByRole('button')
         .map((b) => b.textContent),
-    ).toEqual(['開始', '今日は見送る', '今日から外す', '完了にする']);
+    ).toEqual(['開始', '今日は見送る', '今日の予定から外す', '完了にする']);
+    // #163: labels alone, no line under them.
+    expect(section.querySelector('[aria-describedby]')).toBeNull();
     // Not a recurring Task: no スキップ.
     await userEvent.click(
       within(section).getByRole('button', { name: '開始' }),
     );
     expect(selectionOf('task-interview')?.resolution).toBe('started');
     expect(section.textContent).toMatch(
-      /今日やるに入っています（開始 \d\d:\d\d）/,
+      /今日やるに入っています（作業中 · \d\d:\d\d から）/,
     );
     expect(
       within(section).getByRole('button', { name: '今日はここまで' }),
@@ -1081,14 +1083,14 @@ describe('Backlog — the detail of a Task in 今日やる (#94)', () => {
     expect(row.textContent).not.toContain('今日');
   });
 
-  it('今日から外す records the same removal as the row’s menu', async () => {
+  it('今日の予定から外す records the same removal as the row’s menu', async () => {
     await renderAt('/backlog?fixture=backlog-detail&task=task-interview');
     const section = await now();
     await userEvent.click(
-      within(section).getByRole('button', { name: '今日から外す' }),
+      within(section).getByRole('button', { name: '今日の予定から外す' }),
     );
     expect(selectionOf('task-interview')?.resolution).toBe('removed');
-    expect(section.textContent).toContain('今日から外しました。');
+    expect(section.textContent).toContain('今日の予定から外しました。');
   });
 
   it('今日はここまで asks for the actual time in the section, without another surface, then pauses', async () => {
@@ -1357,7 +1359,7 @@ describe('Backlog › Areas', () => {
     await userEvent.click(screen.getByRole('button', { name: '領域を編集' }));
     const dialog = areaDialog();
     await edit('研究');
-    const field = within(dialog).getByRole('textbox', {
+    const field = within(dialog).getByRole<HTMLInputElement>('textbox', {
       name: '「研究」の名前',
     });
     expect(
@@ -1365,6 +1367,12 @@ describe('Backlog › Areas', () => {
         'Sprint の画面には、次の Sprint から反映されます。',
       ),
     ).toBeTruthy();
+    // The field takes the focus and selects its name two frames after it
+    // opens; typing before that would be replaced by the selection.
+    await waitFor(() => {
+      expect(document.activeElement).toBe(field);
+      expect([field.selectionStart, field.selectionEnd]).toEqual([0, 2]);
+    });
     // An empty name is not saved.
     await userEvent.clear(field);
     await userEvent.keyboard('{Enter}');

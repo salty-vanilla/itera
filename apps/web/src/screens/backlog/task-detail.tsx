@@ -55,6 +55,7 @@ import {
 } from '@/lib/actual-hours';
 import { formatDate, formatTime } from '@/lib/date-format';
 import { formatHours, formatRange } from '@/lib/time-format';
+import { startedText } from '@/lib/today-words';
 import type { BacklogData, BacklogItem } from '@/store/backlog-view';
 import { useTaskActions } from '@/store/use-task-actions';
 import { useTodayActions } from '@/store/use-today';
@@ -204,9 +205,7 @@ function dayText(
 ): string {
   switch (today.resolution) {
     case 'started':
-      return today.startedAt === undefined
-        ? '今日やるに入っています（開始済み）'
-        : `今日やるに入っています（開始 ${formatTime(today.startedAt, timeZone)}）`;
+      return `今日やるに入っています（${startedText(today.startedAt, timeZone)}）`;
     case 'done':
       return '今日やるに入っています（完了）';
     case 'skipped':
@@ -229,7 +228,7 @@ const closedText: Record<
     result: '今日は見送りました。',
     rest: '明日から今週の残りに出ます。',
   },
-  removed: { result: '今日から外しました。' },
+  removed: { result: '今日の予定から外しました。' },
 };
 
 type Outcome =
@@ -349,6 +348,15 @@ function TaskDetail({
   const [openedWith] = useState(() => valuesOf(item));
   const [more, setMore] = useState(false);
   const moreId = useId();
+  // Which of the day's operations the section offers.
+  const resolution = facts.today?.resolution;
+  const offers = {
+    start: resolution === 'selected',
+    pause: resolution === 'started',
+    defer: resolution === 'selected' || resolution === 'started',
+    skip: resolution === 'selected' && facts.today?.recurring === true,
+    remove: resolution === 'selected',
+  };
   // What was typed in the subtask and recurrence forms but not added or
   // applied: closing asks first, with the operation it would carry out.
   const [held, setHeld] = useState<{
@@ -697,7 +705,7 @@ function TaskDetail({
                   今日へ
                 </Button>
               )}
-              {facts.today?.resolution === 'selected' && (
+              {offers.start && (
                 <Button
                   onClick={() =>
                     runNow(() => todayActions.start(facts.today!.selectionId))
@@ -709,7 +717,7 @@ function TaskDetail({
               {/* While the field is open, its own 今日はここまで records: this one
                   stays where it is, disabled, so that the buttons after it do
                   not move under a second press. */}
-              {facts.today?.resolution === 'started' && (
+              {offers.pause && (
                 <Button
                   ref={pauseButtonRef}
                   disabled={pausing}
@@ -719,8 +727,7 @@ function TaskDetail({
                   今日はここまで
                 </Button>
               )}
-              {(facts.today?.resolution === 'selected' ||
-                facts.today?.resolution === 'started') && (
+              {offers.defer && (
                 <Button
                   onClick={() =>
                     runNow(() => todayActions.defer(facts.today!.selectionId))
@@ -729,17 +736,16 @@ function TaskDetail({
                   今日は見送る
                 </Button>
               )}
-              {facts.today?.resolution === 'selected' &&
-                facts.today.recurring && (
-                  <Button
-                    onClick={() =>
-                      runNow(() => todayActions.skip(facts.today!.selectionId))
-                    }
-                  >
-                    今日はスキップ
-                  </Button>
-                )}
-              {facts.today?.resolution === 'selected' && (
+              {offers.skip && (
+                <Button
+                  onClick={() =>
+                    runNow(() => todayActions.skip(facts.today!.selectionId))
+                  }
+                >
+                  今日はスキップ
+                </Button>
+              )}
+              {offers.remove && (
                 <Button
                   onClick={() =>
                     runNow(() =>
@@ -747,7 +753,7 @@ function TaskDetail({
                     )
                   }
                 >
-                  今日から外す
+                  今日の予定から外す
                 </Button>
               )}
               {facts.canComplete && (
