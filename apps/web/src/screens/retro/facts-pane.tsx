@@ -15,6 +15,7 @@ import { formatDate, formatDateTime } from '@/lib/date-format';
 import { SELECTION_WORDS } from '@/lib/selection-words';
 import {
   formatHours,
+  formatPlanningSum,
   formatPlanningTotal,
   formatRange,
 } from '@/lib/time-format';
@@ -101,6 +102,15 @@ function FactsPane({
   // Also when the hours were first entered after confirming.
   const hoursChanged = currentHours !== plannedHours;
   const { minutes: interruptMinutes, withoutMinutes } = facts.interruptTime;
+  // How the plan changed after confirm, which makes its second total.
+  const changedLead =
+    facts.midSprint.length > 0 && facts.removed.length > 0
+      ? '週の途中の追加を含め、外したタスクを除いて'
+      : facts.midSprint.length > 0
+        ? '週の途中の追加を含めて'
+        : facts.removed.length > 0
+          ? '外したタスクを除いて'
+          : undefined;
   const interruptNote = [
     withoutMinutes > 0 && `時間の記録なし ${withoutMinutes}件`,
     interruptMinutes > 0 && '実績には含みません',
@@ -163,30 +173,19 @@ function FactsPane({
             {
               label: '計画値の合計',
               value: formatRange(total.lo, total.hi, { total: true }),
-              // With how it stood against the hours entered when planning
-              // (#167): words only, no danger, as a fact of the week.
               note: (
-                <>
-                  <Sentences
-                    items={[
-                      ...(total.unestimated + total.unestimatedSubtasks > 0
-                        ? [
-                            `見積もりなし ${total.unestimated + total.unestimatedSubtasks}件`,
-                          ]
-                        : []),
-                      plannedHours === undefined
-                        ? '使える時間は未入力'
-                        : `使える時間 ${formatHours(plannedHours, { total: true })}`,
-                    ]}
-                  />
-                  {facts.capacity !== undefined && (
-                    <span className="block">
-                      <Sentences
-                        items={capacityRelationSentences(facts.capacity)}
-                      />
-                    </span>
-                  )}
-                </>
+                <Sentences
+                  items={[
+                    ...(total.unestimated + total.unestimatedSubtasks > 0
+                      ? [
+                          `見積もりなし ${total.unestimated + total.unestimatedSubtasks}件`,
+                        ]
+                      : []),
+                    plannedHours === undefined
+                      ? '使える時間は未入力'
+                      : `使える時間 ${formatHours(plannedHours, { total: true })}`,
+                  ]}
+                />
               ),
             },
           ]}
@@ -199,6 +198,39 @@ function FactsPane({
               （入力済み {entered}件。実績は入力したものだけを数えています）
             </span>
           </p>
+          {facts.capacity !== undefined && (
+            // Both totals against the hours entered when planning, side by
+            // side (owner decision in #167): words only, no danger, as facts
+            // of the week. The second only when the plan changed.
+            <ul className="flex flex-col gap-1">
+              {[
+                {
+                  lead: '確定時の計画',
+                  total: facts.plannedTotal.atConfirm,
+                  capacity: facts.capacity.atConfirm,
+                },
+                ...(changedLead === undefined
+                  ? []
+                  : [
+                      {
+                        lead: changedLead,
+                        total: facts.plannedTotal.withAdditions,
+                        capacity: facts.capacity.withAdditions,
+                      },
+                    ]),
+              ].map((line) => (
+                <li key={line.lead}>
+                  <span className="text-ink-muted">
+                    <span className="whitespace-nowrap">{line.lead}</span>{' '}
+                    <span className="whitespace-nowrap">
+                      {formatPlanningSum(line.total)}：
+                    </span>
+                  </span>
+                  <Sentences items={capacityRelationSentences(line.capacity)} />
+                </li>
+              ))}
+            </ul>
+          )}
           {/* Interrupts are not actual time of a Task, so 実績 above
               leaves their minutes out (#167). */}
           {facts.interrupts.length > 0 && (

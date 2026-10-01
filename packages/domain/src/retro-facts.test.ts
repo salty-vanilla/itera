@@ -485,22 +485,40 @@ describe('retroFacts — the plan against what happened (#167)', () => {
     expect(facts.actualHours).toBe(4.5);
   });
 
-  it('invariant 15: compares the planned total, with the mid-Sprint additions, with the hours entered when planning', () => {
-    // 12–14h against 18h planned (15h now): the upper end fits.
-    expect(retroFacts(reviewSprint(), input()).capacity).toEqual({
-      availableHours: 18,
-      remaining: { lo: 4, hi: 6 },
-      status: 'within',
+  it('invariant 15: compares both planned totals, as confirmed and with the mid-Sprint additions, with the hours entered when planning', () => {
+    // Without the removed Task: 10–11h at confirm (paper 5, done 2–3, clean
+    // 3), 12–14h with the mid-Sprint addition (interview 2–3).
+    const base = reviewSprint();
+    const sprint = {
+      ...base,
+      tasks: base.tasks.filter((t) => t.taskId !== 'task-removed'),
+    };
+    // Against 18h planned (15h now): both fit.
+    expect(retroFacts(sprint, input()).capacity).toEqual({
+      atConfirm: {
+        availableHours: 18,
+        remaining: { lo: 7, hi: 8 },
+        status: 'within',
+      },
+      withAdditions: {
+        availableHours: 18,
+        remaining: { lo: 4, hi: 6 },
+        status: 'within',
+      },
     });
-    // The mid-Sprint addition counts (invariant 15): 12–14h against 11h.
+    // Against 11h: the plan as confirmed may exceed it, the addition makes
+    // even the lower end exceed it.
+    const tight = retroFacts({ ...sprint, plannedAvailableHours: 11 }, input());
+    expect(tight.capacity?.atConfirm.status).toBe('within');
+    expect(tight.capacity?.withAdditions.status).toBe('exceeds');
     const over = retroFacts(
-      { ...reviewSprint(), plannedAvailableHours: 11 },
+      { ...sprint, plannedAvailableHours: 10.5 },
       input(),
     );
-    expect(over.capacity?.status).toBe('exceeds');
+    expect(over.capacity?.atConfirm.status).toBe('mayExceed');
     // No hours entered when planning: nothing to compare with.
     const none = retroFacts(
-      sprintFixture('2026-09-28', 'review', { tasks: reviewSprint().tasks }),
+      sprintFixture('2026-09-28', 'review', { tasks: base.tasks }),
       input(),
     );
     expect(none.capacity).toBeUndefined();

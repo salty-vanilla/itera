@@ -121,10 +121,14 @@ export interface RetroFacts {
     readonly withAdditions: PlanningTotal;
   };
   /**
-   * The planned total (with the mid-Sprint additions) against the available
-   * hours entered when planning; absent when none were entered (#167).
+   * Both planned totals against the available hours entered when planning
+   * (#167): as confirmed, and with the mid-Sprint additions. Absent when no
+   * hours were entered then.
    */
-  readonly capacity?: Capacity;
+  readonly capacity?: {
+    readonly atConfirm: Capacity;
+    readonly withAdditions: Capacity;
+  };
   readonly actualHours: number;
 }
 
@@ -209,6 +213,7 @@ export function retroFacts(sprint: Sprint, input: RetroFactsInput): RetroFacts {
     totalPlanningValues(
       list.flatMap((f) => (f.plan === undefined ? [] : [f.plan.value])),
     );
+  const atConfirm = totalOf(facts.filter((f) => f.origin === 'planning'));
   const withAdditions = totalOf(counted);
 
   return {
@@ -272,13 +277,18 @@ export function retroFacts(sprint: Sprint, input: RetroFactsInput): RetroFacts {
         ? {}
         : { current: sprint.availableHours }),
     },
-    plannedTotal: {
-      atConfirm: totalOf(facts.filter((f) => f.origin === 'planning')),
-      withAdditions,
-    },
+    plannedTotal: { atConfirm, withAdditions },
     ...(sprint.plannedAvailableHours === undefined
       ? {}
-      : { capacity: capacityOf(withAdditions, sprint.plannedAvailableHours) }),
+      : {
+          capacity: {
+            atConfirm: capacityOf(atConfirm, sprint.plannedAvailableHours),
+            withAdditions: capacityOf(
+              withAdditions,
+              sprint.plannedAvailableHours,
+            ),
+          },
+        }),
     actualHours: sprint.actualTimes.reduce((sum, a) => sum + a.hours, 0),
   };
 }

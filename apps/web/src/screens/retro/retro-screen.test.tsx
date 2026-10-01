@@ -1,4 +1,4 @@
-import type { Retro } from '@itera/domain';
+import type { Retro, SprintTask } from '@itera/domain';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import {
   cleanup,
@@ -1070,17 +1070,57 @@ describe('Retro — the plan against what happened (#167)', () => {
   const pane = () =>
     document.querySelector<HTMLElement>('[data-slot="facts-pane"]')!;
 
-  it('says how the planned total stood against the hours entered when planning, in words only', async () => {
+  const lineOf = (lead: string) =>
+    screen
+      .getAllByRole('listitem')
+      .find((li) => li.textContent?.startsWith(lead));
+  const reviewing =
+    (edit: (tasks: readonly SprintTask[]) => readonly SprintTask[]) =>
+    (snapshot: StoreSnapshot): StoreSnapshot => ({
+      ...snapshot,
+      records: {
+        ...snapshot.records,
+        sprints: snapshot.records.sprints.map((s) =>
+          s.id === 'sprint-2026-09-28' ? { ...s, tasks: edit(s.tasks) } : s,
+        ),
+      },
+    });
+
+  it('puts both planned totals beside the hours entered when planning, in words only (owner decision)', async () => {
     await renderAt('/retro?fixture=retro-start');
     const summary = document.querySelector<HTMLElement>(
       '[data-slot="sprint-summary"]',
     )!;
     const total = within(summary).getByText('計画値の合計').parentElement!;
-    // 17.25–20.25h against 17h: over even at the lower end.
     expect(total.textContent).toContain('使える時間 17h');
-    expect(total.textContent).toContain('下限でも 0.25h 超える');
-    // A fact of the week, not an alarm (PRD §12).
+    // As confirmed, and with the mid-Sprint addition, against 17h.
+    expect(lineOf('確定時の計画')?.textContent).toBe(
+      '確定時の計画 15.25–17.25h：下限なら 1.75h 残る · 上限なら 0.25h 超える',
+    );
+    expect(lineOf('週の途中の追加を含めて')?.textContent).toBe(
+      '週の途中の追加を含めて 17.25–20.25h：下限でも 0.25h 超える',
+    );
+    // Facts of the week, not an alarm (PRD §12).
     expect(pane().querySelector('.text-danger')).toBeNull();
+  });
+
+  it('has one line while the plan did not change after confirm', async () => {
+    change = reviewing((tasks) =>
+      tasks.filter((t) => t.origin !== 'midSprint'),
+    );
+    await renderAt('/retro?fixture=retro-start');
+    expect(lineOf('確定時の計画')).toBeTruthy();
+    expect(lineOf('週の途中の追加を含めて')).toBeUndefined();
+  });
+
+  it('names a removed Task as what the second total leaves out', async () => {
+    change = reviewing((tasks) =>
+      tasks
+        .filter((t) => t.origin !== 'midSprint')
+        .map((t, i) => (i === 0 ? { ...t, outcome: 'removed' as const } : t)),
+    );
+    await renderAt('/retro?fixture=retro-start');
+    expect(lineOf('外したタスクを除いて')).toBeTruthy();
   });
 
   it('sums the interrupts and says the actual time leaves them out', async () => {
