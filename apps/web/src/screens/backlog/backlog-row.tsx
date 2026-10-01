@@ -1,5 +1,5 @@
 import type { LocalDate } from '@itera/domain';
-import { useEffect, useRef } from 'react';
+import { Fragment, useEffect, useRef } from 'react';
 import { Archive, CircleCheck, Ellipsis, Route, Sun } from 'lucide-react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { IconButton } from '@/components/ui/icon-button';
@@ -64,14 +64,27 @@ export function RecurrenceText({
   icon?: boolean;
 }) {
   const Icon = semanticIcons.recurrence;
+  // Each part stays whole; a narrow row breaks only after the "·" (Issue #218).
+  const parts = [
+    formatPattern(recurrence.pattern),
+    recurrence.next && `次は ${formatDate(recurrence.next.scheduledDate)}`,
+    recurrence.upcoming &&
+      `変更：${formatDate(recurrence.upcoming.effectiveFrom)} から ${formatPattern(recurrence.upcoming.pattern)}`,
+    recurrence.endsOn && `${formatDate(recurrence.endsOn)} まで`,
+  ].filter((part): part is string => Boolean(part));
   return (
     <MetaItem icon={icon ? <Icon aria-hidden /> : undefined} wrap>
-      {formatPattern(recurrence.pattern)}
-      {recurrence.next &&
-        ` · 次は ${formatDate(recurrence.next.scheduledDate)}`}
-      {recurrence.upcoming &&
-        ` · 変更：${formatDate(recurrence.upcoming.effectiveFrom)} から ${formatPattern(recurrence.upcoming.pattern)}`}
-      {recurrence.endsOn && ` · ${formatDate(recurrence.endsOn)} まで`}
+      <span>
+        {parts.map((part, i) => (
+          <Fragment key={part}>
+            {i > 0 && ' '}
+            <span className="whitespace-nowrap">
+              {part}
+              {i < parts.length - 1 && ' ·'}
+            </span>
+          </Fragment>
+        ))}
+      </span>
     </MetaItem>
   );
 }
