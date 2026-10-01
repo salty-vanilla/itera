@@ -580,12 +580,12 @@ function TaskTable({
   const actions = onAddActual !== undefined;
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[58rem] table-fixed border-collapse text-body">
+      <table className="w-full min-w-[55rem] table-fixed border-collapse text-body">
         <colgroup>
           <col className="xl:w-[32%]" />
           <col className="w-[7rem] xl:w-[11%]" />
           <col className="w-[9rem] xl:w-[11%]" />
-          <col className="w-[10rem] xl:w-[11%]" />
+          <col className="w-[7rem] wide:w-[10rem] xl:w-[11%]" />
           <col className="w-[13rem] wide:w-[18rem] xl:w-[20%]" />
           {actions && <col className="w-[9rem] wide:w-[13rem] xl:w-[15%]" />}
         </colgroup>
@@ -608,7 +608,7 @@ function TaskTable({
             </th>
             <th
               scope="col"
-              className={cn(cell, 'text-left font-normal ps-6 xl:ps-8')}
+              className={cn(cell, 'text-left font-normal xl:ps-8')}
             >
               結果
             </th>
@@ -648,7 +648,7 @@ function TaskTable({
                 {/* 計画時との差, under the value it is about (#167). */}
                 <DifferenceNote fact={t} />
               </td>
-              <td className={cn(cell, 'ps-6 xl:ps-8')}>
+              <td className={cn(cell, 'xl:ps-8')}>
                 <TaskResult fact={t} data={data} />
                 <DaysNote fact={t} />
               </td>
@@ -806,11 +806,17 @@ function AddActualButton({
   );
 }
 
-/** 「計画より 0.5h 少ない」 under the actual time, if any. */
+/**
+ * 「計画より 0.5h 少ない」 under the actual time, if any. Under 1200px the
+ * column is narrow and it breaks between phrases, so the table still fits
+ * at 1000px.
+ */
 function DifferenceNote({ fact }: { fact: TaskFact }) {
   const text = differenceText(fact);
   return text === undefined ? null : (
-    <span className="block text-meta text-ink-muted">{text}</span>
+    <span className="block text-meta whitespace-normal text-ink-muted [word-break:auto-phrase]">
+      {text}
+    </span>
   );
 }
 
