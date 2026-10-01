@@ -15,10 +15,7 @@ const closingHelp = {
   remove: '選び直します。見送りに入れません',
 } as const;
 
-/**
- * 「作業中 · 10:12 から」 for a started selection, or 「作業中」 without the
- * time: the Task's detail. The Today row sets the same words in its own spans.
- */
+/** 「作業中 · 10:12 から」 for a started selection, or 「作業中」 without the time. */
 function startedText(startedAt: Instant | undefined, timeZone: TimeZone) {
   return startedAt === undefined
     ? '作業中'

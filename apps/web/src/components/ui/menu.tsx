@@ -1,6 +1,7 @@
 import { Menu as MenuPrimitive } from '@base-ui/react/menu';
 import { Check } from 'lucide-react';
 import { useId, type ComponentProps, type ReactNode } from 'react';
+import { Kbd } from '@/components/ui/kbd';
 import { cn } from '@/lib/utils';
 
 // DESIGN.md Components › Menu. The drop-down for secondary actions of a row or
@@ -83,14 +84,21 @@ type MenuItemProps = Omit<MenuPrimitive.Item.Props, 'className'> & {
    * last, after a MenuSeparator.
    */
   variant?: 'default' | 'danger';
-  /**
-   * One short line under the label that tells what the item does before it
-   * is pressed. Read out as the item's description, not its name; pass the
-   * label as `label` for typeahead.
-   */
-  description?: ReactNode;
   className?: string;
-};
+} & (
+    | { description?: undefined }
+    | {
+        /**
+         * One short line under the label that tells what the item does
+         * before it is pressed. Read out as the item's description, not its
+         * name. The children are then the icon and the label, in that order
+         * (the description lines up under the label), with no Kbd.
+         */
+        description: ReactNode;
+        /** The label alone, for typeahead (the description is text too). */
+        label: string;
+      }
+  );
 
 function MenuItem({
   variant = 'default',
@@ -252,18 +260,17 @@ function MenuSeparator({ className, ...props }: MenuSeparatorProps) {
 }
 
 /**
- * DESIGN.md Kbd: the shortcut at the right end of an item, in the `code`
- * type. Keys are not highlighted with colour. Not shown where the primary
- * pointer is a finger, as there is no key to press (#163).
+ * DESIGN.md Kbd: the shortcut at the right end of an item, a Kbd in the
+ * item's muted text colour. Keys are not highlighted with colour. Not shown
+ * where the primary pointer is a finger, as there is no key to press (#163).
+ * Read out through the item's `aria-keyshortcuts`, not as text.
  */
 function MenuShortcut({ className, ...props }: ComponentProps<'kbd'>) {
   return (
-    <kbd
+    <Kbd
       data-slot="menu-shortcut"
-      className={cn(
-        'ms-auto ps-4 text-code text-ink-subtle pointer-coarse:hidden',
-        className,
-      )}
+      aria-hidden
+      className={cn('ms-auto text-ink-muted pointer-coarse:hidden', className)}
       {...props}
     />
   );

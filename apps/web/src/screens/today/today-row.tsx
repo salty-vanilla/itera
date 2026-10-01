@@ -23,18 +23,18 @@ import {
   TaskMetadata,
 } from '@/components/task/task-metadata';
 import { CompletionCircle, TaskRow } from '@/components/task/task-row';
-import { formatDate, formatTime } from '@/lib/date-format';
+import { formatDate } from '@/lib/date-format';
 import { formatHours } from '@/lib/time-format';
-import { closingHelp } from '@/lib/today-words';
+import { closingHelp, startedText } from '@/lib/today-words';
 import type { TimeZone } from '@itera/domain';
 import type { TodayItem, TodayRow as TodayRowData } from '@/store/today-view';
 
 // A row of 今日やる, or one closed today (DESIGN.md Task Row, patterns.md
 // Today). ○ is always there; the other daily operations are in the `…`
 // (always visible under 768px). Owner decisions in #41 and #101:
-// - the state and its time go in the metadata line (「開始 10:12」「今日は
-//   ここまで · 1.5h」「今日は見送り」) with an icon, in `ink-muted`, except
-//   開始 in `ink` (#101);
+// - the state and its time go in the metadata line (「作業中 · 10:12 から」
+//   「今日はここまで · 1.5h」「今日は見送り」) with an icon, in `ink-muted`,
+//   except 作業中 in `ink` (#101; its words from #163);
 // - a deferred or removed row has 「取り消す」 the same day (F37), as a
 //   skipped one does (F19);
 // - a done row stays where it is, struck through; ○ again undoes it;
@@ -248,17 +248,9 @@ function RowMetadata({
         return (
           // In `ink`, not muted: the one open state to see at a glance.
           <MetaItem wrap icon={<Play aria-hidden />} className="text-ink">
-            <span>
-              作業中
-              {selection.startedAt !== undefined && (
-                // Breaks only before the separator in a narrow row.
-                <>
-                  {' '}
-                  <span className="whitespace-nowrap">
-                    · {formatTime(selection.startedAt, timeZone)} から
-                  </span>
-                </>
-              )}
+            {/* One piece: the Area moves to the next line before it breaks. */}
+            <span className="whitespace-nowrap">
+              {startedText(selection.startedAt, timeZone)}
             </span>
           </MetaItem>
         );

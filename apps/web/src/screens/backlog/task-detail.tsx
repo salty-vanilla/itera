@@ -345,23 +345,24 @@ function TaskDetail({
   // The line under each of 今日はここまで, 今日は見送る, スキップ and 今日から
   // 外す that tells them apart before they are pressed (#163).
   const todayHelpId = useId();
+  // Which of the day's operations the section offers: the buttons and the
+  // lines under them come from these alone.
   const resolution = facts.today?.resolution;
+  const offers = {
+    start: resolution === 'selected',
+    pause: resolution === 'started',
+    defer: resolution === 'selected' || resolution === 'started',
+    skip: resolution === 'selected' && facts.today?.recurring === true,
+    remove: resolution === 'selected',
+  };
   const todayHelp = (
     [
-      ['pause', '今日はここまで', resolution === 'started'],
-      [
-        'defer',
-        '今日は見送る',
-        resolution === 'selected' || resolution === 'started',
-      ],
-      [
-        'skip',
-        '今日はスキップ',
-        resolution === 'selected' && facts.today?.recurring === true,
-      ],
-      ['remove', '今日から外す', resolution === 'selected'],
+      ['pause', '今日はここまで'],
+      ['defer', '今日は見送る'],
+      ['skip', '今日はスキップ'],
+      ['remove', '今日から外す'],
     ] as const
-  ).filter(([, , shown]) => shown);
+  ).filter(([key]) => offers[key]);
   const helpFor = (key: keyof typeof closingHelp) => `${todayHelpId}-${key}`;
   // What was typed in the subtask and recurrence forms but not added or
   // applied: closing asks first, with the operation it would carry out.
@@ -711,7 +712,7 @@ function TaskDetail({
                   今日へ
                 </Button>
               )}
-              {facts.today?.resolution === 'selected' && (
+              {offers.start && (
                 <Button
                   onClick={() =>
                     runNow(() => todayActions.start(facts.today!.selectionId))
@@ -723,7 +724,7 @@ function TaskDetail({
               {/* While the field is open, its own 今日はここまで records: this one
                   stays where it is, disabled, so that the buttons after it do
                   not move under a second press. */}
-              {facts.today?.resolution === 'started' && (
+              {offers.pause && (
                 <Button
                   ref={pauseButtonRef}
                   aria-describedby={helpFor('pause')}
@@ -734,8 +735,7 @@ function TaskDetail({
                   今日はここまで
                 </Button>
               )}
-              {(facts.today?.resolution === 'selected' ||
-                facts.today?.resolution === 'started') && (
+              {offers.defer && (
                 <Button
                   aria-describedby={helpFor('defer')}
                   onClick={() =>
@@ -745,18 +745,17 @@ function TaskDetail({
                   今日は見送る
                 </Button>
               )}
-              {facts.today?.resolution === 'selected' &&
-                facts.today.recurring && (
-                  <Button
-                    aria-describedby={helpFor('skip')}
-                    onClick={() =>
-                      runNow(() => todayActions.skip(facts.today!.selectionId))
-                    }
-                  >
-                    今日はスキップ
-                  </Button>
-                )}
-              {facts.today?.resolution === 'selected' && (
+              {offers.skip && (
+                <Button
+                  aria-describedby={helpFor('skip')}
+                  onClick={() =>
+                    runNow(() => todayActions.skip(facts.today!.selectionId))
+                  }
+                >
+                  今日はスキップ
+                </Button>
+              )}
+              {offers.remove && (
                 <Button
                   aria-describedby={helpFor('remove')}
                   onClick={() =>

@@ -316,7 +316,7 @@ components:
 | 罫 | `border` / `border-soft` | 構造の罫 / リスト内の行区切り | 操作部品の輪郭 |
 | 罫 | `border-strong` | 入力・Checkbox・Radio・Switch・Secondary Button の輪郭 | 装飾の罫 |
 | 確定 | `primary`（墨）/ `on-primary` | Primary Button の塗り、オン状態、完了サークル、Progress、IconButton の pressed | 大きな面 |
-| 現在地 | `here`（黄）/ `here-subtle` / `on-here` | 今日の列・今の段階の印（`here`）、選んだ行・項目の地（`here-subtle`）。必ずチェックか語を伴う（Filter だけは `ink` の 2px の枠と太字。もう 1 つの例外は、Backlog と Planning の選ぶで追加した直後の行の点滅で、2.5 秒でこの地から透明に消える。docs/design/foundations.md） | 注意・警告（→ `warning`）、装飾、フォーカス |
+| 現在地 | `here`（黄）/ `here-subtle` / `on-here` | 今日の列・今の段階・Today で開始した行（作業中）の印（`here`）、選んだ行・項目の地（`here-subtle`）。必ずチェックか語を伴う（Filter だけは `ink` の 2px の枠と太字。もう 1 つの例外は、Backlog と Planning の選ぶで追加した直後の行の点滅で、2.5 秒でこの地から透明に消える。docs/design/foundations.md） | 注意・警告（→ `warning`）、装飾、フォーカス |
 | Focus | `focus`（`ink` の別名） | フォーカスリングだけ。色相を持たず、墨の 2px の輪郭と 2px のアキで示す | それ以外すべて |
 | リンク | `link`（`ink` の別名） | 下線付きの文字リンク | — |
 | Semantic | `danger` `warning` と `*-subtle` | 危険と注意の文字・アイコン・Status Tag・Notice。必ずアイコンか語を伴う。成功と情報は色を持たず、墨の文字＋アイコン（`circle-check` / `info`）＋語で示す | Area の識別、装飾 |
@@ -336,7 +336,7 @@ Primary は色ではなく墨（light は `#16181a` の塗りに白抜き、dark
 
 `here` は駅の案内で現在地を示す黄に当たる。「今どこか」だけに使う。
 
-- 選択 = `here-subtle` の地＋チェック（Filter は幅を変えないため、チェックの代わりに `ink` の 2px の枠と太字）。今日の列・今の段階は `here` の印（太線や塗りの四角）＋語（「今日」「現在」）。
+- 選択 = `here-subtle` の地＋チェック（Filter は幅を変えないため、チェックの代わりに `ink` の 2px の枠と太字）。今日の列・今の段階は `here` の印（太線や塗りの四角）＋語（「今日」「現在」）。Today で開始した行は、今やっているものとして先頭の端に `here` の 4px の縦線＋語（「作業中」）＋タイトル 700（Task Row › In progress、Issue #163）。
 - 注意・警告には使わない（→ `warning` とアイコン）。フォーカスにも使わない（→ `focus` の墨の輪郭）。
 - 黄の上の文字は `on-here`（墨）。
 
@@ -765,4 +765,4 @@ compact の原則：
 - **Card**（`border` で囲んだ独立面）：Dialog、Drawer、Popover、Menu、Toast、Agent 提案だけ。単なるグルーピングは余白・Divider・見出し・`canvas-subtle` の背景差で行う。
 - **Shadow**：浮いている・重なっている面だけ（`elevation-overlay` `elevation-modal` `elevation-drag`）。
 - **Area の色**：路線記号の地、Capacity バーのセグメント、Filter の路線記号だけ。
-- **黄（`here`）**：現在地（今日・今の段階・選んだもの）だけ。
+- **黄（`here`）**：現在地（今日・今の段階・選んだもの・作業中の行）だけ。
