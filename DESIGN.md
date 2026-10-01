@@ -220,6 +220,7 @@ spacing:
   pane-today: 720px
   pane-rows: 1280px
   pane-side: 336px
+  toast: 480px
   drawer: 400px
   popover: 320px
   dialog-sm: 440px
@@ -476,6 +477,7 @@ Area（領域）はユーザーが作る。駅の路線記号のように、色�
 | `pane-rows` | 1280px | 1 行 1 Task の一覧（Backlog、Retro の繰り返しの回）の行の最大幅 |
 | `drawer` | 400px | 右 Drawer |
 | `popover` | 320px | Popover の幅 |
+| `toast` | 480px | Toast の幅（medium 以上。開いた Drawer に重ならない幅まで。compact は幅 100% − 32px） |
 | `dialog-sm` / `dialog-md` / `dialog-lg` | 440 / 560 / 720px | Dialog の幅（compact は幅 100% − 32px） |
 
 ### Responsive
@@ -635,7 +637,7 @@ compact の原則：
 
 **Notice** — 画面内に留まる説明・注意・エラー。地は warning / danger が各 `*-subtle`、ほかは `canvas-subtle`。`rounded.sm`、枠なし、アイコン＋タイトル（700）＋本文＋任意の操作。Variant：info（`info` アイコン。データ不足、同期状態、計画案の作成後に Backlog が変わった）/ warning（超過の可能性、見積もりのないタスク）/ danger（読み込みの失敗、`role="alert"`）/ done（`circle-check`。反映済み）/ neutral（補足。状態を示さないのでアイコンなし）。次にできることを書く。読み込み後に現れる Notice は `role="status"` で知らせる。× 左に色の太線、同じ画面に 3 つ以上。
 
-**Toast** — 操作の結果を短く伝え、元に戻す手段を添える。面 `surface`＋`border`、`rounded.md`、`elevation-overlay`。Variant：neutral（「3件を今週に入れました」＋元に戻す）/ done（`circle-check`＋「Sprint 14 を確定しました」）/ danger（「保存できませんでした。入力内容は残っています。」＋再試行、`role="alert"`）。表示 8 秒、hover / focus 中は止め、操作付きは閉じるまで残してよい。danger は再試行を失わないよう閉じるまで残す。位置は desktop 左下、compact は下部タブバーの上。下端に固定した追加欄がある画面（Today。compact の Backlog）では、どの幅でも、その追加欄の上に出し、追加欄は動かさない。同じ種類の操作の Toast は積まず、最新の 1 つに置き換える（本文・操作・表示時間が新しくなる。「元に戻す」は最新の操作に効く。グループの一括選択は 1 回の操作なので、その「元に戻す」は残る）。種類の違う Toast は同時に 3 つまで（4 つ目を出すと最も古いものを隠す。「同じ種類」の 3 つ上限の例外）。Toast が出ている間は、スクロール領域の下に Toast の高さ分の余白を足し（画面の下端に届く内容は、その分上がる）、押した行や入力した欄が Toast に隠れないよう最小限スクロールして見える位置に寄せる（隠れる下端の行や追加欄には、スクロールで届く。Toast の位置は動かさない。下端に固定した追加欄がある画面は、上に書いたとおり Toast を追加欄の上に出し、余白は追加欄より前の中身の側に足す。追加欄は下端に固定したまま動かさない）。操作と閉じるボタンは Quiet。入力エラー・確認が必要なこと・タスク完了のたびの通知には使わない。祝福の演出をしない。
+**Toast** — 操作の結果を短く伝え、元に戻す手段を添える。面 `surface`＋`border`、`rounded.md`、`elevation-overlay`。Variant：neutral（「3件を今週に入れました」＋元に戻す）/ done（`circle-check`＋「Sprint 14 を確定しました」）/ danger（「保存できませんでした。入力内容は残っています。」＋再試行、`role="alert"`）。表示 8 秒、操作付き（元に戻す・今日を開く・見る）は読んでから押すまでかかるので 16 秒（閉じるまでは残さない。古い「元に戻す」を残さない）、どちらも hover / focus 中は止める。danger は再試行を失わないよう閉じるまで残す。幅は medium 以上で `toast`（480px。日本語の 1 文が 2 行ほどに収まる）、Drawer（400px）を開いているときは、それに重ならない幅まで（768px で 336px）。compact は幅 100% − 32px。画面を移ったら、前の画面の Toast を閉じる（ナビゲーション・リンク・移った先を開く操作・戻る／進む。「今日を開く」も、押さずに移れば閉じる。絞り込み・日・詳細・段階・Sprint の切り替えだけを変えるときは移ったと数えず、残す。danger は残す）。位置は desktop 左下、compact は下部タブバーの上。下端に固定した追加欄がある画面（Today。compact の Backlog）では、どの幅でも、その追加欄の上に出し、追加欄は動かさない。同じ種類の操作の Toast は積まず、最新の 1 つに置き換える（本文・操作・表示時間が新しくなる。「元に戻す」は最新の操作に効く。グループの一括選択は 1 回の操作なので、その「元に戻す」は残る）。種類の違う Toast は同時に 3 つまで（4 つ目を出すと最も古いものを隠す。「同じ種類」の 3 つ上限の例外）。Toast が出ている間は、スクロール領域の下に Toast の高さ分の余白を足し（画面の下端に届く内容は、その分上がる）、押した行や入力した欄が Toast に隠れないよう最小限スクロールして見える位置に寄せる（隠れる下端の行や追加欄には、スクロールで届く。Toast の位置は動かさない。下端に固定した追加欄がある画面は、上に書いたとおり Toast を追加欄の上に出し、余白は追加欄より前の中身の側に足す。追加欄は下端に固定したまま動かさない）。操作と閉じるボタンは Quiet。入力エラー・確認が必要なこと・タスク完了のたびの通知には使わない。祝福の演出をしない。
 
 **Tooltip** — アイコンだけの操作と省略されたラベルに短い説明。`surface-inverse` の小さな面（`rounded.sm`、12px）、任意で Kbd。hover 400ms 後 / focus で即時に出て、pointer が離れる・blur・Esc で消える（pointer を Tooltip に載せても消えない）。1 行 20 字程度まで。矢印・影・アニメーションで飾らない。必須の情報・エラー・操作可能な内容を載せない。
 
@@ -660,14 +662,14 @@ compact の原則：
 
 **Filter** — リストを絞り込むトグル。Pill（28px、`border`）＋任意の Area の路線記号（`area-badge` 20px。記号は読み上げず、ラベルの Area 名を読む）＋ラベル＋件数。Selected は `here-subtle` の地、`ink` の 2px の枠（`stroke-strong`。内側に取り、大きさを変えない）、ラベルの 700、`aria-pressed`。チェックは付けない（選んでも幅を変えず、後ろの Filter を動かさないため。太字の幅は先に取る）。0 件は disabled（フォーカスでき、「0件」を読める）。ただし選択中の Filter は 0 件になっても外せるよう disabled にしない。compact 幅では見た目の 28px を保ったまま当たり判定を 44px にし、折り返した行の間を 16px 空けて当たり判定を重ねない。
 
-**Sprint Header** — Sprint の画面の見出し。Status Tag、タイトル（`display-l`「Sprint 14」）、期間（`body` `ink-muted`）、右に操作（Primary は 1 つ）、段階表示（路線図のように段階を線でつなぎ、番号付きの駅として並べる。`nav`＋`ol`、現在の段階は `here` の印＋「現在」、`aria-current="step"`）。段階表示は目安で、どの段階にも戻れる。
+**Sprint Header** — Sprint の画面の見出し。Status Tag、タイトル（`display-l`「Sprint 14」）、期間（`body` `ink-muted`）、右に操作（Primary は 1 つ）、段階表示（路線図のように段階を線でつなぎ、番号付きの駅として並べる。`nav`＋`ol`、現在の段階は `here` の印＋「現在」、`aria-current="step"`）。段階表示は目安で、どの段階にも戻れる。段階がすべて済んでいる（完了した Retro）ときは、「現在」と `here` の印を出さず、開いている段階を太字だけにして `aria-current="page"` にする。
 - 前後の移動：タイトルの左右に、前の Sprint・次の Sprint へ移る矢印（`chevron-left` / `chevron-right`、IconButton と同じ Quiet の見た目のリンク、Tooltip と読み上げは「前の Sprint（Sprint 13）」）。端で行き先がなければ、矢印を無効の形（`ink-disabled`）で同じ位置に残す。
-- 呼び名：今と比べた呼び名（「今週」「来週」）があれば、期間の前に `ink` の太字で添える（「来週 · 10/5 (月) – 10/11 (日)」）。呼び名の規則は `docs/design/content.md`「週の呼び名」。
+- 呼び名：今と比べた呼び名（「先週」「今週」「来週」）があれば、期間の前に `ink` の太字で添える（「来週 · 10/5 (月) – 10/11 (日)」）。呼び名の規則は `docs/design/content.md`「週の呼び名」。
 - Planning：選ぶ / 整える / 確かめる（PRD §5.B の Pick / Shape / Check）
 - 実行中：Status「実行中」、段階なし
 - 振り返り中・完了の Sprint の画面：Status「振り返り中」/「完了」（`done`）、段階なし、確定時の計画と結果を読み取り専用で出す
 - 次の週（計画を始める前）：Status なし、操作は「Sprint N の計画を始める」
-- Retro：事実を見る / 振り返る / 引き継ぐ（PRD §5.D）。完了した Retro も同じ段階を読み取り専用で出す
+- Retro：事実を見る / 振り返る / 引き継ぐ（PRD §5.D）。完了した Retro も同じ段階を読み取り専用で出し、「現在」は出さない
 
 ### タスク
 

@@ -144,7 +144,8 @@ describe('runningData', () => {
     const closed = records.sprints.find((s) => s.state === 'closed')!;
     const data = runningData(records, clock, closed.id);
     expect(data?.sprint.id).toBe(closed.id);
-    expect(data?.week).toBeUndefined();
+    // Last week: the Sprint Header says so (#168).
+    expect(data?.week).toBe('先週');
     expect(data?.day).toBeUndefined();
     expect(data?.pastDays).toEqual([]);
     const outcomes = data?.plan.flatMap((p) =>

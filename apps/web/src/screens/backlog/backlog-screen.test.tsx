@@ -188,7 +188,10 @@ describe('Backlog', () => {
 
   it('Detail: adopting a suggestion changes the Estimate, and it can be undone', async () => {
     await renderAt('/backlog?fixture=backlog-detail&task=task-interview');
-    const detail = await screen.findByRole('dialog');
+    // Named by its heading, the Task's title (#153).
+    const detail = await screen.findByRole('dialog', {
+      name: '顧客インタビューの設計',
+    });
     const proposal = within(detail).getByRole('region', {
       name: 'Agent 提案 · 見積もり',
     });
@@ -820,7 +823,7 @@ describe('Backlog', () => {
   it('今日へ: adds a Task outside the Sprint to it and to today, in one operation', async () => {
     await renderAt('/backlog?fixture=backlog-capture');
     await userEvent.click(
-      screen.getByRole('button', { name: '操作: 本棚を整理する' }),
+      screen.getByRole('button', { name: 'その他の操作: 本棚を整理する' }),
     );
     await userEvent.click(
       await screen.findByRole('menuitem', { name: '今日へ' }),
@@ -846,7 +849,7 @@ describe('Backlog', () => {
   it('今日へ from the row: a Toast says where it went and 今日を開く opens it in 今日やる (#94)', async () => {
     const router = await renderAt('/backlog?fixture=backlog-capture');
     await userEvent.click(
-      screen.getByRole('button', { name: '操作: 本棚を整理する' }),
+      screen.getByRole('button', { name: 'その他の操作: 本棚を整理する' }),
     );
     await userEvent.click(
       await screen.findByRole('menuitem', { name: '今日へ' }),
@@ -1078,7 +1081,7 @@ describe('Backlog', () => {
   it('archives with an undo in the Toast', async () => {
     await renderAt('/backlog?fixture=backlog-capture');
     await userEvent.click(
-      screen.getByRole('button', { name: '操作: 歯医者の予約' }),
+      screen.getByRole('button', { name: 'その他の操作: 歯医者の予約' }),
     );
     await userEvent.click(
       await screen.findByRole('menuitem', { name: 'アーカイブ' }),
@@ -1140,7 +1143,9 @@ describe('Backlog — before the Sprint starts (#59)', () => {
   it('shows 今日へ disabled with the day it opens', async () => {
     await confirmedOnSunday();
     await userEvent.click(
-      screen.getByRole('button', { name: '操作: 顧客インタビューの設計' }),
+      screen.getByRole('button', {
+        name: 'その他の操作: 顧客インタビューの設計',
+      }),
     );
     const item = await screen.findByRole('menuitem', {
       name: /今日へ（9\/28 \(月\) から）/,
@@ -1336,7 +1341,9 @@ describe('Backlog — keys of the list (#48)', () => {
   it('見積もりを入れる in the … opens the Task at its Estimate, as E does (#96)', async () => {
     await renderAt('/backlog?fixture=backlog-capture');
     await userEvent.click(
-      within(list()).getByRole('button', { name: '操作: 本棚を整理する' }),
+      within(list()).getByRole('button', {
+        name: 'その他の操作: 本棚を整理する',
+      }),
     );
     const item = await screen.findByRole('menuitem', {
       name: /見積もりを入れる/,

@@ -50,6 +50,7 @@ export const cn = createCn({
         'pane-today',
         'pane-rows',
         'pane-side',
+        'toast',
         'drawer',
         'popover',
         'dialog-sm',

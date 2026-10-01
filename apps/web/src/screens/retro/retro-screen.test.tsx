@@ -123,7 +123,7 @@ describe('Retro — 事実を見る', () => {
     expect(paper.textContent).toContain('見送り 2回');
     expect(screen.getByRole('region', { name: '割り込み' })).toBeTruthy();
     expect(
-      screen.getByRole('region', { name: '見送り・今日はここまで' }),
+      screen.getByRole('region', { name: '見送り・ここまで' }),
     ).toBeTruthy();
     // No rates or scores (patterns.md Retro › ルール).
     expect(document.body.textContent).not.toMatch(/%|点|達成率|失敗/);
@@ -157,7 +157,9 @@ describe('Retro — 事実を見る', () => {
     ]);
     // 事実を見る has no materials beside it (#73); 振り返る gathers them.
     expect(screen.queryByRole('region', { name: '振り返りの材料' })).toBeNull();
-    await userEvent.click(screen.getByRole('button', { name: '振り返るへ' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: '次へ：振り返る' }),
+    );
     const materials = screen.getAllByRole('region', {
       name: '振り返りの材料',
     })[0]!;
@@ -224,7 +226,9 @@ describe('Retro — 計画時との差 (MVP 16)', () => {
         name: /振り返りに使う.*使える時間の変更/,
       }),
     );
-    await userEvent.click(screen.getByRole('button', { name: '振り返るへ' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: '次へ：振り返る' }),
+    );
     const materials = screen.getAllByRole('region', {
       name: '振り返りの材料',
     })[0]!;
@@ -364,7 +368,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
       '2件は Backlog に残っています。次の計画の「持ち越し」に候補として出ます。',
     );
     expect(text).toContain(
-      '完了すると、この Sprint には実績を足せなくなります。',
+      '完了すると、書いた内容は変えられず、この Sprint には実績を足せなくなります。',
     );
 
     await userEvent.click(within(dialog).getByRole('button', { name: '戻る' }));
@@ -446,21 +450,24 @@ describe('Retro — 引き継ぐ and 完了', () => {
     // The same Retro, now read only (#90), with what it handed on.
     expect(await screen.findByText('完了')).toBeTruthy();
     expect(
-      screen.getByText(
-        '完了した振り返りです。書いた内容は、ここでは変えられません。',
-      ),
+      screen.getByText('完了した後は、書いた内容を変えられません。'),
     ).toBeTruthy();
     expect(screen.getByText('論文は 1 本ずつ Task に分ける')).toBeTruthy();
-    // The completed view's next step takes the focus.
-    await waitFor(() =>
-      expect(document.activeElement?.textContent).toBe(
-        'Sprint 3 の計画を始める',
-      ),
-    );
+    // Every stage is done: none is 「現在」, and all three can be opened (#168).
+    const stages = screen.getByRole('navigation', { name: '段階' });
+    expect(within(stages).queryByText('現在')).toBeNull();
+    expect(within(stages).getAllByRole('link')).toHaveLength(3);
+    // The next step is where 「振り返りを完了」 was, and takes the focus; the
+    // Sprint Header keeps it too.
+    const beginPlanning = within(
+      screen.getByRole('navigation', { name: '次の段階' }),
+    ).getByRole('button', { name: 'Sprint 3 の計画を始める' });
+    await waitFor(() => expect(document.activeElement).toBe(beginPlanning));
+    expect(
+      screen.getAllByRole('button', { name: 'Sprint 3 の計画を始める' }),
+    ).toHaveLength(2);
 
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Sprint 3 の計画を始める' }),
-    );
+    await userEvent.click(beginPlanning);
     await waitFor(() => expect(router.state.location.pathname).toBe('/sprint'));
     expect(router.state.location.search).toMatchObject({ sprint: 3 });
     const next = lastSnapshot().records.sprints.find(
@@ -871,7 +878,7 @@ describe('Retro — compact (#57)', () => {
         'Agent の提案 3–5h · 計画 5h（基準） · 実績 4.5h',
       );
       expect(paper?.textContent).toContain(
-        '持ち越し · 見送り 2回 · 今日はここまで 1回',
+        '持ち越し · 見送り 2回 · ここまで 1回',
       );
       expect(
         within(paper!).getByRole('button', { name: /実績を足す.*関連論文/ }),
@@ -974,7 +981,9 @@ describe('Retro — 事実を見るを読みやすくする (#108)', () => {
         .getByRole('heading', { level: 1 })
         .compareDocumentPosition(guide[0]!) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    await userEvent.click(screen.getByRole('button', { name: '振り返るへ' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: '次へ：振り返る' }),
+    );
     expect(
       screen.queryByText(/気になった事実に「振り返りに使う」を付けると/),
     ).toBeNull();
@@ -1006,7 +1015,9 @@ describe('Retro — 事実を見るを読みやすくする (#108)', () => {
     await userEvent.click(
       within(interrupts).getAllByRole('button', { name: /振り返りに使う/ })[0]!,
     );
-    await userEvent.click(screen.getByRole('button', { name: '振り返るへ' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: '次へ：振り返る' }),
+    );
     const materials = screen.getAllByRole('region', {
       name: '振り返りの材料',
     })[0]!;
@@ -1025,7 +1036,9 @@ describe('Retro — 事実を見るを読みやすくする (#108)', () => {
         name: /振り返りに使う.*関連論文を 3 本読む/,
       })[0]!,
     );
-    await userEvent.click(screen.getByRole('button', { name: '振り返るへ' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: '次へ：振り返る' }),
+    );
     const materials = screen.getAllByRole('region', {
       name: '振り返りの材料',
     })[0]!;
@@ -1398,5 +1411,121 @@ describe('Retro — the stage it opens on (#111)', () => {
   it('opens a closed Retro on 事実を見る', async () => {
     await renderAt('/retro?sprint=1&fixture=today-daytime');
     expect(heading()).toBe('Sprint 1 で何が起きたか');
+  });
+});
+
+describe('Retro — after completing (#168)', () => {
+  const stageNav = () => screen.getByRole('navigation', { name: '段階' });
+  const nextNav = () => screen.getByRole('navigation', { name: '次の段階' });
+
+  async function complete() {
+    await userEvent.click(completeButton());
+    await userEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', {
+        name: '振り返りを完了',
+      }),
+    );
+    await screen.findByText('完了');
+  }
+
+  it('marks the stage that is open as 「現在」 only while the Retro is open', async () => {
+    await renderAt('/retro?fixture=retro-before-complete&stage=handoff');
+    expect(within(stageNav()).getByText('現在')).toBeTruthy();
+    expect(
+      within(stageNav()).getByRole('link', { name: /引き継ぐ/ }).ariaCurrent,
+    ).toBe('step');
+    await complete();
+    expect(within(stageNav()).queryByText('現在')).toBeNull();
+    // The open one is still told apart for a screen reader, and the others open.
+    expect(
+      within(stageNav()).getByRole('link', { name: /引き継ぐ/ }).ariaCurrent,
+    ).toBe('page');
+    await userEvent.click(
+      within(stageNav()).getByRole('link', { name: /事実を見る/ }),
+    );
+    expect(
+      await screen.findByRole('heading', { level: 1, name: /で何が起きたか/ }),
+    ).toBeTruthy();
+    expect(within(stageNav()).queryByText('現在')).toBeNull();
+  });
+
+  it('puts the next Planning where 「振り返りを完了」 was, once, and the Header keeps it', async () => {
+    await renderAt('/retro?fixture=retro-before-complete&stage=handoff');
+    expect(
+      within(nextNav()).queryByRole('button', {
+        name: 'Sprint 3 の計画を始める',
+      }),
+    ).toBeNull();
+    await complete();
+    expect(
+      within(nextNav()).getByRole('button', {
+        name: 'Sprint 3 の計画を始める',
+      }),
+    ).toBeTruthy();
+    // The other stages end with 「次へ」, so the Header's is the only one.
+    await userEvent.click(
+      within(stageNav()).getByRole('link', { name: /振り返る/ }),
+    );
+    await screen.findByRole('heading', { level: 1, name: '何に気づいたか' });
+    expect(
+      screen.getAllByRole('button', { name: 'Sprint 3 の計画を始める' }),
+    ).toHaveLength(1);
+  });
+
+  it('draws 「計画を開く」 as the same button once the Planning has started', async () => {
+    const router = await renderAt(
+      '/retro?fixture=retro-before-complete&stage=handoff',
+    );
+    await complete();
+    await userEvent.click(
+      within(nextNav()).getByRole('button', {
+        name: 'Sprint 3 の計画を始める',
+      }),
+    );
+    await waitFor(() => expect(router.state.location.pathname).toBe('/sprint'));
+    await router.navigate({
+      to: '/retro',
+      search: { sprint: 2, stage: 'handoff' },
+    });
+    const open = await within(nextNav()).findByRole('link', {
+      name: 'Sprint 3 の計画を開く',
+    });
+    expect(open.getAttribute('data-slot')).toBe('begin-planning');
+    expect(open.className).toContain('border-primary');
+  });
+
+  it('names the stage a button leads to', async () => {
+    await renderAt('/retro?fixture=retro-before-complete&stage=facts');
+    await userEvent.click(
+      within(nextNav()).getByRole('button', { name: '次へ：振り返る' }),
+    );
+    await userEvent.click(
+      await within(nextNav()).findByRole('button', { name: '次へ：引き継ぐ' }),
+    );
+    expect(completeButton()).toBeTruthy();
+  });
+
+  it('says only that a completed Retro cannot be changed', async () => {
+    await renderAt('/retro?fixture=retro-before-complete&stage=handoff');
+    expect(
+      screen.getByText('書いた内容は、途中で閉じても残ります。'),
+    ).toBeTruthy();
+    await complete();
+    expect(
+      screen.getByText('完了した後は、書いた内容を変えられません。'),
+    ).toBeTruthy();
+    expect(screen.queryByText(/ここでは変えられません/)).toBeNull();
+  });
+
+  it('calls last week 「先週」 beside the period, and keeps the Sprint number in the text', async () => {
+    await renderAt('/retro?fixture=retro-before-complete&stage=facts');
+    const header = document.querySelector('[data-slot="sprint-header"]')!;
+    expect(within(header as HTMLElement).getByText('先週')).toBeTruthy();
+    expect(
+      screen.getByRole('heading', {
+        level: 1,
+        name: 'Sprint 2 で何が起きたか',
+      }),
+    ).toBeTruthy();
   });
 });

@@ -1,4 +1,5 @@
 import type { TaskFact } from '@itera/domain';
+import { PAST_DAY_WORDS } from '@/lib/selection-words';
 import {
   formatHours,
   formatPlanningValue,
@@ -46,14 +47,14 @@ export function planNotes(t: TaskFact): string[] {
   ];
 }
 
-/** 「見送り 2回 · 今日はここまで 1回」, or nothing. */
+/** 「見送り 2回 · ここまで 1回」, or nothing. */
 export function daysText(t: TaskFact): string | undefined {
   const parts = [
     ...(t.deferredDates.length > 0
       ? [`見送り ${t.deferredDates.length}回`]
       : []),
     ...(t.pausedDates.length > 0
-      ? [`今日はここまで ${t.pausedDates.length}回`]
+      ? [`${PAST_DAY_WORDS.paused} ${t.pausedDates.length}回`]
       : []),
   ];
   return parts.length === 0 ? undefined : parts.join(' · ');

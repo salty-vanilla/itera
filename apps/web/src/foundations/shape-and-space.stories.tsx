@@ -40,6 +40,7 @@ const motion = [
   ['duration-base', 'Menu・Popover・Tooltip の出現、行の追加・除外'],
   ['duration-slow', 'Dialog・Drawer の出入り（最大）'],
   ['duration-toast', 'Toast の表示時間'],
+  ['duration-toast-action', '操作付きの Toast の表示時間'],
   ['ease-standard', '既定'],
   ['ease-enter', '出現'],
   ['ease-exit', '退場'],

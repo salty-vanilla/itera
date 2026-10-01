@@ -12,7 +12,7 @@ import {
 import { SprintSummary } from '@/components/sprint/sprint-summary';
 import { criterionName } from '@/lib/criterion-text';
 import { formatDate, formatDateTime } from '@/lib/date-format';
-import { SELECTION_WORDS } from '@/lib/selection-words';
+import { PAST_DAY_WORDS } from '@/lib/selection-words';
 import {
   formatHours,
   formatPlanningSum,
@@ -409,17 +409,17 @@ function FactsPane({
       {(facts.deferrals.length > 0 || facts.pauses.length > 0) && (
         <section aria-labelledby="retro-days" className="flex flex-col gap-3">
           <h2 id="retro-days" className="text-heading text-ink">
-            見送り・今日はここまで
+            見送り・ここまで
           </h2>
           <ul className="flex flex-col border-t border-border-soft">
             {[
               ...facts.deferrals.map((s) => ({
                 s,
-                word: SELECTION_WORDS.deferred,
+                word: PAST_DAY_WORDS.deferred,
               })),
               ...facts.pauses.map((s) => ({
                 s,
-                word: SELECTION_WORDS.paused,
+                word: PAST_DAY_WORDS.paused,
               })),
             ]
               .toSorted((a, b) => (a.s.date < b.s.date ? -1 : 1))
@@ -844,11 +844,11 @@ function AddActualButton({
     <Button
       size="sm"
       variant="quiet"
+      aria-label={`実績を足す: ${subject}`}
       onClick={(event) => onClick(event.currentTarget)}
     >
       <Timer aria-hidden />
       実績を足す
-      <span className="sr-only">: {subject}</span>
     </Button>
   );
 }
@@ -867,7 +867,7 @@ function DifferenceNote({ fact }: { fact: TaskFact }) {
   );
 }
 
-/** 「見送り 2回 · 今日はここまで 1回」 under the outcome, if any. */
+/** 「見送り 2回 · ここまで 1回」 under the outcome, if any. */
 function DaysNote({ fact }: { fact: TaskFact }) {
   const text = daysText(fact);
   return text === undefined ? null : (

@@ -1,15 +1,17 @@
 import type { MouseEvent, ReactNode } from 'react';
 import { StepLink } from '@/components/ui/step-link';
 import { cn } from '@/lib/utils';
-import type { WeekName } from '@/lib/week-text';
+import type { WeekLabel } from '@/lib/week-text';
 
 // DESIGN.md Components › Sprint Header. The Status Tag, the title
 // (`display-l`「Sprint 14」) between the links to the previous and next
-// Sprints, the week's name (「今週」「来週」) and the period, the actions on
+// Sprints, the week's name (「先週」「今週」「来週」) and the period, the actions on
 // the right (one Primary at most), and the stages drawn like a route map:
 // stations joined by a line, the current one marked in `here` with 「現在」
 // and aria-current="step". The stages are a guide; any of them can be
-// opened.
+// opened. Once they are all done (a closed Retro) nothing is current: the
+// one that is open is only bold, so that every stage reads as one to open
+// (#168).
 
 type Stage = { id: string; label: string; href: string };
 
@@ -20,8 +22,8 @@ type SprintHeaderProps = {
   /** The Sprint's state. The next week has none before its Planning. */
   status?: ReactNode;
   title: string;
-  /** 「今週」「来週」: the Sprint's name next to now (#90). */
-  week?: WeekName | undefined;
+  /** 「先週」「今週」「来週」: the Sprint's name next to now (#90, #168). */
+  week?: WeekLabel | undefined;
   period: string;
   /** The previous and next Sprints (#90); a missing one is shown disabled. */
   steps?:
@@ -38,6 +40,8 @@ type SprintHeaderProps = {
   actions?: ReactNode;
   stages?: readonly Stage[] | undefined;
   currentStage?: string | undefined;
+  /** Every stage is done: the open one has no 「現在」 and no mark. */
+  stagesDone?: boolean | undefined;
   /** Lets the router take over a plain click on a stage. */
   onStage?:
     ((id: string, event: MouseEvent<HTMLAnchorElement>) => void) | undefined;
@@ -55,6 +59,7 @@ function SprintHeader({
   actions,
   stages,
   currentStage,
+  stagesDone = false,
   onStage,
   children,
   className,
@@ -107,17 +112,20 @@ function SprintHeader({
         <nav aria-label="段階">
           <ol className="flex flex-wrap items-center gap-y-2">
             {stages.map((stage, index) => {
-              const current = stage.id === currentStage;
+              const open = stage.id === currentStage;
+              const current = open && !stagesDone;
               return (
                 <li key={stage.id} className="flex items-center">
                   <a
                     href={stage.href}
-                    aria-current={current ? 'step' : undefined}
+                    aria-current={
+                      open ? (stagesDone ? 'page' : 'step') : undefined
+                    }
                     onClick={(event) => onStage?.(stage.id, event)}
                     className={cn(
                       'group/stage inline-flex min-h-target-touch items-center gap-1 rounded-sm px-0 text-body whitespace-nowrap text-ink-muted medium:min-h-target-min medium:gap-2 medium:px-1',
                       'hover:text-ink focus-visible:focus-ring',
-                      current && 'font-bold text-ink',
+                      open && 'font-bold text-ink',
                     )}
                   >
                     <span
