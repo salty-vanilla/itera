@@ -67,7 +67,7 @@ describe('capacityHeadline (owner decision S5 in #93, #234)', () => {
     });
     // Where no headline is shown, the numbers follow, once.
     expect(capacityStatusLine(over).text).toBe(
-      '超える：少なく済んでも 3h 超える · 多くかかれば 5h 超える',
+      '少なく済んでも 3h 超える · 多くかかれば 5h 超える',
     );
   });
 

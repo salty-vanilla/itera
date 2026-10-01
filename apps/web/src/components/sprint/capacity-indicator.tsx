@@ -190,8 +190,9 @@ function Sentences({ items }: { items: readonly string[] }) {
  * The state where no headline is shown (the 確かめる summary, the 確定
  * Dialog): the statement, and while the plan may or does go over, the
  * headline's sentences after it, each number said once: 「超える可能性：少なく
- * 済めば 1.75h 残る · 多くかかれば 0.25h 超える」 (#93), 「超える：少なく済んでも
- * 3h 超える · 多くかかれば 5h 超える」 (#165, #234).
+ * 済めば 1.75h 残る · 多くかかれば 0.25h 超える」 (#93); when even the lower
+ * end is over, the two sentences alone: 「少なく済んでも 3h 超える · 多くかかれ
+ * ば 5h 超える」 (#165, #234).
  */
 export function capacityStatusLine(
   capacity: Capacity | undefined,
@@ -202,11 +203,13 @@ export function capacityStatusLine(
     return statement;
   }
   const sentences = capacityHeadlineSentences(capacityHeadline(capacity));
-  return {
-    ...statement,
-    text: `${statement.text}：${sentences.join(' · ')}`,
-    sentences,
-  };
+  // Over: the two sentences already end in 「超える」, so they stand alone
+  // with the error icon (#234).
+  const text =
+    capacity.status === 'exceeds'
+      ? sentences.join(' · ')
+      : `${statement.text}：${sentences.join(' · ')}`;
+  return { ...statement, text, sentences };
 }
 
 /**
@@ -270,9 +273,11 @@ function CapacityStatement({
         // 「超える可能性：」 and each sentence stay whole; the line breaks
         // only after 「：」 or at 「·」.
         <span>
-          <span className="whitespace-nowrap">
-            {statement.text.slice(0, statement.text.indexOf('：') + 1)}
-          </span>
+          {statement.text.includes('：') && (
+            <span className="whitespace-nowrap">
+              {statement.text.slice(0, statement.text.indexOf('：') + 1)}
+            </span>
+          )}
           <Sentences items={statement.sentences} />
         </span>
       )}

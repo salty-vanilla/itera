@@ -739,11 +739,11 @@ describe('Planning — 確かめる', () => {
     await userEvent.type(hours, '14{Enter}');
     const state = summary().querySelector('[data-slot="capacity-statement"]')!;
     expect(state.textContent).toBe(
-      '超える：少なく済んでも 1.25h 超える · 多くかかれば 3.25h 超える',
+      '少なく済んでも 1.25h 超える · 多くかかれば 3.25h 超える',
     );
     // Read out from the summary, the one live region in 確かめる.
     expect(within(summary()).getByRole('status').textContent).toBe(
-      '超える：少なく済んでも 1.25h 超える · 多くかかれば 3.25h 超える',
+      '少なく済んでも 1.25h 超える · 多くかかれば 3.25h 超える',
     );
     expect(state.className).toContain('text-danger');
     // 「計画値が下限どおりでも、超過 1.25h です。」 would say it again.

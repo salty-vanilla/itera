@@ -8,7 +8,11 @@ import {
   AvailableHoursField,
   CapacityStatement,
 } from '@/components/sprint/capacity-indicator';
-import { criterionBoundText, criterionName } from '@/lib/criterion-text';
+import {
+  criterionBoundText,
+  criterionMoveText,
+  criterionName,
+} from '@/lib/criterion-text';
 import { formatHours, formatRange } from '@/lib/time-format';
 import type { PlanningData } from '@/store/planning-view';
 import { planSummary } from './plan-summary';
@@ -177,7 +181,8 @@ function CheckSummary({
 /**
  * The criterion's effect, from the same policy as its name (invariant 39):
  * 「研究のタスク 1件を、提案の多めの値で計画しています。少なく済んだときの合計
- * が 2h 増えます。」, a sentence for each end of the total that moves (#234).
+ * が 2h 増えます。」; when both ends move, one sentence: 「…が 1h 増え、…が
+ * 1h 減ります。」 (#234).
  */
 function CriterionEffect({
   criterion,
@@ -188,14 +193,11 @@ function CriterionEffect({
   const bound = criterionBoundText(criterion.active.policy.rangePolicy);
   const scope =
     criterion.areaName === undefined ? '' : `${criterion.areaName}の`;
-  const move = (end: string, by: number) =>
-    by === 0
-      ? ''
-      : `${end}の合計が ${formatHours(Math.abs(by), { total: true })} ${by > 0 ? '増えます' : '減ります'}。`;
+  const move = criterionMoveText(delta);
   return (
     <p className="text-body text-ink [text-wrap:pretty] [word-break:auto-phrase]">
       {criterion.applied
-        ? `${scope}タスク ${count}件を、${bound}で計画しています。${move('少なく済んだとき', delta.lo)}${move('多くかかったとき', delta.hi)}`
+        ? `${scope}タスク ${count}件を、${bound}で計画しています。${move}`
         : '見積もりの提案の幅のまま合計します。'}
     </p>
   );

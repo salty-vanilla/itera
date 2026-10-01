@@ -4,6 +4,7 @@
 // values of a suggestion are said on the 「少ない・多い」 axis of 「少なく済めば
 // / 多くかかれば」 (#234).
 import type { CriterionPolicy, SuggestionBound } from '@itera/domain';
+import { formatHours } from '@/lib/time-format';
 
 export const BOUND_WORDS: Readonly<Record<SuggestionBound, string>> = {
   lo: '少なめ',
@@ -45,4 +46,34 @@ export function criterionEffectText(
   return count === undefined
     ? `見積もりがない${scope}タスクは、${bound}で計画します`
     : `${scope}タスク ${count}件を、${bound}で計画します`;
+}
+
+/**
+ * How applying the criterion moves the planned total, by its ends (#234):
+ * 「少なく済んだときの合計が 2h 増えます。」, one sentence when both move:
+ * 「少なく済んだときの合計が 1h 増え、多くかかったときの合計が 1h 減ります。」.
+ * Empty when neither moves.
+ */
+export function criterionMoveText(delta: {
+  readonly lo: number;
+  readonly hi: number;
+}): string {
+  const moves = [
+    { end: '少なく済んだとき', by: delta.lo },
+    { end: '多くかかったとき', by: delta.hi },
+  ].filter((m) => m.by !== 0);
+  return moves
+    .map(({ end, by }, i) => {
+      const last = i === moves.length - 1;
+      const verb =
+        by > 0
+          ? last
+            ? '増えます。'
+            : '増え、'
+          : last
+            ? '減ります。'
+            : '減り、';
+      return `${end}の合計が ${formatHours(Math.abs(by), { total: true })} ${verb}`;
+    })
+    .join('');
 }
