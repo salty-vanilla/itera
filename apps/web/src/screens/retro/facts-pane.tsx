@@ -707,7 +707,12 @@ function TaskTable({
                 {t.plan?.estimateHours === undefined &&
                 t.plan?.suggestion !== undefined ? (
                   <>
-                    {formatRange(t.plan.suggestion.lo, t.plan.suggestion.hi)}
+                    <RangeCell
+                      text={formatRange(
+                        t.plan.suggestion.lo,
+                        t.plan.suggestion.hi,
+                      )}
+                    />
                     <span className="block text-meta text-ink-muted">
                       見積もりの提案
                     </span>
@@ -717,7 +722,7 @@ function TaskTable({
                 )}
               </td>
               <td className={num}>
-                {plannedCellText(t)}
+                <RangeCell text={plannedCellText(t)} />
                 {/* Notes break at a phrase within the column, not into 実績. */}
                 {[...unestimatedNote(t), ...planNotes(t)].map((note) => (
                   <span
@@ -757,6 +762,22 @@ function TaskTable({
   );
 }
 
+/**
+ * A value in a narrow column of numbers: a range that does not fit breaks
+ * after its 〜 only, onto a second right-aligned line (「1時間30分〜」
+ * 「2時間30分」), never inside a time (#239, owner decision).
+ */
+function RangeCell({ text }: { text: string }) {
+  const at = text.indexOf('〜');
+  if (at === -1) return text;
+  return (
+    <span className="whitespace-normal">
+      <span className="whitespace-nowrap">{text.slice(0, at + 1)}</span>
+      <wbr />
+      <span className="whitespace-nowrap">{text.slice(at + 1)}</span>
+    </span>
+  );
+}
 /**
  * compact: one Task per item, its values in words on wrapping lines
  * (「見積もりの提案 3〜5時間 · 計画 5時間（ルール） · 実績 4時間30分」), then its outcome and days,

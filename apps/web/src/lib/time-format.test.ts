@@ -26,6 +26,18 @@ describe('formatHours', () => {
     expect(formatHours(17.25 + 0.1 + 0.2)).toBe('17時間33分');
   });
 
+  it('rounds a sum once, after adding (#244)', () => {
+    // Interrupts of 45分 and 20分.
+    expect(formatHours((45 + 20) / 60)).toBe('1時間5分');
+    // Actual hours typed as decimals on whole minutes: the rows and their
+    // sum agree.
+    const rows = [0.25, 1.5, 0.1, 2.75, 0.4];
+    const rowMinutes = rows.map((h) => Math.round(h * 60));
+    expect(formatHours(rows.reduce((a, b) => a + b, 0))).toBe(
+      formatHours(rowMinutes.reduce((a, b) => a + b, 0) / 60),
+    );
+  });
+
   it('writes zero as 0時間', () => {
     expect(formatHours(0)).toBe('0時間');
   });

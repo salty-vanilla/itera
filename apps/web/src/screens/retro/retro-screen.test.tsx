@@ -139,6 +139,14 @@ describe('Retro — 事実を見る', () => {
     }).parentElement!;
     // The suggestion's range, with what it is under it (#162).
     expect(paper.textContent).toContain('3〜5時間見積もりの提案');
+    // A range that does not fit its column breaks after 〜 only (#239).
+    expect(
+      [
+        ...paper
+          .querySelectorAll('td')[0]!
+          .querySelectorAll('.whitespace-normal > .whitespace-nowrap'),
+      ].map((e) => e.textContent),
+    ).toEqual(['3〜', '5時間']);
     expect(paper.textContent).toContain('4時間30分');
     expect(paper.textContent).toContain('持ち越し');
     expect(paper.textContent).toContain('見送り 2回');
