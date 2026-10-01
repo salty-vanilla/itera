@@ -298,10 +298,9 @@ function RunningRow({
           .join(' ')}
       </MetaItem>
     ),
+    // In the words of Planning's row and menu (#159).
     hasGoal && sprintTask.goalLink === 'unlinked' && (
-      <MetaItem key="g" className="text-ink-subtle">
-        目標なし
-      </MetaItem>
+      <MetaItem key="g">目標に紐づかない</MetaItem>
     ),
     sprintTask.origin === 'midSprint' && (
       <MetaItem key="m">週の途中で追加</MetaItem>

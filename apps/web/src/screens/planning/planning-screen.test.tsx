@@ -417,8 +417,69 @@ describe('Planning — 整える', () => {
     expect(draft().tasks.find((t) => t.taskId === 'task-paper')?.goalLink).toBe(
       'unlinked',
     );
-    expect(within(research).getByText('目標なし')).toBeTruthy();
+    const row = within(research)
+      .getByText('関連論文を 3 本読む')
+      .closest('[data-slot="task-row"]') as HTMLElement;
+    expect(within(row).getByText('目標に紐づかない')).toBeTruthy();
     expect(within(research).getByText(/2件/)).toBeTruthy();
+
+    // The menu now offers the other way, in the row's words (#159).
+    await userEvent.click(
+      within(research).getByRole('button', {
+        name: '操作: 関連論文を 3 本読む',
+      }),
+    );
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: '目標に紐づける' }),
+    );
+    expect(within(row).getByText('目標に紐づく')).toBeTruthy();
+  });
+
+  it('says what the stage is for under its heading (#159)', async () => {
+    await renderAt('/sprint?fixture=planning-shape&stage=shape');
+    expect(planPane().textContent).toContain(
+      '領域ごとの目標（任意）と、タスクの見積もりを整えます。',
+    );
+  });
+
+  it('shows the link only in an Area with a Goal, and why a recurring Task is not linked (#159)', async () => {
+    await renderAt('/sprint?fixture=planning-shape&stage=shape');
+    const reason = '繰り返しのタスクは、はじめは目標に紐づきません。';
+    const study = within(planPane()).getByRole('region', { name: /学習/ });
+    const reading = () =>
+      within(study)
+        .getByText('英語の多読 30 分')
+        .closest('[data-slot="task-row"]') as HTMLElement;
+    // 学習 has no Goal: no state on the row and nothing to choose.
+    expect(reading().textContent).not.toContain('目標に紐づ');
+    expect(reading().textContent).not.toContain('目標なし');
+    await userEvent.click(
+      within(study).getByRole('button', { name: '操作: 英語の多読 30 分' }),
+    );
+    await screen.findByRole('menuitem', { name: /から外す/ });
+    expect(screen.queryByRole('menuitem', { name: /目標に紐づ/ })).toBeNull();
+    await userEvent.keyboard('{Escape}');
+
+    await userEvent.click(
+      within(study).getByRole('button', { name: '目標を書く: 学習' }),
+    );
+    await userEvent.type(
+      within(study).getByRole('textbox', { name: /目標（今週の終わりに/ }),
+      '英語に触れる状態にする',
+    );
+    await userEvent.click(within(study).getByRole('button', { name: '保存' }));
+    // The recurring Task stays unlinked, and the Area says why.
+    expect(within(reading()).getByText('目標に紐づかない')).toBeTruthy();
+    expect(study.textContent).toContain(reason);
+
+    await userEvent.click(
+      within(study).getByRole('button', { name: '操作: 英語の多読 30 分' }),
+    );
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: '目標に紐づける' }),
+    );
+    expect(within(reading()).getByText('目標に紐づく')).toBeTruthy();
+    expect(study.textContent).not.toContain(reason);
   });
 });
 
@@ -879,7 +940,8 @@ describe('Planning — review fixes', () => {
     const row = within(study)
       .getByText('TypeScript 6 の変更点を読む')
       .closest('[data-slot="task-row"]');
-    expect(row?.textContent).toContain('目標なし');
+    // 学習 has no Goal: the row has no link to show or change (#159).
+    expect(row?.textContent).not.toContain('目標に紐づ');
     await userEvent.click(
       screen.getByRole('button', { name: 'Sprint 2 を確定' }),
     );
