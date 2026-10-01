@@ -185,7 +185,7 @@ function HandoffPane({
               description={
                 draft === undefined
                   ? '上で「計画のルールにもする」をオンにして新しいルールを作ると選べます。'
-                  : `次の計画では、代わりに${criterionEffectText(draft.criterion.policy, draft.areaName)}。使うかどうかは「確かめる」で選べます。`
+                  : `次の計画では代わりに、${criterionEffectText(draft.criterion.policy, draft.areaName)}。使うかどうかは「確かめる」で選べます。`
               }
             />
           </RadioGroup>
@@ -412,8 +412,10 @@ function DraftCriterion({
       <div className="flex flex-col gap-1">
         <p className="text-body text-ink">
           次の計画では、
-          {criterionEffectText(policy, draft.areaName, preview.length)}
-          （今の Backlog で）。
+          {/* None now: the rule in words, not 「0件」 (#206). */}
+          {preview.length === 0
+            ? `${criterionEffectText(policy, draft.areaName)}（今の Backlog にはまだありません）。`
+            : `${criterionEffectText(policy, draft.areaName, preview.length)}（今の Backlog で）。`}
         </p>
         {preview.length > 0 && (
           <ul className="flex flex-col gap-1 text-body text-ink-muted">

@@ -538,8 +538,26 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
       screen.getByText(/タスク \d+件を、見積もりの提案の中央で計画します/),
     ).toBeTruthy();
     expect(choices()).toContain(
-      '次の計画では、代わりに見積もりがないタスクは、見積もりの提案の中央で計画します。使うかどうかは「確かめる」で選べます。',
+      '次の計画では代わりに、見積もりがないタスクは、見積もりの提案の中央で計画します。使うかどうかは「確かめる」で選べます。',
     );
+  });
+
+  it('previews no Task in words, not as 「0件」 (#206)', async () => {
+    await renderAt('/retro?fixture=retro-before-complete&stage=handoff');
+    await userEvent.click(
+      screen.getByRole('switch', { name: /計画のルールにもする/ }),
+    );
+    // 生活 has no Task planned from a suggestion now.
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: '対象' }),
+      'area-life',
+    );
+    expect(
+      screen.getByText(
+        '次の計画では、見積もりがない生活のタスクは、見積もりの提案の上限で計画します（今の Backlog にはまだありません）。',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/0件/)).toBeNull();
   });
 
   it('says so while the new criterion is the same as this one', async () => {

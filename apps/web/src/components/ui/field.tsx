@@ -58,7 +58,11 @@ function FieldDescription({
   return (
     <FieldPrimitive.Description
       data-slot="field-description"
-      className={cn('text-help text-ink-muted', className)}
+      // A phrase stays whole when the line breaks (「確かめる」, 「できます」).
+      className={cn(
+        'text-help text-ink-muted [text-wrap:pretty] [word-break:auto-phrase]',
+        className,
+      )}
       {...props}
     />
   );

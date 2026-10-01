@@ -133,7 +133,7 @@ function CompleteDialog({
           <DialogTitle>
             Sprint {data.number} の振り返りを完了しますか？
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="[text-wrap:pretty] [word-break:auto-phrase]">
             完了すると、書いた内容は変えられず、この Sprint
             にはかかった時間を記録できなくなります。
           </DialogDescription>

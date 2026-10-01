@@ -51,7 +51,7 @@ function CriterionOutcome({ used }: UsedCriterionProps) {
     result.carriedOver.length > 0 && `${result.carriedOver.length}件を持ち越し`,
   ].filter(Boolean);
   return (
-    <p className="text-body text-ink">
+    <p className="text-body text-ink [text-wrap:pretty] [word-break:auto-phrase]">
       {criterionBoundText(used.criterion.policy.rangePolicy)}で計画した{scope}
       タスク {result.tasks.length}件のうち、{parts.join('、')}
       （計画 {formatPlanningTotal(result.planned)}・実績{' '}
