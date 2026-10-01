@@ -190,23 +190,44 @@ export function weekProgress(
   let done = 0;
   let total = 0;
   for (const sprintTask of sprint.tasks.filter(isCounted)) {
-    if (sprintTask.occurrenceIds === undefined) {
-      total += 1;
-      if (sprintTask.outcome === 'done') done += 1;
-      continue;
-    }
-    for (const occurrenceId of sprintTask.occurrenceIds) {
-      const occurrence = occurrences.find((o) => o.id === occurrenceId);
-      if (
-        occurrence === undefined ||
-        occurrence.state === 'excluded' ||
-        occurrence.state === 'skipped'
-      ) {
-        continue;
-      }
-      total += 1;
-      if (occurrence.state === 'done') done += 1;
-    }
+    const counted = occurrenceProgress(sprintTask, occurrences) ?? {
+      done: sprintTask.outcome === 'done' ? 1 : 0,
+      total: 1,
+    };
+    done += counted.done;
+    total += counted.total;
   }
   return { done, total };
+}
+
+export interface OccurrenceProgress extends WeekProgress {
+  /** Skipped occurrences, which the week no longer counts. */
+  readonly skipped: number;
+}
+
+/**
+ * One recurring SprintTask's share of 「今週の完了」 (F32): its occurrences
+ * this week counted as `weekProgress` counts them, so that the rows add up
+ * to the week's total (「3回中 1回完了」). The skipped ones are told apart,
+ * as they leave the total. `undefined` for a non-recurring SprintTask.
+ */
+export function occurrenceProgress(
+  sprintTask: SprintTask,
+  occurrences: readonly Occurrence[],
+): OccurrenceProgress | undefined {
+  if (sprintTask.occurrenceIds === undefined) return undefined;
+  let done = 0;
+  let total = 0;
+  let skipped = 0;
+  for (const occurrenceId of sprintTask.occurrenceIds) {
+    const occurrence = occurrences.find((o) => o.id === occurrenceId);
+    if (occurrence === undefined || occurrence.state === 'excluded') continue;
+    if (occurrence.state === 'skipped') {
+      skipped += 1;
+      continue;
+    }
+    total += 1;
+    if (occurrence.state === 'done') done += 1;
+  }
+  return { done, total, skipped };
 }

@@ -8,11 +8,11 @@ import { weekText } from '@/lib/week-text';
 
 // DESIGN.md Components › Goal. Sprint × Area: 「今週どんな状態にしたいか」.
 // A `border` rule on top, the heading (Area Indicator heading, the number of
-// Tasks and their time, an edit action), the Goal text in `goal` within
-// `measure-read`, then the Area's chosen Tasks. States: set / empty (「+
-// Goal を書く」 and that it is optional) / editing (`body-l` Textarea with
-// 保存 / キャンセル). A Goal is optional per Area; an Area without one is
-// never shown as a warning. No Card.
+// Tasks and their time), the Goal text in `goal` within `measure-read` with
+// its edit action right under it (#160), then the Area's chosen Tasks.
+// States: set / empty (「+ Goal を書く」 and that it is optional) / editing
+// (`body-l` Textarea with 保存 / キャンセル). A Goal is optional per Area; an
+// Area without one is never shown as a warning. No Card.
 
 type GoalBlockProps = {
   area: { name: string; color: AreaColor };
@@ -38,12 +38,6 @@ type GoalBlockProps = {
   planned?: string | null | undefined;
   children?: ReactNode;
   className?: string | undefined;
-  /**
-   * The heading row's own classes. Where blocks sit side by side, the caller
-   * gives it the button's height, so that a block without 編集 (no Goal) lines
-   * up with the rest.
-   */
-  headingRowClassName?: string | undefined;
 };
 
 function GoalBlock({
@@ -57,7 +51,6 @@ function GoalBlock({
   planned,
   children,
   className,
-  headingRowClassName,
 }: GoalBlockProps) {
   const Heading = level === 2 ? 'h2' : 'h3';
   const [editing, setEditing] = useState(false);
@@ -88,37 +81,12 @@ function GoalBlock({
         className,
       )}
     >
-      <div
-        className={cn(
-          'flex flex-wrap items-center justify-between gap-2',
-          headingRowClassName,
+      <Heading id={headingId} className="flex items-center gap-2">
+        <AreaIndicator name={area.name} color={area.color} variant="heading" />
+        {summary !== undefined && (
+          <span className="text-meta text-ink-muted">{summary}</span>
         )}
-      >
-        <Heading id={headingId} className="flex items-center gap-2">
-          <AreaIndicator
-            name={area.name}
-            color={area.color}
-            variant="heading"
-          />
-          {summary !== undefined && (
-            <span className="text-meta text-ink-muted">{summary}</span>
-          )}
-        </Heading>
-        {onSave !== undefined && !editing && goal !== undefined && (
-          <Button
-            ref={openRef}
-            size="sm"
-            variant="quiet"
-            aria-label={`目標を編集: ${area.name}`}
-            onClick={() => {
-              setText(goal);
-              setEditing(true);
-            }}
-          >
-            編集
-          </Button>
-        )}
-      </div>
+      </Heading>
 
       {editing ? (
         <form
@@ -174,7 +142,8 @@ function GoalBlock({
           </div>
         </form>
       ) : goal !== undefined ? (
-        <div className="flex flex-col gap-1">
+        // 編集 under the text it changes, where 「+ 目標を書く」 is without one.
+        <div className="flex flex-col items-start gap-1">
           <p className="max-w-measure-read text-goal text-ink">{goal}</p>
           {planned === null && (
             <p className="text-meta text-ink-muted">
@@ -186,6 +155,22 @@ function GoalBlock({
               計画時：「{planned}」
             </p>
           )}
+          {onSave !== undefined && (
+            <Button
+              ref={openRef}
+              size="sm"
+              variant="quiet"
+              // The words line up with the Goal text's left edge.
+              className="-ms-3 medium:-ms-2"
+              aria-label={`目標を編集: ${area.name}`}
+              onClick={() => {
+                setText(goal);
+                setEditing(true);
+              }}
+            >
+              編集
+            </Button>
+          )}
         </div>
       ) : (
         <div className="flex flex-col items-start gap-1">
@@ -194,6 +179,7 @@ function GoalBlock({
               ref={openRef}
               size="sm"
               variant="quiet"
+              className="-ms-3 medium:-ms-2"
               aria-label={`目標を書く: ${area.name}`}
               onClick={() => {
                 setText('');
