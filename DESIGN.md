@@ -624,7 +624,7 @@ compact の原則：
 
 **Tag** — Status（Sprint の状態、Goal の自己判定）と本人のラベルだけに使う小さな Pill。
 - 20px、`rounded.full`、Status はアイコン必須、語は 1〜2 語（本人のラベルは 12em で省略し、全文を title で読める）。Variant：neutral / done（墨の文字＋`circle-check`）/ warning（`triangle-alert`）/ danger（`circle-alert`）/ draft（破線＋`circle-dashed`。「計画中 · 未確定」）。neutral の Status は意味に合うアイコンを画面側で選ぶ（同期中・次の Sprint で試すは `info`）。アイコンのない neutral は本人のラベルで、`border` の輪郭だけにする。
-- tone の使い分け：neutral = 本人のラベル・一部できた・できなかった・決めない・同期中・次の Sprint で試す、done = できた・保存済み、warning = 超過の可能性、danger = 同期エラーなど保存・同期の失敗、draft = 未確定。期限超過は Tag にせず、Task Metadata の文字（`circle-alert`＋「2日過ぎ」）で示す。Goal の自己判定は円の形と語で区別し、色で区別しない（Issue #42）：できた `circle-check`（done）/ 一部できた `contrast`（半分を描いた円、neutral）/ できなかった `circle`（空の円、neutral）/ 判断しない `circle-minus`（neutral）。できなかったに赤や × を使わない。
+- tone の使い分け：neutral = 本人のラベル・一部できた・できなかった・決めない・同期中・次の Sprint で試す、done = できた・保存済み、warning = 超過の可能性、danger = 同期エラーなど保存・同期の失敗、draft = 未確定。期限超過は Tag にせず、Task Metadata の文字（`circle-alert`＋「2日過ぎ」）で示す。Goal の自己判定は円の形と語で区別し、色で区別しない（Issue #42）：できた `circle-check`（done）/ 一部できた `contrast`（半分を描いた円、neutral）/ できなかった `circle`（空の円、neutral）/ 決めない `circle-minus`（neutral）。できなかったに赤や × を使わない。
 - 期限・Estimate・持ち越し・繰り返し・Area を Tag にしない（→ Task Metadata の文字）。1 行に 3 つ以上並べない。
 
 **Divider** — Card の代わりにグループを区切る、構造の主役。default（`border`）/ soft（`border-soft`、リスト内）/ rule（`ink` 1px、考える領域の上端、1 画面に 1〜2 本）/ label（ラベル付き。グループ見出し）。× 2px 以上の太い罫、二重線、点線。
@@ -674,14 +674,14 @@ compact の原則：
 ### タスク
 
 **Task Row** — タスク 1 件の行。Backlog・Sprint・Today で同じ構造。
-- 左から：ドラッグハンドル（hover / focus 時のみ、compact は非表示）、コントロール（□ 選ぶ / ○ 完了 / なし。Backlog の繰り返しの Task は、回ごとに完了するので ○ の位置に `repeat` の印を置く。押せず、読み上げは「完了は回ごと」。Issue #171）、タイトル（`task`。compact は 2 行まで、medium 以上は 1 行で省略）、Task Metadata、Estimate（右端 `num-s`）、行の操作 `…`（Backlog は常時。Backlog 以外の行は hover / focus 時、compact は常時。Backlog は「今日へ」を探す行なので hover の裏に置かない。Issue #164）。
+- 左から：ドラッグハンドル（hover / focus 時のみ、compact は非表示）、コントロール（□ 選ぶ / ○ 完了 / なし。Backlog の繰り返しの Task は、回ごとに完了するので ○ の位置に `repeat` の印を置く。押せず、読み上げは「1回ずつ完了」。Issue #171）、タイトル（`task`。compact は 2 行まで、medium 以上は 1 行で省略）、Task Metadata、Estimate（右端 `num-s`）、行の操作 `…`（Backlog は常時。Backlog 以外の行は hover / focus 時、compact は常時。Backlog は「今日へ」を探す行なので hover の裏に置かない。Issue #164）。
 - Planning の Backlog ペイン（選ぶ・整える・確かめる）の行は、列が細いので、medium 以上でもタイトルを 1 行で省略しない（Issue #158）。選ぶは compact と同じ 2 行まで、整える・確かめるのタイトルだけの細い列は全文を折り返して、切れたタイトルを作らない。Estimate（見積もりの提案を含む）はタイトルの右ではなく、タイトルの下の Task Metadata と同じ行の右端に置き、入らなければ次の行の右端に回す。タイトルの幅を Estimate に削らせない。
 - layout stacked（既定、約 52px）/ inline（40px、`row-task` は最小高さ）。区切りは `border-soft`、行間 0、角丸・影なし、Card で囲まない。
 - 状態：Selected（`here-subtle`＋チェック）、In progress（Today で開始した行。先頭の端に `here` の 4px の縦線＋タイトル 700＋メタデータの「作業中 · 10:12 から」。ナビの現在地と同じ印で「今やっているもの」を示す。Issue #163）、Done（○ を `primary` で塗り、タイトル `ink-subtle`＋取り消し線）、Skipped（○ に「−」＋「スキップ」）、Dragging（`surface`＋`elevation-drag`＋`border`）、Loading（Estimate が「見積中」）、Error（行内に「保存できませんでした · 再試行」）、Disabled（アーカイブ済み、`ink-disabled`）。
 - Today の「今日やる」の行は、日次の操作（開始 / 完了 / 今日はここまで / 今日は見送る / 今日の予定から外す / 繰り返しのスキップ）を持つ。強い操作を常時並べすぎず、完了（○）以外は行の操作 `…` と詳細から出す（PRD §12）。例外として、見送り・外した・スキップの行は `…` の位置に「取り消す」（`undo-2` の IconButton、`…` と同じ大きさ）をどの幅でも常に出す（誤操作から戻る手段を hover の裏に置かない。ドメインモデル F19・F37、Issue #101）。「今週の残り」「昨日の続き」の行は □ ではなく、行の先頭に常に見える「今日へ」のボタンで選ぶ（□ は今週へ選ぶ意味なので使わない）。
 - × メタ情報を Badge / Pill にする、□ と ○ を入れ替える、Goal に紐づかない行を薄くする。
 
-**Task Metadata** — タスクの属性を Badge ではなく文字とアイコンで 1 行に並べる（`meta` 12px、要素間 `spacing.3`）。順に Area Indicator（グループ化していない一覧だけ）、Deadline、優先度（高と低だけ「優先度 高」「優先度 低」と語で出す。通常は値がない扱いで出さない。色・アイコンで強調せず、並びも変えない。Issue #97）、持ち越し、繰り返し、サブタスク（Backlog の行だけ。アイコンなしの注記。「サブタスク 2件 · （参考）1h」。計画に使う時間がサブタスクの合計のときは「サブタスクの合計」。Issue #171）、Goal（`target`＋Goal 文を省略。領域ごとにまとめ、見出しに Goal 文がある一覧では、Goal 文の代わりに「目標に紐づく」、紐づかない Task には同じ調子で「目標に紐づかない」と出す。Issue #159）、注記（`ink-subtle`）。値がない属性は出さない（「—」で埋めない）。グループ見出しと同じ情報を行に重ねない。
+**Task Metadata** — タスクの属性を Badge ではなく文字とアイコンで 1 行に並べる（`meta` 12px、要素間 `spacing.3`）。順に Area Indicator（グループ化していない一覧だけ）、Deadline、優先度（高と低だけ「優先度 高」「優先度 低」と語で出す。通常は値がない扱いで出さない。色・アイコンで強調せず、並びも変えない。Issue #97）、持ち越し、繰り返し、サブタスク（Backlog の行だけ。アイコンなしの注記。「サブタスク 2件 · （参考）1h」。計画に使う時間がサブタスクの合計のときは「サブタスクの合計」。Issue #171）、Goal（`target`＋Goal 文を省略。領域ごとにまとめ、見出しに Goal 文がある一覧では、Goal 文の代わりに「目標に入っている」、目標に入っていない Task には同じ調子で「目標に入っていない」と出す。Issue #159）、注記（`ink-subtle`）。値がない属性は出さない（「—」で埋めない）。グループ見出しと同じ情報を行に重ねない。
 
 **Task Quick Add** — 画面を中断せずにタイトルだけでタスクを追加する入力。`plus` の接頭アイコン、視覚ラベルなし（`aria-label` あり）。`aria-label` とプレースホルダーには同じ語で入り先を書く（Backlog「Backlog にタスクを追加」、Today「今日やるタスクを追加」、Planning「今週のタスクを追加」。週の語は週の呼び名に従う）。任意で Area の Select（既定は直前に使った Area）、Secondary の「追加」ボタン（すべての画面・すべての幅に置く。compact では 44px。空のときに押しても何も起きない）、ヒント（Enter で追加 / Esc で取り消し。compact には出さない）。ボタンも Enter も同じ追加で、追加後も入力にフォーカスを残す。768px 以上では、入力・Area の Select・ボタンを 1 行に並べる。compact と Planning の Backlog の枠（細いので）では、入力を 1 行目に広げ、2 行目に Select とボタンを置く（プレースホルダーが切れないように）。Backlog 上部、Planning、Today の下部（幅に関係なく下端に固定（sticky）。compact はタブバーの上）で同じ形。モーダルで追加させない。
 

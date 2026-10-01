@@ -173,7 +173,15 @@ function FactsPane({
               label: 'スキップ',
               value: facts.occurrences.skipped.length,
               unit: '回',
-              note: `繰り返し：完了 ${facts.occurrences.done.length} · 未完了 ${facts.occurrences.missed.length}`,
+              // Breaks only at 「 · 」, as 計画の合計's note does.
+              note: (
+                <Sentences
+                  items={[
+                    `繰り返し：完了 ${facts.occurrences.done.length}`,
+                    `未完了 ${facts.occurrences.missed.length}`,
+                  ]}
+                />
+              ),
             },
             {
               label: '週の途中の追加',

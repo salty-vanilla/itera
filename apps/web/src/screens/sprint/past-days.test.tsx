@@ -46,4 +46,17 @@ describe('consequence (#209)', () => {
       'その日の記録と繰り返しは未完了に戻ります。あとから、その日をスキップにはできません。',
     );
   });
+
+  it('names the occurrence 「繰り返し」 when the day is closed or gone (#205)', () => {
+    expect(
+      consequence(
+        record('done', { kind: 'closed', resolution: 'deferred' }, true),
+      ),
+    ).toBe(
+      'その日の記録は「見送り」に戻り、繰り返しは未完了に戻ります。あとから、その日を完了にはできません。',
+    );
+    expect(consequence(record('done', { kind: 'gone' }, true))).toBe(
+      'その日の記録は消え、繰り返しは未完了に戻ります。あとから、その日を完了にはできません。',
+    );
+  });
 });

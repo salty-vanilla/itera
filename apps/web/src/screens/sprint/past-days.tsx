@@ -140,23 +140,24 @@ function PastDays({ days, onUndo }: PastDaysProps) {
 
 /** What undoing leaves, in words (F33, F17, F29). */
 function consequence(r: PastDayRecord): string {
+  const noWayBack =
+    r.selection.resolution === 'skipped'
+      ? 'あとから、その日をスキップにはできません。'
+      : 'あとから、その日を完了にはできません。';
+  // Unresolved reads 「未完了」 (#205), the state before the completion or
+  // skip, as 日ごとの記録 says. With an occurrence both go back to it: one
+  // sentence.
+  if (r.after.kind === 'unresolved' && r.recurring)
+    return `その日の記録と繰り返しは未完了に戻ります。${noWayBack}`;
   const back = r.recurring
     ? '繰り返しは未完了に戻ります。'
     : 'タスクは今週の残りに戻ります。';
-  // Unresolved reads 「未完了」 (#205), the state before the completion or
-  // skip, as 日ごとの記録 says.
   const day =
     r.after.kind === 'gone'
       ? 'その日の記録は消え、'
       : r.after.kind === 'closed'
         ? `その日の記録は「${PAST_DAY_WORDS[r.after.resolution]}」に戻り、`
-        : r.recurring
-          ? 'その日の記録と'
-          : 'その日の記録は未完了に戻り、';
-  const noWayBack =
-    r.selection.resolution === 'skipped'
-      ? 'あとから、その日をスキップにはできません。'
-      : 'あとから、その日を完了にはできません。';
+        : 'その日の記録は未完了に戻り、';
   return `${day}${back}${noWayBack}`;
 }
 
