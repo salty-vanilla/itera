@@ -15,7 +15,6 @@ import {
   TaskMetadata,
 } from '@/components/task/task-metadata';
 import { TaskRow } from '@/components/task/task-row';
-import { criterionBoundText } from '@/lib/criterion-text';
 import { formatPlanningSum, formatPlanningTotal } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
 import { weekCall, weekText } from '@/lib/week-text';
@@ -25,6 +24,7 @@ import type {
   PlanningData,
 } from '@/store/planning-view';
 import { usePlanningActions } from '@/store/use-planning';
+import { plannedSourceText } from './planned-source';
 
 // The Sprint pane of Planning (Thinking space, at most 680px; from 1920px
 // (bp-xl) it takes the width that is left, and the Area blocks sit in
@@ -266,6 +266,10 @@ function PlannedRow({
   const { sprintTask, task, value, occurrenceCount, suggestion, inactive } =
     planned;
   const recurring = occurrenceCount !== undefined;
+  const source =
+    suggestion === undefined
+      ? undefined
+      : plannedSourceText(value, criterionBound, occurrenceCount);
   const linked = sprintTask.goalLink === 'linked';
   // The link means something only where the Area has a Goal (a Task in an
   // Area without one is unlinked at confirm, goalLinkAtConfirm), so the row
@@ -365,9 +369,9 @@ function PlannedRow({
       estimate={
         // One value: the planning value, solid (a preview from the person's
         // choice), and where it comes from a suggestion, which value, after
-        // it (「3〜5時間（提案）」「5時間（提案の多めの値）」). It is not the
-        // person's Estimate yet (invariant 7, patterns.md Planning), so it
-        // says so on these rows only (#250).
+        // it (「3〜5時間（提案）」「5時間（提案の多めの値）」,
+        // plannedSourceText). It is not the person's Estimate yet (invariant
+        // 7, patterns.md Planning), so it says so on these rows only (#250).
         <span className="inline-flex flex-wrap items-center justify-end">
           <Estimate
             value={value}
@@ -380,13 +384,9 @@ function PlannedRow({
                 : undefined
             }
           />
-          {value.base === 'suggestion' && suggestion !== undefined && (
+          {source !== undefined && (
             <span className="text-meta whitespace-nowrap text-ink-muted">
-              （
-              {value.criterionApplied && criterionBound !== undefined
-                ? criterionBoundText(criterionBound)
-                : '提案'}
-              ）
+              {source}
             </span>
           )}
         </span>

@@ -75,6 +75,20 @@ describe('Backlog', () => {
     expect(records().activities.at(-1)).toMatchObject({ kind: 'taskCreated' });
   });
 
+  it('shows a suggestion as 「提案 3〜5時間」 and reads it out in full (#250)', async () => {
+    await renderAt('/backlog?fixture=backlog-capture');
+    const estimate = within(list())
+      .getByText('新メンバーのオンボーディング資料')
+      .closest('[data-slot="task-row"]')!
+      .querySelector('[data-slot="estimate"][data-variant="suggestion"]')!;
+    expect(estimate.querySelector('[aria-hidden]')!.textContent).toBe(
+      '提案 3〜5時間',
+    );
+    expect(estimate.querySelector('.sr-only')!.textContent).toBe(
+      '見積もりの提案（未確定）：3〜5時間',
+    );
+  });
+
   // Issue #98
   it('Capture: the 追加 button adds like Enter, does nothing when empty, and keeps the focus in the field', async () => {
     await renderAt('/backlog?fixture=backlog-capture');

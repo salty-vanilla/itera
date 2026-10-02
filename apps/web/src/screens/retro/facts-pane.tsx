@@ -34,6 +34,7 @@ import { TaskResult } from './task-result';
 import {
   actualLabel,
   daysText,
+  differenceParts,
   differenceText,
   estimateOf,
   plannedCellText,
@@ -970,13 +971,11 @@ function AddActualButton({
  * at 1000px; the difference itself is not broken (「30分 / 少ない」, #250).
  */
 function DifferenceNote({ fact }: { fact: TaskFact }) {
-  const text = differenceText(fact);
-  if (text === undefined) return null;
-  const space = text.indexOf(' ');
+  const parts = differenceParts(fact);
+  if (parts === undefined) return null;
   return (
     <span className="block text-meta whitespace-normal text-ink-muted">
-      {text.slice(0, space)}{' '}
-      <span className="whitespace-nowrap">{text.slice(space + 1)}</span>
+      {parts.against} <span className="whitespace-nowrap">{parts.amount}</span>
     </span>
   );
 }
