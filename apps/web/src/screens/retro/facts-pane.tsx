@@ -435,12 +435,12 @@ function FactsPane({
                     </span>{' '}
                     {title} · {occurrenceWord(o.state)}
                     {actualHours > 0 && (
-                      // Kept whole with its separator: the line breaks only
-                      // before 「 · 」, never inside 「実績 30分」 (#241).
+                      // The separator stays at the end of the line and the
+                      // value whole: never 「実績」 and 「30分」 apart (#241).
                       <span className="text-ink-muted">
-                        {' '}
+                        {'\u00a0· '}
                         <span className="whitespace-nowrap">
-                          · 実績 {formatHours(actualHours)}
+                          実績 {formatHours(actualHours)}
                         </span>
                       </span>
                     )}
@@ -534,9 +534,9 @@ function FactsPane({
                 {n.text}
                 {n.minutes !== undefined && (
                   <span className="text-ink-muted">
-                    {' '}
+                    {'\u00a0· '}
                     <span className="whitespace-nowrap">
-                      · {formatHours(n.minutes / 60)}
+                      {formatHours(n.minutes / 60)}
                     </span>
                   </span>
                 )}
