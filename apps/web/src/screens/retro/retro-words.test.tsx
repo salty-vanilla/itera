@@ -26,7 +26,7 @@ describe('carryOverWords (#209)', () => {
         completed: 0,
         archived: 0,
       }),
-    ).toBe('5件：次の計画に 2件 · Backlog に 3件');
+    ).toBe('5件：次の Sprint に 2件 · Backlog に 3件');
     expect(
       carryOverWords({
         total: 3,

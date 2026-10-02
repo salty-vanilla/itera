@@ -1,0 +1,27 @@
+import { describe, expect, it } from 'vitest';
+import { readActualHours } from './actual-hours';
+import { formatHours } from './time-format';
+
+describe('readActualHours', () => {
+  it('reads an empty field as nothing, and what is not a minute or more as wrong', () => {
+    expect(readActualHours('  ')).toBeUndefined();
+    expect(readActualHours('abc')).toBeNull();
+    expect(readActualHours('0')).toBeNull();
+    expect(readActualHours('-1')).toBeNull();
+    // Under half a minute rounds to 0分.
+    expect(readActualHours('0.008')).toBeNull();
+  });
+
+  it('rounds to the minute, so that the rows add up to their total (#245)', () => {
+    const rows = ['1.33', '1.33', '1.33'].map((t) => readActualHours(t)!);
+    expect(rows.map((h) => formatHours(h))).toEqual([
+      '1時間20分',
+      '1時間20分',
+      '1時間20分',
+    ]);
+    // Not 3時間59分, the 3.99 hours typed.
+    expect(formatHours(rows.reduce((sum, h) => sum + h, 0))).toBe('4時間');
+    expect(readActualHours('1.5')).toBe(1.5);
+    expect(readActualHours('0.25')).toBe(0.25);
+  });
+});

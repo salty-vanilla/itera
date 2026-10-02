@@ -185,7 +185,7 @@ function Improvement({
             hideLabel
             description={
               data.draft === undefined
-                ? '次の計画のはじめに表示されます。'
+                ? '次の Sprint を計画するときに表示されます。'
                 : '計画のルールの元にしています。消すときは、先に「引き継ぐ」で「計画のルールにもする」をオフにしてください。'
             }
           >

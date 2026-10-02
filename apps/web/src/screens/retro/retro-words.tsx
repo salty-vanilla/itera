@@ -120,7 +120,7 @@ export const DECISION_WORDS: Readonly<Record<RetroDecision, string>> = {
 
 /** A carried-over Task that is not a candidate: where it is instead. */
 export const CARRY_OVER_PLACE_WORDS = {
-  inNext: '次の計画に入っています',
+  inNext: '次の Sprint に入っています',
   completed: '完了',
   archived: 'アーカイブ',
 } as const;
@@ -132,7 +132,7 @@ export const CARRY_OVER_PLACE_WORDS = {
  */
 export function carryOverWords(places: CarryOverPlaces): string {
   const parts = [
-    places.inNext > 0 && `次の計画に ${places.inNext}件`,
+    places.inNext > 0 && `次の Sprint に ${places.inNext}件`,
     places.candidates > 0 && `Backlog に ${places.candidates}件`,
     places.completed > 0 && `完了 ${places.completed}件`,
     places.archived > 0 && `アーカイブ ${places.archived}件`,

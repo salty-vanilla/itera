@@ -964,7 +964,9 @@ describe('Planning — 確定', () => {
         within(dialog).getByRole('button', { name: '戻って調整' }),
       ),
     );
-    expect(within(dialog).getByText(/今回は使わない/)).toBeTruthy();
+    expect(
+      within(dialog).getByText(/ · 今回はこのルールで計画しない$/),
+    ).toBeTruthy();
     expect(
       dialog.querySelector('[data-slot="capacity-statement"]')?.textContent,
     ).toMatch(/^超える可能性：/);
@@ -981,6 +983,19 @@ describe('Planning — 確定', () => {
       sprint?.tasks.find((t) => t.taskId === 'task-paper')?.planSnapshot?.value,
     ).toMatchObject({ lo: 3, hi: 5, criterionApplied: false });
     expect(await screen.findByText('Sprint 2 を確定しました')).toBeTruthy();
+  });
+
+  it('names the criterion with how it plans, not 「使う」 (#245)', async () => {
+    await renderAt('/sprint?fixture=planning-check&stage=check');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Sprint 2 を確定' }),
+    );
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Sprint 2 を確定しますか？',
+    });
+    expect(
+      within(dialog).getByText('計画のルール').nextElementSibling?.textContent,
+    ).toBe('「研究：提案の多めで計画」 · このルールで計画する');
   });
 
   it('moves between stages by the route map, keeping the fixture', async () => {
