@@ -191,8 +191,8 @@ function Sentences({ items }: { items: readonly string[] }) {
 }
 
 /**
- * The state where no headline is shown (the 確かめる summary, the 確定
- * Dialog): the statement, and while the plan may or does go over, the
+ * The state where no headline is shown (the 確定 Dialog; 確かめる shows the
+ * headline since #243): the statement, and while the plan may or does go over, the
  * headline's sentences after it, each number said once: 「超える可能性：少なく
  * 済めば 1時間45分残る · 多くかかれば 15分超える」 (#93); when even the lower
  * end is over, the two sentences alone: 「少なく済んでも 3時間超える · 多くかかれ
@@ -243,16 +243,20 @@ const toneIcon = {
  * The state sentence: its icon and words in its tone, never the colour
  * alone. Shared by the Capacity, the 確かめる summary and the 確定 Dialog
  * (#93). `strong`: an ok state in `ink`, where the sentence leads.
+ * `pause`: a 「。」 read out after 「超える可能性」「超える」, where the
+ * headline follows (#243).
  */
 function CapacityStatement({
   statement,
   as: Tag = 'p',
   strong = false,
+  pause = false,
   className,
 }: {
   statement: CapacityState;
   as?: 'p' | 'li';
   strong?: boolean;
+  pause?: boolean;
   className?: string | undefined;
 }) {
   const Icon = toneIcon[statement.tone];
@@ -272,7 +276,12 @@ function CapacityStatement({
         className="mt-1 size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
       />
       {statement.sentences === undefined ? (
-        statement.text
+        <>
+          {statement.text}
+          {pause && !statement.text.endsWith('。') && (
+            <span className="sr-only">。</span>
+          )}
+        </>
       ) : (
         // 「超える可能性：」 and each sentence stay whole; the line breaks
         // only after 「：」 or at 「·」.
@@ -379,6 +388,10 @@ function CapacityIndicator({
   );
 }
 
+/**
+ * The headline: one sentence per line, the numbers in `num-l`. The top of
+ * the Capacity, and of the 確かめる summary (#243).
+ */
 function Headline({
   headline,
   over,
@@ -551,5 +564,11 @@ function CapacityBar({
   );
 }
 
-export { AvailableHoursField, CapacityIndicator, CapacityStatement, Sentences };
+export {
+  AvailableHoursField,
+  CapacityIndicator,
+  CapacityStatement,
+  Headline,
+  Sentences,
+};
 export type { AreaSegment, CapacityIndicatorProps };

@@ -1,5 +1,8 @@
 import {
+  capacityHeadline,
+  capacityStatement,
   capacityStatusLine,
+  type CapacityHeadline,
   type CapacityState,
 } from '@/components/sprint/capacity-indicator';
 import { criterionName } from '@/lib/criterion-text';
@@ -21,9 +24,21 @@ import type {
 export interface PlanSummary {
   /**
    * Whether the plan fits: ok / tight / over / unknown, with the numbers
-   * while it may or does go over (`capacityStatusLine`).
+   * while it may or does go over (`capacityStatusLine`): the 確定 Dialog's
+   * one line.
    */
   readonly statement: CapacityState;
+  /**
+   * The same state without the numbers, and what is left or over at each
+   * end (absent while no available hours are entered): the head of the
+   * 確かめる summary, the headline in `num-l` under the state (#243).
+   */
+  readonly state: CapacityState;
+  readonly headline?: {
+    readonly parts: CapacityHeadline;
+    /** Even the lower end is over: the numbers are `danger`. */
+    readonly over: boolean;
+  };
   /** 「14時間45分〜17時間45分」, or 「見積もりなし 3件」 with nothing estimated. */
   readonly total: string;
   /** 「18時間」; absent while no available hours are entered. */
@@ -59,6 +74,15 @@ export function planSummary(data: PlanningData): PlanSummary {
   const leftOut = formatLeftOut(totals.total);
   return {
     statement: capacityStatusLine(totals.capacity, totals.total),
+    state: capacityStatement(totals.capacity, totals.total),
+    ...(totals.capacity === undefined
+      ? {}
+      : {
+          headline: {
+            parts: capacityHeadline(totals.capacity),
+            over: totals.capacity.status === 'exceeds',
+          },
+        }),
     total: formatPlanningSum(totals.total),
     ...(totals.capacity === undefined
       ? {}

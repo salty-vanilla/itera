@@ -157,6 +157,7 @@ function RunningSprint({
           value={data.progress.done}
           max={data.progress.total}
           unit="件"
+          large
           className="max-w-measure-read"
         />
       )}
@@ -382,7 +383,8 @@ function Outlook({
             give way breaks only where <wbr> says (#239). */}
         <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-body">
           <dt className="text-ink-muted">計画の合計</dt>
-          <dd className="text-right text-num-m whitespace-nowrap text-ink">
+          {/* In the body's size: 今週の完了 is the answer here (#243). */}
+          <dd className="text-right whitespace-nowrap text-ink">
             {formatPlanningSum(data.totals.total)}
           </dd>
           <dt className="text-ink-muted [word-break:keep-all]">

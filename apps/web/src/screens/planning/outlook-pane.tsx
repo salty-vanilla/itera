@@ -82,7 +82,9 @@ function OutlookPane({
           <h2 id={`${ids}-improvement`} className="text-label text-ink-muted">
             前回、次に試すと決めたこと
           </h2>
-          <p className="text-goal text-ink">{improvement.text}</p>
+          {/* In the body's weight, so that it does not vie with the answer
+              of the stage (#243, owner decision). */}
+          <p className="text-body text-ink">{improvement.text}</p>
           {criterionLine}
         </section>
       )}

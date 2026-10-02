@@ -156,9 +156,11 @@ describe('Sprint — running (#51)', () => {
   it('shows 今週の完了 as Today counts it, with no judgement (#103, F32)', async () => {
     await renderAt('/sprint?fixture=today-interrupt');
     const bar = screen.getByRole('progressbar', { name: '今週の完了' });
-    expect(
-      within(bar.parentElement as HTMLElement).getByText('4 / 10件'),
-    ).toBeTruthy();
+    // The answer of the screen in `num-l`, the unit in `meta`; Today keeps
+    // `num-s` (#243).
+    expect(bar.parentElement?.querySelector('.text-num-l')?.textContent).toBe(
+      '4 / 10件',
+    );
     // Count only: no remaining time, no colour or word of going over or short.
     const text = document.body.textContent ?? '';
     for (const word of ['不足', '遅れ', '残り時間']) {
@@ -166,7 +168,7 @@ describe('Sprint — running (#51)', () => {
     }
     cleanup();
     await renderAt('/today?fixture=today-interrupt');
-    expect(screen.getByText('4 / 10件')).toBeTruthy();
+    expect(screen.getByText('4 / 10件').className).toContain('text-num-s');
   });
 
   it('does not show it for a Sprint that has ended (#103)', async () => {

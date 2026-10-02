@@ -32,7 +32,8 @@ import { UsedCriterion } from './used-criterion';
 // (invariant 36), right after what it did this Sprint; each choice says
 // what the next Planning does (#107). The setting, its effect and the next
 // Planning's preview all come from the one policy (invariant 39).
-// Carry-overs are not decided here (invariant 20): the first block lists
+// The improvement comes first, as the answer of the stage (#243).
+// Carry-overs are not decided here (invariant 20): the block under it lists
 // them and says where they are decided, the next Planning (#169).
 
 type HandoffPaneProps = {
@@ -77,7 +78,7 @@ function HandoffPane({
       data-slot="handoff-pane"
       className={cn('flex flex-col gap-12', className)}
     >
-      {carryOver.total > 0 && <CarryOverList data={data} titleOf={titleOf} />}
+      {/* 次に試すこと first: it is the answer of 引き継ぐ (#243). */}
       <section
         aria-labelledby="handoff-improvement"
         className="flex flex-col gap-3 border-t border-b border-t-ink border-b-border py-4"
@@ -107,6 +108,7 @@ function HandoffPane({
           </>
         )}
       </section>
+      {carryOver.total > 0 && <CarryOverList data={data} titleOf={titleOf} />}
 
       <section aria-labelledby="handoff-draft" className="flex flex-col gap-4">
         <h2 id="handoff-draft" className="text-heading text-ink">
