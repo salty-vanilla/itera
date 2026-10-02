@@ -17,7 +17,8 @@ describe('Button', () => {
     render(<Button variant="quiet">キャンセル</Button>);
     const button = screen.getByRole('button', { name: 'キャンセル' });
     // An outline, so that it reads as a button and not a label (#251).
-    expect(button.className).toContain('border-border');
+    expect(button.className.split(' ')).toContain('border-border');
+    expect(button.className).not.toContain('border-border-strong');
     expect(button.className).not.toContain('border-transparent');
     expect(button.className).toContain('text-body');
     expect(button.className).not.toContain('text-button');
