@@ -1,9 +1,15 @@
 import type { Capacity, PlanningTotal } from '@itera/domain';
 import { Fragment, useId, useState } from 'react';
 import { AreaIndicator, type AreaColor } from '@/components/ui/area-indicator';
-import { Field } from '@/components/ui/field';
+import { DurationField } from '@/components/ui/duration-field';
 import { semanticIcons } from '@/components/ui/icon';
-import { TextInput } from '@/components/ui/text-input';
+import {
+  DURATION_ZERO_ERROR,
+  hoursText,
+  readMinutes,
+  sameMinutes,
+  type DurationText,
+} from '@/lib/duration-text';
 import {
   formatHours,
   formatLeftOut,
@@ -440,57 +446,49 @@ function Headline({
 }
 
 /**
- * The available hours, saved on blur or Enter. It follows a value changed
- * elsewhere and goes back to the saved value when saving fails. Also used
- * on the running Sprint's screen (#51).
+ * The available hours, saved on leaving the fields or Enter. It follows a
+ * value changed elsewhere and goes back to the saved value when saving
+ * fails. Also used on the running Sprint's screen (#51).
  */
 function AvailableHoursField({
   value,
   onChange,
   label = '使える時間',
-  description = '時間で入力',
+  description,
 }: {
   value: number | undefined;
   onChange: (hours: number | null) => boolean;
   label?: string;
   description?: string;
 }) {
-  const saved = value === undefined ? '' : String(value);
+  const saved = hoursText(value);
   const [text, setText] = useState(saved);
   const [error, setError] = useState<string>();
-  const [last, setLast] = useState(saved);
+  const [last, setLast] = useState(value);
   // Follow a value changed elsewhere (another fixture state, 元に戻す).
-  if (saved !== last) {
-    setLast(saved);
+  if (value !== last) {
+    setLast(value);
     setText(saved);
   }
-  function commit() {
-    const trimmed = text.trim();
-    const hours = trimmed === '' ? null : Number(trimmed);
-    if (hours !== null && !(Number.isFinite(hours) && hours >= 0)) {
-      setError('0 以上の時間を数字で入れてください（例：18）');
+  function commit(typed: DurationText) {
+    const minutes = readMinutes(typed);
+    if (minutes === null) {
+      setError(DURATION_ZERO_ERROR);
       return;
     }
     setError(undefined);
-    if ((hours ?? undefined) === value) return;
-    if (!onChange(hours)) setText(saved);
+    if (sameMinutes(minutes, value)) return;
+    if (!onChange(minutes === undefined ? null : minutes / 60)) setText(saved);
   }
   return (
-    <Field label={label} description={description} error={error}>
-      <TextInput
-        inputMode="decimal"
-        suffix="時間"
-        value={text}
-        onChange={(e) => setText(e.currentTarget.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            commit();
-          }
-        }}
-      />
-    </Field>
+    <DurationField
+      label={label}
+      description={description}
+      error={error}
+      value={text}
+      onChange={setText}
+      onCommit={commit}
+    />
   );
 }
 

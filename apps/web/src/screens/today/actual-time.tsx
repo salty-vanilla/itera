@@ -10,7 +10,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
-import { Field } from '@/components/ui/field';
+import { DurationField } from '@/components/ui/duration-field';
 import {
   Popover,
   PopoverBody,
@@ -21,12 +21,12 @@ import {
   PopoverHeader,
   PopoverTitle,
 } from '@/components/ui/popover';
-import { TextInput } from '@/components/ui/text-input';
 import {
   ACTUAL_HOURS_ERROR,
   ACTUAL_HOURS_HINT,
   readActualHours,
 } from '@/lib/actual-hours';
+import { EMPTY_DURATION } from '@/lib/duration-text';
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 
 // かかった時間 (実績時間, patterns.md Today): optional, added lightly after completing or
@@ -90,7 +90,7 @@ function ActualTime({
   description: descriptionOverride,
 }: ActualTimeProps) {
   const sheet = !useMediaQuery(MEDIUM_UP, true);
-  const [text, setText] = useState('');
+  const [text, setText] = useState(EMPTY_DURATION);
   const [error, setError] = useState<string | undefined>(undefined);
   const { title, submit } = words[mode];
   const description = descriptionOverride ?? words[mode].description;
@@ -106,7 +106,7 @@ function ActualTime({
 
   const change = (next: boolean) => {
     if (!next) {
-      setText('');
+      setText(EMPTY_DURATION);
       setError(undefined);
     }
     onOpenChange(next);
@@ -127,19 +127,14 @@ function ActualTime({
   };
 
   const field = (
-    <Field
+    <DurationField
       label="かかった時間"
       necessity={optional ? 'optional' : 'required'}
       description={ACTUAL_HOURS_HINT}
       error={error}
-    >
-      <TextInput
-        inputMode="decimal"
-        suffix="時間"
-        value={text}
-        onChange={(e) => setText(e.currentTarget.value)}
-      />
-    </Field>
+      value={text}
+      onChange={setText}
+    />
   );
   const heading = `${title}：${taskTitle}`;
 

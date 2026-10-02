@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { StoreSnapshot } from '@/store/record-store';
+import { getHours } from '@/test/duration';
 
 // For a Sprint whose criterion changed no planned value (#161).
 let criterionHadNoTarget = false;
@@ -231,9 +232,12 @@ describe('Sprint — running (#51)', () => {
   it('changes the available hours and keeps the planned hours (invariant 18)', async () => {
     await renderAt('/sprint?fixture=today-interrupt');
     // One field, whatever the width (it follows the saved value).
-    const hours = screen.getByRole('textbox', { name: /^使える時間/ });
+    const hours = getHours(screen, /^使える時間/);
     await userEvent.clear(hours);
     await userEvent.type(hours, '14');
+    // Saved on leaving both fields, not on going from 時間 to 分 (#252).
+    await userEvent.tab();
+    expect(running().availableHours).toBe(17);
     await userEvent.tab();
     expect(running().availableHours).toBe(14);
     expect(running().plannedAvailableHours).toBe(17);
@@ -255,10 +259,30 @@ describe('Sprint — running (#51)', () => {
     ).toBeTruthy();
   });
 
+  it('takes 0 available hours, and says how to fix what is not a number (#252)', async () => {
+    await renderAt('/sprint?fixture=today-interrupt');
+    const hours = getHours(screen, /^使える時間/);
+    await userEvent.clear(hours);
+    await userEvent.type(hours, 'abc');
+    await userEvent.tab();
+    await userEvent.tab();
+    expect(screen.getByText('時間と分を数字で入れてください')).toBeTruthy();
+    expect(running().availableHours).toBe(17);
+    // Unlike an Estimate, 0 is a time the week can have.
+    await userEvent.clear(hours);
+    await userEvent.type(hours, '0');
+    await userEvent.tab();
+    await userEvent.tab();
+    expect(screen.queryByText('時間と分を数字で入れてください')).toBeNull();
+    expect(running().availableHours).toBe(0);
+    expect(hours.value).toBe('0');
+  });
+
   it('clears the available hours and says so beside the planned hours', async () => {
     await renderAt('/sprint?fixture=today-interrupt');
-    const hours = screen.getByRole('textbox', { name: /^使える時間/ });
+    const hours = getHours(screen, /^使える時間/);
     await userEvent.clear(hours);
+    await userEvent.tab();
     await userEvent.tab();
     expect(running().availableHours).toBeUndefined();
     expect(running().plannedAvailableHours).toBe(17);

@@ -10,8 +10,15 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
+import { DurationField } from '@/components/ui/duration-field';
 import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
+import {
+  DURATION_ERROR,
+  EMPTY_DURATION,
+  durationText,
+  readMinutes,
+} from '@/lib/duration-text';
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 
 // 割り込みを記録 (patterns.md Today): a short note and optional minutes,
@@ -39,16 +46,14 @@ function InterruptSheet({
   editing,
 }: InterruptSheetProps) {
   const [text, setText] = useState(editing?.text ?? '');
-  const [minutes, setMinutes] = useState(
-    editing?.minutes === undefined ? '' : String(editing.minutes),
-  );
+  const [minutes, setMinutes] = useState(durationText(editing?.minutes));
   const [errors, setErrors] = useState<{ text?: string; minutes?: string }>({});
   const formRef = useRef<HTMLFormElement>(null);
   const medium = useMediaQuery(MEDIUM_UP, true);
   const change = (next: boolean) => {
     if (!next) {
       setText('');
-      setMinutes('');
+      setMinutes(EMPTY_DURATION);
       setErrors({});
     }
     onOpenChange(next);
@@ -56,12 +61,10 @@ function InterruptSheet({
   const save = (event: FormEvent) => {
     event.preventDefault();
     const note = text.trim();
-    const m = minutes.trim() === '' ? undefined : Number(minutes.trim());
+    const m = readMinutes(minutes);
     const next = {
       ...(note === '' ? { text: '何があったかを短く書いてください' } : {}),
-      ...(m !== undefined && (!Number.isFinite(m) || m <= 0)
-        ? { minutes: '何分かを数字で入れてください（例：30）' }
-        : {}),
+      ...(m === null || m === 0 ? { minutes: DURATION_ERROR } : {}),
     };
     setErrors(next);
     if (Object.keys(next).length > 0) {
@@ -73,7 +76,7 @@ function InterruptSheet({
       );
       return;
     }
-    if (onSubmit(note, m)) change(false);
+    if (onSubmit(note, m ?? undefined)) change(false);
   };
   return (
     <Drawer
@@ -107,19 +110,13 @@ function InterruptSheet({
                 onChange={(e) => setText(e.currentTarget.value)}
               />
             </Field>
-            <Field
+            <DurationField
               label="かかった時間"
               necessity="optional"
-              description="分で入力（例：30）"
               error={errors.minutes}
-            >
-              <TextInput
-                inputMode="decimal"
-                suffix="分"
-                value={minutes}
-                onChange={(e) => setMinutes(e.currentTarget.value)}
-              />
-            </Field>
+              value={minutes}
+              onChange={setMinutes}
+            />
           </DrawerBody>
           <DrawerFooter>
             <DrawerClose render={<Button variant="quiet" />}>
