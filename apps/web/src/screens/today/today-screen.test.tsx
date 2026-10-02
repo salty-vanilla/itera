@@ -13,6 +13,7 @@ import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { Clock } from '@/store/records';
 import type { StoreSnapshot } from '@/store/record-store';
+import { findHours, getHours, getMinutes } from '@/test/duration';
 
 afterEach(() => {
   cleanup();
@@ -388,7 +389,7 @@ describe('Today — the daily operations', () => {
         ?.hasAttribute('data-in-progress'),
     ).toBe(true);
     await menu('顧客インタビューの設計', '今日は中断する');
-    const hours = await screen.findByRole('textbox', { name: /かかった時間/ });
+    const hours = await findHours(screen, /かかった時間/);
     await userEvent.type(hours, '1.5');
     await userEvent.click(
       screen.getByRole('button', { name: '今日は中断する' }),
@@ -607,10 +608,7 @@ describe('Today — the daily operations', () => {
   it('records actual hours after completing (append-only)', async () => {
     await renderAt('/today?fixture=today-interrupt');
     await menu('API 設計のレビュー', 'かかった時間を記録');
-    await userEvent.type(
-      await screen.findByRole('textbox', { name: /かかった時間/ }),
-      '0.5',
-    );
+    await userEvent.type(await findHours(screen, /かかった時間/), '0.5');
     await userEvent.click(screen.getByRole('button', { name: '記録する' }));
     expect(
       within(row('今日やる', 'API 設計のレビュー')).getByText('実績 2時間30分'),
@@ -628,12 +626,10 @@ describe('Today — the daily operations', () => {
     await userEvent.click(
       await screen.findByRole('button', { name: '記録する' }),
     );
-    expect(screen.getByText(/0 より大きい時間/)).toBeTruthy();
+    expect(screen.getByText(/1分以上の時間/)).toBeTruthy();
     // The field in error takes the focus (accessibility.md).
     await waitFor(() =>
-      expect(document.activeElement).toBe(
-        screen.getByRole('textbox', { name: /かかった時間/ }),
-      ),
+      expect(document.activeElement).toBe(getHours(screen, /かかった時間/)),
     );
     expect(sprint().actualTimes.filter((a) => a.via === 'later')).toEqual([]);
   });
@@ -825,10 +821,8 @@ describe('Today — adding and interrupts', () => {
         await screen.findByRole('textbox', { name: /メモ/ }),
         '来客対応',
       );
-      await userEvent.type(
-        screen.getByRole('textbox', { name: /かかった時間/ }),
-        '15',
-      );
+      // The same two fields as every time, 時間 and 分 (#252).
+      await userEvent.type(getMinutes(screen, /かかった時間/), '15');
       await userEvent.click(screen.getByRole('button', { name: '記録する' }));
       expect(sprint().interrupts.at(-1)).toMatchObject({
         text: '来客対応',
@@ -872,11 +866,13 @@ describe('Today — editing and deleting interrupts (F38)', () => {
     ).toBeTruthy();
     const note = screen.getByRole('textbox', { name: /メモ/ });
     expect((note as HTMLInputElement).value).toBe('障害の問い合わせに対応');
-    const minutes = screen.getByRole('textbox', { name: /かかった時間/ });
-    expect((minutes as HTMLInputElement).value).toBe('45');
+    const minutes = getMinutes(screen, /かかった時間/);
+    expect(minutes.value).toBe('45');
+    expect(getHours(screen, /かかった時間/).value).toBe('');
     await userEvent.clear(note);
     await userEvent.type(note, '障害の問い合わせと報告');
     await userEvent.clear(minutes);
+    // 60 in 分 is taken as typed: an hour.
     await userEvent.type(minutes, '60');
     await userEvent.click(screen.getByRole('button', { name: '保存' }));
     expect(sprint().interrupts).toHaveLength(before.length);
@@ -1108,9 +1104,7 @@ describe('Today — keys of the lists (#48)', () => {
     rowTitle('今日やる', '顧客インタビューの設計').focus();
     await userEvent.keyboard('e');
     // The Task's own, not a subtask's (「Estimate（時間）: …」).
-    const estimate = await screen.findByRole('textbox', {
-      name: /^見積もり(?!（時間）)/,
-    });
+    const estimate = await findHours(screen, /^見積もり(?!：)/);
     await waitFor(() => expect(document.activeElement).toBe(estimate));
   });
 });
@@ -1128,9 +1122,7 @@ describe('Today — 見積もりを入れる (#96)', () => {
     });
     expect(item.textContent).toContain('E');
     await userEvent.click(item);
-    const estimate = await screen.findByRole('textbox', {
-      name: /^見積もり(?!（時間）)/,
-    });
+    const estimate = await findHours(screen, /^見積もり(?!：)/);
     await waitFor(() => expect(document.activeElement).toBe(estimate));
   });
 });
@@ -1174,9 +1166,7 @@ describe('Today — the Task detail (#95)', () => {
   it('a wrong value keeps the detail open; a valid one is saved on closing', async () => {
     await renderAt('/today?fixture=today-daytime&task=task-bookshelf');
     const detail = await screen.findByRole('dialog');
-    const estimate = within(detail).getByRole('textbox', {
-      name: /^見積もり(?!（時間）)/,
-    });
+    const estimate = getHours(within(detail), /^見積もり(?!：)/);
     await userEvent.clear(estimate);
     await userEvent.type(estimate, 'x');
     await userEvent.keyboard('{Escape}');
@@ -1195,9 +1185,7 @@ describe('Today — the Task detail (#95)', () => {
   it('opening another Task saves the field first, or stays on a wrong value', async () => {
     await renderAt('/today?fixture=today-daytime&task=task-bookshelf');
     const detail = await screen.findByRole('dialog');
-    const estimate = within(detail).getByRole('textbox', {
-      name: /^見積もり(?!（時間）)/,
-    });
+    const estimate = getHours(within(detail), /^見積もり(?!：)/);
     await userEvent.type(estimate, 'x');
     const other = within(row('今日やる', '実験データの前処理')).getByText(
       '実験データの前処理',

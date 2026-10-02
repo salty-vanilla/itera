@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { StoreSnapshot } from '@/store/record-store';
+import { findHours, getHours, getMinutes, queryHours } from '@/test/duration';
 
 afterEach(cleanup);
 beforeEach(() => {
@@ -253,12 +254,13 @@ describe('Backlog', () => {
     await userEvent.click(
       within(proposal).getByRole('button', { name: '直して使う' }),
     );
-    const field = within(proposal).getByRole('textbox', {
-      name: /使う見積もり/,
-    });
-    // Starts from the middle of the range.
-    expect(field).toHaveProperty('value', '2.5');
+    const field = getHours(within(proposal), /使う見積もり/);
+    const minutes = getMinutes(within(proposal), /使う見積もり/);
+    // Starts from the middle of the range, as the screen writes it (#252).
+    expect(field).toHaveProperty('value', '2');
+    expect(minutes).toHaveProperty('value', '30');
     await userEvent.clear(field);
+    await userEvent.clear(minutes);
     await userEvent.type(field, '4');
     await userEvent.click(
       within(proposal).getByRole('button', { name: '使う' }),
@@ -286,19 +288,16 @@ describe('Backlog', () => {
       name: '直して使う',
     });
     await userEvent.click(edit);
-    const field = within(proposal()).getByRole('textbox', {
-      name: /使う見積もり/,
-    });
+    const field = getHours(within(proposal()), /使う見積もり/);
     expect(document.activeElement).toBe(field);
     await userEvent.clear(field);
+    await userEvent.clear(getMinutes(within(proposal()), /使う見積もり/));
     await userEvent.type(field, '0');
     await userEvent.click(
       within(proposal()).getByRole('button', { name: '使う' }),
     );
     expect(
-      within(proposal()).getByText(
-        '0 より大きい時間を数字で入れてください（例：2.5）',
-      ),
+      within(proposal()).getByText('1分以上の時間を数字で入れてください'),
     ).toBeTruthy();
     expect(document.activeElement).toBe(field);
     expect(task('task-interview')).not.toHaveProperty('estimate');
@@ -313,9 +312,14 @@ describe('Backlog', () => {
     await userEvent.click(
       within(proposal()).getByRole('button', { name: '直して使う' }),
     );
-    expect(
-      within(proposal()).getByRole('textbox', { name: /使う見積もり/ }),
-    ).toHaveProperty('value', '2.5');
+    expect(getHours(within(proposal()), /使う見積もり/)).toHaveProperty(
+      'value',
+      '2',
+    );
+    expect(getMinutes(within(proposal()), /使う見積もり/)).toHaveProperty(
+      'value',
+      '30',
+    );
     await userEvent.click(
       within(proposal()).getByRole('button', { name: '使う' }),
     );
@@ -368,30 +372,34 @@ describe('Backlog', () => {
   it('Detail (#95): each field is saved on leaving it, and a wrong value stays with its error', async () => {
     await renderAt('/backlog?fixture=backlog-capture&task=task-bookshelf');
     const detail = await screen.findByRole('dialog');
-    const estimate = within(detail).getByRole('textbox', {
-      name: /^見積もり(?!（時間）)/,
-    });
+    const estimate = getHours(within(detail), /^見積もり(?!：)/);
+    const minutes = getMinutes(within(detail), /^見積もり(?!：)/);
     await userEvent.type(estimate, 'abc');
+    // Going from 時間 to 分 is not leaving the time (#252).
+    await userEvent.tab();
+    expect(document.activeElement).toBe(minutes);
+    expect(
+      within(detail).queryByText('1分以上の時間を数字で入れてください'),
+    ).toBeNull();
     await userEvent.tab();
     expect(
-      within(detail).getByText(
-        '0 より大きい時間を数字で入れてください（例：1.5）',
-      ),
+      within(detail).getByText('1分以上の時間を数字で入れてください'),
     ).toBeTruthy();
     expect(task('task-bookshelf')).not.toHaveProperty('estimate');
     // The input stays as typed.
     expect(estimate).toHaveProperty('value', 'abc');
 
     await userEvent.clear(estimate);
-    await userEvent.type(estimate, '1.5');
+    await userEvent.type(minutes, '90');
     await userEvent.tab();
     expect(task('task-bookshelf')).toMatchObject({
       estimate: { hours: 1.5, source: { kind: 'manual' } },
     });
+    // Written back as the screen writes it.
+    expect(estimate).toHaveProperty('value', '1');
+    expect(minutes).toHaveProperty('value', '30');
     expect(
-      within(detail).queryByText(
-        '0 より大きい時間を数字で入れてください（例：1.5）',
-      ),
+      within(detail).queryByText('1分以上の時間を数字で入れてください'),
     ).toBeNull();
     expect(within(detail).getByText('保存しました')).toBeTruthy();
     expect(
@@ -472,9 +480,7 @@ describe('Backlog', () => {
   it('Detail (#95): a wrong value keeps the detail open and takes the focus back', async () => {
     await renderAt('/backlog?fixture=backlog-capture&task=task-bookshelf');
     const detail = await screen.findByRole('dialog');
-    const estimate = within(detail).getByRole('textbox', {
-      name: /^見積もり(?!（時間）)/,
-    });
+    const estimate = getHours(within(detail), /^見積もり(?!：)/);
     await userEvent.type(estimate, '0');
     await userEvent.keyboard('{Escape}');
     expect(screen.getByRole('dialog')).toBe(detail);
@@ -514,9 +520,7 @@ describe('Backlog', () => {
     expect(
       within(detail).getByRole('combobox', { name: '優先度' }),
     ).toBeTruthy();
-    expect(
-      within(detail).getByRole('textbox', { name: /^見積もり(?!（時間）)/ }),
-    ).toBeTruthy();
+    expect(getHours(within(detail), /^見積もり(?!：)/)).toBeTruthy();
     const more = within(detail).getByRole('button', { name: '詳しく' });
     expect(more.getAttribute('aria-expanded')).toBe('false');
     expect(within(detail).queryByRole('textbox', { name: /説明/ })).toBeNull();
@@ -545,24 +549,23 @@ describe('Backlog', () => {
   it('Detail (#95): adopting a suggestion clears the error of the value it replaces', async () => {
     await renderAt('/backlog?fixture=backlog-detail&task=task-interview');
     const detail = await screen.findByRole('dialog');
-    const estimate = within(detail).getByRole('textbox', {
-      name: /^見積もり(?!（時間）)/,
-    });
+    const estimate = getHours(within(detail), /^見積もり(?!：)/);
     await userEvent.type(estimate, 'abc');
     await userEvent.tab();
+    await userEvent.tab();
     expect(
-      within(detail).getByText(
-        '0 より大きい時間を数字で入れてください（例：1.5）',
-      ),
+      within(detail).getByText('1分以上の時間を数字で入れてください'),
     ).toBeTruthy();
     await userEvent.click(
       within(detail).getByRole('button', { name: 'ふつうの 2時間30分を使う' }),
     );
-    expect(estimate).toHaveProperty('value', '2.5');
+    expect(estimate).toHaveProperty('value', '2');
+    expect(getMinutes(within(detail), /^見積もり(?!：)/)).toHaveProperty(
+      'value',
+      '30',
+    );
     expect(
-      within(detail).queryByText(
-        '0 より大きい時間を数字で入れてください（例：1.5）',
-      ),
+      within(detail).queryByText('1分以上の時間を数字で入れてください'),
     ).toBeNull();
     await userEvent.click(footerClose(detail));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
@@ -728,20 +731,15 @@ describe('Backlog', () => {
     await userEvent.click(
       within(detail).getByRole('button', { name: '詳しく' }),
     );
-    await userEvent.type(
-      within(detail).getByRole('textbox', { name: /^見積もり(?!（時間）)/ }),
-      '6',
-    );
+    await userEvent.type(getHours(within(detail), /^見積もり(?!：)/), '6');
     await userEvent.tab();
     await userEvent.type(
       within(detail).getByRole('textbox', { name: 'サブタスクを追加' }),
       '上の段',
     );
     await userEvent.type(
-      within(detail).getByRole('textbox', {
-        name: 'サブタスクの見積もり（時間、任意）',
-      }),
-      '1{Enter}',
+      getHours(within(detail), 'サブタスクの見積もり（任意）'),
+      '1{Enter}{Enter}',
     );
     const row = () => within(list()).getByText('本棚を整理する').closest('li')!;
     // The Task's own 6時間 is the plan; the subtask's 1時間 is beside it, not in it.
@@ -821,9 +819,7 @@ describe('Backlog', () => {
       within(detail).getByRole('textbox', { name: 'サブタスクを追加' }),
       '上の段{Enter}',
     );
-    const hours = within(detail).getByRole('textbox', {
-      name: '見積もり（時間）：上の段',
-    });
+    const hours = getHours(within(detail), '見積もり：上の段');
     await userEvent.type(hours, '0');
     await userEvent.click(more);
     await userEvent.keyboard('{Escape}');
@@ -1549,16 +1545,14 @@ describe('Backlog — the detail of a Task in 今日やる (#94)', () => {
     );
     // No Drawer inside the Drawer.
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
-    const field = within(section).getByRole('textbox', {
-      name: /かかった時間/,
-    });
+    const field = getHours(within(section), /かかった時間/);
     await waitFor(() => expect(document.activeElement).toBe(field));
     // A wrong value stays in the field with its error.
-    await userEvent.type(field, '0{Enter}');
-    expect(within(section).getByText(/0 より大きい時間/)).toBeTruthy();
+    await userEvent.type(field, '0{Enter}{Enter}');
+    expect(within(section).getByText(/1分以上の時間/)).toBeTruthy();
     expect(selectionOf('task-dataset')?.resolution).toBe('started');
     await userEvent.clear(field);
-    await userEvent.type(field, '1.5{Enter}');
+    await userEvent.type(field, '1.5{Enter}{Enter}');
     expect(selectionOf('task-dataset')?.resolution).toBe('paused');
     // The hours are optional: this is the same record as the row's.
     const sprint = records().sprints.find((s) => s.state === 'active')!;
@@ -1579,9 +1573,7 @@ describe('Backlog — the detail of a Task in 今日やる (#94)', () => {
       within(section).getByRole('button', { name: '今日は中断する' }),
     );
     await userEvent.keyboard('{Escape}');
-    expect(
-      within(section).queryByRole('textbox', { name: /かかった時間/ }),
-    ).toBeNull();
+    expect(queryHours(within(section), /かかった時間/)).toBeNull();
     expect(
       screen.getByRole('dialog', { name: '実験データの前処理' }),
     ).toBeTruthy();
@@ -1613,9 +1605,7 @@ describe('Backlog — keys of the list (#48)', () => {
     rowTitle('本棚を整理する').focus();
     await userEvent.keyboard('e');
     // The Task's own, not a subtask's (「Estimate（時間）: …」).
-    const estimate = await screen.findByRole('textbox', {
-      name: /^見積もり(?!（時間）)/,
-    });
+    const estimate = await findHours(screen, /^見積もり(?!：)/);
     await waitFor(() => expect(document.activeElement).toBe(estimate));
     // Only that time: opened again with Enter, it starts at the heading.
     await userEvent.keyboard('{Escape}');
@@ -1640,9 +1630,7 @@ describe('Backlog — keys of the list (#48)', () => {
     });
     expect(item.textContent).toContain('E');
     await userEvent.click(item);
-    const estimate = await screen.findByRole('textbox', {
-      name: /^見積もり(?!（時間）)/,
-    });
+    const estimate = await findHours(screen, /^見積もり(?!：)/);
     await waitFor(() => expect(document.activeElement).toBe(estimate));
   });
 

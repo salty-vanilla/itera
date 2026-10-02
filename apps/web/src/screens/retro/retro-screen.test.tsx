@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { StoreSnapshot } from '@/store/record-store';
+import { findHours } from '@/test/duration';
 
 afterEach(() => {
   cleanup();
@@ -261,10 +262,7 @@ describe('Retro — 事実を見る', () => {
         name: /かかった時間を記録.*住民税の支払い/,
       }),
     );
-    await userEvent.type(
-      await screen.findByRole('textbox', { name: /かかった時間/ }),
-      '0.5',
-    );
+    await userEvent.type(await findHours(screen, /かかった時間/), '0.5');
     await userEvent.click(screen.getByRole('button', { name: '記録する' }));
     expect(reviewed().actualTimes.at(-1)).toMatchObject({
       hours: 0.5,
@@ -1506,10 +1504,7 @@ describe('Retro — actual time per occurrence (#56)', () => {
     );
     // It says which day it goes to (not today in Retro).
     expect(await screen.findByText('9/28 (月) に記録します。')).toBeTruthy();
-    await userEvent.type(
-      await screen.findByRole('textbox', { name: /かかった時間/ }),
-      '0.25',
-    );
+    await userEvent.type(await findHours(screen, /かかった時間/), '0.25');
     await userEvent.click(screen.getByRole('button', { name: '記録する' }));
     // The Task's row and the week's total follow (Issue #56).
     expect(
@@ -1543,10 +1538,7 @@ describe('Retro — actual time per occurrence (#56)', () => {
     await userEvent.click(
       within(row).getByRole('button', { name: /かかった時間を記録/ }),
     );
-    await userEvent.type(
-      await screen.findByRole('textbox', { name: /かかった時間/ }),
-      '0.5',
-    );
+    await userEvent.type(await findHours(screen, /かかった時間/), '0.5');
     await userEvent.click(screen.getByRole('button', { name: '記録する' }));
     expect(reviewed().actualTimes.at(-1)).toMatchObject({
       date: '2026-10-02',

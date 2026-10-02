@@ -5,10 +5,10 @@ import type {
 import { boundValue } from '@itera/domain';
 import { useEffect, useId, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Field } from '@/components/ui/field';
-import { TextInput } from '@/components/ui/text-input';
+import { DurationField } from '@/components/ui/duration-field';
 import { BOUND_WORDS } from '@/lib/criterion-text';
-import { HOURS_HINT, formatHours, formatRange } from '@/lib/time-format';
+import { DURATION_ERROR, hoursText, readMinutes } from '@/lib/duration-text';
+import { formatHours, formatRange } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
 
 // DESIGN.md Components › Agent 提案 and docs/design/agent-ui.md, for an
@@ -51,7 +51,7 @@ function EstimateSuggestion({
   const mid = boundValue(suggestion, 'mid');
   // 編集して採用: an inline field that starts from the middle value.
   const [editing, setEditing] = useState(false);
-  const [hours, setHours] = useState(String(mid));
+  const [hours, setHours] = useState(() => hoursText(mid));
   const [error, setError] = useState<string>();
   const fieldRef = useRef<HTMLInputElement>(null);
   const firstRef = useRef<HTMLButtonElement>(null);
@@ -70,14 +70,14 @@ function EstimateSuggestion({
   }, [editing]);
 
   function adoptEdited() {
-    const value = Number(hours);
-    if (hours.trim() === '' || !Number.isFinite(value) || value <= 0) {
-      setError('0 より大きい時間を数字で入れてください（例：2.5）');
+    const minutes = readMinutes(hours);
+    if (minutes === undefined || minutes === null || minutes === 0) {
+      setError(DURATION_ERROR);
       fieldRef.current?.focus();
       return;
     }
     setError(undefined);
-    if (onAdoptEdited(value)) setEditing(false);
+    if (onAdoptEdited(minutes / 60)) setEditing(false);
   }
 
   return (
@@ -131,17 +131,14 @@ function EstimateSuggestion({
             adoptEdited();
           }}
         >
-          <Field label="使う見積もり" description={HOURS_HINT} error={error}>
-            <TextInput
-              ref={fieldRef}
-              size="sm"
-              inputMode="decimal"
-              suffix="時間"
-              value={hours}
-              autoFocus
-              onChange={(e) => setHours(e.currentTarget.value)}
-            />
-          </Field>
+          <DurationField
+            label="使う見積もり"
+            size="sm"
+            error={error}
+            value={hours}
+            onChange={setHours}
+            hoursProps={{ ref: fieldRef, autoFocus: true }}
+          />
           <div className="flex gap-2">
             <Button size="sm" type="submit">
               使う
@@ -197,7 +194,7 @@ function EstimateSuggestion({
               variant="quiet"
               onClick={() => {
                 // Always start from the middle of this suggestion.
-                setHours(String(mid));
+                setHours(hoursText(mid));
                 setError(undefined);
                 setEditing(true);
               }}

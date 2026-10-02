@@ -53,15 +53,12 @@ export const Sizes: Story = {
 export const WithSupportTextAndUnit: Story = {
   render: () => (
     <div className="flex max-w-drawer flex-col gap-6">
-      <Field label="使える時間" necessity="required" description="時間で入力">
-        <TextInput inputMode="decimal" defaultValue="18" suffix="時間" />
-      </Field>
       <Field
-        label="見積もり"
-        necessity="optional"
-        description="時間で入力（例：1.5）"
+        label="毎月の日"
+        necessity="required"
+        description="1〜31 の数字（例：15）"
       >
-        <TextInput inputMode="decimal" suffix="時間" />
+        <TextInput inputMode="numeric" defaultValue="15" suffix="日" />
       </Field>
     </div>
   ),
@@ -109,18 +106,18 @@ export const States: Story = {
         <Field
           key={state}
           label={state}
-          description="時間で入力（例：1.5）"
+          description="1〜31 の数字（例：15）"
           disabled={state === 'disabled'}
         >
-          <TextInput defaultValue="3" suffix="時間" {...props} />
+          <TextInput defaultValue="15" suffix="日" {...props} />
         </Field>
       ))}
       <Field
         label="error"
-        description="時間で入力（例：1.5）"
-        error="数値で入力してください（例：1.5）"
+        description="1〜31 の数字（例：15）"
+        error="1〜31 の数字を入れてください（例：15）"
       >
-        <TextInput defaultValue="3時間" suffix="時間" />
+        <TextInput defaultValue="32" suffix="日" />
       </Field>
     </div>
   ),

@@ -35,6 +35,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
+import { DurationField } from '@/components/ui/duration-field';
 import { Field } from '@/components/ui/field';
 import { Notice } from '@/components/ui/notice';
 import { Radio, RadioGroup } from '@/components/ui/radio-group';
@@ -54,7 +55,15 @@ import {
   readActualHours,
 } from '@/lib/actual-hours';
 import { formatDate, formatTime } from '@/lib/date-format';
-import { HOURS_HINT, formatHours } from '@/lib/time-format';
+import {
+  DURATION_ERROR,
+  EMPTY_DURATION,
+  hoursText,
+  readMinutes,
+  sameMinutes,
+  type DurationText,
+} from '@/lib/duration-text';
+import { formatHours } from '@/lib/time-format';
 import { startedText } from '@/lib/today-words';
 import type { BacklogData, BacklogItem } from '@/store/backlog-view';
 import { useTaskActions } from '@/store/use-task-actions';
@@ -77,7 +86,7 @@ type Draft = {
   title: string;
   description: string;
   due: string;
-  estimate: string;
+  estimate: DurationText;
 };
 
 type TextKey = keyof Draft;
@@ -99,7 +108,7 @@ function draftOf(task: Task): Draft {
     title: task.title,
     description: task.description,
     due: task.due ?? '',
-    estimate: task.estimate === undefined ? '' : String(task.estimate.hours),
+    estimate: hoursText(task.estimate?.hours),
   };
 }
 
@@ -142,17 +151,17 @@ function readField(key: TextKey, draft: Draft, task: Task): Reading {
         : { kind: 'save', update: { due: parsed.value } };
     }
     case 'estimate': {
-      const text = draft.estimate.trim();
-      const hours = text === '' ? null : Number(text);
-      if (hours !== null && !(Number.isFinite(hours) && hours > 0)) {
-        return {
-          kind: 'error',
-          message: '0 より大きい時間を数字で入れてください（例：1.5）',
-        };
+      const minutes = readMinutes(draft.estimate);
+      if (minutes === null || minutes === 0) {
+        return { kind: 'error', message: DURATION_ERROR };
       }
-      return hours === (task.estimate?.hours ?? null)
+      return sameMinutes(minutes, task.estimate?.hours)
         ? same
-        : { kind: 'save', update: {}, estimate: hours };
+        : {
+            kind: 'save',
+            update: {},
+            estimate: minutes === undefined ? null : minutes / 60,
+          };
     }
   }
 }
@@ -305,7 +314,7 @@ function TaskDetail({
   // 今日は中断する asks for the actual time in the section itself: a Drawer
   // is never opened inside a Drawer (DESIGN.md Drawer).
   const [pausing, setPausing] = useState(false);
-  const [pauseText, setPauseText] = useState('');
+  const [pauseText, setPauseText] = useState(EMPTY_DURATION);
   const [pauseError, setPauseError] = useState<string>();
   const pauseButtonRef = useRef<HTMLButtonElement>(null);
   const pauseInputRef = useRef<HTMLInputElement>(null);
@@ -314,7 +323,7 @@ function TaskDetail({
   }, [pausing]);
   function closePause() {
     setPausing(false);
-    setPauseText('');
+    setPauseText(EMPTY_DURATION);
     setPauseError(undefined);
     requestAnimationFrame(() => pauseButtonRef.current?.focus());
   }
@@ -329,7 +338,7 @@ function TaskDetail({
     }
     if (todayActions.pause(facts.today.selectionId, hours)) {
       setPausing(false);
-      setPauseText('');
+      setPauseText(EMPTY_DURATION);
       setPauseError(undefined);
       setOperations((n) => n + 1);
     }
@@ -536,13 +545,13 @@ function TaskDetail({
     if (focusEstimate !== undefined) estimateRef.current?.focus();
   }, [focusEstimate]);
   const suggestion = presentedSuggestion(task);
-  const set = (key: TextKey, value: string) => {
+  const set = <K extends TextKey>(key: K, value: Draft[K]) => {
     setDraft((d) => ({ ...d, [key]: value }));
     if (saved === key) setSaved(undefined);
   };
   // The suggestion's operations put a saved value in the field: whatever
   // was wrong with the text before is gone with it.
-  const replaceEstimate = (value: string) => {
+  const replaceEstimate = (value: DurationText) => {
     set('estimate', value);
     setErrors((e) => {
       const next = { ...e };
@@ -636,7 +645,7 @@ function TaskDetail({
     const previous = task.estimate ?? null;
     const hours = boundValue(suggestion, bound);
     if (!actions.adoptSuggestion(task.id, suggestion.id, bound)) return;
-    replaceEstimate(String(hours));
+    replaceEstimate(hoursText(hours));
     setOutcome({
       kind: 'adopted',
       suggestionId: suggestion.id,
@@ -651,7 +660,7 @@ function TaskDetail({
     if (!actions.adoptEditedSuggestion(task.id, suggestion.id, hours)) {
       return false;
     }
-    replaceEstimate(String(hours));
+    replaceEstimate(hoursText(hours));
     setOutcome({
       kind: 'adopted',
       suggestionId: suggestion.id,
@@ -665,9 +674,7 @@ function TaskDetail({
     if (outcome?.kind !== 'adopted') return;
     if (!actions.undoAdoption(task.id, outcome.suggestionId, outcome.previous))
       return;
-    replaceEstimate(
-      outcome.previous === null ? '' : String(outcome.previous.hours),
-    );
+    replaceEstimate(hoursText(outcome.previous?.hours));
     setOutcome(undefined);
     setSuggestionBack(true);
   }
@@ -875,20 +882,15 @@ function TaskDetail({
                 }}
                 className="flex flex-col gap-2"
               >
-                <Field
+                <DurationField
                   label="かかった時間"
                   necessity="optional"
                   description={ACTUAL_HOURS_HINT}
                   error={pauseError}
-                >
-                  <TextInput
-                    ref={pauseInputRef}
-                    inputMode="decimal"
-                    suffix="時間"
-                    value={pauseText}
-                    onChange={(e) => setPauseText(e.currentTarget.value)}
-                  />
-                </Field>
+                  value={pauseText}
+                  onChange={setPauseText}
+                  hoursProps={{ ref: pauseInputRef }}
+                />
                 <div className="flex flex-wrap gap-2">
                   <Button type="submit">今日は中断する</Button>
                   <Button variant="quiet" onClick={closePause}>
@@ -986,24 +988,20 @@ function TaskDetail({
             </Field>
           </Saved>
           <Saved show={saved === 'estimate'}>
-            <Field
+            <DurationField
               label="見積もり"
               necessity="optional"
-              description={HOURS_HINT}
               error={errors.estimate}
-            >
-              <TextInput
-                ref={estimateRef}
-                data-autofocus={focusEstimate !== undefined || undefined}
-                inputMode="decimal"
-                suffix="時間"
-                value={draft.estimate}
-                onChange={(e) => set('estimate', e.currentTarget.value)}
-                data-detail-field
-                onBlur={() => commit('estimate')}
-                onKeyDown={leaveOnEnter('estimate')}
-              />
-            </Field>
+              value={draft.estimate}
+              onChange={(value) => set('estimate', value)}
+              onCommit={() => commit('estimate')}
+              hoursProps={{
+                ref: estimateRef,
+                'data-autofocus': focusEstimate !== undefined || undefined,
+                'data-detail-field': true,
+              }}
+              minutesProps={{ 'data-detail-field': true }}
+            />
           </Saved>
         </div>
 

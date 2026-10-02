@@ -21,12 +21,6 @@ const WAVE_DASH = '〜';
 
 export const UNESTIMATED = '見積もりなし';
 
-/**
- * The description of a field typed in hours. The unit is written here once,
- * not in the label: the suffix 「時間」 is not read out.
- */
-export const HOURS_HINT = '時間で入力（例：1.5）';
-
 /** 「30分」「3時間」「1時間15分」, without the sign. */
 function unsigned(minutes: number): string {
   if (minutes === 0) return '0時間';
