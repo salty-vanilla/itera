@@ -1,4 +1,4 @@
-import type { Retro, SprintTask } from '@itera/domain';
+import type { Retro, Sprint, SprintTask } from '@itera/domain';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import {
   cleanup,
@@ -129,7 +129,8 @@ describe('Retro — 事実を見る', () => {
       ['持ち越し', '2'],
       ['繰り返し', '4'],
       ['週の途中の追加', '1'],
-      ['計画の合計', '17時間15分〜20時間15分'],
+      ['計画', '17時間15分〜20時間15分見積もりなし 1件'],
+      ['実績', '17時間45分入力済み 8件'],
     ]) {
       const term = within(summary).getByText(label!);
       expect(term.parentElement?.textContent).toContain(value);
@@ -145,27 +146,26 @@ describe('Retro — 事実を見る', () => {
       within(summary).getByText('繰り返し').parentElement?.textContent,
     ).toContain('完了 3 · スキップ 1 · 未完了 0');
     expect(within(summary).queryByText('スキップ')).toBeNull();
-    // A range of hours does not fit beside the counts: a row of its own at
-    // every width (#239).
-    expect(
-      within(summary).getByText('計画の合計').parentElement!.className,
-    ).toContain('basis-full');
-    // The sum and its count each stay whole on a line (#239).
-    const planned = screen.getByText(
-      (_, element) =>
-        element?.tagName === 'P' &&
-        element.textContent?.startsWith('計画 17時間15分') === true,
-    );
-    expect(
-      [...planned.querySelectorAll('.whitespace-nowrap')].map(
-        (e) => e.textContent,
-      ),
-    ).toEqual([
-      '計画 17時間15分〜20時間15分',
-      '（ほかに見積もりなし 1件）',
-      '→ 実績 17時間45分',
-      '（入力済み 8件）',
-    ]);
+    // A range of hours does not fit beside the counts: 計画 and 実績 on a
+    // row of their own at every width (#239, #253).
+    for (const label of ['計画', '実績']) {
+      expect(
+        within(summary).getByText(label).parentElement!.className,
+      ).toContain('col-span-2');
+    }
+    // Each number once (#253): the plan's range and its unestimated count
+    // are in the band only, and the hours entered when planning only on the
+    // line of whether the plan fits them.
+    const main = screen.getByRole('main');
+    for (const [text, times] of [
+      ['17時間15分〜20時間15分', 1],
+      ['見積もりなし 1件', 1],
+      ['17時間45分', 1],
+      ['使える時間 17時間', 1],
+    ] as const) {
+      expect(main.textContent?.split(text).length).toBe(times + 1);
+    }
+    expect(screen.queryByText(/ほかに見積もりなし/)).toBeNull();
     // The criterion this Sprint used is one line; its result is in 引き継ぐ
     // (#107).
     expect(
@@ -1284,6 +1284,29 @@ describe('Retro — the plan against what happened (#167)', () => {
     screen
       .getAllByRole('listitem')
       .find((li) => li.textContent?.startsWith(lead));
+  // Whether the plan fits the hours, right under the band (#253).
+  const isFitLine = (_: string, element: Element | null) =>
+    element?.tagName === 'P' &&
+    /^(確定したときの)?使える時間/.test(element.textContent ?? '');
+  const fitLine = () => screen.getByText(isFitLine);
+  const withSprint =
+    (edit: (sprint: Sprint) => Sprint) =>
+    (snapshot: StoreSnapshot): StoreSnapshot => ({
+      ...snapshot,
+      records: {
+        ...snapshot.records,
+        sprints: snapshot.records.sprints.map((s) =>
+          s.id === 'sprint-2026-09-28' ? edit(s) : s,
+        ),
+      },
+    });
+  const withoutHours = (
+    sprint: Sprint,
+    keys: readonly ('plannedAvailableHours' | 'availableHours')[],
+  ): Sprint =>
+    Object.fromEntries(
+      Object.entries(sprint).filter(([key]) => !keys.includes(key as never)),
+    ) as Sprint;
   const reviewing =
     (edit: (tasks: readonly SprintTask[]) => readonly SprintTask[]) =>
     (snapshot: StoreSnapshot): StoreSnapshot => ({
@@ -1296,23 +1319,18 @@ describe('Retro — the plan against what happened (#167)', () => {
       },
     });
 
-  it('puts both planned totals beside the hours entered when planning, in words only (owner decision)', async () => {
+  it('says whether the plan fits the hours entered when planning, out of 詳しく, in words only (owner decision)', async () => {
     await renderAt('/retro?fixture=retro-start');
-    const summary = document.querySelector<HTMLElement>(
-      '[data-slot="sprint-summary"]',
-    )!;
-    const total = within(summary).getByText('計画の合計').parentElement!;
-    expect(total.textContent).toContain('使える時間 17時間');
-    // Under 詳しく, closed at first (#241).
+    // The plan in the band, with the mid-Sprint addition, against 17時間
+    // (#253).
+    expect(fitLine().textContent).toBe(
+      '使える時間 17時間：少なく済んでも 15分超える · 多くかかれば 3時間15分超える',
+    );
+    // The plan as confirmed is under 詳しく, closed at first (#241).
     expect(lineOf('確定したときの計画')).toBeUndefined();
     await openDetails();
-    // As confirmed, and with the mid-Sprint addition, against 17時間. The
-    // second total is the one in the line above: not said again (#241).
     expect(lineOf('確定したときの計画')?.textContent).toBe(
       '確定したときの計画 15時間15分〜17時間15分：少なく済めば 1時間45分残る · 多くかかれば 15分超える',
-    );
-    expect(lineOf('週の途中の追加を含めて')?.textContent).toBe(
-      '週の途中の追加を含めて：少なく済んでも 15分超える · 多くかかれば 3時間15分超える',
     );
     expect(
       screen
@@ -1323,20 +1341,19 @@ describe('Retro — the plan against what happened (#167)', () => {
     expect(pane().querySelector('.text-danger')).toBeNull();
   });
 
-  it('has one line while the plan did not change after confirm', async () => {
+  it('says the plan as confirmed only when it changed after confirm', async () => {
     change = reviewing((tasks) =>
       tasks.filter((t) => t.origin !== 'midSprint'),
     );
     await renderAt('/retro?fixture=retro-start');
-    await openDetails();
-    // The total is the line's above, so it is not said again (#241).
-    expect(lineOf('確定したときの計画')?.textContent).toMatch(
-      /^確定したときの計画：/,
+    expect(fitLine().textContent).toBe(
+      '使える時間 17時間：少なく済めば 1時間45分残る · 多くかかれば 15分超える',
     );
-    expect(lineOf('週の途中の追加を含めて')).toBeUndefined();
+    await openDetails();
+    expect(lineOf('確定したときの計画')).toBeUndefined();
   });
 
-  it('has one line when an addition was removed again', async () => {
+  it('says nothing more when an addition was removed again', async () => {
     change = reviewing((tasks) =>
       tasks.map((t) =>
         t.origin === 'midSprint' ? { ...t, outcome: 'removed' as const } : t,
@@ -1344,15 +1361,10 @@ describe('Retro — the plan against what happened (#167)', () => {
     );
     await renderAt('/retro?fixture=retro-start');
     await openDetails();
-    expect(lineOf('確定したときの計画')).toBeTruthy();
-    expect(
-      screen
-        .getAllByRole('listitem')
-        .filter((li) => /を含め|を除いて/.test(li.textContent ?? '')),
-    ).toEqual([]);
+    expect(lineOf('確定したときの計画')).toBeUndefined();
   });
 
-  it('names a removed Task as what the second total leaves out', async () => {
+  it('says the plan as confirmed when a removed Task changed it', async () => {
     change = reviewing((tasks) =>
       tasks
         .filter((t) => t.origin !== 'midSprint')
@@ -1360,7 +1372,40 @@ describe('Retro — the plan against what happened (#167)', () => {
     );
     await renderAt('/retro?fixture=retro-start');
     await openDetails();
-    expect(lineOf('外したタスクを除いて')).toBeTruthy();
+    expect(lineOf('確定したときの計画')?.textContent).toMatch(
+      /^確定したときの計画 15時間15分〜17時間15分：/,
+    );
+  });
+
+  it('says so when no hours were entered when planning', async () => {
+    change = withSprint((s) =>
+      withoutHours(s, ['plannedAvailableHours', 'availableHours']),
+    );
+    await renderAt('/retro?fixture=retro-start');
+    expect(fitLine().textContent).toBe('使える時間は未入力');
+    await openDetails();
+    expect(lineOf('確定したときの計画')).toBeUndefined();
+  });
+
+  it('names the hours as at confirm once they changed after it, as the Sprint screen does (#224)', async () => {
+    change = withSprint((s) => ({ ...s, availableHours: 20 }));
+    await renderAt('/retro?fixture=retro-start');
+    // Still against the 17時間 entered when planning.
+    expect(fitLine().textContent).toBe(
+      '確定したときの使える時間 17時間：少なく済んでも 15分超える · 多くかかれば 3時間15分超える',
+    );
+  });
+
+  it('names the missing hours as at confirm when they were entered after it', async () => {
+    change = withSprint((s) => withoutHours(s, ['plannedAvailableHours']));
+    await renderAt('/retro?fixture=retro-start');
+    expect(fitLine().textContent).toBe('確定したときの使える時間は未入力');
+  });
+
+  it('has no line of the hours with no planned total to compare', async () => {
+    change = reviewing(() => []);
+    await renderAt('/retro?fixture=retro-start');
+    expect(screen.queryByText(isFitLine)).toBeNull();
   });
 
   it('sums the interrupts and says the actual time leaves them out', async () => {
@@ -1495,7 +1540,11 @@ describe('Retro — actual time per occurrence (#56)', () => {
       screen.getByRole('rowheader', { name: '英語の多読 30分' }).parentElement
         ?.textContent,
     ).toContain('45分');
-    expect(document.body.textContent).toContain('実績 17時間30分');
+    expect(
+      within(
+        document.querySelector<HTMLElement>('[data-slot="sprint-summary"]')!,
+      ).getByText('実績').parentElement?.textContent,
+    ).toContain('17時間30分');
     const occurrence = lastSnapshot().records.occurrences.find(
       (o) => o.taskId === 'task-reading' && o.scheduledDate === '2026-09-28',
     );
