@@ -985,6 +985,19 @@ describe('Planning — 確定', () => {
     expect(await screen.findByText('Sprint 2 を確定しました')).toBeTruthy();
   });
 
+  it('names the criterion with how it plans, not 「使う」 (#245)', async () => {
+    await renderAt('/sprint?fixture=planning-check&stage=check');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Sprint 2 を確定' }),
+    );
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Sprint 2 を確定しますか？',
+    });
+    expect(
+      within(dialog).getByText('計画のルール').nextElementSibling?.textContent,
+    ).toBe('「研究：提案の多めで計画」 · このルールで計画する');
+  });
+
   it('moves between stages by the route map, keeping the fixture', async () => {
     const router = await renderAt('/sprint?fixture=planning-pick&stage=pick');
     const stages = screen.getByRole('navigation', { name: '段階' });

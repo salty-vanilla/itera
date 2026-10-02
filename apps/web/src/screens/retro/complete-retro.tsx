@@ -73,7 +73,7 @@ function CompleteRetro({ data, onComplete }: CompleteRetroProps) {
       </Button>
       <div
         id={reasonId}
-        className="flex max-w-measure-read flex-col gap-1 text-help text-balance text-ink-muted"
+        className="flex max-w-measure-read flex-col gap-1 text-help text-balance text-ink-muted [word-break:auto-phrase]"
       >
         {data.blockers.map((b) => (
           <p key={b}>{BLOCKER_WORDS[b]}</p>
