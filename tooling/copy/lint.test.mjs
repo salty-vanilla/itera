@@ -59,8 +59,10 @@ describe('banned-word', () => {
   it('allows a word inside a phrase of the exception column', () => {
     expect(rulesOf('「事実を見る」で記録を見る')).toEqual([]);
     expect(rulesOf('事実を並べる')).toEqual(['banned-word']);
-    expect(rulesOf('見積もり（時間）：{subtask.title}')).toEqual([]);
-    expect(rulesOf('見積もり（時間）')).toEqual(['banned-word']);
+    // The hidden label of a subtask's Estimate lost its unit (#252).
+    expect(rulesOf('見積もり（時間）：{subtask.title}')).toEqual([
+      'banned-word',
+    ]);
   });
 
   it('matches short hiragana and Latin words only as whole words', () => {
