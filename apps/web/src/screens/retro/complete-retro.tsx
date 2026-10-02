@@ -154,7 +154,7 @@ function CompleteDialog({
               {criterionLines.length === 0 ? (
                 'なし'
               ) : (
-                <ul className="flex flex-col gap-1">
+                <ul className="flex flex-col gap-1 [word-break:auto-phrase]">
                   {criterionLines.map((line) => (
                     <li key={line.text}>
                       {line.text}
