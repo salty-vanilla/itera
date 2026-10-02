@@ -26,6 +26,9 @@ function WeekRow({ item, onOpen, onEstimate, onChoose }: WeekRowProps) {
       control={
         <Button
           size="sm"
+          // Quiet, so that the row being worked on stays the strongest thing
+          // on the screen; the words and the arrow keep it in sight (#242).
+          variant="quiet"
           data-action="choose"
           // The whole name, not a visually hidden 「: タイトル」: browsers
           // read a hidden span apart, as 「今日へ : タイトル」 (#153).

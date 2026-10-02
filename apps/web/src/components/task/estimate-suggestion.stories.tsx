@@ -28,8 +28,16 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** 提示中：破線の枠。「少なめ・ふつう・多めの値を使う」は Secondary、「直して使う」と「使わない」は Quiet。 */
+/** 提示中：破線の枠。「使う：」の後の 3 つの値は枠を共有した 1 つの群（Secondary）、「直して使う」と「使わない」は Quiet。 */
 export const Pending: Story = {};
+
+/**
+ * 3 つの値がどれも「X時間Y分」のとき。「使う：」の後に群が入らない幅では、
+ * 「使う：」が群の上の行に回り、群は折れない（Issue #242）。
+ */
+export const LongValues: Story = {
+  args: { suggestion: { ...suggestion, lo: 1.5, hi: 3.5 } },
+};
 
 /** 根拠がないとき。 */
 export const NoRationale: Story = {

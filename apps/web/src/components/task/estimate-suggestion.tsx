@@ -3,7 +3,7 @@ import type {
   SuggestionBound,
 } from '@itera/domain';
 import { boundValue } from '@itera/domain';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
@@ -56,6 +56,7 @@ function EstimateSuggestion({
   const fieldRef = useRef<HTMLInputElement>(null);
   const firstRef = useRef<HTMLButtonElement>(null);
   const editRef = useRef<HTMLButtonElement>(null);
+  const valuesLabelId = useId();
   // Where focus goes when the inline field closes by キャンセル.
   const backToEdit = useRef(false);
   useEffect(() => {
@@ -159,22 +160,37 @@ function EstimateSuggestion({
           </div>
         </form>
       ) : (
-        <div className="flex flex-col gap-2">
-          {/* The three values together, one under another, so that they
-              never break apart at any width (#234). */}
-          <div className="flex flex-col items-start gap-2">
-            {bounds.map((bound, index) => (
-              <Button
-                key={bound}
-                ref={index === 0 ? firstRef : undefined}
-                size="sm"
-                onClick={() => onAdopt(bound)}
-              >
-                {`${BOUND_WORDS[bound]}の ${formatHours(boundValue(suggestion, bound))}を使う`}
-              </Button>
-            ))}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          {/* The three values in one row, as one control that shares its
+              frame: one strong part rather than three, which never breaks
+              apart at any width (#234, #242); where they do not fit after
+              「使う：」, the label goes on the line above. The values alone
+              are shown; each button reads out its word (少なめ / ふつう /
+              多め) with its value. */}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span id={valuesLabelId} className="text-body text-ink">
+              使う：
+            </span>
+            <div role="group" aria-labelledby={valuesLabelId} className="flex">
+              {bounds.map((bound, index) => (
+                <Button
+                  key={bound}
+                  ref={index === 0 ? firstRef : undefined}
+                  size="sm"
+                  className={cn(
+                    'focus-visible:z-1',
+                    index > 0 && '-ms-px rounded-s-none',
+                    index < bounds.length - 1 && 'rounded-e-none',
+                  )}
+                  aria-label={`${BOUND_WORDS[bound]}の ${formatHours(boundValue(suggestion, bound))}を使う`}
+                  onClick={() => onAdopt(bound)}
+                >
+                  {formatHours(boundValue(suggestion, bound))}
+                </Button>
+              ))}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-x-2">
             <Button
               ref={editRef}
               size="sm"

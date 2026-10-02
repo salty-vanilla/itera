@@ -1394,7 +1394,7 @@ describe('Retro — the plan against what happened (#167)', () => {
     );
   });
 
-  it('inverts 振り返りに使う when on, and counts what is marked', async () => {
+  it('marks 振り返りに使う as chosen when on, and counts what is marked', async () => {
     await renderAt('/retro?fixture=retro-start');
     const count = (n: number) =>
       screen.getByText(
@@ -1411,8 +1411,10 @@ describe('Retro — the plan against what happened (#167)', () => {
     expect(pin().className).not.toContain('bg-primary');
     await userEvent.click(pin());
     expect(pin().getAttribute('aria-pressed')).toBe('true');
-    // An ink fill with a check in place of the pin (DESIGN.md Selected).
-    expect(pin().className).toContain('bg-primary');
+    // The look of a chosen item, with a check in place of the pin, not an
+    // ink fill that would compete with the screen's Primary (#242).
+    expect(pin().className).toContain('bg-here-subtle');
+    expect(pin().className).not.toContain('bg-primary');
     expect(pin().querySelector('svg.lucide-check')).toBeTruthy();
     expect(count(1)).toBeTruthy();
     await userEvent.click(
