@@ -84,6 +84,15 @@ type IconButtonProps = Omit<
      * Makes it a toggle (aria-pressed). Leave undefined for a plain action.
      */
     pressed?: boolean;
+    /**
+     * How a pressed toggle looks. `invert` (the default) is the ink fill;
+     * `selection` is the look of a chosen item, `here-subtle` with the icon
+     * in ink, for a toggle that marks one item among many and would
+     * otherwise compete with the screen's one Primary (DESIGN.md Selected,
+     * #242). Pair it with an icon that changes too (a check), so that the
+     * state is not shown by the tint alone.
+     */
+    pressedLook?: 'invert' | 'selection';
     className?: string;
   };
 
@@ -93,6 +102,7 @@ function IconButton({
   variant,
   size,
   pressed,
+  pressedLook = 'invert',
   loading = false,
   loadingLabel,
   disabled = false,
@@ -122,7 +132,14 @@ function IconButton({
               else onClick?.(event);
             }}
             className={cn(
-              iconButtonVariants({ variant, size, pressed: pressed ?? false }),
+              iconButtonVariants({
+                variant,
+                size,
+                pressed: pressedLook === 'invert' && (pressed ?? false),
+              }),
+              pressedLook === 'selection' &&
+                pressed === true &&
+                'border-transparent bg-here-subtle text-ink not-data-disabled:hover:bg-here-subtle',
               className,
             )}
             {...props}

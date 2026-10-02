@@ -191,8 +191,9 @@ function GoalBlock({
               ref={openRef}
               size="sm"
               variant="quiet"
-              // The words line up with the Goal text's left edge.
-              className="-ms-3 medium:-ms-2"
+              // The words line up with the Goal text's left edge, and are
+              // quieter than it: the Goal is what the block says (#242).
+              className="-ms-3 text-body text-ink-muted medium:-ms-2"
               aria-label={`目標を編集：${area.name}`}
               onClick={() => {
                 setText(goal);

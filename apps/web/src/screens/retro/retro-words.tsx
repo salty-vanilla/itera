@@ -100,10 +100,12 @@ export function PinToggle({
   return (
     <IconButton
       size="sm"
-      // On, it inverts like any toggle (DESIGN.md Selected), with a check in
-      // place of the pin: a marked fact stands out among the many unmarked
-      // ones, and not by color alone (#167).
+      // On, it looks chosen rather than inverted (DESIGN.md Selected, #242):
+      // the yellow of a chosen item, with a check in place of the pin, so
+      // that a marked fact stands out among the many unmarked ones, not by
+      // color alone (#167), and the screen's one Primary stays the only fill.
       pressed={pinned}
+      pressedLook="selection"
       label={`振り返りに使う：${subject}`}
       icon={pinned ? <Check /> : <Pin />}
       onClick={onToggle}

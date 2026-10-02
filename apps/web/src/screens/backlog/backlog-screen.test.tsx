@@ -328,6 +328,24 @@ describe('Backlog', () => {
     );
   });
 
+  it('shows the three values in one group after 「使う：」, read out with their words (#242)', async () => {
+    await renderAt('/backlog?fixture=backlog-detail&task=task-interview');
+    const detail = await screen.findByRole('dialog');
+    const proposal = within(detail).getByRole('region', {
+      name: '見積もりの提案',
+    });
+    const values = within(proposal).getByRole('group', { name: '使う：' });
+    expect(
+      within(values)
+        .getAllByRole('button')
+        .map((b) => [b.getAttribute('aria-label'), b.textContent]),
+    ).toEqual([
+      ['少なめの 2時間を使う', '2時間'],
+      ['ふつうの 2時間30分を使う', '2時間30分'],
+      ['多めの 3時間を使う', '3時間'],
+    ]);
+  });
+
   it('F30: a rejection can be undone, and the suggestion is on show again', async () => {
     await renderAt('/backlog?fixture=backlog-detail&task=task-interview');
     const detail = await screen.findByRole('dialog');
@@ -1423,6 +1441,49 @@ describe('Backlog — the detail of a Task in 今日やる (#94)', () => {
       within(section).getByRole('button', { name: '今日は中断する' }),
     ).toBeTruthy();
     expect(within(section).queryByRole('button', { name: '開始' })).toBeNull();
+  });
+
+  // One strong part (#242): the state's main operation is Secondary and
+  // first, the others are Quiet.
+  const looks = (section: HTMLElement) =>
+    within(section)
+      .getAllByRole('button')
+      .map(
+        (b) =>
+          `${b.textContent}:${b.className.includes('border-border-strong') ? 'secondary' : 'quiet'}`,
+      );
+
+  it('makes 開始 the one Secondary while the Task is today’s, and 完了にする once it is started (#242)', async () => {
+    await renderAt('/backlog?fixture=backlog-detail&task=task-interview');
+    const section = await now();
+    expect(looks(section)).toEqual([
+      '開始:secondary',
+      '今日は見送る:quiet',
+      '今週の残りに戻す:quiet',
+      '完了にする:quiet',
+    ]);
+    await userEvent.click(
+      within(section).getByRole('button', { name: '開始' }),
+    );
+    expect(looks(section)).toEqual([
+      '完了にする:secondary',
+      '今日は中断する:quiet',
+      '今日は見送る:quiet',
+    ]);
+  });
+
+  it('makes 今日へ the one Secondary for a Task outside the Sprint (#242)', async () => {
+    await renderAt('/backlog?fixture=backlog-detail&task=task-bookshelf');
+    const detail = await screen.findByRole('dialog', {
+      name: '本棚を整理する',
+    });
+    const section = within(detail).getByRole('region', { name: '今日と今週' });
+    expect(looks(section)[0]).toBe('今日へ:secondary');
+    expect(
+      looks(section)
+        .slice(1)
+        .every((l) => l.endsWith(':quiet')),
+    ).toBe(true);
   });
 
   it('見送る and 外す take the Task out of 今日, and the row says 今週 again', async () => {

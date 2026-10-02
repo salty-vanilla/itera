@@ -373,6 +373,148 @@ function TaskDetail({
     skip: resolution === 'selected' && facts.today?.recurring === true,
     remove: resolution === 'selected',
   };
+  // The section's operations, in their order. Only the state's main one is
+  // Secondary, and it comes first; the others are Quiet, so that the detail
+  // has one strong part (#242): 今日へ while it can be chosen, 開始 when it
+  // is today's, 完了にする while it is being worked on, 今週へ when 今日へ is
+  // not open yet, and otherwise 完了にする or the only one there is.
+  const variant = (isMain: boolean) => (isMain ? 'secondary' : 'quiet');
+  const dayOperations: {
+    key: string;
+    node: (isMain: boolean) => ReactNode;
+  }[] = [
+    facts.canAddToToday && {
+      key: 'today',
+      node: (isMain: boolean) => (
+        <Button
+          variant={variant(isMain)}
+          onClick={() => runNow(() => addToToday(task.id, task.title))}
+        >
+          今日へ
+        </Button>
+      ),
+    },
+    facts.todayOpensOn !== undefined && {
+      key: 'today-later',
+      node: (isMain: boolean) => (
+        <Button
+          variant={variant(isMain)}
+          disabled
+          focusableWhenDisabled
+          aria-describedby="task-detail-today-opens"
+        >
+          今日へ
+        </Button>
+      ),
+    },
+    offersWeek && {
+      key: 'week',
+      node: (isMain: boolean) => (
+        <Button
+          variant={variant(isMain)}
+          onClick={() => runNow(() => addToWeek(task.id, task.title))}
+        >
+          今週へ
+        </Button>
+      ),
+    },
+    offers.start && {
+      key: 'start',
+      node: (isMain: boolean) => (
+        <Button
+          variant={variant(isMain)}
+          onClick={() =>
+            runNow(() => todayActions.start(facts.today!.selectionId))
+          }
+        >
+          開始
+        </Button>
+      ),
+    },
+    // While the field is open, its own 今日は中断する records: this one stays
+    // where it is, disabled, so that the buttons after it do not move under
+    // a second press.
+    offers.pause && {
+      key: 'pause',
+      node: (isMain: boolean) => (
+        <Button
+          ref={pauseButtonRef}
+          variant={variant(isMain)}
+          disabled={pausing}
+          focusableWhenDisabled
+          onClick={() => setPausing(true)}
+        >
+          今日は中断する
+        </Button>
+      ),
+    },
+    offers.defer && {
+      key: 'defer',
+      node: (isMain: boolean) => (
+        <Button
+          variant={variant(isMain)}
+          onClick={() =>
+            runNow(() => todayActions.defer(facts.today!.selectionId))
+          }
+        >
+          今日は見送る
+        </Button>
+      ),
+    },
+    offers.skip && {
+      key: 'skip',
+      node: (isMain: boolean) => (
+        <Button
+          variant={variant(isMain)}
+          onClick={() =>
+            runNow(() => todayActions.skip(facts.today!.selectionId))
+          }
+        >
+          今日の回をスキップする
+        </Button>
+      ),
+    },
+    offers.remove && {
+      key: 'remove',
+      node: (isMain: boolean) => (
+        <Button
+          variant={variant(isMain)}
+          onClick={() =>
+            runNow(() => todayActions.removeFromToday(facts.today!.selectionId))
+          }
+        >
+          今週の残りに戻す
+        </Button>
+      ),
+    },
+    facts.canComplete && {
+      key: 'complete',
+      node: (isMain: boolean) => (
+        <Button
+          variant={variant(isMain)}
+          onClick={() => {
+            onComplete();
+          }}
+        >
+          完了にする
+        </Button>
+      ),
+    },
+  ].filter((operation) => operation !== false);
+  const has = (key: string) => dayOperations.some((o) => o.key === key);
+  const main = facts.canAddToToday
+    ? 'today'
+    : offers.start
+      ? 'start'
+      : offers.pause && has('complete')
+        ? 'complete'
+        : offersWeek
+          ? 'week'
+          : has('complete')
+            ? 'complete'
+            : dayOperations[0]?.key;
+  // The main operation first, in the DOM too, so that Tab reaches it first.
+  dayOperations.sort((a, b) => Number(b.key === main) - Number(a.key === main));
   // What was typed in the subtask and recurrence forms but not added or
   // applied: closing asks first, with the operation it would carry out.
   const [held, setHeld] = useState<{
@@ -697,89 +839,9 @@ function TaskDetail({
               </p>
             )}
             <div className="flex flex-wrap items-center gap-2">
-              {facts.canAddToToday && (
-                <Button
-                  onClick={() => runNow(() => addToToday(task.id, task.title))}
-                >
-                  今日へ
-                </Button>
-              )}
-              {facts.todayOpensOn !== undefined && (
-                <Button
-                  disabled
-                  focusableWhenDisabled
-                  aria-describedby="task-detail-today-opens"
-                >
-                  今日へ
-                </Button>
-              )}
-              {offersWeek && (
-                <Button
-                  onClick={() => runNow(() => addToWeek(task.id, task.title))}
-                >
-                  今週へ
-                </Button>
-              )}
-              {offers.start && (
-                <Button
-                  onClick={() =>
-                    runNow(() => todayActions.start(facts.today!.selectionId))
-                  }
-                >
-                  開始
-                </Button>
-              )}
-              {/* While the field is open, its own 今日は中断する records: this one
-                  stays where it is, disabled, so that the buttons after it do
-                  not move under a second press. */}
-              {offers.pause && (
-                <Button
-                  ref={pauseButtonRef}
-                  disabled={pausing}
-                  focusableWhenDisabled
-                  onClick={() => setPausing(true)}
-                >
-                  今日は中断する
-                </Button>
-              )}
-              {offers.defer && (
-                <Button
-                  onClick={() =>
-                    runNow(() => todayActions.defer(facts.today!.selectionId))
-                  }
-                >
-                  今日は見送る
-                </Button>
-              )}
-              {offers.skip && (
-                <Button
-                  onClick={() =>
-                    runNow(() => todayActions.skip(facts.today!.selectionId))
-                  }
-                >
-                  今日の回をスキップする
-                </Button>
-              )}
-              {offers.remove && (
-                <Button
-                  onClick={() =>
-                    runNow(() =>
-                      todayActions.removeFromToday(facts.today!.selectionId),
-                    )
-                  }
-                >
-                  今週の残りに戻す
-                </Button>
-              )}
-              {facts.canComplete && (
-                <Button
-                  onClick={() => {
-                    onComplete();
-                  }}
-                >
-                  完了にする
-                </Button>
-              )}
+              {dayOperations.map(({ key, node }) => (
+                <Fragment key={key}>{node(key === main)}</Fragment>
+              ))}
               {facts.today !== undefined && !onTodayScreen && (
                 <Link
                   ref={openTodayRef}
@@ -1068,7 +1130,11 @@ function TaskDetail({
       )}
       <DrawerFooter>
         {footer}
-        <Button onClick={() => leave(onClose)}>閉じる</Button>
+        {/* Quiet: × closes too, and the detail's one strong part is the
+            main operation of 今日と今週 (#242). */}
+        <Button variant="quiet" onClick={() => leave(onClose)}>
+          閉じる
+        </Button>
       </DrawerFooter>
     </>
   );

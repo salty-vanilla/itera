@@ -143,6 +143,12 @@ describe('Today — the top, when nothing is chosen (#99)', () => {
     await renderAt('/today?fixture=today-morning');
     expect(within(region('今日やる')).getByText(/まだありません/)).toBeTruthy();
     expect(screen.queryByText(/今日の残り/)).toBeNull();
+    // 今日へ is Quiet: the row being worked on stays the strongest (#242).
+    expect(
+      within(region('昨日の続き')).getByRole('button', {
+        name: '今日へ：関連論文を 3本読む',
+      }).className,
+    ).not.toContain('border-border-strong');
     await userEvent.click(
       within(region('昨日の続き')).getByRole('button', {
         name: '今日へ：関連論文を 3本読む',

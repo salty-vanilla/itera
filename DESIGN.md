@@ -556,7 +556,7 @@ compact の原則：
 | Hover | 背景 `surface-hover`（Primary は `primary-hover`）、輪郭 `ink-muted`。影・拡大・移動はしない。情報を hover だけに置かない |
 | Focus | `focus`（墨）の 2px outline、offset 2px（リスト内・タブ・メニュー項目は −2px）。hover と同時でも両方見える。黄（選択）や墨の塗り（Primary・pressed）の上でも、外側のアキで見分けられる |
 | Active | `surface-pressed` / `primary-active` |
-| Selected | リストの選択は `here-subtle` の地＋チェック（`aria-selected`）。Filter のオン（`aria-pressed`）は `here-subtle` の地＋`ink` の 2px の枠＋太字。トグルのオン（`aria-pressed`、IconButton の pressed）は墨の反転（`primary` の塗り＋`on-primary`） |
+| Selected | リストの選択は `here-subtle` の地＋チェック（`aria-selected`）。Filter のオン（`aria-pressed`）は `here-subtle` の地＋`ink` の 2px の枠＋太字。トグルのオン（`aria-pressed`、IconButton の pressed）は墨の反転（`primary` の塗り＋`on-primary`）。例外：多くの行の 1 つに付ける「振り返りに使う」のピンは、オンをリストの選択と同じ `here-subtle` の地＋チェック（`ink`）にし、墨の塗りを画面の Primary だけに残す（Issue #242） |
 | Disabled | 地 `canvas-subtle`、文字 `ink-disabled`、輪郭 `border`、`cursor: not-allowed`。理由を近くに書く。可能なら無効化しない |
 | Loading | スピナー＋文言、`aria-busy`、幅を変えない。300ms 未満の処理には出さない |
 | Error | `danger` の 2px 相当の輪郭＋アイコン＋文（`aria-invalid`）。入力内容を消さず、再試行の手段を示す |
@@ -678,7 +678,7 @@ compact の原則：
 - Planning の Backlog ペイン（選ぶ・整える・確かめる）の行は、列が細いので、medium 以上でもタイトルを 1 行で省略しない（Issue #158）。選ぶは compact と同じ 2 行まで、整える・確かめるのタイトルだけの細い列は全文を折り返して、切れたタイトルを作らない。Estimate（見積もりの提案を含む）はタイトルの右ではなく、タイトルの下の Task Metadata と同じ行の右端に置き、入らなければ次の行の右端に回す。タイトルの幅を Estimate に削らせない。
 - layout stacked（既定、約 52px）/ inline（40px、`row-task` は最小高さ）。区切りは `border-soft`、行間 0、角丸・影なし、Card で囲まない。
 - 状態：Selected（`here-subtle`＋チェック）、In progress（Today で開始した行。先頭の端に `here` の 4px の縦線＋タイトル 700＋メタデータの「作業中 · 10:12 から」。ナビの現在地と同じ印で「今やっているもの」を示す。Issue #163）、Done（○ を `primary` で塗り、タイトル `ink-subtle`＋取り消し線）、Skipped（○ に「−」＋「スキップ」）、Dragging（`surface`＋`elevation-drag`＋`border`）、Loading（Estimate が「見積中」）、Error（行内に「保存できませんでした · 再試行」）、Disabled（アーカイブ済み、`ink-disabled`）。
-- Today の「今日やる」の行は、日次の操作（開始 / 完了 / 今日は中断する / 今日は見送る / 今週の残りに戻す / 繰り返しの今日の回をスキップする。繰り返しには「今日は見送る」を出さない。Issue #233）を持つ。強い操作を常時並べすぎず、完了（○）以外は行の操作 `…` と詳細から出す（PRD §12）。例外として、見送り・スキップの行は `…` の位置に「取り消す」（`undo-2` の IconButton、`…` と同じ大きさ）をどの幅でも常に出す（誤操作から戻る手段を hover の裏に置かない。ドメインモデル F19・F37、Issue #101）。「今週の残りに戻す」にした行は「今日やる」から消えて「今週の残り」に移り、その日のうちは「今日へ」で同じ選択に戻る（F37、Issue #233）。「今週の残り」「昨日の続き」の行は □ ではなく、行の先頭に常に見える「今日へ」のボタンで選ぶ（□ は今週へ選ぶ意味なので使わない）。
+- Today の「今日やる」の行は、日次の操作（開始 / 完了 / 今日は中断する / 今日は見送る / 今週の残りに戻す / 繰り返しの今日の回をスキップする。繰り返しには「今日は見送る」を出さない。Issue #233）を持つ。強い操作を常時並べすぎず、完了（○）以外は行の操作 `…` と詳細から出す（PRD §12）。例外として、見送り・スキップの行は `…` の位置に「取り消す」（`undo-2` の IconButton、`…` と同じ大きさ）をどの幅でも常に出す（誤操作から戻る手段を hover の裏に置かない。ドメインモデル F19・F37、Issue #101）。「今週の残りに戻す」にした行は「今日やる」から消えて「今週の残り」に移り、その日のうちは「今日へ」で同じ選択に戻る（F37、Issue #233）。「今週の残り」「昨日の続き」の行は □ ではなく、行の先頭に常に見える「今日へ」のボタンで選ぶ（□ は今週へ選ぶ意味なので使わない）。「今日へ」は Quiet（↑ のアイコンと語。枠を付けず、作業中の行より強くしない。大きさは Button sm のまま。Issue #242）。
 - × メタ情報を Badge / Pill にする、□ と ○ を入れ替える、Goal に紐づかない行を薄くする。
 
 **Task Metadata** — タスクの属性を Badge ではなく文字とアイコンで 1 行に並べる（`meta` 12px、要素間 `spacing.3`）。順に Area Indicator（グループ化していない一覧だけ）、Deadline、優先度（高と低だけ「優先度 高」「優先度 低」と語で出す。通常は値がない扱いで出さない。色・アイコンで強調せず、並びも変えない。Issue #97）、持ち越し、繰り返し、サブタスク（Backlog の行だけ。アイコンなしの注記。「サブタスク 2件 · （参考）1時間」。計画の時間がサブタスクの合計のときは「サブタスクの合計」。Issue #171）、Goal（`target`＋Goal 文を省略。領域ごとにまとめ、見出しに Goal 文がある一覧では、目標に入っている Task には何も出さず、目標に入っていない Task にだけ「目標に入っていない」をアイコンなしでほかの属性と同じ調子で出す。例外だけに印を付ける。Issue #159・#241）、注記（`ink-subtle`）。Today の行では、768px 未満だけ計画の時間（「計画 1時間30分〜3時間」）を先頭に置く（Issue #241）。値がない属性は出さない（「—」で埋めない）。グループ見出しと同じ情報を行に重ねない。全部の行に同じ語を並べない。
@@ -713,7 +713,7 @@ compact の原則：
 ### 計画と振り返り
 
 **Goal** — Sprint × Area の「今週どんな状態にしたいか」。
-- 上端の罫（`border`）、見出し（Area Indicator heading＋タスク数と時間＋自己判定の Tag）、Goal 文（`goal`、`measure-read`）とその直下の編集（Quiet sm、文の左端に揃える。何を変えるかが分かるように、見出しではなく文の近くに置く）、その Area の選んだタスク。
+- 上端の罫（`border`）、見出し（Area Indicator heading＋タスク数と時間＋自己判定の Tag）、Goal 文（`goal`、`measure-read`）とその直下の編集（Quiet sm、文の左端に揃える。何を変えるかが分かるように、見出しではなく文の近くに置く。Goal 文より目立たないよう、語は `body` の `ink-muted`（400）にする。Issue #242）、その Area の選んだタスク。
 - set（確定）/ empty（「+ 目標を書く」だけ。「目標は任意です」のような案内は、計画中も確定後も置かない、Issue #155・#208。Goal も Task もない Area は、名前と「+ 目標を書く」を 1 行にする。Issue #161）/ editing（`body-l` の Textarea＋保存 / キャンセル）/ 自己判定済み（できた = done の Tag、一部できた・できなかった・決めなかった = neutral）。
 - Goal の間は `spacing.8`。× Card で囲む、Goal がない Area を警告色で示す、Goal 文を太字・大見出しにする、全体 Goal を作る。
 
@@ -737,7 +737,7 @@ compact の原則：
 
 **Agent 提案（AgentSuggestion）** — Estimate の提案、Goal の文案、計画案の入口。
 - 破線の枠（`proposal-border`、`rounded.md`、`surface`）、ヘッダー（`kicker` で何の提案か（「見積もりの提案」）＋出所と時刻）、対象、提案の値（EstimateRange / suggestion の Estimate / `body` の文）、根拠、操作。
-- Estimate の提案は、少なめ・ふつう・多めのどれかを本人の Estimate として **採用** できる（PRD §5.A。画面の語は「多めの 4時間を使う」。Issue #206）。採用は Secondary、「直して使う」「使わない」は Quiet。
+- Estimate の提案は、少なめ・ふつう・多めのどれかを本人の Estimate として **採用** できる（PRD §5.A。画面の語は「多めの 4時間を使う」。Issue #206）。採用は Secondary、「直して使う」「使わない」は Quiet。3 つの値は「使う：」の後に、枠を共有した 1 つのボタンの群（`role="group"`、Secondary sm）として 1 行に並べ、ボタンには値だけを出す（［2時間｜2時間30分｜3時間］。読み上げ名は「少なめの 2時間を使う」。少なめ・ふつう・多めは上の値の行が言う）。群は途中で折れず、「直して使う」「使わない」は入らなければ次の行に回す（Issue #242）。
 - 状態：pending / loading（「過去の類似タスクを調べています…」＋取り消す）/ insufficient（幅を広く、わからない点に理由）/ error（「提案を作れませんでした。手入力でそのまま計画を続けられます。」＋もう一度試す）/ 使う・直して使う・使わないの後（実線の `canvas-subtle` の 1 行＋元に戻す）。
 
 **根拠（AgentRationale）** — 「根拠 / わからない点 / 参照していない情報」の 3 行。columns（既定）/ stacked（狭い場所）/ collapsible（「根拠を見る」）。根拠がないときは「根拠となるデータがありません」。× confidence を % で出す、「高精度」と書く。
