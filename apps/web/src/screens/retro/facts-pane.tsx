@@ -102,25 +102,16 @@ function FactsPane({
   // Also when the hours were first entered after confirming.
   const hoursChanged = currentHours !== plannedHours;
   const { minutes: interruptMinutes, withoutMinutes } = facts.interruptTime;
-  // How the plan changed after confirm, which makes its second total: an
-  // addition removed again changes neither, and equal totals say nothing new.
-  const added = facts.midSprint.filter((t) => t.outcome !== 'removed').length;
-  const leftOut = facts.removed.filter((t) => t.origin === 'planning').length;
-  const { atConfirm, withAdditions } = facts.plannedTotal;
+  // The band says the plan with the additions once (#253); the plan as
+  // confirmed is said only when it is not that total. An addition removed
+  // again changes neither.
+  const { atConfirm } = facts.plannedTotal;
   const sameTotal =
-    atConfirm.lo === withAdditions.lo &&
-    atConfirm.hi === withAdditions.hi &&
-    atConfirm.unestimated === withAdditions.unestimated &&
-    atConfirm.unestimatedSubtasks === withAdditions.unestimatedSubtasks;
-  const changedLead = sameTotal
-    ? undefined
-    : added > 0 && leftOut > 0
-      ? '週の途中の追加を含め、外したタスクを除いて'
-      : added > 0
-        ? '週の途中の追加を含めて'
-        : leftOut > 0
-          ? '外したタスクを除いて'
-          : undefined;
+    atConfirm.lo === total.lo &&
+    atConfirm.hi === total.hi &&
+    atConfirm.unestimated === total.unestimated &&
+    atConfirm.unestimatedSubtasks === total.unestimatedSubtasks;
+  const unestimatedAside = formatPlanningAside(total) !== undefined;
   const interruptNote = [
     withoutMinutes > 0 && `時間の記録なし ${withoutMinutes}件`,
     interruptMinutes > 0 && 'タスクの実績には含みません',
@@ -128,57 +119,26 @@ function FactsPane({
     .filter(Boolean)
     .join('。');
 
-  // Under 詳しく (#241): both totals against the hours entered when
-  // planning (owner decision in #167), words only, no danger, as facts of
-  // the week; the second only when the plan changed. A total said in the
-  // line above is not said again. Then the interrupts, which are not actual
-  // time of a Task, so 実績 above leaves their minutes out (#167).
-  const capacityLines =
-    facts.capacity === undefined
+  // Under 詳しく (#241): the plan as confirmed against the hours entered
+  // when planning (owner decision in #167), words only, no danger, as a
+  // fact of the week, when the plan changed. Then the interrupts, which are
+  // not actual time of a Task, so 実績 above leaves their minutes out (#167).
+  const details = [
+    ...(facts.capacity === undefined || sameTotal
       ? []
       : [
-          {
-            lead: '確定したときの計画',
-            // Said only when it is not the total in the line above.
-            total: sameTotal ? undefined : atConfirm,
-            capacity: facts.capacity.atConfirm,
-          },
-          ...(changedLead === undefined
-            ? []
-            : [
-                {
-                  lead: changedLead,
-                  total: undefined,
-                  capacity: facts.capacity.withAdditions,
-                },
-              ]),
-        ];
-  const details = [
-    ...capacityLines.map((line) => (
-      <li key={line.lead}>
-        <span className="text-ink-muted">
-          {/* Whole words, breaking only after 「、」 (the longest lead is
-              wider than 375px). */}
-          {line.lead.split('、').map((part, i, parts) => (
-            <span key={part} className="whitespace-nowrap">
-              {part}
-              {i < parts.length - 1 && '、'}
-            </span>
-          ))}
-          {line.total === undefined ? (
-            '：'
-          ) : (
-            <>
-              {' '}
+          <li key="atConfirm">
+            <span className="text-ink-muted">
+              確定したときの計画{' '}
               <span className="whitespace-nowrap">
-                {formatPlanningSum(line.total)}：
+                {formatPlanningSum(atConfirm)}：
               </span>
-            </>
-          )}
-        </span>
-        <Sentences items={capacityRelationSentences(line.capacity)} />
-      </li>
-    )),
+            </span>
+            <Sentences
+              items={capacityRelationSentences(facts.capacity.atConfirm)}
+            />
+          </li>,
+        ]),
     ...(facts.interrupts.length > 0
       ? [
           <li key="interrupts">
@@ -261,48 +221,47 @@ function FactsPane({
               quiet: true,
             },
             {
-              label: '計画の合計',
-              value: formatRange(total.lo, total.hi),
-              fullRow: true,
+              label: '計画',
+              value: formatPlanningSum(total),
+              lower: true,
               quiet: true,
-              note: (
-                <Sentences
-                  items={[
-                    ...(total.unestimated + total.unestimatedSubtasks > 0
-                      ? [
-                          `見積もりなし ${total.unestimated + total.unestimatedSubtasks}件`,
-                        ]
-                      : []),
-                    plannedHours === undefined
-                      ? '使える時間は未入力'
-                      : `使える時間 ${formatHours(plannedHours)}`,
-                  ]}
-                />
-              ),
+              // Not when the value is the count itself (「見積もりなし 1件」).
+              note: unestimatedAside
+                ? `見積もりなし ${total.unestimated + total.unestimatedSubtasks}件`
+                : undefined,
+            },
+            {
+              // Only what is entered is summed, and the count says so (#241).
+              label: '実績',
+              value: formatHours(facts.actualHours),
+              lower: true,
+              quiet: true,
+              note: `入力済み ${entered}件`,
             },
           ]}
         />
         <div className="flex flex-col gap-1 text-body text-ink">
+          {/* Whether the plan above fits the hours entered when planning:
+              out of 詳しく, the hours said here once (#253). */}
           <p>
-            {/* The sum and the count each whole: 「1」 never leaves 「件」 (#239). */}
-            <span className="whitespace-nowrap">
-              計画 {formatPlanningSum(total)}
-            </span>
-            {formatPlanningAside(total) !== undefined && (
-              <span className="whitespace-nowrap">
-                {formatPlanningAside(total)}
-              </span>
-            )}{' '}
-            <span className="whitespace-nowrap">
-              → 実績 {formatHours(facts.actualHours)}
-            </span>
-            <span className="whitespace-nowrap text-ink-muted">
-              （入力済み {entered}件）
-            </span>
+            {facts.capacity === undefined ? (
+              <span className="text-ink-muted">使える時間は未入力</span>
+            ) : (
+              <>
+                <span className="whitespace-nowrap text-ink-muted">
+                  使える時間{' '}
+                  {formatHours(facts.capacity.withAdditions.availableHours)}：
+                </span>
+                <Sentences
+                  items={capacityRelationSentences(
+                    facts.capacity.withAdditions,
+                  )}
+                />
+              </>
+            )}
           </p>
           {details.length > 0 && (
-            // The rest under 詳しく, closed at first: one line of plan and
-            // actual is the answer (#241).
+            // The rest under 詳しく, closed at first (#241).
             <>
               <Button
                 variant="quiet"
