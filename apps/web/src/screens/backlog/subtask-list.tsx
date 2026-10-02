@@ -60,10 +60,10 @@ function SubtaskList({
           ))}
         </ul>
       )}
-      {/* Compact: the title on a line of its own, the time and 追加 under
-          it, so the title is not cut short (#252). */}
+      {/* The title on a line of its own, the time and 追加 under it, so
+          the title is not cut short in the detail's width (#252). */}
       <form
-        className="flex flex-col gap-2 medium:flex-row medium:items-start"
+        className="flex flex-col gap-2"
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
