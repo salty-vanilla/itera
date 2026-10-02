@@ -34,6 +34,7 @@ import { TaskResult } from './task-result';
 import {
   actualLabel,
   daysText,
+  differenceParts,
   differenceText,
   estimateOf,
   plannedCellText,
@@ -925,14 +926,15 @@ function AddActualButton({
 
 /**
  * 「計画より 30分少ない」 under the actual time, if any. Under 1200px the
- * column is narrow and it breaks between phrases, so the table still fits
- * at 1000px.
+ * column is narrow and it breaks after 「計画より」, so the table still fits
+ * at 1000px; the difference itself is not broken (「30分 / 少ない」, #250).
  */
 function DifferenceNote({ fact }: { fact: TaskFact }) {
-  const text = differenceText(fact);
-  return text === undefined ? null : (
-    <span className="block text-meta whitespace-normal text-ink-muted [word-break:auto-phrase]">
-      {text}
+  const parts = differenceParts(fact);
+  if (parts === undefined) return null;
+  return (
+    <span className="block text-meta whitespace-normal text-ink-muted">
+      {parts.against} <span className="whitespace-nowrap">{parts.amount}</span>
     </span>
   );
 }
