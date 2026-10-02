@@ -203,7 +203,7 @@ function FactsPane({
               value: facts.occurrences.all.length,
               unit: '回',
               quiet: true,
-              // Breaks only at 「 · 」, as 計画の合計's note does.
+              // Breaks only at 「 · 」.
               note: (
                 <Sentences
                   items={[
