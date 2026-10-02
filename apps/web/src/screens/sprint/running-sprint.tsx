@@ -16,7 +16,7 @@ import { Estimate } from '@/components/task/estimate';
 import { MetaItem, TaskMetadata } from '@/components/task/task-metadata';
 import { TaskRow } from '@/components/task/task-row';
 import { semanticIcons } from '@/components/ui/icon';
-import { criterionName } from '@/lib/criterion-text';
+import { criterionName, criterionQuotedName } from '@/lib/criterion-text';
 import { formatDateRange } from '@/lib/date-format';
 import {
   formatHours,
@@ -429,8 +429,11 @@ function Outlook({
             className="mt-0.5 size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
           />
           <span className="[word-break:auto-phrase]">
-            計画のルール「
-            {criterionName(data.criterion.policy, data.criterion.areaName)}」
+            計画のルール
+            {criterionQuotedName(
+              data.criterion.policy,
+              data.criterion.areaName,
+            )}
             <span className="whitespace-nowrap"> · 対象なし</span>
           </span>
         </p>

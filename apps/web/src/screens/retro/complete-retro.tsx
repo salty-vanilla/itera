@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { criterionName } from '@/lib/criterion-text';
+import { criterionQuotedName } from '@/lib/criterion-text';
 import type { RetroBlocker, RetroData } from '@/store/retro-view';
 import { carryOverWords, DECISION_WORDS } from './retro-words';
 
@@ -118,7 +118,7 @@ function CompleteDialog({
       ? []
       : [
           {
-            text: `今回の計画のルール「${criterionName(used.criterion.policy, used.areaName)}」を`,
+            text: `今回の計画のルール${criterionQuotedName(used.criterion.policy, used.areaName)}を`,
             decision: `「${DECISION_WORDS[used.decision]}」`,
           },
         ]),
@@ -126,7 +126,7 @@ function CompleteDialog({
       ? []
       : [
           {
-            text: `新しい計画のルール「${criterionName(draft.criterion.policy, draft.areaName)}」を、次の Sprint から出す`,
+            text: `新しい計画のルール${criterionQuotedName(draft.criterion.policy, draft.areaName)}を、次の Sprint から出す`,
           },
         ]),
   ];

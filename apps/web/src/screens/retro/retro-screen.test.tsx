@@ -172,7 +172,7 @@ describe('Retro — 事実を見る', () => {
         (_, element) =>
           element?.tagName === 'P' &&
           element.textContent ===
-            '今回の計画のルール：「研究：提案の多めで計画」（扱いは「引き継ぐ」で決めます）',
+            '今回の計画のルール「研究：見積もりなしは提案の多めの値で計画」（扱いは「引き継ぐ」で決めます）',
       ),
     ).toBeTruthy();
     expect(screen.queryByText(/タスク 1件のうち/)).toBeNull();
@@ -523,7 +523,9 @@ describe('Retro — 引き継ぐ and 完了', () => {
       lastSnapshot().records.criteria.find((c) => c.id === draftId)?.policy
         .rangePolicy,
     ).toBe('mid');
-    expect(screen.getAllByText(/提案のふつうで計画/).length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(/見積もりなしは提案のふつうの値で計画/).length,
+    ).toBeGreaterThan(0);
     await userEvent.click(screen.getByRole('radio', { name: '置き換える' }));
     await userEvent.click(completeButton());
     const dialog = await screen.findByRole('dialog');
@@ -532,7 +534,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
       within(dialog).getByText('計画のルールの決定').nextElementSibling
         ?.textContent,
     ).toContain(
-      '新しい計画のルール「研究：提案のふつうで計画」を、次の Sprint から出す',
+      '新しい計画のルール「研究：見積もりなしは提案のふつうの値で計画」を、次の Sprint から出す',
     );
     await userEvent.click(
       within(dialog).getByRole('button', { name: '振り返りを完了' }),
@@ -616,7 +618,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
       screen.getByRole('switch', { name: /計画のルールにもする/ }),
     );
     await userEvent.selectOptions(
-      screen.getByRole('combobox', { name: '対象' }),
+      screen.getByRole('combobox', { name: '領域' }),
       '',
     );
     await userEvent.selectOptions(
@@ -630,11 +632,11 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     expect(
       lastSnapshot().records.criteria.find((c) => c.id === draftId)?.policy,
     ).toEqual({ scope: { kind: 'all' }, rangePolicy: 'mid' });
-    expect(screen.getByText('提案のふつうで計画')).toBeTruthy();
     expect(
-      screen.getByText(
-        /見積もりがないタスク \d+件を、提案のふつうの値で計画します/,
-      ),
+      screen.getByText('すべての領域：見積もりなしは提案のふつうの値で計画'),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/^対象は \d+件です（今の Backlog で）。$/),
     ).toBeTruthy();
     expect(choices()).toContain(
       '置き換えるこのルールで計画するかは「確かめる」で選べます。',
@@ -648,13 +650,11 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     );
     // 生活 has no Task planned from a suggestion now.
     await userEvent.selectOptions(
-      screen.getByRole('combobox', { name: '対象' }),
+      screen.getByRole('combobox', { name: '領域' }),
       'area-life',
     );
     expect(
-      screen.getByText(
-        '次の Sprint では、見積もりがない生活のタスクは、提案の多めの値で計画します（今の Backlog にはまだありません）。',
-      ),
+      screen.getByText('対象は、今の Backlog にはまだありません。'),
     ).toBeTruthy();
     expect(screen.queryByText(/0件/)).toBeNull();
   });
@@ -815,7 +815,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
         (_, element) =>
           element?.tagName === 'P' &&
           element.textContent ===
-            '今回の計画のルール：「研究：提案の多めで計画」（結果と扱いは「引き継ぐ」にあります）',
+            '今回の計画のルール「研究：見積もりなしは提案の多めの値で計画」（結果と扱いは「引き継ぐ」にあります）',
       ),
     ).toBeTruthy();
     // The closed reflection keeps the new name, as text (#109).
@@ -1191,7 +1191,7 @@ describe('Retro — 事実を見るを読みやすくする (#108)', () => {
       }),
     );
     await router.navigate({ to: '/retro', search: { stage: 'facts' } });
-    await screen.findByText(/今回の計画のルール：/);
+    await screen.findByText(/今回の計画のルール「/);
     expect(
       screen.queryByText(/気になった記録に「振り返りに使う」を付けると/),
     ).toBeNull();
@@ -1443,7 +1443,7 @@ describe('Retro — the plan against what happened (#167)', () => {
       }),
     );
     await router.navigate({ to: '/retro', search: { stage: 'facts' } });
-    await screen.findByText(/今回の計画のルール：/);
+    await screen.findByText(/今回の計画のルール「/);
     expect(screen.queryByText(/振り返りに使う \d+件/)).toBeNull();
   });
 });

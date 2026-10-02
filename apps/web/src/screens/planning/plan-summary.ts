@@ -5,7 +5,7 @@ import {
   type CapacityHeadline,
   type CapacityState,
 } from '@/components/sprint/capacity-indicator';
-import { criterionName } from '@/lib/criterion-text';
+import { criterionQuotedName } from '@/lib/criterion-text';
 import {
   formatHours,
   formatLeftOut,
@@ -62,7 +62,7 @@ export interface PlanSummary {
   /** 「見積もりのないタスク 1件は合計に含まれていません。」 */
   readonly leftOut?: string;
   /**
-   * 「「研究：提案の多めで計画」 · このルールで計画する」; absent when no
+   * 「「研究：見積もりなしは提案の多めの値で計画」 · このルールで計画する」; absent when no
    * chosen Task is one it acts on (#161).
    */
   readonly criterion?: string;
@@ -109,7 +109,7 @@ export function planSummary(data: PlanningData): PlanSummary {
     ...(criterion?.hasTarget !== true
       ? {}
       : {
-          criterion: `「${criterionName(criterion.active.policy, criterion.areaName)}」${
+          criterion: `${criterionQuotedName(criterion.active.policy, criterion.areaName)}${
             criterion.applied
               ? ' · このルールで計画する'
               : ' · 今回はこのルールで計画しない'
