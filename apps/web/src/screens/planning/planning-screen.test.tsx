@@ -765,10 +765,11 @@ describe('Planning — 確かめる', () => {
     await userEvent.type(hours, '14{Enter}');
     // The state, then the headline with its numbers in `num-l` (#243).
     const state = summary().querySelector('[data-slot="capacity-statement"]')!;
-    expect(state.textContent).toBe('超える');
-    // Read out from the summary, the one live region in 確かめる.
+    expect(state.textContent).toBe('超える。');
+    // Read out from the summary, the one live region in 確かめる, with a
+    // pause after the state.
     expect(within(summary()).getByRole('status').textContent).toBe(
-      '超える少なく済んでも1時間15分超える。多くかかれば3時間15分超える。',
+      '超える。少なく済んでも1時間15分超える。多くかかれば3時間15分超える。',
     );
     expect(state.className).toContain('text-danger');
     const numbers = [...summary().querySelectorAll('.text-num-l')];
@@ -804,7 +805,7 @@ describe('Planning — 確かめる', () => {
     // of the Capacity (#243). The Dialog keeps the one line.
     const stateOf = (root: HTMLElement) =>
       root.querySelector('[data-slot="capacity-statement"]')!;
-    expect(stateOf(summary()).textContent).toBe('超える可能性');
+    expect(stateOf(summary()).textContent).toBe('超える可能性。');
     expect(
       [...summary().querySelectorAll('.text-num-l')].map((n) => n.textContent),
     ).toEqual(['1時間45分', '15分']);

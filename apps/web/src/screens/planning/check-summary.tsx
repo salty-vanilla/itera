@@ -6,9 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import {
   AvailableHoursField,
-  capacityHeadline,
   CapacityStatement,
-  capacityStatement,
   Headline,
 } from '@/components/sprint/capacity-indicator';
 import {
@@ -50,7 +48,6 @@ function CheckSummary({
   onOpenTask,
 }: CheckSummaryProps) {
   const summary = planSummary(data);
-  const { capacity } = data.totals;
   const ids = useId();
   return (
     <section
@@ -68,14 +65,15 @@ function CheckSummary({
             `num-l`, as at the top of the Capacity (#243). */}
         <div role="status" className="flex flex-col gap-2">
           <CapacityStatement
-            statement={capacityStatement(capacity, data.totals.total)}
+            statement={summary.state}
             strong
+            pause
             className="text-subheading"
           />
-          {capacity !== undefined && (
+          {summary.headline !== undefined && (
             <Headline
-              headline={capacityHeadline(capacity)}
-              over={capacity.status === 'exceeds'}
+              headline={summary.headline.parts}
+              over={summary.headline.over}
             />
           )}
         </div>

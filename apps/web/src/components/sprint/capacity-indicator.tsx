@@ -243,16 +243,20 @@ const toneIcon = {
  * The state sentence: its icon and words in its tone, never the colour
  * alone. Shared by the Capacity, the 確かめる summary and the 確定 Dialog
  * (#93). `strong`: an ok state in `ink`, where the sentence leads.
+ * `pause`: a 「。」 read out after 「超える可能性」「超える」, where the
+ * headline follows (#243).
  */
 function CapacityStatement({
   statement,
   as: Tag = 'p',
   strong = false,
+  pause = false,
   className,
 }: {
   statement: CapacityState;
   as?: 'p' | 'li';
   strong?: boolean;
+  pause?: boolean;
   className?: string | undefined;
 }) {
   const Icon = toneIcon[statement.tone];
@@ -272,7 +276,12 @@ function CapacityStatement({
         className="mt-1 size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
       />
       {statement.sentences === undefined ? (
-        statement.text
+        <>
+          {statement.text}
+          {pause && !statement.text.endsWith('。') && (
+            <span className="sr-only">。</span>
+          )}
+        </>
       ) : (
         // 「超える可能性：」 and each sentence stay whole; the line breaks
         // only after 「：」 or at 「·」.

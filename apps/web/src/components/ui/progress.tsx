@@ -74,7 +74,15 @@ function Progress({
                 : 'text-num-s text-ink',
           )}
         >
-          {text}
+          {large && value !== null ? (
+            // The unit in `meta`, as in the Sprint Summary (#243).
+            <>
+              {value} / {max}
+              {unit !== '' && <span className="text-meta">{unit}</span>}
+            </>
+          ) : (
+            text
+          )}
         </span>
       </div>
       <ProgressPrimitive.Track
