@@ -11,13 +11,18 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** 完了 / 持ち越し / スキップ / 週の途中の追加 / 計画値と使える時間。点数や割合は出さない。 */
+/** 完了 / 持ち越し / 繰り返し / 週の途中の追加 / 計画値と使える時間。点数や割合は出さない。 */
 export const Default: Story = {
   args: {
     items: [
       { label: '完了', value: 4, unit: '件' },
       { label: '持ち越し', value: 2, unit: '件' },
-      { label: 'スキップ', value: 1, unit: '回' },
+      {
+        label: '繰り返し',
+        value: 4,
+        unit: '回',
+        note: '完了 3 · スキップ 1 · 未完了 0',
+      },
       { label: '週の途中の追加', value: 1, unit: '件' },
       {
         label: '計画の合計',
@@ -42,7 +47,7 @@ export const WithJump: Story = {
         onSelect: () => {},
         selectLabel: '持ち越し 2件の行へ移る',
       },
-      { label: 'スキップ', value: 0, unit: '回' },
+      { label: '繰り返し', value: 0, unit: '回' },
     ],
   },
 };

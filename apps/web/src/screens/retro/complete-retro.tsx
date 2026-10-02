@@ -36,11 +36,11 @@ const BLOCKER_WORDS: Readonly<Record<RetroBlocker, ReactNode>> = {
   ),
   continueWithDraft: (
     <>
-      新しいルールを使うなら、
+      新しいルールにするなら、
       <span className="whitespace-nowrap">「今回の計画のルール」で</span>
       <span className="whitespace-nowrap">「置き換える」を</span>
       <span className="whitespace-nowrap">選んでください。</span>
-      <span className="whitespace-nowrap">使わないなら、</span>
+      <span className="whitespace-nowrap">今回のルールを続けるなら、</span>
       <span className="whitespace-nowrap">「計画のルールにもする」</span>
       をオフにしてください。
     </>
@@ -79,7 +79,9 @@ function CompleteRetro({ data, onComplete }: CompleteRetroProps) {
           <p key={b}>{BLOCKER_WORDS[b]}</p>
         ))}
         {!blocked && data.improvement === undefined && (
-          <p>次に試すことがないまま完了します。次の計画には何も出ません。</p>
+          <p>
+            次に試すことがないまま完了します。次の Sprint には何も出ません。
+          </p>
         )}
       </div>
       <CompleteDialog
@@ -124,7 +126,7 @@ function CompleteDialog({
       ? []
       : [
           {
-            text: `新しい計画のルール「${criterionName(draft.criterion.policy, draft.areaName)}」を、次の計画から使えるようにする`,
+            text: `新しい計画のルール「${criterionName(draft.criterion.policy, draft.areaName)}」を、次の Sprint から出す`,
           },
         ]),
   ];

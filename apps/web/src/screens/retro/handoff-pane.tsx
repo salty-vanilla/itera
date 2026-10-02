@@ -102,7 +102,7 @@ function HandoffPane({
               {improvement}
             </p>
             <p className="text-help text-ink-muted">
-              次の計画のはじめに表示されます。
+              次の Sprint を計画するときに表示されます。
             </p>
           </>
         )}
@@ -156,7 +156,6 @@ function HandoffPane({
           <UsedCriterion used={used} />
           <RadioGroup<RetroDecision | null>
             legend="次の Sprint でどうしますか"
-            description="使ったかどうかに関係なく選んでください。"
             necessity="required"
             value={used.decision ?? null}
             onValueChange={(value) => {
@@ -174,7 +173,7 @@ function HandoffPane({
             <Radio<RetroDecision | null>
               value="end"
               label="終える"
-              description="次の計画では、このルールを使いません。"
+              description="次の Sprint では、このルールは出ません。"
             />
             <Radio<RetroDecision | null>
               value="replace"
@@ -250,7 +249,7 @@ function CarryOverList({
       )}
       {tasks.some((t) => t.place === 'candidate') && (
         <p className="text-body text-ink-muted [word-break:auto-phrase]">
-          次の計画の「選ぶ」で決めます。
+          次の Sprint の「選ぶ」で決めます。
           {next.planning !== undefined ? (
             <Link
               to="/sprint"
@@ -409,7 +408,7 @@ function DraftCriterion({
       </div>
       <div className="flex flex-col gap-1">
         <p className="text-body text-ink [text-wrap:pretty] [word-break:auto-phrase]">
-          次の計画では、
+          次の Sprint では、
           {/* None now: the rule in words, not 「0件」 (#206). */}
           {preview.length === 0
             ? `${criterionEffectText(policy, draft.areaName)}（今の Backlog にはまだありません）。`

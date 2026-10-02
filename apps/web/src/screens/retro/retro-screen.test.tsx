@@ -105,7 +105,7 @@ const decisionMissingText = reasonText(
   '上の「今回の計画のルール」で、続ける・終える・置き換えるのどれかを選ぶと完了できます。',
 );
 const continueWithDraftText = reasonText(
-  '新しいルールを使うなら、「今回の計画のルール」で「置き換える」を選んでください。使わないなら、「計画のルールにもする」をオフにしてください。',
+  '新しいルールにするなら、「今回の計画のルール」で「置き換える」を選んでください。今回のルールを続けるなら、「計画のルールにもする」をオフにしてください。',
 );
 const completeButton = () =>
   screen.getByRole('button', { name: '振り返りを完了' });
@@ -126,13 +126,19 @@ describe('Retro — 事実を見る', () => {
     for (const [label, value] of [
       ['完了', '4'],
       ['持ち越し', '2'],
-      ['スキップ', '1'],
+      ['繰り返し', '4'],
       ['週の途中の追加', '1'],
       ['計画の合計', '17時間15分〜20時間15分'],
     ]) {
       const term = within(summary).getByText(label!);
       expect(term.parentElement?.textContent).toContain(value);
     }
+    // The occurrences split as the table's rows are: the skipped one is not
+    // an item apart (#245).
+    expect(
+      within(summary).getByText('繰り返し').parentElement?.textContent,
+    ).toContain('完了 3 · スキップ 1 · 未完了 0');
+    expect(within(summary).queryByText('スキップ')).toBeNull();
     // A range of hours does not fit beside the counts: a row of its own at
     // every width (#239).
     expect(
@@ -394,7 +400,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
     ).toBeNull();
     expect(
       screen.getByText(
-        '次に試すことがないまま完了します。次の計画には何も出ません。',
+        '次に試すことがないまま完了します。次の Sprint には何も出ません。',
       ),
     ).toBeTruthy();
     expect(completeButton()).toBe(before);
@@ -515,10 +521,16 @@ describe('Retro — 引き継ぐ and 完了', () => {
     expect(screen.getAllByText(/提案のふつうで計画/).length).toBeGreaterThan(0);
     await userEvent.click(screen.getByRole('radio', { name: '置き換える' }));
     await userEvent.click(completeButton());
+    const dialog = await screen.findByRole('dialog');
+    // The new criterion is not 「使う」d: it is in the next Sprint (#245).
+    expect(
+      within(dialog).getByText('計画のルールの決定').nextElementSibling
+        ?.textContent,
+    ).toContain(
+      '新しい計画のルール「研究：提案のふつうで計画」を、次の Sprint から出す',
+    );
     await userEvent.click(
-      within(await screen.findByRole('dialog')).getByRole('button', {
-        name: '振り返りを完了',
-      }),
+      within(dialog).getByRole('button', { name: '振り返りを完了' }),
     );
 
     expect(reviewed().state).toBe('closed');
@@ -594,7 +606,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
       '続けるこのルールで計画するかは「確かめる」で選べます。',
     );
     expect(choices()).not.toContain('提案の多めの値');
-    expect(choices()).toContain('次の計画では、このルールを使いません。');
+    expect(choices()).toContain('次の Sprint では、このルールは出ません。');
     await userEvent.click(
       screen.getByRole('switch', { name: /計画のルールにもする/ }),
     );
@@ -636,7 +648,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     );
     expect(
       screen.getByText(
-        '次の計画では、見積もりがない生活のタスクは、提案の多めの値で計画します（今の Backlog にはまだありません）。',
+        '次の Sprint では、見積もりがない生活のタスクは、提案の多めの値で計画します（今の Backlog にはまだありません）。',
       ),
     ).toBeTruthy();
     expect(screen.queryByText(/0件/)).toBeNull();
@@ -683,7 +695,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     expect(titles).toEqual(['関連論文を 3本読む', '実験データの前処理']);
     // Not started yet: it says when, and offers nothing to choose.
     expect(list?.textContent).toContain(
-      '次の計画の「選ぶ」で決めます。振り返りの完了後に始まります。',
+      '次の Sprint の「選ぶ」で決めます。振り返りの完了後に始まります。',
     );
     expect(list?.querySelector('input, a')).toBeNull();
     await userEvent.click(screen.getByRole('radio', { name: '終える' }));
@@ -848,11 +860,11 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     );
     expect(rows).toHaveLength(2);
     expect(
-      rows.filter((r) => r.endsWith('次の計画に入っています')),
+      rows.filter((r) => r.endsWith('次の Sprint に入っています')),
     ).toHaveLength(1);
     // Planning has started: it links to that Sprint, to decide there.
     expect(within(list).getByRole('link').textContent).toBe('Sprint 3 を開く');
-    expect(list.textContent).toContain('次の計画の「選ぶ」で決めます。');
+    expect(list.textContent).toContain('次の Sprint の「選ぶ」で決めます。');
   });
 });
 
@@ -1346,7 +1358,7 @@ describe('Retro — the plan against what happened (#167)', () => {
     await openDetails();
     // 45分 and 20分.
     expect(lineOf('割り込み')?.textContent).toBe(
-      '割り込み 2件 · 合計 1時間5分（実績には含みません）',
+      '割り込み 2件 · 合計 1時間5分（タスクの実績には含みません）',
     );
   });
 

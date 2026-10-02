@@ -123,7 +123,7 @@ function FactsPane({
           : undefined;
   const interruptNote = [
     withoutMinutes > 0 && `時間の記録なし ${withoutMinutes}件`,
-    interruptMinutes > 0 && '実績には含みません',
+    interruptMinutes > 0 && 'タスクの実績には含みません',
   ]
     .filter(Boolean)
     .join('。');
@@ -237,14 +237,17 @@ function FactsPane({
               }),
             },
             {
-              label: 'スキップ',
-              value: facts.occurrences.skipped.length,
+              // All the Sprint's occurrences, split as the table's rows are
+              // (#245): the skipped ones are said here once, not apart.
+              label: '繰り返し',
+              value: facts.occurrences.all.length,
               unit: '回',
               // Breaks only at 「 · 」, as 計画の合計's note does.
               note: (
                 <Sentences
                   items={[
-                    `繰り返し：完了 ${facts.occurrences.done.length}`,
+                    `完了 ${facts.occurrences.done.length}`,
+                    `スキップ ${facts.occurrences.skipped.length}`,
                     `未完了 ${facts.occurrences.missed.length}`,
                   ]}
                 />

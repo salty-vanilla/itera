@@ -964,7 +964,9 @@ describe('Planning — 確定', () => {
         within(dialog).getByRole('button', { name: '戻って調整' }),
       ),
     );
-    expect(within(dialog).getByText(/今回は使わない/)).toBeTruthy();
+    expect(
+      within(dialog).getByText(/ · 今回はこのルールで計画しない$/),
+    ).toBeTruthy();
     expect(
       dialog.querySelector('[data-slot="capacity-statement"]')?.textContent,
     ).toMatch(/^超える可能性：/);

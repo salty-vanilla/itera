@@ -201,8 +201,10 @@ describe('Backlog', () => {
     const taskBasis = within(detail).getByRole('radio', {
       name: /このタスクの見積もり/,
     });
-    expect(taskBasis.closest('label')?.textContent ?? '').not.toContain(
-      '見積もりの提案',
+    // No Estimate of the person's: 「なし」, as when there is no suggestion
+    // either (#245).
+    expect(taskBasis.closest('[data-slot="radio-item"]')?.textContent).toBe(
+      'このタスクの見積もりなし',
     );
   });
 

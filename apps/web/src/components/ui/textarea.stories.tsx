@@ -38,7 +38,7 @@ export const WithCount: Story = {
     <Field
       label="次に試すこと"
       necessity="optional"
-      description="次の計画のはじめに表示されます"
+      description="次の Sprint を計画するときに表示されます"
       className="max-w-measure-read"
     >
       <Textarea

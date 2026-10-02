@@ -590,17 +590,16 @@ function TaskDetail({
                     label={
                       <span className="inline-flex flex-wrap items-center gap-2">
                         このタスクの見積もり
-                        {facts.taskValue.base === 'none' ? (
+                        {facts.taskValue.base === 'none' ||
+                        facts.taskValue.base === 'suggestion' ? (
                           // 「見積もり」が 2 回続かないように、ここだけ「なし」。
+                          // A suggestion is not the person's Estimate: it is
+                          // said once, in its card above (#241, #245).
                           <span className="text-num-s text-ink-subtle">
                             なし
                           </span>
                         ) : (
-                          // A suggestion is said once, in its card above
-                          // (#241); the person's own value is said here.
-                          facts.taskValue.base !== 'suggestion' && (
-                            <Estimate value={facts.taskValue} inline />
-                          )
+                          <Estimate value={facts.taskValue} inline />
                         )}
                       </span>
                     }
