@@ -102,6 +102,8 @@ function FactsPane({
   );
   // Also when the hours were first entered after confirming.
   const hoursChanged = currentHours !== plannedHours;
+  // The hours the plan is compared with are the ones at confirm.
+  const hoursName = hoursChanged ? '確定したときの使える時間' : '使える時間';
   const { minutes: interruptMinutes, withoutMinutes } = facts.interruptTime;
   // The band says the plan with the additions once (#253); the plan as
   // confirmed is said only when it is not that total. An addition removed
@@ -243,24 +245,28 @@ function FactsPane({
         />
         <div className="flex flex-col gap-1 text-body text-ink">
           {/* Whether the plan above fits the hours entered when planning:
-              out of 詳しく, the hours said here once (#253). */}
-          <p>
-            {facts.capacity === undefined ? (
-              <span className="text-ink-muted">使える時間は未入力</span>
-            ) : (
-              <>
-                <span className="whitespace-nowrap text-ink-muted">
-                  使える時間{' '}
-                  {formatHours(facts.capacity.withAdditions.availableHours)}：
-                </span>
-                <Sentences
-                  items={capacityRelationSentences(
-                    facts.capacity.withAdditions,
-                  )}
-                />
-              </>
-            )}
-          </p>
+              out of 詳しく, the hours said here once (#253). Named as the
+              Sprint screen does when they changed after confirm (#224), and
+              left out with no planned total to compare. */}
+          {(total.lo > 0 || total.hi > 0) && (
+            <p>
+              {facts.capacity === undefined ? (
+                <span className="text-ink-muted">{hoursName}は未入力</span>
+              ) : (
+                <>
+                  <span className="whitespace-nowrap text-ink-muted">
+                    {hoursName}{' '}
+                    {formatHours(facts.capacity.withAdditions.availableHours)}：
+                  </span>
+                  <Sentences
+                    items={capacityRelationSentences(
+                      facts.capacity.withAdditions,
+                    )}
+                  />
+                </>
+              )}
+            </p>
+          )}
           {details.length > 0 && (
             // The rest under 詳しく, closed at first (#241).
             <>

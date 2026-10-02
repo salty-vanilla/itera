@@ -1,4 +1,4 @@
-import type { Retro, SprintTask } from '@itera/domain';
+import type { Retro, Sprint, SprintTask } from '@itera/domain';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import {
   cleanup,
@@ -1285,12 +1285,28 @@ describe('Retro — the plan against what happened (#167)', () => {
       .getAllByRole('listitem')
       .find((li) => li.textContent?.startsWith(lead));
   // Whether the plan fits the hours, right under the band (#253).
-  const fitLine = () =>
-    screen.getByText(
-      (_, element) =>
-        element?.tagName === 'P' &&
-        element.textContent?.startsWith('使える時間') === true,
-    );
+  const isFitLine = (_: string, element: Element | null) =>
+    element?.tagName === 'P' &&
+    /^(確定したときの)?使える時間/.test(element.textContent ?? '');
+  const fitLine = () => screen.getByText(isFitLine);
+  const withSprint =
+    (edit: (sprint: Sprint) => Sprint) =>
+    (snapshot: StoreSnapshot): StoreSnapshot => ({
+      ...snapshot,
+      records: {
+        ...snapshot.records,
+        sprints: snapshot.records.sprints.map((s) =>
+          s.id === 'sprint-2026-09-28' ? edit(s) : s,
+        ),
+      },
+    });
+  const withoutHours = (
+    sprint: Sprint,
+    keys: readonly ('plannedAvailableHours' | 'availableHours')[],
+  ): Sprint =>
+    Object.fromEntries(
+      Object.entries(sprint).filter(([key]) => !keys.includes(key as never)),
+    ) as Sprint;
   const reviewing =
     (edit: (tasks: readonly SprintTask[]) => readonly SprintTask[]) =>
     (snapshot: StoreSnapshot): StoreSnapshot => ({
@@ -1362,24 +1378,34 @@ describe('Retro — the plan against what happened (#167)', () => {
   });
 
   it('says so when no hours were entered when planning', async () => {
-    change = (snapshot) => {
-      const { plannedAvailableHours: _unused, ...sprint } =
-        snapshot.records.sprints.find((s) => s.id === 'sprint-2026-09-28')!;
-      void _unused;
-      return {
-        ...snapshot,
-        records: {
-          ...snapshot.records,
-          sprints: snapshot.records.sprints.map((s) =>
-            s.id === sprint.id ? sprint : s,
-          ),
-        },
-      };
-    };
+    change = withSprint((s) =>
+      withoutHours(s, ['plannedAvailableHours', 'availableHours']),
+    );
     await renderAt('/retro?fixture=retro-start');
     expect(fitLine().textContent).toBe('使える時間は未入力');
     await openDetails();
     expect(lineOf('確定したときの計画')).toBeUndefined();
+  });
+
+  it('names the hours as at confirm once they changed after it, as the Sprint screen does (#224)', async () => {
+    change = withSprint((s) => ({ ...s, availableHours: 20 }));
+    await renderAt('/retro?fixture=retro-start');
+    // Still against the 17時間 entered when planning.
+    expect(fitLine().textContent).toBe(
+      '確定したときの使える時間 17時間：少なく済んでも 15分超える · 多くかかれば 3時間15分超える',
+    );
+  });
+
+  it('names the missing hours as at confirm when they were entered after it', async () => {
+    change = withSprint((s) => withoutHours(s, ['plannedAvailableHours']));
+    await renderAt('/retro?fixture=retro-start');
+    expect(fitLine().textContent).toBe('確定したときの使える時間は未入力');
+  });
+
+  it('has no line of the hours with no planned total to compare', async () => {
+    change = reviewing(() => []);
+    await renderAt('/retro?fixture=retro-start');
+    expect(screen.queryByText(isFitLine)).toBeNull();
   });
 
   it('sums the interrupts and says the actual time leaves them out', async () => {
