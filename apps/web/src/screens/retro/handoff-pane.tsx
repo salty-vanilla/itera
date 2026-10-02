@@ -15,8 +15,9 @@ import { Switch } from '@/components/ui/switch';
 import { Tag } from '@/components/ui/tag';
 import {
   BOUND_WORDS,
-  criterionEffectText,
   criterionName,
+  criterionQuotedName,
+  criterionTargetText,
 } from '@/lib/criterion-text';
 import { formatHours, formatRange } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
@@ -123,7 +124,7 @@ function HandoffPane({
               // The example breaks between phrases: kept whole, it is wider
               // than the column at 390px.
               <span className="block [text-wrap:pretty] [word-break:auto-phrase]">
-                次に試すことが「見積もりがないときは、提案の多めで計画する」のような形なら、計画のルールにできます。
+                次に試すことが「見積もりがないときは、提案の多めの値で計画する」のような形なら、計画のルールにできます。
               </span>
             )
           }
@@ -311,7 +312,7 @@ function ClosedHandoff({
         <p className="text-body text-ink">
           {draft === undefined
             ? '次に試すことから計画のルールは作りませんでした。'
-            : `次に試すことから計画のルール「${criterionName(draft.criterion.policy, draft.areaName)}」を作りました。`}
+            : `次に試すことから計画のルール${criterionQuotedName(draft.criterion.policy, draft.areaName)}を作りました。`}
         </p>
       </section>
       {used !== undefined && (
@@ -368,7 +369,7 @@ function DraftCriterion({
         </p>
       )}
       <div className="flex flex-wrap gap-4">
-        <Field label="対象">
+        <Field label="領域">
           <Select
             value={scopeValue}
             onChange={(e) => {
@@ -402,7 +403,7 @@ function DraftCriterion({
           >
             {BOUNDS.map((b) => (
               <option key={b} value={b}>
-                {BOUND_WORDS[b]}
+                {BOUND_WORDS[b]}の値
               </option>
             ))}
           </Select>
@@ -410,11 +411,11 @@ function DraftCriterion({
       </div>
       <div className="flex flex-col gap-1">
         <p className="text-body text-ink [text-wrap:pretty] [word-break:auto-phrase]">
-          次の Sprint では、
-          {/* None now: the rule in words, not 「0件」 (#206). */}
+          {/* The name above says the condition and the value; this says how
+              many Tasks it would act on now (#254). */}
           {preview.length === 0
-            ? `${criterionEffectText(policy, draft.areaName)}（今の Backlog にはまだありません）。`
-            : `${criterionEffectText(policy, draft.areaName, preview.length)}（今の Backlog で）。`}
+            ? '対象は、今の Backlog にはまだありません。'
+            : criterionTargetText(preview.length, '今の Backlog で')}
         </p>
         {preview.length > 0 && (
           <ul className="flex flex-col gap-1 text-body text-ink-muted">

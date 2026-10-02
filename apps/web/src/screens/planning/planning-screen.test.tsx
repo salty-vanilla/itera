@@ -528,7 +528,9 @@ describe('Planning — 計画のルールの見せ方 (#105)', () => {
     async (stage) => {
       await renderAt(`/sprint?fixture=planning-check&stage=${stage}`);
       const line = outlook().querySelector('[data-slot="criterion-line"]');
-      expect(line?.textContent).toBe('研究：提案の多めで計画');
+      expect(line?.textContent).toBe(
+        '研究：見積もりなしは提案の多めの値で計画',
+      );
       // It sits under the previous improvement, which is in the body's
       // weight, not vying with the answer of the stage (#243).
       const improvement = within(outlook()).getByRole('region', {
@@ -555,9 +557,7 @@ describe('Planning — 計画のルールの見せ方 (#105)', () => {
     expect(
       within(frame).getByRole('switch', { name: /このルールで計画する/ }),
     ).toBeTruthy();
-    expect(
-      within(frame).getByText(/タスク 1件を、提案の多めの値で/),
-    ).toBeTruthy();
+    expect(within(frame).getByText(/^対象は 1件です。/)).toBeTruthy();
     // 適用 happens here; 採用 (the Estimate, 「多めの 4時間を使う」) stays in the
     // Task’s detail (invariant 7).
     expect(frame.textContent).not.toMatch(/採用|を使う|直して使う/);
@@ -986,7 +986,9 @@ describe('Planning — 確定', () => {
     });
     expect(
       within(dialog).getByText('計画のルール').nextElementSibling?.textContent,
-    ).toBe('「研究：提案の多めで計画」 · このルールで計画する');
+    ).toBe(
+      '「研究：見積もりなしは提案の多めの値で計画」 · このルールで計画する',
+    );
   });
 
   it('moves between stages by the route map, keeping the fixture', async () => {
@@ -1087,7 +1089,7 @@ describe('Planning — review fixes', () => {
     await renderAt('/sprint?fixture=planning-check&stage=check');
     expect(
       within(summary()).getByText(
-        '見積もりがない研究のタスク 1件を、提案の多めの値で計画しています。少なく済んだときの合計が 2時間増えます。',
+        '対象は 1件です。少なく済んだときの合計が 2時間増えます。',
       ),
     ).toBeTruthy();
   });
