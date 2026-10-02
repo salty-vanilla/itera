@@ -139,7 +139,8 @@ function FactsPane({
       : [
           {
             lead: '確定したときの計画',
-            total: changedLead === undefined ? undefined : atConfirm,
+            // Said only when it is not the total in the line above.
+            total: sameTotal ? undefined : atConfirm,
             capacity: facts.capacity.atConfirm,
           },
           ...(changedLead === undefined
@@ -410,9 +411,9 @@ function FactsPane({
                     key={o.id}
                     action={
                       <span className="flex flex-wrap justify-end gap-1">
-                        {toggle({ kind: 'occurrence', id: o.id }, subject)}
                         {/* Per occurrence (#56): the time goes to its day.
-                            Only where none is entered (#241). */}
+                            Only where none is entered (#241), before the
+                            pin, so that the pins keep one column. */}
                         {onAddActual !== undefined && actualHours === 0 && (
                           <AddActualButton
                             subject={subject}
@@ -425,6 +426,7 @@ function FactsPane({
                             }
                           />
                         )}
+                        {toggle({ kind: 'occurrence', id: o.id }, subject)}
                       </span>
                     }
                   >
@@ -873,7 +875,8 @@ function TaskList({
                 {days !== undefined && ` · ${days}`}
               </p>
               {onAddActual !== undefined && (
-                <div className="flex flex-wrap gap-2">
+                // At the end, as in the lists of facts (#241).
+                <div className="flex flex-wrap justify-end gap-2">
                   <TaskActions
                     fact={t}
                     actualDate={data.actualDate}
@@ -908,7 +911,6 @@ function TaskActions({
 }) {
   return (
     <>
-      {toggle({ kind: 'sprintTask', id: fact.sprintTaskId }, fact.title)}
       {/* A recurring Task's time goes to one occurrence (繰り返しの回). Only
           where none is entered: the row's exception (#241). */}
       {!fact.recurring && fact.actualHours === 0 && (
@@ -923,6 +925,8 @@ function TaskActions({
           }
         />
       )}
+      {/* Last, so that the pins keep one column (#241). */}
+      {toggle({ kind: 'sprintTask', id: fact.sprintTaskId }, fact.title)}
     </>
   );
 }

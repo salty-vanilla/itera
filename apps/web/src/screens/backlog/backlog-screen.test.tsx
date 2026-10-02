@@ -186,6 +186,26 @@ describe('Backlog', () => {
     expect(rowOf('API 設計のレビュー').textContent).not.toContain('今日');
   });
 
+  it('Detail: says a suggestion once, in its card (#241)', async () => {
+    await renderAt('/backlog?fixture=backlog-detail&task=task-interview');
+    const detail = await screen.findByRole('dialog', {
+      name: '顧客インタビューの設計',
+    });
+    const proposal = within(detail).getByRole('region', {
+      name: '見積もりの提案',
+    });
+    // No 「提案」 after the middle value: the heading says it.
+    expect(proposal.textContent).toContain('ふつう 2時間30分');
+    expect(proposal.textContent).not.toMatch(/ふつう 2時間30分\s*提案/);
+    // The basis for the plan names no range: the card above has it.
+    const taskBasis = within(detail).getByRole('radio', {
+      name: /このタスクの見積もり/,
+    });
+    expect(taskBasis.closest('label')?.textContent ?? '').not.toContain(
+      '見積もりの提案',
+    );
+  });
+
   it('Detail: adopting a suggestion changes the Estimate, and it can be undone', async () => {
     await renderAt('/backlog?fixture=backlog-detail&task=task-interview');
     // Named by its heading, the Task's title (#153).

@@ -99,6 +99,12 @@ function CheckSummary({
           <h3 id={`${ids}-unestimated`} className="text-subheading text-ink">
             見積もりなし
           </h3>
+          {/* Why these rows are here, said once, under the heading (#241). */}
+          {summary.leftOut !== undefined && (
+            <p className="text-body text-ink-muted [text-wrap:pretty] [word-break:auto-phrase]">
+              {summary.leftOut}
+            </p>
+          )}
           <ul className="flex flex-col border-t border-border-soft">
             {summary.unestimated.map((planned) => (
               <li

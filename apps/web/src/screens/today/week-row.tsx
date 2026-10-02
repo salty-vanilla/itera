@@ -42,7 +42,11 @@ function WeekRow({ item, onOpen, onEstimate, onChoose }: WeekRowProps) {
           <ItemMetadata item={item} occurrenceDate />
         </TaskMetadata>
       }
-      estimate={<PlannedValue value={item.value} at="end" />}
+      estimate={
+        item.value.base === 'none' ? undefined : (
+          <PlannedValue value={item.value} at="end" />
+        )
+      }
       estimateFromMedium
       // 今日やる has the `…`; the values line up with it.
       reserveActions

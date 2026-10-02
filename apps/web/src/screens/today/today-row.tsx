@@ -171,7 +171,11 @@ function TodayRow({
         )
       }
       metadata={<RowMetadata row={row} timeZone={timeZone} />}
-      estimate={<PlannedValue value={row.value} at="end" />}
+      estimate={
+        row.value.base === 'none' ? undefined : (
+          <PlannedValue value={row.value} at="end" />
+        )
+      }
       estimateFromMedium
       reserveActions
       actionsVisible={skipped || undoable}

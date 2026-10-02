@@ -146,7 +146,11 @@ function BeforeStart({ data }: { data: TodayData }) {
                       <ItemMetadata item={item} occurrenceDate />
                     </TaskMetadata>
                   }
-                  estimate={<PlannedValue value={item.value} at="end" />}
+                  estimate={
+                    item.value.base === 'none' ? undefined : (
+                      <PlannedValue value={item.value} at="end" />
+                    )
+                  }
                   estimateFromMedium
                 />
               </li>

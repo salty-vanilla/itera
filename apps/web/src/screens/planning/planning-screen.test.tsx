@@ -811,10 +811,13 @@ describe('Planning — 確かめる', () => {
     expect(summary().textContent?.match(/1時間45分/g)).toHaveLength(1);
     // What is left out of the total is said once, in 「見積もりなし」 with
     // 見積もる (#241): not under the numbers, the Area's heading or the row.
-    expect(summary().textContent).not.toContain('含まれていません');
     const unestimated = within(summary())
       .getByRole('heading', { name: '見積もりなし' })
       .closest('section') as HTMLElement;
+    expect(unestimated.textContent).toContain(
+      '見積もりのないサブタスク 1件は合計に含まれていません。',
+    );
+    expect(summary().textContent?.match(/含まれていません/g)).toHaveLength(1);
     expect(
       within(unestimated).getByRole('button', {
         name: '見積もる：実験データの前処理',

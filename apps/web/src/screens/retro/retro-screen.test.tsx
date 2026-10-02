@@ -260,6 +260,18 @@ describe('Retro — 事実を見る', () => {
       via: 'later',
       date: '2026-10-04',
     });
+    // The button leaves with the time entered; the focus goes to the row's
+    // 振り返りに使う, not to the page (#241).
+    expect(
+      screen.queryByRole('button', {
+        name: /かかった時間を記録.*住民税の支払い/,
+      }),
+    ).toBeNull();
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole('button', { name: '振り返りに使う：住民税の支払い' }),
+      ),
+    );
   });
 });
 
