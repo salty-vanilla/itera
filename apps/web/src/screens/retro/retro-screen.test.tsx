@@ -585,7 +585,10 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     await renderAt('/retro?fixture=retro-start&stage=handoff');
     const section = criterionSection();
     const outcome = within(section).getByText(
-      '提案の多めの値で計画した研究のタスク 1件のうち、1件を持ち越し（計画 5時間・実績 4時間30分）',
+      (_, el) =>
+        el?.tagName === 'P' &&
+        el.textContent ===
+          '提案の多めの値で計画した研究のタスク 1件のうち、1件を持ち越し（計画 5時間・実績 4時間30分）',
     );
     expect(
       within(section).getByText('確定したときに、このルールで計画しました。'),

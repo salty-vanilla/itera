@@ -173,7 +173,7 @@ function TodayRow({
       metadata={<RowMetadata row={row} timeZone={timeZone} />}
       estimate={
         row.value.base === 'none' ? undefined : (
-          <PlannedValue value={row.value} at="end" />
+          <PlannedValue value={row.value} at="end" labeled={showsActual(row)} />
         )
       }
       estimateFromMedium
@@ -280,7 +280,11 @@ function RowMetadata({
   })();
   return (
     <TaskMetadata>
-      <PlannedValue value={row.value} at="metadata" />
+      <PlannedValue
+        value={row.value}
+        at="metadata"
+        labeled={showsActual(row)}
+      />
       {state}
       {selection.origin === 'backlogCompletion' && (
         <MetaItem>Backlog で完了</MetaItem>
@@ -290,24 +294,35 @@ function RowMetadata({
   );
 }
 
+/** The row's state shows an actual time (「実績 2時間」「中断 · 1時間30分」). */
+function showsActual(row: TodayRowData): boolean {
+  const { resolution } = row.selection;
+  return (
+    row.actualHours > 0 && (resolution === 'done' || resolution === 'paused')
+  );
+}
+
 /**
  * A row's planning value, without the subtasks left out (#241). From 768px
  * it ends the row (`estimateFromMedium`); under it, it leads the metadata, so
- * that a long value (「計画 1時間30分〜3時間」) does not leave the title one
- * or two characters a line (#241).
+ * that a long value (「1時間30分〜3時間」) does not leave the title one or
+ * two characters a line (#241). 「計画」 only beside an actual time (#250).
  */
 function PlannedValue({
   value,
   at,
+  labeled = false,
 }: {
   value: PlanningValue;
   at: 'metadata' | 'end';
+  labeled?: boolean;
 }) {
   if (value.base === 'none') return null;
   return (
     <Estimate
       value={value}
       planned
+      labeled={labeled}
       withoutMissing
       className={at === 'metadata' ? 'medium:hidden' : undefined}
     />

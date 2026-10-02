@@ -966,14 +966,17 @@ function AddActualButton({
 
 /**
  * 「計画より 30分少ない」 under the actual time, if any. Under 1200px the
- * column is narrow and it breaks between phrases, so the table still fits
- * at 1000px.
+ * column is narrow and it breaks after 「計画より」, so the table still fits
+ * at 1000px; the difference itself is not broken (「30分 / 少ない」, #250).
  */
 function DifferenceNote({ fact }: { fact: TaskFact }) {
   const text = differenceText(fact);
-  return text === undefined ? null : (
-    <span className="block text-meta whitespace-normal text-ink-muted [word-break:auto-phrase]">
-      {text}
+  if (text === undefined) return null;
+  const space = text.indexOf(' ');
+  return (
+    <span className="block text-meta whitespace-normal text-ink-muted">
+      {text.slice(0, space)}{' '}
+      <span className="whitespace-nowrap">{text.slice(space + 1)}</span>
     </span>
   );
 }

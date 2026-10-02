@@ -54,8 +54,16 @@ function CriterionOutcome({ used }: UsedCriterionProps) {
     <p className="text-body text-ink [text-wrap:pretty] [word-break:auto-phrase]">
       {criterionBoundText(used.criterion.policy.rangePolicy)}で計画した{scope}
       タスク {result.tasks.length}件のうち、{parts.join('、')}
-      （計画 {formatPlanningTotal(result.planned)}・実績{' '}
-      {result.actualHours > 0 ? formatHours(result.actualHours) : '未入力'}）
+      {/* Each label stays with its value (「実績 / 4時間30分」, #250). */}（
+      <span className="whitespace-nowrap">
+        計画 {formatPlanningTotal(result.planned)}
+      </span>
+      ・
+      <span className="whitespace-nowrap">
+        実績{' '}
+        {result.actualHours > 0 ? formatHours(result.actualHours) : '未入力'}
+      </span>
+      ）
     </p>
   );
 }

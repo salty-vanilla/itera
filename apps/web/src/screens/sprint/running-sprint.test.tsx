@@ -116,7 +116,7 @@ describe('Sprint — running (#51)', () => {
       screen.getByRole('link', { name: '今日を開く' }).getAttribute('href'),
     ).toContain('/today');
     // The values fixed at confirm (invariant 16).
-    expect(screen.getAllByText('計画 5時間').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('計画の時間 5時間').length).toBeGreaterThan(0);
     // Capacity is judged in Planning only.
     expect(document.body.textContent).not.toMatch(/超過|超える/);
     // The criterion's use is read only (invariant 37).

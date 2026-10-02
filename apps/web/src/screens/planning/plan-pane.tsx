@@ -1,4 +1,4 @@
-import type { TaskId } from '@itera/domain';
+import type { SuggestionBound, TaskId } from '@itera/domain';
 import { Ellipsis, Target, Undo2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
@@ -15,6 +15,7 @@ import {
   TaskMetadata,
 } from '@/components/task/task-metadata';
 import { TaskRow } from '@/components/task/task-row';
+import { criterionBoundText } from '@/lib/criterion-text';
 import { formatPlanningSum, formatPlanningTotal } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
 import { weekCall, weekText } from '@/lib/week-text';
@@ -79,6 +80,7 @@ function PlanPane({
 }: PlanPaneProps) {
   const actions = usePlanningActions();
   const week = weekCall(data.week, data.number);
+  const criterionBound = data.criterion?.active.policy.rangePolicy;
   const withTasks = data.plan.filter((p) => p.tasks.length > 0);
   // 整える shows every Area (a Goal can be written before choosing Tasks);
   // 領域なし has no Goal and shows only with Tasks.
@@ -138,6 +140,7 @@ function PlanPane({
                 block={block}
                 stage={stage}
                 week={week}
+                criterionBound={criterionBound}
                 addedTaskId={addedTaskId}
                 onOpenTask={onOpenTask}
                 onEstimateTask={onEstimateTask}
@@ -170,6 +173,7 @@ function PlanPane({
                   block={block}
                   stage={stage}
                   week={week}
+                  criterionBound={criterionBound}
                   addedTaskId={addedTaskId}
                   onOpenTask={onOpenTask}
                   onEstimateTask={onEstimateTask}
@@ -201,6 +205,7 @@ function PlannedList({
   block,
   stage,
   week,
+  criterionBound,
   addedTaskId,
   onOpenTask,
   onEstimateTask,
@@ -208,6 +213,7 @@ function PlannedList({
   block: AreaPlan;
   stage: Stage;
   week: string;
+  criterionBound: SuggestionBound | undefined;
   addedTaskId: TaskId | undefined;
   onOpenTask: (taskId: TaskId) => void;
   onEstimateTask: (taskId: TaskId) => void;
@@ -220,6 +226,7 @@ function PlannedList({
             planned={planned}
             stage={stage}
             week={week}
+            criterionBound={criterionBound}
             hasGoal={block.goal !== undefined}
             added={planned.task.id === addedTaskId}
             onOpen={() => onOpenTask(planned.task.id)}
@@ -235,6 +242,7 @@ function PlannedRow({
   planned,
   stage,
   week,
+  criterionBound,
   hasGoal,
   added,
   onOpen,
@@ -244,6 +252,8 @@ function PlannedRow({
   stage: Stage;
   /** 「今週」「来週」 (#90). */
   week: string;
+  /** The value of the suggestion the Sprint's criterion plans with. */
+  criterionBound: SuggestionBound | undefined;
   /** The Task's Area has a Goal: only then is the link shown and changed. */
   hasGoal: boolean;
   /** Just added in the Quick Add: the row flashes for a moment (Issue #92). */
@@ -353,29 +363,12 @@ function PlannedRow({
         meta.length > 0 ? <TaskMetadata>{meta}</TaskMetadata> : undefined
       }
       estimate={
-        // A value from a suggestion shows where it came from (DESIGN.md
-        // Estimate: 「見積もりの提案 3〜5時間」 and 「計画 5時間」). The preview is
-        // solid. Under 768px the two stack, so the title keeps its width.
-        <span className="flex flex-col items-end gap-1 medium:flex-row medium:flex-wrap medium:items-center medium:justify-end medium:gap-2">
-          {/* Always, when the value comes from a suggestion: it is not the
-              person's Estimate yet (invariant 7, patterns.md Planning). For
-              a recurring Task the suggestion is one occurrence's. */}
-          {value.base === 'suggestion' && suggestion !== undefined && (
-            <span className="inline-flex items-center gap-1">
-              <Estimate
-                value={{
-                  base: 'suggestion',
-                  lo: suggestion.lo,
-                  hi: suggestion.hi,
-                  criterionApplied: false,
-                  computedAt: value.computedAt,
-                }}
-              />
-              {recurring && (
-                <span className="text-meta text-ink-muted">/ 1回</span>
-              )}
-            </span>
-          )}
+        // One value: the planning value, solid (a preview from the person's
+        // choice), and where it comes from a suggestion, which value, after
+        // it (「3〜5時間（提案）」「5時間（提案の多めの値）」). It is not the
+        // person's Estimate yet (invariant 7, patterns.md Planning), so it
+        // says so on these rows only (#250).
+        <span className="inline-flex flex-wrap items-center justify-end">
           <Estimate
             value={value}
             planned={value.base !== 'none'}
@@ -387,6 +380,15 @@ function PlannedRow({
                 : undefined
             }
           />
+          {value.base === 'suggestion' && suggestion !== undefined && (
+            <span className="text-meta whitespace-nowrap text-ink-muted">
+              （
+              {value.criterionApplied && criterionBound !== undefined
+                ? criterionBoundText(criterionBound)
+                : '提案'}
+              ）
+            </span>
+          )}
         </span>
       }
       actions={

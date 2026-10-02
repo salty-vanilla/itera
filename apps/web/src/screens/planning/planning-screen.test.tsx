@@ -930,7 +930,11 @@ describe('Planning — 確かめる', () => {
     );
     expect(router.state.location.search).toMatchObject({ criterion: 'off' });
     const research = within(planPane()).getByRole('region', { name: /研究/ });
-    expect(within(research).getByText('計画 3〜5時間')).toBeTruthy();
+    const paper = within(research)
+      .getByText('関連論文を 3本読む')
+      .closest('[data-slot="task-row"]');
+    // The whole range, from the suggestion, without the criterion (#250).
+    expect(paper?.textContent).toContain('3〜5時間（提案）');
     expect(
       lastSnapshot().records.tasks.find((t) => t.id === 'task-paper'),
     ).toBe(before);
@@ -1091,8 +1095,9 @@ describe('Planning — review fixes', () => {
     const row = within(research)
       .getByText('関連論文を 3本読む')
       .closest('[data-slot="task-row"]');
-    expect(row?.textContent).toContain('見積もりの提案 3〜5時間');
-    expect(row?.textContent).toContain('計画 5時間');
+    // One value, and which value of the suggestion it is (#250).
+    expect(row?.textContent).toContain('5時間（提案の多めの値）');
+    expect(row?.textContent).not.toContain('見積もりの提案');
   });
 
   it('explains the criterion’s effect from the domain (invariant 39)', async () => {
@@ -1233,8 +1238,7 @@ describe('Planning — review fixes (2)', () => {
     const row = within(work)
       .getByText('新メンバーのオンボーディング資料')
       .closest('[data-slot="task-row"]');
-    expect(row?.textContent).toContain('見積もりの提案 3〜5時間');
-    expect(row?.textContent).toContain('計画 3〜5時間');
+    expect(row?.textContent).toContain('3〜5時間（提案）');
   });
 });
 
@@ -1408,16 +1412,16 @@ describe('Planning — 見積もりを入れる (#96)', () => {
       within(planPane())
         .getByRole('button', { name: '実験データの前処理' })
         .closest('[data-slot="task-row"]')!;
-    expect(row().textContent).toContain('計画 2時間30分');
+    expect(row().textContent).toContain('計画の時間 2時間30分');
     await userEvent.click(
       within(detail).getByRole('radio', { name: /このタスクの見積もり/ }),
     );
-    expect(row().textContent).not.toContain('計画 2時間30分');
+    expect(row().textContent).not.toContain('2時間30分');
     expect(row().textContent).toContain('見積もりなし');
     await userEvent.click(
       within(detail).getByRole('radio', { name: /サブタスクの合計/ }),
     );
-    expect(row().textContent).toContain('計画 2時間30分');
+    expect(row().textContent).toContain('計画の時間 2時間30分');
   });
 
   it('a row of the Backlog pane has it too', async () => {
