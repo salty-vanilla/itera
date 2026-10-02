@@ -107,14 +107,14 @@ export function capacityStatement(
 /**
  * The headline: what is left or over at each end of the planned total, in
  * one form for all three states (#234, after 「少なく済めば / 多くかかれば」 of
- * #162): 「少なく済めば 3h 残る · 多くかかっても 1h 残る」, 「少なく済めば 2.25h
- * 残る · 多くかかれば 0.75h 超える」 (owner decision S5 in #93), 「少なく済んで
- * も 3h 超える · 多くかかれば 5h 超える」. A total without a range is one
- * sentence: 「3h 残る」.
+ * #162): 「少なく済めば 3時間残る · 多くかかっても 1時間残る」, 「少なく済めば 2時間15分
+ * 残る · 多くかかれば 45分超える」 (owner decision S5 in #93), 「少なく済んで
+ * も 3時間超える · 多くかかれば 5時間超える」. A total without a range is one
+ * sentence: 「3時間残る」.
  */
 export type CapacityHeadline = readonly HeadlinePart[];
 
-/** 「少なく済めば」「2.25h」「残る」; `value` is absent for 「ちょうど収まる」. */
+/** 「少なく済めば」「2時間15分」「残る」; `value` is absent for 「ちょうど収まる」. */
 type HeadlinePart = { lead?: string; value?: string; tail: string };
 
 /**
@@ -127,7 +127,7 @@ function headlinePart(left: number, lead?: string): HeadlinePart {
     left === 0
       ? { tail: 'ちょうど収まる' }
       : {
-          value: formatHours(Math.abs(left), { total: true }),
+          value: formatHours(Math.abs(left)),
           tail: left > 0 ? '残る' : '超える',
         };
   return lead === undefined ? part : { lead, ...part };
@@ -150,12 +150,12 @@ export function capacityHeadline(capacity: Capacity): CapacityHeadline {
 }
 
 function partText({ lead, value, tail }: HeadlinePart): string {
-  const body = value === undefined ? tail : `${value} ${tail}`;
+  const body = value === undefined ? tail : `${value}${tail}`;
   if (lead === undefined) return body;
   return value === undefined ? `${lead}${body}` : `${lead} ${body}`;
 }
 
-/** 「少なく済めば 2.25h 残る」「多くかかれば 0.75h 超える」, or 「3h 残る」. */
+/** 「少なく済めば 2時間15分残る」「多くかかれば 45分超える」, or 「3時間残る」. */
 export function capacityHeadlineSentences(
   headline: CapacityHeadline,
 ): readonly string[] {
@@ -175,13 +175,17 @@ export function capacityRelationSentences(
 
 /**
  * Short sentences joined by 「 · 」: the line breaks only between them, so a
- * number never leaves its words.
+ * number never leaves its words, and after the 「·」, so that it never stands
+ * alone on a line (#239).
  */
 function Sentences({ items }: { items: readonly string[] }) {
   return items.map((item, i) => (
     <Fragment key={item}>
-      {i > 0 && ' · '}
-      <span className="whitespace-nowrap">{item}</span>
+      {i > 0 && ' '}
+      <span className="whitespace-nowrap">
+        {item}
+        {i < items.length - 1 && ' ·'}
+      </span>
     </Fragment>
   ));
 }
@@ -190,9 +194,9 @@ function Sentences({ items }: { items: readonly string[] }) {
  * The state where no headline is shown (the 確かめる summary, the 確定
  * Dialog): the statement, and while the plan may or does go over, the
  * headline's sentences after it, each number said once: 「超える可能性：少なく
- * 済めば 1.75h 残る · 多くかかれば 0.25h 超える」 (#93); when even the lower
- * end is over, the two sentences alone: 「少なく済んでも 3h 超える · 多くかかれ
- * ば 5h 超える」 (#165, #234).
+ * 済めば 1時間45分残る · 多くかかれば 15分超える」 (#93); when even the lower
+ * end is over, the two sentences alone: 「少なく済んでも 3時間超える · 多くかかれ
+ * ば 5時間超える」 (#165, #234).
  */
 export function capacityStatusLine(
   capacity: Capacity | undefined,
@@ -332,7 +336,7 @@ function CapacityIndicator({
               <>
                 <dt className="whitespace-nowrap text-ink-muted">使える時間</dt>
                 <dd className="text-right text-num-m text-ink">
-                  {formatHours(capacity.availableHours, { total: true })}
+                  {formatHours(capacity.availableHours)}
                 </dd>
               </>
             )}
@@ -365,7 +369,7 @@ function CapacityIndicator({
             >
               <AreaIndicator name={a.name} color={a.color} />
               <span className="text-num-s text-ink">
-                {formatRange(a.lo, a.hi, { total: true })}
+                {formatRange(a.lo, a.hi)}
               </span>
             </li>
           ))}
@@ -462,7 +466,7 @@ function AvailableHoursField({
     <Field label={label} description={description} error={error}>
       <TextInput
         inputMode="decimal"
-        suffix="h"
+        suffix="時間"
         value={text}
         onChange={(e) => setText(e.currentTarget.value)}
         onBlur={commit}

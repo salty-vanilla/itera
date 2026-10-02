@@ -198,14 +198,16 @@ describe('Backlog', () => {
     // 採用 only: no word of 適用 or of a planning criterion here (invariant 7).
     expect(proposal.textContent).not.toMatch(/適用|計画のルール/);
     await userEvent.click(
-      within(proposal).getByRole('button', { name: 'ふつうの 2.5h を使う' }),
+      within(proposal).getByRole('button', {
+        name: 'ふつうの 2時間30分を使う',
+      }),
     );
     expect(task('task-interview')?.estimate).toMatchObject({
       hours: 2.5,
       source: { kind: 'adopted', bound: 'mid' },
     });
     const outcome = within(detail)
-      .getByText('見積もりを 2.5h にしました')
+      .getByText('見積もりを 2時間30分にしました')
       .closest<HTMLElement>('[role="status"]')!;
     // The Sprint's plan snapshot is not touched by adopting (invariant 16).
     const sprintTask = records()
@@ -243,7 +245,7 @@ describe('Backlog', () => {
       hours: 4,
       source: { kind: 'edited' },
     });
-    const outcome = within(detail).getByText('見積もりを 4h にしました');
+    const outcome = within(detail).getByText('見積もりを 4時間にしました');
     await userEvent.click(
       within(outcome.closest('p') as HTMLElement).getByRole('button', {
         name: '元に戻す',
@@ -300,7 +302,7 @@ describe('Backlog', () => {
     expect(document.activeElement).toBe(undo);
     await userEvent.click(undo);
     expect(document.activeElement).toBe(
-      within(proposal()).getByRole('button', { name: '少なめの 2h を使う' }),
+      within(proposal()).getByRole('button', { name: '少なめの 2時間を使う' }),
     );
   });
 
@@ -514,7 +516,7 @@ describe('Backlog', () => {
       ),
     ).toBeTruthy();
     await userEvent.click(
-      within(detail).getByRole('button', { name: 'ふつうの 2.5h を使う' }),
+      within(detail).getByRole('button', { name: 'ふつうの 2時間30分を使う' }),
     );
     expect(estimate).toHaveProperty('value', '2.5');
     expect(
@@ -702,9 +704,9 @@ describe('Backlog', () => {
       '1{Enter}',
     );
     const row = () => within(list()).getByText('本棚を整理する').closest('li')!;
-    // The Task's own 6h is the plan; the subtask's 1h is beside it, not in it.
-    expect(row().textContent).toContain('サブタスク 1件 · （参考）1h');
-    expect(row().textContent).toContain('6h');
+    // The Task's own 6時間 is the plan; the subtask's 1時間 is beside it, not in it.
+    expect(row().textContent).toContain('サブタスク 1件 · （参考）1時間');
+    expect(row().textContent).toContain('6時間');
     await userEvent.click(
       within(detail).getByRole('radio', { name: /サブタスクの合計/ }),
     );

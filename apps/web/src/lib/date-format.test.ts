@@ -19,10 +19,10 @@ describe('date format', () => {
     expect(formatDateHeading(localDate('2026-09-29'))).toBe('9月29日（火）');
   });
 
-  it('writes a range of dates with spaces around the en dash', () => {
+  it('writes a range of dates with 〜 and no spaces', () => {
     expect(
       formatDateRange(localDate('2026-09-28'), localDate('2026-10-04')),
-    ).toBe('9/28 (月) – 10/4 (日)');
+    ).toBe('9/28 (月)〜10/4 (日)');
   });
 
   it('writes a time in 24 hours in the user’s time zone', () => {

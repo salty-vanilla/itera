@@ -54,7 +54,7 @@ describe('Today — any day by date (#90)', () => {
     // The same word as today's row (#233), with no 「今日」 (#166).
     expect(within(paper).getByText('中断')).toBeTruthy();
     expect(within(paper).queryByText(/今日/)).toBeNull();
-    expect(within(paper).getByText('実績 4.5h')).toBeTruthy();
+    expect(within(paper).getByText('実績 4時間30分')).toBeTruthy();
     expect(within(record('英語の多読 30分')).getByText('完了')).toBeTruthy();
     // Nothing to do on it: no 今日へ, no ○, no adding.
     expect(screen.queryByRole('button', { name: /今日へ|完了にする/ })).toBe(

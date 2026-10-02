@@ -383,16 +383,20 @@ function Outlook({
         <h2 id={`${ids}-hours`} className="text-heading text-ink">
           時間
         </h2>
+        {/* A range of hours is never broken inside; a label that has to
+            give way breaks only where <wbr> says (#239). */}
         <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-body">
           <dt className="text-ink-muted">計画の合計</dt>
-          <dd className="text-right text-num-m text-ink">
+          <dd className="text-right text-num-m whitespace-nowrap text-ink">
             {formatPlanningSum(data.totals.total)}
           </dd>
-          <dt className="text-ink-muted">確定したときの使える時間</dt>
+          <dt className="text-ink-muted [word-break:keep-all]">
+            確定したときの
+            <wbr />
+            使える時間
+          </dt>
           <dd className="text-right text-ink">
-            {planned === undefined
-              ? '未入力'
-              : formatHours(planned, { total: true })}
+            {planned === undefined ? '未入力' : formatHours(planned)}
           </dd>
         </dl>
         {formatLeftOut(data.totals.total) !== undefined && (
@@ -404,9 +408,7 @@ function Outlook({
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-body">
             <dt className="text-ink-muted">終わったときの使える時間</dt>
             <dd className="text-right text-ink">
-              {current === undefined
-                ? '未入力'
-                : formatHours(current, { total: true })}
+              {current === undefined ? '未入力' : formatHours(current)}
             </dd>
           </dl>
         ) : (

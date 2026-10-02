@@ -19,7 +19,7 @@ function renderPopover() {
   render(
     <>
       <Popover>
-        <PopoverTrigger render={<Button />}>3h</PopoverTrigger>
+        <PopoverTrigger render={<Button />}>3時間</PopoverTrigger>
         <PopoverContent>
           <PopoverHeader>
             <PopoverTitle>見積もりを編集</PopoverTitle>
@@ -41,7 +41,7 @@ function renderPopover() {
       <button type="button">外側</button>
     </>,
   );
-  return screen.getByRole('button', { name: '3h' });
+  return screen.getByRole('button', { name: '3時間' });
 }
 
 describe('Popover', () => {

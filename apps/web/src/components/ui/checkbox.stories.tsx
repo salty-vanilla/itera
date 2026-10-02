@@ -47,7 +47,7 @@ export const BareControl: Story = {
 const diffRows = [
   ['add', '＋追加：関連研究を読む'],
   ['remove', '−除外：発表資料の下書き'],
-  ['change', '→変更：実験の再実行 3h → 5h'],
+  ['change', '→変更：実験の再実行 3時間 → 5時間'],
 ] as const;
 
 /**

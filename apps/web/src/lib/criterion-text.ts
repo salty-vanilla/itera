@@ -50,8 +50,8 @@ export function criterionEffectText(
 
 /**
  * How applying the criterion moves the planned total, by its ends (#234):
- * 「少なく済んだときの合計が 2h 増えます。」, one sentence when both move:
- * 「少なく済んだときの合計が 1h 増え、多くかかったときの合計が 1h 減ります。」.
+ * 「少なく済んだときの合計が 2時間増えます。」, one sentence when both move:
+ * 「少なく済んだときの合計が 1時間増え、多くかかったときの合計が 1時間減ります。」.
  * Empty when neither moves.
  */
 export function criterionMoveText(delta: {
@@ -73,7 +73,7 @@ export function criterionMoveText(delta: {
           : last
             ? '減ります。'
             : '減り、';
-      return `${end}の合計が ${formatHours(Math.abs(by), { total: true })} ${verb}`;
+      return `${end}の合計が ${formatHours(Math.abs(by))}${verb}`;
     })
     .join('');
 }

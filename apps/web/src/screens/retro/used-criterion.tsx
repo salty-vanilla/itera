@@ -33,8 +33,8 @@ function UsedCriterion({ used }: UsedCriterionProps) {
 }
 
 /**
- * 「提案の多めの値で計画した研究のタスク 2件のうち、1件を持ち越し（計画 5h・
- * 実績 4.5h）」.
+ * 「提案の多めの値で計画した研究のタスク 2件のうち、1件を持ち越し（計画 5時間・
+ * 実績 4時間30分）」.
  */
 function CriterionOutcome({ used }: UsedCriterionProps) {
   const { result } = used;
@@ -55,10 +55,7 @@ function CriterionOutcome({ used }: UsedCriterionProps) {
       {criterionBoundText(used.criterion.policy.rangePolicy)}で計画した{scope}
       タスク {result.tasks.length}件のうち、{parts.join('、')}
       （計画 {formatPlanningTotal(result.planned)}・実績{' '}
-      {result.actualHours > 0
-        ? formatHours(result.actualHours, { total: true })
-        : '未入力'}
-      ）
+      {result.actualHours > 0 ? formatHours(result.actualHours) : '未入力'}）
     </p>
   );
 }

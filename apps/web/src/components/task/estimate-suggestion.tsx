@@ -8,12 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
 import { BOUND_WORDS } from '@/lib/criterion-text';
-import {
-  HOURS_HINT,
-  formatHours,
-  formatRange,
-  spokenHours,
-} from '@/lib/time-format';
+import { HOURS_HINT, formatHours, formatRange } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
 
 // DESIGN.md Components › Agent 提案 and docs/design/agent-ui.md, for an
@@ -102,7 +97,7 @@ function EstimateSuggestion({
           <span aria-hidden>{formatRange(suggestion.lo, suggestion.hi)}</span>
           <span className="sr-only">
             見積もりの提案（未確定）：
-            {spokenHours(suggestion.lo, suggestion.hi)}
+            {formatRange(suggestion.lo, suggestion.hi)}
           </span>
         </span>
         <span className="text-meta text-ink-muted">
@@ -110,7 +105,9 @@ function EstimateSuggestion({
         </span>
         <span className="text-meta text-ink-muted">提案</span>
       </p>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-body">
+      {/* Free text with times in it: broken between phrases, so that
+          「1〜2時間」 is not broken inside (#239). */}
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-body [text-wrap:pretty] [word-break:auto-phrase]">
         <dt className="text-label text-ink-muted">根拠</dt>
         <dd className="text-ink">
           {suggestion.rationale === ''
@@ -138,7 +135,7 @@ function EstimateSuggestion({
               ref={fieldRef}
               size="sm"
               inputMode="decimal"
-              suffix="h"
+              suffix="時間"
               value={hours}
               autoFocus
               onChange={(e) => setHours(e.currentTarget.value)}
@@ -173,7 +170,7 @@ function EstimateSuggestion({
                 size="sm"
                 onClick={() => onAdopt(bound)}
               >
-                {`${BOUND_WORDS[bound]}の ${formatHours(boundValue(suggestion, bound))} を使う`}
+                {`${BOUND_WORDS[bound]}の ${formatHours(boundValue(suggestion, bound))}を使う`}
               </Button>
             ))}
           </div>

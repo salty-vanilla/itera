@@ -2,18 +2,17 @@ import type { PlanningValue } from '@itera/domain';
 import {
   formatPlanningValue,
   formatRange,
-  spokenHours,
   UNESTIMATED,
 } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
 
 // DESIGN.md Components › Estimate. The person's value and a suggestion look
 // and read differently:
-// - user (the default): 「3h」, solid, no label. A subtask sum is also the
-//   person's values: 「2.5h」 with 「サブタスク 1件は見積もりなし」 under it.
-// - suggestion: 「見積もりの提案 2–4h」 in a dashed `rounded.xs` box.
-// - planned: 「計画 5h」, this Sprint's planning value.
-// - unset: 「見積もりなし」, never 0h.
+// - user (the default): 「3時間」, solid, no label. A subtask sum is also the
+//   person's values: 「2時間30分」 with 「サブタスク 1件は見積もりなし」 under it.
+// - suggestion: 「見積もりの提案 2〜4時間」 in a dashed `rounded.xs` box.
+// - planned: 「計画 5時間」, this Sprint's planning value.
+// - unset: 「見積もりなし」, never 0時間.
 // - unset with `enter`: the same words as a button that opens the Task's
 //   detail at its Estimate, as E does (Planning rows, #96).
 // Read out as 「見積もり 3時間」 and 「見積もりの提案（未確定）：2〜4時間」.
@@ -30,7 +29,7 @@ type EstimateProps = {
   inline?: boolean;
   /**
    * Inline beside 「サブタスクの合計」: the count does not say 「サブタスク」
-   * again (「2.5h（1件は見積もりなし）」).
+   * again (「2時間30分（1件は見積もりなし）」).
    */
   subtasksNamed?: boolean;
   /**
@@ -99,7 +98,7 @@ function Estimate({
   );
   const missingSpoken =
     missing > 0 ? `、見積もりのないサブタスク ${missing}件` : '';
-  const spoken = spokenHours(value.lo, value.hi);
+  const spoken = formatRange(value.lo, value.hi);
   if (planned) {
     return (
       <span

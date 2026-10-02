@@ -21,6 +21,7 @@ export const RULES = {
   'bracket-space': { level: '確実', title: '「」の前後の空白' },
   'counter-space': { level: '確実', title: '数字と助数詞の間の空白' },
   'middle-dot': { level: '確実', title: '数を並べる「・」' },
+  'time-format': { level: '確実', title: '時間と範囲の表記' },
   'long-sentence': { level: '目安', title: '長い文' },
   'many-masu': {
     level: '目安',
@@ -180,8 +181,25 @@ const PATTERNS = [
   },
   {
     rule: 'middle-dot',
-    pattern: /[0-9}]h?・/g,
+    pattern: /[0-9}](?:h|時間|分)?・/g,
     use: '「 · 」',
+  },
+  // Hours as a decimal with a letter (「1.5h」「30m」), and a range with an en
+  // dash (「2–4h」「9/28 (月) – 10/4 (日)」) or with spaces around 〜.
+  {
+    rule: 'time-format',
+    pattern: /[0-9}](?:h|m)(?![A-Za-z0-9])/g,
+    use: '「1時間30分」「30分」',
+  },
+  {
+    rule: 'time-format',
+    pattern: /[0-9}）)][ \u3000]?–[ \u3000]?[0-9}]/g,
+    use: '空白なしの「〜」',
+  },
+  {
+    rule: 'time-format',
+    pattern: /[0-9}）)分間][ \u3000]〜|〜[ \u3000][0-9}−]/g,
+    use: '空白なしの「〜」',
   },
 ];
 

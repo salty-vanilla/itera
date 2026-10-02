@@ -18,7 +18,7 @@ import { weekText } from '@/lib/week-text';
 
 type GoalBlockProps = {
   area: { name: string; color: AreaColor };
-  /** 「3件 · 8–10h」 */
+  /** 「3件 · 8〜10時間」 */
   summary?: string | undefined;
   goal?: string | undefined;
   /** 「今週」「来週」, or 「Sprint N」: the week the Goal is for (#90). */

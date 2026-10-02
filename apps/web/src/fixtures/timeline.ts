@@ -7,7 +7,7 @@
 // - Sprint 9/21–9/27 is the previous week. Its Retro makes the criterion
 //   「研究：見積もりがないときは提案の多めの値で計画する」 active.
 // - Sprint 9/28–10/4 follows Scenario A (関連論文を 3本読む: deferred twice,
-//   4.5h then 中断, 昨日の続き, carried over; the available hours
+//   4時間30分 then 中断, 昨日の続き, carried over; the available hours
 //   differ, see the Check) and Scenario B
 //   (顧客インタビューの設計 added to Today from the Backlog). Scenario C's
 //   weekly 部屋の掃除 is changed from Saturday to Sunday during the Sprint,
@@ -526,7 +526,10 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
     '09-24 12:00',
     newTask(task.paper, '関連論文を 3本読む', { areaId: area.research }),
   );
-  at('09-24 12:01', suggest(task.paper, 3, 5, '1本 1–1.5h', ['論文の長さ']));
+  at(
+    '09-24 12:01',
+    suggest(task.paper, 3, 5, '1本 1時間〜1時間30分', ['論文の長さ']),
+  );
   at(
     '09-24 12:10',
     newTask(task.interview, '顧客インタビューの設計', {
@@ -537,7 +540,7 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
   );
   at(
     '09-24 12:11',
-    suggest(task.interview, 2, 3, '質問項目 1h、対象者の選定 1–2h', [
+    suggest(task.interview, 2, 3, '質問項目 1時間、対象者の選定 1〜2時間', [
       '対象者の人数',
     ]),
   );
@@ -576,7 +579,7 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
   );
   at(
     '09-25 09:01',
-    suggest(task.onboarding, 3, 5, '既存資料の更新 2h、新規 1–3h'),
+    suggest(task.onboarding, 3, 5, '既存資料の更新 2時間、新規 1〜3時間'),
   );
   at(
     '09-25 09:10',
@@ -675,8 +678,8 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
 
   at(
     '09-27 20:40',
-    // 17h rather than Scenario A's 18h, so that the Check shows a total that
-    // may exceed the available hours (13.25–17.25h against 17h).
+    // 17 hours rather than Scenario A's 18, so that the Check shows a total that
+    // may exceed the available hours (13時間15分〜17時間15分 against 17時間).
     onSprint(current, (s, ctx) => setAvailableHours(s, { hours: 17 }, ctx)),
   );
   snapshot('planning-check', '09-27 20:45');

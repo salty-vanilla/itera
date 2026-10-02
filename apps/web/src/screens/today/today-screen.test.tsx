@@ -106,7 +106,7 @@ describe('Today — the top', () => {
     // F32: 2 Tasks and occurrences done of 10 this week.
     expect(screen.getByText('4 / 10件')).toBeTruthy();
     expect(screen.getByText('今日の残り 2件 ·').closest('p')?.textContent).toBe(
-      '今日の残り 2件 · 4.5–5.5h',
+      '今日の残り 2件 · 4時間30分〜5時間30分',
     );
     // Invariant 25: no daily capacity, no judgement of going over.
     const text = document.body.textContent ?? '';
@@ -377,7 +377,7 @@ describe('Today — the daily operations', () => {
     ).toBe(true);
     expect(
       row('今日はもうやらない', '顧客インタビューの設計').textContent,
-    ).toContain('中断 · 1.5h');
+    ).toContain('中断 · 1時間30分');
     // The moved row's ○ takes the focus.
     await waitFor(() =>
       expect(document.activeElement?.getAttribute('aria-label')).toBe(
@@ -589,7 +589,7 @@ describe('Today — the daily operations', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: '記録する' }));
     expect(
-      within(row('今日やる', 'API 設計のレビュー')).getByText('実績 2.5h'),
+      within(row('今日やる', 'API 設計のレビュー')).getByText('実績 2時間30分'),
     ).toBeTruthy();
     expect(
       sprint()
@@ -1121,7 +1121,7 @@ describe('Today — 計画の時間 in the detail (#96)', () => {
     expect(group.textContent).toContain(
       'タスクの見積もりとサブタスクの合計は、どちらか一方を計画に使います。',
     );
-    // This Task has no Estimate of its own; the subtasks add up to 2.5h.
+    // This Task has no Estimate of its own; the subtasks add up to 2時間30分.
     const own = within(group).getByRole('radio', {
       name: /このタスクの見積もり/,
     });
@@ -1131,7 +1131,7 @@ describe('Today — 計画の時間 in the detail (#96)', () => {
     );
     const sum = within(group).getByRole('radio', { name: /サブタスクの合計/ });
     expect(sum.closest('[data-slot="radio-item"]')?.textContent).toContain(
-      '2.5h（1件は見積もりなし）',
+      '2時間30分（1件は見積もりなし）',
     );
     // 「サブタスク」 is not said twice (#162).
     expect(sum.closest('[data-slot="radio-item"]')?.textContent).not.toContain(

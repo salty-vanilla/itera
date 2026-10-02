@@ -33,7 +33,7 @@ import type { TodayItem, TodayRow as TodayRowData } from '@/store/today-view';
 // Today). ○ is always there; the other daily operations are in the `…`
 // (always visible under 768px). Owner decisions in #41 and #101:
 // - the state and its time go in the metadata line (「作業中 · 10:12 から」
-//   「中断 · 1.5h」「見送り」) with an icon, in `ink-muted`, except 作業中 in
+//   「中断 · 1時間30分」「見送り」) with an icon, in `ink-muted`, except 作業中 in
 //   `ink` (#101; its words from #163 and #233);
 // - a deferred row has 「取り消す」 the same day (F37), as a skipped one
 //   does (F19);

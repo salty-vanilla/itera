@@ -97,11 +97,31 @@ describe('Retro — 事実を見る', () => {
       ['持ち越し', '2'],
       ['スキップ', '1'],
       ['週の途中の追加', '1'],
-      ['計画の合計', '17.25–20.25h'],
+      ['計画の合計', '17時間15分〜20時間15分'],
     ]) {
       const term = within(summary).getByText(label!);
       expect(term.parentElement?.textContent).toContain(value);
     }
+    // A range of hours does not fit beside the counts: a row of its own at
+    // every width (#239).
+    expect(
+      within(summary).getByText('計画の合計').parentElement!.className,
+    ).toContain('basis-full');
+    // The sum and its count each stay whole on a line (#239).
+    const planned = screen.getByText(
+      (_, element) =>
+        element?.tagName === 'P' &&
+        element.textContent?.startsWith('計画 17時間15分') === true,
+    );
+    expect(
+      [...planned.querySelectorAll('.whitespace-nowrap')].map(
+        (e) => e.textContent,
+      ),
+    ).toEqual([
+      '計画 17時間15分〜20時間15分',
+      '（ほかに見積もりなし 1件）',
+      '→ 実績 17時間45分',
+    ]);
     // The criterion this Sprint used is one line; its result is in 引き継ぐ
     // (#107).
     expect(
@@ -118,8 +138,16 @@ describe('Retro — 事実を見る', () => {
       name: '関連論文を 3本読む',
     }).parentElement!;
     // The suggestion's range, with what it is under it (#162).
-    expect(paper.textContent).toContain('3–5h見積もりの提案');
-    expect(paper.textContent).toContain('4.5h');
+    expect(paper.textContent).toContain('3〜5時間見積もりの提案');
+    // A range that does not fit its column breaks after 〜 only (#239).
+    expect(
+      [
+        ...paper
+          .querySelectorAll('td')[0]!
+          .querySelectorAll('.whitespace-normal > .whitespace-nowrap'),
+      ].map((e) => e.textContent),
+    ).toEqual(['3〜', '5時間']);
+    expect(paper.textContent).toContain('4時間30分');
     expect(paper.textContent).toContain('持ち越し');
     expect(paper.textContent).toContain('見送り 2回');
     expect(screen.getByRole('region', { name: '割り込み' })).toBeTruthy();
@@ -220,7 +248,7 @@ describe('Retro — 確定したときとの差 (MVP 16)', () => {
     expect(diff.textContent).toContain(
       '「先行研究を押さえる」 → 「先行研究を 2本押さえる」',
     );
-    expect(diff.textContent).toContain('確定したとき 17h → 今 14h');
+    expect(diff.textContent).toContain('確定したとき 17時間 → 今 14時間');
     // Marked, it reads as its own words in 振り返りの材料 (#105).
     await userEvent.click(
       within(diff).getByRole('button', {
@@ -234,7 +262,7 @@ describe('Retro — 確定したときとの差 (MVP 16)', () => {
       name: '振り返りの材料',
     })[0]!;
     expect(materials.textContent).toContain(
-      '使える時間 確定したとき 17h → 今 14h',
+      '使える時間 確定したとき 17時間 → 今 14時間',
     );
   });
 });
@@ -490,7 +518,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     await renderAt('/retro?fixture=retro-start&stage=handoff');
     const section = criterionSection();
     const outcome = within(section).getByText(
-      '提案の多めの値で計画した研究のタスク 1件のうち、1件を持ち越し（計画 5h・実績 4.5h）',
+      '提案の多めの値で計画した研究のタスク 1件のうち、1件を持ち越し（計画 5時間・実績 4時間30分）',
     );
     expect(
       within(section).getByText('確定したときに、このルールで計画しました。'),
@@ -964,7 +992,7 @@ describe('Retro — compact (#57)', () => {
         .getAllByRole('listitem')
         .find((li) => li.textContent?.startsWith('関連論文を 3本読む'));
       expect(paper?.textContent).toContain(
-        '見積もりの提案 3–5h · 計画 5h（ルール） · 実績 4.5h',
+        '見積もりの提案 3〜5時間 · 計画 5時間（ルール） · 実績 4時間30分',
       );
       expect(paper?.textContent).toContain('持ち越し · 見送り 2回 · 中断 1回');
       expect(
@@ -976,7 +1004,7 @@ describe('Retro — compact (#57)', () => {
       const review = screen
         .getAllByRole('listitem')
         .find((li) => li.textContent?.startsWith('API 設計のレビュー'));
-      expect(review?.textContent).toContain('見積もり 2h · 計画 2h');
+      expect(review?.textContent).toContain('見積もり 2時間 · 計画 2時間');
       for (const li of screen.getAllByRole('listitem')) {
         expect(li.textContent).not.toMatch(/Estimate|Goal|Retro/);
       }
@@ -1137,17 +1165,17 @@ describe('Retro — 事実を見るを読みやすくする (#108)', () => {
     const values = [...item.querySelectorAll('[data-slot="meta-item"]')];
     expect(values.map((v) => v.textContent)).toEqual([
       '持ち越し',
-      '計画 5h（ルール）',
-      '実績 4.5h',
+      '計画 5時間（ルール）',
+      '実績 4時間30分',
       // 確定したときとの差, in the same words as the row (#167).
-      '計画より 30m 少ない',
+      '計画より 30分少ない',
     ]);
     expect(carryIcon(values[0]!)).toBeTruthy();
     expect(carryIcon(values[1]!)).toBeNull();
     // The button's name still says which Task and what it became.
     expect(
       within(item).getByRole('button', {
-        name: /関連論文を 3本読む · 持ち越し · 計画 5h（ルール） · 実績 4.5h/,
+        name: /関連論文を 3本読む · 持ち越し · 計画 5時間（ルール） · 実績 4時間30分/,
       }),
     ).toBeTruthy();
   });
@@ -1197,13 +1225,13 @@ describe('Retro — the plan against what happened (#167)', () => {
       '[data-slot="sprint-summary"]',
     )!;
     const total = within(summary).getByText('計画の合計').parentElement!;
-    expect(total.textContent).toContain('使える時間 17h');
-    // As confirmed, and with the mid-Sprint addition, against 17h.
+    expect(total.textContent).toContain('使える時間 17時間');
+    // As confirmed, and with the mid-Sprint addition, against 17時間.
     expect(lineOf('確定したときの計画')?.textContent).toBe(
-      '確定したときの計画 15.25–17.25h：少なく済めば 1.75h 残る · 多くかかれば 0.25h 超える',
+      '確定したときの計画 15時間15分〜17時間15分：少なく済めば 1時間45分残る · 多くかかれば 15分超える',
     );
     expect(lineOf('週の途中の追加を含めて')?.textContent).toBe(
-      '週の途中の追加を含めて 17.25–20.25h：少なく済んでも 0.25h 超える · 多くかかれば 3.25h 超える',
+      '週の途中の追加を含めて 17時間15分〜20時間15分：少なく済んでも 15分超える · 多くかかれば 3時間15分超える',
     );
     // Facts of the week, not an alarm (PRD §12).
     expect(pane().querySelector('.text-danger')).toBeNull();
@@ -1245,24 +1273,24 @@ describe('Retro — the plan against what happened (#167)', () => {
 
   it('sums the interrupts and says the actual time leaves them out', async () => {
     await renderAt('/retro?fixture=retro-start');
-    // 45m and 20m.
+    // 45分 and 20分.
     expect(
       screen.getByText(
         (_, element) =>
           element?.tagName === 'P' &&
           element.textContent ===
-            '割り込み 2件 · 合計 1.08h（実績には含みません）',
+            '割り込み 2件 · 合計 1時間5分（実績には含みません）',
       ),
     ).toBeTruthy();
   });
 
   it('puts each Task’s difference from its planning value under its actual time', async () => {
     await renderAt('/retro?fixture=retro-start');
-    // 4.5h against 5h.
+    // 4時間30分 against 5時間.
     expect(rowOf('関連論文を 3本読む').textContent).toContain(
-      '計画より 30m 少ない',
+      '計画より 30分少ない',
     );
-    // 4.5h against 3–5h.
+    // 4時間30分 against 3〜5時間.
     expect(rowOf('新メンバーのオンボーディング資料').textContent).toContain(
       '計画の幅の中',
     );
@@ -1351,7 +1379,7 @@ describe('Retro — actual time per occurrence (#56)', () => {
     const row = within(list)
       .getAllByRole('listitem')
       .find((li) => li.textContent?.startsWith('9/28 (月) 英語の多読 30分'))!;
-    expect(row.textContent).toContain('実績 30m');
+    expect(row.textContent).toContain('実績 30分');
     await userEvent.click(
       within(row).getByRole('button', { name: /かかった時間を記録/ }),
     );
@@ -1366,8 +1394,8 @@ describe('Retro — actual time per occurrence (#56)', () => {
     expect(
       screen.getByRole('rowheader', { name: '英語の多読 30分' }).parentElement
         ?.textContent,
-    ).toContain('1.25h');
-    expect(document.body.textContent).toContain('実績 18h');
+    ).toContain('1時間15分');
+    expect(document.body.textContent).toContain('実績 18時間');
     const occurrence = lastSnapshot().records.occurrences.find(
       (o) => o.taskId === 'task-reading' && o.scheduledDate === '2026-09-28',
     );
@@ -1382,7 +1410,7 @@ describe('Retro — actual time per occurrence (#56)', () => {
         .getAllByRole('listitem')
         .find((li) => li.textContent?.startsWith('9/28 (月) 英語の多読 30分'))
         ?.textContent,
-    ).toContain('実績 45m');
+    ).toContain('実績 45分');
   });
 
   it('adds to a skipped occurrence on its own day', async () => {

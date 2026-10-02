@@ -94,9 +94,9 @@ function SubtaskList({
           errorClassName="order-last basis-full"
         >
           <TextInput
-            className="w-1/4 min-w-16 shrink-0"
+            className="w-1/4 min-w-[11rem] shrink-0 medium:min-w-16"
             inputMode="decimal"
-            suffix="h"
+            suffix="時間"
             ref={hoursRef}
             placeholder="任意"
             value={hours}
@@ -155,10 +155,10 @@ function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
         errorClassName="basis-full"
       >
         <TextInput
-          className="w-1/4 min-w-16 shrink-0"
+          className="w-1/4 min-w-[11rem] shrink-0 medium:min-w-16"
           size="sm"
           inputMode="decimal"
-          suffix="h"
+          suffix="時間"
           placeholder="見積もりなし"
           // Saved on leaving it, like the Task detail's own fields: a value
           // left in error keeps the detail open (Issue #95).

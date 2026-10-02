@@ -16,33 +16,33 @@ const headline = (lo: number, hi: number, available: number) =>
 describe('capacityHeadline (owner decision S5 in #93, #234)', () => {
   it('says each end while the plan fits', () => {
     expect(headline(15, 17, 18)).toBe(
-      '少なく済めば 3h 残る · 多くかかっても 1h 残る',
+      '少なく済めば 3時間残る · 多くかかっても 1時間残る',
     );
     expect(headline(16, 18, 18)).toBe(
-      '少なく済めば 2h 残る · 多くかかってもちょうど収まる',
+      '少なく済めば 2時間残る · 多くかかってもちょうど収まる',
     );
   });
 
   it('is two sentences while the difference crosses 0', () => {
     expect(headline(14.75, 17.75, 17)).toBe(
-      '少なく済めば 2.25h 残る · 多くかかれば 0.75h 超える',
+      '少なく済めば 2時間15分残る · 多くかかれば 45分超える',
     );
     // The lower end is exactly the available hours.
     expect(headline(17, 18, 17)).toBe(
-      '少なく済めばちょうど収まる · 多くかかれば 1h 超える',
+      '少なく済めばちょうど収まる · 多くかかれば 1時間超える',
     );
   });
 
   it('says each end when even the lower end is over', () => {
     expect(headline(17, 19, 14)).toBe(
-      '少なく済んでも 3h 超える · 多くかかれば 5h 超える',
+      '少なく済んでも 3時間超える · 多くかかれば 5時間超える',
     );
   });
 
   it('is one sentence for a total without a range', () => {
-    expect(headline(15, 15, 18)).toBe('3h 残る');
+    expect(headline(15, 15, 18)).toBe('3時間残る');
     expect(headline(18, 18, 18)).toBe('ちょうど収まる');
-    expect(headline(19, 19, 18)).toBe('1h 超える');
+    expect(headline(19, 19, 18)).toBe('1時間超える');
   });
 
   it('does not say the numbers again in the state while the difference crosses 0', () => {
@@ -52,7 +52,7 @@ describe('capacityHeadline (owner decision S5 in #93, #234)', () => {
       text: '超える可能性',
     });
     expect(capacityStatusLine(capacity).text).toBe(
-      '超える可能性：少なく済めば 2.25h 残る · 多くかかれば 0.75h 超える',
+      '超える可能性：少なく済めば 2時間15分残る · 多くかかれば 45分超える',
     );
     // While it fits, the line is the statement itself.
     const fits = capacityOf({ lo: 15, hi: 17 }, 18);
@@ -67,7 +67,7 @@ describe('capacityHeadline (owner decision S5 in #93, #234)', () => {
     });
     // Where no headline is shown, the numbers follow, once.
     expect(capacityStatusLine(over).text).toBe(
-      '少なく済んでも 3h 超える · 多くかかれば 5h 超える',
+      '少なく済んでも 3時間超える · 多くかかれば 5時間超える',
     );
   });
 
@@ -89,16 +89,16 @@ describe('capacityRelationSentences (Retro, #167)', () => {
 
   it('says how the plan stood, as the headline does (#234)', () => {
     expect(relation(17.25, 20.25, 17)).toBe(
-      '少なく済んでも 0.25h 超える · 多くかかれば 3.25h 超える',
+      '少なく済んでも 15分超える · 多くかかれば 3時間15分超える',
     );
     expect(relation(15.25, 17.25, 17)).toBe(
-      '少なく済めば 1.75h 残る · 多くかかれば 0.25h 超える',
+      '少なく済めば 1時間45分残る · 多くかかれば 15分超える',
     );
     expect(relation(15, 16, 17)).toBe(
-      '少なく済めば 2h 残る · 多くかかっても 1h 残る',
+      '少なく済めば 2時間残る · 多くかかっても 1時間残る',
     );
     expect(relation(15, 17, 17)).toBe(
-      '少なく済めば 2h 残る · 多くかかってもちょうど収まる',
+      '少なく済めば 2時間残る · 多くかかってもちょうど収まる',
     );
   });
 });

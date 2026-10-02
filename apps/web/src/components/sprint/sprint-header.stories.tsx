@@ -10,7 +10,7 @@ const meta = {
   args: {
     status: <Tag tone="draft">計画中 · 未確定</Tag>,
     title: 'Sprint 14',
-    period: '9/28 (月) – 10/4 (日)',
+    period: '9/28 (月)〜10/4 (日)',
     actions: <Button variant="primary">Sprint 14 を確定</Button>,
     stages: [
       { id: 'pick', label: '選ぶ', href: '#pick' },
@@ -35,7 +35,7 @@ export const Steps: Story = {
   args: {
     title: 'Sprint 3',
     week: '来週',
-    period: '10/5 (月) – 10/11 (日)',
+    period: '10/5 (月)〜10/11 (日)',
     actions: <Button variant="primary">Sprint 3 を確定</Button>,
     steps: { previous: { number: 2, href: '#sprint-2' } },
   },
@@ -48,7 +48,7 @@ export const StagesDone: Story = {
   args: {
     status: <Tag tone="done">完了</Tag>,
     title: 'Sprint 2',
-    period: '9/21 (月) – 9/27 (日)',
+    period: '9/21 (月)〜9/27 (日)',
     actions: undefined,
     stages: [
       { id: 'facts', label: '事実を見る', href: '#facts' },
