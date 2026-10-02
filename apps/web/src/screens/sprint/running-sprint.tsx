@@ -379,22 +379,24 @@ function Outlook({
         <h2 id={`${ids}-hours`} className="text-heading text-ink">
           時間
         </h2>
-        {/* A range of hours is never broken inside; a label that has to
-            give way breaks only where <wbr> says (#239). */}
-        <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-body">
-          <dt className="text-ink-muted">計画の合計</dt>
-          {/* In the body's size: 今週の完了 is the answer here (#243). */}
-          <dd className="text-right whitespace-nowrap text-ink">
-            {formatPlanningSum(data.totals.total)}
-          </dd>
-          <dt className="text-ink-muted [word-break:keep-all]">
-            確定したときの
-            <wbr />
-            使える時間
-          </dt>
-          <dd className="text-right text-ink">
-            {planned === undefined ? '未入力' : formatHours(planned)}
-          </dd>
+        {/* A range of hours is never broken inside. Each pair is a line of
+            its own, so that the long range does not narrow the other label
+            (「確定したときの / 使える時間」, #250); a pair that does not fit
+            puts its value under its label. */}
+        <dl className="flex flex-col gap-y-1 text-body">
+          <div className="flex flex-wrap justify-between gap-x-6">
+            <dt className="text-ink-muted">計画の合計</dt>
+            {/* In the body's size: 今週の完了 is the answer here (#243). */}
+            <dd className="ml-auto text-right whitespace-nowrap text-ink">
+              {formatPlanningSum(data.totals.total)}
+            </dd>
+          </div>
+          <div className="flex flex-wrap justify-between gap-x-6">
+            <dt className="text-ink-muted">確定したときの使える時間</dt>
+            <dd className="ml-auto text-right whitespace-nowrap text-ink">
+              {planned === undefined ? '未入力' : formatHours(planned)}
+            </dd>
+          </div>
         </dl>
         {formatLeftOut(data.totals.total) !== undefined && (
           <p className="text-help text-ink-muted">
