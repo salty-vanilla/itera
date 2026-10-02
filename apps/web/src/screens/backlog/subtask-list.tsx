@@ -159,7 +159,8 @@ function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
           size="sm"
           inputMode="decimal"
           suffix="時間"
-          placeholder="見積もりなし"
+          // Empty says it has none; the sum above counts it (#241). Without
+          // the words, the field keeps its width at every size.
           // Saved on leaving it, like the Task detail's own fields: a value
           // left in error keeps the detail open (Issue #95).
           data-detail-field

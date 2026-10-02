@@ -15,7 +15,7 @@ import {
   TaskMetadata,
 } from '@/components/task/task-metadata';
 import { TaskRow } from '@/components/task/task-row';
-import { formatPlanningTotal } from '@/lib/time-format';
+import { formatPlanningSum, formatPlanningTotal } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
 import { weekCall, weekText } from '@/lib/week-text';
 import type {
@@ -100,9 +100,12 @@ function PlanPane({
       )}
     >
       <h1 className="text-display-m text-ink">{stageHeading(stage, week)}</h1>
-      {stage === 'pick' && (
+      {stage === 'pick' && data.candidates.recurring.length > 0 && (
         <p className="max-w-measure-read text-body text-ink-muted [text-wrap:pretty] [word-break:auto-phrase]">
-          {pickGuide(week, data.candidates.recurring.length > 0)}
+          {weekText(
+            week,
+            'の繰り返しは最初から入っています。外すと今日の画面にも出ません。',
+          )}
         </p>
       )}
       {summary}
@@ -128,7 +131,7 @@ function PlanPane({
                   variant="heading"
                 />
                 <span className="text-meta text-ink-muted">
-                  {summaryOf(block)}
+                  {summaryOf(block, stage)}
                 </span>
               </h2>
               <PlannedList
@@ -144,7 +147,9 @@ function PlanPane({
             <GoalBlock
               key={block.area.id ?? 'none'}
               area={{ name: block.area.name, color: block.area.color }}
-              summary={block.tasks.length > 0 ? summaryOf(block) : undefined}
+              summary={
+                block.tasks.length > 0 ? summaryOf(block, stage) : undefined
+              }
               goal={block.goal?.text}
               week={week}
               // An Area with neither a Goal nor a Task is one line (#161).
@@ -179,24 +184,17 @@ function PlanPane({
 }
 
 /**
- * What the 選ぶ stage says under its heading, chosen Tasks or not: why the
- * occurrences are in already, and what choosing does (Issue #92).
+ * 「2件 · 7時間30分（ほかに見積もりなし 1件）」; in 確かめる without the count
+ * left out, which its 「見積もりなし」 section says once (#241).
  */
-function pickGuide(week: string, hasRecurring: boolean): string {
-  const choosing = 'Backlog でチェックしたタスクが、ここに領域ごとに並びます。';
-  return hasRecurring
-    ? weekText(
-        week,
-        'の繰り返しは最初から入っています。外すと今日の画面にも出ません。',
-      ) + choosing
-    : choosing;
-}
-
-function summaryOf(block: AreaPlan): string {
+function summaryOf(block: AreaPlan, stage: Stage): string {
   const count = `${block.tasks.length}件`;
-  return block.total === undefined
-    ? count
-    : `${count} · ${formatPlanningTotal(block.total)}`;
+  if (block.total === undefined) return count;
+  return `${count} · ${
+    stage === 'check'
+      ? formatPlanningSum(block.total)
+      : formatPlanningTotal(block.total)
+  }`;
 }
 
 function PlannedList({
@@ -263,7 +261,6 @@ function PlannedRow({
   // Area without one is unlinked at confirm, goalLinkAtConfirm), so the row
   // says it, in the words of its menu item, only there (#159).
   const showLink = stage !== 'pick' && hasGoal;
-  const GoalLink = semanticIcons.goalLink;
   const Repeat = semanticIcons.recurrence;
   const Carry = semanticIcons.carriedOver;
   const meta = [
@@ -286,16 +283,10 @@ function PlannedRow({
         持ち越し
       </MetaItem>
     ),
-    // Both states, in the same tone: an unlinked Task is not lighter
-    // (DESIGN.md Do's and Don'ts).
-    showLink &&
-      (linked ? (
-        <MetaItem key="g" icon={<GoalLink aria-hidden />}>
-          目標に入っている
-        </MetaItem>
-      ) : (
-        <MetaItem key="g">目標に入っていない</MetaItem>
-      )),
+    // Only the exception is marked: a linked Task says nothing (#241). In
+    // the tone of the other metadata, not lighter or warned (DESIGN.md Do's
+    // and Don'ts).
+    showLink && !linked && <MetaItem key="g">目標に入っていない</MetaItem>,
   ].filter(Boolean);
 
   const unchoose = () => {
@@ -388,6 +379,8 @@ function PlannedRow({
           <Estimate
             value={value}
             planned={value.base !== 'none'}
+            // 確かめる says the subtasks left out once, in 「見積もりなし」 (#241).
+            withoutMissing={stage === 'check'}
             enter={
               inactive === undefined
                 ? { title: task.title, onEnter: onEstimate }

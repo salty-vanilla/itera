@@ -133,11 +133,11 @@ describe('Sprint — running (#51)', () => {
       .closest('[data-slot="task-row"]');
     expect(row?.textContent).toContain('目標に入っていない');
     expect(document.body.textContent).not.toContain('目標なし');
-    // A linked Task says so too, in the same tone.
+    // Only the exception is marked: a linked Task says nothing (#241).
     const linked = screen
       .getByText('関連論文を 3本読む', { selector: 'main *' })
       .closest('[data-slot="task-row"]');
-    expect(linked?.textContent).toContain('目標に入っている');
+    expect(linked?.textContent).not.toMatch(/目標に入/);
   });
 
   it('folds a criterion that changed no planned value to one line (#161)', async () => {
@@ -145,7 +145,7 @@ describe('Sprint — running (#51)', () => {
     await renderAt('/sprint?fixture=today-interrupt');
     const line = document.querySelector('[data-slot="criterion-line"]');
     expect(line?.textContent).toBe(
-      '計画のルール「研究：見積もりがないときは提案の多めの値で計画する」 · 対象なし',
+      '計画のルール「研究：提案の多めで計画」 · 対象なし',
     );
     expect(
       screen.queryByText('確定したときに、このルールで計画しました。'),

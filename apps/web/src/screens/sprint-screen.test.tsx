@@ -293,7 +293,7 @@ describe('Retro — by number (#90)', () => {
     ).toBeTruthy();
     expect(
       screen.getByText(
-        /次に試すことから計画のルール「研究：見積もりがないときは提案の多めの値で計画する」/,
+        /次に試すことから計画のルール「研究：提案の多めで計画」/,
       ),
     ).toBeTruthy();
     expect(screen.queryByRole('switch')).toBeNull();

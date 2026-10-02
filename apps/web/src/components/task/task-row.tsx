@@ -24,6 +24,12 @@ type TaskRowProps = {
   control?: ReactNode;
   metadata?: ReactNode;
   estimate?: ReactNode;
+  /**
+   * The Estimate at the end of the row from 768px only. Under it the caller
+   * puts the value in the metadata, so that the title keeps the row's width
+   * (Today, #241).
+   */
+  estimateFromMedium?: boolean;
   /** The `…` Menu or other row actions. */
   actions?: ReactNode;
   /**
@@ -74,6 +80,7 @@ function TaskRow({
   control,
   metadata,
   estimate,
+  estimateFromMedium = false,
   actions,
   reserveActions = false,
   actionsVisible = false,
@@ -134,7 +141,14 @@ function TaskRow({
         {metadata}
       </div>
       {estimate !== undefined && (
-        <div className="flex shrink-0">{estimate}</div>
+        <div
+          className={cn(
+            'flex shrink-0',
+            estimateFromMedium && 'hidden medium:flex',
+          )}
+        >
+          {estimate}
+        </div>
       )}
       {actions !== undefined && (
         <div

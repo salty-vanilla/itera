@@ -26,7 +26,7 @@ import { CompletionCircle, TaskRow } from '@/components/task/task-row';
 import { formatDate } from '@/lib/date-format';
 import { formatHours } from '@/lib/time-format';
 import { startedSince } from '@/lib/today-words';
-import type { TimeZone } from '@itera/domain';
+import type { PlanningValue, TimeZone } from '@itera/domain';
 import type { TodayItem, TodayRow as TodayRowData } from '@/store/today-view';
 
 // A row of 今日やる, or one closed today (DESIGN.md Task Row, patterns.md
@@ -173,9 +173,10 @@ function TodayRow({
       metadata={<RowMetadata row={row} timeZone={timeZone} />}
       estimate={
         row.value.base === 'none' ? undefined : (
-          <Estimate value={row.value} planned />
+          <PlannedValue value={row.value} at="end" />
         )
       }
+      estimateFromMedium
       reserveActions
       actionsVisible={skipped || undoable}
       actions={
@@ -279,12 +280,37 @@ function RowMetadata({
   })();
   return (
     <TaskMetadata>
+      <PlannedValue value={row.value} at="metadata" />
       {state}
       {selection.origin === 'backlogCompletion' && (
         <MetaItem>Backlog で完了</MetaItem>
       )}
       <ItemMetadata item={row} />
     </TaskMetadata>
+  );
+}
+
+/**
+ * A row's planning value, without the subtasks left out (#241). From 768px
+ * it ends the row (`estimateFromMedium`); under it, it leads the metadata, so
+ * that a long value (「計画 1時間30分〜3時間」) does not leave the title one
+ * or two characters a line (#241).
+ */
+function PlannedValue({
+  value,
+  at,
+}: {
+  value: PlanningValue;
+  at: 'metadata' | 'end';
+}) {
+  if (value.base === 'none') return null;
+  return (
+    <Estimate
+      value={value}
+      planned
+      withoutMissing
+      className={at === 'metadata' ? 'medium:hidden' : undefined}
+    />
   );
 }
 
@@ -324,4 +350,4 @@ function ItemMetadata({
   );
 }
 
-export { ItemMetadata, TodayRow };
+export { ItemMetadata, PlannedValue, TodayRow };

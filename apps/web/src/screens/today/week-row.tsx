@@ -1,10 +1,9 @@
 import { ArrowUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Estimate } from '@/components/task/estimate';
 import { TaskMetadata } from '@/components/task/task-metadata';
 import { TaskRow } from '@/components/task/task-row';
 import type { TodayItem } from '@/store/today-view';
-import { ItemMetadata } from './today-row';
+import { ItemMetadata, PlannedValue } from './today-row';
 
 // A row of 昨日の続き or 今週の残り. It is chosen with 「今日へ」, always
 // visible at the start of the row; never a □, which means choosing for the
@@ -39,14 +38,16 @@ function WeekRow({ item, onOpen, onEstimate, onChoose }: WeekRowProps) {
       }
       metadata={
         <TaskMetadata>
+          <PlannedValue value={item.value} at="metadata" />
           <ItemMetadata item={item} occurrenceDate />
         </TaskMetadata>
       }
       estimate={
         item.value.base === 'none' ? undefined : (
-          <Estimate value={item.value} planned />
+          <PlannedValue value={item.value} at="end" />
         )
       }
+      estimateFromMedium
       // 今日やる has the `…`; the values line up with it.
       reserveActions
     />

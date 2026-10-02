@@ -596,7 +596,11 @@ function TaskDetail({
                             なし
                           </span>
                         ) : (
-                          <Estimate value={facts.taskValue} inline />
+                          // A suggestion is said once, in its card above
+                          // (#241); the person's own value is said here.
+                          facts.taskValue.base !== 'suggestion' && (
+                            <Estimate value={facts.taskValue} inline />
+                          )
                         )}
                       </span>
                     }

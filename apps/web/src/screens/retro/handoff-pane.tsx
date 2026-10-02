@@ -121,7 +121,7 @@ function HandoffPane({
               // The example breaks between phrases: kept whole, it is wider
               // than the column at 390px.
               <span className="block [text-wrap:pretty] [word-break:auto-phrase]">
-                次に試すことが「見積もりがないときは提案の多めの値で計画する」のような形なら、計画のルールにできます。
+                次に試すことが「見積もりがないときは、提案の多めで計画する」のような形なら、計画のルールにできます。
               </span>
             )
           }
@@ -164,11 +164,12 @@ function HandoffPane({
             }}
             className="flex flex-col gap-2"
           >
-            {/* What the next Planning does, from the criteria's own values. */}
+            {/* The criteria's effects are in their cards (the result above,
+                the new one's preview): here only where it is decided (#241). */}
             <Radio<RetroDecision | null>
               value="continue"
               label="続ける"
-              description={`次の計画でも、${criterionEffectText(used.criterion.policy, used.areaName)}。使うかどうかは「確かめる」で選べます。`}
+              description="このルールで計画するかは「確かめる」で選べます。"
             />
             <Radio<RetroDecision | null>
               value="end"
@@ -182,7 +183,7 @@ function HandoffPane({
               description={
                 draft === undefined
                   ? '上で「計画のルールにもする」をオンにして新しいルールを作ると選べます。'
-                  : `次の計画では代わりに、${criterionEffectText(draft.criterion.policy, draft.areaName)}。使うかどうかは「確かめる」で選べます。`
+                  : 'このルールで計画するかは「確かめる」で選べます。'
               }
             />
           </RadioGroup>

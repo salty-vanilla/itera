@@ -352,9 +352,8 @@ describe('Planning — 選ぶ', () => {
     const note = within(planPane()).getByText(
       /今週の繰り返しは最初から入っています。外すと今日の画面にも出ません。/,
     );
-    expect(note.textContent).toContain(
-      'Backlog でチェックしたタスクが、ここに領域ごとに並びます。',
-    );
+    // What checking does is seen by doing it, not said (#241).
+    expect(note.textContent).not.toContain('Backlog でチェックした');
   });
 
   // Issue #98: the pane is narrow at every stage, so the field has a row to
@@ -469,7 +468,8 @@ describe('Planning — 整える', () => {
     await userEvent.click(
       await screen.findByRole('menuitem', { name: '目標に入れる' }),
     );
-    expect(within(row).getByText('目標に入っている')).toBeTruthy();
+    // Only the exception is marked: a linked row says nothing (#241).
+    expect(row.textContent).not.toMatch(/目標に入/);
   });
 
   it('shows the link only in an Area with a Goal, on the row and in its menu (#159)', async () => {
@@ -514,7 +514,7 @@ describe('Planning — 整える', () => {
     await userEvent.click(
       await screen.findByRole('menuitem', { name: '目標に入れる' }),
     );
-    expect(within(reading()).getByText('目標に入っている')).toBeTruthy();
+    expect(reading().textContent).not.toMatch(/目標に入/);
   });
 });
 
@@ -527,9 +527,7 @@ describe('Planning — 計画のルールの見せ方 (#105)', () => {
     async (stage) => {
       await renderAt(`/sprint?fixture=planning-check&stage=${stage}`);
       const line = outlook().querySelector('[data-slot="criterion-line"]');
-      expect(line?.textContent).toBe(
-        '研究：見積もりがないときは提案の多めの値で計画する',
-      );
+      expect(line?.textContent).toBe('研究：提案の多めで計画');
       // It sits under the previous improvement.
       expect(
         within(outlook())
@@ -811,9 +809,24 @@ describe('Planning — 確かめる', () => {
       '多くかかれば 15分超える',
     ]);
     expect(summary().textContent?.match(/1時間45分/g)).toHaveLength(1);
+    // What is left out of the total is said once, in 「見積もりなし」 with
+    // 見積もる (#241): not under the numbers, the Area's heading or the row.
+    const unestimated = within(summary())
+      .getByRole('heading', { name: '見積もりなし' })
+      .closest('section') as HTMLElement;
+    expect(unestimated.textContent).toContain(
+      '見積もりのないサブタスク 1件は合計に含まれていません。',
+    );
+    expect(summary().textContent?.match(/含まれていません/g)).toHaveLength(1);
     expect(
-      within(summary()).getByText(/見積もりのないサブタスク 1件/),
+      within(unestimated).getByRole('button', {
+        name: '見積もる：実験データの前処理',
+      }),
     ).toBeTruthy();
+    expect(planPane().textContent).not.toContain('ほかに見積もりなし');
+    expect(planPane().textContent).not.toContain(
+      'サブタスク 1件は見積もりなし',
+    );
 
     const hours = (
       within(summary()).getByRole('textbox', {
@@ -924,14 +937,16 @@ describe('Planning — 確かめる', () => {
 
   it('explains what may push the total over', async () => {
     await renderAt('/sprint?fixture=planning-check&stage=check');
+    const drivers = within(summary())
+      .getByRole('heading', { name: '幅のある計画' })
+      .closest('section') as HTMLElement;
     expect(
-      within(summary()).getByText(
-        (_, el) =>
-          el?.tagName === 'LI' &&
-          el.textContent ===
-            '計画のルールで「関連論文を 3本読む」を 5時間で計算しています（見積もりの提案 3〜5時間）。',
-      ),
-    ).toBeTruthy();
+      [...drivers.querySelectorAll('li')].map((li) => li.textContent),
+    ).toEqual([
+      '「新メンバーのオンボーディング資料」は 3〜5時間の幅があります。',
+    ]);
+    // The Task the criterion planned at one value is left to its card (#241).
+    expect(drivers.textContent).not.toContain('計画のルール');
   });
 });
 
@@ -1068,7 +1083,7 @@ describe('Planning — review fixes', () => {
     await renderAt('/sprint?fixture=planning-check&stage=check');
     expect(
       within(summary()).getByText(
-        '研究のタスク 1件を、提案の多めの値で計画しています。少なく済んだときの合計が 2時間増えます。',
+        '見積もりがない研究のタスク 1件を、提案の多めの値で計画しています。少なく済んだときの合計が 2時間増えます。',
       ),
     ).toBeTruthy();
   });

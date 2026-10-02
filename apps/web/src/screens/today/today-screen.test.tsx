@@ -178,6 +178,24 @@ describe('Today — the order for a phone (#100)', () => {
     );
   });
 
+  it('puts the planning value under the title for a phone, without the subtasks left out (#241)', async () => {
+    await renderAt('/today?fixture=today-daytime');
+    const row = within(region('今日やる'))
+      .getByText('実験データの前処理')
+      .closest('[data-slot="task-row"]') as HTMLElement;
+    expect(row.textContent).not.toContain('見積もりなし');
+    // One value leads the metadata under 768px, the other ends the row from
+    // it, shown by CSS; both say the same.
+    const [lead, end] = [
+      ...row.querySelectorAll<HTMLElement>('[data-slot="estimate"]'),
+    ];
+    expect(lead!.closest('[data-slot="task-metadata"]')).toBeTruthy();
+    expect(lead!.className).toContain('medium:hidden');
+    expect(end!.closest('[data-slot="task-metadata"]')).toBeNull();
+    expect(end!.parentElement!.className).toContain('hidden medium:flex');
+    expect(lead!.textContent).toBe(end!.textContent);
+  });
+
   it('puts the week’s Goals for a phone after 今週の残り', async () => {
     await renderAt('/today?fixture=today-morning');
     const goals = screen.getAllByRole('region', { name: '今週の目標' });

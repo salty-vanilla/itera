@@ -1,7 +1,8 @@
 import type { Sprint, SprintId } from '@itera/domain';
 import { useNavigate, useRouter, useSearch } from '@tanstack/react-router';
-import { Rewind, Route } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Pin, Rewind, Route } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tag } from '@/components/ui/tag';
 import { useToast } from '@/components/ui/toast';
@@ -122,7 +123,13 @@ function RetroFor({
   return <RetroView data={data} steps={steps} leadsOn={leadsOn} />;
 }
 
-type Editing = { target: ActualTarget; title: string; anchor: HTMLElement };
+type Editing = {
+  target: ActualTarget;
+  title: string;
+  anchor: HTMLElement;
+  /** The row's 振り返りに使う, beside the button, for the focus (#241). */
+  returnFocus: HTMLElement | null;
+};
 
 function RetroView({
   data,
@@ -152,6 +159,16 @@ function RetroView({
     });
   }, [search.stage, fromRecords, navigate]);
   const [editing, setEditing] = useState<Editing | undefined>(undefined);
+  // The surface leaves with `editing`, before it can hand the focus back.
+  // Back to its button, or, when the button left with the time entered (it
+  // shows only on rows without time, #241), to the row's 振り返りに使う.
+  const closedEditing = useRef<Editing | undefined>(undefined);
+  useEffect(() => {
+    const closed = closedEditing.current;
+    if (editing !== undefined || closed === undefined) return;
+    closedEditing.current = undefined;
+    (closed.anchor.isConnected ? closed.anchor : closed.returnFocus)?.focus();
+  }, [editing]);
   const readOnly = data.sprint.state === 'closed';
   const setStage = (next: RetroStage) =>
     void navigate({ search: (prev) => ({ ...prev, stage: next }) });
@@ -248,9 +265,13 @@ function RetroView({
               {stageHeading(stage, data.number)}
             </h1>
             {stage === 'facts' && !readOnly && (
-              // Where the mark on a row leads, said once.
+              // Where the mark on a row leads, and its icon, said once: the
+              // rows carry the icon alone (#241).
+              // copy-lint-ignore long-sentence -- 語は 40 字のまま。アイコンの要素を字数に数えている（Issue #241）
               <p className="text-help text-ink-muted [word-break:auto-phrase]">
-                気になった記録に「振り返りに使う」を付けると、「振り返る」で材料として並びます。
+                気になった記録に
+                <Icon icon={Pin} className="mx-0.5 inline align-[-0.2em]" />
+                「振り返りに使う」を付けると、「振り返る」で材料として並びます。
               </p>
             )}
           </div>
@@ -261,7 +282,15 @@ function RetroView({
               onPin={actions.togglePin}
               onAssess={actions.assessGoal}
               onAddActual={(target, title, anchor) =>
-                setEditing({ target, title, anchor })
+                setEditing({
+                  target,
+                  title,
+                  anchor,
+                  returnFocus:
+                    anchor.parentElement?.querySelector<HTMLElement>(
+                      '[aria-pressed]',
+                    ) ?? null,
+                })
               }
             />
           )}
@@ -334,7 +363,9 @@ function RetroView({
           description={`${formatDate(editing.target.date)} に記録します。`}
           open
           onOpenChange={(open) => {
-            if (!open) setEditing(undefined);
+            if (open) return;
+            closedEditing.current = editing;
+            setEditing(undefined);
           }}
           anchor={editing.anchor}
           onSubmit={(hours) =>
