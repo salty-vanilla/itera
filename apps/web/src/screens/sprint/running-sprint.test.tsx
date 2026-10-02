@@ -145,7 +145,7 @@ describe('Sprint — running (#51)', () => {
     await renderAt('/sprint?fixture=today-interrupt');
     const line = document.querySelector('[data-slot="criterion-line"]');
     expect(line?.textContent).toBe(
-      '計画のルール「研究：提案の多めで計画」 · 対象なし',
+      '計画のルール「研究：見積もりなしは提案の多めの値で計画」 · 対象なし',
     );
     expect(
       screen.queryByText('確定したときに、このルールで計画しました。'),
