@@ -259,6 +259,25 @@ describe('Sprint — running (#51)', () => {
     ).toBeTruthy();
   });
 
+  it('takes 0 available hours, and says how to fix what is not a number (#252)', async () => {
+    await renderAt('/sprint?fixture=today-interrupt');
+    const hours = getHours(screen, /^使える時間/);
+    await userEvent.clear(hours);
+    await userEvent.type(hours, 'abc');
+    await userEvent.tab();
+    await userEvent.tab();
+    expect(screen.getByText('時間と分を数字で入れてください')).toBeTruthy();
+    expect(running().availableHours).toBe(17);
+    // Unlike an Estimate, 0 is a time the week can have.
+    await userEvent.clear(hours);
+    await userEvent.type(hours, '0');
+    await userEvent.tab();
+    await userEvent.tab();
+    expect(screen.queryByText('時間と分を数字で入れてください')).toBeNull();
+    expect(running().availableHours).toBe(0);
+    expect(hours.value).toBe('0');
+  });
+
   it('clears the available hours and says so beside the planned hours', async () => {
     await renderAt('/sprint?fixture=today-interrupt');
     const hours = getHours(screen, /^使える時間/);

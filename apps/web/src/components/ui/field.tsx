@@ -86,7 +86,7 @@ type FieldProps = {
   label: ReactNode;
   /** Adds 「必須」 or 「任意」 after the label. */
   necessity?: Necessity | undefined;
-  /** Support text above the control: units or an example (「時間で入力（例：1.5）」). */
+  /** Support text above the control: a unit or an example (「1〜31 の数字（例：15）」). */
   description?: ReactNode | undefined;
   /**
    * Error message below the control. Setting it marks the field invalid

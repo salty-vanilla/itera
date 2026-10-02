@@ -162,7 +162,7 @@ function DurationField({
           aria-label="時間"
           enterKeyHint="next"
           suffix="時間"
-          className="w-[6.5rem] shrink-0 medium:w-[5.5rem]"
+          className="w-[7.5rem] shrink-0 medium:w-[6.5rem]"
           value={value.hours}
           onChange={(e) => onChange({ ...value, hours: e.currentTarget.value })}
           onKeyDown={enter('hours')}
