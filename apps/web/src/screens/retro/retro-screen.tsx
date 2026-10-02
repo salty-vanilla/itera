@@ -1,6 +1,7 @@
 import type { Sprint, SprintId } from '@itera/domain';
 import { useNavigate, useRouter, useSearch } from '@tanstack/react-router';
-import { Rewind, Route } from 'lucide-react';
+import { Pin, Rewind, Route } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tag } from '@/components/ui/tag';
@@ -248,9 +249,12 @@ function RetroView({
               {stageHeading(stage, data.number)}
             </h1>
             {stage === 'facts' && !readOnly && (
-              // Where the mark on a row leads, said once.
+              // Where the mark on a row leads, and its icon, said once: the
+              // rows carry the icon alone (#241).
               <p className="text-help text-ink-muted [word-break:auto-phrase]">
-                気になった記録に「振り返りに使う」を付けると、「振り返る」で材料として並びます。
+                気になった記録に
+                <Icon icon={Pin} className="mx-0.5 inline align-[-0.2em]" />
+                「振り返りに使う」を付けると、「振り返る」で材料として並びます。
               </p>
             )}
           </div>

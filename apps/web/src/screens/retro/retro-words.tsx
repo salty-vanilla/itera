@@ -14,7 +14,7 @@ import {
   Pin,
   type LucideIcon,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { Tag } from '@/components/ui/tag';
 
 // Words and small parts shared by the Retro panes. Facts are written
@@ -84,7 +84,8 @@ export const samePin = (a: RetroPin, b: RetroPin) =>
 
 /**
  * 振り返りに使う: marks a fact so that it gathers in 振り返りの材料. Optional;
- * the Retro moves on without any.
+ * the Retro moves on without any. An icon toggle, as it is on every row: the
+ * words are said once, in the guide above the facts (#241), and are its name.
  */
 export function PinToggle({
   pinned,
@@ -97,20 +98,16 @@ export function PinToggle({
   onToggle: () => void;
 }) {
   return (
-    <Button
+    <IconButton
       size="sm"
-      variant="quiet"
       // On, it inverts like any toggle (DESIGN.md Selected), with a check in
       // place of the pin: a marked fact stands out among the many unmarked
       // ones, and not by color alone (#167).
       pressed={pinned}
-      aria-label={`振り返りに使う：${subject}`}
+      label={`振り返りに使う：${subject}`}
+      icon={pinned ? <Check /> : <Pin />}
       onClick={onToggle}
-      {...(!pinned && { className: 'text-ink-muted' })}
-    >
-      {pinned ? <Check aria-hidden /> : <Pin aria-hidden />}
-      振り返りに使う
-    </Button>
+    />
   );
 }
 

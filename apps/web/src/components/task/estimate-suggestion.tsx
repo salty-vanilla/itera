@@ -100,10 +100,10 @@ function EstimateSuggestion({
             {formatRange(suggestion.lo, suggestion.hi)}
           </span>
         </span>
+        {/* No 「提案」 after it: the card's heading says it (#241). */}
         <span className="text-meta text-ink-muted">
           {BOUND_WORDS.mid} {formatHours(mid)}
         </span>
-        <span className="text-meta text-ink-muted">提案</span>
       </p>
       {/* Free text with times in it: broken between phrases, so that
           「1〜2時間」 is not broken inside (#239). */}

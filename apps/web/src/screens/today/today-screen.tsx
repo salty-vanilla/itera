@@ -15,7 +15,6 @@ import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/toast';
 import { AreaSelect, chosenArea } from '@/components/task/area-select';
-import { Estimate } from '@/components/task/estimate';
 import { TaskMetadata } from '@/components/task/task-metadata';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
 import { TaskRow } from '@/components/task/task-row';
@@ -38,7 +37,7 @@ import { ActualTime, type ActualTimeMode } from './actual-time';
 import { InterruptRow } from './interrupt-row';
 import { InterruptSheet } from './interrupt-sheet';
 import { OtherDay } from './other-day';
-import { ItemMetadata, TodayRow } from './today-row';
+import { ItemMetadata, PlannedValue, TodayRow } from './today-row';
 import { WeekRow } from './week-row';
 
 // Today (docs/design/patterns.md Today, PRD §5 C). The light screen used
@@ -143,14 +142,12 @@ function BeforeStart({ data }: { data: TodayData }) {
                   title={item.task.title}
                   metadata={
                     <TaskMetadata>
+                      <PlannedValue value={item.value} at="metadata" />
                       <ItemMetadata item={item} occurrenceDate />
                     </TaskMetadata>
                   }
-                  estimate={
-                    item.value.base === 'none' ? undefined : (
-                      <Estimate value={item.value} planned />
-                    )
-                  }
+                  estimate={<PlannedValue value={item.value} at="end" />}
+                  estimateFromMedium
                 />
               </li>
             ))}

@@ -13,10 +13,10 @@ describe('criterionName', () => {
         { scope: { kind: 'area', areaId: id('a') }, rangePolicy: 'hi' },
         '研究',
       ),
-    ).toBe('研究：見積もりがないときは提案の多めの値で計画する');
+    ).toBe('研究：提案の多めで計画');
     expect(
       criterionName({ scope: { kind: 'all' }, rangePolicy: 'mid' }, undefined),
-    ).toBe('見積もりがないときは提案のふつうの値で計画する');
+    ).toBe('提案のふつうで計画');
   });
 });
 
@@ -30,7 +30,7 @@ describe('criterionEffectText', () => {
       '見積もりがない研究のタスクは、提案の少なめの値で計画します',
     );
     expect(criterionEffectText(policy, '研究', 2)).toBe(
-      '研究のタスク 2件を、提案の少なめの値で計画します',
+      '見積もりがない研究のタスク 2件を、提案の少なめの値で計画します',
     );
   });
 });

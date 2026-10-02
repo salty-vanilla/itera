@@ -66,6 +66,37 @@ const sprintById = (id: string) => {
   return s;
 };
 const reviewed = () => sprintById('sprint-2026-09-28');
+
+/**
+ * Leaves a Task's actual time out of the records, so that its row offers
+ * かかった時間を記録 (only rows without actual time do, #241).
+ */
+const withoutActualOf =
+  (title: string) =>
+  (snapshot: StoreSnapshot): StoreSnapshot => {
+    const task = snapshot.records.tasks.find((t) => t.title === title)!;
+    return {
+      ...snapshot,
+      records: {
+        ...snapshot.records,
+        sprints: snapshot.records.sprints.map((s) => {
+          const st = s.tasks.find((t) => t.taskId === task.id);
+          return st === undefined
+            ? s
+            : {
+                ...s,
+                actualTimes: s.actualTimes.filter(
+                  (a) => a.sprintTaskId !== st.id,
+                ),
+              };
+        }),
+      },
+    };
+  };
+
+/** Opens 詳しく under the line of plan and actual (#241). */
+const openDetails = () =>
+  userEvent.click(screen.getByRole('button', { name: '詳しく' }));
 // The words of the reason sit in spans (kept whole on a line), so match the
 // whole <p>.
 const reasonText = (text: string) => (_: string, element: Element | null) =>
@@ -121,6 +152,7 @@ describe('Retro — 事実を見る', () => {
       '計画 17時間15分〜20時間15分',
       '（ほかに見積もりなし 1件）',
       '→ 実績 17時間45分',
+      '（入力済み 8件）',
     ]);
     // The criterion this Sprint used is one line; its result is in 引き継ぐ
     // (#107).
@@ -129,7 +161,7 @@ describe('Retro — 事実を見る', () => {
         (_, element) =>
           element?.tagName === 'P' &&
           element.textContent ===
-            '今回の計画のルール：「研究：見積もりがないときは提案の多めの値で計画する」（扱いは「引き継ぐ」で決めます）',
+            '今回の計画のルール：「研究：提案の多めで計画」（扱いは「引き継ぐ」で決めます）',
       ),
     ).toBeTruthy();
     expect(screen.queryByText(/タスク 1件のうち/)).toBeNull();
@@ -137,8 +169,10 @@ describe('Retro — 事実を見る', () => {
     const paper = screen.getByRole('rowheader', {
       name: '関連論文を 3本読む',
     }).parentElement!;
-    // The suggestion's range, with what it is under it (#162).
-    expect(paper.textContent).toContain('3〜5時間見積もりの提案');
+    // The suggestion's range alone: a range in the column is a suggestion
+    // (#241). The criterion that planned it is noted under the plan.
+    expect(paper.textContent).toContain('3〜5時間5時間ルール');
+    expect(paper.textContent).not.toContain('見積もりの提案');
     // A range that does not fit its column breaks after 〜 only (#239).
     expect(
       [
@@ -203,7 +237,14 @@ describe('Retro — 事実を見る', () => {
   });
 
   it('adds actual time during Review (F22)', async () => {
+    change = withoutActualOf('住民税の支払い');
     await renderAt('/retro?fixture=retro-start');
+    // Only a row without actual time offers it (#241).
+    expect(
+      screen.queryByRole('button', {
+        name: /かかった時間を記録.*API 設計のレビュー/,
+      }),
+    ).toBeNull();
     await userEvent.click(
       screen.getByRole('button', {
         name: /かかった時間を記録.*住民税の支払い/,
@@ -459,10 +500,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
       lastSnapshot().records.criteria.find((c) => c.id === draftId)?.policy
         .rangePolicy,
     ).toBe('mid');
-    expect(
-      screen.getAllByText(/見積もりがないときは提案のふつうの値で計画する/)
-        .length,
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByText(/提案のふつうで計画/).length).toBeGreaterThan(0);
     await userEvent.click(screen.getByRole('radio', { name: '置き換える' }));
     await userEvent.click(completeButton());
     await userEvent.click(
@@ -538,9 +576,12 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     await renderAt('/retro?fixture=retro-before-complete&stage=handoff');
     const choices = () =>
       within(criterionSection()).getByRole('radiogroup').textContent ?? '';
+    // The effect is in the cards (the result above, the new one's
+    // preview); a choice says only where it is decided (#241).
     expect(choices()).toContain(
-      '次の計画でも、見積もりがない研究のタスクは、提案の多めの値で計画します。使うかどうかは「確かめる」で選べます。',
+      '続けるこのルールで計画するかは「確かめる」で選べます。',
     );
+    expect(choices()).not.toContain('提案の多めの値');
     expect(choices()).toContain('次の計画では、このルールを使いません。');
     await userEvent.click(
       screen.getByRole('switch', { name: /計画のルールにもする/ }),
@@ -560,14 +601,14 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     expect(
       lastSnapshot().records.criteria.find((c) => c.id === draftId)?.policy,
     ).toEqual({ scope: { kind: 'all' }, rangePolicy: 'mid' });
+    expect(screen.getByText('提案のふつうで計画')).toBeTruthy();
     expect(
-      screen.getByText('見積もりがないときは提案のふつうの値で計画する'),
-    ).toBeTruthy();
-    expect(
-      screen.getByText(/タスク \d+件を、提案のふつうの値で計画します/),
+      screen.getByText(
+        /見積もりがないタスク \d+件を、提案のふつうの値で計画します/,
+      ),
     ).toBeTruthy();
     expect(choices()).toContain(
-      '次の計画では代わりに、見積もりがないタスクは、提案のふつうの値で計画します。使うかどうかは「確かめる」で選べます。',
+      '置き換えるこのルールで計画するかは「確かめる」で選べます。',
     );
   });
 
@@ -741,7 +782,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
         (_, element) =>
           element?.tagName === 'P' &&
           element.textContent ===
-            '今回の計画のルール：「研究：見積もりがないときは提案の多めの値で計画する」（結果と扱いは「引き継ぐ」にあります）',
+            '今回の計画のルール：「研究：提案の多めで計画」（結果と扱いは「引き継ぐ」にあります）',
       ),
     ).toBeTruthy();
     // The closed reflection keeps the new name, as text (#109).
@@ -980,6 +1021,7 @@ describe('Retro — compact (#57)', () => {
           removeEventListener: () => {},
         }) as unknown as MediaQueryList,
     );
+    change = withoutActualOf('関連論文を 3本読む');
     try {
       await renderAt('/retro?fixture=retro-start');
       expect(document.querySelector('table')).toBeNull();
@@ -992,7 +1034,7 @@ describe('Retro — compact (#57)', () => {
         .getAllByRole('listitem')
         .find((li) => li.textContent?.startsWith('関連論文を 3本読む'));
       expect(paper?.textContent).toContain(
-        '見積もりの提案 3〜5時間 · 計画 5時間（ルール） · 実績 4時間30分',
+        '見積もりの提案 3〜5時間 · 計画 5時間（ルール） · 実績 未入力',
       );
       expect(paper?.textContent).toContain('持ち越し · 見送り 2回 · 中断 1回');
       expect(
@@ -1181,6 +1223,7 @@ describe('Retro — 事実を見るを読みやすくする (#108)', () => {
   });
 
   it('opens かかった時間を記録 by the same words on its face', async () => {
+    change = withoutActualOf('住民税の支払い');
     await renderAt('/retro?fixture=retro-start');
     await userEvent.click(
       screen.getByRole('button', {
@@ -1226,13 +1269,22 @@ describe('Retro — the plan against what happened (#167)', () => {
     )!;
     const total = within(summary).getByText('計画の合計').parentElement!;
     expect(total.textContent).toContain('使える時間 17時間');
-    // As confirmed, and with the mid-Sprint addition, against 17時間.
+    // Under 詳しく, closed at first (#241).
+    expect(lineOf('確定したときの計画')).toBeUndefined();
+    await openDetails();
+    // As confirmed, and with the mid-Sprint addition, against 17時間. The
+    // second total is the one in the line above: not said again (#241).
     expect(lineOf('確定したときの計画')?.textContent).toBe(
       '確定したときの計画 15時間15分〜17時間15分：少なく済めば 1時間45分残る · 多くかかれば 15分超える',
     );
     expect(lineOf('週の途中の追加を含めて')?.textContent).toBe(
-      '週の途中の追加を含めて 17時間15分〜20時間15分：少なく済んでも 15分超える · 多くかかれば 3時間15分超える',
+      '週の途中の追加を含めて：少なく済んでも 15分超える · 多くかかれば 3時間15分超える',
     );
+    expect(
+      screen
+        .getByRole('button', { name: '折りたたむ' })
+        .getAttribute('aria-expanded'),
+    ).toBe('true');
     // Facts of the week, not an alarm (PRD §12).
     expect(pane().querySelector('.text-danger')).toBeNull();
   });
@@ -1242,7 +1294,11 @@ describe('Retro — the plan against what happened (#167)', () => {
       tasks.filter((t) => t.origin !== 'midSprint'),
     );
     await renderAt('/retro?fixture=retro-start');
-    expect(lineOf('確定したときの計画')).toBeTruthy();
+    await openDetails();
+    // The total is the line's above, so it is not said again (#241).
+    expect(lineOf('確定したときの計画')?.textContent).toMatch(
+      /^確定したときの計画：/,
+    );
     expect(lineOf('週の途中の追加を含めて')).toBeUndefined();
   });
 
@@ -1253,6 +1309,7 @@ describe('Retro — the plan against what happened (#167)', () => {
       ),
     );
     await renderAt('/retro?fixture=retro-start');
+    await openDetails();
     expect(lineOf('確定したときの計画')).toBeTruthy();
     expect(
       screen
@@ -1268,20 +1325,17 @@ describe('Retro — the plan against what happened (#167)', () => {
         .map((t, i) => (i === 0 ? { ...t, outcome: 'removed' as const } : t)),
     );
     await renderAt('/retro?fixture=retro-start');
+    await openDetails();
     expect(lineOf('外したタスクを除いて')).toBeTruthy();
   });
 
   it('sums the interrupts and says the actual time leaves them out', async () => {
     await renderAt('/retro?fixture=retro-start');
+    await openDetails();
     // 45分 and 20分.
-    expect(
-      screen.getByText(
-        (_, element) =>
-          element?.tagName === 'P' &&
-          element.textContent ===
-            '割り込み 2件 · 合計 1時間5分（実績には含みません）',
-      ),
-    ).toBeTruthy();
+    expect(lineOf('割り込み')?.textContent).toBe(
+      '割り込み 2件 · 合計 1時間5分（実績には含みません）',
+    );
   });
 
   it('puts each Task’s difference from its planning value under its actual time', async () => {
@@ -1290,37 +1344,24 @@ describe('Retro — the plan against what happened (#167)', () => {
     expect(rowOf('関連論文を 3本読む').textContent).toContain(
       '計画より 30分少ない',
     );
-    // 4時間30分 against 3〜5時間.
-    expect(rowOf('新メンバーのオンボーディング資料').textContent).toContain(
-      '計画の幅の中',
+    // Only a difference is noted (#241): 4時間30分 within 3〜5時間, and 2時間
+    // against 2時間, say nothing.
+    for (const title of [
+      '新メンバーのオンボーディング資料',
+      'API 設計のレビュー',
+    ]) {
+      expect(rowOf(title).textContent).not.toMatch(
+        /計画と同じ|幅の中|計画より/,
+      );
+    }
+    // A suggestion is its range alone in the 見積もり column.
+    expect(rowOf('新メンバーのオンボーディング資料').textContent).not.toContain(
+      '見積もりの提案',
     );
-    expect(rowOf('API 設計のレビュー').textContent).toContain('計画と同じ');
   });
 
   it('has no difference on a row without actual time', async () => {
-    // The actual time of 「API 設計のレビュー」 left out of the records.
-    change = (snapshot) => {
-      const task = snapshot.records.tasks.find(
-        (t) => t.title === 'API 設計のレビュー',
-      )!;
-      return {
-        ...snapshot,
-        records: {
-          ...snapshot.records,
-          sprints: snapshot.records.sprints.map((s) => {
-            const st = s.tasks.find((t) => t.taskId === task.id);
-            return st === undefined
-              ? s
-              : {
-                  ...s,
-                  actualTimes: s.actualTimes.filter(
-                    (a) => a.sprintTaskId !== st.id,
-                  ),
-                };
-          }),
-        },
-      };
-    };
+    change = withoutActualOf('API 設計のレビュー');
     await renderAt('/retro?fixture=retro-start');
     const row = rowOf('API 設計のレビュー');
     expect(row.textContent).toContain('未入力');
@@ -1374,12 +1415,38 @@ describe('Retro — the plan against what happened (#167)', () => {
 
 describe('Retro — actual time per occurrence (#56)', () => {
   it('adds to one occurrence, on the day it was done, and shows it on its row', async () => {
+    // 9/28's 30分 left out: only an occurrence without actual time offers
+    // かかった時間を記録 (#241).
+    change = (snapshot) => {
+      const occurrence = snapshot.records.occurrences.find(
+        (o) => o.taskId === 'task-reading' && o.scheduledDate === '2026-09-28',
+      )!;
+      return {
+        ...snapshot,
+        records: {
+          ...snapshot.records,
+          sprints: snapshot.records.sprints.map((s) => ({
+            ...s,
+            actualTimes: s.actualTimes.filter(
+              (a) => a.occurrenceId !== occurrence.id,
+            ),
+          })),
+        },
+      };
+    };
     await renderAt('/retro?fixture=retro-start');
-    const list = screen.getByRole('region', { name: '繰り返し' });
-    const row = within(list)
-      .getAllByRole('listitem')
-      .find((li) => li.textContent?.startsWith('9/28 (月) 英語の多読 30分'))!;
-    expect(row.textContent).toContain('実績 30分');
+    const occurrenceRow = (start: string) =>
+      within(screen.getByRole('region', { name: '繰り返し' }))
+        .getAllByRole('listitem')
+        .find((li) => li.textContent?.startsWith(start))!;
+    const row = occurrenceRow('9/28 (月) 英語の多読 30分');
+    expect(row.textContent).not.toContain('実績');
+    // 9/30 has its actual time, so nothing to add there.
+    expect(
+      within(occurrenceRow('9/30 (水) 英語の多読 30分')).queryByRole('button', {
+        name: /かかった時間を記録/,
+      }),
+    ).toBeNull();
     await userEvent.click(
       within(row).getByRole('button', { name: /かかった時間を記録/ }),
     );
@@ -1394,8 +1461,8 @@ describe('Retro — actual time per occurrence (#56)', () => {
     expect(
       screen.getByRole('rowheader', { name: '英語の多読 30分' }).parentElement
         ?.textContent,
-    ).toContain('1時間15分');
-    expect(document.body.textContent).toContain('実績 18時間');
+    ).toContain('45分');
+    expect(document.body.textContent).toContain('実績 17時間30分');
     const occurrence = lastSnapshot().records.occurrences.find(
       (o) => o.taskId === 'task-reading' && o.scheduledDate === '2026-09-28',
     );
@@ -1405,12 +1472,9 @@ describe('Retro — actual time per occurrence (#56)', () => {
       hours: 0.25,
       via: 'later',
     });
-    expect(
-      within(screen.getByRole('region', { name: '繰り返し' }))
-        .getAllByRole('listitem')
-        .find((li) => li.textContent?.startsWith('9/28 (月) 英語の多読 30分'))
-        ?.textContent,
-    ).toContain('実績 45分');
+    expect(occurrenceRow('9/28 (月) 英語の多読 30分').textContent).toContain(
+      '実績 15分',
+    );
   });
 
   it('adds to a skipped occurrence on its own day', async () => {

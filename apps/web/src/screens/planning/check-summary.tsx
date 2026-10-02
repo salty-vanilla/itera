@@ -13,7 +13,7 @@ import {
   criterionMoveText,
   criterionName,
 } from '@/lib/criterion-text';
-import { formatHours, formatRange } from '@/lib/time-format';
+import { formatRange } from '@/lib/time-format';
 import type { PlanningData } from '@/store/planning-view';
 import { planSummary } from './plan-summary';
 
@@ -22,7 +22,8 @@ import { planSummary } from './plan-summary';
 // whether the plan fits. In order: whether it fits with the planned total
 // and the Tasks, the available hours (the one field for them in 確かめる),
 // what may push the total over, the Tasks left out of the total (each opens
-// its Estimate, or its detail for subtasks), the Areas without a Goal
+// its Estimate, or its detail for subtasks; the one place in 確かめる that
+// says them, #241), the Areas without a Goal
 // (written in 整える), and the planning criterion with its Switch and effect
 // (#105), when a chosen Task is one it acts on (#161). The Area blocks under
 // it are for reading.
@@ -79,12 +80,6 @@ function CheckSummary({
             )}
           </dd>
         </dl>
-        {/* Under the numbers, as in the Capacity: the first screen tells it. */}
-        {summary.leftOut !== undefined && (
-          <p className="text-body text-ink [text-wrap:pretty] [word-break:auto-phrase]">
-            {summary.leftOut}
-          </p>
-        )}
         {/* The one field for the hours in 確かめる; the right pane has none. */}
         <div className="max-w-pane-side">
           <AvailableHoursField
@@ -179,8 +174,8 @@ function CheckSummary({
 }
 
 /**
- * The criterion's effect, from the same policy as its name (invariant 39):
- * 「研究のタスク 1件を、提案の多めの値で計画しています。少なく済んだときの合計
+ * The criterion's effect, from the same policy as its name (invariant 39),
+ * with the condition the name leaves out (#241): 「見積もりがない研究のタスク 1件を、提案の多めの値で計画しています。少なく済んだときの合計
  * が 2時間増えます。」; when both ends move, one sentence: 「…が 1時間増え、…が
  * 1時間減ります。」 (#234).
  */
@@ -197,15 +192,19 @@ function CriterionEffect({
   return (
     <p className="text-body text-ink [text-wrap:pretty] [word-break:auto-phrase]">
       {criterion.applied
-        ? `${scope}タスク ${count}件を、${bound}で計画しています。${move}`
+        ? `見積もりがない${scope}タスク ${count}件を、${bound}で計画しています。${move}`
         : '見積もりの提案の幅のまま合計します。'}
     </p>
   );
 }
 
-/** 「何が上振れすると超過するか」 (PRD §5 B Check, MVP 完了条件 5). */
+/**
+ * 「何が上振れすると超過するか」 (PRD §5 B Check, MVP 完了条件 5): the Tasks
+ * planned with a range. A Task the criterion planned at one value is left
+ * to the criterion's card, which says what it did (#241).
+ */
 function Drivers({ data }: { data: PlanningData }) {
-  const { drivers } = data;
+  const drivers = data.drivers.filter((d) => d.fromRange === undefined);
   const headingId = useId();
   if (drivers.length === 0) return null;
   return (
@@ -216,27 +215,12 @@ function Drivers({ data }: { data: PlanningData }) {
       <ul className="flex flex-col gap-1 text-body text-ink">
         {drivers.map((d) => (
           <li key={d.sprintTask.id}>
-            {d.fromRange !== undefined ? (
-              <>
-                {`計画のルールで「${d.task.title}」を `}
-                {/* A time is never broken inside (#239). */}
-                <span className="whitespace-nowrap">
-                  {formatHours(d.value.lo)}
-                </span>
-                で計算しています
-                <span className="whitespace-nowrap">
-                  {`（見積もりの提案 ${formatRange(d.fromRange.lo, d.fromRange.hi)}）。`}
-                </span>
-              </>
-            ) : (
-              <>
-                {`「${d.task.title}」は `}
-                <span className="whitespace-nowrap">
-                  {formatRange(d.value.lo, d.value.hi)}
-                </span>
-                の幅があります。
-              </>
-            )}
+            {`「${d.task.title}」は `}
+            {/* A time is never broken inside (#239). */}
+            <span className="whitespace-nowrap">
+              {formatRange(d.value.lo, d.value.hi)}
+            </span>
+            の幅があります。
           </li>
         ))}
       </ul>

@@ -96,21 +96,22 @@ export function plannedLabel(t: TaskFact): string {
 
 /**
  * 確定したときとの差 of a Task in words (#167): 「計画より 30分少ない」, and against
- * a range 「計画の幅より 1時間多い」「計画の幅より 30分少ない」「計画の幅の中」 (#234). Nothing
- * without actual time or an estimated value. Only the difference: no color
- * and no judgement (invariant 40).
+ * a range 「計画の幅より 1時間多い」「計画の幅より 30分少ない」 (#234). Nothing
+ * without actual time or an estimated value, and nothing when there is no
+ * difference: only the exception is noted (#241). Only the difference: no
+ * color and no judgement (invariant 40).
  */
 export function differenceText(t: TaskFact): string | undefined {
   const d = t.actualVsPlan;
   if (d === undefined) return undefined;
   const hours = (h: number) => formatHours(Math.abs(h));
   if (d.lo === d.hi) {
-    if (d.lo === 0) return '計画と同じ';
+    if (d.lo === 0) return undefined;
     return `計画より ${hours(d.lo)}${d.lo > 0 ? '多い' : '少ない'}`;
   }
   if (d.lo > 0) return `計画の幅より ${hours(d.lo)}多い`;
   if (d.hi < 0) return `計画の幅より ${hours(d.hi)}少ない`;
-  return '計画の幅の中';
+  return undefined;
 }
 
 /** 「実績 4時間30分」, or 「実績 未入力」 while none is entered. */

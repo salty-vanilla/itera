@@ -33,6 +33,12 @@ type EstimateProps = {
    */
   subtasksNamed?: boolean;
   /**
+   * A subtask sum without its count of subtasks left out, where the screen
+   * says them once elsewhere (確かめる's 「見積もりなし」, #241) or not at all
+   * (Today's rows, where the title needs the room).
+   */
+  withoutMissing?: boolean;
+  /**
    * For an unset value on a row: the words are a button, named
    * 「見積もりを入れる: タスク名」, that opens the Task at its Estimate.
    */
@@ -45,6 +51,7 @@ function Estimate({
   planned = false,
   inline = false,
   subtasksNamed = false,
+  withoutMissing = false,
   enter,
   className,
 }: EstimateProps) {
@@ -82,11 +89,15 @@ function Estimate({
   }
   // A subtask sum with subtasks left out: the count goes on a line of its
   // own under the value, so that a row keeps room for its title (#105).
-  const missing = value.base === 'subtasks' ? value.unestimatedSubtasks : 0;
+  const missing =
+    value.base === 'subtasks' && !withoutMissing
+      ? value.unestimatedSubtasks
+      : 0;
   const stack = missing > 0 && !inline;
-  const text = stack
-    ? formatRange(value.lo, value.hi)
-    : formatPlanningValue(value, { subtasksNamed });
+  const text =
+    stack || withoutMissing
+      ? formatRange(value.lo, value.hi)
+      : formatPlanningValue(value, { subtasksNamed });
   const stacked = stack && 'flex-col items-end gap-0';
   // Two lines under 768px, so that the note does not take the title's
   // room (#162).

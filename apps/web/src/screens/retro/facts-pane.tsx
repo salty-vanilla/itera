@@ -1,6 +1,6 @@
 import type { AreaId, RetroPin, SelfAssessment, TaskFact } from '@itera/domain';
-import { Info, Timer } from 'lucide-react';
-import { useId, useRef, type ReactNode } from 'react';
+import { ChevronDown, ChevronRight, Info, Timer } from 'lucide-react';
+import { useId, useRef, useState, type ReactNode } from 'react';
 import { semanticIcons } from '@/components/ui/icon';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { Button } from '@/components/ui/button';
@@ -128,6 +128,72 @@ function FactsPane({
     .filter(Boolean)
     .join('。');
 
+  // Under 詳しく (#241): both totals against the hours entered when
+  // planning (owner decision in #167), words only, no danger, as facts of
+  // the week; the second only when the plan changed. A total said in the
+  // line above is not said again. Then the interrupts, which are not actual
+  // time of a Task, so 実績 above leaves their minutes out (#167).
+  const capacityLines =
+    facts.capacity === undefined
+      ? []
+      : [
+          {
+            lead: '確定したときの計画',
+            total: changedLead === undefined ? undefined : atConfirm,
+            capacity: facts.capacity.atConfirm,
+          },
+          ...(changedLead === undefined
+            ? []
+            : [
+                {
+                  lead: changedLead,
+                  total: undefined,
+                  capacity: facts.capacity.withAdditions,
+                },
+              ]),
+        ];
+  const details = [
+    ...capacityLines.map((line) => (
+      <li key={line.lead}>
+        <span className="text-ink-muted">
+          {/* Whole words, breaking only after 「、」 (the longest lead is
+              wider than 375px). */}
+          {line.lead.split('、').map((part, i, parts) => (
+            <span key={part} className="whitespace-nowrap">
+              {part}
+              {i < parts.length - 1 && '、'}
+            </span>
+          ))}
+          {line.total === undefined ? (
+            '：'
+          ) : (
+            <>
+              {' '}
+              <span className="whitespace-nowrap">
+                {formatPlanningSum(line.total)}：
+              </span>
+            </>
+          )}
+        </span>
+        <Sentences items={capacityRelationSentences(line.capacity)} />
+      </li>
+    )),
+    ...(facts.interrupts.length > 0
+      ? [
+          <li key="interrupts">
+            割り込み {facts.interrupts.length}件
+            {interruptMinutes > 0 &&
+              ` · 合計 ${formatHours(interruptMinutes / 60)}`}
+            {interruptNote !== '' && (
+              <span className="text-ink-muted">（{interruptNote}）</span>
+            )}
+          </li>,
+        ]
+      : []),
+  ];
+  const detailsId = useId();
+  const [detailsOpen, setDetailsOpen] = useState(false);
+
   // 持ち越し N件 in the summary moves to the rows, one press at a time from
   // the first, and round again after the last.
   const paneRef = useRef<HTMLDivElement>(null);
@@ -223,61 +289,36 @@ function FactsPane({
             <span className="whitespace-nowrap">
               → 実績 {formatHours(facts.actualHours)}
             </span>
-            <span className="text-ink-muted">
-              （入力済み {entered}件。実績は入力したものだけを数えています）
+            <span className="whitespace-nowrap text-ink-muted">
+              （入力済み {entered}件）
             </span>
           </p>
-          {facts.capacity !== undefined && (
-            // Both totals against the hours entered when planning, side by
-            // side (owner decision in #167): words only, no danger, as facts
-            // of the week. The second only when the plan changed.
-            <ul className="flex flex-col gap-1">
-              {[
-                {
-                  lead: '確定したときの計画',
-                  total: facts.plannedTotal.atConfirm,
-                  capacity: facts.capacity.atConfirm,
-                },
-                ...(changedLead === undefined
-                  ? []
-                  : [
-                      {
-                        lead: changedLead,
-                        total: facts.plannedTotal.withAdditions,
-                        capacity: facts.capacity.withAdditions,
-                      },
-                    ]),
-              ].map((line) => (
-                <li key={line.lead}>
-                  <span className="text-ink-muted">
-                    {/* Whole words, breaking only after 「、」 (the longest
-                        lead is wider than 375px). */}
-                    {line.lead.split('、').map((part, i, parts) => (
-                      <span key={part} className="whitespace-nowrap">
-                        {part}
-                        {i < parts.length - 1 && '、'}
-                      </span>
-                    ))}{' '}
-                    <span className="whitespace-nowrap">
-                      {formatPlanningSum(line.total)}：
-                    </span>
-                  </span>
-                  <Sentences items={capacityRelationSentences(line.capacity)} />
-                </li>
-              ))}
-            </ul>
-          )}
-          {/* Interrupts are not actual time of a Task, so 実績 above
-              leaves their minutes out (#167). */}
-          {facts.interrupts.length > 0 && (
-            <p>
-              割り込み {facts.interrupts.length}件
-              {interruptMinutes > 0 &&
-                ` · 合計 ${formatHours(interruptMinutes / 60)}`}
-              {interruptNote !== '' && (
-                <span className="text-ink-muted">（{interruptNote}）</span>
-              )}
-            </p>
+          {details.length > 0 && (
+            // The rest under 詳しく, closed at first: one line of plan and
+            // actual is the answer (#241).
+            <>
+              <Button
+                variant="quiet"
+                className="-ms-3 self-start"
+                aria-expanded={detailsOpen}
+                aria-controls={detailsId}
+                onClick={() => setDetailsOpen(!detailsOpen)}
+              >
+                {detailsOpen ? (
+                  <ChevronDown aria-hidden />
+                ) : (
+                  <ChevronRight aria-hidden />
+                )}
+                {detailsOpen ? '折りたたむ' : '詳しく'}
+              </Button>
+              <ul
+                id={detailsId}
+                hidden={!detailsOpen}
+                className="flex flex-col gap-1"
+              >
+                {details}
+              </ul>
+            </>
           )}
         </div>
       </section>
@@ -370,8 +411,9 @@ function FactsPane({
                     action={
                       <span className="flex flex-wrap justify-end gap-1">
                         {toggle({ kind: 'occurrence', id: o.id }, subject)}
-                        {/* Per occurrence (#56): the time goes to its day. */}
-                        {onAddActual !== undefined && (
+                        {/* Per occurrence (#56): the time goes to its day.
+                            Only where none is entered (#241). */}
+                        {onAddActual !== undefined && actualHours === 0 && (
                           <AddActualButton
                             subject={subject}
                             onClick={(anchor) =>
@@ -702,21 +744,16 @@ function TaskTable({
                 )}
               </th>
               <td className={num}>
-                {/* A suggestion is its range, with what it is under it, so
-                    that the column keeps its numbers aligned (#162). */}
+                {/* A suggestion is its range alone: an Estimate is one
+                    value, so a range in the column is a suggestion (#241). */}
                 {t.plan?.estimateHours === undefined &&
                 t.plan?.suggestion !== undefined ? (
-                  <>
-                    <RangeCell
-                      text={formatRange(
-                        t.plan.suggestion.lo,
-                        t.plan.suggestion.hi,
-                      )}
-                    />
-                    <span className="block text-meta text-ink-muted">
-                      見積もりの提案
-                    </span>
-                  </>
+                  <RangeCell
+                    text={formatRange(
+                      t.plan.suggestion.lo,
+                      t.plan.suggestion.hi,
+                    )}
+                  />
                 ) : (
                   estimateOf(t).text
                 )}
@@ -853,7 +890,10 @@ function TaskList({
   );
 }
 
-/** 振り返りに使う, and かかった時間を記録 for a non-recurring Task (F22). */
+/**
+ * 振り返りに使う, and かかった時間を記録 for a non-recurring Task without
+ * actual time (F22, #241).
+ */
 function TaskActions({
   fact,
   actualDate,
@@ -869,8 +909,9 @@ function TaskActions({
   return (
     <>
       {toggle({ kind: 'sprintTask', id: fact.sprintTaskId }, fact.title)}
-      {/* A recurring Task's time goes to one occurrence (繰り返しの回). */}
-      {!fact.recurring && (
+      {/* A recurring Task's time goes to one occurrence (繰り返しの回). Only
+          where none is entered: the row's exception (#241). */}
+      {!fact.recurring && fact.actualHours === 0 && (
         <AddActualButton
           subject={fact.title}
           onClick={(anchor) =>
