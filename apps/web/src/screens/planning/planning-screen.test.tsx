@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { StoreSnapshot } from '@/store/record-store';
+import { findHours, getHours, getMinutes } from '@/test/duration';
 
 afterEach(cleanup);
 beforeEach(() => {
@@ -646,9 +647,7 @@ describe('Planning — the 時間の見通し sheet (#166)', () => {
     );
     const sheet = await screen.findByRole('dialog');
     expect(within(sheet).getAllByText('時間の見通し')).toHaveLength(1);
-    expect(
-      within(sheet).getByRole('textbox', { name: /^使える時間/ }),
-    ).toBeTruthy();
+    expect(getHours(within(sheet), /^使える時間/)).toBeTruthy();
   });
 });
 
@@ -664,12 +663,10 @@ describe('Planning — 確かめる', () => {
     const line = () =>
       screen.getByRole('button', { name: /時間の見通しを開く/ });
     // Right under the total, without 「（時間）」 after the name (#165).
-    const hours = within(outlook).getByRole('textbox', {
-      name: /^使える時間/,
-    });
+    const hours = getHours(within(outlook), /^使える時間/);
     const setHours = async (value: string) => {
       await userEvent.clear(hours);
-      await userEvent.type(hours, `${value}{Enter}`);
+      await userEvent.type(hours, `${value}{Enter}{Enter}`);
     };
 
     // May exceed: 15時間15分〜17時間15分 against 17時間. No negative value.
@@ -758,11 +755,9 @@ describe('Planning — 確かめる', () => {
       screen.getByRole('button', { name: /時間の見通しを開く/ }).textContent,
     ).toBe('時間の見通しを開く');
 
-    const hours = within(summary()).getByRole('textbox', {
-      name: /^使える時間/,
-    });
+    const hours = getHours(within(summary()), /^使える時間/);
     await userEvent.clear(hours);
-    await userEvent.type(hours, '14{Enter}');
+    await userEvent.type(hours, '14{Enter}{Enter}');
     // The state, then the headline with its numbers in `num-l` (#243).
     const state = summary().querySelector('[data-slot="capacity-statement"]')!;
     expect(state.textContent).toBe('超える。');
@@ -829,11 +824,7 @@ describe('Planning — 確かめる', () => {
       'サブタスク 1件は見積もりなし',
     );
 
-    const hours = (
-      within(summary()).getByRole('textbox', {
-        name: /使える時間/,
-      }) as HTMLInputElement
-    ).value;
+    const hours = getHours(within(summary()), /使える時間/).value;
     expect(hours).toBe('17');
     await userEvent.click(
       screen.getByRole('button', { name: 'Sprint 2 を確定' }),
@@ -851,20 +842,21 @@ describe('Planning — 確かめる', () => {
 
   it('takes the available hours in the summary, keeping the focus there', async () => {
     await renderAt('/sprint?fixture=planning-check&stage=check');
-    const field = within(summary()).getByRole('textbox', {
-      name: /使える時間/,
-    });
+    const field = getHours(within(summary()), /使える時間/);
     await userEvent.clear(field);
-    await userEvent.keyboard('{Enter}');
+    await userEvent.keyboard('{Enter}{Enter}');
     expect(draft().availableHours).toBeUndefined();
     expect(
       within(summary()).getByText(
         '使える時間を入力すると、計画との差を表示します。',
       ),
     ).toBeTruthy();
-    await userEvent.type(field, '18{Enter}');
+    await userEvent.type(field, '18{Enter}{Enter}');
     expect(draft().availableHours).toBe(18);
-    expect(document.activeElement).toBe(field);
+    // Enter in 時間 goes to 分, where the second Enter saves (#252).
+    expect(document.activeElement).toBe(
+      getMinutes(within(summary()), /使える時間/),
+    );
   });
 
   it('keeps the Area blocks for reading, with 整える to write a Goal', async () => {
@@ -903,9 +895,7 @@ describe('Planning — 確かめる', () => {
         name: '見積もる：発表資料を見直す',
       }),
     );
-    const estimate = await screen.findByRole('textbox', {
-      name: /^見積もり(?!（時間）)/,
-    });
+    const estimate = await findHours(screen, /^見積もり(?!：)/);
     await waitFor(() => expect(document.activeElement).toBe(estimate));
   });
 
@@ -1032,11 +1022,9 @@ describe('Planning — review fixes', () => {
     expect(line()?.dataset.over).toBe('mayExceed');
     expect(line()?.className).toContain('border-warning');
     expect(line()?.className).not.toContain('danger');
-    const hours = within(summary()).getByRole('textbox', {
-      name: /使える時間/,
-    });
+    const hours = getHours(within(summary()), /使える時間/);
     await userEvent.clear(hours);
-    await userEvent.type(hours, '14{Enter}');
+    await userEvent.type(hours, '14{Enter}{Enter}');
     expect(line()?.dataset.over).toBe('exceeds');
     expect(line()?.className).toContain('border-danger');
   });
@@ -1158,8 +1146,8 @@ describe('Planning — review fixes', () => {
     expect(line.textContent).toBe(
       '時間の見通し少なく済めば 1時間45分残る · 多くかかれば 15分超える',
     );
-    const estimate = within(detail).getByRole('textbox', { name: /見積もり/ });
-    await userEvent.type(estimate, '1{Enter}');
+    const estimate = getHours(within(detail), /^見積もり(?!：)/);
+    await userEvent.type(estimate, '1{Enter}{Enter}');
     // No range left in the total: one sentence (#234).
     expect(line.textContent).toBe('時間の見通し3時間45分残る');
   });
@@ -1249,9 +1237,7 @@ describe('Planning — keys (#48)', () => {
     expect(draft().tasks.some((t) => t.taskId === 'task-interview')).toBe(true);
     await userEvent.keyboard('e');
     // The Task's own, not a subtask's (「Estimate（時間）: …」).
-    const estimate = await screen.findByRole('textbox', {
-      name: /^見積もり(?!（時間）)/,
-    });
+    const estimate = await findHours(screen, /^見積もり(?!：)/);
     await waitFor(() => expect(document.activeElement).toBe(estimate));
   });
 
@@ -1308,9 +1294,7 @@ describe('Planning — the Task detail (#95)', () => {
       '/sprint?fixture=planning-check&stage=check&task=task-onboarding',
     );
     const detail = await screen.findByRole('dialog');
-    const estimate = within(detail).getByRole('textbox', {
-      name: /^見積もり(?!（時間）)/,
-    });
+    const estimate = getHours(within(detail), /^見積もり(?!：)/);
     await userEvent.clear(estimate);
     await userEvent.type(estimate, 'x');
     await userEvent.keyboard('{Escape}');
@@ -1331,9 +1315,7 @@ describe('Planning — the Task detail (#95)', () => {
       '/sprint?fixture=planning-pick&stage=pick&task=task-bookshelf',
     );
     const detail = await screen.findByRole('dialog');
-    const estimate = within(detail).getByRole('textbox', {
-      name: /^見積もり(?!（時間）)/,
-    });
+    const estimate = getHours(within(detail), /^見積もり(?!：)/);
     await userEvent.type(estimate, 'x');
     const other =
       within(backlogPane()).getByText('新メンバーのオンボーディング資料');
@@ -1356,8 +1338,7 @@ describe('Planning — the Task detail (#95)', () => {
 });
 
 describe('Planning — 見積もりを入れる (#96)', () => {
-  const ownEstimate = () =>
-    screen.findByRole('textbox', { name: /^見積もり(?!（時間）)/ });
+  const ownEstimate = () => findHours(screen, /^見積もり(?!：)/);
 
   async function addUnestimated() {
     await renderAt('/sprint?fixture=planning-pick&stage=pick');
