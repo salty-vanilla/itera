@@ -203,6 +203,18 @@ describe('Today — the order for a phone (#100)', () => {
     expect(lead!.textContent).toBe(end!.textContent);
   });
 
+  it('says 「計画」 only beside an actual time (#250)', async () => {
+    await renderAt('/today?fixture=today-daytime');
+    const shown = (title: string) =>
+      within(region('今日やる'))
+        .getByText(title)
+        .closest('[data-slot="task-row"]')!
+        .querySelector('[data-slot="estimate"] > [aria-hidden]')!.textContent;
+    // Started: the value alone. Done with 「実績 2時間」: labeled.
+    expect(shown('実験データの前処理')).toBe('2時間30分');
+    expect(shown('API 設計のレビュー')).toBe('計画 2時間');
+  });
+
   it('puts the week’s Goals for a phone after 今週の残り', async () => {
     await renderAt('/today?fixture=today-morning');
     const goals = screen.getAllByRole('region', { name: '今週の目標' });

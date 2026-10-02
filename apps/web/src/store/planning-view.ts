@@ -51,8 +51,9 @@ export interface PlannedTask {
   /** Recurring: the occurrences included this week. */
   readonly occurrenceCount?: number;
   /**
-   * The suggestion the value comes from, when it does (「見積もりの提案 3〜5時間 / 今回は 5時間
-   * で計画」): one occurrence's range for a recurring Task.
+   * The suggestion the value comes from, when it does (the row says
+   * 「5時間（提案の多めの値）」, #250): one occurrence's range for a recurring
+   * Task.
    */
   readonly suggestion?: { readonly lo: number; readonly hi: number };
   /** The goalLink the Task will have once confirmed (`goalLinkAtConfirm`). */

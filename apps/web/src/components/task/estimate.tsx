@@ -10,8 +10,11 @@ import { cn } from '@/lib/utils';
 // and read differently:
 // - user (the default): 「3時間」, solid, no label. A subtask sum is also the
 //   person's values: 「2時間30分」 with 「サブタスク 1件は見積もりなし」 under it.
-// - suggestion: 「見積もりの提案 2〜4時間」 in a dashed `rounded.xs` box.
-// - planned: 「計画 5時間」, this Sprint's planning value.
+// - suggestion: 「提案 2〜4時間」 in a dashed `rounded.xs` box (#250).
+// - planned: 「5時間」, this Sprint's planning value. 「計画 5時間」 only where
+//   another time shares the row (`labeled`), as 実績 does (#250).
+// Every variant is `meta` in `ink`, not bold, so that a list read down its
+// right edge is not a column of bold values (#250).
 // - unset: 「見積もりなし」, never 0時間.
 // - unset with `enter`: the same words as a button that opens the Task's
 //   detail at its Estimate, as E does (Planning rows, #96).
@@ -22,6 +25,11 @@ type EstimateProps = {
   value: PlanningValue;
   /** This Sprint's planning value rather than the Task's own time. */
   planned?: boolean;
+  /**
+   * A planned value says 「計画」 before it: only on a row where another time
+   * (「実績 2時間」) would otherwise read as the same kind (#250).
+   */
+  labeled?: boolean;
   /**
    * On one line, as in a label: a subtask sum keeps its count in brackets
    * instead of stacking it under the value as a row does.
@@ -49,6 +57,7 @@ type EstimateProps = {
 function Estimate({
   value,
   planned = false,
+  labeled = false,
   inline = false,
   subtasksNamed = false,
   withoutMissing = false,
@@ -56,7 +65,7 @@ function Estimate({
   className,
 }: EstimateProps) {
   const base =
-    'inline-flex shrink-0 items-center gap-1 text-num-s whitespace-nowrap';
+    'inline-flex shrink-0 items-center gap-1 text-meta whitespace-nowrap';
   if (value.base === 'none') {
     if (enter !== undefined) {
       return (
@@ -117,7 +126,7 @@ function Estimate({
         data-variant="planned"
         className={cn(base, stacked, 'text-ink', className)}
       >
-        <span aria-hidden>計画 {text}</span>
+        <span aria-hidden>{labeled ? `計画 ${text}` : text}</span>
         {missingNote}
         <span className="sr-only">
           計画の時間 {spoken}
@@ -137,7 +146,7 @@ function Estimate({
           className,
         )}
       >
-        <span aria-hidden>見積もりの提案 {text}</span>
+        <span aria-hidden>提案 {text}</span>
         <span className="sr-only">見積もりの提案（未確定）：{spoken}</span>
       </span>
     );

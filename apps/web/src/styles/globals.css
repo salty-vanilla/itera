@@ -264,10 +264,16 @@
    * overflow-wrap: anywhere. `anywhere` also lets tables and flex items shrink
    * to one character wide, so the page default is break-word (same wrapping,
    * no effect on minimum widths) and paragraphs add the wrap-anywhere utility.
+   * Text breaks between phrases, not inside a word or a value (「表 / 示します」
+   * 「対象者の選定 / 1〜2時間」), and a paragraph does not leave one character
+   * on its last line (「含まれていませ / ん。」). Both are where the browser
+   * supports them (#250).
    */
   body {
     line-break: strict;
     overflow-wrap: break-word;
+    word-break: auto-phrase;
+    text-wrap: pretty;
   }
 
   /*

@@ -748,7 +748,12 @@ function TaskDetail({
                             なし
                           </span>
                         ) : (
-                          <Estimate value={facts.taskValue} inline />
+                          // Outside a row: `num-s`, as 「なし」 (#250).
+                          <Estimate
+                            value={facts.taskValue}
+                            inline
+                            className="text-num-s"
+                          />
                         )}
                       </span>
                     }
@@ -762,6 +767,7 @@ function TaskDetail({
                           value={facts.subtaskValue}
                           inline
                           subtasksNamed
+                          className="text-num-s"
                         />
                       </span>
                     }

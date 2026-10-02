@@ -102,15 +102,32 @@ export function plannedLabel(t: TaskFact): string {
  * color and no judgement (invariant 40).
  */
 export function differenceText(t: TaskFact): string | undefined {
+  const d = differenceParts(t);
+  return d === undefined ? undefined : `${d.against} ${d.amount}`;
+}
+
+/**
+ * The same difference in its two parts, 「計画より」 and 「30分少ない」, for
+ * a narrow column that breaks only between them (#250).
+ */
+export function differenceParts(
+  t: TaskFact,
+): { against: string; amount: string } | undefined {
   const d = t.actualVsPlan;
   if (d === undefined) return undefined;
   const hours = (h: number) => formatHours(Math.abs(h));
   if (d.lo === d.hi) {
     if (d.lo === 0) return undefined;
-    return `計画より ${hours(d.lo)}${d.lo > 0 ? '多い' : '少ない'}`;
+    return {
+      against: '計画より',
+      amount: `${hours(d.lo)}${d.lo > 0 ? '多い' : '少ない'}`,
+    };
   }
-  if (d.lo > 0) return `計画の幅より ${hours(d.lo)}多い`;
-  if (d.hi < 0) return `計画の幅より ${hours(d.hi)}少ない`;
+  if (d.lo > 0)
+    return { against: '計画の幅より', amount: `${hours(d.lo)}多い` };
+  if (d.hi < 0) {
+    return { against: '計画の幅より', amount: `${hours(d.hi)}少ない` };
+  }
   return undefined;
 }
 
