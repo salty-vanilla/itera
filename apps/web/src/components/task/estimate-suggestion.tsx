@@ -163,10 +163,11 @@ function EstimateSuggestion({
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           {/* The three values in one row, as one control that shares its
               frame: one strong part rather than three, which never breaks
-              apart at any width (#234, #242). The values alone are shown,
-              after 「使う：」; 少なめ / ふつう / 多め are said by the range
-              above and read out with each button. */}
-          <div className="flex items-center gap-2">
+              apart at any width (#234, #242); where they do not fit after
+              「使う：」, the label goes on the line above. The values alone
+              are shown; each button reads out its word (少なめ / ふつう /
+              多め) with its value. */}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span id={valuesLabelId} className="text-body text-ink">
               使う：
             </span>

@@ -1369,6 +1369,27 @@ describe('Backlog — before the Sprint starts (#59)', () => {
     expect(screen.queryByText('保存できませんでした')).toBeNull();
   });
 
+  it('makes 今週へ the one Secondary while 今日へ waits for the start (#242)', async () => {
+    await confirmedOnSunday();
+    await userEvent.click(
+      within(list()).getByRole('button', { name: '顧客インタビューの設計' }),
+    );
+    const detail = await screen.findByRole('dialog', {
+      name: '顧客インタビューの設計',
+    });
+    const looks = within(
+      within(detail).getByRole('region', { name: '今日と今週' }),
+    )
+      .getAllByRole('button')
+      .map(
+        (b) =>
+          `${b.textContent}:${b.className.includes('border-border-strong') ? 'secondary' : 'quiet'}`,
+      );
+    expect(looks[0]).toBe('今週へ:secondary');
+    expect(looks).toContain('今日へ:quiet');
+    expect(looks.slice(1).every((l) => l.endsWith(':quiet'))).toBe(true);
+  });
+
   it('offers 今週へ before the Sprint starts: no day is chosen (#155)', async () => {
     await confirmedOnSunday();
     await userEvent.click(

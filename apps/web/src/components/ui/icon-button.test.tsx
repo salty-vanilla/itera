@@ -25,6 +25,22 @@ describe('IconButton', () => {
     );
     const button = screen.getByRole('button', { name: '詳細パネルを表示' });
     expect(button.getAttribute('aria-pressed')).toBe('true');
+    expect(button.className).toContain('bg-primary');
+  });
+
+  it('shows a pressed toggle as chosen, not inverted, with pressedLook="selection" (#242)', () => {
+    render(
+      <IconButton
+        label="振り返りに使う"
+        icon={<X aria-hidden />}
+        pressed
+        pressedLook="selection"
+      />,
+    );
+    const button = screen.getByRole('button', { name: '振り返りに使う' });
+    expect(button.getAttribute('aria-pressed')).toBe('true');
+    expect(button.className).toContain('bg-here-subtle');
+    expect(button.className).not.toContain('bg-primary');
   });
 });
 
