@@ -10,7 +10,7 @@ import {
   Sentences,
 } from '@/components/sprint/capacity-indicator';
 import { SprintSummary } from '@/components/sprint/sprint-summary';
-import { criterionName } from '@/lib/criterion-text';
+import { criterionQuotedName } from '@/lib/criterion-text';
 import { formatDate, formatDateTime } from '@/lib/date-format';
 import { SELECTION_WORDS } from '@/lib/selection-words';
 import {
@@ -338,7 +338,7 @@ function FactsPane({
             className="mt-1 size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
           />
           <span>
-            {`今回の計画のルール：「${criterionName(used.criterion.policy, used.areaName)}」`}
+            {`今回の計画のルール：${criterionQuotedName(used.criterion.policy, used.areaName)}`}
             <span className="text-ink-muted">
               {readOnly
                 ? '（結果と扱いは「引き継ぐ」にあります）'

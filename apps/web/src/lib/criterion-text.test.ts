@@ -1,9 +1,10 @@
 import { id, type CriterionPolicy } from '@itera/domain';
 import { describe, expect, it } from 'vitest';
 import {
-  criterionEffectText,
   criterionMoveText,
   criterionName,
+  criterionQuotedName,
+  criterionTargetText,
 } from './criterion-text';
 
 describe('criterionName', () => {
@@ -13,24 +14,35 @@ describe('criterionName', () => {
         { scope: { kind: 'area', areaId: id('a') }, rangePolicy: 'hi' },
         '研究',
       ),
-    ).toBe('研究：提案の多めで計画');
+    ).toBe('研究：見積もりなしは提案の多めの値で計画');
+  });
+
+  it('heads every Area with 「すべての領域：」, never 「領域なし」', () => {
+    expect(
+      criterionName({ scope: { kind: 'all' }, rangePolicy: 'lo' }, undefined),
+    ).toBe('すべての領域：見積もりなしは提案の少なめの値で計画');
     expect(
       criterionName({ scope: { kind: 'all' }, rangePolicy: 'mid' }, undefined),
-    ).toBe('提案のふつうで計画');
+    ).toBe('すべての領域：見積もりなしは提案のふつうの値で計画');
+  });
+
+  it('is put in 「」 inside a sentence, and never has 「多め」 alone', () => {
+    const policy: CriterionPolicy = {
+      scope: { kind: 'area', areaId: id('a') },
+      rangePolicy: 'hi',
+    };
+    expect(criterionQuotedName(policy, '研究')).toBe(
+      '「研究：見積もりなしは提案の多めの値で計画」',
+    );
+    expect(criterionName(policy, '研究')).not.toMatch(/多めで/);
   });
 });
 
-describe('criterionEffectText', () => {
-  it('says how it plans, with or without a count', () => {
-    const policy: CriterionPolicy = {
-      scope: { kind: 'area', areaId: id('a') },
-      rangePolicy: 'lo',
-    };
-    expect(criterionEffectText(policy, '研究')).toBe(
-      '見積もりがない研究のタスクは、提案の少なめの値で計画します',
-    );
-    expect(criterionEffectText(policy, '研究', 2)).toBe(
-      '見積もりがない研究のタスク 2件を、提案の少なめの値で計画します',
+describe('criterionTargetText', () => {
+  it('says only how many Tasks it acts on', () => {
+    expect(criterionTargetText(1)).toBe('対象は 1件です。');
+    expect(criterionTargetText(2, '今の Backlog で')).toBe(
+      '対象は 2件です（今の Backlog で）。',
     );
   });
 });

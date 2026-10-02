@@ -10,9 +10,9 @@ import {
   Headline,
 } from '@/components/sprint/capacity-indicator';
 import {
-  criterionBoundText,
   criterionMoveText,
   criterionName,
+  criterionTargetText,
 } from '@/lib/criterion-text';
 import { formatRange } from '@/lib/time-format';
 import type { PlanningData } from '@/store/planning-view';
@@ -192,9 +192,9 @@ function CheckSummary({
 }
 
 /**
- * The criterion's effect, from the same policy as its name (invariant 39),
- * with the condition the name leaves out (#241): 「見積もりがない研究のタスク 1件を、提案の多めの値で計画しています。少なく済んだときの合計
- * が 2時間増えます。」; when both ends move, one sentence: 「…が 1時間増え、…が
+ * The criterion's effect. The name already says the condition and the value
+ * (#254), so the first sentence is only the count: 「対象は 1件です。少なく済んだときの合計が
+ * 2時間増えます。」; when both ends move, one sentence: 「…が 1時間増え、…が
  * 1時間減ります。」 (#234).
  */
 function CriterionEffect({
@@ -203,14 +203,11 @@ function CriterionEffect({
   criterion: NonNullable<PlanningData['criterion']>;
 }) {
   const { count, delta } = criterion.effect;
-  const bound = criterionBoundText(criterion.active.policy.rangePolicy);
-  const scope =
-    criterion.areaName === undefined ? '' : `${criterion.areaName}の`;
   const move = criterionMoveText(delta);
   return (
     <p className="text-body text-ink [text-wrap:pretty] [word-break:auto-phrase]">
       {criterion.applied
-        ? `見積もりがない${scope}タスク ${count}件を、${bound}で計画しています。${move}`
+        ? `${criterionTargetText(count)}${move}`
         : '見積もりの提案の幅のまま合計します。'}
     </p>
   );
