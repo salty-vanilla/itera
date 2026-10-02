@@ -3,8 +3,9 @@ import { cn } from '@/lib/utils';
 
 // DESIGN.md Components › Sprint Summary. The top of Retro's 事実を見る: the
 // Sprint's result as a quiet table. An `ink` rule on top and a `border`
-// rule below, items (label `meta`, value `num-l`, unit, note) split by
-// `border-soft` rules. Never statistic Cards, scores or rankings.
+// rule below, items (label `meta`, value, unit, note) split by `border-soft`
+// rules. Only the answer's values are `num-l` (完了 and 持ち越し); the others
+// are `num-m`, a step down (#243). Never statistic Cards, scores or rankings.
 
 type SprintSummaryItem = {
   label: string;
@@ -26,6 +27,8 @@ type SprintSummaryItem = {
    * as a range of hours (「17時間15分〜20時間15分」, #239).
    */
   fullRow?: boolean;
+  /** `num-m` instead of `num-l`: not the answer of the screen (#243). */
+  quiet?: boolean;
 };
 
 type SprintSummaryProps = {
@@ -82,7 +85,14 @@ function SprintSummary({ items, className }: SprintSummaryProps) {
 function Value({ item }: { item: SprintSummaryItem }) {
   return (
     <>
-      <span className="text-num-l whitespace-nowrap">{item.value}</span>
+      <span
+        className={cn(
+          'whitespace-nowrap',
+          item.quiet === true ? 'text-num-m' : 'text-num-l',
+        )}
+      >
+        {item.value}
+      </span>
       {item.unit !== undefined && (
         <span className="text-meta">{item.unit}</span>
       )}

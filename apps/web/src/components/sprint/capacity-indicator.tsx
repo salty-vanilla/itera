@@ -191,8 +191,8 @@ function Sentences({ items }: { items: readonly string[] }) {
 }
 
 /**
- * The state where no headline is shown (the 確かめる summary, the 確定
- * Dialog): the statement, and while the plan may or does go over, the
+ * The state where no headline is shown (the 確定 Dialog; 確かめる shows the
+ * headline since #243): the statement, and while the plan may or does go over, the
  * headline's sentences after it, each number said once: 「超える可能性：少なく
  * 済めば 1時間45分残る · 多くかかれば 15分超える」 (#93); when even the lower
  * end is over, the two sentences alone: 「少なく済んでも 3時間超える · 多くかかれ
@@ -379,6 +379,10 @@ function CapacityIndicator({
   );
 }
 
+/**
+ * The headline: one sentence per line, the numbers in `num-l`. The top of
+ * the Capacity, and of the 確かめる summary (#243).
+ */
 function Headline({
   headline,
   over,
@@ -551,5 +555,11 @@ function CapacityBar({
   );
 }
 
-export { AvailableHoursField, CapacityIndicator, CapacityStatement, Sentences };
+export {
+  AvailableHoursField,
+  CapacityIndicator,
+  CapacityStatement,
+  Headline,
+  Sentences,
+};
 export type { AreaSegment, CapacityIndicatorProps };

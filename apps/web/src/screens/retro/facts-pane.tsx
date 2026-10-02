@@ -242,6 +242,7 @@ function FactsPane({
               label: '繰り返し',
               value: facts.occurrences.all.length,
               unit: '回',
+              quiet: true,
               // Breaks only at 「 · 」, as 計画の合計's note does.
               note: (
                 <Sentences
@@ -257,11 +258,13 @@ function FactsPane({
               label: '週の途中の追加',
               value: facts.midSprint.length,
               unit: '件',
+              quiet: true,
             },
             {
               label: '計画の合計',
               value: formatRange(total.lo, total.hi),
               fullRow: true,
+              quiet: true,
               note: (
                 <Sentences
                   items={[

@@ -5,6 +5,10 @@ import { cn } from '@/lib/utils';
 // beside it (「7 / 18件」): the numbers are always shown and the fill never
 // changes color by stage. Do not use it to score how far a Goal was achieved.
 //
+// `large`: the numbers in `num-l` under the label, where they are the answer
+// of the screen (the running Sprint, #243). Today keeps them `num-s`: there
+// the row in progress is the answer.
+//
 // Indeterminate progress (value null) shows words instead of numbers and the
 // line pulses in opacity (docs/design/foundations.md does not allow sliding
 // it). Under prefers-reduced-motion the line is hidden and the words carry the
@@ -21,6 +25,8 @@ type ProgressProps = {
   indeterminateText?: string;
   /** 2px instead of 4px, for inside a row. */
   thin?: boolean;
+  /** The numbers in `num-l`, under the label. */
+  large?: boolean;
   className?: string;
 };
 
@@ -31,6 +37,7 @@ function Progress({
   unit = '',
   indeterminateText = '読み込み中…',
   thin = false,
+  large = false,
   className,
 }: ProgressProps) {
   const text = value === null ? indeterminateText : `${value} / ${max}${unit}`;
@@ -46,7 +53,12 @@ function Progress({
       aria-valuetext={spoken}
       className={cn('flex flex-col gap-1', className)}
     >
-      <div className="flex items-baseline justify-between gap-3">
+      <div
+        className={cn(
+          'flex',
+          large ? 'flex-col' : 'items-baseline justify-between gap-3',
+        )}
+      >
         <ProgressPrimitive.Label className="text-label text-ink-muted">
           {label}
         </ProgressPrimitive.Label>
@@ -54,8 +66,12 @@ function Progress({
         <span
           aria-hidden
           className={cn(
-            'text-right',
-            value === null ? 'text-meta text-ink-muted' : 'text-num-s text-ink',
+            !large && 'text-right',
+            value === null
+              ? 'text-meta text-ink-muted'
+              : large
+                ? 'text-num-l text-ink'
+                : 'text-num-s text-ink',
           )}
         >
           {text}

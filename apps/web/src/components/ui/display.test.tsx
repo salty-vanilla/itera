@@ -86,6 +86,13 @@ describe('Progress', () => {
     expect(bar.textContent).toContain('7 / 18件');
   });
 
+  it('puts the numbers in num-l under the label when large (#243)', () => {
+    render(<Progress label="完了" value={7} max={18} unit="件" large />);
+    const bar = screen.getByRole('progressbar', { name: '完了' });
+    expect(screen.getByText('7 / 18件').className).toContain('text-num-l');
+    expect(bar.getAttribute('aria-valuetext')).toBe('18件中 7件');
+  });
+
   it('uses words while indeterminate', () => {
     render(<Progress label="完了" value={null} max={18} />);
     const bar = screen.getByRole('progressbar', { name: '完了' });

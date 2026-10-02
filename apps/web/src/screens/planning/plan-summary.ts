@@ -21,7 +21,8 @@ import type {
 export interface PlanSummary {
   /**
    * Whether the plan fits: ok / tight / over / unknown, with the numbers
-   * while it may or does go over (`capacityStatusLine`).
+   * while it may or does go over (`capacityStatusLine`). The 確定 Dialog's
+   * line; 確かめる shows the state and the headline apart (#243).
    */
   readonly statement: CapacityState;
   /** 「14時間45分〜17時間45分」, or 「見積もりなし 3件」 with nothing estimated. */

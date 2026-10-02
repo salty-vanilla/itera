@@ -528,12 +528,13 @@ describe('Planning — 計画のルールの見せ方 (#105)', () => {
       await renderAt(`/sprint?fixture=planning-check&stage=${stage}`);
       const line = outlook().querySelector('[data-slot="criterion-line"]');
       expect(line?.textContent).toBe('研究：提案の多めで計画');
-      // It sits under the previous improvement.
-      expect(
-        within(outlook())
-          .getByRole('region', { name: '前回、次に試すと決めたこと' })
-          .contains(line),
-      ).toBe(true);
+      // It sits under the previous improvement, which is in the body's
+      // weight, not vying with the answer of the stage (#243).
+      const improvement = within(outlook()).getByRole('region', {
+        name: '前回、次に試すと決めたこと',
+      });
+      expect(improvement.contains(line)).toBe(true);
+      expect(improvement.querySelector('p')?.className).toContain('text-body');
       expect(within(outlook()).queryByRole('switch')).toBeNull();
       expect(
         within(outlook()).queryByRole('region', { name: '計画のルール' }),
@@ -762,15 +763,22 @@ describe('Planning — 確かめる', () => {
     });
     await userEvent.clear(hours);
     await userEvent.type(hours, '14{Enter}');
+    // The state, then the headline with its numbers in `num-l` (#243).
     const state = summary().querySelector('[data-slot="capacity-statement"]')!;
-    expect(state.textContent).toBe(
-      '少なく済んでも 1時間15分超える · 多くかかれば 3時間15分超える',
-    );
+    expect(state.textContent).toBe('超える');
     // Read out from the summary, the one live region in 確かめる.
     expect(within(summary()).getByRole('status').textContent).toBe(
-      '少なく済んでも 1時間15分超える · 多くかかれば 3時間15分超える',
+      '超える少なく済んでも1時間15分超える。多くかかれば3時間15分超える。',
     );
     expect(state.className).toContain('text-danger');
+    const numbers = [...summary().querySelectorAll('.text-num-l')];
+    expect(numbers.map((n) => n.textContent)).toEqual([
+      '1時間15分',
+      '3時間15分',
+    ]);
+    expect(numbers.every((n) => n.className.includes('text-danger'))).toBe(
+      true,
+    );
     // 「計画値が下限どおりでも、超過 1時間15分です。」 would say it again.
     expect(summary().textContent?.match(/1時間15分/g)).toHaveLength(1);
   });
@@ -792,22 +800,14 @@ describe('Planning — 確かめる', () => {
       計画の合計: '15時間15分〜17時間15分',
       タスク: expect.stringMatching(/^7件/),
     });
-    // Without a headline, the state line carries the two sentences, once.
+    // The summary: the state, then the headline in `num-l`, as at the top
+    // of the Capacity (#243). The Dialog keeps the one line.
     const stateOf = (root: HTMLElement) =>
       root.querySelector('[data-slot="capacity-statement"]')!;
-    expect(stateOf(summary()).textContent).toBe(
-      '超える可能性：少なく済めば 1時間45分残る · 多くかかれば 15分超える',
-    );
-    // It breaks between the sentences, never inside one.
+    expect(stateOf(summary()).textContent).toBe('超える可能性');
     expect(
-      [...stateOf(summary()).querySelectorAll('.whitespace-nowrap')].map(
-        (e) => e.textContent,
-      ),
-    ).toEqual([
-      '超える可能性：',
-      '少なく済めば 1時間45分残る ·',
-      '多くかかれば 15分超える',
-    ]);
+      [...summary().querySelectorAll('.text-num-l')].map((n) => n.textContent),
+    ).toEqual(['1時間45分', '15分']);
     expect(summary().textContent?.match(/1時間45分/g)).toHaveLength(1);
     // What is left out of the total is said once, in 「見積もりなし」 with
     // 見積もる (#241): not under the numbers, the Area's heading or the row.

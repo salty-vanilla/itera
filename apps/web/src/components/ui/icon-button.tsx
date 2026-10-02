@@ -137,9 +137,11 @@ function IconButton({
                 size,
                 pressed: pressedLook === 'invert' && (pressed ?? false),
               }),
+              // Hover keeps the here-subtle ground and shows an ink-muted
+              // outline, as a checked Menu item does (#243).
               pressedLook === 'selection' &&
                 pressed === true &&
-                'border-transparent bg-here-subtle text-ink not-data-disabled:hover:bg-here-subtle',
+                'border-transparent bg-here-subtle text-ink not-data-disabled:hover:border-ink-muted not-data-disabled:hover:bg-here-subtle',
               className,
             )}
             {...props}

@@ -11,7 +11,10 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** 完了 / 持ち越し / 繰り返し / 週の途中の追加 / 計画値と使える時間。点数や割合は出さない。 */
+/**
+ * 完了 / 持ち越し / 繰り返し / 週の途中の追加 / 計画値と使える時間。点数や割合は出さない。
+ * 答えの完了・持ち越しだけを num-l にし、ほかは quiet（num-m）にする（Issue #243）。
+ */
 export const Default: Story = {
   args: {
     items: [
@@ -22,13 +25,15 @@ export const Default: Story = {
         value: 4,
         unit: '回',
         note: '完了 3 · スキップ 1 · 未完了 0',
+        quiet: true,
       },
-      { label: '週の途中の追加', value: 1, unit: '件' },
+      { label: '週の途中の追加', value: 1, unit: '件', quiet: true },
       {
         label: '計画の合計',
         value: '17時間15分〜20時間15分',
         fullRow: true,
         note: '使える時間 17時間',
+        quiet: true,
       },
     ],
   },
@@ -47,7 +52,7 @@ export const WithJump: Story = {
         onSelect: () => {},
         selectLabel: '持ち越し 2件の行へ移る',
       },
-      { label: '繰り返し', value: 0, unit: '回' },
+      { label: '繰り返し', value: 0, unit: '回', quiet: true },
     ],
   },
 };

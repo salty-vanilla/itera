@@ -6,7 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import {
   AvailableHoursField,
+  capacityHeadline,
   CapacityStatement,
+  capacityStatement,
+  Headline,
 } from '@/components/sprint/capacity-indicator';
 import {
   criterionBoundText,
@@ -19,7 +22,8 @@ import { planSummary } from './plan-summary';
 
 // The head of 確かめる (Issue #93, owner decision S4): what the 確定 Dialog
 // sums up, from the same `planSummary`, so that the first screen says
-// whether the plan fits. In order: whether it fits with the planned total
+// whether the plan fits. In order: whether it fits (the state and the
+// headline of the Capacity, #243) with the planned total
 // and the Tasks, the available hours (the one field for them in 確かめる),
 // what may push the total over, the Tasks left out of the total (each opens
 // its Estimate, or its detail for subtasks; the one place in 確かめる that
@@ -46,6 +50,7 @@ function CheckSummary({
   onOpenTask,
 }: CheckSummaryProps) {
   const summary = planSummary(data);
+  const { capacity } = data.totals;
   const ids = useId();
   return (
     <section
@@ -58,17 +63,26 @@ function CheckSummary({
           まとめ
         </h2>
         {/* The one place in 確かめる that reads out the state when it
-            changes: the right pane shows no numbers here (#165). */}
-        <div role="status">
+            changes: the right pane shows no numbers here (#165). The
+            answer: the state, then what is left or over at each end in
+            `num-l`, as at the top of the Capacity (#243). */}
+        <div role="status" className="flex flex-col gap-2">
           <CapacityStatement
-            statement={summary.statement}
+            statement={capacityStatement(capacity, data.totals.total)}
             strong
             className="text-subheading"
           />
+          {capacity !== undefined && (
+            <Headline
+              headline={capacityHeadline(capacity)}
+              over={capacity.status === 'exceeds'}
+            />
+          )}
         </div>
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-1 text-body">
           <dt className="text-ink-muted">計画の合計</dt>
-          <dd className="text-num-m text-ink">{summary.total}</dd>
+          {/* In the body's size: the answer is above (#243). */}
+          <dd className="text-ink">{summary.total}</dd>
           <dt className="text-ink-muted">タスク</dt>
           <dd className="text-ink">
             {summary.taskCount}件

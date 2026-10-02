@@ -133,6 +133,11 @@ describe('Retro — 事実を見る', () => {
       const term = within(summary).getByText(label!);
       expect(term.parentElement?.textContent).toContain(value);
     }
+    // Only 完了 and 持ち越し, the answer, in `num-l`; the rest a step down
+    // (#243).
+    expect(
+      [...summary.querySelectorAll('.text-num-l')].map((n) => n.textContent),
+    ).toEqual(['4', '2']);
     // The occurrences split as the table's rows are: the skipped one is not
     // an item apart (#245).
     expect(
@@ -678,13 +683,17 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     expect(screen.getByText(same)).toBeTruthy();
   });
 
-  it('lists the carried-over Tasks by title and where they are decided, first and decides nothing (invariant 20)', async () => {
+  it('lists the carried-over Tasks by title and where they are decided, under the improvement, and decides nothing (invariant 20)', async () => {
     await renderAt('/retro?fixture=retro-start&stage=handoff');
     const words = 'Backlog に 2件';
     const list = carryOverLine();
-    expect(
-      document.querySelector('[data-slot="handoff-pane"]')?.firstElementChild,
-    ).toBe(list);
+    // 次に試すこと first, as the answer of 引き継ぐ; the carry-overs next
+    // (#243).
+    const pane = document.querySelector('[data-slot="handoff-pane"]');
+    expect(pane?.firstElementChild?.getAttribute('aria-labelledby')).toBe(
+      'handoff-improvement',
+    );
+    expect(pane?.firstElementChild?.nextElementSibling).toBe(list);
     expect(within(list as HTMLElement).getByRole('heading').textContent).toBe(
       '持ち越し 2件',
     );
