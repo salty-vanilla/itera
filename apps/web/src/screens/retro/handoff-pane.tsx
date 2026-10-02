@@ -369,7 +369,7 @@ function DraftCriterion({
         </p>
       )}
       <div className="flex flex-wrap gap-4">
-        <Field label="対象">
+        <Field label="領域">
           <Select
             value={scopeValue}
             onChange={(e) => {

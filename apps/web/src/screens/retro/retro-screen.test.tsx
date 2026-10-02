@@ -172,7 +172,7 @@ describe('Retro — 事実を見る', () => {
         (_, element) =>
           element?.tagName === 'P' &&
           element.textContent ===
-            '今回の計画のルール：「研究：見積もりなしは提案の多めの値で計画」（扱いは「引き継ぐ」で決めます）',
+            '今回の計画のルール「研究：見積もりなしは提案の多めの値で計画」（扱いは「引き継ぐ」で決めます）',
       ),
     ).toBeTruthy();
     expect(screen.queryByText(/タスク 1件のうち/)).toBeNull();
@@ -618,7 +618,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
       screen.getByRole('switch', { name: /計画のルールにもする/ }),
     );
     await userEvent.selectOptions(
-      screen.getByRole('combobox', { name: '対象' }),
+      screen.getByRole('combobox', { name: '領域' }),
       '',
     );
     await userEvent.selectOptions(
@@ -650,7 +650,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     );
     // 生活 has no Task planned from a suggestion now.
     await userEvent.selectOptions(
-      screen.getByRole('combobox', { name: '対象' }),
+      screen.getByRole('combobox', { name: '領域' }),
       'area-life',
     );
     expect(
@@ -815,7 +815,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
         (_, element) =>
           element?.tagName === 'P' &&
           element.textContent ===
-            '今回の計画のルール：「研究：見積もりなしは提案の多めの値で計画」（結果と扱いは「引き継ぐ」にあります）',
+            '今回の計画のルール「研究：見積もりなしは提案の多めの値で計画」（結果と扱いは「引き継ぐ」にあります）',
       ),
     ).toBeTruthy();
     // The closed reflection keeps the new name, as text (#109).
@@ -1191,7 +1191,7 @@ describe('Retro — 事実を見るを読みやすくする (#108)', () => {
       }),
     );
     await router.navigate({ to: '/retro', search: { stage: 'facts' } });
-    await screen.findByText(/今回の計画のルール：/);
+    await screen.findByText(/今回の計画のルール「/);
     expect(
       screen.queryByText(/気になった記録に「振り返りに使う」を付けると/),
     ).toBeNull();
@@ -1443,7 +1443,7 @@ describe('Retro — the plan against what happened (#167)', () => {
       }),
     );
     await router.navigate({ to: '/retro', search: { stage: 'facts' } });
-    await screen.findByText(/今回の計画のルール：/);
+    await screen.findByText(/今回の計画のルール「/);
     expect(screen.queryByText(/振り返りに使う \d+件/)).toBeNull();
   });
 });
