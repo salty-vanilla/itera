@@ -13,6 +13,16 @@ describe('Button', () => {
     expect(button.className).toContain('border-border-strong');
   });
 
+  it('is quiet with a light outline and regular words, weaker than secondary', () => {
+    render(<Button variant="quiet">キャンセル</Button>);
+    const button = screen.getByRole('button', { name: 'キャンセル' });
+    // An outline, so that it reads as a button and not a label (#251).
+    expect(button.className).toContain('border-border');
+    expect(button.className).not.toContain('border-transparent');
+    expect(button.className).toContain('text-body');
+    expect(button.className).not.toContain('text-button');
+  });
+
   it('is a plain action without pressed, and an inverted toggle while on', () => {
     const { rerender } = render(
       <Button variant="quiet">振り返りに使う</Button>,

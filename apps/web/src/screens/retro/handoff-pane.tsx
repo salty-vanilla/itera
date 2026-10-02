@@ -239,7 +239,7 @@ function CarryOverList({
       {tasks.length > CARRY_OVER_SHOWN && (
         <Button
           variant="quiet"
-          className="-ms-3 self-start"
+          className="self-start"
           aria-expanded={open}
           aria-controls={listId}
           onClick={() => setOpen(!open)}
