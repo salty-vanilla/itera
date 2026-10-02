@@ -272,7 +272,7 @@ function FactsPane({
             <>
               <Button
                 variant="quiet"
-                className="-ms-3 self-start"
+                className="self-start"
                 aria-expanded={detailsOpen}
                 aria-controls={detailsId}
                 onClick={() => setDetailsOpen(!detailsOpen)}

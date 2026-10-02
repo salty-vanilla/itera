@@ -32,12 +32,15 @@ const buttonVariants = cva(
           'not-data-disabled:hover:border-ink-muted not-data-disabled:hover:bg-surface-hover',
           'not-data-disabled:active:bg-surface-pressed',
         ],
+        // A light outline and no surface, a button and not a label; the
+        // regular weight keeps it weaker than secondary's bold words in
+        // border-strong (#251).
         quiet: [
-          'border-transparent bg-transparent text-ink',
+          'border-border bg-transparent text-body text-ink',
           'not-data-disabled:hover:bg-surface-hover',
           'not-data-disabled:active:bg-surface-pressed',
           // A quiet button has no surface to grey out when disabled.
-          'data-disabled:border-transparent data-disabled:bg-transparent',
+          'data-disabled:bg-transparent',
         ],
         danger: [
           'border-danger bg-surface text-danger',

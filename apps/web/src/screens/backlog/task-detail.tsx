@@ -1037,8 +1037,6 @@ function TaskDetail({
               <div className="flex flex-wrap items-center gap-x-2">
                 <Button
                   variant="quiet"
-                  // The chevron lines up with the fields' left edge.
-                  className="-ms-3"
                   aria-expanded={more}
                   aria-controls={moreId}
                   onClick={() => setMore((m) => !m)}

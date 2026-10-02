@@ -187,7 +187,7 @@ function EstimateSuggestion({
               ))}
             </div>
           </div>
-          <div className="flex flex-wrap gap-x-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               ref={editRef}
               size="sm"
