@@ -251,6 +251,7 @@ function RetroView({
             {stage === 'facts' && !readOnly && (
               // Where the mark on a row leads, and its icon, said once: the
               // rows carry the icon alone (#241).
+              // copy-lint-ignore long-sentence -- 語は 40 字のまま。アイコンの要素を字数に数えている（Issue #241）
               <p className="text-help text-ink-muted [word-break:auto-phrase]">
                 気になった記録に
                 <Icon icon={Pin} className="mx-0.5 inline align-[-0.2em]" />
