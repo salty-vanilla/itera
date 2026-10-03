@@ -5,6 +5,7 @@ import { appOverview } from '@itera/application';
 import { fixtureSnapshot } from '@itera/application/fixtures';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import {
   afterEach,
   beforeAll,
@@ -107,5 +108,79 @@ describe('the API as the data source', () => {
     const router = renderAt('/today?fixture=today-morning');
     await screen.findByText(/^Not on the API yet: \/today/);
     expect(router.state.location.search).toEqual({});
+  });
+});
+
+describe('signing in on the API (#278)', () => {
+  it('asks for the session when the app starts, which extends it', async () => {
+    const requests = serve((path) =>
+      path === '/api/overview'
+        ? Response.json(overview)
+        : path === '/api/auth/get-session'
+          ? Response.json({
+              user: { id: 'user_1', email: 'you@example.com' },
+              session: { id: 'session_1' },
+            })
+          : new Response('404 Not Found', { status: 404 }),
+    );
+    renderAt('/today');
+    await waitFor(() => expect(requests).toContain('/api/auth/get-session'));
+  });
+
+  it('sends the person to sign in when the session has ended', async () => {
+    serve((path) =>
+      path === '/api/auth/get-session'
+        ? Response.json(null)
+        : Response.json(overview),
+    );
+    const router = renderAt('/today');
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/sign-in'),
+    );
+    expect(router.state.location.search).toEqual({ redirect: '/today' });
+  });
+
+  it('starts Google with the screen to come back to and the way back on failure', async () => {
+    const bodies: unknown[] = [];
+    vi.stubGlobal(
+      'fetch',
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request = new Request(input, init);
+        if (new URL(request.url).pathname === '/api/auth/sign-in/social')
+          bodies.push(await request.json());
+        return Response.json(
+          { code: 'INTERNAL', message: 'down' },
+          { status: 500 },
+        );
+      },
+    );
+    renderAt('/sign-in?redirect=%2Fsprint%3Fsprint%3D3');
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Google でサインイン' }),
+    );
+    expect(
+      await screen.findByText('Google でサインインできませんでした'),
+    ).toBeTruthy();
+    expect(bodies).toEqual([
+      {
+        provider: 'google',
+        callbackURL: '/sprint?sprint=3',
+        errorCallbackURL: '/sign-in?redirect=%2Fsprint%3Fsprint%3D3',
+      },
+    ]);
+  });
+
+  it("says why Google's sign-in came back", async () => {
+    serve(() => new Response('404 Not Found', { status: 404 }));
+    renderAt('/sign-in?redirect=%2Ftoday&error=SIGN_UP_NOT_ALLOWED');
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'この Google アカウントでは使えません',
+    );
+    cleanup();
+    renderAt('/sign-in?redirect=%2Ftoday&error=access_denied');
+    expect(
+      await screen.findByText('Google でのサインインを取り消しました'),
+    ).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
