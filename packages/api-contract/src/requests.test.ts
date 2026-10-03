@@ -151,6 +151,73 @@ describe('the surfaces', () => {
 });
 
 describe('the paths and query names', () => {
+  /**
+   * The segments of the paths (#295 決定 4): an action is a verb, after a
+   * resource's ID, and is POSTed; any other segment is a resource's noun.
+   * A new segment goes in one of the lists.
+   */
+  const ACTIONS = new Set([
+    'archive',
+    'restore',
+    'complete',
+    'undo-complete',
+    'adopt',
+    'undo-adopt',
+    'reject',
+    'undo-reject',
+    'confirm',
+    'exclude-occurrences',
+    'start',
+    'pause',
+    'defer',
+    'undo-defer',
+    'remove',
+    'undo-remove',
+    'skip',
+    'undo-skip',
+  ]);
+  const NOUNS = new Set([
+    'me',
+    'areas',
+    'tasks',
+    'recurrence',
+    'subtasks',
+    'estimate-suggestions',
+    'backlog',
+    'days',
+    'sprints',
+    'goals',
+    'sprint-tasks',
+    'included-occurrences',
+    'candidates',
+    'daily-selections',
+    'actual-times',
+    'interrupts',
+    'retro',
+    'pins',
+    'criterion-use',
+    'planning-criteria',
+  ]);
+
+  it('name an action with a verb and a resource with a noun', () => {
+    const routes = [
+      ...Object.values(surfaces).map((s) => [s.method, s.url] as const),
+    ];
+    for (const [method, url] of routes) {
+      const segments = url.split('/').slice(1);
+      segments.forEach((segment, i) => {
+        if (/^\{\w+\}$/.test(segment)) return;
+        if (ACTIONS.has(segment)) {
+          expect(method, url).toBe('POST');
+          expect(i, url).toBe(segments.length - 1);
+          expect(segments[i - 1], url).toMatch(/^\{\w+\}$|^retro$/);
+        } else {
+          expect(NOUNS.has(segment), `${url}: ${segment}`).toBe(true);
+        }
+      });
+    }
+  });
+
   const kebab = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
   it('are kebab-case', () => {

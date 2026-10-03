@@ -90,7 +90,7 @@ iOS・Android ───────────────▶ packages/api-cont
 
 ### 操作の可否
 
-クライアントに状態機械を持たせないため、読み取りの応答に、その記録に今できる操作を返す方向で検討する（例：今日の行ごとに `availableActions: ['completeSelection', 'undoCloseSelection']`）。
+クライアントに状態機械を持たせないため、読み取りの応答に、その記録に今できる操作を返す方向で検討する（例：今日の行ごとに `availableActions: ['completeSelection', 'undoDeferSelection']`）。
 
 - 値は ADR 0006 の operationId にそろえる。引数に対象が要る操作は、対象の ID も返す。
 - 開いた列挙にする（ADR 0006「互換の規則」）。クライアントとその生成した型は、知らない値を受理しなければならず、知らない値で読み込みを失敗させない。知らない操作は出さない。

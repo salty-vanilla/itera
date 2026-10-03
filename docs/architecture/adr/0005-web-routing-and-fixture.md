@@ -77,7 +77,7 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
   - 読み取りの結果は、そのまま API の応答（DTO）にできる形にする。関数を含めない。画面の語（「領域なし」「今週」など）を含めず、画面が語に替える値（`areaId` がない、週が前・今・次のどれか）で返す。ただし契約の正本は OpenAPI で、読み取りの結果が契約を決めるのではない。両者の形が離れたら `services/api` に写像を置く（ADR 0007「アプリケーション層の読み取りと API の DTO」）。
   - 操作は、作った記録の ID と操作の結果の値（`effectiveFrom`・`removed` など）を戻り値で返す。画面が記録の並びや Activity から拾わない。
   - Area の並び順と色のように操作が決める値は、クライアントではなく操作の中で決める。
-  - 実装（#264）：利用者の操作は `packages/application` の `operations`（`operations.ts`）に、画面をまたいで重ならない名前と入力の型で並べる（例：計画中の `setPlanningGoal` と実行中の `setRunningGoal`、Backlog の `completeTask` と Today の `completeSelection`）。この一覧が契約（#265）の operation の元になる。システムの記録（`reviewEnded`・`beginDay`）は一覧に入れない。読み取りは `*-view.ts` の関数で、fixture の 12 状態のすべての読み取りが JSON にして戻しても同じになることをテストで確かめる。ID から引く関数（`item`・`areaOf` など）と「領域なし」「先週」「今週」「来週」の語は、`apps/web` のフック（`src/store/views.ts`、`src/lib/week-text.ts`）が作る。
+  - 実装（#264）：利用者の操作は `packages/application` の `operations`（`operations.ts`）に、画面をまたいで重ならない名前と入力の型で並べる（例：Backlog の `completeTask` と Today の `completeSelection`。#295 で Sprint の中の操作は対象の Sprint の ID を入力に取るようにし、計画中と実行中で同じ意味の操作は `setGoal` などにまとめた）。この一覧が契約（#265）の operation の元になる。システムの記録（`reviewEnded`・`beginDay`）は一覧に入れない。読み取りは `*-view.ts` の関数で、fixture の 12 状態のすべての読み取りが JSON にして戻しても同じになることをテストで確かめる。ID から引く関数（`item`・`areaOf` など）と「領域なし」「先週」「今週」「来週」の語は、`apps/web` のフック（`src/store/views.ts`、`src/lib/week-text.ts`）が作る。
   - fixture（時系列と 12 状態）は `@itera/application/fixtures` に置き、ブラウザ内モックとテストが使う。`services/api` の本番のコードからの import は ESLint で止める。`packages/application` は `packages/domain` と同じく現在時刻と乱数を引数で受け取り、React と `apps/web` に依存しない（ESLint で検査する）。
   - 画面のフックは、#273〜#276 で契約に移すまで、このパッケージを `RecordStore` 経由で使う（上の「`packages/application` を import してよいのはモックだけ」の検査は、画面を移し終えてから入れる）。
 - **プレビューの例外（D2、2026-10-02 オーナー決定）**：プレビューは、当面 `apps/web` が `packages/domain` の関数をそのまま使って計算する。Web での実装し直しと、共通のテストケース（PRD §14、#45 の範囲 2）は、iOS に着手するときに行う。
@@ -110,12 +110,12 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
 #### データの出どころ
 
 - `apps/web/src/app/data-source.ts` が、ブラウザ内モック（開発の既定。`pnpm --filter @itera/web dev`）か API（本番ビルドと `pnpm --filter @itera/web dev:api`）かを選ぶ。どちらも同じ `ApiProvider`（契約のクライアントと `QueryClient`）を画面に渡す。
-- 契約のクライアントは、データの出どころごとに `createClient` で作る（`@itera/api-contract/create-client` の `createClient`・`createConfig`）。生成した関数と options には `{ client }` で渡す（`getOverviewOptions({ client })`）。モジュールの既定の `client` を書き換えない。fixture の状態を替えるたびに、記録・クライアント・キャッシュを新しくする。
+- 契約のクライアントは、データの出どころごとに `createClient` で作る（`@itera/api-contract/create-client` の `createClient`・`createConfig`）。生成した関数と options には `{ client }` で渡す（`getMeOptions({ client })`）。モジュールの既定の `client` を書き換えない。fixture の状態を替えるたびに、記録・クライアント・キャッシュを新しくする。
 - `--mode api` では、Vite の開発サーバーが `/api` を `wrangler dev`（既定 `http://localhost:8787`、`ITERA_API_ORIGIN` で変えられる）に中継する。Host と Origin は開発サーバーのままなので、`BETTER_AUTH_URL` は開発サーバーの origin にする（`services/api/README.md`）。
 
 #### Query のキーと無効化
 
-- キーは生成したもの（`getOverviewQueryKey` など。`[{ _id: <operationId>, baseUrl, path?, query? }]`）だけを使い、手で作らない。
+- キーは生成したもの（`getMeQueryKey` など。`[{ _id: <operationId>, baseUrl, path?, query? }]`）だけを使い、手で作らない。
 - 操作が成功したら、すべての読み取りを無効にする（`apps/web/src/api/reads.ts`）。表示中のものはすぐ取り直し、ほかは次に表示するときに取る。操作の Promise は、表示中の読み取りの最初の答えが戻ってから解決する（`MutationCache` の `onSuccess` が `readAgain` を待つ）。待つのは最初の 1 回（戻った・1 回失敗した・通信を待っている）までで、読み取りの取り直しは待たない。取り直しまで待つと、通信が不安定なときに操作の結果と失敗の Toast が遅れ、オフラインになると送信中のまま止まるため（Issue #272 のレビュー）。
   - 理由：読み取りはすべて利用者の記録の全体から作る派生値で（ADR 0004「操作と読み取りの処理」）、1 つの操作が複数の画面の読み取りを変える（今日の完了は、今日・実行中の Sprint・Backlog・ナビの件数を変える）。操作ごとに読み直す読み取りの表を持つと、派生値のたどり漏れが古い表示として残り、失敗として見えない。
   - 代わりに払うもの：操作のたびに表示中の読み取りを 1 回ずつ取り直す。表示中の読み取りは 1 画面で 1〜3 個で、利用者は 1 人。
