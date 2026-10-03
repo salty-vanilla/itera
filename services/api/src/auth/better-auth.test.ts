@@ -10,6 +10,7 @@ import {
   betterAuthAuthenticator,
   betterAuthSettings,
   createBetterAuth,
+  signUpNotAllowedCode,
 } from './better-auth';
 
 // Runs Better Auth behind the app, as the default composition does, on an
@@ -51,7 +52,7 @@ async function signIn(secret = env.BETTER_AUTH_SECRET) {
 function me(cookie?: string, bindings: CloudflareBindings = env) {
   const headers: Record<string, string> = {};
   if (cookie !== undefined) headers.Cookie = cookie;
-  return app.request('/me', { headers }, bindings);
+  return app.request('/api/me', { headers }, bindings);
 }
 
 // A request to Better Auth's routes from the app's own origin.
@@ -88,7 +89,60 @@ function cookiesFrom(response: Response): string {
     .join('; ');
 }
 
-describe('Better Auth authenticator (GET /me)', () => {
+// Goes through Google sign-in from the start to the callback. Google's token
+// endpoint answers the authorization code exchange with an ID token for
+// `email`. The ID token is only decoded, not verified: it comes straight from
+// Google over TLS in this flow.
+async function signInWithGoogle(email: string) {
+  const encode = (value: object) =>
+    btoa(JSON.stringify(value))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+  const now = Math.floor(Date.now() / 1000);
+  const idToken = [
+    encode({ alg: 'RS256', kid: 'test' }),
+    encode({
+      iss: 'https://accounts.google.com',
+      aud: env.GOOGLE_CLIENT_ID,
+      sub: 'google-user-42',
+      email,
+      email_verified: true,
+      name: 'Grace',
+      iat: now,
+      exp: now + 3600,
+    }),
+    'signature',
+  ].join('.');
+  const google = vi.fn(async (input: RequestInfo | URL) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (url !== 'https://oauth2.googleapis.com/token') {
+      throw new Error(`unexpected fetch: ${url}`);
+    }
+    return Response.json({
+      access_token: 'google-access-token',
+      id_token: idToken,
+      expires_in: 3600,
+      token_type: 'Bearer',
+      scope: 'openid email profile',
+    });
+  });
+  vi.stubGlobal('fetch', google);
+
+  const start = await auth('/sign-in/social', {
+    method: 'POST',
+    body: { provider: 'google', callbackURL: '/' },
+  });
+  const { url } = (await start.json()) as { url: string };
+  const state = new URL(url).searchParams.get('state') ?? '';
+  const callback = await auth(
+    `/callback/google?code=code-1&state=${encodeURIComponent(state)}`,
+    { headers: { Cookie: cookiesFrom(start) } },
+  );
+  return { callback, google };
+}
+
+describe('Better Auth authenticator (GET /api/me)', () => {
   it('returns the Better Auth user ID for a valid session', async () => {
     const { user, cookie } = await signIn();
     const response = await me(cookie);
@@ -146,9 +200,19 @@ describe('Better Auth authenticator (GET /me)', () => {
     'BETTER_AUTH_URL',
     'GOOGLE_CLIENT_ID',
     'GOOGLE_CLIENT_SECRET',
+    'SIGN_UP_ALLOWED_EMAILS',
   ] as const)('fails closed (500) when %s is not set', async (name) => {
     const { cookie } = await signIn();
     expect((await me(cookie, { ...env, [name]: '' })).status).toBe(500);
+  });
+
+  it('fails closed (500) when the allowed emails list has no address', async () => {
+    const { cookie } = await signIn();
+    const response = await me(cookie, {
+      ...env,
+      SIGN_UP_ALLOWED_EMAILS: ' , ',
+    });
+    expect(response.status).toBe(500);
   });
 
   it('fails closed (500) when the secret is shorter than 32 characters', async () => {
@@ -203,54 +267,7 @@ describe('Better Auth sign-in methods', () => {
   });
 
   it('signs a new user up with Google and encrypts the access token', async () => {
-    // Google's token endpoint, answering the authorization code exchange.
-    // The ID token is only decoded, not verified: it comes straight from
-    // Google over TLS in this flow.
-    const encode = (value: object) =>
-      btoa(JSON.stringify(value))
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/, '');
-    const now = Math.floor(Date.now() / 1000);
-    const idToken = [
-      encode({ alg: 'RS256', kid: 'test' }),
-      encode({
-        iss: 'https://accounts.google.com',
-        aud: env.GOOGLE_CLIENT_ID,
-        sub: 'google-user-42',
-        email: 'grace@example.com',
-        email_verified: true,
-        name: 'Grace',
-        iat: now,
-        exp: now + 3600,
-      }),
-      'signature',
-    ].join('.');
-    const google = vi.fn(async (input: RequestInfo | URL) => {
-      const url = input instanceof Request ? input.url : String(input);
-      if (url !== 'https://oauth2.googleapis.com/token') {
-        throw new Error(`unexpected fetch: ${url}`);
-      }
-      return Response.json({
-        access_token: 'google-access-token',
-        id_token: idToken,
-        expires_in: 3600,
-        token_type: 'Bearer',
-        scope: 'openid email profile',
-      });
-    });
-    vi.stubGlobal('fetch', google);
-
-    const start = await auth('/sign-in/social', {
-      method: 'POST',
-      body: { provider: 'google', callbackURL: '/' },
-    });
-    const { url } = (await start.json()) as { url: string };
-    const state = new URL(url).searchParams.get('state') ?? '';
-    const callback = await auth(
-      `/callback/google?code=code-1&state=${encodeURIComponent(state)}`,
-      { headers: { Cookie: cookiesFrom(start) } },
-    );
+    const { callback, google } = await signInWithGoogle('grace@example.com');
     expect(callback.status).toBe(302);
     expect(google).toHaveBeenCalledOnce();
 
@@ -269,6 +286,30 @@ describe('Better Auth sign-in methods', () => {
     const response = await me(cookiesFrom(callback));
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ userId: user?.id });
+  });
+
+  it('does not create a user for a Google account outside the allowed emails', async () => {
+    const { callback, google } = await signInWithGoogle('eve@example.com');
+    expect(google).toHaveBeenCalledOnce();
+    expect(callback.status).toBe(302);
+    const location = new URL(callback.headers.get('Location') ?? '');
+    expect(location.searchParams.get('error')).toBe(signUpNotAllowedCode);
+    expect(callback.headers.getSetCookie().join()).not.toContain(
+      'session_token',
+    );
+    expect(await db.select().from(schema.user)).toEqual([]);
+    expect(await db.select().from(schema.account)).toEqual([]);
+    expect(await db.select().from(schema.session)).toEqual([]);
+  });
+
+  it('keeps existing users signed in after their email leaves the list', async () => {
+    const { user, cookie } = await signIn();
+    const response = await me(cookie, {
+      ...env,
+      SIGN_UP_ALLOWED_EMAILS: 'grace@example.com',
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ userId: user.id });
   });
 
   it('rejects other social providers', async () => {

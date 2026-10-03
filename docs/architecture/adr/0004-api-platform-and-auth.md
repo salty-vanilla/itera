@@ -3,7 +3,7 @@
 - 状態：採用
 - 日付：2026-09-27
 - 関連：Issue #25、後続 Issue #26、#30、#121
-- 改訂：2026-09-30（認証を WorkOS AuthKit から Better Auth に変更。Issue #121）
+- 改訂：2026-09-30（認証を WorkOS AuthKit から Better Auth に変更。Issue #121）、2026-10-03（デプロイの方式、API の経路を `/api` の下に、登録を許可の一覧で絞る。Issue #32）
 
 ## 背景
 
@@ -45,8 +45,9 @@ Better Auth が自分で書き込む行（利用者・アカウント・セッ�
 - **セッションを延長するのは `/api/auth/get-session` だけ**。`requireAuth` を通る API の経路はセッションを読むだけで延長しない（Cookie を送り直せないため。期限切れの行は Better Auth が削除する）。そのためクライアントは、起動時など定期的に `/api/auth/get-session` を呼ぶ。呼ばないと、最後の延長から 7 日で API が 401 を返す。
 - Cookie を使うので、**Web と API は同じ origin で配信する**。CORS と、`BETTER_AUTH_URL` 以外の信頼する origin は設定しない。Web のログイン画面とログインの流れは別の Issue で作る。
 - 利用者の識別子は Better Auth の利用者 ID（`user.id`、Better Auth が生成するランダムな文字列）。
+- **登録できる人を許可の一覧で絞る**（2026-10-03 オーナー決定、Issue #32）。Better Auth の `databaseHooks.user.create.before` で、利用者を作る前にメールアドレスを `SIGN_UP_ALLOWED_EMAILS`（カンマ区切り。前後の空白と大文字・小文字は無視する）と照らし、一覧になければ `APIError`（403、code `SIGN_UP_NOT_ALLOWED`）を投げて作らない。Google のコールバックは、この code を `error` に付けてエラーのページへ戻す。利用者を作る経路はすべてこの hook を通るので、Google 以外の作り方を足しても一覧が効く。照らすのは作るときだけで、すでにある利用者は一覧から外してもサインインできる（外したら利用者を消すかは、PRD §14 の削除の方式と一緒に決める）。一覧は wrangler の secret で渡し、リポジトリに書かない。空なら、ほかの設定値と同じく認証を使うリクエストを 500 で失敗させる。Google の同意画面のテストユーザー（オーナーだけ）と二重にする。一般公開（PRD §14）を決めるまでの備え。
 - Google から受け取ったアクセストークンとリフレッシュトークンは、`account.encryptOAuthTokens` で `BETTER_AUTH_SECRET` から作る鍵で暗号化して保存する。Itera は Google の API を呼ばないが、Better Auth がアカウントの行に保存するため。
-- 設定値（`BETTER_AUTH_SECRET`・`BETTER_AUTH_URL`・`GOOGLE_CLIENT_ID`・`GOOGLE_CLIENT_SECRET`）は環境変数と wrangler の secret で渡し、リポジトリに書かない。どれかが空、または `BETTER_AUTH_SECRET` が 32 文字未満なら、認証を使うリクエストは 500 で失敗する（下の確認事項の 5）。
+- 設定値（`BETTER_AUTH_SECRET`・`BETTER_AUTH_URL`・`GOOGLE_CLIENT_ID`・`GOOGLE_CLIENT_SECRET`・`SIGN_UP_ALLOWED_EMAILS`）は環境変数と wrangler の secret で渡し、リポジトリに書かない。どれかが空、または `BETTER_AUTH_SECRET` が 32 文字未満なら、認証を使うリクエストは 500 で失敗する（下の確認事項の 5）。
 
 ### Better Auth を Workers で使うときの確認事項（2026-09-30）
 
@@ -91,8 +92,8 @@ Better Auth の文書（Context7 と better-auth.com）と、固定した 1.7.6 
 
 - 設定は `wrangler.jsonc`。`compatibility_date` は作った日（2026-09-27）。Workers Logs と Traces を有効にしておく（`observability`）。
 - Workers の実行時の型と binding の型（`CloudflareBindings`）は `wrangler types` で `worker-configuration.d.ts` に生成し、コミットする。手で書かない。`@cloudflare/workers-types` は入れない（`wrangler types` がこれに代わる）。`typecheck` script が `wrangler types --check` で生成物が設定と一致することを確かめる。
-- 認証の設定値（`BETTER_AUTH_SECRET`・`BETTER_AUTH_URL`・`GOOGLE_CLIENT_ID`・`GOOGLE_CLIENT_SECRET`）は `wrangler.jsonc` の `secrets.required` で宣言し、ローカルでは `.dev.vars`（Git 管理外。例は `.dev.vars.example`）、デプロイ先では wrangler の secret で渡す。
-- D1 の `database_id` は、データベースを作るまで仮の値を置く。ローカルの実行（`wrangler dev`、`--local`）はこの値を使わない。
+- 認証の設定値（`BETTER_AUTH_SECRET`・`BETTER_AUTH_URL`・`GOOGLE_CLIENT_ID`・`GOOGLE_CLIENT_SECRET`・`SIGN_UP_ALLOWED_EMAILS`）は `wrangler.jsonc` の `secrets.required` で宣言し、ローカルでは `.dev.vars`（Git 管理外。例は `.dev.vars.example`）、デプロイ先では wrangler の secret で渡す。
+- D1 の `database_id` は、データベースを作るまで仮の値を置く。ローカルの実行（`wrangler dev`、`--local`）はこの値を使わない。オーナーが手順書に沿って D1 を作り、ID を差し替える PR を main に入れる（下の「デプロイ」）。
 - テストは Node 上の Vitest で、Hono の `app.request()` に依存を注入して実行する（下の「依存の組み立て方」）。Workers の実行環境（workerd）でテストする `@cloudflare/vitest-pool-workers`（0.22.0）は Vitest 4 にしか対応しておらず、ADR 0001 の Vitest 5 と合わないため使わない。D1 そのものに触れる動作は `wrangler dev` で確かめる。Vitest 5 に対応したら見直す。
 - `esbuild` と `workerd` のインストールスクリプトは実行しない（`pnpm-workspace.yaml` の `ignoredBuiltDependencies`）。バイナリは optional dependencies で入り、`wrangler dev` はスクリプトなしで動く。
 
@@ -103,9 +104,54 @@ Better Auth の文書（Context7 と better-auth.com）と、固定した 1.7.6 
 - `createApp(dependencies)` が依存を 1 つの引数で受け取る。Workers の env はリクエストの中でしか得られないので、依存は env から実装を作る関数（`Dependencies`：`database`・`authenticator`）にする。`authenticator` は、そのリクエストの DB（`database` で作ったもの）も受け取る。本番の構成（D1、Better Auth）は `src/default-dependencies.ts` にあり、それを選ぶのは `src/index.ts` だけ。
 - DB：ハンドラーは `c.var.db`（型は `Database`）だけを使う。`Database` は Drizzle の非同期の SQLite の型に `batch()` を加えたもので、D1・libSQL・sqlite-proxy のどれでも満たせる（`src/db/database.test.ts` で型を確かめる）。同期の API の better-sqlite3 は満たさない。`drizzle-orm/d1` を使うのは既定の構成だけ。
 - 認証：`Authenticator` は、リクエストのヘッダー（セッションの Cookie）から利用者を返すか、有効なセッションがなければ `null` を返す（サーバー側の失敗は例外）。あわせて、認証サービス自身の経路（`/api/auth/*`）の応答を受け持つ。`requireAuth` は `Authenticator` だけを使い、401 の応答と `c.var.userId` の設定を受け持つ。Bearer トークンは受け付けないので、401 に `WWW-Authenticate: Bearer` は付けない。Better Auth の実装は `src/auth/better-auth.ts` の 1 実装。
-- テストでは、DB に sqlite-proxy の Drizzle（実行した SQL を記録し、行を返さない）を、認証に仮の `Authenticator` を渡す。Better Auth の実装は、libSQL のメモリ DB に `migrations/` を適用したもの（`src/db/memory-database.ts`）を渡し、アプリ越しに確かめる。セッションは Better Auth の内部の adapter で作り、署名した Cookie を付けて送る（あり・なし・期限切れ・別の鍵の署名・サインアウト後）。Google での登録は、Google のトークンのエンドポイントへの `fetch` をテストの中で差し替えて、サインインの開始からコールバック、`/me` までを通す。
+- テストでは、DB に sqlite-proxy の Drizzle（実行した SQL を記録し、行を返さない）を、認証に仮の `Authenticator` を渡す。Better Auth の実装は、libSQL のメモリ DB に `migrations/` を適用したもの（`src/db/memory-database.ts`）を渡し、アプリ越しに確かめる。セッションは Better Auth の内部の adapter で作り、署名した Cookie を付けて送る（あり・なし・期限切れ・別の鍵の署名・サインアウト後）。Google での登録は、Google のトークンのエンドポイントへの `fetch` をテストの中で差し替えて、サインインの開始からコールバック、`/api/me` までを通す。許可の一覧にないメールアドレスでは、同じ流れで利用者・アカウント・セッションが作られないことを確かめる。
 - DI コンテナのライブラリは使わない。関数の引数と Hono の context で足りる範囲にする。
 - 別の DB ドライバ、別の認証サービス、Node でのローカル実行は、必要になったときに別の Issue で足す。
+
+### API の経路（Issue #32、2026-10-03）
+
+API の経路はすべて `/api` の下に置く（`/api/health`、`/api/me`、`/api/auth/*`）。旧い経路（`/health`・`/me`）は残さず、404 を返す。同じ Worker で Web を配信するとき（#280）、`/api/*` だけを API に回し、ほかを画面にするため（#262）。
+
+### デプロイ（Issue #32、2026-10-03）
+
+2026-09-27、オーナーが次のとおり決めた（Issue #32）。
+
+1. **資源の管理は wrangler で行い、Terraform は使わない**。Worker・D1 の binding・`compatibility_date`・observability・公開の設定（`workers_dev`・`preview_urls`・`routes`）は `wrangler.jsonc`、D1 のスキーマは `migrations/` で Git 管理する。資源は Worker 1 つ・D1 1 つで、Terraform の state を管理する手間のほうが大きい。wrangler で管理できない設定（下の「手で行う設定」）は手順書にする。環境が増える・Access や WAF のルールが増える・複数人で運用する、のどれかになったら見直す。
+2. **CD は GitHub Actions で行う**（`.github/workflows/deploy.yml`）。main への push（と main を指定した手動実行）で、`pnpm check`（`check.yml` を `workflow_call` で呼ぶ）が通ったときだけ、D1 のマイグレーション（`wrangler d1 migrations apply DB --remote`）→ Worker のデプロイ（`wrangler deploy`）の順に実行する。production の GitHub Environment の承認を挟む。
+   - 既存の CI と同じ流れで、検査に通ったものだけをデプロイし、マイグレーションとデプロイの順序を保証できる。actions の commit SHA 固定（ADR 0001）と、lockfile の wrangler（`services/api` の固定版）を使う方針に合う。サードパーティの action（`cloudflare/wrangler-action`）は使わず、`pnpm --filter @itera/api exec wrangler` を直接実行する。
+   - Cloudflare の Workers Builds は見送る。2026-10-03 に文書で確かめたところ、Workers Builds は接続した Git の push ごとに Cloudflare の環境でビルドとデプロイのコマンドを実行する仕組みで、GitHub の CI の結果や Environment の承認を待つ機能は書かれていない。見送る理由（CI と別の場所でビルドされ、検査に通ったものだけを出す保証がしにくい）は崩れていない。
+
+workflow の構成：
+
+- `check.yml` は PR と `workflow_call` で動く。main への push の検査は `deploy.yml` が呼ぶ（同じ commit で 2 回動かさない）。
+- `setup` の job が、`wrangler.jsonc` の `database_id` が仮の値（`00000000-…`）なら、承認を求める前に分かる文言で失敗する（2026-10-03 司令塔の決定。wrangler の失敗に頼らない）。
+- `deploy` の job は `environment: production`、`if: github.ref == 'refs/heads/main'`、`concurrency: deploy-production`（途中で取り消さない）。Cloudflare の API トークンとアカウント ID は production の Environment の secret に置き、wrangler を実行する 2 つの step にだけ渡す（`pnpm install` などには渡さない）。`permissions` は `contents: read` だけ、checkout は `persist-credentials: false`。
+- `pull_request_target` は使わない。fork を含む PR の CI には Environment の secret が渡らない。Environment の deployment branch を `main` に限る（手順書）。
+- 2 つ目の環境（staging）、PR ごとのプレビューは作らない（URL が公開になるため。必要になったら判断する）。`preview_urls` を `false` にし、アップロードした版ごとの URL も出さない。
+
+確かめた事実（2026-10-03、Cloudflare の文書と固定した wrangler 4.141.0）：
+
+- `wrangler deploy` は、`secrets.required` の名前が Worker に 1 つでも登録されていなければ、名前を挙げて失敗する。設定値の欠けは、デプロイの時点と実行時（500）の両方で止まる。
+- `wrangler d1 migrations apply` の確認の問いは、CI（非対話）では既定の「はい」で進む。
+- `wrangler secret put` は、Worker がまだないとき、作るかを聞いて作る。Worker 単位の権限のトークンは既存の Worker にしか付けられず、Worker を作るには Workers の Admin が要るので、最初の Worker は手元の `wrangler secret put` で作り、CD のトークンはその Worker の Editor に限る。
+- `routes` を置くと `workers.dev` の URL は既定で無効になる。独自ドメインにするときは `workers_dev: false` も明示し、同じ API が 2 つの origin で応答しないようにする。
+- `wrangler deploy --dry-run` のバンドルは 3,506 KiB（gzip 598 KiB）。
+
+公開する URL（2026-10-03 オーナー決定）：独自ドメインがあればそれを、なければ `*.workers.dev` を使う。オーナーが Cloudflare の設定のときに決め、手順書は両方に対応する。パスキーの RP ID はホスト名に結びつくので、あとで別のドメインに移すとパスキーを登録し直す。Google の OAuth の同意画面は「テスト」のまま、テストユーザーはオーナーだけで始める。
+
+#### 手で行う設定
+
+wrangler で管理できない設定は、[デプロイの手順書](../../operations/deploy.md)に順に書いた。値（トークン、アカウント ID、client secret、秘密鍵、メールアドレス）はリポジトリ・Issue・PR に書かない。
+
+| 場所 | 設定 |
+| --- | --- |
+| Cloudflare | アカウント、Workers Paid、`workers.dev` のサブドメイン（または独自ドメインのゾーン）、D1 の作成（`wrangler d1 create`）、CD 用の API トークン（`itera-api` の Workers Editor と D1 の Edit。独自ドメインならそのゾーンの Workers Routes の Edit） |
+| Google Cloud | OAuth の同意画面（外部・テスト・テストユーザーはオーナーだけ）、OAuth クライアント（ウェブ アプリケーション、リダイレクト URI は `<公開 URL>/api/auth/callback/google`） |
+| Worker の secret | `BETTER_AUTH_SECRET`・`BETTER_AUTH_URL`・`GOOGLE_CLIENT_ID`・`GOOGLE_CLIENT_SECRET`・`SIGN_UP_ALLOWED_EMAILS`（`wrangler secret put`） |
+| GitHub | `production` の Environment（承認者はオーナー、deployment branch は `main`）と、その secret（`CLOUDFLARE_API_TOKEN`・`CLOUDFLARE_ACCOUNT_ID`） |
+| リポジトリ（PR） | `wrangler.jsonc` の `database_id` を作った D1 の ID に差し替える（ID は秘密ではない）。独自ドメインなら `routes` と `workers_dev: false` |
+
+公開後の確認（`/api/health`、Google でのサインイン、パスキーの追加とサインイン、`/api/me`、許可の一覧にないアカウント、`cf-connecting-ip` によるレート制限）は手順書の「公開後の確認」で行い、結果を Issue #32 に残す。
 
 ## 認証の改訂（2026-09-30、Issue #121）
 
@@ -143,7 +189,7 @@ Issue #121 は「Better Auth は原子的な処理に `batch()` を使う」を�
 ## 影響
 
 - `services/api` は Workers 向けに作り、wrangler が束ねてデプロイする。ADR 0001 の「Node で直接動かして出力する `services/api`」という前提は、この ADR で置き換わる。
-- #32（デプロイ）は、認証の設定を Better Auth と Google の OAuth クライアントに合わせる。あわせて、デプロイ先の API に `cf-connecting-ip` が届くこと（届かないとレート制限が全員で 1 つになる）と、`BETTER_AUTH_URL` が https であること（Cookie が Secure になる）を確かめる。
+- #32（デプロイ）で、認証の設定を Better Auth と Google の OAuth クライアントに合わせた（上の「デプロイ」）。デプロイ先の API に `cf-connecting-ip` が届くこと（届かないとレート制限が全員で 1 つになる）と、`BETTER_AUTH_URL` が https であること（Cookie が Secure になる）は、手順書の「公開後の確認」で確かめる。
 - 決めていないもの：API の契約（エンドポイント、OpenAPI）、ドメインのテーブル設計、Web のログイン画面とログインの流れ、データの同期・削除・エクスポート、一般公開の範囲。Better Auth の Origin の検査は `/api/auth/*` にだけかかるので、書き込みを伴う API を足すときに、CSRF への備え（Origin の検査など）を決める。
 - Cloudflare の料金・上限・機能の区分は、2026-09-27 に下の一次資料で確認した。Better Auth の挙動は 2026-09-30 に 1.7.6 で確認した。変わった場合はこの ADR を見直す。
 
@@ -158,6 +204,17 @@ Issue #121 は「Better Auth は原子的な処理に `batch()` を使う」を�
 - `wrangler types`：https://developers.cloudflare.com/workers/wrangler/commands/workers/
 - Clerk の料金：https://clerk.com/pricing
 - Clerk の多言語対応：https://clerk.com/docs/guides/customizing-clerk/localization
+
+2026-10-03 に確認（Issue #32）：
+
+- Workers の GitHub Actions でのデプロイ：https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/
+- `secrets` 設定（`secrets.required` のデプロイ時の検査）：https://developers.cloudflare.com/workers/wrangler/configuration/#secrets-configuration-property
+- Workers の権限（Worker 単位の Editor、Worker の作成、Routes）：https://developers.cloudflare.com/workers/authorization/workers/
+- API トークンの権限（D1 Edit）：https://developers.cloudflare.com/fundamentals/api/reference/permissions/
+- Custom Domains：https://developers.cloudflare.com/workers/configuration/routing/custom-domains/
+- `preview_urls` の既定：https://developers.cloudflare.com/changelog/post/2025-10-23-preview-url-default-behavior/
+- Workers Builds の構成：https://developers.cloudflare.com/workers/ci-cd/builds/configuration/
+- Better Auth の利用者作成の hook（`databaseHooks`）：https://www.better-auth.com/docs/concepts/database
 
 2026-09-30 に確認（Issue #121）：
 

@@ -3,6 +3,11 @@
   "name": "itera-api",
   "main": "src/index.ts",
   "compatibility_date": "2026-09-27",
+  // Served at <name>.<subdomain>.workers.dev until a custom domain is chosen
+  // (docs/operations/deploy.md). Preview URLs stay off: they would publish
+  // every uploaded version at its own URL.
+  "workers_dev": true,
+  "preview_urls": false,
   "observability": {
     "enabled": true,
     "traces": { "enabled": true },
@@ -15,6 +20,7 @@
       "BETTER_AUTH_URL",
       "GOOGLE_CLIENT_ID",
       "GOOGLE_CLIENT_SECRET",
+      "SIGN_UP_ALLOWED_EMAILS",
     ],
   },
   "d1_databases": [

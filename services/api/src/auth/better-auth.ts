@@ -1,6 +1,7 @@
 import { passkey } from '@better-auth/passkey';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { APIError } from 'better-auth/api';
 import type { Database } from '../db/database';
 import * as schema from '../db/schema';
 import { authBasePath, type Authenticator } from './authenticator';
@@ -14,6 +15,9 @@ export type BetterAuthSettings = {
   baseURL: string | undefined;
   googleClientId: string | undefined;
   googleClientSecret: string | undefined;
+  // Email addresses that may sign up, separated by commas. Signing up is
+  // closed to everyone else until general availability is decided (PRD §14).
+  signUpAllowedEmails: string | undefined;
 };
 
 const minimumSecretLength = 32;
@@ -27,7 +31,22 @@ export function betterAuthSettings(
     baseURL: env.BETTER_AUTH_URL,
     googleClientId: env.GOOGLE_CLIENT_ID,
     googleClientSecret: env.GOOGLE_CLIENT_SECRET,
+    signUpAllowedEmails: env.SIGN_UP_ALLOWED_EMAILS,
   };
+}
+
+// The error code a refused sign-up ends with. Google's callback passes it on
+// to the error page as `error`.
+export const signUpNotAllowedCode = 'SIGN_UP_NOT_ALLOWED';
+
+// Normalized like the email Better Auth stores: trimmed and lowercased.
+function parseEmails(list: string): Set<string> {
+  return new Set(
+    list
+      .split(',')
+      .map((email) => email.trim().toLowerCase())
+      .filter((email) => email !== ''),
+  );
 }
 
 // Better Auth decides some defaults from NODE_ENV, which Workers do not set:
@@ -36,7 +55,14 @@ export function betterAuthSettings(
 // production behavior explicitly.
 function requireSettings(settings: BetterAuthSettings) {
   const { secret, baseURL, googleClientId, googleClientSecret } = settings;
-  if (!secret || !baseURL || !googleClientId || !googleClientSecret) {
+  const signUpAllowedEmails = parseEmails(settings.signUpAllowedEmails ?? '');
+  if (
+    !secret ||
+    !baseURL ||
+    !googleClientId ||
+    !googleClientSecret ||
+    signUpAllowedEmails.size === 0
+  ) {
     throw new Error(
       'Better Auth settings are missing (see .dev.vars.example).',
     );
@@ -51,14 +77,20 @@ function requireSettings(settings: BetterAuthSettings) {
     origin: new URL(baseURL).origin,
     googleClientId,
     googleClientSecret,
+    signUpAllowedEmails,
   };
 }
 
 // Better Auth for Itera (Issue #121, ADR 0004). Sign-in methods are Google
 // and passkeys only; a passkey is added by a user who is already signed in.
 export function createBetterAuth(db: Database, settings: BetterAuthSettings) {
-  const { secret, origin, googleClientId, googleClientSecret } =
-    requireSettings(settings);
+  const {
+    secret,
+    origin,
+    googleClientId,
+    googleClientSecret,
+    signUpAllowedEmails,
+  } = requireSettings(settings);
 
   return betterAuth({
     appName: 'Itera',
@@ -75,6 +107,23 @@ export function createBetterAuth(db: Database, settings: BetterAuthSettings) {
     // access and refresh tokens on the account row. Keep them unreadable in
     // D1 and its backups. (The ID token is stored as is.)
     account: { encryptOAuthTokens: true },
+    // Every way of creating a user (today only Google's first sign-in) passes
+    // through this hook, so nobody outside the list gets a user row. Existing
+    // users keep signing in; removing an address does not delete its user.
+    databaseHooks: {
+      user: {
+        create: {
+          before: async (user) => {
+            if (!signUpAllowedEmails.has(user.email.trim().toLowerCase())) {
+              throw new APIError('FORBIDDEN', {
+                code: signUpNotAllowedCode,
+                message: 'This account is not allowed to sign up.',
+              });
+            }
+          },
+        },
+      },
+    },
     plugins: [
       passkey({ rpID: new URL(origin).hostname, rpName: 'Itera', origin }),
     ],
