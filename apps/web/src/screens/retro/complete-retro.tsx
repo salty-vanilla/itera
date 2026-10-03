@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from 'react';
+import { useId, useRef, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { criterionQuotedName } from '@/lib/criterion-text';
-import type { RetroBlocker, RetroData } from '@/store/views';
+import type { RetroBlocker, RetroData } from '@/store/retro-view';
 import { carryOverWords, DECISION_WORDS } from './retro-words';
 
 // 「振り返りを完了」 (docs/design/patterns.md Retro › 引き継ぐ, Issue #106).
@@ -49,12 +49,24 @@ const BLOCKER_WORDS: Readonly<Record<RetroBlocker, ReactNode>> = {
 
 type CompleteRetroProps = {
   data: RetroData;
-  /** Completes the Retro. Called when the Dialog is confirmed. */
-  onComplete: () => void;
+  /**
+   * Completes the Retro, when the Dialog is confirmed. It is done when the
+   * answer is there: the Dialog stays until then.
+   */
+  onComplete: () => Promise<void>;
+  /** The send has been going for a while (useOperation `loading`). */
+  loading?: boolean;
 };
 
-function CompleteRetro({ data, onComplete }: CompleteRetroProps) {
+function CompleteRetro({
+  data,
+  onComplete,
+  loading = false,
+}: CompleteRetroProps) {
   const [open, setOpen] = useState(false);
+  // A press while the first is being sent is not another completion: it
+  // neither takes the first one's focus away nor closes the Dialog under it.
+  const sending = useRef(false);
   const reasonId = useId();
   const blocked = data.blockers.length > 0;
   return (
@@ -88,16 +100,29 @@ function CompleteRetro({ data, onComplete }: CompleteRetroProps) {
         data={data}
         open={open}
         onOpenChange={setOpen}
-        onConfirm={() => {
-          setOpen(false);
-          onComplete();
+        loading={loading}
+        // Gone with the button when it went through; one that did not go
+        // through leaves the Dialog, and the focus goes back to the button.
+        onConfirm={async () => {
+          if (sending.current) return;
+          sending.current = true;
+          try {
+            await onComplete();
+            setOpen(false);
+          } finally {
+            sending.current = false;
+          }
         }}
       />
     </div>
   );
 }
 
-type CompleteDialogProps = CompleteRetroProps & {
+type CompleteDialogProps = Omit<
+  CompleteRetroProps,
+  'onComplete' | 'loading'
+> & {
+  loading: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
@@ -109,7 +134,8 @@ function CompleteDialog({
   open,
   onOpenChange,
   onConfirm,
-}: Omit<CompleteDialogProps, 'onComplete'>) {
+  loading,
+}: CompleteDialogProps) {
   const { used, draft, improvement } = data;
   // Each line: what it is about, and the word that is the decision (kept
   // on one line).
@@ -178,7 +204,12 @@ function CompleteDialog({
         </DialogBody>
         <DialogFooter>
           <DialogClose render={<Button />}>戻る</DialogClose>
-          <Button variant="primary" onClick={onConfirm}>
+          <Button
+            variant="primary"
+            loading={loading}
+            loadingLabel="完了中…"
+            onClick={onConfirm}
+          >
             振り返りを完了
           </Button>
         </DialogFooter>
