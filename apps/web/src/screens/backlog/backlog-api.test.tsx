@@ -3,7 +3,11 @@
 // when an operation does not go through. The API here is the browser mock
 // over a fixture state, with a scripted answer in front of it.
 import { createMemoryStore } from '@itera/application';
-import { fixtureSnapshot } from '@itera/application/fixtures';
+import {
+  fixtureIds,
+  fixtureSnapshot,
+  type FixtureStateId,
+} from '@itera/application/fixtures';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import {
   cleanup,
@@ -47,9 +51,12 @@ afterEach(() => {
  * request on. Every request is kept as `METHOD /path`.
  */
 function serve(
-  answer?: (request: Request) => Response | Promise<Response> | undefined,
+  answer?: (
+    request: Request,
+  ) => Response | Promise<Response | undefined> | undefined,
+  state: FixtureStateId = 'backlog-capture',
 ) {
-  const store = createMemoryStore(fixtureSnapshot('backlog-capture'), {
+  const store = createMemoryStore(fixtureSnapshot(state), {
     random: (bytes) => crypto.getRandomValues(bytes),
   });
   const mock = createMock(store).fetch;
@@ -59,11 +66,21 @@ function serve(
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const request = new Request(input, init);
       requests.push(`${request.method} ${new URL(request.url).pathname}`);
-      return answer?.(request) ?? mock(request);
+      return (await answer?.(request)) ?? mock(request);
     },
   );
   return { store, requests };
 }
+
+const ids = fixtureIds();
+
+/** Every operation's answer comes `ms` late, as on a slow network. */
+const slow = (ms: number) => (request: Request) =>
+  request.method === 'POST'
+    ? new Promise<undefined>((resolve) => setTimeout(resolve, ms)).then(
+        () => undefined,
+      )
+    : undefined;
 
 const refused = () =>
   Response.json({ code: 'invalidInput', message: 'x' }, { status: 422 });
@@ -191,5 +208,66 @@ describe('the Backlog on the API', () => {
       expect(requests.filter((r) => r.startsWith('POST')).length).toBe(1),
     );
     release();
+  });
+
+  it('saves two fields left one after the other while the first is sent', async () => {
+    const { store } = serve(slow(150));
+    renderBacklog();
+    const rows = await list();
+    await userEvent.click(
+      within(rows).getByRole('button', { name: '本棚を整理する' }),
+    );
+    const detail = await screen.findByRole('dialog', {
+      name: '本棚を整理する',
+    });
+    const title = within(detail).getByRole('textbox', { name: /タイトル/ });
+    await userEvent.clear(title);
+    await userEvent.type(title, '本棚を片づける{Enter}');
+    // Left at once, before the title's save is back.
+    await userEvent.selectOptions(
+      within(detail).getByRole('combobox', { name: '優先度' }),
+      '高',
+    );
+    await waitFor(() => {
+      const saved = store
+        .getSnapshot()
+        .records.tasks.find((t) => t.id === ids.task.bookshelf);
+      expect(saved).toMatchObject({
+        title: '本棚を片づける',
+        priority: 'high',
+      });
+    });
+    expect(screen.queryByText('保存できませんでした')).toBeNull();
+  });
+
+  it('saves both weekdays ticked while the first is sent', async () => {
+    const { store } = serve(slow(150), 'backlog-recurrence');
+    const router = renderBacklog();
+    await list();
+    await router.navigate({
+      to: '/backlog',
+      search: { task: ids.task.cleaning },
+    });
+    const detail = await screen.findByRole('dialog', { name: '部屋の掃除' });
+    const days = within(
+      within(detail).getByRole('region', { name: '繰り返し' }),
+    ).getByRole('group', { name: '曜日' });
+    const tick = (name: string) => within(days).getByRole('checkbox', { name });
+    const wanted = ['火', '木'].filter(
+      (name) => tick(name).getAttribute('aria-checked') !== 'true',
+    );
+    expect(wanted).toHaveLength(2);
+    for (const name of wanted) await userEvent.click(tick(name));
+    await waitFor(() => {
+      const rule = store
+        .getSnapshot()
+        .records.rules.find((r) => r.taskId === ids.task.cleaning);
+      const latest = rule?.versions.at(-1)?.pattern;
+      expect(latest).toMatchObject({ freq: 'weekly' });
+      expect(latest && 'daysOfWeek' in latest ? latest.daysOfWeek : []).toEqual(
+        expect.arrayContaining([2, 4]),
+      );
+    });
+    expect(screen.queryByText('保存できませんでした')).toBeNull();
   });
 });

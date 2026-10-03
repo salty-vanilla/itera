@@ -139,7 +139,8 @@ function AreaEditor({
     }
     const created = await actions.addArea(name);
     if (created === undefined) return;
-    setNewName('');
+    // What was typed while it was sent is the next Area's.
+    setNewName((typed) => (typed.trim() === name ? '' : typed));
     setStatus(`「${name}」を追加しました`);
     if (onCreated !== undefined) onCreated(created);
     else newRef.current?.focus();

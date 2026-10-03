@@ -32,25 +32,27 @@ import {
 } from '@itera/api-contract/react-query';
 import { useOperation } from '@/api/use-operation';
 
-/**
- * The person's operations on Tasks, one named function each (ADR 0005 API
- * への移行: the contract's operations). Each gives back whether it went
- * through: when it did, the reads are read again before it resolves, so
- * the screen has the new records. One that did not changes nothing and is
- * shown as a Toast (useOperation). While one is being sent, the same one
- * sent again gives back `false` without sending.
- */
+// The person's operations on Tasks, one named function each (ADR 0005 API
+// への移行: the contract's operations). Each gives back whether it went
+// through: when it did, the reads are read again before it resolves, so the
+// screen has the new records. One that did not changes nothing and is shown
+// as a Toast (useOperation). While one is being sent, the same one sent
+// again gives back `false` without sending, except the ones a field saves
+// as it is left (`whileSending: 'wait'`): those are sent in order.
+//
+// Split by who uses them, so that a small part (a subtask's row) does not
+// make an observer for every operation.
+
+/** The Task's own operations: the Backlog, and the detail's fields and actions. */
 export function useTaskActions() {
   const createTask = useOperation(createTaskMutation);
-  const saveTask = useOperation(saveTaskMutation);
+  // A field saves as it is left: the next one waits for this one, not lost.
+  const saveTask = useOperation(saveTaskMutation, { whileSending: 'wait' });
   const adoptSuggestion = useOperation(adoptSuggestionMutation);
   const undoAdoption = useOperation(undoAdoptionMutation);
   const adoptEdited = useOperation(adoptEditedSuggestionMutation);
   const rejectSuggestion = useOperation(rejectSuggestionMutation);
   const undoRejection = useOperation(undoRejectionMutation);
-  const addSubtask = useOperation(addSubtaskMutation);
-  const setSubtaskDone = useOperation(setSubtaskDoneMutation);
-  const setSubtaskEstimate = useOperation(setSubtaskEstimateMutation);
   const archiveTask = useOperation(archiveTaskMutation);
   const restoreTask = useOperation(restoreTaskMutation);
   const completeTask = useOperation(completeTaskMutation);
@@ -58,8 +60,6 @@ export function useTaskActions() {
   const addToToday = useOperation(addTaskToTodayMutation);
   const addToWeek = useOperation(addTaskToWeekMutation);
   const undoAddToWeek = useOperation(undoAddTaskToWeekMutation);
-  const setRecurrence = useOperation(setRecurrenceMutation);
-  const endRecurrence = useOperation(endRecurrenceMutation);
 
   const actions = {
     /** The new Task's ID, or `undefined` when it did not go through. */
@@ -109,6 +109,57 @@ export function useTaskActions() {
     ) => (await rejectSuggestion.run({ body: { taskId, suggestionId } })).ok,
     undoRejection: async (taskId: TaskId, suggestionId: EstimateSuggestionId) =>
       (await undoRejection.run({ body: { taskId, suggestionId } })).ok,
+    archiveTask: async (taskId: TaskId) =>
+      (await archiveTask.run({ body: { taskId } })).ok,
+    restoreTask: async (taskId: TaskId) =>
+      (await restoreTask.run({ body: { taskId } })).ok,
+    completeTask: async (taskId: TaskId) =>
+      (await completeTask.run({ body: { taskId } })).ok,
+    undoCompleteTask: async (taskId: TaskId) =>
+      (await undoCompleteTask.run({ body: { taskId } })).ok,
+    addToToday: async (taskId: TaskId) =>
+      (await addToToday.run({ body: { taskId } })).ok,
+    addToWeek: async (taskId: TaskId) =>
+      (await addToWeek.run({ body: { taskId } })).ok,
+    undoAddToWeek: async (taskId: TaskId) =>
+      (await undoAddToWeek.run({ body: { taskId } })).ok,
+  };
+  // For how long each is being sent: show it in its button once it has
+  // lasted `LOADING_DELAY` (useOperation `loading`).
+  const loading = {
+    addTask: createTask.loading,
+    saveTask: saveTask.loading,
+    adoptSuggestion: adoptSuggestion.loading,
+    undoAdoption: undoAdoption.loading,
+    adoptEditedSuggestion: adoptEdited.loading,
+    rejectSuggestion: rejectSuggestion.loading,
+    undoRejection: undoRejection.loading,
+    archiveTask: archiveTask.loading,
+    restoreTask: restoreTask.loading,
+    completeTask: completeTask.loading,
+    undoCompleteTask: undoCompleteTask.loading,
+    addToToday: addToToday.loading,
+    addToWeek: addToWeek.loading,
+    undoAddToWeek: undoAddToWeek.loading,
+  } satisfies Record<keyof typeof actions, boolean>;
+  return { ...actions, loading };
+}
+
+export type TaskActions = ReturnType<typeof useTaskActions>;
+
+/**
+ * A Task's subtasks. Checking one off and its Estimate save as they are
+ * made, so a second one made while the first is sent waits for it.
+ */
+export function useSubtaskActions() {
+  const addSubtask = useOperation(addSubtaskMutation);
+  const setSubtaskDone = useOperation(setSubtaskDoneMutation, {
+    whileSending: 'wait',
+  });
+  const setSubtaskEstimate = useOperation(setSubtaskEstimateMutation, {
+    whileSending: 'wait',
+  });
+  return {
     addSubtask: async (taskId: TaskId, title: string, hours?: number) =>
       (
         await addSubtask.run({
@@ -126,20 +177,20 @@ export function useTaskActions() {
       hours: number | null,
     ) =>
       (await setSubtaskEstimate.run({ body: { taskId, subtaskId, hours } })).ok,
-    archiveTask: async (taskId: TaskId) =>
-      (await archiveTask.run({ body: { taskId } })).ok,
-    restoreTask: async (taskId: TaskId) =>
-      (await restoreTask.run({ body: { taskId } })).ok,
-    completeTask: async (taskId: TaskId) =>
-      (await completeTask.run({ body: { taskId } })).ok,
-    undoCompleteTask: async (taskId: TaskId) =>
-      (await undoCompleteTask.run({ body: { taskId } })).ok,
-    addToToday: async (taskId: TaskId) =>
-      (await addToToday.run({ body: { taskId } })).ok,
-    addToWeek: async (taskId: TaskId) =>
-      (await addToWeek.run({ body: { taskId } })).ok,
-    undoAddToWeek: async (taskId: TaskId) =>
-      (await undoAddToWeek.run({ body: { taskId } })).ok,
+    loading: { addSubtask: addSubtask.loading },
+  };
+}
+
+/**
+ * A Task's recurrence. A choice in a rule that exists saves as it is made
+ * (a second weekday ticked while the first is sent waits for it).
+ */
+export function useRecurrenceActions() {
+  const setRecurrence = useOperation(setRecurrenceMutation, {
+    whileSending: 'wait',
+  });
+  const endRecurrence = useOperation(endRecurrenceMutation);
+  return {
     /**
      * Makes the Task recurring or changes its rule. `effectiveFrom` is the
      * day the change takes effect (「次の Sprint から反映」), absent when
@@ -163,30 +214,4 @@ export function useTaskActions() {
       return outcome.ok ? { ok: true, ...outcome.value } : { ok: false };
     },
   };
-  // For how long each is being sent: show it in its button once it has
-  // lasted `LOADING_DELAY` (useOperation `loading`).
-  const loading = {
-    addTask: createTask.loading,
-    saveTask: saveTask.loading,
-    adoptSuggestion: adoptSuggestion.loading,
-    undoAdoption: undoAdoption.loading,
-    adoptEditedSuggestion: adoptEdited.loading,
-    rejectSuggestion: rejectSuggestion.loading,
-    undoRejection: undoRejection.loading,
-    addSubtask: addSubtask.loading,
-    setSubtaskDone: setSubtaskDone.loading,
-    setSubtaskEstimate: setSubtaskEstimate.loading,
-    archiveTask: archiveTask.loading,
-    restoreTask: restoreTask.loading,
-    completeTask: completeTask.loading,
-    undoCompleteTask: undoCompleteTask.loading,
-    addToToday: addToToday.loading,
-    addToWeek: addToWeek.loading,
-    undoAddToWeek: undoAddToWeek.loading,
-    setRecurrence: setRecurrence.loading,
-    endRecurrence: endRecurrence.loading,
-  } satisfies Record<keyof typeof actions, boolean>;
-  return { ...actions, loading };
 }
-
-export type TaskActions = ReturnType<typeof useTaskActions>;

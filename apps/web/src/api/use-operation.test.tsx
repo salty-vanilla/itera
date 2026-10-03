@@ -6,7 +6,10 @@ import {
   createConfig,
   type Client,
 } from '@itera/api-contract/create-client';
-import { renameAreaMutation } from '@itera/api-contract/react-query';
+import {
+  archiveAreaMutation,
+  renameAreaMutation,
+} from '@itera/api-contract/react-query';
 import { createMemoryStore } from '@itera/application';
 import { fixtureIds, fixtureSnapshot } from '@itera/application/fixtures';
 import {
@@ -178,6 +181,71 @@ describe('useOperation', () => {
       requests.filter((r) => r === 'POST /api/operations/renameArea'),
     ).toHaveLength(1);
     await waitFor(() => expect(result.current.rename.pending).toBe(false));
+  });
+});
+
+describe('operations that overlap', () => {
+  /** An operation's answer waits `ms`, as on a slow network. */
+  const slow = (ms: number) => (request: Request) =>
+    request.method === 'POST'
+      ? new Promise<Response>((resolve) =>
+          setTimeout(() => resolve(new Response(null, { status: 204 })), ms),
+        )
+      : undefined;
+
+  function useRenameWaiting() {
+    return useOperation(renameAreaMutation, { whileSending: 'wait' });
+  }
+
+  it('sends every one in order when it waits while sending', async () => {
+    const { store, requests, wrapper } = setUp();
+    const { result } = renderHook(useRenameWaiting, { wrapper });
+    let outcomes: unknown[] = [];
+    await act(async () => {
+      outcomes = await Promise.all([
+        result.current.run(rename('研究室')),
+        result.current.run(rename('研究会')),
+      ]);
+    });
+    expect(outcomes).toMatchObject([{ ok: true }, { ok: true }]);
+    expect(
+      requests.filter((r) => r === 'POST /api/operations/renameArea'),
+    ).toHaveLength(2);
+    // The last one is what is saved.
+    expect(
+      store.getSnapshot().records.areas.find((a) => a.id === ids.area.research)
+        ?.name,
+    ).toBe('研究会');
+  });
+
+  it('does not send two operations at once, whichever hook sent them', async () => {
+    const { requests, wrapper } = setUp(slow(100));
+    const { result } = renderHook(
+      () => ({
+        rename: useOperation(renameAreaMutation),
+        archive: useOperation(archiveAreaMutation),
+      }),
+      { wrapper },
+    );
+    let both: Promise<unknown> = Promise.resolve();
+    await act(async () => {
+      both = Promise.all([
+        result.current.rename.run(rename('研究室')),
+        result.current.archive.run({ body: { areaId: ids.area.research } }),
+      ]);
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      // The second waits for the first (the API would answer 409 to both).
+      expect(requests.filter((r) => r.startsWith('POST'))).toEqual([
+        'POST /api/operations/renameArea',
+      ]);
+    });
+    await act(async () => {
+      await both;
+    });
+    expect(requests.filter((r) => r.startsWith('POST'))).toEqual([
+      'POST /api/operations/renameArea',
+      'POST /api/operations/archiveArea',
+    ]);
   });
 });
 

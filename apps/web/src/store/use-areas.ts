@@ -1,4 +1,4 @@
-import type { AreaColor, AreaId, EditableArea } from '@itera/api-contract';
+import type { AreaId, EditableArea } from '@itera/api-contract';
 import {
   archiveAreaMutation,
   createAreaMutation,
@@ -11,7 +11,7 @@ import { useApiClient } from '@/api/api-provider';
 import { useRead, type Read } from '@/api/read-state';
 import { useOperation } from '@/api/use-operation';
 
-export type { AreaColor, EditableArea };
+export type { EditableArea };
 
 /**
  * Every Area, archived ones too, in the person's order, each by its current

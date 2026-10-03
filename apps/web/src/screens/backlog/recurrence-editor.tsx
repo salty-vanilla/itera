@@ -22,7 +22,7 @@ import {
   WEEK_ORDER,
   WEEKDAY_NAMES,
 } from '@/lib/recurrence-text';
-import { useTaskActions } from '@/store/use-task-actions';
+import { useRecurrenceActions } from '@/store/use-task-actions';
 
 // 繰り返し (PRD §6 Recurrence, F1, F7, F12, F15, F41). Like the other fields
 // of the Task detail, a change to a rule that exists is saved when it is
@@ -102,7 +102,7 @@ function RecurrenceEditor({
    */
   pendingRef?: Ref<() => HTMLElement | null> | undefined;
 }) {
-  const actions = useTaskActions();
+  const actions = useRecurrenceActions();
   const { task, rule } = item;
   const endsOn = item.recurrence?.endsOn;
   // A change starts from the latest version (it may begin next Sprint).
