@@ -20,6 +20,12 @@ describe('returnPath', () => {
       '/\\example.com/today',
       'javascript:alert(1)',
       'today',
+      // The parser drops `.` and `..`, leaving `//evil.com`.
+      '/.//evil.com',
+      '/a/..//evil.com',
+      '/%2e//evil.com',
+      '/%2F%2Fevil.com',
+      '/%5Cevil.com',
     ])
       expect(returnPath(redirect)).toBe('/today');
   });
@@ -27,5 +33,7 @@ describe('returnPath', () => {
   it('does not come back to the sign-in screen or go to the API', () => {
     expect(returnPath(signInHref('/today'))).toBe('/today');
     expect(returnPath('/api/auth/sign-out')).toBe('/today');
+    expect(returnPath('/SIGN-IN/')).toBe('/today');
+    expect(returnPath('/api')).toBe('/today');
   });
 });

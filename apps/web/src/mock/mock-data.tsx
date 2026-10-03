@@ -3,7 +3,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { ApiProvider } from '@/api/api-provider';
 import { apiBaseUrl, createApi } from '@/api/create-api';
 import { invalidateReads } from '@/api/reads';
-import { sendToSignIn } from '@/app/sign-in';
+import { sendToSignIn } from '@/auth/sign-in';
 import { AuthProvider } from '@/auth/auth-provider';
 import { createMemoryStore } from '@/store/record-store';
 import { StoreProvider } from '@/store/store-provider';

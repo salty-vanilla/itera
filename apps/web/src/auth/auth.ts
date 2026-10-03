@@ -58,7 +58,8 @@ export interface Auth {
   getSession(): Promise<Session | null>;
   /**
    * Leaves the app for Google. It comes back to `returnTo` once signed in,
-   * or to `failedTo` with `?error=<code>` (google-errors.ts). Resolves
+   * or to `failedTo` with `?error=<code>`
+   * (screens/sign-in/sign-in-problems.ts). Resolves
    * `false` when the sign-in could not start.
    */
   signInWithGoogle(to: {

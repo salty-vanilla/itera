@@ -20,7 +20,7 @@ const SIGN_UP_NOT_ALLOWED = 'SIGN_UP_NOT_ALLOWED';
 const googleFailed: SignInProblem = {
   tone: 'danger',
   title: 'Google でサインインできませんでした',
-  body: 'もう一度お試しください。',
+  body: 'もう一度試してください。',
 };
 
 export const signInProblem = {

@@ -27,7 +27,7 @@ import {
   validateSignInSearch,
 } from '@/screens/sign-in/sign-in-screen';
 import { RootLayout } from './root-layout';
-import { SIGN_IN_PATH } from './sign-in';
+import { SIGN_IN_PATH } from '@/auth/sign-in';
 
 // Routes (ADR 0005). One path per screen. With the browser mock, the
 // fixture state is a search parameter on the root, kept on every

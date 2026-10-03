@@ -1,7 +1,7 @@
 import { getRouteApi } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { returnPath, signInHref } from '@/app/sign-in';
+import { returnPath, signInHref } from '@/auth/sign-in';
 import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { Notice } from '@/components/ui/notice';

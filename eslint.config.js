@@ -179,12 +179,12 @@ function migratingOn(pkg) {
   );
 }
 
-// Outside the rule: the tests and their helpers, which open the fixture's
-// records, and the browser mock (the server's stand-in).
 // Better Auth's client stays in the one module that implements `Auth`
 // (apps/web/src/auth/better-auth.ts, #278); the rest of apps/web uses the
-// interface, which the browser mock answers too. In both blocks below, as
-// each replaces the other's rule of the same name.
+// interface, which the browser mock answers too. Put in both blocks below,
+// as their ignores differ: a file left out of one is still checked by the
+// other. Files out of both (the mock, the tests, the files migrating on both
+// packages) are not checked.
 const WEB_BETTER_AUTH = 'apps/web/src/auth/better-auth.ts';
 const webBetterAuthPattern = {
   regex: '^(better-auth|@better-auth/)',
@@ -192,6 +192,8 @@ const webBetterAuthPattern = {
     'Use Auth (@/auth/auth-provider); Better Auth stays in src/auth/better-auth.ts.',
 };
 
+// Outside the rule: the tests and their helpers, which open the fixture's
+// records, and the browser mock (the server's stand-in).
 const WEB_NOT_SCREENS = [
   'apps/web/src/**/*.test.{ts,tsx}',
   'apps/web/src/test/**',

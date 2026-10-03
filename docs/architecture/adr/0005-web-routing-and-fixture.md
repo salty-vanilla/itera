@@ -131,7 +131,7 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
   - 保存できたか分からない（409 `revisionConflict`、500、通信の失敗、知らない `code`・ステータス・JSON でない本文）：409 は応答が失われただけで保存は済んでいることがあり（ADR 0006「エラー」）、ほかはサーバーが書いた後に失敗したかもしれないので、「記録は変わっていません」とは言わない。すべての読み取りを読み直してから（成功のときと同じく最初の答えまで）、「保存できたか確かめられませんでした」「最新の記録を確かめてください。」を出す。
   - 未認証（401）は Toast を出さず、下のサインインの入口へ送る。
   - 分け方は `use-operation.test.tsx` の「a failed operation」が、code・ステータスごとに Toast と読み直しの有無で確かめる。
-- 未認証（401）は、読み取りでも操作でも、サインインの画面へ送る（`apps/web/src/app/sign-in.ts`。`/sign-in?redirect=<元の画面>`、履歴は置き換える）。Toast は出さない。画面と戻り先の扱いは下の「サインインとアカウント」（#278）。
+- 未認証（401）は、読み取りでも操作でも、サインインの画面へ送る（`apps/web/src/auth/sign-in.ts`。`/sign-in?redirect=<元の画面>`、履歴は置き換える）。Toast は出さない。画面と戻り先の扱いは下の「サインインとアカウント」（#278）。
 - 読み取りは、サーバーと通信の失敗（500 など）と版の衝突のときだけ 1 回まで取り直す。受け付けられない要求と未認証は取り直さない。操作は取り直さない。
 - 操作は `useOperation(<生成した mutation の options>)`（`apps/web/src/api/use-operation.ts`）で呼ぶ。送信中は同じ操作を重ねて送らない（押し直しは送らずに失敗として返す）。`pending`（送信中。操作を受け付けない）と `loading`（送信中が 300ms 続いた。DESIGN.md の Spinner のとおり、Button・IconButton の `loading` でスピナーと文言を出す）を返す。送信中の見た目は DESIGN.md Components › Button・IconButton と docs/design/foundations.md の Loading に従い、各画面の Issue で付ける。
 
@@ -174,7 +174,8 @@ Better Auth（ADR 0004「認証の構成」）の API を使う、Web のサイ�
 #### 境界
 
 - 画面は `apps/web/src/auth/auth.ts` の `Auth`（セッション、Google とパスキーでのサインイン、パスキーの一覧と追加、サインアウト）だけを使い、`useAuth()` で受け取る。データの出どころが実装を選ぶ：API では `src/auth/better-auth.ts`（Better Auth のクライアント。同じ origin の `/api/auth`）、開発のモックでは `src/mock/mock-auth.ts`。
-- `better-auth`・`@better-auth/*` を import してよいのは `src/auth/better-auth.ts` だけ（ESLint の `no-restricted-imports`。`services/api` の `src/auth/better-auth.ts` と同じ形）。
+- `better-auth`・`@better-auth/*` を import してよいのは `src/auth/better-auth.ts` だけ（ESLint の `no-restricted-imports`。`services/api` の `src/auth/better-auth.ts` と同じ形）。画面の domain と application の 2 つの規則に入れたので、両方の外にあるファイル（モック、テスト、両方を移行中のファイル）は検査されない。
+- 戻り先とサインインの入口（`SIGN_IN_PATH`・`signInHref`・`returnPath`・`sendToSignIn`）は `src/auth/sign-in.ts` に置く（#272 では `src/app/sign-in.ts`）。依存の向きを app → screens → auth の一方にするため。
 - Better Auth の React の hook（`useSession` など）と、クライアントのセッションの自動の取り直しは使わない。延長の呼び方を下の 1 か所で決め、テストで確かめるため。
 
 #### 画面と経路
@@ -187,6 +188,7 @@ Better Auth（ADR 0004「認証の構成」）の API を使う、Web のサイ�
 
 #### セッションの延長
 
+- セッションは 1 つのクエリ（`src/auth/session-query.ts`）として取る。延長はそのクエリを取り直し（`fetchQuery`）、アカウントの画面は同じクエリを読む。`/api/auth/get-session` を呼ぶ場所を 1 つにするため。
 - `src/auth/session-refresh.ts`：枠の中の画面を開いたとき、画面が隠れてから 1 時間以上たって戻ってきたとき（`visibilitychange`）、表示している間は 1 時間ごとに `getSession`（`/api/auth/get-session`）を呼ぶ。ADR 0004 の延長は 1 日を過ぎたセッションで起きるので、1 時間おきなら開いている日には延びる。セッションがなければサインインの画面へ送る。サーバーや通信の失敗は捨て、次の呼び出しに任せる。
 
 #### ブラウザ内モック

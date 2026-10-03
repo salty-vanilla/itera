@@ -4,7 +4,7 @@ import { ToastProvider } from '@/components/ui/toast';
 import { AppShell } from './app-shell';
 import { MockData } from './data-source';
 import { ServerData } from './server-data';
-import { SIGN_IN_PATH } from './sign-in';
+import { SIGN_IN_PATH } from '@/auth/sign-in';
 
 /**
  * The data source and the Toasts for every screen. The sign-in screen

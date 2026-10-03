@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useRouter } from '@tanstack/react-router';
 import { useState } from 'react';
-import { SIGN_IN_PATH, sendToSignIn, signInHref } from '@/app/sign-in';
+import { SIGN_IN_PATH, sendToSignIn, signInHref } from '@/auth/sign-in';
 import type { PasskeyOutcome } from '@/auth/auth';
 import { useAuth } from '@/auth/auth-provider';
+import { sessionQuery } from '@/auth/session-query';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Notice } from '@/components/ui/notice';
 import { Spinner } from '@/components/ui/spinner';
@@ -18,11 +19,7 @@ import { ScreenFrame } from '../screen-frame';
 
 const ACCOUNT_PATH = '/account';
 
-/** The queries of the signed-in person's account, apart from the reads. */
-export const accountKeys = {
-  session: ['account', 'session'],
-  passkeys: ['account', 'passkeys'],
-} as const;
+const PASSKEYS_KEY = ['auth', 'passkeys'] as const;
 
 type AddProblem = Exclude<
   Extract<PasskeyOutcome, { ok: false }>['reason'],
@@ -37,14 +34,9 @@ function AccountScreen() {
   const toast = useToast();
   const [problem, setProblem] = useState<AddProblem | null>(null);
 
-  const session = useQuery({
-    queryKey: accountKeys.session,
-    queryFn: () => auth.getSession(),
-    // Kept fresh by the session's own refresh (session-refresh.ts).
-    staleTime: Infinity,
-  });
+  const session = useQuery(sessionQuery(auth));
   const passkeys = useQuery({
-    queryKey: accountKeys.passkeys,
+    queryKey: PASSKEYS_KEY,
     queryFn: () => auth.listPasskeys(),
   });
 
@@ -63,7 +55,7 @@ function AccountScreen() {
         tone: 'done',
         title: 'パスキーを追加しました',
       });
-      void queryClient.invalidateQueries({ queryKey: accountKeys.passkeys });
+      void queryClient.invalidateQueries({ queryKey: PASSKEYS_KEY });
     } else if (outcome.reason === 'unauthenticated') sendToSignIn(router);
     else if (outcome.reason !== 'cancelled') setProblem(outcome.reason);
   };
@@ -77,7 +69,8 @@ function AccountScreen() {
       toast.show({
         kind: 'sign-out-failed',
         tone: 'danger',
-        title: 'サインアウトできませんでした。',
+        title: 'サインアウトできませんでした',
+        description: 'もう一度試してください。',
       });
       return;
     }
@@ -142,11 +135,11 @@ function AccountScreen() {
           />
         )}
         {problem === 'alreadyAdded' && (
-          <Notice tone="info" title="この端末のパスキーは追加済みです" live />
+          <Notice tone="info" title="このパスキーは追加済みです" live />
         )}
         {problem === 'failed' && (
           <Notice tone="danger" title="パスキーを追加できませんでした">
-            もう一度お試しください。
+            もう一度試してください。
           </Notice>
         )}
         <div>

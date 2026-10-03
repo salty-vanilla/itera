@@ -18,17 +18,29 @@ export function signInHref(from: string): string {
 /**
  * The screen to open after signing in: `redirect` when it is a path of the
  * app's own (not the sign-in screen, not the API), else Today. The value
- * comes from the URL, so a link from elsewhere cannot send the person to
- * another site (`//host`, `/\host` and `https:` are not paths here).
+ * comes from the URL, so a link from elsewhere must not send the person to
+ * another site. The path is checked as it comes out of the URL parser too:
+ * it removes `.` and `..` segments, which can leave `//host`
+ * (`/.//host`). The same rule as Better Auth's for a relative
+ * `callbackURL`: no leading `//`, no backslash, no encoded slash or
+ * backslash in the path.
  */
 export function returnPath(redirect: unknown): string {
   if (typeof redirect !== 'string' || !redirect.startsWith('/'))
     return HOME_PATH;
   const url = new URL(redirect, 'http://app.invalid');
   if (url.origin !== 'http://app.invalid') return HOME_PATH;
-  if (url.pathname === SIGN_IN_PATH || url.pathname.startsWith('/api/'))
+  const path = url.pathname;
+  if (path.startsWith('//') || path.includes('\\') || /%2f|%5c/i.test(path))
     return HOME_PATH;
-  return `${url.pathname}${url.search}${url.hash}`;
+  const screen = path.toLowerCase().replace(/\/+$/, '');
+  if (
+    screen === SIGN_IN_PATH ||
+    screen === '/api' ||
+    screen.startsWith('/api/')
+  )
+    return HOME_PATH;
+  return `${path}${url.search}${url.hash}`;
 }
 
 /**

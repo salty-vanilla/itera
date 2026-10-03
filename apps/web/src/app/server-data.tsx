@@ -4,7 +4,7 @@ import { ApiProvider } from '@/api/api-provider';
 import { apiBaseUrl, createApi } from '@/api/create-api';
 import { AuthProvider } from '@/auth/auth-provider';
 import { createBetterAuth } from '@/auth/better-auth';
-import { sendToSignIn } from './sign-in';
+import { sendToSignIn } from '@/auth/sign-in';
 
 /**
  * The API as the data source, with Better Auth for signing in. There is no
