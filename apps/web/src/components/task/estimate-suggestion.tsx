@@ -1,12 +1,12 @@
 import type {
   EstimateSuggestion as Suggestion,
   SuggestionBound,
-} from '@itera/domain';
-import { boundValue } from '@itera/domain';
+} from '@itera/api-contract';
 import { useEffect, useId, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { DurationField } from '@/components/ui/duration-field';
 import { BOUND_WORDS } from '@/lib/criterion-text';
+import { boundValue } from '@/lib/domain-functions';
 import { DURATION_ERROR, hoursText, readMinutes } from '@/lib/duration-text';
 import { formatHours, formatRange } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
@@ -28,8 +28,11 @@ type EstimateSuggestionProps = {
   /** When it was made, as text (「9/24 (木) 12:01」). */
   madeAt: string;
   onAdopt: (bound: SuggestionBound) => void;
-  /** 直して使う (編集して採用): the person's hours. Returns whether it went through. */
-  onAdoptEdited: (hours: number) => boolean;
+  /**
+   * 直して使う (編集して採用): the person's hours. Returns whether it went
+   * through, when it has been sent.
+   */
+  onAdoptEdited: (hours: number) => boolean | Promise<boolean>;
   onReject: () => void;
   /**
    * Focuses the first 採用 button when it appears, e.g. when the suggestion
@@ -69,7 +72,7 @@ function EstimateSuggestion({
     }
   }, [editing]);
 
-  function adoptEdited() {
+  async function adoptEdited() {
     const minutes = readMinutes(hours);
     if (minutes === undefined || minutes === null || minutes === 0) {
       setError(DURATION_ERROR);
@@ -77,7 +80,7 @@ function EstimateSuggestion({
       return;
     }
     setError(undefined);
-    if (onAdoptEdited(minutes / 60)) setEditing(false);
+    if (await onAdoptEdited(minutes / 60)) setEditing(false);
   }
 
   return (

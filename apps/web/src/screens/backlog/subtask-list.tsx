@@ -1,4 +1,4 @@
-import type { Subtask, Task } from '@itera/domain';
+import type { Subtask, Task } from '@itera/api-contract';
 import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { Button } from '@/components/ui/button';
 import { CheckboxControl } from '@/components/ui/checkbox';
@@ -65,7 +65,7 @@ function SubtaskList({
       <form
         className="flex flex-col gap-2"
         noValidate
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault();
           const parsed = parseHours(hours);
           if (title.trim() === '') return;
@@ -76,7 +76,7 @@ function SubtaskList({
             return;
           }
           setError(undefined);
-          const ok = actions.addSubtask(
+          const ok = await actions.addSubtask(
             task.id,
             title.trim(),
             parsed ?? undefined,
@@ -104,7 +104,13 @@ function SubtaskList({
             onChange={setHours}
             hoursProps={{ ref: hoursRef }}
           />
-          <Button type="submit">追加</Button>
+          <Button
+            type="submit"
+            loading={actions.loading.addSubtask}
+            loadingLabel="追加中…"
+          >
+            追加
+          </Button>
         </div>
       </form>
     </section>
@@ -117,7 +123,7 @@ function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
   const [hours, setHours] = useState(saved);
   const [error, setError] = useState<string>();
 
-  function commit() {
+  async function commit() {
     const parsed = parseHours(hours);
     if (parsed === 'invalid') {
       setError(DURATION_ERROR);
@@ -125,7 +131,7 @@ function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
     }
     setError(undefined);
     if (sameMinutes(readMinutes(hours) ?? undefined, subtask.estimate)) return;
-    if (!actions.setSubtaskEstimate(task.id, subtask.id, parsed))
+    if (!(await actions.setSubtaskEstimate(task.id, subtask.id, parsed)))
       setHours(saved);
   }
 

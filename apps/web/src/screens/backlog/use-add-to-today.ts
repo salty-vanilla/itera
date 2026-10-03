@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router';
-import type { TaskId } from '@itera/domain';
+import type { TaskId } from '@itera/api-contract';
 import { useToast } from '@/components/ui/toast';
 import { useTaskActions } from '@/store/use-task-actions';
 
@@ -13,8 +13,8 @@ export function useAddToToday() {
   const actions = useTaskActions();
   const toast = useToast();
   const navigate = useNavigate();
-  return (taskId: TaskId, title: string): boolean => {
-    if (!actions.addToToday(taskId)) return false;
+  return async (taskId: TaskId, title: string): Promise<boolean> => {
+    if (!(await actions.addToToday(taskId))) return false;
     toast.show({
       kind: 'added-to-today',
       title: `「${title}」を「今日やる」に入れました`,

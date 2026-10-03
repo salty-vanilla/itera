@@ -1,6 +1,7 @@
-import type { AreaId } from '@itera/domain';
+import type { AreaId } from '@itera/api-contract';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { AreaMark } from '@/components/ui/area-indicator';
+import { ReadStatus } from '@/components/read-status';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -104,7 +105,7 @@ function AreaEditor({
   focusNew: boolean;
   onCreated: ((areaId: AreaId) => void) | undefined;
 }) {
-  const areas = useAreas();
+  const read = useAreas();
   const actions = useAreaActions();
   const [renaming, setRenaming] = useState<AreaId>();
   // Archived while the Dialog is open: the line stays with 元に戻す.
@@ -113,7 +114,10 @@ function AreaEditor({
   const [status, setStatus] = useState('');
   const newRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
-  const shown = areas.filter((a) => !a.archived || archived.includes(a.id));
+  const shown =
+    read.status === 'ready'
+      ? read.areas.filter((a) => !a.archived || archived.includes(a.id))
+      : [];
 
   /** After a row changes, the focus goes to a control of that row. */
   const focusRow = (areaId: AreaId, action: 'edit' | 'undo') =>
@@ -125,7 +129,7 @@ function AreaEditor({
         ?.focus(),
     );
 
-  function add(event: FormEvent) {
+  async function add(event: FormEvent) {
     event.preventDefault();
     const name = newName.trim();
     // Nothing typed adds nothing, as in a Quick Add.
@@ -133,7 +137,7 @@ function AreaEditor({
       newRef.current?.focus();
       return;
     }
-    const created = actions.addArea(name);
+    const created = await actions.addArea(name);
     if (created === undefined) return;
     setNewName('');
     setStatus(`「${name}」を追加しました`);
@@ -143,7 +147,9 @@ function AreaEditor({
 
   return (
     <DialogBody className="flex flex-col gap-5">
-      {shown.length === 0 ? (
+      {read.status !== 'ready' ? (
+        <ReadStatus label="領域" read={read} />
+      ) : shown.length === 0 ? (
         <p className="text-body text-ink-muted">領域はまだありません。</p>
       ) : (
         <ul
@@ -156,8 +162,8 @@ function AreaEditor({
               <ArchivedLine
                 key={area.id}
                 area={area}
-                onUndo={() => {
-                  if (!actions.restoreArea(area.id)) return;
+                onUndo={async () => {
+                  if (!(await actions.restoreArea(area.id))) return;
                   setArchived((ids) => ids.filter((id) => id !== area.id));
                   setStatus(`「${area.name}」を元に戻しました`);
                   focusRow(area.id, 'edit');
@@ -167,9 +173,9 @@ function AreaEditor({
               <EditRow
                 key={area.id}
                 area={area}
-                onArchive={() => {
+                onArchive={async () => {
                   setRenaming(undefined);
-                  if (!actions.archiveArea(area.id)) return;
+                  if (!(await actions.archiveArea(area.id))) return;
                   setArchived((ids) => [...ids, area.id]);
                   focusRow(area.id, 'undo');
                 }}
@@ -177,8 +183,8 @@ function AreaEditor({
                   setRenaming(undefined);
                   focusRow(area.id, 'edit');
                 }}
-                onRename={(name) => {
-                  if (!actions.renameArea(area.id, name)) return;
+                onRename={async (name) => {
+                  if (!(await actions.renameArea(area.id, name))) return;
                   setRenaming(undefined);
                   if (name !== area.name) setStatus(`「${name}」に変えました`);
                   focusRow(area.id, 'edit');
@@ -219,7 +225,13 @@ function AreaEditor({
             onChange={(e) => setNewName(e.currentTarget.value)}
           />
         </Field>
-        <Button type="submit">追加</Button>
+        <Button
+          type="submit"
+          loading={actions.loading.addArea}
+          loadingLabel="追加中…"
+        >
+          追加
+        </Button>
       </form>
       <p role="status" className="sr-only">
         {status}

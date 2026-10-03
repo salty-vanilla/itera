@@ -6,7 +6,7 @@ import { sendToSignIn } from './sign-in';
 
 /**
  * The API as the data source. There is no RecordStore: a screen not yet
- * moved to the contract (#273〜#276) shows that it is not (router.tsx).
+ * moved to the contract (#274〜#276) shows that it is not (router.tsx).
  */
 function ServerData({ children }: { children: ReactNode }) {
   const router = useRouter();

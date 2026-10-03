@@ -1,8 +1,9 @@
-import { id, type AreaId, type BacklogSlice, type TaskId } from '@itera/domain';
+import type { AreaId, BacklogSlice, TaskId } from '@itera/api-contract';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { Pencil } from 'lucide-react';
 import { Fragment, useEffect, useId, useRef, useState, type Ref } from 'react';
 import { Button } from '@/components/ui/button';
+import { ReadStatus } from '@/components/read-status';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Filter, FilterGroup } from '@/components/ui/filter';
 import { useToast } from '@/components/ui/toast';
@@ -12,7 +13,7 @@ import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 import { useStuckBar } from '@/lib/use-stuck-bar';
 import { cn } from '@/lib/utils';
-import { useBacklog } from '@/store/use-backlog';
+import { useBacklog, type BacklogView } from '@/store/use-backlog';
 import { useTaskActions } from '@/store/use-task-actions';
 import { AreaDialog, useNewAreaDialog } from './area-dialog';
 import { BacklogRow } from './backlog-row';
@@ -52,16 +53,27 @@ export function validateBacklogSearch(
     ?.value as BacklogSlice | undefined;
   return {
     ...(view === undefined ? {} : { view }),
-    ...(typeof search.area === 'string'
-      ? { area: id<'Area'>(search.area) }
-      : {}),
-    ...(typeof search.task === 'string'
-      ? { task: id<'Task'>(search.task) }
-      : {}),
+    ...(typeof search.area === 'string' ? { area: search.area } : {}),
+    ...(typeof search.task === 'string' ? { task: search.task } : {}),
   };
 }
 
 function BacklogScreen() {
+  const search = useSearch({ from: '/backlog' });
+  const backlog = useBacklog({ view: search.view, area: search.area });
+  if (backlog.status !== 'ready') {
+    return (
+      <div className="flex min-h-full flex-col gap-4 px-4 pt-10 pb-4 medium:px-6 xl:max-w-pane-rows">
+        <h1 className="text-display-m text-ink">Backlog</h1>
+        <ReadStatus label="タスクの一覧" read={backlog} />
+      </div>
+    );
+  }
+  return <LoadedBacklog backlog={backlog} />;
+}
+
+/** The Backlog once its records are read. */
+function LoadedBacklog({ backlog }: { backlog: BacklogView }) {
   const search = useSearch({ from: '/backlog' });
   const navigate = useNavigate({ from: '/backlog' });
   const actions = useTaskActions();
@@ -73,7 +85,6 @@ function BacklogScreen() {
   // 領域を編集, from the end of the Area filters (Issue #113).
   const [editingAreas, setEditingAreas] = useState(false);
   const newArea = useNewAreaDialog();
-  const backlog = useBacklog({ view: search.view, area: search.area });
   const { areas, items, today } = backlog;
   // The Area of the next Quick Add. One archived since it was chosen is no
   // longer a choice: none (#113).
@@ -145,11 +156,11 @@ function BacklogScreen() {
     });
   };
 
-  const completeWithUndo = (taskId: TaskId, title: string) => {
+  const completeWithUndo = async (taskId: TaskId, title: string) => {
     const index = items.findIndex((i) => i.task.id === taskId);
     const before = items[index + 1]?.task.id;
     setRefocus(undefined);
-    if (!actions.completeTask(taskId)) return;
+    if (!(await actions.completeTask(taskId))) return;
     // From the detail: close it once the Task is done. Closing clears the
     // line of an earlier completion, so the new one is set after it.
     if (search.task === taskId) setSearch({ task: undefined });
@@ -160,20 +171,20 @@ function BacklogScreen() {
     });
   };
 
-  const undoCompleted = () => {
+  const undoCompleted = async () => {
     if (completed === undefined) return;
-    if (!actions.undoCompleteTask(completed.taskId)) return;
+    if (!(await actions.undoCompleteTask(completed.taskId))) return;
     setCompleted(undefined);
     setRefocus(completed.taskId);
   };
 
-  const archiveWithUndo = (taskId: TaskId, title: string) => {
+  const archiveWithUndo = async (taskId: TaskId, title: string) => {
     // The row goes: the focus moves to the next row (or the one before it,
     // or the Quick Add) rather than nowhere.
     const index = items.findIndex((i) => i.task.id === taskId);
     const next = items[index + 1] ?? items[index - 1];
     endUndo();
-    if (!actions.archiveTask(taskId)) return;
+    if (!(await actions.archiveTask(taskId))) return;
     if (search.task === taskId) setSearch({ task: undefined });
     requestAnimationFrame(() =>
       document
@@ -258,11 +269,11 @@ function BacklogScreen() {
       >
         <TaskQuickAdd
           label="Backlog にタスクを追加"
-          onAdd={(title) => {
-            const areaId =
-              quickChoice === '' ? undefined : id<'Area'>(quickChoice);
+          loading={actions.loading.addTask}
+          onAdd={async (title) => {
+            const areaId = quickChoice === '' ? undefined : quickChoice;
             endUndo();
-            const created = actions.addTask(title, areaId);
+            const created = await actions.addTask(title, areaId);
             if (created === undefined) return false;
             setJustAdded({ id: created, title });
             return true;

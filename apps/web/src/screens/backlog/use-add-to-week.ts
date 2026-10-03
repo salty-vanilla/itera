@@ -1,4 +1,4 @@
-import type { TaskId } from '@itera/domain';
+import type { TaskId } from '@itera/api-contract';
 import { useToast } from '@/components/ui/toast';
 import { useTaskActions } from '@/store/use-task-actions';
 
@@ -10,8 +10,8 @@ import { useTaskActions } from '@/store/use-task-actions';
 export function useAddToWeek() {
   const actions = useTaskActions();
   const toast = useToast();
-  return (taskId: TaskId, title: string): boolean => {
-    if (!actions.addToWeek(taskId)) return false;
+  return async (taskId: TaskId, title: string): Promise<boolean> => {
+    if (!(await actions.addToWeek(taskId))) return false;
     toast.show({
       kind: 'added-to-week',
       title: `「${title}」を今週に入れました`,

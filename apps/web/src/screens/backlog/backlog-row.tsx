@@ -1,4 +1,4 @@
-import type { LocalDate } from '@itera/domain';
+import type { BacklogItem, LocalDate } from '@itera/api-contract';
 import { Fragment, useEffect, useRef } from 'react';
 import { Archive, CircleCheck, Ellipsis, Route, Sun } from 'lucide-react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
@@ -23,7 +23,6 @@ import { CompletionCircle, TaskRow } from '@/components/task/task-row';
 import { formatDate } from '@/lib/date-format';
 import { formatPattern } from '@/lib/recurrence-text';
 import { formatHours } from '@/lib/time-format';
-import type { BacklogItem } from '@/store/views';
 
 export function CarryOverText({
   count,

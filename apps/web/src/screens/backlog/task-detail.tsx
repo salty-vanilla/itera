@@ -1,17 +1,13 @@
-import {
-  boundValue,
-  id,
-  parseLocalDate,
-  presentedSuggestion,
-  toLocalDate,
-  type Estimate as EstimateRecord,
-  type EstimateSuggestionId,
-  type SuggestionBound,
-  type Task,
-  type TaskAttributeUpdate,
-  type TaskPriority,
-  type TimeBasis,
-} from '@itera/domain';
+import type {
+  BacklogItem,
+  Estimate as EstimateRecord,
+  EstimateSuggestionId,
+  SuggestionBound,
+  Task,
+  TaskAttributeUpdate,
+  TaskPriority,
+  TimeBasis,
+} from '@itera/api-contract';
 import { Link, useLocation } from '@tanstack/react-router';
 import { Check, ChevronDown, ChevronRight } from 'lucide-react';
 import {
@@ -56,6 +52,12 @@ import {
 } from '@/lib/actual-hours';
 import { formatDate, formatTime } from '@/lib/date-format';
 import {
+  boundValue,
+  parseLocalDate,
+  presentedSuggestion,
+  toLocalDate,
+} from '@/lib/domain-functions';
+import {
   DURATION_ERROR,
   EMPTY_DURATION,
   hoursText,
@@ -65,13 +67,13 @@ import {
 } from '@/lib/duration-text';
 import { formatHours } from '@/lib/time-format';
 import { startedText } from '@/lib/today-words';
-import type { BacklogData, BacklogItem } from '@/store/views';
+import type { BacklogView } from '@/store/use-backlog';
 import { useTaskActions } from '@/store/use-task-actions';
-import { useTodayActions } from '@/store/use-today';
 import { useNewAreaDialog } from './area-dialog';
 import { CarryOverText, RecurrenceText, SprintText } from './backlog-row';
 import { RecurrenceEditor } from './recurrence-editor';
 import { SubtaskList } from './subtask-list';
+import { useSelectionActions } from './use-selection-actions';
 import { useAddToToday } from './use-add-to-today';
 import { useAddToWeek } from './use-add-to-week';
 
@@ -209,7 +211,7 @@ function Saved({ show, children }: { show: boolean; children: ReactNode }) {
 /** The line under 今日と今週 for a Task in today's 今日やる. */
 function dayText(
   today: NonNullable<BacklogItem['today']>,
-  timeZone: BacklogData['timeZone'],
+  timeZone: BacklogView['timeZone'],
 ): string {
   switch (today.resolution) {
     case 'started':
@@ -268,8 +270,8 @@ function TaskDetail({
 }: {
   item: BacklogItem;
   /** The Areas to choose from, in the person's order. */
-  areas: BacklogData['areas'];
-  timeZone: BacklogData['timeZone'];
+  areas: BacklogView['areas'];
+  timeZone: BacklogView['timeZone'];
   onClose: () => void;
   /** 完了にする: the screen closes the detail and leaves the undo line. */
   onComplete: () => void;
@@ -288,7 +290,7 @@ function TaskDetail({
 }) {
   const actions = useTaskActions();
   const newArea = useNewAreaDialog();
-  const todayActions = useTodayActions();
+  const selectionActions = useSelectionActions();
   const addToToday = useAddToToday();
   const addToWeek = useAddToWeek();
   const { task } = item;
@@ -327,7 +329,7 @@ function TaskDetail({
     setPauseError(undefined);
     requestAnimationFrame(() => pauseButtonRef.current?.focus());
   }
-  function submitPause(event: FormEvent) {
+  async function submitPause(event: FormEvent) {
     event.preventDefault();
     if (facts.today === undefined) return;
     const hours = readActualHours(pauseText);
@@ -336,26 +338,25 @@ function TaskDetail({
       pauseInputRef.current?.focus();
       return;
     }
-    if (todayActions.pause(facts.today.selectionId, hours)) {
+    if (await selectionActions.pause(facts.today.selectionId, hours)) {
       setPausing(false);
       setPauseText(EMPTY_DURATION);
       setPauseError(undefined);
-      setOperations((n) => n + 1);
+      sectionDone();
     }
   }
   // After an operation of the section the button pressed is gone: the
   // focus goes to 今日を開く, else to the first button left, else the title.
+  // The operation is done before its records are on screen, so the focus
+  // waits for the section to change from what it was when it was pressed.
   const [operations, setOperations] = useState(0);
-  useEffect(() => {
-    if (operations === 0) return;
-    (
-      openTodayRef.current ??
-      nowRef.current?.querySelector<HTMLElement>('button:not([disabled])') ??
-      titleRef.current
-    )?.focus();
-  }, [operations]);
-  function runNow(run: () => boolean) {
-    if (run()) setOperations((n) => n + 1);
+  const focusFrom = useRef<string>(undefined);
+  async function runNow(run: () => Promise<boolean>) {
+    if (await run()) sectionDone();
+  }
+  function sectionDone() {
+    focusFrom.current = sectionKey;
+    setOperations((n) => n + 1);
   }
   const [draft, setDraft] = useState(() => draftOf(task));
   const [errors, setErrors] = useState<Partial<Record<TextKey, string>>>({});
@@ -433,7 +434,7 @@ function TaskDetail({
         <Button
           variant={variant(isMain)}
           onClick={() =>
-            runNow(() => todayActions.start(facts.today!.selectionId))
+            runNow(() => selectionActions.start(facts.today!.selectionId))
           }
         >
           開始
@@ -463,7 +464,7 @@ function TaskDetail({
         <Button
           variant={variant(isMain)}
           onClick={() =>
-            runNow(() => todayActions.defer(facts.today!.selectionId))
+            runNow(() => selectionActions.defer(facts.today!.selectionId))
           }
         >
           今日は見送る
@@ -476,7 +477,7 @@ function TaskDetail({
         <Button
           variant={variant(isMain)}
           onClick={() =>
-            runNow(() => todayActions.skip(facts.today!.selectionId))
+            runNow(() => selectionActions.skip(facts.today!.selectionId))
           }
         >
           今日の回をスキップする
@@ -489,7 +490,9 @@ function TaskDetail({
         <Button
           variant={variant(isMain)}
           onClick={() =>
-            runNow(() => todayActions.removeFromToday(facts.today!.selectionId))
+            runNow(() =>
+              selectionActions.removeFromToday(facts.today!.selectionId),
+            )
           }
         >
           今週の残りに戻す
@@ -524,6 +527,19 @@ function TaskDetail({
             : dayOperations[0]?.key;
   // The main operation first, in the DOM too, so that Tab reaches it first.
   dayOperations.sort((a, b) => Number(b.key === main) - Number(a.key === main));
+  // What the section offers now: it changes once an operation of it has
+  // taken effect (the button pressed is gone).
+  const sectionKey = `${dayOperations.map((o) => o.key).join()}${facts.today === undefined ? '' : '+open'}`;
+  useEffect(() => {
+    if (focusFrom.current === undefined || focusFrom.current === sectionKey)
+      return;
+    focusFrom.current = undefined;
+    (
+      openTodayRef.current ??
+      nowRef.current?.querySelector<HTMLElement>('button:not([disabled])') ??
+      titleRef.current
+    )?.focus();
+  }, [operations, sectionKey]);
   // What was typed in the subtask and recurrence forms but not added or
   // applied: closing asks first, with the operation it would carry out.
   const [held, setHeld] = useState<{
@@ -560,12 +576,12 @@ function TaskDetail({
     });
   };
 
-  function record(
+  async function record(
     key: FieldKey,
     update: TaskAttributeUpdate,
     estimate?: number | null,
-  ): boolean {
-    if (!actions.saveTask(task.id, update, estimate)) return false;
+  ): Promise<boolean> {
+    if (!(await actions.saveTask(task.id, update, estimate))) return false;
     setSaved(key);
     return true;
   }
@@ -640,11 +656,11 @@ function TaskDetail({
     }
   };
 
-  function onAdopt(bound: SuggestionBound) {
+  async function onAdopt(bound: SuggestionBound) {
     if (suggestion === undefined) return;
     const previous = task.estimate ?? null;
     const hours = boundValue(suggestion, bound);
-    if (!actions.adoptSuggestion(task.id, suggestion.id, bound)) return;
+    if (!(await actions.adoptSuggestion(task.id, suggestion.id, bound))) return;
     replaceEstimate(hoursText(hours));
     setOutcome({
       kind: 'adopted',
@@ -654,10 +670,10 @@ function TaskDetail({
     });
   }
 
-  function onAdoptEdited(hours: number): boolean {
+  async function onAdoptEdited(hours: number): Promise<boolean> {
     if (suggestion === undefined) return false;
     const previous = task.estimate ?? null;
-    if (!actions.adoptEditedSuggestion(task.id, suggestion.id, hours)) {
+    if (!(await actions.adoptEditedSuggestion(task.id, suggestion.id, hours))) {
       return false;
     }
     replaceEstimate(hoursText(hours));
@@ -670,18 +686,24 @@ function TaskDetail({
     return true;
   }
 
-  function onUndoAdopt() {
+  async function onUndoAdopt() {
     if (outcome?.kind !== 'adopted') return;
-    if (!actions.undoAdoption(task.id, outcome.suggestionId, outcome.previous))
+    if (
+      !(await actions.undoAdoption(
+        task.id,
+        outcome.suggestionId,
+        outcome.previous,
+      ))
+    )
       return;
     replaceEstimate(hoursText(outcome.previous?.hours));
     setOutcome(undefined);
     setSuggestionBack(true);
   }
 
-  function onReject() {
+  async function onReject() {
     if (suggestion === undefined) return;
-    if (!actions.rejectSuggestion(task.id, suggestion.id)) return;
+    if (!(await actions.rejectSuggestion(task.id, suggestion.id))) return;
     setOutcome({
       kind: 'rejected',
       suggestionId: suggestion.id,
@@ -689,9 +711,9 @@ function TaskDetail({
     });
   }
 
-  function onUndoReject() {
+  async function onUndoReject() {
     if (outcome?.kind !== 'rejected') return;
-    if (!actions.undoRejection(task.id, outcome.suggestionId)) return;
+    if (!(await actions.undoRejection(task.id, outcome.suggestionId))) return;
     setOutcome(undefined);
     setSuggestionBack(true);
   }
@@ -942,7 +964,7 @@ function TaskDetail({
                     return;
                   }
                   record('areaId', {
-                    areaId: areaId === '' ? null : id<'Area'>(areaId),
+                    areaId: areaId === '' ? null : areaId,
                   });
                 }}
               >
@@ -1068,8 +1090,8 @@ function TaskDetail({
 
         <div className="border-t border-border-soft pt-4">
           <Button
-            onClick={() => {
-              if (!actions.archiveTask(task.id)) return;
+            onClick={async () => {
+              if (!(await actions.archiveTask(task.id))) return;
               onClose();
               toast.show({
                 kind: 'task-archived',

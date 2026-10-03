@@ -14,7 +14,7 @@
 //   `12〜16時間（ほかに見積もりなし 2件）`).
 // The words around a value (「提案」「計画」「残る」「超える」) belong to the screen.
 
-import type { PlanningTotal, PlanningValue } from '@itera/domain';
+import type { PlanningTotal, PlanningValue } from '@itera/api-contract';
 
 const MINUS = '−';
 const WAVE_DASH = '〜';

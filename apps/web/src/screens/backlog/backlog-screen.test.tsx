@@ -48,6 +48,8 @@ async function renderAt(url: string) {
     </TooltipProvider>,
   );
   await screen.findByRole('heading', { level: 1, name: 'Backlog' });
+  // The list is there once the records are read (the mock answers).
+  await screen.findByRole('region', { name: 'タスクの一覧' });
   return router;
 }
 

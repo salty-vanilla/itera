@@ -19,7 +19,7 @@ function StoreProvider({
 }
 
 /**
- * What a screen still on the store (#273〜#276) throws when the API is the
+ * What a screen still on the store (#274〜#276) throws when the API is the
  * data source: there is no RecordStore then (ADR 0005). #277 removes it.
  */
 class NotOnContractError extends Error {
