@@ -1106,7 +1106,7 @@ export const unpinFactMutation = (options?: Partial<Options<UnpinFactData>>): Us
 /**
  * Pin a fact
  *
- * Pinned already, nothing changes.
+ * Pinned already, nothing changes. Only a fact of this Sprint can be pinned: another Sprint's, or none's, is 422 `invalidInput`.
  */
 export const pinFactMutation = (options?: Partial<Options<PinFactData>>): UseMutationOptions<PinFactResponse, PinFactError, Options<PinFactData>> => {
     const mutationOptions: UseMutationOptions<PinFactResponse, PinFactError, Options<PinFactData>> = {

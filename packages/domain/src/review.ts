@@ -240,13 +240,44 @@ export function assessGoal(
   );
 }
 
+/**
+ * Whether the pin names a fact of this Sprint (気になる印 is on the facts
+ * the Retro shows): a SprintTask, DailySelection or interrupt of the Sprint,
+ * an occurrence one of its SprintTasks took in, a Goal's Area of the
+ * Sprint, or the available hours (no ID). An ID of another Sprint, or of
+ * none, is not a fact of this one.
+ */
+function isFactOf(sprint: Sprint, pin: RetroPin): boolean {
+  if (pin.kind === 'availableHours') return pin.id === undefined;
+  const { id } = pin;
+  if (id === undefined) return false;
+  switch (pin.kind) {
+    case 'sprintTask':
+      return sprint.tasks.some((t) => t.id === id);
+    case 'dailySelection':
+      return sprint.dailySelections.some((s) => s.id === id);
+    case 'occurrence':
+      return sprint.tasks.some(
+        (t) =>
+          t.outcome !== 'draft' &&
+          t.occurrenceIds?.some((o) => o === id) === true,
+      );
+    case 'interrupt':
+      return sprint.interrupts.some((n) => n.id === id);
+    case 'goal':
+      return sprint.goals.some((g) => g.areaId === id);
+  }
+}
+
 function samePin(a: RetroPin, b: RetroPin): boolean {
   return a.kind === b.kind && a.id === b.id;
 }
 
 /**
- * 気になる印をつける. Pinning a fact already pinned changes nothing, so the
- * same request gives the same result however often it is sent (#295).
+ * 気になる印をつける. Only a fact of this Sprint can be pinned
+ * (`invalidInput` otherwise). Pinning a fact already pinned changes
+ * nothing, so the same request gives the same result however often it is
+ * sent (#295).
  */
 export function pinFact(
   sprint: Sprint,
@@ -275,6 +306,9 @@ function setPinned(
   if (!retro.ok) return retro;
   const pinned = retro.value.pins.some((p) => samePin(p, pin));
   if (pinned === on) return applied(sprint, []);
+  if (on && !isFactOf(sprint, pin)) {
+    return err('invalidInput', 'The pin names no fact of this Sprint.');
+  }
   const pins = on
     ? [...retro.value.pins, pin]
     : retro.value.pins.filter((p) => !samePin(p, pin));

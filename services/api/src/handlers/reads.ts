@@ -3,18 +3,19 @@ import {
   vGetDayPath,
   vGetSprintPath,
   vGetSprintQuery,
+  vGetSprintRetroPath,
   vListSprintCandidatesPath,
   vListSprintsQuery,
 } from '@itera/api-contract';
 import { queryInput } from '@itera/api-contract/requests';
 import {
   areaList,
-  type sprintRetro,
   backlogData,
   dayView,
   parseId,
   sprintCandidates,
   sprintList,
+  sprintRetro,
   sprintView,
   type BacklogData,
   type BacklogFilter,
@@ -113,8 +114,8 @@ function sprintIdIn(records: Records, sprintId: string): SprintId {
 }
 
 /**
- * The reads the API answers. To answer another, add it here and take it
- * off `unimplementedReads`.
+ * The reads the API answers: every read of the contract but the server's
+ * own (`getMe`) (registry.test.ts). To answer another, add it here.
  */
 export const readRoutes: {
   readonly [N in ReadName]?: ReadRoute<ReadViews[N]>;
@@ -161,6 +162,12 @@ export const readRoutes: {
     read: (records, clock, { params }) =>
       sprintCandidates(records, clock, sprintIdIn(records, params.sprintId)),
   }),
+  getSprintRetro: readRoute({
+    path: '/sprints/:sprintId/retro',
+    params: vGetSprintRetroPath,
+    read: (records, clock, { params }) =>
+      sprintRetro(records, clock, sprintIdIn(records, params.sprintId)),
+  }),
   getDay: readRoute({
     path: '/days/:date',
     params: vGetDayPath,
@@ -173,16 +180,6 @@ export const readRoutes: {
     },
   }),
 };
-
-/**
- * The contract's reads the API does not answer yet, by the Issue that adds
- * them. Every read of the contract is in `readRoutes`, here, or the
- * server's own (`getMe`) (registry.test.ts).
- */
-export const unimplementedReads: readonly ReadName[] = [
-  // #270: the Retro.
-  'getSprintRetro',
-];
 
 /**
  * `GET` of each read in `readRoutes`, after the guards. The response is
