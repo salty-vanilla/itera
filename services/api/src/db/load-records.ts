@@ -30,7 +30,8 @@ import {
 } from './schema';
 
 /**
- * All of the user's records except Activity, with their revision, read in
+ * All of the user's records except Activity, with their revision and the
+ * day the system's records were brought up to, read in
  * one batch (ADR 0004 「操作と読み取りの処理」). Root records come in ID order,
  * which is creation order for TypeIDs; the parts of an aggregate come in
  * their saved order.
@@ -86,7 +87,10 @@ export async function loadRecords(
     pinRows,
   ] = await db.batch([
     db
-      .select({ revision: recordRevision.revision })
+      .select({
+        revision: recordRevision.revision,
+        caughtUpTo: recordRevision.caughtUpTo,
+      })
       .from(recordRevision)
       .where(eq(recordRevision.userId, userId)),
     db.select().from(userSettings).where(eq(userSettings.userId, userId)),
@@ -223,5 +227,6 @@ export async function loadRecords(
   return {
     revision: revisions[0]?.revision ?? 0,
     records: recordsFromRows(rows),
+    caughtUpTo: revisions[0]?.caughtUpTo ?? null,
   };
 }

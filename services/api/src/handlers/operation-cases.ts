@@ -47,7 +47,8 @@ export function closeFixtureApps() {
 
 /** The app on a database holding the fixture's state, signed in as its user. */
 export async function setupFixtureApp(state: FixtureStateId) {
-  const { activities, ...records } = fixtureSnapshot(state).records;
+  const { records: all, clock } = fixtureSnapshot(state);
+  const { activities, ...records } = all;
   const memory = await createMemoryDatabase();
   open.push(memory.close);
   const { db } = memory;
@@ -60,6 +61,9 @@ export async function setupFixtureApp(state: FixtureStateId) {
     loaded: { revision: 0, records: null },
     changes: records,
     activities,
+    // Brought up to the fixture's day. The app's clock is later, so the
+    // first request writes the system's catch-up of the days since (#271).
+    caughtUpTo: clock.today,
   });
   const authenticator: Authenticator = {
     authenticate: async () => ({ userId }),
@@ -126,11 +130,17 @@ function responseSchema(name: OperationName): v.GenericSchema {
   return (contract as Record<string, unknown>)[key] as v.GenericSchema;
 }
 
+/**
+ * The records a case starts from: after its steps, and brought up to the
+ * app's clock by a read (#271), so that what the operation writes is its
+ * own and not the system's catch-up of the days since the fixture's.
+ */
 async function prepared(app: FixtureApp, steps: readonly Step[] = []) {
   for (const [name, body] of steps) {
     const response = await app.post(name, body((await app.saved()).records));
     expect(response.status, `${name} (prepare)`).toBeLessThan(300);
   }
+  expect((await app.get('/overview')).status).toBe(200);
   return app.saved();
 }
 

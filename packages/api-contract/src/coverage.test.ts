@@ -30,6 +30,7 @@ const NOT_READS = new Set([
   // The system's own records: the server runs them (ADR 0005).
   'reviewEnded',
   'beginDay',
+  'catchUp',
   // Running operations, and IDs.
   'createMemoryStore',
   'applyRecordChanges',

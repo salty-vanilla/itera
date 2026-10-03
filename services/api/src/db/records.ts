@@ -1,4 +1,5 @@
 import type { Records } from '@itera/application';
+import type { LocalDate } from '@itera/domain';
 
 // The shapes this layer reads and writes are packages/application's:
 // `Records` (every record but Activity, which is append-only and never
@@ -10,6 +11,11 @@ export interface LoadedRecords {
   readonly revision: number;
   /** `null` until the first save, which must include the user's settings. */
   readonly records: Records | null;
+  /**
+   * The day the system's records were brought up to by the last save
+   * (#271). `null` before the first save, or for a save that did not keep it.
+   */
+  readonly caughtUpTo: LocalDate | null;
 }
 
 export type SaveResult =

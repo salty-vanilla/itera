@@ -674,11 +674,13 @@ describe('the invariants, through the API', () => {
 });
 
 describe('the Backlog reads', () => {
-  // The same records and the same clock as the application's functions.
+  // The same records and the same clock as the application's functions:
+  // the records as the read left them, brought up to the clock's day
+  // (#271).
   async function read(path: string) {
     const app = await setup('backlog-capture');
-    const { records } = await app.saved();
     const response = await app.get(path);
+    const { records } = await app.saved();
     return { response, records, json: await response.json() };
   }
 

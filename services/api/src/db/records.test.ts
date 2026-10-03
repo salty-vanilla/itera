@@ -539,7 +539,10 @@ function recordsOf(userId: UserId, n: number): Records {
   };
 }
 
-const empty: LoadedRecords = { revision: 0, records: null };
+const empty: LoadedRecords = { revision: 0, records: null, caughtUpTo: null };
+
+/** The day every save in these tests brings the records up to. */
+const caughtUpTo = localDate('2026-10-03');
 
 async function signUp(db: Database, userId: UserId, email: string) {
   await db.insert(authUser).values({ id: userId, name: 'n', email });
@@ -552,6 +555,7 @@ async function saveAll(db: Database, records: Records) {
     loaded: empty,
     changes: records,
     activities: [],
+    caughtUpTo,
   });
 }
 
@@ -590,6 +594,7 @@ describe('loadRecords and saveRecords', () => {
     expect(await loadRecords(db, alice)).toStrictEqual({
       revision: 1,
       records,
+      caughtUpTo,
     });
   });
 
@@ -610,10 +615,11 @@ describe('loadRecords and saveRecords', () => {
       loaded: { revision: 3, records },
       changes: { tasks: [changed] },
       activities: [],
+      caughtUpTo,
     });
     expect(result).toEqual({ ok: true, revision: 4 });
     expect(queries).toEqual([
-      'insert into "record_revision" ("user_id", "revision") values (?, ?) on conflict ("record_revision"."user_id") do update set "revision" = case when "record_revision"."revision" = ? then ? else 0 end',
+      'insert into "record_revision" ("user_id", "revision", "caught_up_to") values (?, ?, ?) on conflict ("record_revision"."user_id") do update set "revision" = case when "record_revision"."revision" = ? then ? else 0 end, "caught_up_to" = case when "record_revision"."caught_up_to" > ? then "record_revision"."caught_up_to" else ? end',
       'update "subtask" set "title" = ? where "subtask"."id" = ?',
     ]);
   });
@@ -647,6 +653,7 @@ describe('loadRecords and saveRecords', () => {
       loaded,
       changes: { sprints: [changed] },
       activities: [],
+      caughtUpTo,
     });
     expect(result).toEqual({ ok: true, revision: 2 });
     const reloaded = await loadRecords(db, alice);
@@ -678,6 +685,7 @@ describe('loadRecords and saveRecords', () => {
         },
       },
       activities: [],
+      caughtUpTo,
     });
     expect(result).toEqual({ ok: true, revision: 2 });
     const reloaded = (await loadRecords(db, alice)).records!;
@@ -734,6 +742,7 @@ describe('loadRecords and saveRecords', () => {
       loaded,
       changes,
       activities: [],
+      caughtUpTo,
     });
     expect(result).toEqual({ ok: true, revision: 2 });
     const reloaded = (await loadRecords(db, alice)).records!;
@@ -761,6 +770,7 @@ describe('loadRecords and saveRecords', () => {
       loaded,
       changes: { sprints },
       activities: [],
+      caughtUpTo,
     });
     expect(result).toEqual({ ok: true, revision: 2 });
   });
@@ -846,6 +856,7 @@ describe('loadRecords and saveRecords', () => {
         loaded,
         changes: change(records),
         activities: [],
+        caughtUpTo,
       }),
     ).rejects.toThrow();
     expect(await dump(db)).toEqual(before);
@@ -870,6 +881,7 @@ describe('loadRecords and saveRecords', () => {
         deleted: { occurrences: [excluded.id, madeAndDropped.id] },
       },
       activities: [],
+      caughtUpTo,
     });
     expect(result).toEqual({ ok: true, revision: 2 });
     expect((await loadRecords(db, alice)).records!.occurrences).toStrictEqual([
@@ -902,6 +914,7 @@ describe('loadRecords and saveRecords', () => {
       loaded: empty,
       changes: { user: records.user, areas: records.areas },
       activities,
+      caughtUpTo,
     });
     // An operation that changes no record can still append Activity.
     const loaded = await loadRecords(db, alice);
@@ -910,6 +923,7 @@ describe('loadRecords and saveRecords', () => {
       loaded,
       changes: {},
       activities: activities.slice(0, 1),
+      caughtUpTo,
     });
     expect(await db.select().from(activity)).toEqual([
       {
@@ -954,6 +968,7 @@ describe('loadRecords and saveRecords', () => {
       loaded: { revision: 3, records },
       changes: { tasks: records.tasks, user: records.user },
       activities: [],
+      caughtUpTo,
     });
     expect(result).toEqual({ ok: true, revision: 3 });
     expect(queries).toEqual([]);
@@ -973,6 +988,7 @@ describe('loadRecords and saveRecords', () => {
       loaded: empty,
       changes: { user: records.user, tasks: many },
       activities: [],
+      caughtUpTo,
     });
     const parameters = queries.map((q) => q.split('?').length - 1);
     expect(Math.max(...parameters)).toBeLessThanOrEqual(100);
@@ -991,6 +1007,7 @@ describe('loadRecords and saveRecords', () => {
         loaded: empty,
         changes: { areas: records.areas },
         activities: [],
+        caughtUpTo,
       }),
     ).rejects.toThrow(/first save/);
   });
@@ -1008,6 +1025,7 @@ describe('revision', () => {
       loaded,
       changes: { areas: [{ ...area, name: 'PC で変えた' }] },
       activities: [],
+      caughtUpTo,
     });
     expect(fromPc).toEqual({ ok: true, revision: 2 });
     const before = await dump(db);
@@ -1028,6 +1046,7 @@ describe('revision', () => {
           to: 'スマホで変えた',
         },
       ],
+      caughtUpTo,
     });
     expect(fromPhone).toEqual({ ok: false, reason: 'revisionConflict' });
     expect(await dump(db)).toEqual(before);
@@ -1044,6 +1063,7 @@ describe('revision', () => {
         loaded: empty,
         changes: { user: { ...records.user, displayName: '別の端末' } },
         activities: [],
+        caughtUpTo,
       }),
     ).toEqual({ ok: false, reason: 'revisionConflict' });
     expect(await dump(db)).toEqual(before);
@@ -1065,8 +1085,33 @@ describe('revision', () => {
         loaded,
         changes: { occurrences: [duplicate] },
         activities: [],
+        caughtUpTo,
       }),
     ).rejects.toThrow();
+  });
+
+  it('keeps the day the records were brought up to, never an earlier one', async () => {
+    const db = await memoryDatabase();
+    const records = recordsOf(alice, 1);
+    await saveAll(db, records);
+    const rename = async (displayName: string, day: string) => {
+      const loaded = await loadRecords(db, alice);
+      await saveRecords(db, {
+        userId: alice,
+        loaded,
+        changes: { user: { ...records.user, displayName } },
+        activities: [],
+        caughtUpTo: localDate(day),
+      });
+      return loadRecords(db, alice);
+    };
+    expect((await rename('次の日', '2026-10-04')).caughtUpTo).toBe(
+      '2026-10-04',
+    );
+    // Another save whose clock was still before midnight.
+    const late = await rename('前の日の時計', '2026-10-03');
+    expect(late.revision).toBe(3);
+    expect(late.caughtUpTo).toBe('2026-10-04');
   });
 });
 
@@ -1080,10 +1125,12 @@ describe('users', () => {
     expect(await loadRecords(db, alice)).toStrictEqual({
       revision: 1,
       records: aliceRecords,
+      caughtUpTo,
     });
     expect(await loadRecords(db, bob)).toStrictEqual({
       revision: 1,
       records: bobRecords,
+      caughtUpTo,
     });
 
     const loaded = await loadRecords(db, alice);
@@ -1094,10 +1141,12 @@ describe('users', () => {
         sprints: aliceRecords.sprints.map((s) => ({ ...s, interrupts: [] })),
       },
       activities: [],
+      caughtUpTo,
     });
     expect(await loadRecords(db, bob)).toStrictEqual({
       revision: 1,
       records: bobRecords,
+      caughtUpTo,
     });
   });
 
@@ -1114,6 +1163,7 @@ describe('users', () => {
         loaded,
         changes: { tasks: [{ ...bobRecords.tasks[0]!, title: '乗っ取り' }] },
         activities: [],
+        caughtUpTo,
       }),
     ).rejects.toThrow(/cannot be saved/);
     await expect(
@@ -1122,6 +1172,7 @@ describe('users', () => {
         loaded,
         changes: { deleted: { occurrences: [bobRecords.occurrences[0]!.id] } },
         activities: [],
+        caughtUpTo,
       }),
     ).rejects.toThrow(/not a loaded record/);
     // A record with another user's ID under Alice's name is a new row, and
@@ -1136,6 +1187,7 @@ describe('users', () => {
         loaded,
         changes: { occurrences: [forged] },
         activities: [],
+        caughtUpTo,
       }),
     ).rejects.toThrow();
     expect((await loadRecords(db, bob)).records).toStrictEqual(bobRecords);
