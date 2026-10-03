@@ -28,6 +28,7 @@ import {
 } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { getHours } from '@/test/duration';
+import { waitForSprintScreen } from '@/test/sprint-ready';
 import { createMock } from '@/mock/mock-api';
 
 type CreateAppRouter = typeof import('@/app/router').createAppRouter;
@@ -166,6 +167,25 @@ describe('the Sprint on the API', () => {
     // The words wait; the plan is not there.
     expect(await screen.findByText('読み込み中…')).toBeTruthy();
     expect(document.querySelector('[data-slot="plan-pane"]')).toBeNull();
+  });
+
+  it('puts the focus on the heading it ends with, though it is read in two steps', async () => {
+    const late = (request: Request) =>
+      new URL(request.url).pathname.startsWith('/api/sprints')
+        ? new Promise<undefined>((resolve) => setTimeout(resolve, 120)).then(
+            () => undefined,
+          )
+        : undefined;
+    serve('today-daytime', late);
+    const router = renderSprint('/backlog');
+    await screen.findByRole('heading', { level: 1, name: 'Backlog' });
+    await userEvent.click(screen.getAllByRole('link', { name: 'Sprint' })[0]!);
+    await waitFor(() => expect(router.state.location.pathname).toBe('/sprint'));
+    await waitForSprintScreen();
+    // Not the heading of a step that was read on the way.
+    await waitFor(() =>
+      expect(document.activeElement).toBe(document.querySelector('main h1')),
+    );
   });
 
   it('says so when the plan cannot be read, and reads again on request', async () => {

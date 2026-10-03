@@ -49,6 +49,11 @@ export function useRead<TData, TError, T extends object>(
  * to show), `failed` when one failed and there is nothing to show, and
  * `retry` reads again the ones that failed. As for `useRead`, `view` stays
  * the same between renders (a module's function, or a `useCallback`).
+ *
+ * Unlike `useRead`, a `view` that gives `undefined` with nothing failed is
+ * `pending`, not `failed`: for the Sprint screen it is an answer about to be
+ * replaced (a Sprint read as it stops being planned), and the one case that
+ * is a failure (no settings yet) is told by its hook (`useSprintChoice`).
  */
 export function useRead2<A, B, EA, EB, T extends object>(
   a: UseQueryResult<A, EA>,
