@@ -198,17 +198,17 @@ async function monitor(state) {
     );
     for (const w of workers) {
       const { dispatchId: id, agentTerminalHandle: terminal } = w;
-      const [state, detail] = classify(terminal);
-      if (state === 'idle') {
+      const [status, detail] = classify(terminal);
+      if (status === 'idle') {
         idle.set(id, (idle.get(id) ?? 0) + 1);
         if (idle.get(id) < IDLE_GRACE) continue;
       } else {
         idle.set(id, 0);
       }
-      if (state === last.get(id)) continue;
-      last.set(id, state);
-      if (state === 'busy' || (state === 'idle' && ignoreIdle.has(id))) continue;
-      console.log(`[ALERT] ${id} ${w.taskId} state=${state} term=${terminal} :: ${detail}`);
+      if (status === last.get(id)) continue;
+      last.set(id, status);
+      if (status === 'busy' || (status === 'idle' && ignoreIdle.has(id))) continue;
+      console.log(`[ALERT] ${id} ${w.taskId} state=${status} term=${terminal} :: ${detail}`);
     }
     // 5 時間の利用上限
     const values = [coordinatorTerminal, ...workers.map((w) => w.agentTerminalHandle)].flatMap((terminal) =>
@@ -223,9 +223,8 @@ async function monitor(state) {
       paused = true;
       console.log(`[ALERT] USAGE 5h ${usage}% (>= 90): pause launches and merges`);
     }
-    const readable = tail(cwd, coordinatorTerminal, true)
-      .slice(-6)
-      .some((line) => line.includes('│'));
+    // 司令塔の画面が読めないときは、表示が消えたのか読めないだけなのか分からないので判定しない。
+    const readable = tail(cwd, coordinatorTerminal, true).some((line) => line.trim());
     if (paused && readable && (usage === null || usage < 50)) {
       paused = false;
       console.log(`[ALERT] USAGE reset (${usage ?? '<50'}%): resume launches and merges`);

@@ -50,4 +50,4 @@ worker への追加の指示は `orch.mjs send <state> <slug> --text …`（ま�
 
 ## 利用上限
 
-`orch.mjs monitor` は、司令塔と worker の画面のステータスラインから「5h NN%」（5 時間の利用上限の使用率）を読む。ステータスラインにこの表示を出していないと読めないので、そのときは利用上限を手で確かめる。90% 以上で `[ALERT] USAGE`、表示が消えるか 50% 未満になると `[ALERT] USAGE reset` を出す。止めている間に監視を起動し直すときは `USAGE_PAUSED=1` を付ける。待機中のまま知らせなくてよい worker は `IGNORE_IDLE=<dispatch>,…` で外す。
+`orch.mjs monitor` は、司令塔と worker の画面のステータスラインから「5h NN%」（5 時間の利用上限の使用率）を読む。ステータスラインにこの表示を出していないと読めないので、そのときは利用上限を手で確かめる。90% 以上で `[ALERT] USAGE`、司令塔の画面が読めて、表示が消えるか 50% 未満になると `[ALERT] USAGE reset` を出す。止めている間に監視を起動し直すときは `USAGE_PAUSED=1` を付ける。待機中のまま知らせなくてよい worker は `IGNORE_IDLE=<dispatch>,…` で外す。

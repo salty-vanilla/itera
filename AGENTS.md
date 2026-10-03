@@ -69,7 +69,7 @@ PRD §14「クライアントとデータの方式」に従う。規則の正本
 
 ## Agent ツール
 
-共有の Skill と CLI はリポジトリ内で固定している。個人の Skill やグローバル CLI を前提にしない。例外として、Orca（worktree と並列実行の道具。`orca.yaml`）は任意で使ってよい。Orca がなくても手順が成り立つようにし、Orca での操作は `issue-harness` の `references/coordinate-orca.md` に書く。セットアップと更新手順は `docs/development/agent-setup.md`。
+共有の Skill と CLI はリポジトリ内で固定している。個人の Skill やグローバル CLI を前提にしない。例外として、Orca（worktree と並列実行の道具。`orca.yaml`）は任意で使ってよい。Orca を前提にする手順は `issue-harness` の `references/coordinate-orca.md` に限り、ほかの手順は Orca がなくても成り立つようにする。セットアップと更新手順は `docs/development/agent-setup.md`。
 
 - Node は `.node-version` の系列を使う（Claude Code では SessionStart hook が direnv の環境を Bash に読み込む）。`node -v` がその系列でなければ、別の Node を入れたり回避策を探したりせず、その旨を報告する。
 - Skill の正本は `.agents/skills/`（`.claude/skills` はそこへのシンボリックリンク）。上流由来の Skill は `tooling/agents/sources.json` にハッシュを記録しており、`pnpm agent:check` で改変を検出する。直接編集しない。
