@@ -65,7 +65,7 @@ async function setup(
     .values({ id: alice, name: 'Alice', email: 'alice@example.com' });
   await saveRecords(db, {
     userId: alice,
-    loaded: { revision: 0, records: null, caughtUpTo: null },
+    loaded: { revision: 0, records: null },
     changes: settled,
     activities: [],
     caughtUpTo: localDate('2026-10-03'),

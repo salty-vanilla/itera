@@ -74,7 +74,7 @@ async function setup({
   if (settings) {
     await saveRecords(db, {
       userId: alice,
-      loaded: { revision: 0, records: null, caughtUpTo: null },
+      loaded: { revision: 0, records: null },
       changes: settled,
       activities: [],
       caughtUpTo: today,
@@ -226,7 +226,7 @@ describe('an operation', () => {
                 interfered = true;
                 await saveRecords(target, {
                   userId: alice,
-                  loaded: { revision: 1, records: settled, caughtUpTo: null },
+                  loaded: { revision: 1, records: settled },
                   changes: { user: { ...settled.user, displayName: 'A' } },
                   activities: [],
                   caughtUpTo: today,

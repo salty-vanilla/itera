@@ -612,14 +612,14 @@ describe('loadRecords and saveRecords', () => {
     };
     const result = await saveRecords(db, {
       userId: alice,
-      loaded: { revision: 3, records, caughtUpTo: null },
+      loaded: { revision: 3, records },
       changes: { tasks: [changed] },
       activities: [],
       caughtUpTo,
     });
     expect(result).toEqual({ ok: true, revision: 4 });
     expect(queries).toEqual([
-      'insert into "record_revision" ("user_id", "revision", "caught_up_to") values (?, ?, ?) on conflict ("record_revision"."user_id") do update set "revision" = case when "record_revision"."revision" = ? then ? else 0 end, "caught_up_to" = ?',
+      'insert into "record_revision" ("user_id", "revision", "caught_up_to") values (?, ?, ?) on conflict ("record_revision"."user_id") do update set "revision" = case when "record_revision"."revision" = ? then ? else 0 end, "caught_up_to" = case when "record_revision"."caught_up_to" > ? then "record_revision"."caught_up_to" else ? end',
       'update "subtask" set "title" = ? where "subtask"."id" = ?',
     ]);
   });
@@ -965,7 +965,7 @@ describe('loadRecords and saveRecords', () => {
     const { db, queries } = createRecordingDatabase();
     const result = await saveRecords(db, {
       userId: alice,
-      loaded: { revision: 3, records, caughtUpTo: null },
+      loaded: { revision: 3, records },
       changes: { tasks: records.tasks, user: records.user },
       activities: [],
       caughtUpTo,
@@ -1088,6 +1088,30 @@ describe('revision', () => {
         caughtUpTo,
       }),
     ).rejects.toThrow();
+  });
+
+  it('keeps the day the records were brought up to, never an earlier one', async () => {
+    const db = await memoryDatabase();
+    const records = recordsOf(alice, 1);
+    await saveAll(db, records);
+    const rename = async (displayName: string, day: string) => {
+      const loaded = await loadRecords(db, alice);
+      await saveRecords(db, {
+        userId: alice,
+        loaded,
+        changes: { user: { ...records.user, displayName } },
+        activities: [],
+        caughtUpTo: localDate(day),
+      });
+      return loadRecords(db, alice);
+    };
+    expect((await rename('次の日', '2026-10-04')).caughtUpTo).toBe(
+      '2026-10-04',
+    );
+    // Another save whose clock was still before midnight.
+    const late = await rename('前の日の時計', '2026-10-03');
+    expect(late.revision).toBe(3);
+    expect(late.caughtUpTo).toBe('2026-10-04');
   });
 });
 

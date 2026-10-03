@@ -26,7 +26,7 @@ describe('the fixture states', () => {
       expect(
         await saveRecords(db, {
           userId: records.user.id,
-          loaded: { revision: 0, records: null, caughtUpTo: null },
+          loaded: { revision: 0, records: null },
           changes: records,
           activities,
           caughtUpTo: clock.today,

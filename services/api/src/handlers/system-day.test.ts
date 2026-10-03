@@ -21,7 +21,7 @@ import { loadRecords } from '../db/load-records';
 import { createMemoryDatabase } from '../db/memory-database';
 import { saveRecords } from '../db/save-records';
 import { activity, user as authUser } from '../db/schema';
-import { testDependencies, testEnv } from '../test-env';
+import { testDependencies, testEnv, testOrigin } from '../test-env';
 
 const daytime = fixtureSnapshot('today-daytime');
 const { user, areas, tasks, rules, occurrences, sprints, criteria } =
@@ -62,7 +62,7 @@ async function setup() {
     .values({ id: alice, name: 'Alice', email: 'alice@example.com' });
   await saveRecords(db, {
     userId: alice,
-    loaded: { revision: 0, records: null, caughtUpTo: null },
+    loaded: { revision: 0, records: null },
     changes: fixture,
     activities: [],
     caughtUpTo: daytime.clock.today,
@@ -103,7 +103,21 @@ async function setup() {
     const body = (await response.json()) as { clock: { today: LocalDate } };
     return body.clock.today;
   }
-  return { db, statements, readAt };
+  /** Makes an Area at `time`: an operation of the person's. */
+  async function createAreaAt(time: Instant) {
+    now = time;
+    const response = await app.request(
+      '/api/operations/createArea',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Origin: testOrigin },
+        body: JSON.stringify({ name: '趣味' }),
+      },
+      testEnv,
+    );
+    expect(response.status).toBe(200);
+  }
+  return { db, statements, readAt, createAreaAt };
 }
 
 async function sprintOf(db: Database): Promise<Sprint> {
@@ -190,6 +204,30 @@ describe('the start of a day', () => {
     expect(selectionsOn(await sprintOf(db), '2026-10-01')).toEqual([
       ['実験データの前処理', 'manual', 'unresolved'],
       ['API 設計のレビュー', 'manual', 'done'],
+    ]);
+  });
+});
+
+describe('the first operation of a new day', () => {
+  it('writes the start of the day and the operation in one save, the system’s first', async () => {
+    const { db, createAreaAt } = await setup();
+    await createAreaAt(jst('10-02 07:00'));
+    const { revision, records } = await loadRecords(db, alice);
+    expect(revision).toBe(2);
+    expect(records?.areas.map((a) => a.name)).toContain('趣味');
+    const sprint = await sprintOf(db);
+    expect(selectionsOn(sprint, '2026-10-01')).toEqual([
+      ['実験データの前処理', 'manual', 'unresolved'],
+      ['API 設計のレビュー', 'manual', 'done'],
+    ]);
+    expect(selectionsOn(sprint, '2026-10-02')).toEqual([
+      ['英語の多読 30分', 'recurringToday', 'selected'],
+    ]);
+    const entries = await db.select().from(activity);
+    expect(entries.map((e) => [e.revision, e.actor, e.kind])).toEqual([
+      [2, 'system', 'todayUnresolved'],
+      [2, 'system', 'todaySelected'],
+      [2, 'user', 'areaCreated'],
     ]);
   });
 });

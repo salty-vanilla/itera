@@ -38,13 +38,14 @@ type Statement = BatchItem<'sqlite'>;
 export interface SaveRecordsInput {
   readonly userId: UserId;
   /** The records the change was made from, as loadRecords returned them. */
-  readonly loaded: LoadedRecords;
+  readonly loaded: Pick<LoadedRecords, 'revision' | 'records'>;
   readonly changes: RecordChanges;
   /** Appended in this order. */
   readonly activities: readonly Activity[];
   /**
    * The day the system's records are brought up to by this save (#271):
-   * 「今日」 of the catch-up that came before the change.
+   * 「今日」 of the catch-up that came before the change. A day before the
+   * one kept (another save's clock already past midnight) leaves it.
    */
   readonly caughtUpTo: LocalDate;
 }
@@ -106,8 +107,8 @@ export async function saveRecords(
 
 /**
  * Raises the revision from `expected` and keeps the day the records were
- * brought up to, or fails the batch: a row that has moved on is set to 0,
- * which breaks `record_revision_positive`. A first
+ * brought up to (never an earlier one), or fails the batch: a row that has
+ * moved on is set to 0, which breaks `record_revision_positive`. A first
  * save (`expected` 0) inserts the row, so another first save that went in
  * before finds it and fails the same way. SQLite checks the inserted values
  * before the conflict, so they must pass the check themselves.
@@ -125,7 +126,8 @@ function raiseRevision(
       target: recordRevision.userId,
       set: {
         revision: sql`case when ${recordRevision.revision} = ${expected} then ${expected + 1} else 0 end`,
-        caughtUpTo,
+        // LocalDate sorts as text; NULL (kept before #271) gives way.
+        caughtUpTo: sql`case when ${recordRevision.caughtUpTo} > ${caughtUpTo} then ${recordRevision.caughtUpTo} else ${caughtUpTo} end`,
       },
     });
 }
