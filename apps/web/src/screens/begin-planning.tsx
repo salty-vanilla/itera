@@ -1,6 +1,6 @@
 import { Link, useNavigate } from '@tanstack/react-router';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { useNextPlanning, useRetroActions } from '@/store/use-retro';
+import { useBeginPlanning, useNextPlanning } from '@/store/use-begin-planning';
 
 /**
  * 「Sprint N の計画を始める」 (owner decision in #42): starts the next
@@ -16,8 +16,10 @@ function BeginPlanning({
   variant?: 'primary' | 'secondary';
 }) {
   const next = useNextPlanning();
-  const actions = useRetroActions();
+  const { beginPlanning, loading } = useBeginPlanning();
   const navigate = useNavigate();
+  // Nothing to start from until the person's Sprints are read.
+  if (next === undefined) return null;
   if (next.planning !== undefined) {
     return (
       <Link
@@ -34,8 +36,10 @@ function BeginPlanning({
     <Button
       data-slot="begin-planning"
       variant={variant}
-      onClick={() => {
-        if (actions.beginPlanning()) {
+      loading={loading}
+      loadingLabel="始めています…"
+      onClick={async () => {
+        if ((await beginPlanning()) !== undefined) {
           void navigate({ to: '/sprint', search: { sprint: next.number } });
         }
       }}

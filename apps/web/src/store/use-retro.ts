@@ -18,7 +18,7 @@ import type {
 } from '@itera/domain';
 import { useMemo } from 'react';
 import { useStoreSnapshot } from './store-provider';
-import { useRun, useRunOn, useCurrentRecords } from './use-run';
+import { useRunOn, useCurrentRecords } from './use-run';
 import { retroScreenData } from './views';
 
 /**
@@ -44,7 +44,6 @@ export function useNextPlanning() {
  * becomes the API's operations). Each returns whether it went through.
  */
 export function useRetroActions() {
-  const run = useRun();
   const on = useRunOn();
   const current = useCurrentRecords();
   return useMemo(() => {
@@ -117,7 +116,6 @@ export function useRetroActions() {
         on(current().sprints.review, (sprintId) =>
           operations.completeRetro({ sprintId }),
         ).ok,
-      beginPlanning: () => run(operations.beginPlanning()).ok,
     };
-  }, [run, on, current]);
+  }, [on, current]);
 }

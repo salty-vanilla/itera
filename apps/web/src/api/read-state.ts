@@ -41,3 +41,47 @@ export function useRead<TData, TError, T extends object>(
     return { status: 'pending' };
   }, [ready, data, query.isError, refetch]);
 }
+
+/**
+ * `useRead` for a screen that needs two reads at once (the Sprint screen:
+ * the person's Sprints and one Sprint's plan). It is `ready` when both have
+ * answered and `view` makes the data from them (`undefined`: there is none
+ * to show), `failed` when one failed and there is nothing to show, and
+ * `retry` reads again the ones that failed. As for `useRead`, `view` stays
+ * the same between renders (a module's function, or a `useCallback`).
+ *
+ * Unlike `useRead`, a `view` that gives `undefined` with nothing failed is
+ * `pending`, not `failed`: for the Sprint screen it is an answer about to be
+ * replaced (a Sprint read as it stops being planned), and the one case that
+ * is a failure (no settings yet) is told by its hook (`useSprintChoice`).
+ */
+export function useRead2<A, B, EA, EB, T extends object>(
+  a: UseQueryResult<A, EA>,
+  b: UseQueryResult<B, EB>,
+  view: (a: A, b: B) => T | undefined,
+): Read<T> {
+  const { data: dataA, refetch: refetchA } = a;
+  const { data: dataB, refetch: refetchB } = b;
+  const ready = useMemo(
+    () =>
+      dataA === undefined || dataB === undefined
+        ? undefined
+        : view(dataA, dataB),
+    [dataA, dataB, view],
+  );
+  const failedA = a.isError;
+  const failedB = b.isError;
+  return useMemo<Read<T>>(() => {
+    if (ready !== undefined) return { ...ready, status: 'ready' };
+    if (failedA || failedB) {
+      return {
+        status: 'failed',
+        retry: () => {
+          if (failedA) void refetchA();
+          if (failedB) void refetchB();
+        },
+      };
+    }
+    return { status: 'pending' };
+  }, [ready, failedA, failedB, refetchA, refetchB]);
+}

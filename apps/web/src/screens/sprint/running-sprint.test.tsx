@@ -13,6 +13,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import type { StoreSnapshot } from '@/store/record-store';
 import { dayRead } from '@/test/day-read';
 import { getHours } from '@/test/duration';
+import { waitForSprintScreen } from '@/test/sprint-ready';
 import { fixtureIds } from '@itera/application/fixtures';
 
 const ids = fixtureIds();
@@ -92,6 +93,8 @@ async function renderAt(url: string) {
     </TooltipProvider>,
   );
   await screen.findByRole('heading', { level: 1 });
+  // The Sprint is there once its records are read (the mock answers).
+  if (url.startsWith('/sprint')) await waitForSprintScreen();
   return router;
 }
 

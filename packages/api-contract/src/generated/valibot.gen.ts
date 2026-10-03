@@ -88,7 +88,9 @@ export const vCurrentSprints = v.object({
     planning: v.optional(vSprintItem),
     next: v.object({
         start: vLocalDate,
-        number: v.pipe(v.number(), v.integer())
+        end: vLocalDate,
+        number: v.pipe(v.number(), v.integer()),
+        week: v.optional(vSprintWeek)
     })
 });
 

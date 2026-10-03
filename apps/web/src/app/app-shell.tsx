@@ -13,6 +13,7 @@ import { isPlainClick } from '@/lib/plain-click';
 import { getBacklogOptions } from '@itera/api-contract/react-query';
 import { useQuery } from '@tanstack/react-query';
 import { useApiClient } from '@/api/api-provider';
+import { useMe } from '@/api/use-me';
 import { cn } from '@/lib/utils';
 import { useCloseToastsOnScreenChange } from './use-close-toasts-on-screen-change';
 import { focusScreenHeading, useScreenFocus } from './use-screen-focus';
@@ -44,6 +45,10 @@ function AppShell({ children }: { children: ReactNode }) {
   // Backlog is the resource); absent until it is.
   const backlogCount = useQuery(getBacklogOptions({ client: useApiClient() }))
     .data?.view.sliceCounts.all;
+  // The person's Sprints are read with the frame, so that what asks where
+  // the next Planning starts (「Sprint N の計画を始める」) has the answer when
+  // it appears, not a moment after.
+  useMe();
   const mainRef = useRef<HTMLElement>(null);
   useToastClearance(mainRef);
   useScreenFocus(mainRef);

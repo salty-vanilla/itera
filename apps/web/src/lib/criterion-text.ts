@@ -6,7 +6,7 @@
 // policy (invariant 39); only the wording is made here. The three values of a
 // suggestion are said on the 「少ない・多い」 axis of 「少なく済めば / 多くかかれば」
 // (#234), and 「多め」 is never alone, since 「多めに見て」 reads as 「大目に見る」.
-import type { CriterionPolicy, SuggestionBound } from '@itera/domain';
+import type { CriterionPolicy, SuggestionBound } from '@itera/api-contract';
 import { formatHours } from '@/lib/time-format';
 
 export const BOUND_WORDS: Readonly<Record<SuggestionBound, string>> = {

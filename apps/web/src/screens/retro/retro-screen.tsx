@@ -21,7 +21,7 @@ import type {
 } from '@/store/views';
 import { useAppOverview } from '@/store/use-app-overview';
 import { useRetro, useRetroActions } from '@/store/use-retro';
-import { useSprintChoice } from '@/store/use-sprint-choice';
+import { useRetroChoice } from '@/store/use-retro-choice';
 import { ActualTime } from '../today/actual-time';
 import { BeginPlanning } from '../begin-planning';
 import { ScreenFrame } from '../screen-frame';
@@ -90,7 +90,7 @@ type Steps = SprintHeaderProps['steps'];
 
 function RetroScreen() {
   const search = useSearch({ from: '/retro' });
-  const choice = useSprintChoice('retro', search.sprint);
+  const choice = useRetroChoice(search.sprint);
   if (choice === undefined) {
     return (
       <ScreenFrame heading="振り返り" meta="振り返る Sprint はありません" />

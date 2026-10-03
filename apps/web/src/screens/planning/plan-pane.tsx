@@ -1,4 +1,4 @@
-import type { SuggestionBound, TaskId } from '@itera/domain';
+import type { SuggestionBound, TaskId } from '@itera/api-contract';
 import { Ellipsis, Target, Undo2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
@@ -18,8 +18,12 @@ import { TaskRow } from '@/components/task/task-row';
 import { formatPlanningSum, formatPlanningTotal } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
 import { weekCall, weekText } from '@/lib/week-text';
-import type { AreaPlan, PlannedTask, PlanningData } from '@/store/views';
-import { usePlanningActions } from '@/store/use-planning';
+import {
+  usePlanActions,
+  type AreaPlan,
+  type PlannedTask,
+  type PlanningData,
+} from '@/store/use-planning';
 import { plannedSourceText } from './planned-source';
 
 // The Sprint pane of Planning (Thinking space, at most 680px; from 1920px
@@ -74,7 +78,7 @@ function PlanPane({
   onEstimateTask,
   className,
 }: PlanPaneProps) {
-  const actions = usePlanningActions();
+  const actions = usePlanActions(data.sprint.id);
   const week = weekCall(data.week, data.number);
   const criterionBound = data.criterion?.active.policy.rangePolicy;
   const withTasks = data.plan.filter((p) => p.tasks.length > 0);
@@ -136,6 +140,7 @@ function PlanPane({
                 block={block}
                 stage={stage}
                 week={week}
+                actions={actions}
                 criterionBound={criterionBound}
                 addedTaskId={addedTaskId}
                 onOpenTask={onOpenTask}
@@ -169,6 +174,7 @@ function PlanPane({
                   block={block}
                   stage={stage}
                   week={week}
+                  actions={actions}
                   criterionBound={criterionBound}
                   addedTaskId={addedTaskId}
                   onOpenTask={onOpenTask}
@@ -197,10 +203,13 @@ function summaryOf(block: AreaPlan, stage: Stage): string {
   }`;
 }
 
+type PlanActions = ReturnType<typeof usePlanActions>;
+
 function PlannedList({
   block,
   stage,
   week,
+  actions,
   criterionBound,
   addedTaskId,
   onOpenTask,
@@ -209,6 +218,7 @@ function PlannedList({
   block: AreaPlan;
   stage: Stage;
   week: string;
+  actions: PlanActions;
   criterionBound: SuggestionBound | undefined;
   addedTaskId: TaskId | undefined;
   onOpenTask: (taskId: TaskId) => void;
@@ -222,6 +232,7 @@ function PlannedList({
             planned={planned}
             stage={stage}
             week={week}
+            actions={actions}
             criterionBound={criterionBound}
             hasGoal={block.goal !== undefined}
             added={planned.task.id === addedTaskId}
@@ -238,6 +249,7 @@ function PlannedRow({
   planned,
   stage,
   week,
+  actions,
   criterionBound,
   hasGoal,
   added,
@@ -248,6 +260,8 @@ function PlannedRow({
   stage: Stage;
   /** 「今週」「来週」 (#90). */
   week: string;
+  /** The operations on the plan (one hook, in the pane). */
+  actions: PlanActions;
   /** The value of the suggestion the Sprint's criterion plans with. */
   criterionBound: SuggestionBound | undefined;
   /** The Task's Area has a Goal: only then is the link shown and changed. */
@@ -257,7 +271,6 @@ function PlannedRow({
   onOpen: () => void;
   onEstimate: () => void;
 }) {
-  const actions = usePlanningActions();
   const toast = useToast();
   const { sprintTask, task, value, occurrenceCount, suggestion, inactive } =
     planned;
@@ -299,11 +312,11 @@ function PlannedRow({
     showLink && !linked && <MetaItem key="g">目標に入っていない</MetaItem>,
   ].filter(Boolean);
 
-  const unchoose = () => {
+  const unchoose = async () => {
     const occurrenceIds = sprintTask.occurrenceIds ?? [];
     const done = recurring
-      ? actions.excludeAllOccurrences(sprintTask.id)
-      : actions.unchooseTasks([sprintTask.id]);
+      ? await actions.excludeAllOccurrences(sprintTask.id)
+      : await actions.unchooseTasks([sprintTask.id]);
     if (!done) return;
     toast.show({
       kind: 'sprint-pick',
@@ -315,9 +328,9 @@ function PlannedRow({
             action: {
               label: '元に戻す',
               onClick: () =>
-                recurring
+                void (recurring
                   ? actions.includeOccurrences(occurrenceIds)
-                  : actions.chooseTasks([task.id]),
+                  : actions.chooseTasks([task.id])),
             },
           }
         : {}),
@@ -325,7 +338,7 @@ function PlannedRow({
   };
 
   const menuItems = [
-    <MenuItem key="out" onClick={unchoose}>
+    <MenuItem key="out" onClick={() => void unchoose()}>
       <Undo2 aria-hidden />
       {recurring
         ? weekText(week, `から外す（${occurrenceCount}回すべて）`)
@@ -335,7 +348,10 @@ function PlannedRow({
       <MenuItem
         key="link"
         onClick={() =>
-          actions.setGoalLink(sprintTask.id, linked ? 'unlinked' : 'linked')
+          void actions.setGoalLink(
+            sprintTask.id,
+            linked ? 'unlinked' : 'linked',
+          )
         }
       >
         <Target aria-hidden />

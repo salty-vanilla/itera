@@ -3,7 +3,7 @@ import { useId } from 'react';
 import { Divider } from '@/components/ui/divider';
 import { CapacityIndicator } from '@/components/sprint/capacity-indicator';
 import { criterionName } from '@/lib/criterion-text';
-import type { PlanningData } from '@/store/views';
+import type { PlanningData } from '@/store/use-planning';
 import { cn } from '@/lib/utils';
 
 // 時間の見通し (docs/design/patterns.md Sprint Planning, right pane): the
@@ -27,7 +27,8 @@ type OutlookPaneProps = {
    */
   sheet?: boolean | undefined;
   /** Absent: no field for the available hours (確かめる has its own). */
-  onAvailableHours?: ((hours: number | null) => boolean) | undefined;
+  onAvailableHours?:
+    ((hours: number | null) => boolean | Promise<boolean>) | undefined;
   className?: string | undefined;
 };
 

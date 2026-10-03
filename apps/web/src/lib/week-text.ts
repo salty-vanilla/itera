@@ -1,4 +1,4 @@
-import type { SprintWeek } from '@itera/application';
+import type { SprintWeek } from '@itera/api-contract';
 
 /** A Sprint's name next to now, for headings and sentences (#90). */
 export type WeekName = '今週' | '来週';

@@ -224,8 +224,10 @@ describe('keyboard (#154)', () => {
 
   it('keeps the Planning keys after the skip link and after a click on the screen', async () => {
     renderAt('/sprint?fixture=planning-pick&stage=pick');
-    await screen.findByRole('heading', { level: 1 });
-    const field = screen.getByRole('textbox', { name: '今週のタスクを追加' });
+    // The Planning is there once its records are read.
+    const field = await screen.findByRole('textbox', {
+      name: '今週のタスクを追加',
+    });
     await userEvent.tab();
     await userEvent.keyboard('{Enter}n');
     expect(document.activeElement).toBe(field);
