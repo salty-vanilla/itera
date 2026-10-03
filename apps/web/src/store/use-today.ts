@@ -74,21 +74,12 @@ export function useTodayActions() {
         onSelection(selectionId, operations.deferSelection),
       removeFromToday: (selectionId: DailySelectionId) =>
         onSelection(selectionId, operations.removeFromToday),
-      /** Takes back 見送り or 今週の残りに戻す, whichever the choice had. */
-      undoClose: (selectionId: DailySelectionId) => {
-        const { records, sprints } = current();
-        const removed =
-          records.sprints
-            .find((s) => s.id === sprints.active)
-            ?.dailySelections.find((d) => d.id === selectionId)?.resolution ===
-          'removed';
-        return onSelection(
-          selectionId,
-          removed
-            ? operations.undoRemoveFromToday
-            : operations.undoDeferSelection,
-        );
-      },
+      /** Takes back 見送り (F37). */
+      undoDefer: (selectionId: DailySelectionId) =>
+        onSelection(selectionId, operations.undoDeferSelection),
+      /** Takes back 今週の残りに戻す (F37). */
+      undoRemove: (selectionId: DailySelectionId) =>
+        onSelection(selectionId, operations.undoRemoveFromToday),
       pause: (selectionId: DailySelectionId, hours?: number) =>
         on(current().sprints.active, (sprintId) =>
           operations.pauseSelection({
@@ -108,19 +99,22 @@ export function useTodayActions() {
       /** The choice's actual hours, on its day. */
       recordActual: (selectionId: DailySelectionId, hours: number) => {
         const { records, sprints } = current();
-        const selection = records.sprints
-          .find((s) => s.id === sprints.active)
-          ?.dailySelections.find((d) => d.id === selectionId);
-        return on(selection && sprints.active, (sprintId) =>
-          operations.recordActualTime({
-            sprintId,
-            sprintTaskId: selection!.sprintTaskId,
-            date: selection!.date,
-            hours,
-            ...(selection!.occurrenceId === undefined
-              ? {}
-              : { occurrenceId: selection!.occurrenceId }),
-          }),
+        const sprint = records.sprints.find((s) => s.id === sprints.active);
+        const selection = sprint?.dailySelections.find(
+          (d) => d.id === selectionId,
+        );
+        const target = sprint &&
+          selection && { sprintId: sprint.id, selection };
+        return on(
+          target,
+          ({ sprintId, selection: { sprintTaskId, date, occurrenceId } }) =>
+            operations.recordActualTime({
+              sprintId,
+              sprintTaskId,
+              date,
+              hours,
+              ...(occurrenceId === undefined ? {} : { occurrenceId }),
+            }),
         ).ok;
       },
       noteInterrupt: (text: string, minutes?: number) =>

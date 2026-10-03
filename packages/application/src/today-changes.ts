@@ -64,9 +64,11 @@ function running(records: Records): Result<Sprint> {
     : { ok: true, value: sprint };
 }
 
-/** A command on a Sprint: the running one the operation names (#295). */
-function onActive(
-  sprintId: SprintId | undefined,
+/**
+ * A command of the system's on the running Sprint, whichever it is: the
+ * start of the day is the system's, not an operation that names a Sprint.
+ */
+function onRunning(
   command: (
     sprint: Sprint,
     ctx: ChangeContext,
@@ -74,10 +76,25 @@ function onActive(
   ) => CommandResult<Sprint>,
 ): Change {
   return (records, ctx) => {
-    const sprint =
-      sprintId === undefined
-        ? running(records)
-        : sprintIn(records, sprintId, ['active']);
+    const sprint = running(records);
+    if (!sprint.ok) return sprint;
+    return changed(command(sprint.value, ctx, records), (next) => ({
+      sprints: [next],
+    }));
+  };
+}
+
+/** A command on the running Sprint the person's operation names (#295). */
+function onActive(
+  sprintId: SprintId,
+  command: (
+    sprint: Sprint,
+    ctx: ChangeContext,
+    records: Records,
+  ) => CommandResult<Sprint>,
+): Change {
+  return (records, ctx) => {
+    const sprint = sprintIn(records, sprintId, ['active']);
     if (!sprint.ok) return sprint;
     return changed(command(sprint.value, ctx, records), (next) => ({
       sprints: [next],
@@ -139,7 +156,7 @@ function subjectOf(
  * to write).
  */
 export const beginDay = (): Change => (records, ctx) => {
-  const result = onActive(undefined, (sprint, context, current) =>
+  const result = onRunning((sprint, context, current) =>
     startDay(
       sprint,
       {

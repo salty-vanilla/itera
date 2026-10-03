@@ -30,30 +30,19 @@ export function usePlanningActions() {
   const current = useCurrentRecords();
   return useMemo(
     () => ({
-      chooseTasks: (taskIds: readonly TaskId[]) =>
-        on(current().sprints.planning, (sprintId) =>
+      /** The drafts made, or `undefined` when it did not go through. */
+      chooseTasks: (
+        taskIds: readonly TaskId[],
+      ): readonly SprintTaskId[] | undefined => {
+        const result = on(current().sprints.planning, (sprintId) =>
           operations.addSprintTasks({ sprintId, taskIds }),
-        ).ok,
+        );
+        return result.ok ? result.value.sprintTaskIds : undefined;
+      },
       unchooseTasks: (sprintTaskIds: readonly SprintTaskId[]) =>
         on(current().sprints.planning, (sprintId) =>
           operations.removeSprintTasks({ sprintId, sprintTaskIds }),
         ).ok,
-      /** 元に戻す after choosing: the drafts of these Tasks leave the week. */
-      unchooseByTask: (taskIds: readonly TaskId[]) => {
-        const { records, sprints } = current();
-        const drafts =
-          records.sprints
-            .find((s) => s.id === sprints.planning)
-            ?.tasks.filter(
-              (t) => t.outcome === 'draft' && taskIds.includes(t.taskId),
-            ) ?? [];
-        return on(current().sprints.planning, (sprintId) =>
-          operations.removeSprintTasks({
-            sprintId,
-            sprintTaskIds: drafts.map((t) => t.id),
-          }),
-        ).ok;
-      },
       setOccurrenceIncluded: (occurrenceId: OccurrenceId, included: boolean) =>
         on(current().sprints.planning, (sprintId) =>
           operations.setOccurrenceIncluded({

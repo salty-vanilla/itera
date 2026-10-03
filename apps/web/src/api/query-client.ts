@@ -17,8 +17,12 @@ export interface QueryClientOptions {
  *   409, the server or the network failed, an answer this client does not
  *   know: ADR 0006) reads every read again before its promise rejects, so
  *   the screen shows what is saved. It is not sent again: the person decides
- *   on the records as they now are. One the API refused (400, 403, 404,
- *   413, 422) saved nothing and reads nothing again.
+ *   on the records as they now are.
+ * - An operation the API refused (400, 403, 404, 413, 422) saved nothing,
+ *   and also reads every read again before its promise rejects: what it
+ *   was sent with may have been old (today's date or the running Sprint
+ *   from `/me`, after midnight or the end of the week), and reading again
+ *   puts the screen on the records as they are (ADR 0006 エラー, #295).
  * - No session (401), from a read or an operation: `onUnauthenticated`.
  * - A read that failed on the server or the network, or met a conflict, is
  *   tried again once (a read's 409 is the system's catch-up before it
@@ -39,9 +43,8 @@ export function createQueryClient({
       onError: (error) => {
         const failure = failureOf(error);
         if (failure.kind === 'unauthenticated') onUnauthenticated();
-        if (failure.kind === 'revisionConflict' || failure.kind === 'failed')
-          return readAgain(queryClient);
-        return undefined;
+        if (failure.kind === 'unauthenticated') return undefined;
+        return readAgain(queryClient);
       },
     }),
     defaultOptions: {

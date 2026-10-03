@@ -38,11 +38,11 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
   - `schemas/`：`common.yaml`（ID・日付・時計・エラー）、`records.yaml`（domain の記録）、`values.yaml`（domain の派生値）、`views.yaml`（application の読み取りの結果）。
   - `responses.yaml`：エラーの応答。
 - 説明（summary・description）は英語で書く（生成したコードの JSDoc になり、コードのコメントと揃える）。画面の語は使わない。
-- 記録の DTO は、今は domain の型と同じ形にする（写像は恒等。ADR 0007「アプリケーション層の読み取りと API の DTO」）。省略できる属性はキーを省き、`null` にしない（domain の `exactOptionalPropertyTypes`）。`null` を値として使うのは、domain がそう決めている入力（`TaskAttributeUpdate` の `areaId`・`due`、時間の消去など）と、`AreaTotal` などの `areaId: null`（領域なし）だけ。
+- 記録の DTO は、今は domain の型と同じ形にする（写像は恒等。ADR 0007「アプリケーション層の読み取りと API の DTO」）。省略できる属性はキーを省き、`null` にしない（domain の `exactOptionalPropertyTypes`）。`null` を値として使うのは、domain がそう決めている入力（`saveTask` の本文の `areaId`・`due`、時間の消去など）と、`AreaTotal` などの `areaId: null`（領域なし）だけ。
 - ID は TypeID（ADR 0004「ID の形式」）。種類ごとに schema（`TaskId` など）を置き、接頭辞と、UUIDv7 の version（11 文字目が e か f）と variant（14 文字目が 89abrstv のどれか）までを正規表現で決める。`parseId` が受け付けるものと同じであることをテストで確かめる。
 - `LocalDate` は `format: date`、`Instant` は `format: date-time` に domain と同じ正規表現（UTC・ミリ秒つき）を足す。Valibot の書式の検査は暦の上で実在するか（2 月 30 日など）までは見ないので、サーバーは入力の検証の段階で、入力の日付と日時を domain の `parseLocalDate`・`parseInstant` でも確かめ、実在しなければ 400 `validationFailed` にする（形の誤りとして扱い、操作の入力でも読み取りのパラメータでも同じ）。
 - 契約が検証するのは形と書式（型、必須、ID と日付の書式、列挙）だけにする。値の規則（正の時間、空でない題名、状態の遷移）は domain の規則で、422 で返す。規則を契約と domain に二重に持たないため。
-- 要求の本文の最上位と、要求にしか使わない入れ子（`TaskAttributeUpdate`）は `additionalProperties: false`（Valibot の `strictObject`）。綴りの誤りなどの未知のキーは 400 になる。応答と共有する入れ子（`InterruptNote`・`RetroPin`・`Estimate`・`RecurrencePattern`・`CriterionPolicy`）は未知のキーを許し、Valibot の `object` が出力から落とす。サーバーは、要求の本文ではなく検証の出力だけを application に渡す。応答は未知のキーを許す（クライアントが後から足した項目で壊れないように）。応答の余分な・欠けたキーは、下の型のテストで止める。
+- 要求の本文の最上位は `additionalProperties: false`（Valibot の `strictObject`）。綴りの誤りなどの未知のキーは 400 になる。応答と共有する入れ子（`InterruptNote`・`RetroPin`・`Estimate`・`RecurrencePattern`・`CriterionPolicy`）は未知のキーを許し、Valibot の `object` が出力から落とす。サーバーは、要求の本文ではなく検証の出力だけを application に渡す。応答は未知のキーを許す（クライアントが後から足した項目で壊れないように）。応答の余分な・欠けたキーは、下の型のテストで止める。
 - 一覧（`BacklogData.items`・`RetroData.sprintAreas` など、ID をキーにする表）は `additionalProperties` で書き、`propertyNames` は使わない（Hey API 0.99.0 は `propertyNames` があると値を検証しない `v.object({})` を出す）。値が `$ref` の表も、0.99.0 の Valibot の出力では同じく `v.object({})` になる（Valibot のプラグインが `$ref` の値を読まない）。これは下の「生成物」の patch で直す。
 
 ### 経路の形
@@ -160,12 +160,12 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 操作は、その操作の結果（作った ID、操作が決めた値）だけを返し、画面は TanStack Query の無効化で読み直す（Issue #265 の推奨どおり）。
 
-- 理由：読み取りは 10 種類あり、1 つの操作が変える読み取りは画面によって違う。操作ごとにどの読み取りを返すかを契約に持たせると、操作と画面の結合が強くなり、iOS・Android の画面の違いも契約に入ってしまう。読み直しの往復は 1 回増えるが、利用者は 1 人で、読み取りは 1 回の `batch()` で済む（ADR 0004「操作と読み取りの処理」）。
+- 理由：読み取りは 8 種類あり、1 つの操作が変える読み取りは画面によって違う。操作ごとにどの読み取りを返すかを契約に持たせると、操作と画面の結合が強くなり、iOS・Android の画面の違いも契約に入ってしまう。読み直しの往復は 1 回増えるが、利用者は 1 人で、読み取りは 1 回の `batch()` で済む（ADR 0004「操作と読み取りの処理」）。
 - どの操作の後にどの読み取りを読み直すか（Query のキーと無効化の方針）は #272 で決める。
 
 ### 消した記録を戻す操作の照合
 
-消した割り込みを戻す `restoreInterrupt` は、ID を残す。クライアントは、消す前の読み取りで得た note（ID・時刻・本文・分）をそのまま送り（ID は `PUT /today/interrupts/{interruptNoteId}` の path に、ほかは本文に）、domain の `restoreInterrupt` が「同じ ID の note がない」「今より後に記録されたものでない」「本文が空でない」を確かめて、時刻の順の位置に戻す（F38）。
+消した割り込みを戻す `restoreInterrupt` は、ID を残す。クライアントは、消す前の読み取りで得た note（ID・時刻・本文・分）をそのまま送り（ID は `PUT /sprints/{sprintId}/interrupts/{interruptNoteId}` の path に、ほかは本文に）、domain の `restoreInterrupt` が「同じ ID の note がない」「今より後に記録されたものでない」「本文が空でない」を確かめて、時刻の順の位置に戻す（F38）。
 
 - 内容で照合する案（サーバーが消した note を覚えておき、本文と時刻で探す）は採らない。サーバーは Activity を判定に読み返さず（ADR 0004「記録のテーブル」）、消した note を別に保つ場所が要るため。ID は TypeID で、接頭辞と書式を契約で確かめる。
 - 同じ考えで、`undoAdoption` の `previous`（採用する前の Estimate）も、クライアントが採用の前の読み取りで持っていた値を送る。Task は今の Estimate だけを持つため（packages/domain）。
@@ -187,11 +187,13 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 | 422 | `userNotSetUp` | 利用者の設定（タイムゾーン・週の始まり）がまだなく、「今日」が決まらない。`getMe` のほかの操作と読み取りはすべてこれで断る（#266） |
 | 500 | `internalError` | 予期しない失敗 |
 
-- 各 operation の応答に書く：操作は 400（path の値・query・本文のどれもない操作を除く）・401・403・404・409・413・422・500。読み取りは 400（パラメータのある読み取り）・401・409・422・500。`getMe` は 401・500。読み取りの 409 は、読み取りの前の追いつき（#271）の書き込みが、ほかの書き込みとぶつかったとき。操作の 422 は domain の 3 つの code と `userNotSetUp` のどれか、読み取りの 422 は `userNotSetUp` だけ。
+- 各 operation の応答に書く：操作は 400（path の値・query・本文のどれもない操作を除く）・401・403・404・409・413・422・500。読み取りは 400（パラメータのある読み取り）・401・409・422・500。`getMe` は 401・409・500（設定があれば追いつきを走らせるので 409 がありうる。#295 R1）。読み取りの 409 は、読み取りの前の追いつき（#271）の書き込みが、ほかの書き込みとぶつかったとき。操作の 422 は domain の 3 つの code と `userNotSetUp` のどれか、読み取りの 422 は `userNotSetUp` だけ。
 - `userNotSetUp` は domain の規則ではなく、記録を読み込んだときに設定の行がないことで決まる。判定はサーバーの流れの 1 か所（`services/api/src/handlers/flow.ts`）に置く。設定を作る operation（#279）は、この code を断る対象から外す。
 - 本文の大きさの上限は 64 KiB（書き込みのすべての面に Hono の `bodyLimit`。#295 までは `/api/operations/*`）。いちばん大きい本文は Task の説明を含む `saveTask` で、文章を書く欄として十分に大きく、D1 の文字列・行の上限（2 MB）より小さい。`Content-Length` があれば本文を読まずに 413 を返す（ない要求は上限まで読んでから 413）。上限は `info.version` を変えずに広げてよい（狭めるのは壊す変更）。
 - `requireAuth` の 401 の本文も、この形（`unauthenticated`）にした（#266）。
 - 422 にしたのは、要求の形は正しく、記録の今の状態や値の規則で受け付けられないことを、形の誤り（400）と分けるため。409 は版の衝突だけに使い、クライアントは 409 なら読み直す（ADR 0004）。
+- **断られた操作の後も、クライアントは読み直す**（2026-10-03 司令塔の判断、#295）。400・403・404・413・422 で断られた操作は何も保存していないが、送った値が古かったことがある：日付が変わった後の古い「今日」（W3 の 422）、週が終わって Review に入った後の古い実行中の Sprint（422 `invalidTransition`）など。読み直せば、クライアントは今の記録（`/me` の時計と今の Sprint）に戻る。Web は `apps/web/src/api/query-client.ts` で、操作が断られたら読み直してから失敗を返す。iOS・Android も同じ規則に従う。画面の文言は、断られたことを伝えるもの（記録は変わっていない）のまま。
+  - W3 のための専用の code（`dayChanged` など）は今は足さない。原因を文言で伝えたくなったら後から足せる（開いた列挙なので壊さない変更）。
 
 ### 生成物
 
@@ -216,7 +218,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 `packages/api-contract` のテストで確かめる。
 
-- 一覧：生成したクライアントの operation が、`surfaces` の面と読み取りの 10 個と `getMe` に一致し、`operations` のすべての名前が面のどれかに行く。`@itera/application` の関数の export のうち、読み取りでも操作の道具でもないものがあれば失敗する（読み取りを足したら契約にも足す）。
+- 一覧：生成したクライアントの operation が、`surfaces` の面と読み取りの 8 個（`getMe` を含む）に一致し、`operations` のすべての名前が面のどれかに行く。`@itera/application` の関数の export のうち、読み取りでも操作の道具でもないものがあれば失敗する（読み取りを足したら契約にも足す）。
 - 往復（`src/requests.test.ts`）：操作ごとの入力の例（`OPERATION_EXAMPLES`。省略できる項目の有無を含む）を `requestOf` で要求にし、面のスキーマで検証して `operation` に通すと、同じ操作と入力に戻る。面のメソッドと経路が、生成したクライアントの関数が送るものと同じ。面のスキーマのすべての項目を、どれかの操作の要求が使う。すべての経路と query の名前が kebab-case。
 - 型：各操作の入力と要求は `requests.ts` の中で生成した型に対して型検査する。出力と応答（1 つの操作だけの面は同じ型、いくつかの操作の面は各出力が応答に合い、合わせて応答の項目になる）、各読み取りの結果と応答の `view`（`undefined` は `null`）と `clock` が、型として同じ（片方への代入ができるだけでなく、余分な・欠けたキーもない）。比べる前に、両方から brand（ID・日付）と `readonly` を外す。`pnpm typecheck` で確かめる。このテストは、今は application の結果から DTO への写像が恒等であることを確かめるもので、application の形が契約の正本であることを示すものではない（契約の正本は `openapi/`）。内部の変更で型が合わなくなったら、意図した契約の変更でない限り、契約は直さずに `services/api` に写像を置く（ADR 0007「アプリケーション層の読み取りと API の DTO」）。
 - fixture：PRD §12 の 12 状態で、すべての読み取り（Backlog の絞り込みごと、すべての Sprint の番号と次の週、昨日と明日）の結果を JSON にして `{ clock, view }` で包み、生成した応答のスキーマで検証する。
@@ -294,7 +296,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 - 時間（h）の数の表し方（今は JSON の数。分の整数にするかなど）と丸め。後から変えると壊す変更になる。
 - 版の上げ方と、古いクライアントの扱い。
-- iOS・Android の生成の道具。開いた列挙の知らない値と応答の知らないキーで読み込みを失敗させないこと、省略と空を分けられること、型の混ざった `oneOf`（例：`SprintAreaLabel.color` の数と `none`）を扱えること、判別子のない `oneOf` の要求の本文（どの項目があるかで枝が決まる。`updateTask` など、#295）を組み立てられることを条件にして選ぶ。開いた列挙の仕様での書き方も、このとき決める。
+- iOS・Android の生成の道具。開いた列挙の知らない値と応答の知らないキーで読み込みを失敗させないこと、省略と空を分けられること、型の混ざった `oneOf`（例：`SprintAreaLabel.color` の数と `none`）を扱えること、判別子のない `oneOf` の要求の本文（どの項目があるかで枝が決まる。`updateSubtask`・`updateGoal`・`addToSprint`・`chooseForDay`・`adoptEstimateSuggestion`・`updateRetro`、#295）と、path の値の `oneOf`（印の `{pin}`：ID の種類の union と `available-hours`）を扱えることを条件にして選ぶ。開いた列挙の仕様での書き方も、このとき決める。
 
 ## 影響
 

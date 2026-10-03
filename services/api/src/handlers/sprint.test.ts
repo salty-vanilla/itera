@@ -729,6 +729,76 @@ describe('the invariants, through the API', () => {
     expect(actors).toContain('system');
   });
 
+  it('F33: undoing a past day’s skip puts the occurrence back, and the system closes the day', async () => {
+    // A recurring choice of a past day, skipped (the fixture has none).
+    let skipped = '';
+    const app = await setup('today-morning', (records) => {
+      const sprint = activeOf(records);
+      const selection = sprint.dailySelections.find(
+        (d) => d.occurrenceId !== undefined && d.date < clock.today,
+      )!;
+      skipped = selection.id;
+      return {
+        ...records,
+        sprints: records.sprints.map((s) =>
+          s.id !== sprint.id
+            ? s
+            : {
+                ...s,
+                dailySelections: s.dailySelections.map((d) =>
+                  d.id === selection.id
+                    ? {
+                        ...d,
+                        resolution: 'skipped' as const,
+                        resolvedAt: d.selectedAt,
+                      }
+                    : d,
+                ),
+              },
+        ),
+        occurrences: records.occurrences.map((o) =>
+          o.id === selection.occurrenceId
+            ? { ...o, state: 'skipped' as const }
+            : o,
+        ),
+      };
+    });
+    await app.get('/me');
+    const before = (await app.saved()).records;
+    const sprintId = activeOf(before).id;
+    // A skip is undone as a skip, not as a completion.
+    const asCompletion = await app.post('undoCompleteSelection', {
+      sprintId,
+      selectionId: skipped,
+    });
+    expect(asCompletion.status).toBe(422);
+    const response = await app.post('undoSkipSelection', {
+      sprintId,
+      selectionId: skipped,
+    });
+    expect(response.status).toBe(204);
+    const { records } = await app.saved();
+    const selection = activeOf(records).dailySelections.find(
+      (d) => d.id === skipped,
+    )!;
+    expect(selection.resolution).toBe('unresolved');
+    expect(
+      records.occurrences.find((o) => o.id === selection.occurrenceId)?.state,
+    ).not.toBe('skipped');
+  });
+
+  it('F33: a past day’s completion is not undone as a skip', async () => {
+    const app = await setup('today-morning');
+    await app.get('/me');
+    const before = (await app.saved()).records;
+    const response = await app.post('undoSkipSelection', {
+      sprintId: activeOf(before).id,
+      selectionId: selectionOf(before, tax, '2026-09-29').id,
+    });
+    expect(response.status).toBe(422);
+    expect(await response.json()).toMatchObject({ code: 'invalidTransition' });
+  });
+
   it('F9: a Task of a new Area chosen in Planning is in the Sprint’s Area names at confirm', async () => {
     const app = await setup('planning-check');
     const made = (await (

@@ -19,7 +19,19 @@ const apiImportPatterns = [
     regex: '^@itera/api-contract/(client|create-client|react-query)$',
     message: "The API takes the contract's types and schemas only (ADR 0006).",
   },
+  testingImportPattern(),
 ];
+
+/**
+ * `@itera/api-contract/testing` is the tests' helper (operation examples,
+ * IDs): production code does not import it (ADR 0006 生成物).
+ */
+function testingImportPattern() {
+  return {
+    regex: '^@itera/api-contract/testing$',
+    message: "@itera/api-contract/testing is the tests' helper.",
+  };
+}
 
 /**
  * packages/domain and packages/application are pure: the current time,
@@ -231,6 +243,7 @@ export default defineConfig(
         {
           patterns: [
             webBetterAuthPattern,
+            testingImportPattern(),
             {
               regex: '^@itera/domain(/|$)',
               message:
@@ -254,6 +267,7 @@ export default defineConfig(
         {
           patterns: [
             webBetterAuthPattern,
+            testingImportPattern(),
             {
               regex: '^@itera/application(/|$)',
               message:
@@ -383,6 +397,52 @@ export default defineConfig(
           message:
             'Read bindings in default-dependencies.ts or src/auth/better-auth.ts and inject what they make.',
         },
+      ],
+    },
+  },
+  {
+    // packages/api-contract depends on packages/application by its types
+    // only: the operations' names and inputs that requests.ts carries
+    // (ADR 0006 経路の形, ADR 0007 依存の向き). Its runtime stays the
+    // contract's: the generated code and Valibot. testing.ts and the tests
+    // run the application (examples, IDs).
+    files: ['packages/api-contract/src/**/*.ts'],
+    ignores: [
+      'packages/api-contract/src/**/*.test.ts',
+      'packages/api-contract/src/testing.ts',
+      'packages/api-contract/src/generated/**',
+    ],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '^@itera/application(/|$)',
+              allowTypeImports: true,
+              message:
+                "The contract takes packages/application's types only (ADR 0007 依存の向き).",
+            },
+            {
+              regex: '^@itera/domain(/|$)',
+              message:
+                'The contract does not depend on packages/domain (ADR 0007 依存の向き).',
+            },
+            { ...testingImportPattern(), regex: '(^|/)testing$' },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // The browser mock: the tests' helper stays out of it too (the screens'
+    // rules above say so for the rest of apps/web).
+    files: ['apps/web/src/mock/**/*.{ts,tsx}'],
+    ignores: ['apps/web/src/mock/**/*.test.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: [testingImportPattern()] },
       ],
     },
   },

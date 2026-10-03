@@ -70,7 +70,8 @@ function BacklogPane({
 
   const choose = (rows: readonly CandidateRow[]) => {
     const taskIds = rows.map((r) => r.task.id);
-    if (!actions.chooseTasks(taskIds)) return;
+    const chosen = actions.chooseTasks(taskIds);
+    if (chosen === undefined) return;
     toast.show({
       kind: 'sprint-pick',
       title:
@@ -79,7 +80,7 @@ function BacklogPane({
           : `${rows.length}件を${weekText(week, 'に入れました')}`,
       action: {
         label: '元に戻す',
-        onClick: () => actions.unchooseByTask(taskIds),
+        onClick: () => actions.unchooseTasks(chosen),
       },
     });
   };

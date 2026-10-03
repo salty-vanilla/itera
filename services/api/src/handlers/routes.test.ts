@@ -7,6 +7,7 @@ import {
   vGetBacklogResponse,
   vGetMeResponse,
 } from '@itera/api-contract';
+import { requestOf, surfaces } from '@itera/api-contract/requests';
 import { OPERATION_EXAMPLES } from '@itera/api-contract/testing';
 import { createIdSource, type Records } from '@itera/application';
 import { localDate, timeZone, type UserId } from '@itera/domain';
@@ -181,7 +182,12 @@ describe('an operation', () => {
   it('answers 403 to every write surface from another origin, before its checks', async () => {
     const { app, db } = await setup();
     const methods = new Set<string>();
-    for (const [name, [input]] of Object.entries(OPERATION_EXAMPLES)) {
+    const reached = new Set<string>();
+    const examples = Object.entries(OPERATION_EXAMPLES).flatMap(
+      ([name, inputs]) => inputs.map((input) => [name, input] as const),
+    );
+    for (const [name, input] of examples) {
+      reached.add(requestOf(name as never, input as never).operationId);
       const { url, init } = httpRequest(name as never, input);
       methods.add(init.method);
       const response = await app.request(
@@ -198,6 +204,8 @@ describe('an operation', () => {
       });
     }
     expect([...methods].toSorted()).toEqual(['DELETE', 'PATCH', 'POST', 'PUT']);
+    // Every write surface of the contract was sent.
+    expect([...reached].toSorted()).toEqual(Object.keys(surfaces).toSorted());
     expect((await loadRecords(db, alice)).revision).toBe(1);
   });
 
@@ -277,6 +285,43 @@ describe('an operation', () => {
       code: 'payloadTooLarge',
     });
   });
+
+  it.each([
+    [
+      'PUT',
+      'setRecurrence',
+      { taskId: ids.newId('Task', testNow), pattern: { freq: 'daily' } },
+    ],
+    ['PATCH', 'renameArea', { areaId: ids.newId('Area', testNow), name: 'x' }],
+    [
+      'DELETE',
+      'removeSprintTasks',
+      {
+        sprintId: ids.newId('Sprint', testNow),
+        sprintTaskIds: [ids.newId('SprintTask', testNow)],
+      },
+    ],
+  ] as const)(
+    'answers 413 to a %s (%s) body larger than the limit',
+    async (method, name, input) => {
+      const { app, db } = await setup();
+      const { url, init } = httpRequest(name, input);
+      expect(init.method).toBe(method);
+      const response = await app.request(
+        url,
+        {
+          ...init,
+          body: JSON.stringify({ x: 'あ'.repeat(maxBodyBytes / 3 + 1) }),
+        },
+        testEnv,
+      );
+      expect(await errorOf(response)).toMatchObject({
+        status: 413,
+        code: 'payloadTooLarge',
+      });
+      expect((await loadRecords(db, alice)).revision).toBe(1);
+    },
+  );
 
   it('answers 422 with the domain’s code when the domain refuses it', async () => {
     const { app, db } = await setup();

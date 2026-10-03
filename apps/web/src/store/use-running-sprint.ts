@@ -31,23 +31,16 @@ export function useRunningSprintActions() {
         on(current().sprints.active, (sprintId) =>
           operations.setAvailableHours({ sprintId, hours }),
         ).ok,
-      /**
-       * 過去の日の完了・スキップを取り消す (#53, F33): the undo of what the
-       * day's choice was.
-       */
-      undoPastDay: (selectionId: DailySelectionId) => {
-        const { records, sprints } = current();
-        const skipped =
-          records.sprints
-            .find((s) => s.id === sprints.active)
-            ?.dailySelections.find((d) => d.id === selectionId)?.resolution ===
-          'skipped';
-        return on(current().sprints.active, (sprintId) =>
-          skipped
-            ? operations.undoSkipSelection({ sprintId, selectionId })
-            : operations.undoCompleteSelection({ sprintId, selectionId }),
-        ).ok;
-      },
+      /** 過去の日の完了を取り消す (#53, F33). */
+      undoComplete: (selectionId: DailySelectionId) =>
+        on(current().sprints.active, (sprintId) =>
+          operations.undoCompleteSelection({ sprintId, selectionId }),
+        ).ok,
+      /** 過去の日のスキップを取り消す (#53, F33). */
+      undoSkip: (selectionId: DailySelectionId) =>
+        on(current().sprints.active, (sprintId) =>
+          operations.undoSkipSelection({ sprintId, selectionId }),
+        ).ok,
     }),
     [on, current],
   );

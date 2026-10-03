@@ -275,11 +275,15 @@ async function failWith(answer: Answer) {
 // 2026-10-03, Issue #272).
 describe('a failed operation', () => {
   it.each(refused)(
-    '%s: saved nothing, says so, and reads nothing again',
+    '%s: saved nothing, says so, and reads again (ADR 0006 エラー, #295)',
     async (_, answer) => {
       const { outcome, requests } = await failWith(answer);
       expect(outcome).toEqual({ ok: false });
-      expect(requests).toEqual([`PATCH /api/areas/${ids.area.research}`]);
+      // What it was sent with may have been old: the reads come back first.
+      expect(requests).toEqual([
+        `PATCH /api/areas/${ids.area.research}`,
+        'GET /api/me',
+      ]);
       expect(
         await screen.findAllByText('保存できませんでした'),
       ).not.toHaveLength(0);

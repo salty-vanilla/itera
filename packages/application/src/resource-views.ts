@@ -11,22 +11,17 @@ import {
   type SprintState,
 } from '@itera/domain';
 import { dayData, type DayData } from './day-view';
-import { planningData, type PlanningData } from './planning-view';
+import {
+  planningCandidatesOf,
+  sprintPlanOf,
+  type PlanningData,
+  type SprintPlan,
+} from './planning-view';
 import type { Clock, Records } from './records';
 import { retroData, type RetroData } from './retro-view';
 import { runningData, type RunningData } from './running-view';
 import { weekNameOf, type SprintWeek } from './sprint-choice';
 import { todayData, type TodayData } from './today-view';
-
-/** `value` without one of its properties. */
-function without<T extends object, K extends keyof T>(
-  value: T,
-  key: K,
-): Omit<T, K> {
-  return Object.fromEntries(
-    Object.entries(value).filter(([name]) => name !== key),
-  ) as Omit<T, K>;
-}
 
 /** A Sprint as a list or a reference shows it. */
 export interface SprintItem {
@@ -109,7 +104,7 @@ export function currentSprints(records: Records, clock: Clock): CurrentSprints {
 export type SprintView =
   | {
       readonly state: 'planning';
-      readonly plan: Omit<PlanningData, 'candidates'>;
+      readonly plan: SprintPlan;
     }
   | {
       readonly state: 'active' | 'review' | 'closed';
@@ -124,11 +119,11 @@ export function sprintView(
 ): SprintView | undefined {
   const sprint = records.sprints.find((s) => s.id === sprintId);
   if (sprint === undefined) return undefined;
-  if (sprint.state === 'planning') {
-    const data = planningData(records, clock, options, sprintId);
-    if (data === undefined) return undefined;
-    return { state: 'planning', plan: without(data, 'candidates') };
-  }
+  if (sprint.state === 'planning')
+    return {
+      state: 'planning',
+      plan: sprintPlanOf(records, clock, sprint, options),
+    };
   const running = runningData(records, clock, sprintId);
   return running === undefined ? undefined : { state: sprint.state, running };
 }
@@ -142,8 +137,10 @@ export function sprintCandidates(
   clock: Clock,
   sprintId: SprintId,
 ): PlanningData['candidates'] | undefined {
-  return planningData(records, clock, { applyCriterion: false }, sprintId)
-    ?.candidates;
+  const sprint = records.sprints.find((s) => s.id === sprintId);
+  return sprint?.state === 'planning'
+    ? planningCandidatesOf(records, clock, sprint)
+    : undefined;
 }
 
 /** A Sprint's Retro, once it has started; `undefined` before. */

@@ -1,7 +1,7 @@
 // The contract's reads (ADR 0006 経路の形) as TanStack Query keeps them, and
 // which of them an operation makes stale.
 //
-// Query keys are the generated ones (`getOverviewQueryKey` and so on):
+// Query keys are the generated ones (`getMeQueryKey` and so on):
 // `[{ _id: <operationId>, baseUrl, path?, query? }]`, one entry per read and
 // parameters. Nothing else builds keys, so a read's key is the same
 // wherever it is used.
