@@ -19,12 +19,12 @@ export function createApp(dependencies: Dependencies) {
   );
 
   // No authentication. Also confirms the database answers.
-  app.get('/health', async (c) => {
+  app.get('/api/health', async (c) => {
     await c.var.db.run(sql`select 1`);
     return c.json({ status: 'ok' });
   });
 
-  app.get('/me', requireAuth(dependencies.authenticator), (c) =>
+  app.get('/api/me', requireAuth(dependencies.authenticator), (c) =>
     c.json({ userId: c.var.userId }),
   );
 

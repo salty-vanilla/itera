@@ -11,3 +11,7 @@ BETTER_AUTH_URL=http://localhost:8787
 # round trip still works.
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
+# Email addresses that may sign up, separated by commas. Signing in with a
+# Google account outside the list fails without creating a user. Required:
+# when empty, requests that use auth fail with 500.
+SIGN_UP_ALLOWED_EMAILS=

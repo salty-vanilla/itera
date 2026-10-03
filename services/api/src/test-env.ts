@@ -6,4 +6,5 @@ export const testEnv: CloudflareBindings = {
   BETTER_AUTH_URL: 'http://localhost:8787',
   GOOGLE_CLIENT_ID: 'google-client-id.test',
   GOOGLE_CLIENT_SECRET: 'google-client-secret.test',
+  SIGN_UP_ALLOWED_EMAILS: 'ada@example.com, Grace@Example.com',
 };
