@@ -437,6 +437,7 @@ export const vBacklogItem = v.object({
 
 export const vBacklogData = v.object({
     today: vLocalDate,
+    lastDay: v.boolean(),
     timeZone: vTimeZone,
     areas: v.array(v.object({
         id: vAreaId,

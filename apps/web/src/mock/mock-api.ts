@@ -6,7 +6,9 @@
 // no meaning here: the Origin is the app's own, and there is no version to
 // conflict. The person is signed in until they sign out in the mock's auth
 // (mock-auth.ts); then every request is refused with 401, as the API does
-// without a session (#278).
+// without a session (#278). The API's check that a restored interrupt is one
+// the person deleted (preconditions.ts, #315) is not made: the mock keeps no
+// Activity, so it restores a note that was not deleted too.
 // A person who has not made their settings yet (the fixture state
 // `before-settings`) is answered as the API answers them: `getMe` has
 // `settings: null`, `PUT /me/settings` makes them, and every other read and

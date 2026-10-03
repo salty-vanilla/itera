@@ -11,10 +11,12 @@ import {
   type Records,
 } from '@itera/application';
 import { fixtureIds, fixtureSnapshot } from '@itera/application/fixtures';
-import { addDays, instant, localDate } from '@itera/domain';
+import { addDays, id, instant, localDate } from '@itera/domain';
 import * as v from 'valibot';
 import { afterEach, describe, expect, it } from 'vitest';
-import { activity } from '../db/schema';
+import { loadRecords } from '../db/load-records';
+import { saveRecords } from '../db/save-records';
+import { activity, user as authUser } from '../db/schema';
 import {
   closeFixtureApps,
   describeOperations,
@@ -92,6 +94,11 @@ const onNote = (note: { readonly id: string }) => (r: Records) => ({
   ...running(r),
   interruptNoteId: note.id,
 });
+
+/** The fixture's first note, deleted: what a restore needs to come after. */
+const deletedFirstNote: readonly Step[] = [
+  ['deleteInterrupt', onNote(firstNote())],
+];
 
 const successes: readonly Success[] = [
   {
@@ -736,9 +743,13 @@ const failures: readonly Failure[] = [
     code: 'invalidTransition',
   },
   {
-    // The note is still there.
+    // Deleted and restored: the note is there again.
     name: 'restoreInterrupt',
     state: 'today-interrupt',
+    prepare: [
+      ['deleteInterrupt', onNote(firstNote())],
+      ['restoreInterrupt', (r) => ({ ...running(r), note: firstNote() })],
+    ],
     body: (r) => ({ ...running(r), note: firstNote() }),
     status: 422,
     code: 'invalidTransition',
@@ -746,10 +757,12 @@ const failures: readonly Failure[] = [
   {
     // A note is restored, not made: it was noted before now.
     name: 'restoreInterrupt',
+    state: 'today-interrupt',
+    prepare: deletedFirstNote,
     body: (r) => ({
       ...running(r),
       note: {
-        id: missing('InterruptNote'),
+        id: firstNote().id,
         at: '2026-10-03T00:31:00.000Z',
         text: '電話対応',
       },
@@ -760,10 +773,12 @@ const failures: readonly Failure[] = [
   {
     // Noted before the Sprint began (9/28, Tokyo).
     name: 'restoreInterrupt',
+    state: 'today-interrupt',
+    prepare: deletedFirstNote,
     body: (r) => ({
       ...running(r),
       note: {
-        id: missing('InterruptNote'),
+        id: firstNote().id,
         at: '2026-09-27T14:59:00.000Z',
         text: '前の週のメモ',
       },
@@ -773,16 +788,40 @@ const failures: readonly Failure[] = [
   },
   {
     name: 'restoreInterrupt',
+    state: 'today-interrupt',
+    prepare: deletedFirstNote,
     body: (r) => ({
       ...running(r),
       note: {
-        id: missing('InterruptNote'),
+        id: firstNote().id,
         at: '2026-10-03T00:00:00.000Z',
         text: ' ',
       },
     }),
     status: 422,
     code: 'invalidInput',
+  },
+  {
+    // Only a note the person deleted comes back: one still there was not.
+    name: 'restoreInterrupt',
+    state: 'today-interrupt',
+    body: (r) => ({ ...running(r), note: firstNote() }),
+    status: 404,
+    code: 'notFound',
+  },
+  {
+    // An ID nobody has (ADR 0006 「消した記録を戻す操作の照合」).
+    name: 'restoreInterrupt',
+    body: (r) => ({
+      ...running(r),
+      note: {
+        id: missing('InterruptNote'),
+        at: '2026-10-03T00:00:00.000Z',
+        text: '電話対応',
+      },
+    }),
+    status: 404,
+    code: 'notFound',
   },
 ];
 
@@ -986,11 +1025,18 @@ describe('the decisions of Today, through the API', () => {
     );
   });
 
-  it('F38: a note with the ID of another Sprint’s note is refused, writing nothing', async () => {
-    // The ID is the person's for good: the table's key is across Sprints.
-    const parsed = parseId('InterruptNote', missing('InterruptNote'));
-    if (!parsed.ok) throw new Error('not an InterruptNote ID');
-    const taken = parsed.value;
+  it('F38: only a note the person deleted comes back; another user’s note, another Sprint’s and one nobody has are refused alike, writing nothing', async () => {
+    // The ID is the person's for good: the table's key is across Sprints and
+    // users, so a restore of an ID that is not theirs would fail on the key.
+    const idOf = () => {
+      const parsed = parseId('InterruptNote', missing('InterruptNote'));
+      if (!parsed.ok) throw new Error('not an InterruptNote ID');
+      return parsed.value;
+    };
+    const inPreviousSprint = idOf();
+    const bobsNote = idOf();
+    const bobsDeletedNote = idOf();
+    const nobody = idOf();
     const app = await setup('today-morning', (records) => ({
       ...records,
       sprints: records.sprints.map((s) =>
@@ -1000,7 +1046,7 @@ describe('the decisions of Today, through the API', () => {
               ...s,
               interrupts: [
                 {
-                  id: taken,
+                  id: inPreviousSprint,
                   at: instant('2026-09-25T01:00:00.000Z'),
                   text: '前の週',
                 },
@@ -1008,18 +1054,72 @@ describe('the decisions of Today, through the API', () => {
             },
       ),
     }));
+    // Another user, with a note in a Sprint and the deletion of another.
+    const bob = id<'User'>(missing('User'));
+    await app.db
+      .insert(authUser)
+      .values({ id: bob, name: 'bob', email: 'bob@example.com' });
+    const bobsSprint = id<'Sprint'>(missing('Sprint'));
+    const noted = instant('2026-10-01T01:00:00.000Z');
+    await saveRecords(app.db, {
+      userId: bob,
+      loaded: { revision: 0, records: null },
+      changes: {
+        user: { ...fixtureSnapshot('today-morning').records.user, id: bob },
+        areas: [],
+        tasks: [],
+        rules: [],
+        occurrences: [],
+        sprints: [
+          {
+            id: bobsSprint,
+            userId: bob,
+            start: localDate('2026-09-28'),
+            end: localDate('2026-10-04'),
+            state: 'active',
+            goals: [],
+            tasks: [],
+            areaSnapshot: [],
+            dailySelections: [],
+            actualTimes: [],
+            interrupts: [{ id: bobsNote, at: noted, text: '電話対応' }],
+          },
+        ],
+        criteria: [],
+      },
+      activities: [
+        {
+          kind: 'interruptDeleted',
+          at: noted,
+          actor: 'user',
+          sprintId: bobsSprint,
+          interruptId: bobsDeletedNote,
+        },
+      ],
+      caughtUpTo: today,
+    });
     await app.get('/me');
     const before = await app.saved();
-    expect(
-      before.records.sprints.flatMap((s) => s.interrupts.map((n) => n.id)),
-    ).toEqual([taken]);
-    const response = await app.post('restoreInterrupt', {
-      ...running(before.records),
-      note: { id: taken, at: '2026-10-01T01:00:00.000Z', text: '今週のメモ' },
-    });
-    expect(response.status).toBe(422);
-    expect(await response.json()).toMatchObject({ code: 'invalidInput' });
+    const bobBefore = await loadRecords(app.db, bob);
+    const answer = async (note: string) => {
+      const response = await app.post('restoreInterrupt', {
+        ...running(before.records),
+        note: { id: note, at: '2026-10-01T01:00:00.000Z', text: '今週のメモ' },
+      });
+      return [response.status, await response.json()];
+    };
+    const answers = [];
+    for (const note of [inPreviousSprint, bobsNote, bobsDeletedNote, nobody]) {
+      answers.push(await answer(note));
+    }
+    expect(answers[0]).toEqual([
+      404,
+      { code: 'notFound', message: expect.any(String) },
+    ]);
+    // Each is the same answer, in the status, the code and the message.
+    for (const other of answers) expect(other).toEqual(answers[0]);
     expect(await app.saved()).toEqual(before);
+    expect(await loadRecords(app.db, bob)).toEqual(bobBefore);
   });
 
   it('F38: an interrupt is noted on a day of the Sprint, so a confirmed Sprint that has not begun takes none, writing nothing', async () => {

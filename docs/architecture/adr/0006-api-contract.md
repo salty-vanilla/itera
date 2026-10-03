@@ -170,9 +170,10 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 消した割り込みを戻す `restoreInterrupt` は、ID を残す。クライアントは、消す前の読み取りで得た note（ID・時刻・本文・分）をそのまま送り（ID は `PUT /sprints/{sprintId}/interrupts/{interruptNoteId}` の path に、ほかは本文に）、domain の `restoreInterrupt` が「同じ ID の note がない（利用者のほかの Sprint の note も含めて）」「今より後に記録されたものでない」「Sprint の期間の日に記録されたものである（利用者のタイムゾーンの日付で）」「本文が空でない」を確かめて、時刻の順の位置に戻す（F38）。ほかの Sprint の note の ID と時間帯は、domain の入力として `packages/application` が記録から渡す（#269）。
 
-- 内容で照合する案（サーバーが消した note を覚えておき、本文と時刻で探す）は採らない。サーバーは Activity を判定に読み返さず（ADR 0004「記録のテーブル」）、消した note を別に保つ場所が要るため。ID は TypeID で、接頭辞と書式を契約で確かめる。
+- 戻せるのは、利用者がその Sprint から消した割り込みだけにする（#315）。サーバーは保存の前に、利用者自身の Activity にその Sprint からその ID を消した記録（`interruptDeleted`）があるかを確かめ（ADR 0004「Activity を読む 1 つの例外」）、なければ domain に渡さず 404 `notFound` で断る。ほかの利用者の割り込みの ID と、誰も持たない ID は、利用者自身の Activity にないという点で同じなので、状態・code・本文（ID を含めない固定の文）が同じ応答になる。ID は全体の主キーなので、この確かめがないと、ほかの利用者の ID は保存の主キーの衝突（500）になり、ID がほかの利用者にあるかどうかが応答で分かった。消していない割り込みや、別の Sprint から消した割り込みを戻す操作も、同じ 404 になる。ブラウザ内モック（ADR 0005）は Activity を残さないので、この確かめをしない（消していない割り込みも戻す。画面は消した直後にしか戻さないので、見える違いはない）。
+- 内容で照合する案（サーバーが消した note の内容を覚えておき、本文と時刻で探す）は採らない。Activity の `interruptDeleted` は ID しか持たず、内容を別に保つには domain の記録か Activity の項目を変える必要があるため（ドメインモデルの正本の変更。別の Issue で決める）。内容は今までどおりクライアントが送った値で、domain が値の規則だけを確かめる。ID は TypeID で、接頭辞と書式を契約で確かめる。
 - 同じ考えで、`undoAdoption` の `previous`（採用する前の Estimate）も、クライアントが採用の前の読み取りで持っていた値を送る。Task は今の Estimate だけを持つため（packages/domain）。
-- 利用者は自分の記録しか送れないので、作り話の note を戻されても困るのは本人だけ。
+- 内容は自分が消した ID の note としてだけ戻せるので、作り話の内容を戻されても困るのは本人だけ。
 
 ### エラー
 
@@ -183,7 +184,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 | 400 | `validationFailed` | 要求が契約と合わない（形・書式・必須） |
 | 401 | `unauthenticated` | 有効なセッションがない |
 | 403 | `forbiddenOrigin` | 書き込みの Origin が違う（ADR 0004「書き込みの API の CSRF への備え」） |
-| 404 | `notFound` | 要求が指す記録が利用者の記録にない（domain の `notFound`） |
+| 404 | `notFound` | 要求が指す記録が利用者の記録にない（domain の `notFound`）。消した割り込みを戻す操作では、利用者がその Sprint から消していない ID（ほかの利用者の ID、存在しない ID を含む。どれも同じ応答） |
 | 409 | `revisionConflict` | ほかの書き込みが先に入り、この書き込みはしていない（ADR 0004「同時の書き込み」）。保存は確定したのに DB の応答が失われたときもこれになる（ADR 0004 の既知の限界）。どちらも読み直せば保存された記録が分かる |
 | 413 | `payloadTooLarge` | 操作の本文が上限（64 KiB）を超える（#266） |
 | 422 | `invalidInput`・`invalidTransition`・`recurringTaskCannotComplete` | domain が操作を受け付けない（値の規則、状態の遷移、繰り返しの Task の完了） |
@@ -246,8 +247,8 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 - 印の `{pin}` は記録の ID から種類を決める。クライアントが別の種類として送った ID も、その ID の種類の印として扱う（契約が受け付ける ID の種類の中で）。印を付けられるのは、その Sprint の事実だけで、ほかの Sprint や存在しない ID は domain が `notFound`（404。経路の子が経路の Sprint にないとき、と同じ）で断る（#270、不変条件 40）。
 - `PUT`・`DELETE` の 2 回目を、domain が `invalidTransition`（422）で断る操作がある（含めた回をもう一度含める `PUT …/included-occurrences/{occurrenceId}` など）。記録は変わらないので状態としては冪等だが、応答は 1 回目と同じにならない。直すなら domain の変更。
 - 応答のスキーマは未知のキーを許すので、Valibot の検証だけでは余分なキーを見つけられない。型のテストで止めている。
-- `restoreInterrupt` と `undoAdoption` は、クライアントが前の読み取りの値を送る。版はサーバーが読み込んだ時点のものなので、クライアントの読み取りが古いことは 409 では分からない。`undoAdoption` は domain の確かめ（提案の状態）で守られるが、`restoreInterrupt` は古い note でも受け付ける。
-- `restoreInterrupt` が確かめる ID の重複は、利用者自身の Sprint の中だけ（#269）。`interrupt_note.id` は全体の主キーなので、ほかの利用者の note の ID を送ると保存の `batch()` が失敗して 500 になる（上書きはされない）。TypeID を知る必要があり、利用者が 1 人の間は起きない。
+- `restoreInterrupt` と `undoAdoption` は、クライアントが前の読み取りの値を送る。版はサーバーが読み込んだ時点のものなので、クライアントの読み取りが古いことは 409 では分からない。`undoAdoption` は domain の確かめ（提案の状態）で守られるが、`restoreInterrupt` は消した後の内容を覚えていないので、古い note（別の端末で直した後の、直す前の本文など）でも、消した ID のものなら受け付ける。直すには、消した割り込みの内容をサーバーが持つ必要がある（`interruptDeleted` が内容を持つ Activity の変更か、domain の記録。ドメインモデルの正本の変更で、別の Issue）。
+- `restoreInterrupt` が domain で確かめる ID の重複は、利用者自身の Sprint の中だけ（#269）。ほかの利用者の割り込みの ID は、保存の前の確かめ（上の「消した記録を戻す操作の照合」、#315）で 404 になり、保存の主キーの衝突は起きない。`interrupt_note.id` に主キーの衝突を起こしうるのは、クライアントが新しい行の ID を決める経路だけで、契約ではこの操作だけ（#315 で、path と本文に ID を持つすべての操作を確かめた：ほかの操作の ID は既存の記録を指し、新しい行の ID はサーバーが作る）。クライアントが新しい行の ID を決める操作を足すときは、同じ確かめを `services/api/src/handlers/preconditions.ts` に足す。
 - 文字列・配列の長さに、契約では上限を置いていない。本文の大きさは 64 KiB で止める（上の「エラー」、#266）ので、1 つの値が D1 の上限を超えることはない。
 
 ## 互換の規則

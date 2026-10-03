@@ -858,7 +858,7 @@ export const editInterrupt = <ThrowOnError extends boolean = false>(options: Opt
 /**
  * 元に戻す after 割り込みを消す
  *
- * The client sends back the note as the read gave it, its ID in the path: the same note returns to its place (ADR 0006). Refused with 422 if a note with that ID is there, in this Sprint or in another of the person's, if it was noted later than now or on a day outside the Sprint (in the person's time zone), or if its text is empty.
+ * The client sends back the note as the read gave it, its ID in the path: the same note returns to its place (ADR 0006). Only a note the person deleted from this Sprint comes back: any other ID, whether another person's or nobody's, is refused with the same 404. Refused with 422 if a note with that ID is there again, in this Sprint or in another of the person's, if it was noted later than now or on a day outside the Sprint (in the person's time zone), or if its text is empty.
  */
 export const restoreInterrupt = <ThrowOnError extends boolean = false>(options: Options<RestoreInterruptData, ThrowOnError>): RequestResult<RestoreInterruptResponses, RestoreInterruptErrors, ThrowOnError> => (options.client ?? client).put<RestoreInterruptResponses, RestoreInterruptErrors, ThrowOnError>({
     security: [{

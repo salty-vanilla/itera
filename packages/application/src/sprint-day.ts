@@ -18,6 +18,19 @@ export function dayInPeriod(
   };
 }
 
+/**
+ * The last day of the Sprint (F21). The next day is not in the Sprint: what
+ * was left open becomes a carry-over when it moves on to Review (F35), so
+ * nothing closed today returns to 今週の残り. The clients take this value
+ * from the read and do not compare dates themselves (ADR 0007).
+ */
+export function isLastDay(
+  sprint: Pick<Sprint, 'end'>,
+  date: LocalDate,
+): boolean {
+  return date === sprint.end;
+}
+
 /** The actual hours recorded for a choice, on its day. */
 export function selectionActualHours(
   sprint: Sprint,

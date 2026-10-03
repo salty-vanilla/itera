@@ -475,6 +475,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
               item={openItem}
               areas={backlog.areas}
               timeZone={backlog.timeZone}
+              lastDay={backlog.lastDay}
               onClose={() => setSearch({ task: undefined })}
               onComplete={async () => {
                 if (await taskActions.completeTask(openItem.task.id)) {

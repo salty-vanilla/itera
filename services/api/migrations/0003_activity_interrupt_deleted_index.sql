@@ -1,0 +1,1 @@
+CREATE INDEX `activity_interrupt_deleted_idx` ON `activity` ("content" ->> '$.interruptId') WHERE "activity"."kind" = 'interruptDeleted';

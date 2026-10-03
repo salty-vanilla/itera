@@ -164,7 +164,7 @@ wrangler で管理できない設定は、[デプロイの手順書](../../opera
   - RecurrenceRule：版。
 - 値オブジェクト（Estimate、PlanSnapshot と PlanningValue、CriterionPolicy、RecurrencePattern など）は、持ち主の行の列に展開する。union は判別の列（`kind`・`base` など）と、種類ごとの列で表す。
 - 利用者の設定（domain の `User`：表示名・タイムゾーン・週の始まり）は、Better Auth の `user` とは別のテーブルに置き、Better Auth の利用者 ID で 1 対 1 に結ぶ。Better Auth のテーブルに列を足さない。
-- Activity は追記だけの履歴で、種類（75 種）ごとに項目が違う。共通の項目（利用者、追記の順、日時、actor、kind）を列にし、種類ごとの内容を JSON の列に置く。Activity は判定に読み返さない履歴なので、内容の列では検索しない。
+- Activity は追記だけの履歴で、種類（75 種）ごとに項目が違う。共通の項目（利用者、追記の順、日時、actor、kind）を列にし、種類ごとの内容を JSON の列に置く。Activity は判定に読み返さない履歴なので、内容の列では検索しない。例外は 1 つだけ：利用者がその割り込みを消したかの確認（下の「Activity を読む 1 つの例外」）。
 - 列・制約・index は #263 で次のとおり決めた（`services/api/src/db/schema.ts`）。
 
 #### 列（#263）
@@ -201,7 +201,7 @@ DB で守る不変条件：
 
 DB で守らない不変条件：上の表にないもの。状態の遷移、時刻の前後、記録をまたぐ判定で、domain のコマンドが守る。
 
-index：利用者ごとに読むための `user_id`、子テーブルの持ち主の列（主キーの先頭にないもの）、ActualTime の SprintTask。Activity は（利用者、版、`position`）を主キーにし、ほかの index は置かない。
+index：利用者ごとに読むための `user_id`、子テーブルの持ち主の列（主キーの先頭にないもの）、ActualTime の SprintTask。Activity は（利用者、版、`position`）を主キーにし、ほかの index は 1 つだけ（`kind = 'interruptDeleted'` の行の、割り込みの ID の式への部分 index。下の「Activity を読む 1 つの例外」）。
 
 #### 読み込みと書き込み（#263）
 
@@ -213,7 +213,18 @@ index：利用者ごとに読むための `user_id`、子テーブルの持ち�
   - 利用者の記録でないもの（ほかの利用者の `userId` を持つ記録、読み込んでいない記録の削除）は、呼び出し側の誤りとして例外にする。読み込んでいない ID の記録は INSERT になり、ほかの利用者の行と主キーがぶつかって失敗するので、上書きはできない。
   - 最初の保存には利用者の設定（`User`）を含める。
 - Activity は（保存で上げた版、その保存の中の順）で並べる。共通の項目のほかは JSON の `content` に置く。
-- 型は `packages/application` の `Records`・`RecordChanges`（#266 でそろえた）。`Records` は Activity を含まない（追記するだけで読み返さないため）。
+- 型は `packages/application` の `Records`・`RecordChanges`（#266 でそろえた）。`Records` は Activity を含まない（追記するだけで読み返さないため。例外は下の「Activity を読む 1 つの例外」）。
+
+#### Activity を読む 1 つの例外（#315、2026-10-04）
+
+消した割り込みを戻す `restoreInterrupt`（ADR 0006「消した記録を戻す操作の照合」）は、利用者が実際にその割り込みを消したことを、保存の前に確かめる。消した事実を持つのは Activity の `interruptDeleted`（Sprint の ID と割り込みの ID）だけなので、ここだけ Activity を判定に読む。
+
+- 理由：割り込みの ID は全体の主キーで、クライアントが ID を決めて送る（戻す操作が ID を残すため）。確かめがないと、ほかの利用者の ID は保存の主キーの衝突（500）になり、その ID がほかの利用者にあるかどうかが応答の違いで分かる。消した記録を別のテーブルに持つ案は、domain の記録（`Records`）と `RecordChanges` に消した割り込みを足すことになり、Activity が同じ事実をすでに持つので採らない。
+- 境界：読むのは `src/db/deleted-interrupts.ts` の 1 つの問い合わせだけ（利用者の行、`kind = 'interruptDeleted'`、割り込みと Sprint の ID の一致、`limit 1`）。Activity を `select` する場所がほかに増えたら失敗する検査を置いた（`src/db/activity-reads.test.ts`）。ほかの判定にログを読ませたくなったら、この節を直す決定として扱う。
+- 索引：Activity の `content` は JSON で、問い合わせが主キー（利用者、版、`position`）の順では引けない。`kind = 'interruptDeleted'` の行だけに、`content ->> '$.interruptId'` への部分 index（`activity_interrupt_deleted_idx`、マイグレーション 0003）を置く。問い合わせの `kind` は定数で書き、式は index と同じ形にして、index が使われることを `EXPLAIN QUERY PLAN` でテストする（ローカルの D1、wrangler 4.141.0 でも、マイグレーション 0003 が通り、同じ index が使われることを確かめた。2026-10-04）。式の `->>` は、drizzle-kit 0.31.11 が `json_extract(…, '…')` の引数のカンマで式を分けて壊れた SQL を出すので選んだ（SQLite 3.38 以降。D1 と libSQL で動く）。
+- Activity は追記だけなので、消した記録は後から消えない。確かめと保存の間に結果が変わらないので、版の確かめには入れず、記録を読み込んだあとに 1 回問い合わせる。
+- 使い始めの間の作り直し（上の「使い始めの間のスキーマの変更」）で `activity` を記録を移さずに作り直すと、それより前に消した割り込みは戻せなくなる（404。500 にはならない）。
+- 戻す条件：domain が消した割り込みを `Records` に持つ（たとえば消した note の内容を含めて）ようになったら、この問い合わせをやめて記録からの照合にし、index も消す。
 
 ### 操作と読み取りの処理（2026-10-03）
 
@@ -222,7 +233,7 @@ index：利用者ごとに読むための `user_id`、子テーブルの持ち�
 1. 認証（`requireAuth`）。
 2. 書き込みのリクエストの Origin を確かめる（下の「書き込みの API の CSRF への備え」）。
 3. 入力を契約（OpenAPI、ADR 0006）のスキーマで検証する。
-4. 利用者の記録を読み込む。
+4. 利用者の記録を読み込む。この直後に、記録の外の DB の確認が要る操作だけ、その確認をする（`src/handlers/preconditions.ts`。今は `restoreInterrupt` だけ。下の「Activity を読む 1 つの例外」）。
 5. 日付が変わったときのシステムの処理（Sprint の終了、その日の始まり）を、その時点まで進める（#271）。
 6. アプリケーション層（ADR 0005）の操作を実行する。判定は `packages/domain` のコマンドが行う。
 7. 変わった行だけを 1 つの `batch()` で書く。同じ `batch()` の中で、利用者ごとの版を確かめて上げる（下の「同時の書き込み」）。
