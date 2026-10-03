@@ -181,7 +181,7 @@ Better Auth（ADR 0004「認証の構成」）の API を使う、Web のサイ�
 #### 画面と経路
 
 - `/sign-in`（`?redirect=<元の画面>`、Google が失敗して戻ったときは `&error=<code>`）。アプリの枠（ナビ）の外に出す。枠の中の画面は読み取りをするので、セッションのない画面に置くと 401 をくり返すため。経路は平らなまま（各画面の `getRouteApi('/today')` などの ID を変えない）、`root-layout.tsx` がパスで枠を付けるかを決める。
-- 戻り先（`returnPath`）は、アプリの中のパス（`/` で始まり、別の origin にならず、サインインの画面と `/api/` でない）だけを受け、ほかは今日を開く。URL から来る値なので、外のサイトへ送らない。
+- 戻り先（`returnPath`）は、アプリの中のパス（`/` で始まり、別の origin にならず、サインインの画面と `/api` でない。比べるときは大文字小文字と末尾の `/` を無視する）だけを受け、ほかは今日を開く。URL から来る値なので、外のサイトへ送らない。URL の解析は `.` と `..` を消すので（`/.//host` が `//host` になる）、解析した後のパスも確かめ、`//` で始まる・`\` を含む・`%2F` か `%5C` を含むものは断る（Better Auth 1.7.6 の相対の `callbackURL` の検査と同じ条件）。
 - Google：`signIn.social` に `callbackURL`（戻り先）と `errorCallbackURL`（`/sign-in?redirect=<戻り先>`）を渡す。失敗の文言は `error` の code だけで分ける（`access_denied`：取り消した。`SIGN_UP_NOT_ALLOWED`：許可の一覧にない。ほか：失敗）。`error_description` は使わない（ADR 0004）。
 - パスキー：プロンプトを閉じた・時間切れ（`AUTH_CANCELLED`、`ERROR_CEREMONY_ABORTED`、`ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY`）は何も言わない。追加では、追加済み（`ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED`）と、サインインが古い（`SESSION_NOT_FRESH`。Better Auth の fresh session は 1 日）を分け、後者はもう一度サインインする入口を出す。ほかは失敗。
 - サインインした後とサインアウトした後は `QueryClient` を空にする。前の人の記録と、401 で失敗した取得を残さない。設定の画面の操作は `useMutation` にしない（`MutationCache` が成功のたびに契約の読み取りをすべて読み直し、サインアウトの直後に 401 で別の遷移が起きるため）。
