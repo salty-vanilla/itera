@@ -18,8 +18,8 @@ type ReflectPaneProps = {
   /** A closed Retro: the words as they were written (#90). */
   readOnly?: boolean | undefined;
   onPin: (pin: RetroPin, on: boolean) => void;
-  onReflect: (text: string) => boolean;
-  onImprove: (text: string) => boolean;
+  onReflect: (text: string) => Promise<boolean>;
+  onImprove: (text: string) => Promise<boolean>;
   /** The materials sit here below 1200px; beside the facts above it. */
   showMaterials: boolean;
   className?: string | undefined;
@@ -123,7 +123,7 @@ function Improvement({
   onImprove,
 }: {
   data: RetroData;
-  onImprove: (text: string) => boolean;
+  onImprove: (text: string) => Promise<boolean>;
 }) {
   const saved = data.improvement;
   const [editing, setEditing] = useState(saved === undefined);
@@ -138,12 +138,23 @@ function Improvement({
     }
   }, [editing]);
 
-  const save = () => {
+  // The save of the words being sent: leaving the field and pressing 確定
+  // come one after the other, and the second is the first's, not another.
+  const sending = useRef<
+    { text: string; result: Promise<boolean> } | undefined
+  >(undefined);
+  const save = (): Promise<boolean> => {
     const next = text.trim();
-    if (next === (saved ?? '')) return true;
+    if (next === (saved ?? '')) return Promise.resolve(true);
     // A criterion made from it keeps it; the handoff says to drop it first.
-    if (next === '' && data.draft !== undefined) return false;
-    return onImprove(next);
+    if (next === '' && data.draft !== undefined) return Promise.resolve(false);
+    if (sending.current?.text === next) return sending.current.result;
+    const result = onImprove(next).then((ok) => {
+      if (sending.current?.result === result) sending.current = undefined;
+      return ok;
+    });
+    sending.current = { text: next, result };
+    return result;
   };
 
   return (
@@ -172,9 +183,9 @@ function Improvement({
         <form
           noValidate
           className="flex max-w-measure-read flex-col gap-2"
-          onSubmit={(event) => {
+          onSubmit={async (event) => {
             event.preventDefault();
-            if (save() && text.trim() !== '') {
+            if ((await save()) && text.trim() !== '') {
               backToEdit.current = true;
               setEditing(false);
             }
@@ -195,7 +206,7 @@ function Improvement({
               placeholder="例：論文は 1本ずつタスクに分ける"
               onChange={(e) => setText(e.currentTarget.value)}
               // Kept as it is typed; 確定 only ends the editing.
-              onBlur={save}
+              onBlur={() => void save()}
             />
           </Field>
           <div>

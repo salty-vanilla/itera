@@ -89,10 +89,10 @@ describe('the API as the data source', () => {
         ? Response.json(overview)
         : new Response('404 Not Found', { status: 404 }),
     );
-    renderAt('/retro');
+    renderAt('/sprint');
     expect(
       await screen.findByText(
-        /^Not on the API yet: \/retro moves to the contract in #276\./,
+        /^Not on the API yet: \/sprint moves to the contract in #274\./,
       ),
     ).toBeTruthy();
     const [side] = screen.getAllByRole('navigation', { name: 'メイン' });
@@ -106,8 +106,8 @@ describe('the API as the data source', () => {
 
   it('has no fixture: the URL cannot switch the records', async () => {
     serve(() => Response.json(overview));
-    const router = renderAt('/retro?fixture=today-morning');
-    await screen.findByText(/^Not on the API yet: \/retro/);
+    const router = renderAt('/sprint?fixture=today-morning');
+    await screen.findByText(/^Not on the API yet: \/sprint/);
     expect(router.state.location.search).toEqual({});
   });
 });

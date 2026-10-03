@@ -186,6 +186,22 @@ Backlog（#273）の形で `/today`（今日、過去と先の日）を移した
 - **型と共通の部品**：Today の部品は契約の型（`TodayData`・`TodayRow`・`TodayItem`・`DayData`・`InterruptNote`・`LocalDate`）を使い、`packages/domain` を import しない。日付の関数は `lib/domain-functions.ts`（`addDays`・`parseLocalDate`）。`lib/selection-words.ts` は契約の `DailyResolution` にした。`useRead` は、答えに画面で使えるものがないとき（利用者の設定がまだなく、時計がない）`view` が `undefined` を返し、`failed` になる。
 - **import の境界**：`MIGRATING` から #275 のファイルと `lib/selection-words.ts` を消した。`NotOnContract` の一覧から `/today` を消した。
 
+### 振り返りを契約に移す（2026-10-04、Issue #276）
+
+Backlog（#273）・今日（#275）の形で `/retro` を移した。
+
+- **開く Sprint**：`useRetroChoice`（`store/use-retro-choice.ts`）が `listSprints` を 1 本読み、URL の `?sprint=` の番号の Sprint、なければ Review の Sprint、実行中の Sprint（最終日に Retro を始める。F21）、最後に closed になった Sprint の順に選ぶ。前後の Sprint（見出しの ‹ ›）は一覧の隣。サーバーが各 Sprint の `week` を返すので、画面は選ぶだけで名前を付けない。Retro を開ける Sprint だけが対象なので、`/me` の `next`（まだ計画が始まっていない来週）は要らない。Sprint が 1 つもなければ、選んだ結果は空（`current` なし）で、画面は「振り返る Sprint はありません」を出す。
+- **Retro の読み取り**：`useRetro(sprintId)` は `getSprintRetro` を Sprint の ID で読み、`Read<RetroData>` を返す。Sprint ごとに別の読み取りで、前の Sprint の答えを残さない（見出しの Sprint と中身の Sprint が食い違う間を作らない）。`retroScreenData`（`store/retro-view.ts`）が、契約の `RetroData` から画面が使う ID 引き（`areaOf`・`titleOf`・`taskTitleOf`）を作る。Retro が始まっていない（`view` が `null`）Sprint は Review か closed なら起きないので、`failed` とする。
+- **読み込み中**：Sprint の見出し（番号・期間・状態・‹ ›）は選んだ Sprint から作れるので、Retro を読んでいる間も出し続ける。‹ › で Sprint を替えたときに焦点が外れず、読めたあとに見出しが作り直されない。本体の場所は「振り返り」の見出しと `ReadStatus`。外側に `aria-busy`（テストはこれで読み終わりを待つ）。段階の表示は、記録から決まる段階（URL に段階がないとき）を読むまで出さない。
+- **操作のフック**：`useRetroActions({ sprintId, draftId })` は、画面に出している Sprint の ID を操作に渡す（暗黙の「Review の Sprint」を使わない）。計画のルールの下書きの ID は読み取りの `draft.criterion.id`。`useBeginRetro(sprintId)` は実行中の Sprint の Retro を始める。次の計画（`useNextPlanning`・`useBeginPlanning`）は `store/use-begin-planning.ts`（#274 と同じファイル）で、`getMe` の `sprints` から読み、始めたら作った Sprint の ID を返す。
+  - 同時の扱い：印・自己判定・文章・決定は、選んだ値や書いた言葉をそのまま送るので、重ねて送った分を捨てず順に送る（`whileSending: 'wait'`）。計画のルールの下書きを作る・替える・消す操作は、画面に出ている方針から全体を作って送るので、画面が前の結果を描くまで次を送らない（捨てる）。
+  - 完了の確認の Dialog は、送り終わるまで開いたままで、送信が 300ms 続いたらボタンを「完了中…」にする。通らなかったときは Dialog を閉じ、焦点は「振り返りを完了」のボタンに戻る。通ったときは、完了のボタンがなくなった場所の「Sprint N の計画を始める」へ焦点を移す。画面が新しい記録を描くのは操作の Promise が解決したあとなので、焦点は ref に頼みを置き、ボタンが描かれてから移す（「操作が終わっても…」）。かかった時間の記録（Sheet / Popover）の後も同じで、行のボタンがなくなってから行の「振り返りに使う」へ戻す。
+  - 「次に試すこと」は、欄を離れたときと「次に試すことを確定」が続けて起きても同じ言葉を 2 回送らない（送っている間は同じ結果を待つ）。
+- **型**：Retro の部品は契約の型（`RetroData`・`RetroCriterion`・`TaskFact`・`RetroPin` など）を使い、`packages/domain` を import しない。`lib/criterion-text.ts` と `lib/week-text.ts` も契約の型にした。
+- **画面の文言**：読み込めなかったときの文言は #273 と同じ。送信中の「完了中…」（完了の確認のボタン）と「始めています…」（振り返りを始める。Sprint N の計画を始めるのボタンと同じ語）を足した。content.md には載っていない語（語として決めるかはオーナーの確認を待つ）。
+- **import の境界**：`MIGRATING` から #276 のファイルを消した。`NotOnContract` の一覧から `/retro` を消した（統合ブランチに残る移していない画面は `/sprint` だけ）。#274 と #276 の両方が入ると移していない画面がなくなるので、`NotOnContract` とそのテスト（`server-data.test.tsx`）は #277 で消す。
+- **API での確認**：Retro の API（#270）がマージされるまで、`wrangler dev` への接続での確認はできない。画面の送受信はブラウザ内モックの上で `retro-api.test.tsx` が確かめる。
+
 ### サインインと設定（2026-10-03、Issue #278）
 
 Better Auth（ADR 0004「認証の構成」）の API を使う、Web のサインインの画面と設定の画面。パスキーの追加とサインアウトの置き場所は、2026-10-03 のオーナー決定（Issue #278 のコメント）で設定の画面（`/settings`）の「アカウント」の欄にした。初めは「アカウント」の画面（`/account`）としたが、rail の 55px の項目に「アカウント」（12px で約 59px）が収まらないため、同じ日のオーナー決定で「設定」に改めた。利用者の設定（週の始まりなど）も、あとでこの画面の欄として置ける。入口は DESIGN.md の Navigation「設定の入口」。

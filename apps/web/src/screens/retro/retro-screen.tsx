@@ -196,14 +196,20 @@ function RetroView({
   const [editing, setEditing] = useState<Editing | undefined>(undefined);
   // The surface leaves with `editing`, before it can hand the focus back.
   // Back to its button, or, when the button left with the time entered (it
-  // shows only on rows without time, #241), to the row's 振り返りに使う.
-  const closedEditing = useRef<Editing | undefined>(undefined);
+  // shows only on rows without time, #241), to the row's 振り返りに使う. The
+  // time is drawn after the operation has resolved, so the button is still
+  // there when the surface closes: the focus waits for it to go.
+  const closedEditing = useRef<(Editing & { recorded: boolean }) | undefined>(
+    undefined,
+  );
+  const recorded = useRef(false);
   useEffect(() => {
     const closed = closedEditing.current;
     if (editing !== undefined || closed === undefined) return;
+    if (closed.recorded && closed.anchor.isConnected) return;
     closedEditing.current = undefined;
     (closed.anchor.isConnected ? closed.anchor : closed.returnFocus)?.focus();
-  }, [editing]);
+  }, [editing, data]);
   const readOnly = sprint.state === 'closed';
   const setStage = (next: RetroStage) =>
     void navigate({ search: (prev) => ({ ...prev, stage: next }) });
@@ -431,20 +437,23 @@ function RetroView({
           open
           onOpenChange={(open) => {
             if (open) return;
-            closedEditing.current = editing;
+            closedEditing.current = { ...editing, recorded: recorded.current };
+            recorded.current = false;
             setEditing(undefined);
           }}
           anchor={editing.anchor}
           loading={actions.loading.recordActual}
-          onSubmit={(hours) =>
-            hours !== undefined &&
-            actions.recordActual(
+          onSubmit={async (hours) => {
+            if (hours === undefined) return false;
+            const ok = await actions.recordActual(
               editing.target.sprintTaskId,
               hours,
               editing.target.date,
               editing.target.occurrenceId,
-            )
-          }
+            );
+            recorded.current = ok;
+            return ok;
+          }}
         />
       )}
     </div>

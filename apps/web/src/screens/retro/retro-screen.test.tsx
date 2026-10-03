@@ -60,8 +60,16 @@ async function renderAt(url: string) {
       <RouterProvider router={router} />
     </TooltipProvider>,
   );
-  await screen.findByRole('heading', { level: 1 });
+  await retroRead();
   return router;
+}
+
+/** Waits for the screen to have read what it shows: it is busy until then. */
+async function retroRead() {
+  await screen.findByRole('heading', { level: 1 });
+  await waitFor(() =>
+    expect(document.querySelector('[aria-busy="true"]')).toBeNull(),
+  );
 }
 
 const sprintById = (id: string) => {
@@ -267,11 +275,13 @@ describe('Retro — 事実を見る', () => {
     );
     await userEvent.type(await findHours(screen, /かかった時間/), '0.5');
     await userEvent.click(screen.getByRole('button', { name: '記録する' }));
-    expect(reviewed().actualTimes.at(-1)).toMatchObject({
-      hours: 0.5,
-      via: 'later',
-      date: '2026-10-04',
-    });
+    await waitFor(() =>
+      expect(reviewed().actualTimes.at(-1)).toMatchObject({
+        hours: 0.5,
+        via: 'later',
+        date: '2026-10-04',
+      }),
+    );
     // The button leaves with the time entered; the focus goes to the row's
     // 振り返りに使う, not to the page (#241).
     expect(
@@ -707,8 +717,11 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     expect(titles).toHaveLength(2);
     expect(titles).toEqual(['関連論文を 3本読む', '実験データの前処理']);
     // Not started yet: it says when, and offers nothing to choose.
-    expect(list?.textContent).toContain(
-      '次の Sprint の「選ぶ」で決めます。振り返りの完了後に始まります。',
+    // (Where the next Planning is comes with the person's Sprints.)
+    await waitFor(() =>
+      expect(list?.textContent).toContain(
+        '次の Sprint の「選ぶ」で決めます。振り返りの完了後に始まります。',
+      ),
     );
     expect(list?.querySelector('input, a')).toBeNull();
     await userEvent.click(screen.getByRole('radio', { name: '終える' }));
@@ -876,7 +889,9 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
       rows.filter((r) => r.endsWith('次の Sprint に入っています')),
     ).toHaveLength(1);
     // Planning has started: it links to that Sprint, to decide there.
-    expect(within(list).getByRole('link').textContent).toBe('Sprint 3 を開く');
+    expect((await within(list).findByRole('link')).textContent).toBe(
+      'Sprint 3 を開く',
+    );
     expect(list.textContent).toContain('次の Sprint の「選ぶ」で決めます。');
   });
 });
@@ -966,10 +981,11 @@ describe('Retro — boundaries', () => {
       },
     });
     await renderAt('/retro?fixture=today-interrupt');
+    // Today comes with the person's Sprints: the last day is known then.
     await userEvent.click(
-      screen.getByRole('button', { name: '振り返りを始める' }),
+      await screen.findByRole('button', { name: '振り返りを始める' }),
     );
-    expect(reviewed().state).toBe('review');
+    await waitFor(() => expect(reviewed().state).toBe('review'));
     // In Review it is no longer 「今週」: the next week to start is (#90).
     expect(
       await screen.findByRole('heading', {
