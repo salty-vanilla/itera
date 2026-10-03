@@ -45,9 +45,16 @@ export function closeFixtureApps() {
   for (const close of open.splice(0)) close();
 }
 
-/** The app on a database holding the fixture's state, signed in as its user. */
-export async function setupFixtureApp(state: FixtureStateId) {
-  const { activities, ...records } = fixtureSnapshot(state).records;
+/**
+ * The app on a database holding the fixture's state, signed in as its user.
+ * `edit` changes the records first, for a state the fixture does not have.
+ */
+export async function setupFixtureApp(
+  state: FixtureStateId,
+  edit: (records: Records) => Records = (records) => records,
+) {
+  const { activities, ...fixture } = fixtureSnapshot(state).records;
+  const records = edit(fixture);
   const memory = await createMemoryDatabase();
   open.push(memory.close);
   const { db } = memory;
@@ -173,12 +180,14 @@ export function describeOperations(
         expect(after.revision).toBe(before.revision + 1);
         expect(after.records).not.toEqual(before.records);
         await c.check(after.records, before.records, body);
+        // The person's entry is in the revision's batch; an operation may
+        // also leave the system's (undoPastDay closes the day, invariant 24).
         const entries = await app.db.select().from(activity);
-        expect(entries.at(-1)).toMatchObject({
-          revision: after.revision,
-          actor: 'user',
-          at: testNow,
-        });
+        expect(
+          entries.filter((e) => e.revision === after.revision),
+        ).toContainEqual(
+          expect.objectContaining({ actor: 'user', at: testNow }),
+        );
       });
     });
 

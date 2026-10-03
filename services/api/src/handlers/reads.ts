@@ -1,9 +1,17 @@
-import { vGetBacklogQuery } from '@itera/api-contract';
+import {
+  vGetBacklogQuery,
+  vGetPlanningQuery,
+  vGetRunningQuery,
+  vGetSprintChoiceQuery,
+} from '@itera/api-contract';
 import {
   appOverview,
   areaList,
   backlogData,
   parseId,
+  planningData,
+  runningData,
+  sprintChoice,
   type AppOverview,
   type BacklogData,
   type BacklogFilter,
@@ -97,6 +105,18 @@ function backlogFilter(query: {
 }
 
 /**
+ * A Sprint's number (F25, the contract's `sprint` parameter) as the
+ * application takes it, the Sprint's ID. `sprintChoice` opens the Sprint
+ * with that number, and the current one when there is none, so a different
+ * number means there is none; the next week before its Planning has no
+ * Sprint yet either.
+ */
+function sprintIdOfNumber(records: Records, clock: Clock, number: number) {
+  const { current } = sprintChoice(records, clock, 'sprint', number);
+  return current.number === number ? current.sprint?.id : undefined;
+}
+
+/**
  * The reads the API answers. To answer another, add it here and take it
  * off `unimplementedReads`.
  */
@@ -117,6 +137,33 @@ export const readRoutes: {
     read: (records, clock, { query }) =>
       backlogData(records, clock, backlogFilter(query)),
   }),
+  getSprintChoice: readRoute({
+    path: '/sprint-choice',
+    query: vGetSprintChoiceQuery,
+    read: (records, clock, { query }) =>
+      query.screen === 'sprint'
+        ? sprintChoice(records, clock, 'sprint', query.sprint)
+        : sprintChoice(records, clock, 'retro', query.sprint),
+  }),
+  getPlanning: readRoute({
+    path: '/planning',
+    query: vGetPlanningQuery,
+    read: (records, clock, { query }) =>
+      planningData(records, clock, {
+        applyCriterion: query.applyCriterion ?? false,
+      }),
+  }),
+  getRunning: readRoute({
+    path: '/running',
+    query: vGetRunningQuery,
+    read: (records, clock, { query }) => {
+      if (query.sprint === undefined) return runningData(records, clock);
+      const sprintId = sprintIdOfNumber(records, clock, query.sprint);
+      return sprintId === undefined
+        ? undefined
+        : runningData(records, clock, sprintId);
+    },
+  }),
 };
 
 /**
@@ -125,10 +172,6 @@ export const readRoutes: {
  * server's own (`getMe`) (registry.test.ts).
  */
 export const unimplementedReads: readonly ReadName[] = [
-  // #268: the Sprint, planning and running.
-  'getSprintChoice',
-  'getPlanning',
-  'getRunning',
   // #269: today.
   'getToday',
   'getDay',

@@ -135,6 +135,15 @@ export interface RunningData {
 }
 
 /**
+ * The totals as `RunningData.totals` says: without the capacity, which
+ * `sprintTotals` also returns and no screen of a confirmed Sprint reads. The
+ * API answers with this value, so it carries nothing the contract lacks.
+ */
+function pickTotals({ total, byArea }: SprintTotals): RunningData['totals'] {
+  return { total, byArea };
+}
+
+/**
  * A confirmed Sprint's plan and how it went: the running one by default,
  * or the one asked for. `undefined` for a Sprint still being planned.
  */
@@ -246,7 +255,7 @@ export function runningData(
         }).plannedTotal.withAdditions,
         byArea: [],
       }
-    : sprintTotals(sprint, { tasks, now: clock.now });
+    : pickTotals(sprintTotals(sprint, { tasks, now: clock.now }));
 
   return {
     sprint,
