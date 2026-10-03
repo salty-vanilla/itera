@@ -119,7 +119,7 @@ type CommandResult<T> =
 ## Today で決めた細部（#23）
 
 - **置き場所**：DailySelection・ActualTime・InterruptNote は Sprint の集約の中（`dailySelections`・`actualTimes`・`interrupts`）。Today のコマンドは Sprint と、変えた Task・Occurrence を返し、Goal・計画基準・使える時間には触れない（不変条件 25）。
-- **1 日 1 件**：日付 × SprintTask（繰り返しは × Occurrence）に 1 件（不変条件 21）。同じ日に「今日の予定から外す」「見送る」をした後、同じ日にもう一度選ぶことはできない（オーナー確認済み）。ただし、その日のうちなら完了にはできる（F17。`completeSelection` の `today` で判定）。
+- **1 日 1 件**：日付 × SprintTask（繰り返しは × Occurrence）に 1 件（不変条件 21）。同じ日に「今週の残りに戻す」「見送る」をした後、同じ日にもう一度選ぶことはできない（オーナー確認済み）。ただし、その日のうちなら完了にはできる（F17。`completeSelection` の `today` で判定）。
 - **ほかの日の回（F18）**：繰り返しの回は、同じ Sprint のほかの日にも選べる。
 - **Today が触れる範囲**：Today のコマンドは active な Sprint の、planned の SprintTask の選択だけに働く（完了の取り消しは、単発なら done、繰り返しなら planned）。Sprint から外した SprintTask の開いた選択はそのまま残るが、Today のコマンドも「今日の残り」も扱わず、日付が変わると未処理になる。Sprint に戻せば（F13）また使える。
 - **当日の繰り返し**：`startDay`（actor = system だけ）で作る。Today を開いたとき・日付が変わったときに呼び、繰り返しても変わらない。前の日に開いたままの選択（selected / started）を unresolved にし（不変条件 24）、その日の Pending の回で、planned の SprintTask に含まれるものを `recurringToday` の選択にする。「昨日の続き」も含め、ほかは自動で選ばない（不変条件 22）。
@@ -187,7 +187,7 @@ PlanProposal（不変条件 41）は、外部 Agent を MVP に含めるかが P
 | `src/mid-sprint.ts` | 週の途中の追加、Sprint から外す・戻す、F9 |
 | `src/sprint-recurrence.ts` | 次の Sprint からの Rule の作成と変更（F1・F7・F15） |
 | `src/capacity.ts` | 計画値の合計と使える時間との比較 |
-| `src/today.ts` | 今日へ、開始・完了・今日はここまで・見送り・外す・スキップ（と取り消し）、日付の変更、Backlog からの完了（と取り消し）、実績、割り込み |
+| `src/today.ts` | 今日へ、開始・完了・中断・見送り・今週の残りに戻す・スキップ（と取り消し）、日付の変更、Backlog からの完了（と取り消し）、実績、割り込み |
 | `src/today-view.ts` | 連続見送り、昨日の続き、今日の残り |
 | `src/review.ts` | Review への移行、Retro（印・気になったこと・Improvement・自己判定）、計画基準の下書きと決定、Retro の完了 |
 | `src/criterion.ts` | PlanningCriterion、下書きの設定、`criterionView`（不変条件 39） |
