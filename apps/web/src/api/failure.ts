@@ -31,13 +31,16 @@ export type ErrorCode =
 /**
  * - `unauthenticated`: no session (401). The person is sent to sign in.
  * - `revisionConflict`: another write came first, and this one was not made
- *   (409). The reads are read again.
+ *   (409); or it was made and the database's answer was lost, which comes
+ *   back the same way (ADR 0006 エラー). So it may have been saved: the
+ *   reads are read again.
  * - `refused`: the request or the records' state does not allow it (400,
  *   403, 404, 413, 422). Sending it again gives the same answer. Among
  *   them `userNotSetUp`: the person has no settings yet (#279 makes the way
  *   to them).
- * - `failed`: anything else: the server failed (500), the network, a code
- *   this client does not know (ADR 0006 互換の規則).
+ * - `failed`: anything else, which may have been saved too: the server
+ *   failed (500), the network, a code this client does not know (ADR 0006
+ *   互換の規則).
  */
 export type Failure =
   | { readonly kind: 'unauthenticated' }

@@ -1,6 +1,7 @@
 // An operation through the contract's client and TanStack Query (#272): the
-// failure is told with the danger Toast, a version conflict reads again, no
-// session goes to sign in, and a second press while sending sends nothing.
+// failure is told with the danger Toast by what it says about the records
+// (one that may have been saved reads again first), no session goes to sign
+// in, and a second press while sending sends nothing.
 import {
   createClient,
   createConfig,
@@ -28,13 +29,14 @@ const ids = fixtureIds();
 
 afterEach(cleanup);
 
+/** An answer in front of the mock's: `undefined` lets the mock answer. */
+type Answer = (request: Request) => Response | Promise<Response> | undefined;
+
 /**
  * The mock over a fixture state, with `answer` in front of it: what it
  * returns is the answer, `undefined` passes the request to the mock.
  */
-function setUp(
-  answer?: (request: Request) => Response | Promise<Response> | undefined,
-) {
+function setUp(answer?: Answer) {
   const store = createMemoryStore(fixtureSnapshot('backlog-capture'), {
     random: (bytes) => crypto.getRandomValues(bytes),
   });
@@ -109,23 +111,6 @@ describe('useOperation', () => {
     expect(store.getSnapshot().records).toEqual(before.records);
   });
 
-  it('reads again after a version conflict, and tells it', async () => {
-    const { requests, wrapper } = setUp(answerWith(409, 'revisionConflict'));
-    const { result } = renderHook(useRenameAndOverview, { wrapper });
-    await waitFor(() => expect(result.current.overview.data).toBeDefined());
-    requests.length = 0;
-    await act(async () => {
-      await result.current.rename.run(rename('研究室'));
-    });
-    expect(requests).toEqual([
-      `PATCH /api/areas/${ids.area.research}`,
-      'GET /api/overview',
-    ]);
-    expect(await screen.findAllByText('保存できませんでした')).not.toHaveLength(
-      0,
-    );
-  });
-
   it('sends the person to sign in without a session, with no Toast', async () => {
     const { onUnauthenticated, wrapper } = setUp(
       answerWith(401, 'unauthenticated'),
@@ -136,17 +121,9 @@ describe('useOperation', () => {
     });
     expect(onUnauthenticated).toHaveBeenCalled();
     expect(screen.queryAllByText('保存できませんでした')).toHaveLength(0);
-  });
-
-  it('tells a code it does not know as a failure (ADR 0006 互換の規則)', async () => {
-    const { wrapper } = setUp(answerWith(418, 'somethingNew'));
-    const { result } = renderHook(useRenameAndOverview, { wrapper });
-    await act(async () => {
-      await result.current.rename.run(rename('研究室'));
-    });
-    expect(await screen.findAllByText('保存できませんでした')).not.toHaveLength(
-      0,
-    );
+    expect(
+      screen.queryAllByText('保存できたか確かめられませんでした'),
+    ).toHaveLength(0);
   });
 
   it('sends nothing more while one is being sent', async () => {
@@ -175,6 +152,134 @@ describe('useOperation', () => {
       requests.filter((r) => r === `PATCH /api/areas/${ids.area.research}`),
     ).toHaveLength(1);
     await waitFor(() => expect(result.current.rename.pending).toBe(false));
+  });
+});
+
+/** `answer` for the operation's request: anything but a read. */
+const onWrite =
+  (answer: () => Response): Answer =>
+  (request) =>
+    request.method !== 'GET' ? answer() : undefined;
+
+const refused: readonly [string, Answer][] = [
+  ['400 validationFailed', answerWith(400, 'validationFailed')],
+  ['403 forbiddenOrigin', answerWith(403, 'forbiddenOrigin')],
+  ['404 notFound', answerWith(404, 'notFound')],
+  ['413 payloadTooLarge', answerWith(413, 'payloadTooLarge')],
+  ['422 invalidInput', answerWith(422, 'invalidInput')],
+  ['422 invalidTransition', answerWith(422, 'invalidTransition')],
+  [
+    '422 recurringTaskCannotComplete',
+    answerWith(422, 'recurringTaskCannotComplete'),
+  ],
+  ['422 userNotSetUp', answerWith(422, 'userNotSetUp')],
+];
+
+const unknown: readonly [string, Answer][] = [
+  ['409 revisionConflict', answerWith(409, 'revisionConflict')],
+  ['500 internalError', answerWith(500, 'internalError')],
+  // ADR 0006 列挙: a code or a status this client does not know.
+  ['418 a code it does not know', answerWith(418, 'somethingNew')],
+  [
+    '502 that is not JSON',
+    onWrite(() => new Response('<html>Bad Gateway</html>', { status: 502 })),
+  ],
+  [
+    'no answer (the network)',
+    (request) =>
+      request.method !== 'GET'
+        ? Promise.reject(new TypeError('Failed to fetch'))
+        : undefined,
+  ],
+];
+
+/** Runs the operation with `answer` and gives what the person sees. */
+async function failWith(answer: Answer) {
+  const { requests, wrapper } = setUp(answer);
+  const { result } = renderHook(useRenameAndOverview, { wrapper });
+  await waitFor(() => expect(result.current.overview.data).toBeDefined());
+  requests.length = 0;
+  let outcome: unknown;
+  await act(async () => {
+    outcome = await result.current.rename.run(rename('研究室'));
+  });
+  return { outcome, requests };
+}
+
+// The Toast by what the failure says about the records (owner decision
+// 2026-10-03, Issue #272).
+describe('a failed operation', () => {
+  it.each(refused)(
+    '%s: saved nothing, says so, and reads nothing again',
+    async (_, answer) => {
+      const { outcome, requests } = await failWith(answer);
+      expect(outcome).toEqual({ ok: false });
+      expect(requests).toEqual([`PATCH /api/areas/${ids.area.research}`]);
+      expect(
+        await screen.findAllByText('保存できませんでした'),
+      ).not.toHaveLength(0);
+      expect(
+        screen.getAllByText(
+          '記録は変わっていません。内容を確かめてもう一度試してください。',
+        ),
+      ).not.toHaveLength(0);
+    },
+  );
+
+  it.each(unknown)(
+    '%s: may have been saved, reads again, then asks to look',
+    async (_, answer) => {
+      const { outcome, requests } = await failWith(answer);
+      expect(outcome).toEqual({ ok: false });
+      // Read again before `run` gave back its outcome, and not sent again.
+      expect(requests).toEqual([
+        `PATCH /api/areas/${ids.area.research}`,
+        'GET /api/overview',
+      ]);
+      expect(
+        await screen.findAllByText('保存できたか確かめられませんでした'),
+      ).not.toHaveLength(0);
+      expect(
+        screen.getAllByText('最新の記録を確かめてください。'),
+      ).not.toHaveLength(0);
+      expect(screen.queryAllByText(/記録は変わっていません/)).toHaveLength(0);
+    },
+  );
+});
+
+describe('reading again after an operation', () => {
+  it('waits for the first answer of each read, not for its retries', async () => {
+    // The operation fails on the network, and so does the read again.
+    let down = false;
+    const { requests, wrapper } = setUp(() =>
+      down ? Promise.reject(new TypeError('Failed to fetch')) : undefined,
+    );
+    const { result } = renderHook(useRenameAndOverview, { wrapper });
+    await waitFor(() => expect(result.current.overview.data).toBeDefined());
+    down = true;
+    requests.length = 0;
+    // A read's retry waits 1000ms: the clock does not move unless told.
+    vi.useFakeTimers();
+    try {
+      let outcome: unknown;
+      await act(async () => {
+        void result.current.rename
+          .run(rename('研究室'))
+          .then((o) => (outcome = o));
+        await vi.advanceTimersByTimeAsync(10);
+      });
+      expect(outcome).toEqual({ ok: false });
+      expect(requests).toEqual([
+        `PATCH /api/areas/${ids.area.research}`,
+        'GET /api/overview',
+      ]);
+      expect(
+        screen.getAllByText('保存できたか確かめられませんでした'),
+      ).not.toHaveLength(0);
+      expect(result.current.rename.pending).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
