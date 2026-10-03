@@ -18,6 +18,8 @@ servers:
 security:
   - session: []
 tags:
+  - name: Me
+    description: The signed-in person.
   - name: Reads
     description: The reads of packages/application.
   - name: Area
@@ -33,6 +35,8 @@ tags:
   - name: Retro
     description: The Retro of a Sprint in Review.
 paths:
+  /me:
+    $ref: './paths/me.yaml#/getMe'
   /overview:
     $ref: './paths/reads.yaml#/getOverview'
   /areas:

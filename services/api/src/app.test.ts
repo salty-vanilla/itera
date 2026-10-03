@@ -1,8 +1,13 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from './app';
 import type { Authenticator } from './auth/authenticator';
 import { createRecordingDatabase } from './db/recording-database';
-import { testEnv } from './test-env';
+import { createIdSource } from '@itera/application';
+import { testDependencies, testEnv, testNow } from './test-env';
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 function setup(
   authenticate: Authenticator['authenticate'] = async () => null,
@@ -14,12 +19,17 @@ function setup(
     handle: vi.fn(handle),
   };
   const createAuthenticator = vi.fn(() => authenticator);
-  const app = createApp({
-    database: () => db,
-    authenticator: createAuthenticator,
-  });
+  const app = createApp(
+    testDependencies({
+      database: () => db,
+      authenticator: createAuthenticator,
+    }),
+  );
   return { app, db, queries, authenticator, createAuthenticator };
 }
+
+const ids = createIdSource((bytes) => crypto.getRandomValues(bytes));
+const user01 = ids.newId('User', testNow);
 
 function me(
   app: ReturnType<typeof createApp>,
@@ -56,11 +66,12 @@ describe('GET /api/health', () => {
 describe('GET /api/me (requireAuth)', () => {
   it('returns the user the authenticator accepts', async () => {
     const { app, db, authenticator, createAuthenticator } = setup(async () => ({
-      userId: 'user_01',
+      userId: user01,
     }));
     const response = await me(app, { Cookie: 'session=abc' });
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ userId: 'user_01' });
+    // The recording database has no settings row.
+    expect(await response.json()).toEqual({ userId: user01, settings: null });
     expect(createAuthenticator).toHaveBeenCalledWith(testEnv, db);
     const [headers] = authenticator.authenticate.mock.calls[0]!;
     expect(headers.get('Cookie')).toBe('session=abc');
@@ -70,24 +81,37 @@ describe('GET /api/me (requireAuth)', () => {
     const { app } = setup(async () => null);
     const response = await me(app);
     expect(response.status).toBe(401);
-    expect(await response.json()).toEqual({ error: 'unauthorized' });
+    expect(await response.json()).toEqual({
+      code: 'unauthenticated',
+      message: 'No valid session.',
+    });
   });
 
   it('answers 500 when the authenticator fails on the server side', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
     const { app } = setup(async () => {
       throw new Error('database unreachable');
     });
-    expect((await me(app)).status).toBe(500);
+    const response = await me(app);
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({
+      code: 'internalError',
+      message: 'An unexpected failure.',
+    });
+    expect(log).toHaveBeenCalledOnce();
   });
 
   it('answers 500 when the authenticator cannot be built', async () => {
     const { db } = createRecordingDatabase();
-    const app = createApp({
-      database: () => db,
-      authenticator: () => {
-        throw new Error('settings are missing');
-      },
-    });
+    const app = createApp(
+      testDependencies({
+        database: () => db,
+        authenticator: () => {
+          throw new Error('settings are missing');
+        },
+      }),
+    );
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     expect((await me(app)).status).toBe(500);
   });
 });
@@ -114,7 +138,7 @@ describe('the auth service routes', () => {
   });
 
   it('does not route /api/me or /api/health to the authenticator', async () => {
-    const { app, authenticator } = setup(async () => ({ userId: 'user_01' }));
+    const { app, authenticator } = setup(async () => ({ userId: user01 }));
     await app.request('/api/health', {}, testEnv);
     await me(app);
     expect(authenticator.handle).not.toHaveBeenCalled();
@@ -126,7 +150,7 @@ describe('routes outside /api', () => {
   // app everywhere else (ADR 0004).
   it.each(['/health', '/me'])('does not answer %s', async (path) => {
     const { app, queries, createAuthenticator } = setup(async () => ({
-      userId: 'user_01',
+      userId: user01,
     }));
     const response = await app.request(path, {}, testEnv);
     expect(response.status).toBe(404);

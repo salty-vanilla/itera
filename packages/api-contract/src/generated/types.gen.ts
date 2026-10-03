@@ -4,6 +4,43 @@ export type ClientOptions = {
     baseUrl: `${string}://${string}/api` | (string & {});
 };
 
+export type UserId = string;
+
+/**
+ * An IANA time zone name.
+ */
+export type TimeZone = string;
+
+/**
+ * 0 is Sunday, 6 is Saturday.
+ */
+export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+/**
+ * The person's settings: the domain's User without its ID. The week's first day decides a Sprint's dates.
+ */
+export type UserSettings = {
+    displayName: string;
+    timeZone: TimeZone;
+    weekStartsOn: DayOfWeek;
+};
+
+/**
+ * No valid session.
+ */
+export type UnauthenticatedError = {
+    code: 'unauthenticated';
+    message: string;
+};
+
+/**
+ * An unexpected failure on the server.
+ */
+export type InternalError = {
+    code: 'internalError';
+    message: string;
+};
+
 /**
  * A calendar day in the person's time zone.
  */
@@ -21,11 +58,6 @@ export type Clock = {
     today: LocalDate;
     now: Instant;
 };
-
-/**
- * An IANA time zone name.
- */
-export type TimeZone = string;
 
 export type SprintState = 'planning' | 'active' | 'review' | 'closed';
 
@@ -50,14 +82,6 @@ export type AppOverview = {
 };
 
 /**
- * No valid session.
- */
-export type UnauthenticatedError = {
-    code: 'unauthenticated';
-    message: string;
-};
-
-/**
  * Another write came first (ADR 0004 同時の書き込み), and this one was not made; read the records again. Not retried automatically. (When the database's answer to a write that was made is lost, it also comes back as this; reading again shows what was saved.)
  */
 export type RevisionConflictError = {
@@ -66,10 +90,10 @@ export type RevisionConflictError = {
 };
 
 /**
- * An unexpected failure on the server.
+ * The person has no settings yet (time zone, start of the week), so there is no 「今日」 to run an operation or a read with. Making the settings comes first.
  */
-export type InternalError = {
-    code: 'internalError';
+export type UserNotSetUpError = {
+    code: 'userNotSetUp';
     message: string;
 };
 
@@ -93,8 +117,6 @@ export type EditableArea = {
 export type BacklogSlice = 'dueSoon' | 'overdue' | 'carriedOver' | 'recurring' | 'noArea';
 
 export type TaskId = string;
-
-export type UserId = string;
 
 export type TaskPriority = 'high' | 'normal' | 'low';
 
@@ -188,11 +210,6 @@ export type CarryCount = {
     count: number;
     fromSprint: number;
 };
-
-/**
- * 0 is Sunday, 6 is Saturday.
- */
-export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 export type RecurrencePattern = {
     freq: 'daily';
@@ -1140,6 +1157,14 @@ export type NotFoundError = {
 };
 
 /**
+ * The request's body is larger than the API takes (64 KiB).
+ */
+export type PayloadTooLargeError = {
+    code: 'payloadTooLarge';
+    message: string;
+};
+
+/**
  * The domain refused the operation (packages/domain DomainError): a value its rules do not accept, a transition the record's state does not allow, or completing a recurring Task.
  */
 export type RuleViolationError = {
@@ -1159,6 +1184,38 @@ export type TaskAttributeUpdate = {
     timeBasis?: TimeBasis;
 };
 
+export type GetMeData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/me';
+};
+
+export type GetMeErrors = {
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type GetMeError = GetMeErrors[keyof GetMeErrors];
+
+export type GetMeResponses = {
+    /**
+     * The person.
+     */
+    200: {
+        userId: UserId;
+        settings: UserSettings | null;
+    };
+};
+
+export type GetMeResponse = GetMeResponses[keyof GetMeResponses];
+
 export type GetOverviewData = {
     body?: never;
     path?: never;
@@ -1175,6 +1232,10 @@ export type GetOverviewErrors = {
      * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
+    /**
+     * The person has no settings yet.
+     */
+    422: UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -1211,6 +1272,10 @@ export type ListAreasErrors = {
      * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
+    /**
+     * The person has no settings yet.
+     */
+    422: UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -1254,6 +1319,10 @@ export type GetBacklogErrors = {
      * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
+    /**
+     * The person has no settings yet.
+     */
+    422: UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -1301,6 +1370,10 @@ export type GetSprintChoiceErrors = {
      */
     409: RevisionConflictError;
     /**
+     * The person has no settings yet.
+     */
+    422: UserNotSetUpError;
+    /**
      * An unexpected failure on the server.
      */
     500: InternalError;
@@ -1345,6 +1418,10 @@ export type GetPlanningErrors = {
      * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
+    /**
+     * The person has no settings yet.
+     */
+    422: UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -1391,6 +1468,10 @@ export type GetRunningErrors = {
      */
     409: RevisionConflictError;
     /**
+     * The person has no settings yet.
+     */
+    422: UserNotSetUpError;
+    /**
      * An unexpected failure on the server.
      */
     500: InternalError;
@@ -1426,6 +1507,10 @@ export type GetTodayErrors = {
      * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
+    /**
+     * The person has no settings yet.
+     */
+    422: UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -1468,6 +1553,10 @@ export type GetDayErrors = {
      * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
+    /**
+     * The person has no settings yet.
+     */
+    422: UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -1514,6 +1603,10 @@ export type GetRetroErrors = {
      */
     409: RevisionConflictError;
     /**
+     * The person has no settings yet.
+     */
+    422: UserNotSetUpError;
+    /**
      * An unexpected failure on the server.
      */
     500: InternalError;
@@ -1549,6 +1642,10 @@ export type GetNextPlanningErrors = {
      * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
+    /**
+     * The person has no settings yet.
+     */
+    422: UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -1600,9 +1697,13 @@ export type CreateAreaErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -1654,9 +1755,13 @@ export type RenameAreaErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -1705,9 +1810,13 @@ export type ArchiveAreaErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -1756,9 +1865,13 @@ export type RestoreAreaErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -1808,9 +1921,13 @@ export type CreateTaskErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -1866,9 +1983,13 @@ export type SaveTaskErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -1919,9 +2040,13 @@ export type AdoptSuggestionErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -1972,9 +2097,13 @@ export type UndoAdoptionErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -2025,9 +2154,13 @@ export type AdoptEditedSuggestionErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -2077,9 +2210,13 @@ export type RejectSuggestionErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -2129,9 +2266,13 @@ export type UndoRejectionErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -2182,9 +2323,13 @@ export type AddSubtaskErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -2237,9 +2382,13 @@ export type SetSubtaskDoneErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -2290,9 +2439,13 @@ export type SetSubtaskEstimateErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -2341,9 +2494,13 @@ export type ArchiveTaskErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -2392,9 +2549,13 @@ export type RestoreTaskErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -2443,9 +2604,13 @@ export type CompleteTaskErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -2494,9 +2659,13 @@ export type UndoCompleteTaskErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -2545,9 +2714,13 @@ export type AddTaskToTodayErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -2599,9 +2772,13 @@ export type AddTaskToWeekErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -2652,9 +2829,13 @@ export type UndoAddTaskToWeekErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -2704,9 +2885,13 @@ export type SetRecurrenceErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -2760,9 +2945,13 @@ export type EndRecurrenceErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -2816,9 +3005,13 @@ export type ChooseTasksErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -2872,9 +3065,13 @@ export type UnchooseTasksErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -2923,9 +3120,13 @@ export type UnchooseTasksByTaskErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -2975,9 +3176,13 @@ export type SetOccurrenceIncludedErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -3026,9 +3231,13 @@ export type IncludeOccurrencesErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -3077,9 +3286,13 @@ export type ExcludeAllOccurrencesErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -3129,9 +3342,13 @@ export type CreateAndChooseTaskErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -3184,9 +3401,13 @@ export type SetPlanningGoalErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -3236,9 +3457,13 @@ export type SetGoalLinkErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -3287,9 +3512,13 @@ export type SetPlanningAvailableHoursErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -3338,9 +3567,13 @@ export type ConfirmSprintErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -3390,9 +3623,13 @@ export type ChooseForTodayErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -3443,9 +3680,13 @@ export type StartSelectionErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -3494,9 +3735,13 @@ export type DeferSelectionErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -3545,9 +3790,13 @@ export type RemoveFromTodayErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -3596,9 +3845,13 @@ export type UndoCloseSelectionErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -3648,9 +3901,13 @@ export type PauseSelectionErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -3699,9 +3956,13 @@ export type CompleteSelectionErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -3750,9 +4011,13 @@ export type UndoCompleteSelectionErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -3801,9 +4066,13 @@ export type SkipSelectionErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -3852,9 +4121,13 @@ export type UndoSkipSelectionErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -3904,9 +4177,13 @@ export type RecordSelectionActualErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -3956,9 +4233,13 @@ export type NoteInterruptErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -4011,9 +4292,13 @@ export type EditInterruptErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -4062,9 +4347,13 @@ export type DeleteInterruptErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -4113,9 +4402,13 @@ export type RestoreInterruptErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -4165,9 +4458,13 @@ export type CreateTaskForTodayErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -4214,9 +4511,13 @@ export type BeginRetroErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -4266,9 +4567,13 @@ export type SetRunningGoalErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -4317,9 +4622,13 @@ export type SetRunningAvailableHoursErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -4368,9 +4677,13 @@ export type UndoPastDayErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -4420,9 +4733,13 @@ export type AssessGoalErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -4471,9 +4788,13 @@ export type TogglePinErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -4522,9 +4843,13 @@ export type SetReflectionErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -4573,9 +4898,13 @@ export type SetImprovementErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -4624,9 +4953,13 @@ export type DraftCriterionErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -4677,9 +5010,13 @@ export type SetDraftPolicyErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -4722,9 +5059,13 @@ export type DropCriterionDraftErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -4773,9 +5114,13 @@ export type DecideCriterionErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -4827,9 +5172,13 @@ export type RecordReviewActualErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -4872,9 +5221,13 @@ export type CompleteRetroErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */
@@ -4917,9 +5270,13 @@ export type BeginPlanningErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The domain refused the operation.
+     * The body is larger than the API takes.
      */
-    422: RuleViolationError;
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
     /**
      * An unexpected failure on the server.
      */

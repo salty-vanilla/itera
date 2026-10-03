@@ -1,6 +1,7 @@
 import { createMiddleware } from 'hono/factory';
 import type { Dependencies } from '../dependencies';
 import type { AppEnv } from '../env';
+import { errorResponse } from '../errors';
 
 // Asks the injected authenticator for the request's user and sets `userId`
 // for the handler. Knows nothing about the auth service or its cookies.
@@ -11,7 +12,7 @@ export function requireAuth(authenticator: Dependencies['authenticator']) {
 
     const user = await auth.authenticate(c.req.raw.headers);
     if (!user) {
-      return c.json({ error: 'unauthorized' }, 401);
+      return errorResponse(c, 'unauthenticated', 'No valid session.');
     }
 
     c.set('userId', user.userId);

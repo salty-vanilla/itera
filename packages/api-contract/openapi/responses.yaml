@@ -24,11 +24,25 @@ RevisionConflict:
   content:
     application/json:
       schema: { $ref: './schemas/common.yaml#/RevisionConflictError' }
-RuleViolation:
-  description: The domain refused the operation.
+PayloadTooLarge:
+  description: The body is larger than the API takes.
   content:
     application/json:
-      schema: { $ref: './schemas/common.yaml#/RuleViolationError' }
+      schema: { $ref: './schemas/common.yaml#/PayloadTooLargeError' }
+RuleViolation:
+  description: >-
+    The domain refused the operation, or the person has no settings yet.
+  content:
+    application/json:
+      schema:
+        oneOf:
+          - { $ref: './schemas/common.yaml#/RuleViolationError' }
+          - { $ref: './schemas/common.yaml#/UserNotSetUpError' }
+UserNotSetUp:
+  description: The person has no settings yet.
+  content:
+    application/json:
+      schema: { $ref: './schemas/common.yaml#/UserNotSetUpError' }
 ServerError:
   description: An unexpected failure on the server.
   content:

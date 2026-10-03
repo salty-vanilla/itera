@@ -25,7 +25,14 @@ export {
   type RecordStore,
   type StoreSnapshot,
 } from './record-store';
-export type { Clock, RecordChanges, Records } from './records';
+export { mergeChanges } from './changes';
+export { applyRecordChanges } from './records';
+export type {
+  Clock,
+  RecordChanges,
+  Records,
+  RecordsWithActivity,
+} from './records';
 
 // IDs (ADR 0004 ID の形式).
 export {

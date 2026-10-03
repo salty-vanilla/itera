@@ -1,0 +1,28 @@
+# The signed-in person: who they are and their settings. Not a read of
+# packages/application, and it runs no catch-up (#271): it answers before
+# the settings exist, so that a client knows to make them first.
+
+getMe:
+  get:
+    operationId: getMe
+    tags: [Me]
+    summary: The signed-in person and their settings
+    description: >-
+      `settings` is `null` until the person has made them; every other
+      operation and read answers 422 `userNotSetUp` until then.
+    responses:
+      '200':
+        description: The person.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, settings]
+              properties:
+                userId: { $ref: '../schemas/common.yaml#/UserId' }
+                settings:
+                  oneOf:
+                    - { $ref: '../schemas/records.yaml#/UserSettings' }
+                    - { type: 'null' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '500': { $ref: '../responses.yaml#/ServerError' }

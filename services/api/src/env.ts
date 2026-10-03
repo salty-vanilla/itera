@@ -1,3 +1,4 @@
+import type { UserId } from '@itera/domain';
 import type { Database } from './db/database';
 
 // CloudflareBindings is generated from wrangler.jsonc by `pnpm cf-typegen`
@@ -7,7 +8,8 @@ export type AppEnv = {
   Variables: {
     // Built from Dependencies['database'] for each request.
     db: Database;
-    // Better Auth user ID of the request's session, set by requireAuth.
-    userId: string;
+    // The user of the request's session, set by requireAuth. Better Auth's
+    // user ID, which is also the domain's (ADR 0004 ID の形式).
+    userId: UserId;
   };
 };

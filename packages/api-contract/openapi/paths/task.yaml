@@ -32,6 +32,7 @@ createTask:
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
@@ -66,6 +67,7 @@ saveTask:
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
@@ -95,6 +97,7 @@ adoptSuggestion:
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
@@ -129,6 +132,7 @@ undoAdoption:
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
@@ -158,6 +162,7 @@ adoptEditedSuggestion:
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
@@ -186,6 +191,7 @@ rejectSuggestion:
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
@@ -214,6 +220,7 @@ undoRejection:
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
@@ -249,6 +256,7 @@ addSubtask:
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
@@ -277,6 +285,7 @@ setSubtaskDone:
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
@@ -310,6 +319,7 @@ setSubtaskEstimate:
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
@@ -336,6 +346,7 @@ archiveTask:
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
@@ -362,6 +373,7 @@ restoreTask:
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
@@ -390,6 +402,7 @@ completeTask:
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
@@ -416,6 +429,7 @@ undoCompleteTask:
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
@@ -451,6 +465,7 @@ addTaskToToday:
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
@@ -484,6 +499,7 @@ addTaskToWeek:
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
@@ -510,6 +526,7 @@ undoAddTaskToWeek:
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
@@ -548,6 +565,7 @@ setRecurrence:
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
@@ -586,5 +604,6 @@ endRecurrence:
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
