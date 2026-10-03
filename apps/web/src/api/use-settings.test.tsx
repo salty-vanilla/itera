@@ -98,7 +98,7 @@ describe('useSetSettings', () => {
     });
     expect(outcome).toEqual({ ok: false });
     expect(
-      await screen.findAllByText('保存できたか確かめられませんでした'),
+      await screen.findAllByText('保存できたかわかりませんでした'),
     ).not.toHaveLength(0);
     expect(result.current.me.data?.settings).toBeNull();
   });
