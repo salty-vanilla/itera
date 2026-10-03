@@ -28,6 +28,7 @@ import {
 } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { createMock } from '@/mock/mock-api';
+import { waitForRead } from '@/test/read-ready';
 
 type CreateAppRouter = typeof import('@/app/router').createAppRouter;
 let createAppRouter: CreateAppRouter;
@@ -95,14 +96,6 @@ function renderRetro(url = '/retro') {
   return router;
 }
 
-/** Waits for the screen to have read what it shows: it is busy until then. */
-async function read() {
-  await screen.findByRole('heading', { level: 1 });
-  await waitFor(() =>
-    expect(document.querySelector('[aria-busy="true"]')).toBeNull(),
-  );
-}
-
 const reviewedId = (store: ReturnType<typeof serve>['store']) =>
   store.getSnapshot().records.sprints.find((s) => s.state === 'review')!.id;
 
@@ -110,7 +103,7 @@ describe('Retro on the API', () => {
   it('asks for the Sprints, then for the Retro of the one in Review by its ID', async () => {
     const { store, requests } = serve();
     renderRetro();
-    await read();
+    await waitForRead();
     expect(requests).toContain('GET /api/sprints');
     expect(requests).toContain(`GET /api/sprints/${reviewedId(store)}/retro`);
     expect(
@@ -180,7 +173,7 @@ describe('Retro on the API', () => {
       .getSnapshot()
       .records.sprints.toSorted((a, b) => (a.start < b.start ? -1 : 1))[0]!;
     renderRetro('/retro?sprint=1');
-    await read();
+    await waitForRead();
     expect(requests).toContain(`GET /api/sprints/${first.id}/retro`);
     expect(
       screen.getByRole('heading', {
@@ -197,7 +190,7 @@ describe('Retro on the API', () => {
   it('sends a mark as a request on the Sprint, and takes it off the same way', async () => {
     const { store, requests } = serve();
     renderRetro('/retro?stage=facts');
-    await read();
+    await waitForRead();
     const id = reviewedId(store);
     const mark = () =>
       screen.getByRole('button', { name: '振り返りに使う：住民税の支払い' });
@@ -230,7 +223,7 @@ describe('Retro on the API', () => {
       'retro-reflect',
     );
     renderRetro('/retro?stage=reflect');
-    await read();
+    await waitForRead();
     const before = store.getSnapshot().records;
     const field = screen.getByRole('textbox', { name: /気づいたこと/ });
     await userEvent.type(field, 'あとで足した言葉');
@@ -263,7 +256,7 @@ describe('Retro on the API', () => {
         return undefined;
       }, 'retro-before-complete');
       renderRetro('/retro?stage=handoff');
-      await read();
+      await waitForRead();
       const dialog = await openDialog();
       await userEvent.click(
         dialog.getByRole('button', { name: '振り返りを完了' }),
@@ -293,6 +286,43 @@ describe('Retro on the API', () => {
       ).toBeNull();
     });
 
+    it('sends one completion however many times it is pressed, and keeps the Dialog until it is done', async () => {
+      let release: (() => void) | undefined;
+      const { requests } = serve(async (request) => {
+        if (
+          request.method === 'POST' &&
+          pathOf(request).endsWith('/retro/complete')
+        ) {
+          await new Promise<void>((resolve) => (release = resolve));
+        }
+        return undefined;
+      }, 'retro-before-complete');
+      renderRetro('/retro?stage=handoff');
+      await waitForRead();
+      const dialog = await openDialog();
+      const confirm = dialog.getByRole('button', { name: '振り返りを完了' });
+      await userEvent.click(confirm);
+      await userEvent.click(confirm);
+      await userEvent.click(confirm);
+      // The second and third presses are not completions: the Dialog stays,
+      // and nothing more is sent.
+      expect(
+        screen.getByRole('dialog', { name: /振り返りを完了しますか/ }),
+      ).toBeTruthy();
+      expect(
+        requests.filter((r) => r.endsWith('/retro/complete')),
+      ).toHaveLength(1);
+      release?.();
+      expect(
+        await screen.findByText('Sprint 2 の振り返りを完了しました'),
+      ).toBeTruthy();
+      await waitFor(() =>
+        expect(document.activeElement?.getAttribute('data-slot')).toBe(
+          'begin-planning',
+        ),
+      );
+    });
+
     it('leaves the Dialog and keeps the Retro open when it is refused', async () => {
       const { store } = serve(
         (request) =>
@@ -303,7 +333,7 @@ describe('Retro on the API', () => {
         'retro-before-complete',
       );
       renderRetro('/retro?stage=handoff');
-      await read();
+      await waitForRead();
       const before = store.getSnapshot().records;
       const dialog = await openDialog();
       await userEvent.click(

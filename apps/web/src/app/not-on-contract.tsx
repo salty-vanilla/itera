@@ -1,9 +1,7 @@
 import { useLocation } from '@tanstack/react-router';
 
 /** The screens and the Issues that move them to the contract. */
-const MOVES: Readonly<Record<string, string>> = {
-  '/sprint': '#274',
-};
+const MOVES: Readonly<Record<string, string>> = {};
 
 /**
  * In place of a screen still on the store (NotOnContractError), with the
@@ -12,7 +10,7 @@ const MOVES: Readonly<Record<string, string>> = {
  */
 function NotOnContract() {
   const pathname = useLocation({ select: (l) => l.pathname });
-  const issue = MOVES[pathname] ?? '#274';
+  const issue = MOVES[pathname] ?? '#277';
   return (
     <p lang="en" className="p-6 text-body text-ink-muted">
       {`Not on the API yet: ${pathname} moves to the contract in ${issue}. Open it with the browser mock (pnpm --filter @itera/web dev).`}

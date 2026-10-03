@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from 'react';
+import { useId, useRef, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -64,6 +64,9 @@ function CompleteRetro({
   loading = false,
 }: CompleteRetroProps) {
   const [open, setOpen] = useState(false);
+  // A press while the first is being sent is not another completion: it
+  // neither takes the first one's focus away nor closes the Dialog under it.
+  const sending = useRef(false);
   const reasonId = useId();
   const blocked = data.blockers.length > 0;
   return (
@@ -101,8 +104,14 @@ function CompleteRetro({
         // Gone with the button when it went through; one that did not go
         // through leaves the Dialog, and the focus goes back to the button.
         onConfirm={async () => {
-          await onComplete();
-          setOpen(false);
+          if (sending.current) return;
+          sending.current = true;
+          try {
+            await onComplete();
+            setOpen(false);
+          } finally {
+            sending.current = false;
+          }
         }}
       />
     </div>

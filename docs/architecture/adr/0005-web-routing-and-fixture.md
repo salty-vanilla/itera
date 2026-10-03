@@ -18,8 +18,8 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
 
 ### ルーター
 
-| 対象 | 採用 | 版 | 理由 |
-| --- | --- | --- | --- |
+| 対象     | 採用                     | 版       | 理由                                                                                                                                                                                               |
+| -------- | ------------------------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ルーター | `@tanstack/react-router` | 1.170.39 | 検索パラメータを型つきで検証し、遷移のあいだ保てる（`validateSearch`・`retainSearchParams`）。fixture の状態と、後の画面の状態（絞り込み、開いている詳細）を URL に置ける。React 19 に対応している |
 
 依存は ADR 0001 と同じく完全一致で固定する。
@@ -99,11 +99,11 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
 
 #### 依存と版
 
-| 対象 | 採用 | 版 | 置き場所 |
-| --- | --- | --- | --- |
-| 取得結果のキャッシュ | `@tanstack/react-query` | 5.104.1 | `apps/web` の dependencies。ADR 0006 と同じ版 |
-| 契約のクライアント | `@itera/api-contract`（`/client`・`/create-client`・`/react-query`） | workspace | `apps/web` の dependencies |
-| モックの入力の検証 | `valibot` | 1.5.0 | `apps/web` の devDependencies（モックだけが使い、本番ビルドに入らない）。ADR 0006 と同じ版 |
+| 対象                 | 採用                                                                 | 版        | 置き場所                                                                                   |
+| -------------------- | -------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------ |
+| 取得結果のキャッシュ | `@tanstack/react-query`                                              | 5.104.1   | `apps/web` の dependencies。ADR 0006 と同じ版                                              |
+| 契約のクライアント   | `@itera/api-contract`（`/client`・`/create-client`・`/react-query`） | workspace | `apps/web` の dependencies                                                                 |
+| モックの入力の検証   | `valibot`                                                            | 1.5.0     | `apps/web` の devDependencies（モックだけが使い、本番ビルドに入らない）。ADR 0006 と同じ版 |
 
 使い方は 2026-10-03 に Context7 で TanStack Query v5（`QueryCache`・`MutationCache` の全体のコールバック、`invalidateQueries`）と Vite（`server.proxy`、`--mode`）の文書を確かめた。
 
@@ -221,9 +221,9 @@ Backlog（#273）・今日（#275）の形で `/retro` を移した。
   - 完了の確認の Dialog は、送り終わるまで開いたままで、送信が 300ms 続いたらボタンを「完了中…」にする。通らなかったときは Dialog を閉じ、焦点は「振り返りを完了」のボタンに戻る。通ったときは、完了のボタンがなくなった場所の「Sprint N の計画を始める」へ焦点を移す。画面が新しい記録を描くのは操作の Promise が解決したあとなので、焦点は ref に頼みを置き、ボタンが描かれてから移す（「操作が終わっても…」）。かかった時間の記録（Sheet / Popover）の後も同じで、行のボタンがなくなってから行の「振り返りに使う」へ戻す。
   - 「次に試すこと」は、欄を離れたときと「次に試すことを確定」が続けて起きても同じ言葉を 2 回送らない（送っている間は同じ結果を待つ）。
 - **型**：Retro の部品は契約の型（`RetroData`・`RetroCriterion`・`TaskFact`・`RetroPin` など）を使い、`packages/domain` を import しない。`lib/criterion-text.ts` と `lib/week-text.ts` も契約の型にした。
-- **画面の文言**：読み込めなかったときの文言は #273 と同じ。送信中の「完了中…」（完了の確認のボタン）と「始めています…」（振り返りを始める。Sprint N の計画を始めるのボタンと同じ語）を足した。content.md には載っていない語（語として決めるかはオーナーの確認を待つ）。
-- **import の境界**：`MIGRATING` から #276 のファイルを消した。`NotOnContract` の一覧から `/retro` を消した（統合ブランチに残る移していない画面は `/sprint` だけ）。#274 と #276 の両方が入ると移していない画面がなくなるので、`NotOnContract` とそのテスト（`server-data.test.tsx`）は #277 で消す。
-- **API での確認**：Retro の API（#270）がマージされるまで、`wrangler dev` への接続での確認はできない。画面の送受信はブラウザ内モックの上で `retro-api.test.tsx` が確かめる。
+- **画面の文言**：読み込めなかったときの文言は #273 と同じ。読み込み中の見出しは「振り返り」（ナビの語）、`ReadStatus` のラベルは、Sprint の一覧を読む間が「Sprint の一覧」、Retro を読む間が「この Sprint の記録」（見出しと同じ語を続けない。今日の「この日の記録」と同じ型）。送信中の「完了中…」（完了の確認のボタン）と「始めています…」（振り返りを始める。Sprint N の計画を始めるのボタンと同じ語）を足した。これらは content.md には載っていない語（語として決めるかはオーナーの確認を待つ）。
+- **import の境界**：`MIGRATING` から #276 のファイルを消し、使われなくなった `store/views.ts` を消した。#274 と #276 が入って、移していない画面はなくなった。`NotOnContract`（`MOVES` は空）は #277 で消す。`server-data.test.tsx` の検査は移していない画面に頼らない形に直した。
+- **API での確認**：画面の送受信はブラウザ内モックの上で `retro-api.test.tsx` が確かめる。Retro の API（#270）は統合ブランチに入っているが、`wrangler dev` への接続での手操作の確認は、この Issue の実装では行っていない（司令塔が行う）。
 
 ### サインインと設定（2026-10-03、Issue #278）
 
@@ -231,11 +231,11 @@ Better Auth（ADR 0004「認証の構成」）の API を使う、Web のサイ�
 
 #### 依存と版
 
-| 対象 | 採用 | 版 | 置き場所 |
-| --- | --- | --- | --- |
-| 認証のクライアント | `better-auth`（`better-auth/client`） | 1.7.6 | `apps/web` の dependencies。サーバーと同じ版（ADR 0004「導入した依存と版」） |
-| パスキーのクライアント | `@better-auth/passkey`（`/client`） | 1.7.6 | `apps/web` の dependencies。サーバーと同じ版 |
-| `better-call` の任意の peer | `zod` | 4.6.5 | `apps/web` の devDependencies。画面のコードは使わない |
+| 対象                        | 採用                                  | 版    | 置き場所                                                                     |
+| --------------------------- | ------------------------------------- | ----- | ---------------------------------------------------------------------------- |
+| 認証のクライアント          | `better-auth`（`better-auth/client`） | 1.7.6 | `apps/web` の dependencies。サーバーと同じ版（ADR 0004「導入した依存と版」） |
+| パスキーのクライアント      | `@better-auth/passkey`（`/client`）   | 1.7.6 | `apps/web` の dependencies。サーバーと同じ版                                 |
+| `better-call` の任意の peer | `zod`                                 | 4.6.5 | `apps/web` の devDependencies。画面のコードは使わない                        |
 
 - `zod` を足す理由：`better-auth` が使う `better-call` は `zod` を任意の peer に持つ。`apps/web` では shadcn（CLI）が持ち込む zod 3 がその peer に解決され、pnpm が `better-auth` の 1 つの実体を `services/api` と共有するため（`dedupePeerDependents`）、API の `better-auth` まで zod 3 の組み合わせに移った（2026-10-03 に lockfile で確かめた）。`apps/web` に zod 4.6.5 を置くと peer がそれに解決され、`services/api` の解決は変わらない。pnpm の `overrides` は peer の解決を変えなかった（範囲だけが変わり、警告が残る）。同じ lockfile の変更で、`eslint-plugin-react-hooks` の依存の zod も 3.25.76 から 4.6.5 に寄った（その範囲が両方を許すため）。`better-auth` を外すか、shadcn が zod 4 に移ったら、この devDependency を外せるか確かめる。
 - 使い方は 2026-10-03 に Context7（Better Auth の client、passkey プラグイン、`sessionOptions`）と、固定した 1.7.6 のコード（`@better-auth/passkey/client` の `signIn.passkey`・`passkey.addPasskey` の戻り値、OAuth のコールバックが `errorCallbackURL` に `error` を足す処理）で確かめた。

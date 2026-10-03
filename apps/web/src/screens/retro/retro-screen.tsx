@@ -109,7 +109,7 @@ function Reading({ read }: { read: NotReady }) {
       className="flex w-full max-w-measure-read flex-col gap-2 px-4 py-10 medium:px-6"
     >
       <h1 className="text-display-m text-ink">振り返り</h1>
-      <ReadStatus label="振り返り" read={read} />
+      <ReadStatus label="Sprint の一覧" read={read} />
     </div>
   );
 }
@@ -266,20 +266,18 @@ function RetroView({
         week={weekLabel(sprint.week)}
         period={formatDateRange(sprint.start, sprint.end)}
         steps={steps}
-        stages={
-          // Where the writing has got to is known once the Retro is read.
-          ready
-            ? RETRO_STAGES.map((s) => ({
-                id: s.id,
-                label: s.label,
-                href: router.buildLocation({
-                  to: '/retro',
-                  search: (prev) => ({ ...prev, stage: s.id }),
-                }).href,
-              }))
-            : undefined
-        }
-        currentStage={stage}
+        stages={RETRO_STAGES.map((s) => ({
+          id: s.id,
+          label: s.label,
+          href: router.buildLocation({
+            to: '/retro',
+            search: (prev) => ({ ...prev, stage: s.id }),
+          }).href,
+        }))}
+        // Where the writing has got to is known once the Retro is read: the
+        // stages are there from the start, so that the heading under them
+        // stays where it is, and none is marked until then.
+        currentStage={ready || search.stage !== undefined ? stage : undefined}
         stagesDone={readOnly}
         onStage={(stageId, event) => {
           if (
@@ -313,7 +311,7 @@ function RetroView({
       {data.status !== 'ready' ? (
         <div className="flex max-w-measure-read flex-col gap-2">
           <h1 className="text-display-m text-ink">振り返り</h1>
-          <ReadStatus label="振り返り" read={data} />
+          <ReadStatus label="この Sprint の記録" read={data} />
         </div>
       ) : (
         <>
