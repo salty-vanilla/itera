@@ -175,8 +175,15 @@ export type TaskAttributeUpdate = PlainInput<'saveTask'>['update'];
 /** The operationId of a surface: a write of the contract. */
 export type SurfaceId = keyof Datas;
 
-/** The request's parts of a surface, as the generated client takes them. */
-export type RequestParts<S extends SurfaceId> = Omit<Datas[S], 'url'>;
+/**
+ * The request's parts of a surface, as the generated client takes them.
+ * The Idempotency-Key is not a part of the operation: the sender adds it
+ * for each write (`idempotencyKeyHeaders`).
+ */
+export type RequestParts<S extends SurfaceId> = Omit<
+  Datas[S],
+  'url' | 'headers'
+>;
 
 /** The response of a surface when it went through. */
 export type SurfaceResponse<S extends SurfaceId> =
@@ -1061,6 +1068,43 @@ export function requestOf<N extends OperationName>(
       input: PlainInput<N>,
     ) => OperationRequest<OperationSurfaces[N]>
   )(input);
+}
+
+// ------------------------------------------------------ the idempotency key
+
+/**
+ * The header that names a write (ADR 0006 冪等キー), on every write of the
+ * contract and on no read.
+ */
+export const IDEMPOTENCY_KEY_HEADER = 'Idempotency-Key';
+
+/**
+ * The header of a write named by `key`, a UUID (a new one for each write,
+ * the same one when it is sent again): a Structured Field String, so in
+ * double quotes (RFC 9651 §3.3.3).
+ */
+export function idempotencyKeyHeaders(key: string): {
+  readonly 'Idempotency-Key': string;
+} {
+  return { [IDEMPOTENCY_KEY_HEADER]: `"${key}"` };
+}
+
+/**
+ * The key a received write is named by: the UUID of the header, in
+ * lowercase, so that a key sent again in another case is the same key.
+ * Throws `RequestError` (400) when there is no header or it is not a UUID
+ * in a Structured Field String.
+ */
+export function readIdempotencyKey(value: string | null | undefined): string {
+  const header = IDEMPOTENCY_KEY_HEADER;
+  if (value === null || value === undefined)
+    throw new RequestError({ header, detail: 'required for every write.' });
+  if (!v.is(c.vIdempotencyKey, value))
+    throw new RequestError({
+      header,
+      detail: 'not a UUID as a Structured Field String ("…").',
+    });
+  return value.slice(1, -1).toLowerCase();
 }
 
 // ------------------------------------------------------------ the query

@@ -8,6 +8,7 @@ import {
   type SQLiteTable,
 } from 'drizzle-orm/sqlite-core';
 import type { Database } from './database';
+import { keepAnswerStatements, type AnsweredWrite } from './idempotency';
 import {
   addAreaRows,
   addCriterionRows,
@@ -48,14 +49,20 @@ export interface SaveRecordsInput {
    * one kept (another save's clock already past midnight) leaves it.
    */
   readonly caughtUpTo: LocalDate;
+  /**
+   * The write this save is for, kept with its answer in the same batch, so
+   * the key is there exactly when the write was saved (ADR 0006 冪等キー).
+   * Not kept when nothing is written.
+   */
+  readonly answered?: AnsweredWrite;
 }
 
 /**
  * Writes a change in one batch: only the rows that differ from the loaded
- * records, then the Activity entries. The first statement of the batch
- * checks the user's revision against the loaded one and raises it; if
- * another save went in first, the batch fails as a whole and nothing is
- * written (ADR 0004 「同時の書き込み」).
+ * records, then the Activity entries and the key of the write (`answered`).
+ * The first statement of the batch checks the user's revision against the
+ * loaded one and raises it; if another save went in first, the batch fails
+ * as a whole and nothing is written (ADR 0004 「同時の書き込み」).
  *
  * Throws on a change that does not fit the loaded records (another user's
  * record, a deletion of a record not loaded): those are bugs in the caller.
@@ -89,6 +96,9 @@ export async function saveRecords(
       ...chunks(activityRows, rowsPerInsert(activity)).map((rows) =>
         db.insert(activity).values(rows),
       ),
+      ...(input.answered === undefined
+        ? []
+        : keepAnswerStatements(db, userId, input.answered)),
     ]);
   } catch (error) {
     // Tell a conflict by the revision, not by the error text, which differs

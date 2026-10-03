@@ -169,7 +169,7 @@ describe('the Backlog on the API', () => {
     expect(within(rows).queryByText('請求書を送る')).toBeNull();
   });
 
-  it('reads the list again after a version conflict, and tells it', async () => {
+  it('reads the list again after a version conflict, and tells it was not saved', async () => {
     const { requests } = serve((request) =>
       request.method === 'POST' ? conflict() : undefined,
     );
@@ -181,9 +181,9 @@ describe('the Backlog on the API', () => {
       screen.getByRole('textbox', { name: 'Backlog にタスクを追加' }),
       '請求書を送る{Enter}',
     );
-    expect(
-      await screen.findAllByText('保存できたかわかりませんでした'),
-    ).not.toHaveLength(0);
+    expect(await screen.findAllByText('保存できませんでした')).not.toHaveLength(
+      0,
+    );
     await waitFor(() => expect(reads()).toBeGreaterThan(before));
   });
 

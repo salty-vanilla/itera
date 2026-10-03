@@ -15,12 +15,20 @@ import {
   toLocalDate,
   type Activity,
   type Actor,
+  type Instant,
   type LocalDate,
   type UserId,
 } from '@itera/domain';
 import type { Context, MiddlewareHandler } from 'hono';
 import type { Database } from '../db/database';
-import { loadRecords } from '../db/load-records';
+import {
+  loadKeptAnswer,
+  type Answer,
+  type AnsweredWrite,
+  type IdempotentWrite,
+  type KeptAnswer,
+} from '../db/idempotency';
+import { loadRecords, loadRecordsForWrite } from '../db/load-records';
 import { saveRecords } from '../db/save-records';
 import type { Dependencies } from '../dependencies';
 import type { AppEnv } from '../env';
@@ -60,31 +68,44 @@ export type ReadResponse<View> = {
 
 /**
  * The common course of the API's operations and reads (ADR 0004
- * 「操作と読み取りの処理」). Authentication and the Origin check come
- * before it (middleware), and the input is validated by the route; this
- * loads the records, brings them up to now, runs the operation or the read
- * and writes what changed.
+ * 「操作と読み取りの処理」). Authentication, the Origin check and the
+ * Idempotency-Key come before it (middleware), and the input is validated
+ * by the route; this loads the records, brings them up to now, runs the
+ * operation or the read and writes what changed.
+ *
+ * A write (`operate`, `setUp`) is named by its Idempotency-Key
+ * (`c.var.write`, ADR 0006 冪等キー). What it answered is kept with what it
+ * wrote, in one batch. The same write sent again answers that, without
+ * being made again: found with the records when they are loaded, or, when
+ * the save meets another write, by looking again (its own first send, whose
+ * answer was lost, or the same write sent at once). Only a write that met
+ * another and was not made itself is a conflict (409). A write that wrote
+ * nothing keeps no key, and runs again when sent again.
  */
 export type Flow = {
   /**
-   * Runs an operation of the person, writes its changes and returns its
-   * value. A `precondition` is checked once the records are loaded (so
-   * `user-not-set-up` comes first) and before the operation runs.
+   * Runs an operation of the person, writes its changes and gives the
+   * answer `answer` makes of its value. A `precondition` is checked once
+   * the records are loaded (so `user-not-set-up` comes first) and before
+   * the operation runs.
    */
   operate<T>(
     c: Context<AppEnv>,
     change: Change<T>,
+    answer: (value: T) => Answer,
     precondition?: Precondition,
-  ): Promise<T>;
+  ): Promise<Answer>;
   /**
    * Makes the person's settings, the one write that needs no records: it
-   * is what makes them possible. Answers whether this made them (the first
-   * time) or wrote them again, and the settings as they now are.
+   * is what makes them possible. `answer` says, from whether this made them
+   * (the first time) or wrote them again and the settings as they now are,
+   * what the write answers.
    */
   setUp(
     c: Context<AppEnv>,
     settings: SettingsInput,
-  ): Promise<{ created: boolean; settings: SettingsInput }>;
+    answer: (made: { created: boolean; settings: SettingsInput }) => Answer,
+  ): Promise<Answer>;
   /** Reads the records as of now. */
   read<View>(
     c: Context<AppEnv>,
@@ -119,18 +140,21 @@ export function createFlow({
   /**
    * The user's records and the clock: 「今日」 is today in the user's time
    * zone. A user without settings has no 「今日」, so nothing runs until
-   * they are made.
+   * they are made. A write's key is looked up with them (`kept`).
    */
-  async function load(c: Context<AppEnv>) {
+  async function load(c: Context<AppEnv>, write?: IdempotentWrite) {
     const { db, userId } = c.var;
-    const loaded = await loadRecords(db, userId);
+    const at = now();
+    const { loaded, kept } =
+      write === undefined
+        ? { loaded: await loadRecords(db, userId), kept: null }
+        : await loadRecordsForWrite(db, userId, { key: write.key, at });
     if (loaded.records === null) {
       throw ApiError.of(
         '/problems/user-not-set-up',
         'The user has no settings yet.',
       );
     }
-    const at = now();
     const clock: Clock = {
       now: at,
       today: toLocalDate(at, loaded.records.user.timeZone),
@@ -140,7 +164,46 @@ export function createFlow({
       records: loaded.records,
       caughtUpTo: loaded.caughtUpTo,
     };
-    return { current, clock };
+    return { current, clock, kept };
+  }
+
+  /** The write of the request, set by `readWrite` on every write's route. */
+  function writeOf(c: Context<AppEnv>): IdempotentWrite {
+    const { write } = c.var;
+    if (write === undefined) {
+      throw new Error(`${c.req.method} ${c.req.path} has no Idempotency-Key.`);
+    }
+    return write;
+  }
+
+  /**
+   * The answer kept for the write's key, given again; the same key for
+   * another request is refused (422), and nothing is done.
+   */
+  function given(kept: KeptAnswer, write: IdempotentWrite): Answer {
+    if (kept.fingerprint !== write.fingerprint) {
+      throw ApiError.of(
+        '/problems/idempotency-key-reused',
+        'The Idempotency-Key was used for another request.',
+      );
+    }
+    return { status: kept.status, body: kept.body };
+  }
+
+  /**
+   * A write's save met another write. If its key is kept now, the write was
+   * made: its own, whose batch went in and whose answer was lost, or the
+   * same write sent at once. Only otherwise was it not made (409).
+   */
+  async function afterConflict(
+    c: Context<AppEnv>,
+    write: IdempotentWrite,
+    at: Instant,
+  ): Promise<Answer> {
+    const { db, userId } = c.var;
+    const kept = await loadKeptAnswer(db, userId, { key: write.key, at });
+    if (kept === null) throw conflict();
+    return given(kept, write);
   }
 
   /**
@@ -179,6 +242,7 @@ export function createFlow({
     clock: Clock,
     changes: RecordChanges,
     activities: readonly Activity[],
+    answered?: AnsweredWrite,
   ) {
     const saved = await saveRecords(db, {
       userId,
@@ -186,6 +250,7 @@ export function createFlow({
       changes,
       activities,
       caughtUpTo: clock.today,
+      ...(answered === undefined ? {} : { answered }),
     });
     return saved.ok;
   }
@@ -219,16 +284,21 @@ export function createFlow({
     async operate<T>(
       c: Context<AppEnv>,
       change: Change<T>,
+      answer: (value: T) => Answer,
       precondition?: Precondition,
-    ): Promise<T> {
+    ): Promise<Answer> {
       const { db, userId } = c.var;
-      const { current, clock } = await load(c);
+      const write = writeOf(c);
+      const { current, clock, kept } = await load(c, write);
+      if (kept !== null) return given(kept, write);
       await precondition?.(db, userId);
       const system = caughtUp(current, clock);
       const result = change(system.records, contextOf(clock, 'user'));
       if (!result.ok) throw ApiError.fromDomain(result.error);
       const { changes, activities, value } = result.value;
-      // The system's changes and the person's go in one batch (#271).
+      const answered = { write, answer: answer(value as T), at: clock.now };
+      // The system's changes and the person's go in one batch (#271), with
+      // the write's key.
       const saved = await save(
         db,
         userId,
@@ -236,13 +306,20 @@ export function createFlow({
         clock,
         mergeChanges(system.changes, changes),
         [...system.activities, ...activities],
+        answered,
       );
-      if (!saved) throw conflict();
-      return value as T;
+      if (!saved) return afterConflict(c, write, clock.now);
+      return answered.answer;
     },
-    async setUp(c, settings) {
+    async setUp(c, settings, answer) {
       const { db, userId } = c.var;
-      const loaded = await loadRecords(db, userId);
+      const write = writeOf(c);
+      const at = now();
+      const { loaded, kept } = await loadRecordsForWrite(db, userId, {
+        key: write.key,
+        at,
+      });
+      if (kept !== null) return given(kept, write);
       const result = settingsChange(
         userId,
         loaded.records?.user ?? null,
@@ -250,6 +327,15 @@ export function createFlow({
       );
       if (!result.ok) throw ApiError.fromDomain(result.error);
       const { changes, created, user: person } = result.value;
+      const { displayName, timeZone, weekStartsOn } = person;
+      const answered = {
+        write,
+        answer: answer({
+          created,
+          settings: { displayName, timeZone, weekStartsOn },
+        }),
+        at,
+      };
       const { user } = changes;
       if (user !== undefined) {
         const saved = await saveRecords(db, {
@@ -261,12 +347,12 @@ export function createFlow({
           // to stays (ADR 0004 追いついた日), so that the days between are
           // still run by the next read or operation. The first time has no
           // records to bring up, so it starts from today.
-          caughtUpTo: loaded.caughtUpTo ?? toLocalDate(now(), user.timeZone),
+          caughtUpTo: loaded.caughtUpTo ?? toLocalDate(at, user.timeZone),
+          answered,
         });
-        if (!saved.ok) throw conflict();
+        if (!saved.ok) return afterConflict(c, write, at);
       }
-      const { displayName, timeZone, weekStartsOn } = person;
-      return { created, settings: { displayName, timeZone, weekStartsOn } };
+      return answered.answer;
     },
     async read(c, read) {
       const { records, clock } = await caughtUpForRead(c);

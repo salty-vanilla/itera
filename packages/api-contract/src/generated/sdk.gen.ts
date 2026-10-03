@@ -401,7 +401,7 @@ export const listSprints = <ThrowOnError extends boolean = false>(options?: Opti
  *
  * For the next week not confirmed yet; the domain decides when it starts.
  */
-export const beginPlanning = <ThrowOnError extends boolean = false>(options?: Options<BeginPlanningData, ThrowOnError>): RequestResult<BeginPlanningResponses, BeginPlanningErrors, ThrowOnError> => (options?.client ?? client).post<BeginPlanningResponses, BeginPlanningErrors, ThrowOnError>({
+export const beginPlanning = <ThrowOnError extends boolean = false>(options: Options<BeginPlanningData, ThrowOnError>): RequestResult<BeginPlanningResponses, BeginPlanningErrors, ThrowOnError> => (options.client ?? client).post<BeginPlanningResponses, BeginPlanningErrors, ThrowOnError>({
     security: [{
             in: 'cookie',
             name: 'better-auth.session_token',

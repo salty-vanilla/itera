@@ -30,7 +30,15 @@ const examples = {
   danger: {
     tone: 'danger',
     title: '保存できませんでした',
-    description: '入力内容は残っています。',
+    description:
+      '記録は変わっていません。内容を確かめてもう一度試してください。',
+  },
+  // 再試行 only where the write may have been saved: sending it again is
+  // safe (content.md 保存の失敗, #320).
+  unknown: {
+    tone: 'danger',
+    title: '保存できたかわかりませんでした',
+    description: '記録が変わったかもしれません。最新の記録を見てください。',
     action: { label: '再試行', onClick: () => {} },
   },
 } satisfies Record<string, ToastOptions>;
@@ -53,6 +61,9 @@ function Triggers() {
       <Button onClick={() => toast.show(examples.neutral)}>neutral</Button>
       <Button onClick={() => toast.show(examples.done)}>done</Button>
       <Button onClick={() => toast.show(examples.danger)}>danger</Button>
+      <Button onClick={() => toast.show(examples.unknown)}>
+        danger with 再試行
+      </Button>
     </div>
   );
 }
@@ -80,6 +91,19 @@ export const WithUndo: Story = {
   render: () => (
     <>
       <ShowOnMount toasts={[examples.neutral]} />
+      <Triggers />
+    </>
+  ),
+};
+
+/**
+ * 保存できたかが分からない失敗の「再試行」。同じ書き込みを同じキーで送り直す。
+ * 閉じるまで残る。保存できなかった失敗には付けない（content.md の「保存の失敗」）。
+ */
+export const WithRetry: Story = {
+  render: () => (
+    <>
+      <ShowOnMount toasts={[examples.unknown]} />
       <Triggers />
     </>
   ),

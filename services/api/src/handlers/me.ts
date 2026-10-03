@@ -6,6 +6,7 @@ import { loadUserSettings } from '../db/user-settings';
 import type { AppEnv } from '../env';
 import type { Flow } from './flow';
 import { jsonBody } from './body';
+import { answerOf, answerResponse } from './idempotency';
 import { validate } from './validate';
 
 /**
@@ -34,14 +35,17 @@ export async function getMe(c: Context<AppEnv>, flow: Flow) {
 
 /**
  * `PUT /me/settings`: the person's settings (ADR 0006「利用者」), made the
- * first time (201) and written again after (204). The body is checked with
+ * first time (201) and written again after (204). A write like the
+ * operations, with an Idempotency-Key (ADR 0006 冪等キー). The body is checked with
  * the contract's schema; the time zone and the rule (the time zone and the
  * first day are fixed once made) by `settingsChange`.
  */
 export async function putSettings(c: Context<AppEnv>, flow: Flow) {
   const body = validate(settingsSurface.body, await jsonBody(c.req), 'body');
-  const { created, settings } = await flow.setUp(c, body);
-  return created
-    ? c.json(settings, settingsSurface.status.created)
-    : c.body(null, settingsSurface.status.written);
+  const answer = await flow.setUp(c, body, ({ created, settings }) =>
+    created
+      ? answerOf(settingsSurface.status.created, settings)
+      : answerOf(settingsSurface.status.written, undefined),
+  );
+  return answerResponse(c, answer);
 }

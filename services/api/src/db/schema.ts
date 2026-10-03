@@ -721,3 +721,33 @@ export const activity = sqliteTable(
       .where(sql`${table.kind} = 'interruptDeleted'`),
   ],
 );
+
+/**
+ * The writes the user has made, by their Idempotency-Key (ADR 0006
+ * 冪等キー): what each one answered, so that the same write sent again
+ * answers the same without being made twice. A row is written in the
+ * write's own batch, so it exists exactly when the write was saved. Rows
+ * older than 24 hours are deleted by the user's next write
+ * (src/db/idempotency.ts).
+ */
+export const idempotencyKey = sqliteTable(
+  'idempotency_key',
+  {
+    userId: owner(),
+    /** The UUID of the header, in lowercase. */
+    key: text('key').notNull(),
+    /** SHA-256 of the method, path, query and body, in hex. */
+    fingerprint: text('fingerprint').notNull(),
+    status: integer('status').notNull(),
+    /** The response's JSON as it was sent; NULL without a body (204). */
+    body: text('body'),
+    createdAt: instantColumn('created_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.key] }),
+    index('idempotency_key_user_id_created_at_idx').on(
+      table.userId,
+      table.createdAt,
+    ),
+  ],
+);

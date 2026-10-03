@@ -293,7 +293,7 @@ describe('Today on the API', () => {
     ).toBeNull();
   });
 
-  it('reads the day again after a version conflict, and tells it', async () => {
+  it('reads the day again after a version conflict, and tells it was not saved', async () => {
     const { requests } = serve((request) =>
       request.method === 'POST' ? conflict() : undefined,
     );
@@ -303,9 +303,9 @@ describe('Today on the API', () => {
       requests.filter((r) => r === 'GET /api/days/2026-10-01').length;
     const before = reads();
     await userEvent.click(choose('関連論文を 3本読む'));
-    expect(
-      await screen.findAllByText('保存できたかわかりませんでした'),
-    ).not.toHaveLength(0);
+    expect(await screen.findAllByText('保存できませんでした')).not.toHaveLength(
+      0,
+    );
     await waitFor(() => expect(reads()).toBeGreaterThan(before));
   });
 

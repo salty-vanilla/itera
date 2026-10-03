@@ -24,11 +24,12 @@ import * as v from 'valibot';
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../app';
 import type { Authenticator } from '../auth/authenticator';
+import type { Database } from '../db/database';
 import { loadRecords } from '../db/load-records';
 import { createMemoryDatabase } from '../db/memory-database';
 import { saveRecords } from '../db/save-records';
 import { activity, user as authUser } from '../db/schema';
-import { testDependencies, testEnv, testNow, testOrigin } from '../test-env';
+import { testDependencies, testEnv, testNow, writeHeaders } from '../test-env';
 import { problemIn } from '../test-problems';
 
 const newIds = createIdSource((bytes) => crypto.getRandomValues(bytes));
@@ -53,13 +54,16 @@ export function closeFixtureApps() {
  * The app on a database holding the fixture's state, signed in as its user.
  * `edit` changes the records first, for a state the fixture does not have;
  * `now` sets the app's clock (`testNow` otherwise), later than the state's,
- * so the first request writes the system's catch-up of the days between.
+ * so the first request writes the system's catch-up of the days between;
+ * `at` moves it. `wrap` puts something between the app and its database.
  */
 export async function setupFixtureApp(
   state: FixtureStateId,
   edit: (records: Records) => Records = (records) => records,
   now: Instant = testNow,
+  wrap: (db: Database) => Database = (db) => db,
 ) {
+  let current = now;
   const { records: all, clock } = fixtureSnapshot(state);
   const { activities, ...fixture } = all;
   const records = edit(fixture);
@@ -85,9 +89,9 @@ export async function setupFixtureApp(
   };
   const app = createApp(
     testDependencies({
-      database: () => db,
+      database: () => wrap(db),
       authenticator: () => authenticator,
-      now: () => now,
+      now: () => current,
     }),
   );
   /** Sends an operation as its request of the contract (requestOf). */
@@ -98,6 +102,13 @@ export async function setupFixtureApp(
   return {
     db,
     post,
+    /** Sends a request as it is. */
+    request: (url: string, init: RequestInit) =>
+      app.request(url, init, testEnv),
+    /** Moves the app's clock. */
+    at: (time: Instant) => {
+      current = time;
+    },
     /** `post` for a step that must work: it fails the test, naming the operation, when it does not. */
     run: async (name: OperationName, body: unknown) => {
       const response = await post(name, body);
@@ -168,7 +179,7 @@ export function httpRequest(name: OperationName, input: unknown) {
     url,
     init: {
       method,
-      headers: { 'Content-Type': 'application/json', Origin: testOrigin },
+      headers: { 'Content-Type': 'application/json', ...writeHeaders() },
       ...(body === undefined ? {} : { body }),
     },
   };

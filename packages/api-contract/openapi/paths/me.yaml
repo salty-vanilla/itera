@@ -47,6 +47,8 @@ meSettings:
       day of the week is refused with 422 `/problems/invalid-input`. A Sprint's dates
       follow the week's first day, and 「今日」 the time zone, so how a
       change should reach Sprints already made is for a later decision.
+    parameters:
+      - $ref: '../parameters.yaml#/IdempotencyKey'
     requestBody:
       required: true
       content:

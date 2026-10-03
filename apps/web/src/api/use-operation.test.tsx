@@ -1,7 +1,8 @@
 // An operation through the contract's client and TanStack Query (#272): the
 // failure is told with the danger Toast by what it says about the records
-// (one that may have been saved reads again first), no session goes to sign
-// in, and a second press while sending sends nothing.
+// (one that may have been saved reads again first, and is sent again with
+// its Idempotency-Key first, #320), no session goes to sign in, and a second
+// press while sending sends nothing.
 import {
   createClient,
   createConfig,
@@ -12,6 +13,7 @@ import { fixtureIds, fixtureSnapshot } from '@itera/application/fixtures';
 import {
   act,
   cleanup,
+  fireEvent,
   renderHook,
   screen,
   waitFor,
@@ -22,7 +24,7 @@ import { ToastProvider } from '@/components/ui/toast';
 import { createMock } from '@/mock/mock-api';
 import { ApiProvider } from './api-provider';
 import { createQueryClient } from './query-client';
-import { useOperation } from './use-operation';
+import { SEND_AGAIN_DELAYS, useOperation } from './use-operation';
 import { useMe } from './use-me';
 import { problemResponse } from '@/test/problem';
 import {
@@ -48,9 +50,13 @@ function setUp(answer?: Answer) {
   });
   const mock = createMock(store).fetch;
   const requests: string[] = [];
+  /** The Idempotency-Key of each write sent, in order. */
+  const keys: (string | null)[] = [];
   const fetch: typeof globalThis.fetch = async (input, init) => {
     const request = new Request(input, init);
     requests.push(`${request.method} ${new URL(request.url).pathname}`);
+    if (request.method !== 'GET')
+      keys.push(request.headers.get('Idempotency-Key'));
     return answer?.(request) ?? mock(request);
   };
   const client: Client = createClient(
@@ -65,7 +71,7 @@ function setUp(answer?: Answer) {
       </ApiProvider>
     );
   }
-  return { store, requests, onUnauthenticated, wrapper };
+  return { store, requests, keys, onUnauthenticated, wrapper };
 }
 
 function answerWith(type: PlainProblemType) {
@@ -241,6 +247,8 @@ const refused: readonly [string, Answer][] = [
   ['400 validation-failed', validationFailed],
   ['403 forbidden-origin', answerWith('/problems/forbidden-origin')],
   ['404 not-found', answerWith('/problems/not-found')],
+  // Another write came first: this one was not made (ADR 0004 同時の書き込み).
+  ['409 revision-conflict', answerWith('/problems/revision-conflict')],
   ['413 payload-too-large', answerWith('/problems/payload-too-large')],
   ['422 invalid-input', answerWith('/problems/invalid-input')],
   ['422 invalid-transition', answerWith('/problems/invalid-transition')],
@@ -249,21 +257,23 @@ const refused: readonly [string, Answer][] = [
     answerWith('/problems/recurring-task-cannot-complete'),
   ],
   ['422 user-not-set-up', answerWith('/problems/user-not-set-up')],
+  [
+    '422 idempotency-key-reused',
+    answerWith('/problems/idempotency-key-reused'),
+  ],
 ];
 
-const unknown: readonly [string, Answer][] = [
-  ['409 revision-conflict', answerWith('/problems/revision-conflict')],
+/** ADR 0006 列挙: a type or a status this client does not know. */
+const unknownType = onWrite(() =>
+  Response.json(
+    { type: '/problems/something-new', title: '', status: 418, detail: '' },
+    { status: 418, headers: { 'Content-Type': PROBLEM_CONTENT_TYPE } },
+  ),
+);
+
+/** No answer, or the server failed: sent again with the same key. */
+const sentAgain: readonly [string, Answer][] = [
   ['500 internal-error', answerWith('/problems/internal-error')],
-  // ADR 0006 列挙: a type or a status this client does not know.
-  [
-    '418 a type it does not know',
-    onWrite(() =>
-      Response.json(
-        { type: '/problems/something-new', title: '', status: 418, detail: '' },
-        { status: 418, headers: { 'Content-Type': PROBLEM_CONTENT_TYPE } },
-      ),
-    ),
-  ],
   [
     '502 that is not JSON',
     onWrite(() => new Response('<html>Bad Gateway</html>', { status: 502 })),
@@ -279,7 +289,7 @@ const unknown: readonly [string, Answer][] = [
 
 /** Runs the operation with `answer` and gives what the person sees. */
 async function failWith(answer: Answer) {
-  const { requests, wrapper } = setUp(answer);
+  const { requests, keys, wrapper } = setUp(answer);
   const { result } = renderHook(useRenameAndOverview, { wrapper });
   await waitFor(() => expect(result.current.overview.data).toBeDefined());
   requests.length = 0;
@@ -287,7 +297,31 @@ async function failWith(answer: Answer) {
   await act(async () => {
     outcome = await result.current.rename.run(rename('研究室'));
   });
-  return { outcome, requests };
+  return { outcome, requests, keys };
+}
+
+const patch = `PATCH /api/areas/${ids.area.research}`;
+
+/**
+ * The 再試行 buttons. A danger Toast is hidden from assistive technology
+ * until focus is in it (Base UI): its text is announced through the alert
+ * region, and F6 takes focus to it.
+ */
+const retryButtons = () =>
+  screen.getAllByRole('button', { name: '再試行', hidden: true });
+
+/** The Toast of a write that may have been saved, with 再試行. */
+async function expectMayHaveBeenSaved() {
+  expect(
+    await screen.findAllByText('保存できたかわかりませんでした'),
+  ).not.toHaveLength(0);
+  expect(
+    screen.getAllByText(
+      '記録が変わったかもしれません。最新の記録を見てください。',
+    ),
+  ).not.toHaveLength(0);
+  expect(screen.queryAllByText(/記録は変わっていません/)).toHaveLength(0);
+  expect(retryButtons()).not.toHaveLength(0);
 }
 
 // The Toast by what the failure says about the records (owner decision
@@ -314,27 +348,74 @@ describe('a failed operation', () => {
     },
   );
 
-  it.each(unknown)(
-    '%s: may have been saved, reads again, then asks to look',
+  it('a type it does not know (418): may have been saved, reads again, not sent again', async () => {
+    const { outcome, requests } = await failWith(unknownType);
+    expect(outcome).toEqual({ ok: false });
+    // The API answered: sending it again would answer the same.
+    expect(requests).toEqual([patch, 'GET /api/me']);
+    await expectMayHaveBeenSaved();
+  });
+
+  it.each(sentAgain)(
+    '%s: sent again twice with its key, then reads again and asks to look',
     async (_, answer) => {
-      const { outcome, requests } = await failWith(answer);
+      const { outcome, requests, keys } = await failWith(answer);
       expect(outcome).toEqual({ ok: false });
-      // Read again before `run` gave back its outcome, and not sent again.
-      expect(requests).toEqual([
-        `PATCH /api/areas/${ids.area.research}`,
-        'GET /api/me',
-      ]);
-      expect(
-        await screen.findAllByText('保存できたかわかりませんでした'),
-      ).not.toHaveLength(0);
-      expect(
-        screen.getAllByText(
-          '記録が変わったかもしれません。最新の記録を見てください。',
-        ),
-      ).not.toHaveLength(0);
-      expect(screen.queryAllByText(/記録は変わっていません/)).toHaveLength(0);
+      expect(requests).toEqual([patch, patch, patch, 'GET /api/me']);
+      expect(keys).toHaveLength(3);
+      expect(keys[0]).toMatch(/^"[0-9a-f-]{36}"$/);
+      expect(new Set(keys).size).toBe(1);
+      await expectMayHaveBeenSaved();
     },
   );
+
+  it('sent again after no answer, it goes through: no Toast', async () => {
+    let failures = 1;
+    const { outcome, requests, keys } = await failWith((request) => {
+      if (request.method === 'GET' || failures === 0) return undefined;
+      failures -= 1;
+      return Promise.reject(new TypeError('Failed to fetch'));
+    });
+    expect(outcome).toMatchObject({ ok: true });
+    expect(requests).toEqual([patch, patch, 'GET /api/me']);
+    expect(new Set(keys).size).toBe(1);
+    expect(screen.queryAllByText(/保存でき/)).toHaveLength(0);
+  });
+
+  it('sends the same write again with 再試行, with its key', async () => {
+    let down = true;
+    const { requests, keys } = await failWith((request) =>
+      request.method !== 'GET' && down
+        ? Promise.reject(new TypeError('Failed to fetch'))
+        : undefined,
+    );
+    await expectMayHaveBeenSaved();
+    down = false;
+    requests.length = 0;
+    await act(async () => {
+      fireEvent.click(retryButtons()[0]!);
+    });
+    await waitFor(() => expect(requests).toEqual([patch, 'GET /api/me']));
+    expect(new Set(keys).size).toBe(1);
+    expect(keys).toHaveLength(4);
+    await waitFor(() =>
+      expect(
+        screen.queryAllByText('保存できたかわかりませんでした'),
+      ).toHaveLength(0),
+    );
+  });
+
+  it('names each run with a new key', async () => {
+    const { keys } = await failWith(validationFailed);
+    const { result } = renderHook(useRenameAndOverview, {
+      wrapper: setUp().wrapper,
+    });
+    await act(async () => {
+      await result.current.rename.run(rename('研究室'));
+    });
+    expect(keys).toHaveLength(1);
+    expect(keys[0]).not.toBeNull();
+  });
 });
 
 describe('reading again after an operation', () => {
@@ -348,21 +429,20 @@ describe('reading again after an operation', () => {
     await waitFor(() => expect(result.current.overview.data).toBeDefined());
     down = true;
     requests.length = 0;
-    // A read's retry waits 1000ms: the clock does not move unless told.
+    // The write is sent again after SEND_AGAIN_DELAYS, and a read's retry
+    // waits 1000ms after: the clock does not move unless told.
     vi.useFakeTimers();
     try {
       let outcome: unknown;
+      const sending = SEND_AGAIN_DELAYS.reduce((sum, ms) => sum + ms, 0);
       await act(async () => {
         void result.current.rename
           .run(rename('研究室'))
           .then((o) => (outcome = o));
-        await vi.advanceTimersByTimeAsync(10);
+        await vi.advanceTimersByTimeAsync(sending + 10);
       });
       expect(outcome).toEqual({ ok: false });
-      expect(requests).toEqual([
-        `PATCH /api/areas/${ids.area.research}`,
-        'GET /api/me',
-      ]);
+      expect(requests).toEqual([patch, patch, patch, 'GET /api/me']);
       expect(
         screen.getAllByText('保存できたかわかりませんでした'),
       ).not.toHaveLength(0);

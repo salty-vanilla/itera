@@ -19,6 +19,7 @@ import type { AppEnv } from '../env';
 import { ApiError, errorResponse } from '../errors';
 import { testNow } from '../test-env';
 import { createFlow } from './flow';
+import { answerOf, answerResponse } from './idempotency';
 
 const ids = createIdSource((bytes) => crypto.getRandomValues(bytes));
 const alice = ids.newId('User', testNow);
@@ -90,10 +91,16 @@ async function setup(
   app.use(async (c, next) => {
     c.set('db', interfering);
     c.set('userId', alice);
+    c.set('write', { key: crypto.randomUUID(), fingerprint: 'operate' });
     await next();
   });
   app.post('/operate', async (c) =>
-    c.json(await flow.operate(c, operations.createArea({ name: '仕事' }))),
+    answerResponse(
+      c,
+      await flow.operate(c, operations.createArea({ name: '仕事' }), (value) =>
+        answerOf(200, value),
+      ),
+    ),
   );
   app.get('/read', async (c) =>
     c.json(await flow.read(c, (records) => records.areas.map((a) => a.name))),

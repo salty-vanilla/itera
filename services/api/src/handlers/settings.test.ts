@@ -16,7 +16,7 @@ import { loadRecords } from '../db/load-records';
 import { createMemoryDatabase } from '../db/memory-database';
 import { loadUserSettings } from '../db/user-settings';
 import { activity, user as authUser } from '../db/schema';
-import { testDependencies, testEnv, testNow, testOrigin } from '../test-env';
+import { testDependencies, testEnv, testNow, writeHeaders } from '../test-env';
 import { problemIn } from '../test-problems';
 import { httpRequest, missing } from './operation-cases';
 import { maxBodyBytes } from './body';
@@ -68,7 +68,7 @@ type App = Awaited<ReturnType<typeof setup>>['app'];
 function put(
   app: App,
   body: unknown,
-  headers: Record<string, string> = { Origin: testOrigin },
+  headers: Record<string, string> = writeHeaders(),
 ) {
   return app.request(
     '/api/me/settings',
@@ -305,32 +305,74 @@ describe('PUT /api/me/settings', () => {
     });
   });
 
-  it('answers 409 when another write came first, and the first write stands', async () => {
-    const { db } = await setup();
-    // Another save makes the first row of this person between the load and
-    // the write: the second first-save fails on the revision.
-    const racing = new Proxy(db, {
+  /** The app on `db`, whose batches go through `batch`. */
+  function appWithBatch(
+    db: Database,
+    batch: (
+      target: Database,
+      statements: Parameters<Database['batch']>[0],
+    ) => Promise<unknown>,
+  ) {
+    const wrapped = new Proxy(db, {
       get(target, key, receiver) {
         if (key !== 'batch') return Reflect.get(target, key, receiver);
-        return async (statements: Parameters<Database['batch']>[0]) => {
-          await target.batch(statements);
-          return target.batch(statements);
-        };
+        return (statements: Parameters<Database['batch']>[0]) =>
+          batch(target, statements);
       },
     });
-    const conflicting = createApp(
+    return createApp(
       testDependencies({
-        database: () => racing,
+        database: () => wrapped,
         authenticator: () => ({
           authenticate: async () => ({ userId: alice }),
           handle: async () => new Response(null, { status: 404 }),
         }),
       }),
     );
+  }
+
+  it('answers 409 when another write came first, and the first write stands', async () => {
+    const { app, db } = await setup();
+    // Another device makes the settings between this write's load and its
+    // save: the second first-save fails on the revision, and its key is not
+    // kept.
+    // Its first batch loads; the second saves.
+    let batches = 0;
+    const conflicting = appWithBatch(db, async (target, statements) => {
+      batches += 1;
+      if (batches === 2) {
+        expect((await put(app, { ...settings, displayName: 'A' })).status).toBe(
+          201,
+        );
+      }
+      return target.batch(statements);
+    });
     expect(await errorOf(await put(conflicting, settings))).toMatchObject({
       status: 409,
       type: '/problems/revision-conflict',
     });
+    expect(await loadUserSettings(db, alice)).toMatchObject({
+      displayName: 'A',
+    });
+    expect((await loadRecords(db, alice)).revision).toBe(1);
+  });
+
+  it('answers what it made when the batch went in and its answer was lost', async () => {
+    const { db } = await setup();
+    // The batch is made, then the database's answer fails (ADR 0004 同時の
+    // 書き込み): the write's own key tells that it was made.
+    let batches = 0;
+    const lost = appWithBatch(db, async (target, statements) => {
+      batches += 1;
+      const result = await target.batch(statements);
+      if (batches === 2) throw new Error('The answer was lost.');
+      return result;
+    });
+    const response = await put(lost, settings);
+    expect(response.status).toBe(201);
+    expect(v.parse(vSetSettingsResponse, await response.json())).toEqual(
+      settings,
+    );
     expect((await loadRecords(db, alice)).revision).toBe(1);
   });
 });
