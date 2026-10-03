@@ -89,7 +89,13 @@ export async function saveRecords(
       ),
     ]);
   } catch (error) {
-    if ((await currentRevision(db, userId)) !== loaded.revision) {
+    // Tell a conflict by the revision, not by the error text, which differs
+    // between D1 and libSQL. If the check cannot be made, the save's own
+    // failure is what the caller needs.
+    const current = await currentRevision(db, userId).catch(() => {
+      throw error;
+    });
+    if (current !== loaded.revision) {
       return { ok: false, reason: 'revisionConflict' };
     }
     throw error;
@@ -127,7 +133,8 @@ async function currentRevision(db: Database, userId: UserId) {
 /**
  * The rows of the records the change touches, before (as loaded) and after.
  * An aggregate is compared as a whole, so a changed part shows up as its own
- * row.
+ * row. As in apps/web's applyChanges, a deletion wins over a change of the
+ * same record, and deleting a record the change itself made leaves nothing.
  */
 function changedRows(input: SaveRecordsInput): [RowSet, RowSet] {
   const { userId, changes } = input;
@@ -148,19 +155,23 @@ function changedRows(input: SaveRecordsInput): [RowSet, RowSet] {
     owner: (record: R) => string | undefined,
   ) => {
     const byId = new Map(current.map((r) => [r.id, r]));
+    const gone = new Set<string>(deleted);
+    const made = new Set<string>();
     for (const record of changed ?? []) {
       const ownerId = owner(record);
       if (ownerId !== undefined) expectOwner(ownerId, userId);
       const old = byId.get(record.id);
+      if (old === undefined) made.add(record.id);
+      if (gone.has(record.id)) continue;
       if (old !== undefined) add(before, old);
       add(after, record);
     }
-    for (const id of deleted ?? []) {
+    for (const id of gone) {
       const old = byId.get(id);
-      if (old === undefined) {
+      if (old !== undefined) add(before, old);
+      else if (!made.has(id)) {
         throw new Error(`Cannot delete ${id}: it is not a loaded record.`);
       }
-      add(before, old);
     }
   };
   each(loaded.areas, changes.areas, undefined, addAreaRows, (r) => r.userId);
@@ -221,15 +232,38 @@ function expectOwner(ownerId: string, userId: UserId): void {
 }
 
 /**
- * Rows that may hold the one slot of a partial unique index. Within a table
- * they are written after the rows that may leave it, so handing the slot
- * over (an active criterion replaced by another) never holds two at once.
+ * The partial unique indexes of src/db/schema.ts whose one slot a row can
+ * take by an update (a criterion becoming active). Within a table, the rows
+ * that hold the slot after the change are written after the others, so
+ * handing it over never holds it twice: SQLite checks unique indexes after
+ * each statement. `holds` repeats the index's condition.
  */
-const holdsUniqueSlot = new Map<RecordTable, (row: Row) => boolean>([
-  [estimateSuggestion, (row) => row.state === 'presented'],
-  [planningCriterion, (row) => row.state === 'active'],
-  [sprint, (row) => row.state === 'active'],
-]);
+export const uniqueSlots: Readonly<
+  Record<string, { table: RecordTable; holds: (row: Row) => boolean }>
+> = {
+  estimate_suggestion_presented_idx: {
+    table: estimateSuggestion,
+    holds: (row) => row.state === 'presented',
+  },
+  planning_criterion_active_idx: {
+    table: planningCriterion,
+    holds: (row) => row.state === 'active',
+  },
+  sprint_active_idx: { table: sprint, holds: (row) => row.state === 'active' },
+};
+
+/**
+ * Partial unique indexes whose columns and condition are fixed when the row
+ * is made, so no update moves a row into them. Deleting first is enough.
+ */
+export const fixedUniqueIndexes: readonly string[] = [
+  'daily_selection_task_date_idx',
+  'sprint_task_once_idx',
+];
+
+const holdsUniqueSlot = new Map<RecordTable, (row: Row) => boolean>(
+  Object.values(uniqueSlots).map(({ table, holds }) => [table, holds]),
+);
 
 /**
  * The statements that turn the `before` rows into the `after` rows. Rows

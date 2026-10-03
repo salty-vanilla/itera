@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "913c757b-dcc9-4f64-bb34-e6cb1b7f11fa",
+  "id": "0132c53f-4557-48c2-a1ba-4808f5b0988d",
   "prevId": "6eaba768-2478-4ae3-81f6-0a93574d1fc9",
   "tables": {
     "account": {
@@ -2062,6 +2062,15 @@
             "sprint_id"
           ],
           "isUnique": false
+        },
+        "sprint_task_once_idx": {
+          "name": "sprint_task_once_idx",
+          "columns": [
+            "sprint_id",
+            "task_id"
+          ],
+          "isUnique": true,
+          "where": "\"sprint_task\".\"has_occurrences\" = 0"
         }
       },
       "foreignKeys": {

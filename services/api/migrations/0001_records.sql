@@ -246,6 +246,7 @@ CREATE TABLE `sprint_task` (
 );
 --> statement-breakpoint
 CREATE INDEX `sprint_task_sprint_id_idx` ON `sprint_task` (`sprint_id`);--> statement-breakpoint
+CREATE UNIQUE INDEX `sprint_task_once_idx` ON `sprint_task` (`sprint_id`,`task_id`) WHERE "sprint_task"."has_occurrences" = 0;--> statement-breakpoint
 CREATE TABLE `sprint_task_occurrence` (
 	`sprint_task_id` text NOT NULL,
 	`occurrence_id` text NOT NULL,

@@ -209,6 +209,9 @@ export const rateLimit = sqliteTable('rate_limit', {
 // aggregate reference their root and go with it. References between
 // aggregates (a Task's Area, a SprintTask's Task, …) have no foreign key:
 // the domain decides when they may dangle (ADR 0004).
+//
+// A partial unique index must also be listed in src/db/save-records.ts
+// (`uniqueSlots` or `fixedUniqueIndexes`), which orders the writes around it.
 // ---------------------------------------------------------------------------
 
 const owner = () =>
@@ -553,7 +556,14 @@ export const sprintTask = sqliteTable(
     planOccurrenceCount: integer('plan_occurrence_count'),
     carriedFrom: text('carried_from').$type<SprintTaskId>(),
   },
-  (table) => [index('sprint_task_sprint_id_idx').on(table.sprintId)],
+  (table) => [
+    index('sprint_task_sprint_id_idx').on(table.sprintId),
+    // Invariant 14: a non-recurring Task has one SprintTask per Sprint. A
+    // recurring one may have more (an occurrence added mid-Sprint).
+    uniqueIndex('sprint_task_once_idx')
+      .on(table.sprintId, table.taskId)
+      .where(sql`${table.hasOccurrences} = 0`),
+  ],
 );
 
 /** A SprintTask's `occurrenceIds`. */

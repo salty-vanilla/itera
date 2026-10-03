@@ -14,6 +14,7 @@ import {
   type UserId,
 } from '@itera/domain';
 import { getTableName, sql } from 'drizzle-orm';
+import { getTableConfig } from 'drizzle-orm/sqlite-core';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Database } from './database';
 import { loadRecords } from './load-records';
@@ -21,7 +22,7 @@ import { createMemoryDatabase } from './memory-database';
 import { recordTables } from './record-rows';
 import type { LoadedRecords, StoredRecords } from './records';
 import { createRecordingDatabase } from './recording-database';
-import { saveRecords } from './save-records';
+import { fixedUniqueIndexes, saveRecords, uniqueSlots } from './save-records';
 import { activity, recordRevision, user as authUser } from './schema';
 
 // IDs in the TypeID shape (ADR 0004 「ID の形式」). Fixed values: generating
@@ -71,9 +72,14 @@ function recordsOf(userId: UserId, n: number): StoredRecords {
   const occurrenceIds = [1, 2].map((i) =>
     id<'Occurrence'>(ids('occurrence', i)),
   ) as [Occurrence['id'], Occurrence['id']];
-  const [firstSprint, secondSprint] = [1, 2].map((i) =>
-    id<'Sprint'>(ids('sprint', i)),
-  ) as [Sprint['id'], Sprint['id']];
+  const [firstSprint, secondSprint, reviewSprint, activeSprint] = [
+    1, 2, 3, 4,
+  ].map((i) => id<'Sprint'>(ids('sprint', i))) as [
+    Sprint['id'],
+    Sprint['id'],
+    Sprint['id'],
+    Sprint['id'],
+  ];
   const sprintTaskIds = [1, 2, 3, 4, 5].map((i) =>
     id<'SprintTask'>(ids('sprint_task', i)),
   ) as Sprint['tasks'][number]['id'][];
@@ -472,6 +478,35 @@ function recordsOf(userId: UserId, n: number): StoredRecords {
         improvement: { text: '' },
       },
     },
+    // No CriterionUse; a Retro without improvement or completion.
+    {
+      id: reviewSprint,
+      userId,
+      start: localDate('2026-10-12'),
+      end: localDate('2026-10-18'),
+      state: 'review',
+      goals: [],
+      tasks: [],
+      areaSnapshot: [],
+      dailySelections: [],
+      actualTimes: [],
+      interrupts: [],
+      retro: { startedAt: at(23), pins: [], reflection: '' },
+    },
+    // No CriterionUse and no Retro.
+    {
+      id: activeSprint,
+      userId,
+      start: localDate('2026-10-19'),
+      end: localDate('2026-10-25'),
+      state: 'active',
+      goals: [],
+      tasks: [],
+      areaSnapshot: [],
+      dailySelections: [],
+      actualTimes: [],
+      interrupts: [],
+    },
   ];
   const criteria: PlanningCriterion[] = [
     {
@@ -705,24 +740,140 @@ describe('loadRecords and saveRecords', () => {
     expect(reloaded.tasks[1]).toStrictEqual(changes.tasks[0]);
   });
 
-  it('keeps the DB from holding two active criteria or presented suggestions', async () => {
+  it('hands the active Sprint over in one save', async () => {
     const db = await memoryDatabase();
     const records = recordsOf(alice, 1);
     await saveAll(db, records);
     const loaded = await loadRecords(db, alice);
-    const second: PlanningCriterion = {
-      ...records.criteria[1]!,
-      id: id<'PlanningCriterion'>(tid('planning_criterion', 199)),
-    };
+    const [, planning, , active] = records.sprints as [
+      Sprint,
+      Sprint,
+      Sprint,
+      Sprint,
+    ];
+    const sprints: Sprint[] = [
+      { ...planning, state: 'active' },
+      { ...active, state: 'review' },
+    ];
+    const result = await saveRecords(db, {
+      userId: alice,
+      loaded,
+      changes: { sprints },
+      activities: [],
+    });
+    expect(result).toEqual({ ok: true, revision: 2 });
+  });
+
+  it('lists every partial unique index with the order its writes need', () => {
+    const partial = recordTables.flatMap((table) =>
+      getTableConfig(table)
+        .indexes.filter((i) => i.config.unique && i.config.where !== undefined)
+        .map((i) => i.config.name),
+    );
+    expect(partial.sort()).toEqual(
+      [...Object.keys(uniqueSlots), ...fixedUniqueIndexes].sort(),
+    );
+  });
+
+  it.each([
+    [
+      'two active criteria',
+      (records: StoredRecords) => ({
+        criteria: [
+          {
+            ...records.criteria[1]!,
+            id: id<'PlanningCriterion'>(tid('planning_criterion', 199)),
+          },
+        ],
+      }),
+    ],
+    [
+      'two presented suggestions on a Task',
+      (records: StoredRecords) => {
+        const task = records.tasks[1]!;
+        const presented = task.suggestions[1]!;
+        return {
+          tasks: [
+            {
+              ...task,
+              suggestions: [
+                ...task.suggestions,
+                {
+                  ...presented,
+                  id: id<'EstimateSuggestion'>(tid('estimate_suggestion', 199)),
+                },
+              ],
+            },
+          ],
+        };
+      },
+    ],
+    [
+      'a non-recurring Task twice in a Sprint (invariant 14)',
+      (records: StoredRecords) => {
+        const sprint = records.sprints[0]!;
+        const once = sprint.tasks[0]!;
+        return {
+          sprints: [
+            {
+              ...sprint,
+              tasks: [
+                ...sprint.tasks,
+                { ...once, id: id<'SprintTask'>(tid('sprint_task', 199)) },
+              ],
+            },
+          ],
+        };
+      },
+    ],
+    [
+      'a DailySelection whose SprintTask is gone',
+      (records: StoredRecords) => {
+        const sprint = records.sprints[0]!;
+        return { sprints: [{ ...sprint, tasks: sprint.tasks.slice(1) }] };
+      },
+    ],
+  ] as const)('keeps the DB from holding %s', async (_, change) => {
+    const db = await memoryDatabase();
+    const records = recordsOf(alice, 1);
+    await saveAll(db, records);
+    const loaded = await loadRecords(db, alice);
+    const before = await dump(db);
     await expect(
       saveRecords(db, {
         userId: alice,
         loaded,
-        changes: { criteria: [second] },
+        changes: change(records),
         activities: [],
       }),
     ).rejects.toThrow();
-    expect((await loadRecords(db, alice)).revision).toBe(1);
+    expect(await dump(db)).toEqual(before);
+  });
+
+  it('lets a deletion win over a change of the same record', async () => {
+    const db = await memoryDatabase();
+    const records = recordsOf(alice, 1);
+    await saveAll(db, records);
+    const loaded = await loadRecords(db, alice);
+    const [done, excluded] = records.occurrences as [Occurrence, Occurrence];
+    const madeAndDropped: Occurrence = {
+      ...excluded,
+      id: id<'Occurrence'>(tid('occurrence', 199)),
+      scheduledDate: localDate('2026-10-02'),
+    };
+    const result = await saveRecords(db, {
+      userId: alice,
+      loaded,
+      changes: {
+        occurrences: [{ ...excluded, state: 'pending' }, madeAndDropped],
+        deleted: { occurrences: [excluded.id, madeAndDropped.id] },
+      },
+      activities: [],
+    });
+    expect(result).toEqual({ ok: true, revision: 2 });
+    expect((await loadRecords(db, alice)).records!.occurrences).toStrictEqual([
+      done,
+    ]);
   });
 
   it('appends Activity in order with the revision of the save', async () => {
@@ -922,7 +1073,7 @@ describe('users', () => {
   it('reads and writes only the given user’s records', async () => {
     const db = await memoryDatabase();
     const aliceRecords = recordsOf(alice, 1);
-    const bobRecords = { ...recordsOf(bob, 2), user: userOf(bob) };
+    const bobRecords = recordsOf(bob, 2);
     await saveAll(db, aliceRecords);
     await saveAll(db, bobRecords);
     expect(await loadRecords(db, alice)).toStrictEqual({

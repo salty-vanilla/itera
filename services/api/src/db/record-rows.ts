@@ -582,7 +582,7 @@ export function recordsFromRows(rows: RowSet): StoredRecords | null {
       policy: {
         scope:
           c.scopeKind === 'area'
-            ? { kind: 'area', areaId: required(c.scopeAreaId) }
+            ? { kind: 'area', areaId: required(c.scopeAreaId, 'scopeAreaId') }
             : { kind: 'all' },
         rangePolicy: c.rangePolicy,
       },
@@ -598,25 +598,31 @@ function estimateOf(t: RowOf<typeof task>): Estimate | null {
   if (t.estimateHours === null) return null;
   return {
     hours: t.estimateHours,
-    setAt: required(t.estimateSetAt),
+    setAt: required(t.estimateSetAt, 'estimateSetAt'),
     source: estimateSourceOf(t),
   };
 }
 
 function estimateSourceOf(t: RowOf<typeof task>): EstimateSource {
-  switch (required(t.estimateSourceKind)) {
+  switch (required(t.estimateSourceKind, 'estimateSourceKind')) {
     case 'manual':
       return { kind: 'manual' };
     case 'adopted':
       return {
         kind: 'adopted',
-        suggestionId: required(t.estimateSourceSuggestionId),
-        bound: required(t.estimateSourceBound),
+        suggestionId: required(
+          t.estimateSourceSuggestionId,
+          'estimateSourceSuggestionId',
+        ),
+        bound: required(t.estimateSourceBound, 'estimateSourceBound'),
       };
     case 'edited':
       return {
         kind: 'edited',
-        suggestionId: required(t.estimateSourceSuggestionId),
+        suggestionId: required(
+          t.estimateSourceSuggestionId,
+          'estimateSourceSuggestionId',
+        ),
       };
   }
 }
@@ -632,7 +638,10 @@ function patternOf(
     case 'weekly':
       return { freq: 'weekly', daysOfWeek };
     case 'monthly':
-      return { freq: 'monthly', dayOfMonth: required(v.dayOfMonth) };
+      return {
+        freq: 'monthly',
+        dayOfMonth: required(v.dayOfMonth, 'dayOfMonth'),
+      };
   }
 }
 
@@ -657,7 +666,7 @@ function planSnapshotOf(t: RowOf<typeof sprintTask>): PlanSnapshot | null {
   if (t.planValueBase === null) return null;
   return {
     value: planningValueOf(t),
-    timeBasis: required(t.planTimeBasis),
+    timeBasis: required(t.planTimeBasis, 'planTimeBasis'),
     ...optional('estimateHours', t.planEstimateHours),
     ...optional(
       'suggestion',
@@ -665,8 +674,8 @@ function planSnapshotOf(t: RowOf<typeof sprintTask>): PlanSnapshot | null {
         ? null
         : {
             id: t.planSuggestionId,
-            lo: required(t.planSuggestionLo),
-            hi: required(t.planSuggestionHi),
+            lo: required(t.planSuggestionLo, 'planSuggestionLo'),
+            hi: required(t.planSuggestionHi, 'planSuggestionHi'),
           },
     ),
     ...optional('occurrenceCount', t.planOccurrenceCount),
@@ -674,17 +683,20 @@ function planSnapshotOf(t: RowOf<typeof sprintTask>): PlanSnapshot | null {
 }
 
 function planningValueOf(t: RowOf<typeof sprintTask>): PlanningValue {
-  const base = required(t.planValueBase);
-  const computedAt = required(t.planValueComputedAt);
+  const base = required(t.planValueBase, 'planValueBase');
+  const computedAt = required(t.planValueComputedAt, 'planValueComputedAt');
   switch (base) {
     case 'none':
       return { base: 'none', criterionApplied: false, computedAt };
     case 'subtasks':
       return {
         base: 'subtasks',
-        lo: required(t.planValueLo),
-        hi: required(t.planValueHi),
-        unestimatedSubtasks: required(t.planValueUnestimatedSubtasks),
+        lo: required(t.planValueLo, 'planValueLo'),
+        hi: required(t.planValueHi, 'planValueHi'),
+        unestimatedSubtasks: required(
+          t.planValueUnestimatedSubtasks,
+          'planValueUnestimatedSubtasks',
+        ),
         criterionApplied: false,
         computedAt,
       };
@@ -692,9 +704,12 @@ function planningValueOf(t: RowOf<typeof sprintTask>): PlanningValue {
     case 'suggestion':
       return {
         base,
-        lo: required(t.planValueLo),
-        hi: required(t.planValueHi),
-        criterionApplied: required(t.planValueCriterionApplied),
+        lo: required(t.planValueLo, 'planValueLo'),
+        hi: required(t.planValueHi, 'planValueHi'),
+        criterionApplied: required(
+          t.planValueCriterionApplied,
+          'planValueCriterionApplied',
+        ),
         computedAt,
       };
   }
@@ -717,7 +732,7 @@ function dailySelectionOf(d: RowOf<typeof dailySelection>): DailySelection {
         ? null
         : {
             resolution: d.closedBeforeResolution,
-            at: required(d.closedBeforeAt),
+            at: required(d.closedBeforeAt, 'closedBeforeAt'),
           },
     ),
   };
@@ -732,8 +747,8 @@ function optional<K extends string, V>(
 }
 
 /** A column that the row's other columns say is set. */
-function required<V>(value: V | null): V {
-  if (value === null) throw new Error('A required column is NULL.');
+function required<V>(value: V | null, column: string): V {
+  if (value === null) throw new Error(`${column} is NULL.`);
   return value;
 }
 

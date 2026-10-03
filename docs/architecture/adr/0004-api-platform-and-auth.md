@@ -191,13 +191,14 @@ DB で守る不変条件：
 | 11 Active の Sprint は同時に 1 つ | `sprint`：`state = 'active'` の行に、利用者ごとの部分一意 index |
 | 11 Sprint の期間は重ならない（一部） | `sprint`：利用者と `start` の一意 index。始まりの違う期間の重なり（週の始まりを変えたとき）は domain に任せる |
 | 13 SprintGoal は Sprint × Area に 0..1 | `sprint_goal` の主キー（Sprint、Area） |
+| 14 非繰り返しの Task は、同じ Sprint に SprintTask を 1 件まで | `sprint_task`：`has_occurrences = 0` の行に、（Sprint、Task）の部分一意 index。繰り返しの Task は週の途中に回を足すと SprintTask が増えるので対象外 |
 | 21 DailySelection は日付 × SprintTask（繰り返しは × Occurrence）に 0..1 | `daily_selection`：（SprintTask、日付）の一意 index（`occurrence_id` が NULL の行）と、（SprintTask、Occurrence、日付）の一意 index |
 | 35 Active な計画基準は最大 1 つ | `planning_criterion`：`state = 'active'` の行に、利用者ごとの部分一意 index |
 | 36・38 CriterionUse・Retro・RetroImprovement は Sprint に 0..1 | `criterion_use`・`retro` の主キーが Sprint。improvement は `retro` の列 |
 | 提示中の提案は Task に 1 つまで（packages/domain README、#20） | `estimate_suggestion`：`state = 'presented'` の行に、Task ごとの部分一意 index |
 | 回は Rule と日付に 1 つ（`generateOccurrences` は回のある日を飛ばす） | `occurrence`：（Rule、予定日）の一意 index |
 
-DB で守らない不変条件：上の表にないもの。たとえば 14（非繰り返しの Task は同じ Sprint に SprintTask 1 件まで）は、繰り返しかどうかが `task` の行にあり、`sprint_task` の index では書けない。ほかは状態の遷移、時刻の前後、記録をまたぐ判定で、domain のコマンドが守る。
+DB で守らない不変条件：上の表にないもの。状態の遷移、時刻の前後、記録をまたぐ判定で、domain のコマンドが守る。
 
 index：利用者ごとに読むための `user_id`、子テーブルの持ち主の列（主キーの先頭にないもの）、ActualTime の SprintTask。Activity は（利用者、版、`position`）を主キーにし、ほかの index は置かない。
 
@@ -205,7 +206,8 @@ index：利用者ごとに読むための `user_id`、子テーブルの持ち�
 
 - 読み込み（`loadRecords`）：利用者 ID を受け取り、利用者の版と、Activity を除く記録を 1 回の `batch()`（23 の SELECT）で読む。子テーブルは持ち主のテーブルを利用者で絞った副問い合わせで選ぶ。記録の種類ごとの配列は ID の順（TypeID では作った順）、集約の中身は `position` の順。最初の保存の前は版 0、記録なし。
 - 書き込み（`saveRecords`）：変えた・足した記録、消す記録の ID、追記する Activity、読み込んだときの記録と版を受け取る。変えた記録を読み込んだときの記録と行の単位で比べ、消えた行を DELETE、変わった行を変わった列だけ UPDATE、新しい行を INSERT する。これと Activity の INSERT を 1 つの `batch()` で送る。何も変わらず Activity もなければ、何も書かない。
-  - 順序：DELETE を先に、子から親の順で行う（同じ一意キーで作り直す行、たとえば作り直した回が入れるように）。続いて UPDATE と INSERT を親から子の順で行う。部分一意 index の枠（Active な計画基準・Sprint、提示中の提案）は、同じテーブルの中で、枠を離れる行を先に、枠に入る行を後に書く（SQLite は一意制約を文ごとに確かめる）。
+  - 順序：DELETE を先に、子から親の順で行う（同じ一意キーで作り直す行、たとえば作り直した回が入れるように）。続いて UPDATE と INSERT を親から子の順で行う。部分一意 index の枠（Active な計画基準・Sprint、提示中の提案）は、同じテーブルの中で、枠を離れる行を先に、枠に入る行を後に書く（SQLite は一意制約を文ごとに確かめる）。部分一意 index はすべて `save-records.ts` の一覧（UPDATE で枠に入りうるものと、作ったときに列が決まるもの）に載せ、載っていないものがあればテストで失敗させる。
+  - 同じ記録が変更と削除の両方にあるときは削除が勝ち、同じ変更で作って消した記録は何も書かない（`apps/web` の `applyChanges` と同じ）。
   - D1 の 1 文あたりのバインド変数の上限（100）に収まるよう、INSERT は列の数に合わせて行を分ける。
   - 利用者の記録でないもの（ほかの利用者の `userId` を持つ記録、読み込んでいない記録の削除）は、呼び出し側の誤りとして例外にする。読み込んでいない ID の記録は INSERT になり、ほかの利用者の行と主キーがぶつかって失敗するので、上書きはできない。
   - 最初の保存には利用者の設定（`User`）を含める。
@@ -245,6 +247,7 @@ PC とスマホから同じ利用者の記録を書く。後から来た書き�
 - 版は利用者ごとの行（`record_revision`）に置き、`CHECK (revision >= 1)` を付ける。行がなければ版 0。
 - 版の確かめ方（#263）：`batch()` の最初の文を `INSERT INTO record_revision (user_id, revision) VALUES (?, 読み込んだ版 + 1) ON CONFLICT (user_id) DO UPDATE SET revision = CASE WHEN revision = 読み込んだ版 THEN 読み込んだ版 + 1 ELSE 0 END` にする。ほかの書き込みが先に版を上げていれば 0 を書こうとして CHECK に反し、`batch()` 全体が取り消される。最初の保存（版 0）が同時に 2 つ来たときは、後の方が先の行とぶつかり、同じく 0 になって失敗する。SQLite は INSERT の値を衝突より先に CHECK で確かめるので、INSERT の値は CHECK を満たす値（読み込んだ版 + 1）にする。読み込んだ版が 1 以上なのに行がない場合（行は利用者を消すときにしか消えない）はそのまま入る。
 - `batch()` が失敗したら版を読み直し、読み込んだ版と違えば「版の衝突」を返す。同じなら衝突ではないので、失敗をそのまま投げる。エラーの文言は D1 と libSQL で違うので、文言では見分けない。
+- 既知の限界：`batch()` が確定したあとに D1 の応答が失われると、読み直した版が進んでいるので「版の衝突」と返る（実際には保存されている）。クライアントは記録を読み直すので、記録は正しく表示される。また、1 回の `batch()` の文の数に上限は設けていない（Workers Paid の 1 起動あたり 1000 クエリに `batch()` の中の文がどう数えられるかは文書で確かめられていない）。1 つの操作で書く行は多くても数十の見込みで、超えそうになったら見直す。
 - ローカルの D1（`wrangler dev`、wrangler 4.141.0）で確かめた（2026-10-03）：同じ版から始めた 2 つの書き込みは、後の方が衝突になり、その中の Task と Activity は 1 行も書かれなかった。同じ版から同時に送った 2 つの書き込みも、片方だけが通った。
 - クライアントは 409 を受けたら記録を読み直し、操作が通らなかったことを知らせる。自動ではやり直さない（読み直した記録では、その操作の意味が変わっていることがあるため）。
 
