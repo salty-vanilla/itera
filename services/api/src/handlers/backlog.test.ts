@@ -1,109 +1,31 @@
 // The Backlog, Tasks and Areas through the app (#267): each operation
-// succeeds with a response the contract's schema accepts and a changed
-// record, and is refused with the domain's error for an input the domain
-// refuses, writing nothing. The reads answer what the application's
-// functions give on the same records and the same clock. On an in-memory
-// database with the migrations applied, from the fixture's states.
+// succeeds and is refused as the domain says (operation-cases.ts), the
+// invariants hold through the API, and the reads answer what the
+// application's functions give on the same records and the same clock.
 import * as contract from '@itera/api-contract';
 import {
   areaList,
   backlogData,
-  createIdSource,
-  type Clock,
-  type OperationName,
+  type BacklogFilter,
   type Records,
 } from '@itera/application';
-import { fixtureIds, fixtureSnapshot } from '@itera/application/fixtures';
-import type { FixtureStateId } from '@itera/application/fixtures';
+import { fixtureIds } from '@itera/application/fixtures';
 import * as v from 'valibot';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createApp } from '../app';
-import type { Authenticator } from '../auth/authenticator';
-import { loadRecords } from '../db/load-records';
-import { createMemoryDatabase } from '../db/memory-database';
-import { saveRecords } from '../db/save-records';
-import { activity, user as authUser } from '../db/schema';
-import { testDependencies, testEnv, testNow, testOrigin } from '../test-env';
+import {
+  closeFixtureApps,
+  describeOperations,
+  fixtureClock as clock,
+  missing,
+  setupFixtureApp as setup,
+  type Failure,
+  type Step,
+  type Success,
+} from './operation-cases';
 
 const ids = fixtureIds();
-const newIds = createIdSource((bytes) => crypto.getRandomValues(bytes));
 
-/** The clock of the tests: 2026-10-03 in the fixture's time zone. */
-const clock: Clock = { now: testNow, today: '2026-10-03' as Clock['today'] };
-
-let close: (() => void) | undefined;
-afterEach(() => close?.());
-
-/** The app on a database holding the fixture's state, signed in as its user. */
-async function setup(state: FixtureStateId) {
-  const { activities, ...records } = fixtureSnapshot(state).records;
-  const memory = await createMemoryDatabase();
-  close = memory.close;
-  const { db } = memory;
-  const userId = records.user.id;
-  await db
-    .insert(authUser)
-    .values({ id: userId, name: 'わたし', email: 'me@example.com' });
-  await saveRecords(db, {
-    userId,
-    loaded: { revision: 0, records: null },
-    changes: records,
-    activities,
-  });
-  const authenticator: Authenticator = {
-    authenticate: async () => ({ userId }),
-    handle: async () => new Response(null, { status: 404 }),
-  };
-  const app = createApp(
-    testDependencies({
-      database: () => db,
-      authenticator: () => authenticator,
-    }),
-  );
-  const post = (name: OperationName, body: unknown) =>
-    app.request(
-      `/api/operations/${name}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Origin: testOrigin },
-        body: JSON.stringify(body),
-      },
-      testEnv,
-    );
-  const get = (path: string) => app.request(`/api${path}`, {}, testEnv);
-  const records$ = async () => {
-    const loaded = await loadRecords(db, userId);
-    return { revision: loaded.revision, records: loaded.records! };
-  };
-  return { db, post, get, records: records$ };
-}
-
-type Step = readonly [OperationName, (records: Records) => unknown];
-
-/** An operation of the table: its input, from the records it runs on. */
-type Case = {
-  readonly name: OperationName;
-  /** The fixture state it runs on. */
-  readonly state?: FixtureStateId;
-  /** Operations that bring the records to where this one starts. */
-  readonly prepare?: readonly Step[];
-  readonly body: (records: Records) => unknown;
-};
-
-type Success = Case & {
-  /** The contract's schema for the 200 response; absent for 204. */
-  readonly response?: v.GenericSchema;
-  readonly check: (
-    after: Records,
-    before: Records,
-    response: unknown,
-  ) => void | Promise<void>;
-};
-
-type Failure = Case & {
-  readonly status: number;
-  readonly code: string;
-};
+afterEach(closeFixtureApps);
 
 const task = (records: Records, taskId: string) =>
   records.tasks.find((t) => t.id === taskId)!;
@@ -118,8 +40,6 @@ const subtasksOf = (records: Records, taskId: string) =>
 
 const { interview, paper, bookshelf, dentist, reading, tax } = ids.task;
 const { work, life, study } = ids.area;
-/** An ID of the right kind that no record has. */
-const missing = (kind: string) => newIds.newId(kind, testNow);
 
 const adopt: Step = [
   'adoptSuggestion',
@@ -154,7 +74,6 @@ const successes: readonly Success[] = [
   {
     name: 'createTask',
     body: () => ({ title: '請求書を送る', areaId: work }),
-    response: contract.vCreateTaskResponse,
     check: (after, before, response) => {
       const { taskId } = response as { taskId: string };
       expect(before.tasks.some((t) => t.id === taskId)).toBe(false);
@@ -238,7 +157,6 @@ const successes: readonly Success[] = [
   {
     name: 'addSubtask',
     body: () => ({ taskId: bookshelf, title: '上の段', hours: 0.5 }),
-    response: contract.vAddSubtaskResponse,
     check: (after, _, response) => {
       const { subtaskId } = response as { subtaskId: string };
       expect(subtasksOf(after, bookshelf)).toEqual([
@@ -296,7 +214,6 @@ const successes: readonly Success[] = [
   {
     name: 'addTaskToToday',
     body: () => ({ taskId: interview }),
-    response: contract.vAddTaskToTodayResponse,
     check: (after, _, response) => {
       const { sprintTaskId, selectionId } = response as {
         sprintTaskId: string;
@@ -315,7 +232,6 @@ const successes: readonly Success[] = [
   {
     name: 'addTaskToWeek',
     body: () => ({ taskId: dentist }),
-    response: contract.vAddTaskToWeekResponse,
     check: (after, _, response) => {
       const { sprintTaskId } = response as { sprintTaskId: string };
       expect(
@@ -342,7 +258,6 @@ const successes: readonly Success[] = [
       taskId: bookshelf,
       pattern: { freq: 'weekly', daysOfWeek: [3] },
     }),
-    response: contract.vSetRecurrenceResponse,
     check: (after, before, response) => {
       // From the next Sprint not confirmed yet (F1, F15).
       expect(response).toEqual({ effectiveFrom: '2026-10-05' });
@@ -361,7 +276,6 @@ const successes: readonly Success[] = [
   {
     name: 'endRecurrence',
     body: () => ({ taskId: reading }),
-    response: contract.vEndRecurrenceResponse,
     check: (after, _, response) => {
       expect(response).toEqual({ removed: false });
       expect(task(after, reading).recurrenceRuleId).toBeUndefined();
@@ -557,19 +471,7 @@ const failures: readonly Failure[] = [
   },
 ];
 
-/** Runs the steps through the API and returns the records they leave. */
-async function prepared(
-  app: Awaited<ReturnType<typeof setup>>,
-  steps: readonly Step[] = [],
-) {
-  for (const [name, body] of steps) {
-    const response = await app.post(name, body((await app.records()).records));
-    expect(response.status, `${name} (prepare)`).toBeLessThan(300);
-  }
-  return app.records();
-}
-
-describe('the Backlog, Task and Area operations', () => {
+describe('the Backlog, Task and Area routes', () => {
   it('are each tested for a success and a refusal', () => {
     const answered = [
       'renameArea',
@@ -601,62 +503,19 @@ describe('the Backlog, Task and Area operations', () => {
     );
   });
 
-  describe.each(successes)('$name', (c) => {
-    it('changes the records and answers what the contract says', async () => {
-      const app = await setup(c.state ?? 'backlog-capture');
-      const before = await prepared(app, c.prepare);
-      const response = await app.post(c.name, c.body(before.records));
-
-      const schema = (contract as Record<string, unknown>)[
-        `v${c.name[0]!.toUpperCase()}${c.name.slice(1)}Response`
-      ] as v.GenericSchema;
-      if (c.response === undefined) {
-        expect(response.status).toBe(204);
-        expect(await response.text()).toBe('');
-        expect(v.is(schema, undefined)).toBe(true);
-      } else {
-        expect(response.status).toBe(200);
-        expect(c.response).toBe(schema);
-      }
-      const body: unknown =
-        c.response === undefined
-          ? undefined
-          : v.parse(c.response, await response.json());
-
-      const after = await app.records();
-      expect(after.revision).toBe(before.revision + 1);
-      expect(after.records).not.toEqual(before.records);
-      await c.check(after.records, before.records, body);
-      // The person's Activity is written in the same batch.
-      const entries = await app.db.select().from(activity);
-      expect(entries.at(-1)).toMatchObject({
-        revision: after.revision,
-        actor: 'user',
-        at: testNow,
-      });
-    });
-  });
-
-  describe.each(failures)('$name refused: $code', (c) => {
-    it('answers the domain’s error and writes nothing', async () => {
-      const app = await setup(c.state ?? 'backlog-capture');
-      const before = await prepared(app, c.prepare);
-      const response = await app.post(c.name, c.body(before.records));
-
-      expect(response.status).toBe(c.status);
-      expect(await response.json()).toMatchObject({ code: c.code });
-      expect(await app.records()).toEqual(before);
-    });
-  });
-
   it('answers 400 to an ID of another kind, writing nothing', async () => {
     const app = await setup('backlog-capture');
-    const before = await app.records();
+    const before = await app.saved();
     const response = await app.post('archiveTask', { taskId: life });
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ code: 'validationFailed' });
-    expect(await app.records()).toEqual(before);
+    expect(await app.saved()).toEqual(before);
   });
+});
+
+describeOperations('the Backlog, Task and Area operations answer', {
+  successes,
+  failures,
 });
 
 describe('the invariants, through the API', () => {
@@ -676,16 +535,16 @@ describe('the invariants, through the API', () => {
       update: { areaId: made.areaId },
     });
     // Not in the Sprint yet: nothing to note.
-    expect(sprintOf((await app.records()).records).areaSnapshot).toHaveLength(
-      4,
-    );
+    expect(sprintOf((await app.saved()).records).areaSnapshot).toHaveLength(4);
 
     expect(
       (await app.post('addTaskToWeek', { taskId: bookshelf })).status,
     ).toBe(200);
-    expect(sprintOf((await app.records()).records).areaSnapshot.at(-1)).toEqual(
-      { areaId: made.areaId, name: '趣味', order: 5 },
-    );
+    expect(sprintOf((await app.saved()).records).areaSnapshot.at(-1)).toEqual({
+      areaId: made.areaId,
+      name: '趣味',
+      order: 5,
+    });
   });
 
   it('F9: moving a Task of the Sprint to a new Area notes the name too', async () => {
@@ -699,15 +558,17 @@ describe('the invariants, through the API', () => {
       taskId: paper,
       update: { areaId: made.areaId },
     });
-    expect(sprintOf((await app.records()).records).areaSnapshot.at(-1)).toEqual(
-      { areaId: made.areaId, name: '趣味', order: 5 },
-    );
+    expect(sprintOf((await app.saved()).records).areaSnapshot.at(-1)).toEqual({
+      areaId: made.areaId,
+      name: '趣味',
+      order: 5,
+    });
   });
 
   it('F1, F39: a rule changes from the next Sprint, and changing it back drops the version', async () => {
     const app = await setup('backlog-capture');
     const { cleaning } = ids.task;
-    const first = (await app.records()).records;
+    const first = (await app.saved()).records;
     const occurrences = first.occurrences;
 
     const changed = await app.post('setRecurrence', {
@@ -715,17 +576,17 @@ describe('the invariants, through the API', () => {
       pattern: weekly(0),
     });
     expect(await changed.json()).toEqual({ effectiveFrom: '2026-10-05' });
-    let rule = ruleOf((await app.records()).records, cleaning)!;
+    let rule = ruleOf((await app.saved()).records, cleaning)!;
     expect(rule.versions.map((v) => v.pattern)).toEqual([weekly(6), weekly(0)]);
     // The Sprint under way keeps its occurrences (F1).
-    expect((await app.records()).records.occurrences).toEqual(occurrences);
+    expect((await app.saved()).records.occurrences).toEqual(occurrences);
 
     const back = await app.post('setRecurrence', {
       taskId: cleaning,
       pattern: weekly(6),
     });
     expect(await back.json()).toEqual({ effectiveFrom: '2026-10-05' });
-    rule = ruleOf((await app.records()).records, cleaning)!;
+    rule = ruleOf((await app.saved()).records, cleaning)!;
     expect(rule.versions.map((v) => v.pattern)).toEqual([weekly(6)]);
   });
 
@@ -735,18 +596,18 @@ describe('the invariants, through the API', () => {
       taskId: bookshelf,
       pattern: weekly(3),
     });
-    expect(ruleOf((await app.records()).records, bookshelf)).toBeDefined();
+    expect(ruleOf((await app.saved()).records, bookshelf)).toBeDefined();
 
     const removed = await app.post('endRecurrence', { taskId: bookshelf });
     expect(await removed.json()).toEqual({ removed: true });
-    const after = (await app.records()).records;
+    const after = (await app.saved()).records;
     expect(ruleOf(after, bookshelf)).toBeUndefined();
     expect(task(after, bookshelf).recurrenceRuleId).toBeUndefined();
 
     // The rule of a Task that has occurrences stays, with its last day.
     const ended = await app.post('endRecurrence', { taskId: reading });
     expect(await ended.json()).toEqual({ removed: false });
-    const { records } = await app.records();
+    const { records } = await app.saved();
     expect(ruleOf(records, reading)?.versions.at(-1)).toMatchObject({
       effectiveTo: '2026-10-04',
     });
@@ -755,13 +616,68 @@ describe('the invariants, through the API', () => {
       422,
     );
   });
+  describe('while the next Sprint is in Planning', () => {
+    const occurrencesOf = (records: Records, taskId: string) =>
+      records.occurrences
+        .filter((o) => o.taskId === taskId)
+        .map((o) => `${o.scheduledDate} ${o.state}`);
+    const draftOf = (records: Records) =>
+      records.sprints.find((s) => s.state === 'planning')!;
+
+    it('F15: a rule made now makes the draft’s occurrences and puts them in the Sprint', async () => {
+      const app = await setup('planning-pick');
+      const before = (await app.saved()).records;
+      const response = await app.post('setRecurrence', {
+        taskId: bookshelf,
+        pattern: weekly(3),
+      });
+      expect(await response.json()).toEqual({ effectiveFrom: '2026-09-28' });
+      const after = (await app.saved()).records;
+      expect(occurrencesOf(after, bookshelf)).toEqual(['2026-09-30 pending']);
+      expect(draftOf(after).tasks).toHaveLength(
+        draftOf(before).tasks.length + 1,
+      );
+      expect(
+        draftOf(after).tasks.find((t) => t.taskId === bookshelf)?.occurrenceIds,
+      ).toHaveLength(1);
+    });
+
+    it('F7: changing a rule remakes the draft’s occurrences and keeps the done ones', async () => {
+      const app = await setup('planning-pick');
+      const { cleaning } = ids.task;
+      const before = (await app.saved()).records;
+      expect(occurrencesOf(before, cleaning)).toEqual([
+        '2026-09-26 done',
+        '2026-10-03 pending',
+      ]);
+      await app.post('setRecurrence', { taskId: cleaning, pattern: weekly(0) });
+      expect(occurrencesOf((await app.saved()).records, cleaning)).toEqual([
+        '2026-09-26 done',
+        '2026-10-04 pending',
+      ]);
+    });
+
+    it('F41: ending a rule drops the draft’s occurrences and its SprintTask', async () => {
+      const app = await setup('planning-pick');
+      const before = (await app.saved()).records;
+      expect(occurrencesOf(before, reading)).toHaveLength(3);
+      const response = await app.post('endRecurrence', { taskId: reading });
+      expect(await response.json()).toEqual({ removed: true });
+      const after = (await app.saved()).records;
+      expect(occurrencesOf(after, reading)).toEqual([]);
+      expect(ruleOf(after, reading)).toBeUndefined();
+      expect(draftOf(after).tasks).toHaveLength(
+        draftOf(before).tasks.length - 1,
+      );
+    });
+  });
 });
 
 describe('the Backlog reads', () => {
   // The same records and the same clock as the application's functions.
   async function read(path: string) {
     const app = await setup('backlog-capture');
-    const { records } = await app.records();
+    const { records } = await app.saved();
     const response = await app.get(path);
     return { response, records, json: await response.json() };
   }
@@ -772,7 +688,7 @@ describe('the Backlog reads', () => {
   it('listAreas answers areaList, archived ones too', async () => {
     const app = await setup('backlog-capture');
     await app.post('archiveArea', { areaId: life });
-    const { records } = await app.records();
+    const { records } = await app.saved();
     const response = await app.get('/areas');
     expect(response.status).toBe(200);
     const body = v.parse(contract.vListAreasResponse, await response.json());
@@ -780,7 +696,7 @@ describe('the Backlog reads', () => {
     expect(body.view.find((a) => a.id === life)?.archived).toBe(true);
   });
 
-  it.each([
+  const filters: readonly (readonly [string, string, BacklogFilter])[] = [
     ['all', '/backlog', {}],
     ['a slice', '/backlog?view=overdue', { view: 'overdue' }],
     ['an Area', `/backlog?area=${work}`, { area: work }],
@@ -789,15 +705,19 @@ describe('the Backlog reads', () => {
       `/backlog?view=noArea&area=${work}`,
       { view: 'noArea', area: work },
     ],
-  ])('getBacklog (%s) answers backlogData', async (_, path, filter) => {
-    const { response, records, json } = await read(path);
-    expect(response.status).toBe(200);
-    const body = v.parse(contract.vGetBacklogResponse, json);
-    expect(body).toEqual({
-      clock,
-      view: asJson(backlogData(records, clock, filter as never)),
-    });
-  });
+  ];
+  it.each(filters)(
+    'getBacklog (%s) answers backlogData',
+    async (_, path, filter) => {
+      const { response, records, json } = await read(path);
+      expect(response.status).toBe(200);
+      const body = v.parse(contract.vGetBacklogResponse, json);
+      expect(body).toEqual({
+        clock,
+        view: asJson(backlogData(records, clock, filter)),
+      });
+    },
+  );
 
   it('getBacklog shows what an operation just changed', async () => {
     const app = await setup('backlog-capture');

@@ -18,7 +18,6 @@ import {
   type SprintChoice,
   type TodayData,
 } from '@itera/application';
-import type { BacklogSlice } from '@itera/domain';
 import { Hono } from 'hono';
 import type * as v from 'valibot';
 import type { AppEnv } from '../env';
@@ -82,11 +81,12 @@ export function readRoute<View, Query = undefined, Params = undefined>(route: {
 }
 
 /**
- * The Backlog's filter from the query. The schema has checked the Area's
- * ID is an Area ID's form; `parseId` gives it the domain's type.
+ * The Backlog's filter from the query. The schema has already refused an ID
+ * that is not an Area's, so `parseId` here only gives it the domain's type
+ * (no cast).
  */
 function backlogFilter(query: {
-  readonly view?: BacklogSlice | undefined;
+  readonly view?: BacklogFilter['view'];
   readonly area?: string | undefined;
 }): BacklogFilter {
   if (query.area === undefined) return { view: query.view };
