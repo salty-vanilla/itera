@@ -7,9 +7,7 @@ import { createBetterAuth } from '@/auth/better-auth';
 import { sendToSignIn } from '@/auth/sign-in';
 
 /**
- * The API as the data source, with Better Auth for signing in. There is no
- * RecordStore: a screen not yet moved to the contract (#274〜#276) shows
- * that it is not (router.tsx).
+ * The API as the data source, with Better Auth for signing in.
  */
 function ServerData({ children }: { children: ReactNode }) {
   const router = useRouter();
