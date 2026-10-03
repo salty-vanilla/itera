@@ -10,7 +10,8 @@ import { Hono } from 'hono';
 import type { AppEnv } from '../env';
 import { ApiError } from '../errors';
 import { jsonBody, limitBody } from './body';
-import type { Flow, Guards } from './flow';
+import type { Flow, Guards, Precondition } from './flow';
+import { preconditions } from './preconditions';
 import { validate } from './validate';
 
 /** A surface's path in Hono's form: `/areas/{areaId}` becomes `/areas/:areaId`. */
@@ -43,7 +44,12 @@ export function operationRoutes(flow: Flow, guards: Guards) {
         const operation = operations[name] as (
           input: unknown,
         ) => Change<unknown>;
-        const value = await flow.operate(c, operation(input));
+        const precondition = (
+          preconditions as Partial<
+            Record<string, (input: unknown) => Precondition>
+          >
+        )[name]?.(input);
+        const value = await flow.operate(c, operation(input), precondition);
         // Made with nothing to return (the Retro, 201) has no body either.
         return value === undefined
           ? c.body(null, surface.status)

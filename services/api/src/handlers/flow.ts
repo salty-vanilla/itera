@@ -45,6 +45,13 @@ type Current = {
   readonly caughtUpTo: LocalDate | null;
 };
 
+/**
+ * A check against the database that an operation needs before it runs, and
+ * that is not in the records (`preconditions.ts`). Throws the `ApiError`
+ * that refuses the operation.
+ */
+export type Precondition = (db: Database, userId: UserId) => Promise<void>;
+
 /** A read's response: the clock it was read with and its result (ADR 0006). */
 export type ReadResponse<View> = {
   readonly clock: Clock;
@@ -59,8 +66,16 @@ export type ReadResponse<View> = {
  * and writes what changed.
  */
 export type Flow = {
-  /** Runs an operation of the person, writes its changes and returns its value. */
-  operate<T>(c: Context<AppEnv>, change: Change<T>): Promise<T>;
+  /**
+   * Runs an operation of the person, writes its changes and returns its
+   * value. A `precondition` is checked once the records are loaded (so
+   * `userNotSetUp` comes first) and before the operation runs.
+   */
+  operate<T>(
+    c: Context<AppEnv>,
+    change: Change<T>,
+    precondition?: Precondition,
+  ): Promise<T>;
   /**
    * Makes the person's settings, the one write that needs no records: it
    * is what makes them possible. Answers whether this made them (the first
@@ -198,9 +213,14 @@ export function createFlow({
   }
 
   return {
-    async operate<T>(c: Context<AppEnv>, change: Change<T>): Promise<T> {
+    async operate<T>(
+      c: Context<AppEnv>,
+      change: Change<T>,
+      precondition?: Precondition,
+    ): Promise<T> {
       const { db, userId } = c.var;
       const { current, clock } = await load(c);
+      await precondition?.(db, userId);
       const system = caughtUp(current, clock);
       const result = change(system.records, contextOf(clock, 'user'));
       if (!result.ok) throw ApiError.fromDomain(result.error);
