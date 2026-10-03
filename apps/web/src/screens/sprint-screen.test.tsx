@@ -30,8 +30,24 @@ async function renderAt(url: string) {
     </TooltipProvider>,
   );
   await screen.findByRole('heading', { level: 1 });
+  // The Sprint is there once its records are read (the mock answers).
+  await waitFor(() =>
+    expect(
+      document.querySelector('[data-slot="sprint-header"]'),
+    ).not.toBeNull(),
+  );
   return router;
 }
+
+/** The Backlog pane of Planning, once the plan has been read. */
+const findPlanningBacklog = () =>
+  waitFor(() => {
+    const pane = document.querySelector<HTMLElement>(
+      '[data-slot="planning-backlog"]',
+    );
+    if (pane === null) throw new Error('no Backlog pane yet');
+    return pane;
+  });
 
 /** The Sprint Header's title, 「Sprint 2」. */
 const title = () =>
@@ -186,9 +202,7 @@ describe('Sprint — the next week (#90)', () => {
     await userEvent.click(
       screen.getByRole('button', { name: 'Sprint 3 の計画を始める' }),
     );
-    const backlog = await waitFor(() =>
-      document.querySelector<HTMLElement>('[data-slot="planning-backlog"]')!,
-    );
+    const backlog = await findPlanningBacklog();
     await userEvent.click(
       within(backlog).getByRole('button', { name: /^本棚を整理する$/ }),
     );
@@ -205,13 +219,11 @@ describe('Sprint — the next week (#90)', () => {
     await userEvent.click(
       screen.getByRole('button', { name: 'Sprint 3 の計画を始める' }),
     );
+    const backlog = await findPlanningBacklog();
     const header = document.querySelector<HTMLElement>(
       '[data-slot="sprint-header"]',
     )!;
     expect(await within(header).findByText('来週')).toBeTruthy();
-    const backlog = document.querySelector<HTMLElement>(
-      '[data-slot="planning-backlog"]',
-    )!;
     await userEvent.click(
       within(backlog).getByRole('checkbox', {
         name: '来週に入れる：歯医者の予約',
@@ -355,6 +367,8 @@ describe('「来週」 mark of a Task chosen for next week (#150)', () => {
     const router = await startPlanning();
     for (const t of ['本棚を整理する', '関連論文を 3本読む']) {
       await userEvent.click(chooseCheckbox(t));
+      // Chosen once the operation is done (the Toast says so).
+      await screen.findByText(`「${t}」を来週に入れました`);
     }
     await router.navigate({ to: '/backlog' });
     await screen.findByRole('heading', { level: 1, name: 'Backlog' });
@@ -381,6 +395,7 @@ describe('「来週」 mark of a Task chosen for next week (#150)', () => {
     // Taken off in the Planning: the mark goes.
     await router.navigate({ to: '/sprint', search: { sprint: 3 } });
     await userEvent.click(await findChoice('本棚を整理する'));
+    await screen.findByText('「本棚を整理する」を来週から外しました');
     await router.navigate({ to: '/backlog' });
     await screen.findByRole('heading', { level: 1, name: 'Backlog' });
     expect(metaOf('本棚を整理する')).not.toContain('来週');
@@ -390,6 +405,7 @@ describe('「来週」 mark of a Task chosen for next week (#150)', () => {
   it('says 「来週にも」 on the running Sprint’s row of a Task also in next week’s plan, and not after it is taken off', async () => {
     const router = await startPlanning();
     await userEvent.click(chooseCheckbox('関連論文を 3本読む'));
+    await screen.findByText('「関連論文を 3本読む」を来週に入れました');
     await router.navigate({ to: '/sprint' });
     await screen.findByRole('heading', { level: 1, name: /の計画$/ });
     expect(metaOf('関連論文を 3本読む')).toContain('来週にも');
@@ -399,8 +415,12 @@ describe('「来週」 mark of a Task chosen for next week (#150)', () => {
 
     await router.navigate({ to: '/sprint', search: { sprint: 3 } });
     await userEvent.click(await findChoice('関連論文を 3本読む'));
+    await screen.findByText('「関連論文を 3本読む」を来週から外しました');
     await router.navigate({ to: '/sprint' });
     await screen.findByRole('heading', { level: 1, name: /の計画$/ });
-    expect(metaOf('関連論文を 3本読む')).not.toContain('来週にも');
+    // The Sprint's records are read again as it is shown (ADR 0005).
+    await waitFor(() =>
+      expect(metaOf('関連論文を 3本読む')).not.toContain('来週にも'),
+    );
   });
 });

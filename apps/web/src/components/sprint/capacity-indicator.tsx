@@ -1,4 +1,4 @@
-import type { Capacity, PlanningTotal } from '@itera/domain';
+import type { Capacity, PlanningTotal } from '@itera/api-contract';
 import { Fragment, useId, useState } from 'react';
 import { AreaIndicator, type AreaColor } from '@/components/ui/area-indicator';
 import { DurationField } from '@/components/ui/duration-field';
@@ -46,7 +46,8 @@ type CapacityIndicatorProps = {
   capacity?: Capacity | undefined;
   areas: readonly AreaSegment[];
   /** Saves the available hours; `null` clears them. Returns success. */
-  onAvailableHoursChange?: ((hours: number | null) => boolean) | undefined;
+  onAvailableHoursChange?:
+    ((hours: number | null) => boolean | Promise<boolean>) | undefined;
   /** Read-only after confirm. */
   readOnly?: boolean | undefined;
   /** Its own 「時間の見通し」 heading. Off under a title that says it (#166). */
@@ -457,7 +458,8 @@ function AvailableHoursField({
   description,
 }: {
   value: number | undefined;
-  onChange: (hours: number | null) => boolean;
+  /** Saves the hours; returns success, when it is done. */
+  onChange: (hours: number | null) => boolean | Promise<boolean>;
   label?: string;
   description?: string;
 }) {
@@ -478,7 +480,11 @@ function AvailableHoursField({
     }
     setError(undefined);
     if (sameMinutes(minutes, value)) return;
-    if (!onChange(minutes === undefined ? null : minutes / 60)) setText(saved);
+    void Promise.resolve(
+      onChange(minutes === undefined ? null : minutes / 60),
+    ).then((done) => {
+      if (!done) setText(saved);
+    });
   }
   return (
     <DurationField

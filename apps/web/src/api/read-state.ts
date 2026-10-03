@@ -20,10 +20,12 @@ export type NotReady = Exclude<Read<object>, { readonly status: 'ready' }>;
  * The read of a query, with `view` turning the answer into the screen's
  * data. Data that is there stays ready, however the next read ends: a
  * failure of a read made again shows what was last read, not a failure.
+ * A `view` that gives `undefined` has nothing to show for that answer (a
+ * Sprint read as it stops being planned): the read is `pending`.
  */
 export function useRead<TData, TError, T extends object>(
   query: UseQueryResult<TData, TError>,
-  view: (data: TData) => T,
+  view: (data: TData) => T | undefined,
 ): Read<T> {
   const { data, refetch } = query;
   // `view` is a module-level function, not a closure over the render.
@@ -36,4 +38,42 @@ export function useRead<TData, TError, T extends object>(
     if (query.isError) return { status: 'failed', retry: () => void refetch() };
     return { status: 'pending' };
   }, [ready, query.isError, refetch]);
+}
+
+/**
+ * `useRead` for a screen that needs two reads at once (the Sprint screen:
+ * the person's Sprints and one Sprint's plan). It is `ready` when both have
+ * answered and `view` makes the data from them (`undefined`: there is none
+ * to show), `failed` when one failed and there is nothing to show, and
+ * `retry` reads again the ones that failed.
+ */
+export function useRead2<A, B, EA, EB, T extends object>(
+  a: UseQueryResult<A, EA>,
+  b: UseQueryResult<B, EB>,
+  view: (a: A, b: B) => T | undefined,
+): Read<T> {
+  const { data: dataA, refetch: refetchA } = a;
+  const { data: dataB, refetch: refetchB } = b;
+  const ready = useMemo(
+    () =>
+      dataA === undefined || dataB === undefined
+        ? undefined
+        : view(dataA, dataB),
+    [dataA, dataB, view],
+  );
+  const failedA = a.isError;
+  const failedB = b.isError;
+  return useMemo<Read<T>>(() => {
+    if (ready !== undefined) return { ...ready, status: 'ready' };
+    if (failedA || failedB) {
+      return {
+        status: 'failed',
+        retry: () => {
+          if (failedA) void refetchA();
+          if (failedB) void refetchB();
+        },
+      };
+    }
+    return { status: 'pending' };
+  }, [ready, failedA, failedB, refetchA, refetchB]);
 }

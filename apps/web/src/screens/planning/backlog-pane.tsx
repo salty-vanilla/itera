@@ -1,4 +1,4 @@
-import { id, type AreaId, type LocalDate, type TaskId } from '@itera/domain';
+import type { AreaId, LocalDate, TaskId } from '@itera/api-contract';
 import { Ellipsis } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
@@ -22,8 +22,11 @@ import { formatDate, formatMonthDay } from '@/lib/date-format';
 import { rowKeyHandlers } from '@/lib/row-keys';
 import { cn } from '@/lib/utils';
 import { weekCall, weekText } from '@/lib/week-text';
-import type { CandidateRow, PlanningData } from '@/store/views';
-import { usePlanningActions } from '@/store/use-planning';
+import type {
+  CandidateRow,
+  PickActions,
+  PlanningData,
+} from '@/store/use-planning';
 import { useNewAreaDialog } from '../backlog/area-dialog';
 import { CarryOverText } from '../backlog/backlog-row';
 
@@ -41,9 +44,14 @@ import { CarryOverText } from '../backlog/backlog-row';
 
 type BacklogPaneProps = {
   data: PlanningData;
+  /** The operations on what the week chooses (one hook, in the screen). */
+  actions: PickActions;
   slim?: boolean;
-  /** Adds a Task and chooses it for the week. Returns false to keep the text. */
-  onAdd: (title: string, areaId: AreaId | undefined) => boolean;
+  /**
+   * Adds a Task and chooses it for the week. Returns false to keep the text;
+   * the text stays until the add is done.
+   */
+  onAdd: (title: string, areaId: AreaId | undefined) => Promise<boolean>;
   onOpenTask: (taskId: TaskId) => void;
   /** E on a row: the Task's detail, at its Estimate. */
   onEstimateTask: (taskId: TaskId) => void;
@@ -52,13 +60,13 @@ type BacklogPaneProps = {
 
 function BacklogPane({
   data,
+  actions,
   slim = false,
   onAdd,
   onOpenTask,
   onEstimateTask,
   className,
 }: BacklogPaneProps) {
-  const actions = usePlanningActions();
   const toast = useToast();
   const { candidates } = data;
   const week = weekCall(data.week, data.number);
@@ -68,9 +76,9 @@ function BacklogPane({
   // One archived since it was chosen is no longer a choice (#113).
   const quickChoice = chosenArea(quickArea, data.addAreas);
 
-  const choose = (rows: readonly CandidateRow[]) => {
+  const choose = async (rows: readonly CandidateRow[]) => {
     const taskIds = rows.map((r) => r.task.id);
-    const chosen = actions.chooseTasks(taskIds);
+    const chosen = await actions.chooseTasks(taskIds);
     if (chosen === undefined) return;
     toast.show({
       kind: 'sprint-pick',
@@ -80,16 +88,16 @@ function BacklogPane({
           : `${rows.length}件を${weekText(week, 'に入れました')}`,
       action: {
         label: '元に戻す',
-        onClick: () => actions.unchooseTasks(chosen),
+        onClick: () => void actions.unchooseTasks(chosen),
       },
     });
   };
-  const unchoose = (rows: readonly CandidateRow[]) => {
+  const unchoose = async (rows: readonly CandidateRow[]) => {
     const ids = rows.flatMap((r) =>
       r.chosen === undefined ? [] : [r.chosen.id],
     );
     const taskIds = rows.map((r) => r.task.id);
-    if (!actions.unchooseTasks(ids)) return;
+    if (!(await actions.unchooseTasks(ids))) return;
     toast.show({
       kind: 'sprint-pick',
       title:
@@ -98,7 +106,7 @@ function BacklogPane({
           : `${rows.length}件を${weekText(week, 'から外しました')}`,
       action: {
         label: '元に戻す',
-        onClick: () => actions.chooseTasks(taskIds),
+        onClick: () => void actions.chooseTasks(taskIds),
       },
     });
   };
@@ -112,8 +120,9 @@ function BacklogPane({
       <TaskQuickAdd
         label={weekText(week, 'のタスクを追加')}
         stackArea
+        loading={actions.loading.addAndChoose}
         onAdd={(title) =>
-          onAdd(title, quickChoice === '' ? undefined : id<'Area'>(quickChoice))
+          onAdd(title, quickChoice === '' ? undefined : quickChoice)
         }
         area={
           <AreaSelect
@@ -207,7 +216,7 @@ function BacklogPane({
                       label={formatDate(o.scheduledDate)}
                       checked={o.state === 'pending'}
                       onCheckedChange={(checked) =>
-                        actions.setOccurrenceIncluded(o.id, checked)
+                        void actions.setOccurrenceIncluded(o.id, checked)
                       }
                     />
                   ))}
@@ -279,8 +288,8 @@ function Group({
   until?: LocalDate;
   rows: readonly CandidateRow[];
   slim: boolean;
-  choose: (rows: readonly CandidateRow[]) => void;
-  unchoose: (rows: readonly CandidateRow[]) => void;
+  choose: (rows: readonly CandidateRow[]) => Promise<void>;
+  unchoose: (rows: readonly CandidateRow[]) => Promise<void>;
   onOpenTask: (taskId: TaskId) => void;
   onEstimateTask: (taskId: TaskId) => void;
   today: PlanningData['today'];
@@ -300,8 +309,8 @@ function Group({
             indeterminate={chosen.length > 0 && !all}
             onCheckedChange={(checked) =>
               checked
-                ? choose(rows.filter((r) => r.chosen === undefined))
-                : unchoose(chosen)
+                ? void choose(rows.filter((r) => r.chosen === undefined))
+                : void unchoose(chosen)
             }
           />
         </span>
@@ -327,7 +336,9 @@ function Group({
             slim={slim}
             today={today}
             week={week}
-            onToggle={(checked) => (checked ? choose([row]) : unchoose([row]))}
+            onToggle={(checked) =>
+              void (checked ? choose([row]) : unchoose([row]))
+            }
             onOpen={() => onOpenTask(row.task.id)}
             onEstimate={() => onEstimateTask(row.task.id)}
           />

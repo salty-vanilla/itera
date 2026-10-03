@@ -30,8 +30,11 @@ type GoalBlockProps = {
   bare?: boolean | undefined;
   /** The heading level; the screen's h1 is followed by h2 by default. */
   level?: 2 | 3 | undefined;
-  /** Saves the text; an empty text removes the Goal. Returns success. */
-  onSave?: ((text: string) => boolean) | undefined;
+  /**
+   * Saves the text; an empty text removes the Goal. Returns success, when it
+   * is done: the form stays open until then, and when it did not go through.
+   */
+  onSave?: ((text: string) => boolean | Promise<boolean>) | undefined;
   /**
    * After confirm a Goal can be reworded but not removed (F16): an empty
    * text is then refused in the form.
@@ -69,15 +72,21 @@ function GoalBlock({
   const line = bare && !editing && goal === undefined;
   const openRef = useRef<HTMLButtonElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
-  const backToOpen = useRef(false);
+  // The focus goes back to the way in when the form closes. After a save
+  // the Goal is read again and drawn a moment after the form closes (the
+  // cache tells the screen on the next task, ADR 0005), and the way in is
+  // another button then: the request stays until the Goal has changed.
+  const backToOpen = useRef<{ goal: string | undefined; saved: boolean }>(
+    undefined,
+  );
   useEffect(() => {
-    if (!editing && backToOpen.current) {
-      backToOpen.current = false;
-      openRef.current?.focus();
-    }
-  }, [editing]);
-  const close = () => {
-    backToOpen.current = true;
+    const back = backToOpen.current;
+    if (editing || back === undefined) return;
+    openRef.current?.focus();
+    if (!back.saved || goal !== back.goal) backToOpen.current = undefined;
+  }, [editing, goal]);
+  const close = (saved: boolean) => {
+    backToOpen.current = { goal, saved };
     setError(undefined);
     setEditing(false);
   };
@@ -124,11 +133,11 @@ function GoalBlock({
           ref={formRef}
           noValidate
           className="flex max-w-measure-read flex-col gap-2"
-          onSubmit={(event) => {
+          onSubmit={async (event) => {
             event.preventDefault();
             // Nothing written for an Area without a Goal: nothing to save.
             if (goal === undefined && text.trim() === '') {
-              close();
+              close(false);
               return;
             }
             if (!removable && text.trim() === '') {
@@ -143,7 +152,7 @@ function GoalBlock({
               );
               return;
             }
-            if (onSave?.(text.trim())) close();
+            if (await onSave?.(text.trim())) close(true);
           }}
         >
           <Field
@@ -167,7 +176,7 @@ function GoalBlock({
             <Button size="sm" type="submit">
               保存
             </Button>
-            <Button size="sm" variant="quiet" onClick={close}>
+            <Button size="sm" variant="quiet" onClick={() => close(false)}>
               キャンセル
             </Button>
           </div>

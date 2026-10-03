@@ -1,4 +1,4 @@
-import type { TaskId } from '@itera/domain';
+import type { TaskId } from '@itera/api-contract';
 import { Link } from '@tanstack/react-router';
 import { Info } from 'lucide-react';
 import { useId } from 'react';
@@ -15,7 +15,7 @@ import {
   criterionTargetText,
 } from '@/lib/criterion-text';
 import { formatRange } from '@/lib/time-format';
-import type { PlanningData } from '@/store/views';
+import type { PlanningData } from '@/store/use-planning';
 import { planSummary } from './plan-summary';
 
 // The head of 確かめる (Issue #93, owner decision S4): what the 確定 Dialog
@@ -33,7 +33,7 @@ import { planSummary } from './plan-summary';
 type CheckSummaryProps = {
   data: PlanningData;
   onApplyCriterion: (applied: boolean) => void;
-  onAvailableHours: (hours: number | null) => boolean;
+  onAvailableHours: (hours: number | null) => boolean | Promise<boolean>;
   /** A Task without a value: its detail, at its Estimate. */
   onEstimateTask: (taskId: TaskId) => void;
   /** A Task with subtasks left out: its detail, where they are. */

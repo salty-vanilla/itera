@@ -433,13 +433,18 @@ describe('Planning — 整える', () => {
       '英語に触れる状態にする',
     );
     await userEvent.click(within(study).getByRole('button', { name: '保存' }));
+    // The form closes once the Goal is saved.
+    expect(
+      await within(study).findByText('英語に触れる状態にする'),
+    ).toBeTruthy();
     expect(draft().goals.find((g) => g.areaId === ids.area.study)?.text).toBe(
       '英語に触れる状態にする',
     );
-    expect(within(study).getByText('英語に触れる状態にする')).toBeTruthy();
     // Saving puts the focus on 編集, where the Goal is.
-    expect(document.activeElement).toBe(
-      within(study).getByRole('button', { name: '目標を編集：学習' }),
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(study).getByRole('button', { name: '目標を編集：学習' }),
+      ),
     );
   });
 

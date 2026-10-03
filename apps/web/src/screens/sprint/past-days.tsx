@@ -14,7 +14,7 @@ import {
 import { useToast } from '@/components/ui/toast';
 import { formatDate } from '@/lib/date-format';
 import { SELECTION_WORDS } from '@/lib/selection-words';
-import type { PastDayRecord, RunningData } from '@/store/views';
+import type { PastDayRecord, RunningData } from '@/store/use-running-sprint';
 
 // 日ごとの記録 (#53, owner decisions): the days before today with their
 // completions and skips, each with 「取り消す」, an IconButton that keeps a
@@ -25,7 +25,8 @@ import type { PastDayRecord, RunningData } from '@/store/views';
 
 type PastDaysProps = {
   days: RunningData['pastDays'];
-  onUndo: (record: PastDayRecord) => boolean;
+  /** Undoes it; returns success, when it is done. */
+  onUndo: (record: PastDayRecord) => Promise<boolean>;
 };
 
 function PastDays({ days, onUndo }: PastDaysProps) {
@@ -37,10 +38,10 @@ function PastDays({ days, onUndo }: PastDaysProps) {
 
   const word = (r: PastDayRecord) =>
     r.selection.resolution === 'skipped' ? 'スキップ' : '完了';
-  const confirm = () => {
+  const confirm = async () => {
     if (asking === undefined) return;
     const record = asking;
-    if (!onUndo(record)) return;
+    if (!(await onUndo(record))) return;
     setAsking(undefined);
     toast.show({
       kind: 'day-record-undone',
@@ -128,7 +129,9 @@ function PastDays({ days, onUndo }: PastDaysProps) {
               </DialogHeader>
               <DialogFooter>
                 <DialogClose render={<Button />}>キャンセル</DialogClose>
-                <Button onClick={confirm}>{word(asking)}を取り消す</Button>
+                <Button onClick={() => void confirm()}>
+                  {word(asking)}を取り消す
+                </Button>
               </DialogFooter>
             </>
           )}

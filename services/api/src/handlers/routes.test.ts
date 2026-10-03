@@ -481,7 +481,14 @@ describe('GET /api/me', () => {
       // With the settings, the clock and the Sprints she has now (#295 R1):
       // none yet, and the next Planning starts on this week's Monday.
       clock: { today: '2026-10-03', now: testNow },
-      sprints: { next: { start: '2026-09-28', number: 1 } },
+      sprints: {
+        next: {
+          start: '2026-09-28',
+          end: '2026-10-04',
+          number: 1,
+          week: 'current',
+        },
+      },
     });
   });
 

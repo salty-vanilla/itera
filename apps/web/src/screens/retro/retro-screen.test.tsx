@@ -61,6 +61,14 @@ async function renderAt(url: string) {
     </TooltipProvider>,
   );
   await screen.findByRole('heading', { level: 1 });
+  // The Sprint screen shows its header once its records are read.
+  if (url.startsWith('/sprint')) {
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-slot="sprint-header"]'),
+      ).not.toBeNull(),
+    );
+  }
   return router;
 }
 

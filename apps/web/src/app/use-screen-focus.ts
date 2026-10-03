@@ -12,9 +12,49 @@ export function focusScreenHeading(
   { preventScroll = false }: { preventScroll?: boolean } = {},
 ) {
   const heading = main?.querySelector<HTMLElement>('h1');
-  if (heading === null || heading === undefined) return;
+  if (main === null || heading === null || heading === undefined) return;
   heading.tabIndex = -1;
   heading.focus({ preventScroll });
+  keepOnHeading(main, heading, preventScroll);
+}
+
+/**
+ * A screen whose records are still being read shows a heading of its own,
+ * and the one it has once they are in replaces it. The focus on the first
+ * would be lost with it, so it moves to the second, if nothing else has
+ * taken the focus meanwhile (the person pressing or clicking anywhere
+ * leaves it be).
+ */
+function keepOnHeading(
+  main: HTMLElement,
+  heading: HTMLElement,
+  preventScroll: boolean,
+) {
+  const stop = () => {
+    observer.disconnect();
+    document.removeEventListener('focusin', onFocusIn, true);
+    document.removeEventListener('pointerdown', stop, true);
+    document.removeEventListener('keydown', stop, true);
+    window.clearTimeout(timer);
+  };
+  const observer = new MutationObserver(() => {
+    if (heading.isConnected) return;
+    stop();
+    // Focus lost with the heading: it is on the body again.
+    if (document.activeElement !== document.body) return;
+    const next = main.querySelector<HTMLElement>('h1');
+    if (next === null) return;
+    next.tabIndex = -1;
+    next.focus({ preventScroll });
+  });
+  const onFocusIn = (event: FocusEvent) => {
+    if (event.target !== heading) stop();
+  };
+  const timer = window.setTimeout(stop, 10_000);
+  observer.observe(main, { childList: true, subtree: true });
+  document.addEventListener('focusin', onFocusIn, true);
+  document.addEventListener('pointerdown', stop, true);
+  document.addEventListener('keydown', stop, true);
 }
 
 /**

@@ -4,6 +4,7 @@
 // a day is one resource whether it is today, past or still to come.
 import {
   nextUnconfirmedSprintStart,
+  sprintEnd,
   sprintNumber,
   type LocalDate,
   type Sprint,
@@ -68,8 +69,17 @@ export interface CurrentSprints {
   readonly active?: SprintItem;
   readonly review?: SprintItem;
   readonly planning?: SprintItem;
-  /** The next week not confirmed yet, with its number (F25). */
-  readonly next: { readonly start: LocalDate; readonly number: number };
+  /**
+   * The next week not confirmed yet, with its number (F25), its last day
+   * and its place next to now: where its Planning starts, so a screen can
+   * open it before there is a Sprint (#274).
+   */
+  readonly next: {
+    readonly start: LocalDate;
+    readonly end: LocalDate;
+    readonly number: number;
+    readonly week?: SprintWeek;
+  };
 }
 
 export function currentSprints(records: Records, clock: Clock): CurrentSprints {
@@ -84,6 +94,7 @@ export function currentSprints(records: Records, clock: Clock): CurrentSprints {
     records.user,
     clock.today,
   );
+  const week = weekNameOf(start, records, clock);
   return {
     ...of('active'),
     ...of('review'),
@@ -91,7 +102,9 @@ export function currentSprints(records: Records, clock: Clock): CurrentSprints {
     // One after every Sprint that starts before it.
     next: {
       start,
+      end: sprintEnd(start),
       number: records.sprints.filter((s) => s.start < start).length + 1,
+      ...(week === undefined ? {} : { week }),
     },
   };
 }

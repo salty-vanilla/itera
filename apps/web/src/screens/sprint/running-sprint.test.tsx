@@ -91,6 +91,14 @@ async function renderAt(url: string) {
     </TooltipProvider>,
   );
   await screen.findByRole('heading', { level: 1 });
+  // The Sprint is there once its records are read (the mock answers).
+  if (url.startsWith('/sprint')) {
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-slot="sprint-header"]'),
+      ).not.toBeNull(),
+    );
+  }
   return router;
 }
 

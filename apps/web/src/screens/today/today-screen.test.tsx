@@ -1001,7 +1001,7 @@ describe('Today — outside the period (#54)', () => {
   it('says when a confirmed Sprint starts, with its Goals, and nothing to choose', async () => {
     await renderAt('/sprint?fixture=planning-check&stage=check');
     await userEvent.click(
-      screen.getAllByRole('button', { name: 'Sprint 2 を確定' })[0]!,
+      (await screen.findAllByRole('button', { name: 'Sprint 2 を確定' }))[0]!,
     );
     await userEvent.click(
       within(await screen.findByRole('dialog')).getByRole('button', {

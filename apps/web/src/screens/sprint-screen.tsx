@@ -1,13 +1,14 @@
-import type { SprintId } from '@itera/domain';
+import type { SprintId } from '@itera/api-contract';
 import { Link, useSearch } from '@tanstack/react-router';
 import type { SprintHeaderProps } from '@/components/sprint/sprint-header';
 import { SprintHeader } from '@/components/sprint/sprint-header';
 import { formatDate, formatDateRange } from '@/lib/date-format';
 import { weekCall, weekText, weekLabel } from '@/lib/week-text';
-import type { SprintChoice } from '@/store/views';
+import { ReadStatus } from '@/components/read-status';
+import type { NotReady } from '@/api/read-state';
 import { usePlanning } from '@/store/use-planning';
 import { useRunningSprint } from '@/store/use-running-sprint';
-import { useSprintChoice } from '@/store/use-sprint-choice';
+import { useSprintChoice, type SprintChoice } from '@/store/use-sprint-choice';
 import { PlanningScreen } from './planning/planning-screen';
 import { RunningSprint } from './sprint/running-sprint';
 import { BeginPlanning } from './begin-planning';
@@ -21,26 +22,45 @@ import { useSprintSteps } from './sprint-steps';
 // (#51; read only once it has ended).
 function SprintScreen() {
   const search = useSearch({ from: '/sprint' });
-  const choice = useSprintChoice('sprint', search.sprint);
+  const choice = useSprintChoice(search.sprint);
+  if (choice.status !== 'ready') return <Reading read={choice} />;
+  return <Chosen choice={choice} />;
+}
+
+/** In place of the Sprint while its records are being read, or could not be. */
+function Reading({ read }: { read: NotReady }) {
+  return (
+    <div className="flex min-h-full flex-col gap-4 px-4 pt-10 pb-4 medium:px-6">
+      <h1 className="text-display-m text-ink">Sprint</h1>
+      <ReadStatus label="Sprint" read={read} />
+    </div>
+  );
+}
+
+function Chosen({ choice }: { choice: SprintChoice }) {
   const steps = useSprintSteps('/sprint', choice);
   const sprint = choice.current.sprint;
   if (sprint === undefined) return <NextSprint choice={choice} steps={steps} />;
-  if (sprint.state === 'planning') return <Planning steps={steps} />;
-  return <Confirmed sprintId={sprint.id} steps={steps} />;
+  // Keyed by the Sprint: another one does not start from this one's records.
+  if (sprint.state === 'planning')
+    return <Planning key={sprint.id} sprintId={sprint.id} steps={steps} />;
+  return <Confirmed key={sprint.id} sprintId={sprint.id} steps={steps} />;
 }
 
 type Steps = SprintHeaderProps['steps'];
 
-function Planning({ steps }: { steps: Steps }) {
+function Planning({ sprintId, steps }: { sprintId: SprintId; steps: Steps }) {
   const search = useSearch({ from: '/sprint' });
-  const planning = usePlanning({ applyCriterion: search.criterion !== 'off' });
-  if (planning === undefined) return null;
+  const planning = usePlanning(sprintId, {
+    applyCriterion: search.criterion !== 'off',
+  });
+  if (planning.status !== 'ready') return <Reading read={planning} />;
   return <PlanningScreen data={planning} steps={steps} />;
 }
 
 function Confirmed({ sprintId, steps }: { sprintId: SprintId; steps: Steps }) {
   const data = useRunningSprint(sprintId);
-  if (data === undefined) return null;
+  if (data.status !== 'ready') return <Reading read={data} />;
   return <RunningSprint data={data} steps={steps} />;
 }
 

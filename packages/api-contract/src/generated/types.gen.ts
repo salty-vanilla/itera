@@ -72,11 +72,13 @@ export type CurrentSprints = {
     review?: SprintItem;
     planning?: SprintItem;
     /**
-     * The next week not confirmed yet, with its number (F25).
+     * The next week not confirmed yet, with its number (F25), its last day and its place next to now (`week`, as a Sprint's): where its Planning starts, before there is a Sprint to open (#274).
      */
     next: {
         start: LocalDate;
+        end: LocalDate;
         number: number;
+        week?: SprintWeek;
     };
 };
 
