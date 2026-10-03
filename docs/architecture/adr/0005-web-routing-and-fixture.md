@@ -195,7 +195,7 @@ fixture の段階（#38〜#42）では、画面が `RecordStore` と `Change` �
 - **共有のもの**：`BeginPlanning` は `getMe` と `beginPlanning` に移した。Retro の画面も使うので（#276 がその画面を移す）、枠（`AppShell`）が `getMe` を先に読み、「Sprint N の計画を始める」が現れる時点で答えがあるようにした。Retro が開く Sprint は、Retro の画面を移すまで store から求める（`use-retro-choice.ts`。#276 で消す）。`useSprintSteps` は番号だけを持つ参照を受ける。
 - **型**：計画と確定済みの Sprint の画面と部品は契約の型を使う。領域なしのまとまりの語は `screen-data/screen-area.ts`（Retro の `views.ts` のものは domain の型なので別）。
 - **import の境界**：`MIGRATING` から #274 のファイルと、契約の型だけになった共有のファイル（`capacity-indicator.tsx`・`criterion-text.ts`・`selection-words.ts`・`week-text.ts`）を消した。`use-retro-choice.ts` を #276 の一覧に足した。
-- **画面の文言**：送信中の「確定中…」「始めています…」と、記録を読む間の見出し「Sprint」・ラベル「計画」。ほかの語は変えていない。
+- **画面の文言**：送信中の「確定中…」「始めています…」と、記録を読む間の見出し「Sprint」・ラベル「計画」。ほかの語は変えていない（「始めています…」は Issue #312 で「保存中…」に変えた）。
 
 ### 今日を契約に移す（2026-10-03、Issue #275）
 
