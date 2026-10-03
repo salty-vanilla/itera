@@ -184,7 +184,7 @@ describe('the Backlog on the API', () => {
       '請求書を送る{Enter}',
     );
     expect(
-      await screen.findAllByText('保存できたか確かめられませんでした'),
+      await screen.findAllByText('保存できたか分かりませんでした'),
     ).not.toHaveLength(0);
     await waitFor(() => expect(reads()).toBeGreaterThan(before));
   });

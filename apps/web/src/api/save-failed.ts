@@ -27,8 +27,8 @@ export const SAVE_FAILED: ToastOptions = {
 export const SAVE_UNKNOWN: ToastOptions = {
   kind: 'save-failed',
   tone: 'danger',
-  title: '保存できたか確かめられませんでした',
-  description: '最新の記録を確かめてください。',
+  title: '保存できたか分かりませんでした',
+  description: '記録が変わったかもしれません。最新の記録を見てください。',
 };
 
 /** The Toast for a failed operation; none without a session (sign-in). */
