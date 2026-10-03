@@ -12,7 +12,10 @@ export function requireAuth(authenticator: Dependencies['authenticator']) {
 
     const user = await auth.authenticate(c.req.raw.headers);
     if (!user) {
-      return errorResponse(c, 'unauthenticated', 'No valid session.');
+      return errorResponse(c, {
+        type: '/problems/unauthenticated',
+        detail: 'No valid session.',
+      });
     }
 
     c.set('userId', user.userId);

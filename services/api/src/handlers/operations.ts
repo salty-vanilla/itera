@@ -71,8 +71,7 @@ async function operationOf(surface: Surface, received: ReceivedRequest) {
       validate(schema, value, part),
     );
   } catch (error) {
-    if (error instanceof RequestError)
-      throw new ApiError('validationFailed', error.message);
+    if (error instanceof RequestError) throw ApiError.invalid(error.issue);
     throw error;
   }
 }

@@ -36,6 +36,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { createMock } from '@/mock/mock-api';
 import { getHours } from '@/test/duration';
 import { comeBack, otherDevice, until } from '@/test/other-device';
+import { problemResponse } from '@/test/problem';
 
 type CreateAppRouter = typeof import('@/app/router').createAppRouter;
 let createAppRouter: CreateAppRouter;
@@ -90,12 +91,9 @@ const slow = (ms: number) => (request: Request) =>
       )
     : undefined;
 
-const refused = () =>
-  Response.json({ code: 'invalidInput', message: 'x' }, { status: 422 });
-const conflict = () =>
-  Response.json({ code: 'revisionConflict', message: 'x' }, { status: 409 });
-const failed = () =>
-  Response.json({ code: 'internalError', message: 'x' }, { status: 500 });
+const refused = () => problemResponse('/problems/invalid-input');
+const conflict = () => problemResponse('/problems/revision-conflict');
+const failed = () => problemResponse('/problems/internal-error');
 
 function renderBacklog() {
   const router = createAppRouter({

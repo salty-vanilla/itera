@@ -3,7 +3,7 @@
 # server read with (ADR 0005 時計) and the view. Before reading, the server
 # brings the records up to now (the end of a Sprint, the start of a day,
 # #271); that write may meet another write. A person without settings yet
-# gets 422 `userNotSetUp`. The reads of a resource with writes are with them
+# gets 422 `/problems/user-not-set-up`. The reads of a resource with writes are with them
 # (area.yaml, sprint.yaml, retro.yaml).
 
 backlog:

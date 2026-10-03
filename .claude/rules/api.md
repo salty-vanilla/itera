@@ -16,5 +16,5 @@ paths:
 - テーブルは `src/db/schema.ts` に置き、drizzle-kit でマイグレーションを生成して wrangler で適用する。Better Auth のテーブルも同じで、Better Auth のマイグレーション（CLI・エンドポイント）は使わない。
 - テストは Node 上の Vitest で `app.request()` に依存を注入して書く。DB は `src/db/recording-database.ts`（sqlite-proxy）、認証は仮の `Authenticator` を使う。行を保存して読む必要があるテストは `src/db/memory-database.ts`（libSQL のメモリ DB にマイグレーションを適用）を使う。
 - wrangler はこのパッケージの固定版を使う（`pnpm --filter @itera/api exec wrangler ...`）。`wrangler.jsonc` を変えたら `pnpm --filter @itera/api cf-typegen` で型を生成し直す。
-- 契約は `packages/api-contract`（ADR 0006）。入力は `@itera/api-contract` の Valibot のスキーマで検証し、エラーは ADR 0006 の割り当て（`{ code, message }` と HTTP のステータス）で返す。`@itera/api-contract/client`・`/react-query` は使わない（ESLint で検査する）。
+- 契約は `packages/api-contract`（ADR 0006）。入力は `@itera/api-contract` の Valibot のスキーマで検証し、エラーは ADR 0006 の割り当て（Problem Details の `type` と HTTP のステータス）で、`src/errors.ts` の `ApiError`・`errorResponse` から返す（本文は `@itera/api-contract/problems` が作る）。`@itera/api-contract/client`・`/react-query` は使わない（ESLint で検査する）。
 - クライアントが新しい行の ID を決めて送る操作（今は `restoreInterrupt` だけ）は、`src/handlers/preconditions.ts` に、その ID が利用者のものであることの確かめを置く。ID は全体の主キーなので、確かめがないと、ほかの利用者の ID が保存の主キーの衝突（500）になる（ADR 0004「Activity を読む 1 つの例外」、ADR 0006）。Activity を読む問い合わせを増やさない（`src/db/activity-reads.test.ts`）。

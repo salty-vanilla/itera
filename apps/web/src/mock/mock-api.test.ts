@@ -1,7 +1,8 @@
 // The browser mock answers the contract's requests, through the generated
 // client, as the API does (ADR 0006): the reads' `{ clock, view }`, the
-// operations' values, and the errors by status and code.
+// operations' values, and the errors by status and problem type.
 import * as contract from '@itera/api-contract';
+import { PROBLEM_CONTENT_TYPE } from '@itera/api-contract/problems';
 import { getDayOptions, getMeOptions } from '@itera/api-contract/react-query';
 import {
   requestOf,
@@ -161,7 +162,7 @@ describe('the mock', () => {
       path: { sprintId: 'sprint_01h455vb4pex5vsknk084sn02q' },
     });
     expect(response?.status).toBe(404);
-    expect(error).toMatchObject({ code: 'notFound' });
+    expect(error).toMatchObject({ type: '/problems/not-found' });
   });
 
   it('runs an operation and returns what it made, a TypeID, with 201', async () => {
@@ -189,7 +190,7 @@ describe('the mock', () => {
     expect(response?.status).toBe(204);
   });
 
-  it('answers a domain refusal with 422 and its code, and changes nothing', async () => {
+  it('answers a domain refusal with 422 and its type, and changes nothing', async () => {
     const { client, store } = mockOf('backlog-capture');
     // A read first: it brings the system's records up to now.
     await sdk.getMe({ client });
@@ -200,7 +201,11 @@ describe('the mock', () => {
       body: { name: '' },
     });
     expect(response?.status).toBe(422);
-    expect(error).toMatchObject({ code: 'invalidInput' });
+    expect(response?.headers.get('Content-Type')).toBe(PROBLEM_CONTENT_TYPE);
+    expect(error).toMatchObject({
+      type: '/problems/invalid-input',
+      status: 422,
+    });
     expect(store.getSnapshot().records).toEqual(before.records);
   });
 
@@ -214,7 +219,7 @@ describe('the mock', () => {
       path: { areaId },
     });
     expect(response?.status).toBe(404);
-    expect(error).toMatchObject({ code: 'notFound' });
+    expect(error).toMatchObject({ type: '/problems/not-found' });
   });
 
   it('answers every write surface with its operation (ADR 0006 経路の形)', async () => {
@@ -236,10 +241,13 @@ describe('the mock', () => {
         // The examples' IDs are no records', so most are refused: by the
         // domain, never as a request out of the contract or without a route.
         const answer = response.status < 300 ? {} : await response.json();
-        expect(answer, name).not.toMatchObject({ code: 'validationFailed' });
-        expect(response.headers.get('Content-Type') ?? '', name).not.toMatch(
-          /^text\/plain/,
-        );
+        expect(answer, name).not.toMatchObject({
+          type: '/problems/validation-failed',
+        });
+        // Without a route, the mock answers 404 as the API does.
+        expect(answer, name).not.toMatchObject({
+          detail: expect.stringMatching(/ in the API\.$/),
+        });
         answered.add(request.operationId);
       }
     }
@@ -253,9 +261,13 @@ describe('the mock', () => {
       body: { name: '健康', color: 'area-1' } as { name: string },
     });
     expect(unknownKey.response?.status).toBe(400);
-    expect(unknownKey.error).toMatchObject({ code: 'validationFailed' });
+    expect(unknownKey.error).toMatchObject({
+      type: '/problems/validation-failed',
+      errors: [{ pointer: '#/color' }],
+    });
     const notADay = await sdk.getDay({ client, path: { date: '2026-02-30' } });
     expect(notADay.response?.status).toBe(400);
+    expect(notADay.error).toMatchObject({ errors: [{ parameter: 'date' }] });
     const notANumber = await sdk.listSprints({
       client,
       query: { number: 'two' as unknown as number },
@@ -323,7 +335,7 @@ describe('a person who has not made their settings', () => {
     ]) {
       const { error, response } = await request;
       expect(response?.status).toBe(422);
-      expect(error).toMatchObject({ code: 'userNotSetUp' });
+      expect(error).toMatchObject({ type: '/problems/user-not-set-up' });
     }
   });
 
@@ -360,7 +372,7 @@ describe('a person who has not made their settings', () => {
     ]) {
       const refused = await sdk.setSettings({ client, body: other });
       expect(refused.response?.status).toBe(422);
-      expect(refused.error).toMatchObject({ code: 'invalidInput' });
+      expect(refused.error).toMatchObject({ type: '/problems/invalid-input' });
     }
   });
 

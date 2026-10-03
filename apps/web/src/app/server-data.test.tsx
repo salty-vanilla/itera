@@ -16,6 +16,7 @@ import {
   vi,
 } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { problemResponse } from '@/test/problem';
 
 type CreateAppRouter = typeof import('./router').createAppRouter;
 let createAppRouter: CreateAppRouter;
@@ -68,12 +69,7 @@ const overview = JSON.parse(
 
 describe('the API as the data source', () => {
   it('sends the person to sign in when the API has no session, to come back after', async () => {
-    serve(() =>
-      Response.json(
-        { code: 'unauthenticated', message: 'for developers' },
-        { status: 401 },
-      ),
-    );
+    serve(() => problemResponse('/problems/unauthenticated'));
     const router = renderAt('/today?date=2026-10-01');
     await waitFor(() =>
       expect(router.state.location.pathname).toBe('/sign-in'),

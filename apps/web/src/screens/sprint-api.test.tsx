@@ -30,6 +30,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { getHours } from '@/test/duration';
 import { waitForSprintScreen } from '@/test/sprint-ready';
 import { createMock } from '@/mock/mock-api';
+import { problemResponse } from '@/test/problem';
 
 type CreateAppRouter = typeof import('@/app/router').createAppRouter;
 let createAppRouter: CreateAppRouter;
@@ -82,10 +83,8 @@ function serve(
   return { store, requests, sprint };
 }
 
-const refused = () =>
-  Response.json({ code: 'invalidInput', message: 'x' }, { status: 422 });
-const failed = () =>
-  Response.json({ code: 'internalError', message: 'x' }, { status: 500 });
+const refused = () => problemResponse('/problems/invalid-input');
+const failed = () => problemResponse('/problems/internal-error');
 
 function renderSprint(url = '/sprint') {
   const router = createAppRouter({

@@ -28,7 +28,7 @@ function RootLayout() {
 /**
  * The screens of a signed-in person, in the app's frame. A person with no
  * settings has no 「今日」 and every read would be refused (422
- * `userNotSetUp`): they make their settings first, on the screen they
+ * `/problems/user-not-set-up`): they make their settings first, on the screen they
  * opened, and the screen opens once `/me` answers with them (#279).
  */
 function SignedIn() {

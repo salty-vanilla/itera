@@ -21,7 +21,7 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 /**
  * The signed-in person and their settings
  *
- * `settings` is `null` until the person has made them; every other operation and read answers 422 `userNotSetUp` until then. With the settings, `clock` and `sprints` (the Sprints by what each is now, and where the next Planning starts).
+ * `settings` is `null` until the person has made them; every other operation and read answers 422 `/problems/user-not-set-up` until then. With the settings, `clock` and `sprints` (the Sprints by what each is now, and where the next Planning starts).
  */
 export const getMe = <ThrowOnError extends boolean = false>(options?: Options<GetMeData, ThrowOnError>): RequestResult<GetMeResponses, GetMeErrors, ThrowOnError> => (options?.client ?? client).get<GetMeResponses, GetMeErrors, ThrowOnError>({
     security: [{
@@ -36,7 +36,7 @@ export const getMe = <ThrowOnError extends boolean = false>(options?: Options<Ge
 /**
  * Make the person's settings
  *
- * The first thing a new person does: until it is done every other operation and read (but `getMe`) answers 422 `userNotSetUp`. The first time makes them (201). After that the display name can be written again, and the same settings again change nothing (204); another time zone or first day of the week is refused with 422 `invalidInput`. A Sprint's dates follow the week's first day, and 「今日」 the time zone, so how a change should reach Sprints already made is for a later decision.
+ * The first thing a new person does: until it is done every other operation and read (but `getMe`) answers 422 `/problems/user-not-set-up`. The first time makes them (201). After that the display name can be written again, and the same settings again change nothing (204); another time zone or first day of the week is refused with 422 `/problems/invalid-input`. A Sprint's dates follow the week's first day, and 「今日」 the time zone, so how a change should reach Sprints already made is for a later decision.
  */
 export const setSettings = <ThrowOnError extends boolean = false>(options: Options<SetSettingsData, ThrowOnError>): RequestResult<SetSettingsResponses, SetSettingsErrors, ThrowOnError> => (options.client ?? client).put<SetSettingsResponses, SetSettingsErrors, ThrowOnError>({
     security: [{

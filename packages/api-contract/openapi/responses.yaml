@@ -2,38 +2,38 @@
 BadRequest:
   description: The request does not match the contract.
   content:
-    application/json:
+    application/problem+json:
       schema: { $ref: './schemas/common.yaml#/ValidationError' }
 Unauthenticated:
   description: No valid session.
   content:
-    application/json:
+    application/problem+json:
       schema: { $ref: './schemas/common.yaml#/UnauthenticatedError' }
 ForbiddenOrigin:
   description: A write whose Origin is not the app's own.
   content:
-    application/json:
+    application/problem+json:
       schema: { $ref: './schemas/common.yaml#/ForbiddenOriginError' }
 NotFound:
   description: A record the request names is not among the person's records.
   content:
-    application/json:
+    application/problem+json:
       schema: { $ref: './schemas/common.yaml#/NotFoundError' }
 RevisionConflict:
   description: Another write came first; this one was not made.
   content:
-    application/json:
+    application/problem+json:
       schema: { $ref: './schemas/common.yaml#/RevisionConflictError' }
 PayloadTooLarge:
   description: The body is larger than the API takes.
   content:
-    application/json:
+    application/problem+json:
       schema: { $ref: './schemas/common.yaml#/PayloadTooLargeError' }
 RuleViolation:
   description: >-
     The domain refused the operation, or the person has no settings yet.
   content:
-    application/json:
+    application/problem+json:
       schema:
         oneOf:
           - { $ref: './schemas/common.yaml#/RuleViolationError' }
@@ -41,10 +41,10 @@ RuleViolation:
 UserNotSetUp:
   description: The person has no settings yet.
   content:
-    application/json:
+    application/problem+json:
       schema: { $ref: './schemas/common.yaml#/UserNotSetUpError' }
 ServerError:
   description: An unexpected failure on the server.
   content:
-    application/json:
+    application/problem+json:
       schema: { $ref: './schemas/common.yaml#/InternalError' }

@@ -17,8 +17,7 @@ function failure(run: () => unknown) {
   try {
     run();
   } catch (error) {
-    if (error instanceof ApiError)
-      return { code: error.code, message: error.message };
+    if (error instanceof ApiError) return error.failure;
     throw error;
   }
   return undefined;
@@ -40,19 +39,41 @@ describe('validate', () => {
       failure(() =>
         validate(vRecordActualTimeBody, { ...review, hours: 'x' }, 'body'),
       ),
-    ).toMatchObject({
-      code: 'validationFailed',
-      message: expect.stringContaining('body.hours'),
+    ).toEqual({
+      type: '/problems/validation-failed',
+      errors: [{ detail: expect.any(String), pointer: '#/hours' }],
     });
+  });
+
+  it('names every place that does not match, once each', () => {
+    const body = { sprintTaskId: 'x', hours: 'x', date: '2026-09-30' };
+    expect(
+      failure(() => validate(vRecordActualTimeBody, body, 'body')),
+    ).toMatchObject({
+      errors: [{ pointer: '#/sprintTaskId' }, { pointer: '#/hours' }],
+    });
+  });
+
+  it('names a path or query parameter by its name', () => {
+    expect(
+      failure(() =>
+        validate(contract.vGetSprintPath, { sprintId: 'task_x' }, 'path'),
+      ),
+    ).toMatchObject({ errors: [{ parameter: 'sprintId' }] });
+    expect(
+      failure(() =>
+        validate(contract.vGetDayPath, { date: '2026-02-30' }, 'path'),
+      ),
+    ).toMatchObject({ errors: [{ parameter: 'date' }] });
   });
 
   it('refuses a date that does not exist (ADR 0006)', () => {
     const body = { ...review, date: '2026-02-30' };
     expect(
       failure(() => validate(vRecordActualTimeBody, body, 'body')),
-    ).toMatchObject({
-      code: 'validationFailed',
-      message: expect.stringMatching(/^body\.date: /),
+    ).toEqual({
+      type: '/problems/validation-failed',
+      errors: [{ detail: expect.any(String), pointer: '#/date' }],
     });
   });
 
@@ -64,9 +85,9 @@ describe('validate', () => {
     };
     expect(
       failure(() => validate(vUndoAdoptionBody, { previous }, 'body')),
-    ).toMatchObject({
-      code: 'validationFailed',
-      message: expect.stringMatching(/^body\.previous\.setAt: /),
+    ).toEqual({
+      type: '/problems/validation-failed',
+      errors: [{ detail: expect.any(String), pointer: '#/previous/setAt' }],
     });
   });
 

@@ -1,38 +1,49 @@
-// The error's `code` is an open enum (ADR 0006 列挙): what this client does
-// not know is a plain failure, never a failure to read the answer.
+// The problem's `type` is an open enum (ADR 0006 列挙): what this client
+// does not know is a plain failure, never a failure to read the answer.
+import {
+  problemOf,
+  validationProblem,
+  type PlainProblemType,
+} from '@itera/api-contract/problems';
 import { describe, expect, it } from 'vitest';
 import { failureOf } from './failure';
 
 describe('failureOf', () => {
-  it('reads the codes the contract names', () => {
-    expect(failureOf({ code: 'unauthenticated', message: '' })).toEqual({
+  it('reads the types the contract names', () => {
+    expect(failureOf(problemOf('/problems/unauthenticated', ''))).toEqual({
       kind: 'unauthenticated',
     });
-    expect(failureOf({ code: 'revisionConflict', message: '' })).toEqual({
+    expect(failureOf(problemOf('/problems/revision-conflict', ''))).toEqual({
       kind: 'revisionConflict',
     });
-    for (const code of [
-      'validationFailed',
-      'forbiddenOrigin',
-      'notFound',
-      'payloadTooLarge',
-      'invalidInput',
-      'invalidTransition',
-      'recurringTaskCannotComplete',
-      'userNotSetUp',
-    ])
-      expect(failureOf({ code, message: '' })).toEqual({
-        kind: 'refused',
-        code,
-      });
-    expect(failureOf({ code: 'internalError', message: '' })).toEqual({
+    const refused: readonly PlainProblemType[] = [
+      '/problems/forbidden-origin',
+      '/problems/not-found',
+      '/problems/payload-too-large',
+      '/problems/invalid-input',
+      '/problems/invalid-transition',
+      '/problems/recurring-task-cannot-complete',
+      '/problems/user-not-set-up',
+    ];
+    for (const type of refused)
+      expect(failureOf(problemOf(type, ''))).toEqual({ kind: 'refused', type });
+    expect(
+      failureOf(validationProblem([{ detail: '', pointer: '#/title' }])),
+    ).toEqual({ kind: 'refused', type: '/problems/validation-failed' });
+    expect(failureOf(problemOf('/problems/internal-error', ''))).toEqual({
       kind: 'failed',
     });
   });
 
   it('takes what it does not know as a plain failure', () => {
-    // A code added later, with or without a message.
-    expect(failureOf({ code: 'quotaExceeded' })).toEqual({ kind: 'failed' });
+    // A type added later, with or without the other members.
+    expect(failureOf({ type: '/problems/quota-exceeded' })).toEqual({
+      kind: 'failed',
+    });
+    // The error shape before RFC 9457 (contract 0.2), by an older server.
+    expect(failureOf({ code: 'notFound', message: '' })).toEqual({
+      kind: 'failed',
+    });
     // Not JSON (a proxy's page), no answer (the network), nothing at all.
     expect(failureOf('413 Request Entity Too Large')).toEqual({
       kind: 'failed',
@@ -42,6 +53,6 @@ describe('failureOf', () => {
     });
     expect(failureOf({})).toEqual({ kind: 'failed' });
     expect(failureOf(null)).toEqual({ kind: 'failed' });
-    expect(failureOf({ code: 42 })).toEqual({ kind: 'failed' });
+    expect(failureOf({ type: 42 })).toEqual({ kind: 'failed' });
   });
 });
