@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useSetSettings } from '@/api/use-settings';
 import { useAuth } from '@/auth/auth-provider';
 import type { Session } from '@/auth/auth';
@@ -37,8 +37,6 @@ function FirstSettingsScreen() {
   const [weekStartsOn, setWeekStartsOn] = useState<FirstDay>(1);
   // Fixed for this visit: the zone the person sees is the zone that is made.
   const [timeZone] = useState(deviceTimeZone);
-  const heading = useRef<HTMLHeadingElement>(null);
-  useEffect(() => heading.current?.focus(), []);
 
   return (
     <main
@@ -58,9 +56,7 @@ function FirstSettingsScreen() {
         }}
       >
         <p className="text-subheading text-ink">Itera</p>
-        <h1 ref={heading} tabIndex={-1} className="text-display-m text-ink">
-          はじめの設定
-        </h1>
+        <h1 className="text-display-m text-ink">はじめの設定</h1>
         <RadioGroup<FirstDay>
           legend="週の始まり"
           description="Sprint はこの曜日から始まります。"
