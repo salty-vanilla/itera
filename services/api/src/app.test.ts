@@ -4,6 +4,7 @@ import type { Authenticator } from './auth/authenticator';
 import { createRecordingDatabase } from './db/recording-database';
 import { createIdSource } from '@itera/application';
 import { testDependencies, testEnv, testNow } from './test-env';
+import { problemIn } from './test-problems';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -81,9 +82,11 @@ describe('GET /api/me (requireAuth)', () => {
     const { app } = setup(async () => null);
     const response = await me(app);
     expect(response.status).toBe(401);
-    expect(await response.json()).toEqual({
-      code: 'unauthenticated',
-      message: 'No valid session.',
+    expect(await problemIn(response)).toEqual({
+      type: '/problems/unauthenticated',
+      title: 'No valid session',
+      status: 401,
+      detail: 'No valid session.',
     });
   });
 
@@ -94,9 +97,11 @@ describe('GET /api/me (requireAuth)', () => {
     });
     const response = await me(app);
     expect(response.status).toBe(500);
-    expect(await response.json()).toEqual({
-      code: 'internalError',
-      message: 'An unexpected failure.',
+    expect(await problemIn(response)).toEqual({
+      type: '/problems/internal-error',
+      title: 'An unexpected failure',
+      status: 500,
+      detail: 'An unexpected failure.',
     });
     expect(log).toHaveBeenCalledOnce();
   });

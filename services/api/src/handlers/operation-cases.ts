@@ -6,6 +6,7 @@
 // in-memory database with the migrations applied, behind a fake
 // Authenticator. For tests only.
 import * as contract from '@itera/api-contract';
+import type { ProblemType } from '@itera/api-contract/problems';
 import { requestOf, surfaces } from '@itera/api-contract/requests';
 import { httpOf } from '@itera/api-contract/testing';
 import {
@@ -28,6 +29,7 @@ import { createMemoryDatabase } from '../db/memory-database';
 import { saveRecords } from '../db/save-records';
 import { activity, user as authUser } from '../db/schema';
 import { testDependencies, testEnv, testNow, testOrigin } from '../test-env';
+import { problemIn } from '../test-problems';
 
 const newIds = createIdSource((bytes) => crypto.getRandomValues(bytes));
 
@@ -138,7 +140,7 @@ export type Success = Case & {
 
 export type Failure = Case & {
   readonly status: number;
-  readonly code: string;
+  readonly type: ProblemType;
 };
 
 /**
@@ -191,7 +193,7 @@ async function prepared(app: FixtureApp, steps: readonly Step[] = []) {
  * Runs the tables. A success answers what the contract says (its surface's
  * status, and a body the response schema parses, or none where it has none), raises
  * the revision once and writes the person's Activity in the same batch. A
- * failure answers the status and code and leaves the records as they were.
+ * failure answers the status and type and leaves the records as they were.
  */
 export function describeOperations(
   title: string,
@@ -237,14 +239,14 @@ export function describeOperations(
       });
     });
 
-    describe.each(failures)('$name refused: $code', (c) => {
+    describe.each(failures)('$name refused: $type', (c) => {
       it('answers the domain’s error and writes nothing', async () => {
         const app = await setupFixtureApp(c.state ?? state, undefined, c.now);
         const before = await prepared(app, c.prepare);
         const response = await app.post(c.name, c.body(before.records));
 
         expect(response.status).toBe(c.status);
-        expect(await response.json()).toMatchObject({ code: c.code });
+        expect(await problemIn(response)).toMatchObject({ type: c.type });
         expect(await app.saved()).toEqual(before);
       });
     });

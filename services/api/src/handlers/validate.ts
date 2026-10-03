@@ -1,3 +1,8 @@
+import {
+  issueAt,
+  valibotIssues,
+  type RequestPart,
+} from '@itera/api-contract/problems';
 import { parseInstant, parseLocalDate } from '@itera/domain';
 import * as v from 'valibot';
 import { ApiError } from '../errors';
@@ -35,40 +40,42 @@ const leaves = new Set([
   'void',
 ]);
 
-type Visit = (kind: 'date' | 'instant', value: string, path: string) => void;
+type Keys = readonly PropertyKey[];
+
+type Visit = (kind: 'date' | 'instant', value: string, keys: Keys) => void;
 
 /**
  * Walks `value` (already valid for `schema`) along the schema, calling
  * `visit` for each LocalDate (`isoDate`) and Instant (`isoTimestamp`).
  */
-function walk(schema: Schema, value: unknown, path: string, visit: Visit) {
+function walk(schema: Schema, value: unknown, keys: Keys, visit: Visit) {
   const node = schema as unknown as Node;
   switch (node.type) {
     case 'object':
     case 'strict_object':
       for (const [key, entry] of Object.entries(node.entries ?? {})) {
         const field = (value as Record<string, unknown>)[key];
-        if (field !== undefined) walk(entry, field, `${path}.${key}`, visit);
+        if (field !== undefined) walk(entry, field, [...keys, key], visit);
       }
       return;
     case 'optional':
     case 'nullable':
     case 'nullish':
       if (value !== undefined && value !== null)
-        walk(node.wrapped as Schema, value, path, visit);
+        walk(node.wrapped as Schema, value, keys, visit);
       return;
     case 'array':
       (value as readonly unknown[]).forEach((item, i) =>
-        walk(node.item as Schema, item, `${path}[${i}]`, visit),
+        walk(node.item as Schema, item, [...keys, i], visit),
       );
       return;
     case 'record':
       for (const [key, item] of Object.entries(value as object))
-        walk(node.value as Schema, item, `${path}.${key}`, visit);
+        walk(node.value as Schema, item, [...keys, key], visit);
       return;
     case 'union': {
       const option = node.options?.find((o) => v.is(o, value));
-      if (option !== undefined) walk(option, value, path, visit);
+      if (option !== undefined) walk(option, value, keys, visit);
       return;
     }
     default: {
@@ -76,9 +83,9 @@ function walk(schema: Schema, value: unknown, path: string, visit: Visit) {
         throw new Error(`validate.ts does not know the schema ${node.type}.`);
       }
       const actions = node.pipe?.map((action) => action.type) ?? [];
-      if (actions.includes('iso_date')) visit('date', value as string, path);
+      if (actions.includes('iso_date')) visit('date', value as string, keys);
       if (actions.includes('iso_timestamp'))
-        visit('instant', value as string, path);
+        visit('instant', value as string, keys);
     }
   }
 }
@@ -104,31 +111,24 @@ export function assertWalkable(schema: Schema): void {
 }
 
 /**
- * The value as the contract describes it, or a 400 `validationFailed`.
- * Valibot's format checks do not reject a day that does not exist (2026-02-30),
- * so dates and times are also read with the domain's parsers (ADR 0006).
+ * The value as the contract describes it, or a 400 `validation-failed`
+ * with each place that does not match (in `part`). Valibot's format checks
+ * do not reject a day that does not exist (2026-02-30), so dates and times
+ * are also read with the domain's parsers (ADR 0006).
  */
 export function validate<S extends Schema>(
   schema: S,
   value: unknown,
-  what: string,
+  part: RequestPart,
 ): v.InferOutput<S> {
   const result = v.safeParse(schema, value);
   if (!result.success) {
-    const [issue] = result.issues;
-    const at = v.getDotPath(issue);
-    throw new ApiError(
-      'validationFailed',
-      `${what}${at === null ? '' : `.${at}`}: ${issue.message}`,
-    );
+    throw ApiError.invalid(...valibotIssues(part, result.issues));
   }
-  walk(schema, result.output, what, (kind, text, path) => {
+  walk(schema, result.output, [], (kind, text, keys) => {
     const parsed = kind === 'date' ? parseLocalDate(text) : parseInstant(text);
     if (!parsed.ok) {
-      throw new ApiError(
-        'validationFailed',
-        `${path}: ${parsed.error.message}`,
-      );
+      throw ApiError.invalid(issueAt(part, keys, parsed.error.message));
     }
   });
   return result.output;

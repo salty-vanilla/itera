@@ -14,13 +14,13 @@ export function requireSameOrigin(appOrigin: Dependencies['appOrigin']) {
     if (!readMethods.has(c.req.method)) {
       const origin = c.req.header('Origin');
       if (origin !== appOrigin(c.env)) {
-        return errorResponse(
-          c,
-          'forbiddenOrigin',
-          origin === undefined
-            ? 'A write needs an Origin header.'
-            : 'A write must come from the app’s own origin.',
-        );
+        return errorResponse(c, {
+          type: '/problems/forbidden-origin',
+          detail:
+            origin === undefined
+              ? 'A write needs an Origin header.'
+              : 'A write must come from the app’s own origin.',
+        });
       }
     }
     await next();

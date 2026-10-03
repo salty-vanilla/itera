@@ -86,64 +86,103 @@ export type CurrentSprints = {
  * No valid session.
  */
 export type UnauthenticatedError = {
-    code: 'unauthenticated';
-    message: string;
+    type: '/problems/unauthenticated';
+    title: string;
+    status: 401;
+    detail: string;
 };
 
 /**
  * Another write came first (ADR 0004 同時の書き込み), and this one was not made; read the records again. Not retried automatically. (When the database's answer to a write that was made is lost, it also comes back as this; reading again shows what was saved.)
  */
 export type RevisionConflictError = {
-    code: 'revisionConflict';
-    message: string;
+    type: '/problems/revision-conflict';
+    title: string;
+    status: 409;
+    detail: string;
 };
 
 /**
  * An unexpected failure on the server.
  */
 export type InternalError = {
-    code: 'internalError';
-    message: string;
+    type: '/problems/internal-error';
+    title: string;
+    status: 500;
+    detail: string;
 };
 
 /**
- * The request does not match the contract.
+ * One place in the request that does not match the contract, located by exactly one of `pointer` (in the body), `parameter` (a path or query parameter) or `header`.
+ */
+export type ValidationIssue = {
+    /**
+     * What is wrong there, for developers.
+     */
+    detail: string;
+    /**
+     * Where in the body, as a JSON Pointer in its URI fragment form (RFC 6901 §6): `#/title`, `#/previous/setAt`; `#` is the whole body.
+     */
+    pointer?: string;
+    /**
+     * The name of a path or query parameter, as the contract names it.
+     */
+    parameter?: string;
+    /**
+     * The name of a request header.
+     */
+    header?: string;
+};
+
+/**
+ * The request does not match the contract. `errors` says where, one item for each place.
  */
 export type ValidationError = {
-    code: 'validationFailed';
-    message: string;
+    type: '/problems/validation-failed';
+    title: string;
+    status: 400;
+    detail: string;
+    errors: Array<ValidationIssue>;
 };
 
 /**
  * A write whose Origin is not the app's own.
  */
 export type ForbiddenOriginError = {
-    code: 'forbiddenOrigin';
-    message: string;
+    type: '/problems/forbidden-origin';
+    title: string;
+    status: 403;
+    detail: string;
 };
 
 /**
  * The request's body is larger than the API takes (64 KiB).
  */
 export type PayloadTooLargeError = {
-    code: 'payloadTooLarge';
-    message: string;
+    type: '/problems/payload-too-large';
+    title: string;
+    status: 413;
+    detail: string;
 };
 
 /**
  * The domain refused the operation (packages/domain DomainError): a value its rules do not accept, a transition the record's state does not allow, or completing a recurring Task.
  */
 export type RuleViolationError = {
-    code: 'invalidInput' | 'invalidTransition' | 'recurringTaskCannotComplete';
-    message: string;
+    type: '/problems/invalid-input' | '/problems/invalid-transition' | '/problems/recurring-task-cannot-complete';
+    title: string;
+    status: 422;
+    detail: string;
 };
 
 /**
  * The person has no settings yet (time zone, start of the week), so there is no 「今日」 to run an operation or a read with. Making the settings comes first.
  */
 export type UserNotSetUpError = {
-    code: 'userNotSetUp';
-    message: string;
+    type: '/problems/user-not-set-up';
+    title: string;
+    status: 422;
+    detail: string;
 };
 
 export type AreaId = string;
@@ -167,8 +206,10 @@ export type EditableArea = {
  * A record the request names is not among the person's records.
  */
 export type NotFoundError = {
-    code: 'notFound';
-    message: string;
+    type: '/problems/not-found';
+    title: string;
+    status: 404;
+    detail: string;
 };
 
 export type TaskId = string;

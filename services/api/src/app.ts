@@ -17,12 +17,12 @@ export function createApp(dependencies: Dependencies) {
   const app = new Hono<AppEnv>();
   const flow = createFlow(dependencies);
 
-  // Every failure answers with the contract's error shape (ADR 0006). An
-  // unexpected one is 500 and goes to Workers Logs, without the request's
-  // body or the records.
+  // Every failure answers with one of the contract's problems (ADR 0006).
+  // An unexpected one is 500 and goes to Workers Logs, without the
+  // request's body or the records.
   app.onError((error, c) => {
     if (error instanceof ApiError) {
-      return errorResponse(c, error.code, error.message);
+      return errorResponse(c, error.failure);
     }
     console.error(
       JSON.stringify({
@@ -32,8 +32,20 @@ export function createApp(dependencies: Dependencies) {
         error: loggedError(error),
       }),
     );
-    return errorResponse(c, 'internalError', 'An unexpected failure.');
+    return errorResponse(c, {
+      type: '/problems/internal-error',
+      detail: 'An unexpected failure.',
+    });
   });
+
+  // A path no route takes. The Worker runs first only for /api/* (the rest
+  // is the web app's assets), and Better Auth answers its own /api/auth/*.
+  app.notFound((c) =>
+    errorResponse(c, {
+      type: '/problems/not-found',
+      detail: `No ${c.req.method} ${c.req.path} in the API.`,
+    }),
+  );
 
   app.use(async (c, next) => {
     c.set('db', dependencies.database(c.env));

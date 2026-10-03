@@ -29,6 +29,7 @@ import {
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { createMock } from '@/mock/mock-api';
 import { waitForRead } from '@/test/read-ready';
+import { problemResponse } from '@/test/problem';
 
 type CreateAppRouter = typeof import('@/app/router').createAppRouter;
 let createAppRouter: CreateAppRouter;
@@ -79,10 +80,8 @@ const isRetroRead = (request: Request) =>
   request.method === 'GET' &&
   /^\/api\/sprints\/[^/]+\/retro$/.test(pathOf(request));
 const hangs = () => new Promise<Response>(() => {});
-const refused = () =>
-  Response.json({ code: 'invalidInput', message: 'x' }, { status: 422 });
-const failed = () =>
-  Response.json({ code: 'internalError', message: 'x' }, { status: 500 });
+const refused = () => problemResponse('/problems/invalid-input');
+const failed = () => problemResponse('/problems/internal-error');
 
 function renderRetro(url = '/retro') {
   const router = createAppRouter({

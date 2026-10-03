@@ -7,6 +7,7 @@
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
     "./create-client": "./src/create-client.ts",
+    "./problems": "./src/problems.ts",
     "./react-query": "./src/react-query.ts",
     "./requests": "./src/requests.ts",
     "./testing": "./src/testing.ts"

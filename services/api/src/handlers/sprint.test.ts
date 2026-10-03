@@ -277,19 +277,19 @@ const failures: readonly Failure[] = [
     name: 'addSprintTasks',
     body: (r) => ({ ...planned(r), taskIds: [tax, missing('Task')] }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   {
     name: 'addSprintTasks',
     body: (r) => ({ ...planned(r), taskIds: [paper] }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'addSprintTasks',
     body: () => ({ sprintId: missing('Sprint'), taskIds: [tax] }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   {
     name: 'removeSprintTasks',
@@ -298,7 +298,7 @@ const failures: readonly Failure[] = [
       sprintTaskIds: [sprintTaskOf(r, paper).id, missing('SprintTask')],
     }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   {
     name: 'removeSprintTasks',
@@ -309,7 +309,7 @@ const failures: readonly Failure[] = [
       sprintTaskIds: [activeSprintTaskOf(r, paper).id],
     }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'setOccurrenceIncluded',
@@ -319,7 +319,7 @@ const failures: readonly Failure[] = [
       included: false,
     }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   {
     name: 'setOccurrenceIncluded',
@@ -329,7 +329,7 @@ const failures: readonly Failure[] = [
       included: true,
     }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'includeOccurrences',
@@ -338,19 +338,19 @@ const failures: readonly Failure[] = [
       occurrenceIds: [occurrencesOf(r, reading)[0]!.id],
     }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'excludeAllOccurrences',
     body: (r) => ({ ...planned(r), sprintTaskId: missing('SprintTask') }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   {
     name: 'createAndChooseTask',
     body: (r) => ({ ...planned(r), title: '   ' }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'createAndChooseTask',
@@ -358,14 +358,14 @@ const failures: readonly Failure[] = [
     // A new Task goes into a Sprint being planned only (#295 W1).
     body: (r) => ({ ...running(r), title: '請求書を送る' }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'setGoal',
     state: 'today-morning',
     body: (r) => ({ ...running(r), areaId: research, text: '' }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'setGoal',
@@ -377,7 +377,7 @@ const failures: readonly Failure[] = [
       text: '先行研究を二本読む',
     }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'setGoalLink',
@@ -387,26 +387,26 @@ const failures: readonly Failure[] = [
       goalLink: 'linked',
     }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   {
     name: 'setAvailableHours',
     body: (r) => ({ ...planned(r), hours: -1 }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'setAvailableHours',
     body: () => ({ sprintId: missing('Sprint'), hours: 20 }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   {
     name: 'confirmSprint',
     state: 'today-morning',
     body: (r) => ({ ...running(r), applyCriterion: true }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'confirmSprint',
@@ -414,7 +414,7 @@ const failures: readonly Failure[] = [
     prepare: [['completeTask', () => ({ taskId: paper })]],
     body: (r) => ({ ...planned(r), applyCriterion: true }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'undoCompleteSelection',
@@ -425,14 +425,14 @@ const failures: readonly Failure[] = [
       selectionId: selectionOf(r, paper, '2026-09-28').id,
     }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'undoCompleteSelection',
     state: 'today-morning',
     body: (r) => ({ ...running(r), selectionId: missing('DailySelection') }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
 ];
 
@@ -467,7 +467,9 @@ describe('the Sprint routes', () => {
       taskIds: [life],
     });
     expect(response.status).toBe(400);
-    expect(await response.json()).toMatchObject({ code: 'validationFailed' });
+    expect(await response.json()).toMatchObject({
+      type: '/problems/validation-failed',
+    });
     expect(await app.saved()).toEqual(before);
   });
 });
@@ -549,7 +551,9 @@ describe('the invariants, through the API', () => {
       applyCriterion: true,
     });
     expect(refused.status).toBe(422);
-    expect(await refused.json()).toMatchObject({ code: 'invalidTransition' });
+    expect(await refused.json()).toMatchObject({
+      type: '/problems/invalid-transition',
+    });
     expect(await app.saved()).toEqual(before);
 
     // Planning goes on: the draft's hours change.
@@ -796,7 +800,9 @@ describe('the invariants, through the API', () => {
       selectionId: selectionOf(before, tax, '2026-09-29').id,
     });
     expect(response.status).toBe(422);
-    expect(await response.json()).toMatchObject({ code: 'invalidTransition' });
+    expect(await response.json()).toMatchObject({
+      type: '/problems/invalid-transition',
+    });
   });
 
   it('F9: a Task of a new Area chosen in Planning is in the Sprint’s Area names at confirm', async () => {
@@ -917,7 +923,7 @@ describe('the Sprint reads', () => {
         () => `/sprints/${missing('Sprint')}`,
       );
       expect(response.status).toBe(404);
-      expect(json).toMatchObject({ code: 'notFound' });
+      expect(json).toMatchObject({ type: '/problems/not-found' });
     });
 
     it.each([
@@ -929,7 +935,7 @@ describe('the Sprint reads', () => {
     ])('answers 400 to %s', async (_, path) => {
       const { response, json } = await readOn('today-morning', path);
       expect(response.status).toBe(400);
-      expect(json).toMatchObject({ code: 'validationFailed' });
+      expect(json).toMatchObject({ type: '/problems/validation-failed' });
     });
   });
 
@@ -1004,7 +1010,7 @@ describe('the Sprint reads', () => {
     ])('answers 400 to %s', async (_, path) => {
       const { response, json } = await readOn('today-morning', () => path);
       expect(response.status).toBe(400);
-      expect(json).toMatchObject({ code: 'validationFailed' });
+      expect(json).toMatchObject({ type: '/problems/validation-failed' });
     });
   });
 

@@ -404,7 +404,7 @@ const failures: readonly Failure[] = [
       sprintTaskId: sprintTaskOf(r, paper).id,
     }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'chooseForToday',
@@ -414,7 +414,7 @@ const failures: readonly Failure[] = [
       sprintTaskId: missing('SprintTask'),
     }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   {
     // Once a day (F17): the selection is there already.
@@ -426,7 +426,7 @@ const failures: readonly Failure[] = [
       sprintTaskId: sprintTaskOf(r, paper).id,
     }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     // Done already: only a planned SprintTask is chosen.
@@ -437,7 +437,7 @@ const failures: readonly Failure[] = [
       sprintTaskId: sprintTaskOf(r, ids.task.tax).id,
     }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     // A recurring Task is chosen by its occurrence.
@@ -448,7 +448,7 @@ const failures: readonly Failure[] = [
       sprintTaskId: sprintTaskOf(r, reading).id,
     }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'chooseForToday',
@@ -459,7 +459,7 @@ const failures: readonly Failure[] = [
       occurrenceId: pendingOccurrence(r).id,
     }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     // An occurrence of another SprintTask.
@@ -471,7 +471,7 @@ const failures: readonly Failure[] = [
       occurrenceId: pendingOccurrence(r).id,
     }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     // A day done already is not chosen again.
@@ -488,7 +488,7 @@ const failures: readonly Failure[] = [
       };
     },
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'chooseForToday',
@@ -502,7 +502,7 @@ const failures: readonly Failure[] = [
       };
     },
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'chooseForToday',
@@ -512,32 +512,32 @@ const failures: readonly Failure[] = [
       sprintTaskId: sprintTaskOf(r, paper).id,
     }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   {
     name: 'createTaskForToday',
     body: (r) => ({ ...running(r), date: today, title: '   ' }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'createTaskForToday',
     body: (r) => ({ ...running(r), date: yesterday, title: '請求書を送る' }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'startSelection',
     prepare: [onCleaning('completeSelection')],
     body: cleaningToday,
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'startSelection',
     body: (r) => ({ ...running(r), selectionId: missing('DailySelection') }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   {
     // The Sprint is in Review: Today is over.
@@ -548,54 +548,54 @@ const failures: readonly Failure[] = [
       selectionId: reviewOf(r).dailySelections[0]!.id,
     }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'pauseSelection',
     prepare: [onCleaning('startSelection')],
     body: (r) => ({ ...cleaningToday(r), hours: -1 }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'pauseSelection',
     prepare: [onCleaning('deferSelection')],
     body: cleaningToday,
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'deferSelection',
     prepare: [onCleaning('deferSelection')],
     body: cleaningToday,
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     // F37: a deferral of an earlier day is not taken back.
     name: 'undoDeferSelection',
     body: (r) => pastSelection(r, paper, '2026-09-29'),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'undoDeferSelection',
     body: cleaningToday,
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'removeFromToday',
     prepare: [onCleaning('removeFromToday')],
     body: cleaningToday,
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'undoRemoveFromToday',
     body: cleaningToday,
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'undoRemoveFromToday',
@@ -604,27 +604,27 @@ const failures: readonly Failure[] = [
       selectionId: missing('DailySelection'),
     }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   {
     // An earlier day's open choice was closed by the system, not completed.
     name: 'completeSelection',
     body: (r) => pastSelection(r, reading, '2026-10-02'),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'completeSelection',
     prepare: [onCleaning('completeSelection')],
     body: cleaningToday,
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'undoCompleteSelection',
     body: cleaningToday,
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'skipSelection',
@@ -634,20 +634,20 @@ const failures: readonly Failure[] = [
       selectionId: selectionOf(r, paper, today).id,
     }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'skipSelection',
     prepare: [onCleaning('skipSelection')],
     body: cleaningToday,
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'undoSkipSelection',
     body: cleaningToday,
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'recordActualTime',
@@ -659,7 +659,7 @@ const failures: readonly Failure[] = [
       hours: -2,
     }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'recordActualTime',
@@ -670,26 +670,26 @@ const failures: readonly Failure[] = [
       hours: 2,
     }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   {
     name: 'noteInterrupt',
     body: (r) => ({ ...running(r), text: '  ' }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'noteInterrupt',
     body: (r) => ({ ...running(r), text: '電話対応', minutes: 0 }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'noteInterrupt',
     state: 'retro-start',
     body: (r) => ({ sprintId: reviewOf(r).id, text: '電話対応' }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'editInterrupt',
@@ -699,7 +699,7 @@ const failures: readonly Failure[] = [
       text: '',
     }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'editInterrupt',
@@ -709,7 +709,7 @@ const failures: readonly Failure[] = [
       text: '電話対応',
     }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   {
     // Invariant 40: after the Review starts the notes are fixed.
@@ -721,7 +721,7 @@ const failures: readonly Failure[] = [
       text: '直す',
     }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'deleteInterrupt',
@@ -730,7 +730,7 @@ const failures: readonly Failure[] = [
       interruptNoteId: missing('InterruptNote'),
     }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   {
     name: 'deleteInterrupt',
@@ -740,7 +740,7 @@ const failures: readonly Failure[] = [
       interruptNoteId: reviewOf(r).interrupts[0]!.id,
     }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     // Deleted and restored: the note is there again.
@@ -752,7 +752,7 @@ const failures: readonly Failure[] = [
     ],
     body: (r) => ({ ...running(r), note: firstNote() }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     // A note is restored, not made: it was noted before now.
@@ -768,7 +768,7 @@ const failures: readonly Failure[] = [
       },
     }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     // Noted before the Sprint began (9/28, Tokyo).
@@ -784,7 +784,7 @@ const failures: readonly Failure[] = [
       },
     }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'restoreInterrupt',
@@ -799,7 +799,7 @@ const failures: readonly Failure[] = [
       },
     }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     // Only a note the person deleted comes back: one still there was not.
@@ -807,7 +807,7 @@ const failures: readonly Failure[] = [
     state: 'today-interrupt',
     body: (r) => ({ ...running(r), note: firstNote() }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   {
     // An ID nobody has (ADR 0006 「消した記録を戻す操作の照合」).
@@ -821,7 +821,7 @@ const failures: readonly Failure[] = [
       },
     }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
 ];
 
@@ -873,7 +873,9 @@ describe('the Today routes', () => {
     const before = await app.saved();
     const response = await app.post('startSelection', body(before.records));
     expect(response.status).toBe(400);
-    expect(await response.json()).toMatchObject({ code: 'validationFailed' });
+    expect(await response.json()).toMatchObject({
+      type: '/problems/validation-failed',
+    });
     expect(await app.saved()).toEqual(before);
   });
 
@@ -887,7 +889,9 @@ describe('the Today routes', () => {
       sprintTaskId: sprintTaskOf(before.records, paper).id,
     });
     expect(response.status).toBe(400);
-    expect(await response.json()).toMatchObject({ code: 'validationFailed' });
+    expect(await response.json()).toMatchObject({
+      type: '/problems/validation-failed',
+    });
     expect(await app.saved()).toEqual(before);
   });
 });
@@ -1114,9 +1118,14 @@ describe('the decisions of Today, through the API', () => {
     }
     expect(answers[0]).toEqual([
       404,
-      { code: 'notFound', message: expect.any(String) },
+      {
+        type: '/problems/not-found',
+        title: 'Not found',
+        status: 404,
+        detail: expect.any(String),
+      },
     ]);
-    // Each is the same answer, in the status, the code and the message.
+    // Each is the same answer, in the status, the type and the detail.
     for (const other of answers) expect(other).toEqual(answers[0]);
     expect(await app.saved()).toEqual(before);
     expect(await loadRecords(app.db, bob)).toEqual(bobBefore);
@@ -1144,7 +1153,9 @@ describe('the decisions of Today, through the API', () => {
       text: '電話対応',
     });
     expect(response.status).toBe(422);
-    expect(await response.json()).toMatchObject({ code: 'invalidInput' });
+    expect(await response.json()).toMatchObject({
+      type: '/problems/invalid-input',
+    });
     expect(await app.saved()).toEqual(before);
   });
 
@@ -1293,7 +1304,7 @@ describe('the Today read', () => {
     ])('answers 400 to %s', async (_, path) => {
       const { response, json } = await readOn('today-morning', () => path);
       expect(response.status).toBe(400);
-      expect(json).toMatchObject({ code: 'validationFailed' });
+      expect(json).toMatchObject({ type: '/problems/validation-failed' });
     });
   });
 });

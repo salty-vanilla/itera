@@ -75,7 +75,7 @@ async function setup(
   // The contract's errors as the app answers them; anything else is 500.
   app.onError((error, c) =>
     error instanceof ApiError
-      ? errorResponse(c, error.code, error.message)
+      ? errorResponse(c, error.failure)
       : c.text('', 500),
   );
   const interfering = new Proxy(db, {
@@ -194,7 +194,9 @@ describe('a read whose catch-up meets another write', () => {
     const { app, db } = await setup(writingCatchUp, before(2));
     const response = await app.request('/read');
     expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ code: 'revisionConflict' });
+    expect(await response.json()).toMatchObject({
+      type: '/problems/revision-conflict',
+    });
     const { revision, records } = await loadRecords(db, alice);
     expect(revision).toBe(3);
     expect(records?.areas).toEqual([]);
