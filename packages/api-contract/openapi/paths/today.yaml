@@ -1,0 +1,476 @@
+# Today: its operations. Each operation is named in packages/application
+# operations.ts and is a POST of its input (ADR 0006).
+
+chooseForToday:
+  post:
+    operationId: chooseForToday
+    tags: [Today]
+    summary: Choose a SprintTask (or an occurrence of it) for today
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [sprintTaskId]
+            properties:
+              sprintTaskId: { $ref: '../schemas/common.yaml#/SprintTaskId' }
+              occurrenceId: { $ref: '../schemas/common.yaml#/OccurrenceId' }
+    responses:
+      '200':
+        description: Done. What the operation made or decided.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [selectionId]
+              properties:
+                selectionId:
+                  { $ref: '../schemas/common.yaml#/DailySelectionId' }
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+startSelection:
+  post:
+    operationId: startSelection
+    tags: [Today]
+    summary: Start a choice for today
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [selectionId]
+            properties:
+              selectionId: { $ref: '../schemas/common.yaml#/DailySelectionId' }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+deferSelection:
+  post:
+    operationId: deferSelection
+    tags: [Today]
+    summary: 今日は見送る
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [selectionId]
+            properties:
+              selectionId: { $ref: '../schemas/common.yaml#/DailySelectionId' }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+removeFromToday:
+  post:
+    operationId: removeFromToday
+    tags: [Today]
+    summary: 今週の残りに戻す
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [selectionId]
+            properties:
+              selectionId: { $ref: '../schemas/common.yaml#/DailySelectionId' }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+undoCloseSelection:
+  post:
+    operationId: undoCloseSelection
+    tags: [Today]
+    summary: Take back 見送り or 今週の残りに戻す, today only
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [selectionId]
+            properties:
+              selectionId: { $ref: '../schemas/common.yaml#/DailySelectionId' }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+pauseSelection:
+  post:
+    operationId: pauseSelection
+    tags: [Today]
+    summary: 今日は中断する
+    description: >-
+      With the actual hours so far, if given.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [selectionId]
+            properties:
+              selectionId: { $ref: '../schemas/common.yaml#/DailySelectionId' }
+              hours: { type: number }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+completeSelection:
+  post:
+    operationId: completeSelection
+    tags: [Today]
+    summary: Complete a choice for today
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [selectionId]
+            properties:
+              selectionId: { $ref: '../schemas/common.yaml#/DailySelectionId' }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+undoCompleteSelection:
+  post:
+    operationId: undoCompleteSelection
+    tags: [Today]
+    summary: Take back a completion today
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [selectionId]
+            properties:
+              selectionId: { $ref: '../schemas/common.yaml#/DailySelectionId' }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+skipSelection:
+  post:
+    operationId: skipSelection
+    tags: [Today]
+    summary: Skip a recurring Task's occurrence (F19)
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [selectionId]
+            properties:
+              selectionId: { $ref: '../schemas/common.yaml#/DailySelectionId' }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+undoSkipSelection:
+  post:
+    operationId: undoSkipSelection
+    tags: [Today]
+    summary: Take back a skip today
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [selectionId]
+            properties:
+              selectionId: { $ref: '../schemas/common.yaml#/DailySelectionId' }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+recordSelectionActual:
+  post:
+    operationId: recordSelectionActual
+    tags: [Today]
+    summary: Record a choice's actual hours, on its day
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [selectionId, hours]
+            properties:
+              selectionId: { $ref: '../schemas/common.yaml#/DailySelectionId' }
+              hours: { type: number }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+noteInterrupt:
+  post:
+    operationId: noteInterrupt
+    tags: [Today]
+    summary: 割り込みを記録
+    description: >-
+      Nothing in Today changes (invariant 29).
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [text]
+            properties:
+              text: { type: string }
+              minutes: { type: number }
+    responses:
+      '200':
+        description: Done. What the operation made or decided.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [interruptNoteId]
+              properties:
+                interruptNoteId:
+                  { $ref: '../schemas/common.yaml#/InterruptNoteId' }
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+editInterrupt:
+  post:
+    operationId: editInterrupt
+    tags: [Today]
+    summary: 割り込みを編集
+    description: >-
+      Its note and minutes; the time stays (F38).
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [interruptNoteId, text]
+            properties:
+              interruptNoteId:
+                { $ref: '../schemas/common.yaml#/InterruptNoteId' }
+              text: { type: string }
+              minutes: { type: number }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+deleteInterrupt:
+  post:
+    operationId: deleteInterrupt
+    tags: [Today]
+    summary: 割り込みを消す (F38)
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [interruptNoteId]
+            properties:
+              interruptNoteId:
+                { $ref: '../schemas/common.yaml#/InterruptNoteId' }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+restoreInterrupt:
+  post:
+    operationId: restoreInterrupt
+    tags: [Today]
+    summary: 元に戻す after 割り込みを消す
+    description: >-
+      The client sends back the note as the read gave it, with its ID and time: the same note returns to its place (ADR 0006). Refused if a note with that ID is there, or if it was noted later than now.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [note]
+            properties:
+              note: { $ref: '../schemas/records.yaml#/InterruptNote' }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+createTaskForToday:
+  post:
+    operationId: createTaskForToday
+    tags: [Today]
+    summary: "Today's quick add: a new Task, in the Sprint and chosen for today"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [title]
+            properties:
+              title: { type: string }
+              areaId: { $ref: '../schemas/common.yaml#/AreaId' }
+    responses:
+      '200':
+        description: Done. What the operation made or decided.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [taskId, sprintTaskId, selectionId]
+              properties:
+                taskId: { $ref: '../schemas/common.yaml#/TaskId' }
+                sprintTaskId: { $ref: '../schemas/common.yaml#/SprintTaskId' }
+                selectionId:
+                  { $ref: '../schemas/common.yaml#/DailySelectionId' }
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+beginRetro:
+  post:
+    operationId: beginRetro
+    tags: [Today]
+    summary: Retro を始める, from the last day (F21)
+    responses:
+      '204':
+        description: Done.
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }

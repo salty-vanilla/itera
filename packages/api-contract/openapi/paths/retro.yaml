@@ -1,0 +1,279 @@
+# Retro: its operations. Each operation is named in packages/application
+# operations.ts and is a POST of its input (ADR 0006).
+
+assessGoal:
+  post:
+    operationId: assessGoal
+    tags: [Retro]
+    summary: Assess an Area's Goal
+    description: >-
+      `null` clears the assessment.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [areaId, assessment]
+            properties:
+              areaId: { $ref: '../schemas/common.yaml#/AreaId' }
+              assessment:
+                oneOf:
+                  - { $ref: '../schemas/records.yaml#/SelfAssessment' }
+                  - type: 'null'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+togglePin:
+  post:
+    operationId: togglePin
+    tags: [Retro]
+    summary: Pin or unpin a fact
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [pin]
+            properties:
+              pin: { $ref: '../schemas/records.yaml#/RetroPin' }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+setReflection:
+  post:
+    operationId: setReflection
+    tags: [Retro]
+    summary: Write the reflection
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [text]
+            properties:
+              text: { type: string }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+setImprovement:
+  post:
+    operationId: setImprovement
+    tags: [Retro]
+    summary: Write the improvement
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [text]
+            properties:
+              text: { type: string }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+draftCriterion:
+  post:
+    operationId: draftCriterion
+    tags: [Retro]
+    summary: '基準にもする: draft a planning criterion from the improvement'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [policy]
+            properties:
+              policy: { $ref: '../schemas/records.yaml#/CriterionPolicy' }
+    responses:
+      '200':
+        description: Done. What the operation made or decided.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [criterionId]
+              properties:
+                criterionId:
+                  { $ref: '../schemas/common.yaml#/PlanningCriterionId' }
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+setDraftPolicy:
+  post:
+    operationId: setDraftPolicy
+    tags: [Retro]
+    summary: Change the draft criterion's policy
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [policy]
+            properties:
+              policy: { $ref: '../schemas/records.yaml#/CriterionPolicy' }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+dropCriterionDraft:
+  post:
+    operationId: dropCriterionDraft
+    tags: [Retro]
+    summary: Drop the draft criterion
+    responses:
+      '204':
+        description: Done.
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+decideCriterion:
+  post:
+    operationId: decideCriterion
+    tags: [Retro]
+    summary: 続ける / 終える / 置き換える for the criterion this Sprint had
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [decision]
+            properties:
+              decision: { $ref: '../schemas/records.yaml#/RetroDecision' }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+recordReviewActual:
+  post:
+    operationId: recordReviewActual
+    tags: [Retro]
+    summary: Add actual hours in Review (F22)
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [sprintTaskId, hours, date]
+            properties:
+              sprintTaskId: { $ref: '../schemas/common.yaml#/SprintTaskId' }
+              hours: { type: number }
+              date: { $ref: '../schemas/common.yaml#/LocalDate' }
+              occurrenceId: { $ref: '../schemas/common.yaml#/OccurrenceId' }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+completeRetro:
+  post:
+    operationId: completeRetro
+    tags: [Retro]
+    summary: Complete the Retro
+    responses:
+      '204':
+        description: Done.
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+beginPlanning:
+  post:
+    operationId: beginPlanning
+    tags: [Retro]
+    summary: 計画を始める for the next week not confirmed yet
+    responses:
+      '200':
+        description: Done. What the operation made or decided.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sprintId]
+              properties:
+                sprintId: { $ref: '../schemas/common.yaml#/SprintId' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }

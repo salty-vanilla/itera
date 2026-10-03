@@ -1,0 +1,355 @@
+# Values packages/domain derives from the records (totals, capacity,
+# progress, Retro facts, …). Never stored; the server computes them for the
+# reads (ADR 0005 2026-10-03: derived values come from the API).
+
+# ------------------------------------------------------------ Recurrence
+NextOccurrence:
+  type: object
+  required: [scheduledDate, ruleVersion, generated]
+  properties:
+    scheduledDate: { $ref: './common.yaml#/LocalDate' }
+    ruleVersion: { type: integer }
+    generated:
+      description: Whether the occurrence exists already or is projected.
+      type: boolean
+RecurrenceSummary:
+  type: object
+  required: [pattern]
+  properties:
+    pattern: { $ref: './records.yaml#/RecurrencePattern' }
+    upcoming:
+      description: A change of pattern from a later day.
+      type: object
+      required: [pattern, effectiveFrom]
+      properties:
+        pattern: { $ref: './records.yaml#/RecurrencePattern' }
+        effectiveFrom: { $ref: './common.yaml#/LocalDate' }
+    next: { $ref: '#/NextOccurrence' }
+    endsOn: { $ref: './common.yaml#/LocalDate' }
+
+# ------------------------------------------------------ Totals, capacity
+Range:
+  type: object
+  required: [lo, hi]
+  properties:
+    lo: { type: number }
+    hi: { type: number }
+PlanningTotal:
+  type: object
+  required: [lo, hi, unestimated, unestimatedSubtasks]
+  properties:
+    lo: { type: number }
+    hi: { type: number }
+    unestimated: { type: integer }
+    unestimatedSubtasks: { type: integer }
+AreaTotal:
+  type: object
+  required: [areaId, lo, hi, unestimated, unestimatedSubtasks]
+  properties:
+    areaId:
+      description: '`null` for the Tasks without an Area.'
+      oneOf:
+        - $ref: './common.yaml#/AreaId'
+        - type: 'null'
+    lo: { type: number }
+    hi: { type: number }
+    unestimated: { type: integer }
+    unestimatedSubtasks: { type: integer }
+CapacityStatus:
+  type: string
+  enum: [within, mayExceed, exceeds]
+Capacity:
+  type: object
+  required: [availableHours, remaining, status]
+  properties:
+    availableHours: { type: number }
+    remaining: { $ref: '#/Range' }
+    status: { $ref: '#/CapacityStatus' }
+SprintTotals:
+  type: object
+  required: [total, byArea]
+  properties:
+    total: { $ref: '#/PlanningTotal' }
+    byArea:
+      type: array
+      items: { $ref: '#/AreaTotal' }
+    capacity: { $ref: '#/Capacity' }
+CapacityDriver:
+  description: A Task whose range widens the week's total the most.
+  type: object
+  required: [sprintTask, task, value, spread]
+  properties:
+    sprintTask: { $ref: './records.yaml#/SprintTask' }
+    task: { $ref: './records.yaml#/Task' }
+    value: { $ref: './records.yaml#/EstimatedPlanningValue' }
+    fromRange: { $ref: '#/Range' }
+    spread: { type: number }
+
+# ------------------------------------------------------------- Criterion
+ActiveCriterion:
+  type: object
+  required: [id, policy]
+  properties:
+    id: { $ref: './common.yaml#/PlanningCriterionId' }
+    policy: { $ref: './records.yaml#/CriterionPolicy' }
+CriterionPreviewRow:
+  type: object
+  required: [taskId, from, to]
+  properties:
+    taskId: { $ref: './common.yaml#/TaskId' }
+    from: { $ref: '#/Range' }
+    to: { type: number }
+CriterionView:
+  type: object
+  required: [policy, effect, preview]
+  properties:
+    policy: { $ref: './records.yaml#/CriterionPolicy' }
+    effect:
+      type: object
+      required: [bound, scope]
+      properties:
+        bound: { $ref: './records.yaml#/SuggestionBound' }
+        scope: { $ref: './records.yaml#/CriterionScope' }
+    preview:
+      type: array
+      items: { $ref: '#/CriterionPreviewRow' }
+CriterionEffect:
+  type: object
+  required: [count, delta]
+  properties:
+    count: { type: integer }
+    delta: { $ref: '#/Range' }
+
+# -------------------------------------------------------------- Progress
+WeekProgress:
+  type: object
+  required: [done, total]
+  properties:
+    done: { type: integer }
+    total: { type: integer }
+OccurrenceProgress:
+  type: object
+  required: [done, total, skipped]
+  properties:
+    done: { type: integer }
+    total: { type: integer }
+    skipped: { type: integer }
+TodayRemaining:
+  type: object
+  required: [count, lo, hi, unestimated]
+  properties:
+    count: { type: integer }
+    lo: { type: number }
+    hi: { type: number }
+    unestimated: { type: integer }
+DayOfSprint:
+  description: The day's place in its Sprint (「3日目 / 7日」).
+  type: object
+  required: [index, count]
+  properties:
+    index: { type: integer }
+    count: { type: integer }
+CarryCount:
+  description: 持ち越し N回（Sprint M から） (F25, F26).
+  type: object
+  required: [count, fromSprint]
+  properties:
+    count: { type: integer }
+    fromSprint: { type: integer }
+AvailableHours:
+  type: object
+  properties:
+    planned: { type: number }
+    current: { type: number }
+
+# ------------------------------------------------------------ Retro facts
+TaskFact:
+  type: object
+  required:
+    - sprintTaskId
+    - taskId
+    - title
+    - areaId
+    - recurring
+    - outcome
+    - origin
+    - goalLink
+    - actualHours
+    - carryCount
+    - deferredDates
+    - longestDeferralRun
+    - pausedDates
+  properties:
+    sprintTaskId: { $ref: './common.yaml#/SprintTaskId' }
+    taskId: { $ref: './common.yaml#/TaskId' }
+    title: { type: string }
+    areaId:
+      oneOf:
+        - $ref: './common.yaml#/AreaId'
+        - type: 'null'
+    recurring: { type: boolean }
+    outcome: { $ref: './records.yaml#/SprintTaskOutcome' }
+    origin: { $ref: './records.yaml#/SprintTaskOrigin' }
+    goalLink: { $ref: './records.yaml#/GoalLink' }
+    plan: { $ref: './records.yaml#/PlanSnapshot' }
+    estimateNow: { type: number }
+    actualHours: { type: number }
+    actualVsPlan: { $ref: '#/Range' }
+    carryCount: { type: integer }
+    deferredDates:
+      type: array
+      items: { $ref: './common.yaml#/LocalDate' }
+    longestDeferralRun:
+      type: array
+      items: { $ref: './common.yaml#/LocalDate' }
+    pausedDates:
+      type: array
+      items: { $ref: './common.yaml#/LocalDate' }
+GoalFact:
+  type: object
+  required: [text, changedSinceConfirm]
+  properties:
+    text: { type: string }
+    plannedText: { type: string }
+    changedSinceConfirm: { type: boolean }
+    selfAssessment: { $ref: './records.yaml#/SelfAssessment' }
+AreaFacts:
+  type: object
+  required: [areaId, linked, unlinked]
+  properties:
+    areaId:
+      oneOf:
+        - $ref: './common.yaml#/AreaId'
+        - type: 'null'
+    name: { type: string }
+    goal: { $ref: '#/GoalFact' }
+    linked:
+      type: array
+      items: { $ref: '#/TaskFact' }
+    unlinked:
+      type: array
+      items: { $ref: '#/TaskFact' }
+OccurrenceFact:
+  type: object
+  required: [occurrence, sprintTaskId, actualHours]
+  properties:
+    occurrence: { $ref: './records.yaml#/Occurrence' }
+    sprintTaskId: { $ref: './common.yaml#/SprintTaskId' }
+    actualHours: { type: number }
+    doneOn: { $ref: './common.yaml#/LocalDate' }
+OccurrenceFacts:
+  type: object
+  required: [done, skipped, missed, all]
+  properties:
+    done:
+      type: array
+      items: { $ref: './records.yaml#/Occurrence' }
+    skipped:
+      type: array
+      items: { $ref: './records.yaml#/Occurrence' }
+    missed:
+      type: array
+      items: { $ref: './records.yaml#/Occurrence' }
+    all:
+      type: array
+      items: { $ref: '#/OccurrenceFact' }
+RetroFacts:
+  description: Retro の事実, derived from the Sprint's records.
+  type: object
+  required:
+    - areas
+    - tasks
+    - completed
+    - carriedOver
+    - removed
+    - midSprint
+    - occurrences
+    - deferrals
+    - pauses
+    - interrupts
+    - interruptTime
+    - availableHours
+    - plannedTotal
+    - actualHours
+  properties:
+    areas:
+      type: array
+      items: { $ref: '#/AreaFacts' }
+    tasks:
+      type: array
+      items: { $ref: '#/TaskFact' }
+    completed:
+      type: array
+      items: { $ref: '#/TaskFact' }
+    carriedOver:
+      type: array
+      items: { $ref: '#/TaskFact' }
+    removed:
+      type: array
+      items: { $ref: '#/TaskFact' }
+    midSprint:
+      type: array
+      items: { $ref: '#/TaskFact' }
+    occurrences: { $ref: '#/OccurrenceFacts' }
+    deferrals:
+      type: array
+      items: { $ref: './records.yaml#/DailySelection' }
+    pauses:
+      type: array
+      items: { $ref: './records.yaml#/DailySelection' }
+    interrupts:
+      type: array
+      items: { $ref: './records.yaml#/InterruptNote' }
+    interruptTime:
+      type: object
+      required: [minutes, withoutMinutes]
+      properties:
+        minutes: { type: number }
+        withoutMinutes: { type: integer }
+    availableHours: { $ref: '#/AvailableHours' }
+    plannedTotal:
+      type: object
+      required: [atConfirm, withAdditions]
+      properties:
+        atConfirm: { $ref: '#/PlanningTotal' }
+        withAdditions: { $ref: '#/PlanningTotal' }
+    capacity:
+      type: object
+      required: [atConfirm, withAdditions]
+      properties:
+        atConfirm: { $ref: '#/Capacity' }
+        withAdditions: { $ref: '#/Capacity' }
+    actualHours: { type: number }
+CriterionResult:
+  type: object
+  required: [tasks, done, carriedOver, planned, actualHours]
+  properties:
+    tasks:
+      type: array
+      items: { $ref: '#/TaskFact' }
+    done:
+      type: array
+      items: { $ref: '#/TaskFact' }
+    carriedOver:
+      type: array
+      items: { $ref: '#/TaskFact' }
+    planned: { $ref: '#/PlanningTotal' }
+    actualHours: { type: number }
+CarryOverPlaces:
+  type: object
+  required: [total, inNext, candidates, completed, archived]
+  properties:
+    total: { type: integer }
+    inNext: { type: integer }
+    candidates: { type: integer }
+    completed: { type: integer }
+    archived: { type: integer }
+CarryOverPlace:
+  type: string
+  enum: [inNext, candidate, completed, archived]
+CarryOverTask:
+  type: object
+  required: [taskId, place]
+  properties:
+    taskId: { $ref: './common.yaml#/TaskId' }
+    place: { $ref: '#/CarryOverPlace' }

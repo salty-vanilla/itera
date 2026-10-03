@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    // scripts/generated.mjs, as the root checks tooling/**/*.mjs.
+    "allowJs": true,
+    "checkJs": true,
+    // generated.mjs imports contract-config.ts as Node runs it.
+    "allowImportingTsExtensions": true
+  },
+  "include": ["src", "scripts", "vitest.config.ts"],
+  "exclude": []
+}

@@ -9,6 +9,7 @@ docs/
 
 # Generated or local.
 services/api/worker-configuration.d.ts
+packages/api-contract/src/generated/
 services/api/migrations/
 .wrangler/
 pnpm-lock.yaml

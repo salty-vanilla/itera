@@ -1,0 +1,468 @@
+# The records of packages/domain, in the same shape (ADR 0006 記録の DTO).
+# An optional property is left out when it has no value; it is never null.
+# Value rules (positive hours, a non-empty title, state transitions) are the
+# domain's: the contract describes the shape only.
+
+# ------------------------------------------------------------------ Area
+AreaColor:
+  description: The Area's color, `area-1` to `area-7` (DESIGN.md).
+  type: integer
+  enum: [1, 2, 3, 4, 5, 6, 7]
+
+# ------------------------------------------------------------------ Task
+TaskLifecycle:
+  type: string
+  enum: [active, completed, archived]
+TaskPriority:
+  type: string
+  enum: [high, normal, low]
+TimeBasis:
+  description: Whether the Task's time is its own Estimate or its Subtasks' sum.
+  type: string
+  enum: [task, subtasks]
+TaskCreatedVia:
+  type: string
+  enum: [backlog, today, agent]
+SuggestionBound:
+  description: Which end of a suggestion's range is used (lo, the middle, hi).
+  type: string
+  enum: [lo, mid, hi]
+Subtask:
+  type: object
+  required: [id, title, done]
+  properties:
+    id: { $ref: './common.yaml#/SubtaskId' }
+    title: { type: string }
+    estimate:
+      description: Hours.
+      type: number
+    done: { type: boolean }
+    doneAt: { $ref: './common.yaml#/Instant' }
+EstimateSource:
+  oneOf:
+    - type: object
+      required: [kind]
+      properties:
+        kind: { const: manual }
+    - description: 採用 of a suggestion's bound.
+      type: object
+      required: [kind, suggestionId, bound]
+      properties:
+        kind: { const: adopted }
+        suggestionId: { $ref: './common.yaml#/EstimateSuggestionId' }
+        bound: { $ref: '#/SuggestionBound' }
+    - description: 直して使う (F31), the person's own hours from a suggestion.
+      type: object
+      required: [kind, suggestionId]
+      properties:
+        kind: { const: edited }
+        suggestionId: { $ref: './common.yaml#/EstimateSuggestionId' }
+Estimate:
+  type: object
+  required: [hours, setAt, source]
+  properties:
+    hours: { type: number }
+    setAt: { $ref: './common.yaml#/Instant' }
+    source: { $ref: '#/EstimateSource' }
+SuggestionState:
+  type: string
+  enum: [presented, adopted, rejected, replaced]
+EstimateSuggestion:
+  type: object
+  required: [id, lo, hi, rationale, uncertainties, createdAt, state]
+  properties:
+    id: { $ref: './common.yaml#/EstimateSuggestionId' }
+    lo: { type: number }
+    hi: { type: number }
+    rationale: { type: string }
+    uncertainties:
+      type: array
+      items: { type: string }
+    createdAt: { $ref: './common.yaml#/Instant' }
+    state: { $ref: '#/SuggestionState' }
+Task:
+  type: object
+  required:
+    - id
+    - userId
+    - title
+    - description
+    - priority
+    - lifecycle
+    - timeBasis
+    - subtasks
+    - suggestions
+    - createdAt
+    - createdVia
+  properties:
+    id: { $ref: './common.yaml#/TaskId' }
+    userId: { $ref: './common.yaml#/UserId' }
+    title: { type: string }
+    description: { type: string }
+    areaId: { $ref: './common.yaml#/AreaId' }
+    due: { $ref: './common.yaml#/LocalDate' }
+    priority: { $ref: '#/TaskPriority' }
+    lifecycle: { $ref: '#/TaskLifecycle' }
+    timeBasis: { $ref: '#/TimeBasis' }
+    subtasks:
+      type: array
+      items: { $ref: '#/Subtask' }
+    estimate: { $ref: '#/Estimate' }
+    suggestions:
+      type: array
+      items: { $ref: '#/EstimateSuggestion' }
+    recurrenceRuleId:
+      description: Set for a recurring Task. The rule is a record of its own.
+      $ref: './common.yaml#/RecurrenceRuleId'
+    createdAt: { $ref: './common.yaml#/Instant' }
+    createdVia: { $ref: '#/TaskCreatedVia' }
+    completedAt: { $ref: './common.yaml#/Instant' }
+    archivedAt: { $ref: './common.yaml#/Instant' }
+TaskAttributeUpdate:
+  description: >-
+    The attributes to change; a property left out stays. `null` clears an
+    optional attribute. Only in requests, so unknown keys are refused.
+  type: object
+  additionalProperties: false
+  properties:
+    title: { type: string }
+    description: { type: string }
+    areaId:
+      oneOf:
+        - $ref: './common.yaml#/AreaId'
+        - type: 'null'
+    due:
+      oneOf:
+        - $ref: './common.yaml#/LocalDate'
+        - type: 'null'
+    priority: { $ref: '#/TaskPriority' }
+    timeBasis: { $ref: '#/TimeBasis' }
+
+# ------------------------------------------------------------ Recurrence
+RecurrencePattern:
+  oneOf:
+    - type: object
+      required: [freq]
+      properties:
+        freq: { const: daily }
+    - type: object
+      required: [freq]
+      properties:
+        freq: { const: weekdays }
+    - type: object
+      required: [freq, daysOfWeek]
+      properties:
+        freq: { const: weekly }
+        daysOfWeek:
+          type: array
+          items: { $ref: './common.yaml#/DayOfWeek' }
+    - type: object
+      required: [freq, dayOfMonth]
+      properties:
+        freq: { const: monthly }
+        dayOfMonth: { type: integer }
+OccurrenceState:
+  type: string
+  enum: [pending, excluded, done, skipped, missed]
+Occurrence:
+  type: object
+  required:
+    - id
+    - taskId
+    - ruleId
+    - scheduledDate
+    - ruleVersion
+    - materializedAt
+    - state
+    - stateChangedAt
+  properties:
+    id: { $ref: './common.yaml#/OccurrenceId' }
+    taskId: { $ref: './common.yaml#/TaskId' }
+    ruleId: { $ref: './common.yaml#/RecurrenceRuleId' }
+    scheduledDate: { $ref: './common.yaml#/LocalDate' }
+    ruleVersion: { type: integer }
+    materializedAt: { $ref: './common.yaml#/Instant' }
+    state: { $ref: '#/OccurrenceState' }
+    stateChangedAt: { $ref: './common.yaml#/Instant' }
+
+# ------------------------------------------------------- PlanningValue
+CriterionScope:
+  description: The Tasks a planning criterion covers.
+  oneOf:
+    - type: object
+      required: [kind]
+      properties:
+        kind: { const: all }
+    - type: object
+      required: [kind, areaId]
+      properties:
+        kind: { const: area }
+        areaId: { $ref: './common.yaml#/AreaId' }
+CriterionPolicy:
+  type: object
+  required: [scope, rangePolicy]
+  properties:
+    scope: { $ref: '#/CriterionScope' }
+    rangePolicy: { $ref: '#/SuggestionBound' }
+EstimatedPlanningValue:
+  description: A planning value from an Estimate or a suggestion.
+  type: object
+  required: [base, lo, hi, criterionApplied, computedAt]
+  properties:
+    base:
+      type: string
+      enum: [estimate, suggestion]
+    lo: { type: number }
+    hi: { type: number }
+    criterionApplied: { type: boolean }
+    computedAt: { $ref: './common.yaml#/Instant' }
+PlanningValue:
+  description: >-
+    The hours a Task is planned at (PlanningValue). 「適用」 of a criterion
+    changes this value, not the Task.
+  oneOf:
+    - $ref: '#/EstimatedPlanningValue'
+    - type: object
+      required:
+        [base, lo, hi, unestimatedSubtasks, criterionApplied, computedAt]
+      properties:
+        base: { const: subtasks }
+        lo: { type: number }
+        hi: { type: number }
+        unestimatedSubtasks: { type: integer }
+        criterionApplied: { const: false }
+        computedAt: { $ref: './common.yaml#/Instant' }
+    - type: object
+      required: [base, criterionApplied, computedAt]
+      properties:
+        base: { const: none }
+        criterionApplied: { const: false }
+        computedAt: { $ref: './common.yaml#/Instant' }
+
+# ---------------------------------------------------------------- Sprint
+SprintState:
+  type: string
+  enum: [planning, active, review, closed]
+SprintTaskOutcome:
+  type: string
+  enum: [draft, planned, done, removed, carriedOver]
+SprintTaskOrigin:
+  type: string
+  enum: [planning, midSprint]
+GoalLink:
+  type: string
+  enum: [linked, unlinked]
+SelfAssessment:
+  type: string
+  enum: [achieved, partly, notAchieved, notJudged]
+RetroDecision:
+  type: string
+  enum: [continue, end, replace]
+PlanSnapshot:
+  description: The plan fixed at confirm.
+  type: object
+  required: [value, timeBasis]
+  properties:
+    value: { $ref: '#/PlanningValue' }
+    timeBasis: { $ref: '#/TimeBasis' }
+    estimateHours: { type: number }
+    suggestion:
+      type: object
+      required: [id, lo, hi]
+      properties:
+        id: { $ref: './common.yaml#/EstimateSuggestionId' }
+        lo: { type: number }
+        hi: { type: number }
+    occurrenceCount: { type: integer }
+SprintTask:
+  type: object
+  required: [id, taskId, origin, addedAt, goalLink, outcome]
+  properties:
+    id: { $ref: './common.yaml#/SprintTaskId' }
+    taskId: { $ref: './common.yaml#/TaskId' }
+    occurrenceIds:
+      description: >-
+        A recurring Task's occurrences in this Sprint. Left out for a Task
+        that does not recur; empty when every occurrence is left out.
+      type: array
+      items: { $ref: './common.yaml#/OccurrenceId' }
+    origin: { $ref: '#/SprintTaskOrigin' }
+    addedAt: { $ref: './common.yaml#/Instant' }
+    goalLink: { $ref: '#/GoalLink' }
+    outcome: { $ref: '#/SprintTaskOutcome' }
+    planSnapshot: { $ref: '#/PlanSnapshot' }
+    carriedFrom: { $ref: './common.yaml#/SprintTaskId' }
+SprintGoal:
+  type: object
+  required: [areaId, text]
+  properties:
+    areaId: { $ref: './common.yaml#/AreaId' }
+    text: { type: string }
+    plannedText: { type: string }
+    selfAssessment: { $ref: '#/SelfAssessment' }
+SprintAreaSnapshotEntry:
+  type: object
+  required: [areaId, name, order]
+  properties:
+    areaId: { $ref: './common.yaml#/AreaId' }
+    name: { type: string }
+    order: { type: number }
+CriterionUse:
+  type: object
+  required: [criterionId, appliedAtConfirm]
+  properties:
+    criterionId: { $ref: './common.yaml#/PlanningCriterionId' }
+    appliedAtConfirm: { type: boolean }
+    retroDecision: { $ref: '#/RetroDecision' }
+DailyResolution:
+  type: string
+  enum:
+    - selected
+    - started
+    - done
+    - paused
+    - deferred
+    - removed
+    - skipped
+    - unresolved
+ClosedResolution:
+  description: How a choice for today was closed without being done.
+  type: string
+  enum: [paused, deferred, removed]
+DailySelectionOrigin:
+  type: string
+  enum: [manual, recurringToday, midSprint, backlogCompletion]
+DailySelection:
+  type: object
+  required: [id, date, sprintTaskId, origin, resolution, selectedAt]
+  properties:
+    id: { $ref: './common.yaml#/DailySelectionId' }
+    date: { $ref: './common.yaml#/LocalDate' }
+    sprintTaskId: { $ref: './common.yaml#/SprintTaskId' }
+    occurrenceId: { $ref: './common.yaml#/OccurrenceId' }
+    origin: { $ref: '#/DailySelectionOrigin' }
+    resolution: { $ref: '#/DailyResolution' }
+    selectedAt: { $ref: './common.yaml#/Instant' }
+    startedAt: { $ref: './common.yaml#/Instant' }
+    resolvedAt: { $ref: './common.yaml#/Instant' }
+    closedBefore:
+      type: object
+      required: [resolution, at]
+      properties:
+        resolution: { $ref: '#/ClosedResolution' }
+        at: { $ref: './common.yaml#/Instant' }
+ActualTimeVia:
+  type: string
+  enum: [completion, pause, later]
+ActualTime:
+  type: object
+  required: [sprintTaskId, hours, date, via, recordedAt]
+  properties:
+    sprintTaskId: { $ref: './common.yaml#/SprintTaskId' }
+    occurrenceId: { $ref: './common.yaml#/OccurrenceId' }
+    hours: { type: number }
+    date: { $ref: './common.yaml#/LocalDate' }
+    via: { $ref: '#/ActualTimeVia' }
+    recordedAt: { $ref: './common.yaml#/Instant' }
+InterruptNote:
+  type: object
+  required: [id, at, text]
+  properties:
+    id: { $ref: './common.yaml#/InterruptNoteId' }
+    at: { $ref: './common.yaml#/Instant' }
+    text: { type: string }
+    minutes: { type: number }
+RetroPin:
+  type: object
+  required: [kind]
+  properties:
+    kind:
+      type: string
+      enum:
+        - sprintTask
+        - dailySelection
+        - occurrence
+        - interrupt
+        - goal
+        - availableHours
+    id:
+      description: The pinned record's ID (an Area's for a goal).
+      type: string
+RetroImprovement:
+  type: object
+  required: [text]
+  properties:
+    text: { type: string }
+    criterionId: { $ref: './common.yaml#/PlanningCriterionId' }
+Retro:
+  type: object
+  required: [startedAt, pins, reflection]
+  properties:
+    startedAt: { $ref: './common.yaml#/Instant' }
+    completedAt: { $ref: './common.yaml#/Instant' }
+    pins:
+      type: array
+      items: { $ref: '#/RetroPin' }
+    reflection: { type: string }
+    improvement: { $ref: '#/RetroImprovement' }
+Sprint:
+  description: The aggregate root of its SprintTasks, DailySelections, Retro, ….
+  type: object
+  required:
+    - id
+    - userId
+    - start
+    - end
+    - state
+    - goals
+    - tasks
+    - areaSnapshot
+    - dailySelections
+    - actualTimes
+    - interrupts
+  properties:
+    id: { $ref: './common.yaml#/SprintId' }
+    userId: { $ref: './common.yaml#/UserId' }
+    start: { $ref: './common.yaml#/LocalDate' }
+    end: { $ref: './common.yaml#/LocalDate' }
+    state: { $ref: '#/SprintState' }
+    previousSprintId: { $ref: './common.yaml#/SprintId' }
+    availableHours: { type: number }
+    plannedAvailableHours: { type: number }
+    confirmedAt: { $ref: './common.yaml#/Instant' }
+    goals:
+      type: array
+      items: { $ref: '#/SprintGoal' }
+    tasks:
+      type: array
+      items: { $ref: '#/SprintTask' }
+    areaSnapshot:
+      type: array
+      items: { $ref: '#/SprintAreaSnapshotEntry' }
+    criterionUse: { $ref: '#/CriterionUse' }
+    dailySelections:
+      type: array
+      items: { $ref: '#/DailySelection' }
+    actualTimes:
+      type: array
+      items: { $ref: '#/ActualTime' }
+    interrupts:
+      type: array
+      items: { $ref: '#/InterruptNote' }
+    retro: { $ref: '#/Retro' }
+
+# ---------------------------------------------------- PlanningCriterion
+CriterionState:
+  type: string
+  enum: [draft, active, ended, replaced]
+PlanningCriterion:
+  type: object
+  required: [id, userId, policy, sourceSprintId, state, createdAt]
+  properties:
+    id: { $ref: './common.yaml#/PlanningCriterionId' }
+    userId: { $ref: './common.yaml#/UserId' }
+    policy: { $ref: '#/CriterionPolicy' }
+    sourceSprintId: { $ref: './common.yaml#/SprintId' }
+    state: { $ref: '#/CriterionState' }
+    replacedBy: { $ref: './common.yaml#/PlanningCriterionId' }
+    createdAt: { $ref: './common.yaml#/Instant' }

@@ -1,0 +1,86 @@
+# The Sprint after 確定: its operations. Each operation is named in packages/application
+# operations.ts and is a POST of its input (ADR 0006).
+
+setRunningGoal:
+  post:
+    operationId: setRunningGoal
+    tags: [Running]
+    summary: Change an Area's Goal while the Sprint runs
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [areaId, text]
+            properties:
+              areaId: { $ref: '../schemas/common.yaml#/AreaId' }
+              text: { type: string }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+setRunningAvailableHours:
+  post:
+    operationId: setRunningAvailableHours
+    tags: [Running]
+    summary: Change the week's available hours while the Sprint runs
+    description: >-
+      `null` clears them.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [hours]
+            properties:
+              hours:
+                oneOf:
+                  - { type: number }
+                  - type: 'null'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+undoPastDay:
+  post:
+    operationId: undoPastDay
+    tags: [Running]
+    summary: Take back a past day's completion or skip (#53)
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [selectionId]
+            properties:
+              selectionId: { $ref: '../schemas/common.yaml#/DailySelectionId' }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }

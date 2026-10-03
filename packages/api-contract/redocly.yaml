@@ -1,0 +1,7 @@
+# The contract's lint (ADR 0006): Redocly's recommended rules with every
+# warning an error, so `pnpm check` stops on it.
+extends:
+  - recommended-strict
+# No usage data leaves the machine (the update check is turned off by
+# REDOCLY_SUPPRESS_UPDATE_NOTICE in the scripts).
+telemetry: off
