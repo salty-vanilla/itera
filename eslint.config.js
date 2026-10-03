@@ -5,6 +5,67 @@ import globals from 'globals';
 import reactHooks from 'eslint-plugin-react-hooks';
 import storybook from 'eslint-plugin-storybook';
 
+/**
+ * packages/domain and packages/application are pure: the current time,
+ * randomness and IDs come in as arguments (.claude/rules/domain.md, ADR 0005
+ * アプリケーション層).
+ * @param {string} name
+ * @returns {import('eslint').Linter.RulesRecord}
+ */
+function pureRules(name) {
+  return {
+    'no-restricted-properties': [
+      'error',
+      {
+        object: 'Date',
+        property: 'now',
+        message: 'Take the current time as an argument.',
+      },
+      {
+        object: 'Math',
+        property: 'random',
+        message: 'Take IDs and random values as arguments.',
+      },
+    ],
+    'no-restricted-syntax': [
+      'error',
+      {
+        selector: "NewExpression[callee.name='Date'][arguments.length=0]",
+        message: 'Take the current time as an argument.',
+      },
+      {
+        selector: "CallExpression[callee.name='Date'][arguments.length=0]",
+        message: 'Take the current time as an argument.',
+      },
+    ],
+    'no-restricted-globals': [
+      'error',
+      ...[
+        'globalThis',
+        'window',
+        'self',
+        'document',
+        'navigator',
+        'localStorage',
+        'sessionStorage',
+        'fetch',
+        'process',
+        'Buffer',
+        'require',
+        'crypto',
+        'performance',
+        'setTimeout',
+        'setInterval',
+        'queueMicrotask',
+        'structuredClone',
+      ].map((global) => ({
+        name: global,
+        message: `${name} is pure: take it as an argument.`,
+      })),
+    ],
+  };
+}
+
 // Keep ESLint configuration in this one file. ESLint 10 looks up the nearest
 // eslint.config.* per directory, so a nested config would replace this one
 // for its subtree instead of extending it. Add package rules here with `files`.
@@ -55,55 +116,7 @@ export default defineConfig(
       'packages/domain/src/testing.ts',
     ],
     rules: {
-      'no-restricted-properties': [
-        'error',
-        {
-          object: 'Date',
-          property: 'now',
-          message: 'Take the current time as an argument.',
-        },
-        {
-          object: 'Math',
-          property: 'random',
-          message: 'Take IDs and random values as arguments.',
-        },
-      ],
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector: "NewExpression[callee.name='Date'][arguments.length=0]",
-          message: 'Take the current time as an argument.',
-        },
-        {
-          selector: "CallExpression[callee.name='Date'][arguments.length=0]",
-          message: 'Take the current time as an argument.',
-        },
-      ],
-      'no-restricted-globals': [
-        'error',
-        ...[
-          'globalThis',
-          'window',
-          'self',
-          'document',
-          'navigator',
-          'localStorage',
-          'sessionStorage',
-          'fetch',
-          'process',
-          'Buffer',
-          'require',
-          'crypto',
-          'performance',
-          'setTimeout',
-          'setInterval',
-          'queueMicrotask',
-          'structuredClone',
-        ].map((name) => ({
-          name,
-          message: 'packages/domain is pure: take it as an argument.',
-        })),
-      ],
+      ...pureRules('packages/domain'),
       'no-restricted-imports': [
         'error',
         {
@@ -128,54 +141,7 @@ export default defineConfig(
       'packages/application/src/testing.ts',
     ],
     rules: {
-      'no-restricted-properties': [
-        'error',
-        {
-          object: 'Date',
-          property: 'now',
-          message: 'Take the current time as an argument.',
-        },
-        {
-          object: 'Math',
-          property: 'random',
-          message: 'Take random bytes as an argument.',
-        },
-      ],
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector: "NewExpression[callee.name='Date'][arguments.length=0]",
-          message: 'Take the current time as an argument.',
-        },
-        {
-          selector: "CallExpression[callee.name='Date'][arguments.length=0]",
-          message: 'Take the current time as an argument.',
-        },
-      ],
-      'no-restricted-globals': [
-        'error',
-        ...[
-          'globalThis',
-          'window',
-          'self',
-          'document',
-          'navigator',
-          'localStorage',
-          'sessionStorage',
-          'fetch',
-          'process',
-          'Buffer',
-          'require',
-          'crypto',
-          'performance',
-          'setTimeout',
-          'setInterval',
-          'queueMicrotask',
-        ].map((name) => ({
-          name,
-          message: 'packages/application is pure: take it as an argument.',
-        })),
-      ],
+      ...pureRules('packages/application'),
       'no-restricted-imports': [
         'error',
         {

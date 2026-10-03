@@ -4,8 +4,7 @@
     // Product code only. No DOM (lib ES2023) and no Node types, so browser
     // and Node APIs are type errors here: the API (Workers) and the browser
     // mock run the same code. Tests are checked by tsconfig.test.json.
-    "types": [],
-    "resolveJsonModule": true
+    "types": []
   },
   "include": ["src"],
   "exclude": ["src/**/*.test.ts", "src/testing.ts"]

@@ -13,8 +13,12 @@ import {
 import { formatDate, formatDateRange } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
 import { weekCall, weekText, weekLabel } from '@/lib/week-text';
-import type { ActualTarget, RetroData } from '@/store/views';
-import { type SprintChoice, type SprintRef } from '@/store/views';
+import type {
+  ActualTarget,
+  RetroData,
+  SprintChoice,
+  SprintRef,
+} from '@/store/views';
 import { useAppOverview } from '@/store/use-app-overview';
 import { useRetro, useRetroActions } from '@/store/use-retro';
 import { useSprintChoice } from '@/store/use-sprint-choice';

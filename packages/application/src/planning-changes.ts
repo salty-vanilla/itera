@@ -167,6 +167,28 @@ export function excludeAllOccurrences(sprintTaskId: SprintTaskId): Change {
   };
 }
 
+/** Puts one excluded occurrence back in the draft (invariant 33). */
+function include(
+  sprint: Sprint,
+  occurrenceId: OccurrenceId,
+  records: Records,
+  ctx: ChangeContext,
+) {
+  const occurrence = find(records.occurrences, occurrenceId, 'Occurrence');
+  if (!occurrence.ok) return occurrence;
+  const task = find(records.tasks, occurrence.value.taskId, 'Task');
+  if (!task.ok) return task;
+  return includeInPlan(
+    sprint,
+    {
+      occurrence: occurrence.value,
+      task: task.value,
+      sprintTaskId: ctx.newId('SprintTask'),
+    },
+    ctx,
+  );
+}
+
 /**
  * 外した繰り返しの回をまとめて戻す (invariant 33): all of them or, when one
  * cannot be, none.
@@ -181,23 +203,15 @@ export function includeOccurrences(
     const included: Occurrence[] = [];
     const activities: Activity[] = [];
     for (const occurrenceId of occurrenceIds) {
-      const occurrence = find(records.occurrences, occurrenceId, 'Occurrence');
-      if (!occurrence.ok) return occurrence;
-      const task = find(records.tasks, occurrence.value.taskId, 'Task');
-      if (!task.ok) return task;
-      const result = includeInPlan(
-        sprint,
-        {
-          occurrence: occurrence.value,
-          task: task.value,
-          sprintTaskId: ctx.newId('SprintTask'),
-        },
-        ctx,
-      );
+      const result = include(sprint, occurrenceId, records, ctx);
       if (!result.ok) return result;
       sprint = result.value.record.sprint;
       included.push(result.value.record.occurrence);
       activities.push(...result.value.activities);
+    }
+    // Nothing to put back: nothing to write.
+    if (included.length === 0) {
+      return { ok: true, value: { changes: {}, activities: [] } };
     }
     return {
       ok: true,
@@ -225,18 +239,8 @@ export function setOccurrenceIncluded(
         (next) => ({ sprints: [next.sprint], occurrences: [next.occurrence] }),
       );
     }
-    const task = find(records.tasks, occurrence.value.taskId, 'Task');
-    if (!task.ok) return task;
     return changed(
-      includeInPlan(
-        sprint.value,
-        {
-          occurrence: occurrence.value,
-          task: task.value,
-          sprintTaskId: ctx.newId('SprintTask'),
-        },
-        ctx,
-      ),
+      include(sprint.value, occurrenceId, records, ctx),
       (next) => ({ sprints: [next.sprint], occurrences: [next.occurrence] }),
     );
   };

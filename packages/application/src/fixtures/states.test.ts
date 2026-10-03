@@ -215,9 +215,17 @@ describe('fixture IDs (ADR 0004 ID の形式)', () => {
     // order its records were made (Sprints by their start).
     const suffix = (id: string) => id.slice(id.lastIndexOf('_') + 1);
     for (const [kind, list] of idLists(records)) {
+      // A Task's subtasks and suggestions are in order per Task (below): a
+      // Task made earlier may get a suggestion later.
       if (kind === 'Subtask' || kind === 'EstimateSuggestion') continue;
       const ordered = list.map(suffix);
       expect(ordered.toSorted(), kind).toEqual(ordered);
+    }
+    for (const task of records.tasks) {
+      for (const list of [task.subtasks, task.suggestions]) {
+        const ordered = list.map((r) => suffix(r.id));
+        expect(ordered.toSorted(), task.title).toEqual(ordered);
+      }
     }
     const tasks = records.tasks.map((t) => ({
       id: suffix(t.id),

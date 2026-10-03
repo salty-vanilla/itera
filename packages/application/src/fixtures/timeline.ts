@@ -147,9 +147,9 @@ export function buildTimeline(): Timeline {
     weekStartsOn: 1,
   };
   // Filled in as the records are made.
-  const area = {} as Record<AreaName, AreaId>;
-  const task = {} as Record<TaskName, TaskId>;
-  const sprint = {} as Record<SprintName, SprintId>;
+  const area = named<AreaName, AreaId>('Area');
+  const task = named<TaskName, TaskId>('Task');
+  const sprint = named<SprintName, SprintId>('Sprint');
   let records: Records = {
     user,
     areas: [],
@@ -906,5 +906,29 @@ export function buildTimeline(): Timeline {
   );
   snapshot('retro-before-complete', '10-05 10:00');
 
-  return { ids: { user: user.id, area, task, sprint }, snapshots };
+  return {
+    ids: {
+      user: user.id,
+      area: { ...area },
+      task: { ...task },
+      sprint: { ...sprint },
+    },
+    snapshots,
+  };
+}
+
+/**
+ * IDs by name, filled in as the records are made. Reading a name before its
+ * record is made throws: a step out of order would otherwise pass
+ * `undefined` on and quietly make a record without it.
+ */
+function named<Name extends string, Value>(kind: string): Record<Name, Value> {
+  return new Proxy({} as Record<Name, Value>, {
+    get(target, name) {
+      if (typeof name === 'string' && !Object.hasOwn(target, name)) {
+        throw new Error(`No ${kind} ${name} made yet`);
+      }
+      return Reflect.get(target, name);
+    },
+  });
 }
