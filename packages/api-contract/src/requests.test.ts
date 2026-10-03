@@ -13,6 +13,7 @@ import {
   queryInput,
   RequestError,
   requestOf,
+  settingsSurface,
   surfaces,
   type PlainInput,
   type OperationRequest,
@@ -79,8 +80,13 @@ describe('the surfaces', () => {
       )
       .map(([name]) => name)
       .filter((name) => !/^(get|list)[A-Z]/.test(name));
-    expect(writes.toSorted()).toEqual(Object.keys(surfaces).toSorted());
-    const routes = Object.values(surfaces).map((s) => `${s.method} ${s.url}`);
+    // The settings are the one write no operation takes (requests.ts).
+    expect(writes.toSorted()).toEqual(
+      [...Object.keys(surfaces), 'setSettings'].toSorted(),
+    );
+    const routes = [...Object.values(surfaces), settingsSurface].map(
+      (s) => `${s.method} ${s.url}`,
+    );
     expect(new Set(routes).size).toBe(routes.length);
   });
 
@@ -150,6 +156,33 @@ describe('the surfaces', () => {
   });
 });
 
+describe('the settings surface', () => {
+  it('is the method and path the generated client sends, with the contract’s body', async () => {
+    let sent: globalThis.Request | undefined;
+    const client = createClient(
+      createConfig({
+        baseUrl: 'http://itera.test/api',
+        fetch: async (input, init) => {
+          sent = new globalThis.Request(input, init);
+          return new Response(null, { status: 204 });
+        },
+      }),
+    );
+    const body = {
+      displayName: 'わたし',
+      timeZone: 'Asia/Tokyo',
+      weekStartsOn: 1,
+    } as const;
+    await sdk.setSettings({ client, body });
+    expect(sent?.method).toBe(settingsSurface.method);
+    expect(new URL(sent!.url).pathname).toBe(`/api${settingsSurface.url}`);
+    expect(await sent!.json()).toEqual(body);
+    expect(v.is(settingsSurface.body, body)).toBe(true);
+    expect(v.is(settingsSurface.body, { ...body, extra: 1 })).toBe(false);
+    expect(settingsSurface.body).toBe(contract.vSetSettingsBody);
+  });
+});
+
 describe('the paths and query names', () => {
   /**
    * The segments of the paths (#295 決定 4): an action is a verb, after a
@@ -178,6 +211,7 @@ describe('the paths and query names', () => {
   ]);
   const NOUNS = new Set([
     'me',
+    'settings',
     'areas',
     'tasks',
     'recurrence',
@@ -200,9 +234,9 @@ describe('the paths and query names', () => {
   ]);
 
   it('name an action with a verb and a resource with a noun', () => {
-    const routes = [
-      ...Object.values(surfaces).map((s) => [s.method, s.url] as const),
-    ];
+    const routes = [...Object.values(surfaces), settingsSurface].map(
+      (s) => [s.method, s.url] as const,
+    );
     for (const [method, url] of routes) {
       const segments = url.split('/').slice(1);
       segments.forEach((segment, i) => {

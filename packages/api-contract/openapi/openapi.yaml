@@ -20,7 +20,7 @@ security:
   - session: []
 tags:
   - name: Me
-    description: The signed-in person and the Sprints they have now.
+    description: The signed-in person, their settings and the Sprints they have now.
   - name: Reads
     description: The reads of the resources.
   - name: Area
@@ -38,6 +38,8 @@ tags:
 paths:
   /me:
     $ref: './paths/me.yaml#/me'
+  /me/settings:
+    $ref: './paths/me.yaml#/meSettings'
   /areas:
     $ref: './paths/area.yaml#/areas'
   /areas/{areaId}:

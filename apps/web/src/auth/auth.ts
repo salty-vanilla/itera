@@ -8,6 +8,8 @@
 export interface Session {
   /** The Google account's address they signed up with. */
   readonly email: string;
+  /** The Google account's name: the display name their settings start from (#279). */
+  readonly name: string;
 }
 
 /** A passkey of the signed-in person. */

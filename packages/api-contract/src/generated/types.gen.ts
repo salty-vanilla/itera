@@ -106,6 +106,46 @@ export type InternalError = {
     message: string;
 };
 
+/**
+ * The request does not match the contract.
+ */
+export type ValidationError = {
+    code: 'validationFailed';
+    message: string;
+};
+
+/**
+ * A write whose Origin is not the app's own.
+ */
+export type ForbiddenOriginError = {
+    code: 'forbiddenOrigin';
+    message: string;
+};
+
+/**
+ * The request's body is larger than the API takes (64 KiB).
+ */
+export type PayloadTooLargeError = {
+    code: 'payloadTooLarge';
+    message: string;
+};
+
+/**
+ * The domain refused the operation (packages/domain DomainError): a value its rules do not accept, a transition the record's state does not allow, or completing a recurring Task.
+ */
+export type RuleViolationError = {
+    code: 'invalidInput' | 'invalidTransition' | 'recurringTaskCannotComplete';
+    message: string;
+};
+
+/**
+ * The person has no settings yet (time zone, start of the week), so there is no 「今日」 to run an operation or a read with. Making the settings comes first.
+ */
+export type UserNotSetUpError = {
+    code: 'userNotSetUp';
+    message: string;
+};
+
 export type AreaId = string;
 
 /**
@@ -124,50 +164,10 @@ export type EditableArea = {
 };
 
 /**
- * The person has no settings yet (time zone, start of the week), so there is no 「今日」 to run an operation or a read with. Making the settings comes first.
- */
-export type UserNotSetUpError = {
-    code: 'userNotSetUp';
-    message: string;
-};
-
-/**
- * The request does not match the contract.
- */
-export type ValidationError = {
-    code: 'validationFailed';
-    message: string;
-};
-
-/**
- * A write whose Origin is not the app's own.
- */
-export type ForbiddenOriginError = {
-    code: 'forbiddenOrigin';
-    message: string;
-};
-
-/**
  * A record the request names is not among the person's records.
  */
 export type NotFoundError = {
     code: 'notFound';
-    message: string;
-};
-
-/**
- * The request's body is larger than the API takes (64 KiB).
- */
-export type PayloadTooLargeError = {
-    code: 'payloadTooLarge';
-    message: string;
-};
-
-/**
- * The domain refused the operation (packages/domain DomainError): a value its rules do not accept, a transition the record's state does not allow, or completing a recurring Task.
- */
-export type RuleViolationError = {
-    code: 'invalidInput' | 'invalidTransition' | 'recurringTaskCannotComplete';
     message: string;
 };
 
@@ -1230,6 +1230,63 @@ export type GetMeResponses = {
 };
 
 export type GetMeResponse = GetMeResponses[keyof GetMeResponses];
+
+export type SetSettingsData = {
+    body: {
+        displayName: string;
+        timeZone: TimeZone;
+        weekStartsOn: DayOfWeek;
+    };
+    path?: never;
+    query?: never;
+    url: '/me/settings';
+};
+
+export type SetSettingsErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A write whose Origin is not the app's own.
+     */
+    403: ForbiddenOriginError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The body is larger than the API takes.
+     */
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type SetSettingsError = SetSettingsErrors[keyof SetSettingsErrors];
+
+export type SetSettingsResponses = {
+    /**
+     * Made.
+     */
+    201: unknown;
+    /**
+     * Already made; the display name is as sent.
+     */
+    204: void;
+};
+
+export type SetSettingsResponse = SetSettingsResponses[keyof SetSettingsResponses];
 
 export type ListAreasData = {
     body?: never;

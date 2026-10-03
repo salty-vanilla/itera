@@ -12,7 +12,7 @@ import {
 
 export type { FixtureIds, FixtureStateId };
 
-/** Every state, in the order of PRD §12. */
+/** Every state, in the order of PRD §12, then the start of a new person. */
 export const fixtureStateIds: readonly FixtureStateId[] = [
   'backlog-capture',
   'backlog-detail',
@@ -26,6 +26,9 @@ export const fixtureStateIds: readonly FixtureStateId[] = [
   'retro-start',
   'retro-reflect',
   'retro-before-complete',
+  // A person who has just started, with and without their settings (#279).
+  'empty',
+  'before-settings',
 ];
 
 export function isFixtureStateId(value: unknown): value is FixtureStateId {

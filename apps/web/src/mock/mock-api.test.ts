@@ -27,6 +27,7 @@ import { addDays } from '@itera/domain';
 import * as v from 'valibot';
 import { describe, expect, it, vi } from 'vitest';
 import { READS } from '@/api/reads';
+import { fixtureSettingsMade } from './fixture-states';
 import { createMock, MOCK_HEADER, MOCK_READS } from './mock-api';
 
 const ids = fixtureIds();
@@ -38,86 +39,95 @@ function mockOf(state: FixtureStateId) {
   const client = createClient(
     createConfig({
       baseUrl: 'http://localhost/api',
-      fetch: createMock(store).fetch,
+      fetch: createMock(store, { settingsMade: fixtureSettingsMade(state) })
+        .fetch,
     }),
   );
   return { store, client };
 }
 
-describe.each(fixtureStateIds)('the reads of %s', (state) => {
-  it('answer every read as the contract says', async () => {
-    const { client, store } = mockOf(state);
-    const { clock } = store.getSnapshot();
-    const { records } = store.getSnapshot();
-    const sprintId = records.sprints[0]?.id;
-    const reads = [
-      ['getMe', contract.vGetMeResponse, sdk.getMe({ client })],
-      ['listAreas', contract.vListAreasResponse, sdk.listAreas({ client })],
-      ['getBacklog', contract.vGetBacklogResponse, sdk.getBacklog({ client })],
-      [
-        'getBacklog',
-        contract.vGetBacklogResponse,
-        sdk.getBacklog({
-          client,
-          query: { view: 'recurring', area: ids.area.research },
-        }),
-      ],
-      [
-        'listSprints',
-        contract.vListSprintsResponse,
-        sdk.listSprints({ client }),
-      ],
-      [
-        'listSprints',
-        contract.vListSprintsResponse,
-        sdk.listSprints({ client, query: { number: 1 } }),
-      ],
-      ...(sprintId === undefined
-        ? []
-        : ([
-            [
-              'getSprint',
-              contract.vGetSprintResponse,
-              sdk.getSprint({
-                client,
-                path: { sprintId },
-                query: { 'apply-criterion': true },
-              }),
-            ],
-            [
-              'listSprintCandidates',
-              contract.vListSprintCandidatesResponse,
-              sdk.listSprintCandidates({ client, path: { sprintId } }),
-            ],
-            [
-              'getSprintRetro',
-              contract.vGetSprintRetroResponse,
-              sdk.getSprintRetro({ client, path: { sprintId } }),
-            ],
-          ] as const)),
-      [
-        'getDay',
-        contract.vGetDayResponse,
-        sdk.getDay({ client, path: { date: clock.today } }),
-      ],
-      [
-        'getDay',
-        contract.vGetDayResponse,
-        sdk.getDay({ client, path: { date: addDays(clock.today, -1) } }),
-      ],
-    ] as const;
-    // Every read the mock answers is asked here, where there is a Sprint.
-    if (sprintId !== undefined)
-      expect(new Set(reads.map(([id]) => id))).toEqual(new Set(MOCK_READS));
-    for (const [, schema, request] of reads) {
-      const { data, error, response } = await request;
-      expect(error).toBeUndefined();
-      expect(response?.headers.get(MOCK_HEADER)).toBe('1');
-      const result = v.safeParse(schema, data);
-      expect(result.issues ?? []).toEqual([]);
-    }
-  });
-});
+// `before-settings` answers 422 to all of them (its own describe below).
+describe.each(fixtureStateIds.filter(fixtureSettingsMade))(
+  'the reads of %s',
+  (state) => {
+    it('answer every read as the contract says', async () => {
+      const { client, store } = mockOf(state);
+      const { clock } = store.getSnapshot();
+      const { records } = store.getSnapshot();
+      const sprintId = records.sprints[0]?.id;
+      const reads = [
+        ['getMe', contract.vGetMeResponse, sdk.getMe({ client })],
+        ['listAreas', contract.vListAreasResponse, sdk.listAreas({ client })],
+        [
+          'getBacklog',
+          contract.vGetBacklogResponse,
+          sdk.getBacklog({ client }),
+        ],
+        [
+          'getBacklog',
+          contract.vGetBacklogResponse,
+          sdk.getBacklog({
+            client,
+            query: { view: 'recurring', area: ids.area.research },
+          }),
+        ],
+        [
+          'listSprints',
+          contract.vListSprintsResponse,
+          sdk.listSprints({ client }),
+        ],
+        [
+          'listSprints',
+          contract.vListSprintsResponse,
+          sdk.listSprints({ client, query: { number: 1 } }),
+        ],
+        ...(sprintId === undefined
+          ? []
+          : ([
+              [
+                'getSprint',
+                contract.vGetSprintResponse,
+                sdk.getSprint({
+                  client,
+                  path: { sprintId },
+                  query: { 'apply-criterion': true },
+                }),
+              ],
+              [
+                'listSprintCandidates',
+                contract.vListSprintCandidatesResponse,
+                sdk.listSprintCandidates({ client, path: { sprintId } }),
+              ],
+              [
+                'getSprintRetro',
+                contract.vGetSprintRetroResponse,
+                sdk.getSprintRetro({ client, path: { sprintId } }),
+              ],
+            ] as const)),
+        [
+          'getDay',
+          contract.vGetDayResponse,
+          sdk.getDay({ client, path: { date: clock.today } }),
+        ],
+        [
+          'getDay',
+          contract.vGetDayResponse,
+          sdk.getDay({ client, path: { date: addDays(clock.today, -1) } }),
+        ],
+      ] as const;
+      // Every read the mock answers is asked here, where there is a Sprint.
+      if (sprintId !== undefined)
+        expect(new Set(reads.map(([id]) => id))).toEqual(new Set(MOCK_READS));
+      for (const [, schema, request] of reads) {
+        const { data, error, response } = await request;
+        expect(error).toBeUndefined();
+        expect(response?.headers.get(MOCK_HEADER)).toBe('1');
+        const result = v.safeParse(schema, data);
+        expect(result.issues ?? []).toEqual([]);
+      }
+    });
+  },
+);
 
 describe('the mock', () => {
   it('reads what packages/application reads, with the clock', async () => {
@@ -302,5 +312,84 @@ describe('the mock', () => {
     expect(
       getDayOptions({ client, path: { date: '2026-10-01' } }).queryKey[0],
     ).toMatchObject({ _id: 'getDay', path: { date: '2026-10-01' } });
+  });
+});
+
+describe('a person who has not made their settings', () => {
+  const settings = {
+    displayName: 'わたし',
+    timeZone: 'Asia/Tokyo',
+    weekStartsOn: 0,
+  } as const;
+
+  it('is told so by getMe, and refused every other read and operation', async () => {
+    const { client, store } = mockOf('before-settings');
+    const me = await sdk.getMe({ client, throwOnError: true });
+    expect(me.data).toEqual({
+      userId: store.getSnapshot().records.user.id,
+      settings: null,
+    });
+    for (const request of [
+      sdk.listAreas({ client }),
+      sdk.getBacklog({ client }),
+      sdk.listSprints({ client }),
+      sdk.createArea({ client, body: { name: '仕事' } }),
+      sdk.beginPlanning({ client }),
+    ]) {
+      const { error, response } = await request;
+      expect(response?.status).toBe(422);
+      expect(error).toMatchObject({ code: 'userNotSetUp' });
+    }
+  });
+
+  it('makes them with PUT /me/settings (201), then the reads and operations answer', async () => {
+    const { client, store } = mockOf('before-settings');
+    const made = await sdk.setSettings({ client, body: settings });
+    expect(made.response?.status).toBe(201);
+    expect(store.getSnapshot().records.user).toMatchObject(settings);
+
+    const me = await sdk.getMe({ client, throwOnError: true });
+    expect(v.parse(contract.vGetMeResponse, me.data)).toMatchObject({
+      settings,
+      clock: store.getSnapshot().clock,
+    });
+    expect(
+      (await sdk.createArea({ client, body: { name: '仕事' } })).response
+        ?.status,
+    ).toBe(201);
+  });
+
+  it('writes the display name again (204), and keeps the time zone and the first day', async () => {
+    const { client, store } = mockOf('before-settings');
+    await sdk.setSettings({ client, body: settings });
+    const again = await sdk.setSettings({
+      client,
+      body: { ...settings, displayName: 'あなた' },
+    });
+    expect(again.response?.status).toBe(204);
+    expect(store.getSnapshot().records.user.displayName).toBe('あなた');
+    for (const other of [
+      { ...settings, timeZone: 'UTC' },
+      { ...settings, weekStartsOn: 1 } as const,
+    ]) {
+      const refused = await sdk.setSettings({ client, body: other });
+      expect(refused.response?.status).toBe(422);
+      expect(refused.error).toMatchObject({ code: 'invalidInput' });
+    }
+  });
+
+  it('refuses what the contract does not take, and a time zone that does not exist', async () => {
+    const { client } = mockOf('before-settings');
+    const bad = await sdk.setSettings({
+      client,
+      body: { ...settings, weekStartsOn: 9 } as never,
+    });
+    expect(bad.response?.status).toBe(400);
+    const zone = await sdk.setSettings({
+      client,
+      body: { ...settings, timeZone: 'Mars/Olympus' },
+    });
+    expect(zone.response?.status).toBe(422);
+    expect((await sdk.getMe({ client })).data?.settings).toBeNull();
   });
 });

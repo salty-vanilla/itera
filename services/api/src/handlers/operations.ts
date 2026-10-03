@@ -16,7 +16,7 @@ import { validate } from './validate';
 /** The largest request body an operation takes (ADR 0006 エラー). */
 export const maxBodyBytes = 64 * 1024;
 
-async function jsonBody(request: HonoRequest): Promise<unknown> {
+export async function jsonBody(request: HonoRequest): Promise<unknown> {
   try {
     return await request.json<unknown>();
   } catch {
@@ -26,6 +26,17 @@ async function jsonBody(request: HonoRequest): Promise<unknown> {
 
 /** A surface's path in Hono's form: `/areas/{areaId}` becomes `/areas/:areaId`. */
 export const honoPath = (url: string) => url.replace(/\{(\w+)\}/g, ':$1');
+
+/** The size limit of a write's body: 413 `payloadTooLarge` over it. */
+export const limitBody = bodyLimit({
+  maxSize: maxBodyBytes,
+  onError: (c) =>
+    errorResponse(
+      c,
+      'payloadTooLarge',
+      `The body is larger than ${maxBodyBytes} bytes.`,
+    ),
+});
 
 /**
  * Each write surface of the contract (`surfaces` of
@@ -38,22 +49,13 @@ export const honoPath = (url: string) => url.replace(/\{(\w+)\}/g, ':$1');
  */
 export function operationRoutes(flow: Flow, guards: Guards) {
   const routes = new Hono<AppEnv>();
-  const limit = bodyLimit({
-    maxSize: maxBodyBytes,
-    onError: (c) =>
-      errorResponse(
-        c,
-        'payloadTooLarge',
-        `The body is larger than ${maxBodyBytes} bytes.`,
-      ),
-  });
   for (const surface of Object.values(surfaces) as Surface[]) {
     routes.on(
       surface.method,
       honoPath(surface.url),
       guards.user,
       guards.origin,
-      limit,
+      limitBody,
       async (c) => {
         const { name, input } = await operationOf(surface, {
           path: c.req.param(),

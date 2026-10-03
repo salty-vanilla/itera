@@ -28,7 +28,7 @@ import { maxBodyBytes } from './operations';
 const ids = createIdSource((bytes) => crypto.getRandomValues(bytes));
 const alice = ids.newId('User', testNow);
 
-/** Alice's settings and nothing else: the first save (#279 makes it). */
+/** Alice's settings and nothing else: the first save (`PUT /api/me/settings` makes it, #279). */
 const settled: Records = {
   user: {
     id: alice,

@@ -118,6 +118,50 @@ export const vInternalError = v.object({
     message: v.string()
 });
 
+/**
+ * The request does not match the contract.
+ */
+export const vValidationError = v.object({
+    code: v.literal('validationFailed'),
+    message: v.string()
+});
+
+/**
+ * A write whose Origin is not the app's own.
+ */
+export const vForbiddenOriginError = v.object({
+    code: v.literal('forbiddenOrigin'),
+    message: v.string()
+});
+
+/**
+ * The request's body is larger than the API takes (64 KiB).
+ */
+export const vPayloadTooLargeError = v.object({
+    code: v.literal('payloadTooLarge'),
+    message: v.string()
+});
+
+/**
+ * The domain refused the operation (packages/domain DomainError): a value its rules do not accept, a transition the record's state does not allow, or completing a recurring Task.
+ */
+export const vRuleViolationError = v.object({
+    code: v.picklist([
+        'invalidInput',
+        'invalidTransition',
+        'recurringTaskCannotComplete'
+    ]),
+    message: v.string()
+});
+
+/**
+ * The person has no settings yet (time zone, start of the week), so there is no 「今日」 to run an operation or a read with. Making the settings comes first.
+ */
+export const vUserNotSetUpError = v.object({
+    code: v.literal('userNotSetUp'),
+    message: v.string()
+});
+
 export const vAreaId = v.pipe(v.string(), v.regex(/^area_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
 
 /**
@@ -141,54 +185,10 @@ export const vEditableArea = v.object({
 });
 
 /**
- * The person has no settings yet (time zone, start of the week), so there is no 「今日」 to run an operation or a read with. Making the settings comes first.
- */
-export const vUserNotSetUpError = v.object({
-    code: v.literal('userNotSetUp'),
-    message: v.string()
-});
-
-/**
- * The request does not match the contract.
- */
-export const vValidationError = v.object({
-    code: v.literal('validationFailed'),
-    message: v.string()
-});
-
-/**
- * A write whose Origin is not the app's own.
- */
-export const vForbiddenOriginError = v.object({
-    code: v.literal('forbiddenOrigin'),
-    message: v.string()
-});
-
-/**
  * A record the request names is not among the person's records.
  */
 export const vNotFoundError = v.object({
     code: v.literal('notFound'),
-    message: v.string()
-});
-
-/**
- * The request's body is larger than the API takes (64 KiB).
- */
-export const vPayloadTooLargeError = v.object({
-    code: v.literal('payloadTooLarge'),
-    message: v.string()
-});
-
-/**
- * The domain refused the operation (packages/domain DomainError): a value its rules do not accept, a transition the record's state does not allow, or completing a recurring Task.
- */
-export const vRuleViolationError = v.object({
-    code: v.picklist([
-        'invalidInput',
-        'invalidTransition',
-        'recurringTaskCannotComplete'
-    ]),
     message: v.string()
 });
 
@@ -1241,6 +1241,14 @@ export const vGetMeResponse = v.object({
     clock: v.optional(vClock),
     sprints: v.optional(vCurrentSprints)
 });
+
+export const vSetSettingsBody = v.strictObject({
+    displayName: v.string(),
+    timeZone: vTimeZone,
+    weekStartsOn: vDayOfWeek
+});
+
+export const vSetSettingsResponse = v.union([v.unknown(), v.void()]);
 
 /**
  * The read.

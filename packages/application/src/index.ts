@@ -14,6 +14,7 @@ export {
 } from './operations';
 export { catchUp, reviewEnded } from './system-changes';
 export { beginDay } from './today-changes';
+export { settingsChange, type SettingsInput } from './user-changes';
 
 // Running them over the records.
 export {

@@ -36,8 +36,8 @@ export type ErrorCode =
  *   reads are read again.
  * - `refused`: the request or the records' state does not allow it (400,
  *   403, 404, 413, 422). Sending it again gives the same answer. Among
- *   them `userNotSetUp`: the person has no settings yet (#279 makes the way
- *   to them).
+ *   them `userNotSetUp`: the person has no settings yet (the first settings
+ *   screen takes their place, #279).
  * - `failed`: anything else, which may have been saved too: the server
  *   failed (500), the network, a code this client does not know (ADR 0006
  *   互換の規則).

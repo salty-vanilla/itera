@@ -90,7 +90,9 @@ export type FixtureStateId =
   | 'retro-before-complete'
   | 'backlog-capture'
   | 'backlog-detail'
-  | 'backlog-recurrence';
+  | 'backlog-recurrence'
+  | 'empty'
+  | 'before-settings';
 
 /** A time in Tokyo in 2026, e.g. `jst('09-27 21:00')`. */
 function jst(monthDayTime: string): Instant {
@@ -493,6 +495,13 @@ export function buildTimeline(): Timeline {
       reviewSprint(get(r.sprints, sprintId))(r, ctx);
 
   // ------------------------------------------------------------ 9/13 setup
+
+  // A person who has just started (#279): no records, on a Monday, so that
+  // the first week can be run through (the clock of a state does not move).
+  // `before-settings` is the same records before they have made their
+  // settings: the user stands for what the settings are made from.
+  snapshot('empty', '09-14 09:00');
+  snapshot('before-settings', '09-14 09:00');
 
   at('09-13 10:00', newArea('work', '仕事', 1, 0));
   at('09-13 10:01', newArea('research', '研究', 2, 1));

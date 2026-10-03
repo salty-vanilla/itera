@@ -668,6 +668,27 @@ export const surfaces: { readonly [S in SurfaceId]: Surface<S> } = {
 };
 
 /**
+ * The write of the person's settings (`PUT /me/settings`). It is a surface
+ * of the contract that no operation of packages/application takes: the
+ * operations run on the person's records, and the settings are what makes
+ * the records possible (`settingsChange`, run by the server and the
+ * browser mock). So it stands outside `surfaces`.
+ */
+export const settingsSurface = {
+  method: 'PUT',
+  url: '/me/settings' satisfies c.SetSettingsData['url'],
+  /** The first time makes them; after that they are written again. */
+  status: { created: 201, written: 204 } satisfies Record<
+    string,
+    keyof c.SetSettingsResponses
+  >,
+  body: c.vSetSettingsBody,
+} as const;
+
+/** The settings as the request carries them. */
+export type SettingsBody = c.SetSettingsData['body'];
+
+/**
  * A request the contract's schemas let through but no operation takes, or
  * an input no request can carry (400 `validationFailed`).
  */

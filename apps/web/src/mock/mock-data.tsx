@@ -11,6 +11,7 @@ import { useSystemDay } from '@/store/use-system-day';
 import { DevMenu } from './dev-menu';
 import {
   defaultFixtureState,
+  fixtureSettingsMade,
   fixtureSnapshot,
   isFixtureStateId,
   type FixtureStateId,
@@ -58,7 +59,10 @@ function FixtureData({
     const auth = createMockAuth({
       now: () => store.getSnapshot().clock.now,
     });
-    const mock = createMock(store, { isSignedIn: auth.isSignedIn });
+    const mock = createMock(store, {
+      isSignedIn: auth.isSignedIn,
+      settingsMade: fixtureSettingsMade(fixture),
+    });
     return {
       store,
       mock,

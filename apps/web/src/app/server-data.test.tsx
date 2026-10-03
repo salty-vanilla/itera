@@ -119,7 +119,7 @@ describe('signing in on the API (#278)', () => {
         ? Response.json(overview)
         : path === '/api/auth/get-session'
           ? Response.json({
-              user: { id: 'user_1', email: 'you@example.com' },
+              user: { id: 'user_1', email: 'you@example.com', name: 'あなた' },
               session: { id: 'session_1' },
             })
           : new Response('404 Not Found', { status: 404 }),

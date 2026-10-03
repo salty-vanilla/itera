@@ -3,11 +3,13 @@ import {
   catchUp as systemCatchUp,
   createIdSource,
   mergeChanges,
+  settingsChange,
   type Change,
   type ChangeContext,
   type Clock,
   type RecordChanges,
   type Records,
+  type SettingsInput,
 } from '@itera/application';
 import {
   toLocalDate,
@@ -59,6 +61,12 @@ export type ReadResponse<View> = {
 export type Flow = {
   /** Runs an operation of the person, writes its changes and returns its value. */
   operate<T>(c: Context<AppEnv>, change: Change<T>): Promise<T>;
+  /**
+   * Makes the person's settings, the one write that needs no records: it
+   * is what makes them possible. Answers whether this made them (the first
+   * time) or wrote them again.
+   */
+  setUp(c: Context<AppEnv>, settings: SettingsInput): Promise<boolean>;
   /** Reads the records as of now. */
   read<View>(
     c: Context<AppEnv>,
@@ -205,6 +213,29 @@ export function createFlow({
       );
       if (!saved) throw conflict();
       return value as T;
+    },
+    async setUp(c, settings) {
+      const { db, userId } = c.var;
+      const loaded = await loadRecords(db, userId);
+      const result = settingsChange(
+        userId,
+        loaded.records?.user ?? null,
+        settings,
+      );
+      if (!result.ok) throw ApiError.fromDomain(result.error);
+      const { changes, created } = result.value;
+      const { user } = changes;
+      if (user !== undefined) {
+        const saved = await saveRecords(db, {
+          userId,
+          loaded,
+          changes,
+          activities: [],
+          caughtUpTo: toLocalDate(now(), user.timeZone),
+        });
+        if (!saved.ok) throw conflict();
+      }
+      return created;
     },
     async read(c, read) {
       const { records, clock } = await caughtUpForRead(c);
