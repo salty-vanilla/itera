@@ -940,7 +940,7 @@ export const recordActualTimeMutation = (options?: Partial<Options<RecordActualT
 /**
  * 割り込みを記録
  *
- * Nothing in Today changes (invariant 29).
+ * Nothing in Today changes (invariant 29). Refused with 422 on a day outside the Sprint (in the person's time zone), as a note restored after a delete is.
  */
 export const noteInterruptMutation = (options?: Partial<Options<NoteInterruptData>>): UseMutationOptions<NoteInterruptResponse, NoteInterruptError, Options<NoteInterruptData>> => {
     const mutationOptions: UseMutationOptions<NoteInterruptResponse, NoteInterruptError, Options<NoteInterruptData>> = {

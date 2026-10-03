@@ -892,7 +892,9 @@ interrupts:
     tags: [Today]
     summary: 割り込みを記録
     description: >-
-      Nothing in Today changes (invariant 29).
+      Nothing in Today changes (invariant 29). Refused with 422 on a day
+      outside the Sprint (in the person's time zone), as a note restored
+      after a delete is.
     parameters:
       - name: sprintId
         in: path

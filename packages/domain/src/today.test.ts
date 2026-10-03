@@ -44,6 +44,9 @@ const system = {
   actor: 'system' as const,
 };
 
+/** The person's time zone, as a command that notes an interrupt takes it. */
+const tokyo = { timeZone: timeZone('Asia/Tokyo') };
+
 function planned(taskId: string, extra: Partial<SprintTask> = {}): SprintTask {
   return {
     id: id(`st-${taskId}`),
@@ -571,7 +574,7 @@ describe('records', () => {
   it('invariant 29: an interrupt is a note, not a Task or an addition', () => {
     const result = noteInterrupt(
       active(),
-      { id: id('int-1'), text: '急な会議', minutes: 30 },
+      { id: id('int-1'), text: '急な会議', minutes: 30, ...tokyo },
       ctx,
     );
     const sprint = unwrap(result);
@@ -580,7 +583,7 @@ describe('records', () => {
     ]);
     expect(sprint.tasks).toEqual(active().tasks);
     expect(
-      noteInterrupt(active(), { id: id('int-2'), text: ' ' }, ctx),
+      noteInterrupt(active(), { id: id('int-2'), text: ' ', ...tokyo }, ctx),
     ).toMatchObject({ ok: false });
   });
 });
@@ -592,18 +595,18 @@ describe('F38: interrupts can be edited and deleted while the Sprint runs', () =
         unwrap(
           noteInterrupt(
             active(),
-            { id: id('int-1'), text: '急な会議', minutes: 30 },
+            { id: id('int-1'), text: '急な会議', minutes: 30, ...tokyo },
             at('2026-09-28T01:00:00.000Z'),
           ),
         ),
-        { id: id('int-2'), text: '問い合わせ' },
+        { id: id('int-2'), text: '問い合わせ', ...tokyo },
         at('2026-09-28T03:00:00.000Z'),
       ),
     );
   const later = at('2026-09-28T05:00:00.000Z');
   const review = (sprint: Sprint): Sprint => ({ ...sprint, state: 'review' });
   /** What a restore knows of the person: no other Sprint's notes, Tokyo. */
-  const person = { otherNoteIds: [], timeZone: timeZone('Asia/Tokyo') };
+  const person = { otherNoteIds: [], ...tokyo };
 
   it('edits the note and minutes, keeps the time, and leaves an Activity', () => {
     const result = editInterrupt(
@@ -793,6 +796,50 @@ describe('F38: interrupts can be edited and deleted while the Sprint runs', () =
     expect(restoredAt('2026-09-27T20:00:00.000Z')).toMatchObject({ ok: true });
   });
 
+  it('notes an interrupt only on a day of the Sprint, in the person’s time zone', () => {
+    const notedAt = (when: string, zone = tokyo) =>
+      noteInterrupt(
+        active(),
+        { id: id('int-9'), text: '来客', ...zone },
+        at(when),
+      );
+    const refused = { ok: false, error: { code: 'invalidInput' } };
+    // The Sprint is 9/28–10/4 (Tokyo): its first and last minutes are in,
+    // the same as for a note restored after a delete.
+    expect(notedAt('2026-09-27T14:59:59.999Z')).toMatchObject(refused);
+    expect(notedAt('2026-09-27T15:00:00.000Z')).toMatchObject({ ok: true });
+    expect(notedAt('2026-10-04T14:59:59.999Z')).toMatchObject({ ok: true });
+    expect(notedAt('2026-10-04T15:00:00.000Z')).toMatchObject(refused);
+    // 9/27 20:00 UTC is 9/28 in Tokyo, and 9/27 in UTC.
+    expect(notedAt('2026-09-27T20:00:00.000Z')).toMatchObject({ ok: true });
+    expect(
+      notedAt('2026-09-27T20:00:00.000Z', { timeZone: timeZone('UTC') }),
+    ).toMatchObject(refused);
+  });
+
+  it('a note that could be noted can be restored: the two share their range', () => {
+    const when = '2026-09-27T15:00:00.000Z';
+    const sprint = unwrap(
+      noteInterrupt(
+        active(),
+        { id: id('int-9'), text: '来客', ...tokyo },
+        at(when),
+      ),
+    );
+    const note = sprint.interrupts[0];
+    if (note === undefined) throw new Error('no note');
+    const deleted = unwrap(
+      deleteInterrupt(sprint, { id: note.id }, at('2026-09-28T05:00:00.000Z')),
+    );
+    expect(
+      restoreInterrupt(
+        deleted,
+        { note, otherNoteIds: [], ...tokyo },
+        at('2026-09-28T05:00:00.000Z'),
+      ),
+    ).toMatchObject({ ok: true });
+  });
+
   it('invariant 40: after the Review starts the notes are fixed', () => {
     const fixed = review(noted());
     const note = fixed.interrupts[0];
@@ -826,7 +873,9 @@ describe('invariant 25: Today never changes Goals, criterion or available hours'
     let sprint = chosen(before);
     sprint = unwrap(startSelection(sprint, sel, ctx));
     sprint = unwrap(pauseSelection(sprint, { ...sel, actualHours: 1 }, ctx));
-    sprint = unwrap(noteInterrupt(sprint, { id: id('i'), text: 'x' }, ctx));
+    sprint = unwrap(
+      noteInterrupt(sprint, { id: id('i'), text: 'x', ...tokyo }, ctx),
+    );
     expect(pick(sprint)).toEqual(pick(before));
   });
 });

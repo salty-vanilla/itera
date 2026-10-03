@@ -21,7 +21,7 @@ import { carryCount, retroFacts } from './retro-facts';
 import type { Activity } from './shared/activity';
 import type { CommandResult } from './shared/command';
 import { id } from './shared/ids';
-import { localDate } from './shared/time';
+import { localDate, timeZone } from './shared/time';
 import { sprintAreaName, type SprintTask } from './sprint';
 import { changeRuleForNextSprint } from './sprint-recurrence';
 import { updateTask } from './task';
@@ -309,7 +309,12 @@ describe('現在状態だけでは失われる情報', () => {
     sprint = run(
       noteInterrupt(
         sprint,
-        { id: id('int-1'), text: '急な会議', minutes: 30 },
+        {
+          id: id('int-1'),
+          text: '急な会議',
+          minutes: 30,
+          timeZone: timeZone('Asia/Tokyo'),
+        },
         at('2026-09-30T02:00:00.000Z'),
       ),
     );

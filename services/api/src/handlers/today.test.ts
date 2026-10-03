@@ -11,7 +11,7 @@ import {
   type Records,
 } from '@itera/application';
 import { fixtureIds, fixtureSnapshot } from '@itera/application/fixtures';
-import { addDays, instant } from '@itera/domain';
+import { addDays, instant, localDate } from '@itera/domain';
 import * as v from 'valibot';
 import { afterEach, describe, expect, it } from 'vitest';
 import { activity } from '../db/schema';
@@ -1022,6 +1022,32 @@ describe('the decisions of Today, through the API', () => {
     const response = await app.post('restoreInterrupt', {
       ...running(before.records),
       note: { id: taken, at: '2026-10-01T01:00:00.000Z', text: '今週のメモ' },
+    });
+    expect(response.status).toBe(422);
+    expect(await response.json()).toMatchObject({ code: 'invalidInput' });
+    expect(await app.saved()).toEqual(before);
+  });
+
+  it('F38: an interrupt is noted on a day of the Sprint, so a confirmed Sprint that has not begun takes none, writing nothing', async () => {
+    // F34: a confirmed Sprint runs from its confirmation, before its first day.
+    const app = await setup('today-morning', (records) => ({
+      ...records,
+      sprints: records.sprints.map((s) =>
+        s.state === 'active'
+          ? {
+              ...s,
+              start: localDate('2026-10-10'),
+              end: localDate('2026-10-16'),
+            }
+          : s,
+      ),
+    }));
+    await app.get('/me');
+    const before = await app.saved();
+    expect(activeOf(before.records).start > today).toBe(true);
+    const response = await app.post('noteInterrupt', {
+      ...running(before.records),
+      text: '電話対応',
     });
     expect(response.status).toBe(422);
     expect(await response.json()).toMatchObject({ code: 'invalidInput' });

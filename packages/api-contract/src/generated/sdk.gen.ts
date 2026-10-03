@@ -788,7 +788,7 @@ export const recordActualTime = <ThrowOnError extends boolean = false>(options: 
 /**
  * 割り込みを記録
  *
- * Nothing in Today changes (invariant 29).
+ * Nothing in Today changes (invariant 29). Refused with 422 on a day outside the Sprint (in the person's time zone), as a note restored after a delete is.
  */
 export const noteInterrupt = <ThrowOnError extends boolean = false>(options: Options<NoteInterruptData, ThrowOnError>): RequestResult<NoteInterruptResponses, NoteInterruptErrors, ThrowOnError> => (options.client ?? client).post<NoteInterruptResponses, NoteInterruptErrors, ThrowOnError>({
     security: [{

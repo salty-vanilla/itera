@@ -350,6 +350,7 @@ export const interrupt =
             id: interruptNoteId,
             text,
             ...(minutes === undefined ? {} : { minutes }),
+            timeZone: records.user.timeZone,
           },
           context,
         ),

@@ -807,11 +807,14 @@ export interface NoteInterruptInput {
   readonly id: InterruptNoteId;
   readonly text: string;
   readonly minutes?: number;
+  /** The person's time zone: the day the note is noted on is the person's day. */
+  readonly timeZone: TimeZone;
 }
 
 /**
  * 割り込みを残す. Not a Task, and it changes nothing in Today (invariant
- * 29, PRD §5 C).
+ * 29, PRD §5 C). It is noted on a day of the Sprint, as a note restored
+ * after a delete must have been (F38).
  */
 export function noteInterrupt(
   sprint: Sprint,
@@ -820,6 +823,10 @@ export function noteInterrupt(
 ): CommandResult<Sprint> {
   if (sprint.state !== 'active') {
     return err('invalidTransition', 'Interrupts are noted during the Sprint.');
+  }
+  const day = toLocalDate(ctx.now, input.timeZone);
+  if (day < sprint.start || day > sprint.end) {
+    return err('invalidInput', 'Interrupts are noted on a day of the Sprint.');
   }
   const text = input.text.trim();
   if (text === '') return err('invalidInput', 'The note is empty.');
