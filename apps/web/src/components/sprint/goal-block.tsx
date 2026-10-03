@@ -3,7 +3,7 @@ import { AreaIndicator, type AreaColor } from '@/components/ui/area-indicator';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Textarea } from '@/components/ui/textarea';
-import { useDraftField } from '@/lib/use-draft-field';
+import { sameWords, useDraftField } from '@/lib/use-draft-field';
 import { cn } from '@/lib/utils';
 import { weekText } from '@/lib/week-text';
 
@@ -70,7 +70,7 @@ function GoalBlock({
   // the Goal as it is now, and 保存 compares with what the form showed when
   // it was typed in, so that a form left as it was never writes the Goal it
   // opened with over another device's (#324).
-  const field = useDraftField(goal ?? '');
+  const field = useDraftField(goal ?? '', sameWords);
   const text = field.value;
   const [error, setError] = useState<string | undefined>(undefined);
   const headingId = useId();
@@ -144,7 +144,7 @@ function GoalBlock({
             event.preventDefault();
             // The same as the form showed: nothing to save. That covers an
             // Area without a Goal with nothing written.
-            if (text.trim() === field.base.trim()) {
+            if (!field.edited) {
               close(false);
               return;
             }

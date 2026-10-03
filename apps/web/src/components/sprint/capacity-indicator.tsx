@@ -476,10 +476,7 @@ function AvailableHoursField({
     setError(undefined);
     // Compared with what the field showed when it was typed in, not with
     // the value as read since: a field left as it was saves nothing (#324).
-    if (minutes === readMinutes(field.base)) {
-      field.leave();
-      return;
-    }
+    if (!field.leave()) return;
     const saving = Promise.resolve(
       onChange(minutes === undefined ? null : minutes / 60),
     );

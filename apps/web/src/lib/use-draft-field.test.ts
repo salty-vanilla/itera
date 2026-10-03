@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { useDraftField } from './use-draft-field';
+import { sameWords, useDraftField } from './use-draft-field';
 
 function setup(initial = 'saved') {
   return renderHook(({ read }) => useDraftField(read), {
@@ -93,5 +93,34 @@ describe('useDraftField', () => {
     act(() => result.current.set('typed'));
     act(() => result.current.drop());
     expect(result.current.value).toBe('saved');
+  });
+});
+
+describe('useDraftField with words that are the same around spaces', () => {
+  it('is not an edit to type spaces around the words, and goes back to following the read', () => {
+    const { result, rerender } = renderHook(
+      ({ read }) => useDraftField(read, sameWords),
+      { initialProps: { read: 'saved' } },
+    );
+    act(() => result.current.set('saved '));
+    expect(result.current.edited).toBe(false);
+    act(() => {
+      result.current.leave();
+    });
+    rerender({ read: 'from another device' });
+    expect(result.current.value).toBe('from another device');
+  });
+});
+
+describe('useDraftField when the read changes while typing', () => {
+  it('shows what was sent until the read changes from what it was when sent, and gives it back on a failure', async () => {
+    const { result, rerender } = setup();
+    act(() => result.current.set('typed'));
+    // The read changes (a read that was on its way) before the save is sent.
+    rerender({ read: 'read in between' });
+    await act(async () => result.current.hold(Promise.resolve(false)));
+    // Not dropped by the earlier change: the person's typing is kept.
+    expect(result.current.value).toBe('typed');
+    expect(result.current.edited).toBe(true);
   });
 });

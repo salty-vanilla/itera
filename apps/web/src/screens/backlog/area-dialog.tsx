@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
-import { useDraftField } from '@/lib/use-draft-field';
+import { sameWords, useDraftField } from '@/lib/use-draft-field';
 import {
   useAreaActions,
   useAreas,
@@ -265,7 +265,7 @@ function EditRow({
   // until it is typed in, and 名前を変える on a name nothing was typed in
   // changes nothing, so that the name it opened with never goes over another
   // device's (#324).
-  const nameField = useDraftField(area.name);
+  const nameField = useDraftField(area.name, sameWords);
   const name = nameField.value;
   const [error, setError] = useState<string>();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -288,7 +288,7 @@ function EditRow({
             inputRef.current?.focus();
             return;
           }
-          if (name.trim() === nameField.base.trim()) {
+          if (!nameField.edited) {
             onCancel();
             return;
           }

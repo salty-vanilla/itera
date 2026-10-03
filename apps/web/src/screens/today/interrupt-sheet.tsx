@@ -19,7 +19,7 @@ import {
   readMinutes,
   sameDuration,
 } from '@/lib/duration-text';
-import { useDraftField } from '@/lib/use-draft-field';
+import { sameWords, useDraftField } from '@/lib/use-draft-field';
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 
 // 割り込みを記録 (patterns.md Today): a short note and optional minutes,
@@ -59,7 +59,7 @@ function InterruptSheet({
   // the fields show the note as it is now, and 保存 on a note nothing was
   // typed in sends nothing, so that the words it was opened with never go
   // over another device's (#324).
-  const textField = useDraftField(editing?.text ?? '');
+  const textField = useDraftField(editing?.text ?? '', sameWords);
   const minutesField = useDraftField(
     durationText(editing?.minutes),
     sameDuration,

@@ -29,6 +29,7 @@ import {
 import {
   renameArea,
   saveTask,
+  setRecurrence,
   updateSubtask,
 } from '@itera/api-contract/client';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -286,8 +287,12 @@ describe('the Backlog on the API', () => {
       /** The field, found again each time: the detail may draw it anew. */
       find: (detail: HTMLElement) => HTMLInputElement | HTMLTextAreaElement;
       theirs: Parameters<typeof saveTask>[0]['body'];
+      /** What the Task record holds once the other device has saved. */
+      theirsRecord: object;
       shown: string;
       typed: string;
+      /** What it holds once what was typed is saved. */
+      typedRecord: object;
       /** The value a person's typing makes (the estimate is in two fields). */
       type: (field: HTMLElement, text: string) => Promise<void>;
     };
@@ -297,8 +302,10 @@ describe('the Backlog on the API', () => {
         find: (detail) =>
           within(detail).getByRole('textbox', { name: /タイトル/ }),
         theirs: { title: 'スマホで直した題名' },
+        theirsRecord: { title: 'スマホで直した題名' },
         shown: 'スマホで直した題名',
         typed: 'PC で直した題名',
+        typedRecord: { title: 'PC で直した題名' },
         type: async (field, text) => {
           await userEvent.clear(field);
           await userEvent.type(field, text);
@@ -308,8 +315,10 @@ describe('the Backlog on the API', () => {
         name: '説明',
         find: (detail) => within(detail).getByRole('textbox', { name: /説明/ }),
         theirs: { description: 'スマホで書いた説明' },
+        theirsRecord: { description: 'スマホで書いた説明' },
         shown: 'スマホで書いた説明',
         typed: 'PC で書いた説明',
+        typedRecord: { description: 'PC で書いた説明' },
         type: async (field, text) => {
           await userEvent.clear(field);
           await userEvent.type(field, text);
@@ -319,8 +328,10 @@ describe('the Backlog on the API', () => {
         name: '期限',
         find: (detail) => within(detail).getByLabelText(/期限/),
         theirs: { due: '2026-10-20' },
+        theirsRecord: { due: '2026-10-20' },
         shown: '2026-10-20',
         typed: '2026-10-25',
+        typedRecord: { due: '2026-10-25' },
         type: async (field, text) => {
           await userEvent.clear(field);
           await userEvent.type(field, text);
@@ -330,8 +341,10 @@ describe('the Backlog on the API', () => {
         name: '見積もり',
         find: (detail) => getHours(within(detail), /^見積もり(?!：)/),
         theirs: { estimate: 3 },
+        theirsRecord: { estimate: { hours: 3 } },
         shown: '3',
         typed: '5',
+        typedRecord: { estimate: { hours: 5 } },
         type: async (field, text) => {
           await userEvent.clear(field);
           await userEvent.type(field, text);
@@ -376,10 +389,12 @@ describe('the Backlog on the API', () => {
         await userEvent.tab();
         expect(saves(requests)).toHaveLength(before);
         expect(field.find(detail).value).toBe(field.shown);
-        const saved = store
-          .getSnapshot()
-          .records.tasks.find((t) => t.id === ids.task.bookshelf);
-        expect(saved).toBeDefined();
+        // The record is still the other device's.
+        expect(
+          store
+            .getSnapshot()
+            .records.tasks.find((t) => t.id === ids.task.bookshelf),
+        ).toMatchObject(field.theirsRecord);
       },
     );
 
@@ -390,12 +405,11 @@ describe('the Backlog on the API', () => {
       // The estimate is saved on leaving 分, after 時間.
       if (field.name === '見積もり') await userEvent.tab();
       await until(() => expect(saves(requests)).toHaveLength(1));
-      const saved = store
-        .getSnapshot()
-        .records.tasks.find((t) => t.id === ids.task.bookshelf);
-      expect(JSON.stringify(saved)).toContain(
-        field.name === '見積もり' ? '5' : field.typed,
-      );
+      expect(
+        store
+          .getSnapshot()
+          .records.tasks.find((t) => t.id === ids.task.bookshelf),
+      ).toMatchObject(field.typedRecord);
     });
 
     it("sends nothing on leaving a Subtask's Estimate unedited, and shows the other device's value", async () => {
@@ -429,6 +443,94 @@ describe('the Backlog on the API', () => {
         ),
       ).toHaveLength(0);
       expect(field().value).toBe('3');
+    });
+
+    it("saves a Subtask's Estimate typed in, as it did", async () => {
+      const { store, requests } = serve(undefined, 'backlog-detail');
+      const router = renderBacklog();
+      await list();
+      await router.navigate({
+        to: '/backlog',
+        search: { task: ids.task.dataset },
+      });
+      const detail = await screen.findByRole('dialog');
+      const field = getHours(within(detail), /^見積もり：欠損値を確認する/);
+      await userEvent.clear(field);
+      await userEvent.type(field, '4');
+      // Left from 分, after 時間.
+      await userEvent.tab();
+      await userEvent.tab();
+      await until(() =>
+        expect(
+          store
+            .getSnapshot()
+            .records.tasks.find((t) => t.id === ids.task.dataset)!.subtasks[0]!
+            .estimate,
+        ).toBe(4),
+      );
+      expect(
+        requests.filter(
+          (r) => r.includes('/subtasks/') && r.startsWith('PATCH'),
+        ),
+      ).toHaveLength(1);
+    });
+
+    it('follows the other device again after a title typed and typed back with spaces around it', async () => {
+      const { store, requests, detail } = await openDetail(fields[0]!);
+      const title = () =>
+        within(detail).getByRole('textbox', {
+          name: /タイトル/,
+        }) as HTMLInputElement;
+      await userEvent.type(title(), ' ');
+      await userEvent.tab();
+      expect(saves(requests)).toHaveLength(0);
+      await saveTask({
+        client: otherDevice(store),
+        path: { taskId: ids.task.bookshelf },
+        body: { title: 'スマホで直した題名' },
+      });
+      comeBack();
+      // Not an edit: the field goes on following what is read.
+      await until(() => expect(title().value).toBe('スマホで直した題名'));
+    });
+
+    it('shows a recurrence another device has set, and changes one thing of it', async () => {
+      const { store } = serve(undefined, 'backlog-recurrence');
+      const router = renderBacklog();
+      await list();
+      await router.navigate({
+        to: '/backlog',
+        search: { task: ids.task.cleaning },
+      });
+      const detail = await screen.findByRole('dialog', { name: '部屋の掃除' });
+      const days = () =>
+        within(
+          within(detail).getByRole('region', { name: '繰り返し' }),
+        ).getByRole('group', { name: '曜日' });
+      const tick = (name: string) =>
+        within(days()).getByRole('checkbox', { name });
+      await setRecurrence({
+        client: otherDevice(store),
+        path: { taskId: ids.task.cleaning },
+        body: { pattern: { freq: 'weekly', daysOfWeek: [1, 3, 5] } },
+      });
+      comeBack();
+      await until(() => {
+        expect(tick('月').getAttribute('aria-checked')).toBe('true');
+        expect(tick('金').getAttribute('aria-checked')).toBe('true');
+      });
+      await userEvent.click(tick('火'));
+      await until(() => {
+        const rule = store
+          .getSnapshot()
+          .records.rules.find((r) => r.taskId === ids.task.cleaning);
+        const latest = rule?.versions.at(-1)?.pattern;
+        // The other device's days are kept; one is added.
+        expect(latest).toMatchObject({ freq: 'weekly' });
+        expect(
+          latest && 'daysOfWeek' in latest ? [...latest.daysOfWeek].sort() : [],
+        ).toEqual([1, 2, 3, 5]);
+      });
     });
 
     it("sends nothing on 名前を変える for an Area's name unedited, and shows the other device's name", async () => {

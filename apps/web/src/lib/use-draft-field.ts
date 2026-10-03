@@ -51,6 +51,10 @@ type DraftField<T> = {
  * typing began, not with what was read after: a field left unedited saves
  * nothing, and an older value never goes over a newer one.
  *
+ * `equal` says when two values are the same to the person (the words
+ * without the spaces around them, a time to the minute): typing back to such
+ * a value is not an edit, so the field goes back to following the read.
+ *
  * Typing is not touched by a re-read. After `hold`, the typing is shown
  * (the read has not caught up) until the read changes.
  */
@@ -78,7 +82,9 @@ function useDraftField<T>(
     put: (next) =>
       setDraft({ value: next, base: next, from: read, held: true }),
     hold: (saving) => {
-      setDraft((d) => d && { ...d, held: true });
+      // The read as it is when the save is sent: what the read is to change
+      // from before the typing is given up.
+      setDraft((d) => d && { ...d, held: true, from: read });
       void Promise.resolve(saving).then((ok) => {
         if (ok === false) release();
       });
@@ -93,5 +99,8 @@ function useDraftField<T>(
   };
 }
 
-export { useDraftField };
+/** Two texts are the same words, whatever spaces are around them. */
+const sameWords = (a: string, b: string) => a.trim() === b.trim();
+
+export { sameWords, useDraftField };
 export type { DraftField };

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Tag } from '@/components/ui/tag';
 import { Textarea } from '@/components/ui/textarea';
-import { useDraftField } from '@/lib/use-draft-field';
+import { sameWords, useDraftField } from '@/lib/use-draft-field';
 import { cn } from '@/lib/utils';
 import type { RetroData } from '@/screen-data/retro-view';
 import { Materials } from './materials';
@@ -131,7 +131,7 @@ function Improvement({
 }) {
   const saved = data.improvement;
   const [editing, setEditing] = useState(saved === undefined);
-  const field = useDraftField(saved ?? '');
+  const field = useDraftField(saved ?? '', sameWords);
   const text = field.value;
   const headingId = useId();
   const editRef = useRef<HTMLButtonElement>(null);
@@ -150,15 +150,14 @@ function Improvement({
   >(undefined);
   const save = (): Promise<boolean> => {
     const next = text.trim();
+    // The save of these words is on its way (leaving the field, then 確定):
+    // its answer is this one's, whatever the field's base has become.
+    if (sending.current?.text === next) return sending.current.result;
     // Compared with what the field showed when it was typed in, not with
     // what was read since: the other device's words are not written over.
-    if (next === field.base.trim()) {
-      field.leave();
-      return Promise.resolve(true);
-    }
+    if (!field.leave()) return Promise.resolve(true);
     // A criterion made from it keeps it; the handoff says to drop it first.
     if (next === '' && data.draft !== undefined) return Promise.resolve(false);
-    if (sending.current?.text === next) return sending.current.result;
     const result = onImprove(next).then((ok) => {
       if (sending.current?.result === result) sending.current = undefined;
       return ok;

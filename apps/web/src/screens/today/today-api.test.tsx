@@ -26,10 +26,12 @@ import {
   it,
   vi,
 } from 'vitest';
+import { deleteInterrupt, editInterrupt } from '@itera/api-contract/client';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { createMock } from '@/mock/mock-api';
 import { dayRead } from '@/test/day-read';
 import { findHours } from '@/test/duration';
+import { comeBack, otherDevice, until } from '@/test/other-device';
 
 type CreateAppRouter = typeof import('@/app/router').createAppRouter;
 let createAppRouter: CreateAppRouter;
@@ -428,6 +430,77 @@ describe('Today on the API', () => {
           .filter((a) => a.via === 'later')
           .map((a) => [a.hours, a.date]),
       ).toEqual([[0.5, '2026-10-01']]);
+    });
+  });
+
+  describe('an interrupt another device has changed while it is being edited (#324)', () => {
+    async function openEdit(store: ReturnType<typeof serve>['store']) {
+      renderToday();
+      await dayRead();
+      const note = store
+        .getSnapshot()
+        .records.sprints.flatMap((sprint) => sprint.interrupts)[0]!;
+      const row = within(region('割り込み'))
+        .getByText(note.text)
+        .closest<HTMLElement>('[data-slot="interrupt-row"]')!;
+      await userEvent.click(
+        within(row).getByRole('button', { name: /^その他の操作：割り込み/ }),
+      );
+      await userEvent.click(
+        await screen.findByRole('menuitem', { name: '編集' }),
+      );
+      const sheet = await screen.findByRole('dialog', {
+        name: '割り込みを編集',
+      });
+      const sprint = store
+        .getSnapshot()
+        .records.sprints.find((s) => s.interrupts.includes(note))!;
+      return { note, sheet, sprintId: sprint.id };
+    }
+    const memo = () =>
+      screen.getByRole('textbox', { name: /メモ/ }) as HTMLInputElement;
+    const patches = (requests: string[]) =>
+      requests.filter((r) => r.startsWith('PATCH'));
+
+    it("sends nothing on 保存 for a note not typed in, and shows the other device's note", async () => {
+      const { store, requests } = serve(undefined, 'today-interrupt');
+      const { note, sprintId } = await openEdit(store);
+      await editInterrupt({
+        client: otherDevice(store),
+        path: { sprintId, interruptNoteId: note.id },
+        body: { text: 'スマホで直したメモ', minutes: 20 },
+      });
+      comeBack();
+      await until(() => expect(memo().value).toBe('スマホで直したメモ'));
+      const before = patches(requests).length;
+      await userEvent.click(screen.getByRole('button', { name: '保存' }));
+      await until(() =>
+        expect(
+          screen.queryByRole('dialog', { name: '割り込みを編集' }),
+        ).toBeNull(),
+      );
+      expect(patches(requests)).toHaveLength(before);
+      expect(
+        store
+          .getSnapshot()
+          .records.sprints.flatMap((sprint) => sprint.interrupts)
+          .find((n) => n.id === note.id),
+      ).toMatchObject({ text: 'スマホで直したメモ', minutes: 20 });
+    });
+
+    it('closes the sheet when the note is gone', async () => {
+      const { store } = serve(undefined, 'today-interrupt');
+      const { note, sprintId } = await openEdit(store);
+      await deleteInterrupt({
+        client: otherDevice(store),
+        path: { sprintId, interruptNoteId: note.id },
+      });
+      comeBack();
+      await until(() =>
+        expect(
+          screen.queryByRole('dialog', { name: '割り込みを編集' }),
+        ).toBeNull(),
+      );
     });
   });
 });

@@ -315,6 +315,52 @@ describe('Retro on the API', () => {
     });
   });
 
+  describe('次に試すことを確定 right after leaving the field (#324)', () => {
+    const confirm = () =>
+      screen.getByRole('button', { name: '次に試すことを確定' });
+
+    it('sends the words once, and shows them once they are saved', async () => {
+      const { requests } = serve(undefined, 'retro-reflect');
+      renderRetro('/retro?stage=reflect');
+      await waitForRead();
+      await userEvent.type(
+        screen.getByRole('textbox', { name: '次に試すこと' }),
+        '論文は 1本ずつ分ける',
+      );
+      // Pressing it leaves the field first: the save of the field is the
+      // one the press waits for.
+      await userEvent.click(confirm());
+      await until(() =>
+        expect(
+          screen.queryByRole('textbox', { name: '次に試すこと' }),
+        ).toBeNull(),
+      );
+      expect(requests.filter((r) => r.startsWith('PATCH'))).toHaveLength(1);
+      expect(await screen.findByText('論文は 1本ずつ分ける')).toBeTruthy();
+    });
+
+    it('keeps the form and the words when the save is refused', async () => {
+      const { requests } = serve(
+        (request) => (request.method === 'PATCH' ? refused() : undefined),
+        'retro-reflect',
+      );
+      renderRetro('/retro?stage=reflect');
+      await waitForRead();
+      await userEvent.type(
+        screen.getByRole('textbox', { name: '次に試すこと' }),
+        '論文は 1本ずつ分ける',
+      );
+      await userEvent.click(confirm());
+      await until(() =>
+        expect(requests.filter((r) => r.startsWith('PATCH'))).toHaveLength(1),
+      );
+      const field = screen.getByRole('textbox', {
+        name: '次に試すこと',
+      }) as HTMLTextAreaElement;
+      expect(field.value).toBe('論文は 1本ずつ分ける');
+    });
+  });
+
   describe('completing', () => {
     const openDialog = async () => {
       await userEvent.click(

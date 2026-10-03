@@ -137,10 +137,7 @@ function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
     }
     setError(undefined);
     // Compared with what the field showed when it was typed in, to the minute.
-    if (readMinutes(hours) === readMinutes(field.base)) {
-      field.leave();
-      return;
-    }
+    if (!field.leave()) return;
     const saving = actions.setSubtaskEstimate(task.id, subtask.id, parsed);
     field.hold(saving);
     // A save that fails goes back to the value as read.

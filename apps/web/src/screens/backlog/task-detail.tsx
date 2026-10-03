@@ -64,7 +64,11 @@ import {
   sameDuration,
   type DurationText,
 } from '@/lib/duration-text';
-import { useDraftField, type DraftField } from '@/lib/use-draft-field';
+import {
+  sameWords,
+  useDraftField,
+  type DraftField,
+} from '@/lib/use-draft-field';
 import { LAST_DAY_CLOSED_WORDS } from '@/lib/selection-words';
 import { formatHours } from '@/lib/time-format';
 import { startedText } from '@/lib/today-words';
@@ -378,7 +382,7 @@ function TaskDetail({
   // The text fields: what is typed apart from the Task as read, so that a
   // field not typed in follows another device's change (#324).
   const fields: { [K in TextKey]: DraftField<Draft[K]> } = {
-    title: useDraftField(task.title),
+    title: useDraftField(task.title, sameWords),
     description: useDraftField(task.description),
     due: useDraftField(task.due ?? ''),
     estimate: useDraftField(hoursText(task.estimate?.hours), sameDuration),
