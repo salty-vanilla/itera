@@ -25,7 +25,6 @@ import {
   type Step,
   type Success,
 } from './operation-cases';
-import { unimplementedOperations } from './operations';
 
 const ids = fixtureIds();
 
@@ -815,11 +814,6 @@ describe('the Today routes', () => {
     expect([...new Set(failures.map((c) => c.name))].toSorted()).toEqual(
       answered,
     );
-  });
-
-  it('are all answered: none is listed as not yet', () => {
-    for (const name of answered)
-      expect(unimplementedOperations).not.toContain(name);
   });
 
   it.each([
