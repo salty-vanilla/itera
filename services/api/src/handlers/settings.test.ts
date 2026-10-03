@@ -3,7 +3,7 @@
 // `userNotSetUp` while `GET /api/me` answers. Through the app, on an
 // in-memory database with the migrations applied, behind a fake
 // Authenticator.
-import { vGetMeResponse } from '@itera/api-contract';
+import { vGetMeResponse, vSetSettingsResponse } from '@itera/api-contract';
 import { OPERATION_EXAMPLES } from '@itera/api-contract/testing';
 import { createIdSource, type OperationName } from '@itera/application';
 import * as v from 'valibot';
@@ -127,7 +127,9 @@ describe('PUT /api/me/settings', () => {
     const { app, db } = await setup();
     const response = await put(app, settings);
     expect(response.status).toBe(201);
-    expect(await response.text()).toBe('');
+    expect(v.parse(vSetSettingsResponse, await response.json())).toEqual(
+      settings,
+    );
 
     expect(await loadUserSettings(db, alice)).toEqual(settings);
     const loaded = await loadRecords(db, alice);
@@ -170,9 +172,10 @@ describe('PUT /api/me/settings', () => {
     expect((await loadRecords(db, alice)).revision).toBe(1);
   });
 
-  it('trims the name', async () => {
+  it('trims the name, and answers with the settings as made', async () => {
     const { app, db } = await setup();
-    await put(app, { ...settings, displayName: '  Alice ' });
+    const response = await put(app, { ...settings, displayName: '  Alice ' });
+    expect(await response.json()).toEqual(settings);
     expect(await loadUserSettings(db, alice)).toEqual(settings);
   });
 

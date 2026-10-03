@@ -61,7 +61,10 @@ meSettings:
               weekStartsOn: { $ref: '../schemas/common.yaml#/DayOfWeek' }
     responses:
       '201':
-        description: Made.
+        description: Made. The settings as they were made (the name is trimmed).
+        content:
+          application/json:
+            schema: { $ref: '../schemas/records.yaml#/UserSettings' }
       '204':
         description: Already made; the display name is as sent.
       '400': { $ref: '../responses.yaml#/BadRequest' }

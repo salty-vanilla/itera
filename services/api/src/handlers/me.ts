@@ -40,9 +40,8 @@ export async function getMe(c: Context<AppEnv>, flow: Flow) {
  */
 export async function putSettings(c: Context<AppEnv>, flow: Flow) {
   const body = validate(settingsSurface.body, await jsonBody(c.req), 'body');
-  const created = await flow.setUp(c, body);
-  return c.body(
-    null,
-    created ? settingsSurface.status.created : settingsSurface.status.written,
-  );
+  const { created, settings } = await flow.setUp(c, body);
+  return created
+    ? c.json(settings, settingsSurface.status.created)
+    : c.body(null, settingsSurface.status.written);
 }

@@ -346,6 +346,7 @@ describe('a person who has not made their settings', () => {
     const { client, store } = mockOf('before-settings');
     const made = await sdk.setSettings({ client, body: settings });
     expect(made.response?.status).toBe(201);
+    expect(made.data).toEqual(settings);
     expect(store.getSnapshot().records.user).toMatchObject(settings);
 
     const me = await sdk.getMe({ client, throwOnError: true });

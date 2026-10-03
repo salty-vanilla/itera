@@ -355,7 +355,7 @@ async function makeSettings(
     checked.output,
   );
   if (!result.ok) return domainFailure(result.error);
-  const { changes, created } = result.value;
+  const { changes, created, user: person } = result.value;
   own(() =>
     store.run(() => ({
       ok: true,
@@ -363,10 +363,13 @@ async function makeSettings(
     })),
   );
   settings.made = true;
-  return new Response(null, {
-    status: created
-      ? settingsSurface.status.created
-      : settingsSurface.status.written,
+  if (!created)
+    return new Response(null, { status: settingsSurface.status.written });
+  const { displayName, timeZone, weekStartsOn } = person;
+  return json(settingsSurface.status.created, {
+    displayName,
+    timeZone,
+    weekStartsOn,
   });
 }
 

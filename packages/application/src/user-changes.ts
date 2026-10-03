@@ -28,13 +28,19 @@ export interface SettingsInput {
  * What writing the settings changes: the person's `user` (made, or written
  * again with another display name), or nothing when the same settings are
  * written again. `current` is `null` before the first time; `created` is
- * whether this is it. The rules are `setUpUser`'s.
+ * whether this is it, and `user` is the person after it. The rules are
+ * `setUpUser`'s.
  */
 export function settingsChange(
   userId: UserId,
   current: User | null,
   input: SettingsInput,
-): Result<{ readonly changes: RecordChanges; readonly created: boolean }> {
+): Result<{
+  readonly changes: RecordChanges;
+  readonly created: boolean;
+  /** The person as they now are: what a first write answers with. */
+  readonly user: User;
+}> {
   const zone = parseTimeZone(input.timeZone);
   if (!zone.ok) return zone;
   const result = setUpUser(current, {
@@ -48,6 +54,6 @@ export function settingsChange(
   const written = created || user.displayName !== current?.displayName;
   return {
     ok: true,
-    value: { changes: written ? { user } : {}, created },
+    value: { changes: written ? { user } : {}, created, user },
   };
 }

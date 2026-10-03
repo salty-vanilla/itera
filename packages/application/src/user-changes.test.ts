@@ -14,14 +14,14 @@ describe('settingsChange', () => {
   it('makes the person’s first settings', () => {
     expect(settingsChange(userId, null, input)).toEqual({
       ok: true,
-      value: { changes: { user }, created: true },
+      value: { changes: { user }, created: true, user },
     });
   });
 
   it('writes nothing for the same settings again', () => {
     expect(settingsChange(userId, user, input)).toEqual({
       ok: true,
-      value: { changes: {}, created: false },
+      value: { changes: {}, created: false, user },
     });
   });
 
@@ -33,6 +33,7 @@ describe('settingsChange', () => {
       value: {
         changes: { user: { ...user, displayName: 'ほか' } },
         created: false,
+        user: { ...user, displayName: 'ほか' },
       },
     });
   });

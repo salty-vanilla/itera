@@ -1248,7 +1248,7 @@ export const vSetSettingsBody = v.strictObject({
     weekStartsOn: vDayOfWeek
 });
 
-export const vSetSettingsResponse = v.union([v.unknown(), v.void()]);
+export const vSetSettingsResponse = v.union([vUserSettings, v.void()]);
 
 /**
  * The read.

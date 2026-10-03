@@ -64,9 +64,12 @@ export type Flow = {
   /**
    * Makes the person's settings, the one write that needs no records: it
    * is what makes them possible. Answers whether this made them (the first
-   * time) or wrote them again.
+   * time) or wrote them again, and the settings as they now are.
    */
-  setUp(c: Context<AppEnv>, settings: SettingsInput): Promise<boolean>;
+  setUp(
+    c: Context<AppEnv>,
+    settings: SettingsInput,
+  ): Promise<{ created: boolean; settings: SettingsInput }>;
   /** Reads the records as of now. */
   read<View>(
     c: Context<AppEnv>,
@@ -223,7 +226,7 @@ export function createFlow({
         settings,
       );
       if (!result.ok) throw ApiError.fromDomain(result.error);
-      const { changes, created } = result.value;
+      const { changes, created, user: person } = result.value;
       const { user } = changes;
       if (user !== undefined) {
         const saved = await saveRecords(db, {
@@ -235,7 +238,8 @@ export function createFlow({
         });
         if (!saved.ok) throw conflict();
       }
-      return created;
+      const { displayName, timeZone, weekStartsOn } = person;
+      return { created, settings: { displayName, timeZone, weekStartsOn } };
     },
     async read(c, read) {
       const { records, clock } = await caughtUpForRead(c);

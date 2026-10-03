@@ -1277,9 +1277,9 @@ export type SetSettingsError = SetSettingsErrors[keyof SetSettingsErrors];
 
 export type SetSettingsResponses = {
     /**
-     * Made.
+     * Made. The settings as they were made (the name is trimmed).
      */
-    201: unknown;
+    201: UserSettings;
     /**
      * Already made; the display name is as sent.
      */
