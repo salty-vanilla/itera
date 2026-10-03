@@ -10,7 +10,6 @@ import {
   sprintNumber,
   type LocalDate,
   type Sprint,
-  type SprintState,
 } from '@itera/domain';
 import type { Clock, Records } from './records';
 
@@ -29,13 +28,6 @@ export interface SprintRef {
   /** Absent for the next week, whose Planning has not started. */
   readonly sprint?: Sprint;
   readonly week?: SprintWeek;
-}
-
-/** The Sprint a screen shows, and those before and after it. */
-export interface SprintChoice {
-  readonly current: SprintRef;
-  readonly previous?: SprintRef;
-  readonly next?: SprintRef;
 }
 
 /**
@@ -135,55 +127,4 @@ export function sprintRefs(
     });
   }
   return refs;
-}
-
-/**
- * The Sprint a screen opens: the one asked for, if there is one by that
- * number, else the current one.
- * - Sprint: the running Sprint, else the one being planned, else the one in
- *   Review, else the next week (its Planning starts there).
- * - Retro: the one in Review, else the running one (its Retro starts on its
- *   last day, F21), else the last closed. The next week has no Retro, so
- *   there is none before the first Sprint.
- */
-export function sprintChoice(
-  records: Records,
-  clock: Clock,
-  screen: 'sprint',
-  asked?: number,
-): SprintChoice;
-export function sprintChoice(
-  records: Records,
-  clock: Clock,
-  screen: 'retro',
-  asked?: number,
-): SprintChoice | undefined;
-export function sprintChoice(
-  records: Records,
-  clock: Clock,
-  screen: 'sprint' | 'retro',
-  asked?: number,
-): SprintChoice | undefined {
-  const refs = sprintRefs(records, clock).filter(
-    (r) => screen === 'sprint' || r.sprint !== undefined,
-  );
-  const inState = (state: SprintState) =>
-    refs.find((r) => r.sprint?.state === state);
-  const current =
-    refs.find((r) => r.number === asked) ??
-    (screen === 'sprint'
-      ? (inState('active') ?? inState('planning') ?? inState('review'))
-      : (inState('review') ??
-        inState('active') ??
-        refs.findLast((r) => r.sprint?.state === 'closed'))) ??
-    refs.at(-1);
-  if (current === undefined) return undefined;
-  const index = refs.indexOf(current);
-  const previous = refs[index - 1];
-  const next = refs[index + 1];
-  return {
-    current,
-    ...(previous === undefined ? {} : { previous }),
-    ...(next === undefined ? {} : { next }),
-  };
 }

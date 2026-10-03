@@ -28,7 +28,6 @@ import {
   type PlanningValue,
   type RetroImprovement,
   type Sprint,
-  type SprintId,
   type SprintGoal,
   type SprintTask,
   type SprintTotals,
@@ -99,7 +98,19 @@ export interface RecurringCandidate {
   readonly area?: PlanningArea;
 }
 
-export interface PlanningData {
+/** The Tasks a Sprint being planned can choose, in groups (選ぶ). */
+export interface PlanningCandidates {
+  readonly carriedOver: readonly CandidateRow[];
+  readonly overdue: readonly CandidateRow[];
+  readonly dueSoon: readonly CandidateRow[];
+  /** The last day 期限が近い reaches (shown in its heading). */
+  readonly dueSoonUntil: LocalDate;
+  readonly recurring: readonly RecurringCandidate[];
+  readonly others: readonly CandidateRow[];
+}
+
+/** A Sprint being planned: its plan (整える・確かめる). */
+export interface SprintPlan {
   readonly sprint: Sprint;
   /** 「Sprint 14」 (F25). */
   readonly number: number;
@@ -118,16 +129,6 @@ export interface PlanningData {
     readonly name: string;
     readonly color: AreaColor;
   }[];
-  /** 選ぶ: the Backlog in groups. */
-  readonly candidates: {
-    readonly carriedOver: readonly CandidateRow[];
-    readonly overdue: readonly CandidateRow[];
-    readonly dueSoon: readonly CandidateRow[];
-    /** The last day 期限が近い reaches (shown in its heading). */
-    readonly dueSoonUntil: LocalDate;
-    readonly recurring: readonly RecurringCandidate[];
-    readonly others: readonly CandidateRow[];
-  };
   /**
    * 整える・確かめる: the chosen Tasks and Goals per Area, in the order of
    * `areas`, then the Tasks without an Area.
@@ -170,21 +171,6 @@ export interface PlanningData {
   };
 }
 
-/** The Sprint being planned, if there is one. */
-export function planningSprint(records: Records): Sprint | undefined {
-  return records.sprints.find((s) => s.state === 'planning');
-}
-
-/** The Sprint being planned: the one with the ID, or the one there is. */
-function planningSprintOf(
-  records: Records,
-  sprintId: SprintId | undefined,
-): Sprint | undefined {
-  return sprintId === undefined
-    ? planningSprint(records)
-    : records.sprints.find((s) => s.id === sprintId && s.state === 'planning');
-}
-
 /** A Task's Area as Planning shows it. */
 function areaOf(records: Records, task: Task): PlanningArea | undefined {
   if (task.areaId === undefined) return undefined;
@@ -193,28 +179,6 @@ function areaOf(records: Records, task: Task): PlanningArea | undefined {
     ? undefined
     : { id: area.id, name: area.name, color: area.color };
 }
-
-/**
- * A Sprint being planned and the Tasks it can choose: its plan
- * (`sprintPlanOf`) and its candidates (`planningCandidatesOf`), which the
- * contract reads apart (#295 R2).
- */
-export function planningData(
-  records: Records,
-  clock: Clock,
-  options: { applyCriterion: boolean },
-  sprintId?: SprintId,
-): PlanningData | undefined {
-  const sprint = planningSprintOf(records, sprintId);
-  if (sprint === undefined) return undefined;
-  return {
-    ...sprintPlanOf(records, clock, sprint, options),
-    candidates: planningCandidatesOf(records, clock, sprint),
-  };
-}
-
-/** A Sprint being planned: its plan, without the Tasks to choose. */
-export type SprintPlan = Omit<PlanningData, 'candidates'>;
 
 /** The plan of a Sprint being planned (整える・確かめる). */
 export function sprintPlanOf(
@@ -355,7 +319,7 @@ export function planningCandidatesOf(
   records: Records,
   clock: Clock,
   sprint: Sprint,
-): PlanningData['candidates'] {
+): PlanningCandidates {
   const { tasks } = records;
   const now = clock.now;
   // 選ぶ

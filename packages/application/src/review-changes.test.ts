@@ -2,7 +2,7 @@ import { addDays, instant, type Sprint } from '@itera/domain';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from './fixtures/states';
 import { chooseTasks } from './planning-changes';
-import { planningData } from './planning-view';
+import { planningCandidatesOf } from './planning-view';
 import { memoryStore } from './testing';
 import { beginPlanning } from './retro-changes';
 import { reviewEnded } from './system-changes';
@@ -30,12 +30,14 @@ describe('planning the next Sprint mid-week', () => {
   it('marks a candidate still unfinished in the running Sprint, and it can be chosen', () => {
     const { store, running, unfinished } = chooseUnfinished();
     const { records, clock } = store.getSnapshot();
-    const data = planningData(records, clock, { applyCriterion: false });
+    const sprint = records.sprints.find((s) => s.state === 'planning');
+    if (sprint === undefined) throw new Error('no Sprint being planned');
+    const candidates = planningCandidatesOf(records, clock, sprint);
     const rows = [
-      ...(data?.candidates.carriedOver ?? []),
-      ...(data?.candidates.overdue ?? []),
-      ...(data?.candidates.dueSoon ?? []),
-      ...(data?.candidates.others ?? []),
+      ...candidates.carriedOver,
+      ...candidates.overdue,
+      ...candidates.dueSoon,
+      ...candidates.others,
     ];
     const row = rows.find((r) => r.task.id === unfinished.taskId);
     expect(row?.running).toEqual({ sprint: 2 });

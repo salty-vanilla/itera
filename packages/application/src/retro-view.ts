@@ -6,7 +6,6 @@ import {
   carryOverTasks,
   criterionResult,
   criterionView,
-  nextUnconfirmedSprintStart,
   retroFacts,
   sprintAreaName,
   sprintNumber,
@@ -115,11 +114,6 @@ export interface RetroData {
   readonly carryOverTasks: readonly CarryOverTask[];
 }
 
-/** The Sprint in Review, if any. */
-export function reviewSprintOf(records: Records): Sprint | undefined {
-  return records.sprints.find((s) => s.state === 'review');
-}
-
 /**
  * The Retro of the Sprint in Review, or of the one asked for once it is in
  * Review or closed (#90; a closed one is read only). `undefined` before it.
@@ -131,7 +125,7 @@ export function retroData(
 ): RetroData | undefined {
   const sprint =
     sprintId === undefined
-      ? reviewSprintOf(records)
+      ? records.sprints.find((s) => s.state === 'review')
       : records.sprints.find((s) => s.id === sprintId);
   if (sprint?.retro === undefined) return undefined;
   const { tasks, areas: allAreas, criteria } = records;
@@ -243,29 +237,5 @@ export function retroData(
     })),
     carryOver: carryOverPlaces(sprint, following, tasks),
     carryOverTasks: carried,
-  };
-}
-
-/** Where the next Planning stands: the Sprint being planned, or a new one. */
-export interface NextPlanning {
-  /** The Sprint being planned, if Planning has started. */
-  readonly planning?: SprintId;
-  /** Where a new Planning would start, and its number (F25). */
-  readonly start: LocalDate;
-  readonly number: number;
-}
-
-export function nextPlanningOf(records: Records, clock: Clock): NextPlanning {
-  const planning = records.sprints.find((s) => s.state === 'planning');
-  const start = nextUnconfirmedSprintStart(
-    records.sprints,
-    records.user,
-    clock.today,
-  );
-  return {
-    ...(planning === undefined ? {} : { planning: planning.id }),
-    start,
-    // Its number as F25 counts it: one after every Sprint before it.
-    number: records.sprints.filter((s) => s.start < start).length + 1,
   };
 }

@@ -66,13 +66,12 @@ export {
   type BacklogItem,
 } from './backlog-view';
 export { type DayArea, type DayData, type DayRecord } from './day-view';
-export { areaList, type EditableArea } from './overview-view';
+export { areaList, type EditableArea } from './area-view';
 export {
   type AreaPlan,
   type CandidateRow,
   type PlannedTask,
   type PlanningArea,
-  type PlanningData,
   type RecurringCandidate,
 } from './planning-view';
 export {

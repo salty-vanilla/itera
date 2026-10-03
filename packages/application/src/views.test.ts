@@ -10,11 +10,17 @@ import {
   fixtureSnapshot,
   fixtureStateIds,
 } from './fixtures/states';
-import { appOverview, areaList } from './overview-view';
-import { planningData } from './planning-view';
-import { nextPlanningOf, retroData } from './retro-view';
+import { areaList } from './area-view';
+import { retroData } from './retro-view';
+import {
+  currentSprints,
+  dayView,
+  sprintCandidates,
+  sprintList,
+  sprintRetro,
+  sprintView,
+} from './resource-views';
 import { runningData } from './running-view';
-import { sprintChoice } from './sprint-choice';
 import { todayData } from './today-view';
 
 const ids = fixtureIds();
@@ -24,18 +30,20 @@ const viaJson = (value: unknown) =>
 function readsOf(state: (typeof fixtureStateIds)[number]) {
   const { records, clock } = fixtureSnapshot(state);
   return {
-    overview: appOverview(records, clock),
+    sprints: sprintList(records, clock),
+    currentSprints: currentSprints(records, clock),
     areas: areaList(records),
     today: todayData(records, clock),
+    yesterdayView: dayView(records, clock, addDays(clock.today, -1)),
+    todayView: dayView(records, clock, clock.today),
     yesterday: dayData(records, clock, addDays(clock.today, -1)),
     tomorrow: dayData(records, clock, addDays(clock.today, 1)),
-    planning: planningData(records, clock, { applyCriterion: false }),
-    planningWithCriterion: planningData(records, clock, {
-      applyCriterion: true,
-    }),
-    sprintChoice: sprintChoice(records, clock, 'sprint'),
-    retroChoice: sprintChoice(records, clock, 'retro'),
-    nextPlanning: nextPlanningOf(records, clock),
+    candidates: (() => {
+      const planning = records.sprints.find((s) => s.state === 'planning');
+      return planning === undefined
+        ? undefined
+        : sprintCandidates(records, clock, planning.id);
+    })(),
     running: runningData(records, clock),
     retro: retroData(records, clock),
     backlogInArea: backlogData(records, clock, { area: ids.area.research }),
@@ -52,6 +60,15 @@ function readsOf(state: (typeof fixtureStateIds)[number]) {
       records.sprints.flatMap((s, i) => [
         [`running-${i + 1}`, runningData(records, clock, s.id)],
         [`retro-${i + 1}`, retroData(records, clock, s.id)],
+        [
+          `sprint-${i + 1}`,
+          sprintView(records, clock, s.id, { applyCriterion: false }),
+        ],
+        [
+          `sprint-${i + 1}-with-criterion`,
+          sprintView(records, clock, s.id, { applyCriterion: true }),
+        ],
+        [`sprint-retro-${i + 1}`, sprintRetro(records, clock, s.id)],
       ]),
     ),
   } as Record<string, unknown>;
