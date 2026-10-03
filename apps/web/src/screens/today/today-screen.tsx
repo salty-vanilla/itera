@@ -364,7 +364,12 @@ function TodayView({ data }: { data: TodayData }) {
         label: '元に戻す',
         onClick: () => {
           closedToast.current = undefined;
-          moved(selectionId, actions.undoClose(selectionId));
+          moved(
+            selectionId,
+            backToWeek
+              ? actions.undoRemove(selectionId)
+              : actions.undoDefer(selectionId),
+          );
         },
       },
     });
@@ -424,7 +429,7 @@ function TodayView({ data }: { data: TodayData }) {
       onUndoSkip: () => moved(selectionId, actions.undoSkip(selectionId)),
       onUndoClose: () => {
         dropClosedToast(selectionId);
-        moved(selectionId, actions.undoClose(selectionId));
+        moved(selectionId, actions.undoDefer(selectionId));
       },
       onPause: () =>
         setEditing({
@@ -450,7 +455,7 @@ function TodayView({ data }: { data: TodayData }) {
     // Put back today: the same choice comes back (F37), its row where it was.
     if (item.removedToday !== undefined) {
       dropClosedToast(item.removedToday);
-      moved(item.removedToday, actions.undoClose(item.removedToday));
+      moved(item.removedToday, actions.undoRemove(item.removedToday));
       return;
     }
     const before = new Set(data.rows.map((r) => r.selection.id));

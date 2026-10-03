@@ -145,7 +145,7 @@ function Materials({
 }: {
   data: RetroData;
   /** Absent in a closed Retro: read only. */
-  onPin: ((pin: RetroPin) => void) | undefined;
+  onPin: ((pin: RetroPin, on: boolean) => void) | undefined;
   headingLevel?: 2 | 3;
   className?: string | undefined;
 }) {
@@ -194,7 +194,7 @@ function Materials({
                   <PinToggle
                     pinned
                     subject={text}
-                    onToggle={() => onPin(pin)}
+                    onToggle={() => onPin(pin, false)}
                   />
                 </span>
               )}

@@ -7,10 +7,6 @@ import {
   createConfig,
   type Client,
 } from '@itera/api-contract/create-client';
-import {
-  archiveAreaMutation,
-  renameAreaMutation,
-} from '@itera/api-contract/react-query';
 import { createMemoryStore } from '@itera/application';
 import { fixtureIds, fixtureSnapshot } from '@itera/application/fixtures';
 import {
@@ -27,7 +23,7 @@ import { createMock } from '@/mock/mock-api';
 import { ApiProvider } from './api-provider';
 import { createQueryClient } from './query-client';
 import { useOperation } from './use-operation';
-import { useOverview } from './use-overview';
+import { useMe } from './use-me';
 
 const ids = fixtureIds();
 
@@ -68,22 +64,20 @@ function setUp(answer?: Answer) {
 
 function answerWith(status: number, code: string) {
   return (request: Request) =>
-    request.method === 'POST'
+    request.method !== 'GET'
       ? Response.json({ code, message: 'for developers' }, { status })
       : undefined;
 }
 
-/** An operation and the overview, as a screen would use both. */
+/** An operation and a read, as a screen would use both. */
 function useRenameAndOverview() {
   return {
-    rename: useOperation(renameAreaMutation),
-    overview: useOverview(),
+    rename: useOperation('renameArea'),
+    overview: useMe(),
   };
 }
 
-const rename = (name: string) => ({
-  body: { areaId: ids.area.research, name },
-});
+const rename = (name: string) => ({ areaId: ids.area.research, name });
 
 describe('useOperation', () => {
   it('gives back the outcome and reads the reads again before it resolves', async () => {
@@ -97,8 +91,8 @@ describe('useOperation', () => {
     });
     expect(outcome).toMatchObject({ ok: true });
     expect(requests).toEqual([
-      'POST /api/operations/renameArea',
-      'GET /api/overview',
+      `PATCH /api/areas/${ids.area.research}`,
+      'GET /api/me',
     ]);
   });
 
@@ -137,7 +131,7 @@ describe('useOperation', () => {
     const held = new Promise<void>((resolve) => (release = resolve));
     // The operation's answer waits, as on a slow network.
     const { requests, wrapper } = setUp((request) =>
-      request.method === 'POST'
+      request.method !== 'GET'
         ? held.then(() => new Response(null, { status: 204 }))
         : undefined,
     );
@@ -155,7 +149,7 @@ describe('useOperation', () => {
       expect(await first).toMatchObject({ ok: true });
     });
     expect(
-      requests.filter((r) => r === 'POST /api/operations/renameArea'),
+      requests.filter((r) => r === `PATCH /api/areas/${ids.area.research}`),
     ).toHaveLength(1);
     await waitFor(() => expect(result.current.rename.pending).toBe(false));
   });
@@ -164,14 +158,14 @@ describe('useOperation', () => {
 describe('operations that overlap', () => {
   /** An operation's answer waits `ms`, as on a slow network. */
   const slow = (ms: number) => (request: Request) =>
-    request.method === 'POST'
+    request.method !== 'GET'
       ? new Promise<Response>((resolve) =>
           setTimeout(() => resolve(new Response(null, { status: 204 })), ms),
         )
       : undefined;
 
   function useRenameWaiting() {
-    return useOperation(renameAreaMutation, { whileSending: 'wait' });
+    return useOperation('renameArea', { whileSending: 'wait' });
   }
 
   it('sends every one in order when it waits while sending', async () => {
@@ -186,7 +180,7 @@ describe('operations that overlap', () => {
     });
     expect(outcomes).toMatchObject([{ ok: true }, { ok: true }]);
     expect(
-      requests.filter((r) => r === 'POST /api/operations/renameArea'),
+      requests.filter((r) => r === `PATCH /api/areas/${ids.area.research}`),
     ).toHaveLength(2);
     // The last one is what is saved.
     expect(
@@ -199,8 +193,8 @@ describe('operations that overlap', () => {
     const { requests, wrapper } = setUp(slow(100));
     const { result } = renderHook(
       () => ({
-        rename: useOperation(renameAreaMutation),
-        archive: useOperation(archiveAreaMutation),
+        rename: useOperation('renameArea'),
+        archive: useOperation('archiveArea'),
       }),
       { wrapper },
     );
@@ -208,28 +202,29 @@ describe('operations that overlap', () => {
     await act(async () => {
       both = Promise.all([
         result.current.rename.run(rename('研究室')),
-        result.current.archive.run({ body: { areaId: ids.area.research } }),
+        result.current.archive.run({ areaId: ids.area.research }),
       ]);
       await new Promise((resolve) => setTimeout(resolve, 30));
       // The second waits for the first (the API would answer 409 to both).
-      expect(requests.filter((r) => r.startsWith('POST'))).toEqual([
-        'POST /api/operations/renameArea',
+      expect(requests.filter((r) => !r.startsWith('GET'))).toEqual([
+        `PATCH /api/areas/${ids.area.research}`,
       ]);
     });
     await act(async () => {
       await both;
     });
-    expect(requests.filter((r) => r.startsWith('POST'))).toEqual([
-      'POST /api/operations/renameArea',
-      'POST /api/operations/archiveArea',
+    expect(requests.filter((r) => !r.startsWith('GET'))).toEqual([
+      `PATCH /api/areas/${ids.area.research}`,
+      `POST /api/areas/${ids.area.research}/archive`,
     ]);
   });
 });
 
-const onPost =
+/** `answer` for the operation's request: anything but a read. */
+const onWrite =
   (answer: () => Response): Answer =>
   (request) =>
-    request.method === 'POST' ? answer() : undefined;
+    request.method !== 'GET' ? answer() : undefined;
 
 const refused: readonly [string, Answer][] = [
   ['400 validationFailed', answerWith(400, 'validationFailed')],
@@ -252,12 +247,12 @@ const unknown: readonly [string, Answer][] = [
   ['418 a code it does not know', answerWith(418, 'somethingNew')],
   [
     '502 that is not JSON',
-    onPost(() => new Response('<html>Bad Gateway</html>', { status: 502 })),
+    onWrite(() => new Response('<html>Bad Gateway</html>', { status: 502 })),
   ],
   [
     'no answer (the network)',
     (request) =>
-      request.method === 'POST'
+      request.method !== 'GET'
         ? Promise.reject(new TypeError('Failed to fetch'))
         : undefined,
   ],
@@ -280,11 +275,15 @@ async function failWith(answer: Answer) {
 // 2026-10-03, Issue #272).
 describe('a failed operation', () => {
   it.each(refused)(
-    '%s: saved nothing, says so, and reads nothing again',
+    '%s: saved nothing, says so, and reads again (ADR 0006 エラー, #295)',
     async (_, answer) => {
       const { outcome, requests } = await failWith(answer);
       expect(outcome).toEqual({ ok: false });
-      expect(requests).toEqual(['POST /api/operations/renameArea']);
+      // What it was sent with may have been old: the reads come back first.
+      expect(requests).toEqual([
+        `PATCH /api/areas/${ids.area.research}`,
+        'GET /api/me',
+      ]);
       expect(
         await screen.findAllByText('保存できませんでした'),
       ).not.toHaveLength(0);
@@ -303,8 +302,8 @@ describe('a failed operation', () => {
       expect(outcome).toEqual({ ok: false });
       // Read again before `run` gave back its outcome, and not sent again.
       expect(requests).toEqual([
-        'POST /api/operations/renameArea',
-        'GET /api/overview',
+        `PATCH /api/areas/${ids.area.research}`,
+        'GET /api/me',
       ]);
       expect(
         await screen.findAllByText('保存できたか確かめられませんでした'),
@@ -340,8 +339,8 @@ describe('reading again after an operation', () => {
       });
       expect(outcome).toEqual({ ok: false });
       expect(requests).toEqual([
-        'POST /api/operations/renameArea',
-        'GET /api/overview',
+        `PATCH /api/areas/${ids.area.research}`,
+        'GET /api/me',
       ]);
       expect(
         screen.getAllByText('保存できたか確かめられませんでした'),
@@ -361,7 +360,7 @@ describe('a read without a session', () => {
         { status: 401 },
       ),
     );
-    renderHook(useOverview, { wrapper });
+    renderHook(useMe, { wrapper });
     await waitFor(() => expect(onUnauthenticated).toHaveBeenCalled());
   });
 });
@@ -371,7 +370,7 @@ describe('the loading state', () => {
     let release = () => {};
     const held = new Promise<void>((resolve) => (release = resolve));
     const { wrapper } = setUp((request) =>
-      request.method === 'POST'
+      request.method !== 'GET'
         ? held.then(() => new Response(null, { status: 204 }))
         : undefined,
     );

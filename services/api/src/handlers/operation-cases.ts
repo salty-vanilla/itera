@@ -6,6 +6,8 @@
 // in-memory database with the migrations applied, behind a fake
 // Authenticator. For tests only.
 import * as contract from '@itera/api-contract';
+import { requestOf, surfaces } from '@itera/api-contract/requests';
+import { httpOf } from '@itera/api-contract/testing';
 import {
   createIdSource,
   type Clock,
@@ -82,16 +84,11 @@ export async function setupFixtureApp(
       authenticator: () => authenticator,
     }),
   );
-  const post = (name: OperationName, body: unknown) =>
-    app.request(
-      `/api/operations/${name}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Origin: testOrigin },
-        body: JSON.stringify(body),
-      },
-      testEnv,
-    );
+  /** Sends an operation as its request of the contract (requestOf). */
+  const post = (name: OperationName, input: unknown) => {
+    const { url, init } = httpRequest(name, input);
+    return app.request(url, init, testEnv);
+  };
   return {
     db,
     post,
@@ -138,10 +135,30 @@ export type Failure = Case & {
   readonly code: string;
 };
 
-/** The contract's response schema of an operation, by its name. */
-function responseSchema(name: OperationName): v.GenericSchema {
-  const key = `v${name[0]!.toUpperCase()}${name.slice(1)}Response`;
-  return (contract as Record<string, unknown>)[key] as v.GenericSchema;
+/** The contract's response schema of an operation's surface, and its status. */
+function responseOf(name: OperationName, input: unknown) {
+  const id = requestOf(name, input as never).operationId;
+  const key = `v${id[0]!.toUpperCase()}${id.slice(1)}Response`;
+  return {
+    schema: (contract as Record<string, unknown>)[key] as v.GenericSchema,
+    status: surfaces[id].status,
+  };
+}
+
+/**
+ * An operation and its input as an HTTP request of the contract (`httpOf`),
+ * from the app's own origin.
+ */
+export function httpRequest(name: OperationName, input: unknown) {
+  const { method, url, body } = httpOf(requestOf(name, input as never));
+  return {
+    url,
+    init: {
+      method,
+      headers: { 'Content-Type': 'application/json', Origin: testOrigin },
+      ...(body === undefined ? {} : { body }),
+    },
+  };
 }
 
 /**
@@ -154,13 +171,13 @@ async function prepared(app: FixtureApp, steps: readonly Step[] = []) {
     const response = await app.post(name, body((await app.saved()).records));
     expect(response.status, `${name} (prepare)`).toBeLessThan(300);
   }
-  expect((await app.get('/overview')).status).toBe(200);
+  expect((await app.get('/me')).status).toBe(200);
   return app.saved();
 }
 
 /**
- * Runs the tables. A success answers what the contract says (204 for a
- * response without a value, 200 and the schema's parse otherwise), raises
+ * Runs the tables. A success answers what the contract says (its surface's
+ * status, and a body the response schema parses unless 204), raises
  * the revision once and writes the person's Activity in the same batch. A
  * failure answers the status and code and leaves the records as they were.
  */
@@ -181,15 +198,15 @@ export function describeOperations(
       it('changes the records and answers what the contract says', async () => {
         const app = await setupFixtureApp(c.state ?? state);
         const before = await prepared(app, c.prepare);
-        const response = await app.post(c.name, c.body(before.records));
+        const input = c.body(before.records);
+        const response = await app.post(c.name, input);
 
-        const schema = responseSchema(c.name);
+        const { schema, status } = responseOf(c.name, input);
         let body: unknown;
-        if (v.is(schema, undefined)) {
-          expect(response.status).toBe(204);
+        expect(response.status).toBe(status);
+        if (status === 204) {
           expect(await response.text()).toBe('');
         } else {
-          expect(response.status).toBe(200);
           body = v.parse(schema, await response.json());
         }
 

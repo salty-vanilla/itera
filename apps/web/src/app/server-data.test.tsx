@@ -1,7 +1,7 @@
 // With the API as the data source (the production build, `--mode api`):
 // no fixture, a request without a session goes to sign in, and a screen not
 // yet moved to the contract says so (#272).
-import { appOverview } from '@itera/application';
+import { backlogData } from '@itera/application';
 import { fixtureSnapshot } from '@itera/application/fixtures';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
@@ -61,8 +61,9 @@ function renderAt(url: string) {
 }
 
 const { records, clock } = fixtureSnapshot('today-daytime');
+const backlog = backlogData(records, clock, {});
 const overview = JSON.parse(
-  JSON.stringify({ clock, view: appOverview(records, clock) }),
+  JSON.stringify({ clock, view: backlog }),
 ) as unknown;
 
 describe('the API as the data source', () => {
@@ -82,9 +83,9 @@ describe('the API as the data source', () => {
     });
   });
 
-  it('reads the overview from the API, and says a screen is not moved yet', async () => {
+  it("reads the Backlog's count from the API, and says a screen is not moved yet", async () => {
     const requests = serve((path) =>
-      path === '/api/overview'
+      path === '/api/backlog'
         ? Response.json(overview)
         : new Response('404 Not Found', { status: 404 }),
     );
@@ -97,10 +98,10 @@ describe('the API as the data source', () => {
     const [side] = screen.getAllByRole('navigation', { name: 'メイン' });
     await waitFor(() =>
       expect(side?.textContent).toContain(
-        `Backlog${appOverview(records, clock).backlogCount}件`,
+        `Backlog${backlog.sliceCounts.all}件`,
       ),
     );
-    expect(requests).toContain('/api/overview');
+    expect(requests).toContain('/api/backlog');
   });
 
   it('has no fixture: the URL cannot switch the records', async () => {
@@ -114,7 +115,7 @@ describe('the API as the data source', () => {
 describe('signing in on the API (#278)', () => {
   it('asks for the session when the app starts, which extends it', async () => {
     const requests = serve((path) =>
-      path === '/api/overview'
+      path === '/api/backlog'
         ? Response.json(overview)
         : path === '/api/auth/get-session'
           ? Response.json({

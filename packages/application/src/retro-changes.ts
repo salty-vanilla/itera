@@ -8,17 +8,16 @@ import {
   draftCriterion,
   dropCriterionDraft,
   nextUnconfirmedSprintStart,
-  recordActualTime,
+  pinFact,
   setDraftPolicy,
   setImprovement,
   setReflection,
   startPlanning,
-  togglePin,
+  unpinFact,
   type AreaId,
   type CommandResult,
   type CriterionPolicy,
-  type LocalDate,
-  type OccurrenceId,
+  type PlanningCriterion,
   type PlanningCriterionId,
   type RetroDecision,
   type RetroPin,
@@ -26,7 +25,6 @@ import {
   type SelfAssessment,
   type Sprint,
   type SprintId,
-  type SprintTaskId,
 } from '@itera/domain';
 import { find } from './changes';
 import {
@@ -36,20 +34,16 @@ import {
   type ChangeContext,
 } from './record-store';
 import type { Records } from './records';
-import { reviewSprintOf } from './retro-view';
+import { sprintIn } from './sprint-of';
 
-function inReview(records: Records): Result<Sprint> {
-  const sprint = reviewSprintOf(records);
-  return sprint === undefined
-    ? {
-        ok: false,
-        error: { code: 'notFound', message: 'No Sprint in Review.' },
-      }
-    : { ok: true, value: sprint };
+/** The Sprint in Review that the operation names (#295). */
+function inReview(records: Records, sprintId: SprintId): Result<Sprint> {
+  return sprintIn(records, sprintId, ['review']);
 }
 
 /** A command on the Sprint in Review. */
 function onReview(
+  sprintId: SprintId,
   command: (
     sprint: Sprint,
     ctx: ChangeContext,
@@ -57,7 +51,7 @@ function onReview(
   ) => CommandResult<Sprint>,
 ): Change {
   return (records, ctx) => {
-    const sprint = inReview(records);
+    const sprint = inReview(records, sprintId);
     if (!sprint.ok) return sprint;
     return changed(command(sprint.value, ctx, records), (next) => ({
       sprints: [next],
@@ -66,26 +60,39 @@ function onReview(
 }
 
 /** Goal の自己判定, or `null` for 未判定 (invariant 19). */
-export const assess = (areaId: AreaId, assessment: SelfAssessment | null) =>
-  onReview((sprint, ctx) => assessGoal(sprint, { areaId, assessment }, ctx));
+export const assess = (
+  sprintId: SprintId,
+  areaId: AreaId,
+  assessment: SelfAssessment | null,
+) =>
+  onReview(sprintId, (sprint, ctx) =>
+    assessGoal(sprint, { areaId, assessment }, ctx),
+  );
 
-/** 振り返りに使う印をつける / 外す. */
-export const pin = (target: RetroPin) =>
-  onReview((sprint, ctx) => togglePin(sprint, { pin: target }, ctx));
+/** 振り返りに使う印をつける (nothing changes when it is on already). */
+export const pin = (sprintId: SprintId, target: RetroPin) =>
+  onReview(sprintId, (sprint, ctx) => pinFact(sprint, { pin: target }, ctx));
+
+/** 振り返りに使う印を外す (nothing changes when it is off already). */
+export const unpin = (sprintId: SprintId, target: RetroPin) =>
+  onReview(sprintId, (sprint, ctx) => unpinFact(sprint, { pin: target }, ctx));
 
 /** 気づいたこと (optional). */
-export const reflect = (text: string) =>
-  onReview((sprint, ctx) => setReflection(sprint, { text }, ctx));
+export const reflect = (sprintId: SprintId, text: string) =>
+  onReview(sprintId, (sprint, ctx) => setReflection(sprint, { text }, ctx));
 
 /** 次に試すことを確定: one natural-language text (invariant 38). */
-export const improve = (text: string) =>
-  onReview((sprint, ctx) => setImprovement(sprint, { text }, ctx));
+export const improve = (sprintId: SprintId, text: string) =>
+  onReview(sprintId, (sprint, ctx) => setImprovement(sprint, { text }, ctx));
 
 /** 計画のルールにもする: a draft criterion from the improvement. */
 export const draft =
-  (policy: CriterionPolicy): Change<{ criterionId: PlanningCriterionId }> =>
+  (
+    sprintId: SprintId,
+    policy: CriterionPolicy,
+  ): Change<{ criterionId: PlanningCriterionId }> =>
   (records, ctx) => {
-    const sprint = inReview(records);
+    const sprint = inReview(records, sprintId);
     if (!sprint.ok) return sprint;
     const criterionId = ctx.newId('PlanningCriterion');
     return returning(
@@ -97,69 +104,74 @@ export const draft =
     );
   };
 
+/**
+ * A draft criterion the operation names, with the Sprint in Review whose
+ * improvement it came from: only that Retro changes it (#295).
+ */
+function draftOf(
+  records: Records,
+  criterionId: PlanningCriterionId,
+): Result<{ sprint: Sprint; criterion: PlanningCriterion }> {
+  const criterion = find(records.criteria, criterionId, 'PlanningCriterion');
+  if (!criterion.ok) return criterion;
+  const sprint = inReview(records, criterion.value.sourceSprintId);
+  if (!sprint.ok) return sprint;
+  if (sprint.value.retro?.improvement?.criterionId !== criterionId) {
+    return {
+      ok: false,
+      error: {
+        code: 'invalidTransition',
+        message: 'Not the draft of the Retro in progress.',
+      },
+    };
+  }
+  return {
+    ok: true,
+    value: { sprint: sprint.value, criterion: criterion.value },
+  };
+}
+
 /** The draft's setting (幅の扱いと対象). */
 export const setDraft =
-  (policy: CriterionPolicy): Change =>
+  (criterionId: PlanningCriterionId, policy: CriterionPolicy): Change =>
   (records, ctx) => {
-    const sprint = inReview(records);
-    if (!sprint.ok) return sprint;
-    const draftId = sprint.value.retro?.improvement?.criterionId;
-    if (draftId === undefined) {
-      return {
-        ok: false,
-        error: { code: 'notFound', message: 'No draft criterion.' },
-      };
-    }
-    const criterion = find(records.criteria, draftId, 'PlanningCriterion');
-    if (!criterion.ok) return criterion;
-    return changed(setDraftPolicy(criterion.value, policy, ctx), (next) => ({
-      criteria: [next],
-    }));
+    const draft = draftOf(records, criterionId);
+    if (!draft.ok) return draft;
+    return changed(
+      setDraftPolicy(draft.value.criterion, policy, ctx),
+      (next) => ({ criteria: [next] }),
+    );
   };
 
 /** 基準にしない: the draft goes (a replace decision relying on it is cleared). */
-export const dropDraft = (): Change => (records, ctx) => {
-  const sprint = inReview(records);
-  if (!sprint.ok) return sprint;
-  return changed(dropCriterionDraft(sprint.value, ctx), (next) => ({
-    sprints: [next.sprint],
-    deleted: { criteria: [next.dropped] },
-  }));
-};
+export const dropDraft =
+  (criterionId: PlanningCriterionId): Change =>
+  (records, ctx) => {
+    const draft = draftOf(records, criterionId);
+    if (!draft.ok) return draft;
+    return changed(dropCriterionDraft(draft.value.sprint, ctx), (next) => ({
+      sprints: [next.sprint],
+      deleted: { criteria: [next.dropped] },
+    }));
+  };
 
 /** 続ける / 終える / 置き換える (invariant 36). */
-export const decide = (decision: RetroDecision) =>
-  onReview((sprint, ctx) => decideCriterion(sprint, { decision }, ctx));
-
-/** 実績を後から足す, also in Review (F22). */
-export const recordActual = (
-  sprintTaskId: SprintTaskId,
-  hours: number,
-  date: LocalDate,
-  occurrenceId?: OccurrenceId,
-) =>
-  onReview((sprint, ctx) =>
-    recordActualTime(
-      sprint,
-      {
-        sprintTaskId,
-        hours,
-        date,
-        ...(occurrenceId === undefined ? {} : { occurrenceId }),
-      },
-      ctx,
-    ),
+export const decide = (sprintId: SprintId, decision: RetroDecision) =>
+  onReview(sprintId, (sprint, ctx) =>
+    decideCriterion(sprint, { decision }, ctx),
   );
 
 /** Retro を完了: the Sprint closes and criteria change as decided. */
-export const complete = (): Change => (records, ctx) => {
-  const sprint = inReview(records);
-  if (!sprint.ok) return sprint;
-  return changed(
-    completeRetro(sprint.value, { criteria: records.criteria }, ctx),
-    (next) => ({ sprints: [next.sprint], criteria: next.criteria }),
-  );
-};
+export const complete =
+  (sprintId: SprintId): Change =>
+  (records, ctx) => {
+    const sprint = inReview(records, sprintId);
+    if (!sprint.ok) return sprint;
+    return changed(
+      completeRetro(sprint.value, { criteria: records.criteria }, ctx),
+      (next) => ({ sprints: [next.sprint], criteria: next.criteria }),
+    );
+  };
 
 /**
  * 計画を始める for the next week not confirmed yet (owner decision in

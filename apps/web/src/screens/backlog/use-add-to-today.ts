@@ -1,7 +1,8 @@
 import { useNavigate } from '@tanstack/react-router';
 import type { TaskId } from '@itera/api-contract';
-import { addTaskToTodayMutation } from '@itera/api-contract/react-query';
+import { useRunningDay } from '@/api/use-me';
 import { useOperation } from '@/api/use-operation';
+import { SAVE_FAILED } from '@/api/save-failed';
 import { useToast } from '@/components/ui/toast';
 
 /**
@@ -11,11 +12,17 @@ import { useToast } from '@/components/ui/toast';
  * choice with their records. Returns whether it went through.
  */
 export function useAddToToday() {
-  const addToToday = useOperation(addTaskToTodayMutation);
+  const addToToday = useOperation('addTaskToToday');
+  const day = useRunningDay();
   const toast = useToast();
   const navigate = useNavigate();
   return async (taskId: TaskId, title: string): Promise<boolean> => {
-    if (!(await addToToday.run({ body: { taskId } })).ok) return false;
+    // No Sprint running: there is no today to put it in.
+    if (day === undefined) {
+      toast.show(SAVE_FAILED);
+      return false;
+    }
+    if (!(await addToToday.run({ ...day, taskId })).ok) return false;
     toast.show({
       kind: 'added-to-today',
       title: `「${title}」を「今日やる」に入れました`,

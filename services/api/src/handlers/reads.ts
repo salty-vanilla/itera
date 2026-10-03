@@ -1,37 +1,35 @@
 import {
   vGetBacklogQuery,
-  vGetPlanningQuery,
-  vGetRunningQuery,
-  vGetSprintChoiceQuery,
+  vGetSprintPath,
+  vGetSprintQuery,
+  vListSprintCandidatesPath,
+  vListSprintsQuery,
 } from '@itera/api-contract';
+import { queryInput } from '@itera/api-contract/requests';
 import {
-  appOverview,
   areaList,
+  type dayView,
+  type sprintRetro,
   backlogData,
   parseId,
-  planningData,
-  runningData,
-  sprintChoice,
-  type AppOverview,
+  sprintCandidates,
+  sprintList,
+  sprintView,
   type BacklogData,
   type BacklogFilter,
   type Clock,
-  type DayData,
   type EditableArea,
-  type NextPlanning,
-  type PlanningData,
   type Records,
-  type RetroData,
-  type RunningData,
-  type SprintChoice,
-  type TodayData,
+  type SprintItem,
+  type SprintView,
 } from '@itera/application';
+import type { SprintId } from '@itera/domain';
 import { Hono } from 'hono';
 import type * as v from 'valibot';
 import type { AppEnv } from '../env';
 import { ApiError } from '../errors';
 import type { Flow, Guards } from './flow';
-import { queryInput, validate } from './validate';
+import { validate } from './validate';
 
 /**
  * Each read of the contract, by its operationId, and the `view` it answers
@@ -42,16 +40,13 @@ import { queryInput, validate } from './validate';
  * the route's `read` maps the result to the DTO here, in services/api.
  */
 type ReadViews = {
-  getOverview: AppOverview;
   listAreas: readonly EditableArea[];
   getBacklog: BacklogData;
-  getSprintChoice: SprintChoice | undefined;
-  getPlanning: PlanningData | undefined;
-  getRunning: RunningData | undefined;
-  getToday: TodayData | undefined;
-  getDay: DayData | undefined;
-  getRetro: RetroData | undefined;
-  getNextPlanning: NextPlanning;
+  listSprints: readonly SprintItem[];
+  getSprint: SprintView;
+  listSprintCandidates: ReturnType<typeof sprintCandidates>;
+  getSprintRetro: ReturnType<typeof sprintRetro>;
+  getDay: ReturnType<typeof dayView>;
 };
 
 export type ReadName = keyof ReadViews;
@@ -105,15 +100,15 @@ function backlogFilter(query: {
 }
 
 /**
- * A Sprint's number (F25, the contract's `sprint` parameter) as the
- * application takes it, the Sprint's ID. `sprintChoice` opens the Sprint
- * with that number, and the current one when there is none, so a different
- * number means there is none; the next week before its Planning has no
- * Sprint yet either.
+ * The person's Sprint with the path's ID (#295): a read of a Sprint the
+ * person does not have answers 404, as an operation on it does. The
+ * schema has refused an ID that is not a Sprint's.
  */
-function sprintIdOfNumber(records: Records, clock: Clock, number: number) {
-  const { current } = sprintChoice(records, clock, 'sprint', number);
-  return current.number === number ? current.sprint?.id : undefined;
+function sprintIdIn(records: Records, sprintId: string): SprintId {
+  const sprint = records.sprints.find((s) => s.id === sprintId);
+  if (sprint === undefined)
+    throw new ApiError('notFound', `Sprint ${sprintId}`);
+  return sprint.id;
 }
 
 /**
@@ -123,10 +118,6 @@ function sprintIdOfNumber(records: Records, clock: Clock, number: number) {
 export const readRoutes: {
   readonly [N in ReadName]?: ReadRoute<ReadViews[N]>;
 } = {
-  getOverview: readRoute({
-    path: '/overview',
-    read: (records, clock) => appOverview(records, clock),
-  }),
   listAreas: readRoute({
     path: '/areas',
     read: (records) => areaList(records),
@@ -137,32 +128,37 @@ export const readRoutes: {
     read: (records, clock, { query }) =>
       backlogData(records, clock, backlogFilter(query)),
   }),
-  getSprintChoice: readRoute({
-    path: '/sprint-choice',
-    query: vGetSprintChoiceQuery,
+  listSprints: readRoute({
+    path: '/sprints',
+    query: vListSprintsQuery,
     read: (records, clock, { query }) =>
-      query.screen === 'sprint'
-        ? sprintChoice(records, clock, 'sprint', query.sprint)
-        : sprintChoice(records, clock, 'retro', query.sprint),
+      sprintList(
+        records,
+        clock,
+        query.number === undefined ? {} : { number: query.number },
+      ),
   }),
-  getPlanning: readRoute({
-    path: '/planning',
-    query: vGetPlanningQuery,
-    read: (records, clock, { query }) =>
-      planningData(records, clock, {
-        applyCriterion: query.applyCriterion ?? false,
-      }),
-  }),
-  getRunning: readRoute({
-    path: '/running',
-    query: vGetRunningQuery,
-    read: (records, clock, { query }) => {
-      if (query.sprint === undefined) return runningData(records, clock);
-      const sprintId = sprintIdOfNumber(records, clock, query.sprint);
-      return sprintId === undefined
-        ? undefined
-        : runningData(records, clock, sprintId);
+  getSprint: readRoute({
+    path: '/sprints/:sprintId',
+    params: vGetSprintPath,
+    query: vGetSprintQuery,
+    read: (records, clock, { params, query }) => {
+      const view = sprintView(
+        records,
+        clock,
+        sprintIdIn(records, params.sprintId),
+        { applyCriterion: query['apply-criterion'] ?? false },
+      );
+      if (view === undefined)
+        throw new ApiError('notFound', `Sprint ${params.sprintId}`);
+      return view;
     },
+  }),
+  listSprintCandidates: readRoute({
+    path: '/sprints/:sprintId/candidates',
+    params: vListSprintCandidatesPath,
+    read: (records, clock, { params }) =>
+      sprintCandidates(records, clock, sprintIdIn(records, params.sprintId)),
   }),
 };
 
@@ -172,12 +168,10 @@ export const readRoutes: {
  * server's own (`getMe`) (registry.test.ts).
  */
 export const unimplementedReads: readonly ReadName[] = [
-  // #269: today.
-  'getToday',
+  // #269: a day, today included.
   'getDay',
   // #270: the Retro.
-  'getRetro',
-  'getNextPlanning',
+  'getSprintRetro',
 ];
 
 /**
@@ -194,7 +188,7 @@ export function readRoutesApp(flow: Flow, guards: Guards) {
             ? undefined
             : validate(
                 route.query,
-                queryInput(route.query, c.req.query()),
+                queryInput(route.query, c.req.queries()),
                 'query',
               ),
         params:

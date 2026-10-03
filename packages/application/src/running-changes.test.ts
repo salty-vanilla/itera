@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot, fixtureIds } from './fixtures/states';
 import { type StoreSnapshot } from './record-store';
 import { memoryStore } from './testing';
-import { undoPastDay } from './running-changes';
+import type { Change } from './record-store';
+import { undoCompletion, undoSkipping } from './running-changes';
 import { reviewEnded } from './system-changes';
 import * as today from './today-changes';
 import * as task from './task-changes';
@@ -34,7 +35,18 @@ const selectionOf = (
   );
 };
 
-describe('undoPastDay (#53, F33)', () => {
+/** A past day's undo, as `…/undo-complete` or `…/undo-skip` sends it. */
+const undoPastDay =
+  (selectionId: string): Change =>
+  (records, ctx) => {
+    const sprint = records.sprints.find((x) => x.state === 'active')!;
+    const selection = sprint.dailySelections.find((d) => d.id === selectionId);
+    const undo =
+      selection?.resolution === 'skipped' ? undoSkipping : undoCompletion;
+    return undo(sprint.id, selectionId as never)(records, ctx);
+  };
+
+describe('undoing a past day (#53, F33)', () => {
   it('undoes a past completion; the system leaves that day unresolved', () => {
     const store = memoryStore(fixtureSnapshot('today-interrupt'));
     const done = selectionOf(store, ids.task.tax, '2026-09-29')!;
@@ -83,9 +95,18 @@ describe('undoPastDay (#53, F33)', () => {
           (o) => o.id === id && o.scheduledDate === '2026-10-02',
         ),
     )!;
-    expect(first.run(today.choose(st.id, occurrenceId)).ok).toBe(true);
+    expect(
+      first.run(
+        today.choose(
+          active(first).id,
+          '2026-10-01' as LocalDate,
+          st.id,
+          occurrenceId,
+        ),
+      ).ok,
+    ).toBe(true);
     const chosen = selectionOf(first, ids.task.reading, '2026-10-01')!;
-    expect(first.run(today.skip(chosen.id)).ok).toBe(true);
+    expect(first.run(today.skip(active(first).id, chosen.id)).ok).toBe(true);
 
     const store = memoryStore({
       ...first.getSnapshot(),
@@ -124,14 +145,22 @@ describe('undoPastDay (#53, F33)', () => {
     ).toBe('active');
   });
 
-  it("refuses today's choice (Today undoes that)", () => {
+  it("undoes today's completion as Today does: no day is closed", () => {
     const store = memoryStore(fixtureSnapshot('today-interrupt'));
     const todays = selectionOf(store, ids.task.apiReview, '2026-10-01')!;
-    const result = store.run(undoPastDay(todays.id));
-    expect(result.ok).toBe(false);
+    expect(todays.resolution).toBe('done');
+    expect(store.run(undoPastDay(todays.id)).ok).toBe(true);
     expect(
       selectionOf(store, ids.task.apiReview, '2026-10-01')?.resolution,
-    ).toBe('done');
+    ).not.toBe('done');
+    expect(store.getSnapshot().records.activities.at(-1)?.actor).toBe('user');
+  });
+
+  it('refuses to undo a skip of a past completion', () => {
+    const store = memoryStore(fixtureSnapshot('today-interrupt'));
+    const done = selectionOf(store, ids.task.tax, '2026-09-29')!;
+    const result = store.run(undoSkipping(active(store).id, done.id));
+    expect(!result.ok && result.error.code).toBe('invalidTransition');
   });
 
   it('leaves the Retro facts as the domain derives them', () => {
@@ -160,8 +189,10 @@ describe('undoPastDay (#53, F33)', () => {
     // 10/1: the started Task is deferred, then completed the same day.
     const first = memoryStore(fixtureSnapshot('today-interrupt'));
     const chosen = selectionOf(first, ids.task.dataset, '2026-10-01')!;
-    expect(first.run(today.defer(chosen.id)).ok).toBe(true);
-    expect(first.run(today.complete(chosen.id)).ok).toBe(true);
+    expect(first.run(today.defer(active(first).id, chosen.id)).ok).toBe(true);
+    expect(first.run(today.complete(active(first).id, chosen.id)).ok).toBe(
+      true,
+    );
     const done = selectionOf(first, ids.task.dataset, '2026-10-01')!;
     expect(done.closedBefore?.resolution).toBe('deferred');
 

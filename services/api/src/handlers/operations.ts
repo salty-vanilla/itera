@@ -1,103 +1,57 @@
-import * as contract from '@itera/api-contract';
+import {
+  readRequest,
+  RequestError,
+  surfaces,
+  type ReceivedRequest,
+  type Surface,
+} from '@itera/api-contract/requests';
 import {
   operations,
   type Change,
   type OperationName,
-  type Operations,
 } from '@itera/application';
 import { Hono, type HonoRequest } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
-import type * as v from 'valibot';
 import type { AppEnv } from '../env';
 import { ApiError, errorResponse } from '../errors';
 import type { Flow, Guards } from './flow';
 import { validate } from './validate';
 
 /**
- * The request body of each operation the API answers: the contract's
- * schema (`v<Name>Body`), or `null` for an operation without input. The
- * operation itself is `operations[name]` of packages/application, by the
- * same name (ADR 0006 経路の形). To answer another operation, add it here
- * and take it off `unimplementedOperations`.
- */
-export const operationBodies: {
-  readonly [N in OperationName]?: Parameters<Operations[N]> extends []
-    ? null
-    : v.GenericSchema;
-} = {
-  createArea: contract.vCreateAreaBody,
-  renameArea: contract.vRenameAreaBody,
-  archiveArea: contract.vArchiveAreaBody,
-  restoreArea: contract.vRestoreAreaBody,
-  createTask: contract.vCreateTaskBody,
-  saveTask: contract.vSaveTaskBody,
-  adoptSuggestion: contract.vAdoptSuggestionBody,
-  undoAdoption: contract.vUndoAdoptionBody,
-  adoptEditedSuggestion: contract.vAdoptEditedSuggestionBody,
-  rejectSuggestion: contract.vRejectSuggestionBody,
-  undoRejection: contract.vUndoRejectionBody,
-  addSubtask: contract.vAddSubtaskBody,
-  setSubtaskDone: contract.vSetSubtaskDoneBody,
-  setSubtaskEstimate: contract.vSetSubtaskEstimateBody,
-  archiveTask: contract.vArchiveTaskBody,
-  restoreTask: contract.vRestoreTaskBody,
-  completeTask: contract.vCompleteTaskBody,
-  undoCompleteTask: contract.vUndoCompleteTaskBody,
-  addTaskToToday: contract.vAddTaskToTodayBody,
-  addTaskToWeek: contract.vAddTaskToWeekBody,
-  undoAddTaskToWeek: contract.vUndoAddTaskToWeekBody,
-  setRecurrence: contract.vSetRecurrenceBody,
-  endRecurrence: contract.vEndRecurrenceBody,
-  chooseTasks: contract.vChooseTasksBody,
-  unchooseTasks: contract.vUnchooseTasksBody,
-  unchooseTasksByTask: contract.vUnchooseTasksByTaskBody,
-  setOccurrenceIncluded: contract.vSetOccurrenceIncludedBody,
-  includeOccurrences: contract.vIncludeOccurrencesBody,
-  excludeAllOccurrences: contract.vExcludeAllOccurrencesBody,
-  createAndChooseTask: contract.vCreateAndChooseTaskBody,
-  setPlanningGoal: contract.vSetPlanningGoalBody,
-  setGoalLink: contract.vSetGoalLinkBody,
-  setPlanningAvailableHours: contract.vSetPlanningAvailableHoursBody,
-  confirmSprint: contract.vConfirmSprintBody,
-  setRunningGoal: contract.vSetRunningGoalBody,
-  setRunningAvailableHours: contract.vSetRunningAvailableHoursBody,
-  undoPastDay: contract.vUndoPastDayBody,
-};
-
-/**
- * The contract's operations the API does not answer yet, by the Issue that
- * adds them. Every operation of the contract is in `operationBodies` or
- * here (registry.test.ts).
+ * The operations the API does not answer yet, by the Issue that adds them;
+ * it answers every other operation of packages/application (registry.test.ts).
+ * A request for one of these answers 404 once it has passed the guards and
+ * the contract's checks: a surface may take others the API answers, so the
+ * operation is known only then.
  */
 export const unimplementedOperations: readonly OperationName[] = [
-  // #269: today.
+  // #269: a day's choices and interrupts.
   'chooseForToday',
+  'createTaskForToday',
   'startSelection',
-  'deferSelection',
-  'removeFromToday',
-  'undoCloseSelection',
   'pauseSelection',
+  'deferSelection',
+  'undoDeferSelection',
+  'removeFromToday',
+  'undoRemoveFromToday',
   'completeSelection',
-  'undoCompleteSelection',
   'skipSelection',
-  'undoSkipSelection',
-  'recordSelectionActual',
+  'recordActualTime',
   'noteInterrupt',
   'editInterrupt',
   'deleteInterrupt',
   'restoreInterrupt',
-  'createTaskForToday',
   // #270: the Retro.
   'beginRetro',
   'assessGoal',
-  'togglePin',
+  'pinFact',
+  'unpinFact',
   'setReflection',
   'setImprovement',
   'draftCriterion',
   'setDraftPolicy',
   'dropCriterionDraft',
   'decideCriterion',
-  'recordReviewActual',
   'completeRetro',
   'beginPlanning',
 ];
@@ -113,11 +67,16 @@ async function jsonBody(request: HonoRequest): Promise<unknown> {
   }
 }
 
+/** A surface's path in Hono's form: `/areas/{areaId}` becomes `/areas/:areaId`. */
+export const honoPath = (url: string) => url.replace(/\{(\w+)\}/g, ':$1');
+
 /**
- * `POST /operations/{name}` for each operation in `operationBodies`. The
- * guards (authentication, the Origin check) run first, then the size limit
- * and the contract's validation. An operation that returns a value answers
- * 200 with it; one that returns nothing, 204.
+ * Each write surface of the contract (`surfaces` of
+ * `@itera/api-contract/requests`): the guards (authentication, the Origin
+ * check) run first, then the size limit and the contract's validation of
+ * the path, the query and the body. The surface names the operation of
+ * packages/application, which runs on the person's records. It answers the
+ * surface's status: 201 with what it made, 200 with what it decided, or 204.
  */
 export function operationRoutes(flow: Flow, guards: Guards) {
   const routes = new Hono<AppEnv>();
@@ -130,22 +89,48 @@ export function operationRoutes(flow: Flow, guards: Guards) {
         `The body is larger than ${maxBodyBytes} bytes.`,
       ),
   });
-  for (const [name, body] of Object.entries(operationBodies)) {
-    routes.post(`/${name}`, guards.user, guards.origin, limit, async (c) => {
-      const input =
-        body === null
-          ? undefined
-          : validate(body, await jsonBody(c.req), 'body');
-      // The contract's body is the operation's input, IDs and dates as
-      // plain strings (packages/api-contract conformance.test.ts). The
-      // schema has checked each ID's kind and each date, so they are the
-      // domain's values.
-      const operation = operations[name as OperationName] as (
-        input: unknown,
-      ) => Change<unknown>;
-      const value = await flow.operate(c, operation(input));
-      return value === undefined ? c.body(null, 204) : c.json(value, 200);
-    });
+  const unimplemented = new Set<string>(unimplementedOperations);
+  for (const surface of Object.values(surfaces) as Surface[]) {
+    routes.on(
+      surface.method,
+      honoPath(surface.url),
+      guards.user,
+      guards.origin,
+      limit,
+      async (c) => {
+        const { name, input } = await operationOf(surface, {
+          path: c.req.param(),
+          query: c.req.queries(),
+          body: () => jsonBody(c.req),
+        });
+        if (unimplemented.has(name)) return c.notFound();
+        const operation = operations[name] as (
+          input: unknown,
+        ) => Change<unknown>;
+        const value = await flow.operate(c, operation(input));
+        // Made with nothing to return (the Retro, 201) has no body either.
+        return value === undefined
+          ? c.body(null, surface.status)
+          : c.json(value, surface.status);
+      },
+    );
   }
   return routes;
+}
+
+/**
+ * The operation a request names (`readRequest`): each part checked with the
+ * contract's schemas and the domain's dates (`validate`), a request no
+ * operation takes refused with 400.
+ */
+async function operationOf(surface: Surface, received: ReceivedRequest) {
+  try {
+    return await readRequest(surface, received, (schema, value, part) =>
+      validate(schema, value, part),
+    );
+  } catch (error) {
+    if (error instanceof RequestError)
+      throw new ApiError('validationFailed', error.message);
+    throw error;
+  }
 }

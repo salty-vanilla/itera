@@ -1,12 +1,8 @@
-import type { DailySelectionId } from '@itera/api-contract';
-import {
-  deferSelectionMutation,
-  pauseSelectionMutation,
-  removeFromTodayMutation,
-  skipSelectionMutation,
-  startSelectionMutation,
-} from '@itera/api-contract/react-query';
+import type { DailySelectionId, SprintId } from '@itera/api-contract';
+import { SAVE_FAILED } from '@/api/save-failed';
+import { useRunningDay } from '@/api/use-me';
 import { useOperation } from '@/api/use-operation';
+import { useToast } from '@/components/ui/toast';
 
 /**
  * What the Task detail does to the Task's choice for today (「今日と今週」):
@@ -16,28 +12,39 @@ import { useOperation } from '@/api/use-operation';
  * whether it went through (useOperation).
  */
 export function useSelectionActions() {
-  const start = useOperation(startSelectionMutation);
-  const pause = useOperation(pauseSelectionMutation);
-  const defer = useOperation(deferSelectionMutation);
-  const skip = useOperation(skipSelectionMutation);
-  const removeFromToday = useOperation(removeFromTodayMutation);
+  const start = useOperation('startSelection');
+  const pause = useOperation('pauseSelection');
+  const defer = useOperation('deferSelection');
+  const skip = useOperation('skipSelection');
+  const removeFromToday = useOperation('removeFromToday');
+  const sprintId = useRunningDay()?.sprintId;
+  const toast = useToast();
+  /** The choice of the running Sprint; with none running, a refusal. */
+  const on = async (
+    send: (sprintId: SprintId) => Promise<{ readonly ok: boolean }>,
+  ) => {
+    if (sprintId === undefined) {
+      toast.show(SAVE_FAILED);
+      return false;
+    }
+    return (await send(sprintId)).ok;
+  };
   return {
-    start: async (selectionId: DailySelectionId) =>
-      (await start.run({ body: { selectionId } })).ok,
-    pause: async (selectionId: DailySelectionId, hours?: number) =>
-      (
-        await pause.run({
-          body: {
-            selectionId,
-            ...(hours === undefined ? {} : { hours }),
-          },
-        })
-      ).ok,
-    defer: async (selectionId: DailySelectionId) =>
-      (await defer.run({ body: { selectionId } })).ok,
-    skip: async (selectionId: DailySelectionId) =>
-      (await skip.run({ body: { selectionId } })).ok,
-    removeFromToday: async (selectionId: DailySelectionId) =>
-      (await removeFromToday.run({ body: { selectionId } })).ok,
+    start: (selectionId: DailySelectionId) =>
+      on((sprintId) => start.run({ sprintId, selectionId })),
+    pause: (selectionId: DailySelectionId, hours?: number) =>
+      on((sprintId) =>
+        pause.run({
+          sprintId,
+          selectionId,
+          ...(hours === undefined ? {} : { hours }),
+        }),
+      ),
+    defer: (selectionId: DailySelectionId) =>
+      on((sprintId) => defer.run({ sprintId, selectionId })),
+    skip: (selectionId: DailySelectionId) =>
+      on((sprintId) => skip.run({ sprintId, selectionId })),
+    removeFromToday: (selectionId: DailySelectionId) =>
+      on((sprintId) => removeFromToday.run({ sprintId, selectionId })),
   };
 }

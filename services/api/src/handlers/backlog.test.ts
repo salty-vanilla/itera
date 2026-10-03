@@ -213,7 +213,11 @@ const successes: readonly Success[] = [
   },
   {
     name: 'addTaskToToday',
-    body: () => ({ taskId: interview }),
+    body: (r) => ({
+      sprintId: sprintOf(r).id,
+      date: clock.today,
+      taskId: interview,
+    }),
     check: (after, _, response) => {
       const { sprintTaskId, selectionId } = response as {
         sprintTaskId: string;
@@ -227,29 +231,6 @@ const successes: readonly Success[] = [
       expect(
         sprint.dailySelections.find((s) => s.id === selectionId),
       ).toMatchObject({ sprintTaskId, date: clock.today });
-    },
-  },
-  {
-    name: 'addTaskToWeek',
-    body: () => ({ taskId: dentist }),
-    check: (after, _, response) => {
-      const { sprintTaskId } = response as { sprintTaskId: string };
-      expect(
-        sprintOf(after).tasks.find((t) => t.id === sprintTaskId),
-      ).toMatchObject({ taskId: dentist });
-    },
-  },
-  {
-    name: 'undoAddTaskToWeek',
-    prepare: [['addTaskToWeek', () => ({ taskId: dentist })]],
-    body: () => ({ taskId: dentist }),
-    check: (after, before) => {
-      expect(sprintOf(after).tasks.some((t) => t.taskId === dentist)).toBe(
-        false,
-      );
-      expect(sprintOf(after).tasks).toHaveLength(
-        sprintOf(before).tasks.length - 1,
-      );
     },
   },
   {
@@ -425,34 +406,29 @@ const failures: readonly Failure[] = [
     // The week's Sprint is not active yet: it is still in Planning.
     name: 'addTaskToToday',
     state: 'planning-pick',
-    body: () => ({ taskId: bookshelf }),
+    body: (r) => ({
+      sprintId: r.sprints.find((x) => x.state === 'planning')!.id,
+      date: clock.today,
+      taskId: bookshelf,
+    }),
     status: 422,
     code: 'invalidTransition',
   },
   {
     name: 'addTaskToToday',
-    body: () => ({ taskId: paper }),
+    body: (r) => ({
+      sprintId: sprintOf(r).id,
+      date: clock.today,
+      taskId: paper,
+    }),
     status: 422,
     code: 'invalidInput',
   },
   {
     name: 'addTaskToToday',
-    body: () => ({ taskId: tax }),
+    body: (r) => ({ sprintId: sprintOf(r).id, date: clock.today, taskId: tax }),
     status: 422,
     code: 'invalidTransition',
-  },
-  {
-    name: 'addTaskToWeek',
-    state: 'planning-pick',
-    body: () => ({ taskId: bookshelf }),
-    status: 422,
-    code: 'invalidTransition',
-  },
-  {
-    name: 'undoAddTaskToWeek',
-    body: () => ({ taskId: dentist }),
-    status: 404,
-    code: 'notFound',
   },
   {
     name: 'setRecurrence',
@@ -492,8 +468,6 @@ describe('the Backlog, Task and Area routes', () => {
       'completeTask',
       'undoCompleteTask',
       'addTaskToToday',
-      'addTaskToWeek',
-      'undoAddTaskToWeek',
       'setRecurrence',
       'endRecurrence',
     ].toSorted();
@@ -538,8 +512,13 @@ describe('the invariants, through the API', () => {
     expect(sprintOf((await app.saved()).records).areaSnapshot).toHaveLength(4);
 
     expect(
-      (await app.post('addTaskToWeek', { taskId: bookshelf })).status,
-    ).toBe(200);
+      (
+        await app.post('addSprintTasks', {
+          sprintId: sprintOf((await app.saved()).records).id,
+          taskIds: [bookshelf],
+        })
+      ).status,
+    ).toBe(201);
     expect(sprintOf((await app.saved()).records).areaSnapshot.at(-1)).toEqual({
       areaId: made.areaId,
       name: '趣味',

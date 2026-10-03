@@ -229,7 +229,11 @@ function RunningSprint({
           {running && (
             <PastDays
               days={data.pastDays}
-              onUndo={(r) => actions.undoPastDay(r.selection.id)}
+              onUndo={(r) =>
+                r.selection.resolution === 'skipped'
+                  ? actions.undoSkip(r.selection.id)
+                  : actions.undoComplete(r.selection.id)
+              }
             />
           )}
         </div>

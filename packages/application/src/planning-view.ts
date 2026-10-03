@@ -28,6 +28,7 @@ import {
   type PlanningValue,
   type RetroImprovement,
   type Sprint,
+  type SprintId,
   type SprintGoal,
   type SprintTask,
   type SprintTotals,
@@ -174,13 +175,54 @@ export function planningSprint(records: Records): Sprint | undefined {
   return records.sprints.find((s) => s.state === 'planning');
 }
 
+/** The Sprint being planned: the one with the ID, or the one there is. */
+function planningSprintOf(
+  records: Records,
+  sprintId: SprintId | undefined,
+): Sprint | undefined {
+  return sprintId === undefined
+    ? planningSprint(records)
+    : records.sprints.find((s) => s.id === sprintId && s.state === 'planning');
+}
+
+/** A Task's Area as Planning shows it. */
+function areaOf(records: Records, task: Task): PlanningArea | undefined {
+  if (task.areaId === undefined) return undefined;
+  const area = records.areas.find((a) => a.id === task.areaId);
+  return area === undefined
+    ? undefined
+    : { id: area.id, name: area.name, color: area.color };
+}
+
+/**
+ * A Sprint being planned and the Tasks it can choose: its plan
+ * (`sprintPlanOf`) and its candidates (`planningCandidatesOf`), which the
+ * contract reads apart (#295 R2).
+ */
 export function planningData(
   records: Records,
   clock: Clock,
   options: { applyCriterion: boolean },
+  sprintId?: SprintId,
 ): PlanningData | undefined {
-  const sprint = planningSprint(records);
+  const sprint = planningSprintOf(records, sprintId);
   if (sprint === undefined) return undefined;
+  return {
+    ...sprintPlanOf(records, clock, sprint, options),
+    candidates: planningCandidatesOf(records, clock, sprint),
+  };
+}
+
+/** A Sprint being planned: its plan, without the Tasks to choose. */
+export type SprintPlan = Omit<PlanningData, 'candidates'>;
+
+/** The plan of a Sprint being planned (整える・確かめる). */
+export function sprintPlanOf(
+  records: Records,
+  clock: Clock,
+  sprint: Sprint,
+  options: { applyCriterion: boolean },
+): SprintPlan {
   const { tasks } = records;
   const now = clock.now;
   // An archived Area still shows while a chosen Task is in it.
@@ -194,13 +236,6 @@ export function planningData(
     .filter((a) => !a.archived || chosenAreas.has(a.id))
     .toSorted((a, b) => a.order - b.order)
     .map((a) => ({ id: a.id, name: a.name, color: a.color }));
-  const areaOf = (task: Task): PlanningArea | undefined => {
-    if (task.areaId === undefined) return undefined;
-    const area = records.areas.find((a) => a.id === task.areaId);
-    return area === undefined
-      ? undefined
-      : { id: area.id, name: area.name, color: area.color };
-  };
 
   const active = activeCriterion(records.criteria);
   const criterion =
@@ -212,53 +247,9 @@ export function planningData(
     ...(preview === undefined ? {} : { previewCriterion: preview }),
   };
 
-  // 選ぶ
-  const groups = planningCandidates(sprint, {
-    today: clock.today,
-    tasks,
-    sprints: records.sprints,
-    occurrences: records.occurrences,
-  });
   const previous = records.sprints.find(
     (s) => s.id === sprint.previousSprintId,
   );
-  // The Sprint still running is the one before this draft; its unfinished
-  // Tasks are linked when it enters Review (F35).
-  const running = previous?.state === 'active' ? previous : undefined;
-  const runningNumber =
-    running === undefined ? undefined : sprintNumber(running, records.sprints);
-  const row = (task: Task): CandidateRow => {
-    const chosen = sprint.tasks.find(
-      (t) => t.taskId === task.id && t.outcome === 'draft',
-    );
-    const carriedFrom = previous?.tasks.find(
-      (t) => t.taskId === task.id && t.outcome === 'carriedOver',
-    );
-    const area = areaOf(task);
-    const carry = carryOverOf(task.id, records.sprints);
-    const carryFrom = records.sprints.find((s) => s.id === carry?.fromSprintId);
-    const unfinished = running?.tasks.some(
-      (t) => t.taskId === task.id && t.outcome === 'planned',
-    );
-    return {
-      task,
-      ...(chosen === undefined ? {} : { chosen }),
-      ...(carriedFrom === undefined ? {} : { carriedFrom }),
-      ...(area === undefined ? {} : { area }),
-      value: planningValueOf(task, { now }),
-      ...(carry === undefined || carryFrom === undefined
-        ? {}
-        : {
-            carry: {
-              count: carry.count,
-              fromSprint: sprintNumber(carryFrom, records.sprints),
-            },
-          }),
-      ...(unfinished === true && runningNumber !== undefined
-        ? { running: { sprint: runningNumber } }
-        : {}),
-    };
-  };
 
   // 整える・確かめる
   const totals = sprintTotals(sprint, valueOptions);
@@ -322,17 +313,6 @@ export function planningData(
       .filter((a) => !a.archived)
       .toSorted((a, b) => a.order - b.order)
       .map((a) => ({ id: a.id, name: a.name, color: a.color })),
-    candidates: {
-      carriedOver: groups.carriedOver.map(row),
-      overdue: groups.overdue.map(row),
-      dueSoon: groups.dueSoon.map(row),
-      dueSoonUntil: groups.dueSoonUntil,
-      recurring: groups.recurring.map((r) => {
-        const area = areaOf(r.task);
-        return { ...r, ...(area === undefined ? {} : { area }) };
-      }),
-      others: groups.others.map(row),
-    },
     plan,
     chosenCount: planned.length,
     totals,
@@ -367,5 +347,74 @@ export function planningData(
             state: previous.state,
           },
         }),
+  };
+}
+
+/** The Tasks a Sprint being planned can choose, in groups (選ぶ). */
+export function planningCandidatesOf(
+  records: Records,
+  clock: Clock,
+  sprint: Sprint,
+): PlanningData['candidates'] {
+  const { tasks } = records;
+  const now = clock.now;
+  // 選ぶ
+  const groups = planningCandidates(sprint, {
+    today: clock.today,
+    tasks,
+    sprints: records.sprints,
+    occurrences: records.occurrences,
+  });
+  const previous = records.sprints.find(
+    (s) => s.id === sprint.previousSprintId,
+  );
+  // The Sprint still running is the one before this draft; its unfinished
+  // Tasks are linked when it enters Review (F35).
+  const running = previous?.state === 'active' ? previous : undefined;
+  const runningNumber =
+    running === undefined ? undefined : sprintNumber(running, records.sprints);
+  const row = (task: Task): CandidateRow => {
+    const chosen = sprint.tasks.find(
+      (t) => t.taskId === task.id && t.outcome === 'draft',
+    );
+    const carriedFrom = previous?.tasks.find(
+      (t) => t.taskId === task.id && t.outcome === 'carriedOver',
+    );
+    const area = areaOf(records, task);
+    const carry = carryOverOf(task.id, records.sprints);
+    const carryFrom = records.sprints.find((s) => s.id === carry?.fromSprintId);
+    const unfinished = running?.tasks.some(
+      (t) => t.taskId === task.id && t.outcome === 'planned',
+    );
+    return {
+      task,
+      ...(chosen === undefined ? {} : { chosen }),
+      ...(carriedFrom === undefined ? {} : { carriedFrom }),
+      ...(area === undefined ? {} : { area }),
+      value: planningValueOf(task, { now }),
+      ...(carry === undefined || carryFrom === undefined
+        ? {}
+        : {
+            carry: {
+              count: carry.count,
+              fromSprint: sprintNumber(carryFrom, records.sprints),
+            },
+          }),
+      ...(unfinished === true && runningNumber !== undefined
+        ? { running: { sprint: runningNumber } }
+        : {}),
+    };
+  };
+
+  return {
+    carriedOver: groups.carriedOver.map(row),
+    overdue: groups.overdue.map(row),
+    dueSoon: groups.dueSoon.map(row),
+    dueSoonUntil: groups.dueSoonUntil,
+    recurring: groups.recurring.map((r) => {
+      const area = areaOf(records, r.task);
+      return { ...r, ...(area === undefined ? {} : { area }) };
+    }),
+    others: groups.others.map(row),
   };
 }

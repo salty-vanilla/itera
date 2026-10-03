@@ -158,6 +158,9 @@ importers:
 
   packages/api-contract:
     dependencies:
+      '@itera/application':
+        specifier: workspace:*
+        version: link:../application
       valibot:
         specifier: 1.5.0
         version: 1.5.0(typescript@6.0.3)
@@ -165,9 +168,6 @@ importers:
       '@hey-api/openapi-ts':
         specifier: 0.99.0
         version: 0.99.0(patch_hash=61d025d5f829ed7fa0ea7271b5602f30fba4d1340f2dd058fd1d852bb98ae018)(typescript@6.0.3)
-      '@itera/application':
-        specifier: workspace:*
-        version: link:../application
       '@itera/domain':
         specifier: workspace:*
         version: link:../domain

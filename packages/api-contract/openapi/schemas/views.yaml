@@ -42,28 +42,37 @@ SprintRef:
       description: Left out for the next week before its Planning.
       $ref: './records.yaml#/Sprint'
     week: { $ref: '#/SprintWeek' }
-
-# -------------------------------------------------------------- Overview
-SprintSummary:
+SprintItem:
+  description: >-
+    A Sprint as a list or a reference shows it. Its number (「Sprint 14」,
+    F25) is an attribute, not its key: the key is its ID (#295).
   type: object
-  required: [start, end, state, number]
+  required: [id, number, start, end, state]
   properties:
+    id: { $ref: './common.yaml#/SprintId' }
+    number: { type: integer }
     start: { $ref: './common.yaml#/LocalDate' }
     end: { $ref: './common.yaml#/LocalDate' }
     state: { $ref: './records.yaml#/SprintState' }
-    number: { type: integer }
-AppOverview:
-  description: What every screen's frame shows (the navigation and the clock).
+    week: { $ref: '#/SprintWeek' }
+CurrentSprints:
+  description: >-
+    The Sprints the person has now, by what each is (a week running or in
+    Review while the next is planned), and where the next Planning starts.
   type: object
-  required: [today, now, timeZone, backlogCount]
+  required: [next]
   properties:
-    today: { $ref: './common.yaml#/LocalDate' }
-    now: { $ref: './common.yaml#/Instant' }
-    timeZone: { $ref: './common.yaml#/TimeZone' }
-    backlogCount: { type: integer }
-    activeSprint: { $ref: '#/SprintSummary' }
-    reviewSprint: { $ref: '#/SprintSummary' }
-    planningSprint: { $ref: '#/SprintSummary' }
+    active: { $ref: '#/SprintItem' }
+    review: { $ref: '#/SprintItem' }
+    planning: { $ref: '#/SprintItem' }
+    next:
+      description: The next week not confirmed yet, with its number (F25).
+      type: object
+      required: [start, number]
+      properties:
+        start: { $ref: './common.yaml#/LocalDate' }
+        number: { type: integer }
+
 EditableArea:
   type: object
   required: [id, name, color, archived]
@@ -74,15 +83,6 @@ EditableArea:
       type: string
     color: { $ref: './records.yaml#/AreaColor' }
     archived: { type: boolean }
-SprintChoice:
-  description: The Sprint a screen opens, and those before and after it.
-  type: object
-  required: [current]
-  properties:
-    current: { $ref: '#/SprintRef' }
-    previous: { $ref: '#/SprintRef' }
-    next: { $ref: '#/SprintRef' }
-
 # --------------------------------------------------------------- Backlog
 BacklogSlice:
   type: string
@@ -252,7 +252,10 @@ PlanningBlocker:
     was completed or archived.
   type: string
   enum: [previousRetroOpen, inactiveTasks]
-PlanningData:
+SprintPlan:
+  description: >-
+    A Sprint being planned: its plan (#295 R2). The Tasks it can choose
+    are a resource of their own (SprintCandidates).
   type: object
   required:
     - sprint
@@ -261,7 +264,6 @@ PlanningData:
     - timeZone
     - areas
     - addAreas
-    - candidates
     - plan
     - chosenCount
     - totals
@@ -279,26 +281,6 @@ PlanningData:
     addAreas:
       type: array
       items: { $ref: '#/AreaLabel' }
-    candidates:
-      type: object
-      required: [carriedOver, overdue, dueSoon, dueSoonUntil, recurring, others]
-      properties:
-        carriedOver:
-          type: array
-          items: { $ref: '#/CandidateRow' }
-        overdue:
-          type: array
-          items: { $ref: '#/CandidateRow' }
-        dueSoon:
-          type: array
-          items: { $ref: '#/CandidateRow' }
-        dueSoonUntil: { $ref: './common.yaml#/LocalDate' }
-        recurring:
-          type: array
-          items: { $ref: '#/RecurringCandidate' }
-        others:
-          type: array
-          items: { $ref: '#/CandidateRow' }
     plan:
       type: array
       items: { $ref: '#/AreaPlan' }
@@ -330,6 +312,27 @@ PlanningData:
         end: { $ref: './common.yaml#/LocalDate' }
         state: { $ref: './records.yaml#/SprintState' }
 
+SprintCandidates:
+  description: The Tasks a Sprint being planned can choose, in groups (選ぶ).
+  type: object
+  required: [carriedOver, overdue, dueSoon, dueSoonUntil, recurring, others]
+  properties:
+    carriedOver:
+      type: array
+      items: { $ref: '#/CandidateRow' }
+    overdue:
+      type: array
+      items: { $ref: '#/CandidateRow' }
+    dueSoon:
+      type: array
+      items: { $ref: '#/CandidateRow' }
+    dueSoonUntil: { $ref: './common.yaml#/LocalDate' }
+    recurring:
+      type: array
+      items: { $ref: '#/RecurringCandidate' }
+    others:
+      type: array
+      items: { $ref: '#/CandidateRow' }
 # ------------------------------------------------------- Running Sprint
 RunningTask:
   type: object
@@ -654,12 +657,41 @@ RetroData:
     carryOverTasks:
       type: array
       items: { $ref: './values.yaml#/CarryOverTask' }
-NextPlanning:
-  type: object
-  required: [start, number]
-  properties:
-    planning:
-      description: The Sprint being planned, if Planning has started.
-      $ref: './common.yaml#/SprintId'
-    start: { $ref: './common.yaml#/LocalDate' }
-    number: { type: integer }
+
+# ---------------------------------------------------------------- Sprint
+SprintView:
+  description: >-
+    A Sprint (#295 R2): while planned, its plan; once confirmed, how it went.
+  oneOf:
+    - type: object
+      required: [state, plan]
+      properties:
+        state: { const: planning }
+        plan: { $ref: '#/SprintPlan' }
+    - type: object
+      required: [state, running]
+      properties:
+        state:
+          type: string
+          enum: [active, review, closed]
+        running: { $ref: '#/RunningData' }
+
+# ------------------------------------------------------------------- Day
+DayView:
+  description: >-
+    A day (#295 R3), today, past or still to come: today's choices on the
+    running Sprint (`today` is left out when none runs), or another day's
+    records or occurrences.
+  oneOf:
+    - type: object
+      required: [kind]
+      properties:
+        kind: { const: today }
+        today: { $ref: '#/TodayData' }
+    - type: object
+      required: [kind, day]
+      properties:
+        kind:
+          type: string
+          enum: [past, future]
+        day: { $ref: '#/DayData' }

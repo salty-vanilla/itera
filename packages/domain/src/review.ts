@@ -244,25 +244,47 @@ function samePin(a: RetroPin, b: RetroPin): boolean {
   return a.kind === b.kind && a.id === b.id;
 }
 
-/** 気になる印をつける / 外す. */
-export function togglePin(
+/**
+ * 気になる印をつける. Pinning a fact already pinned changes nothing, so the
+ * same request gives the same result however often it is sent (#295).
+ */
+export function pinFact(
   sprint: Sprint,
   input: { readonly pin: RetroPin },
   ctx: CommandContext,
 ): CommandResult<Sprint> {
+  return setPinned(sprint, input.pin, true, ctx);
+}
+
+/** 気になる印を外す. Unpinning a fact not pinned changes nothing. */
+export function unpinFact(
+  sprint: Sprint,
+  input: { readonly pin: RetroPin },
+  ctx: CommandContext,
+): CommandResult<Sprint> {
+  return setPinned(sprint, input.pin, false, ctx);
+}
+
+function setPinned(
+  sprint: Sprint,
+  pin: RetroPin,
+  on: boolean,
+  ctx: CommandContext,
+): CommandResult<Sprint> {
   const retro = inRetro(sprint);
   if (!retro.ok) return retro;
-  const pinned = retro.value.pins.some((p) => samePin(p, input.pin));
-  const pins = pinned
-    ? retro.value.pins.filter((p) => !samePin(p, input.pin))
-    : [...retro.value.pins, input.pin];
+  const pinned = retro.value.pins.some((p) => samePin(p, pin));
+  if (pinned === on) return applied(sprint, []);
+  const pins = on
+    ? [...retro.value.pins, pin]
+    : retro.value.pins.filter((p) => !samePin(p, pin));
   return applied({ ...sprint, retro: { ...retro.value, pins } }, [
     {
-      kind: pinned ? 'retroUnpinned' : 'retroPinned',
+      kind: on ? 'retroPinned' : 'retroUnpinned',
       at: ctx.now,
       actor: ctx.actor,
       sprintId: sprint.id,
-      pin: input.pin,
+      pin,
     },
   ]);
 }

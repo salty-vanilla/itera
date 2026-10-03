@@ -42,7 +42,22 @@ export {
   type RandomBytes,
 } from './ids';
 
-// The reads: the API's responses.
+// The reads of the contract's resources (#295): the API's responses.
+export {
+  currentSprints,
+  dayView,
+  sprintCandidates,
+  sprintList,
+  sprintRetro,
+  sprintView,
+  type CurrentSprints,
+  type DayView,
+  type SprintItem,
+  type SprintView,
+} from './resource-views';
+
+// The reads the screens still on the store use (#274〜#276; ADR 0006
+// 経路の形), and the parts of the reads above.
 export {
   backlogData,
   type BacklogData,

@@ -1,18 +1,16 @@
 // In each of the fixture's 12 states (PRD §12), every read's result passes
 // the contract's response schema as the API returns it, `{ clock, view }`
-// with `null` for no result (#265 完了条件). The same reads as
-// packages/application's views.test.ts, and every Sprint by number.
+// with `null` for no result (#265 完了条件): the reads of the resources
+// (#295), for every Sprint of the state and the days around today.
 import {
-  appOverview,
   areaList,
   backlogData,
-  dayData,
-  nextPlanningOf,
-  planningData,
-  retroData,
-  runningData,
-  sprintChoice,
-  todayData,
+  currentSprints,
+  dayView,
+  sprintCandidates,
+  sprintList,
+  sprintRetro,
+  sprintView,
 } from '@itera/application';
 import {
   fixtureIds,
@@ -23,16 +21,14 @@ import { addDays, type BacklogSlice } from '@itera/domain';
 import * as v from 'valibot';
 import { describe, expect, it } from 'vitest';
 import {
+  vCurrentSprints,
   vGetBacklogResponse,
   vGetDayResponse,
-  vGetNextPlanningResponse,
-  vGetOverviewResponse,
-  vGetPlanningResponse,
-  vGetRetroResponse,
-  vGetRunningResponse,
-  vGetSprintChoiceResponse,
-  vGetTodayResponse,
+  vGetSprintResponse,
+  vGetSprintRetroResponse,
   vListAreasResponse,
+  vListSprintCandidatesResponse,
+  vListSprintsResponse,
 } from './index';
 
 const SLICES: readonly (BacklogSlice | undefined)[] = [
@@ -54,34 +50,20 @@ function readsOf(state: (typeof fixtureStateIds)[number]) {
   const ids = fixtureIds();
   const numbers = records.sprints.map((_, i) => i + 1);
   const reads: Record<string, Read> = {
-    overview: {
-      schema: vGetOverviewResponse,
-      view: appOverview(records, clock),
-    },
     areas: { schema: vListAreasResponse, view: areaList(records) },
-    today: { schema: vGetTodayResponse, view: todayData(records, clock) },
+    sprints: { schema: vListSprintsResponse, view: sprintList(records, clock) },
+    today: {
+      schema: vGetDayResponse,
+      view: dayView(records, clock, clock.today),
+    },
     yesterday: {
       schema: vGetDayResponse,
-      view: dayData(records, clock, addDays(clock.today, -1)),
+      view: dayView(records, clock, addDays(clock.today, -1)),
     },
     tomorrow: {
       schema: vGetDayResponse,
-      view: dayData(records, clock, addDays(clock.today, 1)),
+      view: dayView(records, clock, addDays(clock.today, 1)),
     },
-    planning: {
-      schema: vGetPlanningResponse,
-      view: planningData(records, clock, { applyCriterion: false }),
-    },
-    planningWithCriterion: {
-      schema: vGetPlanningResponse,
-      view: planningData(records, clock, { applyCriterion: true }),
-    },
-    nextPlanning: {
-      schema: vGetNextPlanningResponse,
-      view: nextPlanningOf(records, clock),
-    },
-    running: { schema: vGetRunningResponse, view: runningData(records, clock) },
-    retro: { schema: vGetRetroResponse, view: retroData(records, clock) },
     backlogInArea: {
       schema: vGetBacklogResponse,
       view: backlogData(records, clock, { area: ids.area.research }),
@@ -93,32 +75,26 @@ function readsOf(state: (typeof fixtureStateIds)[number]) {
       view: backlogData(records, clock, { view }),
     };
   }
-  // sprintChoice is overloaded by screen; one call per screen.
-  const choice = (screen: 'sprint' | 'retro', number?: number) =>
-    screen === 'sprint'
-      ? sprintChoice(records, clock, 'sprint', number)
-      : sprintChoice(records, clock, 'retro', number);
-  for (const screen of ['sprint', 'retro'] as const) {
-    reads[`${screen}Choice`] = {
-      schema: vGetSprintChoiceResponse,
-      view: choice(screen),
+  for (const number of numbers) {
+    reads[`sprints-${number}`] = {
+      schema: vListSprintsResponse,
+      view: sprintList(records, clock, { number }),
     };
-    // The next week's number too (its Planning has not started).
-    for (const number of [...numbers, numbers.length + 1]) {
-      reads[`${screen}Choice-${number}`] = {
-        schema: vGetSprintChoiceResponse,
-        view: choice(screen, number),
-      };
-    }
   }
   for (const [i, sprint] of records.sprints.entries()) {
-    reads[`running-${i + 1}`] = {
-      schema: vGetRunningResponse,
-      view: runningData(records, clock, sprint.id),
+    for (const applyCriterion of [false, true]) {
+      reads[`sprint-${i + 1}${applyCriterion ? '-criterion' : ''}`] = {
+        schema: vGetSprintResponse,
+        view: sprintView(records, clock, sprint.id, { applyCriterion }),
+      };
+    }
+    reads[`candidates-${i + 1}`] = {
+      schema: vListSprintCandidatesResponse,
+      view: sprintCandidates(records, clock, sprint.id),
     };
     reads[`retro-${i + 1}`] = {
-      schema: vGetRetroResponse,
-      view: retroData(records, clock, sprint.id),
+      schema: vGetSprintRetroResponse,
+      view: sprintRetro(records, clock, sprint.id),
     };
   }
   return { clock, reads };
@@ -127,6 +103,14 @@ function readsOf(state: (typeof fixtureStateIds)[number]) {
 const states = new Map(fixtureStateIds.map((state) => [state, readsOf(state)]));
 
 describe.each(fixtureStateIds)('the reads of %s', (state) => {
+  it("passes the person's current Sprints", () => {
+    const { records, clock } = fixtureSnapshot(state);
+    const current = JSON.parse(
+      JSON.stringify(currentSprints(records, clock)),
+    ) as unknown;
+    expect(v.safeParse(vCurrentSprints, current).issues ?? []).toEqual([]);
+  });
+
   const of = states.get(state);
   if (of === undefined) throw new Error(state);
   const { clock, reads } = of;
@@ -146,23 +130,28 @@ describe.each(fixtureStateIds)('the reads of %s', (state) => {
   });
 });
 
+it('checks the candidates of a Sprint being planned in some state', () => {
+  const some = [...states.values()].some(({ reads }) =>
+    Object.entries(reads).some(
+      ([name, read]) =>
+        name.startsWith('candidates-') && read.view !== undefined,
+    ),
+  );
+  expect(some).toBe(true);
+});
+
 it('checks every read with a result in some state', () => {
   const names = new Set(
     [...states.values()].flatMap(({ reads }) => Object.keys(reads)),
   );
   for (const name of [
-    'overview',
     'today',
     'yesterday',
     'tomorrow',
-    'planning',
-    'planningWithCriterion',
-    'nextPlanning',
-    'running',
-    'retro',
-    'retroChoice',
-    'running-1',
+    'sprint-1',
+    'sprint-1-criterion',
     'retro-1',
+    'sprints-1',
   ]) {
     expect(names.has(name), name).toBe(true);
     const some = [...states.values()].some(

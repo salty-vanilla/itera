@@ -77,12 +77,12 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
   - 読み取りの結果は、そのまま API の応答（DTO）にできる形にする。関数を含めない。画面の語（「領域なし」「今週」など）を含めず、画面が語に替える値（`areaId` がない、週が前・今・次のどれか）で返す。ただし契約の正本は OpenAPI で、読み取りの結果が契約を決めるのではない。両者の形が離れたら `services/api` に写像を置く（ADR 0007「アプリケーション層の読み取りと API の DTO」）。
   - 操作は、作った記録の ID と操作の結果の値（`effectiveFrom`・`removed` など）を戻り値で返す。画面が記録の並びや Activity から拾わない。
   - Area の並び順と色のように操作が決める値は、クライアントではなく操作の中で決める。
-  - 実装（#264）：利用者の操作は `packages/application` の `operations`（`operations.ts`）に、画面をまたいで重ならない名前と入力の型で並べる（例：計画中の `setPlanningGoal` と実行中の `setRunningGoal`、Backlog の `completeTask` と Today の `completeSelection`）。この一覧が契約（#265）の operation の元になる。システムの記録（`reviewEnded`・`beginDay`）は一覧に入れない。読み取りは `*-view.ts` の関数で、fixture の 12 状態のすべての読み取りが JSON にして戻しても同じになることをテストで確かめる。ID から引く関数（`item`・`areaOf` など）と「領域なし」「先週」「今週」「来週」の語は、`apps/web` のフック（`src/store/views.ts`、`src/lib/week-text.ts`）が作る。
+  - 実装（#264）：利用者の操作は `packages/application` の `operations`（`operations.ts`）に、画面をまたいで重ならない名前と入力の型で並べる（例：Backlog の `completeTask` と Today の `completeSelection`。#295 で Sprint の中の操作は対象の Sprint の ID を入力に取るようにし、計画中と実行中で同じ意味の操作は `setGoal` などにまとめた）。この一覧が契約（#265）の operation の元になる。システムの記録（`reviewEnded`・`beginDay`）は一覧に入れない。読み取りは `*-view.ts` の関数で、fixture の 12 状態のすべての読み取りが JSON にして戻しても同じになることをテストで確かめる。ID から引く関数（`item`・`areaOf` など）と「領域なし」「先週」「今週」「来週」の語は、`apps/web` のフック（`src/store/views.ts`、`src/lib/week-text.ts`）が作る。
   - fixture（時系列と 12 状態）は `@itera/application/fixtures` に置き、ブラウザ内モックとテストが使う。`services/api` の本番のコードからの import は ESLint で止める。`packages/application` は `packages/domain` と同じく現在時刻と乱数を引数で受け取り、React と `apps/web` に依存しない（ESLint で検査する）。
   - 画面のフックは、#273〜#276 で契約に移すまで、このパッケージを `RecordStore` 経由で使う（上の「`packages/application` を import してよいのはモックだけ」の検査は、画面を移し終えてから入れる）。
 - **プレビューの例外（D2、2026-10-02 オーナー決定）**：プレビューは、当面 `apps/web` が `packages/domain` の関数をそのまま使って計算する。Web での実装し直しと、共通のテストケース（PRD §14、#45 の範囲 2）は、iOS に着手するときに行う。
   - 2026-10-03 の時点で画面が使う値の関数は、`boundValue`・`presentedSuggestion` と日付の関数（`parseLocalDate`・`toLocalDate`・`addDays`・`dayOfWeek`）だけ。
-  - `apps/web` のうち `packages/domain` を import してよいのは、この例外をまとめた 1 つのモジュールとブラウザ内モックだけ。`packages/application` を import してよいのはモックだけ。型だけの import も同じ（画面は契約の型を使う）。ESLint の `no-restricted-imports` で検査する。
+  - `apps/web` のうち `packages/domain` を import してよいのは、この例外をまとめた 1 つのモジュールとブラウザ内モックだけ。`packages/application` を import してよいのはモックだけ。型だけの import も同じ（画面は契約の型を使う）。操作の名前と入力の型は `@itera/api-contract/requests` から取る（元は application の型。ADR 0007「依存の向き」の例外、#295）。ESLint の `no-restricted-imports` で検査する。
   - 戻す条件：iOS に着手するとき。
 - **#45 の分け方**：#45 の範囲を、#264（アプリケーション層）、#265（契約）、#272・#273・#274・#275・#276・#277（画面を契約に移す）に分けた。範囲 2 のプレビューの一覧と共通のテストケースは、上の例外のとおり iOS に回す。
 - **システムの記録**：`useSystemDay` の処理（終了日を過ぎた Sprint を Review にする、その日の始まり）は、サーバーが操作と読み取りの前に、その時点まで進める（ADR 0004「操作と読み取りの処理」、#271）。クライアントの operation にしない。
@@ -110,12 +110,12 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
 #### データの出どころ
 
 - `apps/web/src/app/data-source.ts` が、ブラウザ内モック（開発の既定。`pnpm --filter @itera/web dev`）か API（本番ビルドと `pnpm --filter @itera/web dev:api`）かを選ぶ。どちらも同じ `ApiProvider`（契約のクライアントと `QueryClient`）を画面に渡す。
-- 契約のクライアントは、データの出どころごとに `createClient` で作る（`@itera/api-contract/create-client` の `createClient`・`createConfig`）。生成した関数と options には `{ client }` で渡す（`getOverviewOptions({ client })`）。モジュールの既定の `client` を書き換えない。fixture の状態を替えるたびに、記録・クライアント・キャッシュを新しくする。
+- 契約のクライアントは、データの出どころごとに `createClient` で作る（`@itera/api-contract/create-client` の `createClient`・`createConfig`）。生成した関数と options には `{ client }` で渡す（`getMeOptions({ client })`）。モジュールの既定の `client` を書き換えない。fixture の状態を替えるたびに、記録・クライアント・キャッシュを新しくする。
 - `--mode api` では、Vite の開発サーバーが `/api` を `wrangler dev`（既定 `http://localhost:8787`、`ITERA_API_ORIGIN` で変えられる）に中継する。Host と Origin は開発サーバーのままなので、`BETTER_AUTH_URL` は開発サーバーの origin にする（`services/api/README.md`）。
 
 #### Query のキーと無効化
 
-- キーは生成したもの（`getOverviewQueryKey` など。`[{ _id: <operationId>, baseUrl, path?, query? }]`）だけを使い、手で作らない。
+- キーは生成したもの（`getMeQueryKey` など。`[{ _id: <operationId>, baseUrl, path?, query? }]`）だけを使い、手で作らない。
 - 操作が成功したら、すべての読み取りを無効にする（`apps/web/src/api/reads.ts`）。表示中のものはすぐ取り直し、ほかは次に表示するときに取る。操作の Promise は、表示中の読み取りの最初の答えが戻ってから解決する（`MutationCache` の `onSuccess` が `readAgain` を待つ）。待つのは最初の 1 回（戻った・1 回失敗した・通信を待っている）までで、読み取りの取り直しは待たない。取り直しまで待つと、通信が不安定なときに操作の結果と失敗の Toast が遅れ、オフラインになると送信中のまま止まるため（Issue #272 のレビュー）。
   - 理由：読み取りはすべて利用者の記録の全体から作る派生値で（ADR 0004「操作と読み取りの処理」）、1 つの操作が複数の画面の読み取りを変える（今日の完了は、今日・実行中の Sprint・Backlog・ナビの件数を変える）。操作ごとに読み直す読み取りの表を持つと、派生値のたどり漏れが古い表示として残り、失敗として見えない。
   - 代わりに払うもの：操作のたびに表示中の読み取りを 1 回ずつ取り直す。表示中の読み取りは 1 画面で 1〜3 個で、利用者は 1 人。
@@ -127,13 +127,13 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
 - 失敗は応答の `code` だけで分ける（`apps/web/src/api/failure.ts`）：`unauthenticated`（401）、`revisionConflict`（409）、受け付けられない（400・403・404・413・422。利用者の設定がまだない `userNotSetUp` もここ。設定を作る画面への入口は #279）、それ以外（500、通信の失敗、知らない `code`。ADR 0006「互換の規則」）。`message` は画面に出さない。
   - エラーの `code` は開いた列挙（ADR 0006「列挙」）。生成した型は `code` をエラーごとの閉じた値で書いているが、Web は応答を実行時に検証しない（生成した SDK に応答の検証はない）。`failureOf` は失敗を `unknown` として受け、`code` を文字列として読むので、知らない `code`・知らない HTTP のステータス・JSON でない本文でも読み込みは失敗せず、一般の失敗になる（`failure.test.ts`）。Web が応答を実行時に検証するようにするなら、その前に開いた列挙の仕様での書き方を決める（ADR 0006）。
 - 操作が失敗したら、失敗が記録について言えることで danger の Toast を分ける（2026-10-03 オーナー決定、Issue #272。文言は `src/api/save-failed.ts` の 1 か所にまとめ、`use-run.ts` も使う）。操作は自動で送り直さない。
-  - 保存の前に断った（受け付けられない：400・403・404・413・422）：「保存できませんでした」「記録は変わっていません。内容を確かめてもう一度試してください。」。読み直さない。
+  - 保存の前に断った（受け付けられない：400・403・404・413・422）：「保存できませんでした」「記録は変わっていません。内容を確かめてもう一度試してください。」。読み直してから出す（2026-10-03 司令塔の判断、#295。送った日付や実行中の Sprint が古かったときに、画面を今の記録に戻すため。ADR 0006「エラー」。それまでは読み直さなかった）。
   - 保存できたか分からない（409 `revisionConflict`、500、通信の失敗、知らない `code`・ステータス・JSON でない本文）：409 は応答が失われただけで保存は済んでいることがあり（ADR 0006「エラー」）、ほかはサーバーが書いた後に失敗したかもしれないので、「記録は変わっていません」とは言わない。すべての読み取りを読み直してから（成功のときと同じく最初の答えまで）、「保存できたか確かめられませんでした」「最新の記録を確かめてください。」を出す。
   - 未認証（401）は Toast を出さず、下のサインインの入口へ送る。
   - 分け方は `use-operation.test.tsx` の「a failed operation」が、code・ステータスごとに Toast と読み直しの有無で確かめる。
 - 未認証（401）は、読み取りでも操作でも、サインインの画面へ送る（`apps/web/src/auth/sign-in.ts`。`/sign-in?redirect=<元の画面>`、履歴は置き換える）。Toast は出さない。画面と戻り先の扱いは下の「サインインと設定」（#278）。
 - 読み取りは、サーバーと通信の失敗（500 など）と版の衝突のときだけ 1 回まで取り直す。受け付けられない要求と未認証は取り直さない。操作は取り直さない。
-- 操作は `useOperation(<生成した mutation の options>)`（`apps/web/src/api/use-operation.ts`）で呼ぶ。送信中は同じ操作を重ねて送らない（押し直しは送らずに失敗として返す）。`pending`（送信中。操作を受け付けない）と `loading`（送信中が 300ms 続いた。DESIGN.md の Spinner のとおり、Button・IconButton の `loading` でスピナーと文言を出す）を返す。送信中の見た目は DESIGN.md Components › Button・IconButton と docs/design/foundations.md の Loading に従い、各画面の Issue で付ける。
+- 操作は `useOperation('<操作の名前>')` と `run(<入力>)`（`apps/web/src/api/use-operation.ts`）で呼ぶ。名前と入力は `packages/application` の操作のもので、HTTP のメソッドと経路への載せ方は `@itera/api-contract/requests` が決める（ADR 0006「経路の形」、#295。2026-10-03 改訂。それまでは生成した mutation の options を渡していた）。送信中は同じ操作を重ねて送らない（押し直しは送らずに失敗として返す）。`pending`（送信中。操作を受け付けない）と `loading`（送信中が 300ms 続いた。DESIGN.md の Spinner のとおり、Button・IconButton の `loading` でスピナーと文言を出す）を返す。送信中の見た目は DESIGN.md Components › Button・IconButton と docs/design/foundations.md の Loading に従い、各画面の Issue で付ける。
 
 #### ブラウザ内モック
 

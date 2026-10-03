@@ -4,10 +4,10 @@ import type {
   EstimateSuggestionId,
   SuggestionBound,
   Task,
-  TaskAttributeUpdate,
   TaskPriority,
   TimeBasis,
 } from '@itera/api-contract';
+import type { TaskAttributeUpdate } from '@itera/api-contract/requests';
 import { Link, useLocation } from '@tanstack/react-router';
 import { Check, ChevronDown, ChevronRight } from 'lucide-react';
 import {

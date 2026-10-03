@@ -1,11 +1,13 @@
-# Task (Backlog and the detail): its operations. Each operation is named in packages/application
-# operations.ts and is a POST of its input (ADR 0006).
+# Task. The paths of a resource and its methods (ADR 0006 経路の形):
+# nouns of the domain, a state change a verb after the resource. A write
+# is one operation of packages/application or, where a path takes several,
+# the one its body names (@itera/api-contract/requests).
 
-createTask:
+tasks:
   post:
     operationId: createTask
     tags: [Task]
-    summary: Quick Add in the Backlog
+    summary: 'Quick Add: make a Task in the Backlog'
     requestBody:
       required: true
       content:
@@ -18,8 +20,8 @@ createTask:
               title: { type: string }
               areaId: { $ref: '../schemas/common.yaml#/AreaId' }
     responses:
-      '200':
-        description: Done. What the operation made or decided.
+      '201':
+        description: Made. The IDs of what the operation made.
         content:
           application/json:
             schema:
@@ -36,13 +38,18 @@ createTask:
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
-saveTask:
-  post:
+task:
+  patch:
     operationId: saveTask
     tags: [Task]
-    summary: Save the detail's form
+    summary: "Save a Task's detail"
     description: >-
-      The attributes and the Estimate, saved together.
+      The attributes and the Estimate, saved together: a property left out stays, `null` clears an optional one.
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
     requestBody:
       required: true
       content:
@@ -50,264 +57,21 @@ saveTask:
           schema:
             type: object
             additionalProperties: false
-            required: [taskId, update]
             properties:
-              taskId: { $ref: '../schemas/common.yaml#/TaskId' }
-              update: { $ref: '../schemas/records.yaml#/TaskAttributeUpdate' }
-              estimate:
-                description: Hours. `null` clears the Estimate; left out, it stays.
-                oneOf:
-                  - { type: number }
-                  - type: 'null'
-    responses:
-      '204':
-        description: Done.
-      '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
-      '404': { $ref: '../responses.yaml#/NotFound' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
-      '422': { $ref: '../responses.yaml#/RuleViolation' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-adoptSuggestion:
-  post:
-    operationId: adoptSuggestion
-    tags: [Task]
-    summary: 採用 a suggestion at one of its bounds
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [taskId, suggestionId, bound]
-            properties:
-              taskId: { $ref: '../schemas/common.yaml#/TaskId' }
-              suggestionId:
-                { $ref: '../schemas/common.yaml#/EstimateSuggestionId' }
-              bound: { $ref: '../schemas/records.yaml#/SuggestionBound' }
-    responses:
-      '204':
-        description: Done.
-      '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
-      '404': { $ref: '../responses.yaml#/NotFound' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
-      '422': { $ref: '../responses.yaml#/RuleViolation' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-undoAdoption:
-  post:
-    operationId: undoAdoption
-    tags: [Task]
-    summary: Take back 採用
-    description: >-
-      The Task keeps only its current Estimate, so the client sends the one it had before (`null` for none), from the read it made before adopting.
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [taskId, suggestionId, previous]
-            properties:
-              taskId: { $ref: '../schemas/common.yaml#/TaskId' }
-              suggestionId:
-                { $ref: '../schemas/common.yaml#/EstimateSuggestionId' }
-              previous:
-                oneOf:
-                  - { $ref: '../schemas/records.yaml#/Estimate' }
-                  - type: 'null'
-    responses:
-      '204':
-        description: Done.
-      '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
-      '404': { $ref: '../responses.yaml#/NotFound' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
-      '422': { $ref: '../responses.yaml#/RuleViolation' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-adoptEditedSuggestion:
-  post:
-    operationId: adoptEditedSuggestion
-    tags: [Task]
-    summary: '直して使う: adopt a suggestion with the hours edited (F31)'
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [taskId, suggestionId, hours]
-            properties:
-              taskId: { $ref: '../schemas/common.yaml#/TaskId' }
-              suggestionId:
-                { $ref: '../schemas/common.yaml#/EstimateSuggestionId' }
-              hours: { type: number }
-    responses:
-      '204':
-        description: Done.
-      '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
-      '404': { $ref: '../responses.yaml#/NotFound' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
-      '422': { $ref: '../responses.yaml#/RuleViolation' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-rejectSuggestion:
-  post:
-    operationId: rejectSuggestion
-    tags: [Task]
-    summary: Reject a suggestion
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [taskId, suggestionId]
-            properties:
-              taskId: { $ref: '../schemas/common.yaml#/TaskId' }
-              suggestionId:
-                { $ref: '../schemas/common.yaml#/EstimateSuggestionId' }
-    responses:
-      '204':
-        description: Done.
-      '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
-      '404': { $ref: '../responses.yaml#/NotFound' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
-      '422': { $ref: '../responses.yaml#/RuleViolation' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-undoRejection:
-  post:
-    operationId: undoRejection
-    tags: [Task]
-    summary: Take back a rejection
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [taskId, suggestionId]
-            properties:
-              taskId: { $ref: '../schemas/common.yaml#/TaskId' }
-              suggestionId:
-                { $ref: '../schemas/common.yaml#/EstimateSuggestionId' }
-    responses:
-      '204':
-        description: Done.
-      '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
-      '404': { $ref: '../responses.yaml#/NotFound' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
-      '422': { $ref: '../responses.yaml#/RuleViolation' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-addSubtask:
-  post:
-    operationId: addSubtask
-    tags: [Task]
-    summary: Add a Subtask
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [taskId, title]
-            properties:
-              taskId: { $ref: '../schemas/common.yaml#/TaskId' }
               title: { type: string }
-              hours: { type: number }
-    responses:
-      '200':
-        description: Done. What the operation made or decided.
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [subtaskId]
-              properties:
-                subtaskId: { $ref: '../schemas/common.yaml#/SubtaskId' }
-      '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
-      '404': { $ref: '../responses.yaml#/NotFound' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
-      '422': { $ref: '../responses.yaml#/RuleViolation' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-setSubtaskDone:
-  post:
-    operationId: setSubtaskDone
-    tags: [Task]
-    summary: Check or uncheck a Subtask
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [taskId, subtaskId, done]
-            properties:
-              taskId: { $ref: '../schemas/common.yaml#/TaskId' }
-              subtaskId: { $ref: '../schemas/common.yaml#/SubtaskId' }
-              done: { type: boolean }
-    responses:
-      '204':
-        description: Done.
-      '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
-      '404': { $ref: '../responses.yaml#/NotFound' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
-      '422': { $ref: '../responses.yaml#/RuleViolation' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-setSubtaskEstimate:
-  post:
-    operationId: setSubtaskEstimate
-    tags: [Task]
-    summary: Set a Subtask's hours
-    description: >-
-      `null` clears them.
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [taskId, subtaskId, hours]
-            properties:
-              taskId: { $ref: '../schemas/common.yaml#/TaskId' }
-              subtaskId: { $ref: '../schemas/common.yaml#/SubtaskId' }
-              hours:
+              description: { type: string }
+              areaId:
+                oneOf:
+                  - { $ref: '../schemas/common.yaml#/AreaId' }
+                  - type: 'null'
+              due:
+                oneOf:
+                  - { $ref: '../schemas/common.yaml#/LocalDate' }
+                  - type: 'null'
+              priority: { $ref: '../schemas/records.yaml#/TaskPriority' }
+              timeBasis: { $ref: '../schemas/records.yaml#/TimeBasis' }
+              estimate:
+                description: Hours. `null` clears the Estimate.
                 oneOf:
                   - { type: number }
                   - type: 'null'
@@ -323,21 +87,16 @@ setSubtaskEstimate:
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
-archiveTask:
+taskArchive:
   post:
     operationId: archiveTask
     tags: [Task]
     summary: Archive a Task
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [taskId]
-            properties:
-              taskId: { $ref: '../schemas/common.yaml#/TaskId' }
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
     responses:
       '204':
         description: Done.
@@ -350,21 +109,16 @@ archiveTask:
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
-restoreTask:
+taskRestore:
   post:
     operationId: restoreTask
     tags: [Task]
     summary: Bring an archived Task back
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [taskId]
-            properties:
-              taskId: { $ref: '../schemas/common.yaml#/TaskId' }
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
     responses:
       '204':
         description: Done.
@@ -377,23 +131,18 @@ restoreTask:
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
-completeTask:
+taskComplete:
   post:
     operationId: completeTask
     tags: [Task]
     summary: 完了にする in the Backlog
     description: >-
       With today's selection when the Task is in the running Sprint.
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [taskId]
-            properties:
-              taskId: { $ref: '../schemas/common.yaml#/TaskId' }
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
     responses:
       '204':
         description: Done.
@@ -406,21 +155,16 @@ completeTask:
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
-undoCompleteTask:
+taskUndoComplete:
   post:
     operationId: undoCompleteTask
     tags: [Task]
     summary: Take back 完了にする in the Backlog
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [taskId]
-            properties:
-              taskId: { $ref: '../schemas/common.yaml#/TaskId' }
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
     responses:
       '204':
         description: Done.
@@ -433,108 +177,18 @@ undoCompleteTask:
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
-addTaskToToday:
-  post:
-    operationId: addTaskToToday
-    tags: [Task]
-    summary: 今日へ for a Task outside the running Sprint
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [taskId]
-            properties:
-              taskId: { $ref: '../schemas/common.yaml#/TaskId' }
-    responses:
-      '200':
-        description: Done. What the operation made or decided.
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [sprintTaskId, selectionId]
-              properties:
-                sprintTaskId: { $ref: '../schemas/common.yaml#/SprintTaskId' }
-                selectionId:
-                  { $ref: '../schemas/common.yaml#/DailySelectionId' }
-      '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
-      '404': { $ref: '../responses.yaml#/NotFound' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
-      '422': { $ref: '../responses.yaml#/RuleViolation' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-addTaskToWeek:
-  post:
-    operationId: addTaskToWeek
-    tags: [Task]
-    summary: 今週へ for a Task outside the running Sprint (#155)
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [taskId]
-            properties:
-              taskId: { $ref: '../schemas/common.yaml#/TaskId' }
-    responses:
-      '200':
-        description: Done. What the operation made or decided.
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [sprintTaskId]
-              properties:
-                sprintTaskId: { $ref: '../schemas/common.yaml#/SprintTaskId' }
-      '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
-      '404': { $ref: '../responses.yaml#/NotFound' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
-      '422': { $ref: '../responses.yaml#/RuleViolation' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-undoAddTaskToWeek:
-  post:
-    operationId: undoAddTaskToWeek
-    tags: [Task]
-    summary: Take back 今週へ
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [taskId]
-            properties:
-              taskId: { $ref: '../schemas/common.yaml#/TaskId' }
-    responses:
-      '204':
-        description: Done.
-      '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
-      '404': { $ref: '../responses.yaml#/NotFound' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
-      '422': { $ref: '../responses.yaml#/RuleViolation' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-setRecurrence:
-  post:
+taskRecurrence:
+  put:
     operationId: setRecurrence
     tags: [Task]
-    summary: Set or change a Task's recurrence
+    summary: "Set or change a Task's recurrence"
+    description: >-
+      The rule is a record of the Task of its own, one at most.
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
     requestBody:
       required: true
       content:
@@ -542,13 +196,12 @@ setRecurrence:
           schema:
             type: object
             additionalProperties: false
-            required: [taskId, pattern]
+            required: [pattern]
             properties:
-              taskId: { $ref: '../schemas/common.yaml#/TaskId' }
               pattern: { $ref: '../schemas/records.yaml#/RecurrencePattern' }
     responses:
       '200':
-        description: Done. What the operation made or decided.
+        description: Done. What the operation decided.
         content:
           application/json:
             schema:
@@ -569,24 +222,18 @@ setRecurrence:
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
-endRecurrence:
-  post:
+  delete:
     operationId: endRecurrence
     tags: [Task]
-    summary: End a Task's recurrence
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [taskId]
-            properties:
-              taskId: { $ref: '../schemas/common.yaml#/TaskId' }
+    summary: "End a Task's recurrence"
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
     responses:
       '200':
-        description: Done. What the operation made or decided.
+        description: Done. What the operation decided.
         content:
           application/json:
             schema:
@@ -599,6 +246,230 @@ endRecurrence:
                     the Task is one-off again. Otherwise it ends before the
                     next Sprint not confirmed yet.
                   type: boolean
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+subtasks:
+  post:
+    operationId: addSubtask
+    tags: [Task]
+    summary: Add a Subtask
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [title]
+            properties:
+              title: { type: string }
+              hours: { type: number }
+    responses:
+      '201':
+        description: Made. The IDs of what the operation made.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subtaskId]
+              properties:
+                subtaskId: { $ref: '../schemas/common.yaml#/SubtaskId' }
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+subtask:
+  patch:
+    operationId: updateSubtask
+    tags: [Task]
+    summary: Check a Subtask, or set its hours
+    description: >-
+      One change a request: `done` (setSubtaskDone, a check with no rule) or `hours`, `null` to clear them (setSubtaskEstimate).
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
+      - name: subtaskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SubtaskId' }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - type: object
+                additionalProperties: false
+                required: [done]
+                properties:
+                  done: { type: boolean }
+              - type: object
+                additionalProperties: false
+                required: [hours]
+                properties:
+                  hours:
+                    oneOf:
+                      - { type: number }
+                      - type: 'null'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+suggestionAdopt:
+  post:
+    operationId: adoptEstimateSuggestion
+    tags: [Task]
+    summary: 採用 an estimate suggestion
+    description: >-
+      At one of its bounds (`bound`, adoptSuggestion), or with the hours edited (`hours`, 直して使う, adoptEditedSuggestion, F31).
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
+      - name: suggestionId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/EstimateSuggestionId' }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - type: object
+                additionalProperties: false
+                required: [bound]
+                properties:
+                  bound: { $ref: '../schemas/records.yaml#/SuggestionBound' }
+              - type: object
+                additionalProperties: false
+                required: [hours]
+                properties:
+                  hours: { type: number }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+suggestionUndoAdopt:
+  post:
+    operationId: undoAdoption
+    tags: [Task]
+    summary: Take back 採用
+    description: >-
+      The Task keeps only its current Estimate, so the client sends the one it had before (`null` for none), from the read it made before adopting.
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
+      - name: suggestionId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/EstimateSuggestionId' }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [previous]
+            properties:
+              previous:
+                oneOf:
+                  - { $ref: '../schemas/records.yaml#/Estimate' }
+                  - type: 'null'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+suggestionReject:
+  post:
+    operationId: rejectSuggestion
+    tags: [Task]
+    summary: Reject an estimate suggestion
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
+      - name: suggestionId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/EstimateSuggestionId' }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+suggestionUndoReject:
+  post:
+    operationId: undoRejection
+    tags: [Task]
+    summary: Take back a rejection
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
+      - name: suggestionId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/EstimateSuggestionId' }
+    responses:
+      '204':
+        description: Done.
       '400': { $ref: '../responses.yaml#/BadRequest' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }

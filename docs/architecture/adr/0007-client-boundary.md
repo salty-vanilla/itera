@@ -48,18 +48,24 @@ Web を契約に移し終えた後（ADR 0005、#272〜#277）の形：
 ```text
 services/api ───────────────▶ packages/application ──▶ packages/domain
 services/api ───────────────▶ packages/api-contract（型と検証）
-apps/web ───────────────────▶ packages/api-contract（生成したクライアントと型）
+apps/web ───────────────────▶ packages/api-contract（生成したクライアントと型、requests の振り分け）
+packages/api-contract/requests ─(型だけ)─▶ packages/application（操作の名前と入力。#295）
 apps/web のブラウザ内モック ─▶ packages/application ──▶ packages/domain（開発ビルドだけ）
 apps/web のプレビューの例外 ─▶ packages/domain（iOS に着手するまで。ADR 0005）
 iOS・Android ───────────────▶ packages/api-contract/openapi/ から生成したもの
 ```
 
 - Web を特別扱いしない。Web も契約だけに依存し、iOS・Android にない近道（`packages/application` の読み取りを直接呼ぶなど）を持たない。最初のクライアントである Web で、契約の欠けとずれを見つけるため。
-- 例外は次の 2 つで、どちらも過渡的なもの。終わる時期は例外ごとに決める。
+- 例外は次の 3 つで、どれも過渡的なもの。終わる時期は例外ごとに決める。
   - ADR 0005「プレビューの例外」：Web のプレビューは `packages/domain` の関数を使う。戻す条件（iOS に着手するとき）も ADR 0005 のとおり。
+  - 操作の名前と入力（#295、2026-10-03）：Web は `packages/application` の操作の名前と入力で操作を呼ぶ（Issue #295 の範囲 3。ADR 0005「操作は名前と入力」）。その名前と入力の型は、`@itera/api-contract/requests`（振り分けの規則、ADR 0006「経路の形」）を通して application から来る。
+    - 境界：依存するのは `packages/api-contract/src/requests.ts` が application の型を import することだけ。実行時の依存はない（ESLint の `@typescript-eslint/no-restricted-imports` の `allowTypeImports` で、型だけの import に限る）。`openapi/` と生成したものは依存しない。画面は `requests` の型を使い、application を import しない（ADR 0005）。テストの道具 `@itera/api-contract/testing` は application と domain を実行時に使うが、本番のコードから import できない（ESLint）。
+    - 理由：要求の組み立ての規則を、サーバー・ブラウザ内モック・Web で 1 か所に置くため。名前と入力は application が正本で、契約に写すと二重になる。
+    - iOS・Android は影響を受けない。`openapi/` から生成し、操作の名前と入力では呼ばない（面の operationId で呼ぶ）。
+    - 戻す条件：iOS に着手するときに、Web も面の operationId と生成した型で呼ぶ形にするか、操作の名前と入力を契約の側に置くかを決める。
   - 操作の可否と値の規則：プレビューの一覧と操作の可否（下の「操作の可否」）を決めるまで、Web は今のとおり、状態の名前から操作の可否を決め、値の規則（空でない名前など）を送る前に検査してよい。下の「クライアントに許す計算」は目標の形で、iOS・Android は初めからこれに従う。Web をこの形に移す時期は、操作の可否の形を決めるときに決める。
 - Web の依存は ESLint の `no-restricted-imports` で検査する（ADR 0005）。iOS・Android は言語が違うので、TypeScript の実装には依存できない。
-- 契約は内部より上流に置く。`openapi/` と、そこから生成したものは、`packages/application`・`packages/domain` に依存しない。`packages/api-contract` のテストが `packages/application` を使うのは、契約と実装が合っているかを確かめるため（ADR 0006「契約と実装の一致」）だけ。
+- 契約は内部より上流に置く。`openapi/` と、そこから生成したものは、`packages/application`・`packages/domain` に依存しない。`packages/api-contract` が `packages/application` を使うのは、テスト（契約と実装が合っているかを確かめる。ADR 0006「契約と実装の一致」）と、上の例外の `requests.ts` の型だけ。
 
 ### アプリケーション層の読み取りと API の DTO
 
@@ -90,7 +96,7 @@ iOS・Android ───────────────▶ packages/api-cont
 
 ### 操作の可否
 
-クライアントに状態機械を持たせないため、読み取りの応答に、その記録に今できる操作を返す方向で検討する（例：今日の行ごとに `availableActions: ['completeSelection', 'undoCloseSelection']`）。
+クライアントに状態機械を持たせないため、読み取りの応答に、その記録に今できる操作を返す方向で検討する（例：今日の行ごとに `availableActions: ['completeSelection', 'undoDeferSelection']`）。
 
 - 値は ADR 0006 の operationId にそろえる。引数に対象が要る操作は、対象の ID も返す。
 - 開いた列挙にする（ADR 0006「互換の規則」）。クライアントとその生成した型は、知らない値を受理しなければならず、知らない値で読み込みを失敗させない。知らない操作は出さない。

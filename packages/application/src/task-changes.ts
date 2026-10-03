@@ -4,7 +4,6 @@
 import {
   activeCriterion,
   addSubtask,
-  addTaskMidSprint,
   addToToday,
   adoptEditedSuggestion,
   adoptSuggestion,
@@ -22,7 +21,6 @@ import {
   setEstimate,
   setSubtaskDone,
   setSubtaskEstimate,
-  undoAddTaskMidSprint,
   undoAdoption,
   undoRejection,
   updateTask,
@@ -35,6 +33,7 @@ import {
   type RecurrencePattern,
   type Result,
   type SubtaskId,
+  type SprintId,
   type SprintTaskId,
   type SuggestionBound,
   type TaskAttributeUpdate,
@@ -51,6 +50,7 @@ import {
   type Changed,
 } from './record-store';
 import type { Records } from './records';
+import { onlyToday, sprintIn } from './sprint-of';
 
 /** The active Sprint, if any: 今日へ and 完了 act on it. */
 export function activeSprint(records: Records) {
@@ -76,11 +76,6 @@ export function midSprintAddition(
       : { criterion: { id: criterion.id, policy: criterion.policy } }),
   };
 }
-
-const noActiveSprint = {
-  ok: false,
-  error: { code: 'invalidTransition', message: 'No active Sprint.' },
-} as const;
 
 /** Quick Add: a Task from its title, optionally in an Area. */
 export function addTask(
@@ -283,13 +278,18 @@ export function undoComplete(taskId: TaskId, date?: LocalDate): Change {
  * mid-Sprint addition and chosen for today, in one operation (invariant 26).
  */
 export function toToday(
+  sprintId: SprintId,
+  date: LocalDate,
   taskId: TaskId,
 ): Change<{ sprintTaskId: SprintTaskId; selectionId: DailySelectionId }> {
   return (records, ctx) => {
+    const today = onlyToday(date, ctx);
+    if (!today.ok) return today;
     const task = find(records.tasks, taskId, 'Task');
     if (!task.ok) return task;
-    const sprint = activeSprint(records);
-    if (sprint === undefined) return noActiveSprint;
+    const running = sprintIn(records, sprintId, ['active']);
+    if (!running.ok) return running;
+    const sprint = running.value;
     const addition = midSprintAddition(records, task.value, ctx);
     const selectionId = ctx.newId('DailySelection');
     return returning(
@@ -307,45 +307,6 @@ export function toToday(
         (next) => ({ sprints: [next] }),
       ),
       { sprintTaskId: addition.sprintTaskId, selectionId },
-    );
-  };
-}
-
-/**
- * 今週へ (#155): the Task joins the active Sprint as a mid-Sprint addition
- * without a day chosen (unlinked, own snapshot, no capacity warning).
- */
-export function toWeek(taskId: TaskId): Change<{ sprintTaskId: SprintTaskId }> {
-  return (records, ctx) => {
-    const task = find(records.tasks, taskId, 'Task');
-    if (!task.ok) return task;
-    const sprint = activeSprint(records);
-    if (sprint === undefined) return noActiveSprint;
-    const addition = midSprintAddition(records, task.value, ctx);
-    return returning(
-      changed(
-        addTaskMidSprint(sprint, { ...addition, via: 'backlog' }, ctx),
-        (next) => ({ sprints: [next] }),
-      ),
-      { sprintTaskId: addition.sprintTaskId },
-    );
-  };
-}
-
-/** 元に戻す right after 今週へ (F40): the addition goes with its record. */
-export function undoToWeek(taskId: TaskId): Change {
-  return (records, ctx) => {
-    const sprint = activeSprint(records);
-    const sprintTask = sprint?.tasks.find((t) => t.taskId === taskId);
-    if (sprint === undefined || sprintTask === undefined) {
-      return {
-        ok: false,
-        error: { code: 'notFound', message: 'Not in the active Sprint.' },
-      };
-    }
-    return changed(
-      undoAddTaskMidSprint(sprint, { sprintTaskId: sprintTask.id }, ctx),
-      (next) => ({ sprints: [next] }),
     );
   };
 }

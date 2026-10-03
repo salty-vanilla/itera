@@ -6,30 +6,9 @@ import type {
   RecurrencePattern,
   SubtaskId,
   SuggestionBound,
-  TaskAttributeUpdate,
   TaskId,
 } from '@itera/api-contract';
-import {
-  addSubtaskMutation,
-  addTaskToTodayMutation,
-  addTaskToWeekMutation,
-  adoptEditedSuggestionMutation,
-  adoptSuggestionMutation,
-  archiveTaskMutation,
-  completeTaskMutation,
-  createTaskMutation,
-  endRecurrenceMutation,
-  rejectSuggestionMutation,
-  restoreTaskMutation,
-  saveTaskMutation,
-  setRecurrenceMutation,
-  setSubtaskDoneMutation,
-  setSubtaskEstimateMutation,
-  undoAddTaskToWeekMutation,
-  undoAdoptionMutation,
-  undoCompleteTaskMutation,
-  undoRejectionMutation,
-} from '@itera/api-contract/react-query';
+import type { TaskAttributeUpdate } from '@itera/api-contract/requests';
 import { useOperation } from '@/api/use-operation';
 
 // The person's operations on Tasks, one named function each (ADR 0005 API
@@ -45,21 +24,18 @@ import { useOperation } from '@/api/use-operation';
 
 /** The Task's own operations: the Backlog, and the detail's fields and actions. */
 export function useTaskActions() {
-  const createTask = useOperation(createTaskMutation);
+  const createTask = useOperation('createTask');
   // A field saves as it is left: the next one waits for this one, not lost.
-  const saveTask = useOperation(saveTaskMutation, { whileSending: 'wait' });
-  const adoptSuggestion = useOperation(adoptSuggestionMutation);
-  const undoAdoption = useOperation(undoAdoptionMutation);
-  const adoptEdited = useOperation(adoptEditedSuggestionMutation);
-  const rejectSuggestion = useOperation(rejectSuggestionMutation);
-  const undoRejection = useOperation(undoRejectionMutation);
-  const archiveTask = useOperation(archiveTaskMutation);
-  const restoreTask = useOperation(restoreTaskMutation);
-  const completeTask = useOperation(completeTaskMutation);
-  const undoCompleteTask = useOperation(undoCompleteTaskMutation);
-  const addToToday = useOperation(addTaskToTodayMutation);
-  const addToWeek = useOperation(addTaskToWeekMutation);
-  const undoAddToWeek = useOperation(undoAddTaskToWeekMutation);
+  const saveTask = useOperation('saveTask', { whileSending: 'wait' });
+  const adoptSuggestion = useOperation('adoptSuggestion');
+  const undoAdoption = useOperation('undoAdoption');
+  const adoptEdited = useOperation('adoptEditedSuggestion');
+  const rejectSuggestion = useOperation('rejectSuggestion');
+  const undoRejection = useOperation('undoRejection');
+  const archiveTask = useOperation('archiveTask');
+  const restoreTask = useOperation('restoreTask');
+  const completeTask = useOperation('completeTask');
+  const undoCompleteTask = useOperation('undoCompleteTask');
 
   const actions = {
     /** The new Task's ID, or `undefined` when it did not go through. */
@@ -68,7 +44,8 @@ export function useTaskActions() {
       areaId?: AreaId,
     ): Promise<TaskId | undefined> => {
       const outcome = await createTask.run({
-        body: { title, ...(areaId === undefined ? {} : { areaId }) },
+        title,
+        ...(areaId === undefined ? {} : { areaId }),
       });
       return outcome.ok ? outcome.value.taskId : undefined;
     },
@@ -79,50 +56,40 @@ export function useTaskActions() {
     ) =>
       (
         await saveTask.run({
-          body: {
-            taskId,
-            update,
-            ...(estimate === undefined ? {} : { estimate }),
-          },
+          taskId,
+          update,
+          ...(estimate === undefined ? {} : { estimate }),
         })
       ).ok,
     adoptSuggestion: async (
       taskId: TaskId,
       suggestionId: EstimateSuggestionId,
       bound: SuggestionBound,
-    ) =>
-      (await adoptSuggestion.run({ body: { taskId, suggestionId, bound } })).ok,
+    ) => (await adoptSuggestion.run({ taskId, suggestionId, bound })).ok,
     undoAdoption: async (
       taskId: TaskId,
       suggestionId: EstimateSuggestionId,
       previous: Estimate | null,
-    ) =>
-      (await undoAdoption.run({ body: { taskId, suggestionId, previous } })).ok,
+    ) => (await undoAdoption.run({ taskId, suggestionId, previous })).ok,
     adoptEditedSuggestion: async (
       taskId: TaskId,
       suggestionId: EstimateSuggestionId,
       hours: number,
-    ) => (await adoptEdited.run({ body: { taskId, suggestionId, hours } })).ok,
+    ) => (await adoptEdited.run({ taskId, suggestionId, hours })).ok,
     rejectSuggestion: async (
       taskId: TaskId,
       suggestionId: EstimateSuggestionId,
-    ) => (await rejectSuggestion.run({ body: { taskId, suggestionId } })).ok,
+    ) => (await rejectSuggestion.run({ taskId, suggestionId })).ok,
     undoRejection: async (taskId: TaskId, suggestionId: EstimateSuggestionId) =>
-      (await undoRejection.run({ body: { taskId, suggestionId } })).ok,
+      (await undoRejection.run({ taskId, suggestionId })).ok,
     archiveTask: async (taskId: TaskId) =>
-      (await archiveTask.run({ body: { taskId } })).ok,
+      (await archiveTask.run({ taskId })).ok,
     restoreTask: async (taskId: TaskId) =>
-      (await restoreTask.run({ body: { taskId } })).ok,
+      (await restoreTask.run({ taskId })).ok,
     completeTask: async (taskId: TaskId) =>
-      (await completeTask.run({ body: { taskId } })).ok,
+      (await completeTask.run({ taskId })).ok,
     undoCompleteTask: async (taskId: TaskId) =>
-      (await undoCompleteTask.run({ body: { taskId } })).ok,
-    addToToday: async (taskId: TaskId) =>
-      (await addToToday.run({ body: { taskId } })).ok,
-    addToWeek: async (taskId: TaskId) =>
-      (await addToWeek.run({ body: { taskId } })).ok,
-    undoAddToWeek: async (taskId: TaskId) =>
-      (await undoAddToWeek.run({ body: { taskId } })).ok,
+      (await undoCompleteTask.run({ taskId })).ok,
   };
   // For how long each is being sent: show it in its button once it has
   // lasted `LOADING_DELAY` (useOperation `loading`).
@@ -138,9 +105,6 @@ export function useTaskActions() {
     restoreTask: restoreTask.loading,
     completeTask: completeTask.loading,
     undoCompleteTask: undoCompleteTask.loading,
-    addToToday: addToToday.loading,
-    addToWeek: addToWeek.loading,
-    undoAddToWeek: undoAddToWeek.loading,
   } satisfies Record<keyof typeof actions, boolean>;
   return { ...actions, loading };
 }
@@ -152,31 +116,32 @@ export type TaskActions = ReturnType<typeof useTaskActions>;
  * made, so a second one made while the first is sent waits for it.
  */
 export function useSubtaskActions() {
-  const addSubtask = useOperation(addSubtaskMutation);
-  const setSubtaskDone = useOperation(setSubtaskDoneMutation, {
+  const addSubtask = useOperation('addSubtask');
+  const setSubtaskDone = useOperation('setSubtaskDone', {
     whileSending: 'wait',
   });
-  const setSubtaskEstimate = useOperation(setSubtaskEstimateMutation, {
+  const setSubtaskEstimate = useOperation('setSubtaskEstimate', {
     whileSending: 'wait',
   });
   return {
     addSubtask: async (taskId: TaskId, title: string, hours?: number) =>
       (
         await addSubtask.run({
-          body: { taskId, title, ...(hours === undefined ? {} : { hours }) },
+          taskId,
+          title,
+          ...(hours === undefined ? {} : { hours }),
         })
       ).ok,
     setSubtaskDone: async (
       taskId: TaskId,
       subtaskId: SubtaskId,
       done: boolean,
-    ) => (await setSubtaskDone.run({ body: { taskId, subtaskId, done } })).ok,
+    ) => (await setSubtaskDone.run({ taskId, subtaskId, done })).ok,
     setSubtaskEstimate: async (
       taskId: TaskId,
       subtaskId: SubtaskId,
       hours: number | null,
-    ) =>
-      (await setSubtaskEstimate.run({ body: { taskId, subtaskId, hours } })).ok,
+    ) => (await setSubtaskEstimate.run({ taskId, subtaskId, hours })).ok,
     loading: { addSubtask: addSubtask.loading },
   };
 }
@@ -186,10 +151,10 @@ export function useSubtaskActions() {
  * (a second weekday ticked while the first is sent waits for it).
  */
 export function useRecurrenceActions() {
-  const setRecurrence = useOperation(setRecurrenceMutation, {
+  const setRecurrence = useOperation('setRecurrence', {
     whileSending: 'wait',
   });
-  const endRecurrence = useOperation(endRecurrenceMutation);
+  const endRecurrence = useOperation('endRecurrence');
   return {
     /**
      * Makes the Task recurring or changes its rule. `effectiveFrom` is the
@@ -200,7 +165,7 @@ export function useRecurrenceActions() {
       taskId: TaskId,
       pattern: RecurrencePattern,
     ): Promise<{ ok: boolean; effectiveFrom?: LocalDate }> => {
-      const outcome = await setRecurrence.run({ body: { taskId, pattern } });
+      const outcome = await setRecurrence.run({ taskId, pattern });
       return outcome.ok ? { ok: true, ...outcome.value } : { ok: false };
     },
     /**
@@ -210,7 +175,7 @@ export function useRecurrenceActions() {
     endRecurrence: async (
       taskId: TaskId,
     ): Promise<{ ok: boolean; removed?: boolean }> => {
-      const outcome = await endRecurrence.run({ body: { taskId } });
+      const outcome = await endRecurrence.run({ taskId });
       return outcome.ok ? { ok: true, ...outcome.value } : { ok: false };
     },
   };

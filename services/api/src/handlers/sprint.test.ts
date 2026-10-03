@@ -1,12 +1,14 @@
-// The Sprint, in Planning and running, through the app (#268): each
+// The Sprint, in Planning and running, through the app (#268, #295): each
 // operation succeeds and is refused as the domain says (operation-cases.ts),
-// the invariants hold through the API, and the reads answer what the
-// application's functions give on the same records and the same clock.
+// on the Sprint the request names; the invariants hold through the API, and
+// the reads of the Sprint resources answer what the application's functions
+// give on the same records and the same clock.
 import * as contract from '@itera/api-contract';
 import {
-  planningData,
-  runningData,
-  sprintChoice,
+  currentSprints,
+  sprintCandidates,
+  sprintList,
+  sprintView,
   type Records,
 } from '@itera/application';
 import { fixtureIds } from '@itera/application/fixtures';
@@ -52,14 +54,25 @@ const { paper, tax, dataset, reading, bookshelf } = ids.task;
 const { work, research, study, life } = ids.area;
 
 const choose = (...taskIds: string[]): Step => [
-  'chooseTasks',
-  () => ({ taskIds }),
+  'addSprintTasks',
+  (r) => ({ sprintId: draftOf(r).id, taskIds }),
 ];
+const exclude = (index: number): Step => [
+  'setOccurrenceIncluded',
+  (r) => ({
+    sprintId: draftOf(r).id,
+    occurrenceId: occurrencesOf(r, reading)[index]!.id,
+    included: false,
+  }),
+];
+/** The Sprint being planned, and the running one, as a request names them. */
+const planned = (r: Records) => ({ sprintId: draftOf(r).id });
+const running = (r: Records) => ({ sprintId: activeOf(r).id });
 
 const planningSuccesses: readonly Success[] = [
   {
-    name: 'chooseTasks',
-    body: () => ({ taskIds: [tax, dataset] }),
+    name: 'addSprintTasks',
+    body: (r) => ({ ...planned(r), taskIds: [tax, dataset] }),
     check: (after, before, response) => {
       const { sprintTaskIds } = response as { sprintTaskIds: string[] };
       expect(sprintTaskIds).toHaveLength(2);
@@ -73,19 +86,29 @@ const planningSuccesses: readonly Success[] = [
     },
   },
   {
-    name: 'unchooseTasks',
-    body: (r) => ({ sprintTaskIds: [sprintTaskOf(r, paper).id] }),
+    name: 'removeSprintTasks',
+    body: (r) => ({
+      ...planned(r),
+      sprintTaskIds: [sprintTaskOf(r, paper).id],
+    }),
     check: (after) => expect(sprintTaskOf(after, paper)).toBeUndefined(),
   },
   {
-    name: 'unchooseTasksByTask',
-    prepare: [choose(tax)],
-    body: () => ({ taskIds: [tax] }),
-    check: (after) => expect(sprintTaskOf(after, tax)).toBeUndefined(),
+    name: 'removeSprintTasks',
+    prepare: [choose(tax, dataset)],
+    body: (r) => ({
+      ...planned(r),
+      sprintTaskIds: [sprintTaskOf(r, tax).id, sprintTaskOf(r, dataset).id],
+    }),
+    check: (after) => {
+      expect(sprintTaskOf(after, tax)).toBeUndefined();
+      expect(sprintTaskOf(after, dataset)).toBeUndefined();
+    },
   },
   {
     name: 'setOccurrenceIncluded',
     body: (r) => ({
+      ...planned(r),
       occurrenceId: occurrencesOf(r, reading)[0]!.id,
       included: false,
     }),
@@ -100,23 +123,9 @@ const planningSuccesses: readonly Success[] = [
   },
   {
     name: 'includeOccurrences',
-    prepare: [
-      [
-        'setOccurrenceIncluded',
-        (r) => ({
-          occurrenceId: occurrencesOf(r, reading)[0]!.id,
-          included: false,
-        }),
-      ],
-      [
-        'setOccurrenceIncluded',
-        (r) => ({
-          occurrenceId: occurrencesOf(r, reading)[1]!.id,
-          included: false,
-        }),
-      ],
-    ],
+    prepare: [exclude(0), exclude(1)],
     body: (r) => ({
+      ...planned(r),
       occurrenceIds: occurrencesOf(r, reading)
         .slice(0, 2)
         .map((o) => o.id),
@@ -130,7 +139,7 @@ const planningSuccesses: readonly Success[] = [
   },
   {
     name: 'excludeAllOccurrences',
-    body: (r) => ({ sprintTaskId: sprintTaskOf(r, reading).id }),
+    body: (r) => ({ ...planned(r), sprintTaskId: sprintTaskOf(r, reading).id }),
     check: (after) => {
       expect(occurrencesOf(after, reading).map((o) => o.state)).toEqual([
         'excluded',
@@ -142,11 +151,11 @@ const planningSuccesses: readonly Success[] = [
   },
   {
     name: 'createAndChooseTask',
-    body: () => ({ title: '請求書を送る', areaId: work }),
+    body: (r) => ({ ...planned(r), title: '請求書を送る', areaId: work }),
     check: (after, before, response) => {
-      const { taskId, sprintTaskId } = response as {
+      const { taskId, sprintTaskIds } = response as {
         taskId: string;
-        sprintTaskId: string;
+        sprintTaskIds: string[];
       };
       expect(before.tasks.some((t) => t.id === taskId)).toBe(false);
       expect(task(after, taskId)).toMatchObject({
@@ -155,14 +164,18 @@ const planningSuccesses: readonly Success[] = [
         lifecycle: 'active',
       });
       expect(sprintTaskOf(after, taskId)).toMatchObject({
-        id: sprintTaskId,
+        id: sprintTaskIds[0],
         outcome: 'draft',
       });
     },
   },
   {
-    name: 'setPlanningGoal',
-    body: () => ({ areaId: study, text: '型の変更点を読み終える' }),
+    name: 'setGoal',
+    body: (r) => ({
+      ...planned(r),
+      areaId: study,
+      text: '型の変更点を読み終える',
+    }),
     check: (after) =>
       expect(draftOf(after).goals).toEqual([
         { areaId: study, text: '型の変更点を読み終える' },
@@ -172,6 +185,7 @@ const planningSuccesses: readonly Success[] = [
     name: 'setGoalLink',
     state: 'planning-shape',
     body: (r) => ({
+      ...planned(r),
       sprintTaskId: sprintTaskOf(r, paper).id,
       goalLink: 'unlinked',
     }),
@@ -179,14 +193,14 @@ const planningSuccesses: readonly Success[] = [
       expect(sprintTaskOf(after, paper).goalLink).toBe('unlinked'),
   },
   {
-    name: 'setPlanningAvailableHours',
-    body: () => ({ hours: 18 }),
+    name: 'setAvailableHours',
+    body: (r) => ({ ...planned(r), hours: 18 }),
     check: (after) => expect(draftOf(after).availableHours).toBe(18),
   },
   {
     name: 'confirmSprint',
     state: 'planning-check',
-    body: () => ({ applyCriterion: true }),
+    body: (r) => ({ ...planned(r), applyCriterion: true }),
     check: (after, before) => {
       const sprint = after.sprints.find((s) => s.id === draftOf(before).id)!;
       expect(sprint.state).toBe('active');
@@ -197,9 +211,13 @@ const planningSuccesses: readonly Success[] = [
 
 const runningSuccesses: readonly Success[] = [
   {
-    name: 'setRunningGoal',
+    name: 'setGoal',
     state: 'today-morning',
-    body: () => ({ areaId: research, text: '先行研究を二本読む' }),
+    body: (r) => ({
+      ...running(r),
+      areaId: research,
+      text: '先行研究を二本読む',
+    }),
     check: (after) =>
       expect(
         activeOf(after).goals.find((g) => g.areaId === research),
@@ -209,15 +227,43 @@ const runningSuccesses: readonly Success[] = [
       }),
   },
   {
-    name: 'setRunningAvailableHours',
+    name: 'setAvailableHours',
     state: 'today-morning',
-    body: () => ({ hours: 20 }),
+    body: (r) => ({ ...running(r), hours: 20 }),
     check: (after) => expect(activeOf(after).availableHours).toBe(20),
   },
   {
-    name: 'undoPastDay',
+    name: 'addSprintTasks',
     state: 'today-morning',
-    body: (r) => ({ selectionId: selectionOf(r, tax, '2026-09-29').id }),
+    body: (r) => ({ ...running(r), taskIds: [bookshelf] }),
+    check: (after, _before, response) => {
+      const { sprintTaskIds } = response as { sprintTaskIds: string[] };
+      expect(activeSprintTaskOf(after, bookshelf)).toMatchObject({
+        id: sprintTaskIds[0],
+        origin: 'midSprint',
+      });
+    },
+  },
+  {
+    name: 'removeSprintTasks',
+    state: 'today-morning',
+    prepare: [
+      ['addSprintTasks', (r) => ({ ...running(r), taskIds: [bookshelf] })],
+    ],
+    body: (r) => ({
+      ...running(r),
+      sprintTaskIds: [activeSprintTaskOf(r, bookshelf).id],
+    }),
+    check: (after) =>
+      expect(activeSprintTaskOf(after, bookshelf)).toBeUndefined(),
+  },
+  {
+    name: 'undoCompleteSelection',
+    state: 'today-morning',
+    body: (r) => ({
+      ...running(r),
+      selectionId: selectionOf(r, tax, '2026-09-29').id,
+    }),
     check: (after) => {
       expect(activeSprintTaskOf(after, tax).outcome).toBe('planned');
     },
@@ -228,47 +274,57 @@ const successes = [...planningSuccesses, ...runningSuccesses];
 
 const failures: readonly Failure[] = [
   {
-    name: 'chooseTasks',
-    body: () => ({ taskIds: [tax, missing('Task')] }),
+    name: 'addSprintTasks',
+    body: (r) => ({ ...planned(r), taskIds: [tax, missing('Task')] }),
     status: 404,
     code: 'notFound',
   },
   {
-    name: 'chooseTasks',
-    body: () => ({ taskIds: [paper] }),
+    name: 'addSprintTasks',
+    body: (r) => ({ ...planned(r), taskIds: [paper] }),
     status: 422,
     code: 'invalidInput',
   },
   {
-    name: 'chooseTasks',
-    state: 'today-morning',
-    body: () => ({ taskIds: [bookshelf] }),
+    name: 'addSprintTasks',
+    body: () => ({ sprintId: missing('Sprint'), taskIds: [tax] }),
     status: 404,
     code: 'notFound',
   },
   {
-    name: 'unchooseTasks',
+    name: 'removeSprintTasks',
     body: (r) => ({
+      ...planned(r),
       sprintTaskIds: [sprintTaskOf(r, paper).id, missing('SprintTask')],
     }),
     status: 404,
     code: 'notFound',
   },
   {
-    name: 'unchooseTasksByTask',
-    body: () => ({ taskIds: [tax] }),
-    status: 404,
-    code: 'notFound',
+    name: 'removeSprintTasks',
+    state: 'today-morning',
+    // Planned at confirm, not added during the week: it stays (F40).
+    body: (r) => ({
+      ...running(r),
+      sprintTaskIds: [activeSprintTaskOf(r, paper).id],
+    }),
+    status: 422,
+    code: 'invalidInput',
   },
   {
     name: 'setOccurrenceIncluded',
-    body: () => ({ occurrenceId: missing('Occurrence'), included: false }),
+    body: (r) => ({
+      ...planned(r),
+      occurrenceId: missing('Occurrence'),
+      included: false,
+    }),
     status: 404,
     code: 'notFound',
   },
   {
     name: 'setOccurrenceIncluded',
     body: (r) => ({
+      ...planned(r),
       occurrenceId: occurrencesOf(r, reading)[0]!.id,
       included: true,
     }),
@@ -278,6 +334,7 @@ const failures: readonly Failure[] = [
   {
     name: 'includeOccurrences',
     body: (r) => ({
+      ...planned(r),
       occurrenceIds: [occurrencesOf(r, reading)[0]!.id],
     }),
     status: 422,
@@ -285,95 +342,95 @@ const failures: readonly Failure[] = [
   },
   {
     name: 'excludeAllOccurrences',
-    body: () => ({ sprintTaskId: missing('SprintTask') }),
+    body: (r) => ({ ...planned(r), sprintTaskId: missing('SprintTask') }),
     status: 404,
     code: 'notFound',
   },
   {
     name: 'createAndChooseTask',
-    body: () => ({ title: '   ' }),
+    body: (r) => ({ ...planned(r), title: '   ' }),
     status: 422,
     code: 'invalidInput',
   },
   {
     name: 'createAndChooseTask',
     state: 'today-morning',
-    body: () => ({ title: '請求書を送る' }),
-    status: 404,
-    code: 'notFound',
+    // A new Task goes into a Sprint being planned only (#295 W1).
+    body: (r) => ({ ...running(r), title: '請求書を送る' }),
+    status: 422,
+    code: 'invalidTransition',
   },
   {
-    name: 'setPlanningGoal',
+    name: 'setGoal',
     state: 'today-morning',
-    body: () => ({ areaId: study, text: '型の変更点を読み終える' }),
-    status: 404,
-    code: 'notFound',
+    body: (r) => ({ ...running(r), areaId: research, text: '' }),
+    status: 422,
+    code: 'invalidInput',
+  },
+  {
+    name: 'setGoal',
+    state: 'today-morning',
+    // The Sprint before the running one is closed.
+    body: () => ({
+      sprintId: ids.sprint.previous,
+      areaId: research,
+      text: '先行研究を二本読む',
+    }),
+    status: 422,
+    code: 'invalidTransition',
   },
   {
     name: 'setGoalLink',
-    body: () => ({ sprintTaskId: missing('SprintTask'), goalLink: 'linked' }),
+    body: (r) => ({
+      ...planned(r),
+      sprintTaskId: missing('SprintTask'),
+      goalLink: 'linked',
+    }),
     status: 404,
     code: 'notFound',
   },
   {
-    name: 'setPlanningAvailableHours',
-    body: () => ({ hours: -1 }),
+    name: 'setAvailableHours',
+    body: (r) => ({ ...planned(r), hours: -1 }),
     status: 422,
     code: 'invalidInput',
+  },
+  {
+    name: 'setAvailableHours',
+    body: () => ({ sprintId: missing('Sprint'), hours: 20 }),
+    status: 404,
+    code: 'notFound',
   },
   {
     name: 'confirmSprint',
     state: 'today-morning',
-    body: () => ({ applyCriterion: true }),
-    status: 404,
-    code: 'notFound',
+    body: (r) => ({ ...running(r), applyCriterion: true }),
+    status: 422,
+    code: 'invalidTransition',
   },
   {
     name: 'confirmSprint',
     state: 'planning-check',
     prepare: [['completeTask', () => ({ taskId: paper })]],
-    body: () => ({ applyCriterion: true }),
+    body: (r) => ({ ...planned(r), applyCriterion: true }),
     status: 422,
     code: 'invalidTransition',
   },
   {
-    name: 'setRunningGoal',
+    name: 'undoCompleteSelection',
     state: 'today-morning',
-    body: () => ({ areaId: research, text: '' }),
-    status: 422,
-    code: 'invalidInput',
-  },
-  {
-    name: 'setRunningGoal',
-    body: () => ({ areaId: research, text: '先行研究を二本読む' }),
-    status: 404,
-    code: 'notFound',
-  },
-  {
-    name: 'setRunningAvailableHours',
-    state: 'today-morning',
-    body: () => ({ hours: -3 }),
-    status: 422,
-    code: 'invalidInput',
-  },
-  {
-    name: 'setRunningAvailableHours',
-    body: () => ({ hours: 20 }),
-    status: 404,
-    code: 'notFound',
-  },
-  {
-    name: 'undoPastDay',
-    state: 'today-morning',
-    // Deferred, not completed or skipped: there is nothing to take back.
-    body: (r) => ({ selectionId: selectionOf(r, paper, '2026-09-28').id }),
+    // Deferred, not completed: there is nothing to take back.
+    body: (r) => ({
+      ...running(r),
+      selectionId: selectionOf(r, paper, '2026-09-28').id,
+    }),
     status: 422,
     code: 'invalidTransition',
   },
   {
-    name: 'undoPastDay',
+    name: 'undoCompleteSelection',
     state: 'today-morning',
-    body: () => ({ selectionId: missing('DailySelection') }),
+    body: (r) => ({ ...running(r), selectionId: missing('DailySelection') }),
     status: 404,
     code: 'notFound',
   },
@@ -382,22 +439,21 @@ const failures: readonly Failure[] = [
 describe('the Sprint routes', () => {
   it('are each tested for a success and a refusal', () => {
     const answered = [
-      'chooseTasks',
-      'unchooseTasks',
-      'unchooseTasksByTask',
+      'addSprintTasks',
+      'removeSprintTasks',
       'setOccurrenceIncluded',
       'includeOccurrences',
       'excludeAllOccurrences',
       'createAndChooseTask',
-      'setPlanningGoal',
+      'setGoal',
       'setGoalLink',
-      'setPlanningAvailableHours',
+      'setAvailableHours',
       'confirmSprint',
-      'setRunningGoal',
-      'setRunningAvailableHours',
-      'undoPastDay',
+      'undoCompleteSelection',
     ].toSorted();
-    expect(successes.map((c) => c.name).toSorted()).toEqual(answered);
+    expect([...new Set(successes.map((c) => c.name))].toSorted()).toEqual(
+      answered,
+    );
     expect([...new Set(failures.map((c) => c.name))].toSorted()).toEqual(
       answered,
     );
@@ -406,7 +462,10 @@ describe('the Sprint routes', () => {
   it('answers 400 to an ID of another kind, writing nothing', async () => {
     const app = await setup('planning-pick');
     const before = await app.saved();
-    const response = await app.post('chooseTasks', { taskIds: [life] });
+    const response = await app.post('addSprintTasks', {
+      sprintId: draftOf(before.records).id,
+      taskIds: [life],
+    });
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ code: 'validationFailed' });
     expect(await app.saved()).toEqual(before);
@@ -422,8 +481,11 @@ describeOperations('the Sprint operations answer', {
 describe('the invariants, through the API', () => {
   it('invariant 33: an occurrence taken out stays as a record, and goes back in', async () => {
     const app = await setup('planning-pick');
-    const first = occurrencesOf((await app.saved()).records, reading)[0]!;
+    const saved = (await app.saved()).records;
+    const sprintId = draftOf(saved).id;
+    const first = occurrencesOf(saved, reading)[0]!;
     await app.run('setOccurrenceIncluded', {
+      sprintId,
       occurrenceId: first.id,
       included: false,
     });
@@ -435,6 +497,7 @@ describe('the invariants, through the API', () => {
     expect(sprintTaskOf(records, reading).occurrenceIds).toHaveLength(2);
 
     await app.run('setOccurrenceIncluded', {
+      sprintId,
       occurrenceId: first.id,
       included: true,
     });
@@ -447,11 +510,13 @@ describe('the invariants, through the API', () => {
 
   it('invariant 33: taking out the last occurrence takes the Task out of the week', async () => {
     const app = await setup('planning-pick');
+    const sprintId = draftOf((await app.saved()).records).id;
     for (const occurrence of occurrencesOf(
       (await app.saved()).records,
       reading,
     )) {
       const response = await app.post('setOccurrenceIncluded', {
+        sprintId,
         occurrenceId: occurrence.id,
         included: false,
       });
@@ -461,6 +526,7 @@ describe('the invariants, through the API', () => {
     expect(sprintTaskOf(records, reading)).toBeUndefined();
     // Putting one back makes the Task's SprintTask again.
     await app.run('setOccurrenceIncluded', {
+      sprintId,
       occurrenceId: occurrencesOf(records, reading)[0]!.id,
       included: true,
     });
@@ -477,20 +543,28 @@ describe('the invariants, through the API', () => {
       ),
     }));
     const before = await app.saved();
-    const refused = await app.post('confirmSprint', { applyCriterion: true });
+    const sprintId = draftOf(before.records).id;
+    const refused = await app.post('confirmSprint', {
+      sprintId,
+      applyCriterion: true,
+    });
     expect(refused.status).toBe(422);
     expect(await refused.json()).toMatchObject({ code: 'invalidTransition' });
     expect(await app.saved()).toEqual(before);
 
     // Planning goes on: the draft's hours change.
-    const edited = await app.post('setPlanningAvailableHours', { hours: 12 });
+    const edited = await app.post('setAvailableHours', { sprintId, hours: 12 });
     expect(edited.status).toBe(204);
     expect(draftOf((await app.saved()).records).availableHours).toBe(12);
   });
 
   it('invariants 16, 18: confirming fixes every planned value, and later edits leave them', async () => {
     const app = await setup('planning-check');
-    const response = await app.post('confirmSprint', { applyCriterion: true });
+    const sprintId = draftOf((await app.saved()).records).id;
+    const response = await app.post('confirmSprint', {
+      sprintId,
+      applyCriterion: true,
+    });
     expect(response.status).toBe(204);
     const confirmed = activeOf((await app.saved()).records);
     expect(confirmed.tasks.length).toBeGreaterThan(0);
@@ -512,11 +586,12 @@ describe('the invariants, through the API', () => {
     // the hours change; what was written down at confirm does not.
     await app.run('saveTask', { taskId: paper, update: {}, estimate: 9 });
     await app.run('renameArea', { areaId: research, name: '調査' });
-    await app.run('setRunningGoal', {
+    await app.run('setGoal', {
+      sprintId,
       areaId: research,
       text: '書き直した文',
     });
-    await app.run('setRunningAvailableHours', { hours: 5 });
+    await app.run('setAvailableHours', { sprintId, hours: 5 });
     const { records } = await app.saved();
     // The edits took effect…
     expect(task(records, paper).estimate).toMatchObject({ hours: 9 });
@@ -536,14 +611,20 @@ describe('the invariants, through the API', () => {
 
   it('invariant 36: confirming with an active criterion makes its CriterionUse, applied or not', async () => {
     const applied = await setup('planning-check');
-    await applied.run('confirmSprint', { applyCriterion: true });
+    await applied.run('confirmSprint', {
+      sprintId: draftOf((await applied.saved()).records).id,
+      applyCriterion: true,
+    });
     expect(activeOf((await applied.saved()).records).criterionUse).toEqual({
       criterionId: expect.any(String),
       appliedAtConfirm: true,
     });
 
     const left = await setup('planning-check');
-    await left.run('confirmSprint', { applyCriterion: false });
+    await left.run('confirmSprint', {
+      sprintId: draftOf((await left.saved()).records).id,
+      applyCriterion: false,
+    });
     expect(activeOf((await left.saved()).records).criterionUse).toEqual({
       criterionId: expect.any(String),
       appliedAtConfirm: false,
@@ -563,14 +644,18 @@ describe('the invariants, through the API', () => {
       .tasks.filter((t) => task(records, t.taskId).areaId === research)
       .map((t) => t.id);
     expect(sprintTaskIds.length).toBeGreaterThan(0);
-    await app.run('unchooseTasks', { sprintTaskIds });
+    const sprintId = draftOf(records).id;
+    await app.run('removeSprintTasks', { sprintId, sprintTaskIds });
     ({ records } = await app.saved());
     expect(
       draftOf(records).tasks.some(
         (t) => task(records, t.taskId).areaId === research,
       ),
     ).toBe(false);
-    const response = await app.post('confirmSprint', { applyCriterion: true });
+    const response = await app.post('confirmSprint', {
+      sprintId,
+      applyCriterion: true,
+    });
     expect(response.status).toBe(204);
     expect(activeOf((await app.saved()).records).criterionUse).toMatchObject({
       appliedAtConfirm: false,
@@ -579,24 +664,32 @@ describe('the invariants, through the API', () => {
 
   it('capacity: exceeding the available hours does not stop the confirm', async () => {
     const app = await setup('planning-check');
-    await app.run('setPlanningAvailableHours', { hours: 1 });
-    const planning = v.parse(
-      contract.vGetPlanningResponse,
-      await (await app.get('/planning')).json(),
-    ).view!;
-    expect(planning.totals.capacity?.status).toBe('exceeds');
-    const response = await app.post('confirmSprint', { applyCriterion: true });
+    const sprintId = draftOf((await app.saved()).records).id;
+    await app.run('setAvailableHours', { sprintId, hours: 1 });
+    const { view } = v.parse(
+      contract.vGetSprintResponse,
+      await (await app.get(`/sprints/${sprintId}`)).json(),
+    );
+    expect(view.state === 'planning' && view.plan.totals.capacity?.status).toBe(
+      'exceeds',
+    );
+    const response = await app.post('confirmSprint', {
+      sprintId,
+      applyCriterion: true,
+    });
     expect(response.status).toBe(204);
   });
 
   it('F16: a Goal written after confirm has no planned text, and is not removed', async () => {
     const app = await setup('today-morning');
-    await app.run('setRunningGoal', { areaId: study, text: '新しい目標' });
+    const sprintId = activeOf((await app.saved()).records).id;
+    await app.run('setGoal', { sprintId, areaId: study, text: '新しい目標' });
     const goal = activeOf((await app.saved()).records).goals.find(
       (g) => g.areaId === study,
     );
     expect(goal).toEqual({ areaId: study, text: '新しい目標' });
-    const removed = await app.post('setRunningGoal', {
+    const removed = await app.post('setGoal', {
+      sprintId,
       areaId: study,
       text: '',
     });
@@ -612,11 +705,12 @@ describe('the invariants, through the API', () => {
     const app = await setup('today-morning');
     // Brought up to the day first (#271), so that the system's entry in the
     // undo's revision is the undo's own.
-    await app.get('/overview');
+    await app.get('/me');
     const before = (await app.saved()).records;
     const selection = selectionOf(before, tax, '2026-09-29');
     expect(activeSprintTaskOf(before, tax).outcome).toBe('done');
-    const response = await app.post('undoPastDay', {
+    const response = await app.post('undoCompleteSelection', {
+      sprintId: activeOf(before).id,
       selectionId: selection.id,
     });
     expect(response.status).toBe(204);
@@ -635,16 +729,88 @@ describe('the invariants, through the API', () => {
     expect(actors).toContain('system');
   });
 
+  it('F33: undoing a past day’s skip puts the occurrence back, and the system closes the day', async () => {
+    // A recurring choice of a past day, skipped (the fixture has none).
+    let skipped = '';
+    const app = await setup('today-morning', (records) => {
+      const sprint = activeOf(records);
+      const selection = sprint.dailySelections.find(
+        (d) => d.occurrenceId !== undefined && d.date < clock.today,
+      )!;
+      skipped = selection.id;
+      return {
+        ...records,
+        sprints: records.sprints.map((s) =>
+          s.id !== sprint.id
+            ? s
+            : {
+                ...s,
+                dailySelections: s.dailySelections.map((d) =>
+                  d.id === selection.id
+                    ? {
+                        ...d,
+                        resolution: 'skipped' as const,
+                        resolvedAt: d.selectedAt,
+                      }
+                    : d,
+                ),
+              },
+        ),
+        occurrences: records.occurrences.map((o) =>
+          o.id === selection.occurrenceId
+            ? { ...o, state: 'skipped' as const }
+            : o,
+        ),
+      };
+    });
+    await app.get('/me');
+    const before = (await app.saved()).records;
+    const sprintId = activeOf(before).id;
+    // A skip is undone as a skip, not as a completion.
+    const asCompletion = await app.post('undoCompleteSelection', {
+      sprintId,
+      selectionId: skipped,
+    });
+    expect(asCompletion.status).toBe(422);
+    const response = await app.post('undoSkipSelection', {
+      sprintId,
+      selectionId: skipped,
+    });
+    expect(response.status).toBe(204);
+    const { records } = await app.saved();
+    const selection = activeOf(records).dailySelections.find(
+      (d) => d.id === skipped,
+    )!;
+    expect(selection.resolution).toBe('unresolved');
+    expect(
+      records.occurrences.find((o) => o.id === selection.occurrenceId)?.state,
+    ).not.toBe('skipped');
+  });
+
+  it('F33: a past day’s completion is not undone as a skip', async () => {
+    const app = await setup('today-morning');
+    await app.get('/me');
+    const before = (await app.saved()).records;
+    const response = await app.post('undoSkipSelection', {
+      sprintId: activeOf(before).id,
+      selectionId: selectionOf(before, tax, '2026-09-29').id,
+    });
+    expect(response.status).toBe(422);
+    expect(await response.json()).toMatchObject({ code: 'invalidTransition' });
+  });
+
   it('F9: a Task of a new Area chosen in Planning is in the Sprint’s Area names at confirm', async () => {
     const app = await setup('planning-check');
     const made = (await (
       await app.run('createArea', { name: '趣味' })
     ).json()) as { areaId: string };
+    const sprintId = draftOf((await app.saved()).records).id;
     await app.run('createAndChooseTask', {
+      sprintId,
       title: '写真を整理する',
       areaId: made.areaId,
     });
-    await app.run('confirmSprint', { applyCriterion: false });
+    await app.run('confirmSprint', { sprintId, applyCriterion: false });
     expect(
       activeOf((await app.saved()).records).areaSnapshot.map((a) => a.name),
     ).toEqual(['仕事', '研究', '学習', '生活', '趣味']);
@@ -655,133 +821,111 @@ describe('the Sprint reads', () => {
   /** What JSON makes of a value: `undefined` fields are gone. */
   const asJson = (value: unknown) => JSON.parse(JSON.stringify(value));
 
-  async function readOn(state: Parameters<typeof setup>[0], path: string) {
+  async function readOn(
+    state: Parameters<typeof setup>[0],
+    path: (records: Records) => string,
+  ) {
     const app = await setup(state);
-    const response = await app.get(path);
-    // The records as the read left them, brought up to the clock's day (#271).
+    // Brought up to the clock's day first (#271), so that the Sprints are
+    // as the read finds them.
+    await app.get('/me');
+    const response = await app.get(path((await app.saved()).records));
     const { records } = await app.saved();
     return { response, records, json: await response.json() };
   }
 
-  describe('getPlanning', () => {
+  describe('getSprint', () => {
     it.each([
-      ['applying the criterion', '?applyCriterion=true', true],
-      ['not applying it', '?applyCriterion=false', false],
+      ['applying the criterion', '?apply-criterion=true', true],
+      ['not applying it', '?apply-criterion=false', false],
       ['by default', '', false],
-    ])('answers planningData %s', async (_, query, applyCriterion) => {
+    ])(
+      'answers a Sprint being planned with its plan %s',
+      async (_, query, applyCriterion) => {
+        const { response, records, json } = await readOn(
+          'planning-check',
+          (r) => `/sprints/${draftOf(r).id}${query}`,
+        );
+        expect(response.status).toBe(200);
+        const body = v.parse(contract.vGetSprintResponse, json);
+        const sprintId = draftOf(records).id;
+        expect(body).toEqual({
+          clock,
+          view: asJson(
+            sprintView(records, clock, sprintId, { applyCriterion }),
+          ),
+        });
+        expect(
+          body.view.state === 'planning' && body.view.plan.criterion?.applied,
+        ).toBe(applyCriterion);
+        // The Tasks to choose are not part of it (#295 R2).
+        expect(
+          (json as { view: { plan: object } }).view.plan,
+        ).not.toHaveProperty('candidates');
+      },
+    );
+
+    it.each([
+      ['a closed Sprint', ids.sprint.previous],
+      ['the running Sprint', ids.sprint.current],
+    ])('answers %s with how it went', async (_, sprintId) => {
       const { response, records, json } = await readOn(
-        'planning-check',
-        `/planning${query}`,
+        'today-morning',
+        () => `/sprints/${sprintId}`,
       );
       expect(response.status).toBe(200);
-      const body = v.parse(contract.vGetPlanningResponse, json);
+      const body = v.parse(contract.vGetSprintResponse, json);
       expect(body).toEqual({
         clock,
-        view: asJson(planningData(records, clock, { applyCriterion })),
+        view: asJson(
+          sprintView(records, clock, sprintId, { applyCriterion: false }),
+        ),
       });
-      expect(body.view?.criterion?.applied).toBe(applyCriterion);
+      expect(
+        body.view.state === 'planning'
+          ? undefined
+          : body.view.running.sprint.id,
+      ).toBe(sprintId);
     });
 
     it('writes nothing, whatever it is asked', async () => {
       const app = await setup('planning-check');
-      // The first read brings the records up to the day (#271); the asked
-      // read after it writes nothing.
-      await app.get('/overview');
+      await app.get('/me');
       const before = await app.saved();
-      await app.get('/planning?applyCriterion=true');
+      await app.get(
+        `/sprints/${draftOf(before.records).id}?apply-criterion=true`,
+      );
       expect(await app.saved()).toEqual(before);
-    });
-
-    it('answers null when no Sprint is being planned', async () => {
-      const { response, json } = await readOn('today-morning', '/planning');
-      expect(response.status).toBe(200);
-      expect(json).toEqual({ clock, view: null });
-    });
-
-    it('shows what an operation just changed', async () => {
-      const app = await setup('planning-pick');
-      await app.run('chooseTasks', { taskIds: [tax] });
-      const body = v.parse(
-        contract.vGetPlanningResponse,
-        await (await app.get('/planning')).json(),
-      );
-      expect(body.view?.chosenCount).toBe(5);
-    });
-
-    it('answers 400 to a value that is not a boolean', async () => {
-      const { response, json } = await readOn(
-        'planning-check',
-        '/planning?applyCriterion=yes',
-      );
-      expect(response.status).toBe(400);
-      expect(json).toMatchObject({ code: 'validationFailed' });
-    });
-  });
-
-  describe('getRunning', () => {
-    it('answers runningData of the running Sprint', async () => {
-      const { response, records, json } = await readOn(
-        'today-morning',
-        '/running',
-      );
-      expect(response.status).toBe(200);
-      const body = v.parse(contract.vGetRunningResponse, json);
-      expect(body).toEqual({
-        clock,
-        view: asJson(runningData(records, clock)),
-      });
-      expect(body.view?.sprint.state).toBe('active');
-    });
-
-    it.each([
-      ['a closed Sprint', 1, ids.sprint.previous],
-      ['the running Sprint', 2, ids.sprint.current],
-    ])(
-      'answers runningData of %s by its number',
-      async (_, number, sprintId) => {
-        const { response, records, json } = await readOn(
-          'today-morning',
-          `/running?sprint=${number}`,
-        );
-        expect(response.status).toBe(200);
-        const body = v.parse(contract.vGetRunningResponse, json);
-        expect(body).toEqual({
-          clock,
-          view: asJson(runningData(records, clock, sprintId)),
-        });
-        expect(body.view?.sprint.id).toBe(sprintId);
-      },
-    );
-
-    it.each([
-      ['a number with no Sprint', 'today-morning', '/running?sprint=9'],
-      [
-        'the next week, before its Planning',
-        'today-morning',
-        '/running?sprint=3',
-      ],
-      ['a Sprint still being planned', 'planning-pick', '/running?sprint=2'],
-      ['no running Sprint', 'planning-pick', '/running'],
-    ] as const)('answers null for %s', async (_, state, path) => {
-      const { response, json } = await readOn(state, path);
-      expect(response.status).toBe(200);
-      expect(json).toEqual({ clock, view: null });
     });
 
     it('shows what an operation just changed', async () => {
       const app = await setup('today-morning');
-      await app.run('setRunningAvailableHours', { hours: 20 });
-      const body = v.parse(
-        contract.vGetRunningResponse,
-        await (await app.get('/running')).json(),
+      const sprintId = activeOf((await app.saved()).records).id;
+      await app.run('setAvailableHours', { sprintId, hours: 20 });
+      const { view } = v.parse(
+        contract.vGetSprintResponse,
+        await (await app.get(`/sprints/${sprintId}`)).json(),
       );
-      expect(body.view?.sprint.availableHours).toBe(20);
+      expect(
+        view.state === 'active' && view.running.sprint.availableHours,
+      ).toBe(20);
+    });
+
+    it('answers 404 for a Sprint the person does not have', async () => {
+      const { response, json } = await readOn(
+        'today-morning',
+        () => `/sprints/${missing('Sprint')}`,
+      );
+      expect(response.status).toBe(404);
+      expect(json).toMatchObject({ code: 'notFound' });
     });
 
     it.each([
-      ['a number below 1', '/running?sprint=0'],
-      ['a fraction', '/running?sprint=1.5'],
-      ['text', '/running?sprint=two'],
+      ['an ID of another kind', () => `/sprints/${ids.task.paper}`],
+      [
+        'a value that is not a boolean',
+        (r: Records) => `/sprints/${activeOf(r).id}?apply-criterion=yes`,
+      ],
     ])('answers 400 to %s', async (_, path) => {
       const { response, json } = await readOn('today-morning', path);
       expect(response.status).toBe(400);
@@ -789,56 +933,92 @@ describe('the Sprint reads', () => {
     });
   });
 
-  describe('getSprintChoice', () => {
-    it.each([
-      ['planning-pick', 'sprint', undefined],
-      ['planning-pick', 'sprint', 1],
-      ['today-morning', 'sprint', undefined],
-      ['today-morning', 'sprint', 3],
-      ['today-morning', 'retro', undefined],
-      ['retro-start', 'retro', undefined],
-      ['retro-start', 'sprint', undefined],
-      ['planning-pick', 'sprint', 9],
-    ] as const)(
-      'answers sprintChoice (%s, %s, sprint %s)',
-      async (state, screen, number) => {
-        const query =
-          number === undefined
-            ? `screen=${screen}`
-            : `screen=${screen}&sprint=${number}`;
-        const { response, records, json } = await readOn(
-          state,
-          `/sprint-choice?${query}`,
-        );
-        expect(response.status).toBe(200);
-        const body = v.parse(contract.vGetSprintChoiceResponse, json);
-        const expected =
-          screen === 'sprint'
-            ? sprintChoice(records, clock, 'sprint', number)
-            : sprintChoice(records, clock, 'retro', number);
-        expect(body).toEqual({ clock, view: asJson(expected ?? null) });
-      },
-    );
-
-    it('opens the running Sprint, with the one before and after it', async () => {
-      const { json } = await readOn(
-        'today-morning',
-        '/sprint-choice?screen=sprint',
+  describe('listSprintCandidates', () => {
+    it('answers the Tasks a Sprint being planned can choose', async () => {
+      const { response, records, json } = await readOn(
+        'planning-pick',
+        (r) => `/sprints/${draftOf(r).id}/candidates`,
       );
-      const { view } = v.parse(contract.vGetSprintChoiceResponse, json);
-      expect(view?.current.number).toBe(2);
-      expect(view?.previous?.number).toBe(1);
-      expect(view?.next?.number).toBe(3);
+      expect(response.status).toBe(200);
+      const body = v.parse(contract.vListSprintCandidatesResponse, json);
+      expect(body).toEqual({
+        clock,
+        view: asJson(sprintCandidates(records, clock, draftOf(records).id)),
+      });
+    });
+
+    it('shows what an operation just changed', async () => {
+      const app = await setup('planning-pick');
+      const sprintId = draftOf((await app.saved()).records).id;
+      const read = async () =>
+        v.parse(
+          contract.vListSprintCandidatesResponse,
+          await (await app.get(`/sprints/${sprintId}/candidates`)).json(),
+        ).view!;
+      const rows = (view: Awaited<ReturnType<typeof read>>) => [
+        ...view.overdue,
+        ...view.dueSoon,
+        ...view.others,
+        ...view.carriedOver,
+      ];
+      expect(
+        rows(await read()).find((row) => row.task.id === tax)?.chosen,
+      ).toBeUndefined();
+      await app.run('addSprintTasks', { sprintId, taskIds: [tax] });
+      expect(
+        rows(await read()).find((row) => row.task.id === tax)?.chosen,
+      ).toBeDefined();
+    });
+
+    it('answers null for a Sprint not being planned', async () => {
+      const { response, json } = await readOn(
+        'today-morning',
+        (r) => `/sprints/${activeOf(r).id}/candidates`,
+      );
+      expect(response.status).toBe(200);
+      expect(json).toEqual({ clock, view: null });
+    });
+  });
+
+  describe('listSprints', () => {
+    it("answers the person's Sprints, and the one with a number", async () => {
+      const all = await readOn('today-morning', () => '/sprints');
+      expect(all.response.status).toBe(200);
+      expect(v.parse(contract.vListSprintsResponse, all.json)).toEqual({
+        clock,
+        view: asJson(sprintList(all.records, clock)),
+      });
+      const second = await readOn('today-morning', () => '/sprints?number=2');
+      const { view } = v.parse(contract.vListSprintsResponse, second.json);
+      expect(view.map((s) => [s.id, s.number, s.state])).toEqual([
+        [ids.sprint.current, 2, 'active'],
+      ]);
+      const none = await readOn('today-morning', () => '/sprints?number=9');
+      expect(none.json).toEqual({ clock, view: [] });
     });
 
     it.each([
-      ['no screen', '/sprint-choice'],
-      ['a screen that does not exist', '/sprint-choice?screen=today'],
-      ['a number below 1', '/sprint-choice?screen=sprint&sprint=0'],
+      ['a number below 1', '/sprints?number=0'],
+      ['a fraction', '/sprints?number=1.5'],
+      ['text', '/sprints?number=two'],
     ])('answers 400 to %s', async (_, path) => {
-      const { response, json } = await readOn('today-morning', path);
+      const { response, json } = await readOn('today-morning', () => path);
       expect(response.status).toBe(400);
       expect(json).toMatchObject({ code: 'validationFailed' });
+    });
+  });
+
+  describe('getMe', () => {
+    it('answers the clock and the Sprints the person has now (#295 R1)', async () => {
+      const { response, records, json } = await readOn(
+        'planning-pick',
+        () => '/me',
+      );
+      expect(response.status).toBe(200);
+      const body = v.parse(contract.vGetMeResponse, json);
+      expect(body.clock).toEqual(clock);
+      expect(body.sprints).toEqual(asJson(currentSprints(records, clock)));
+      expect(body.sprints?.planning?.id).toBe(draftOf(records).id);
     });
   });
 });

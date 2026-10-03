@@ -27,7 +27,7 @@ function ApiProvider({
 
 /**
  * The client to pass to the generated functions and options:
- * `getOverviewOptions({ client })`, `createAreaMutation({ client })`.
+ * `getMeOptions({ client })`; operations go through `useOperation`.
  */
 function useApiClient(): Client {
   const client = use(ClientContext);

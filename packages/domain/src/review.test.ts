@@ -11,10 +11,11 @@ import {
   draftCriterion,
   dropCriterionDraft,
   enterReview,
+  pinFact,
   previousImprovement,
   setImprovement,
   setReflection,
-  togglePin,
+  unpinFact,
 } from './review';
 import { id } from './shared/ids';
 import { instant, localDate } from './shared/time';
@@ -264,12 +265,32 @@ describe('Retro', () => {
     });
   });
 
-  it('pins facts and toggles them off', () => {
+  it('pins facts and unpins them; the same request again changes nothing', () => {
     const pin = { kind: 'sprintTask' as const, id: 'st-task-open' };
-    let sprint = unwrap(togglePin(reviewed().sprint, { pin }, ctx));
+    const pinned = pinFact(reviewed().sprint, { pin }, ctx);
+    let sprint = unwrap(pinned);
     expect(sprint.retro?.pins).toEqual([pin]);
-    sprint = unwrap(togglePin(sprint, { pin }, ctx));
+    expect(pinned.ok && pinned.value.activities.map((a) => a.kind)).toEqual([
+      'retroPinned',
+    ]);
+    const again = pinFact(sprint, { pin }, ctx);
+    expect(again.ok && again.value.activities).toEqual([]);
+    expect(unwrap(again).retro?.pins).toEqual([pin]);
+
+    const unpinned = unpinFact(sprint, { pin }, ctx);
+    sprint = unwrap(unpinned);
     expect(sprint.retro?.pins).toEqual([]);
+    expect(unpinned.ok && unpinned.value.activities.map((a) => a.kind)).toEqual(
+      ['retroUnpinned'],
+    );
+    const none = unpinFact(sprint, { pin }, ctx);
+    expect(none.ok && none.value.activities).toEqual([]);
+  });
+
+  it('pins only in a Retro', () => {
+    const pin = { kind: 'availableHours' as const };
+    const result = pinFact(active(), { pin }, ctx);
+    expect(!result.ok && result.error.code).toBe('invalidTransition');
   });
 
   it('invariant 38: one improvement text per Retro; a criterion is optional and separate', () => {

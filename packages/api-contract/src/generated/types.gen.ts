@@ -26,22 +26,6 @@ export type UserSettings = {
 };
 
 /**
- * No valid session.
- */
-export type UnauthenticatedError = {
-    code: 'unauthenticated';
-    message: string;
-};
-
-/**
- * An unexpected failure on the server.
- */
-export type InternalError = {
-    code: 'internalError';
-    message: string;
-};
-
-/**
  * A calendar day in the person's time zone.
  */
 export type LocalDate = string;
@@ -59,26 +43,49 @@ export type Clock = {
     now: Instant;
 };
 
+export type SprintId = string;
+
 export type SprintState = 'planning' | 'active' | 'review' | 'closed';
 
-export type SprintSummary = {
+/**
+ * The week a Sprint is in, seen from today.
+ */
+export type SprintWeek = 'previous' | 'current' | 'next';
+
+/**
+ * A Sprint as a list or a reference shows it. Its number (「Sprint 14」, F25) is an attribute, not its key: the key is its ID (#295).
+ */
+export type SprintItem = {
+    id: SprintId;
+    number: number;
     start: LocalDate;
     end: LocalDate;
     state: SprintState;
-    number: number;
+    week?: SprintWeek;
 };
 
 /**
- * What every screen's frame shows (the navigation and the clock).
+ * The Sprints the person has now, by what each is (a week running or in Review while the next is planned), and where the next Planning starts.
  */
-export type AppOverview = {
-    today: LocalDate;
-    now: Instant;
-    timeZone: TimeZone;
-    backlogCount: number;
-    activeSprint?: SprintSummary;
-    reviewSprint?: SprintSummary;
-    planningSprint?: SprintSummary;
+export type CurrentSprints = {
+    active?: SprintItem;
+    review?: SprintItem;
+    planning?: SprintItem;
+    /**
+     * The next week not confirmed yet, with its number (F25).
+     */
+    next: {
+        start: LocalDate;
+        number: number;
+    };
+};
+
+/**
+ * No valid session.
+ */
+export type UnauthenticatedError = {
+    code: 'unauthenticated';
+    message: string;
 };
 
 /**
@@ -90,10 +97,10 @@ export type RevisionConflictError = {
 };
 
 /**
- * The person has no settings yet (time zone, start of the week), so there is no 「今日」 to run an operation or a read with. Making the settings comes first.
+ * An unexpected failure on the server.
  */
-export type UserNotSetUpError = {
-    code: 'userNotSetUp';
+export type InternalError = {
+    code: 'internalError';
     message: string;
 };
 
@@ -114,31 +121,76 @@ export type EditableArea = {
     archived: boolean;
 };
 
-export type BacklogSlice = 'dueSoon' | 'overdue' | 'carriedOver' | 'recurring' | 'noArea';
+/**
+ * The person has no settings yet (time zone, start of the week), so there is no 「今日」 to run an operation or a read with. Making the settings comes first.
+ */
+export type UserNotSetUpError = {
+    code: 'userNotSetUp';
+    message: string;
+};
+
+/**
+ * The request does not match the contract.
+ */
+export type ValidationError = {
+    code: 'validationFailed';
+    message: string;
+};
+
+/**
+ * A write whose Origin is not the app's own.
+ */
+export type ForbiddenOriginError = {
+    code: 'forbiddenOrigin';
+    message: string;
+};
+
+/**
+ * A record the request names is not among the person's records.
+ */
+export type NotFoundError = {
+    code: 'notFound';
+    message: string;
+};
+
+/**
+ * The request's body is larger than the API takes (64 KiB).
+ */
+export type PayloadTooLargeError = {
+    code: 'payloadTooLarge';
+    message: string;
+};
+
+/**
+ * The domain refused the operation (packages/domain DomainError): a value its rules do not accept, a transition the record's state does not allow, or completing a recurring Task.
+ */
+export type RuleViolationError = {
+    code: 'invalidInput' | 'invalidTransition' | 'recurringTaskCannotComplete';
+    message: string;
+};
 
 export type TaskId = string;
 
 export type TaskPriority = 'high' | 'normal' | 'low';
-
-export type TaskLifecycle = 'active' | 'completed' | 'archived';
 
 /**
  * Whether the Task's time is its own Estimate or its Subtasks' sum.
  */
 export type TimeBasis = 'task' | 'subtasks';
 
-export type SubtaskId = string;
-
-export type Subtask = {
-    id: SubtaskId;
-    title: string;
-    /**
-     * Hours.
-     */
-    estimate?: number;
-    done: boolean;
-    doneAt?: Instant;
+export type RecurrencePattern = {
+    freq: 'daily';
+} | {
+    freq: 'weekdays';
+} | {
+    freq: 'weekly';
+    daysOfWeek: Array<DayOfWeek>;
+} | {
+    freq: 'monthly';
+    dayOfMonth: number;
 };
+
+export type SubtaskId = string;
 
 export type EstimateSuggestionId = string;
 
@@ -162,6 +214,21 @@ export type Estimate = {
     hours: number;
     setAt: Instant;
     source: EstimateSource;
+};
+
+export type BacklogSlice = 'dueSoon' | 'overdue' | 'carriedOver' | 'recurring' | 'noArea';
+
+export type TaskLifecycle = 'active' | 'completed' | 'archived';
+
+export type Subtask = {
+    id: SubtaskId;
+    title: string;
+    /**
+     * Hours.
+     */
+    estimate?: number;
+    done: boolean;
+    doneAt?: Instant;
 };
 
 export type SuggestionState = 'presented' | 'adopted' | 'rejected' | 'replaced';
@@ -209,18 +276,6 @@ export type Task = {
 export type CarryCount = {
     count: number;
     fromSprint: number;
-};
-
-export type RecurrencePattern = {
-    freq: 'daily';
-} | {
-    freq: 'weekdays';
-} | {
-    freq: 'weekly';
-    daysOfWeek: Array<DayOfWeek>;
-} | {
-    freq: 'monthly';
-    dayOfMonth: number;
 };
 
 export type NextOccurrence = {
@@ -369,16 +424,6 @@ export type BacklogData = {
         [key: string]: BacklogItem;
     };
 };
-
-/**
- * The request does not match the contract.
- */
-export type ValidationError = {
-    code: 'validationFailed';
-    message: string;
-};
-
-export type SprintId = string;
 
 export type SelfAssessment = 'achieved' | 'partly' | 'notAchieved' | 'notJudged';
 
@@ -530,9 +575,96 @@ export type Sprint = {
 };
 
 /**
- * The week a Sprint is in, seen from today.
+ * The day's place in its Sprint (「3日目 / 7日」).
  */
-export type SprintWeek = 'previous' | 'current' | 'next';
+export type DayOfSprint = {
+    index: number;
+    count: number;
+};
+
+export type WeekProgress = {
+    done: number;
+    total: number;
+};
+
+export type TodayRemaining = {
+    count: number;
+    lo: number;
+    hi: number;
+    unestimated: number;
+};
+
+/**
+ * An Area as a read shows it.
+ */
+export type AreaLabel = {
+    id: AreaId;
+    name: string;
+    color: AreaColor;
+};
+
+export type OccurrenceState = 'pending' | 'excluded' | 'done' | 'skipped' | 'missed';
+
+export type Occurrence = {
+    id: OccurrenceId;
+    taskId: TaskId;
+    ruleId: RecurrenceRuleId;
+    scheduledDate: LocalDate;
+    ruleVersion: number;
+    materializedAt: Instant;
+    state: OccurrenceState;
+    stateChangedAt: Instant;
+};
+
+export type TodayRow = {
+    sprintTask: SprintTask;
+    task: Task;
+    area?: AreaLabel;
+    occurrence?: Occurrence;
+    value: PlanningValue;
+    streak: number;
+    removedToday?: DailySelectionId;
+    selection: DailySelection;
+    actualHours: number;
+};
+
+export type TodayItem = {
+    sprintTask: SprintTask;
+    task: Task;
+    area?: AreaLabel;
+    occurrence?: Occurrence;
+    value: PlanningValue;
+    /**
+     * 連続見送り.
+     */
+    streak: number;
+    removedToday?: DailySelectionId;
+};
+
+export type TodayData = {
+    sprint: Sprint;
+    number: number;
+    today: LocalDate;
+    day: DayOfSprint;
+    lastDay: boolean;
+    timeZone: TimeZone;
+    progress: WeekProgress;
+    remaining: TodayRemaining;
+    goals: Array<{
+        area: AreaLabel;
+        text: string;
+    }>;
+    rows: Array<TodayRow>;
+    closed: Array<TodayRow>;
+    /**
+     * 昨日の続き (F6).
+     */
+    continuation: Array<TodayItem>;
+    rest: Array<TodayItem>;
+    plan: Array<TodayItem>;
+    interrupts: Array<InterruptNote>;
+    areas: Array<AreaLabel>;
+};
 
 /**
  * A Sprint a screen can open, or the next week before its Planning.
@@ -551,62 +683,56 @@ export type SprintRef = {
     week?: SprintWeek;
 };
 
-/**
- * The Sprint a screen opens, and those before and after it.
- */
-export type SprintChoice = {
-    current: SprintRef;
-    previous?: SprintRef;
-    next?: SprintRef;
-};
-
-/**
- * An Area as a read shows it.
- */
-export type AreaLabel = {
-    id: AreaId;
-    name: string;
-    color: AreaColor;
-};
-
-export type CandidateRow = {
-    task: Task;
-    /**
-     * The draft SprintTask when the Task is chosen for this week.
-     */
-    chosen?: SprintTask;
-    /**
-     * 持ち越し, the previous Sprint's carried-over SprintTask.
-     */
-    carriedFrom?: SprintTask;
+export type DayRecord = {
+    selection: DailySelection;
+    title: string;
     area?: AreaLabel;
-    value: PlanningValue;
-    carry?: CarryCount;
+    occurrence?: Occurrence;
+    actualHours: number;
+};
+
+export type DayData = {
+    date: LocalDate;
+    today: LocalDate;
+    when: 'past' | 'future';
+    timeZone: TimeZone;
     /**
-     * In the running Sprint (when planning next week).
+     * The Sprint whose period has the day, and the day's place.
      */
-    running?: {
-        sprint: number;
+    within?: {
+        number: number;
+        start: LocalDate;
+        end: LocalDate;
+        sprint?: Sprint;
+        week?: SprintWeek;
+        day: DayOfSprint;
     };
+    /**
+     * With no Sprint for the day, the next one after it.
+     */
+    next?: SprintRef;
+    records: Array<DayRecord>;
+    interrupts: Array<InterruptNote>;
+    occurrences: Array<{
+        occurrence: Occurrence;
+        title: string;
+        area?: AreaLabel;
+    }>;
+    due: Array<{
+        task: Task;
+        area?: AreaLabel;
+    }>;
 };
 
-export type OccurrenceState = 'pending' | 'excluded' | 'done' | 'skipped' | 'missed';
-
-export type Occurrence = {
-    id: OccurrenceId;
-    taskId: TaskId;
-    ruleId: RecurrenceRuleId;
-    scheduledDate: LocalDate;
-    ruleVersion: number;
-    materializedAt: Instant;
-    state: OccurrenceState;
-    stateChangedAt: Instant;
-};
-
-export type RecurringCandidate = {
-    task: Task;
-    occurrences: Array<Occurrence>;
-    area?: AreaLabel;
+/**
+ * A day (#295 R3), today, past or still to come: today's choices on the running Sprint (`today` is left out when none runs), or another day's records or occurrences.
+ */
+export type DayView = {
+    kind: 'today';
+    today?: TodayData;
+} | {
+    kind: 'past' | 'future';
+    day: DayData;
 };
 
 export type Range = {
@@ -722,7 +848,10 @@ export type CriterionEffect = {
  */
 export type PlanningBlocker = 'previousRetroOpen' | 'inactiveTasks';
 
-export type PlanningData = {
+/**
+ * A Sprint being planned: its plan (#295 R2). The Tasks it can choose are a resource of their own (SprintCandidates).
+ */
+export type SprintPlan = {
     sprint: Sprint;
     number: number;
     week?: SprintWeek;
@@ -730,14 +859,6 @@ export type PlanningData = {
     timeZone: TimeZone;
     areas: Array<AreaLabel>;
     addAreas: Array<AreaLabel>;
-    candidates: {
-        carriedOver: Array<CandidateRow>;
-        overdue: Array<CandidateRow>;
-        dueSoon: Array<CandidateRow>;
-        dueSoonUntil: LocalDate;
-        recurring: Array<RecurringCandidate>;
-        others: Array<CandidateRow>;
-    };
     plan: Array<AreaPlan>;
     chosenCount: number;
     totals: SprintTotals;
@@ -760,14 +881,6 @@ export type PlanningData = {
         end: LocalDate;
         state: SprintState;
     };
-};
-
-/**
- * The day's place in its Sprint (「3日目 / 7日」).
- */
-export type DayOfSprint = {
-    index: number;
-    count: number;
 };
 
 /**
@@ -803,11 +916,6 @@ export type RunningAreaPlan = {
 export type AvailableHours = {
     planned?: number;
     current?: number;
-};
-
-export type WeekProgress = {
-    done: number;
-    total: number;
 };
 
 export type PastDayRecord = {
@@ -851,102 +959,54 @@ export type RunningData = {
     };
 };
 
-export type TodayRemaining = {
-    count: number;
-    lo: number;
-    hi: number;
-    unestimated: number;
+/**
+ * A Sprint (#295 R2): while planned, its plan; once confirmed, how it went.
+ */
+export type SprintView = {
+    state: 'planning';
+    plan: SprintPlan;
+} | {
+    state: 'active' | 'review' | 'closed';
+    running: RunningData;
 };
 
-export type TodayRow = {
-    sprintTask: SprintTask;
+export type CandidateRow = {
     task: Task;
+    /**
+     * The draft SprintTask when the Task is chosen for this week.
+     */
+    chosen?: SprintTask;
+    /**
+     * 持ち越し, the previous Sprint's carried-over SprintTask.
+     */
+    carriedFrom?: SprintTask;
     area?: AreaLabel;
-    occurrence?: Occurrence;
     value: PlanningValue;
-    streak: number;
-    removedToday?: DailySelectionId;
-    selection: DailySelection;
-    actualHours: number;
-};
-
-export type TodayItem = {
-    sprintTask: SprintTask;
-    task: Task;
-    area?: AreaLabel;
-    occurrence?: Occurrence;
-    value: PlanningValue;
+    carry?: CarryCount;
     /**
-     * 連続見送り.
+     * In the running Sprint (when planning next week).
      */
-    streak: number;
-    removedToday?: DailySelectionId;
-};
-
-export type TodayData = {
-    sprint: Sprint;
-    number: number;
-    today: LocalDate;
-    day: DayOfSprint;
-    lastDay: boolean;
-    timeZone: TimeZone;
-    progress: WeekProgress;
-    remaining: TodayRemaining;
-    goals: Array<{
-        area: AreaLabel;
-        text: string;
-    }>;
-    rows: Array<TodayRow>;
-    closed: Array<TodayRow>;
-    /**
-     * 昨日の続き (F6).
-     */
-    continuation: Array<TodayItem>;
-    rest: Array<TodayItem>;
-    plan: Array<TodayItem>;
-    interrupts: Array<InterruptNote>;
-    areas: Array<AreaLabel>;
-};
-
-export type DayRecord = {
-    selection: DailySelection;
-    title: string;
-    area?: AreaLabel;
-    occurrence?: Occurrence;
-    actualHours: number;
-};
-
-export type DayData = {
-    date: LocalDate;
-    today: LocalDate;
-    when: 'past' | 'future';
-    timeZone: TimeZone;
-    /**
-     * The Sprint whose period has the day, and the day's place.
-     */
-    within?: {
-        number: number;
-        start: LocalDate;
-        end: LocalDate;
-        sprint?: Sprint;
-        week?: SprintWeek;
-        day: DayOfSprint;
+    running?: {
+        sprint: number;
     };
-    /**
-     * With no Sprint for the day, the next one after it.
-     */
-    next?: SprintRef;
-    records: Array<DayRecord>;
-    interrupts: Array<InterruptNote>;
-    occurrences: Array<{
-        occurrence: Occurrence;
-        title: string;
-        area?: AreaLabel;
-    }>;
-    due: Array<{
-        task: Task;
-        area?: AreaLabel;
-    }>;
+};
+
+export type RecurringCandidate = {
+    task: Task;
+    occurrences: Array<Occurrence>;
+    area?: AreaLabel;
+};
+
+/**
+ * The Tasks a Sprint being planned can choose, in groups (選ぶ).
+ */
+export type SprintCandidates = {
+    carriedOver: Array<CandidateRow>;
+    overdue: Array<CandidateRow>;
+    dueSoon: Array<CandidateRow>;
+    dueSoonUntil: LocalDate;
+    recurring: Array<RecurringCandidate>;
+    others: Array<CandidateRow>;
 };
 
 export type GoalFact = {
@@ -1131,59 +1191,6 @@ export type RetroData = {
     carryOverTasks: Array<CarryOverTask>;
 };
 
-export type NextPlanning = {
-    /**
-     * The Sprint being planned, if Planning has started.
-     */
-    planning?: SprintId;
-    start: LocalDate;
-    number: number;
-};
-
-/**
- * A write whose Origin is not the app's own.
- */
-export type ForbiddenOriginError = {
-    code: 'forbiddenOrigin';
-    message: string;
-};
-
-/**
- * A record the request names is not among the person's records.
- */
-export type NotFoundError = {
-    code: 'notFound';
-    message: string;
-};
-
-/**
- * The request's body is larger than the API takes (64 KiB).
- */
-export type PayloadTooLargeError = {
-    code: 'payloadTooLarge';
-    message: string;
-};
-
-/**
- * The domain refused the operation (packages/domain DomainError): a value its rules do not accept, a transition the record's state does not allow, or completing a recurring Task.
- */
-export type RuleViolationError = {
-    code: 'invalidInput' | 'invalidTransition' | 'recurringTaskCannotComplete';
-    message: string;
-};
-
-/**
- * The attributes to change; a property left out stays. `null` clears an optional attribute. Only in requests, so unknown keys are refused.
- */
-export type TaskAttributeUpdate = {
-    title?: string;
-    description?: string;
-    areaId?: AreaId | null;
-    due?: LocalDate | null;
-    priority?: TaskPriority;
-    timeBasis?: TimeBasis;
-};
-
 export type GetMeData = {
     body?: never;
     path?: never;
@@ -1196,6 +1203,10 @@ export type GetMeErrors = {
      * No valid session.
      */
     401: UnauthenticatedError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
     /**
      * An unexpected failure on the server.
      */
@@ -1211,50 +1222,12 @@ export type GetMeResponses = {
     200: {
         userId: UserId;
         settings: UserSettings | null;
+        clock?: Clock;
+        sprints?: CurrentSprints;
     };
 };
 
 export type GetMeResponse = GetMeResponses[keyof GetMeResponses];
-
-export type GetOverviewData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/overview';
-};
-
-export type GetOverviewErrors = {
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The person has no settings yet.
-     */
-    422: UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type GetOverviewError = GetOverviewErrors[keyof GetOverviewErrors];
-
-export type GetOverviewResponses = {
-    /**
-     * The overview.
-     */
-    200: {
-        clock: Clock;
-        view: AppOverview;
-    };
-};
-
-export type GetOverviewResponse = GetOverviewResponses[keyof GetOverviewResponses];
 
 export type ListAreasData = {
     body?: never;
@@ -1286,7 +1259,7 @@ export type ListAreasError = ListAreasErrors[keyof ListAreasErrors];
 
 export type ListAreasResponses = {
     /**
-     * The Areas.
+     * The read.
      */
     200: {
         clock: Clock;
@@ -1296,383 +1269,13 @@ export type ListAreasResponses = {
 
 export type ListAreasResponse = ListAreasResponses[keyof ListAreasResponses];
 
-export type GetBacklogData = {
-    body?: never;
-    path?: never;
-    query?: {
-        view?: BacklogSlice;
-        area?: AreaId;
-    };
-    url: '/backlog';
-};
-
-export type GetBacklogErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The person has no settings yet.
-     */
-    422: UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type GetBacklogError = GetBacklogErrors[keyof GetBacklogErrors];
-
-export type GetBacklogResponses = {
-    /**
-     * The Backlog.
-     */
-    200: {
-        clock: Clock;
-        view: BacklogData;
-    };
-};
-
-export type GetBacklogResponse = GetBacklogResponses[keyof GetBacklogResponses];
-
-export type GetSprintChoiceData = {
-    body?: never;
-    path?: never;
-    query: {
-        screen: 'sprint' | 'retro';
-        /**
-         * The Sprint's number (F25).
-         */
-        sprint?: number;
-    };
-    url: '/sprint-choice';
-};
-
-export type GetSprintChoiceErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The person has no settings yet.
-     */
-    422: UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type GetSprintChoiceError = GetSprintChoiceErrors[keyof GetSprintChoiceErrors];
-
-export type GetSprintChoiceResponses = {
-    /**
-     * The choice.
-     */
-    200: {
-        clock: Clock;
-        view: SprintChoice | null;
-    };
-};
-
-export type GetSprintChoiceResponse = GetSprintChoiceResponses[keyof GetSprintChoiceResponses];
-
-export type GetPlanningData = {
-    body?: never;
-    path?: never;
-    query?: {
-        /**
-         * Left out, the criterion is not applied.
-         */
-        applyCriterion?: boolean;
-    };
-    url: '/planning';
-};
-
-export type GetPlanningErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The person has no settings yet.
-     */
-    422: UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type GetPlanningError = GetPlanningErrors[keyof GetPlanningErrors];
-
-export type GetPlanningResponses = {
-    /**
-     * The Planning.
-     */
-    200: {
-        clock: Clock;
-        view: PlanningData | null;
-    };
-};
-
-export type GetPlanningResponse = GetPlanningResponses[keyof GetPlanningResponses];
-
-export type GetRunningData = {
-    body?: never;
-    path?: never;
-    query?: {
-        /**
-         * The Sprint's number (F25).
-         */
-        sprint?: number;
-    };
-    url: '/running';
-};
-
-export type GetRunningErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The person has no settings yet.
-     */
-    422: UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type GetRunningError = GetRunningErrors[keyof GetRunningErrors];
-
-export type GetRunningResponses = {
-    /**
-     * The Sprint.
-     */
-    200: {
-        clock: Clock;
-        view: RunningData | null;
-    };
-};
-
-export type GetRunningResponse = GetRunningResponses[keyof GetRunningResponses];
-
-export type GetTodayData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/today';
-};
-
-export type GetTodayErrors = {
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The person has no settings yet.
-     */
-    422: UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type GetTodayError = GetTodayErrors[keyof GetTodayErrors];
-
-export type GetTodayResponses = {
-    /**
-     * Today.
-     */
-    200: {
-        clock: Clock;
-        view: TodayData | null;
-    };
-};
-
-export type GetTodayResponse = GetTodayResponses[keyof GetTodayResponses];
-
-export type GetDayData = {
-    body?: never;
-    path: {
-        date: LocalDate;
-    };
-    query?: never;
-    url: '/days/{date}';
-};
-
-export type GetDayErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The person has no settings yet.
-     */
-    422: UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type GetDayError = GetDayErrors[keyof GetDayErrors];
-
-export type GetDayResponses = {
-    /**
-     * The day.
-     */
-    200: {
-        clock: Clock;
-        view: DayData | null;
-    };
-};
-
-export type GetDayResponse = GetDayResponses[keyof GetDayResponses];
-
-export type GetRetroData = {
-    body?: never;
-    path?: never;
-    query?: {
-        /**
-         * The Sprint's number (F25).
-         */
-        sprint?: number;
-    };
-    url: '/retro';
-};
-
-export type GetRetroErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The person has no settings yet.
-     */
-    422: UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type GetRetroError = GetRetroErrors[keyof GetRetroErrors];
-
-export type GetRetroResponses = {
-    /**
-     * The Retro.
-     */
-    200: {
-        clock: Clock;
-        view: RetroData | null;
-    };
-};
-
-export type GetRetroResponse = GetRetroResponses[keyof GetRetroResponses];
-
-export type GetNextPlanningData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/next-planning';
-};
-
-export type GetNextPlanningErrors = {
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The person has no settings yet.
-     */
-    422: UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type GetNextPlanningError = GetNextPlanningErrors[keyof GetNextPlanningErrors];
-
-export type GetNextPlanningResponses = {
-    /**
-     * The next Planning.
-     */
-    200: {
-        clock: Clock;
-        view: NextPlanning;
-    };
-};
-
-export type GetNextPlanningResponse = GetNextPlanningResponses[keyof GetNextPlanningResponses];
-
 export type CreateAreaData = {
     body: {
         name: string;
     };
     path?: never;
     query?: never;
-    url: '/operations/createArea';
+    url: '/areas';
 };
 
 export type CreateAreaErrors = {
@@ -1714,9 +1317,9 @@ export type CreateAreaError = CreateAreaErrors[keyof CreateAreaErrors];
 
 export type CreateAreaResponses = {
     /**
-     * Done. What the operation made or decided.
+     * Made. The IDs of what the operation made.
      */
-    200: {
+    201: {
         areaId: AreaId;
     };
 };
@@ -1725,12 +1328,13 @@ export type CreateAreaResponse = CreateAreaResponses[keyof CreateAreaResponses];
 
 export type RenameAreaData = {
     body: {
-        areaId: AreaId;
         name: string;
     };
-    path?: never;
+    path: {
+        areaId: AreaId;
+    };
     query?: never;
-    url: '/operations/renameArea';
+    url: '/areas/{areaId}';
 };
 
 export type RenameAreaErrors = {
@@ -1780,12 +1384,12 @@ export type RenameAreaResponses = {
 export type RenameAreaResponse = RenameAreaResponses[keyof RenameAreaResponses];
 
 export type ArchiveAreaData = {
-    body: {
+    body?: never;
+    path: {
         areaId: AreaId;
     };
-    path?: never;
     query?: never;
-    url: '/operations/archiveArea';
+    url: '/areas/{areaId}/archive';
 };
 
 export type ArchiveAreaErrors = {
@@ -1835,12 +1439,12 @@ export type ArchiveAreaResponses = {
 export type ArchiveAreaResponse = ArchiveAreaResponses[keyof ArchiveAreaResponses];
 
 export type RestoreAreaData = {
-    body: {
+    body?: never;
+    path: {
         areaId: AreaId;
     };
-    path?: never;
     query?: never;
-    url: '/operations/restoreArea';
+    url: '/areas/{areaId}/restore';
 };
 
 export type RestoreAreaErrors = {
@@ -1896,7 +1500,7 @@ export type CreateTaskData = {
     };
     path?: never;
     query?: never;
-    url: '/operations/createTask';
+    url: '/tasks';
 };
 
 export type CreateTaskErrors = {
@@ -1938,9 +1542,9 @@ export type CreateTaskError = CreateTaskErrors[keyof CreateTaskErrors];
 
 export type CreateTaskResponses = {
     /**
-     * Done. What the operation made or decided.
+     * Made. The IDs of what the operation made.
      */
-    200: {
+    201: {
         taskId: TaskId;
     };
 };
@@ -1949,16 +1553,22 @@ export type CreateTaskResponse = CreateTaskResponses[keyof CreateTaskResponses];
 
 export type SaveTaskData = {
     body: {
-        taskId: TaskId;
-        update: TaskAttributeUpdate;
+        title?: string;
+        description?: string;
+        areaId?: AreaId | null;
+        due?: LocalDate | null;
+        priority?: TaskPriority;
+        timeBasis?: TimeBasis;
         /**
-         * Hours. `null` clears the Estimate; left out, it stays.
+         * Hours. `null` clears the Estimate.
          */
         estimate?: number | null;
     };
-    path?: never;
+    path: {
+        taskId: TaskId;
+    };
     query?: never;
-    url: '/operations/saveTask';
+    url: '/tasks/{taskId}';
 };
 
 export type SaveTaskErrors = {
@@ -2007,469 +1617,13 @@ export type SaveTaskResponses = {
 
 export type SaveTaskResponse = SaveTaskResponses[keyof SaveTaskResponses];
 
-export type AdoptSuggestionData = {
-    body: {
-        taskId: TaskId;
-        suggestionId: EstimateSuggestionId;
-        bound: SuggestionBound;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/adoptSuggestion';
-};
-
-export type AdoptSuggestionErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type AdoptSuggestionError = AdoptSuggestionErrors[keyof AdoptSuggestionErrors];
-
-export type AdoptSuggestionResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type AdoptSuggestionResponse = AdoptSuggestionResponses[keyof AdoptSuggestionResponses];
-
-export type UndoAdoptionData = {
-    body: {
-        taskId: TaskId;
-        suggestionId: EstimateSuggestionId;
-        previous: Estimate | null;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/undoAdoption';
-};
-
-export type UndoAdoptionErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type UndoAdoptionError = UndoAdoptionErrors[keyof UndoAdoptionErrors];
-
-export type UndoAdoptionResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type UndoAdoptionResponse = UndoAdoptionResponses[keyof UndoAdoptionResponses];
-
-export type AdoptEditedSuggestionData = {
-    body: {
-        taskId: TaskId;
-        suggestionId: EstimateSuggestionId;
-        hours: number;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/adoptEditedSuggestion';
-};
-
-export type AdoptEditedSuggestionErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type AdoptEditedSuggestionError = AdoptEditedSuggestionErrors[keyof AdoptEditedSuggestionErrors];
-
-export type AdoptEditedSuggestionResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type AdoptEditedSuggestionResponse = AdoptEditedSuggestionResponses[keyof AdoptEditedSuggestionResponses];
-
-export type RejectSuggestionData = {
-    body: {
-        taskId: TaskId;
-        suggestionId: EstimateSuggestionId;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/rejectSuggestion';
-};
-
-export type RejectSuggestionErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type RejectSuggestionError = RejectSuggestionErrors[keyof RejectSuggestionErrors];
-
-export type RejectSuggestionResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type RejectSuggestionResponse = RejectSuggestionResponses[keyof RejectSuggestionResponses];
-
-export type UndoRejectionData = {
-    body: {
-        taskId: TaskId;
-        suggestionId: EstimateSuggestionId;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/undoRejection';
-};
-
-export type UndoRejectionErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type UndoRejectionError = UndoRejectionErrors[keyof UndoRejectionErrors];
-
-export type UndoRejectionResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type UndoRejectionResponse = UndoRejectionResponses[keyof UndoRejectionResponses];
-
-export type AddSubtaskData = {
-    body: {
-        taskId: TaskId;
-        title: string;
-        hours?: number;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/addSubtask';
-};
-
-export type AddSubtaskErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type AddSubtaskError = AddSubtaskErrors[keyof AddSubtaskErrors];
-
-export type AddSubtaskResponses = {
-    /**
-     * Done. What the operation made or decided.
-     */
-    200: {
-        subtaskId: SubtaskId;
-    };
-};
-
-export type AddSubtaskResponse = AddSubtaskResponses[keyof AddSubtaskResponses];
-
-export type SetSubtaskDoneData = {
-    body: {
-        taskId: TaskId;
-        subtaskId: SubtaskId;
-        done: boolean;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/setSubtaskDone';
-};
-
-export type SetSubtaskDoneErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type SetSubtaskDoneError = SetSubtaskDoneErrors[keyof SetSubtaskDoneErrors];
-
-export type SetSubtaskDoneResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type SetSubtaskDoneResponse = SetSubtaskDoneResponses[keyof SetSubtaskDoneResponses];
-
-export type SetSubtaskEstimateData = {
-    body: {
-        taskId: TaskId;
-        subtaskId: SubtaskId;
-        hours: number | null;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/setSubtaskEstimate';
-};
-
-export type SetSubtaskEstimateErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type SetSubtaskEstimateError = SetSubtaskEstimateErrors[keyof SetSubtaskEstimateErrors];
-
-export type SetSubtaskEstimateResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type SetSubtaskEstimateResponse = SetSubtaskEstimateResponses[keyof SetSubtaskEstimateResponses];
-
 export type ArchiveTaskData = {
-    body: {
+    body?: never;
+    path: {
         taskId: TaskId;
     };
-    path?: never;
     query?: never;
-    url: '/operations/archiveTask';
+    url: '/tasks/{taskId}/archive';
 };
 
 export type ArchiveTaskErrors = {
@@ -2519,12 +1673,12 @@ export type ArchiveTaskResponses = {
 export type ArchiveTaskResponse = ArchiveTaskResponses[keyof ArchiveTaskResponses];
 
 export type RestoreTaskData = {
-    body: {
+    body?: never;
+    path: {
         taskId: TaskId;
     };
-    path?: never;
     query?: never;
-    url: '/operations/restoreTask';
+    url: '/tasks/{taskId}/restore';
 };
 
 export type RestoreTaskErrors = {
@@ -2574,12 +1728,12 @@ export type RestoreTaskResponses = {
 export type RestoreTaskResponse = RestoreTaskResponses[keyof RestoreTaskResponses];
 
 export type CompleteTaskData = {
-    body: {
+    body?: never;
+    path: {
         taskId: TaskId;
     };
-    path?: never;
     query?: never;
-    url: '/operations/completeTask';
+    url: '/tasks/{taskId}/complete';
 };
 
 export type CompleteTaskErrors = {
@@ -2629,12 +1783,12 @@ export type CompleteTaskResponses = {
 export type CompleteTaskResponse = CompleteTaskResponses[keyof CompleteTaskResponses];
 
 export type UndoCompleteTaskData = {
-    body: {
+    body?: never;
+    path: {
         taskId: TaskId;
     };
-    path?: never;
     query?: never;
-    url: '/operations/undoCompleteTask';
+    url: '/tasks/{taskId}/undo-complete';
 };
 
 export type UndoCompleteTaskErrors = {
@@ -2683,244 +1837,13 @@ export type UndoCompleteTaskResponses = {
 
 export type UndoCompleteTaskResponse = UndoCompleteTaskResponses[keyof UndoCompleteTaskResponses];
 
-export type AddTaskToTodayData = {
-    body: {
-        taskId: TaskId;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/addTaskToToday';
-};
-
-export type AddTaskToTodayErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type AddTaskToTodayError = AddTaskToTodayErrors[keyof AddTaskToTodayErrors];
-
-export type AddTaskToTodayResponses = {
-    /**
-     * Done. What the operation made or decided.
-     */
-    200: {
-        sprintTaskId: SprintTaskId;
-        selectionId: DailySelectionId;
-    };
-};
-
-export type AddTaskToTodayResponse = AddTaskToTodayResponses[keyof AddTaskToTodayResponses];
-
-export type AddTaskToWeekData = {
-    body: {
-        taskId: TaskId;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/addTaskToWeek';
-};
-
-export type AddTaskToWeekErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type AddTaskToWeekError = AddTaskToWeekErrors[keyof AddTaskToWeekErrors];
-
-export type AddTaskToWeekResponses = {
-    /**
-     * Done. What the operation made or decided.
-     */
-    200: {
-        sprintTaskId: SprintTaskId;
-    };
-};
-
-export type AddTaskToWeekResponse = AddTaskToWeekResponses[keyof AddTaskToWeekResponses];
-
-export type UndoAddTaskToWeekData = {
-    body: {
-        taskId: TaskId;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/undoAddTaskToWeek';
-};
-
-export type UndoAddTaskToWeekErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type UndoAddTaskToWeekError = UndoAddTaskToWeekErrors[keyof UndoAddTaskToWeekErrors];
-
-export type UndoAddTaskToWeekResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type UndoAddTaskToWeekResponse = UndoAddTaskToWeekResponses[keyof UndoAddTaskToWeekResponses];
-
-export type SetRecurrenceData = {
-    body: {
-        taskId: TaskId;
-        pattern: RecurrencePattern;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/setRecurrence';
-};
-
-export type SetRecurrenceErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type SetRecurrenceError = SetRecurrenceErrors[keyof SetRecurrenceErrors];
-
-export type SetRecurrenceResponses = {
-    /**
-     * Done. What the operation made or decided.
-     */
-    200: {
-        /**
-         * The day the change takes effect (the next Sprint not confirmed yet, F1, F7, F15). Left out when the pattern was already the rule's.
-         */
-        effectiveFrom?: LocalDate;
-    };
-};
-
-export type SetRecurrenceResponse = SetRecurrenceResponses[keyof SetRecurrenceResponses];
-
 export type EndRecurrenceData = {
-    body: {
+    body?: never;
+    path: {
         taskId: TaskId;
     };
-    path?: never;
     query?: never;
-    url: '/operations/endRecurrence';
+    url: '/tasks/{taskId}/recurrence';
 };
 
 export type EndRecurrenceErrors = {
@@ -2962,7 +1885,7 @@ export type EndRecurrenceError = EndRecurrenceErrors[keyof EndRecurrenceErrors];
 
 export type EndRecurrenceResponses = {
     /**
-     * Done. What the operation made or decided.
+     * Done. What the operation decided.
      */
     200: {
         /**
@@ -2974,16 +1897,18 @@ export type EndRecurrenceResponses = {
 
 export type EndRecurrenceResponse = EndRecurrenceResponses[keyof EndRecurrenceResponses];
 
-export type ChooseTasksData = {
+export type SetRecurrenceData = {
     body: {
-        taskIds: Array<TaskId>;
+        pattern: RecurrencePattern;
     };
-    path?: never;
+    path: {
+        taskId: TaskId;
+    };
     query?: never;
-    url: '/operations/chooseTasks';
+    url: '/tasks/{taskId}/recurrence';
 };
 
-export type ChooseTasksErrors = {
+export type SetRecurrenceErrors = {
     /**
      * The request does not match the contract.
      */
@@ -3018,368 +1943,35 @@ export type ChooseTasksErrors = {
     500: InternalError;
 };
 
-export type ChooseTasksError = ChooseTasksErrors[keyof ChooseTasksErrors];
+export type SetRecurrenceError = SetRecurrenceErrors[keyof SetRecurrenceErrors];
 
-export type ChooseTasksResponses = {
+export type SetRecurrenceResponses = {
     /**
-     * Done. What the operation made or decided.
+     * Done. What the operation decided.
      */
     200: {
         /**
-         * The draft SprintTasks, in the order of `taskIds`.
+         * The day the change takes effect (the next Sprint not confirmed yet, F1, F7, F15). Left out when the pattern was already the rule's.
          */
-        sprintTaskIds: Array<SprintTaskId>;
+        effectiveFrom?: LocalDate;
     };
 };
 
-export type ChooseTasksResponse = ChooseTasksResponses[keyof ChooseTasksResponses];
+export type SetRecurrenceResponse = SetRecurrenceResponses[keyof SetRecurrenceResponses];
 
-export type UnchooseTasksData = {
-    body: {
-        sprintTaskIds: Array<SprintTaskId>;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/unchooseTasks';
-};
-
-export type UnchooseTasksErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type UnchooseTasksError = UnchooseTasksErrors[keyof UnchooseTasksErrors];
-
-export type UnchooseTasksResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type UnchooseTasksResponse = UnchooseTasksResponses[keyof UnchooseTasksResponses];
-
-export type UnchooseTasksByTaskData = {
-    body: {
-        taskIds: Array<TaskId>;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/unchooseTasksByTask';
-};
-
-export type UnchooseTasksByTaskErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type UnchooseTasksByTaskError = UnchooseTasksByTaskErrors[keyof UnchooseTasksByTaskErrors];
-
-export type UnchooseTasksByTaskResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type UnchooseTasksByTaskResponse = UnchooseTasksByTaskResponses[keyof UnchooseTasksByTaskResponses];
-
-export type SetOccurrenceIncludedData = {
-    body: {
-        occurrenceId: OccurrenceId;
-        included: boolean;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/setOccurrenceIncluded';
-};
-
-export type SetOccurrenceIncludedErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type SetOccurrenceIncludedError = SetOccurrenceIncludedErrors[keyof SetOccurrenceIncludedErrors];
-
-export type SetOccurrenceIncludedResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type SetOccurrenceIncludedResponse = SetOccurrenceIncludedResponses[keyof SetOccurrenceIncludedResponses];
-
-export type IncludeOccurrencesData = {
-    body: {
-        occurrenceIds: Array<OccurrenceId>;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/includeOccurrences';
-};
-
-export type IncludeOccurrencesErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type IncludeOccurrencesError = IncludeOccurrencesErrors[keyof IncludeOccurrencesErrors];
-
-export type IncludeOccurrencesResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type IncludeOccurrencesResponse = IncludeOccurrencesResponses[keyof IncludeOccurrencesResponses];
-
-export type ExcludeAllOccurrencesData = {
-    body: {
-        sprintTaskId: SprintTaskId;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/excludeAllOccurrences';
-};
-
-export type ExcludeAllOccurrencesErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type ExcludeAllOccurrencesError = ExcludeAllOccurrencesErrors[keyof ExcludeAllOccurrencesErrors];
-
-export type ExcludeAllOccurrencesResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type ExcludeAllOccurrencesResponse = ExcludeAllOccurrencesResponses[keyof ExcludeAllOccurrencesResponses];
-
-export type CreateAndChooseTaskData = {
+export type AddSubtaskData = {
     body: {
         title: string;
-        areaId?: AreaId;
+        hours?: number;
     };
-    path?: never;
-    query?: never;
-    url: '/operations/createAndChooseTask';
-};
-
-export type CreateAndChooseTaskErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type CreateAndChooseTaskError = CreateAndChooseTaskErrors[keyof CreateAndChooseTaskErrors];
-
-export type CreateAndChooseTaskResponses = {
-    /**
-     * Done. What the operation made or decided.
-     */
-    200: {
+    path: {
         taskId: TaskId;
-        sprintTaskId: SprintTaskId;
     };
-};
-
-export type CreateAndChooseTaskResponse = CreateAndChooseTaskResponses[keyof CreateAndChooseTaskResponses];
-
-export type SetPlanningGoalData = {
-    body: {
-        areaId: AreaId;
-        text: string;
-    };
-    path?: never;
     query?: never;
-    url: '/operations/setPlanningGoal';
+    url: '/tasks/{taskId}/subtasks';
 };
 
-export type SetPlanningGoalErrors = {
+export type AddSubtaskErrors = {
     /**
      * The request does not match the contract.
      */
@@ -3414,83 +2006,34 @@ export type SetPlanningGoalErrors = {
     500: InternalError;
 };
 
-export type SetPlanningGoalError = SetPlanningGoalErrors[keyof SetPlanningGoalErrors];
+export type AddSubtaskError = AddSubtaskErrors[keyof AddSubtaskErrors];
 
-export type SetPlanningGoalResponses = {
+export type AddSubtaskResponses = {
     /**
-     * Done.
+     * Made. The IDs of what the operation made.
      */
-    204: void;
-};
-
-export type SetPlanningGoalResponse = SetPlanningGoalResponses[keyof SetPlanningGoalResponses];
-
-export type SetGoalLinkData = {
-    body: {
-        sprintTaskId: SprintTaskId;
-        goalLink: GoalLink;
+    201: {
+        subtaskId: SubtaskId;
     };
-    path?: never;
-    query?: never;
-    url: '/operations/setGoalLink';
 };
 
-export type SetGoalLinkErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
+export type AddSubtaskResponse = AddSubtaskResponses[keyof AddSubtaskResponses];
 
-export type SetGoalLinkError = SetGoalLinkErrors[keyof SetGoalLinkErrors];
-
-export type SetGoalLinkResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type SetGoalLinkResponse = SetGoalLinkResponses[keyof SetGoalLinkResponses];
-
-export type SetPlanningAvailableHoursData = {
+export type UpdateSubtaskData = {
     body: {
+        done: boolean;
+    } | {
         hours: number | null;
     };
-    path?: never;
+    path: {
+        taskId: TaskId;
+        subtaskId: SubtaskId;
+    };
     query?: never;
-    url: '/operations/setPlanningAvailableHours';
+    url: '/tasks/{taskId}/subtasks/{subtaskId}';
 };
 
-export type SetPlanningAvailableHoursErrors = {
+export type UpdateSubtaskErrors = {
     /**
      * The request does not match the contract.
      */
@@ -3525,24 +2068,558 @@ export type SetPlanningAvailableHoursErrors = {
     500: InternalError;
 };
 
-export type SetPlanningAvailableHoursError = SetPlanningAvailableHoursErrors[keyof SetPlanningAvailableHoursErrors];
+export type UpdateSubtaskError = UpdateSubtaskErrors[keyof UpdateSubtaskErrors];
 
-export type SetPlanningAvailableHoursResponses = {
+export type UpdateSubtaskResponses = {
     /**
      * Done.
      */
     204: void;
 };
 
-export type SetPlanningAvailableHoursResponse = SetPlanningAvailableHoursResponses[keyof SetPlanningAvailableHoursResponses];
+export type UpdateSubtaskResponse = UpdateSubtaskResponses[keyof UpdateSubtaskResponses];
+
+export type AdoptEstimateSuggestionData = {
+    body: {
+        bound: SuggestionBound;
+    } | {
+        hours: number;
+    };
+    path: {
+        taskId: TaskId;
+        suggestionId: EstimateSuggestionId;
+    };
+    query?: never;
+    url: '/tasks/{taskId}/estimate-suggestions/{suggestionId}/adopt';
+};
+
+export type AdoptEstimateSuggestionErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A write whose Origin is not the app's own.
+     */
+    403: ForbiddenOriginError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The body is larger than the API takes.
+     */
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type AdoptEstimateSuggestionError = AdoptEstimateSuggestionErrors[keyof AdoptEstimateSuggestionErrors];
+
+export type AdoptEstimateSuggestionResponses = {
+    /**
+     * Done.
+     */
+    204: void;
+};
+
+export type AdoptEstimateSuggestionResponse = AdoptEstimateSuggestionResponses[keyof AdoptEstimateSuggestionResponses];
+
+export type UndoAdoptionData = {
+    body: {
+        previous: Estimate | null;
+    };
+    path: {
+        taskId: TaskId;
+        suggestionId: EstimateSuggestionId;
+    };
+    query?: never;
+    url: '/tasks/{taskId}/estimate-suggestions/{suggestionId}/undo-adopt';
+};
+
+export type UndoAdoptionErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A write whose Origin is not the app's own.
+     */
+    403: ForbiddenOriginError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The body is larger than the API takes.
+     */
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type UndoAdoptionError = UndoAdoptionErrors[keyof UndoAdoptionErrors];
+
+export type UndoAdoptionResponses = {
+    /**
+     * Done.
+     */
+    204: void;
+};
+
+export type UndoAdoptionResponse = UndoAdoptionResponses[keyof UndoAdoptionResponses];
+
+export type RejectSuggestionData = {
+    body?: never;
+    path: {
+        taskId: TaskId;
+        suggestionId: EstimateSuggestionId;
+    };
+    query?: never;
+    url: '/tasks/{taskId}/estimate-suggestions/{suggestionId}/reject';
+};
+
+export type RejectSuggestionErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A write whose Origin is not the app's own.
+     */
+    403: ForbiddenOriginError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The body is larger than the API takes.
+     */
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type RejectSuggestionError = RejectSuggestionErrors[keyof RejectSuggestionErrors];
+
+export type RejectSuggestionResponses = {
+    /**
+     * Done.
+     */
+    204: void;
+};
+
+export type RejectSuggestionResponse = RejectSuggestionResponses[keyof RejectSuggestionResponses];
+
+export type UndoRejectionData = {
+    body?: never;
+    path: {
+        taskId: TaskId;
+        suggestionId: EstimateSuggestionId;
+    };
+    query?: never;
+    url: '/tasks/{taskId}/estimate-suggestions/{suggestionId}/undo-reject';
+};
+
+export type UndoRejectionErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A write whose Origin is not the app's own.
+     */
+    403: ForbiddenOriginError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The body is larger than the API takes.
+     */
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type UndoRejectionError = UndoRejectionErrors[keyof UndoRejectionErrors];
+
+export type UndoRejectionResponses = {
+    /**
+     * Done.
+     */
+    204: void;
+};
+
+export type UndoRejectionResponse = UndoRejectionResponses[keyof UndoRejectionResponses];
+
+export type GetBacklogData = {
+    body?: never;
+    path?: never;
+    query?: {
+        view?: BacklogSlice;
+        area?: AreaId;
+    };
+    url: '/backlog';
+};
+
+export type GetBacklogErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The person has no settings yet.
+     */
+    422: UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type GetBacklogError = GetBacklogErrors[keyof GetBacklogErrors];
+
+export type GetBacklogResponses = {
+    /**
+     * The Backlog.
+     */
+    200: {
+        clock: Clock;
+        view: BacklogData;
+    };
+};
+
+export type GetBacklogResponse = GetBacklogResponses[keyof GetBacklogResponses];
+
+export type GetDayData = {
+    body?: never;
+    path: {
+        date: LocalDate;
+    };
+    query?: never;
+    url: '/days/{date}';
+};
+
+export type GetDayErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The person has no settings yet.
+     */
+    422: UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type GetDayError = GetDayErrors[keyof GetDayErrors];
+
+export type GetDayResponses = {
+    /**
+     * The day.
+     */
+    200: {
+        clock: Clock;
+        view: DayView;
+    };
+};
+
+export type GetDayResponse = GetDayResponses[keyof GetDayResponses];
+
+export type ListSprintsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        number?: number;
+    };
+    url: '/sprints';
+};
+
+export type ListSprintsErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The person has no settings yet.
+     */
+    422: UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type ListSprintsError = ListSprintsErrors[keyof ListSprintsErrors];
+
+export type ListSprintsResponses = {
+    /**
+     * The read.
+     */
+    200: {
+        clock: Clock;
+        view: Array<SprintItem>;
+    };
+};
+
+export type ListSprintsResponse = ListSprintsResponses[keyof ListSprintsResponses];
+
+export type BeginPlanningData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/sprints';
+};
+
+export type BeginPlanningErrors = {
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A write whose Origin is not the app's own.
+     */
+    403: ForbiddenOriginError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The body is larger than the API takes.
+     */
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type BeginPlanningError = BeginPlanningErrors[keyof BeginPlanningErrors];
+
+export type BeginPlanningResponses = {
+    /**
+     * Made. The IDs of what the operation made.
+     */
+    201: {
+        sprintId: SprintId;
+    };
+};
+
+export type BeginPlanningResponse = BeginPlanningResponses[keyof BeginPlanningResponses];
+
+export type GetSprintData = {
+    body?: never;
+    path: {
+        sprintId: SprintId;
+    };
+    query?: {
+        /**
+         * Left out, the criterion is not applied.
+         */
+        'apply-criterion'?: boolean;
+    };
+    url: '/sprints/{sprintId}';
+};
+
+export type GetSprintErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The person has no settings yet.
+     */
+    422: UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type GetSprintError = GetSprintErrors[keyof GetSprintErrors];
+
+export type GetSprintResponses = {
+    /**
+     * The read.
+     */
+    200: {
+        clock: Clock;
+        view: SprintView;
+    };
+};
+
+export type GetSprintResponse = GetSprintResponses[keyof GetSprintResponses];
+
+export type SetAvailableHoursData = {
+    body: {
+        availableHours: number | null;
+    };
+    path: {
+        sprintId: SprintId;
+    };
+    query?: never;
+    url: '/sprints/{sprintId}';
+};
+
+export type SetAvailableHoursErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A write whose Origin is not the app's own.
+     */
+    403: ForbiddenOriginError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The body is larger than the API takes.
+     */
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type SetAvailableHoursError = SetAvailableHoursErrors[keyof SetAvailableHoursErrors];
+
+export type SetAvailableHoursResponses = {
+    /**
+     * Done.
+     */
+    204: void;
+};
+
+export type SetAvailableHoursResponse = SetAvailableHoursResponses[keyof SetAvailableHoursResponses];
 
 export type ConfirmSprintData = {
     body: {
         applyCriterion: boolean;
     };
-    path?: never;
+    path: {
+        sprintId: SprintId;
+    };
     query?: never;
-    url: '/operations/confirmSprint';
+    url: '/sprints/{sprintId}/confirm';
 };
 
 export type ConfirmSprintErrors = {
@@ -3591,17 +2668,21 @@ export type ConfirmSprintResponses = {
 
 export type ConfirmSprintResponse = ConfirmSprintResponses[keyof ConfirmSprintResponses];
 
-export type ChooseForTodayData = {
+export type UpdateGoalData = {
     body: {
-        sprintTaskId: SprintTaskId;
-        occurrenceId?: OccurrenceId;
+        text: string;
+    } | {
+        assessment: SelfAssessment | null;
     };
-    path?: never;
+    path: {
+        sprintId: SprintId;
+        areaId: AreaId;
+    };
     query?: never;
-    url: '/operations/chooseForToday';
+    url: '/sprints/{sprintId}/goals/{areaId}';
 };
 
-export type ChooseForTodayErrors = {
+export type UpdateGoalErrors = {
     /**
      * The request does not match the contract.
      */
@@ -3636,26 +2717,616 @@ export type ChooseForTodayErrors = {
     500: InternalError;
 };
 
-export type ChooseForTodayError = ChooseForTodayErrors[keyof ChooseForTodayErrors];
+export type UpdateGoalError = UpdateGoalErrors[keyof UpdateGoalErrors];
 
-export type ChooseForTodayResponses = {
+export type UpdateGoalResponses = {
     /**
-     * Done. What the operation made or decided.
+     * Done.
      */
-    200: {
-        selectionId: DailySelectionId;
+    204: void;
+};
+
+export type UpdateGoalResponse = UpdateGoalResponses[keyof UpdateGoalResponses];
+
+export type RemoveSprintTasksData = {
+    body?: never;
+    path: {
+        sprintId: SprintId;
+    };
+    query: {
+        ids: Array<SprintTaskId>;
+    };
+    url: '/sprints/{sprintId}/sprint-tasks';
+};
+
+export type RemoveSprintTasksErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A write whose Origin is not the app's own.
+     */
+    403: ForbiddenOriginError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The body is larger than the API takes.
+     */
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type RemoveSprintTasksError = RemoveSprintTasksErrors[keyof RemoveSprintTasksErrors];
+
+export type RemoveSprintTasksResponses = {
+    /**
+     * Done.
+     */
+    204: void;
+};
+
+export type RemoveSprintTasksResponse = RemoveSprintTasksResponses[keyof RemoveSprintTasksResponses];
+
+export type AddToSprintData = {
+    body: {
+        taskIds: Array<TaskId>;
+    } | {
+        title: string;
+        areaId?: AreaId;
+    };
+    path: {
+        sprintId: SprintId;
+    };
+    query?: never;
+    url: '/sprints/{sprintId}/sprint-tasks';
+};
+
+export type AddToSprintErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A write whose Origin is not the app's own.
+     */
+    403: ForbiddenOriginError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The body is larger than the API takes.
+     */
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type AddToSprintError = AddToSprintErrors[keyof AddToSprintErrors];
+
+export type AddToSprintResponses = {
+    /**
+     * Made. The IDs of what the operation made.
+     */
+    201: {
+        /**
+         * The SprintTasks made, in the order of `taskIds`.
+         */
+        sprintTaskIds: Array<SprintTaskId>;
+        /**
+         * With `title`, the new Task.
+         */
+        taskId?: TaskId;
     };
 };
 
-export type ChooseForTodayResponse = ChooseForTodayResponses[keyof ChooseForTodayResponses];
+export type AddToSprintResponse = AddToSprintResponses[keyof AddToSprintResponses];
+
+export type RemoveSprintTaskData = {
+    body?: never;
+    path: {
+        sprintId: SprintId;
+        sprintTaskId: SprintTaskId;
+    };
+    query?: never;
+    url: '/sprints/{sprintId}/sprint-tasks/{sprintTaskId}';
+};
+
+export type RemoveSprintTaskErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A write whose Origin is not the app's own.
+     */
+    403: ForbiddenOriginError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The body is larger than the API takes.
+     */
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type RemoveSprintTaskError = RemoveSprintTaskErrors[keyof RemoveSprintTaskErrors];
+
+export type RemoveSprintTaskResponses = {
+    /**
+     * Done.
+     */
+    204: void;
+};
+
+export type RemoveSprintTaskResponse = RemoveSprintTaskResponses[keyof RemoveSprintTaskResponses];
+
+export type SetGoalLinkData = {
+    body: {
+        goalLink: GoalLink;
+    };
+    path: {
+        sprintId: SprintId;
+        sprintTaskId: SprintTaskId;
+    };
+    query?: never;
+    url: '/sprints/{sprintId}/sprint-tasks/{sprintTaskId}';
+};
+
+export type SetGoalLinkErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A write whose Origin is not the app's own.
+     */
+    403: ForbiddenOriginError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The body is larger than the API takes.
+     */
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type SetGoalLinkError = SetGoalLinkErrors[keyof SetGoalLinkErrors];
+
+export type SetGoalLinkResponses = {
+    /**
+     * Done.
+     */
+    204: void;
+};
+
+export type SetGoalLinkResponse = SetGoalLinkResponses[keyof SetGoalLinkResponses];
+
+export type ExcludeAllOccurrencesData = {
+    body?: never;
+    path: {
+        sprintId: SprintId;
+        sprintTaskId: SprintTaskId;
+    };
+    query?: never;
+    url: '/sprints/{sprintId}/sprint-tasks/{sprintTaskId}/exclude-occurrences';
+};
+
+export type ExcludeAllOccurrencesErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A write whose Origin is not the app's own.
+     */
+    403: ForbiddenOriginError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The body is larger than the API takes.
+     */
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type ExcludeAllOccurrencesError = ExcludeAllOccurrencesErrors[keyof ExcludeAllOccurrencesErrors];
+
+export type ExcludeAllOccurrencesResponses = {
+    /**
+     * Done.
+     */
+    204: void;
+};
+
+export type ExcludeAllOccurrencesResponse = ExcludeAllOccurrencesResponses[keyof ExcludeAllOccurrencesResponses];
+
+export type IncludeOccurrencesData = {
+    body: {
+        occurrenceIds: Array<OccurrenceId>;
+    };
+    path: {
+        sprintId: SprintId;
+    };
+    query?: never;
+    url: '/sprints/{sprintId}/included-occurrences';
+};
+
+export type IncludeOccurrencesErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A write whose Origin is not the app's own.
+     */
+    403: ForbiddenOriginError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The body is larger than the API takes.
+     */
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type IncludeOccurrencesError = IncludeOccurrencesErrors[keyof IncludeOccurrencesErrors];
+
+export type IncludeOccurrencesResponses = {
+    /**
+     * Done.
+     */
+    204: void;
+};
+
+export type IncludeOccurrencesResponse = IncludeOccurrencesResponses[keyof IncludeOccurrencesResponses];
+
+export type ExcludeOccurrenceData = {
+    body?: never;
+    path: {
+        sprintId: SprintId;
+        occurrenceId: OccurrenceId;
+    };
+    query?: never;
+    url: '/sprints/{sprintId}/included-occurrences/{occurrenceId}';
+};
+
+export type ExcludeOccurrenceErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A write whose Origin is not the app's own.
+     */
+    403: ForbiddenOriginError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The body is larger than the API takes.
+     */
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type ExcludeOccurrenceError = ExcludeOccurrenceErrors[keyof ExcludeOccurrenceErrors];
+
+export type ExcludeOccurrenceResponses = {
+    /**
+     * Done.
+     */
+    204: void;
+};
+
+export type ExcludeOccurrenceResponse = ExcludeOccurrenceResponses[keyof ExcludeOccurrenceResponses];
+
+export type IncludeOccurrenceData = {
+    body?: never;
+    path: {
+        sprintId: SprintId;
+        occurrenceId: OccurrenceId;
+    };
+    query?: never;
+    url: '/sprints/{sprintId}/included-occurrences/{occurrenceId}';
+};
+
+export type IncludeOccurrenceErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A write whose Origin is not the app's own.
+     */
+    403: ForbiddenOriginError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The body is larger than the API takes.
+     */
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type IncludeOccurrenceError = IncludeOccurrenceErrors[keyof IncludeOccurrenceErrors];
+
+export type IncludeOccurrenceResponses = {
+    /**
+     * Done.
+     */
+    204: void;
+};
+
+export type IncludeOccurrenceResponse = IncludeOccurrenceResponses[keyof IncludeOccurrenceResponses];
+
+export type ListSprintCandidatesData = {
+    body?: never;
+    path: {
+        sprintId: SprintId;
+    };
+    query?: never;
+    url: '/sprints/{sprintId}/candidates';
+};
+
+export type ListSprintCandidatesErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The person has no settings yet.
+     */
+    422: UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type ListSprintCandidatesError = ListSprintCandidatesErrors[keyof ListSprintCandidatesErrors];
+
+export type ListSprintCandidatesResponses = {
+    /**
+     * The read.
+     */
+    200: {
+        clock: Clock;
+        view: SprintCandidates | null;
+    };
+};
+
+export type ListSprintCandidatesResponse = ListSprintCandidatesResponses[keyof ListSprintCandidatesResponses];
+
+export type ChooseForDayData = {
+    body: {
+        date: LocalDate;
+        sprintTaskId: SprintTaskId;
+        occurrenceId?: OccurrenceId;
+    } | {
+        date: LocalDate;
+        taskId: TaskId;
+    } | {
+        date: LocalDate;
+        title: string;
+        areaId?: AreaId;
+    };
+    path: {
+        sprintId: SprintId;
+    };
+    query?: never;
+    url: '/sprints/{sprintId}/daily-selections';
+};
+
+export type ChooseForDayErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A write whose Origin is not the app's own.
+     */
+    403: ForbiddenOriginError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The body is larger than the API takes.
+     */
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type ChooseForDayError = ChooseForDayErrors[keyof ChooseForDayErrors];
+
+export type ChooseForDayResponses = {
+    /**
+     * Made. The IDs of what the operation made.
+     */
+    201: {
+        selectionId: DailySelectionId;
+        /**
+         * With `taskId` or `title`, its new SprintTask.
+         */
+        sprintTaskId?: SprintTaskId;
+        /**
+         * With `title`, the new Task.
+         */
+        taskId?: TaskId;
+    };
+};
+
+export type ChooseForDayResponse = ChooseForDayResponses[keyof ChooseForDayResponses];
 
 export type StartSelectionData = {
-    body: {
+    body?: never;
+    path: {
+        sprintId: SprintId;
         selectionId: DailySelectionId;
     };
-    path?: never;
     query?: never;
-    url: '/operations/startSelection';
+    url: '/sprints/{sprintId}/daily-selections/{selectionId}/start';
 };
 
 export type StartSelectionErrors = {
@@ -3704,179 +3375,16 @@ export type StartSelectionResponses = {
 
 export type StartSelectionResponse = StartSelectionResponses[keyof StartSelectionResponses];
 
-export type DeferSelectionData = {
-    body: {
-        selectionId: DailySelectionId;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/deferSelection';
-};
-
-export type DeferSelectionErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type DeferSelectionError = DeferSelectionErrors[keyof DeferSelectionErrors];
-
-export type DeferSelectionResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type DeferSelectionResponse = DeferSelectionResponses[keyof DeferSelectionResponses];
-
-export type RemoveFromTodayData = {
-    body: {
-        selectionId: DailySelectionId;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/removeFromToday';
-};
-
-export type RemoveFromTodayErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type RemoveFromTodayError = RemoveFromTodayErrors[keyof RemoveFromTodayErrors];
-
-export type RemoveFromTodayResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type RemoveFromTodayResponse = RemoveFromTodayResponses[keyof RemoveFromTodayResponses];
-
-export type UndoCloseSelectionData = {
-    body: {
-        selectionId: DailySelectionId;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/undoCloseSelection';
-};
-
-export type UndoCloseSelectionErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type UndoCloseSelectionError = UndoCloseSelectionErrors[keyof UndoCloseSelectionErrors];
-
-export type UndoCloseSelectionResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type UndoCloseSelectionResponse = UndoCloseSelectionResponses[keyof UndoCloseSelectionResponses];
-
 export type PauseSelectionData = {
     body: {
-        selectionId: DailySelectionId;
         hours?: number;
     };
-    path?: never;
+    path: {
+        sprintId: SprintId;
+        selectionId: DailySelectionId;
+    };
     query?: never;
-    url: '/operations/pauseSelection';
+    url: '/sprints/{sprintId}/daily-selections/{selectionId}/pause';
 };
 
 export type PauseSelectionErrors = {
@@ -3925,13 +3433,238 @@ export type PauseSelectionResponses = {
 
 export type PauseSelectionResponse = PauseSelectionResponses[keyof PauseSelectionResponses];
 
-export type CompleteSelectionData = {
-    body: {
+export type DeferSelectionData = {
+    body?: never;
+    path: {
+        sprintId: SprintId;
         selectionId: DailySelectionId;
     };
-    path?: never;
     query?: never;
-    url: '/operations/completeSelection';
+    url: '/sprints/{sprintId}/daily-selections/{selectionId}/defer';
+};
+
+export type DeferSelectionErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A write whose Origin is not the app's own.
+     */
+    403: ForbiddenOriginError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The body is larger than the API takes.
+     */
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type DeferSelectionError = DeferSelectionErrors[keyof DeferSelectionErrors];
+
+export type DeferSelectionResponses = {
+    /**
+     * Done.
+     */
+    204: void;
+};
+
+export type DeferSelectionResponse = DeferSelectionResponses[keyof DeferSelectionResponses];
+
+export type UndoDeferSelectionData = {
+    body?: never;
+    path: {
+        sprintId: SprintId;
+        selectionId: DailySelectionId;
+    };
+    query?: never;
+    url: '/sprints/{sprintId}/daily-selections/{selectionId}/undo-defer';
+};
+
+export type UndoDeferSelectionErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A write whose Origin is not the app's own.
+     */
+    403: ForbiddenOriginError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The body is larger than the API takes.
+     */
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type UndoDeferSelectionError = UndoDeferSelectionErrors[keyof UndoDeferSelectionErrors];
+
+export type UndoDeferSelectionResponses = {
+    /**
+     * Done.
+     */
+    204: void;
+};
+
+export type UndoDeferSelectionResponse = UndoDeferSelectionResponses[keyof UndoDeferSelectionResponses];
+
+export type RemoveFromTodayData = {
+    body?: never;
+    path: {
+        sprintId: SprintId;
+        selectionId: DailySelectionId;
+    };
+    query?: never;
+    url: '/sprints/{sprintId}/daily-selections/{selectionId}/remove';
+};
+
+export type RemoveFromTodayErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A write whose Origin is not the app's own.
+     */
+    403: ForbiddenOriginError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The body is larger than the API takes.
+     */
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type RemoveFromTodayError = RemoveFromTodayErrors[keyof RemoveFromTodayErrors];
+
+export type RemoveFromTodayResponses = {
+    /**
+     * Done.
+     */
+    204: void;
+};
+
+export type RemoveFromTodayResponse = RemoveFromTodayResponses[keyof RemoveFromTodayResponses];
+
+export type UndoRemoveFromTodayData = {
+    body?: never;
+    path: {
+        sprintId: SprintId;
+        selectionId: DailySelectionId;
+    };
+    query?: never;
+    url: '/sprints/{sprintId}/daily-selections/{selectionId}/undo-remove';
+};
+
+export type UndoRemoveFromTodayErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A write whose Origin is not the app's own.
+     */
+    403: ForbiddenOriginError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The body is larger than the API takes.
+     */
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type UndoRemoveFromTodayError = UndoRemoveFromTodayErrors[keyof UndoRemoveFromTodayErrors];
+
+export type UndoRemoveFromTodayResponses = {
+    /**
+     * Done.
+     */
+    204: void;
+};
+
+export type UndoRemoveFromTodayResponse = UndoRemoveFromTodayResponses[keyof UndoRemoveFromTodayResponses];
+
+export type CompleteSelectionData = {
+    body?: never;
+    path: {
+        sprintId: SprintId;
+        selectionId: DailySelectionId;
+    };
+    query?: never;
+    url: '/sprints/{sprintId}/daily-selections/{selectionId}/complete';
 };
 
 export type CompleteSelectionErrors = {
@@ -3981,12 +3714,13 @@ export type CompleteSelectionResponses = {
 export type CompleteSelectionResponse = CompleteSelectionResponses[keyof CompleteSelectionResponses];
 
 export type UndoCompleteSelectionData = {
-    body: {
+    body?: never;
+    path: {
+        sprintId: SprintId;
         selectionId: DailySelectionId;
     };
-    path?: never;
     query?: never;
-    url: '/operations/undoCompleteSelection';
+    url: '/sprints/{sprintId}/daily-selections/{selectionId}/undo-complete';
 };
 
 export type UndoCompleteSelectionErrors = {
@@ -4036,12 +3770,13 @@ export type UndoCompleteSelectionResponses = {
 export type UndoCompleteSelectionResponse = UndoCompleteSelectionResponses[keyof UndoCompleteSelectionResponses];
 
 export type SkipSelectionData = {
-    body: {
+    body?: never;
+    path: {
+        sprintId: SprintId;
         selectionId: DailySelectionId;
     };
-    path?: never;
     query?: never;
-    url: '/operations/skipSelection';
+    url: '/sprints/{sprintId}/daily-selections/{selectionId}/skip';
 };
 
 export type SkipSelectionErrors = {
@@ -4091,12 +3826,13 @@ export type SkipSelectionResponses = {
 export type SkipSelectionResponse = SkipSelectionResponses[keyof SkipSelectionResponses];
 
 export type UndoSkipSelectionData = {
-    body: {
+    body?: never;
+    path: {
+        sprintId: SprintId;
         selectionId: DailySelectionId;
     };
-    path?: never;
     query?: never;
-    url: '/operations/undoSkipSelection';
+    url: '/sprints/{sprintId}/daily-selections/{selectionId}/undo-skip';
 };
 
 export type UndoSkipSelectionErrors = {
@@ -4145,17 +3881,21 @@ export type UndoSkipSelectionResponses = {
 
 export type UndoSkipSelectionResponse = UndoSkipSelectionResponses[keyof UndoSkipSelectionResponses];
 
-export type RecordSelectionActualData = {
+export type RecordActualTimeData = {
     body: {
-        selectionId: DailySelectionId;
+        sprintTaskId: SprintTaskId;
+        date: LocalDate;
         hours: number;
+        occurrenceId?: OccurrenceId;
     };
-    path?: never;
+    path: {
+        sprintId: SprintId;
+    };
     query?: never;
-    url: '/operations/recordSelectionActual';
+    url: '/sprints/{sprintId}/actual-times';
 };
 
-export type RecordSelectionActualErrors = {
+export type RecordActualTimeErrors = {
     /**
      * The request does not match the contract.
      */
@@ -4190,25 +3930,27 @@ export type RecordSelectionActualErrors = {
     500: InternalError;
 };
 
-export type RecordSelectionActualError = RecordSelectionActualErrors[keyof RecordSelectionActualErrors];
+export type RecordActualTimeError = RecordActualTimeErrors[keyof RecordActualTimeErrors];
 
-export type RecordSelectionActualResponses = {
+export type RecordActualTimeResponses = {
     /**
      * Done.
      */
     204: void;
 };
 
-export type RecordSelectionActualResponse = RecordSelectionActualResponses[keyof RecordSelectionActualResponses];
+export type RecordActualTimeResponse = RecordActualTimeResponses[keyof RecordActualTimeResponses];
 
 export type NoteInterruptData = {
     body: {
         text: string;
         minutes?: number;
     };
-    path?: never;
+    path: {
+        sprintId: SprintId;
+    };
     query?: never;
-    url: '/operations/noteInterrupt';
+    url: '/sprints/{sprintId}/interrupts';
 };
 
 export type NoteInterruptErrors = {
@@ -4250,79 +3992,23 @@ export type NoteInterruptError = NoteInterruptErrors[keyof NoteInterruptErrors];
 
 export type NoteInterruptResponses = {
     /**
-     * Done. What the operation made or decided.
+     * Made. The IDs of what the operation made.
      */
-    200: {
+    201: {
         interruptNoteId: InterruptNoteId;
     };
 };
 
 export type NoteInterruptResponse = NoteInterruptResponses[keyof NoteInterruptResponses];
 
-export type EditInterruptData = {
-    body: {
-        interruptNoteId: InterruptNoteId;
-        text: string;
-        minutes?: number;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/editInterrupt';
-};
-
-export type EditInterruptErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type EditInterruptError = EditInterruptErrors[keyof EditInterruptErrors];
-
-export type EditInterruptResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type EditInterruptResponse = EditInterruptResponses[keyof EditInterruptResponses];
-
 export type DeleteInterruptData = {
-    body: {
+    body?: never;
+    path: {
+        sprintId: SprintId;
         interruptNoteId: InterruptNoteId;
     };
-    path?: never;
     query?: never;
-    url: '/operations/deleteInterrupt';
+    url: '/sprints/{sprintId}/interrupts/{interruptNoteId}';
 };
 
 export type DeleteInterruptErrors = {
@@ -4371,13 +4057,77 @@ export type DeleteInterruptResponses = {
 
 export type DeleteInterruptResponse = DeleteInterruptResponses[keyof DeleteInterruptResponses];
 
+export type EditInterruptData = {
+    body: {
+        text: string;
+        minutes: number | null;
+    };
+    path: {
+        sprintId: SprintId;
+        interruptNoteId: InterruptNoteId;
+    };
+    query?: never;
+    url: '/sprints/{sprintId}/interrupts/{interruptNoteId}';
+};
+
+export type EditInterruptErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A write whose Origin is not the app's own.
+     */
+    403: ForbiddenOriginError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The body is larger than the API takes.
+     */
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type EditInterruptError = EditInterruptErrors[keyof EditInterruptErrors];
+
+export type EditInterruptResponses = {
+    /**
+     * Done.
+     */
+    204: void;
+};
+
+export type EditInterruptResponse = EditInterruptResponses[keyof EditInterruptResponses];
+
 export type RestoreInterruptData = {
     body: {
-        note: InterruptNote;
+        at: Instant;
+        text: string;
+        minutes?: number;
     };
-    path?: never;
+    path: {
+        sprintId: SprintId;
+        interruptNoteId: InterruptNoteId;
+    };
     query?: never;
-    url: '/operations/restoreInterrupt';
+    url: '/sprints/{sprintId}/interrupts/{interruptNoteId}';
 };
 
 export type RestoreInterruptErrors = {
@@ -4426,17 +4176,70 @@ export type RestoreInterruptResponses = {
 
 export type RestoreInterruptResponse = RestoreInterruptResponses[keyof RestoreInterruptResponses];
 
-export type CreateTaskForTodayData = {
-    body: {
-        title: string;
-        areaId?: AreaId;
+export type GetSprintRetroData = {
+    body?: never;
+    path: {
+        sprintId: SprintId;
     };
-    path?: never;
     query?: never;
-    url: '/operations/createTaskForToday';
+    url: '/sprints/{sprintId}/retro';
 };
 
-export type CreateTaskForTodayErrors = {
+export type GetSprintRetroErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The person has no settings yet.
+     */
+    422: UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type GetSprintRetroError = GetSprintRetroErrors[keyof GetSprintRetroErrors];
+
+export type GetSprintRetroResponses = {
+    /**
+     * The read.
+     */
+    200: {
+        clock: Clock;
+        view: RetroData | null;
+    };
+};
+
+export type GetSprintRetroResponse = GetSprintRetroResponses[keyof GetSprintRetroResponses];
+
+export type UpdateRetroData = {
+    body: {
+        reflection: string;
+    } | {
+        improvement: string;
+    };
+    path: {
+        sprintId: SprintId;
+    };
+    query?: never;
+    url: '/sprints/{sprintId}/retro';
+};
+
+export type UpdateRetroErrors = {
     /**
      * The request does not match the contract.
      */
@@ -4471,29 +4274,31 @@ export type CreateTaskForTodayErrors = {
     500: InternalError;
 };
 
-export type CreateTaskForTodayError = CreateTaskForTodayErrors[keyof CreateTaskForTodayErrors];
+export type UpdateRetroError = UpdateRetroErrors[keyof UpdateRetroErrors];
 
-export type CreateTaskForTodayResponses = {
+export type UpdateRetroResponses = {
     /**
-     * Done. What the operation made or decided.
+     * Done.
      */
-    200: {
-        taskId: TaskId;
-        sprintTaskId: SprintTaskId;
-        selectionId: DailySelectionId;
-    };
+    204: void;
 };
 
-export type CreateTaskForTodayResponse = CreateTaskForTodayResponses[keyof CreateTaskForTodayResponses];
+export type UpdateRetroResponse = UpdateRetroResponses[keyof UpdateRetroResponses];
 
 export type BeginRetroData = {
     body?: never;
-    path?: never;
+    path: {
+        sprintId: SprintId;
+    };
     query?: never;
-    url: '/operations/beginRetro';
+    url: '/sprints/{sprintId}/retro';
 };
 
 export type BeginRetroErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
     /**
      * No valid session.
      */
@@ -4528,520 +4333,25 @@ export type BeginRetroError = BeginRetroErrors[keyof BeginRetroErrors];
 
 export type BeginRetroResponses = {
     /**
-     * Done.
+     * Made.
      */
-    204: void;
+    201: unknown;
 };
 
-export type BeginRetroResponse = BeginRetroResponses[keyof BeginRetroResponses];
-
-export type SetRunningGoalData = {
-    body: {
-        areaId: AreaId;
-        text: string;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/setRunningGoal';
-};
-
-export type SetRunningGoalErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type SetRunningGoalError = SetRunningGoalErrors[keyof SetRunningGoalErrors];
-
-export type SetRunningGoalResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type SetRunningGoalResponse = SetRunningGoalResponses[keyof SetRunningGoalResponses];
-
-export type SetRunningAvailableHoursData = {
-    body: {
-        hours: number | null;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/setRunningAvailableHours';
-};
-
-export type SetRunningAvailableHoursErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type SetRunningAvailableHoursError = SetRunningAvailableHoursErrors[keyof SetRunningAvailableHoursErrors];
-
-export type SetRunningAvailableHoursResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type SetRunningAvailableHoursResponse = SetRunningAvailableHoursResponses[keyof SetRunningAvailableHoursResponses];
-
-export type UndoPastDayData = {
-    body: {
-        selectionId: DailySelectionId;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/undoPastDay';
-};
-
-export type UndoPastDayErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type UndoPastDayError = UndoPastDayErrors[keyof UndoPastDayErrors];
-
-export type UndoPastDayResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type UndoPastDayResponse = UndoPastDayResponses[keyof UndoPastDayResponses];
-
-export type AssessGoalData = {
-    body: {
-        areaId: AreaId;
-        assessment: SelfAssessment | null;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/assessGoal';
-};
-
-export type AssessGoalErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type AssessGoalError = AssessGoalErrors[keyof AssessGoalErrors];
-
-export type AssessGoalResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type AssessGoalResponse = AssessGoalResponses[keyof AssessGoalResponses];
-
-export type TogglePinData = {
-    body: {
-        pin: RetroPin;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/togglePin';
-};
-
-export type TogglePinErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type TogglePinError = TogglePinErrors[keyof TogglePinErrors];
-
-export type TogglePinResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type TogglePinResponse = TogglePinResponses[keyof TogglePinResponses];
-
-export type SetReflectionData = {
-    body: {
-        text: string;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/setReflection';
-};
-
-export type SetReflectionErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type SetReflectionError = SetReflectionErrors[keyof SetReflectionErrors];
-
-export type SetReflectionResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type SetReflectionResponse = SetReflectionResponses[keyof SetReflectionResponses];
-
-export type SetImprovementData = {
-    body: {
-        text: string;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/setImprovement';
-};
-
-export type SetImprovementErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type SetImprovementError = SetImprovementErrors[keyof SetImprovementErrors];
-
-export type SetImprovementResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type SetImprovementResponse = SetImprovementResponses[keyof SetImprovementResponses];
-
-export type DraftCriterionData = {
-    body: {
-        policy: CriterionPolicy;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/draftCriterion';
-};
-
-export type DraftCriterionErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type DraftCriterionError = DraftCriterionErrors[keyof DraftCriterionErrors];
-
-export type DraftCriterionResponses = {
-    /**
-     * Done. What the operation made or decided.
-     */
-    200: {
-        criterionId: PlanningCriterionId;
-    };
-};
-
-export type DraftCriterionResponse = DraftCriterionResponses[keyof DraftCriterionResponses];
-
-export type SetDraftPolicyData = {
-    body: {
-        policy: CriterionPolicy;
-    };
-    path?: never;
-    query?: never;
-    url: '/operations/setDraftPolicy';
-};
-
-export type SetDraftPolicyErrors = {
-    /**
-     * The request does not match the contract.
-     */
-    400: ValidationError;
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type SetDraftPolicyError = SetDraftPolicyErrors[keyof SetDraftPolicyErrors];
-
-export type SetDraftPolicyResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type SetDraftPolicyResponse = SetDraftPolicyResponses[keyof SetDraftPolicyResponses];
-
-export type DropCriterionDraftData = {
+export type CompleteRetroData = {
     body?: never;
-    path?: never;
+    path: {
+        sprintId: SprintId;
+    };
     query?: never;
-    url: '/operations/dropCriterionDraft';
+    url: '/sprints/{sprintId}/retro/complete';
 };
 
-export type DropCriterionDraftErrors = {
+export type CompleteRetroErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
     /**
      * No valid session.
      */
@@ -5072,24 +4382,144 @@ export type DropCriterionDraftErrors = {
     500: InternalError;
 };
 
-export type DropCriterionDraftError = DropCriterionDraftErrors[keyof DropCriterionDraftErrors];
+export type CompleteRetroError = CompleteRetroErrors[keyof CompleteRetroErrors];
 
-export type DropCriterionDraftResponses = {
+export type CompleteRetroResponses = {
     /**
      * Done.
      */
     204: void;
 };
 
-export type DropCriterionDraftResponse = DropCriterionDraftResponses[keyof DropCriterionDraftResponses];
+export type CompleteRetroResponse = CompleteRetroResponses[keyof CompleteRetroResponses];
+
+export type UnpinFactData = {
+    body?: never;
+    path: {
+        sprintId: SprintId;
+        /**
+         * The pinned fact: the ID of its SprintTask, selection, occurrence or interrupt, of the Area for its Goal, or `available-hours`.
+         */
+        pin: SprintTaskId | DailySelectionId | OccurrenceId | InterruptNoteId | AreaId | 'available-hours';
+    };
+    query?: never;
+    url: '/sprints/{sprintId}/retro/pins/{pin}';
+};
+
+export type UnpinFactErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A write whose Origin is not the app's own.
+     */
+    403: ForbiddenOriginError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The body is larger than the API takes.
+     */
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type UnpinFactError = UnpinFactErrors[keyof UnpinFactErrors];
+
+export type UnpinFactResponses = {
+    /**
+     * Done.
+     */
+    204: void;
+};
+
+export type UnpinFactResponse = UnpinFactResponses[keyof UnpinFactResponses];
+
+export type PinFactData = {
+    body?: never;
+    path: {
+        sprintId: SprintId;
+        /**
+         * The pinned fact: the ID of its SprintTask, selection, occurrence or interrupt, of the Area for its Goal, or `available-hours`.
+         */
+        pin: SprintTaskId | DailySelectionId | OccurrenceId | InterruptNoteId | AreaId | 'available-hours';
+    };
+    query?: never;
+    url: '/sprints/{sprintId}/retro/pins/{pin}';
+};
+
+export type PinFactErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A write whose Origin is not the app's own.
+     */
+    403: ForbiddenOriginError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The body is larger than the API takes.
+     */
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type PinFactError = PinFactErrors[keyof PinFactErrors];
+
+export type PinFactResponses = {
+    /**
+     * Done.
+     */
+    204: void;
+};
+
+export type PinFactResponse = PinFactResponses[keyof PinFactResponses];
 
 export type DecideCriterionData = {
     body: {
-        decision: RetroDecision;
+        retroDecision: RetroDecision;
     };
-    path?: never;
+    path: {
+        sprintId: SprintId;
+    };
     query?: never;
-    url: '/operations/decideCriterion';
+    url: '/sprints/{sprintId}/criterion-use';
 };
 
 export type DecideCriterionErrors = {
@@ -5138,19 +4568,17 @@ export type DecideCriterionResponses = {
 
 export type DecideCriterionResponse = DecideCriterionResponses[keyof DecideCriterionResponses];
 
-export type RecordReviewActualData = {
+export type DraftCriterionData = {
     body: {
-        sprintTaskId: SprintTaskId;
-        hours: number;
-        date: LocalDate;
-        occurrenceId?: OccurrenceId;
+        sourceSprintId: SprintId;
+        policy: CriterionPolicy;
     };
     path?: never;
     query?: never;
-    url: '/operations/recordReviewActual';
+    url: '/planning-criteria';
 };
 
-export type RecordReviewActualErrors = {
+export type DraftCriterionErrors = {
     /**
      * The request does not match the contract.
      */
@@ -5185,113 +4613,127 @@ export type RecordReviewActualErrors = {
     500: InternalError;
 };
 
-export type RecordReviewActualError = RecordReviewActualErrors[keyof RecordReviewActualErrors];
+export type DraftCriterionError = DraftCriterionErrors[keyof DraftCriterionErrors];
 
-export type RecordReviewActualResponses = {
+export type DraftCriterionResponses = {
     /**
-     * Done.
+     * Made. The IDs of what the operation made.
      */
-    204: void;
-};
-
-export type RecordReviewActualResponse = RecordReviewActualResponses[keyof RecordReviewActualResponses];
-
-export type CompleteRetroData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/operations/completeRetro';
-};
-
-export type CompleteRetroErrors = {
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type CompleteRetroError = CompleteRetroErrors[keyof CompleteRetroErrors];
-
-export type CompleteRetroResponses = {
-    /**
-     * Done.
-     */
-    204: void;
-};
-
-export type CompleteRetroResponse = CompleteRetroResponses[keyof CompleteRetroResponses];
-
-export type BeginPlanningData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/operations/beginPlanning';
-};
-
-export type BeginPlanningErrors = {
-    /**
-     * No valid session.
-     */
-    401: UnauthenticatedError;
-    /**
-     * A write whose Origin is not the app's own.
-     */
-    403: ForbiddenOriginError;
-    /**
-     * A record the request names is not among the person's records.
-     */
-    404: NotFoundError;
-    /**
-     * Another write came first; this one was not made.
-     */
-    409: RevisionConflictError;
-    /**
-     * The body is larger than the API takes.
-     */
-    413: PayloadTooLargeError;
-    /**
-     * The domain refused the operation, or the person has no settings yet.
-     */
-    422: RuleViolationError | UserNotSetUpError;
-    /**
-     * An unexpected failure on the server.
-     */
-    500: InternalError;
-};
-
-export type BeginPlanningError = BeginPlanningErrors[keyof BeginPlanningErrors];
-
-export type BeginPlanningResponses = {
-    /**
-     * Done. What the operation made or decided.
-     */
-    200: {
-        sprintId: SprintId;
+    201: {
+        criterionId: PlanningCriterionId;
     };
 };
 
-export type BeginPlanningResponse = BeginPlanningResponses[keyof BeginPlanningResponses];
+export type DraftCriterionResponse = DraftCriterionResponses[keyof DraftCriterionResponses];
+
+export type DropCriterionDraftData = {
+    body?: never;
+    path: {
+        criterionId: PlanningCriterionId;
+    };
+    query?: never;
+    url: '/planning-criteria/{criterionId}';
+};
+
+export type DropCriterionDraftErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A write whose Origin is not the app's own.
+     */
+    403: ForbiddenOriginError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The body is larger than the API takes.
+     */
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type DropCriterionDraftError = DropCriterionDraftErrors[keyof DropCriterionDraftErrors];
+
+export type DropCriterionDraftResponses = {
+    /**
+     * Done.
+     */
+    204: void;
+};
+
+export type DropCriterionDraftResponse = DropCriterionDraftResponses[keyof DropCriterionDraftResponses];
+
+export type SetDraftPolicyData = {
+    body: {
+        policy: CriterionPolicy;
+    };
+    path: {
+        criterionId: PlanningCriterionId;
+    };
+    query?: never;
+    url: '/planning-criteria/{criterionId}';
+};
+
+export type SetDraftPolicyErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
+    /**
+     * No valid session.
+     */
+    401: UnauthenticatedError;
+    /**
+     * A write whose Origin is not the app's own.
+     */
+    403: ForbiddenOriginError;
+    /**
+     * A record the request names is not among the person's records.
+     */
+    404: NotFoundError;
+    /**
+     * Another write came first; this one was not made.
+     */
+    409: RevisionConflictError;
+    /**
+     * The body is larger than the API takes.
+     */
+    413: PayloadTooLargeError;
+    /**
+     * The domain refused the operation, or the person has no settings yet.
+     */
+    422: RuleViolationError | UserNotSetUpError;
+    /**
+     * An unexpected failure on the server.
+     */
+    500: InternalError;
+};
+
+export type SetDraftPolicyError = SetDraftPolicyErrors[keyof SetDraftPolicyErrors];
+
+export type SetDraftPolicyResponses = {
+    /**
+     * Done.
+     */
+    204: void;
+};
+
+export type SetDraftPolicyResponse = SetDraftPolicyResponses[keyof SetDraftPolicyResponses];

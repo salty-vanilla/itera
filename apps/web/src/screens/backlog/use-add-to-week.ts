@@ -1,8 +1,6 @@
 import type { TaskId } from '@itera/api-contract';
-import {
-  addTaskToWeekMutation,
-  undoAddTaskToWeekMutation,
-} from '@itera/api-contract/react-query';
+import { SAVE_FAILED } from '@/api/save-failed';
+import { useRunningDay } from '@/api/use-me';
 import { useOperation } from '@/api/use-operation';
 import { useToast } from '@/components/ui/toast';
 
@@ -12,17 +10,25 @@ import { useToast } from '@/components/ui/toast';
  * addition out with its record (F40). Returns whether it went through.
  */
 export function useAddToWeek() {
-  const addToWeek = useOperation(addTaskToWeekMutation);
-  const undoAddToWeek = useOperation(undoAddTaskToWeekMutation);
+  const addToWeek = useOperation('addSprintTasks');
+  const undoAddToWeek = useOperation('removeSprintTasks');
+  const sprintId = useRunningDay()?.sprintId;
   const toast = useToast();
   return async (taskId: TaskId, title: string): Promise<boolean> => {
-    if (!(await addToWeek.run({ body: { taskId } })).ok) return false;
+    // No Sprint running: there is no week to put it in.
+    if (sprintId === undefined) {
+      toast.show(SAVE_FAILED);
+      return false;
+    }
+    const added = await addToWeek.run({ sprintId, taskIds: [taskId] });
+    if (!added.ok) return false;
+    const { sprintTaskIds } = added.value;
     toast.show({
       kind: 'added-to-week',
       title: `「${title}」を今週に入れました`,
       action: {
         label: '元に戻す',
-        onClick: () => undoAddToWeek.run({ body: { taskId } }),
+        onClick: () => undoAddToWeek.run({ sprintId, sprintTaskIds }),
       },
     });
     return true;

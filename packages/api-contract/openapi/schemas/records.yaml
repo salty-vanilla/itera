@@ -130,26 +130,6 @@ Task:
     createdVia: { $ref: '#/TaskCreatedVia' }
     completedAt: { $ref: './common.yaml#/Instant' }
     archivedAt: { $ref: './common.yaml#/Instant' }
-TaskAttributeUpdate:
-  description: >-
-    The attributes to change; a property left out stays. `null` clears an
-    optional attribute. Only in requests, so unknown keys are refused.
-  type: object
-  additionalProperties: false
-  properties:
-    title: { type: string }
-    description: { type: string }
-    areaId:
-      oneOf:
-        - $ref: './common.yaml#/AreaId'
-        - type: 'null'
-    due:
-      oneOf:
-        - $ref: './common.yaml#/LocalDate'
-        - type: 'null'
-    priority: { $ref: '#/TaskPriority' }
-    timeBasis: { $ref: '#/TimeBasis' }
-
 # ------------------------------------------------------------ Recurrence
 RecurrencePattern:
   oneOf:
