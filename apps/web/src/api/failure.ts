@@ -1,6 +1,10 @@
 // What a failed request means to the app. The API answers with `{ code,
 // message }` (ADR 0006 エラー); the client decides by `code` alone, and the
-// message, for developers, is never shown.
+// message, for developers, is never shown. `code` is an open enum (ADR 0006
+// 列挙): the generated types name each error's own value, but nothing
+// checks the answer at run time, and the error is read here as `unknown`, so
+// a code, a status or a body this client does not know is a plain failure,
+// never a failure to read.
 import type {
   ForbiddenOriginError,
   InternalError,
