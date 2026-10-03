@@ -47,7 +47,8 @@ export function closeFixtureApps() {
 
 /** The app on a database holding the fixture's state, signed in as its user. */
 export async function setupFixtureApp(state: FixtureStateId) {
-  const { activities, ...records } = fixtureSnapshot(state).records;
+  const { records: all, clock } = fixtureSnapshot(state);
+  const { activities, ...records } = all;
   const memory = await createMemoryDatabase();
   open.push(memory.close);
   const { db } = memory;
@@ -60,6 +61,8 @@ export async function setupFixtureApp(state: FixtureStateId) {
     loaded: { revision: 0, records: null },
     changes: records,
     activities,
+    // Brought up to the fixture's day; the app's clock is later (#271).
+    caughtUpTo: clock.today,
   });
   const authenticator: Authenticator = {
     authenticate: async () => ({ userId }),
