@@ -12,6 +12,7 @@ import {
 import { fixtureIds } from '@itera/application/fixtures';
 import * as v from 'valibot';
 import { afterEach, describe, expect, it } from 'vitest';
+import { activity } from '../db/schema';
 import {
   closeFixtureApps,
   describeOperations,
@@ -422,7 +423,7 @@ describe('the invariants, through the API', () => {
   it('invariant 33: an occurrence taken out stays as a record, and goes back in', async () => {
     const app = await setup('planning-pick');
     const first = occurrencesOf((await app.saved()).records, reading)[0]!;
-    await app.post('setOccurrenceIncluded', {
+    await app.run('setOccurrenceIncluded', {
       occurrenceId: first.id,
       included: false,
     });
@@ -433,7 +434,7 @@ describe('the invariants, through the API', () => {
     // The other two occurrences keep the Task in the week.
     expect(sprintTaskOf(records, reading).occurrenceIds).toHaveLength(2);
 
-    await app.post('setOccurrenceIncluded', {
+    await app.run('setOccurrenceIncluded', {
       occurrenceId: first.id,
       included: true,
     });
@@ -459,7 +460,7 @@ describe('the invariants, through the API', () => {
     const { records } = await app.saved();
     expect(sprintTaskOf(records, reading)).toBeUndefined();
     // Putting one back makes the Task's SprintTask again.
-    await app.post('setOccurrenceIncluded', {
+    await app.run('setOccurrenceIncluded', {
       occurrenceId: occurrencesOf(records, reading)[0]!.id,
       included: true,
     });
@@ -509,15 +510,19 @@ describe('the invariants, through the API', () => {
 
     // After confirm: the Task's estimate, an Area's name, the Goal's text and
     // the hours change; what was written down at confirm does not.
-    await app.post('saveTask', { taskId: paper, estimate: 9 });
-    await app.post('renameArea', { areaId: research, name: '調査' });
-    await app.post('setRunningGoal', {
+    await app.run('saveTask', { taskId: paper, update: {}, estimate: 9 });
+    await app.run('renameArea', { areaId: research, name: '調査' });
+    await app.run('setRunningGoal', {
       areaId: research,
       text: '書き直した文',
     });
-    await app.post('setRunningAvailableHours', { hours: 5 });
+    await app.run('setRunningAvailableHours', { hours: 5 });
     const { records } = await app.saved();
+    // The edits took effect…
+    expect(task(records, paper).estimate).toMatchObject({ hours: 9 });
+    expect(records.areas.find((a) => a.id === research)?.name).toBe('調査');
     const later = activeOf(records);
+    // …and what was written down at confirm stayed.
     expect(later.tasks.map((t) => t.planSnapshot)).toEqual(
       confirmed.tasks.map((t) => t.planSnapshot),
     );
@@ -531,14 +536,14 @@ describe('the invariants, through the API', () => {
 
   it('invariant 36: confirming with an active criterion makes its CriterionUse, applied or not', async () => {
     const applied = await setup('planning-check');
-    await applied.post('confirmSprint', { applyCriterion: true });
+    await applied.run('confirmSprint', { applyCriterion: true });
     expect(activeOf((await applied.saved()).records).criterionUse).toEqual({
       criterionId: expect.any(String),
       appliedAtConfirm: true,
     });
 
     const left = await setup('planning-check');
-    await left.post('confirmSprint', { applyCriterion: false });
+    await left.run('confirmSprint', { applyCriterion: false });
     expect(activeOf((await left.saved()).records).criterionUse).toEqual({
       criterionId: expect.any(String),
       appliedAtConfirm: false,
@@ -558,7 +563,7 @@ describe('the invariants, through the API', () => {
       .tasks.filter((t) => task(records, t.taskId).areaId === research)
       .map((t) => t.id);
     expect(sprintTaskIds.length).toBeGreaterThan(0);
-    await app.post('unchooseTasks', { sprintTaskIds });
+    await app.run('unchooseTasks', { sprintTaskIds });
     ({ records } = await app.saved());
     expect(
       draftOf(records).tasks.some(
@@ -574,7 +579,7 @@ describe('the invariants, through the API', () => {
 
   it('capacity: exceeding the available hours does not stop the confirm', async () => {
     const app = await setup('planning-check');
-    await app.post('setPlanningAvailableHours', { hours: 1 });
+    await app.run('setPlanningAvailableHours', { hours: 1 });
     const planning = v.parse(
       contract.vGetPlanningResponse,
       await (await app.get('/planning')).json(),
@@ -586,7 +591,7 @@ describe('the invariants, through the API', () => {
 
   it('F16: a Goal written after confirm has no planned text, and is not removed', async () => {
     const app = await setup('today-morning');
-    await app.post('setRunningGoal', { areaId: study, text: '新しい目標' });
+    await app.run('setRunningGoal', { areaId: study, text: '新しい目標' });
     const goal = activeOf((await app.saved()).records).goals.find(
       (g) => g.areaId === study,
     );
@@ -603,7 +608,7 @@ describe('the invariants, through the API', () => {
     ).toBe(true);
   });
 
-  it('F33: undoing a past day’s completion makes the Task planned again, and the day open for nothing', async () => {
+  it('F33: undoing a past day’s completion makes the Task planned again, and the system closes the day', async () => {
     const app = await setup('today-morning');
     const before = (await app.saved()).records;
     const selection = selectionOf(before, tax, '2026-09-29');
@@ -612,21 +617,31 @@ describe('the invariants, through the API', () => {
       selectionId: selection.id,
     });
     expect(response.status).toBe(204);
-    const after = (await app.saved()).records;
-    expect(activeSprintTaskOf(after, tax).outcome).toBe('planned');
-    expect(task(after, tax).lifecycle).toBe('active');
+    const saved = await app.saved();
+    expect(activeSprintTaskOf(saved.records, tax).outcome).toBe('planned');
+    expect(task(saved.records, tax).lifecycle).toBe('active');
+    // The past day is not left open: the system closes it as unresolved
+    // (invariant 24), in the same change as the person's undo.
+    expect(selectionOf(saved.records, tax, '2026-09-29').resolution).toBe(
+      'unresolved',
+    );
+    const actors = (await app.db.select().from(activity))
+      .filter((e) => e.revision === saved.revision)
+      .map((e) => e.actor);
+    expect(actors).toContain('user');
+    expect(actors).toContain('system');
   });
 
   it('F9: a Task of a new Area chosen in Planning is in the Sprint’s Area names at confirm', async () => {
     const app = await setup('planning-check');
     const made = (await (
-      await app.post('createArea', { name: '趣味' })
+      await app.run('createArea', { name: '趣味' })
     ).json()) as { areaId: string };
-    await app.post('createAndChooseTask', {
+    await app.run('createAndChooseTask', {
       title: '写真を整理する',
       areaId: made.areaId,
     });
-    await app.post('confirmSprint', { applyCriterion: false });
+    await app.run('confirmSprint', { applyCriterion: false });
     expect(
       activeOf((await app.saved()).records).areaSnapshot.map((a) => a.name),
     ).toEqual(['仕事', '研究', '学習', '生活', '趣味']);
@@ -678,7 +693,7 @@ describe('the Sprint reads', () => {
 
     it('shows what an operation just changed', async () => {
       const app = await setup('planning-pick');
-      await app.post('chooseTasks', { taskIds: [tax] });
+      await app.run('chooseTasks', { taskIds: [tax] });
       const body = v.parse(
         contract.vGetPlanningResponse,
         await (await app.get('/planning')).json(),
@@ -748,7 +763,7 @@ describe('the Sprint reads', () => {
 
     it('shows what an operation just changed', async () => {
       const app = await setup('today-morning');
-      await app.post('setRunningAvailableHours', { hours: 20 });
+      await app.run('setRunningAvailableHours', { hours: 20 });
       const body = v.parse(
         contract.vGetRunningResponse,
         await (await app.get('/running')).json(),

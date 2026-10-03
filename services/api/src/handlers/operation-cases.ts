@@ -78,18 +78,25 @@ export async function setupFixtureApp(
       authenticator: () => authenticator,
     }),
   );
+  const post = (name: OperationName, body: unknown) =>
+    app.request(
+      `/api/operations/${name}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Origin: testOrigin },
+        body: JSON.stringify(body),
+      },
+      testEnv,
+    );
   return {
     db,
-    post: (name: OperationName, body: unknown) =>
-      app.request(
-        `/api/operations/${name}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Origin: testOrigin },
-          body: JSON.stringify(body),
-        },
-        testEnv,
-      ),
+    post,
+    /** `post` for a step that must work: it fails the test, naming the operation, when it does not. */
+    run: async (name: OperationName, body: unknown) => {
+      const response = await post(name, body);
+      expect(response.status, `${name} (set-up)`).toBeLessThan(300);
+      return response;
+    },
     get: (path: string) => app.request(`/api${path}`, {}, testEnv),
     /** The user's records as saved, with their revision. */
     async saved() {
