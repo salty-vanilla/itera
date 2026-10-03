@@ -1,16 +1,15 @@
-// The contract's surfaces and reads the API answers, and the operations and
-// reads it does not yet (#266 完了条件, #295): every surface is routed at its
-// method and path, and every read is answered or listed as not yet.
+// The contract's surfaces and reads the API answers (#266 完了条件, #295,
+// #270): every surface is routed at its method and path, and every read is
+// answered.
 import * as contract from '@itera/api-contract';
 import * as sdk from '@itera/api-contract/client';
 import { surfaces } from '@itera/api-contract/requests';
-import { operations } from '@itera/application';
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../app';
 import { createRecordingDatabase } from '../db/recording-database';
 import { testDependencies } from '../test-env';
-import { honoPath, unimplementedOperations } from './operations';
-import { readRoutes, unimplementedReads } from './reads';
+import { honoPath } from './operations';
+import { readRoutes } from './reads';
 
 /** The contract's operationIds: the client's functions. */
 const contractNames = Object.entries(sdk)
@@ -62,14 +61,6 @@ function routes() {
 }
 
 describe('operations', () => {
-  it('are each answered or listed as not yet, once', () => {
-    expect(new Set(unimplementedOperations).size).toBe(
-      unimplementedOperations.length,
-    );
-    for (const name of unimplementedOperations)
-      expect(Object.keys(operations)).toContain(name);
-  });
-
   it("are routed at their surfaces' methods and paths", () => {
     const routed = routes();
     for (const [name, surface] of Object.entries(surfaces)) {
@@ -84,10 +75,10 @@ describe('operations', () => {
 describe('reads', () => {
   const implemented = Object.keys(readRoutes);
 
-  it('are each implemented, listed as not yet, or the server’s own, once', () => {
-    expect(
-      [...implemented, ...unimplementedReads, ...serverReads].toSorted(),
-    ).toEqual(readNames.toSorted());
+  it('are each implemented or the server’s own, once', () => {
+    expect([...implemented, ...serverReads].toSorted()).toEqual(
+      readNames.toSorted(),
+    );
   });
 
   it("are at the contract's paths, with its parameter schemas", () => {

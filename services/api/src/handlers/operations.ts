@@ -5,40 +5,13 @@ import {
   type ReceivedRequest,
   type Surface,
 } from '@itera/api-contract/requests';
-import {
-  operations,
-  type Change,
-  type OperationName,
-} from '@itera/application';
+import { operations, type Change } from '@itera/application';
 import { Hono, type HonoRequest } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import type { AppEnv } from '../env';
 import { ApiError, errorResponse } from '../errors';
 import type { Flow, Guards } from './flow';
 import { validate } from './validate';
-
-/**
- * The operations the API does not answer yet, by the Issue that adds them;
- * it answers every other operation of packages/application (registry.test.ts).
- * A request for one of these answers 404 once it has passed the guards and
- * the contract's checks: a surface may take others the API answers, so the
- * operation is known only then.
- */
-export const unimplementedOperations: readonly OperationName[] = [
-  // #270: the Retro.
-  'beginRetro',
-  'assessGoal',
-  'pinFact',
-  'unpinFact',
-  'setReflection',
-  'setImprovement',
-  'draftCriterion',
-  'setDraftPolicy',
-  'dropCriterionDraft',
-  'decideCriterion',
-  'completeRetro',
-  'beginPlanning',
-];
 
 /** The largest request body an operation takes (ADR 0006 エラー). */
 export const maxBodyBytes = 64 * 1024;
@@ -56,7 +29,8 @@ export const honoPath = (url: string) => url.replace(/\{(\w+)\}/g, ':$1');
 
 /**
  * Each write surface of the contract (`surfaces` of
- * `@itera/api-contract/requests`): the guards (authentication, the Origin
+ * `@itera/api-contract/requests`; registry.test.ts holds every one routed
+ * at its method and path): the guards (authentication, the Origin
  * check) run first, then the size limit and the contract's validation of
  * the path, the query and the body. The surface names the operation of
  * packages/application, which runs on the person's records. It answers the
@@ -73,7 +47,6 @@ export function operationRoutes(flow: Flow, guards: Guards) {
         `The body is larger than ${maxBodyBytes} bytes.`,
       ),
   });
-  const unimplemented = new Set<string>(unimplementedOperations);
   for (const surface of Object.values(surfaces) as Surface[]) {
     routes.on(
       surface.method,
@@ -87,7 +60,6 @@ export function operationRoutes(flow: Flow, guards: Guards) {
           query: c.req.queries(),
           body: () => jsonBody(c.req),
         });
-        if (unimplemented.has(name)) return c.notFound();
         const operation = operations[name] as (
           input: unknown,
         ) => Change<unknown>;

@@ -1,6 +1,7 @@
 import type { PlanningCriterion } from './criterion';
 import { missOccurrence, type Occurrence } from './occurrence';
 import type { CriterionPolicy } from './planning-value';
+import { factOccurrenceIds, factSprintTasks } from './retro-facts';
 import type { Activity } from './shared/activity';
 import {
   applied,
@@ -240,13 +241,49 @@ export function assessGoal(
   );
 }
 
+/**
+ * The pin as a fact of this Sprint (気になる印 is on the facts the Retro
+ * shows, those of `retroFacts`): a SprintTask, DailySelection or interrupt
+ * of the Sprint, an occurrence it took in, a Goal's Area of the Sprint, or
+ * the available hours (no ID). A pin that does not name its ID, or names
+ * one for the hours, is `invalidInput`; an ID of another Sprint, or of
+ * none, is `notFound`, as for a Goal without an Area (`assessGoal`).
+ */
+function checkPin(sprint: Sprint, pin: RetroPin): Result<RetroPin> {
+  const { id } = pin;
+  if ((pin.kind === 'availableHours') !== (id === undefined)) {
+    return err('invalidInput', 'A pin names its ID, except the hours.');
+  }
+  const found = (() => {
+    switch (pin.kind) {
+      case 'availableHours':
+        return true;
+      case 'sprintTask':
+        return factSprintTasks(sprint).some((t) => t.id === id);
+      case 'dailySelection':
+        return sprint.dailySelections.some((s) => s.id === id);
+      case 'occurrence':
+        return [...factOccurrenceIds(sprint)].some((o) => o === id);
+      case 'interrupt':
+        return sprint.interrupts.some((n) => n.id === id);
+      case 'goal':
+        return sprint.goals.some((g) => g.areaId === id);
+    }
+  })();
+  return found
+    ? { ok: true, value: pin }
+    : err('notFound', 'The pin names no fact of this Sprint.');
+}
+
 function samePin(a: RetroPin, b: RetroPin): boolean {
   return a.kind === b.kind && a.id === b.id;
 }
 
 /**
- * 気になる印をつける. Pinning a fact already pinned changes nothing, so the
- * same request gives the same result however often it is sent (#295).
+ * 気になる印をつける. Only a fact of this Sprint can be pinned (`notFound`
+ * otherwise; `checkPin`). Pinning a fact already pinned changes
+ * nothing, so the same request gives the same result however often it is
+ * sent (#295).
  */
 export function pinFact(
   sprint: Sprint,
@@ -275,6 +312,10 @@ function setPinned(
   if (!retro.ok) return retro;
   const pinned = retro.value.pins.some((p) => samePin(p, pin));
   if (pinned === on) return applied(sprint, []);
+  if (on) {
+    const checked = checkPin(sprint, pin);
+    if (!checked.ok) return checked;
+  }
   const pins = on
     ? [...retro.value.pins, pin]
     : retro.value.pins.filter((p) => !samePin(p, pin));

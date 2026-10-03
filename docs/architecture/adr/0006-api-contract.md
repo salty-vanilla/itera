@@ -241,7 +241,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 - query の数と真偽は文字列で届くので、サーバーで変換が要る（#266）。
 - query は空の配列を運べないので、`DELETE /sprints/{sprintId}/sprint-tasks?ids=` は `minItems: 1` とし、`requestOf` も空の配列を断る（1 つも外さないときは送らない）。
-- 印の `{pin}` は記録の ID から種類を決める。クライアントが別の種類として送った ID も、その ID の種類の印として扱う（契約が受け付ける ID の種類の中で）。
+- 印の `{pin}` は記録の ID から種類を決める。クライアントが別の種類として送った ID も、その ID の種類の印として扱う（契約が受け付ける ID の種類の中で）。印を付けられるのは、その Sprint の事実だけで、ほかの Sprint や存在しない ID は domain が `notFound`（404。経路の子が経路の Sprint にないとき、と同じ）で断る（#270、不変条件 40）。
 - `PUT`・`DELETE` の 2 回目を、domain が `invalidTransition`（422）で断る操作がある（含めた回をもう一度含める `PUT …/included-occurrences/{occurrenceId}` など）。記録は変わらないので状態としては冪等だが、応答は 1 回目と同じにならない。直すなら domain の変更。
 - 応答のスキーマは未知のキーを許すので、Valibot の検証だけでは余分なキーを見つけられない。型のテストで止めている。
 - `restoreInterrupt` と `undoAdoption` は、クライアントが前の読み取りの値を送る。版はサーバーが読み込んだ時点のものなので、クライアントの読み取りが古いことは 409 では分からない。`undoAdoption` は domain の確かめ（提案の状態）で守られるが、`restoreInterrupt` は古い note でも受け付ける。
@@ -302,7 +302,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 ## 影響
 
-- `services/api`（#266）は、`@itera/api-contract` のスキーマで入力を検証し、この ADR の割り当てでエラーを返す。書き込みは `@itera/api-contract/requests` の面をすべて登録し（#295）、まだ答えない操作は `src/handlers/operations.ts` の未実装の一覧に置いて 404 にする。読み取りは `reads.ts` の登録表に足し、まだ答えないもの（`getSprintRetro` は #270）は同じファイルの未実装の一覧に置く。
+- `services/api`（#266）は、`@itera/api-contract` のスキーマで入力を検証し、この ADR の割り当てでエラーを返す。書き込みは `@itera/api-contract/requests` の面をすべて登録し（#295）、読み取りは `reads.ts` の登録表に足す。契約のすべての面と読み取り（`getMe` のほか）が登録されていることはテストで確かめる（#270 で全部の領域がそろい、未実装の一覧はなくなった）。
 - `apps/web`（#272）は、`@itera/api-contract/client` と `/react-query` を使い、`@tanstack/react-query` 5.104.1 を入れる。操作は `useOperation('<名前>')` で、`@itera/api-contract/requests` を通して送る（#295）。
 - iOS・Android は、`openapi/` を 1 ファイルにまとめたもの（`redocly bundle`）から生成できる。セッションの Cookie と書き込みの Origin の検査（ADR 0004）は、Origin を送らないネイティブのクライアントでは 403 になるので、ネイティブの認証の方式は iOS に着手するときに決める。
 - 契約を変えるときは、`openapi/` を直し、`pnpm contract:generate` を実行して、生成物と一緒にコミットする。

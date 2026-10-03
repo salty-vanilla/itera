@@ -18,7 +18,7 @@ import {
   fixtureSnapshot,
   type FixtureStateId,
 } from '@itera/application/fixtures';
-import { localDate } from '@itera/domain';
+import { localDate, type Instant } from '@itera/domain';
 import * as v from 'valibot';
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../app';
@@ -49,11 +49,14 @@ export function closeFixtureApps() {
 
 /**
  * The app on a database holding the fixture's state, signed in as its user.
- * `edit` changes the records first, for a state the fixture does not have.
+ * `edit` changes the records first, for a state the fixture does not have;
+ * `now` sets the app's clock (`testNow` otherwise), later than the state's,
+ * so the first request writes the system's catch-up of the days between.
  */
 export async function setupFixtureApp(
   state: FixtureStateId,
   edit: (records: Records) => Records = (records) => records,
+  now: Instant = testNow,
 ) {
   const { records: all, clock } = fixtureSnapshot(state);
   const { activities, ...fixture } = all;
@@ -82,6 +85,7 @@ export async function setupFixtureApp(
     testDependencies({
       database: () => db,
       authenticator: () => authenticator,
+      now: () => now,
     }),
   );
   /** Sends an operation as its request of the contract (requestOf). */
@@ -117,6 +121,8 @@ type Case = {
   readonly name: OperationName;
   /** The fixture state it runs on. */
   readonly state?: FixtureStateId;
+  /** The app's current time, when it is not `testNow`. */
+  readonly now?: Instant;
   readonly prepare?: readonly Step[];
   readonly body: (records: Records) => unknown;
 };
@@ -135,12 +141,17 @@ export type Failure = Case & {
   readonly code: string;
 };
 
-/** The contract's response schema of an operation's surface, and its status. */
+/**
+ * The contract's response schema of an operation's surface, and its status.
+ * A surface that answers with nothing (204, or 201 for the Retro) has no
+ * schema.
+ */
 function responseOf(name: OperationName, input: unknown) {
   const id = requestOf(name, input as never).operationId;
   const key = `v${id[0]!.toUpperCase()}${id.slice(1)}Response`;
   return {
-    schema: (contract as Record<string, unknown>)[key] as v.GenericSchema,
+    schema: (contract as Record<string, unknown>)[key] as
+      v.GenericSchema | undefined,
     status: surfaces[id].status,
   };
 }
@@ -178,7 +189,7 @@ async function prepared(app: FixtureApp, steps: readonly Step[] = []) {
 
 /**
  * Runs the tables. A success answers what the contract says (its surface's
- * status, and a body the response schema parses unless 204), raises
+ * status, and a body the response schema parses, or none where it has none), raises
  * the revision once and writes the person's Activity in the same batch. A
  * failure answers the status and code and leaves the records as they were.
  */
@@ -197,7 +208,7 @@ export function describeOperations(
   describe(title, () => {
     describe.each(successes)('$name', (c) => {
       it('changes the records and answers what the contract says', async () => {
-        const app = await setupFixtureApp(c.state ?? state);
+        const app = await setupFixtureApp(c.state ?? state, undefined, c.now);
         const before = await prepared(app, c.prepare);
         const input = c.body(before.records);
         const response = await app.post(c.name, input);
@@ -205,7 +216,7 @@ export function describeOperations(
         const { schema, status } = responseOf(c.name, input);
         let body: unknown;
         expect(response.status).toBe(status);
-        if (status === 204) {
+        if (status === 204 || schema === undefined) {
           expect(await response.text()).toBe('');
         } else {
           body = v.parse(schema, await response.json());
@@ -221,14 +232,14 @@ export function describeOperations(
         expect(
           entries.filter((e) => e.revision === after.revision),
         ).toContainEqual(
-          expect.objectContaining({ actor: 'user', at: testNow }),
+          expect.objectContaining({ actor: 'user', at: c.now ?? testNow }),
         );
       });
     });
 
     describe.each(failures)('$name refused: $code', (c) => {
       it('answers the domain’s error and writes nothing', async () => {
-        const app = await setupFixtureApp(c.state ?? state);
+        const app = await setupFixtureApp(c.state ?? state, undefined, c.now);
         const before = await prepared(app, c.prepare);
         const response = await app.post(c.name, c.body(before.records));
 

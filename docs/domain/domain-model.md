@@ -355,7 +355,7 @@ stateDiagram-v2
 37. 確定後に基準の適用を変える操作はない（MVP）。
 38. RetroImprovement は Retro ごとに 1 件の自然文。Criterion はそこから任意で 0..1 作られるが、Improvement そのものではない。
 39. 基準の設定値・効果の説明・次回 Planning のプレビューは、同じ 1 つの値から作る。
-40. Retro の事実は記録からの派生で、Retro では編集しない。生産性スコアのような点数は作らない。
+40. Retro の事実は記録からの派生で、Retro では編集しない。生産性スコアのような点数は作らない。気になる印は、その Sprint の事実（SprintTask・DailySelection・Occurrence・割り込み・Goal・使える時間）にだけ付けられる。
 41. Agent の計画案は Sprint を直接書き換えない。採用された項目だけが、本人の操作と同じ検証を通って Planning の下書きを変える。
 
 ## 現在状態だけでは失われる情報

@@ -23,7 +23,7 @@ import { saveRecords } from '../db/save-records';
 import { activity, user as authUser } from '../db/schema';
 import { testDependencies, testEnv, testNow, testOrigin } from '../test-env';
 import { httpRequest } from './operation-cases';
-import { maxBodyBytes, unimplementedOperations } from './operations';
+import { maxBodyBytes } from './operations';
 
 const ids = createIdSource((bytes) => crypto.getRandomValues(bytes));
 const alice = ids.newId('User', testNow);
@@ -414,18 +414,6 @@ describe('an operation', () => {
     expect(logged).not.toContain('秘密');
     expect(logged).toContain('SQLITE_FULL');
     expect(logged).toContain('/api/areas');
-  });
-
-  it('is not answered when the API does not implement it yet', async () => {
-    const { app } = await setup();
-    // Every operation the API answers is registered, so these are the ones
-    // that are not.
-    for (const name of unimplementedOperations) {
-      for (const input of OPERATION_EXAMPLES[name]) {
-        const { url, init } = httpRequest(name, input);
-        expect((await app.request(url, init, testEnv)).status, name).toBe(404);
-      }
-    }
   });
 });
 
