@@ -120,7 +120,7 @@ type CommandResult<T> =
 ## Today で決めた細部（#23）
 
 - **置き場所**：DailySelection・ActualTime・InterruptNote は Sprint の集約の中（`dailySelections`・`actualTimes`・`interrupts`）。Today のコマンドは Sprint と、変えた Task・Occurrence を返し、Goal・計画基準・使える時間には触れない（不変条件 25）。
-- **1 日 1 件**：日付 × SprintTask（繰り返しは × Occurrence）に 1 件（不変条件 21）。同じ日に「今日の予定から外す」「見送る」をした後、同じ日にもう一度選ぶことはできない（オーナー確認済み）。ただし、その日のうちなら完了にはできる（F17。`completeSelection` の `today` で判定）。
+- **1 日 1 件**：日付 × SprintTask（繰り返しは × Occurrence）に 1 件（不変条件 21）。同じ日に「今週の残りに戻す」「見送る」をした後、同じ日にもう一度選ぶことはできない（オーナー確認済み）。ただし、その日のうちなら完了にはできる（F17。`completeSelection` の `today` で判定）。
 - **ほかの日の回（F18）**：繰り返しの回は、同じ Sprint のほかの日にも選べる。
 - **Today が触れる範囲**：Today のコマンドは active な Sprint の、planned の SprintTask の選択だけに働く（完了の取り消しは、単発なら done、繰り返しなら planned）。Sprint から外した SprintTask の開いた選択はそのまま残るが、Today のコマンドも「今日の残り」も扱わず、日付が変わると未処理になる。Sprint に戻せば（F13）また使える。
 - **当日の繰り返し**：`startDay`（actor = system だけ）で作る。Today を開いたとき・日付が変わったときに呼び、繰り返しても変わらない。前の日に開いたままの選択（selected / started）を unresolved にし（不変条件 24）、その日の Pending の回で、planned の SprintTask に含まれるものを `recurringToday` の選択にする。「昨日の続き」も含め、ほかは自動で選ばない（不変条件 22）。
@@ -143,7 +143,7 @@ type CommandResult<T> =
 - **Retro の完了**（`completeRetro`）：Review → Closed。続けるなら Active のまま、終えるなら Ended、置き換えるなら Replaced（`replacedBy` = 下書き）にして下書きを Active にする。下書きは、Active が続く場合を除いて Active になる（続けるのに下書きがあると Active が 2 つになるので拒否する。不変条件 35）。変わった基準の記録を返す。
 - **次の Planning の入口**：`previousImprovement` で前の Sprint の Improvement を出す。
 - **不変条件 39**：`criterionView(policy, tasks, now)` が、設定値・効果（どちらの端か、どこに効くか）・次の Planning のプレビューを同じ 1 つの `CriterionPolicy` から作る。文言は画面が作る。
-- **Retro の事実**（`retroFacts`）：記録から毎回計算し、保存も編集もしない。点数は作らない（不変条件 40）。Area ごとの Goal（計画時と今、自己判定。Area は Sprint の並び順で、Area のない Task は最後）、Goal に紐づく / 紐づかない Task、完了・持ち越し・外した Task、週の途中の追加、繰り返しの回（回ごとに属する SprintTask・実績・完了した日も返す。#56。Sprint に含めた回。途中で外した繰り返しの、外す前に済ませた回も出す：F24。Excluded は出さない：F2・F14）、見送り・今日はここまで（F17 で完了になった選択も数える）、割り込み、使える時間の計画時と今、計画値の合計（確定時の分と、週の途中の追加を含めた分）、実績。Task ごとに持ち越し回数（`carryCount`：この SprintTask より前に続いた持ち越しの数。この Sprint での持ち越しは含まない）と最長の連続見送り（Today の `deferralStreak` と同じ規則。F17 で完了した日はそこで区切り、見送りの日の一覧には含める）を返す。
+- **Retro の事実**（`retroFacts`）：記録から毎回計算し、保存も編集もしない。点数は作らない（不変条件 40）。Area ごとの Goal（計画時と今、自己判定。Area は Sprint の並び順で、Area のない Task は最後）、Goal に紐づく / 紐づかない Task、完了・持ち越し・外した Task、週の途中の追加、繰り返しの回（回ごとに属する SprintTask・実績・完了した日も返す。#56。Sprint に含めた回。途中で外した繰り返しの、外す前に済ませた回も出す：F24。Excluded は出さない：F2・F14）、見送り・中断（F17 で完了になった選択も数える）、割り込み、使える時間の計画時と今、計画値の合計（確定時の分と、週の途中の追加を含めた分）、実績。Task ごとに持ち越し回数（`carryCount`：この SprintTask より前に続いた持ち越しの数。この Sprint での持ち越しは含まない）と最長の連続見送り（Today の `deferralStreak` と同じ規則。F17 で完了した日はそこで区切り、見送りの日の一覧には含める）を返す。
 - **実績**：Review 中も `recordActualTime` で足せる（F22）。
 
 ## Backlog の画面で決めた細部（#39）
@@ -188,7 +188,7 @@ PlanProposal（不変条件 41）は、外部 Agent を MVP に含めるかが P
 | `src/mid-sprint.ts` | 週の途中の追加、Sprint から外す・戻す、F9 |
 | `src/sprint-recurrence.ts` | 次の Sprint からの Rule の作成と変更（F1・F7・F15） |
 | `src/capacity.ts` | 計画値の合計と使える時間との比較 |
-| `src/today.ts` | 今日へ、開始・完了・今日はここまで・見送り・外す・スキップ（と取り消し）、日付の変更、Backlog からの完了（と取り消し）、実績、割り込み |
+| `src/today.ts` | 今日へ、開始・完了・中断・見送り・今週の残りに戻す・スキップ（と取り消し）、日付の変更、Backlog からの完了（と取り消し）、実績、割り込み |
 | `src/today-view.ts` | 連続見送り、昨日の続き、今日の残り |
 | `src/review.ts` | Review への移行、Retro（印・気になったこと・Improvement・自己判定）、計画基準の下書きと決定、Retro の完了 |
 | `src/criterion.ts` | PlanningCriterion、下書きの設定、`criterionView`（不変条件 39） |

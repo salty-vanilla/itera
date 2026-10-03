@@ -30,7 +30,7 @@
 | `design-references` | このリポジトリで作成 | DADS / Apple HIG の一次資料の取得 |
 | `copy-review` | このリポジトリで作成 | 画面の日本語の定期の評価。`pnpm copy:list` で一覧を作り、ペルソナを演じる評価役に読ませて集計する |
 | `ui-copy` | このリポジトリで作成 | 画面の日本語を書く・変える前に読む。`docs/design/content.md` に沿って書き、`pnpm copy:lint` と自己点検で確かめる |
-| `issue-harness` | このリポジトリで作成 | Issue 駆動の実装と独立した受け入れ |
+| `issue-harness` | このリポジトリで作成 | Issue 駆動の実装と独立した受け入れ、複数の Issue の並列実行 |
 | `wrangler` | cloudflare/skills（Apache-2.0） | wrangler の設定とコマンド。`services/api` の固定版を `pnpm --filter @itera/api exec wrangler <command>` か package の script で使う |
 | `workers-best-practices` | cloudflare/skills（Apache-2.0） | Workers のコードと設定の作法・レビュー観点 |
 | `hono` | honojs/skills（MIT） | Hono の API の参照 |
@@ -94,6 +94,8 @@ direnv のシェル hook は対話シェルのプロンプトでしか動かな�
 ```
 
 経過と結果は Issue・PR・CI に残す。中断したときと上限に達したときだけ、実行記録を `.tools/harness/issue-<番号>/<実行ID>/run.md` に置く（Git 管理外）。
+
+複数の Issue を並列に進めるときは、1 つのセッションを司令塔にし、Issue ごとに worker のセッションを動かす（`references/coordinate.md`）。Orca を使うときの操作と補助のスクリプトは `references/coordinate-orca.md` と `scripts/orch.mjs`。
 
 ## 確認と更新
 
