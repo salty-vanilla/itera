@@ -2,8 +2,8 @@
 
 - 状態：採用
 - 日付：2026-09-27
-- 関連：Issue #25、後続 Issue #26、#30、#121
-- 改訂：2026-09-30（認証を WorkOS AuthKit から Better Auth に変更。Issue #121）
+- 関連：Issue #25、後続 Issue #26、#30、#121、#262
+- 改訂：2026-09-30（認証を WorkOS AuthKit から Better Auth に変更。Issue #121）、2026-10-03（記録のテーブル、操作と読み取りの処理、ID の形式、同時の書き込み、CSRF、Web と API の配信、使い始めの間のスキーマの変更。Issue #262）
 
 ## 背景
 
@@ -107,6 +107,71 @@ Better Auth の文書（Context7 と better-auth.com）と、固定した 1.7.6 
 - DI コンテナのライブラリは使わない。関数の引数と Hono の context で足りる範囲にする。
 - 別の DB ドライバ、別の認証サービス、Node でのローカル実行は、必要になったときに別の Issue で足す。
 
+### 記録のテーブル（2026-10-03）
+
+オーナーの決定（2026-10-02・03）：記録をまるごと 1 件の JSON にする案と、集約の中身を JSON の列に置く案は採らない。どちらも、どの記録が変わったかを DB が知らず、PC とスマホから同じ集約を書いたときに集約ごと上書きされて片方の変更が消える。SQL で中身を確かめることもできない。
+
+- `packages/domain` の記録を、種類ごとのテーブルに置く。集約の中身も子テーブルに分ける。
+  - Sprint：SprintGoal、SprintTask、SprintAreaSnapshot、CriterionUse、DailySelection、ActualTime、InterruptNote、Retro と RetroPin。
+  - Task：Subtask、EstimateSuggestion。
+  - RecurrenceRule：版。
+- 値オブジェクト（Estimate、PlanSnapshot と PlanningValue、CriterionPolicy、RecurrencePattern など）は、持ち主の行の列に展開する。union は判別の列（`kind`・`base` など）と、種類ごとの列で表す。
+- 利用者の設定（domain の `User`：表示名・タイムゾーン・週の始まり）は、Better Auth の `user` とは別のテーブルに置き、Better Auth の利用者 ID で 1 対 1 に結ぶ。Better Auth のテーブルに列を足さない。
+- Activity は追記だけの履歴で、種類（75 種）ごとに項目が違う。共通の項目（利用者、追記の順、日時、actor、kind）を列にし、種類ごとの内容を JSON の列に置く。Activity は判定に読み返さない履歴なので、内容の列では検索しない。
+- 列・制約・index は #263 で決め、この節に追記する。
+
+### 操作と読み取りの処理（2026-10-03）
+
+操作（書き込み）は次の順に処理する。読み取りは 1・3・4・5 の後に派生値を計算して返す。
+
+1. 認証（`requireAuth`）。
+2. 書き込みのリクエストの Origin を確かめる（下の「書き込みの API の CSRF への備え」）。
+3. 入力を契約（OpenAPI、ADR 0006）のスキーマで検証する。
+4. 利用者の記録を読み込む。
+5. 日付が変わったときのシステムの処理（Sprint の終了、その日の始まり）を、その時点まで進める（#271）。
+6. アプリケーション層（ADR 0005）の操作を実行する。判定は `packages/domain` のコマンドが行う。
+7. 変わった行だけを 1 つの `batch()` で書く。同じ `batch()` の中で、利用者ごとの版を確かめて上げる（下の「同時の書き込み」）。
+8. 操作の結果（作った記録の ID、操作が返す値）を返す。
+
+- 4 では、その利用者の記録を、Activity を除いてすべて読む。派生値（持ち越し回数、連続見送り、Retro の事実）は過去の Sprint をたどるので、操作ごとに読む範囲を切り出すと、範囲を決める規則が `packages/domain` の外に増えるため。1 回の `batch()`（テーブルの数の SELECT）で読む。Workers Logs で読み込みの時間を見て、目安（p95 で 100ms）を超えたら、読む範囲の切り出しを検討する。
+
+### ID の形式（2026-10-03）
+
+オーナーの決定：記録の ID は TypeID（仕様 v0.3）にする。接頭辞に記録の種類を、後ろに UUIDv7 を base32 にした 26 文字を置く（例：`task_01h2xcejqtf2nbrexx3vqjhp41`）。
+
+- 接頭辞は domain の ID の種類を snake_case にしたもの（`user`、`area`、`task`、`subtask`、`estimate_suggestion`、`recurrence_rule`、`occurrence`、`sprint`、`sprint_task`、`daily_selection`、`interrupt_note`、`planning_criterion`）。
+- UUIDv7 は作った時刻の順に並ぶので、domain が同時刻の記録を ID の順で並べる規則（packages/domain README）を満たす。
+- ID は `packages/domain` の外で作る（domain は時計と乱数に依存しない）。作る関数は API とブラウザ内モックで共有する（#264）。外から来た ID は、接頭辞と形式を検証してから使う（契約のスキーマ、#265）。
+- Better Auth が作る ID（利用者・セッション・アカウントなど）も TypeID にそろえる。domain の利用者 ID は Better Auth の利用者 ID と同じ値（`user_…`）。
+- D1 には文字列のまま置く。
+
+### 同時の書き込み（2026-10-03）
+
+PC とスマホから同じ利用者の記録を書く。後から来た書き込みが、古い記録をもとにほかの書き込みを上書きしないように、利用者ごとの版（revision）で楽観的に排他する。
+
+- 読み込んだときの版を、書き込みの `batch()` の中で確かめて上げる。ほかの書き込みが先に入っていたら `batch()` 全体を取り消し、409 を返す。`batch()` は 1 つのトランザクションで、途中の文が失敗すると全体が取り消される（上の「トランザクション」）。
+- 版の確かめ方（`batch()` を失敗させる文の作り方）は #263 で決め、ローカルの D1 で確かめる。
+- クライアントは 409 を受けたら記録を読み直し、操作が通らなかったことを知らせる。自動ではやり直さない（読み直した記録では、その操作の意味が変わっていることがあるため）。
+
+### 書き込みの API の CSRF への備え（2026-10-03）
+
+「影響」で後回しにしていた点を決める。セッションの Cookie は SameSite=Lax だが、それだけに頼らず、`/api/*` の GET・HEAD 以外のリクエストは、`Origin` ヘッダーが `BETTER_AUTH_URL` の origin と一致しなければ 403 にする。Better Auth 自身の経路（`/api/auth/*`）は Better Auth の検査に任せる。
+
+### Web と API の配信（2026-10-03）
+
+- `apps/web` のビルドを、API と同じ Worker の静的アセット（Workers Static Assets）として配信する。同じ origin なので、Cookie と CORS の前提（上の「認証の構成」）を変えない。
+- `assets.not_found_handling` を `single-page-application` にし、`assets.run_worker_first` を `["/api/*"]` にする（2026-10-03 に Cloudflare の文書で確認）。
+- API の経路はすべて `/api` の下に置く（`/api/health`、`/api/me`、`/api/auth/*`、契約の operation）。画面の経路（`/today` など）と重ならない。
+- ローカルの開発では、Vite の開発サーバーが `/api` を `wrangler dev` に中継する（ブラウザから見て同じ origin）。
+
+### 使い始めの間のスキーマの変更（2026-10-02）
+
+オーナーの決定：利用者がオーナー 1 人で、記録が消えてもよい間は、スキーマを変えるときに既存の記録を移さなくてよい。
+
+- マイグレーションは今までどおり drizzle-kit で生成して wrangler で適用する。記録を移す SQL は書かず、テーブルを作り直してよい。
+- 作り直す前に、戻す必要が出たときのために D1 の Time Travel の時点を控える。
+- 終わる条件：オーナー以外が使い始めるとき、またはオーナーが残したい記録ができたと決めたとき。以後は記録を保つマイグレーションにする。
+
 ## 認証の改訂（2026-09-30、Issue #121）
 
 2026-09-27 には WorkOS AuthKit（WorkOS がホストするログイン画面と、`jose` によるアクセストークンの検証）を採用し、#26・#30 で実装した。デプロイ前（#32）のうちに、オーナーが次の理由で Better Auth に切り替えた。
@@ -144,7 +209,7 @@ Issue #121 は「Better Auth は原子的な処理に `batch()` を使う」を�
 
 - `services/api` は Workers 向けに作り、wrangler が束ねてデプロイする。ADR 0001 の「Node で直接動かして出力する `services/api`」という前提は、この ADR で置き換わる。
 - #32（デプロイ）は、認証の設定を Better Auth と Google の OAuth クライアントに合わせる。あわせて、デプロイ先の API に `cf-connecting-ip` が届くこと（届かないとレート制限が全員で 1 つになる）と、`BETTER_AUTH_URL` が https であること（Cookie が Secure になる）を確かめる。
-- 決めていないもの：API の契約（エンドポイント、OpenAPI）、ドメインのテーブル設計、Web のログイン画面とログインの流れ、データの同期・削除・エクスポート、一般公開の範囲。Better Auth の Origin の検査は `/api/auth/*` にだけかかるので、書き込みを伴う API を足すときに、CSRF への備え（Origin の検査など）を決める。
+- 決めていないもの：API の契約（エンドポイント、OpenAPI。ADR 0006 で決める、#265）、テーブルの列・制約・index（上の「記録のテーブル」の方針で #263 が決める）、Web のログイン画面とログインの流れ（#278）、データの同期・削除・エクスポート、一般公開の範囲。書き込みを伴う API の CSRF への備えは、上の「書き込みの API の CSRF への備え」で決めた（2026-10-03）。
 - Cloudflare の料金・上限・機能の区分は、2026-09-27 に下の一次資料で確認した。Better Auth の挙動は 2026-09-30 に 1.7.6 で確認した。変わった場合はこの ADR を見直す。
 
 ## 参照
