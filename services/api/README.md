@@ -10,6 +10,26 @@ pnpm --filter @itera/api db:migrate:local                    # ローカルの D
 pnpm --filter @itera/api dev                                  # http://localhost:8787
 ```
 
+### 本番と同じ形で確かめる（Web を同じ Worker から配信する）
+
+`wrangler.jsonc` の `assets` が `apps/web/dist`（Web のビルドの出力）を指す。ビルドしてから `wrangler dev` を起動すると、Web と API が 1 つの origin から返る。`dist` がないと wrangler は起動しない。
+
+```sh
+pnpm build                      # apps/web/dist を作る
+pnpm --filter @itera/api dev    # .dev.vars の BETTER_AUTH_URL は http://localhost:8787 のままでよい
+```
+
+| 開くもの | 返るもの |
+| --- | --- |
+| `/`、`/today?date=2026-10-01`、`/sprint?sprint=3`（直接開く・再読み込み） | `index.html`（200）。画面のルーターが開く |
+| 存在しない画面のパス（`/nothing`） | `index.html`（200）。画面が「ページが見つかりません」を出す |
+| `/api/health` | `{"status":"ok"}` |
+| 存在しない `/api/xxx` | API の 404（`404 Not Found`）。画面にはならない |
+| `/assets/<ハッシュ付きのファイル>` | 200、`Cache-Control: public, max-age=0, must-revalidate` と `ETag`（`If-None-Match` を付けると 304） |
+| 存在しない `/assets/<名前>` | `index.html`（200）。同じ既定の `Cache-Control`（固定されない） |
+
+すべてのアセットが Workers の既定の `Cache-Control: public, max-age=0, must-revalidate`（毎回 `ETag` で確かめる）。長く固定する設定（`immutable`）は意図して付けていない（ADR 0004「Web と API の配信」）。コードを変えたら、`dist` を作り直す。Vite の開発サーバーから使う開発（`/api` の中継）は #272 で作る。
+
 API の経路はすべて `/api` の下にある。同じ origin のほかの経路は Web の配信に使う（ADR 0004）。
 
 - `GET /api/health`：認証なし。ローカルの D1 に問い合わせて `{"status":"ok"}` を返す。
@@ -65,4 +85,4 @@ wrangler はこのパッケージの固定版を使う（`pnpm --filter @itera/a
 
 ## デプロイ
 
-main への push で、GitHub Actions（`.github/workflows/deploy.yml`）が `pnpm check` → D1 のマイグレーション（`--remote`）→ `wrangler deploy` の順に実行する。production の Environment の承認を待ってから動く。Cloudflare・Google・GitHub の設定と公開後の確認は [`docs/operations/deploy.md`](../../docs/operations/deploy.md)。コードのデプロイとマイグレーションは CD だけで行う。secret の登録・版の戻し・本番の D1 の読み取りは手元の wrangler で行う（手順書の「設定を変えるとき」）。
+main への push で、GitHub Actions（`.github/workflows/deploy.yml`）が `pnpm check` → Web のビルド → D1 のマイグレーション（`--remote`）→ `wrangler deploy`（ビルドした Web も同じ Worker の静的アセットとして上がる）の順に実行する。production の Environment の承認を待ってから動く。Cloudflare・Google・GitHub の設定と公開後の確認は [`docs/operations/deploy.md`](../../docs/operations/deploy.md)。コードのデプロイとマイグレーションは CD だけで行う。secret の登録・版の戻し・本番の D1 の読み取りは手元の wrangler で行う（手順書の「設定を変えるとき」）。
