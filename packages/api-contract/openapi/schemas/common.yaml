@@ -1,0 +1,145 @@
+# Shared values: record IDs, dates and times, the clock and errors.
+
+# Record IDs are TypeIDs (ADR 0004 ID の形式): the kind's prefix, `_`, and a
+# UUIDv7 in base32 (26 characters). The pattern also fixes the UUID's
+# version (7, the 11th character is e or f) and variant (10, the 14th
+# character is one of 89abrstv), as `parseId` of @itera/application does.
+UserId:
+  type: string
+  pattern: '^user_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$'
+  examples: ['user_01k6f3x3qhe7t9vb2q6n0m8r4s']
+AreaId:
+  type: string
+  pattern: '^area_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$'
+  examples: ['area_01k6f3x3qhe7t9vb2q6n0m8r4s']
+TaskId:
+  type: string
+  pattern: '^task_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$'
+  examples: ['task_01k6f3x3qhe7t9vb2q6n0m8r4s']
+SubtaskId:
+  type: string
+  pattern: '^subtask_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$'
+  examples: ['subtask_01k6f3x3qhe7t9vb2q6n0m8r4s']
+EstimateSuggestionId:
+  type: string
+  pattern: '^estimate_suggestion_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$'
+  examples: ['estimate_suggestion_01k6f3x3qhe7t9vb2q6n0m8r4s']
+RecurrenceRuleId:
+  type: string
+  pattern: '^recurrence_rule_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$'
+  examples: ['recurrence_rule_01k6f3x3qhe7t9vb2q6n0m8r4s']
+OccurrenceId:
+  type: string
+  pattern: '^occurrence_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$'
+  examples: ['occurrence_01k6f3x3qhe7t9vb2q6n0m8r4s']
+SprintId:
+  type: string
+  pattern: '^sprint_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$'
+  examples: ['sprint_01k6f3x3qhe7t9vb2q6n0m8r4s']
+SprintTaskId:
+  type: string
+  pattern: '^sprint_task_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$'
+  examples: ['sprint_task_01k6f3x3qhe7t9vb2q6n0m8r4s']
+DailySelectionId:
+  type: string
+  pattern: '^daily_selection_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$'
+  examples: ['daily_selection_01k6f3x3qhe7t9vb2q6n0m8r4s']
+InterruptNoteId:
+  type: string
+  pattern: '^interrupt_note_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$'
+  examples: ['interrupt_note_01k6f3x3qhe7t9vb2q6n0m8r4s']
+PlanningCriterionId:
+  type: string
+  pattern: '^planning_criterion_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$'
+  examples: ['planning_criterion_01k6f3x3qhe7t9vb2q6n0m8r4s']
+
+# Dates and times (packages/domain shared/time.ts).
+LocalDate:
+  description: A calendar day in the person's time zone.
+  type: string
+  format: date
+  examples: ['2026-10-03']
+Instant:
+  description: >-
+    A point in time, in UTC with milliseconds. Ordering by string equals
+    ordering in time.
+  type: string
+  format: date-time
+  pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$'
+  examples: ['2026-10-03T00:30:00.000Z']
+TimeZone:
+  description: An IANA time zone name.
+  type: string
+  examples: [Asia/Tokyo]
+DayOfWeek:
+  description: 0 is Sunday, 6 is Saturday.
+  type: integer
+  enum: [0, 1, 2, 3, 4, 5, 6]
+Clock:
+  description: >-
+    「今日」 in the person's time zone and the current time, as the server
+    decided them for this response (ADR 0005 時計).
+  type: object
+  required: [today, now]
+  properties:
+    today: { $ref: '#/LocalDate' }
+    now: { $ref: '#/Instant' }
+
+# Errors (ADR 0006). `code` is stable and decides what a client does;
+# `message` is for developers and is not shown to the person.
+ValidationError:
+  description: The request does not match the contract.
+  type: object
+  required: [code, message]
+  properties:
+    code: { const: validationFailed }
+    message: { type: string }
+UnauthenticatedError:
+  description: No valid session.
+  type: object
+  required: [code, message]
+  properties:
+    code: { const: unauthenticated }
+    message: { type: string }
+ForbiddenOriginError:
+  description: A write whose Origin is not the app's own.
+  type: object
+  required: [code, message]
+  properties:
+    code: { const: forbiddenOrigin }
+    message: { type: string }
+NotFoundError:
+  description: A record the request names is not among the person's records.
+  type: object
+  required: [code, message]
+  properties:
+    code: { const: notFound }
+    message: { type: string }
+RevisionConflictError:
+  description: >-
+    Another write came first (ADR 0004 同時の書き込み). Nothing was written;
+    read the records again. Not retried automatically.
+  type: object
+  required: [code, message]
+  properties:
+    code: { const: revisionConflict }
+    message: { type: string }
+RuleViolationError:
+  description: >-
+    The domain refused the operation (packages/domain DomainError): a value
+    its rules do not accept, a transition the record's state does not allow,
+    or completing a recurring Task.
+  type: object
+  required: [code, message]
+  properties:
+    code:
+      type: string
+      enum: [invalidInput, invalidTransition, recurringTaskCannotComplete]
+    message: { type: string }
+InternalError:
+  description: An unexpected failure on the server.
+  type: object
+  required: [code, message]
+  properties:
+    code: { const: internalError }
+    message: { type: string }

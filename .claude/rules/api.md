@@ -16,3 +16,4 @@ paths:
 - テーブルは `src/db/schema.ts` に置き、drizzle-kit でマイグレーションを生成して wrangler で適用する。Better Auth のテーブルも同じで、Better Auth のマイグレーション（CLI・エンドポイント）は使わない。
 - テストは Node 上の Vitest で `app.request()` に依存を注入して書く。DB は `src/db/recording-database.ts`（sqlite-proxy）、認証は仮の `Authenticator` を使う。行を保存して読む必要があるテストは `src/db/memory-database.ts`（libSQL のメモリ DB にマイグレーションを適用）を使う。
 - wrangler はこのパッケージの固定版を使う（`pnpm --filter @itera/api exec wrangler ...`）。`wrangler.jsonc` を変えたら `pnpm --filter @itera/api cf-typegen` で型を生成し直す。
+- 契約は `packages/api-contract`（ADR 0006）。入力は `@itera/api-contract` の Valibot のスキーマで検証し、エラーは ADR 0006 の割り当て（`{ code, message }` と HTTP のステータス）で返す。`@itera/api-contract/client`・`/react-query` は使わない（ESLint で検査する）。

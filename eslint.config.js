@@ -83,6 +83,8 @@ export default defineConfig(
       '.agents/skills/**',
       'apps/web/storybook-static/**',
       'services/api/worker-configuration.d.ts',
+      // Generated from the contract (ADR 0006); checked by contract:check.
+      'packages/api-contract/src/generated/**',
       'services/api/.wrangler/**',
       'playwright-report/**',
       'test-results/**',
@@ -177,10 +179,21 @@ export default defineConfig(
               regex: '^@itera/application/fixtures$',
               message: 'The fixture is for tests and the browser mock only.',
             },
+            {
+              regex: '^@itera/api-contract/(client|react-query)$',
+              message:
+                "The API takes the contract's types and schemas only (ADR 0006).",
+            },
           ],
         },
       ],
     },
+  },
+  {
+    // packages/api-contract: generating and checking the generated code
+    // runs on Node.
+    files: ['packages/api-contract/scripts/**', 'packages/api-contract/*.ts'],
+    languageOptions: { globals: globals.node },
   },
   {
     // services/api: its build and tool configs run on Node. The Worker code

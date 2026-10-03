@@ -1,0 +1,195 @@
+openapi: 3.1.1
+info:
+  title: Itera API
+  version: 0.1.0
+  summary: The contract between Itera's clients and its API (ADR 0006).
+  description: >-
+    Spec-first: this file and the files it refers to are the source of
+    truth. The API (services/api) and the clients (apps/web, later iOS and
+    Android) take their types, schemas and clients from it. The rules are
+    packages/domain's and only the server runs them; an operation is a name
+    and its input, and a read is a GET (ADR 0005 API への移行).
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+  - url: /api
+    description: The same origin as the web app (ADR 0004 Web と API の配信).
+security:
+  - session: []
+tags:
+  - name: Reads
+    description: The reads of packages/application.
+  - name: Area
+    description: 領域.
+  - name: Task
+    description: The Backlog and a Task's detail.
+  - name: Planning
+    description: Planning the Sprint, before 確定.
+  - name: Today
+    description: Today in the running Sprint.
+  - name: Running
+    description: The Sprint after 確定.
+  - name: Retro
+    description: The Retro of a Sprint in Review.
+paths:
+  /overview:
+    $ref: './paths/reads.yaml#/getOverview'
+  /areas:
+    $ref: './paths/reads.yaml#/listAreas'
+  /backlog:
+    $ref: './paths/reads.yaml#/getBacklog'
+  /sprint-choice:
+    $ref: './paths/reads.yaml#/getSprintChoice'
+  /planning:
+    $ref: './paths/reads.yaml#/getPlanning'
+  /running:
+    $ref: './paths/reads.yaml#/getRunning'
+  /today:
+    $ref: './paths/reads.yaml#/getToday'
+  /days/{date}:
+    $ref: './paths/reads.yaml#/getDay'
+  /retro:
+    $ref: './paths/reads.yaml#/getRetro'
+  /next-planning:
+    $ref: './paths/reads.yaml#/getNextPlanning'
+  /operations/createArea:
+    $ref: './paths/area.yaml#/createArea'
+  /operations/renameArea:
+    $ref: './paths/area.yaml#/renameArea'
+  /operations/archiveArea:
+    $ref: './paths/area.yaml#/archiveArea'
+  /operations/restoreArea:
+    $ref: './paths/area.yaml#/restoreArea'
+  /operations/createTask:
+    $ref: './paths/task.yaml#/createTask'
+  /operations/saveTask:
+    $ref: './paths/task.yaml#/saveTask'
+  /operations/adoptSuggestion:
+    $ref: './paths/task.yaml#/adoptSuggestion'
+  /operations/undoAdoption:
+    $ref: './paths/task.yaml#/undoAdoption'
+  /operations/adoptEditedSuggestion:
+    $ref: './paths/task.yaml#/adoptEditedSuggestion'
+  /operations/rejectSuggestion:
+    $ref: './paths/task.yaml#/rejectSuggestion'
+  /operations/undoRejection:
+    $ref: './paths/task.yaml#/undoRejection'
+  /operations/addSubtask:
+    $ref: './paths/task.yaml#/addSubtask'
+  /operations/setSubtaskDone:
+    $ref: './paths/task.yaml#/setSubtaskDone'
+  /operations/setSubtaskEstimate:
+    $ref: './paths/task.yaml#/setSubtaskEstimate'
+  /operations/archiveTask:
+    $ref: './paths/task.yaml#/archiveTask'
+  /operations/restoreTask:
+    $ref: './paths/task.yaml#/restoreTask'
+  /operations/completeTask:
+    $ref: './paths/task.yaml#/completeTask'
+  /operations/undoCompleteTask:
+    $ref: './paths/task.yaml#/undoCompleteTask'
+  /operations/addTaskToToday:
+    $ref: './paths/task.yaml#/addTaskToToday'
+  /operations/addTaskToWeek:
+    $ref: './paths/task.yaml#/addTaskToWeek'
+  /operations/undoAddTaskToWeek:
+    $ref: './paths/task.yaml#/undoAddTaskToWeek'
+  /operations/setRecurrence:
+    $ref: './paths/task.yaml#/setRecurrence'
+  /operations/endRecurrence:
+    $ref: './paths/task.yaml#/endRecurrence'
+  /operations/chooseTasks:
+    $ref: './paths/planning.yaml#/chooseTasks'
+  /operations/unchooseTasks:
+    $ref: './paths/planning.yaml#/unchooseTasks'
+  /operations/unchooseTasksByTask:
+    $ref: './paths/planning.yaml#/unchooseTasksByTask'
+  /operations/setOccurrenceIncluded:
+    $ref: './paths/planning.yaml#/setOccurrenceIncluded'
+  /operations/includeOccurrences:
+    $ref: './paths/planning.yaml#/includeOccurrences'
+  /operations/excludeAllOccurrences:
+    $ref: './paths/planning.yaml#/excludeAllOccurrences'
+  /operations/createAndChooseTask:
+    $ref: './paths/planning.yaml#/createAndChooseTask'
+  /operations/setPlanningGoal:
+    $ref: './paths/planning.yaml#/setPlanningGoal'
+  /operations/setGoalLink:
+    $ref: './paths/planning.yaml#/setGoalLink'
+  /operations/setPlanningAvailableHours:
+    $ref: './paths/planning.yaml#/setPlanningAvailableHours'
+  /operations/confirmSprint:
+    $ref: './paths/planning.yaml#/confirmSprint'
+  /operations/chooseForToday:
+    $ref: './paths/today.yaml#/chooseForToday'
+  /operations/startSelection:
+    $ref: './paths/today.yaml#/startSelection'
+  /operations/deferSelection:
+    $ref: './paths/today.yaml#/deferSelection'
+  /operations/removeFromToday:
+    $ref: './paths/today.yaml#/removeFromToday'
+  /operations/undoCloseSelection:
+    $ref: './paths/today.yaml#/undoCloseSelection'
+  /operations/pauseSelection:
+    $ref: './paths/today.yaml#/pauseSelection'
+  /operations/completeSelection:
+    $ref: './paths/today.yaml#/completeSelection'
+  /operations/undoCompleteSelection:
+    $ref: './paths/today.yaml#/undoCompleteSelection'
+  /operations/skipSelection:
+    $ref: './paths/today.yaml#/skipSelection'
+  /operations/undoSkipSelection:
+    $ref: './paths/today.yaml#/undoSkipSelection'
+  /operations/recordSelectionActual:
+    $ref: './paths/today.yaml#/recordSelectionActual'
+  /operations/noteInterrupt:
+    $ref: './paths/today.yaml#/noteInterrupt'
+  /operations/editInterrupt:
+    $ref: './paths/today.yaml#/editInterrupt'
+  /operations/deleteInterrupt:
+    $ref: './paths/today.yaml#/deleteInterrupt'
+  /operations/restoreInterrupt:
+    $ref: './paths/today.yaml#/restoreInterrupt'
+  /operations/createTaskForToday:
+    $ref: './paths/today.yaml#/createTaskForToday'
+  /operations/beginRetro:
+    $ref: './paths/today.yaml#/beginRetro'
+  /operations/setRunningGoal:
+    $ref: './paths/running.yaml#/setRunningGoal'
+  /operations/setRunningAvailableHours:
+    $ref: './paths/running.yaml#/setRunningAvailableHours'
+  /operations/undoPastDay:
+    $ref: './paths/running.yaml#/undoPastDay'
+  /operations/assessGoal:
+    $ref: './paths/retro.yaml#/assessGoal'
+  /operations/togglePin:
+    $ref: './paths/retro.yaml#/togglePin'
+  /operations/setReflection:
+    $ref: './paths/retro.yaml#/setReflection'
+  /operations/setImprovement:
+    $ref: './paths/retro.yaml#/setImprovement'
+  /operations/draftCriterion:
+    $ref: './paths/retro.yaml#/draftCriterion'
+  /operations/setDraftPolicy:
+    $ref: './paths/retro.yaml#/setDraftPolicy'
+  /operations/dropCriterionDraft:
+    $ref: './paths/retro.yaml#/dropCriterionDraft'
+  /operations/decideCriterion:
+    $ref: './paths/retro.yaml#/decideCriterion'
+  /operations/recordReviewActual:
+    $ref: './paths/retro.yaml#/recordReviewActual'
+  /operations/completeRetro:
+    $ref: './paths/retro.yaml#/completeRetro'
+  /operations/beginPlanning:
+    $ref: './paths/retro.yaml#/beginPlanning'
+components:
+  securitySchemes:
+    session:
+      description: >-
+        Better Auth's session cookie, set by signing in (/api/auth/*, not in
+        this contract). Over HTTPS its name has the `__Secure-` prefix. A
+        browser sends it by itself; there is no bearer token.
+      type: apiKey
+      in: cookie
+      name: better-auth.session_token

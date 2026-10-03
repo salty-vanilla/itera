@@ -1,0 +1,36 @@
+# The error responses, one per status (ADR 0006 エラー).
+BadRequest:
+  description: The request does not match the contract.
+  content:
+    application/json:
+      schema: { $ref: './schemas/common.yaml#/ValidationError' }
+Unauthenticated:
+  description: No valid session.
+  content:
+    application/json:
+      schema: { $ref: './schemas/common.yaml#/UnauthenticatedError' }
+ForbiddenOrigin:
+  description: A write whose Origin is not the app's own.
+  content:
+    application/json:
+      schema: { $ref: './schemas/common.yaml#/ForbiddenOriginError' }
+NotFound:
+  description: A record the request names is not among the person's records.
+  content:
+    application/json:
+      schema: { $ref: './schemas/common.yaml#/NotFoundError' }
+RevisionConflict:
+  description: Another write came first; nothing was written.
+  content:
+    application/json:
+      schema: { $ref: './schemas/common.yaml#/RevisionConflictError' }
+RuleViolation:
+  description: The domain refused the operation.
+  content:
+    application/json:
+      schema: { $ref: './schemas/common.yaml#/RuleViolationError' }
+ServerError:
+  description: An unexpected failure on the server.
+  content:
+    application/json:
+      schema: { $ref: './schemas/common.yaml#/InternalError' }
