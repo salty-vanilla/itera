@@ -13,6 +13,7 @@ import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { StoreSnapshot } from '@/store/record-store';
 import { findHours } from '@/test/duration';
+import { waitForSprintScreen } from '@/test/sprint-ready';
 import { fixtureIds } from '@itera/application/fixtures';
 
 const ids = fixtureIds();
@@ -61,6 +62,8 @@ async function renderAt(url: string) {
     </TooltipProvider>,
   );
   await screen.findByRole('heading', { level: 1 });
+  // The Sprint screen shows its header once its records are read.
+  if (url.startsWith('/sprint')) await waitForSprintScreen();
   return router;
 }
 

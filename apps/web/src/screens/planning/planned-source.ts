@@ -1,4 +1,4 @@
-import type { PlanningValue, SuggestionBound } from '@itera/domain';
+import type { PlanningValue, SuggestionBound } from '@itera/api-contract';
 import { criterionBoundText } from '@/lib/criterion-text';
 
 /**
