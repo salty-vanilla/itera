@@ -36,9 +36,6 @@ export function useTaskActions() {
   const restoreTask = useOperation('restoreTask');
   const completeTask = useOperation('completeTask');
   const undoCompleteTask = useOperation('undoCompleteTask');
-  const addToToday = useOperation('addTaskToToday');
-  const addToWeek = useOperation('addTaskToWeek');
-  const undoAddToWeek = useOperation('undoAddTaskToWeek');
 
   const actions = {
     /** The new Task's ID, or `undefined` when it did not go through. */
@@ -93,10 +90,6 @@ export function useTaskActions() {
       (await completeTask.run({ taskId })).ok,
     undoCompleteTask: async (taskId: TaskId) =>
       (await undoCompleteTask.run({ taskId })).ok,
-    addToToday: async (taskId: TaskId) => (await addToToday.run({ taskId })).ok,
-    addToWeek: async (taskId: TaskId) => (await addToWeek.run({ taskId })).ok,
-    undoAddToWeek: async (taskId: TaskId) =>
-      (await undoAddToWeek.run({ taskId })).ok,
   };
   // For how long each is being sent: show it in its button once it has
   // lasted `LOADING_DELAY` (useOperation `loading`).
@@ -112,9 +105,6 @@ export function useTaskActions() {
     restoreTask: restoreTask.loading,
     completeTask: completeTask.loading,
     undoCompleteTask: undoCompleteTask.loading,
-    addToToday: addToToday.loading,
-    addToWeek: addToWeek.loading,
-    undoAddToWeek: undoAddToWeek.loading,
   } satisfies Record<keyof typeof actions, boolean>;
   return { ...actions, loading };
 }

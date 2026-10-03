@@ -2,12 +2,7 @@
 
 import * as v from 'valibot';
 
-export const vUserId = v.pipe(
-  v.string(),
-  v.regex(
-    /^user_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/,
-  ),
-);
+export const vUserId = v.pipe(v.string(), v.regex(/^user_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
 
 /**
  * An IANA time zone name.
@@ -17,15 +12,23 @@ export const vTimeZone = v.string();
 /**
  * 0 is Sunday, 6 is Saturday.
  */
-export const vDayOfWeek = v.picklist([0, 1, 2, 3, 4, 5, 6]);
+export const vDayOfWeek = v.picklist([
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+]);
 
 /**
  * The person's settings: the domain's User without its ID. The week's first day decides a Sprint's dates.
  */
 export const vUserSettings = v.object({
-  displayName: v.string(),
-  timeZone: vTimeZone,
-  weekStartsOn: vDayOfWeek,
+    displayName: v.string(),
+    timeZone: vTimeZone,
+    weekStartsOn: vDayOfWeek
 });
 
 /**
@@ -36,167 +39,164 @@ export const vLocalDate = v.pipe(v.string(), v.isoDate());
 /**
  * A point in time, in UTC with milliseconds. Ordering by string equals ordering in time.
  */
-export const vInstant = v.pipe(
-  v.string(),
-  v.isoTimestamp(),
-  v.regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/),
-);
+export const vInstant = v.pipe(v.string(), v.isoTimestamp(), v.regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/));
 
 /**
  * 「今日」 in the person's time zone and the current time, as the server decided them for this response (ADR 0005 時計).
  */
 export const vClock = v.object({
-  today: vLocalDate,
-  now: vInstant,
+    today: vLocalDate,
+    now: vInstant
 });
 
-export const vSprintId = v.pipe(
-  v.string(),
-  v.regex(
-    /^sprint_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/,
-  ),
-);
+export const vSprintId = v.pipe(v.string(), v.regex(/^sprint_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
 
 export const vSprintState = v.picklist([
-  'planning',
-  'active',
-  'review',
-  'closed',
+    'planning',
+    'active',
+    'review',
+    'closed'
 ]);
 
 /**
  * The week a Sprint is in, seen from today.
  */
-export const vSprintWeek = v.picklist(['previous', 'current', 'next']);
+export const vSprintWeek = v.picklist([
+    'previous',
+    'current',
+    'next'
+]);
 
 /**
  * A Sprint as a list or a reference shows it. Its number (「Sprint 14」, F25) is an attribute, not its key: the key is its ID (#295).
  */
 export const vSprintItem = v.object({
-  id: vSprintId,
-  number: v.pipe(v.number(), v.integer()),
-  start: vLocalDate,
-  end: vLocalDate,
-  state: vSprintState,
-  week: v.optional(vSprintWeek),
+    id: vSprintId,
+    number: v.pipe(v.number(), v.integer()),
+    start: vLocalDate,
+    end: vLocalDate,
+    state: vSprintState,
+    week: v.optional(vSprintWeek)
 });
 
 /**
  * The Sprints the person has now, by what each is (a week running or in Review while the next is planned), and where the next Planning starts.
  */
 export const vCurrentSprints = v.object({
-  active: v.optional(vSprintItem),
-  review: v.optional(vSprintItem),
-  planning: v.optional(vSprintItem),
-  next: v.object({
-    start: vLocalDate,
-    number: v.pipe(v.number(), v.integer()),
-  }),
+    active: v.optional(vSprintItem),
+    review: v.optional(vSprintItem),
+    planning: v.optional(vSprintItem),
+    next: v.object({
+        start: vLocalDate,
+        number: v.pipe(v.number(), v.integer())
+    })
 });
 
 /**
  * No valid session.
  */
 export const vUnauthenticatedError = v.object({
-  code: v.literal('unauthenticated'),
-  message: v.string(),
+    code: v.literal('unauthenticated'),
+    message: v.string()
 });
 
 /**
  * Another write came first (ADR 0004 同時の書き込み), and this one was not made; read the records again. Not retried automatically. (When the database's answer to a write that was made is lost, it also comes back as this; reading again shows what was saved.)
  */
 export const vRevisionConflictError = v.object({
-  code: v.literal('revisionConflict'),
-  message: v.string(),
+    code: v.literal('revisionConflict'),
+    message: v.string()
 });
 
 /**
  * An unexpected failure on the server.
  */
 export const vInternalError = v.object({
-  code: v.literal('internalError'),
-  message: v.string(),
+    code: v.literal('internalError'),
+    message: v.string()
 });
 
-export const vAreaId = v.pipe(
-  v.string(),
-  v.regex(
-    /^area_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/,
-  ),
-);
+export const vAreaId = v.pipe(v.string(), v.regex(/^area_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
 
 /**
  * The Area's color, `area-1` to `area-7` (DESIGN.md).
  */
-export const vAreaColor = v.picklist([1, 2, 3, 4, 5, 6, 7]);
+export const vAreaColor = v.picklist([
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+]);
 
 export const vEditableArea = v.object({
-  id: vAreaId,
-  name: v.string(),
-  color: vAreaColor,
-  archived: v.boolean(),
+    id: vAreaId,
+    name: v.string(),
+    color: vAreaColor,
+    archived: v.boolean()
 });
 
 /**
  * The person has no settings yet (time zone, start of the week), so there is no 「今日」 to run an operation or a read with. Making the settings comes first.
  */
 export const vUserNotSetUpError = v.object({
-  code: v.literal('userNotSetUp'),
-  message: v.string(),
+    code: v.literal('userNotSetUp'),
+    message: v.string()
 });
 
 /**
  * The request does not match the contract.
  */
 export const vValidationError = v.object({
-  code: v.literal('validationFailed'),
-  message: v.string(),
+    code: v.literal('validationFailed'),
+    message: v.string()
 });
 
 /**
  * A write whose Origin is not the app's own.
  */
 export const vForbiddenOriginError = v.object({
-  code: v.literal('forbiddenOrigin'),
-  message: v.string(),
+    code: v.literal('forbiddenOrigin'),
+    message: v.string()
 });
 
 /**
  * A record the request names is not among the person's records.
  */
 export const vNotFoundError = v.object({
-  code: v.literal('notFound'),
-  message: v.string(),
+    code: v.literal('notFound'),
+    message: v.string()
 });
 
 /**
  * The request's body is larger than the API takes (64 KiB).
  */
 export const vPayloadTooLargeError = v.object({
-  code: v.literal('payloadTooLarge'),
-  message: v.string(),
+    code: v.literal('payloadTooLarge'),
+    message: v.string()
 });
 
 /**
  * The domain refused the operation (packages/domain DomainError): a value its rules do not accept, a transition the record's state does not allow, or completing a recurring Task.
  */
 export const vRuleViolationError = v.object({
-  code: v.picklist([
-    'invalidInput',
-    'invalidTransition',
-    'recurringTaskCannotComplete',
-  ]),
-  message: v.string(),
+    code: v.picklist([
+        'invalidInput',
+        'invalidTransition',
+        'recurringTaskCannotComplete'
+    ]),
+    message: v.string()
 });
 
-export const vTaskId = v.pipe(
-  v.string(),
-  v.regex(
-    /^task_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/,
-  ),
-);
+export const vTaskId = v.pipe(v.string(), v.regex(/^task_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
 
-export const vTaskPriority = v.picklist(['high', 'normal', 'low']);
+export const vTaskPriority = v.picklist([
+    'high',
+    'normal',
+    'low'
+]);
 
 /**
  * Whether the Task's time is its own Estimate or its Subtasks' sum.
@@ -204,1128 +204,1067 @@ export const vTaskPriority = v.picklist(['high', 'normal', 'low']);
 export const vTimeBasis = v.picklist(['task', 'subtasks']);
 
 export const vRecurrencePattern = v.union([
-  v.object({
-    freq: v.literal('daily'),
-  }),
-  v.object({
-    freq: v.literal('weekdays'),
-  }),
-  v.object({
-    freq: v.literal('weekly'),
-    daysOfWeek: v.array(vDayOfWeek),
-  }),
-  v.object({
-    freq: v.literal('monthly'),
-    dayOfMonth: v.pipe(v.number(), v.integer()),
-  }),
+    v.object({
+        freq: v.literal('daily')
+    }),
+    v.object({
+        freq: v.literal('weekdays')
+    }),
+    v.object({
+        freq: v.literal('weekly'),
+        daysOfWeek: v.array(vDayOfWeek)
+    }),
+    v.object({
+        freq: v.literal('monthly'),
+        dayOfMonth: v.pipe(v.number(), v.integer())
+    })
 ]);
 
-export const vSubtaskId = v.pipe(
-  v.string(),
-  v.regex(
-    /^subtask_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/,
-  ),
-);
+export const vSubtaskId = v.pipe(v.string(), v.regex(/^subtask_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
 
-export const vEstimateSuggestionId = v.pipe(
-  v.string(),
-  v.regex(
-    /^estimate_suggestion_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/,
-  ),
-);
+export const vEstimateSuggestionId = v.pipe(v.string(), v.regex(/^estimate_suggestion_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
 
 /**
  * Which end of a suggestion's range is used (lo, the middle, hi).
  */
-export const vSuggestionBound = v.picklist(['lo', 'mid', 'hi']);
+export const vSuggestionBound = v.picklist([
+    'lo',
+    'mid',
+    'hi'
+]);
 
 export const vEstimateSource = v.union([
-  v.object({
-    kind: v.literal('manual'),
-  }),
-  v.object({
-    kind: v.literal('adopted'),
-    suggestionId: vEstimateSuggestionId,
-    bound: vSuggestionBound,
-  }),
-  v.object({
-    kind: v.literal('edited'),
-    suggestionId: vEstimateSuggestionId,
-  }),
+    v.object({
+        kind: v.literal('manual')
+    }),
+    v.object({
+        kind: v.literal('adopted'),
+        suggestionId: vEstimateSuggestionId,
+        bound: vSuggestionBound
+    }),
+    v.object({
+        kind: v.literal('edited'),
+        suggestionId: vEstimateSuggestionId
+    })
 ]);
 
 export const vEstimate = v.object({
-  hours: v.number(),
-  setAt: vInstant,
-  source: vEstimateSource,
+    hours: v.number(),
+    setAt: vInstant,
+    source: vEstimateSource
 });
 
 export const vBacklogSlice = v.picklist([
-  'dueSoon',
-  'overdue',
-  'carriedOver',
-  'recurring',
-  'noArea',
+    'dueSoon',
+    'overdue',
+    'carriedOver',
+    'recurring',
+    'noArea'
 ]);
 
-export const vTaskLifecycle = v.picklist(['active', 'completed', 'archived']);
+export const vTaskLifecycle = v.picklist([
+    'active',
+    'completed',
+    'archived'
+]);
 
 export const vSubtask = v.object({
-  id: vSubtaskId,
-  title: v.string(),
-  estimate: v.optional(v.number()),
-  done: v.boolean(),
-  doneAt: v.optional(vInstant),
+    id: vSubtaskId,
+    title: v.string(),
+    estimate: v.optional(v.number()),
+    done: v.boolean(),
+    doneAt: v.optional(vInstant)
 });
 
 export const vSuggestionState = v.picklist([
-  'presented',
-  'adopted',
-  'rejected',
-  'replaced',
+    'presented',
+    'adopted',
+    'rejected',
+    'replaced'
 ]);
 
 export const vEstimateSuggestion = v.object({
-  id: vEstimateSuggestionId,
-  lo: v.number(),
-  hi: v.number(),
-  rationale: v.string(),
-  uncertainties: v.array(v.string()),
-  createdAt: vInstant,
-  state: vSuggestionState,
+    id: vEstimateSuggestionId,
+    lo: v.number(),
+    hi: v.number(),
+    rationale: v.string(),
+    uncertainties: v.array(v.string()),
+    createdAt: vInstant,
+    state: vSuggestionState
 });
 
-export const vRecurrenceRuleId = v.pipe(
-  v.string(),
-  v.regex(
-    /^recurrence_rule_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/,
-  ),
-);
+export const vRecurrenceRuleId = v.pipe(v.string(), v.regex(/^recurrence_rule_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
 
-export const vTaskCreatedVia = v.picklist(['backlog', 'today', 'agent']);
+export const vTaskCreatedVia = v.picklist([
+    'backlog',
+    'today',
+    'agent'
+]);
 
 export const vTask = v.object({
-  id: vTaskId,
-  userId: vUserId,
-  title: v.string(),
-  description: v.string(),
-  areaId: v.optional(vAreaId),
-  due: v.optional(vLocalDate),
-  priority: vTaskPriority,
-  lifecycle: vTaskLifecycle,
-  timeBasis: vTimeBasis,
-  subtasks: v.array(vSubtask),
-  estimate: v.optional(vEstimate),
-  suggestions: v.array(vEstimateSuggestion),
-  recurrenceRuleId: v.optional(vRecurrenceRuleId),
-  createdAt: vInstant,
-  createdVia: vTaskCreatedVia,
-  completedAt: v.optional(vInstant),
-  archivedAt: v.optional(vInstant),
+    id: vTaskId,
+    userId: vUserId,
+    title: v.string(),
+    description: v.string(),
+    areaId: v.optional(vAreaId),
+    due: v.optional(vLocalDate),
+    priority: vTaskPriority,
+    lifecycle: vTaskLifecycle,
+    timeBasis: vTimeBasis,
+    subtasks: v.array(vSubtask),
+    estimate: v.optional(vEstimate),
+    suggestions: v.array(vEstimateSuggestion),
+    recurrenceRuleId: v.optional(vRecurrenceRuleId),
+    createdAt: vInstant,
+    createdVia: vTaskCreatedVia,
+    completedAt: v.optional(vInstant),
+    archivedAt: v.optional(vInstant)
 });
 
 /**
  * 持ち越し N回（Sprint M から） (F25, F26).
  */
 export const vCarryCount = v.object({
-  count: v.pipe(v.number(), v.integer()),
-  fromSprint: v.pipe(v.number(), v.integer()),
+    count: v.pipe(v.number(), v.integer()),
+    fromSprint: v.pipe(v.number(), v.integer())
 });
 
 export const vNextOccurrence = v.object({
-  scheduledDate: vLocalDate,
-  ruleVersion: v.pipe(v.number(), v.integer()),
-  generated: v.boolean(),
+    scheduledDate: vLocalDate,
+    ruleVersion: v.pipe(v.number(), v.integer()),
+    generated: v.boolean()
 });
 
 export const vRecurrenceSummary = v.object({
-  pattern: vRecurrencePattern,
-  upcoming: v.optional(
-    v.object({
-      pattern: vRecurrencePattern,
-      effectiveFrom: vLocalDate,
-    }),
-  ),
-  next: v.optional(vNextOccurrence),
-  endsOn: v.optional(vLocalDate),
+    pattern: vRecurrencePattern,
+    upcoming: v.optional(v.object({
+        pattern: vRecurrencePattern,
+        effectiveFrom: vLocalDate
+    })),
+    next: v.optional(vNextOccurrence),
+    endsOn: v.optional(vLocalDate)
 });
 
-export const vDailySelectionId = v.pipe(
-  v.string(),
-  v.regex(
-    /^daily_selection_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/,
-  ),
-);
+export const vDailySelectionId = v.pipe(v.string(), v.regex(/^daily_selection_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
 
 /**
  * A choice for today that Today lists under 今日やる.
  */
 export const vListedResolution = v.picklist([
-  'selected',
-  'started',
-  'done',
-  'skipped',
+    'selected',
+    'started',
+    'done',
+    'skipped'
 ]);
 
 /**
  * How a choice for today was closed without being done.
  */
-export const vClosedResolution = v.picklist(['paused', 'deferred', 'removed']);
+export const vClosedResolution = v.picklist([
+    'paused',
+    'deferred',
+    'removed'
+]);
 
 /**
  * A planning value from an Estimate or a suggestion.
  */
 export const vEstimatedPlanningValue = v.object({
-  base: v.picklist(['estimate', 'suggestion']),
-  lo: v.number(),
-  hi: v.number(),
-  criterionApplied: v.boolean(),
-  computedAt: vInstant,
+    base: v.picklist(['estimate', 'suggestion']),
+    lo: v.number(),
+    hi: v.number(),
+    criterionApplied: v.boolean(),
+    computedAt: vInstant
 });
 
 /**
  * The hours a Task is planned at (PlanningValue). 「適用」 of a criterion changes this value, not the Task.
  */
 export const vPlanningValue = v.union([
-  vEstimatedPlanningValue,
-  v.object({
-    base: v.literal('subtasks'),
-    lo: v.number(),
-    hi: v.number(),
-    unestimatedSubtasks: v.pipe(v.number(), v.integer()),
-    criterionApplied: v.literal(false),
-    computedAt: vInstant,
-  }),
-  v.object({
-    base: v.literal('none'),
-    criterionApplied: v.literal(false),
-    computedAt: vInstant,
-  }),
+    vEstimatedPlanningValue,
+    v.object({
+        base: v.literal('subtasks'),
+        lo: v.number(),
+        hi: v.number(),
+        unestimatedSubtasks: v.pipe(v.number(), v.integer()),
+        criterionApplied: v.literal(false),
+        computedAt: vInstant
+    }),
+    v.object({
+        base: v.literal('none'),
+        criterionApplied: v.literal(false),
+        computedAt: vInstant
+    })
 ]);
 
 export const vBacklogItem = v.object({
-  task: vTask,
-  area: v.optional(
-    v.object({
-      name: v.string(),
-      color: vAreaColor,
-    }),
-  ),
-  carry: v.optional(vCarryCount),
-  recurrence: v.optional(vRecurrenceSummary),
-  rule: v.optional(
-    v.object({
-      current: vRecurrencePattern,
-      latest: vRecurrencePattern,
-    }),
-  ),
-  thisWeek: v.optional(
-    v.object({
-      midSprint: v.boolean(),
-      confirmed: v.boolean(),
-    }),
-  ),
-  nextWeek: v.optional(v.literal(true)),
-  today: v.optional(
-    v.object({
-      selectionId: vDailySelectionId,
-      resolution: vListedResolution,
-      startedAt: v.optional(vInstant),
-      recurring: v.boolean(),
-    }),
-  ),
-  closedToday: v.optional(vClosedResolution),
-  value: vPlanningValue,
-  taskValue: vPlanningValue,
-  subtaskValue: vPlanningValue,
-  canAddToToday: v.boolean(),
-  canAddToWeek: v.boolean(),
-  todayOpensOn: v.optional(
-    v.object({
-      number: v.pipe(v.number(), v.integer()),
-      start: vLocalDate,
-    }),
-  ),
-  canComplete: v.boolean(),
+    task: vTask,
+    area: v.optional(v.object({
+        name: v.string(),
+        color: vAreaColor
+    })),
+    carry: v.optional(vCarryCount),
+    recurrence: v.optional(vRecurrenceSummary),
+    rule: v.optional(v.object({
+        current: vRecurrencePattern,
+        latest: vRecurrencePattern
+    })),
+    thisWeek: v.optional(v.object({
+        midSprint: v.boolean(),
+        confirmed: v.boolean()
+    })),
+    nextWeek: v.optional(v.literal(true)),
+    today: v.optional(v.object({
+        selectionId: vDailySelectionId,
+        resolution: vListedResolution,
+        startedAt: v.optional(vInstant),
+        recurring: v.boolean()
+    })),
+    closedToday: v.optional(vClosedResolution),
+    value: vPlanningValue,
+    taskValue: vPlanningValue,
+    subtaskValue: vPlanningValue,
+    canAddToToday: v.boolean(),
+    canAddToWeek: v.boolean(),
+    todayOpensOn: v.optional(v.object({
+        number: v.pipe(v.number(), v.integer()),
+        start: vLocalDate
+    })),
+    canComplete: v.boolean()
 });
 
 export const vBacklogData = v.object({
-  today: vLocalDate,
-  timeZone: vTimeZone,
-  areas: v.array(
-    v.object({
-      id: vAreaId,
-      name: v.string(),
-      color: vAreaColor,
-      count: v.pipe(v.number(), v.integer()),
+    today: vLocalDate,
+    timeZone: vTimeZone,
+    areas: v.array(v.object({
+        id: vAreaId,
+        name: v.string(),
+        color: vAreaColor,
+        count: v.pipe(v.number(), v.integer())
+    })),
+    sliceCounts: v.object({
+        all: v.pipe(v.number(), v.integer()),
+        dueSoon: v.pipe(v.number(), v.integer()),
+        overdue: v.pipe(v.number(), v.integer()),
+        carriedOver: v.pipe(v.number(), v.integer()),
+        recurring: v.pipe(v.number(), v.integer()),
+        noArea: v.pipe(v.number(), v.integer())
     }),
-  ),
-  sliceCounts: v.object({
-    all: v.pipe(v.number(), v.integer()),
-    dueSoon: v.pipe(v.number(), v.integer()),
-    overdue: v.pipe(v.number(), v.integer()),
-    carriedOver: v.pipe(v.number(), v.integer()),
-    recurring: v.pipe(v.number(), v.integer()),
-    noArea: v.pipe(v.number(), v.integer()),
-  }),
-  shown: v.array(vTaskId),
-  items: v.record(v.string(), vBacklogItem),
+    shown: v.array(vTaskId),
+    items: v.record(v.string(), vBacklogItem)
 });
 
 export const vSelfAssessment = v.picklist([
-  'achieved',
-  'partly',
-  'notAchieved',
-  'notJudged',
+    'achieved',
+    'partly',
+    'notAchieved',
+    'notJudged'
 ]);
 
 export const vSprintGoal = v.object({
-  areaId: vAreaId,
-  text: v.string(),
-  plannedText: v.optional(v.string()),
-  selfAssessment: v.optional(vSelfAssessment),
+    areaId: vAreaId,
+    text: v.string(),
+    plannedText: v.optional(v.string()),
+    selfAssessment: v.optional(vSelfAssessment)
 });
 
-export const vSprintTaskId = v.pipe(
-  v.string(),
-  v.regex(
-    /^sprint_task_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/,
-  ),
-);
+export const vSprintTaskId = v.pipe(v.string(), v.regex(/^sprint_task_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
 
-export const vOccurrenceId = v.pipe(
-  v.string(),
-  v.regex(
-    /^occurrence_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/,
-  ),
-);
+export const vOccurrenceId = v.pipe(v.string(), v.regex(/^occurrence_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
 
 export const vSprintTaskOrigin = v.picklist(['planning', 'midSprint']);
 
 export const vGoalLink = v.picklist(['linked', 'unlinked']);
 
 export const vSprintTaskOutcome = v.picklist([
-  'draft',
-  'planned',
-  'done',
-  'removed',
-  'carriedOver',
+    'draft',
+    'planned',
+    'done',
+    'removed',
+    'carriedOver'
 ]);
 
 /**
  * The plan fixed at confirm.
  */
 export const vPlanSnapshot = v.object({
-  value: vPlanningValue,
-  timeBasis: vTimeBasis,
-  estimateHours: v.optional(v.number()),
-  suggestion: v.optional(
-    v.object({
-      id: vEstimateSuggestionId,
-      lo: v.number(),
-      hi: v.number(),
-    }),
-  ),
-  occurrenceCount: v.optional(v.pipe(v.number(), v.integer())),
+    value: vPlanningValue,
+    timeBasis: vTimeBasis,
+    estimateHours: v.optional(v.number()),
+    suggestion: v.optional(v.object({
+        id: vEstimateSuggestionId,
+        lo: v.number(),
+        hi: v.number()
+    })),
+    occurrenceCount: v.optional(v.pipe(v.number(), v.integer()))
 });
 
 export const vSprintTask = v.object({
-  id: vSprintTaskId,
-  taskId: vTaskId,
-  occurrenceIds: v.optional(v.array(vOccurrenceId)),
-  origin: vSprintTaskOrigin,
-  addedAt: vInstant,
-  goalLink: vGoalLink,
-  outcome: vSprintTaskOutcome,
-  planSnapshot: v.optional(vPlanSnapshot),
-  carriedFrom: v.optional(vSprintTaskId),
+    id: vSprintTaskId,
+    taskId: vTaskId,
+    occurrenceIds: v.optional(v.array(vOccurrenceId)),
+    origin: vSprintTaskOrigin,
+    addedAt: vInstant,
+    goalLink: vGoalLink,
+    outcome: vSprintTaskOutcome,
+    planSnapshot: v.optional(vPlanSnapshot),
+    carriedFrom: v.optional(vSprintTaskId)
 });
 
 export const vSprintAreaSnapshotEntry = v.object({
-  areaId: vAreaId,
-  name: v.string(),
-  order: v.number(),
+    areaId: vAreaId,
+    name: v.string(),
+    order: v.number()
 });
 
-export const vPlanningCriterionId = v.pipe(
-  v.string(),
-  v.regex(
-    /^planning_criterion_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/,
-  ),
-);
+export const vPlanningCriterionId = v.pipe(v.string(), v.regex(/^planning_criterion_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
 
-export const vRetroDecision = v.picklist(['continue', 'end', 'replace']);
+export const vRetroDecision = v.picklist([
+    'continue',
+    'end',
+    'replace'
+]);
 
 export const vCriterionUse = v.object({
-  criterionId: vPlanningCriterionId,
-  appliedAtConfirm: v.boolean(),
-  retroDecision: v.optional(vRetroDecision),
+    criterionId: vPlanningCriterionId,
+    appliedAtConfirm: v.boolean(),
+    retroDecision: v.optional(vRetroDecision)
 });
 
 export const vDailySelectionOrigin = v.picklist([
-  'manual',
-  'recurringToday',
-  'midSprint',
-  'backlogCompletion',
+    'manual',
+    'recurringToday',
+    'midSprint',
+    'backlogCompletion'
 ]);
 
 export const vDailyResolution = v.picklist([
-  'selected',
-  'started',
-  'done',
-  'paused',
-  'deferred',
-  'removed',
-  'skipped',
-  'unresolved',
+    'selected',
+    'started',
+    'done',
+    'paused',
+    'deferred',
+    'removed',
+    'skipped',
+    'unresolved'
 ]);
 
 export const vDailySelection = v.object({
-  id: vDailySelectionId,
-  date: vLocalDate,
-  sprintTaskId: vSprintTaskId,
-  occurrenceId: v.optional(vOccurrenceId),
-  origin: vDailySelectionOrigin,
-  resolution: vDailyResolution,
-  selectedAt: vInstant,
-  startedAt: v.optional(vInstant),
-  resolvedAt: v.optional(vInstant),
-  closedBefore: v.optional(
-    v.object({
-      resolution: vClosedResolution,
-      at: vInstant,
-    }),
-  ),
+    id: vDailySelectionId,
+    date: vLocalDate,
+    sprintTaskId: vSprintTaskId,
+    occurrenceId: v.optional(vOccurrenceId),
+    origin: vDailySelectionOrigin,
+    resolution: vDailyResolution,
+    selectedAt: vInstant,
+    startedAt: v.optional(vInstant),
+    resolvedAt: v.optional(vInstant),
+    closedBefore: v.optional(v.object({
+        resolution: vClosedResolution,
+        at: vInstant
+    }))
 });
 
-export const vActualTimeVia = v.picklist(['completion', 'pause', 'later']);
+export const vActualTimeVia = v.picklist([
+    'completion',
+    'pause',
+    'later'
+]);
 
 export const vActualTime = v.object({
-  sprintTaskId: vSprintTaskId,
-  occurrenceId: v.optional(vOccurrenceId),
-  hours: v.number(),
-  date: vLocalDate,
-  via: vActualTimeVia,
-  recordedAt: vInstant,
+    sprintTaskId: vSprintTaskId,
+    occurrenceId: v.optional(vOccurrenceId),
+    hours: v.number(),
+    date: vLocalDate,
+    via: vActualTimeVia,
+    recordedAt: vInstant
 });
 
-export const vInterruptNoteId = v.pipe(
-  v.string(),
-  v.regex(
-    /^interrupt_note_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/,
-  ),
-);
+export const vInterruptNoteId = v.pipe(v.string(), v.regex(/^interrupt_note_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
 
 export const vInterruptNote = v.object({
-  id: vInterruptNoteId,
-  at: vInstant,
-  text: v.string(),
-  minutes: v.optional(v.number()),
+    id: vInterruptNoteId,
+    at: vInstant,
+    text: v.string(),
+    minutes: v.optional(v.number())
 });
 
 export const vRetroPin = v.object({
-  kind: v.picklist([
-    'sprintTask',
-    'dailySelection',
-    'occurrence',
-    'interrupt',
-    'goal',
-    'availableHours',
-  ]),
-  id: v.optional(v.string()),
+    kind: v.picklist([
+        'sprintTask',
+        'dailySelection',
+        'occurrence',
+        'interrupt',
+        'goal',
+        'availableHours'
+    ]),
+    id: v.optional(v.string())
 });
 
 export const vRetroImprovement = v.object({
-  text: v.string(),
-  criterionId: v.optional(vPlanningCriterionId),
+    text: v.string(),
+    criterionId: v.optional(vPlanningCriterionId)
 });
 
 export const vRetro = v.object({
-  startedAt: vInstant,
-  completedAt: v.optional(vInstant),
-  pins: v.array(vRetroPin),
-  reflection: v.string(),
-  improvement: v.optional(vRetroImprovement),
+    startedAt: vInstant,
+    completedAt: v.optional(vInstant),
+    pins: v.array(vRetroPin),
+    reflection: v.string(),
+    improvement: v.optional(vRetroImprovement)
 });
 
 /**
  * The aggregate root of its SprintTasks, DailySelections, Retro, ….
  */
 export const vSprint = v.object({
-  id: vSprintId,
-  userId: vUserId,
-  start: vLocalDate,
-  end: vLocalDate,
-  state: vSprintState,
-  previousSprintId: v.optional(vSprintId),
-  availableHours: v.optional(v.number()),
-  plannedAvailableHours: v.optional(v.number()),
-  confirmedAt: v.optional(vInstant),
-  goals: v.array(vSprintGoal),
-  tasks: v.array(vSprintTask),
-  areaSnapshot: v.array(vSprintAreaSnapshotEntry),
-  criterionUse: v.optional(vCriterionUse),
-  dailySelections: v.array(vDailySelection),
-  actualTimes: v.array(vActualTime),
-  interrupts: v.array(vInterruptNote),
-  retro: v.optional(vRetro),
+    id: vSprintId,
+    userId: vUserId,
+    start: vLocalDate,
+    end: vLocalDate,
+    state: vSprintState,
+    previousSprintId: v.optional(vSprintId),
+    availableHours: v.optional(v.number()),
+    plannedAvailableHours: v.optional(v.number()),
+    confirmedAt: v.optional(vInstant),
+    goals: v.array(vSprintGoal),
+    tasks: v.array(vSprintTask),
+    areaSnapshot: v.array(vSprintAreaSnapshotEntry),
+    criterionUse: v.optional(vCriterionUse),
+    dailySelections: v.array(vDailySelection),
+    actualTimes: v.array(vActualTime),
+    interrupts: v.array(vInterruptNote),
+    retro: v.optional(vRetro)
 });
 
 /**
  * The day's place in its Sprint (「3日目 / 7日」).
  */
 export const vDayOfSprint = v.object({
-  index: v.pipe(v.number(), v.integer()),
-  count: v.pipe(v.number(), v.integer()),
+    index: v.pipe(v.number(), v.integer()),
+    count: v.pipe(v.number(), v.integer())
 });
 
 export const vWeekProgress = v.object({
-  done: v.pipe(v.number(), v.integer()),
-  total: v.pipe(v.number(), v.integer()),
+    done: v.pipe(v.number(), v.integer()),
+    total: v.pipe(v.number(), v.integer())
 });
 
 export const vTodayRemaining = v.object({
-  count: v.pipe(v.number(), v.integer()),
-  lo: v.number(),
-  hi: v.number(),
-  unestimated: v.pipe(v.number(), v.integer()),
+    count: v.pipe(v.number(), v.integer()),
+    lo: v.number(),
+    hi: v.number(),
+    unestimated: v.pipe(v.number(), v.integer())
 });
 
 /**
  * An Area as a read shows it.
  */
 export const vAreaLabel = v.object({
-  id: vAreaId,
-  name: v.string(),
-  color: vAreaColor,
+    id: vAreaId,
+    name: v.string(),
+    color: vAreaColor
 });
 
 export const vOccurrenceState = v.picklist([
-  'pending',
-  'excluded',
-  'done',
-  'skipped',
-  'missed',
+    'pending',
+    'excluded',
+    'done',
+    'skipped',
+    'missed'
 ]);
 
 export const vOccurrence = v.object({
-  id: vOccurrenceId,
-  taskId: vTaskId,
-  ruleId: vRecurrenceRuleId,
-  scheduledDate: vLocalDate,
-  ruleVersion: v.pipe(v.number(), v.integer()),
-  materializedAt: vInstant,
-  state: vOccurrenceState,
-  stateChangedAt: vInstant,
+    id: vOccurrenceId,
+    taskId: vTaskId,
+    ruleId: vRecurrenceRuleId,
+    scheduledDate: vLocalDate,
+    ruleVersion: v.pipe(v.number(), v.integer()),
+    materializedAt: vInstant,
+    state: vOccurrenceState,
+    stateChangedAt: vInstant
 });
 
 export const vTodayRow = v.object({
-  sprintTask: vSprintTask,
-  task: vTask,
-  area: v.optional(vAreaLabel),
-  occurrence: v.optional(vOccurrence),
-  value: vPlanningValue,
-  streak: v.pipe(v.number(), v.integer()),
-  removedToday: v.optional(vDailySelectionId),
-  selection: vDailySelection,
-  actualHours: v.number(),
+    sprintTask: vSprintTask,
+    task: vTask,
+    area: v.optional(vAreaLabel),
+    occurrence: v.optional(vOccurrence),
+    value: vPlanningValue,
+    streak: v.pipe(v.number(), v.integer()),
+    removedToday: v.optional(vDailySelectionId),
+    selection: vDailySelection,
+    actualHours: v.number()
 });
 
 export const vTodayItem = v.object({
-  sprintTask: vSprintTask,
-  task: vTask,
-  area: v.optional(vAreaLabel),
-  occurrence: v.optional(vOccurrence),
-  value: vPlanningValue,
-  streak: v.pipe(v.number(), v.integer()),
-  removedToday: v.optional(vDailySelectionId),
+    sprintTask: vSprintTask,
+    task: vTask,
+    area: v.optional(vAreaLabel),
+    occurrence: v.optional(vOccurrence),
+    value: vPlanningValue,
+    streak: v.pipe(v.number(), v.integer()),
+    removedToday: v.optional(vDailySelectionId)
 });
 
 export const vTodayData = v.object({
-  sprint: vSprint,
-  number: v.pipe(v.number(), v.integer()),
-  today: vLocalDate,
-  day: vDayOfSprint,
-  lastDay: v.boolean(),
-  timeZone: vTimeZone,
-  progress: vWeekProgress,
-  remaining: vTodayRemaining,
-  goals: v.array(
-    v.object({
-      area: vAreaLabel,
-      text: v.string(),
-    }),
-  ),
-  rows: v.array(vTodayRow),
-  closed: v.array(vTodayRow),
-  continuation: v.array(vTodayItem),
-  rest: v.array(vTodayItem),
-  plan: v.array(vTodayItem),
-  interrupts: v.array(vInterruptNote),
-  areas: v.array(vAreaLabel),
+    sprint: vSprint,
+    number: v.pipe(v.number(), v.integer()),
+    today: vLocalDate,
+    day: vDayOfSprint,
+    lastDay: v.boolean(),
+    timeZone: vTimeZone,
+    progress: vWeekProgress,
+    remaining: vTodayRemaining,
+    goals: v.array(v.object({
+        area: vAreaLabel,
+        text: v.string()
+    })),
+    rows: v.array(vTodayRow),
+    closed: v.array(vTodayRow),
+    continuation: v.array(vTodayItem),
+    rest: v.array(vTodayItem),
+    plan: v.array(vTodayItem),
+    interrupts: v.array(vInterruptNote),
+    areas: v.array(vAreaLabel)
 });
 
 /**
  * A Sprint a screen can open, or the next week before its Planning.
  */
 export const vSprintRef = v.object({
-  number: v.pipe(v.number(), v.integer()),
-  start: vLocalDate,
-  end: vLocalDate,
-  sprint: v.optional(vSprint),
-  week: v.optional(vSprintWeek),
+    number: v.pipe(v.number(), v.integer()),
+    start: vLocalDate,
+    end: vLocalDate,
+    sprint: v.optional(vSprint),
+    week: v.optional(vSprintWeek)
 });
 
 export const vDayRecord = v.object({
-  selection: vDailySelection,
-  title: v.string(),
-  area: v.optional(vAreaLabel),
-  occurrence: v.optional(vOccurrence),
-  actualHours: v.number(),
+    selection: vDailySelection,
+    title: v.string(),
+    area: v.optional(vAreaLabel),
+    occurrence: v.optional(vOccurrence),
+    actualHours: v.number()
 });
 
 export const vDayData = v.object({
-  date: vLocalDate,
-  today: vLocalDate,
-  when: v.picklist(['past', 'future']),
-  timeZone: vTimeZone,
-  within: v.optional(
-    v.object({
-      number: v.pipe(v.number(), v.integer()),
-      start: vLocalDate,
-      end: vLocalDate,
-      sprint: v.optional(vSprint),
-      week: v.optional(vSprintWeek),
-      day: vDayOfSprint,
-    }),
-  ),
-  next: v.optional(vSprintRef),
-  records: v.array(vDayRecord),
-  interrupts: v.array(vInterruptNote),
-  occurrences: v.array(
-    v.object({
-      occurrence: vOccurrence,
-      title: v.string(),
-      area: v.optional(vAreaLabel),
-    }),
-  ),
-  due: v.array(
-    v.object({
-      task: vTask,
-      area: v.optional(vAreaLabel),
-    }),
-  ),
+    date: vLocalDate,
+    today: vLocalDate,
+    when: v.picklist(['past', 'future']),
+    timeZone: vTimeZone,
+    within: v.optional(v.object({
+        number: v.pipe(v.number(), v.integer()),
+        start: vLocalDate,
+        end: vLocalDate,
+        sprint: v.optional(vSprint),
+        week: v.optional(vSprintWeek),
+        day: vDayOfSprint
+    })),
+    next: v.optional(vSprintRef),
+    records: v.array(vDayRecord),
+    interrupts: v.array(vInterruptNote),
+    occurrences: v.array(v.object({
+        occurrence: vOccurrence,
+        title: v.string(),
+        area: v.optional(vAreaLabel)
+    })),
+    due: v.array(v.object({
+        task: vTask,
+        area: v.optional(vAreaLabel)
+    }))
 });
 
 /**
  * A day (#295 R3), today, past or still to come: today's choices on the running Sprint (`today` is left out when none runs), or another day's records or occurrences.
  */
-export const vDayView = v.union([
-  v.object({
-    kind: v.literal('today'),
-    today: v.optional(vTodayData),
-  }),
-  v.object({
-    kind: v.picklist(['past', 'future']),
-    day: vDayData,
-  }),
-]);
+export const vDayView = v.union([v.object({
+        kind: v.literal('today'),
+        today: v.optional(vTodayData)
+    }), v.object({
+        kind: v.picklist(['past', 'future']),
+        day: vDayData
+    })]);
 
 export const vRange = v.object({
-  lo: v.number(),
-  hi: v.number(),
+    lo: v.number(),
+    hi: v.number()
 });
 
 export const vPlannedTask = v.object({
-  sprintTask: vSprintTask,
-  task: vTask,
-  value: vPlanningValue,
-  occurrenceCount: v.optional(v.pipe(v.number(), v.integer())),
-  suggestion: v.optional(vRange),
-  linkAtConfirm: vGoalLink,
-  inactive: v.optional(v.picklist(['completed', 'archived'])),
+    sprintTask: vSprintTask,
+    task: vTask,
+    value: vPlanningValue,
+    occurrenceCount: v.optional(v.pipe(v.number(), v.integer())),
+    suggestion: v.optional(vRange),
+    linkAtConfirm: vGoalLink,
+    inactive: v.optional(v.picklist(['completed', 'archived']))
 });
 
 export const vAreaTotal = v.object({
-  areaId: v.nullable(vAreaId),
-  lo: v.number(),
-  hi: v.number(),
-  unestimated: v.pipe(v.number(), v.integer()),
-  unestimatedSubtasks: v.pipe(v.number(), v.integer()),
+    areaId: v.nullable(vAreaId),
+    lo: v.number(),
+    hi: v.number(),
+    unestimated: v.pipe(v.number(), v.integer()),
+    unestimatedSubtasks: v.pipe(v.number(), v.integer())
 });
 
 export const vAreaPlan = v.object({
-  area: v.optional(vAreaLabel),
-  goal: v.optional(vSprintGoal),
-  tasks: v.array(vPlannedTask),
-  total: v.optional(vAreaTotal),
+    area: v.optional(vAreaLabel),
+    goal: v.optional(vSprintGoal),
+    tasks: v.array(vPlannedTask),
+    total: v.optional(vAreaTotal)
 });
 
 export const vPlanningTotal = v.object({
-  lo: v.number(),
-  hi: v.number(),
-  unestimated: v.pipe(v.number(), v.integer()),
-  unestimatedSubtasks: v.pipe(v.number(), v.integer()),
+    lo: v.number(),
+    hi: v.number(),
+    unestimated: v.pipe(v.number(), v.integer()),
+    unestimatedSubtasks: v.pipe(v.number(), v.integer())
 });
 
-export const vCapacityStatus = v.picklist(['within', 'mayExceed', 'exceeds']);
+export const vCapacityStatus = v.picklist([
+    'within',
+    'mayExceed',
+    'exceeds'
+]);
 
 export const vCapacity = v.object({
-  availableHours: v.number(),
-  remaining: vRange,
-  status: vCapacityStatus,
+    availableHours: v.number(),
+    remaining: vRange,
+    status: vCapacityStatus
 });
 
 export const vSprintTotals = v.object({
-  total: vPlanningTotal,
-  byArea: v.array(vAreaTotal),
-  capacity: v.optional(vCapacity),
+    total: vPlanningTotal,
+    byArea: v.array(vAreaTotal),
+    capacity: v.optional(vCapacity)
 });
 
 /**
  * A Task whose range widens the week's total the most.
  */
 export const vCapacityDriver = v.object({
-  sprintTask: vSprintTask,
-  task: vTask,
-  value: vEstimatedPlanningValue,
-  fromRange: v.optional(vRange),
-  spread: v.number(),
+    sprintTask: vSprintTask,
+    task: vTask,
+    value: vEstimatedPlanningValue,
+    fromRange: v.optional(vRange),
+    spread: v.number()
 });
 
 /**
  * The Tasks a planning criterion covers.
  */
-export const vCriterionScope = v.union([
-  v.object({
-    kind: v.literal('all'),
-  }),
-  v.object({
-    kind: v.literal('area'),
-    areaId: vAreaId,
-  }),
-]);
+export const vCriterionScope = v.union([v.object({
+        kind: v.literal('all')
+    }), v.object({
+        kind: v.literal('area'),
+        areaId: vAreaId
+    })]);
 
 export const vCriterionPolicy = v.object({
-  scope: vCriterionScope,
-  rangePolicy: vSuggestionBound,
+    scope: vCriterionScope,
+    rangePolicy: vSuggestionBound
 });
 
 export const vActiveCriterion = v.object({
-  id: vPlanningCriterionId,
-  policy: vCriterionPolicy,
+    id: vPlanningCriterionId,
+    policy: vCriterionPolicy
 });
 
 export const vCriterionPreviewRow = v.object({
-  taskId: vTaskId,
-  from: vRange,
-  to: v.number(),
+    taskId: vTaskId,
+    from: vRange,
+    to: v.number()
 });
 
 export const vCriterionView = v.object({
-  policy: vCriterionPolicy,
-  effect: v.object({
-    bound: vSuggestionBound,
-    scope: vCriterionScope,
-  }),
-  preview: v.array(vCriterionPreviewRow),
+    policy: vCriterionPolicy,
+    effect: v.object({
+        bound: vSuggestionBound,
+        scope: vCriterionScope
+    }),
+    preview: v.array(vCriterionPreviewRow)
 });
 
 export const vCriterionEffect = v.object({
-  count: v.pipe(v.number(), v.integer()),
-  delta: vRange,
+    count: v.pipe(v.number(), v.integer()),
+    delta: vRange
 });
 
 /**
  * Why 確定 is not possible yet. `previousRetroOpen`: the previous Sprint's Retro is open (invariant 12). `inactiveTasks`: a chosen Task was completed or archived.
  */
-export const vPlanningBlocker = v.picklist([
-  'previousRetroOpen',
-  'inactiveTasks',
-]);
+export const vPlanningBlocker = v.picklist(['previousRetroOpen', 'inactiveTasks']);
 
 /**
  * A Sprint being planned: its plan (#295 R2). The Tasks it can choose are a resource of their own (SprintCandidates).
  */
 export const vSprintPlan = v.object({
-  sprint: vSprint,
-  number: v.pipe(v.number(), v.integer()),
-  week: v.optional(vSprintWeek),
-  today: vLocalDate,
-  timeZone: vTimeZone,
-  areas: v.array(vAreaLabel),
-  addAreas: v.array(vAreaLabel),
-  plan: v.array(vAreaPlan),
-  chosenCount: v.pipe(v.number(), v.integer()),
-  totals: vSprintTotals,
-  drivers: v.array(vCapacityDriver),
-  improvement: v.optional(vRetroImprovement),
-  criterion: v.optional(
-    v.object({
-      active: vActiveCriterion,
-      view: vCriterionView,
-      areaName: v.optional(v.string()),
-      applied: v.boolean(),
-      effect: vCriterionEffect,
-      hasTarget: v.boolean(),
-    }),
-  ),
-  blockers: v.array(vPlanningBlocker),
-  previous: v.optional(
-    v.object({
-      number: v.pipe(v.number(), v.integer()),
-      end: vLocalDate,
-      state: vSprintState,
-    }),
-  ),
+    sprint: vSprint,
+    number: v.pipe(v.number(), v.integer()),
+    week: v.optional(vSprintWeek),
+    today: vLocalDate,
+    timeZone: vTimeZone,
+    areas: v.array(vAreaLabel),
+    addAreas: v.array(vAreaLabel),
+    plan: v.array(vAreaPlan),
+    chosenCount: v.pipe(v.number(), v.integer()),
+    totals: vSprintTotals,
+    drivers: v.array(vCapacityDriver),
+    improvement: v.optional(vRetroImprovement),
+    criterion: v.optional(v.object({
+        active: vActiveCriterion,
+        view: vCriterionView,
+        areaName: v.optional(v.string()),
+        applied: v.boolean(),
+        effect: vCriterionEffect,
+        hasTarget: v.boolean()
+    })),
+    blockers: v.array(vPlanningBlocker),
+    previous: v.optional(v.object({
+        number: v.pipe(v.number(), v.integer()),
+        end: vLocalDate,
+        state: vSprintState
+    }))
 });
 
 /**
  * An Area as a confirmed Sprint shows it (its name at confirm, F5). `none` for an Area the person no longer has.
  */
 export const vSprintAreaLabel = v.object({
-  id: vAreaId,
-  name: v.string(),
-  color: v.union([vAreaColor, v.literal('none')]),
+    id: vAreaId,
+    name: v.string(),
+    color: v.union([vAreaColor, v.literal('none')])
 });
 
 export const vOccurrenceProgress = v.object({
-  done: v.pipe(v.number(), v.integer()),
-  total: v.pipe(v.number(), v.integer()),
-  skipped: v.pipe(v.number(), v.integer()),
+    done: v.pipe(v.number(), v.integer()),
+    total: v.pipe(v.number(), v.integer()),
+    skipped: v.pipe(v.number(), v.integer())
 });
 
 export const vRunningTask = v.object({
-  sprintTask: vSprintTask,
-  task: vTask,
-  value: vPlanningValue,
-  occurrences: v.optional(vOccurrenceProgress),
-  carry: v.optional(vCarryCount),
-  nextWeek: v.optional(v.literal(true)),
+    sprintTask: vSprintTask,
+    task: vTask,
+    value: vPlanningValue,
+    occurrences: v.optional(vOccurrenceProgress),
+    carry: v.optional(vCarryCount),
+    nextWeek: v.optional(v.literal(true))
 });
 
 export const vRunningAreaPlan = v.object({
-  area: v.optional(vSprintAreaLabel),
-  goal: v.optional(vSprintGoal),
-  tasks: v.array(vRunningTask),
+    area: v.optional(vSprintAreaLabel),
+    goal: v.optional(vSprintGoal),
+    tasks: v.array(vRunningTask)
 });
 
 export const vAvailableHours = v.object({
-  planned: v.optional(v.number()),
-  current: v.optional(v.number()),
+    planned: v.optional(v.number()),
+    current: v.optional(v.number())
 });
 
 export const vPastDayRecord = v.object({
-  selection: vDailySelection,
-  title: v.string(),
-  recurring: v.boolean(),
-  after: v.union([
-    v.object({
-      kind: v.literal('unresolved'),
-    }),
-    v.object({
-      kind: v.literal('closed'),
-      resolution: vClosedResolution,
-    }),
-    v.object({
-      kind: v.literal('gone'),
-    }),
-  ]),
+    selection: vDailySelection,
+    title: v.string(),
+    recurring: v.boolean(),
+    after: v.union([
+        v.object({
+            kind: v.literal('unresolved')
+        }),
+        v.object({
+            kind: v.literal('closed'),
+            resolution: vClosedResolution
+        }),
+        v.object({
+            kind: v.literal('gone')
+        })
+    ])
 });
 
 export const vPastDay = v.object({
-  date: vLocalDate,
-  records: v.array(vPastDayRecord),
+    date: vLocalDate,
+    records: v.array(vPastDayRecord)
 });
 
 export const vRunningData = v.object({
-  sprint: vSprint,
-  number: v.pipe(v.number(), v.integer()),
-  week: v.optional(vSprintWeek),
-  today: vLocalDate,
-  day: v.optional(vDayOfSprint),
-  plan: v.array(vRunningAreaPlan),
-  totals: v.object({
-    total: vPlanningTotal,
-    byArea: v.array(vAreaTotal),
-  }),
-  availableHours: vAvailableHours,
-  progress: v.optional(vWeekProgress),
-  pastDays: v.array(vPastDay),
-  criterion: v.optional(
-    v.object({
-      policy: vCriterionPolicy,
-      areaName: v.optional(v.string()),
-      applied: v.boolean(),
-      noEffect: v.boolean(),
+    sprint: vSprint,
+    number: v.pipe(v.number(), v.integer()),
+    week: v.optional(vSprintWeek),
+    today: vLocalDate,
+    day: v.optional(vDayOfSprint),
+    plan: v.array(vRunningAreaPlan),
+    totals: v.object({
+        total: vPlanningTotal,
+        byArea: v.array(vAreaTotal)
     }),
-  ),
+    availableHours: vAvailableHours,
+    progress: v.optional(vWeekProgress),
+    pastDays: v.array(vPastDay),
+    criterion: v.optional(v.object({
+        policy: vCriterionPolicy,
+        areaName: v.optional(v.string()),
+        applied: v.boolean(),
+        noEffect: v.boolean()
+    }))
 });
 
 /**
  * A Sprint (#295 R2): while planned, its plan; once confirmed, how it went.
  */
-export const vSprintView = v.union([
-  v.object({
-    state: v.literal('planning'),
-    plan: vSprintPlan,
-  }),
-  v.object({
-    state: v.picklist(['active', 'review', 'closed']),
-    running: vRunningData,
-  }),
-]);
+export const vSprintView = v.union([v.object({
+        state: v.literal('planning'),
+        plan: vSprintPlan
+    }), v.object({
+        state: v.picklist([
+            'active',
+            'review',
+            'closed'
+        ]),
+        running: vRunningData
+    })]);
 
 export const vCandidateRow = v.object({
-  task: vTask,
-  chosen: v.optional(vSprintTask),
-  carriedFrom: v.optional(vSprintTask),
-  area: v.optional(vAreaLabel),
-  value: vPlanningValue,
-  carry: v.optional(vCarryCount),
-  running: v.optional(
-    v.object({
-      sprint: v.pipe(v.number(), v.integer()),
-    }),
-  ),
+    task: vTask,
+    chosen: v.optional(vSprintTask),
+    carriedFrom: v.optional(vSprintTask),
+    area: v.optional(vAreaLabel),
+    value: vPlanningValue,
+    carry: v.optional(vCarryCount),
+    running: v.optional(v.object({
+        sprint: v.pipe(v.number(), v.integer())
+    }))
 });
 
 export const vRecurringCandidate = v.object({
-  task: vTask,
-  occurrences: v.array(vOccurrence),
-  area: v.optional(vAreaLabel),
+    task: vTask,
+    occurrences: v.array(vOccurrence),
+    area: v.optional(vAreaLabel)
 });
 
 /**
  * The Tasks a Sprint being planned can choose, in groups (選ぶ).
  */
 export const vSprintCandidates = v.object({
-  carriedOver: v.array(vCandidateRow),
-  overdue: v.array(vCandidateRow),
-  dueSoon: v.array(vCandidateRow),
-  dueSoonUntil: vLocalDate,
-  recurring: v.array(vRecurringCandidate),
-  others: v.array(vCandidateRow),
+    carriedOver: v.array(vCandidateRow),
+    overdue: v.array(vCandidateRow),
+    dueSoon: v.array(vCandidateRow),
+    dueSoonUntil: vLocalDate,
+    recurring: v.array(vRecurringCandidate),
+    others: v.array(vCandidateRow)
 });
 
 export const vGoalFact = v.object({
-  text: v.string(),
-  plannedText: v.optional(v.string()),
-  changedSinceConfirm: v.boolean(),
-  selfAssessment: v.optional(vSelfAssessment),
+    text: v.string(),
+    plannedText: v.optional(v.string()),
+    changedSinceConfirm: v.boolean(),
+    selfAssessment: v.optional(vSelfAssessment)
 });
 
 export const vTaskFact = v.object({
-  sprintTaskId: vSprintTaskId,
-  taskId: vTaskId,
-  title: v.string(),
-  areaId: v.nullable(vAreaId),
-  recurring: v.boolean(),
-  outcome: vSprintTaskOutcome,
-  origin: vSprintTaskOrigin,
-  goalLink: vGoalLink,
-  plan: v.optional(vPlanSnapshot),
-  estimateNow: v.optional(v.number()),
-  actualHours: v.number(),
-  actualVsPlan: v.optional(vRange),
-  carryCount: v.pipe(v.number(), v.integer()),
-  deferredDates: v.array(vLocalDate),
-  longestDeferralRun: v.array(vLocalDate),
-  pausedDates: v.array(vLocalDate),
+    sprintTaskId: vSprintTaskId,
+    taskId: vTaskId,
+    title: v.string(),
+    areaId: v.nullable(vAreaId),
+    recurring: v.boolean(),
+    outcome: vSprintTaskOutcome,
+    origin: vSprintTaskOrigin,
+    goalLink: vGoalLink,
+    plan: v.optional(vPlanSnapshot),
+    estimateNow: v.optional(v.number()),
+    actualHours: v.number(),
+    actualVsPlan: v.optional(vRange),
+    carryCount: v.pipe(v.number(), v.integer()),
+    deferredDates: v.array(vLocalDate),
+    longestDeferralRun: v.array(vLocalDate),
+    pausedDates: v.array(vLocalDate)
 });
 
 export const vAreaFacts = v.object({
-  areaId: v.nullable(vAreaId),
-  name: v.optional(v.string()),
-  goal: v.optional(vGoalFact),
-  linked: v.array(vTaskFact),
-  unlinked: v.array(vTaskFact),
+    areaId: v.nullable(vAreaId),
+    name: v.optional(v.string()),
+    goal: v.optional(vGoalFact),
+    linked: v.array(vTaskFact),
+    unlinked: v.array(vTaskFact)
 });
 
 export const vOccurrenceFact = v.object({
-  occurrence: vOccurrence,
-  sprintTaskId: vSprintTaskId,
-  actualHours: v.number(),
-  doneOn: v.optional(vLocalDate),
+    occurrence: vOccurrence,
+    sprintTaskId: vSprintTaskId,
+    actualHours: v.number(),
+    doneOn: v.optional(vLocalDate)
 });
 
 export const vOccurrenceFacts = v.object({
-  done: v.array(vOccurrence),
-  skipped: v.array(vOccurrence),
-  missed: v.array(vOccurrence),
-  all: v.array(vOccurrenceFact),
+    done: v.array(vOccurrence),
+    skipped: v.array(vOccurrence),
+    missed: v.array(vOccurrence),
+    all: v.array(vOccurrenceFact)
 });
 
 /**
  * Retro の事実, derived from the Sprint's records.
  */
 export const vRetroFacts = v.object({
-  areas: v.array(vAreaFacts),
-  tasks: v.array(vTaskFact),
-  completed: v.array(vTaskFact),
-  carriedOver: v.array(vTaskFact),
-  removed: v.array(vTaskFact),
-  midSprint: v.array(vTaskFact),
-  occurrences: vOccurrenceFacts,
-  deferrals: v.array(vDailySelection),
-  pauses: v.array(vDailySelection),
-  interrupts: v.array(vInterruptNote),
-  interruptTime: v.object({
-    minutes: v.number(),
-    withoutMinutes: v.pipe(v.number(), v.integer()),
-  }),
-  availableHours: vAvailableHours,
-  plannedTotal: v.object({
-    atConfirm: vPlanningTotal,
-    withAdditions: vPlanningTotal,
-  }),
-  capacity: v.optional(
-    v.object({
-      atConfirm: vCapacity,
-      withAdditions: vCapacity,
+    areas: v.array(vAreaFacts),
+    tasks: v.array(vTaskFact),
+    completed: v.array(vTaskFact),
+    carriedOver: v.array(vTaskFact),
+    removed: v.array(vTaskFact),
+    midSprint: v.array(vTaskFact),
+    occurrences: vOccurrenceFacts,
+    deferrals: v.array(vDailySelection),
+    pauses: v.array(vDailySelection),
+    interrupts: v.array(vInterruptNote),
+    interruptTime: v.object({
+        minutes: v.number(),
+        withoutMinutes: v.pipe(v.number(), v.integer())
     }),
-  ),
-  actualHours: v.number(),
+    availableHours: vAvailableHours,
+    plannedTotal: v.object({
+        atConfirm: vPlanningTotal,
+        withAdditions: vPlanningTotal
+    }),
+    capacity: v.optional(v.object({
+        atConfirm: vCapacity,
+        withAdditions: vCapacity
+    })),
+    actualHours: v.number()
 });
 
 export const vCriterionState = v.picklist([
-  'draft',
-  'active',
-  'ended',
-  'replaced',
+    'draft',
+    'active',
+    'ended',
+    'replaced'
 ]);
 
 export const vPlanningCriterion = v.object({
-  id: vPlanningCriterionId,
-  userId: vUserId,
-  policy: vCriterionPolicy,
-  sourceSprintId: vSprintId,
-  state: vCriterionState,
-  replacedBy: v.optional(vPlanningCriterionId),
-  createdAt: vInstant,
+    id: vPlanningCriterionId,
+    userId: vUserId,
+    policy: vCriterionPolicy,
+    sourceSprintId: vSprintId,
+    state: vCriterionState,
+    replacedBy: v.optional(vPlanningCriterionId),
+    createdAt: vInstant
 });
 
 export const vCriterionResult = v.object({
-  tasks: v.array(vTaskFact),
-  done: v.array(vTaskFact),
-  carriedOver: v.array(vTaskFact),
-  planned: vPlanningTotal,
-  actualHours: v.number(),
+    tasks: v.array(vTaskFact),
+    done: v.array(vTaskFact),
+    carriedOver: v.array(vTaskFact),
+    planned: vPlanningTotal,
+    actualHours: v.number()
 });
 
 export const vRetroCriterion = v.object({
-  criterion: vPlanningCriterion,
-  view: vCriterionView,
-  areaName: v.optional(v.string()),
+    criterion: vPlanningCriterion,
+    view: vCriterionView,
+    areaName: v.optional(v.string())
 });
 
 /**
  * `decisionMissing`: 続ける / 終える / 置き換える is not chosen (invariant 36). `continueWithDraft`: 続ける keeps the active criterion, so the draft must go (invariant 35).
  */
-export const vRetroBlocker = v.picklist([
-  'decisionMissing',
-  'continueWithDraft',
-]);
+export const vRetroBlocker = v.picklist(['decisionMissing', 'continueWithDraft']);
 
 export const vActualTarget = v.object({
-  sprintTaskId: vSprintTaskId,
-  occurrenceId: v.optional(vOccurrenceId),
-  date: vLocalDate,
+    sprintTaskId: vSprintTaskId,
+    occurrenceId: v.optional(vOccurrenceId),
+    date: vLocalDate
 });
 
 export const vRetroOccurrence = v.object({
-  occurrence: vOccurrence,
-  title: v.string(),
-  actualHours: v.number(),
-  target: vActualTarget,
+    occurrence: vOccurrence,
+    title: v.string(),
+    actualHours: v.number(),
+    target: vActualTarget
 });
 
 export const vCarryOverPlaces = v.object({
-  total: v.pipe(v.number(), v.integer()),
-  inNext: v.pipe(v.number(), v.integer()),
-  candidates: v.pipe(v.number(), v.integer()),
-  completed: v.pipe(v.number(), v.integer()),
-  archived: v.pipe(v.number(), v.integer()),
+    total: v.pipe(v.number(), v.integer()),
+    inNext: v.pipe(v.number(), v.integer()),
+    candidates: v.pipe(v.number(), v.integer()),
+    completed: v.pipe(v.number(), v.integer()),
+    archived: v.pipe(v.number(), v.integer())
 });
 
 export const vCarryOverPlace = v.picklist([
-  'inNext',
-  'candidate',
-  'completed',
-  'archived',
+    'inNext',
+    'candidate',
+    'completed',
+    'archived'
 ]);
 
 export const vCarryOverTask = v.object({
-  taskId: vTaskId,
-  place: vCarryOverPlace,
+    taskId: vTaskId,
+    place: vCarryOverPlace
 });
 
 export const vRetroData = v.object({
-  sprint: vSprint,
-  number: v.pipe(v.number(), v.integer()),
-  week: v.optional(vSprintWeek),
-  today: vLocalDate,
-  timeZone: vTimeZone,
-  facts: vRetroFacts,
-  sprintAreas: v.record(v.string(), vSprintAreaLabel),
-  areas: v.array(vSprintAreaLabel),
-  taskTitles: v.record(v.string(), v.string()),
-  used: v.optional(
-    v.object({
-      criterion: vPlanningCriterion,
-      view: vCriterionView,
-      areaName: v.optional(v.string()),
-      appliedAtConfirm: v.boolean(),
-      result: vCriterionResult,
-      decision: v.optional(vRetroDecision),
-    }),
-  ),
-  draft: v.optional(vRetroCriterion),
-  pins: v.array(vRetroPin),
-  reflection: v.string(),
-  improvement: v.optional(v.string()),
-  blockers: v.array(vRetroBlocker),
-  actualDate: vLocalDate,
-  occurrences: v.array(vRetroOccurrence),
-  carryOver: vCarryOverPlaces,
-  carryOverTasks: v.array(vCarryOverTask),
+    sprint: vSprint,
+    number: v.pipe(v.number(), v.integer()),
+    week: v.optional(vSprintWeek),
+    today: vLocalDate,
+    timeZone: vTimeZone,
+    facts: vRetroFacts,
+    sprintAreas: v.record(v.string(), vSprintAreaLabel),
+    areas: v.array(vSprintAreaLabel),
+    taskTitles: v.record(v.string(), v.string()),
+    used: v.optional(v.object({
+        criterion: vPlanningCriterion,
+        view: vCriterionView,
+        areaName: v.optional(v.string()),
+        appliedAtConfirm: v.boolean(),
+        result: vCriterionResult,
+        decision: v.optional(vRetroDecision)
+    })),
+    draft: v.optional(vRetroCriterion),
+    pins: v.array(vRetroPin),
+    reflection: v.string(),
+    improvement: v.optional(v.string()),
+    blockers: v.array(vRetroBlocker),
+    actualDate: vLocalDate,
+    occurrences: v.array(vRetroOccurrence),
+    carryOver: vCarryOverPlaces,
+    carryOverTasks: v.array(vCarryOverTask)
 });
 
 /**
  * The person.
  */
 export const vGetMeResponse = v.object({
-  userId: vUserId,
-  settings: v.nullable(vUserSettings),
-  clock: v.optional(vClock),
-  sprints: v.optional(vCurrentSprints),
+    userId: vUserId,
+    settings: v.nullable(vUserSettings),
+    clock: v.optional(vClock),
+    sprints: v.optional(vCurrentSprints)
 });
 
 /**
  * The read.
  */
 export const vListAreasResponse = v.object({
-  clock: vClock,
-  view: v.array(vEditableArea),
+    clock: vClock,
+    view: v.array(vEditableArea)
 });
 
 export const vCreateAreaBody = v.strictObject({
-  name: v.string(),
+    name: v.string()
 });
 
 /**
  * Made. The IDs of what the operation made.
  */
 export const vCreateAreaResponse = v.object({
-  areaId: vAreaId,
+    areaId: vAreaId
 });
 
 export const vRenameAreaBody = v.strictObject({
-  name: v.string(),
+    name: v.string()
 });
 
 export const vRenameAreaPath = v.object({
-  areaId: vAreaId,
+    areaId: vAreaId
 });
 
 /**
@@ -1334,7 +1273,7 @@ export const vRenameAreaPath = v.object({
 export const vRenameAreaResponse = v.void();
 
 export const vArchiveAreaPath = v.object({
-  areaId: vAreaId,
+    areaId: vAreaId
 });
 
 /**
@@ -1343,7 +1282,7 @@ export const vArchiveAreaPath = v.object({
 export const vArchiveAreaResponse = v.void();
 
 export const vRestoreAreaPath = v.object({
-  areaId: vAreaId,
+    areaId: vAreaId
 });
 
 /**
@@ -1352,29 +1291,29 @@ export const vRestoreAreaPath = v.object({
 export const vRestoreAreaResponse = v.void();
 
 export const vCreateTaskBody = v.strictObject({
-  title: v.string(),
-  areaId: v.optional(vAreaId),
+    title: v.string(),
+    areaId: v.optional(vAreaId)
 });
 
 /**
  * Made. The IDs of what the operation made.
  */
 export const vCreateTaskResponse = v.object({
-  taskId: vTaskId,
+    taskId: vTaskId
 });
 
 export const vSaveTaskBody = v.strictObject({
-  title: v.optional(v.string()),
-  description: v.optional(v.string()),
-  areaId: v.nullish(vAreaId),
-  due: v.nullish(vLocalDate),
-  priority: v.optional(vTaskPriority),
-  timeBasis: v.optional(vTimeBasis),
-  estimate: v.nullish(v.number()),
+    title: v.optional(v.string()),
+    description: v.optional(v.string()),
+    areaId: v.nullish(vAreaId),
+    due: v.nullish(vLocalDate),
+    priority: v.optional(vTaskPriority),
+    timeBasis: v.optional(vTimeBasis),
+    estimate: v.nullish(v.number())
 });
 
 export const vSaveTaskPath = v.object({
-  taskId: vTaskId,
+    taskId: vTaskId
 });
 
 /**
@@ -1383,7 +1322,7 @@ export const vSaveTaskPath = v.object({
 export const vSaveTaskResponse = v.void();
 
 export const vArchiveTaskPath = v.object({
-  taskId: vTaskId,
+    taskId: vTaskId
 });
 
 /**
@@ -1392,7 +1331,7 @@ export const vArchiveTaskPath = v.object({
 export const vArchiveTaskResponse = v.void();
 
 export const vRestoreTaskPath = v.object({
-  taskId: vTaskId,
+    taskId: vTaskId
 });
 
 /**
@@ -1401,7 +1340,7 @@ export const vRestoreTaskPath = v.object({
 export const vRestoreTaskResponse = v.void();
 
 export const vCompleteTaskPath = v.object({
-  taskId: vTaskId,
+    taskId: vTaskId
 });
 
 /**
@@ -1410,7 +1349,7 @@ export const vCompleteTaskPath = v.object({
 export const vCompleteTaskResponse = v.void();
 
 export const vUndoCompleteTaskPath = v.object({
-  taskId: vTaskId,
+    taskId: vTaskId
 });
 
 /**
@@ -1419,59 +1358,56 @@ export const vUndoCompleteTaskPath = v.object({
 export const vUndoCompleteTaskResponse = v.void();
 
 export const vEndRecurrencePath = v.object({
-  taskId: vTaskId,
+    taskId: vTaskId
 });
 
 /**
  * Done. What the operation decided.
  */
 export const vEndRecurrenceResponse = v.object({
-  removed: v.boolean(),
+    removed: v.boolean()
 });
 
 export const vSetRecurrenceBody = v.strictObject({
-  pattern: vRecurrencePattern,
+    pattern: vRecurrencePattern
 });
 
 export const vSetRecurrencePath = v.object({
-  taskId: vTaskId,
+    taskId: vTaskId
 });
 
 /**
  * Done. What the operation decided.
  */
 export const vSetRecurrenceResponse = v.object({
-  effectiveFrom: v.optional(vLocalDate),
+    effectiveFrom: v.optional(vLocalDate)
 });
 
 export const vAddSubtaskBody = v.strictObject({
-  title: v.string(),
-  hours: v.optional(v.number()),
+    title: v.string(),
+    hours: v.optional(v.number())
 });
 
 export const vAddSubtaskPath = v.object({
-  taskId: vTaskId,
+    taskId: vTaskId
 });
 
 /**
  * Made. The IDs of what the operation made.
  */
 export const vAddSubtaskResponse = v.object({
-  subtaskId: vSubtaskId,
+    subtaskId: vSubtaskId
 });
 
-export const vUpdateSubtaskBody = v.union([
-  v.strictObject({
-    done: v.boolean(),
-  }),
-  v.strictObject({
-    hours: v.nullable(v.number()),
-  }),
-]);
+export const vUpdateSubtaskBody = v.union([v.strictObject({
+        done: v.boolean()
+    }), v.strictObject({
+        hours: v.nullable(v.number())
+    })]);
 
 export const vUpdateSubtaskPath = v.object({
-  taskId: vTaskId,
-  subtaskId: vSubtaskId,
+    taskId: vTaskId,
+    subtaskId: vSubtaskId
 });
 
 /**
@@ -1479,18 +1415,15 @@ export const vUpdateSubtaskPath = v.object({
  */
 export const vUpdateSubtaskResponse = v.void();
 
-export const vAdoptEstimateSuggestionBody = v.union([
-  v.strictObject({
-    bound: vSuggestionBound,
-  }),
-  v.strictObject({
-    hours: v.number(),
-  }),
-]);
+export const vAdoptEstimateSuggestionBody = v.union([v.strictObject({
+        bound: vSuggestionBound
+    }), v.strictObject({
+        hours: v.number()
+    })]);
 
 export const vAdoptEstimateSuggestionPath = v.object({
-  taskId: vTaskId,
-  suggestionId: vEstimateSuggestionId,
+    taskId: vTaskId,
+    suggestionId: vEstimateSuggestionId
 });
 
 /**
@@ -1499,12 +1432,12 @@ export const vAdoptEstimateSuggestionPath = v.object({
 export const vAdoptEstimateSuggestionResponse = v.void();
 
 export const vUndoAdoptionBody = v.strictObject({
-  previous: v.nullable(vEstimate),
+    previous: v.nullable(vEstimate)
 });
 
 export const vUndoAdoptionPath = v.object({
-  taskId: vTaskId,
-  suggestionId: vEstimateSuggestionId,
+    taskId: vTaskId,
+    suggestionId: vEstimateSuggestionId
 });
 
 /**
@@ -1513,8 +1446,8 @@ export const vUndoAdoptionPath = v.object({
 export const vUndoAdoptionResponse = v.void();
 
 export const vRejectSuggestionPath = v.object({
-  taskId: vTaskId,
-  suggestionId: vEstimateSuggestionId,
+    taskId: vTaskId,
+    suggestionId: vEstimateSuggestionId
 });
 
 /**
@@ -1523,8 +1456,8 @@ export const vRejectSuggestionPath = v.object({
 export const vRejectSuggestionResponse = v.void();
 
 export const vUndoRejectionPath = v.object({
-  taskId: vTaskId,
-  suggestionId: vEstimateSuggestionId,
+    taskId: vTaskId,
+    suggestionId: vEstimateSuggestionId
 });
 
 /**
@@ -1533,71 +1466,71 @@ export const vUndoRejectionPath = v.object({
 export const vUndoRejectionResponse = v.void();
 
 export const vGetBacklogQuery = v.object({
-  view: v.optional(vBacklogSlice),
-  area: v.optional(vAreaId),
+    view: v.optional(vBacklogSlice),
+    area: v.optional(vAreaId)
 });
 
 /**
  * The Backlog.
  */
 export const vGetBacklogResponse = v.object({
-  clock: vClock,
-  view: vBacklogData,
+    clock: vClock,
+    view: vBacklogData
 });
 
 export const vGetDayPath = v.object({
-  date: vLocalDate,
+    date: vLocalDate
 });
 
 /**
  * The day.
  */
 export const vGetDayResponse = v.object({
-  clock: vClock,
-  view: vDayView,
+    clock: vClock,
+    view: vDayView
 });
 
 export const vListSprintsQuery = v.object({
-  number: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+    number: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)))
 });
 
 /**
  * The read.
  */
 export const vListSprintsResponse = v.object({
-  clock: vClock,
-  view: v.array(vSprintItem),
+    clock: vClock,
+    view: v.array(vSprintItem)
 });
 
 /**
  * Made. The IDs of what the operation made.
  */
 export const vBeginPlanningResponse = v.object({
-  sprintId: vSprintId,
+    sprintId: vSprintId
 });
 
 export const vGetSprintPath = v.object({
-  sprintId: vSprintId,
+    sprintId: vSprintId
 });
 
 export const vGetSprintQuery = v.object({
-  'apply-criterion': v.optional(v.boolean()),
+    'apply-criterion': v.optional(v.boolean())
 });
 
 /**
  * The read.
  */
 export const vGetSprintResponse = v.object({
-  clock: vClock,
-  view: vSprintView,
+    clock: vClock,
+    view: vSprintView
 });
 
 export const vSetAvailableHoursBody = v.strictObject({
-  availableHours: v.nullable(v.number()),
+    availableHours: v.nullable(v.number())
 });
 
 export const vSetAvailableHoursPath = v.object({
-  sprintId: vSprintId,
+    sprintId: vSprintId
 });
 
 /**
@@ -1606,11 +1539,11 @@ export const vSetAvailableHoursPath = v.object({
 export const vSetAvailableHoursResponse = v.void();
 
 export const vConfirmSprintBody = v.strictObject({
-  applyCriterion: v.boolean(),
+    applyCriterion: v.boolean()
 });
 
 export const vConfirmSprintPath = v.object({
-  sprintId: vSprintId,
+    sprintId: vSprintId
 });
 
 /**
@@ -1618,18 +1551,15 @@ export const vConfirmSprintPath = v.object({
  */
 export const vConfirmSprintResponse = v.void();
 
-export const vUpdateGoalBody = v.union([
-  v.strictObject({
-    text: v.string(),
-  }),
-  v.strictObject({
-    assessment: v.nullable(vSelfAssessment),
-  }),
-]);
+export const vUpdateGoalBody = v.union([v.strictObject({
+        text: v.string()
+    }), v.strictObject({
+        assessment: v.nullable(vSelfAssessment)
+    })]);
 
 export const vUpdateGoalPath = v.object({
-  sprintId: vSprintId,
-  areaId: vAreaId,
+    sprintId: vSprintId,
+    areaId: vAreaId
 });
 
 /**
@@ -1638,11 +1568,11 @@ export const vUpdateGoalPath = v.object({
 export const vUpdateGoalResponse = v.void();
 
 export const vRemoveSprintTasksPath = v.object({
-  sprintId: vSprintId,
+    sprintId: vSprintId
 });
 
 export const vRemoveSprintTasksQuery = v.object({
-  ids: v.pipe(v.array(vSprintTaskId), v.minLength(1)),
+    ids: v.pipe(v.array(vSprintTaskId), v.minLength(1))
 });
 
 /**
@@ -1650,31 +1580,28 @@ export const vRemoveSprintTasksQuery = v.object({
  */
 export const vRemoveSprintTasksResponse = v.void();
 
-export const vAddToSprintBody = v.union([
-  v.strictObject({
-    taskIds: v.array(vTaskId),
-  }),
-  v.strictObject({
-    title: v.string(),
-    areaId: v.optional(vAreaId),
-  }),
-]);
+export const vAddToSprintBody = v.union([v.strictObject({
+        taskIds: v.array(vTaskId)
+    }), v.strictObject({
+        title: v.string(),
+        areaId: v.optional(vAreaId)
+    })]);
 
 export const vAddToSprintPath = v.object({
-  sprintId: vSprintId,
+    sprintId: vSprintId
 });
 
 /**
  * Made. The IDs of what the operation made.
  */
 export const vAddToSprintResponse = v.object({
-  sprintTaskIds: v.array(vSprintTaskId),
-  taskId: v.optional(vTaskId),
+    sprintTaskIds: v.array(vSprintTaskId),
+    taskId: v.optional(vTaskId)
 });
 
 export const vRemoveSprintTaskPath = v.object({
-  sprintId: vSprintId,
-  sprintTaskId: vSprintTaskId,
+    sprintId: vSprintId,
+    sprintTaskId: vSprintTaskId
 });
 
 /**
@@ -1683,12 +1610,12 @@ export const vRemoveSprintTaskPath = v.object({
 export const vRemoveSprintTaskResponse = v.void();
 
 export const vSetGoalLinkBody = v.strictObject({
-  goalLink: vGoalLink,
+    goalLink: vGoalLink
 });
 
 export const vSetGoalLinkPath = v.object({
-  sprintId: vSprintId,
-  sprintTaskId: vSprintTaskId,
+    sprintId: vSprintId,
+    sprintTaskId: vSprintTaskId
 });
 
 /**
@@ -1697,8 +1624,8 @@ export const vSetGoalLinkPath = v.object({
 export const vSetGoalLinkResponse = v.void();
 
 export const vExcludeAllOccurrencesPath = v.object({
-  sprintId: vSprintId,
-  sprintTaskId: vSprintTaskId,
+    sprintId: vSprintId,
+    sprintTaskId: vSprintTaskId
 });
 
 /**
@@ -1707,11 +1634,11 @@ export const vExcludeAllOccurrencesPath = v.object({
 export const vExcludeAllOccurrencesResponse = v.void();
 
 export const vIncludeOccurrencesBody = v.strictObject({
-  occurrenceIds: v.array(vOccurrenceId),
+    occurrenceIds: v.array(vOccurrenceId)
 });
 
 export const vIncludeOccurrencesPath = v.object({
-  sprintId: vSprintId,
+    sprintId: vSprintId
 });
 
 /**
@@ -1720,8 +1647,8 @@ export const vIncludeOccurrencesPath = v.object({
 export const vIncludeOccurrencesResponse = v.void();
 
 export const vExcludeOccurrencePath = v.object({
-  sprintId: vSprintId,
-  occurrenceId: vOccurrenceId,
+    sprintId: vSprintId,
+    occurrenceId: vOccurrenceId
 });
 
 /**
@@ -1730,8 +1657,8 @@ export const vExcludeOccurrencePath = v.object({
 export const vExcludeOccurrenceResponse = v.void();
 
 export const vIncludeOccurrencePath = v.object({
-  sprintId: vSprintId,
-  occurrenceId: vOccurrenceId,
+    sprintId: vSprintId,
+    occurrenceId: vOccurrenceId
 });
 
 /**
@@ -1740,50 +1667,50 @@ export const vIncludeOccurrencePath = v.object({
 export const vIncludeOccurrenceResponse = v.void();
 
 export const vListSprintCandidatesPath = v.object({
-  sprintId: vSprintId,
+    sprintId: vSprintId
 });
 
 /**
  * The read.
  */
 export const vListSprintCandidatesResponse = v.object({
-  clock: vClock,
-  view: v.nullable(vSprintCandidates),
+    clock: vClock,
+    view: v.nullable(vSprintCandidates)
 });
 
 export const vChooseForDayBody = v.union([
-  v.strictObject({
-    date: vLocalDate,
-    sprintTaskId: vSprintTaskId,
-    occurrenceId: v.optional(vOccurrenceId),
-  }),
-  v.strictObject({
-    date: vLocalDate,
-    taskId: vTaskId,
-  }),
-  v.strictObject({
-    date: vLocalDate,
-    title: v.string(),
-    areaId: v.optional(vAreaId),
-  }),
+    v.strictObject({
+        date: vLocalDate,
+        sprintTaskId: vSprintTaskId,
+        occurrenceId: v.optional(vOccurrenceId)
+    }),
+    v.strictObject({
+        date: vLocalDate,
+        taskId: vTaskId
+    }),
+    v.strictObject({
+        date: vLocalDate,
+        title: v.string(),
+        areaId: v.optional(vAreaId)
+    })
 ]);
 
 export const vChooseForDayPath = v.object({
-  sprintId: vSprintId,
+    sprintId: vSprintId
 });
 
 /**
  * Made. The IDs of what the operation made.
  */
 export const vChooseForDayResponse = v.object({
-  selectionId: vDailySelectionId,
-  sprintTaskId: v.optional(vSprintTaskId),
-  taskId: v.optional(vTaskId),
+    selectionId: vDailySelectionId,
+    sprintTaskId: v.optional(vSprintTaskId),
+    taskId: v.optional(vTaskId)
 });
 
 export const vStartSelectionPath = v.object({
-  sprintId: vSprintId,
-  selectionId: vDailySelectionId,
+    sprintId: vSprintId,
+    selectionId: vDailySelectionId
 });
 
 /**
@@ -1792,12 +1719,12 @@ export const vStartSelectionPath = v.object({
 export const vStartSelectionResponse = v.void();
 
 export const vPauseSelectionBody = v.strictObject({
-  hours: v.optional(v.number()),
+    hours: v.optional(v.number())
 });
 
 export const vPauseSelectionPath = v.object({
-  sprintId: vSprintId,
-  selectionId: vDailySelectionId,
+    sprintId: vSprintId,
+    selectionId: vDailySelectionId
 });
 
 /**
@@ -1806,8 +1733,8 @@ export const vPauseSelectionPath = v.object({
 export const vPauseSelectionResponse = v.void();
 
 export const vDeferSelectionPath = v.object({
-  sprintId: vSprintId,
-  selectionId: vDailySelectionId,
+    sprintId: vSprintId,
+    selectionId: vDailySelectionId
 });
 
 /**
@@ -1816,8 +1743,8 @@ export const vDeferSelectionPath = v.object({
 export const vDeferSelectionResponse = v.void();
 
 export const vUndoDeferSelectionPath = v.object({
-  sprintId: vSprintId,
-  selectionId: vDailySelectionId,
+    sprintId: vSprintId,
+    selectionId: vDailySelectionId
 });
 
 /**
@@ -1826,8 +1753,8 @@ export const vUndoDeferSelectionPath = v.object({
 export const vUndoDeferSelectionResponse = v.void();
 
 export const vRemoveFromTodayPath = v.object({
-  sprintId: vSprintId,
-  selectionId: vDailySelectionId,
+    sprintId: vSprintId,
+    selectionId: vDailySelectionId
 });
 
 /**
@@ -1836,8 +1763,8 @@ export const vRemoveFromTodayPath = v.object({
 export const vRemoveFromTodayResponse = v.void();
 
 export const vUndoRemoveFromTodayPath = v.object({
-  sprintId: vSprintId,
-  selectionId: vDailySelectionId,
+    sprintId: vSprintId,
+    selectionId: vDailySelectionId
 });
 
 /**
@@ -1846,8 +1773,8 @@ export const vUndoRemoveFromTodayPath = v.object({
 export const vUndoRemoveFromTodayResponse = v.void();
 
 export const vCompleteSelectionPath = v.object({
-  sprintId: vSprintId,
-  selectionId: vDailySelectionId,
+    sprintId: vSprintId,
+    selectionId: vDailySelectionId
 });
 
 /**
@@ -1856,8 +1783,8 @@ export const vCompleteSelectionPath = v.object({
 export const vCompleteSelectionResponse = v.void();
 
 export const vUndoCompleteSelectionPath = v.object({
-  sprintId: vSprintId,
-  selectionId: vDailySelectionId,
+    sprintId: vSprintId,
+    selectionId: vDailySelectionId
 });
 
 /**
@@ -1866,8 +1793,8 @@ export const vUndoCompleteSelectionPath = v.object({
 export const vUndoCompleteSelectionResponse = v.void();
 
 export const vSkipSelectionPath = v.object({
-  sprintId: vSprintId,
-  selectionId: vDailySelectionId,
+    sprintId: vSprintId,
+    selectionId: vDailySelectionId
 });
 
 /**
@@ -1876,8 +1803,8 @@ export const vSkipSelectionPath = v.object({
 export const vSkipSelectionResponse = v.void();
 
 export const vUndoSkipSelectionPath = v.object({
-  sprintId: vSprintId,
-  selectionId: vDailySelectionId,
+    sprintId: vSprintId,
+    selectionId: vDailySelectionId
 });
 
 /**
@@ -1886,14 +1813,14 @@ export const vUndoSkipSelectionPath = v.object({
 export const vUndoSkipSelectionResponse = v.void();
 
 export const vRecordActualTimeBody = v.strictObject({
-  sprintTaskId: vSprintTaskId,
-  date: vLocalDate,
-  hours: v.number(),
-  occurrenceId: v.optional(vOccurrenceId),
+    sprintTaskId: vSprintTaskId,
+    date: vLocalDate,
+    hours: v.number(),
+    occurrenceId: v.optional(vOccurrenceId)
 });
 
 export const vRecordActualTimePath = v.object({
-  sprintId: vSprintId,
+    sprintId: vSprintId
 });
 
 /**
@@ -1902,24 +1829,24 @@ export const vRecordActualTimePath = v.object({
 export const vRecordActualTimeResponse = v.void();
 
 export const vNoteInterruptBody = v.strictObject({
-  text: v.string(),
-  minutes: v.optional(v.number()),
+    text: v.string(),
+    minutes: v.optional(v.number())
 });
 
 export const vNoteInterruptPath = v.object({
-  sprintId: vSprintId,
+    sprintId: vSprintId
 });
 
 /**
  * Made. The IDs of what the operation made.
  */
 export const vNoteInterruptResponse = v.object({
-  interruptNoteId: vInterruptNoteId,
+    interruptNoteId: vInterruptNoteId
 });
 
 export const vDeleteInterruptPath = v.object({
-  sprintId: vSprintId,
-  interruptNoteId: vInterruptNoteId,
+    sprintId: vSprintId,
+    interruptNoteId: vInterruptNoteId
 });
 
 /**
@@ -1928,13 +1855,13 @@ export const vDeleteInterruptPath = v.object({
 export const vDeleteInterruptResponse = v.void();
 
 export const vEditInterruptBody = v.strictObject({
-  text: v.string(),
-  minutes: v.nullable(v.number()),
+    text: v.string(),
+    minutes: v.nullable(v.number())
 });
 
 export const vEditInterruptPath = v.object({
-  sprintId: vSprintId,
-  interruptNoteId: vInterruptNoteId,
+    sprintId: vSprintId,
+    interruptNoteId: vInterruptNoteId
 });
 
 /**
@@ -1943,14 +1870,14 @@ export const vEditInterruptPath = v.object({
 export const vEditInterruptResponse = v.void();
 
 export const vRestoreInterruptBody = v.strictObject({
-  at: vInstant,
-  text: v.string(),
-  minutes: v.optional(v.number()),
+    at: vInstant,
+    text: v.string(),
+    minutes: v.optional(v.number())
 });
 
 export const vRestoreInterruptPath = v.object({
-  sprintId: vSprintId,
-  interruptNoteId: vInterruptNoteId,
+    sprintId: vSprintId,
+    interruptNoteId: vInterruptNoteId
 });
 
 /**
@@ -1959,28 +1886,25 @@ export const vRestoreInterruptPath = v.object({
 export const vRestoreInterruptResponse = v.void();
 
 export const vGetSprintRetroPath = v.object({
-  sprintId: vSprintId,
+    sprintId: vSprintId
 });
 
 /**
  * The read.
  */
 export const vGetSprintRetroResponse = v.object({
-  clock: vClock,
-  view: v.nullable(vRetroData),
+    clock: vClock,
+    view: v.nullable(vRetroData)
 });
 
-export const vUpdateRetroBody = v.union([
-  v.strictObject({
-    reflection: v.string(),
-  }),
-  v.strictObject({
-    improvement: v.string(),
-  }),
-]);
+export const vUpdateRetroBody = v.union([v.strictObject({
+        reflection: v.string()
+    }), v.strictObject({
+        improvement: v.string()
+    })]);
 
 export const vUpdateRetroPath = v.object({
-  sprintId: vSprintId,
+    sprintId: vSprintId
 });
 
 /**
@@ -1989,11 +1913,11 @@ export const vUpdateRetroPath = v.object({
 export const vUpdateRetroResponse = v.void();
 
 export const vBeginRetroPath = v.object({
-  sprintId: vSprintId,
+    sprintId: vSprintId
 });
 
 export const vCompleteRetroPath = v.object({
-  sprintId: vSprintId,
+    sprintId: vSprintId
 });
 
 /**
@@ -2002,15 +1926,15 @@ export const vCompleteRetroPath = v.object({
 export const vCompleteRetroResponse = v.void();
 
 export const vUnpinFactPath = v.object({
-  sprintId: vSprintId,
-  pin: v.union([
-    vSprintTaskId,
-    vDailySelectionId,
-    vOccurrenceId,
-    vInterruptNoteId,
-    vAreaId,
-    v.literal('available-hours'),
-  ]),
+    sprintId: vSprintId,
+    pin: v.union([
+        vSprintTaskId,
+        vDailySelectionId,
+        vOccurrenceId,
+        vInterruptNoteId,
+        vAreaId,
+        v.literal('available-hours')
+    ])
 });
 
 /**
@@ -2019,15 +1943,15 @@ export const vUnpinFactPath = v.object({
 export const vUnpinFactResponse = v.void();
 
 export const vPinFactPath = v.object({
-  sprintId: vSprintId,
-  pin: v.union([
-    vSprintTaskId,
-    vDailySelectionId,
-    vOccurrenceId,
-    vInterruptNoteId,
-    vAreaId,
-    v.literal('available-hours'),
-  ]),
+    sprintId: vSprintId,
+    pin: v.union([
+        vSprintTaskId,
+        vDailySelectionId,
+        vOccurrenceId,
+        vInterruptNoteId,
+        vAreaId,
+        v.literal('available-hours')
+    ])
 });
 
 /**
@@ -2036,11 +1960,11 @@ export const vPinFactPath = v.object({
 export const vPinFactResponse = v.void();
 
 export const vDecideCriterionBody = v.strictObject({
-  retroDecision: vRetroDecision,
+    retroDecision: vRetroDecision
 });
 
 export const vDecideCriterionPath = v.object({
-  sprintId: vSprintId,
+    sprintId: vSprintId
 });
 
 /**
@@ -2049,19 +1973,19 @@ export const vDecideCriterionPath = v.object({
 export const vDecideCriterionResponse = v.void();
 
 export const vDraftCriterionBody = v.strictObject({
-  sourceSprintId: vSprintId,
-  policy: vCriterionPolicy,
+    sourceSprintId: vSprintId,
+    policy: vCriterionPolicy
 });
 
 /**
  * Made. The IDs of what the operation made.
  */
 export const vDraftCriterionResponse = v.object({
-  criterionId: vPlanningCriterionId,
+    criterionId: vPlanningCriterionId
 });
 
 export const vDropCriterionDraftPath = v.object({
-  criterionId: vPlanningCriterionId,
+    criterionId: vPlanningCriterionId
 });
 
 /**
@@ -2070,11 +1994,11 @@ export const vDropCriterionDraftPath = v.object({
 export const vDropCriterionDraftResponse = v.void();
 
 export const vSetDraftPolicyBody = v.strictObject({
-  policy: vCriterionPolicy,
+    policy: vCriterionPolicy
 });
 
 export const vSetDraftPolicyPath = v.object({
-  criterionId: vPlanningCriterionId,
+    criterionId: vPlanningCriterionId
 });
 
 /**

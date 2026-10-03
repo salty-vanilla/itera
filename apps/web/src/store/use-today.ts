@@ -1,4 +1,9 @@
-import { dayData, operations, todayData } from '@itera/application';
+import {
+  dayData,
+  operations,
+  todayData,
+  type Change,
+} from '@itera/application';
 import type {
   AreaId,
   DailySelectionId,
@@ -6,11 +11,12 @@ import type {
   InterruptNoteId,
   LocalDate,
   OccurrenceId,
+  SprintId,
   SprintTaskId,
 } from '@itera/domain';
 import { useMemo } from 'react';
 import { useStoreSnapshot } from './store-provider';
-import { useRun } from './use-run';
+import { useRunOn, useCurrentRecords } from './use-run';
 
 /** The Today screen's data (ADR 0005: screens read through hooks). */
 export function useToday() {
@@ -36,67 +42,121 @@ const minutesOf = (minutes: number | undefined) =>
  * The day's start is the system's (useSystemDay).
  */
 export function useTodayActions() {
-  const run = useRun();
-  return useMemo(
-    () => ({
+  const on = useRunOn();
+  const current = useCurrentRecords();
+  return useMemo(() => {
+    const onSelection = (
+      selectionId: DailySelectionId,
+      operation: (input: {
+        sprintId: SprintId;
+        selectionId: DailySelectionId;
+      }) => Change<unknown>,
+    ) =>
+      on(current().sprints.active, (sprintId) =>
+        operation({ sprintId, selectionId }),
+      ).ok;
+    return {
       chooseForToday: (
         sprintTaskId: SprintTaskId,
         occurrenceId?: OccurrenceId,
       ) =>
-        run(
+        on(current().sprints.active, (sprintId) =>
           operations.chooseForToday({
+            sprintId,
+            date: current().clock.today,
             sprintTaskId,
             ...(occurrenceId === undefined ? {} : { occurrenceId }),
           }),
         ).ok,
       start: (selectionId: DailySelectionId) =>
-        run(operations.startSelection({ selectionId })).ok,
+        onSelection(selectionId, operations.startSelection),
       defer: (selectionId: DailySelectionId) =>
-        run(operations.deferSelection({ selectionId })).ok,
+        onSelection(selectionId, operations.deferSelection),
       removeFromToday: (selectionId: DailySelectionId) =>
-        run(operations.removeFromToday({ selectionId })).ok,
-      undoClose: (selectionId: DailySelectionId) =>
-        run(operations.undoCloseSelection({ selectionId })).ok,
+        onSelection(selectionId, operations.removeFromToday),
+      /** Takes back 見送り or 今週の残りに戻す, whichever the choice had. */
+      undoClose: (selectionId: DailySelectionId) => {
+        const { records, sprints } = current();
+        const removed =
+          records.sprints
+            .find((s) => s.id === sprints.active)
+            ?.dailySelections.find((d) => d.id === selectionId)?.resolution ===
+          'removed';
+        return onSelection(
+          selectionId,
+          removed
+            ? operations.undoRemoveFromToday
+            : operations.undoDeferSelection,
+        );
+      },
       pause: (selectionId: DailySelectionId, hours?: number) =>
-        run(
+        on(current().sprints.active, (sprintId) =>
           operations.pauseSelection({
+            sprintId,
             selectionId,
             ...(hours === undefined ? {} : { hours }),
           }),
         ).ok,
       complete: (selectionId: DailySelectionId) =>
-        run(operations.completeSelection({ selectionId })).ok,
+        onSelection(selectionId, operations.completeSelection),
       undoComplete: (selectionId: DailySelectionId) =>
-        run(operations.undoCompleteSelection({ selectionId })).ok,
+        onSelection(selectionId, operations.undoCompleteSelection),
       skip: (selectionId: DailySelectionId) =>
-        run(operations.skipSelection({ selectionId })).ok,
+        onSelection(selectionId, operations.skipSelection),
       undoSkip: (selectionId: DailySelectionId) =>
-        run(operations.undoSkipSelection({ selectionId })).ok,
-      recordActual: (selectionId: DailySelectionId, hours: number) =>
-        run(operations.recordSelectionActual({ selectionId, hours })).ok,
+        onSelection(selectionId, operations.undoSkipSelection),
+      /** The choice's actual hours, on its day. */
+      recordActual: (selectionId: DailySelectionId, hours: number) => {
+        const { records, sprints } = current();
+        const selection = records.sprints
+          .find((s) => s.id === sprints.active)
+          ?.dailySelections.find((d) => d.id === selectionId);
+        return on(selection && sprints.active, (sprintId) =>
+          operations.recordActualTime({
+            sprintId,
+            sprintTaskId: selection!.sprintTaskId,
+            date: selection!.date,
+            hours,
+            ...(selection!.occurrenceId === undefined
+              ? {}
+              : { occurrenceId: selection!.occurrenceId }),
+          }),
+        ).ok;
+      },
       noteInterrupt: (text: string, minutes?: number) =>
-        run(operations.noteInterrupt({ text, ...minutesOf(minutes) })).ok,
+        on(current().sprints.active, (sprintId) =>
+          operations.noteInterrupt({ sprintId, text, ...minutesOf(minutes) }),
+        ).ok,
       editInterrupt: (id: InterruptNoteId, text: string, minutes?: number) =>
-        run(
+        on(current().sprints.active, (sprintId) =>
           operations.editInterrupt({
+            sprintId,
             interruptNoteId: id,
             text,
             ...minutesOf(minutes),
           }),
         ).ok,
       deleteInterrupt: (id: InterruptNoteId) =>
-        run(operations.deleteInterrupt({ interruptNoteId: id })).ok,
+        on(current().sprints.active, (sprintId) =>
+          operations.deleteInterrupt({ sprintId, interruptNoteId: id }),
+        ).ok,
       restoreInterrupt: (note: InterruptNote) =>
-        run(operations.restoreInterrupt({ note })).ok,
+        on(current().sprints.active, (sprintId) =>
+          operations.restoreInterrupt({ sprintId, note }),
+        ).ok,
       addToToday: (title: string, areaId?: AreaId) =>
-        run(
+        on(current().sprints.active, (sprintId) =>
           operations.createTaskForToday({
+            sprintId,
+            date: current().clock.today,
             title,
             ...(areaId === undefined ? {} : { areaId }),
           }),
         ).ok,
-      beginRetro: () => run(operations.beginRetro()).ok,
-    }),
-    [run],
-  );
+      beginRetro: () =>
+        on(current().sprints.active, (sprintId) =>
+          operations.beginRetro({ sprintId }),
+        ).ok,
+    };
+  }, [on, current]);
 }

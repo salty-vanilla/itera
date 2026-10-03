@@ -10,7 +10,9 @@ import { buttonVariants } from '@/components/ui/button';
 import { iconButtonVariants } from '@/components/ui/icon-button';
 import { Navigation, type NavigationItem } from '@/components/ui/navigation';
 import { isPlainClick } from '@/lib/plain-click';
-import { useOverview } from '@/api/use-overview';
+import { getBacklogOptions } from '@itera/api-contract/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { useApiClient } from '@/api/api-provider';
 import { cn } from '@/lib/utils';
 import { useCloseToastsOnScreenChange } from './use-close-toasts-on-screen-change';
 import { focusScreenHeading, useScreenFocus } from './use-screen-focus';
@@ -38,8 +40,10 @@ function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const navigate = useNavigate();
   const pathname = useLocation({ select: (location) => location.pathname });
-  // The overview is read through the contract (#272); absent until it is.
-  const backlogCount = useOverview().data?.view.backlogCount;
+  // The Backlog's count, read through the contract (#272, #295: the
+  // Backlog is the resource); absent until it is.
+  const backlogCount = useQuery(getBacklogOptions({ client: useApiClient() }))
+    .data?.view.sliceCounts.all;
   const mainRef = useRef<HTMLElement>(null);
   useToastClearance(mainRef);
   useScreenFocus(mainRef);

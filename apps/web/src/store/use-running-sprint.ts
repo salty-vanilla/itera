@@ -2,7 +2,7 @@ import { operations, runningData } from '@itera/application';
 import type { AreaId, DailySelectionId, SprintId } from '@itera/domain';
 import { useMemo } from 'react';
 import { useStoreSnapshot } from './store-provider';
-import { useRun } from './use-run';
+import { useRunOn, useCurrentRecords } from './use-run';
 import { runningScreenData } from './views';
 
 /**
@@ -19,17 +19,36 @@ export function useRunningSprint(sprintId?: SprintId) {
 
 /** What may change after confirm, one named function each. */
 export function useRunningSprintActions() {
-  const run = useRun();
+  const on = useRunOn();
+  const current = useCurrentRecords();
   return useMemo(
     () => ({
       setGoal: (areaId: AreaId, text: string) =>
-        run(operations.setRunningGoal({ areaId, text })).ok,
+        on(current().sprints.active, (sprintId) =>
+          operations.setGoal({ sprintId, areaId, text }),
+        ).ok,
       setAvailableHours: (hours: number | null) =>
-        run(operations.setRunningAvailableHours({ hours })).ok,
-      /** 過去の日の完了・スキップを取り消す (#53, F33). */
-      undoPastDay: (selectionId: DailySelectionId) =>
-        run(operations.undoPastDay({ selectionId })).ok,
+        on(current().sprints.active, (sprintId) =>
+          operations.setAvailableHours({ sprintId, hours }),
+        ).ok,
+      /**
+       * 過去の日の完了・スキップを取り消す (#53, F33): the undo of what the
+       * day's choice was.
+       */
+      undoPastDay: (selectionId: DailySelectionId) => {
+        const { records, sprints } = current();
+        const skipped =
+          records.sprints
+            .find((s) => s.id === sprints.active)
+            ?.dailySelections.find((d) => d.id === selectionId)?.resolution ===
+          'skipped';
+        return on(current().sprints.active, (sprintId) =>
+          skipped
+            ? operations.undoSkipSelection({ sprintId, selectionId })
+            : operations.undoCompleteSelection({ sprintId, selectionId }),
+        ).ok;
+      },
     }),
-    [run],
+    [on, current],
   );
 }

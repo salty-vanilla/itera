@@ -108,8 +108,9 @@ export function operationRoutes(flow: Flow, guards: Guards) {
           input: unknown,
         ) => Change<unknown>;
         const value = await flow.operate(c, operation(input));
-        return surface.status === 204
-          ? c.body(null, 204)
+        // Made with nothing to return (the Retro, 201) has no body either.
+        return value === undefined
+          ? c.body(null, surface.status)
           : c.json(value, surface.status);
       },
     );

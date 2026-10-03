@@ -23,7 +23,7 @@ import { createMock } from '@/mock/mock-api';
 import { ApiProvider } from './api-provider';
 import { createQueryClient } from './query-client';
 import { useOperation } from './use-operation';
-import { useOverview } from './use-overview';
+import { useMe } from './use-me';
 
 const ids = fixtureIds();
 
@@ -69,11 +69,11 @@ function answerWith(status: number, code: string) {
       : undefined;
 }
 
-/** An operation and the overview, as a screen would use both. */
+/** An operation and a read, as a screen would use both. */
 function useRenameAndOverview() {
   return {
     rename: useOperation('renameArea'),
-    overview: useOverview(),
+    overview: useMe(),
   };
 }
 
@@ -92,7 +92,7 @@ describe('useOperation', () => {
     expect(outcome).toMatchObject({ ok: true });
     expect(requests).toEqual([
       `PATCH /api/areas/${ids.area.research}`,
-      'GET /api/overview',
+      'GET /api/me',
     ]);
   });
 
@@ -215,7 +215,7 @@ describe('operations that overlap', () => {
     });
     expect(requests.filter((r) => !r.startsWith('GET'))).toEqual([
       `PATCH /api/areas/${ids.area.research}`,
-      `PATCH /api/areas/${ids.area.research}`,
+      `POST /api/areas/${ids.area.research}/archive`,
     ]);
   });
 });
@@ -299,7 +299,7 @@ describe('a failed operation', () => {
       // Read again before `run` gave back its outcome, and not sent again.
       expect(requests).toEqual([
         `PATCH /api/areas/${ids.area.research}`,
-        'GET /api/overview',
+        'GET /api/me',
       ]);
       expect(
         await screen.findAllByText('保存できたか確かめられませんでした'),
@@ -336,7 +336,7 @@ describe('reading again after an operation', () => {
       expect(outcome).toEqual({ ok: false });
       expect(requests).toEqual([
         `PATCH /api/areas/${ids.area.research}`,
-        'GET /api/overview',
+        'GET /api/me',
       ]);
       expect(
         screen.getAllByText('保存できたか確かめられませんでした'),
@@ -356,7 +356,7 @@ describe('a read without a session', () => {
         { status: 401 },
       ),
     );
-    renderHook(useOverview, { wrapper });
+    renderHook(useMe, { wrapper });
     await waitFor(() => expect(onUnauthenticated).toHaveBeenCalled());
   });
 });

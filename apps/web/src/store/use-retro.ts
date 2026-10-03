@@ -1,9 +1,15 @@
-import { nextPlanningOf, operations, retroData } from '@itera/application';
+import {
+  nextPlanningOf,
+  operations,
+  retroData,
+  type Change,
+} from '@itera/application';
 import type {
   AreaId,
   CriterionPolicy,
   LocalDate,
   OccurrenceId,
+  PlanningCriterionId,
   RetroDecision,
   RetroPin,
   SelfAssessment,
@@ -12,7 +18,7 @@ import type {
 } from '@itera/domain';
 import { useMemo } from 'react';
 import { useStoreSnapshot } from './store-provider';
-import { useRun } from './use-run';
+import { useRun, useRunOn, useCurrentRecords } from './use-run';
 import { retroScreenData } from './views';
 
 /**
@@ -39,43 +45,79 @@ export function useNextPlanning() {
  */
 export function useRetroActions() {
   const run = useRun();
-  return useMemo(
-    () => ({
-      beginRetro: () => run(operations.beginRetro()).ok,
+  const on = useRunOn();
+  const current = useCurrentRecords();
+  return useMemo(() => {
+    /** The draft criterion of the Retro in progress. */
+    const draft = () => {
+      const { records, sprints } = current();
+      return records.sprints.find((s) => s.id === sprints.review)?.retro
+        ?.improvement?.criterionId;
+    };
+    const onDraft = (
+      operation: (criterionId: PlanningCriterionId) => Change<unknown>,
+    ) => on(draft(), operation).ok;
+    return {
+      /** Retro を始める, from the running Sprint's last day (F21). */
+      beginRetro: () =>
+        on(current().sprints.active, (sprintId) =>
+          operations.beginRetro({ sprintId }),
+        ).ok,
       assessGoal: (areaId: AreaId, assessment: SelfAssessment | null) =>
-        run(operations.assessGoal({ areaId, assessment })).ok,
-      /** 振り返りに使う印をつける (`on`) / 外す. */
-      setPinned: (pin: RetroPin, on: boolean) =>
-        run(on ? operations.pinFact({ pin }) : operations.unpinFact({ pin }))
-          .ok,
+        on(current().sprints.review, (sprintId) =>
+          operations.assessGoal({ sprintId, areaId, assessment }),
+        ).ok,
+      /** 振り返りに使う印をつける (`pinned`) / 外す. */
+      setPinned: (pin: RetroPin, pinned: boolean) =>
+        on(current().sprints.review, (sprintId) =>
+          pinned
+            ? operations.pinFact({ sprintId, pin })
+            : operations.unpinFact({ sprintId, pin }),
+        ).ok,
       setReflection: (text: string) =>
-        run(operations.setReflection({ text })).ok,
+        on(current().sprints.review, (sprintId) =>
+          operations.setReflection({ sprintId, text }),
+        ).ok,
       setImprovement: (text: string) =>
-        run(operations.setImprovement({ text })).ok,
+        on(current().sprints.review, (sprintId) =>
+          operations.setImprovement({ sprintId, text }),
+        ).ok,
       draftCriterion: (policy: CriterionPolicy) =>
-        run(operations.draftCriterion({ policy })).ok,
+        on(current().sprints.review, (sprintId) =>
+          operations.draftCriterion({ sprintId, policy }),
+        ).ok,
       setDraftPolicy: (policy: CriterionPolicy) =>
-        run(operations.setDraftPolicy({ policy })).ok,
-      dropCriterionDraft: () => run(operations.dropCriterionDraft()).ok,
+        onDraft((criterionId) =>
+          operations.setDraftPolicy({ criterionId, policy }),
+        ),
+      dropCriterionDraft: () =>
+        onDraft((criterionId) =>
+          operations.dropCriterionDraft({ criterionId }),
+        ),
       decideCriterion: (decision: RetroDecision) =>
-        run(operations.decideCriterion({ decision })).ok,
+        on(current().sprints.review, (sprintId) =>
+          operations.decideCriterion({ sprintId, decision }),
+        ).ok,
       recordActual: (
         sprintTaskId: SprintTaskId,
         hours: number,
         date: LocalDate,
         occurrenceId?: OccurrenceId,
       ) =>
-        run(
-          operations.recordReviewActual({
+        on(current().sprints.review, (sprintId) =>
+          operations.recordActualTime({
+            sprintId,
             sprintTaskId,
             hours,
             date,
             ...(occurrenceId === undefined ? {} : { occurrenceId }),
           }),
         ).ok,
-      completeRetro: () => run(operations.completeRetro()).ok,
+      completeRetro: () =>
+        on(current().sprints.review, (sprintId) =>
+          operations.completeRetro({ sprintId }),
+        ).ok,
       beginPlanning: () => run(operations.beginPlanning()).ok,
-    }),
-    [run],
-  );
+    };
+  }, [run, on, current]);
 }

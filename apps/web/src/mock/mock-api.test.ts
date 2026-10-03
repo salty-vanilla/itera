@@ -2,10 +2,7 @@
 // client, as the API does (ADR 0006): the reads' `{ clock, view }`, the
 // operations' values, and the errors by status and code.
 import * as contract from '@itera/api-contract';
-import {
-  getDayOptions,
-  getOverviewOptions,
-} from '@itera/api-contract/react-query';
+import { getDayOptions, getMeOptions } from '@itera/api-contract/react-query';
 import {
   requestOf,
   surfaces,
@@ -15,7 +12,7 @@ import { httpOf, OPERATION_EXAMPLES } from '@itera/api-contract/testing';
 import * as sdk from '@itera/api-contract/client';
 import { createClient, createConfig } from '@itera/api-contract/create-client';
 import {
-  appOverview,
+  sprintList,
   createIdSource,
   createMemoryStore,
   operations,
@@ -51,13 +48,10 @@ describe.each(fixtureStateIds)('the reads of %s', (state) => {
   it('answer every read as the contract says', async () => {
     const { client, store } = mockOf(state);
     const { clock } = store.getSnapshot();
+    const { records } = store.getSnapshot();
+    const sprintId = records.sprints[0]?.id;
     const reads = [
       ['getMe', contract.vGetMeResponse, sdk.getMe({ client })],
-      [
-        'getOverview',
-        contract.vGetOverviewResponse,
-        sdk.getOverview({ client }),
-      ],
       ['listAreas', contract.vListAreasResponse, sdk.listAreas({ client })],
       ['getBacklog', contract.vGetBacklogResponse, sdk.getBacklog({ client })],
       [
@@ -69,46 +63,52 @@ describe.each(fixtureStateIds)('the reads of %s', (state) => {
         }),
       ],
       [
-        'getSprintChoice',
-        contract.vGetSprintChoiceResponse,
-        sdk.getSprintChoice({ client, query: { screen: 'sprint' } }),
+        'listSprints',
+        contract.vListSprintsResponse,
+        sdk.listSprints({ client }),
       ],
       [
-        'getSprintChoice',
-        contract.vGetSprintChoiceResponse,
-        sdk.getSprintChoice({ client, query: { screen: 'retro', sprint: 1 } }),
+        'listSprints',
+        contract.vListSprintsResponse,
+        sdk.listSprints({ client, query: { number: 1 } }),
       ],
+      ...(sprintId === undefined
+        ? []
+        : ([
+            [
+              'getSprint',
+              contract.vGetSprintResponse,
+              sdk.getSprint({
+                client,
+                path: { sprintId },
+                query: { 'apply-criterion': true },
+              }),
+            ],
+            [
+              'listSprintCandidates',
+              contract.vListSprintCandidatesResponse,
+              sdk.listSprintCandidates({ client, path: { sprintId } }),
+            ],
+            [
+              'getSprintRetro',
+              contract.vGetSprintRetroResponse,
+              sdk.getSprintRetro({ client, path: { sprintId } }),
+            ],
+          ] as const)),
       [
-        'getPlanning',
-        contract.vGetPlanningResponse,
-        sdk.getPlanning({ client, query: { 'apply-criterion': true } }),
+        'getDay',
+        contract.vGetDayResponse,
+        sdk.getDay({ client, path: { date: clock.today } }),
       ],
-      ['getRunning', contract.vGetRunningResponse, sdk.getRunning({ client })],
-      [
-        'getRunning',
-        contract.vGetRunningResponse,
-        sdk.getRunning({ client, query: { sprint: 1 } }),
-      ],
-      ['getToday', contract.vGetTodayResponse, sdk.getToday({ client })],
       [
         'getDay',
         contract.vGetDayResponse,
         sdk.getDay({ client, path: { date: addDays(clock.today, -1) } }),
       ],
-      ['getRetro', contract.vGetRetroResponse, sdk.getRetro({ client })],
-      [
-        'getRetro',
-        contract.vGetRetroResponse,
-        sdk.getRetro({ client, query: { sprint: 1 } }),
-      ],
-      [
-        'getNextPlanning',
-        contract.vGetNextPlanningResponse,
-        sdk.getNextPlanning({ client }),
-      ],
     ] as const;
-    // Every read the mock answers is asked here.
-    expect(new Set(reads.map(([id]) => id))).toEqual(new Set(MOCK_READS));
+    // Every read the mock answers is asked here, where there is a Sprint.
+    if (sprintId !== undefined)
+      expect(new Set(reads.map(([id]) => id))).toEqual(new Set(MOCK_READS));
     for (const [, schema, request] of reads) {
       const { data, error, response } = await request;
       expect(error).toBeUndefined();
@@ -122,21 +122,37 @@ describe.each(fixtureStateIds)('the reads of %s', (state) => {
 describe('the mock', () => {
   it('reads what packages/application reads, with the clock', async () => {
     const { client, store } = mockOf('today-daytime');
-    const { data } = await sdk.getOverview({ client, throwOnError: true });
+    const { data } = await sdk.listSprints({ client, throwOnError: true });
     const { records, clock } = store.getSnapshot();
     expect(data).toEqual(
       JSON.parse(
-        JSON.stringify({ clock, view: appOverview(records, clock) }),
+        JSON.stringify({ clock, view: sprintList(records, clock) }),
       ) as unknown,
     );
   });
 
-  it('opens a Sprint by its number, and none for a number with no Sprint', async () => {
+  it('finds a Sprint by its number, and reads it by its ID', async () => {
     const { client } = mockOf('retro-reflect');
-    const first = await sdk.getRetro({ client, query: { sprint: 1 } });
-    expect(first.data?.view?.number).toBe(1);
-    const none = await sdk.getRunning({ client, query: { sprint: 99 } });
-    expect(none.data?.view).toBeNull();
+    const found = await sdk.listSprints({ client, query: { number: 1 } });
+    const [first] = found.data?.view ?? [];
+    expect(first?.number).toBe(1);
+    const retro = await sdk.getSprintRetro({
+      client,
+      path: { sprintId: first!.id },
+    });
+    expect(retro.data?.view?.number).toBe(1);
+    const none = await sdk.listSprints({ client, query: { number: 99 } });
+    expect(none.data?.view).toEqual([]);
+  });
+
+  it('answers 404 for a Sprint the person does not have', async () => {
+    const { client } = mockOf('retro-reflect');
+    const { response, error } = await sdk.getSprint({
+      client,
+      path: { sprintId: 'sprint_01h455vb4pex5vsknk084sn02q' },
+    });
+    expect(response?.status).toBe(404);
+    expect(error).toMatchObject({ code: 'notFound' });
   });
 
   it('runs an operation and returns what it made, a TypeID, with 201', async () => {
@@ -155,7 +171,7 @@ describe('the mock', () => {
 
   it('answers 204 for an operation that returns nothing', async () => {
     const { client } = mockOf('backlog-capture');
-    const { response, error } = await sdk.updateArea({
+    const { response, error } = await sdk.renameArea({
       client,
       path: { areaId: ids.area.research },
       body: { name: '研究室' },
@@ -167,9 +183,9 @@ describe('the mock', () => {
   it('answers a domain refusal with 422 and its code, and changes nothing', async () => {
     const { client, store } = mockOf('backlog-capture');
     // A read first: it brings the system's records up to now.
-    await sdk.getOverview({ client });
+    await sdk.getMe({ client });
     const before = store.getSnapshot();
-    const { error, response } = await sdk.updateArea({
+    const { error, response } = await sdk.renameArea({
       client,
       path: { areaId: ids.area.research },
       body: { name: '' },
@@ -184,10 +200,9 @@ describe('the mock', () => {
     const areaId = createIdSource((bytes) =>
       crypto.getRandomValues(bytes),
     ).newId('area', store.getSnapshot().clock.now);
-    const { error, response } = await sdk.updateArea({
+    const { error, response } = await sdk.archiveArea({
       client,
       path: { areaId },
-      body: { archived: true },
     });
     expect(response?.status).toBe(404);
     expect(error).toMatchObject({ code: 'notFound' });
@@ -232,9 +247,9 @@ describe('the mock', () => {
     expect(unknownKey.error).toMatchObject({ code: 'validationFailed' });
     const notADay = await sdk.getDay({ client, path: { date: '2026-02-30' } });
     expect(notADay.response?.status).toBe(400);
-    const notANumber = await sdk.getRetro({
+    const notANumber = await sdk.listSprints({
       client,
-      query: { sprint: 'two' as unknown as number },
+      query: { number: 'two' as unknown as number },
     });
     expect(notANumber.response?.status).toBe(400);
   });
@@ -258,9 +273,9 @@ describe('the mock', () => {
         fetch: createMock(store).fetch,
       }),
     );
-    const { data } = await sdk.getOverview({ client, throwOnError: true });
-    expect(data.view.activeSprint).toBeUndefined();
-    expect(data.view.reviewSprint).toBeDefined();
+    const { data } = await sdk.getMe({ client, throwOnError: true });
+    expect(data.sprints?.active).toBeUndefined();
+    expect(data.sprints?.review).toBeDefined();
   });
 
   it('tells the changes the screens make through the store, not its own', async () => {
@@ -283,7 +298,7 @@ describe('the mock', () => {
 
   it('keys reads by the generated keys', () => {
     const { client } = mockOf('today-daytime');
-    expect(getOverviewOptions({ client }).queryKey[0]._id).toBe('getOverview');
+    expect(getMeOptions({ client }).queryKey[0]._id).toBe('getMe');
     expect(
       getDayOptions({ client, path: { date: '2026-10-01' } }).queryKey[0],
     ).toMatchObject({ _id: 'getDay', path: { date: '2026-10-01' } });
