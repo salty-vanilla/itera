@@ -235,8 +235,8 @@ function expectOwner(ownerId: string, userId: UserId): void {
  * The partial unique indexes of src/db/schema.ts whose one slot a row can
  * take by an update (a criterion becoming active). Within a table, the rows
  * that hold the slot after the change are written after the others, so
- * handing it over never holds it twice: SQLite checks unique indexes after
- * each statement. `holds` repeats the index's condition.
+ * handing it over never holds it twice: SQLite checks a unique index as
+ * each row is written, not at the end of the batch. `holds` repeats the index's condition.
  */
 export const uniqueSlots: Readonly<
   Record<string, { table: RecordTable; holds: (row: Row) => boolean }>
