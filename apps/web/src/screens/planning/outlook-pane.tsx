@@ -3,7 +3,7 @@ import { useId } from 'react';
 import { Divider } from '@/components/ui/divider';
 import { CapacityIndicator } from '@/components/sprint/capacity-indicator';
 import { criterionName } from '@/lib/criterion-text';
-import type { PlanningData } from '@/store/use-planning';
+import type { PlanningData } from '@/screen-data/use-planning';
 import { cn } from '@/lib/utils';
 
 // 時間の見通し (docs/design/patterns.md Sprint Planning, right pane): the

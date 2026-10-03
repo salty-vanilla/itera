@@ -1,6 +1,9 @@
 import { Link, useNavigate } from '@tanstack/react-router';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { useBeginPlanning, useNextPlanning } from '@/store/use-begin-planning';
+import {
+  useBeginPlanning,
+  useNextPlanning,
+} from '@/screen-data/use-begin-planning';
 
 /**
  * 「Sprint N の計画を始める」 (owner decision in #42): starts the next

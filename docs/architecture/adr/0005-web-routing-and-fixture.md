@@ -51,7 +51,7 @@ fixture の段階（#38〜#42）では、画面が `RecordStore` と `Change` �
 - 記録と派生値は API（OpenAPI の契約）から得る。クライアントでの取得結果のキャッシュは TanStack Query が持つ。
 - `RecordStore`（`getSnapshot`・`subscribe`・`run`）と `createMemoryStore` は `packages/application` にあり、使うのはブラウザ内モック（`apps/web/src/mock/`）と各パッケージのテストだけ。モックは fixture の状態をメモリ上のストアに開き、リロードすると fixture に戻る。永続化しない。画面と画面のフックは `RecordStore`・`Change`・`Records` を参照しない。
 - 変更は `packages/application` の `operations`（利用者の 1 操作を domain のコマンドの組み合わせで行う関数）として、API のハンドラーとモックが実行する。成功したら記録を差し替えて Activity を追記し、失敗したら何も変えずに domain のエラーを返す。ID はストアが作って文脈で渡す（domain は ID を作らない）。
-- `apps/web/src/store/` には、契約の読み取りを画面の形にするフック、画面の操作のフック（`useOperation` から作る）、画面が使う値の変換が残る（名前は #39〜#42 の名残で、ストアではない。`src/api/` のフックとの置き場所の分け方と名前の付け替えは、別に決める）。
+- 契約の読み取りを画面の形にするフック、画面の操作のフック（`useOperation` から作る）、画面が使う値の変換は `apps/web/src/screen-data/` にある。置き場所の規則は「RecordStore と Change の片づけ」の節。
 - クライアントの UI 状態を持つストア（Zustand など）は置かない。状態の置き場所は後の「状態の置き場所」のとおり。
 
 ### API への移行
@@ -193,7 +193,7 @@ fixture の段階（#38〜#42）では、画面が `RecordStore` と `Change` �
 - **描き直しを待ってから焦点を動かす**：目標を保存して形を閉じるとき、キャッシュは更新済みでも画面はまだ新しい目標を描いていない（上の #273「操作が終わっても…」）。「編集」へ戻す焦点は、形を閉じた直後ではなく、目標の文が変わるまで待つ（`GoalBlock`）。今と同じ文は保存せずに閉じる（変わらないので、待つ要求が残らない）。
 - **見出しの焦点**：Sprint は一覧と計画の 2 段で読むので、読み込み中の見出しが読み終えた画面の見出しに替わるまでに 2 回作り直される。`useScreenFocus`（#275 で、見出しが作り直される画面に対応した）が、焦点がページに落ちているあいだ、今ある見出しへ何度でも移す。ほかへ移した焦点は取らない。
 - **共有のもの**：`BeginPlanning` は `getMe` と `beginPlanning` に移した。Retro の画面も使うので（#276 がその画面を移す）、枠（`AppShell`）が `getMe` を先に読み、「Sprint N の計画を始める」が現れる時点で答えがあるようにした。Retro が開く Sprint は、Retro の画面を移すまで store から求める（`use-retro-choice.ts`。#276 で消す）。`useSprintSteps` は番号だけを持つ参照を受ける。
-- **型**：計画と確定済みの Sprint の画面と部品は契約の型を使う。領域なしのまとまりの語は `store/screen-area.ts`（Retro の `views.ts` のものは domain の型なので別）。
+- **型**：計画と確定済みの Sprint の画面と部品は契約の型を使う。領域なしのまとまりの語は `screen-data/screen-area.ts`（Retro の `views.ts` のものは domain の型なので別）。
 - **import の境界**：`MIGRATING` から #274 のファイルと、契約の型だけになった共有のファイル（`capacity-indicator.tsx`・`criterion-text.ts`・`selection-words.ts`・`week-text.ts`）を消した。`use-retro-choice.ts` を #276 の一覧に足した。
 - **画面の文言**：送信中の「確定中…」「始めています…」と、記録を読む間の見出し「Sprint」・ラベル「計画」。ほかの語は変えていない。
 
@@ -215,7 +215,7 @@ Backlog（#273）の形で `/today`（今日、過去と先の日）を移した
 
 Backlog（#273）・今日（#275）の形で `/retro` を移した。
 
-- **開く Sprint**：`useRetroChoice`（`store/use-retro-choice.ts`）が `listSprints` を 1 本読み、URL の `?sprint=` の番号の Sprint、なければ Review の Sprint、実行中の Sprint（最終日に Retro を始める。F21）、最後に closed になった Sprint の順に選ぶ。前後の Sprint（見出しの ‹ ›）は一覧の隣。サーバーが各 Sprint の `week` を返すので、画面は選ぶだけで名前を付けない。Retro を開ける Sprint だけが対象なので、`/me` の `next`（まだ計画が始まっていない来週）は要らない。Sprint が 1 つもなければ、選んだ結果は空（`current` なし）で、画面は「振り返る Sprint はありません」を出す。
+- **開く Sprint**：`useRetroChoice`（`screen-data/use-retro-choice.ts`）が `listSprints` を 1 本読み、URL の `?sprint=` の番号の Sprint、なければ Review の Sprint、実行中の Sprint（最終日に Retro を始める。F21）、最後に closed になった Sprint の順に選ぶ。前後の Sprint（見出しの ‹ ›）は一覧の隣。サーバーが各 Sprint の `week` を返すので、画面は選ぶだけで名前を付けない。Retro を開ける Sprint だけが対象なので、`/me` の `next`（まだ計画が始まっていない来週）は要らない。Sprint が 1 つもなければ、選んだ結果は空（`current` なし）で、画面は「振り返る Sprint はありません」を出す。
 - **Retro の読み取り**：`useRetro(sprintId)` は `getSprintRetro` を Sprint の ID で読み、`Read<RetroData>` を返す。Sprint ごとに別の読み取りで、前の Sprint の答えを残さない（見出しの Sprint と中身の Sprint が食い違う間を作らない）。`retroScreenData`（`store/retro-view.ts`）が、契約の `RetroData` から画面が使う ID 引き（`areaOf`・`titleOf`・`taskTitleOf`）を作る。Retro が始まっていない（`view` が `null`）Sprint は Review か closed なら起きないので、`failed` とする。
 - **読み込み中**：Sprint の見出し（番号・期間・状態・‹ ›）は選んだ Sprint から作れるので、Retro を読んでいる間も出し続ける。‹ › で Sprint を替えたときに焦点が外れず、読めたあとに見出しが作り直されない。本体の場所は「振り返り」の見出しと `ReadStatus`。外側に `aria-busy`（テストはこれで読み終わりを待つ）。段階の表示は、記録から決まる段階（URL に段階がないとき）を読むまで出さない。
 - **操作のフック**：`useRetroActions({ sprintId, draftId })` は、画面に出している Sprint の ID を操作に渡す（暗黙の「Review の Sprint」を使わない）。計画のルールの下書きの ID は読み取りの `draft.criterion.id`。`useBeginRetro(sprintId)` は実行中の Sprint の Retro を始める。次の計画（`useNextPlanning`・`useBeginPlanning`）は `store/use-begin-planning.ts`（#274 と同じファイル）で、`getMe` の `sprints` から読み、始めたら作った Sprint の ID を返す。
@@ -296,8 +296,13 @@ Better Auth（ADR 0004「認証の構成」）の API を使う、Web のサイ�
 - 消したもの：`apps/web/src/store/` の `record-store.ts`・`store-provider.tsx`・`use-run.ts`・`use-system-day.ts`・`use-app-overview.ts`、`app/not-on-contract.tsx`（`NotOnContractError` を含む）、`createMock` の `subscribeToScreens`、`eslint.config.js` の `MIGRATING`。
 - モックのストアの生成は `apps/web/src/mock/memory-store.ts` に置く（乱数だけを渡す薄い関数）。開発用メニューは、モックのストアの時計と利用者のタイムゾーンを自分で読む。
 - システムの記録：モックは、読み取りと操作の前に `catchUp` を実行する（サーバーと同じ順序）。fixture の時計を進めた状態でも、終了日を過ぎた Sprint は読み取りの前に Review になる（`mock-api.test.ts`）。`packages/application` の `system-day.test.ts` も `catchUp` で確かめる。
-- `packages/application` の index から、画面ごとの読み取り（`appOverview`・`sprintChoice`・`planningData`・`nextPlanningOf` と、`runningData`・`retroData`・`dayData`・`todayData`）の関数を外した。契約の読み取りは `resource-views` が部品として使う。上の 4 つ（`appOverview`・`sprintChoice`・`planningData`・`nextPlanningOf`）はどこからも呼ばれず、テストだけが使う。消すかどうかは別の Issue で決める。
+- `packages/application`：使われなくなった画面ごとの読み取り（`appOverview`・`sprintChoice`・`planningData`・`nextPlanningOf`）と、それらだけが使う型・補助関数（`AppOverview`・`SprintSummary`・`SprintChoice`・`NextPlanning`・`PlanningData`・`planningSprint`・`reviewSprintOf`）を消した。`overview-view.ts` は `areaList` だけになったので `area-view.ts` に改めた。これらのテストが確かめていた振る舞いは、今使われている関数に移した：計画値・適用の切り替え・確定を待つ理由・追加できる領域・領域名の反映は `sprintPlanOf` のテスト、候補の印は `planningCandidatesOf` のテスト、どの Sprint を開くかの規則はクライアントの `use-sprint-choice.test.ts`、契約の読み取り（`sprintList`・`currentSprints`・`sprintView`・`sprintCandidates`・`sprintRetro`・`dayView`）が JSON を通しても同じになることは `views.test.ts`。画面ごとの読み取りの `runningData`・`retroData`・`dayData`・`todayData` は index から外し、`resource-views` が部品として使う。`reviewEnded`・`beginDay` も index から外した（外から使うのは `catchUp` だけ）。
 - import の境界の最終の形：`packages/domain` を import してよいのは `src/lib/domain-functions.ts` とモックとテスト、`packages/application` はモックとテスト。違反は ESLint が失敗する。例外の一覧はない。
+- **置き場所の規則（`apps/web/src/`）**：`store/` を `screen-data/` に改めた（ストアではなくなったため）。依存の向きは `screens/` → `screen-data/` → `api/` → `@itera/api-contract`。
+  - `api/`：契約への通信の層。クライアントとキャッシュ（`create-api`・`api-provider`・`query-client`）、読み取りの状態（`Read`・`useRead`）、操作（`useOperation`）、失敗の扱い（`failure`・`save-failed`）、人と設定の読み取り（`useMe`・`useSettings`）。画面の語と形を知らない。
+  - `screen-data/`：画面ごと・資源ごとのフック。契約の答えを画面の形にする読み取り（`use-backlog`・`use-today`・`use-planning`・`use-retro`・`use-running-sprint`・`use-areas`・`use-sprint-choice`・`use-retro-choice`）、画面が名前で呼ぶ操作の関数（`use-task-actions`・`use-begin-planning` と各 `use-*` の `*Actions`）、それらが使う値の変換（`retro-view.ts`・`screen-area.ts`）。`api/` を使い、画面から使われる。
+  - 画面の中だけで使うフックは、その画面のフォルダに置く（`screens/backlog/use-add-to-today.ts` など）。複数の画面が使うものだけを `screen-data/` に置く。
+  - `api/`・`components/`・`lib/`・`auth/`・`foundations/` は `screen-data/` を import しない。ESLint の `no-restricted-imports` で検査する（違反を足して失敗を確かめた）。
 - 設定の画面のパスキーの一覧は、他の画面と同じ `useRead` と `ReadStatus` で読み込み中と失敗を表す（失敗の見出しは「読み込めませんでした」）。
 
 ## 影響

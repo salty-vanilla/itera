@@ -23,7 +23,7 @@ import {
   type AreaPlan,
   type PlannedTask,
   type PlanningData,
-} from '@/store/use-planning';
+} from '@/screen-data/use-planning';
 import { plannedSourceText } from './planned-source';
 
 // The Sprint pane of Planning (Thinking space, at most 680px; from 1920px

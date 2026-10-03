@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { CapacityStatement } from '@/components/sprint/capacity-indicator';
-import type { PlanningData } from '@/store/use-planning';
+import type { PlanningData } from '@/screen-data/use-planning';
 import { planSummary } from './plan-summary';
 
 // 確定 (docs/design/patterns.md Sprint Planning › 確定). A Dialog (md) with

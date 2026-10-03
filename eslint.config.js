@@ -180,6 +180,41 @@ export default defineConfig(
     },
   },
   {
+    // The layers under the screens do not reach up to them: src/api/ (the
+    // contract's client, reads, operations, failures) and the parts and
+    // helpers (components, lib, auth, foundations) never import
+    // src/screen-data/, the hooks that shape the contract for a screen
+    // (ADR 0005 置き場所の規則). This block repeats the domain rule above
+    // for these files, since a later block replaces an earlier one's options.
+    files: ['apps/web/src/{api,components,lib,auth,foundations}/**/*.{ts,tsx}'],
+    ignores: [
+      ...WEB_NOT_SCREENS,
+      'apps/web/src/lib/domain-functions.ts',
+      WEB_BETTER_AUTH,
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            webBetterAuthPattern,
+            testingImportPattern(),
+            {
+              regex: '^@itera/domain(/|$)',
+              message:
+                'Take the types from the contract (@itera/api-contract) and the previews and dates from @/lib/domain-functions (ADR 0005).',
+            },
+            {
+              regex: '^(@/|(\\.\\./)+)screen-data(/|$)',
+              message:
+                'Only the screens import src/screen-data/; api, components and lib stay below them (ADR 0005 置き場所の規則).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['apps/web/src/**/*.{ts,tsx}', 'apps/web/.storybook/**/*.{ts,tsx}'],
     ignores: [...WEB_NOT_SCREENS, WEB_BETTER_AUTH],
     rules: {

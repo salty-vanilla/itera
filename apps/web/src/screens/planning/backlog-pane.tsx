@@ -26,7 +26,7 @@ import type {
   CandidateRow,
   PickActions,
   PlanningData,
-} from '@/store/use-planning';
+} from '@/screen-data/use-planning';
 import { useNewAreaDialog } from '../backlog/area-dialog';
 import { CarryOverText } from '../backlog/backlog-row';
 

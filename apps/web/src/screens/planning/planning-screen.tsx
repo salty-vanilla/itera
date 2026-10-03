@@ -33,14 +33,14 @@ import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { useStuckBar } from '@/lib/use-stuck-bar';
 import { cn } from '@/lib/utils';
 import { weekCall, weekText, weekLabel } from '@/lib/week-text';
-import { useBacklog } from '@/store/use-backlog';
+import { useBacklog } from '@/screen-data/use-backlog';
 import {
   useAvailableHoursAction,
   useConfirmSprint,
   usePickActions,
   type PlanningData,
-} from '@/store/use-planning';
-import { useTaskActions } from '@/store/use-task-actions';
+} from '@/screen-data/use-planning';
+import { useTaskActions } from '@/screen-data/use-task-actions';
 import { TaskDetail } from '../backlog/task-detail';
 import { useTaskDetailLeave } from '../backlog/use-task-detail-leave';
 import { BacklogPane } from './backlog-pane';

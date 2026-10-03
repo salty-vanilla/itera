@@ -18,5 +18,6 @@ paths:
   - 画面は、記録と派生値を API（OpenAPI の契約）から得る。`packages/domain` を import してよいのは、プレビューと日付の関数をまとめた例外のモジュールとブラウザ内モックだけ。`packages/application` を import してよいのはモックだけ（PRD §14「クライアントとデータの方式」、ADR 0005 の 2026-10-03 の改訂）。
   - 契約に移した画面（Backlog #273、今日 #275、Sprint #274、振り返り #276）の読み取りは、フックが `Read<T>`（`status` が `pending`・`failed`・`ready`）を返し、画面は `ready` でない間 `ReadStatus` を出す。操作は `useOperation` から作った非同期の関数で、結果の `boolean` を待ってから Toast や焦点を動かす。形は ADR 0005「Backlog・Task の詳細・領域を契約に移す」、日の読み取りと焦点は「今日を契約に移す」。2 つの読み取りを合わせる画面（Sprint）は `useRead2` で `Read<T>` にし、操作のフックは画面が 1 つずつ呼んで部品へ渡す（行ごとに呼ばない）。形は ADR 0005「Sprint（計画・実行中）を契約に移す」。
   - 画面の部品とフックは `RecordStore`・`Change`・`Records` を参照しない（#277 で片づけた）。画面の変更は操作ごとの名前つき関数（`useOperation` から作る）で行い、読み取りは契約のフックを通す。
+  - 置き場所：`src/api/` は契約への通信の層（クライアント・読み取りの状態・操作・失敗。画面の形を知らない）、`src/screen-data/` は契約の答えを画面の形にする読み取りと、画面が名前で呼ぶ操作の関数（`screens/` から使い、`api/` を使う）。1 つの画面だけが使うフックはその画面のフォルダに置く。`api/`・`components/`・`lib/` から `screen-data/` は import できない（ESLint）。形は ADR 0005「RecordStore と Change の片づけ」。
 - DESIGN.md と docs/design で決めきれない操作・アクセシビリティの判断は `design-references` Skill で DADS / HIG を確かめる。
 - UI を変えたら `pnpm agent:playwright` で実際に操作し、compact（768px 未満）・medium（768〜1199px）・wide（1200〜1439px の rail と 1440px 以上）を確認する。仕上げの点検には `impeccable` Skill の critique / audit / polish を使ってよい。

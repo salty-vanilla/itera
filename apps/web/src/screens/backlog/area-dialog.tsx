@@ -14,7 +14,11 @@ import {
 } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
-import { useAreaActions, useAreas, type EditableArea } from '@/store/use-areas';
+import {
+  useAreaActions,
+  useAreas,
+  type EditableArea,
+} from '@/screen-data/use-areas';
 
 // 領域を編集 (Issue #113, patterns.md Backlog › Browse): the one Dialog to
 // make an Area, rename it and archive it. It opens from the end of the
