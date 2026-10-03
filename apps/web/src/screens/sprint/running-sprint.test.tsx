@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { StoreSnapshot } from '@/store/record-store';
+import { dayRead } from '@/test/day-read';
 import { getHours } from '@/test/duration';
 import { fixtureIds } from '@itera/application/fixtures';
 
@@ -172,6 +173,7 @@ describe('Sprint — running (#51)', () => {
     }
     cleanup();
     await renderAt('/today?fixture=today-interrupt');
+    await dayRead();
     expect(screen.getByText('4 / 10件').className).toContain('text-num-s');
   });
 

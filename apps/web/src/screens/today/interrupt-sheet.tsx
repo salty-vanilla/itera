@@ -33,8 +33,16 @@ import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 type InterruptSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Returns whether it went through; the sheet then closes. */
-  onSubmit: (text: string, minutes: number | undefined) => boolean;
+  /**
+   * Returns whether it went through; the sheet then closes. One that is
+   * sent returns when it is done.
+   */
+  onSubmit: (
+    text: string,
+    minutes: number | undefined,
+  ) => boolean | Promise<boolean>;
+  /** The save has been sent for a while (useOperation `loading`). */
+  loading?: boolean;
   /** 編集: the note as recorded, and the time it was noted (「10:00」). */
   editing?: { text: string; minutes?: number; time: string };
 };
@@ -43,6 +51,7 @@ function InterruptSheet({
   open,
   onOpenChange,
   onSubmit,
+  loading = false,
   editing,
 }: InterruptSheetProps) {
   const [text, setText] = useState(editing?.text ?? '');
@@ -58,7 +67,7 @@ function InterruptSheet({
     }
     onOpenChange(next);
   };
-  const save = (event: FormEvent) => {
+  const save = async (event: FormEvent) => {
     event.preventDefault();
     const note = text.trim();
     const m = readMinutes(minutes);
@@ -76,7 +85,7 @@ function InterruptSheet({
       );
       return;
     }
-    if (onSubmit(note, m ?? undefined)) change(false);
+    if (await onSubmit(note, m ?? undefined)) change(false);
   };
   return (
     <Drawer
@@ -122,7 +131,7 @@ function InterruptSheet({
             <DrawerClose render={<Button variant="quiet" />}>
               キャンセル
             </DrawerClose>
-            <Button type="submit">
+            <Button type="submit" loading={loading} loadingLabel="保存中…">
               {editing === undefined ? '記録する' : '保存'}
             </Button>
           </DrawerFooter>

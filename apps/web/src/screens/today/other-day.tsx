@@ -1,4 +1,4 @@
-import type { LocalDate } from '@itera/domain';
+import type { DayData } from '@itera/api-contract';
 import { Link } from '@tanstack/react-router';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { semanticIcons } from '@/components/ui/icon';
@@ -7,8 +7,6 @@ import { MetaItem, TaskMetadata } from '@/components/task/task-metadata';
 import { formatDate, formatTime } from '@/lib/date-format';
 import { SELECTION_WORDS } from '@/lib/selection-words';
 import { formatHours } from '@/lib/time-format';
-import type { DayData } from '@/store/views';
-import { useDay } from '@/store/use-today';
 import { DayFrame } from './day-frame';
 
 // A day other than today on the Today screen (#90), read only.
@@ -23,13 +21,12 @@ import { DayFrame } from './day-frame';
 const link = 'whitespace-nowrap text-link underline focus-visible:focus-ring';
 const Repeat = semanticIcons.recurrence;
 
-function OtherDay({ date }: { date: LocalDate }) {
-  const data = useDay(date);
-  if (data === undefined) return null;
+function OtherDay({ data }: { data: DayData }) {
   const { within } = data;
   return (
     <DayFrame
-      date={date}
+      date={data.date}
+      today={data.today}
       meta={
         within === undefined
           ? undefined

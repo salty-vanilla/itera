@@ -166,11 +166,24 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
 - **操作のフック**：`useTaskActions`・`useSubtaskActions`・`useRecurrenceActions`・`useAreaActions` は、操作ごとに `useOperation` を呼び、操作ごとの名前つき関数を返す（1 つのフックが全部の操作の購読を作らないよう、使う部品ごとに分けた）。関数は非同期で、成功したかを `boolean` で（作ったものの ID は `string | undefined`、`setRecurrence` と `endRecurrence` は `{ ok, … }` で）返す。成功したときは、表示中の読み取りが戻ってから解決する。送信中に同じ操作を重ねて送らない。ただし、欄を離れたときや選んだときに保存する操作（Task の各欄の保存、サブタスクのチェックと見積もり、繰り返しの設定）は、重ねて送った分を捨てずに、前の分が終わってから順に送る（`useOperation` の `whileSending: 'wait'`）。捨てると、続けて変えた 2 つ目が黙って保存されない。`loading`（操作ごとの、300ms 続いた送信中）は、その操作のボタンの `loading` と `loadingLabel`（「追加中…」）に渡す。今回は追加（Quick Add、サブタスク、領域）のボタンに付けた。ほかの操作は、結果が Toast か行の変化で見えるので、送信中の見た目を付けない。
 - **操作は重ならない**：`useOperation` の操作は、どのフックから送っても同じ mutation の scope（`operations`）に入り、1 つずつ送られる（TanStack Query v5 の `scope`。文書で確かめた）。API は版を確かめて書くので（ADR 0004 同時の書き込み）、重なると片方が版の衝突になる。
 - **操作が終わっても、画面はまだ新しい記録を描いていないことがある**：キャッシュは更新済みでも、購読者への通知は次のタスクで届く。操作の結果に合わせて表示や焦点を動かす処理は、操作の前に頼みを置いておくか、記録が変わるのを待つ。Task の詳細の「今日と今週」は、押したときの選択肢の並びを覚えておき、並びが変わったときに焦点を動かす。
-- **Task の詳細が使う選択の操作**（開始・今日は中断する・今日は見送る・今日の回をスキップする・今週の残りに戻す）は、契約の operation を `screens/backlog/use-selection-actions.ts` から呼ぶ。Today の操作の一覧（`use-today.ts`）は #275 が移す。
+- **Task の詳細が使う選択の操作**（開始・今日は中断する・今日は見送る・今日の回をスキップする・今週の残りに戻す）は、契約の operation を `screens/backlog/use-selection-actions.ts` から呼ぶ。Today の操作の一覧（`use-today.ts`）は #275 で移した（次の節）。
 - **型**：Backlog の画面と部品は契約の型（`@itera/api-contract`）を使い、`packages/domain` を import しない。ID・`LocalDate`・`Instant` は契約では素の文字列で、domain のブランド付きの型を受ける部品も、契約の型を受けるように替えた（ブランド付きの値は文字列として渡せるので、まだ移していない画面はそのまま渡せる）。配列は読み取り専用にして受ける部品だけ、受け方を広げる。
 - **プレビューの例外のモジュール**：`lib/domain-functions.ts` の日付の関数（`addDays`・`dayOfWeek`・`toLocalDate`）は、契約の型を受けて、domain の関数に渡す。ブランドの付け替え（`as`）はここだけで、日付と時刻の形は契約のスキーマが確かめる。`presentedSuggestion` は、Task 全体でなく `suggestions` を持つものを受けるようにした（`packages/domain` の型の変更だけで、振る舞いは同じ）。
 - **import の境界**：`MIGRATING` から #273 のファイルと、契約の型だけになった共有のファイル（`components/task/`・`lib/` の一部）を消した。
 - **画面の文言**：読み込めなかったときの「読み込めませんでした」と「もう一度読み込む」、読み込み中の「読み込み中…」、追加を送っている間の「追加中…」。content.md には載っていない語で、Notice・Progress・Button の部品の文書が例に挙げている。語として決めるかはオーナーの確認を待つ。
+
+### 今日を契約に移す（2026-10-03、Issue #275）
+
+Backlog（#273）の形で `/today`（今日、過去と先の日）を移した。
+
+- **今日の日付と日の読み取り**：今日の日付はサーバーが利用者のタイムゾーンで決める（「時計」）。画面は `getMe` の `clock.today` と `sprints`（`useNow`、`apps/web/src/api/use-me.ts`）を読み、その日付で `getDay`（`useDay`、`store/use-today.ts`）を読む。URL に `?date=` がなければ今日の日付、あれば `?date=` の日付を渡す。答えの `kind` が、今日（`today`。実行中の Sprint がなければ `today` は空）か、ほかの日（`past`・`future`）かを決める。画面は日付の比較で今日かどうかを決めず、答えに従う。`useToday` は作らず、`useDay` が今日も含む（`useToday` と `useDay` を別のフックにすると、日を替えるたびに画面の部品が作り直され、前の日を残せない）。
+  - 代わりに払うもの：最初の表示は `getMe` → `getDay` の 2 つの読み取りが順に要る（契約に「今日」を指す経路がないため）。`getMe` は操作の対象の Sprint を決めるために操作のたびにも使うので、同じキャッシュを読む。
+- **日を替えるとき**：`getDay` は `placeholderData: keepPreviousData` で、新しい日が読めるまで前の日を残す。見出し・矢印・日付の入力が変わらず、矢印に置いた焦点が残る（#90）。今日とほかの日の画面は別の部品なので、種類が変わるときだけ見出しが作り直され、焦点は `DayFocusScope` が戻す。最初の読み込み中と失敗は、その日付の見出しと `ReadStatus`。読み込み中の枠は `aria-busy`（テストはこれで読み終わりを待つ。`src/test/day-read.ts`）。
+- **操作のフック**：`useTodayActions` は、操作ごとに `useOperation` を呼ぶ。実行中の Sprint と今日の日付は `useRunningDay`（`getMe`）から取り、`useOnRunningDay` が、実行中の Sprint がないときに保存できなかった Toast を出す（Backlog の詳細の選択の操作 `use-selection-actions.ts` も同じ）。「かかった時間を記録」は、画面が持っている選択の記録（`row.selection`）から、`sprintTaskId`・`date`・`occurrenceId` を渡す（記録の並びから引かない）。
+- **行を動かす操作と焦点**：操作は送り終わるまで画面に反映されないことがある（上の「操作が終わっても…」）。行が動く操作（完了・取り消し・見送り・今日へなど）は、焦点を移す先を送る前に決め、通らなかったら取り消す（`follow`）。見送り・今週の残りに戻すの Toast と、割り込みの記録・消す Toast は、送り終わってから出す。
+- **送信中**：追加（今日やるタスク）は Backlog と同じ「追加中…」。割り込みの記録・編集と、かかった時間の記録・「今日は中断する」は、送信が 300ms 続いたら保存する Button を「保存中…」にする（foundations.md の Loading の語）。Sheet は送り終わるまで閉じず、通らなかったら入力を残して開いたままにする。
+- **型と共通の部品**：Today の部品は契約の型（`TodayData`・`TodayRow`・`TodayItem`・`DayData`・`InterruptNote`・`LocalDate`）を使い、`packages/domain` を import しない。日付の関数は `lib/domain-functions.ts`（`addDays`・`parseLocalDate`）。`lib/selection-words.ts` は契約の `DailyResolution` にした。`useRead` は、答えに画面で使えるものがないとき（利用者の設定がまだなく、時計がない）`view` が `undefined` を返し、`failed` になる。
+- **import の境界**：`MIGRATING` から #275 のファイルと `lib/selection-words.ts` を消した。`NotOnContract` の一覧から `/today` を消した。
 
 ### サインインと設定（2026-10-03、Issue #278）
 

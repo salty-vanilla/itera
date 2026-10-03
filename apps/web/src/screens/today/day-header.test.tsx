@@ -11,6 +11,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { dayRead } from '@/test/day-read';
 
 // The Today screen's heading (#90): the days before and after by the
 // arrows, a date to choose, and back to today from the navigation.
@@ -29,7 +30,7 @@ async function renderAt(url: string) {
       <RouterProvider router={router} />
     </TooltipProvider>,
   );
-  await screen.findByRole('heading', { level: 1 });
+  await dayRead();
   return router;
 }
 

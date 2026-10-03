@@ -117,16 +117,6 @@ const MIGRATING = {
     'apps/web/src/store/use-running-sprint.ts': ['domain', 'application'],
     'apps/web/src/store/use-sprint-choice.ts': ['application'],
   },
-  // #275: Today.
-  '#275': {
-    'apps/web/src/screens/today/day-frame.tsx': ['domain'],
-    'apps/web/src/screens/today/day-header.tsx': ['domain'],
-    'apps/web/src/screens/today/interrupt-row.tsx': ['domain'],
-    'apps/web/src/screens/today/other-day.tsx': ['domain'],
-    'apps/web/src/screens/today/today-row.tsx': ['domain'],
-    'apps/web/src/screens/today/today-screen.tsx': ['domain'],
-    'apps/web/src/store/use-today.ts': ['domain', 'application'],
-  },
   // #276: the Retro.
   '#276': {
     'apps/web/src/screens/retro/facts-pane.tsx': ['domain'],
@@ -147,7 +137,6 @@ const MIGRATING = {
     'apps/web/src/components/task/task-quick-add.stories.tsx': ['domain'],
     'apps/web/src/components/task/task-row.stories.tsx': ['domain'],
     'apps/web/src/lib/criterion-text.ts': ['domain'],
-    'apps/web/src/lib/selection-words.ts': ['domain'],
     'apps/web/src/lib/week-text.ts': ['application'],
     'apps/web/src/store/record-store.ts': ['application'],
     'apps/web/src/store/store-provider.tsx': ['application'],

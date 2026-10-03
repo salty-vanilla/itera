@@ -1,4 +1,4 @@
-import { addDays, parseLocalDate, type LocalDate } from '@itera/domain';
+import type { LocalDate } from '@itera/api-contract';
 import { useNavigate, useRouter } from '@tanstack/react-router';
 import {
   createContext,
@@ -14,7 +14,7 @@ import { StepLink } from '@/components/ui/step-link';
 import { TextInput } from '@/components/ui/text-input';
 import { formatDate, formatDateHeading } from '@/lib/date-format';
 import { isPlainClick } from '@/lib/plain-click';
-import { useAppOverview } from '@/store/use-app-overview';
+import { addDays, parseLocalDate } from '@/lib/domain-functions';
 
 // The Today screen's heading (#90): the date between links to the day
 // before and after, and a date to choose. Any day opens by `?date=` in the
@@ -67,10 +67,13 @@ function DayFocusScope({ children }: { children: ReactNode }) {
 
 function DayHeader({
   date,
+  today,
   meta,
   children,
 }: {
   date: LocalDate;
+  /** Today as the server decided it: the day with no date in its URL. */
+  today: LocalDate;
   /** The line above the date: 「Sprint 2 · 4日目 / 7日」. */
   meta?: ReactNode;
   /** Under the date: Progress and the like. */
@@ -78,7 +81,6 @@ function DayHeader({
 }) {
   const router = useRouter();
   const navigate = useNavigate();
-  const { today } = useAppOverview();
   const inputId = useId();
   const header = useRef<HTMLElement>(null);
   const focusAfter = useContext(DayFocus);
