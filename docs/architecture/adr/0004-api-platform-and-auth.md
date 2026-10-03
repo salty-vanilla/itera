@@ -144,6 +144,8 @@ Better Auth の文書（Context7 と better-auth.com）と、固定した 1.7.6 
 - ID は `packages/domain` の外で作る（domain は時計と乱数に依存しない）。作る関数は API とブラウザ内モックで共有する（#264）。外から来た ID は、接頭辞と形式を検証してから使う（契約のスキーマ、#265）。
 - Better Auth が作る ID（利用者・セッション・アカウントなど）も TypeID にそろえる。domain の利用者 ID は Better Auth の利用者 ID と同じ値（`user_…`）。
 - D1 には文字列のまま置く。
+- 作る関数と確かめる関数は `packages/application` の `ids.ts`（#264）。ライブラリは使わずに仕様を実装した。仕様は小さく（接頭辞の規則と、128 ビットを 26 文字にする base32）、作る時刻を引数で渡せること（fixture は見本データの日時から毎回同じ ID を作り、メモリ上のストアは fixture の時計の時刻で作る）と、同じミリ秒の中でも作った順に並ぶこと（RFC 9562 §6.2 の、乱数の部分を前の ID から数え上げる方法）が要るため。乱数は引数で受け取り、Workers とブラウザでは `crypto.getRandomValues` を渡す。仕様のリポジトリの `valid.json`・`invalid.json` の例をテストで通す。
+- 外から来た ID は、接頭辞が記録の種類と一致し、UUID が v7（version 7、variant `10`）のときだけ受け付ける（`parseId`）。
 
 ### 同時の書き込み（2026-10-03）
 

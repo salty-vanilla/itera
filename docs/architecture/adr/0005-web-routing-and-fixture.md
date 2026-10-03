@@ -41,7 +41,7 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
 - 状態は PRD §12 の 12 個：選ぶ / 整える / 確かめる、Today の朝 / 日中 / 割り込み、Retro の開始 / 振り返り / 完了直前、Backlog の Capture / Detail / Recurrence。
 - 状態はルートの検索パラメータ `fixture` で選ぶ（例：`/today?fixture=today-morning`）。`retainSearchParams` で、画面を移っても保つ。ないときは「日中」（`today-daytime`）。`sprint` と `date` は `retainSearchParams` に入れない。ナビから開けば今の Sprint と今日に戻り、画面を移っても前に選んだ Sprint と日を持ち越さない（Issue #90）。
 - 開発用メニューは画面の右下に出し、状態を選ぶとその状態の画面を開く。`import.meta.env.DEV` のときだけ動的に読み込むので、本番ビルドには入らない。URL での切り替えは本番ビルドでも使える（services/api とつなぐまでは fixture がデータの唯一の出どころのため）。
-- fixture は、`packages/domain` のコマンドを 1 本の時系列（9/13〜10/5）で実行して作り、途中の記録をスナップショットとして取る（`apps/web/src/fixtures/timeline.ts`）。記録を手で書かないので、どの状態もドメインが作りうる記録だけになり、不変条件はコマンドが守る。ドメインモデルの Scenario A〜C を 1 人の利用者の 1 本の時系列に並べ直している。
+- fixture は、`packages/domain` のコマンドを 1 本の時系列（9/13〜10/5）で実行して作り、途中の記録をスナップショットとして取る（`packages/application/src/fixtures/timeline.ts`。#264 で `apps/web` から移した）。記録を手で書かないので、どの状態もドメインが作りうる記録だけになり、不変条件はコマンドが守る。ドメインモデルの Scenario A〜C を 1 人の利用者の 1 本の時系列に並べ直している。
 - 状態ごとに時計（「今日」の LocalDate と現在時刻の Instant）を持つ。画面とコマンドはこの時計を使い、ブラウザの時計を読まない。
 
 ### 記録のストア
@@ -75,6 +75,9 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
   - 読み取りの結果は、そのまま API の応答（DTO）にできる形にする。関数を含めない。画面の語（「領域なし」「今週」など）を含めず、画面が語に替える値（`areaId` がない、週が前・今・次のどれか）で返す。
   - 操作は、作った記録の ID と操作の結果の値（`effectiveFrom`・`removed` など）を戻り値で返す。画面が記録の並びや Activity から拾わない。
   - Area の並び順と色のように操作が決める値は、クライアントではなく操作の中で決める。
+  - 実装（#264）：利用者の操作は `packages/application` の `operations`（`operations.ts`）に、画面をまたいで重ならない名前と入力の型で並べる（例：計画中の `setPlanningGoal` と実行中の `setRunningGoal`、Backlog の `completeTask` と Today の `completeSelection`）。この一覧が契約（#265）の operation の元になる。システムの記録（`reviewEnded`・`beginDay`）は一覧に入れない。読み取りは `*-view.ts` の関数で、fixture の 12 状態のすべての読み取りが JSON にして戻しても同じになることをテストで確かめる。ID から引く関数（`item`・`areaOf` など）と「領域なし」「先週」「今週」「来週」の語は、`apps/web` のフック（`src/store/views.ts`、`src/lib/week-text.ts`）が作る。
+  - fixture（時系列と 12 状態）は `@itera/application/fixtures` に置き、ブラウザ内モックとテストが使う。`services/api` の本番のコードからの import は ESLint で止める。`packages/application` は `packages/domain` と同じく現在時刻と乱数を引数で受け取り、React と `apps/web` に依存しない（ESLint で検査する）。
+  - 画面のフックは、#273〜#276 で契約に移すまで、このパッケージを `RecordStore` 経由で使う（上の「`packages/application` を import してよいのはモックだけ」の検査は、画面を移し終えてから入れる）。
 - **プレビューの例外（D2、2026-10-02 オーナー決定）**：プレビューは、当面 `apps/web` が `packages/domain` の関数をそのまま使って計算する。Web での実装し直しと、共通のテストケース（PRD §14、#45 の範囲 2）は、iOS に着手するときに行う。
   - 2026-10-03 の時点で画面が使う値の関数は、`boundValue`・`presentedSuggestion` と日付の関数（`parseLocalDate`・`toLocalDate`・`addDays`・`dayOfWeek`）だけ。
   - `apps/web` のうち `packages/domain` を import してよいのは、この例外をまとめた 1 つのモジュールとブラウザ内モックだけ。`packages/application` を import してよいのはモックだけ。型だけの import も同じ（画面は契約の型を使う）。ESLint の `no-restricted-imports` で検査する。
