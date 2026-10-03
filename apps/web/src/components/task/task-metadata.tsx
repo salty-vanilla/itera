@@ -1,4 +1,4 @@
-import type { TaskPriority } from '@itera/domain';
+import type { TaskPriority } from '@itera/api-contract';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 

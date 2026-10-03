@@ -92,20 +92,6 @@ function pureRules(name) {
  * @type {Record<string, Record<string, ('domain' | 'application')[]>>}
  */
 const MIGRATING = {
-  // #273: Backlog, the Task detail and the Areas.
-  '#273': {
-    'apps/web/src/screens/backlog/area-dialog.tsx': ['domain'],
-    'apps/web/src/screens/backlog/backlog-row.tsx': ['domain'],
-    'apps/web/src/screens/backlog/backlog-screen.tsx': ['domain'],
-    'apps/web/src/screens/backlog/recurrence-editor.tsx': ['domain'],
-    'apps/web/src/screens/backlog/subtask-list.tsx': ['domain'],
-    'apps/web/src/screens/backlog/task-detail.tsx': ['domain'],
-    'apps/web/src/screens/backlog/use-add-to-today.ts': ['domain'],
-    'apps/web/src/screens/backlog/use-add-to-week.ts': ['domain'],
-    'apps/web/src/store/use-areas.ts': ['domain', 'application'],
-    'apps/web/src/store/use-backlog.ts': ['application'],
-    'apps/web/src/store/use-task-actions.ts': ['domain', 'application'],
-  },
   // #274: the Sprint (Planning and running).
   '#274': {
     'apps/web/src/screens/planning/backlog-pane.tsx': ['domain'],
@@ -145,21 +131,11 @@ const MIGRATING = {
   shared: {
     'apps/web/src/components/sprint/capacity-indicator.tsx': ['domain'],
     'apps/web/src/components/task/area-select.stories.tsx': ['domain'],
-    'apps/web/src/components/task/area-select.tsx': ['domain'],
-    'apps/web/src/components/task/deadline.tsx': ['domain'],
     'apps/web/src/components/task/estimate-suggestion.stories.tsx': ['domain'],
-    'apps/web/src/components/task/estimate-suggestion.tsx': ['domain'],
-    'apps/web/src/components/task/estimate.tsx': ['domain'],
-    'apps/web/src/components/task/task-metadata.tsx': ['domain'],
     'apps/web/src/components/task/task-quick-add.stories.tsx': ['domain'],
     'apps/web/src/components/task/task-row.stories.tsx': ['domain'],
     'apps/web/src/lib/criterion-text.ts': ['domain'],
-    'apps/web/src/lib/date-format.ts': ['domain'],
-    'apps/web/src/lib/recurrence-text.ts': ['domain'],
     'apps/web/src/lib/selection-words.ts': ['domain'],
-    'apps/web/src/lib/time-format.ts': ['domain'],
-    'apps/web/src/lib/today-words.ts': ['domain'],
-    'apps/web/src/lib/use-estimate-focus.ts': ['domain'],
     'apps/web/src/lib/week-text.ts': ['application'],
     'apps/web/src/store/record-store.ts': ['application'],
     'apps/web/src/store/store-provider.tsx': ['application'],

@@ -1,4 +1,4 @@
-import type { AreaId } from '@itera/domain';
+import type { AreaId } from '@itera/api-contract';
 import { AreaMark, type AreaColor } from '@/components/ui/area-indicator';
 import { Field } from '@/components/ui/field';
 import { Select } from '@/components/ui/select';

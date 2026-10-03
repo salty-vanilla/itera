@@ -1,4 +1,4 @@
-// The screens' store until they move to the API's contract (#273〜#276):
+// The screens' store until they move to the API's contract (#274〜#276):
 // `@itera/application`'s memory store over a fixture state. New IDs are
 // random TypeIDs (ADR 0004 ID の形式).
 import {

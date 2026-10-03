@@ -88,10 +88,10 @@ describe('the API as the data source', () => {
         ? Response.json(overview)
         : new Response('404 Not Found', { status: 404 }),
     );
-    renderAt('/backlog');
+    renderAt('/retro');
     expect(
       await screen.findByText(
-        /^Not on the API yet: \/backlog moves to the contract in #273\./,
+        /^Not on the API yet: \/retro moves to the contract in #276\./,
       ),
     ).toBeTruthy();
     const [side] = screen.getAllByRole('navigation', { name: 'メイン' });

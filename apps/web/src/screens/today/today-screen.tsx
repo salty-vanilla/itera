@@ -250,7 +250,9 @@ function TodayView({ data }: { data: TodayData }) {
   const openTask = (taskId: TaskId | undefined) =>
     detail.leave(() => showTask(taskId), taskId !== undefined);
   const openItem =
-    search.task === undefined ? undefined : backlog.item(search.task);
+    search.task === undefined || backlog.status !== 'ready'
+      ? undefined
+      : backlog.item(search.task);
   const estimateFocus = useEstimateFocus(search.task);
   const openEstimate = (taskId: TaskId) =>
     detail.leave(() => {
@@ -395,12 +397,15 @@ function TodayView({ data }: { data: TodayData }) {
         dropClosedToast(selectionId);
         moved(selectionId, actions.complete(selectionId));
       },
-      onUndoComplete: () => {
+      onUndoComplete: async () => {
         // Completed from the Backlog: undone as the Backlog does (F29), so
         // the choice it made for today goes away with it.
         if (row.selection.origin === 'backlogCompletion') {
-          if (taskActions.undoCompleteTask(row.task.id)) {
-            focusNext.current = { rest: row.sprintTask.id };
+          // Set before it is sent: the records change while it is, and the
+          // focus moves when they do.
+          focusNext.current = { rest: row.sprintTask.id };
+          if (!(await taskActions.undoCompleteTask(row.task.id))) {
+            focusNext.current = undefined;
           }
           return;
         }
@@ -766,15 +771,15 @@ function TodayView({ data }: { data: TodayData }) {
         }}
       >
         <DrawerContent>
-          {openItem !== undefined && (
+          {backlog.status === 'ready' && openItem !== undefined && (
             <TaskDetail
               key={openItem.task.id}
               item={openItem}
               areas={backlog.areas}
               timeZone={backlog.timeZone}
               onClose={() => showTask(undefined)}
-              onComplete={() => {
-                if (taskActions.completeTask(openItem.task.id)) {
+              onComplete={async () => {
+                if (await taskActions.completeTask(openItem.task.id)) {
                   showTask(undefined);
                 }
               }}

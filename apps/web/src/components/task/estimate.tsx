@@ -1,4 +1,4 @@
-import type { PlanningValue } from '@itera/domain';
+import type { PlanningValue } from '@itera/api-contract';
 import {
   formatPlanningValue,
   formatRange,
