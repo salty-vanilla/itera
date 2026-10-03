@@ -19,7 +19,7 @@ import type {
 } from './shared/ids';
 import { omit } from './shared/record';
 import { err, type Result } from './shared/result';
-import type { LocalDate } from './shared/time';
+import { toLocalDate, type LocalDate, type TimeZone } from './shared/time';
 import type {
   ActualTime,
   ActualTimeVia,
@@ -934,11 +934,21 @@ export function deleteInterrupt(
 export interface RestoreInterruptInput {
   /** The note as it was deleted. */
   readonly note: InterruptNote;
+  /**
+   * The IDs of the person's notes in their other Sprints. A note keeps its
+   * ID for good (an ID names one note among all of the person's), so the
+   * note's ID is not one of these.
+   */
+  readonly otherNoteIds: readonly InterruptNoteId[];
+  /** The person's time zone: the day a note was noted is the person's day. */
+  readonly timeZone: TimeZone;
 }
 
 /**
  * 元に戻す after 割り込みを消す: the same note comes back with its time
- * (F38), in its place among the others (oldest first).
+ * (F38), in its place among the others (oldest first). It is the note as
+ * the person had it: with an ID no other note of theirs has, noted on a day
+ * of this Sprint and not later than now.
  */
 export function restoreInterrupt(
   sprint: Sprint,
@@ -955,6 +965,9 @@ export function restoreInterrupt(
   if (sprint.interrupts.some((n) => n.id === note.id)) {
     return err('invalidTransition', 'The interrupt is still there.');
   }
+  if (input.otherNoteIds.includes(note.id)) {
+    return err('invalidInput', 'The ID is another Sprint’s note.');
+  }
   if (note.text.trim() === '') return err('invalidInput', 'The note is empty.');
   if (note.minutes !== undefined && !isPositiveHours(note.minutes)) {
     return err('invalidInput', 'Minutes must be positive.');
@@ -962,6 +975,11 @@ export function restoreInterrupt(
   // A note is restored, not made: it was noted before now.
   if (note.at > ctx.now) {
     return err('invalidInput', 'The note was noted later than now.');
+  }
+  // A note of this Sprint was noted on a day of its period.
+  const day = toLocalDate(note.at, input.timeZone);
+  if (day < sprint.start || day > sprint.end) {
+    return err('invalidInput', 'The note was not noted during the Sprint.');
   }
   const after = sprint.interrupts.findIndex((n) => n.at > note.at);
   const interrupts =

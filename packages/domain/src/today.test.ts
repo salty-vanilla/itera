@@ -3,7 +3,7 @@ import { presentSuggestion } from './estimate';
 import { generateOccurrences, type Occurrence } from './occurrence';
 import { createRecurrenceRule } from './recurrence';
 import { id } from './shared/ids';
-import { instant, localDate } from './shared/time';
+import { instant, localDate, timeZone } from './shared/time';
 import type { Sprint, SprintTask } from './sprint';
 import {
   addToToday,
@@ -602,6 +602,8 @@ describe('F38: interrupts can be edited and deleted while the Sprint runs', () =
     );
   const later = at('2026-09-28T05:00:00.000Z');
   const review = (sprint: Sprint): Sprint => ({ ...sprint, state: 'review' });
+  /** What a restore knows of the person: no other Sprint's notes, Tokyo. */
+  const person = { otherNoteIds: [], timeZone: timeZone('Asia/Tokyo') };
 
   it('edits the note and minutes, keeps the time, and leaves an Activity', () => {
     const result = editInterrupt(
@@ -713,7 +715,7 @@ describe('F38: interrupts can be edited and deleted while the Sprint runs', () =
     const note = before.interrupts[0];
     if (note === undefined) throw new Error('no note');
     const deleted = unwrap(deleteInterrupt(before, { id: note.id }, later));
-    const result = restoreInterrupt(deleted, { note }, later);
+    const result = restoreInterrupt(deleted, { note, ...person }, later);
     expect(result).toMatchObject({
       ok: true,
       value: {
@@ -721,16 +723,74 @@ describe('F38: interrupts can be edited and deleted while the Sprint runs', () =
       },
     });
     expect(unwrap(result).interrupts).toEqual(before.interrupts);
-    expect(restoreInterrupt(before, { note }, later)).toMatchObject({
+    expect(restoreInterrupt(before, { note, ...person }, later)).toMatchObject({
       ok: false,
     });
     expect(
       restoreInterrupt(
         deleted,
-        { note: { ...note, at: instant('2026-09-28T06:00:00.000Z') } },
+        {
+          note: { ...note, at: instant('2026-09-28T06:00:00.000Z') },
+          ...person,
+        },
         later,
       ),
     ).toMatchObject({ ok: false, error: { code: 'invalidInput' } });
+  });
+
+  it('does not restore a note whose ID is another Sprint’s note', () => {
+    const before = noted();
+    const note = before.interrupts[0];
+    if (note === undefined) throw new Error('no note');
+    const deleted = unwrap(deleteInterrupt(before, { id: note.id }, later));
+    expect(
+      restoreInterrupt(
+        deleted,
+        { note, ...person, otherNoteIds: [id('int-9'), note.id] },
+        later,
+      ),
+    ).toMatchObject({ ok: false, error: { code: 'invalidInput' } });
+    expect(
+      restoreInterrupt(
+        deleted,
+        { note, ...person, otherNoteIds: [id('int-9')] },
+        later,
+      ),
+    ).toMatchObject({ ok: true });
+  });
+
+  it('restores a note only if it was noted on a day of the Sprint, in the person’s time zone', () => {
+    const before = noted();
+    const note = before.interrupts[0];
+    if (note === undefined) throw new Error('no note');
+    const deleted = unwrap(deleteInterrupt(before, { id: note.id }, later));
+    const end = at('2026-10-10T00:00:00.000Z');
+    const restoredAt = (when: string, now = later) =>
+      restoreInterrupt(
+        deleted,
+        { note: { ...note, at: instant(when) }, ...person },
+        now,
+      );
+    const refused = { ok: false, error: { code: 'invalidInput' } };
+    // The Sprint is 9/28–10/4 (Tokyo): its first and last minutes are in.
+    expect(restoredAt('2026-09-27T14:59:59.999Z')).toMatchObject(refused);
+    expect(restoredAt('2026-09-27T15:00:00.000Z')).toMatchObject({ ok: true });
+    expect(restoredAt('2026-10-04T14:59:59.999Z', end)).toMatchObject({
+      ok: true,
+    });
+    expect(restoredAt('2026-10-04T15:00:00.000Z', end)).toMatchObject(refused);
+    // 9/27 20:00 UTC is 9/28 in Tokyo, and 9/27 in UTC.
+    const utc = restoreInterrupt(
+      deleted,
+      {
+        note: { ...note, at: instant('2026-09-27T20:00:00.000Z') },
+        ...person,
+        timeZone: timeZone('UTC'),
+      },
+      later,
+    );
+    expect(utc).toMatchObject(refused);
+    expect(restoredAt('2026-09-27T20:00:00.000Z')).toMatchObject({ ok: true });
   });
 
   it('invariant 40: after the Review starts the notes are fixed', () => {
@@ -742,7 +802,7 @@ describe('F38: interrupts can be edited and deleted while the Sprint runs', () =
       deleteInterrupt(fixed, { id: note.id }, later),
       restoreInterrupt(
         { ...fixed, interrupts: fixed.interrupts.slice(1) },
-        { note },
+        { note, ...person },
         later,
       ),
     ]) {
