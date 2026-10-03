@@ -1,11 +1,11 @@
-import type { RetroPin } from '@itera/domain';
+import type { RetroPin } from '@itera/api-contract';
 import { useEffect, useId, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Tag } from '@/components/ui/tag';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import type { RetroData } from '@/store/views';
+import type { RetroData } from '@/store/retro-view';
 import { Materials } from './materials';
 
 // 振り返る (patterns.md Retro): two inputs only — 「気づいたこと」

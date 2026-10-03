@@ -1,4 +1,9 @@
-import type { AreaId, RetroPin, SelfAssessment, TaskFact } from '@itera/domain';
+import type {
+  AreaId,
+  RetroPin,
+  SelfAssessment,
+  TaskFact,
+} from '@itera/api-contract';
 import { ChevronDown, ChevronRight, Info, Timer } from 'lucide-react';
 import { useId, useRef, useState, type ReactNode } from 'react';
 import { semanticIcons } from '@/components/ui/icon';
@@ -21,7 +26,7 @@ import {
 } from '@/lib/time-format';
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 import { cn } from '@/lib/utils';
-import type { ActualTarget, RetroData } from '@/store/views';
+import type { ActualTarget, RetroData } from '@/store/retro-view';
 import {
   ASSESSMENTS,
   AssessmentTag,

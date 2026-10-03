@@ -1,8 +1,11 @@
-import type { Sprint, SprintId } from '@itera/domain';
+import type { SprintItem } from '@itera/api-contract';
 import { useNavigate, useRouter, useSearch } from '@tanstack/react-router';
 import { Pin, Rewind, Route } from 'lucide-react';
 import { Icon } from '@/components/ui/icon';
 import { useEffect, useRef, useState } from 'react';
+import type { NotReady, Read } from '@/api/read-state';
+import { useNow } from '@/api/use-me';
+import { ReadStatus } from '@/components/read-status';
 import { Button } from '@/components/ui/button';
 import { Tag } from '@/components/ui/tag';
 import { useToast } from '@/components/ui/toast';
@@ -13,15 +16,9 @@ import {
 import { formatDate, formatDateRange } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
 import { weekCall, weekText, weekLabel } from '@/lib/week-text';
-import type {
-  ActualTarget,
-  RetroData,
-  SprintChoice,
-  SprintRef,
-} from '@/store/views';
-import { useAppOverview } from '@/store/use-app-overview';
-import { useRetro, useRetroActions } from '@/store/use-retro';
-import { useSprintChoice } from '@/store/use-sprint-choice';
+import type { ActualTarget, RetroData } from '@/store/retro-view';
+import { useRetroChoice, type RetroChoice } from '@/store/use-retro-choice';
+import { useBeginRetro, useRetro, useRetroActions } from '@/store/use-retro';
 import { ActualTime } from '../today/actual-time';
 import { BeginPlanning } from '../begin-planning';
 import { ScreenFrame } from '../screen-frame';
@@ -90,41 +87,64 @@ type Steps = SprintHeaderProps['steps'];
 
 function RetroScreen() {
   const search = useSearch({ from: '/retro' });
-  const choice = useSprintChoice('retro', search.sprint);
-  if (choice === undefined) {
+  const choice = useRetroChoice(search.sprint);
+  if (choice.status !== 'ready') return <Reading read={choice} />;
+  if (choice.current === undefined) {
     return (
       <ScreenFrame heading="振り返り" meta="振り返る Sprint はありません" />
     );
   }
-  return <RetroOf choice={choice} />;
+  return <RetroOf current={choice.current} choice={choice} />;
 }
 
-function RetroOf({ choice }: { choice: SprintChoice }) {
+/**
+ * What the screen shows in place of the Retro while the Sprints, or a
+ * Sprint's Retro, are being read: the heading and the read's status
+ * (ReadStatus). `aria-busy` until the read has answered.
+ */
+function Reading({ read }: { read: NotReady }) {
+  return (
+    <div
+      aria-busy={read.status === 'pending' || undefined}
+      className="flex w-full max-w-measure-read flex-col gap-2 px-4 py-10 medium:px-6"
+    >
+      <h1 className="text-display-m text-ink">振り返り</h1>
+      <ReadStatus label="振り返り" read={read} />
+    </div>
+  );
+}
+
+function RetroOf({
+  current,
+  choice,
+}: {
+  current: SprintItem;
+  choice: RetroChoice;
+}) {
   const steps = useSprintSteps('/retro', choice);
-  const { sprint } = choice.current;
-  if (sprint === undefined) return null;
-  if (sprint.state === 'review' || sprint.state === 'closed') {
-    return <RetroFor sprintId={sprint.id} choice={choice} steps={steps} />;
+  if (current.state === 'review' || current.state === 'closed') {
+    // The last closed Retro leads on to the next Planning (#42); an older
+    // one, with a Sprint confirmed after it, does not.
+    const leadsOn =
+      choice.next === undefined || choice.next.state === 'planning';
+    return <RetroFor sprint={current} steps={steps} leadsOn={leadsOn} />;
   }
-  return <NotStarted current={choice.current} sprint={sprint} steps={steps} />;
+  return <NotStarted sprint={current} steps={steps} />;
 }
 
 function RetroFor({
-  sprintId,
-  choice,
+  sprint,
   steps,
+  leadsOn,
 }: {
-  sprintId: SprintId;
-  choice: SprintChoice;
+  sprint: SprintItem;
   steps: Steps;
+  leadsOn: boolean;
 }) {
-  const data = useRetro(sprintId);
-  if (data === undefined) return null;
-  // The last closed Retro leads on to the next Planning (#42); an older
-  // one, with a Sprint confirmed after it, does not.
-  const leadsOn =
-    choice.next === undefined || choice.next.sprint?.state === 'planning';
-  return <RetroView data={data} steps={steps} leadsOn={leadsOn} />;
+  const data = useRetro(sprint.id);
+  return (
+    <RetroView sprint={sprint} data={data} steps={steps} leadsOn={leadsOn} />
+  );
 }
 
 type Editing = {
@@ -135,12 +155,19 @@ type Editing = {
   returnFocus: HTMLElement | null;
 };
 
+/**
+ * A Sprint's Retro. The Sprint Header comes from the Sprint (its number,
+ * period and state), so it stays while the Retro is being read: moving
+ * from one Sprint to another with its arrows keeps the focus on them.
+ */
 function RetroView({
+  sprint,
   data,
   steps,
   leadsOn,
 }: {
-  data: RetroData;
+  sprint: SprintItem;
+  data: Read<RetroData>;
   steps: Steps;
   /** Closed: whether 「Sprint N の計画を始める」 follows (#42). */
   leadsOn: boolean;
@@ -149,14 +176,18 @@ function RetroView({
   const navigate = useNavigate({ from: '/retro' });
   const router = useRouter();
   const toast = useToast();
-  const actions = useRetroActions();
+  const ready = data.status === 'ready';
+  const actions = useRetroActions({
+    sprintId: sprint.id,
+    draftId: ready ? data.draft?.criterion.id : undefined,
+  });
   // No stage in the URL (opened from the navigation): where the records
   // say the writing has got to. The URL then names it, so that it stays put
-  // while the records change under it.
-  const fromRecords = retroStageOf(data);
-  const stage = search.stage ?? fromRecords;
+  // while the records change under it. Not known until they are read.
+  const fromRecords = ready ? retroStageOf(data) : undefined;
+  const stage = search.stage ?? fromRecords ?? 'facts';
   useEffect(() => {
-    if (search.stage !== undefined) return;
+    if (search.stage !== undefined || fromRecords === undefined) return;
     void navigate({
       search: (prev) => ({ ...prev, stage: fromRecords }),
       replace: true,
@@ -173,26 +204,35 @@ function RetroView({
     closedEditing.current = undefined;
     (closed.anchor.isConnected ? closed.anchor : closed.returnFocus)?.focus();
   }, [editing]);
-  const readOnly = data.sprint.state === 'closed';
+  const readOnly = sprint.state === 'closed';
   const setStage = (next: RetroStage) =>
     void navigate({ search: (prev) => ({ ...prev, stage: next }) });
 
-  const complete = () => {
-    if (!actions.completeRetro()) return;
+  // After 振り返りを完了, the focus goes to what takes the Complete button's
+  // place. The records are drawn after the operation has resolved, so this
+  // waits for the button to be there. It is brought to the middle: at the
+  // foot, the Toast would cover it on a narrow screen (#168).
+  const focusBegin = useRef(false);
+  useEffect(() => {
+    if (!focusBegin.current || !readOnly) return;
+    const next = document.querySelector<HTMLElement>(
+      'nav[aria-label="次の段階"] [data-slot="begin-planning"]',
+    );
+    if (next === null) return;
+    focusBegin.current = false;
+    next.focus({ preventScroll: true });
+    next.scrollIntoView?.({ block: 'center' });
+  }, [readOnly, leadsOn, stage]);
+  const complete = async () => {
+    focusBegin.current = true;
+    if (!(await actions.completeRetro())) {
+      focusBegin.current = false;
+      return;
+    }
     toast.show({
       kind: 'retro-completed',
       tone: 'done',
-      title: `Sprint ${data.number} の振り返りを完了しました`,
-    });
-    // The Complete button goes; the focus moves to what takes its place. It
-    // is brought to the middle: at the foot, the Toast would cover it on a
-    // narrow screen (#168).
-    requestAnimationFrame(() => {
-      const next = document.querySelector<HTMLElement>(
-        'nav[aria-label="次の段階"] [data-slot="begin-planning"]',
-      );
-      next?.focus({ preventScroll: true });
-      next?.scrollIntoView?.({ block: 'center' });
+      title: `Sprint ${sprint.number} の振り返りを完了しました`,
     });
   };
 
@@ -202,7 +242,10 @@ function RetroView({
     // screen: 事実を見る fills it with its tables, the others keep their
     // 720px text and 336px materials; so the left edge stays where it is
     // when the stage changes (owner decision in #81).
-    <div className="flex min-h-full w-full max-w-[calc(var(--spacing-pane-today)+var(--spacing-pane-side)+var(--spacing-12))] flex-col gap-8 px-4 pt-6 pb-16 medium:px-6 medium:pt-8 xl:max-w-none">
+    <div
+      aria-busy={data.status === 'pending' || undefined}
+      className="flex min-h-full w-full max-w-[calc(var(--spacing-pane-today)+var(--spacing-pane-side)+var(--spacing-12))] flex-col gap-8 px-4 pt-6 pb-16 medium:px-6 medium:pt-8 xl:max-w-none"
+    >
       <SprintHeader
         status={
           readOnly ? (
@@ -213,18 +256,23 @@ function RetroView({
             </Tag>
           )
         }
-        title={`Sprint ${data.number}`}
-        week={weekLabel(data.week)}
-        period={formatDateRange(data.sprint.start, data.sprint.end)}
+        title={`Sprint ${sprint.number}`}
+        week={weekLabel(sprint.week)}
+        period={formatDateRange(sprint.start, sprint.end)}
         steps={steps}
-        stages={RETRO_STAGES.map((s) => ({
-          id: s.id,
-          label: s.label,
-          href: router.buildLocation({
-            to: '/retro',
-            search: (prev) => ({ ...prev, stage: s.id }),
-          }).href,
-        }))}
+        stages={
+          // Where the writing has got to is known once the Retro is read.
+          ready
+            ? RETRO_STAGES.map((s) => ({
+                id: s.id,
+                label: s.label,
+                href: router.buildLocation({
+                  to: '/retro',
+                  search: (prev) => ({ ...prev, stage: s.id }),
+                }).href,
+              }))
+            : undefined
+        }
         currentStage={stage}
         stagesDone={readOnly}
         onStage={(stageId, event) => {
@@ -256,107 +304,122 @@ function RetroView({
         </p>
       </SprintHeader>
 
-      <div
-        className={cn(
-          'grid grid-cols-1 gap-12',
-          stage !== 'facts' &&
-            'wide:grid-cols-[minmax(0,var(--spacing-pane-today))_var(--spacing-pane-side)]',
-        )}
-      >
-        <div className="flex min-w-0 flex-col gap-8">
-          <div className="flex flex-col gap-2">
-            <h1 className="text-display-m text-ink">
-              {stageHeading(stage, data.number)}
-            </h1>
-            {stage === 'facts' && !readOnly && (
-              // Where the mark on a row leads, and its icon, said once: the
-              // rows carry the icon alone (#241).
-              // copy-lint-ignore long-sentence -- 語は 40 字のまま。アイコンの要素を字数に数えている（Issue #241）
-              <p className="text-help text-ink-muted [word-break:auto-phrase]">
-                気になった記録に
-                <Icon icon={Pin} className="mx-0.5 inline align-[-0.2em]" />
-                「振り返りに使う」を付けると、「振り返る」で材料として並びます。
-              </p>
+      {data.status !== 'ready' ? (
+        <div className="flex max-w-measure-read flex-col gap-2">
+          <h1 className="text-display-m text-ink">振り返り</h1>
+          <ReadStatus label="振り返り" read={data} />
+        </div>
+      ) : (
+        <>
+          <div
+            className={cn(
+              'grid grid-cols-1 gap-12',
+              stage !== 'facts' &&
+                'wide:grid-cols-[minmax(0,var(--spacing-pane-today))_var(--spacing-pane-side)]',
             )}
-          </div>
-          {stage === 'facts' && (
-            <FactsPane
-              data={data}
-              readOnly={readOnly}
-              onPin={actions.setPinned}
-              onAssess={actions.assessGoal}
-              onAddActual={(target, title, anchor) =>
-                setEditing({
-                  target,
-                  title,
-                  anchor,
-                  returnFocus:
-                    anchor.parentElement?.querySelector<HTMLElement>(
-                      '[aria-pressed]',
-                    ) ?? null,
-                })
-              }
-            />
-          )}
-          {stage === 'reflect' && (
-            <ReflectPane
-              data={data}
-              readOnly={readOnly}
-              onPin={actions.setPinned}
-              onReflect={actions.setReflection}
-              onImprove={actions.setImprovement}
-              showMaterials
-            />
-          )}
-          {stage === 'handoff' && (
-            <HandoffPane
-              data={data}
-              readOnly={readOnly}
-              titleOf={data.taskTitleOf}
-              onDraft={actions.draftCriterion}
-              onDraftPolicy={actions.setDraftPolicy}
-              onDropDraft={actions.dropCriterionDraft}
-              onDecide={actions.decideCriterion}
-              onWriteImprovement={() => setStage('reflect')}
-            />
-          )}
-          <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
-            {stage === 'facts' && !readOnly && (
-              // How many facts go on as materials (#167), beside the way to
-              // where they gather.
-              <p className="text-help text-ink-muted">
-                振り返りに使う {data.pins.length}件
-              </p>
-            )}
-            <nav aria-label="次の段階">
+          >
+            <div className="flex min-w-0 flex-col gap-8">
+              <div className="flex flex-col gap-2">
+                <h1 className="text-display-m text-ink">
+                  {stageHeading(stage, data.number)}
+                </h1>
+                {stage === 'facts' && !readOnly && (
+                  // Where the mark on a row leads, and its icon, said once: the
+                  // rows carry the icon alone (#241).
+                  // copy-lint-ignore long-sentence -- 語は 40 字のまま。アイコンの要素を字数に数えている（Issue #241）
+                  <p className="text-help text-ink-muted [word-break:auto-phrase]">
+                    気になった記録に
+                    <Icon icon={Pin} className="mx-0.5 inline align-[-0.2em]" />
+                    「振り返りに使う」を付けると、「振り返る」で材料として並びます。
+                  </p>
+                )}
+              </div>
               {stage === 'facts' && (
-                <Button onClick={() => setStage('reflect')}>
-                  次へ：振り返る
-                </Button>
+                <FactsPane
+                  data={data}
+                  readOnly={readOnly}
+                  onPin={actions.setPinned}
+                  onAssess={actions.assessGoal}
+                  onAddActual={(target, title, anchor) =>
+                    setEditing({
+                      target,
+                      title,
+                      anchor,
+                      returnFocus:
+                        anchor.parentElement?.querySelector<HTMLElement>(
+                          '[aria-pressed]',
+                        ) ?? null,
+                    })
+                  }
+                />
               )}
               {stage === 'reflect' && (
-                <Button onClick={() => setStage('handoff')}>
-                  次へ：引き継ぐ
-                </Button>
+                <ReflectPane
+                  data={data}
+                  readOnly={readOnly}
+                  onPin={actions.setPinned}
+                  onReflect={actions.setReflection}
+                  onImprove={actions.setImprovement}
+                  showMaterials
+                />
               )}
-              {stage === 'handoff' && !readOnly && (
-                <CompleteRetro data={data} onComplete={complete} />
+              {stage === 'handoff' && (
+                <HandoffPane
+                  data={data}
+                  readOnly={readOnly}
+                  titleOf={data.taskTitleOf}
+                  onDraft={actions.draftCriterion}
+                  onDraftPolicy={actions.setDraftPolicy}
+                  onDropDraft={actions.dropCriterionDraft}
+                  onDecide={actions.decideCriterion}
+                  onWriteImprovement={() => setStage('reflect')}
+                />
               )}
-              {stage === 'handoff' && readOnly && leadsOn && <BeginPlanning />}
-            </nav>
-          </div>
-        </div>
-        {stage !== 'facts' && (
-          <aside className="hidden wide:block">
-            <div className="sticky top-8">
-              <Materials
-                data={data}
-                onPin={readOnly ? undefined : actions.setPinned}
-              />
+              <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+                {stage === 'facts' && !readOnly && (
+                  // How many facts go on as materials (#167), beside the way to
+                  // where they gather.
+                  <p className="text-help text-ink-muted">
+                    振り返りに使う {data.pins.length}件
+                  </p>
+                )}
+                <nav aria-label="次の段階">
+                  {stage === 'facts' && (
+                    <Button onClick={() => setStage('reflect')}>
+                      次へ：振り返る
+                    </Button>
+                  )}
+                  {stage === 'reflect' && (
+                    <Button onClick={() => setStage('handoff')}>
+                      次へ：引き継ぐ
+                    </Button>
+                  )}
+                  {stage === 'handoff' && !readOnly && (
+                    <CompleteRetro
+                      data={data}
+                      onComplete={complete}
+                      loading={actions.loading.completeRetro}
+                    />
+                  )}
+                  {stage === 'handoff' && readOnly && leadsOn && (
+                    <BeginPlanning />
+                  )}
+                </nav>
+              </div>
             </div>
-          </aside>
-        )}
-      </div>
+            {stage !== 'facts' && (
+              <aside className="hidden wide:block">
+                <div className="sticky top-8">
+                  <Materials
+                    data={data}
+                    onPin={readOnly ? undefined : actions.setPinned}
+                  />
+                </div>
+              </aside>
+            )}
+          </div>
+        </>
+      )}
 
       {editing !== undefined && (
         <ActualTime
@@ -372,6 +435,7 @@ function RetroView({
             setEditing(undefined);
           }}
           anchor={editing.anchor}
+          loading={actions.loading.recordActual}
           onSubmit={(hours) =>
             hours !== undefined &&
             actions.recordActual(
@@ -391,19 +455,15 @@ function RetroView({
  * A Sprint whose Retro has not started: running (its Retro starts on its
  * last day, F21) or still being planned.
  */
-function NotStarted({
-  current,
-  sprint,
-  steps,
-}: {
-  current: SprintRef;
-  sprint: Sprint;
-  steps: Steps;
-}) {
-  const { today } = useAppOverview();
-  const actions = useRetroActions();
-  const week = weekCall(current.week, current.number);
-  const lastDay = sprint.state === 'active' && today >= sprint.end;
+function NotStarted({ sprint, steps }: { sprint: SprintItem; steps: Steps }) {
+  // The last day is known once today is: until then there is nothing to start.
+  const now = useNow();
+  const { beginRetro, loading } = useBeginRetro(sprint.id);
+  const week = weekCall(sprint.week, sprint.number);
+  const lastDay =
+    sprint.state === 'active' &&
+    now.status === 'ready' &&
+    now.today >= sprint.end;
   return (
     <div className="flex min-h-full w-full max-w-[calc(var(--spacing-pane-today)+var(--spacing-pane-side)+var(--spacing-12))] flex-col gap-8 px-4 pt-6 pb-16 medium:px-6 medium:pt-8">
       <SprintHeader
@@ -416,13 +476,18 @@ function NotStarted({
             <Tag tone="draft">計画中 · 未確定</Tag>
           )
         }
-        title={`Sprint ${current.number}`}
-        week={weekLabel(current.week)}
+        title={`Sprint ${sprint.number}`}
+        week={weekLabel(sprint.week)}
         period={formatDateRange(sprint.start, sprint.end)}
         steps={steps}
         actions={
           lastDay ? (
-            <Button variant="primary" onClick={() => actions.beginRetro()}>
+            <Button
+              variant="primary"
+              loading={loading}
+              loadingLabel="始めています…"
+              onClick={() => void beginRetro()}
+            >
               振り返りを始める
             </Button>
           ) : undefined
