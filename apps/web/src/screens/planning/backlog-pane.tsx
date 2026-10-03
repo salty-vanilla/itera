@@ -120,7 +120,9 @@ function BacklogPane({
       <TaskQuickAdd
         label={weekText(week, 'のタスクを追加')}
         stackArea
-        loading={actions.loading.addAndChoose}
+        // The slim pane (208px) has no room for the wider button: it would
+        // leave the Area select too narrow for 「領域なし」.
+        {...(slim ? {} : { loading: actions.loading.addAndChoose })}
         onAdd={(title) =>
           onAdd(title, quickChoice === '' ? undefined : quickChoice)
         }

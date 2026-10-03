@@ -45,7 +45,8 @@ export function useRead<TData, TError, T extends object>(
  * the person's Sprints and one Sprint's plan). It is `ready` when both have
  * answered and `view` makes the data from them (`undefined`: there is none
  * to show), `failed` when one failed and there is nothing to show, and
- * `retry` reads again the ones that failed.
+ * `retry` reads again the ones that failed. As for `useRead`, `view` stays
+ * the same between renders (a module's function, or a `useCallback`).
  */
 export function useRead2<A, B, EA, EB, T extends object>(
   a: UseQueryResult<A, EA>,

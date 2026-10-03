@@ -20,10 +20,10 @@ export function focusScreenHeading(
 
 /**
  * A screen whose records are still being read shows a heading of its own,
- * and the one it has once they are in replaces it. The focus on the first
- * would be lost with it, so it moves to the second, if nothing else has
- * taken the focus meanwhile (the person pressing or clicking anywhere
- * leaves it be).
+ * and the one it has once they are in replaces it (a screen that reads in
+ * two steps replaces it twice). The focus on the first would be lost with
+ * it, so it moves to the next, if nothing else has taken the focus
+ * meanwhile (the person pressing or clicking anywhere leaves it be).
  */
 function keepOnHeading(
   main: HTMLElement,
@@ -46,6 +46,8 @@ function keepOnHeading(
     if (next === null) return;
     next.tabIndex = -1;
     next.focus({ preventScroll });
+    // This one may be replaced too (a screen that reads in two steps).
+    keepOnHeading(main, next, preventScroll);
   });
   const onFocusIn = (event: FocusEvent) => {
     if (event.target !== heading) stop();

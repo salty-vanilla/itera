@@ -152,6 +152,11 @@ function GoalBlock({
               );
               return;
             }
+            // The same text: nothing to save.
+            if (goal !== undefined && text.trim() === goal) {
+              close(false);
+              return;
+            }
             if (await onSave?.(text.trim())) close(true);
           }}
         >

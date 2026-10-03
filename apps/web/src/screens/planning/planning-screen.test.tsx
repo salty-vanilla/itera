@@ -12,6 +12,7 @@ import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { StoreSnapshot } from '@/store/record-store';
 import { findHours, getHours, getMinutes } from '@/test/duration';
+import { waitForSprintScreen } from '@/test/sprint-ready';
 import { fixtureIds } from '@itera/application/fixtures';
 
 const ids = fixtureIds();
@@ -55,6 +56,7 @@ async function renderAt(url: string) {
     </TooltipProvider>,
   );
   await screen.findByText('Sprint 2', { selector: 'p' });
+  await waitForSprintScreen();
   return router;
 }
 

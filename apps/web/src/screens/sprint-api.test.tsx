@@ -148,6 +148,26 @@ describe('the Sprint on the API', () => {
     expect(document.querySelector('[data-slot="sprint-header"]')).toBeNull();
   });
 
+  it('keeps the Sprint’s header while its plan is read', async () => {
+    serve('planning-pick', (request) =>
+      /^\/api\/sprints\/[^/]+$/.test(new URL(request.url).pathname)
+        ? new Promise<Response>(() => {})
+        : undefined,
+    );
+    renderSprint();
+    const header = await waitFor(() => {
+      const found = document.querySelector<HTMLElement>(
+        '[data-slot="sprint-header"]',
+      );
+      if (found === null) throw new Error('no header yet');
+      return found;
+    });
+    expect(within(header).getByText('Sprint 2')).toBeTruthy();
+    // The words wait; the plan is not there.
+    expect(await screen.findByText('読み込み中…')).toBeTruthy();
+    expect(document.querySelector('[data-slot="plan-pane"]')).toBeNull();
+  });
+
   it('says so when the plan cannot be read, and reads again on request', async () => {
     let broken = true;
     const { sprint } = serve('planning-pick', (request) =>
@@ -185,6 +205,39 @@ describe('the Sprint on the API', () => {
       within(header).getByText(/10\/5 \(月\)〜10\/11 \(日\)/),
     ).toBeTruthy();
     expect(requests).toContain('GET /api/me');
+  });
+
+  it('sends Tasks picked one after another, each in turn, and drops only a repeat of one', async () => {
+    const { requests, sprint } = serve('planning-pick', (request) =>
+      request.method === 'POST'
+        ? new Promise<undefined>((resolve) => setTimeout(resolve, 300)).then(
+            () => undefined,
+          )
+        : undefined,
+    );
+    renderSprint();
+    const pane = await backlogPane();
+    const id = sprint('planning').id;
+    const had = new Set(sprint('planning').tasks.map((t) => t.taskId));
+    const box = (title: string) =>
+      within(pane).getByRole('checkbox', {
+        name: new RegExp(`に入れる：${title}`),
+      });
+    // Two Tasks while the first is on its way, and the first pressed again.
+    await userEvent.click(box(onboarding));
+    await userEvent.click(box('顧客インタビューの設計'));
+    await userEvent.click(box(onboarding));
+    await waitFor(
+      () =>
+        expect(
+          sprint('planning').tasks.filter((t) => !had.has(t.taskId)),
+        ).toHaveLength(2),
+      { timeout: 4000 },
+    );
+    expect(
+      requests.filter((r) => r === `POST /api/sprints/${id}/sprint-tasks`),
+    ).toHaveLength(2);
+    expect(screen.queryByText('保存できませんでした')).toBeNull();
   });
 
   it('chooses a Task with the operation, and takes it back with the ID it returned', async () => {
@@ -296,7 +349,7 @@ describe('the Sprint on the API', () => {
     expect(sprint('active').id).toBe(id);
   });
 
-  it('sends the hours as they are left, one after the other', async () => {
+  it('sends the hours as they are left', async () => {
     const { requests, sprint } = serve('planning-pick');
     renderSprint();
     await backlogPane();

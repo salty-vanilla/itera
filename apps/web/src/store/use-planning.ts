@@ -16,6 +16,7 @@ import {
   listSprintCandidatesOptions,
 } from '@itera/api-contract/react-query';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useCallback, useRef } from 'react';
 import { useApiClient } from '@/api/api-provider';
 import { useRead2, type Read } from '@/api/read-state';
 import { useOperation } from '@/api/use-operation';
@@ -77,8 +78,29 @@ export function usePlanning(
   return useRead2(plan, candidates, planningView);
 }
 
-/** An operation's outcome as the screens use it: did it go through. */
-export type Done = Promise<boolean>;
+/**
+ * For the operations of rows the person picks one after another: a second
+ * press on the *same* target while it is on its way is dropped (a double
+ * click would send the same change twice and fail), and one on another
+ * target is sent after it, in order (`useOperation` `whileSending: 'wait'`),
+ * not thrown away. `key` names the target. Gives back `undefined` for one
+ * that was dropped.
+ */
+function useOncePerTarget() {
+  const onTheWay = useRef(new Set<string>());
+  return useCallback(
+    async <T>(key: string, send: () => Promise<T>): Promise<T | undefined> => {
+      if (onTheWay.current.has(key)) return undefined;
+      onTheWay.current.add(key);
+      try {
+        return await send();
+      } finally {
+        onTheWay.current.delete(key);
+      }
+    },
+    [],
+  );
+}
 
 /**
  * The person's operations on the Tasks to choose from, one named function
@@ -86,27 +108,37 @@ export type Done = Promise<boolean>;
  * changes nothing and is shown as a Toast (useOperation).
  */
 export function usePickActions(sprintId: SprintId) {
-  const choose = useOperation('addSprintTasks');
-  const unchoose = useOperation('removeSprintTasks');
-  const include = useOperation('setOccurrenceIncluded');
+  const wait = { whileSending: 'wait' } as const;
+  const choose = useOperation('addSprintTasks', wait);
+  const unchoose = useOperation('removeSprintTasks', wait);
+  const include = useOperation('setOccurrenceIncluded', wait);
   const create = useOperation('createAndChooseTask');
+  const once = useOncePerTarget();
   return {
     /** The drafts made, or `undefined` when it did not go through. */
     chooseTasks: async (
       taskIds: readonly TaskId[],
     ): Promise<readonly SprintTaskId[] | undefined> => {
-      const outcome = await choose.run({
-        sprintId,
-        taskIds: [...taskIds],
-      });
-      return outcome.ok ? outcome.value.sprintTaskIds : undefined;
+      const outcome = await once(`choose:${taskIds.join()}`, () =>
+        choose.run({ sprintId, taskIds: [...taskIds] }),
+      );
+      return outcome?.ok ? outcome.value.sprintTaskIds : undefined;
     },
     unchooseTasks: async (sprintTaskIds: readonly SprintTaskId[]) =>
-      (await unchoose.run({ sprintId, sprintTaskIds: [...sprintTaskIds] })).ok,
+      (
+        await once(`unchoose:${sprintTaskIds.join()}`, () =>
+          unchoose.run({ sprintId, sprintTaskIds: [...sprintTaskIds] }),
+        )
+      )?.ok === true,
     setOccurrenceIncluded: async (
       occurrenceId: OccurrenceId,
       included: boolean,
-    ) => (await include.run({ sprintId, occurrenceId, included })).ok,
+    ) =>
+      (
+        await once(`include:${occurrenceId}`, () =>
+          include.run({ sprintId, occurrenceId, included }),
+        )
+      )?.ok === true,
     /** The new Task's ID, or `undefined` when it did not go through. */
     addAndChoose: async (
       title: string,
@@ -131,27 +163,49 @@ export type PickActions = ReturnType<typeof usePickActions>;
  * hours), one named function each. Each gives back whether it went through.
  */
 export function usePlanActions(sprintId: SprintId) {
-  const choose = useOperation('addSprintTasks');
-  const unchoose = useOperation('removeSprintTasks');
-  const excludeAll = useOperation('excludeAllOccurrences');
-  const includeAll = useOperation('includeOccurrences');
-  const link = useOperation('setGoalLink');
-  const goal = useOperation('setGoal');
+  const wait = { whileSending: 'wait' } as const;
+  const choose = useOperation('addSprintTasks', wait);
+  const unchoose = useOperation('removeSprintTasks', wait);
+  const excludeAll = useOperation('excludeAllOccurrences', wait);
+  const includeAll = useOperation('includeOccurrences', wait);
+  const link = useOperation('setGoalLink', wait);
+  const goal = useOperation('setGoal', wait);
+  const once = useOncePerTarget();
   return {
     chooseTasks: async (taskIds: readonly TaskId[]) =>
-      (await choose.run({ sprintId, taskIds: [...taskIds] })).ok,
+      (
+        await once(`choose:${taskIds.join()}`, () =>
+          choose.run({ sprintId, taskIds: [...taskIds] }),
+        )
+      )?.ok === true,
     unchooseTasks: async (sprintTaskIds: readonly SprintTaskId[]) =>
-      (await unchoose.run({ sprintId, sprintTaskIds: [...sprintTaskIds] })).ok,
+      (
+        await once(`unchoose:${sprintTaskIds.join()}`, () =>
+          unchoose.run({ sprintId, sprintTaskIds: [...sprintTaskIds] }),
+        )
+      )?.ok === true,
     excludeAllOccurrences: async (sprintTaskId: SprintTaskId) =>
-      (await excludeAll.run({ sprintId, sprintTaskId })).ok,
+      (
+        await once(`exclude:${sprintTaskId}`, () =>
+          excludeAll.run({ sprintId, sprintTaskId }),
+        )
+      )?.ok === true,
     /** All of them back, or none when one cannot be. */
     includeOccurrences: async (occurrenceIds: readonly OccurrenceId[]) =>
-      (await includeAll.run({ sprintId, occurrenceIds: [...occurrenceIds] }))
-        .ok,
+      (
+        await once(`include-all:${occurrenceIds.join()}`, () =>
+          includeAll.run({ sprintId, occurrenceIds: [...occurrenceIds] }),
+        )
+      )?.ok === true,
     setGoalLink: async (sprintTaskId: SprintTaskId, goalLink: GoalLink) =>
-      (await link.run({ sprintId, sprintTaskId, goalLink })).ok,
+      (
+        await once(`link:${sprintTaskId}`, () =>
+          link.run({ sprintId, sprintTaskId, goalLink }),
+        )
+      )?.ok === true,
     setGoal: async (areaId: AreaId, text: string) =>
-      (await goal.run({ sprintId, areaId, text })).ok,
+      (await once(`goal:${areaId}`, () => goal.run({ sprintId, areaId, text })))
+        ?.ok === true,
   };
 }
 

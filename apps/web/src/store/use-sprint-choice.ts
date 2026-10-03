@@ -1,11 +1,14 @@
 import type {
   CurrentSprints,
+  GetMeResponse,
+  ListSprintsResponse,
   LocalDate,
   SprintItem,
   SprintWeek,
 } from '@itera/api-contract';
 import { listSprintsOptions } from '@itera/api-contract/react-query';
 import { useQuery } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { useApiClient } from '@/api/api-provider';
 import { useMe } from '@/api/use-me';
 import { useRead2, type Read } from '@/api/read-state';
@@ -42,14 +45,19 @@ export function useSprintChoice(asked?: number): Read<SprintChoice> {
   const client = useApiClient();
   const me = useMe();
   const sprints = useQuery(listSprintsOptions({ client }));
-  return useRead2(me, sprints, (person, list) =>
-    person.sprints === undefined
-      ? undefined
-      : choiceOf(list.view, person.sprints.next, asked),
+  // Kept between renders while `asked` is: `useRead2` makes the data from it
+  // only when an answer or it changes.
+  const view = useCallback(
+    (person: GetMeResponse, list: ListSprintsResponse) =>
+      person.sprints === undefined
+        ? undefined
+        : choiceOf(list.view, person.sprints.next, asked),
+    [asked],
   );
+  return useRead2(me, sprints, view);
 }
 
-function choiceOf(
+export function choiceOf(
   items: readonly SprintItem[],
   next: CurrentSprints['next'],
   asked: number | undefined,

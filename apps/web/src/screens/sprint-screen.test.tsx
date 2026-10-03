@@ -11,6 +11,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { waitForSprintScreen } from '@/test/sprint-ready';
 
 // Any Sprint by its number in the URL, stepping between them, and the
 // week's words (#90).
@@ -31,11 +32,7 @@ async function renderAt(url: string) {
   );
   await screen.findByRole('heading', { level: 1 });
   // The Sprint is there once its records are read (the mock answers).
-  await waitFor(() =>
-    expect(
-      document.querySelector('[data-slot="sprint-header"]'),
-    ).not.toBeNull(),
-  );
+  await waitForSprintScreen();
   return router;
 }
 

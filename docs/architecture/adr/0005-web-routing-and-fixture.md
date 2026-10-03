@@ -180,19 +180,20 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
   - `useSprintChoice(asked)`：画面が開く Sprint とその前後。`getMe`（`sprints.next`）と `listSprints` から求める。`?sprint=` の番号があればそれ、なければ実行中 → 計画中 → Review 中 → 次の週。計画中の Sprint がないときだけ、`getMe` の次の週を最後に足す。選ぶだけで、週の名前と終了日は読み取りの値を使う（下）。
   - `usePlanning(sprintId, { applyCriterion })`：`getSprint`（`apply-criterion` は付けるときだけ `true`。外す選択でキーが変わるので、`keepPreviousData` で前の計画を残す）と `listSprintCandidates`。計画中でなくなった Sprint（確定した直後）の答えは `pending` として扱う。
   - `useRunningSprint(sprintId)`：`getSprint`。計画中の答えは `pending`。
-  - 画面は `ready` でない間、見出し「Sprint」と `ReadStatus` を出す。別の Sprint を開いたときに前の Sprint の記録を見せないよう、`Planning`・`Confirmed` は Sprint の ID を `key` にする。
+  - 画面は `ready` でない間、`ReadStatus`（ラベルは「計画」）を出す。Sprint の一覧が読めるまでは見出し「Sprint」、開く Sprint が分かってからは、その Sprint の見出し（名前・週・期間・‹ ›）をそのまま出して計画だけを待つ（画面の見出しは読み上げ専用）。見出しが読み込みの前後で跳ばず、押した ‹ › も消えない。別の Sprint を開いたときに前の Sprint の記録を見せないよう、`Planning`・`Confirmed` は Sprint の ID を `key` にする。
 - **契約の欠けを足した**：次の週（計画を始める前で、Sprint がまだない）を開くには、その週の名前（今週／来週）と終了日が要る。`getMe` の `sprints.next` は開始日と番号だけだったので、`end` と `week`（省略可）を足した（2026-10-03 司令塔の判断。週の規則をクライアントに二重に持たせない、ADR 0007）。`packages/application` の `currentSprints`、`views.yaml`、生成物、API とモックのテストを合わせた。ADR 0006 の `getMe` の項に書いてある。
 - **操作のフック**：`usePickActions`（選ぶ：Task を入れる・外す、回を入れる・外す、新しい Task を足して入れる）、`usePlanActions`（整える・確かめる：行の操作、目標のリンク、目標の文）、`useAvailableHoursAction`、`useConfirmSprint`、`useRunningSprintActions`、`useBeginPlanning`。画面（`PlanningScreen`・`PlanPane`）が 1 つずつ呼び、部品へ props で渡す。行ごとにフックを呼ばない（購読が行の数だけ増える）。対象の Sprint の ID は、画面が読んだ Sprint から渡す（記録の並びから探さない）。
   - 操作が返す ID を使う：「元に戻す」は、入れたときに返った `sprintTaskIds` で外す。
   - 使える時間は欄を離れたときに保存するので、`whileSending: 'wait'`（#273 と同じ理由）。
-  - 送信中の語：追加（Quick Add）は「追加中…」、確定の Dialog のボタンは「確定中…」（DESIGN.md Components › Button の Loading）、「Sprint N の計画を始める」は「開始中…」。ほかの操作は、結果が Toast か行の変化で見えるので付けない。
+  - 行を続けて選ぶ操作（Task の入れる・外す、回の入れる・外す、目標のリンク、目標の文）は、`wait` で送り、同じ対象の重ねた押下だけを捨てる（`useOncePerTarget`）。`drop` にすると、遅い API で別の行の選択が黙って捨てられる。`wait` だけだと、同じ行の二度押しが同じ変更を 2 回送って 2 回目が失敗する（Toast が出る）。対象は操作と ID で決める。
+  - 送信中の語：追加（Quick Add）は「追加中…」、確定の Dialog のボタンは「確定中…」（DESIGN.md Components › Button の Loading）、「Sprint N の計画を始める」は「始めています…」（ボタンと同じ動詞。「開始」は今日の画面でタスクに取りかかる操作の語）。ほかの操作は、結果が Toast か行の変化で見えるので付けない。細い Backlog の欄（整える・確かめる、208px）の Quick Add には付けない（幅を保つ Button が広がり、領域の選択が「領域なし」を入れる幅を割る）。
 - **部品は結果を待つ**：`GoalBlock` の `onSave` と `AvailableHoursField` の `onChange` は `boolean | Promise<boolean>` を受ける。目標の文は、保存が通ってから形を閉じる。使える時間は、通らなかったとき入力した文字を前の値に戻す。
-- **描き直しを待ってから焦点を動かす**：目標を保存して形を閉じるとき、キャッシュは更新済みでも画面はまだ新しい目標を描いていない（上の #273「操作が終わっても…」）。「編集」へ戻す焦点は、形を閉じた直後ではなく、目標の文が変わるまで待つ（`GoalBlock`）。
-- **見出しの焦点**：画面を開くと焦点は見出しへ移る（#154）。記録を読む間の見出しは、読み終えた画面の見出しに替わる（別の要素）ので、焦点が体に戻ってしまう。`focusScreenHeading` は、焦点が見出しにあったまま見出しが消えたときだけ、次の見出しへ移す（ほかへ焦点が動いた・押した・クリックしたら止める）。
+- **描き直しを待ってから焦点を動かす**：目標を保存して形を閉じるとき、キャッシュは更新済みでも画面はまだ新しい目標を描いていない（上の #273「操作が終わっても…」）。「編集」へ戻す焦点は、形を閉じた直後ではなく、目標の文が変わるまで待つ（`GoalBlock`）。今と同じ文は保存せずに閉じる（変わらないので、待つ要求が残らない）。
+- **見出しの焦点**：画面を開くと焦点は見出しへ移る（#154）。記録を読む間の見出しは、読み終えた画面の見出しに替わる（別の要素）ので、焦点が体に戻ってしまう。`focusScreenHeading` は、焦点が見出しにあったまま見出しが消えたときだけ、次の見出しへ移し、そこでも続ける（Sprint は一覧と計画の 2 段で読むので、見出しが 2 回替わる。`use-screen-focus.test.ts`）。ほかへ焦点が動いた・押した・クリックしたら止める。
 - **共有のもの**：`BeginPlanning` は `getMe` と `beginPlanning` に移した。Retro の画面も使うので（#276 がその画面を移す）、枠（`AppShell`）が `getMe` を先に読み、「Sprint N の計画を始める」が現れる時点で答えがあるようにした。Retro が開く Sprint は、Retro の画面を移すまで store から求める（`use-retro-choice.ts`。#276 で消す）。`useSprintSteps` は番号だけを持つ参照を受ける。
 - **型**：計画と確定済みの Sprint の画面と部品は契約の型を使う。領域なしのまとまりの語は `store/screen-area.ts`（Retro の `views.ts` のものは domain の型なので別）。
 - **import の境界**：`MIGRATING` から #274 のファイルと、契約の型だけになった共有のファイル（`capacity-indicator.tsx`・`criterion-text.ts`・`selection-words.ts`・`week-text.ts`）を消した。`use-retro-choice.ts` を #276 の一覧に足した。
-- **画面の文言**：送信中の「確定中…」「開始中…」と、記録を読む間の見出し「Sprint」。ほかの語は変えていない。
+- **画面の文言**：送信中の「確定中…」「始めています…」と、記録を読む間の見出し「Sprint」・ラベル「計画」。ほかの語は変えていない。
 
 ### サインインと設定（2026-10-03、Issue #278）
 

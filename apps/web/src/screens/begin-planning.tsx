@@ -37,7 +37,7 @@ function BeginPlanning({
       data-slot="begin-planning"
       variant={variant}
       loading={loading}
-      loadingLabel="開始中…"
+      loadingLabel="始めています…"
       onClick={async () => {
         if ((await beginPlanning()) !== undefined) {
           void navigate({ to: '/sprint', search: { sprint: next.number } });
