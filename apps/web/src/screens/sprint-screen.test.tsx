@@ -11,6 +11,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { waitForRetroScreen } from '@/test/retro-ready';
 import { waitForSprintScreen } from '@/test/sprint-ready';
 
 // Any Sprint by its number in the URL, stepping between them, and the
@@ -31,8 +32,9 @@ async function renderAt(url: string) {
     </TooltipProvider>,
   );
   await screen.findByRole('heading', { level: 1 });
-  // The Sprint is there once its records are read (the mock answers).
-  await waitForSprintScreen();
+  // The screen is there once its records are read (the mock answers).
+  if (url.startsWith('/retro')) await waitForRetroScreen();
+  else await waitForSprintScreen();
   return router;
 }
 

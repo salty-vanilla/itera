@@ -13,6 +13,7 @@ import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { StoreSnapshot } from '@/store/record-store';
 import { findHours } from '@/test/duration';
+import { waitForRetroScreen } from '@/test/retro-ready';
 import { waitForSprintScreen } from '@/test/sprint-ready';
 import { fixtureIds } from '@itera/application/fixtures';
 
@@ -63,16 +64,8 @@ async function renderAt(url: string) {
   );
   // The Sprint screen shows its header once its records are read.
   if (url.startsWith('/sprint')) await waitForSprintScreen();
-  else await retroRead();
+  else await waitForRetroScreen();
   return router;
-}
-
-/** Waits for the screen to have read what it shows: it is busy until then. */
-async function retroRead() {
-  await screen.findByRole('heading', { level: 1 });
-  await waitFor(() =>
-    expect(document.querySelector('[aria-busy="true"]')).toBeNull(),
-  );
 }
 
 const sprintById = (id: string) => {
