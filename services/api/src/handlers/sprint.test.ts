@@ -610,6 +610,9 @@ describe('the invariants, through the API', () => {
 
   it('F33: undoing a past day’s completion makes the Task planned again, and the system closes the day', async () => {
     const app = await setup('today-morning');
+    // Brought up to the day first (#271), so that the system's entry in the
+    // undo's revision is the undo's own.
+    await app.get('/overview');
     const before = (await app.saved()).records;
     const selection = selectionOf(before, tax, '2026-09-29');
     expect(activeSprintTaskOf(before, tax).outcome).toBe('done');
