@@ -47,7 +47,9 @@ DB と認証は `createApp` に注入する（ADR 0004「依存の組み立て�
 | `src/default-dependencies.ts` | 本番の構成：D1 と Better Auth |
 | `src/app.ts` | ルート。`c.var.db` と、注入された `Authenticator`（`requireAuth` と `/api/auth/*`）だけを使う |
 | `src/db/database.ts` | ハンドラーが使う DB の型（D1・libSQL・sqlite-proxy で満たせる） |
-| `src/db/schema.ts` | テーブルの定義（今は Better Auth のテーブルだけ） |
+| `src/db/schema.ts` | テーブルの定義（Better Auth のテーブルと、Itera の記録のテーブル。ADR 0004「記録のテーブル」） |
+| `src/db/load-records.ts`・`save-records.ts` | 利用者の記録（Activity を除く）と版を 1 回の `batch()` で読む。変わった行と Activity を、版を確かめて 1 回の `batch()` で書く |
+| `src/db/record-rows.ts` | `packages/domain` の記録とテーブルの行の対応（両方向） |
 | `src/auth/` | `Authenticator` の型、`requireAuth`、Better Auth の実装 |
 
 ## よく使うコマンド
