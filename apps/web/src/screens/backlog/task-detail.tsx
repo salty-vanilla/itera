@@ -233,16 +233,20 @@ function dayText(
  */
 function closedText(
   closed: NonNullable<BacklogItem['closedToday']>,
-  lastDay: boolean,
+  // A recurring Task's next Sprint takes its own occurrences: there is
+  // nothing to choose, so on the last day the line says no more (#314).
+  after: { lastDay: boolean; recurring: boolean },
 ): { result: string; rest?: string } {
-  const rest = lastDay
-    ? LAST_DAY_CLOSED_WORDS.detail
-    : '明日から今週の残りに出ます。';
+  const rest = !after.lastDay
+    ? '明日から今週の残りに出ます。'
+    : after.recurring
+      ? undefined
+      : LAST_DAY_CLOSED_WORDS.detail;
   switch (closed) {
     case 'paused':
-      return { result: '今日は中断しました。', rest };
+      return { result: '今日は中断しました。', ...(rest && { rest }) };
     case 'deferred':
-      return { result: '今日は見送りました。', rest };
+      return { result: '今日は見送りました。', ...(rest && { rest }) };
     // Back in the week at once: no 「明日から」 (#233).
     case 'removed':
       return { result: '今週の残りに戻しました。' };
@@ -323,7 +327,10 @@ function TaskDetail({
   const closedLine =
     facts.closedToday === undefined
       ? undefined
-      : closedText(facts.closedToday, lastDay);
+      : closedText(facts.closedToday, {
+          lastDay,
+          recurring: facts.recurrence !== undefined,
+        });
   const nowRef = useRef<HTMLElement>(null);
   const openTodayRef = useRef<HTMLAnchorElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);

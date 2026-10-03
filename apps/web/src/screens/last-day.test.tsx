@@ -47,7 +47,7 @@ afterEach(() => {
 });
 
 const LAST_DAY_SECTION =
-  '終わっていないタスクは、次の Sprint の計画で選べます。';
+  '終わっていないタスクは、次の Sprint を計画するときに選べます。';
 const NEXT_DAY_SECTION = '明日から、今週の残りに戻ります。';
 
 const isRead = (path: string) =>
@@ -142,8 +142,8 @@ describe.each([
 describe.each([
   [
     true,
-    '今日は見送りました。次の Sprint の計画で選べます。',
-    '今日は中断しました。次の Sprint の計画で選べます。',
+    '今日は見送りました。次の Sprint を計画するときに選べます。',
+    '今日は中断しました。次の Sprint を計画するときに選べます。',
   ],
   [
     false,
@@ -175,3 +175,34 @@ describe.each([
     });
   },
 );
+
+describe('Task detail of a recurring Task on the last day (#314)', () => {
+  it('says only that it was paused: the next Sprint takes its own occurrences', async () => {
+    serve(true, 'today-interrupt');
+    await renderAt('/today?fixture=today-interrupt');
+    await userEvent.click(
+      await screen.findByRole('button', { name: '今日へ：英語の多読 30分' }),
+    );
+    await menu('英語の多読 30分', '開始');
+    await menu('英語の多読 30分', '今日は中断する');
+    await findHours(screen, /かかった時間/);
+    await userEvent.click(
+      screen.getByRole('button', { name: '今日は中断する' }),
+    );
+    await waitFor(() => expect(closedSection()).not.toBeNull());
+    await userEvent.click(
+      within(closedSection()!).getByRole('button', {
+        name: '英語の多読 30分',
+      }),
+    );
+    const detail = await screen.findByRole('dialog', {
+      name: '英語の多読 30分',
+    });
+    const section = within(detail).getByRole('region', { name: '今日と今週' });
+    await waitFor(() =>
+      expect(section.textContent).toContain('今日は中断しました。'),
+    );
+    expect(section.textContent).not.toContain('次の Sprint');
+    expect(section.textContent).not.toContain('明日から');
+  });
+});

@@ -398,7 +398,7 @@ export type BacklogItem = {
 export type BacklogData = {
     today: LocalDate;
     /**
-     * Today is the last day of the active Sprint (the same value as the Today read's lastDay). What is closed for the day does not come back to 今週の残り the next day.
+     * Today is the last day of the active Sprint (the same value as the Today read's lastDay), false when no Sprint is active. What is closed for the day does not come back to 今週の残り the next day.
      */
     lastDay: boolean;
     timeZone: TimeZone;

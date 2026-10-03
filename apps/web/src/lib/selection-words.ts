@@ -26,7 +26,7 @@ export const SELECTION_WORDS: Readonly<Record<DailyResolution, string>> = {
 // when the read says `lastDay` (ADR 0007).
 export const LAST_DAY_CLOSED_WORDS = {
   /** 「今日はもうやらない」 in Today and the pause surface. */
-  section: '終わっていないタスクは、次の Sprint の計画で選べます。',
+  section: '終わっていないタスクは、次の Sprint を計画するときに選べます。',
   /** After 今日は中断しました。 / 今日は見送りました。 in the Task detail. */
-  detail: '次の Sprint の計画で選べます。',
+  detail: '次の Sprint を計画するときに選べます。',
 } as const;

@@ -676,7 +676,7 @@ function TodayView({ data }: { data: TodayData }) {
               <h2 id="today-closed" className="text-subheading text-ink-muted">
                 今日はもうやらない
               </h2>
-              <p className="text-help text-ink-muted">
+              <p className="text-help text-ink-muted [text-wrap:pretty] [word-break:auto-phrase]">
                 {data.lastDay
                   ? LAST_DAY_CLOSED_WORDS.section
                   : '明日から、今週の残りに戻ります。'}
@@ -814,7 +814,11 @@ function TodayView({ data }: { data: TodayData }) {
             if (!open) setEditing(undefined);
           }}
           anchor={editing.anchor}
-          lastDay={data.lastDay}
+          description={
+            editing.mode === 'pause' && data.lastDay
+              ? LAST_DAY_CLOSED_WORDS.section
+              : undefined
+          }
           loading={
             editing.mode === 'pause'
               ? actions.loading.pause
