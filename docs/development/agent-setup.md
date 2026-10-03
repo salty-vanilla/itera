@@ -95,7 +95,7 @@ direnv のシェル hook は対話シェルのプロンプトでしか動かな�
 
 経過と結果は Issue・PR・CI に残す。中断したときと上限に達したときだけ、実行記録を `.tools/harness/issue-<番号>/<実行ID>/run.md` に置く（Git 管理外）。
 
-複数の Issue を並列に進めるときは、1 つのセッションを司令塔にし、Issue ごとに worker のセッションを動かす（`references/coordinate.md`）。並列実行の道具の操作手順は、各自の環境に置く。
+複数の Issue を並列に進めるときは、1 つのセッションを司令塔にし、Issue ごとに worker のセッションを動かす（`references/coordinate.md`）。Orca を使うときの操作と補助のスクリプトは `references/coordinate-orca.md` と `scripts/orch.mjs`。
 
 ## 確認と更新
 
