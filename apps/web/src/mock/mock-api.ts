@@ -8,6 +8,10 @@
 // conflict. The person is signed in until they sign out in the mock's auth
 // (mock-auth.ts); then every request is refused with 401, as the API does
 // without a session (#278).
+// A person who has not made their settings yet (the fixture state
+// `before-settings`) is answered as the API answers them: `getMe` has
+// `settings: null`, `PUT /me/settings` makes them, and every other read and
+// operation is refused with 422 `userNotSetUp` until then (#279).
 // 1. The request is checked against the contract's schemas (400).
 // 2. The system's records are brought up to now: a Sprint past its end goes
 //    to Review, then the running Sprint's day starts (#271).
@@ -21,6 +25,7 @@ import {
   queryInput,
   readRequest,
   RequestError,
+  settingsSurface,
   surfaces,
   type Call,
   type Surface,
@@ -35,6 +40,7 @@ import {
   sprintCandidates,
   sprintList,
   sprintRetro,
+  settingsChange,
   sprintView,
   type BacklogFilter,
   type Change,
@@ -216,8 +222,19 @@ export interface Mock {
 /** The mock over a store: what answers the client, and what it changes. */
 export function createMock(
   store: RecordStore,
-  { isSignedIn = () => true }: { isSignedIn?: () => boolean } = {},
+  {
+    isSignedIn = () => true,
+    settingsMade = true,
+  }: {
+    isSignedIn?: () => boolean;
+    /**
+     * Whether the person has made their settings. If not, the store's
+     * `user` stands for what they are made from: its ID, which they keep.
+     */
+    settingsMade?: boolean;
+  } = {},
 ): Mock {
+  const settings = { made: settingsMade };
   let answering = false;
   /** Runs the store's changes of an answer, which are the mock's own. */
   const own = <T>(run: () => T): T => {
@@ -233,7 +250,7 @@ export function createMock(
       const request = new Request(input, init);
       try {
         const response = isSignedIn()
-          ? await answer(store, request, own)
+          ? await answer(store, request, own, settings)
           : failure(401, 'unauthenticated', 'No session.');
         response.headers.set(MOCK_HEADER, '1');
         return response;
@@ -253,11 +270,21 @@ async function answer(
   store: RecordStore,
   request: Request,
   own: <T>(run: () => T) => T,
+  settings: { made: boolean },
 ) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/^\/api(?=\/)/, '');
   const write = writeOf(request.method, path);
 
+  if (request.method === settingsSurface.method && path === settingsSurface.url)
+    return makeSettings(store, request, own, settings);
+  if (request.method === 'GET' && path === '/me' && !settings.made)
+    return json(200, {
+      userId: store.getSnapshot().records.user.id,
+      settings: null,
+    });
+  if (!settings.made && (write !== undefined || readOf(path) !== undefined))
+    return failure(422, 'userNotSetUp', 'The user has no settings yet.');
   if (request.method === 'GET' && path === '/me') {
     // The person and their settings; with them, the clock and the Sprints
     // they have now, after the catch-up, as the API reads them (#295 R1).
@@ -299,6 +326,51 @@ async function answer(
       : json(surface.status, result.value);
   }
   return new Response('404 Not Found', { status: 404 });
+}
+
+/**
+ * `PUT /me/settings`, as the API does (ADR 0006「利用者」): the body checked
+ * with the contract's schema, then `settingsChange`: made the first time
+ * (201), the display name written again after (204). The fixture's clock
+ * does not move, so it stays on the day it was made for.
+ */
+async function makeSettings(
+  store: RecordStore,
+  request: Request,
+  own: <T>(run: () => T) => T,
+  settings: { made: boolean },
+) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return failure(400, 'validationFailed', 'The body is not JSON.');
+  }
+  const checked = v.safeParse(settingsSurface.body, body);
+  if (!checked.success) return invalid(checked.issues);
+  const { user } = store.getSnapshot().records;
+  const result = settingsChange(
+    user.id,
+    settings.made ? user : null,
+    checked.output,
+  );
+  if (!result.ok) return domainFailure(result.error);
+  const { changes, created, user: person } = result.value;
+  own(() =>
+    store.run(() => ({
+      ok: true,
+      value: { changes, activities: [], value: undefined },
+    })),
+  );
+  settings.made = true;
+  if (!created)
+    return new Response(null, { status: settingsSurface.status.written });
+  const { displayName, timeZone, weekStartsOn } = person;
+  return json(settingsSurface.status.created, {
+    displayName,
+    timeZone,
+    weekStartsOn,
+  });
 }
 
 /**

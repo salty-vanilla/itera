@@ -3,7 +3,7 @@
 // answered.
 import * as contract from '@itera/api-contract';
 import * as sdk from '@itera/api-contract/client';
-import { surfaces } from '@itera/api-contract/requests';
+import { settingsSurface, surfaces } from '@itera/api-contract/requests';
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../app';
 import { createRecordingDatabase } from '../db/recording-database';
@@ -16,8 +16,11 @@ const contractNames = Object.entries(sdk)
   .filter(([name, value]) => typeof value === 'function' && name !== 'client')
   .map(([name]) => name);
 
+/** The one write that is not an operation (requests.ts). */
+const settingsWrite = 'setSettings';
+
 const readNames = contractNames.filter(
-  (name) => !Object.hasOwn(surfaces, name),
+  (name) => !Object.hasOwn(surfaces, name) && name !== settingsWrite,
 );
 
 /** The server's own reads, answered outside `readRoutes`. */
@@ -69,6 +72,17 @@ describe('operations', () => {
       const [method, path] = route.split(' ');
       expect(routed).toContain(`${method} /api${path}`);
     }
+  });
+});
+
+describe('the settings write', () => {
+  it('is routed at its surface’s method and path', () => {
+    expect(contractRoute(settingsWrite)).toBe(
+      `${settingsSurface.method} ${honoPath(settingsSurface.url)}`,
+    );
+    expect(routes()).toContain(
+      `${settingsSurface.method} /api${settingsSurface.url}`,
+    );
   });
 });
 

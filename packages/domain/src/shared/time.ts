@@ -55,11 +55,15 @@ export function parseInstant(value: string): Result<Instant> {
 
 export function parseTimeZone(value: string): Result<TimeZone> {
   try {
-    new Intl.DateTimeFormat('en', { timeZone: value });
+    // The name as Intl spells it: `asia/tokyo` is `Asia/Tokyo`, so the same
+    // zone is stored, and compared, in one spelling.
+    const { timeZone } = new Intl.DateTimeFormat('en', {
+      timeZone: value,
+    }).resolvedOptions();
+    return ok(timeZone as TimeZone);
   } catch {
     return err('invalidInput', `Unknown time zone: ${value}`);
   }
-  return ok(value as TimeZone);
 }
 
 /** For literals in tests and fixtures. Throws on a malformed value. */

@@ -1,5 +1,6 @@
 import {
   backlogView,
+  dayOfWeek,
   deferralStreak,
   projectFrom,
   recurrenceSummary,
@@ -31,8 +32,8 @@ function currentSprint(state: FixtureStateId): Sprint {
 }
 
 describe('fixture states', () => {
-  it('has a snapshot for every state of PRD §12', () => {
-    expect(fixtureStateIds).toHaveLength(12);
+  it('has a snapshot for every state of PRD §12 and the new person’s two', () => {
+    expect(fixtureStateIds).toHaveLength(14);
     for (const id of fixtureStateIds) {
       expect(() => fixtureSnapshot(id)).not.toThrow();
     }
@@ -57,6 +58,23 @@ describe('fixture states', () => {
       const { activities } = fixtureSnapshot(id).records;
       const times = activities.map((a) => a.at);
       expect(times).toEqual(times.toSorted());
+    }
+  });
+
+  it('has a new person with no records, on a Monday (#279)', () => {
+    for (const id of ['empty', 'before-settings'] as const) {
+      const { records, clock } = fixtureSnapshot(id);
+      expect(records).toMatchObject({
+        areas: [],
+        tasks: [],
+        rules: [],
+        occurrences: [],
+        sprints: [],
+        criteria: [],
+        activities: [],
+      });
+      expect(clock.today).toBe('2026-09-14');
+      expect(dayOfWeek(clock.today)).toBe(records.user.weekStartsOn);
     }
   });
 

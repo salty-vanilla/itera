@@ -1,3 +1,4 @@
+import { settingsSurface } from '@itera/api-contract/requests';
 import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { authBasePath } from './auth/authenticator';
@@ -6,7 +7,8 @@ import type { Dependencies } from './dependencies';
 import type { AppEnv } from './env';
 import { ApiError, errorResponse, loggedError } from './errors';
 import { createFlow, type Guards } from './handlers/flow';
-import { getMe } from './handlers/me';
+import { getMe, putSettings } from './handlers/me';
+import { limitBody } from './handlers/body';
 import { operationRoutes } from './handlers/operations';
 import { readRoutesApp } from './handlers/reads';
 import { requireSameOrigin } from './handlers/same-origin';
@@ -57,6 +59,13 @@ export function createApp(dependencies: Dependencies) {
     origin: requireSameOrigin(dependencies.appOrigin),
   };
   app.get('/api/me', guards.user, guards.origin, (c) => getMe(c, flow));
+  app.put(
+    `/api${settingsSurface.url}`,
+    guards.user,
+    guards.origin,
+    limitBody,
+    (c) => putSettings(c, flow),
+  );
   app.route('/api', readRoutesApp(flow, guards));
   app.route('/api', operationRoutes(flow, guards));
 

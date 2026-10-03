@@ -6,23 +6,12 @@ import {
   type Surface,
 } from '@itera/api-contract/requests';
 import { operations, type Change } from '@itera/application';
-import { Hono, type HonoRequest } from 'hono';
-import { bodyLimit } from 'hono/body-limit';
+import { Hono } from 'hono';
 import type { AppEnv } from '../env';
-import { ApiError, errorResponse } from '../errors';
+import { ApiError } from '../errors';
+import { jsonBody, limitBody } from './body';
 import type { Flow, Guards } from './flow';
 import { validate } from './validate';
-
-/** The largest request body an operation takes (ADR 0006 エラー). */
-export const maxBodyBytes = 64 * 1024;
-
-async function jsonBody(request: HonoRequest): Promise<unknown> {
-  try {
-    return await request.json<unknown>();
-  } catch {
-    throw new ApiError('validationFailed', 'body: not JSON.');
-  }
-}
 
 /** A surface's path in Hono's form: `/areas/{areaId}` becomes `/areas/:areaId`. */
 export const honoPath = (url: string) => url.replace(/\{(\w+)\}/g, ':$1');
@@ -38,22 +27,13 @@ export const honoPath = (url: string) => url.replace(/\{(\w+)\}/g, ':$1');
  */
 export function operationRoutes(flow: Flow, guards: Guards) {
   const routes = new Hono<AppEnv>();
-  const limit = bodyLimit({
-    maxSize: maxBodyBytes,
-    onError: (c) =>
-      errorResponse(
-        c,
-        'payloadTooLarge',
-        `The body is larger than ${maxBodyBytes} bytes.`,
-      ),
-  });
   for (const surface of Object.values(surfaces) as Surface[]) {
     routes.on(
       surface.method,
       honoPath(surface.url),
       guards.user,
       guards.origin,
-      limit,
+      limitBody,
       async (c) => {
         const { name, input } = await operationOf(surface, {
           path: c.req.param(),

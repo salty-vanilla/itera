@@ -7,6 +7,7 @@
 - 改訂：2026-10-03（利用者と設定の読み取り `getMe`、設定がないときのエラー、本文の大きさの上限。Issue #266）
 - 改訂：2026-10-03（経路を資源（ドメインの名詞）から付け、HTTP のメソッドで表し、kebab-case にそろえる。Sprint は ID で経路に置く。状態の遷移はスラッシュの動作。Issue #295。初めの案 A は取り下げた）
 - 改訂：2026-10-03（`getMe` の `sprints.next` に `end` と `week` を足す。Issue #274）
+- 改訂：2026-10-04（利用者の設定を作る `PUT /me/settings`。契約の operation を足すだけなので `info.version` は 0.2.0 のまま。Issue #279）
 
 ## 背景
 
@@ -155,6 +156,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 - 応答は `{ clock, view }`。`clock` は、サーバーがその応答のために決めた「今日」と現在時刻（ADR 0005「時計」）。`view` は、今は application の関数の結果そのもので（写像は恒等。ADR 0007）、結果がない（`undefined`）ときは `null`（TanStack Query は `undefined` をデータにできない）。
 - query の数と真偽（`number`・`apply-criterion`）は、通信の上では文字列。サーバーは宣言した型に変えてから、生成したスキーマで検証する（`queryInput`。同じ名前を繰り返した値は、配列の項目なら全部、それ以外は検証で 400）。
 - **利用者**：`GET /api/me`（`getMe`）は、サインインしている利用者の ID と設定（表示名・タイムゾーン・週の始まり。domain の `User` から ID を除いたもの）を返す。設定をまだ作っていなければ `settings` は `null` で、日付が変わったときの処理（#271）を走らせずに答える（設定がない間もこの読み取りだけは答え、クライアントは設定を作る画面を出す。#279、#266）。設定があれば、処理を走らせてから、`clock` と今の Sprint の参照（`sprints`：実行中・Review 中・計画中のそれぞれと、次に計画を始める週）も返す（R1）。次に計画を始める週（`next`）は、開始日・終了日・番号と、その週の名前（`week`。Sprint の `week` と同じ。省略可）を持つ。Sprint がまだない週を画面が開くのに要る（#274）。`end` は必須で足した（下の「壊さない変更」の、応答に必須の項目を足す規則）。
+- **利用者の設定を作る**：`PUT /api/me/settings`（`setSettings`。本文は `{ displayName, timeZone, weekStartsOn }`）。設定がなければ作り（201）、あれば表示名だけを書き直す（204。同じ値をもう一度送っても 204 で、何も書かない）。タイムゾーンと週の始まりを別の値で送ると 422 `invalidInput` で断る。理由：「今日」はタイムゾーンで、Sprint の期間は週の始まりで決まるので、すでにある Sprint がある利用者の値を変えると、それらの Sprint が動く。変えたときに既存の Sprint をどうするかは決まっていない。戻す条件：設定を後から変える画面の Issue が、その扱いを決めたとき（2026-10-03 司令塔の判断。オーナーへ要確認として Issue #279 に記録）。タイムゾーンは名前で、契約のスキーマは文字列としか見ないので、実在する名前かは domain の `parseTimeZone` が確かめ（なければ 422 `invalidInput`）、表示名は前後の空白を除いて空なら同じく 422。201 は作った設定を返す（表示名は前後の空白を除くので、送った値と違いうる）。ここだけ「作る → 201 は作った ID」の規則（本文のない 201 は生成物が `unknown` になり、`generated.test.ts` が断る）から外れる例外で、書き直し（204）や再送には本文がないので、クライアントはこの本文に頼らない（今の Web は使わない）。タイムゾーンは `Intl` の綴り（`asia/tokyo` は `Asia/Tokyo`）にそろえて保存・比べる。操作ではなく読み取りでもないので、`surfaces`（操作の面）には入れず、`requests.ts` の `settingsSurface` に置く。記録がなくても作れる唯一の書き込みで、サーバーは `flow.setUp` が受け持つ（読み込み → `settingsChange` → 最初の保存。ほかの書き込みと同じく版を確かめ、Activity は残さない）。
 - 以前の画面ごとの読み取り（`getOverview`・`getSprintChoice`・`getPlanning`・`getRunning`・`getToday`・`getRetro`・`getNextPlanning`）はなくした。画面が開く Sprint とその前後は `/me` の参照と `/sprints` の一覧（番号の並び、週の名前の出力専用の項目）から求まる。ナビの Backlog の件数は `/backlog` の件数。application のこれらの関数（`appOverview`・`sprintChoice`・`planningData`・`runningData`・`todayData`・`dayData`・`retroData`・`nextPlanningOf`）は、store のままの画面（#274〜#276）が使うので残す。契約の読み取りではないことを `coverage.test.ts` の一覧に書き、#277 で export から外す。
 
 ### 操作の応答に読み取りを含めない
@@ -189,7 +191,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 | 500 | `internalError` | 予期しない失敗 |
 
 - 各 operation の応答に書く：操作は 400（path の値・query・本文のどれもない操作を除く）・401・403・404・409・413・422・500。読み取りは 400（パラメータのある読み取り）・401・409・422・500。`getMe` は 401・409・500（設定があれば追いつきを走らせるので 409 がありうる。#295 R1）。読み取りの 409 は、読み取りの前の追いつき（#271）の書き込みが、ほかの書き込みとぶつかったとき。操作の 422 は domain の 3 つの code と `userNotSetUp` のどれか、読み取りの 422 は `userNotSetUp` だけ。
-- `userNotSetUp` は domain の規則ではなく、記録を読み込んだときに設定の行がないことで決まる。判定はサーバーの流れの 1 か所（`services/api/src/handlers/flow.ts`）に置く。設定を作る operation（#279）は、この code を断る対象から外す。
+- `userNotSetUp` は domain の規則ではなく、記録を読み込んだときに設定の行がないことで決まる。判定はサーバーの流れの 1 か所（`services/api/src/handlers/flow.ts`）に置く。設定を作る `PUT /api/me/settings`（#279）は、記録を読む前に分かれるので、この code で断らない（`flow.setUp`）。
 - 本文の大きさの上限は 64 KiB（書き込みのすべての面に Hono の `bodyLimit`。#295 までは `/api/operations/*`）。いちばん大きい本文は Task の説明を含む `saveTask` で、文章を書く欄として十分に大きく、D1 の文字列・行の上限（2 MB）より小さい。`Content-Length` があれば本文を読まずに 413 を返す（ない要求は上限まで読んでから 413）。上限は `info.version` を変えずに広げてよい（狭めるのは壊す変更）。
 - `requireAuth` の 401 の本文も、この形（`unauthenticated`）にした（#266）。
 - 422 にしたのは、要求の形は正しく、記録の今の状態や値の規則で受け付けられないことを、形の誤り（400）と分けるため。409 は版の衝突だけに使い、クライアントは 409 なら読み直す（ADR 0004）。
@@ -219,7 +221,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 `packages/api-contract` のテストで確かめる。
 
-- 一覧：生成したクライアントの operation が、`surfaces` の面と読み取りの 8 個（`getMe` を含む）に一致し、`operations` のすべての名前が面のどれかに行く。`@itera/application` の関数の export のうち、読み取りでも操作の道具でもないものがあれば失敗する（読み取りを足したら契約にも足す）。
+- 一覧：生成したクライアントの operation が、`surfaces` の面、読み取りの 8 個（`getMe` を含む）、設定を作る `setSettings`（`settingsSurface`）に一致し、`operations` のすべての名前が面のどれかに行く。`@itera/application` の関数の export のうち、読み取りでも操作の道具でもないものがあれば失敗する（読み取りを足したら契約にも足す）。
 - 往復（`src/requests.test.ts`）：操作ごとの入力の例（`OPERATION_EXAMPLES`。省略できる項目の有無を含む）を `requestOf` で要求にし、面のスキーマで検証して `operation` に通すと、同じ操作と入力に戻る。面のメソッドと経路が、生成したクライアントの関数が送るものと同じ。面のスキーマのすべての項目を、どれかの操作の要求が使う。すべての経路と query の名前が kebab-case。
 - 型：各操作の入力と要求は `requests.ts` の中で生成した型に対して型検査する。出力と応答（1 つの操作だけの面は同じ型、いくつかの操作の面は各出力が応答に合い、合わせて応答の項目になる）、各読み取りの結果と応答の `view`（`undefined` は `null`）と `clock` が、型として同じ（片方への代入ができるだけでなく、余分な・欠けたキーもない）。比べる前に、両方から brand（ID・日付）と `readonly` を外す。`pnpm typecheck` で確かめる。このテストは、今は application の結果から DTO への写像が恒等であることを確かめるもので、application の形が契約の正本であることを示すものではない（契約の正本は `openapi/`）。内部の変更で型が合わなくなったら、意図した契約の変更でない限り、契約は直さずに `services/api` に写像を置く（ADR 0007「アプリケーション層の読み取りと API の DTO」）。
 - fixture：PRD §12 の 12 状態で、すべての読み取り（Backlog の絞り込みごと、すべての Sprint の番号と次の週、昨日と明日）の結果を JSON にして `{ clock, view }` で包み、生成した応答のスキーマで検証する。

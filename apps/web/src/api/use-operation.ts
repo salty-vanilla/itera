@@ -47,19 +47,37 @@ const OPERATION_SCOPE = 'operations';
  */
 export function useOperation<N extends OperationName>(
   name: N,
+  options: { whileSending?: 'drop' | 'wait' } = {},
+) {
+  return useSend<PlainInput<N>, PlainOutput<N>>(
+    name,
+    (client, input) => sendOperation(client, name, input),
+    options,
+  );
+}
+
+/**
+ * What `useOperation` does for one write of the contract, for any request
+ * (the person's settings are a write that no operation of
+ * packages/application takes, `useSetSettings`): the sending, the Toast of a
+ * failure, the reads read again. `key` names the mutation.
+ */
+export function useSend<Input, Output>(
+  key: string,
+  send: (client: Client, input: Input) => Promise<Output>,
   { whileSending = 'drop' }: { whileSending?: 'drop' | 'wait' } = {},
 ) {
   const client = useApiClient();
   const toast = useToast();
   const { mutateAsync, isPending } = useMutation({
-    mutationKey: [name],
-    mutationFn: (input: PlainInput<N>) => sendOperation(client, name, input),
+    mutationKey: [key],
+    mutationFn: (input: Input) => send(client, input),
     scope: { id: OPERATION_SCOPE },
   });
   // A ref, not `isPending`: a second press can come before the render.
   const sending = useRef(false);
   const run = useCallback(
-    async (...[input]: Args<N>): Promise<Outcome<PlainOutput<N>>> => {
+    async (...[input]: Args<Input>): Promise<Outcome<Output>> => {
       if (whileSending === 'drop') {
         if (sending.current) return { ok: false };
         sending.current = true;
@@ -67,7 +85,7 @@ export function useOperation<N extends OperationName>(
       try {
         return {
           ok: true,
-          value: await mutateAsync(input as PlainInput<N>),
+          value: await mutateAsync(input as Input),
         };
       } catch (error) {
         const failed = saveFailedToast(failureOf(error));
@@ -83,8 +101,7 @@ export function useOperation<N extends OperationName>(
 }
 
 /** `run`'s arguments: the input, none for an operation without one. */
-type Args<N extends OperationName> =
-  PlainInput<N> extends undefined ? [] : [input: PlainInput<N>];
+type Args<Input> = [Input] extends [undefined] ? [] : [input: Input];
 
 /**
  * Sends an operation as its request with the generated client's function

@@ -7,6 +7,7 @@ import type { Auth, Passkey } from '@/auth/auth';
 import { UNAUTHENTICATED } from '@/auth/auth';
 
 export const MOCK_EMAIL = 'you@example.com';
+export const MOCK_NAME = 'わたし';
 
 export interface MockAuth extends Auth {
   readonly isSignedIn: () => boolean;
@@ -27,7 +28,8 @@ export function createMockAuth({
   ];
   return {
     isSignedIn: () => signedIn,
-    getSession: async () => (signedIn ? { email: MOCK_EMAIL } : null),
+    getSession: async () =>
+      signedIn ? { email: MOCK_EMAIL, name: MOCK_NAME } : null,
     signInWithGoogle: async ({ returnTo }) => {
       signedIn = true;
       assign(returnTo);

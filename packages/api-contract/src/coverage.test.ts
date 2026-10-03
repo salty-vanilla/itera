@@ -4,7 +4,7 @@
 import * as application from '@itera/application';
 import { describe, expect, it } from 'vitest';
 import * as sdk from './client';
-import { requestOf, surfaces } from './requests';
+import { requestOf, settingsSurface, surfaces } from './requests';
 import { OPERATION_EXAMPLES } from './testing';
 
 /** The contract's reads and the functions whose result each returns. */
@@ -44,6 +44,8 @@ const NOT_READS = new Set([
   'reviewEnded',
   'beginDay',
   'catchUp',
+  // The person's settings: the server's, with the first write (requests.ts).
+  'settingsChange',
   // Running operations, and IDs.
   'createMemoryStore',
   'applyRecordChanges',
@@ -60,9 +62,12 @@ const contract = Object.entries(sdk)
 describe('the contract', () => {
   it('has a surface for each operation of the application, and no other write', () => {
     const reads = new Set(Object.keys(READS));
+    // The settings are made before there are records for an operation to
+    // run on: the one write that is not an operation (requests.ts).
     expect(contract.filter((name) => !reads.has(name)).toSorted()).toEqual(
-      Object.keys(surfaces).toSorted(),
+      [...Object.keys(surfaces), 'setSettings'].toSorted(),
     );
+    expect(settingsSurface.url).toBe('/me/settings');
     expect(Object.keys(OPERATION_EXAMPLES).toSorted()).toEqual(
       Object.keys(application.operations).toSorted(),
     );

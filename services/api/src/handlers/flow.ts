@@ -3,11 +3,13 @@ import {
   catchUp as systemCatchUp,
   createIdSource,
   mergeChanges,
+  settingsChange,
   type Change,
   type ChangeContext,
   type Clock,
   type RecordChanges,
   type Records,
+  type SettingsInput,
 } from '@itera/application';
 import {
   toLocalDate,
@@ -59,6 +61,15 @@ export type ReadResponse<View> = {
 export type Flow = {
   /** Runs an operation of the person, writes its changes and returns its value. */
   operate<T>(c: Context<AppEnv>, change: Change<T>): Promise<T>;
+  /**
+   * Makes the person's settings, the one write that needs no records: it
+   * is what makes them possible. Answers whether this made them (the first
+   * time) or wrote them again, and the settings as they now are.
+   */
+  setUp(
+    c: Context<AppEnv>,
+    settings: SettingsInput,
+  ): Promise<{ created: boolean; settings: SettingsInput }>;
   /** Reads the records as of now. */
   read<View>(
     c: Context<AppEnv>,
@@ -205,6 +216,34 @@ export function createFlow({
       );
       if (!saved) throw conflict();
       return value as T;
+    },
+    async setUp(c, settings) {
+      const { db, userId } = c.var;
+      const loaded = await loadRecords(db, userId);
+      const result = settingsChange(
+        userId,
+        loaded.records?.user ?? null,
+        settings,
+      );
+      if (!result.ok) throw ApiError.fromDomain(result.error);
+      const { changes, created, user: person } = result.value;
+      const { user } = changes;
+      if (user !== undefined) {
+        const saved = await saveRecords(db, {
+          userId,
+          loaded,
+          changes,
+          activities: [],
+          // Written without a catch-up: the day the records were brought up
+          // to stays (ADR 0004 追いついた日), so that the days between are
+          // still run by the next read or operation. The first time has no
+          // records to bring up, so it starts from today.
+          caughtUpTo: loaded.caughtUpTo ?? toLocalDate(now(), user.timeZone),
+        });
+        if (!saved.ok) throw conflict();
+      }
+      const { displayName, timeZone, weekStartsOn } = person;
+      return { created, settings: { displayName, timeZone, weekStartsOn } };
     },
     async read(c, read) {
       const { records, clock } = await caughtUpForRead(c);

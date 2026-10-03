@@ -52,7 +52,9 @@ export function createBetterAuth(origin: string): Auth {
     async getSession() {
       const { data, error } = await client.getSession();
       if (error !== null) throw error;
-      return data === null ? null : { email: data.user.email };
+      return data === null
+        ? null
+        : { email: data.user.email, name: data.user.name };
     },
     async signInWithGoogle({ returnTo, failedTo }) {
       // Better Auth's client follows the answer's URL to Google.

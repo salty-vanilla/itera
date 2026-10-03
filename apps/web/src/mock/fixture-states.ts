@@ -21,6 +21,8 @@ export interface FixtureState {
   readonly label: string;
   /** The screen's search parameters the dev menu opens it with. */
   readonly search?: Readonly<Record<string, string>>;
+  /** `false`: the person has not made their settings yet (#279). */
+  readonly settingsMade?: false;
 }
 
 const ids = fixtureIds();
@@ -60,11 +62,23 @@ const states: Readonly<Record<FixtureStateId, Omit<FixtureState, 'id'>>> = {
   'retro-start': { screen: 'retro', label: '開始' },
   'retro-reflect': { screen: 'retro', label: '振り返り' },
   'retro-before-complete': { screen: 'retro', label: '完了直前' },
+  // A person who has just started: no records, with and without settings.
+  empty: { screen: 'today', label: '空（記録なし）' },
+  'before-settings': {
+    screen: 'today',
+    label: '空（設定の前）',
+    settingsMade: false,
+  },
 };
 
 export const fixtureStates: readonly FixtureState[] = fixtureStateIds.map(
   (id) => ({ id, ...states[id] }),
 );
+
+/** Whether a state's person has made their settings (all but one have). */
+export function fixtureSettingsMade(id: FixtureStateId): boolean {
+  return states[id].settingsMade !== false;
+}
 
 /** The state opened when the URL names none. */
 export const defaultFixtureState: FixtureStateId = 'today-daytime';

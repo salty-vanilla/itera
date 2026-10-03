@@ -22,7 +22,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 /** An Auth that is signed in and does everything; override what a test needs. */
 export function fakeAuth(overrides: Partial<Auth> = {}): Auth {
   return {
-    getSession: async () => ({ email: 'you@example.com' }),
+    getSession: async () => ({ email: 'you@example.com', name: 'あなた' }),
     signInWithGoogle: async () => true,
     signInWithPasskey: async () => ({ ok: true }),
     listPasskeys: async () => [],

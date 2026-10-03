@@ -81,6 +81,10 @@ describe('TimeZone', () => {
   it('accepts IANA names and returns an error for unknown ones', () => {
     expect(parseTimeZone('Asia/Tokyo').ok).toBe(true);
     expect(parseTimeZone('UTC').ok).toBe(true);
+    expect(parseTimeZone('asia/tokyo')).toEqual({
+      ok: true,
+      value: 'Asia/Tokyo',
+    });
     expect(parseTimeZone('Mars/Olympus')).toMatchObject({
       ok: false,
       error: { code: 'invalidInput' },

@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useNavigate, useRouter } from '@tanstack/react-router';
+import { Link, useRouter } from '@tanstack/react-router';
 import { useState } from 'react';
-import { SIGN_IN_PATH, sendToSignIn, signInHref } from '@/auth/sign-in';
+import { sendToSignIn, signInHref } from '@/auth/sign-in';
 import type { PasskeyOutcome } from '@/auth/auth';
 import { useAuth } from '@/auth/auth-provider';
+import { useSignOut } from '@/auth/use-sign-out';
 import { sessionQuery } from '@/auth/session-query';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Notice } from '@/components/ui/notice';
@@ -31,7 +32,6 @@ type AddProblem = Exclude<
 function SettingsScreen() {
   const auth = useAuth();
   const router = useRouter();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const toast = useToast();
   const [problem, setProblem] = useState<AddProblem | null>(null);
@@ -42,15 +42,14 @@ function SettingsScreen() {
     queryFn: () => auth.listPasskeys(),
   });
 
-  // Not mutations: the query cache's operations read the contract's
-  // reads again afterwards (api/query-client.ts), which signing out must not.
-  const [busy, setBusy] = useState<'add' | 'signOut' | null>(null);
+  const [adding, setAdding] = useState(false);
+  const { signOut, busy: signingOut } = useSignOut();
 
   const addPasskey = async () => {
-    setBusy('add');
+    setAdding(true);
     setProblem(null);
     const outcome = await auth.addPasskey();
-    setBusy(null);
+    setAdding(false);
     if (outcome.ok) {
       toast.show({
         kind: 'passkey-added',
@@ -60,25 +59,6 @@ function SettingsScreen() {
       void queryClient.invalidateQueries({ queryKey: PASSKEYS_KEY });
     } else if (outcome.reason === 'unauthenticated') sendToSignIn(router);
     else if (outcome.reason !== 'cancelled') setProblem(outcome.reason);
-  };
-
-  const signOut = async () => {
-    setBusy('signOut');
-    try {
-      await auth.signOut();
-    } catch {
-      setBusy(null);
-      toast.show({
-        kind: 'sign-out-failed',
-        tone: 'danger',
-        title: 'サインアウトできませんでした',
-        description: 'もう一度試してください。',
-      });
-      return;
-    }
-    // Nothing of the person stays in the page once signed out.
-    queryClient.clear();
-    void navigate({ to: SIGN_IN_PATH, replace: true });
   };
 
   return (
@@ -159,8 +139,8 @@ function SettingsScreen() {
             <Button
               variant="primary"
               onClick={() => void addPasskey()}
-              disabled={busy === 'signOut'}
-              {...(busy === 'add'
+              disabled={signingOut}
+              {...(adding
                 ? { loading: true, loadingLabel: 'パスキーを追加中…' }
                 : {})}
             >
@@ -171,8 +151,8 @@ function SettingsScreen() {
         <div className="mt-4">
           <Button
             onClick={() => void signOut()}
-            disabled={busy === 'add'}
-            {...(busy === 'signOut'
+            disabled={adding}
+            {...(signingOut
               ? { loading: true, loadingLabel: 'サインアウト中…' }
               : {})}
           >
