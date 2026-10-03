@@ -22,6 +22,15 @@ export function formatDate(date: LocalDate): string {
   return `${month}/${day} (${weekday})`;
 }
 
+/**
+ * 「9/28 (月)」: the day an instant falls on in this device's time zone,
+ * for what is about the device rather than the records (a passkey added).
+ */
+export function formatDeviceDate(at: string): string {
+  const date = new Date(at);
+  return `${date.getMonth() + 1}/${date.getDate()} (${WEEKDAYS[date.getDay()]})`;
+}
+
 /** 「9/28」, where the weekday would only add width. */
 export function formatMonthDay(date: LocalDate): string {
   const { month, day } = parts(date);

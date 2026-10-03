@@ -181,6 +181,17 @@ function migratingOn(pkg) {
 
 // Outside the rule: the tests and their helpers, which open the fixture's
 // records, and the browser mock (the server's stand-in).
+// Better Auth's client stays in the one module that implements `Auth`
+// (apps/web/src/auth/better-auth.ts, #278); the rest of apps/web uses the
+// interface, which the browser mock answers too. In both blocks below, as
+// each replaces the other's rule of the same name.
+const WEB_BETTER_AUTH = 'apps/web/src/auth/better-auth.ts';
+const webBetterAuthPattern = {
+  regex: '^(better-auth|@better-auth/)',
+  message:
+    'Use Auth (@/auth/auth-provider); Better Auth stays in src/auth/better-auth.ts.',
+};
+
 const WEB_NOT_SCREENS = [
   'apps/web/src/**/*.test.{ts,tsx}',
   'apps/web/src/test/**',
@@ -233,6 +244,7 @@ export default defineConfig(
     ignores: [
       ...WEB_NOT_SCREENS,
       'apps/web/src/lib/domain-functions.ts',
+      WEB_BETTER_AUTH,
       ...migratingOn('domain'),
     ],
     rules: {
@@ -240,6 +252,7 @@ export default defineConfig(
         'error',
         {
           patterns: [
+            webBetterAuthPattern,
             {
               regex: '^@itera/domain(/|$)',
               message:
@@ -252,12 +265,17 @@ export default defineConfig(
   },
   {
     files: ['apps/web/src/**/*.{ts,tsx}', 'apps/web/.storybook/**/*.{ts,tsx}'],
-    ignores: [...WEB_NOT_SCREENS, ...migratingOn('application')],
+    ignores: [
+      ...WEB_NOT_SCREENS,
+      WEB_BETTER_AUTH,
+      ...migratingOn('application'),
+    ],
     rules: {
       '@typescript-eslint/no-restricted-imports': [
         'error',
         {
           patterns: [
+            webBetterAuthPattern,
             {
               regex: '^@itera/application(/|$)',
               message:

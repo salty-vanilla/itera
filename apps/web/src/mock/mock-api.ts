@@ -4,8 +4,10 @@
 // (#273〜#276) change the same records, so both see one set of records.
 //
 // The same steps as the API (ADR 0004 操作と読み取りの処理), less what has
-// no meaning here: the person is always signed in (#278), the Origin is the
-// app's own, and there is no version to conflict.
+// no meaning here: the Origin is the app's own, and there is no version to
+// conflict. The person is signed in until they sign out in the mock's auth
+// (mock-auth.ts); then every request is refused with 401, as the API does
+// without a session (#278).
 // 1. The request is checked against the contract's schemas (400).
 // 2. The system's records are brought up to now: a Sprint past its end goes
 //    to Review, then the running Sprint's day starts (#271).
@@ -151,7 +153,10 @@ export interface Mock {
 }
 
 /** The mock over a store: what answers the client, and what it changes. */
-export function createMock(store: RecordStore): Mock {
+export function createMock(
+  store: RecordStore,
+  { isSignedIn = () => true }: { isSignedIn?: () => boolean } = {},
+): Mock {
   let answering = false;
   /** Runs the store's changes of an answer, which are the mock's own. */
   const own = <T>(run: () => T): T => {
@@ -166,7 +171,9 @@ export function createMock(store: RecordStore): Mock {
     fetch: async (input, init) => {
       const request = new Request(input, init);
       try {
-        const response = await answer(store, request, own);
+        const response = isSignedIn()
+          ? await answer(store, request, own)
+          : failure(401, 'unauthenticated', 'No session.');
         response.headers.set(MOCK_HEADER, '1');
         return response;
       } catch (error) {
