@@ -20,9 +20,12 @@ import type { Flow, Guards } from './flow';
 import { queryInput, validate } from './validate';
 
 /**
- * Each read of the contract, by its operationId, and the application's
- * result its `view` is (packages/api-contract conformance.test.ts holds
- * them equal to the contract's).
+ * Each read of the contract, by its operationId, and the `view` it answers
+ * with. For now that is the application's result as it is: the mapping to
+ * the contract's DTO is the identity (ADR 0007 アプリケーション層の読み取りと
+ * API の DTO; packages/api-contract conformance.test.ts holds the types
+ * equal). When the application's shape changes but the contract does not,
+ * the route's `read` maps the result to the DTO here, in services/api.
  */
 type ReadViews = {
   getOverview: AppOverview;
