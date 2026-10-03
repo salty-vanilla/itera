@@ -122,7 +122,7 @@ describe('useOperation', () => {
     expect(onUnauthenticated).toHaveBeenCalled();
     expect(screen.queryAllByText('保存できませんでした')).toHaveLength(0);
     expect(
-      screen.queryAllByText('保存できたか分かりませんでした'),
+      screen.queryAllByText('保存できたかわかりませんでした'),
     ).toHaveLength(0);
   });
 
@@ -306,7 +306,7 @@ describe('a failed operation', () => {
         'GET /api/me',
       ]);
       expect(
-        await screen.findAllByText('保存できたか分かりませんでした'),
+        await screen.findAllByText('保存できたかわかりませんでした'),
       ).not.toHaveLength(0);
       expect(
         screen.getAllByText(
@@ -345,7 +345,7 @@ describe('reading again after an operation', () => {
         'GET /api/me',
       ]);
       expect(
-        screen.getAllByText('保存できたか分かりませんでした'),
+        screen.getAllByText('保存できたかわかりませんでした'),
       ).not.toHaveLength(0);
       expect(result.current.rename.pending).toBe(false);
     } finally {
