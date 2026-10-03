@@ -21,7 +21,7 @@ import {
 } from '@/lib/time-format';
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 import { cn } from '@/lib/utils';
-import type { ActualTarget, RetroData } from '@/store/retro-view';
+import type { ActualTarget, RetroData } from '@/store/views';
 import {
   ASSESSMENTS,
   AssessmentTag,

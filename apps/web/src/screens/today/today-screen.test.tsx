@@ -11,9 +11,12 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import type { Clock } from '@/store/records';
+import type { Clock } from '@/store/record-store';
 import type { StoreSnapshot } from '@/store/record-store';
 import { findHours, getHours, getMinutes } from '@/test/duration';
+import { fixtureIds } from '@itera/application/fixtures';
+
+const ids = fixtureIds();
 
 afterEach(() => {
   cleanup();
@@ -236,7 +239,7 @@ describe('Today — the top, when all chosen are closed (#99)', () => {
       }),
     );
     await menu('関連論文を 3本読む', '今日は見送る');
-    expect(selectionOf('task-paper')?.resolution).toBe('deferred');
+    expect(selectionOf(ids.task.paper)?.resolution).toBe('deferred');
     expect(screen.getByText('今日の残りはありません')).toBeTruthy();
   });
 });
@@ -246,13 +249,13 @@ describe('Today — 今日へ', () => {
     await renderAt('/today?fixture=today-morning');
     expect(within(region('今日やる')).getByText(/まだありません/)).toBeTruthy();
     // Not chosen automatically.
-    expect(selectionOf('task-paper')).toBeUndefined();
+    expect(selectionOf(ids.task.paper)).toBeUndefined();
     await userEvent.click(
       within(region('昨日の続き')).getByRole('button', {
         name: '今日へ：関連論文を 3本読む',
       }),
     );
-    expect(selectionOf('task-paper')?.resolution).toBe('selected');
+    expect(selectionOf(ids.task.paper)?.resolution).toBe('selected');
     expect(row('今日やる', '関連論文を 3本読む')).toBeTruthy();
     expect(screen.queryByRole('region', { name: '昨日の続き' })).toBeNull();
     await waitFor(() =>
@@ -270,18 +273,18 @@ describe('Today — 今日へ', () => {
       }),
     );
     const occurrence = lastSnapshot().records.occurrences.find(
-      (o) => o.taskId === 'task-reading' && o.scheduledDate === '2026-10-02',
+      (o) => o.taskId === ids.task.reading && o.scheduledDate === '2026-10-02',
     );
-    expect(selectionOf('task-reading')?.occurrenceId).toBe(occurrence?.id);
+    expect(selectionOf(ids.task.reading)?.occurrenceId).toBe(occurrence?.id);
     await menu('英語の多読 30分', '今日の回をスキップする');
-    expect(selectionOf('task-reading')?.resolution).toBe('skipped');
+    expect(selectionOf(ids.task.reading)?.resolution).toBe('skipped');
     const skipped = row('今日やる', '英語の多読 30分');
     expect(within(skipped).getByText('スキップ')).toBeTruthy();
     // The Menu's trigger is gone; 「取り消す」 takes the focus.
     const undo = within(skipped).getByRole('button', { name: /取り消す/ });
     await waitFor(() => expect(document.activeElement).toBe(undo));
     await userEvent.click(undo);
-    expect(selectionOf('task-reading')?.resolution).toBe('selected');
+    expect(selectionOf(ids.task.reading)?.resolution).toBe('selected');
     await waitFor(() =>
       expect(document.activeElement?.getAttribute('aria-label')).toBe(
         '完了にする：英語の多読 30分',
@@ -316,7 +319,7 @@ describe('Today — the daily operations in the detail (#94)', () => {
     await userEvent.click(
       within(now).getByRole('button', { name: '今日の回をスキップする' }),
     );
-    expect(selectionOf('task-reading')?.resolution).toBe('skipped');
+    expect(selectionOf(ids.task.reading)?.resolution).toBe('skipped');
     // In the menu's words (#233).
     expect(
       within(detail).getByRole('region', { name: '今日と今週' }).textContent,
@@ -366,9 +369,9 @@ describe('Today — the daily operations', () => {
       name: '完了にする：顧客インタビューの設計',
     });
     await userEvent.click(circle);
-    expect(selectionOf('task-interview')?.resolution).toBe('done');
+    expect(selectionOf(ids.task.interview)?.resolution).toBe('done');
     expect(
-      lastSnapshot().records.tasks.find((t) => t.id === 'task-interview')
+      lastSnapshot().records.tasks.find((t) => t.id === ids.task.interview)
         ?.lifecycle,
     ).toBe('completed');
     // In place, struck through; no Toast (patterns.md Today).
@@ -379,13 +382,13 @@ describe('Today — the daily operations', () => {
         name: '完了を取り消す：顧客インタビューの設計',
       }),
     );
-    expect(selectionOf('task-interview')?.resolution).toBe('selected');
+    expect(selectionOf(ids.task.interview)?.resolution).toBe('selected');
   });
 
   it('starts, then 今日は中断する with actual hours from the surface', async () => {
     await renderAt('/today?fixture=today-interrupt');
     await menu('顧客インタビューの設計', '開始');
-    expect(selectionOf('task-interview')?.resolution).toBe('started');
+    expect(selectionOf(ids.task.interview)?.resolution).toBe('started');
     // #101: in ink with its icon, not only a colour. #163: 「作業中 · 10:12
     // から」, the `here` bar and the title in 700.
     const startedRow = row('今日やる', '顧客インタビューの設計');
@@ -406,7 +409,7 @@ describe('Today — the daily operations', () => {
     await userEvent.click(
       screen.getByRole('button', { name: '今日は中断する' }),
     );
-    expect(selectionOf('task-interview')?.resolution).toBe('paused');
+    expect(selectionOf(ids.task.interview)?.resolution).toBe('paused');
     expect(
       sprint().actualTimes.some(
         (a) => a.hours === 1.5 && a.via === 'pause' && a.date === '2026-10-01',
@@ -426,7 +429,7 @@ describe('Today — the daily operations', () => {
   it('defers, shows the row closed, and still completes it that day (F17)', async () => {
     await renderAt('/today?fixture=today-interrupt');
     await menu('実験データの前処理', '今日は見送る');
-    expect(selectionOf('task-dataset')?.resolution).toBe('deferred');
+    expect(selectionOf(ids.task.dataset)?.resolution).toBe('deferred');
     const closed = row('今日はもうやらない', '実験データの前処理');
     expect(within(closed).getByText('見送り')).toBeTruthy();
     await userEvent.click(
@@ -434,7 +437,7 @@ describe('Today — the daily operations', () => {
         name: '完了にする：実験データの前処理',
       }),
     );
-    expect(selectionOf('task-dataset')).toMatchObject({
+    expect(selectionOf(ids.task.dataset)).toMatchObject({
       resolution: 'done',
       closedBefore: { resolution: 'deferred' },
     });
@@ -443,13 +446,13 @@ describe('Today — the daily operations', () => {
         name: '完了を取り消す：実験データの前処理',
       }),
     );
-    expect(selectionOf('task-dataset')?.resolution).toBe('deferred');
+    expect(selectionOf(ids.task.dataset)?.resolution).toBe('deferred');
   });
 
   it('puts the row back in 今週の残り at once, without counting a deferral (#233)', async () => {
     await renderAt('/today?fixture=today-interrupt');
     await menu('顧客インタビューの設計', '今週の残りに戻す');
-    expect(selectionOf('task-interview')?.resolution).toBe('removed');
+    expect(selectionOf(ids.task.interview)?.resolution).toBe('removed');
     expect(
       within(region('今日やる')).queryByText('顧客インタビューの設計'),
     ).toBeNull();
@@ -467,14 +470,14 @@ describe('Today — the daily operations', () => {
   it('今日へ takes a row put back today to 今日やる again: the same selection (F37, #233)', async () => {
     await renderAt('/today?fixture=today-interrupt');
     const before = sprint().dailySelections.length;
-    const id = selectionOf('task-interview')?.id;
+    const id = selectionOf(ids.task.interview)?.id;
     await menu('顧客インタビューの設計', '今週の残りに戻す');
     await userEvent.click(
       within(row('今週の残り', '顧客インタビューの設計')).getByRole('button', {
         name: '今日へ：顧客インタビューの設計',
       }),
     );
-    expect(selectionOf('task-interview')).toMatchObject({
+    expect(selectionOf(ids.task.interview)).toMatchObject({
       id,
       resolution: 'selected',
     });
@@ -513,7 +516,7 @@ describe('Today — the daily operations', () => {
     '%s from the `…` says so in a Toast with 元に戻す (#163)',
     async (action, result) => {
       await renderAt('/today?fixture=today-interrupt');
-      const id = selectionOf('task-interview')?.id;
+      const id = selectionOf(ids.task.interview)?.id;
       await menu('顧客インタビューの設計', action);
       const toast = (
         await screen.findByText(`「顧客インタビューの設計」${result}`)
@@ -521,7 +524,7 @@ describe('Today — the daily operations', () => {
       await userEvent.click(
         within(toast).getByRole('button', { name: '元に戻す' }),
       );
-      expect(selectionOf('task-interview')).toMatchObject({
+      expect(selectionOf(ids.task.interview)).toMatchObject({
         id,
         resolution: 'selected',
       });
@@ -574,13 +577,13 @@ describe('Today — the daily operations', () => {
     // Labels alone (#163).
     expect(items.some((i) => i.hasAttribute('aria-describedby'))).toBe(false);
     await userEvent.click(screen.getByRole('menuitem', { name: '完了にする' }));
-    expect(selectionOf('task-interview')?.resolution).toBe('done');
+    expect(selectionOf(ids.task.interview)?.resolution).toBe('done');
   });
 
   it('F37: 今日は見送る, then 取り消す the same day: back to 今日やる, the same selection', async () => {
     await renderAt('/today?fixture=today-interrupt');
     const before = sprint().dailySelections.length;
-    const id = selectionOf('task-interview')?.id;
+    const id = selectionOf(ids.task.interview)?.id;
     await menu('顧客インタビューの設計', '今日は見送る');
     await userEvent.click(
       within(row('今日はもうやらない', '顧客インタビューの設計')).getByRole(
@@ -588,7 +591,7 @@ describe('Today — the daily operations', () => {
         { name: '取り消す（見送り）：顧客インタビューの設計' },
       ),
     );
-    expect(selectionOf('task-interview')).toMatchObject({
+    expect(selectionOf(ids.task.interview)).toMatchObject({
       id,
       resolution: 'selected',
     });
@@ -701,7 +704,7 @@ describe('Today — completed from the Backlog', () => {
     await userEvent.click(
       await screen.findByRole('button', { name: '完了にする' }),
     );
-    expect(selectionOf('task-onboarding')).toMatchObject({
+    expect(selectionOf(ids.task.onboarding)).toMatchObject({
       origin: 'backlogCompletion',
       resolution: 'done',
     });
@@ -730,9 +733,9 @@ describe('Today — completed from the Backlog', () => {
       }),
     );
     // The choice the completion made is gone; the Task is back in the week.
-    expect(selectionOf('task-onboarding')).toBeUndefined();
+    expect(selectionOf(ids.task.onboarding)).toBeUndefined();
     expect(
-      lastSnapshot().records.tasks.find((t) => t.id === 'task-onboarding')
+      lastSnapshot().records.tasks.find((t) => t.id === ids.task.onboarding)
         ?.lifecycle,
     ).toBe('active');
     const back = within(
@@ -971,9 +974,9 @@ describe('Today — the days', () => {
     clockOverride = at('2026-10-02', '06:30');
     await renderAt('/today?fixture=today-interrupt');
     await waitFor(() =>
-      expect(selectionOf('task-interview')?.resolution).toBe('unresolved'),
+      expect(selectionOf(ids.task.interview)?.resolution).toBe('unresolved'),
     );
-    expect(selectionOf('task-reading', '2026-10-02')?.origin).toBe(
+    expect(selectionOf(ids.task.reading, '2026-10-02')?.origin).toBe(
       'recurringToday',
     );
     expect(row('今日やる', '英語の多読 30分')).toBeTruthy();
@@ -987,7 +990,7 @@ describe('Today — the days', () => {
       screen.getByRole('button', { name: '振り返りを始める' }),
     );
     expect(
-      lastSnapshot().records.sprints.find((s) => s.id === 'sprint-2026-09-28')
+      lastSnapshot().records.sprints.find((s) => s.id === ids.sprint.current)
         ?.state,
     ).toBe('review');
     await waitFor(() => expect(router.state.location.pathname).toBe('/retro'));
@@ -1038,7 +1041,7 @@ describe('Today — outside the period (#54)', () => {
     // No active Sprint is left once the system has moved it to Review.
     await waitFor(() => expect(sprint).toThrow());
     const reviewed = lastSnapshot().records.sprints.find(
-      (s) => s.id === 'sprint-2026-09-28',
+      (s) => s.id === ids.sprint.current,
     );
     expect(reviewed?.state).toBe('review');
     // Open choices are closed by the system, not the person (F23).
@@ -1100,7 +1103,7 @@ describe('Today — keys of the lists (#48)', () => {
     const router = await renderAt('/today?fixture=today-interrupt');
     rowTitle('今日やる', '顧客インタビューの設計').focus();
     await userEvent.keyboard(' ');
-    expect(selectionOf('task-interview')?.resolution).toBe('done');
+    expect(selectionOf(ids.task.interview)?.resolution).toBe('done');
     expect(router.state.location.search).not.toHaveProperty('task');
   });
 
@@ -1108,7 +1111,7 @@ describe('Today — keys of the lists (#48)', () => {
     await renderAt('/today?fixture=today-morning');
     rowTitle('昨日の続き', '関連論文を 3本読む').focus();
     await userEvent.keyboard(' ');
-    expect(selectionOf('task-paper')?.resolution).toBe('selected');
+    expect(selectionOf(ids.task.paper)?.resolution).toBe('selected');
   });
 
   it('E opens the Task at its Estimate', async () => {
@@ -1141,7 +1144,7 @@ describe('Today — 見積もりを入れる (#96)', () => {
 
 describe('Today — 計画の時間 in the detail (#96)', () => {
   it('shows both values under the subtasks, and says only one is used', async () => {
-    await renderAt('/today?fixture=today-daytime&task=task-dataset');
+    await renderAt(`/today?fixture=today-daytime&task=${ids.task.dataset}`);
     const detail = await screen.findByRole('dialog');
     const group = within(detail).getByRole('radiogroup', {
       name: /計画の時間/,
@@ -1176,7 +1179,7 @@ describe('Today — 計画の時間 in the detail (#96)', () => {
 
 describe('Today — the Task detail (#95)', () => {
   it('a wrong value keeps the detail open; a valid one is saved on closing', async () => {
-    await renderAt('/today?fixture=today-daytime&task=task-bookshelf');
+    await renderAt(`/today?fixture=today-daytime&task=${ids.task.bookshelf}`);
     const detail = await screen.findByRole('dialog');
     const estimate = getHours(within(detail), /^見積もり(?!：)/);
     await userEvent.clear(estimate);
@@ -1189,13 +1192,13 @@ describe('Today — the Task detail (#95)', () => {
     await userEvent.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(
-      lastSnapshot().records.tasks.find((t) => t.id === 'task-bookshelf')
+      lastSnapshot().records.tasks.find((t) => t.id === ids.task.bookshelf)
         ?.estimate?.hours,
     ).toBe(2);
   });
 
   it('opening another Task saves the field first, or stays on a wrong value', async () => {
-    await renderAt('/today?fixture=today-daytime&task=task-bookshelf');
+    await renderAt(`/today?fixture=today-daytime&task=${ids.task.bookshelf}`);
     const detail = await screen.findByRole('dialog');
     const estimate = getHours(within(detail), /^見積もり(?!：)/);
     await userEvent.type(estimate, 'x');
@@ -1214,7 +1217,7 @@ describe('Today — the Task detail (#95)', () => {
       ),
     );
     expect(
-      lastSnapshot().records.tasks.find((t) => t.id === 'task-bookshelf')
+      lastSnapshot().records.tasks.find((t) => t.id === ids.task.bookshelf)
         ?.estimate?.hours,
     ).toBe(1);
   });

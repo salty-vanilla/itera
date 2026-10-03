@@ -6,7 +6,7 @@ import { formatDate, formatDateTime } from '@/lib/date-format';
 import { SELECTION_WORDS } from '@/lib/selection-words';
 import { formatHours } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
-import type { RetroData } from '@/store/retro-view';
+import type { RetroData } from '@/store/views';
 import { occurrenceWord, PinToggle } from './retro-words';
 import {
   actualLabel,

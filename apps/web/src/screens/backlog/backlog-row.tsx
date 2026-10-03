@@ -23,7 +23,7 @@ import { CompletionCircle, TaskRow } from '@/components/task/task-row';
 import { formatDate } from '@/lib/date-format';
 import { formatPattern } from '@/lib/recurrence-text';
 import { formatHours } from '@/lib/time-format';
-import type { BacklogItem } from '@/store/backlog-view';
+import type { BacklogItem } from '@/store/views';
 
 export function CarryOverText({
   count,

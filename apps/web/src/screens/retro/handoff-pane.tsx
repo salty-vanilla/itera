@@ -21,7 +21,7 @@ import {
 } from '@/lib/criterion-text';
 import { formatHours, formatRange } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
-import type { RetroCriterion, RetroData } from '@/store/retro-view';
+import type { RetroCriterion, RetroData } from '@/store/views';
 import { useNextPlanning } from '@/store/use-retro';
 import { CARRY_OVER_PLACE_WORDS, DECISION_WORDS } from './retro-words';
 import { UsedCriterion } from './used-criterion';

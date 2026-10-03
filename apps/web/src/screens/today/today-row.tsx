@@ -27,7 +27,7 @@ import { formatDate } from '@/lib/date-format';
 import { formatHours } from '@/lib/time-format';
 import { startedSince } from '@/lib/today-words';
 import type { PlanningValue, TimeZone } from '@itera/domain';
-import type { TodayItem, TodayRow as TodayRowData } from '@/store/today-view';
+import type { TodayItem, TodayRow as TodayRowData } from '@/store/views';
 
 // A row of 今日やる, or one closed today (DESIGN.md Task Row, patterns.md
 // Today). ○ is always there; the other daily operations are in the `…`

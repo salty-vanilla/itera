@@ -12,6 +12,9 @@ import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { StoreSnapshot } from '@/store/record-store';
 import { findHours, getHours, getMinutes } from '@/test/duration';
+import { fixtureIds } from '@itera/application/fixtures';
+
+const ids = fixtureIds();
 
 afterEach(cleanup);
 beforeEach(() => {
@@ -29,13 +32,12 @@ vi.mock('@/store/record-store', async (importOriginal) => {
   return {
     ...actual,
     createMemoryStore: (
-      ...[initial, options]: Parameters<typeof actual.createMemoryStore>
+      ...[initial]: Parameters<typeof actual.createMemoryStore>
     ) => {
       const store = actual.createMemoryStore(
         withoutCriteria
           ? { ...initial, records: { ...initial.records, criteria: [] } }
           : initial,
-        options,
       );
       lastSnapshot = () => store.getSnapshot();
       return store;
@@ -169,7 +171,7 @@ describe('Planning — 選ぶ', () => {
     );
     expect(
       draft().tasks.some(
-        (t) => t.taskId === 'task-interview' && t.outcome === 'draft',
+        (t) => t.taskId === ids.task.interview && t.outcome === 'draft',
       ),
     ).toBe(true);
     const work = within(planPane()).getByRole('region', { name: '仕事' });
@@ -178,7 +180,7 @@ describe('Planning — 選ぶ', () => {
     await userEvent.click(
       await screen.findByRole('button', { name: '元に戻す' }),
     );
-    expect(draft().tasks.some((t) => t.taskId === 'task-interview')).toBe(
+    expect(draft().tasks.some((t) => t.taskId === ids.task.interview)).toBe(
       false,
     );
   });
@@ -195,7 +197,7 @@ describe('Planning — 選ぶ', () => {
         .getAttribute('aria-checked'),
     ).toBe('true');
     const sprintTask = draft().tasks.find(
-      (t) => t.taskId === 'task-api-review',
+      (t) => t.taskId === ids.task.apiReview,
     );
     expect(sprintTask?.carriedFrom).toBeDefined();
   });
@@ -208,9 +210,9 @@ describe('Planning — 選ぶ', () => {
       }),
     );
     const chosen = draft().tasks.map((t) => t.taskId);
-    expect(chosen).toContain('task-tax');
+    expect(chosen).toContain(ids.task.tax);
     // 期限切れ is its own group: choosing 期限が近い leaves it out.
-    expect(chosen).not.toContain('task-passport');
+    expect(chosen).not.toContain(ids.task.passport);
   });
 
   it('splits 期限切れ from 期限が近い, and ends 期限が近い at the Sprint’s last day (#151)', async () => {
@@ -240,11 +242,12 @@ describe('Planning — 選ぶ', () => {
     await userEvent.click(box);
     const occ = () =>
       lastSnapshot().records.occurrences.find(
-        (o) => o.taskId === 'task-reading' && o.scheduledDate === '2026-09-30',
+        (o) =>
+          o.taskId === ids.task.reading && o.scheduledDate === '2026-09-30',
       );
     expect(occ()?.state).toBe('excluded');
     expect(
-      draft().tasks.find((t) => t.taskId === 'task-reading')?.occurrenceIds,
+      draft().tasks.find((t) => t.taskId === ids.task.reading)?.occurrenceIds,
     ).toHaveLength(2);
     await userEvent.click(box);
     expect(occ()?.state).toBe('pending');
@@ -309,7 +312,7 @@ describe('Planning — 選ぶ', () => {
     const task = lastSnapshot().records.tasks.find(
       (t) => t.title === '発表資料を見直す',
     );
-    expect(task?.areaId).toBe('area-research');
+    expect(task?.areaId).toBe(ids.area.research);
     const research = within(planPane()).getByRole('region', { name: /研究/ });
     const row = within(research)
       .getByText('発表資料を見直す')
@@ -344,7 +347,7 @@ describe('Planning — 選ぶ', () => {
       }),
       '単語を覚える{Enter}',
     );
-    expect(select).toHaveProperty('value', 'area-study');
+    expect(select).toHaveProperty('value', ids.area.study);
   });
 
   it('tells why rows are in already, also when Tasks are chosen', async () => {
@@ -388,7 +391,7 @@ describe('Planning — 整える', () => {
       '英語を毎日読む状態にする',
     );
     await userEvent.click(within(study).getByRole('button', { name: '保存' }));
-    expect(draft().goals.find((g) => g.areaId === 'area-study')?.text).toBe(
+    expect(draft().goals.find((g) => g.areaId === ids.area.study)?.text).toBe(
       '英語を毎日読む状態にする',
     );
     expect(within(study).getByText('英語を毎日読む状態にする')).toBeTruthy();
@@ -398,7 +401,7 @@ describe('Planning — 整える', () => {
     );
     await userEvent.clear(within(study).getByRole('textbox', { name: /目標/ }));
     await userEvent.click(within(study).getByRole('button', { name: '保存' }));
-    expect(draft().goals.some((g) => g.areaId === 'area-study')).toBe(false);
+    expect(draft().goals.some((g) => g.areaId === ids.area.study)).toBe(false);
   });
 
   it('shows an Area with neither a Goal nor a Task as one line, and a Goal can still be written (#161)', async () => {
@@ -430,7 +433,7 @@ describe('Planning — 整える', () => {
       '英語に触れる状態にする',
     );
     await userEvent.click(within(study).getByRole('button', { name: '保存' }));
-    expect(draft().goals.find((g) => g.areaId === 'area-study')?.text).toBe(
+    expect(draft().goals.find((g) => g.areaId === ids.area.study)?.text).toBe(
       '英語に触れる状態にする',
     );
     expect(within(study).getByText('英語に触れる状態にする')).toBeTruthy();
@@ -451,9 +454,9 @@ describe('Planning — 整える', () => {
     await userEvent.click(
       await screen.findByRole('menuitem', { name: '目標から外す' }),
     );
-    expect(draft().tasks.find((t) => t.taskId === 'task-paper')?.goalLink).toBe(
-      'unlinked',
-    );
+    expect(
+      draft().tasks.find((t) => t.taskId === ids.task.paper)?.goalLink,
+    ).toBe('unlinked');
     const row = within(research)
       .getByText('関連論文を 3本読む')
       .closest('[data-slot="task-row"]') as HTMLElement;
@@ -913,7 +916,7 @@ describe('Planning — 確かめる', () => {
   it('the criterion switch changes the preview, not the Estimate (invariant 7)', async () => {
     const router = await renderAt('/sprint?fixture=planning-check&stage=check');
     const before = lastSnapshot().records.tasks.find(
-      (t) => t.id === 'task-paper',
+      (t) => t.id === ids.task.paper,
     );
     await userEvent.click(
       within(summary()).getByRole('switch', { name: /このルールで計画する/ }),
@@ -926,7 +929,7 @@ describe('Planning — 確かめる', () => {
     // The whole range, from the suggestion, without the criterion (#250).
     expect(paper?.textContent).toContain('3〜5時間（提案）');
     expect(
-      lastSnapshot().records.tasks.find((t) => t.id === 'task-paper'),
+      lastSnapshot().records.tasks.find((t) => t.id === ids.task.paper),
     ).toBe(before);
   });
 
@@ -969,13 +972,14 @@ describe('Planning — 確定', () => {
       within(dialog).getByRole('button', { name: 'Sprint 2 を確定' }),
     );
     const sprint = lastSnapshot().records.sprints.find(
-      (s) => s.id === 'sprint-2026-09-28',
+      (s) => s.id === ids.sprint.current,
     );
     expect(sprint?.state).toBe('active');
     expect(sprint?.criterionUse).toMatchObject({ appliedAtConfirm: false });
     // Plans are fixed at confirm (invariant 16): the paper stays a range.
     expect(
-      sprint?.tasks.find((t) => t.taskId === 'task-paper')?.planSnapshot?.value,
+      sprint?.tasks.find((t) => t.taskId === ids.task.paper)?.planSnapshot
+        ?.value,
     ).toMatchObject({ lo: 3, hi: 5, criterionApplied: false });
     expect(await screen.findByText('Sprint 2 を確定しました')).toBeTruthy();
   });
@@ -1101,7 +1105,7 @@ describe('Planning — review fixes', () => {
 
   it('a Task completed during Planning blocks 確定 with a reason until it leaves the week', async () => {
     await renderAt(
-      '/sprint?fixture=planning-check&stage=check&task=task-onboarding',
+      `/sprint?fixture=planning-check&stage=check&task=${ids.task.onboarding}`,
     );
     const detail = await screen.findByRole('dialog');
     await userEvent.click(
@@ -1144,7 +1148,7 @@ describe('Planning — review fixes', () => {
 
   it('shows what an Estimate typed in the detail does to the plan, before closing (#165)', async () => {
     await renderAt(
-      '/sprint?fixture=planning-check&stage=pick&task=task-onboarding',
+      `/sprint?fixture=planning-check&stage=pick&task=${ids.task.onboarding}`,
     );
     const detail = await screen.findByRole('dialog');
     const line = detail.querySelector('[data-slot="detail-capacity"]')!;
@@ -1169,7 +1173,7 @@ describe('Planning — review fixes', () => {
       within(dialog).getByRole('button', { name: 'Sprint 2 を確定' }),
     );
     const sprint = lastSnapshot().records.sprints.find(
-      (s) => s.id === 'sprint-2026-09-28',
+      (s) => s.id === ids.sprint.current,
     );
     expect(sprint).toMatchObject({
       state: 'active',
@@ -1186,7 +1190,7 @@ describe('Planning — review fixes', () => {
 describe('Planning — review fixes (2)', () => {
   it('a recurring Task archived during Planning can leave the week, and then 確定 is possible', async () => {
     await renderAt(
-      '/sprint?fixture=planning-check&stage=check&task=task-reading',
+      `/sprint?fixture=planning-check&stage=check&task=${ids.task.reading}`,
     );
     const detail = await screen.findByRole('dialog');
     await userEvent.click(
@@ -1208,10 +1212,12 @@ describe('Planning — review fixes (2)', () => {
         name: '今週から外す（3回すべて）',
       }),
     );
-    expect(draft().tasks.some((t) => t.taskId === 'task-reading')).toBe(false);
+    expect(draft().tasks.some((t) => t.taskId === ids.task.reading)).toBe(
+      false,
+    );
     expect(
       lastSnapshot()
-        .records.occurrences.filter((o) => o.taskId === 'task-reading')
+        .records.occurrences.filter((o) => o.taskId === ids.task.reading)
         .filter((o) => o.scheduledDate >= '2026-09-28')
         .map((o) => o.state),
     ).toEqual(['excluded', 'excluded', 'excluded']);
@@ -1240,7 +1246,9 @@ describe('Planning — keys (#48)', () => {
       .getByRole('button', { name: '顧客インタビューの設計' })
       .focus();
     await userEvent.keyboard(' ');
-    expect(draft().tasks.some((t) => t.taskId === 'task-interview')).toBe(true);
+    expect(draft().tasks.some((t) => t.taskId === ids.task.interview)).toBe(
+      true,
+    );
     await userEvent.keyboard('e');
     // The Task's own, not a subtask's (「Estimate（時間）: …」).
     const estimate = await findHours(screen, /^見積もり(?!：)/);
@@ -1277,7 +1285,7 @@ describe('Planning — keys (#48)', () => {
 
   it('⌘/Ctrl+Enter while 確定 is not possible moves to the button and its reason', async () => {
     await renderAt(
-      '/sprint?fixture=planning-check&stage=check&task=task-onboarding',
+      `/sprint?fixture=planning-check&stage=check&task=${ids.task.onboarding}`,
     );
     const detail = await screen.findByRole('dialog');
     await userEvent.click(
@@ -1297,7 +1305,7 @@ describe('Planning — keys (#48)', () => {
 describe('Planning — the Task detail (#95)', () => {
   it('a wrong value keeps the detail open; a valid one is saved on closing', async () => {
     await renderAt(
-      '/sprint?fixture=planning-check&stage=check&task=task-onboarding',
+      `/sprint?fixture=planning-check&stage=check&task=${ids.task.onboarding}`,
     );
     const detail = await screen.findByRole('dialog');
     const estimate = getHours(within(detail), /^見積もり(?!：)/);
@@ -1311,14 +1319,14 @@ describe('Planning — the Task detail (#95)', () => {
     await userEvent.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(
-      lastSnapshot().records.tasks.find((t) => t.id === 'task-onboarding')
+      lastSnapshot().records.tasks.find((t) => t.id === ids.task.onboarding)
         ?.estimate?.hours,
     ).toBe(2);
   });
 
   it('opening another Task saves the field first, or stays on a wrong value', async () => {
     await renderAt(
-      '/sprint?fixture=planning-pick&stage=pick&task=task-bookshelf',
+      `/sprint?fixture=planning-pick&stage=pick&task=${ids.task.bookshelf}`,
     );
     const detail = await screen.findByRole('dialog');
     const estimate = getHours(within(detail), /^見積もり(?!：)/);
@@ -1337,7 +1345,7 @@ describe('Planning — the Task detail (#95)', () => {
       ),
     );
     expect(
-      lastSnapshot().records.tasks.find((t) => t.id === 'task-bookshelf')
+      lastSnapshot().records.tasks.find((t) => t.id === ids.task.bookshelf)
         ?.estimate?.hours,
     ).toBe(1);
   });
@@ -1388,7 +1396,7 @@ describe('Planning — 見積もりを入れる (#96)', () => {
 
   it('only the chosen side of 計画の時間 is in the plan (invariant 10)', async () => {
     await renderAt(
-      '/sprint?fixture=planning-check&stage=check&task=task-dataset',
+      `/sprint?fixture=planning-check&stage=check&task=${ids.task.dataset}`,
     );
     const detail = await screen.findByRole('dialog');
     const row = () =>

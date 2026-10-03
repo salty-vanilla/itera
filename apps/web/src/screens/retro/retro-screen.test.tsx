@@ -13,6 +13,9 @@ import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { StoreSnapshot } from '@/store/record-store';
 import { findHours } from '@/test/duration';
+import { fixtureIds } from '@itera/application/fixtures';
+
+const ids = fixtureIds();
 
 afterEach(() => {
   cleanup();
@@ -66,7 +69,7 @@ const sprintById = (id: string) => {
   if (s === undefined) throw new Error(`no Sprint ${id}`);
   return s;
 };
-const reviewed = () => sprintById('sprint-2026-09-28');
+const reviewed = () => sprintById(ids.sprint.current);
 
 /**
  * Leaves a Task's actual time out of the records, so that its row offers
@@ -214,7 +217,7 @@ describe('Retro — 事実を見る', () => {
     ).toBe(false);
     await userEvent.click(within(work).getByRole('radio', { name: 'できた' }));
     expect(
-      reviewed().goals.find((g) => g.areaId === 'area-work')?.selfAssessment,
+      reviewed().goals.find((g) => g.areaId === ids.area.work)?.selfAssessment,
     ).toBe('achieved');
   });
 
@@ -296,7 +299,7 @@ describe('Retro — 確定したときとの差 (MVP 16)', () => {
                 ...s,
                 availableHours: 14,
                 goals: s.goals.map((g) =>
-                  g.areaId === 'area-research'
+                  g.areaId === ids.area.research
                     ? { ...g, text: '先行研究を 2本押さえる' }
                     : g,
                 ),
@@ -652,7 +655,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     // 生活 has no Task planned from a suggestion now.
     await userEvent.selectOptions(
       screen.getByRole('combobox', { name: '領域' }),
-      'area-life',
+      ids.area.life,
     );
     expect(
       screen.getByText('対象は、今の Backlog にはまだありません。'),
@@ -1296,7 +1299,7 @@ describe('Retro — the plan against what happened (#167)', () => {
       records: {
         ...snapshot.records,
         sprints: snapshot.records.sprints.map((s) =>
-          s.id === 'sprint-2026-09-28' ? edit(s) : s,
+          s.id === ids.sprint.current ? edit(s) : s,
         ),
       },
     });
@@ -1314,7 +1317,7 @@ describe('Retro — the plan against what happened (#167)', () => {
       records: {
         ...snapshot.records,
         sprints: snapshot.records.sprints.map((s) =>
-          s.id === 'sprint-2026-09-28' ? { ...s, tasks: edit(s.tasks) } : s,
+          s.id === ids.sprint.current ? { ...s, tasks: edit(s.tasks) } : s,
         ),
       },
     });
@@ -1500,7 +1503,8 @@ describe('Retro — actual time per occurrence (#56)', () => {
     // かかった時間を記録 (#241).
     change = (snapshot) => {
       const occurrence = snapshot.records.occurrences.find(
-        (o) => o.taskId === 'task-reading' && o.scheduledDate === '2026-09-28',
+        (o) =>
+          o.taskId === ids.task.reading && o.scheduledDate === '2026-09-28',
       )!;
       return {
         ...snapshot,
@@ -1546,7 +1550,7 @@ describe('Retro — actual time per occurrence (#56)', () => {
       ).getByText('実績').parentElement?.textContent,
     ).toContain('17時間30分');
     const occurrence = lastSnapshot().records.occurrences.find(
-      (o) => o.taskId === 'task-reading' && o.scheduledDate === '2026-09-28',
+      (o) => o.taskId === ids.task.reading && o.scheduledDate === '2026-09-28',
     );
     expect(reviewed().actualTimes.at(-1)).toMatchObject({
       occurrenceId: occurrence?.id,

@@ -1,3 +1,4 @@
+import { operations, planningData } from '@itera/application';
 import type {
   AreaId,
   GoalLink,
@@ -6,19 +7,18 @@ import type {
   TaskId,
 } from '@itera/domain';
 import { useMemo } from 'react';
-import * as changes from './planning-changes';
-import { planningData } from './planning-view';
-import { useRecordStore, useStoreSnapshot } from './store-provider';
+import { useStoreSnapshot } from './store-provider';
 import { useRun } from './use-run';
+import { planningScreenData } from './views';
 
 /** The Planning screen's data (ADR 0005: screens read through hooks). */
 export function usePlanning(options: { applyCriterion: boolean }) {
   const { records, clock } = useStoreSnapshot();
   const { applyCriterion } = options;
-  return useMemo(
-    () => planningData(records, clock, { applyCriterion }),
-    [records, clock, applyCriterion],
-  );
+  return useMemo(() => {
+    const data = planningData(records, clock, { applyCriterion });
+    return data && planningScreenData(data);
+  }, [records, clock, applyCriterion]);
 }
 
 /**
@@ -27,36 +27,40 @@ export function usePlanning(options: { applyCriterion: boolean }) {
  */
 export function usePlanningActions() {
   const run = useRun();
-  const store = useRecordStore();
   return useMemo(
     () => ({
       chooseTasks: (taskIds: readonly TaskId[]) =>
-        run(changes.chooseTasks(taskIds)),
+        run(operations.chooseTasks({ taskIds })).ok,
       unchooseTasks: (sprintTaskIds: readonly SprintTaskId[]) =>
-        run(changes.unchooseTasks(sprintTaskIds)),
+        run(operations.unchooseTasks({ sprintTaskIds })).ok,
       unchooseByTask: (taskIds: readonly TaskId[]) =>
-        run(changes.unchooseByTask(taskIds)),
+        run(operations.unchooseTasksByTask({ taskIds })).ok,
       setOccurrenceIncluded: (occurrenceId: OccurrenceId, included: boolean) =>
-        run(changes.setOccurrenceIncluded(occurrenceId, included)),
+        run(operations.setOccurrenceIncluded({ occurrenceId, included })).ok,
       excludeAllOccurrences: (sprintTaskId: SprintTaskId) =>
-        run(changes.excludeAllOccurrences(sprintTaskId)),
+        run(operations.excludeAllOccurrences({ sprintTaskId })).ok,
+      /** All of them back, or none when one cannot be. */
       includeOccurrences: (occurrenceIds: readonly OccurrenceId[]) =>
-        occurrenceIds.every((id) =>
-          run(changes.setOccurrenceIncluded(id, true)),
-        ),
+        run(operations.includeOccurrences({ occurrenceIds })).ok,
       /** The new Task's ID, or `undefined` when it did not go through. */
-      addAndChoose: (title: string, areaId?: AreaId): TaskId | undefined =>
-        run(changes.addAndChoose(title, areaId))
-          ? store.getSnapshot().records.tasks.at(-1)?.id
-          : undefined,
+      addAndChoose: (title: string, areaId?: AreaId): TaskId | undefined => {
+        const result = run(
+          operations.createAndChooseTask({
+            title,
+            ...(areaId === undefined ? {} : { areaId }),
+          }),
+        );
+        return result.ok ? result.value.taskId : undefined;
+      },
       setGoal: (areaId: AreaId, text: string) =>
-        run(changes.setGoal(areaId, text)),
+        run(operations.setPlanningGoal({ areaId, text })).ok,
       setGoalLink: (sprintTaskId: SprintTaskId, goalLink: GoalLink) =>
-        run(changes.setLink(sprintTaskId, goalLink)),
-      setAvailableHours: (hours: number | null) => run(changes.setHours(hours)),
+        run(operations.setGoalLink({ sprintTaskId, goalLink })).ok,
+      setAvailableHours: (hours: number | null) =>
+        run(operations.setPlanningAvailableHours({ hours })).ok,
       confirmSprint: (applyCriterion: boolean) =>
-        run(changes.confirm(applyCriterion)),
+        run(operations.confirmSprint({ applyCriterion })).ok,
     }),
-    [run, store],
+    [run],
   );
 }

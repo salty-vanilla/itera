@@ -1,20 +1,19 @@
+import { nextPlanningOf, operations, retroData } from '@itera/application';
 import type {
   AreaId,
-  SprintId,
   CriterionPolicy,
   LocalDate,
   OccurrenceId,
   RetroDecision,
   RetroPin,
   SelfAssessment,
+  SprintId,
   SprintTaskId,
 } from '@itera/domain';
 import { useMemo } from 'react';
-import * as changes from './retro-changes';
-import { nextPlanningOf, retroData } from './retro-view';
 import { useStoreSnapshot } from './store-provider';
-import { beginRetro } from './today-changes';
 import { useRun } from './use-run';
+import { retroScreenData } from './views';
 
 /**
  * The Retro screen's data (ADR 0005: screens read through hooks): the
@@ -22,10 +21,10 @@ import { useRun } from './use-run';
  */
 export function useRetro(sprintId?: SprintId) {
   const { records, clock } = useStoreSnapshot();
-  return useMemo(
-    () => retroData(records, clock, sprintId),
-    [records, clock, sprintId],
-  );
+  return useMemo(() => {
+    const data = retroData(records, clock, sprintId);
+    return data && retroScreenData(data);
+  }, [records, clock, sprintId]);
 }
 
 /** The next week's Planning: being planned, or where one would start. */
@@ -42,26 +41,37 @@ export function useRetroActions() {
   const run = useRun();
   return useMemo(
     () => ({
-      beginRetro: () => run(beginRetro()),
+      beginRetro: () => run(operations.beginRetro()).ok,
       assessGoal: (areaId: AreaId, assessment: SelfAssessment | null) =>
-        run(changes.assess(areaId, assessment)),
-      togglePin: (pin: RetroPin) => run(changes.pin(pin)),
-      setReflection: (text: string) => run(changes.reflect(text)),
-      setImprovement: (text: string) => run(changes.improve(text)),
-      draftCriterion: (policy: CriterionPolicy) => run(changes.draft(policy)),
+        run(operations.assessGoal({ areaId, assessment })).ok,
+      togglePin: (pin: RetroPin) => run(operations.togglePin({ pin })).ok,
+      setReflection: (text: string) =>
+        run(operations.setReflection({ text })).ok,
+      setImprovement: (text: string) =>
+        run(operations.setImprovement({ text })).ok,
+      draftCriterion: (policy: CriterionPolicy) =>
+        run(operations.draftCriterion({ policy })).ok,
       setDraftPolicy: (policy: CriterionPolicy) =>
-        run(changes.setDraft(policy)),
-      dropCriterionDraft: () => run(changes.dropDraft()),
+        run(operations.setDraftPolicy({ policy })).ok,
+      dropCriterionDraft: () => run(operations.dropCriterionDraft()).ok,
       decideCriterion: (decision: RetroDecision) =>
-        run(changes.decide(decision)),
+        run(operations.decideCriterion({ decision })).ok,
       recordActual: (
         sprintTaskId: SprintTaskId,
         hours: number,
         date: LocalDate,
         occurrenceId?: OccurrenceId,
-      ) => run(changes.recordActual(sprintTaskId, hours, date, occurrenceId)),
-      completeRetro: () => run(changes.complete()),
-      beginPlanning: () => run(changes.beginPlanning()),
+      ) =>
+        run(
+          operations.recordReviewActual({
+            sprintTaskId,
+            hours,
+            date,
+            ...(occurrenceId === undefined ? {} : { occurrenceId }),
+          }),
+        ).ok,
+      completeRetro: () => run(operations.completeRetro()).ok,
+      beginPlanning: () => run(operations.beginPlanning()).ok,
     }),
     [run],
   );

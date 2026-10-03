@@ -22,7 +22,7 @@ import { formatDate, formatMonthDay } from '@/lib/date-format';
 import { rowKeyHandlers } from '@/lib/row-keys';
 import { cn } from '@/lib/utils';
 import { weekCall, weekText } from '@/lib/week-text';
-import type { CandidateRow, PlanningData } from '@/store/planning-view';
+import type { CandidateRow, PlanningData } from '@/store/views';
 import { usePlanningActions } from '@/store/use-planning';
 import { useNewAreaDialog } from '../backlog/area-dialog';
 import { CarryOverText } from '../backlog/backlog-row';

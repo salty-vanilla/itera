@@ -65,7 +65,7 @@ import {
 } from '@/lib/duration-text';
 import { formatHours } from '@/lib/time-format';
 import { startedText } from '@/lib/today-words';
-import type { BacklogData, BacklogItem } from '@/store/backlog-view';
+import type { BacklogData, BacklogItem } from '@/store/views';
 import { useTaskActions } from '@/store/use-task-actions';
 import { useTodayActions } from '@/store/use-today';
 import { useNewAreaDialog } from './area-dialog';

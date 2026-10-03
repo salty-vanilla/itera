@@ -118,6 +118,105 @@ export default defineConfig(
     },
   },
   {
+    // packages/application: shared by the API (Workers) and the browser
+    // mock, so it stays as pure as packages/domain: the current time and
+    // random bytes come in as arguments, and it knows nothing of React or
+    // apps/web (ADR 0005 アプリケーション層).
+    files: ['packages/application/src/**/*.ts'],
+    ignores: [
+      'packages/application/src/**/*.test.ts',
+      'packages/application/src/testing.ts',
+    ],
+    rules: {
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'Date',
+          property: 'now',
+          message: 'Take the current time as an argument.',
+        },
+        {
+          object: 'Math',
+          property: 'random',
+          message: 'Take random bytes as an argument.',
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "NewExpression[callee.name='Date'][arguments.length=0]",
+          message: 'Take the current time as an argument.',
+        },
+        {
+          selector: "CallExpression[callee.name='Date'][arguments.length=0]",
+          message: 'Take the current time as an argument.',
+        },
+      ],
+      'no-restricted-globals': [
+        'error',
+        ...[
+          'globalThis',
+          'window',
+          'self',
+          'document',
+          'navigator',
+          'localStorage',
+          'sessionStorage',
+          'fetch',
+          'process',
+          'Buffer',
+          'require',
+          'crypto',
+          'performance',
+          'setTimeout',
+          'setInterval',
+          'queueMicrotask',
+        ].map((name) => ({
+          name,
+          message: 'packages/application is pure: take it as an argument.',
+        })),
+      ],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '^node:',
+              message: 'packages/application must not depend on Node.',
+            },
+            {
+              regex: '^(react|react-dom)(/|$)',
+              message: 'packages/application must not depend on React.',
+            },
+            {
+              regex: '^(@/|@itera/web(/|$))',
+              message: 'packages/application must not depend on apps/web.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // The fixture is for tests and the browser mock (ADR 0005), not for the
+    // API's production code.
+    files: ['services/api/src/**/*.ts'],
+    ignores: ['services/api/src/**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '^@itera/application/fixtures$',
+              message: 'The fixture is for tests and the browser mock only.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // services/api: its build and tool configs run on Node. The Worker code
     // gets its globals from the generated worker-configuration.d.ts.
     files: ['services/api/*.ts'],

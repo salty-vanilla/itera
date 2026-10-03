@@ -28,10 +28,11 @@ import { cn } from '@/lib/utils';
 import {
   weekCall,
   weekNameOnly,
+  weekLabel,
   weekText,
   type WeekName,
 } from '@/lib/week-text';
-import type { RunningData, RunningTask } from '@/store/running-view';
+import type { RunningData, RunningTask } from '@/store/views';
 import { useBacklog } from '@/store/use-backlog';
 import { useRunningSprintActions } from '@/store/use-running-sprint';
 import { useTaskActions } from '@/store/use-task-actions';
@@ -112,7 +113,7 @@ function RunningSprint({
           )
         }
         title={`Sprint ${data.number}`}
-        week={data.week}
+        week={weekLabel(data.week)}
         period={
           data.day === undefined
             ? period

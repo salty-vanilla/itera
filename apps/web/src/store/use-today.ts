@@ -1,3 +1,4 @@
+import { dayData, operations, todayData } from '@itera/application';
 import type {
   AreaId,
   DailySelectionId,
@@ -8,10 +9,7 @@ import type {
   SprintTaskId,
 } from '@itera/domain';
 import { useMemo } from 'react';
-import { dayData } from './day-view';
 import { useStoreSnapshot } from './store-provider';
-import * as changes from './today-changes';
-import { todayData } from './today-view';
 import { useRun } from './use-run';
 
 /** The Today screen's data (ADR 0005: screens read through hooks). */
@@ -29,6 +27,9 @@ export function useDay(date: LocalDate) {
   return useMemo(() => dayData(records, clock, date), [records, clock, date]);
 }
 
+const minutesOf = (minutes: number | undefined) =>
+  minutes === undefined ? {} : { minutes };
+
 /**
  * The person's operations in Today, one named function each (the list
  * becomes the API's operations). Each returns whether it went through.
@@ -41,33 +42,60 @@ export function useTodayActions() {
       chooseForToday: (
         sprintTaskId: SprintTaskId,
         occurrenceId?: OccurrenceId,
-      ) => run(changes.choose(sprintTaskId, occurrenceId)),
-      start: (selectionId: DailySelectionId) => run(changes.start(selectionId)),
-      defer: (selectionId: DailySelectionId) => run(changes.defer(selectionId)),
+      ) =>
+        run(
+          operations.chooseForToday({
+            sprintTaskId,
+            ...(occurrenceId === undefined ? {} : { occurrenceId }),
+          }),
+        ).ok,
+      start: (selectionId: DailySelectionId) =>
+        run(operations.startSelection({ selectionId })).ok,
+      defer: (selectionId: DailySelectionId) =>
+        run(operations.deferSelection({ selectionId })).ok,
       removeFromToday: (selectionId: DailySelectionId) =>
-        run(changes.remove(selectionId)),
+        run(operations.removeFromToday({ selectionId })).ok,
       undoClose: (selectionId: DailySelectionId) =>
-        run(changes.undoClose(selectionId)),
+        run(operations.undoCloseSelection({ selectionId })).ok,
       pause: (selectionId: DailySelectionId, hours?: number) =>
-        run(changes.pause(selectionId, hours)),
+        run(
+          operations.pauseSelection({
+            selectionId,
+            ...(hours === undefined ? {} : { hours }),
+          }),
+        ).ok,
       complete: (selectionId: DailySelectionId) =>
-        run(changes.complete(selectionId)),
+        run(operations.completeSelection({ selectionId })).ok,
       undoComplete: (selectionId: DailySelectionId) =>
-        run(changes.undoComplete(selectionId)),
-      skip: (selectionId: DailySelectionId) => run(changes.skip(selectionId)),
+        run(operations.undoCompleteSelection({ selectionId })).ok,
+      skip: (selectionId: DailySelectionId) =>
+        run(operations.skipSelection({ selectionId })).ok,
       undoSkip: (selectionId: DailySelectionId) =>
-        run(changes.undoSkip(selectionId)),
+        run(operations.undoSkipSelection({ selectionId })).ok,
       recordActual: (selectionId: DailySelectionId, hours: number) =>
-        run(changes.recordActual(selectionId, hours)),
+        run(operations.recordSelectionActual({ selectionId, hours })).ok,
       noteInterrupt: (text: string, minutes?: number) =>
-        run(changes.interrupt(text, minutes)),
+        run(operations.noteInterrupt({ text, ...minutesOf(minutes) })).ok,
       editInterrupt: (id: InterruptNoteId, text: string, minutes?: number) =>
-        run(changes.editNote(id, text, minutes)),
-      deleteInterrupt: (id: InterruptNoteId) => run(changes.deleteNote(id)),
-      restoreInterrupt: (note: InterruptNote) => run(changes.restoreNote(note)),
+        run(
+          operations.editInterrupt({
+            interruptNoteId: id,
+            text,
+            ...minutesOf(minutes),
+          }),
+        ).ok,
+      deleteInterrupt: (id: InterruptNoteId) =>
+        run(operations.deleteInterrupt({ interruptNoteId: id })).ok,
+      restoreInterrupt: (note: InterruptNote) =>
+        run(operations.restoreInterrupt({ note })).ok,
       addToToday: (title: string, areaId?: AreaId) =>
-        run(changes.addAndChoose(title, areaId)),
-      beginRetro: () => run(changes.beginRetro()),
+        run(
+          operations.createTaskForToday({
+            title,
+            ...(areaId === undefined ? {} : { areaId }),
+          }),
+        ).ok,
+      beginRetro: () => run(operations.beginRetro()).ok,
     }),
     [run],
   );
