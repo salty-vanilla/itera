@@ -1,4 +1,4 @@
-import type { operations } from '@itera/application';
+import type { OperationName, operations } from '@itera/application';
 import { wasInterruptDeleted } from '../db/deleted-interrupts';
 import { ApiError } from '../errors';
 import type { Precondition } from './flow';
@@ -29,4 +29,4 @@ export const preconditions = {
         );
       }
     },
-} as const;
+} as const satisfies Partial<Record<OperationName, unknown>>;

@@ -9,8 +9,8 @@ import { activity } from './schema';
  * append-only, so a deletion that was there stays, and the answer does not
  * race with a save.
  *
- * This is the one place the log is read for a decision (ADR 0006 「消した記録
- * を戻す操作の照合」). It looks at the user's own entries only, so the ID of
+ * This is the one place the log is read for a decision (ADR 0004 「Activity
+ * を読む 1 つの例外」, ADR 0006 「消した記録を戻す操作の照合」). It looks at the user's own entries only, so the ID of
  * another user's note and an ID nobody has give the same answer.
  *
  * The condition on `kind` is a literal and the JSON path the one of

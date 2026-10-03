@@ -695,7 +695,8 @@ export const retroPin = sqliteTable(
 
 /**
  * The append-only Activity log. The common fields are columns; the rest of
- * each kind is JSON in `content`, never searched (ADR 0004). Entries are
+ * each kind is JSON in `content`, never searched (ADR 0004) but for the one
+ * check of a deleted InterruptNote (below). Entries are
  * ordered by the revision of the save that appended them, then `position`.
  */
 export const activity = sqliteTable(
