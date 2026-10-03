@@ -1,6 +1,6 @@
 import { parseInstant, parseLocalDate } from '@itera/domain';
 import * as v from 'valibot';
-import { ApiError } from './errors';
+import { ApiError } from '../errors';
 
 // Checks a request against the contract's Valibot schemas (ADR 0006): the
 // shape and formats, and that every date and time in it exists on the
@@ -155,9 +155,9 @@ export function queryInput(
 function converted(schema: Schema, text: string): unknown {
   let node = schema as unknown as Node;
   while (node.wrapped !== undefined) node = node.wrapped as unknown as Node;
+  // Decimal digits only: `Number` would also take ` 2`, `0x10` and `1e1`.
   if (node.type === 'number') {
-    const number = Number(text);
-    return text.trim() === '' || Number.isNaN(number) ? text : number;
+    return /^-?\d+(\.\d+)?$/.test(text) ? Number(text) : text;
   }
   if (node.type === 'boolean') {
     if (text === 'true') return true;

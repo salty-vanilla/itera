@@ -1,19 +1,27 @@
 import {
   applyRecordChanges,
   createIdSource,
+  mergeChanges,
   type Change,
+  type ChangeContext,
   type Clock,
+  type RecordChanges,
   type Records,
 } from '@itera/application';
-import { toLocalDate, type Actor, type UserId } from '@itera/domain';
+import {
+  toLocalDate,
+  type Activity,
+  type Actor,
+  type UserId,
+} from '@itera/domain';
 import type { Context, MiddlewareHandler } from 'hono';
 import type { Database } from '../db/database';
 import { loadRecords } from '../db/load-records';
 import { saveRecords } from '../db/save-records';
 import type { Dependencies } from '../dependencies';
 import type { AppEnv } from '../env';
-import { catchUp } from './catch-up';
-import { ApiError } from './errors';
+import { catchUp as systemCatchUp } from './catch-up';
+import { ApiError } from '../errors';
 
 /**
  * What runs before every route of the contract, in this order: the user of
@@ -50,57 +58,33 @@ export type Flow = {
   ): Promise<ReadResponse<View>>;
 };
 
-export function createFlow({ now }: Pick<Dependencies, 'now'>): Flow {
+export type FlowOptions = Pick<Dependencies, 'now'> & {
+  /**
+   * What the system does when the date has moved on (#271). Tests put in
+   * one that writes, to hold the course of a catch-up that writes.
+   */
+  readonly catchUp?: Change;
+};
+
+export function createFlow({
+  now,
+  catchUp = systemCatchUp,
+}: FlowOptions): Flow {
   // One source for the app, so that IDs made in one isolate sort in the
   // order they were made, also within one millisecond (ADR 0004 ID の形式).
   const ids = createIdSource((bytes) => crypto.getRandomValues(bytes));
 
-  /**
-   * Runs a change on the current records and writes it in one batch,
-   * checking the revision. A refused command is the person's error; another
-   * write in between is a conflict, and nothing is written.
-   */
-  async function commit<T>(
-    db: Database,
-    userId: UserId,
-    current: Current,
-    clock: Clock,
-    change: Change<T>,
-    actor: Actor,
-  ): Promise<{ readonly current: Current; readonly value: T }> {
-    const result = change(current.records, {
-      now: clock.now,
-      today: clock.today,
-      actor,
-      newId: (kind) => ids.newId(kind, clock.now),
-    });
-    if (!result.ok) throw ApiError.fromDomain(result.error);
-    const { changes, activities, value } = result.value;
-    const saved = await saveRecords(db, {
-      userId,
-      loaded: current,
-      changes,
-      activities,
-    });
-    if (!saved.ok) {
-      throw new ApiError(
-        'revisionConflict',
-        'Another write came first; read the records again.',
-      );
-    }
-    return {
-      current: {
-        revision: saved.revision,
-        records: applyRecordChanges(current.records, changes),
-      },
-      value: value as T,
-    };
-  }
+  const contextOf = (clock: Clock, actor: Actor): ChangeContext => ({
+    now: clock.now,
+    today: clock.today,
+    actor,
+    newId: (kind) => ids.newId(kind, clock.now),
+  });
 
   /**
-   * The user's records brought up to now, and the clock: 「今日」 is today
-   * in the user's time zone. A user without settings has no 「今日」, so
-   * nothing runs until they are made.
+   * The user's records and the clock: 「今日」 is today in the user's time
+   * zone. A user without settings has no 「今日」, so nothing runs until
+   * they are made.
    */
   async function load(c: Context<AppEnv>) {
     const { db, userId } = c.var;
@@ -113,40 +97,81 @@ export function createFlow({ now }: Pick<Dependencies, 'now'>): Flow {
       now: at,
       today: toLocalDate(at, loaded.records.user.timeZone),
     };
-    const loadedCurrent = {
+    const current: Current = {
       revision: loaded.revision,
       records: loaded.records,
     };
-    // The system's own records are written first, on their own: they stand
-    // whether or not the person's operation goes through.
-    const { current } = await commit(
-      db,
-      userId,
-      loadedCurrent,
-      clock,
-      catchUp,
-      'system',
-    );
     return { current, clock };
   }
 
-  return {
-    async operate(c, change) {
-      const { current, clock } = await load(c);
-      const { db, userId } = c.var;
-      const { value } = await commit(
-        db,
-        userId,
-        current,
-        clock,
-        change,
-        'user',
+  /**
+   * The system's own changes up to now, as the system. Not written here:
+   * the caller writes them with what follows. The system's change depends
+   * on the clock and the records only, never on the request. Refused, it
+   * is the server's failure (500), not the person's.
+   */
+  function caughtUp(current: Current, clock: Clock) {
+    const result = catchUp(current.records, contextOf(clock, 'system'));
+    if (!result.ok) {
+      throw new Error(
+        `The system's catch-up was refused: ${result.error.code}.`,
       );
-      return value;
+    }
+    const { changes, activities } = result.value;
+    return {
+      records: applyRecordChanges(current.records, changes),
+      changes,
+      activities,
+    };
+  }
+
+  /**
+   * Writes the changes in one batch, checking the revision: another write
+   * since the load is a conflict, and nothing is written.
+   */
+  async function save(
+    db: Database,
+    userId: UserId,
+    current: Current,
+    changes: RecordChanges,
+    activities: readonly Activity[],
+  ) {
+    const saved = await saveRecords(db, {
+      userId,
+      loaded: current,
+      changes,
+      activities,
+    });
+    if (!saved.ok) {
+      throw new ApiError(
+        'revisionConflict',
+        'Another write came first; read the records again.',
+      );
+    }
+  }
+
+  return {
+    async operate<T>(c: Context<AppEnv>, change: Change<T>): Promise<T> {
+      const { db, userId } = c.var;
+      const { current, clock } = await load(c);
+      const system = caughtUp(current, clock);
+      const result = change(system.records, contextOf(clock, 'user'));
+      if (!result.ok) throw ApiError.fromDomain(result.error);
+      const { changes, activities, value } = result.value;
+      // The system's changes and the person's go in one batch (#271).
+      await save(db, userId, current, mergeChanges(system.changes, changes), [
+        ...system.activities,
+        ...activities,
+      ]);
+      return value as T;
     },
     async read(c, read) {
+      const { db, userId } = c.var;
       const { current, clock } = await load(c);
-      const view = read(current.records, clock);
+      const system = caughtUp(current, clock);
+      // Nothing to write when the system had nothing to do.
+      await save(db, userId, current, system.changes, system.activities);
+      const view = read(system.records, clock);
       // A read with nothing to show answers `null` (ADR 0006).
       return {
         clock,

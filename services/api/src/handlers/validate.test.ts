@@ -9,7 +9,7 @@ import {
 import { createIdSource } from '@itera/application';
 import { instant } from '@itera/domain';
 import { describe, expect, it } from 'vitest';
-import { ApiError } from './errors';
+import { ApiError } from '../errors';
 import { assertWalkable, queryInput, validate } from './validate';
 
 const ids = createIdSource((bytes) => crypto.getRandomValues(bytes));
@@ -103,6 +103,9 @@ describe('queryInput', () => {
     [vGetRunningQuery, { sprint: 'three' }],
     [vGetRunningQuery, { sprint: '' }],
     [vGetRunningQuery, { sprint: '1.5' }],
+    [vGetRunningQuery, { sprint: '0x10' }],
+    [vGetRunningQuery, { sprint: '1e1' }],
+    [vGetRunningQuery, { sprint: ' 2' }],
     [vGetPlanningQuery, { applyCriterion: 'yes' }],
   ])('leaves what does not convert to fail validation: %j', (schema, query) => {
     expect(

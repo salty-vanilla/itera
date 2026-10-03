@@ -4,7 +4,7 @@ import { authBasePath } from './auth/authenticator';
 import { requireAuth } from './auth/require-auth';
 import type { Dependencies } from './dependencies';
 import type { AppEnv } from './env';
-import { ApiError, errorResponse, loggedError } from './handlers/errors';
+import { ApiError, errorResponse, loggedError } from './errors';
 import { createFlow, type Guards } from './handlers/flow';
 import { getMe } from './handlers/me';
 import { operationRoutes } from './handlers/operations';

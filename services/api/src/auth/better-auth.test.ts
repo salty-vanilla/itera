@@ -1,6 +1,6 @@
 import { parseId } from '@itera/application';
 import { makeSignature } from 'better-auth/crypto';
-import { eq } from 'drizzle-orm';
+import { DrizzleQueryError, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app';
 import type { Database } from '../db/database';
@@ -10,6 +10,7 @@ import { testDependencies, testEnv as env, testNow } from '../test-env';
 import {
   authIdSource,
   betterAuthAuthenticator,
+  betterAuthLogger,
   betterAuthSettings,
   createBetterAuth,
   signUpNotAllowedCode,
@@ -313,6 +314,8 @@ describe('Better Auth sign-in methods', () => {
     expect(parseId('Account', account?.id ?? '').ok).toBe(true);
     const [session] = await db.select().from(schema.session);
     expect(parseId('Session', session?.id ?? '').ok).toBe(true);
+    // The session's token stays Better Auth's random string.
+    expect(session?.token).not.toMatch(/^session_/);
     // Better Auth encrypts the access and refresh tokens, not the ID token.
     expect(account?.accessToken).toBeTruthy();
     expect(account?.accessToken).not.toContain('google-access-token');
@@ -424,5 +427,25 @@ describe('Better Auth rate limiting', () => {
     expect((await signInFrom('203.0.113.7')).status).toBe(429);
     expect((await signInFrom('203.0.113.8')).status).toBe(200);
     expect(await db.select().from(schema.rateLimit)).toHaveLength(2);
+  });
+});
+
+describe('Better Auth logging', () => {
+  it('keeps a failed query’s parameters out of the log', () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    betterAuthLogger.log(
+      'error',
+      'INTERNAL_SERVER_ERROR',
+      new DrizzleQueryError(
+        'select * from "session" where "token" = ?',
+        ['secret-session-token'],
+        new Error('D1_ERROR: network connection lost'),
+      ),
+    );
+    expect(log).toHaveBeenCalledOnce();
+    const line = String(log.mock.calls[0]?.[0]);
+    expect(line).not.toContain('secret-session-token');
+    expect(line).toContain('INTERNAL_SERVER_ERROR');
+    expect(line).toContain('network connection lost');
   });
 });

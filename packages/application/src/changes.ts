@@ -140,7 +140,10 @@ const everyFieldListed: [Unlisted | UnlistedDeletion] extends [never]
 void everyFieldListed;
 
 /** `b` after `a`: later records replace earlier ones by ID; deletions add up. */
-function mergeChanges(a: RecordChanges, b: RecordChanges): RecordChanges {
+export function mergeChanges(
+  a: RecordChanges,
+  b: RecordChanges,
+): RecordChanges {
   const lists = <K extends (typeof LIST_FIELDS)[number]>(key: K) => {
     const x = a[key];
     const y = b[key];

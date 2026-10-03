@@ -44,7 +44,7 @@ Better Auth が自分で書き込む行（利用者・アカウント・セッ�
 - セッションは D1 の行と、署名した Cookie（`better-auth.session_token`、https では `__Secure-` 付き。HttpOnly、SameSite=Lax）で持つ。有効期間は Better Auth の既定（7 日。1 日を過ぎると `/api/auth/get-session` が延長し、Cookie を送り直す）。Cookie キャッシュは使わないので、サインアウトやセッションの削除はすぐに効く。
 - **セッションを延長するのは `/api/auth/get-session` だけ**。`requireAuth` を通る API の経路はセッションを読むだけで延長しない（Cookie を送り直せないため。期限切れの行は Better Auth が削除する）。そのためクライアントは、起動時など定期的に `/api/auth/get-session` を呼ぶ。呼ばないと、最後の延長から 7 日で API が 401 を返す。
 - Cookie を使うので、**Web と API は同じ origin で配信する**。CORS と、`BETTER_AUTH_URL` 以外の信頼する origin は設定しない。Web のログイン画面とログインの流れは別の Issue で作る。
-- 利用者の識別子は Better Auth の利用者 ID（`user.id`、Better Auth が生成するランダムな文字列）。
+- 利用者の識別子は Better Auth の利用者 ID（`user.id`）。形は TypeID（`user_…`。下の「ID の形式」、#266）。
 - **登録できる人を許可の一覧で絞る**（2026-10-03 オーナー決定、Issue #32）。Better Auth の `databaseHooks.user.create.before` で、利用者を作る前にメールアドレスを `SIGN_UP_ALLOWED_EMAILS`（カンマ区切り。前後の空白と大文字・小文字は無視する）と照らし、一覧にないか、Google が確認済みとしていない（`emailVerified` が true でない）なら `APIError`（403、code `SIGN_UP_NOT_ALLOWED`）を投げて作らない。未確認のメールアドレスは主張にすぎず、許可の根拠にしない。Google のコールバックは、サインインの開始で渡した `errorCallbackURL`（渡さなければ `/api/auth/error` の Better Auth のページ）へ、この code を `error` に、英語の説明を `error_description` に付けて戻す。クライアントが頼るのは `error` の code だけにする。Better Auth が利用者を作る経路（`internalAdapter` の `createUser`・`createOAuthUser`）はすべてこの hook を通るので、Better Auth の別の作り方を足しても一覧が効く。アプリが `user` テーブルへ直接書き込む経路は作らない（hook を迂回するため）。照らすのは作るときだけで、すでにある利用者は一覧から外してもサインインできる（外したら利用者を消すかは、PRD §14 の削除の方式と一緒に決める）。一覧は wrangler の secret で渡し、リポジトリに書かない。空なら、ほかの設定値と同じく認証を使うリクエストを 500 で失敗させる。Google の同意画面のテストユーザー（オーナーだけ）と二重にする。一般公開（PRD §14）を決めるまでの備え。
 - Google から受け取ったアクセストークンとリフレッシュトークンは、`account.encryptOAuthTokens` で `BETTER_AUTH_SECRET` から作る鍵で暗号化して保存する。Itera は Google の API を呼ばないが、Better Auth がアカウントの行に保存するため。
 - 設定値（`BETTER_AUTH_SECRET`・`BETTER_AUTH_URL`・`GOOGLE_CLIENT_ID`・`GOOGLE_CLIENT_SECRET`・`SIGN_UP_ALLOWED_EMAILS`）は環境変数と wrangler の secret で渡し、リポジトリに書かない。どれかが空、または `BETTER_AUTH_SECRET` が 32 文字未満なら、認証を使うリクエストは 500 で失敗する（下の確認事項の 5）。
@@ -213,7 +213,7 @@ index：利用者ごとに読むための `user_id`、子テーブルの持ち�
   - 利用者の記録でないもの（ほかの利用者の `userId` を持つ記録、読み込んでいない記録の削除）は、呼び出し側の誤りとして例外にする。読み込んでいない ID の記録は INSERT になり、ほかの利用者の行と主キーがぶつかって失敗するので、上書きはできない。
   - 最初の保存には利用者の設定（`User`）を含める。
 - Activity は（保存で上げた版、その保存の中の順）で並べる。共通の項目のほかは JSON の `content` に置く。
-- 型は `packages/domain` の型で書いた（`StoredRecords`・`RecordChanges`。形は `apps/web` の `Records`・`RecordChanges` と同じ）。#264 がこれらを `packages/application` に移したら、#266 でそちらの型に合わせる。
+- 型は `packages/application` の `Records`・`RecordChanges`（#266 でそろえた）。`Records` は Activity を含まない（追記するだけで読み返さないため）。
 
 ### 操作と読み取りの処理（2026-10-03）
 
@@ -230,8 +230,9 @@ index：利用者ごとに読むための `user_id`、子テーブルの持ち�
 
 - 実装（#266）：`services/api/src/handlers/`。1・2 は経路ごとの middleware（`requireAuth`・`requireSameOrigin`）、3 は経路（`validate.ts`。契約の Valibot のスキーマに加えて、日付と日時が暦の上で実在するかを domain の関数で確かめ、query の数と真偽は宣言した型に変えてから検証する）、4〜8 は `flow.ts` の 1 か所にある。operation は `operations.ts` の登録表に契約の本文のスキーマを足すだけで答える（実行するのは `packages/application` の `operations` の同じ名前の関数）。読み取りは `reads.ts` に、経路・パラメータのスキーマ・application の読み取りの関数を足す。まだ答えないものは同じファイルの未実装の一覧に置き、契約のすべての operation と読み取りがどちらかにあることをテストで確かめる。
 - 4 の後、利用者の設定（タイムゾーン）がなければ「今日」が決まらないので、422 `userNotSetUp` で断る（ADR 0006「エラー」）。`GET /api/me` だけは設定を読んで `null` を返す。
-- 5 は、システムの記録として、利用者の操作とは別の `batch()` で先に書く。利用者の操作が断られても、日付が変わったことの記録は残ってよいため。読み取りも同じ。中身は #271 で、#266 では何も書かない。
-- 予期しない例外は 500 `internalError` にし、Workers Logs に経路・例外の種類・文言・スタックを残す。要求の本文と記録は出さない。Drizzle の失敗した問い合わせの文言にはパラメータ（利用者の文字列）が入るので、その文言は出さず、原因（DB 自身の文言）だけを出す。
+- 5 の変更は、操作のときは操作の変更と同じ `batch()` で書き（追いつきが先、操作が後。Activity も同じ版に入る）、読み取りのときは派生値を計算する前に書く（#271 の範囲 2）。追いつきの中身、読み取りの衝突のやり直しは #271 で、#266 の追いつきは何も書かない。テストでは追いつきを差し替えて、この書き方を確かめる（`createFlow` の `catchUp`）。
+- 追いつきは時計と記録だけで決まり、要求の入力に左右されない。GET の読み取りでも書くので（GET は Origin を確かめない）、CSRF の備えはこの前提に立つ。システムの変更が domain に断られたら、利用者の誤りではないので 500 にする。
+- 予期しない例外は 500 `internalError` にし、Workers Logs に経路・例外の種類・文言・スタックを残す。要求の本文と記録は出さない。Drizzle の失敗した問い合わせの文言にはパラメータ（利用者の文字列）が入るので、その文言は出さず、原因（DB 自身の文言）だけを出す。Better Auth 自身のログ（セッションを読む途中の DB の失敗など）も、`logger` で同じように伏せる（引数は例外の種類と原因だけ）。
 - 4 では、その利用者の記録を、Activity を除いてすべて読む。派生値（持ち越し回数、連続見送り、Retro の事実）は過去の Sprint をたどるので、操作ごとに読む範囲を切り出すと、範囲を決める規則が `packages/domain` の外に増えるため。1 回の `batch()`（テーブルの数の SELECT）で読む。Workers Logs で読み込みの時間を見て、目安（p95 で 100ms）を超えたら、読む範囲の切り出しを検討する。
 
 ### ID の形式（2026-10-03）

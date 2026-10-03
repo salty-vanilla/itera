@@ -33,6 +33,7 @@ const NOT_READS = new Set([
   // Running operations, and IDs.
   'createMemoryStore',
   'applyRecordChanges',
+  'mergeChanges',
   'createIdSource',
   'parseId',
 ]);

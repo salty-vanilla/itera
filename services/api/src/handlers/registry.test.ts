@@ -4,6 +4,7 @@
 import * as contract from '@itera/api-contract';
 import * as sdk from '@itera/api-contract/client';
 import { operations } from '@itera/application';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../app';
 import { createRecordingDatabase } from '../db/recording-database';
@@ -25,6 +26,28 @@ const readNames = contractNames.filter(
 const serverReads = ['getMe'];
 
 const capitalized = (name: string) => name[0]!.toUpperCase() + name.slice(1);
+
+/** A generated schema of the contract by its name, or undefined. */
+const schemaNamed = (name: string) =>
+  (contract as Record<string, unknown>)[name];
+
+/**
+ * Each operationId's path in the contract (openapi.yaml, under `/api`), in
+ * Hono's form: `/days/{date}` becomes `/days/:date`.
+ */
+const contractPaths = new Map(
+  [
+    ...readFileSync(
+      decodeURIComponent(
+        new URL(
+          '../../../../packages/api-contract/openapi/openapi.yaml',
+          import.meta.url,
+        ).pathname,
+      ),
+      'utf8',
+    ).matchAll(/^ {2}(\/\S*):\n {4}\$ref: '[^#]+#\/(\w+)'$/gm),
+  ].map(([, path, name]) => [name!, path!.replace(/\{(\w+)\}/g, ':$1')]),
+);
 
 function routes() {
   const { db } = createRecordingDatabase();
@@ -50,9 +73,7 @@ describe('operations', () => {
 
   it("take the contract's body schema, by name", () => {
     for (const [name, body] of Object.entries(operationBodies)) {
-      const schema = (contract as Record<string, unknown>)[
-        `v${capitalized(name)}Body`
-      ];
+      const schema = schemaNamed(`v${capitalized(name)}Body`);
       expect(body, name).toBe(schema ?? null);
     }
   });
@@ -74,11 +95,16 @@ describe('reads', () => {
     ).toEqual(readNames.toSorted());
   });
 
-  it('are routed with GET under /api', () => {
+  it("are at the contract's paths, with its parameter schemas", () => {
+    expect(contractPaths.size).toBe(contractNames.length);
     const routed = routes();
-    for (const { path } of Object.values(readRoutes)) {
-      expect(routed).toContain(`GET /api${path}`);
+    for (const [name, route] of Object.entries(readRoutes)) {
+      expect(route.path, name).toBe(contractPaths.get(name));
+      expect(routed).toContain(`GET /api${route.path}`);
+      expect(route.query, name).toBe(schemaNamed(`v${capitalized(name)}Query`));
+      expect(route.params, name).toBe(schemaNamed(`v${capitalized(name)}Path`));
     }
+    expect(contractPaths.get('getMe')).toBe('/me');
     expect(routed).toContain('GET /api/me');
   });
 });

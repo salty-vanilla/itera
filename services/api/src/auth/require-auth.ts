@@ -1,7 +1,7 @@
 import { createMiddleware } from 'hono/factory';
 import type { Dependencies } from '../dependencies';
 import type { AppEnv } from '../env';
-import { errorResponse } from '../handlers/errors';
+import { errorResponse } from '../errors';
 
 // Asks the injected authenticator for the request's user and sets `userId`
 // for the handler. Knows nothing about the auth service or its cookies.

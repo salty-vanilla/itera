@@ -1,10 +1,11 @@
 import { passkey } from '@better-auth/passkey';
 import { createIdSource, parseId } from '@itera/application';
 import type { Instant } from '@itera/domain';
-import { betterAuth } from 'better-auth';
+import { betterAuth, type BetterAuthOptions } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { APIError } from 'better-auth/api';
 import type { Database } from '../db/database';
+import { loggedError } from '../errors';
 import * as schema from '../db/schema';
 import { authBasePath, type Authenticator } from './authenticator';
 
@@ -96,6 +97,26 @@ export function authIdSource(now: () => Instant): NewAuthId {
   return (model) => ids.newId(model, now());
 }
 
+// Better Auth's own log lines, kept to what Workers Logs may hold (ADR 0004
+// 操作と読み取りの処理): its message and, of each argument, only an error's
+// kind and cause. A failed query's message lists its parameters (a session
+// token, an email address), so it is not logged, as for the app's own
+// failures.
+export const betterAuthLogger = {
+  log(level, message, ...args: unknown[]) {
+    const line = JSON.stringify({
+      message: `Better Auth: ${message}`,
+      level,
+      details: args.map((arg) =>
+        arg instanceof Error ? loggedError(arg) : typeof arg,
+      ),
+    });
+    if (level === 'error') console.error(line);
+    else if (level === 'warn') console.warn(line);
+    else console.log(line);
+  },
+} satisfies BetterAuthOptions['logger'];
+
 // Better Auth for Itera (Issue #121, ADR 0004). Sign-in methods are Google
 // and passkeys only; a passkey is added by a user who is already signed in.
 export function createBetterAuth(
@@ -165,6 +186,7 @@ export function createBetterAuth(
       disableOriginCheck: false,
     },
     telemetry: { enabled: false },
+    logger: betterAuthLogger,
   });
 }
 

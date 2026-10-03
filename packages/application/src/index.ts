@@ -25,6 +25,7 @@ export {
   type RecordStore,
   type StoreSnapshot,
 } from './record-store';
+export { mergeChanges } from './changes';
 export { applyRecordChanges } from './records';
 export type {
   Clock,

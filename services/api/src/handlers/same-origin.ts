@@ -1,7 +1,7 @@
 import { createMiddleware } from 'hono/factory';
 import type { Dependencies } from '../dependencies';
 import type { AppEnv } from '../env';
-import { errorResponse } from './errors';
+import { errorResponse } from '../errors';
 
 const readMethods = new Set(['GET', 'HEAD']);
 

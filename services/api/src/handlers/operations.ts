@@ -9,7 +9,7 @@ import { Hono, type HonoRequest } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import type * as v from 'valibot';
 import type { AppEnv } from '../env';
-import { ApiError, errorResponse } from './errors';
+import { ApiError, errorResponse } from '../errors';
 import type { Flow, Guards } from './flow';
 import { validate } from './validate';
 
@@ -31,7 +31,7 @@ export const operationBodies: {
 /**
  * The contract's operations the API does not answer yet, by the Issue that
  * adds them. Every operation of the contract is in `operationBodies` or
- * here (operations.test.ts).
+ * here (registry.test.ts).
  */
 export const unimplementedOperations: readonly OperationName[] = [
   // #267: the Backlog, Tasks and Areas.
@@ -104,7 +104,7 @@ export const unimplementedOperations: readonly OperationName[] = [
   'beginPlanning',
 ];
 
-/** The largest request body an operation takes (ADR 0006 既知の制約). */
+/** The largest request body an operation takes (ADR 0006 エラー). */
 export const maxBodyBytes = 64 * 1024;
 
 async function jsonBody(request: HonoRequest): Promise<unknown> {
