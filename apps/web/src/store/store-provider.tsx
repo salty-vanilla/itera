@@ -18,9 +18,20 @@ function StoreProvider({
   return <StoreContext value={store}>{children}</StoreContext>;
 }
 
+/**
+ * What a screen still on the store (#273〜#276) throws when the API is the
+ * data source: there is no RecordStore then (ADR 0005). #277 removes it.
+ */
+class NotOnContractError extends Error {
+  constructor() {
+    super('This screen reads the RecordStore, which the API has not.');
+    this.name = 'NotOnContractError';
+  }
+}
+
 function useRecordStore(): RecordStore {
   const store = use(StoreContext);
-  if (store === null) throw new Error('useRecordStore needs a StoreProvider.');
+  if (store === null) throw new NotOnContractError();
   return store;
 }
 
@@ -30,4 +41,4 @@ function useStoreSnapshot(): StoreSnapshot {
   return useSyncExternalStore(store.subscribe, store.getSnapshot);
 }
 
-export { StoreProvider, useRecordStore, useStoreSnapshot };
+export { NotOnContractError, StoreProvider, useRecordStore, useStoreSnapshot };

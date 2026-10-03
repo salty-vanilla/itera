@@ -3,7 +3,7 @@
 - 状態：採用
 - 日付：2026-09-27
 - 関連：Issue #38、後続 Issue #39〜#42
-- 改訂：2026-09-27（API への移行と状態の置き場所を追記）、2026-09-28（クライアントとデータの方式を追記）、2026-09-30（Sprint を番号で、日を日付で開く検索パラメータ、Issue #90）、2026-10-03（アプリケーション層、プレビューの例外、#45 の分け方、システムの記録、時計、本番ビルドの fixture。Issue #262）、2026-10-03（プレビューの共通のテストケースを仕様ケースと生成ケースに分ける。読み取りの結果と DTO の関係。ADR 0007）、2026-10-03（何日も開かなかったときのシステムの記録。Issue #271）
+- 改訂：2026-09-27（API への移行と状態の置き場所を追記）、2026-09-28（クライアントとデータの方式を追記）、2026-09-30（Sprint を番号で、日を日付で開く検索パラメータ、Issue #90）、2026-10-03（アプリケーション層、プレビューの例外、#45 の分け方、システムの記録、時計、本番ビルドの fixture。Issue #262）、2026-10-03（プレビューの共通のテストケースを仕様ケースと生成ケースに分ける。読み取りの結果と DTO の関係。ADR 0007）、2026-10-03（Web のクライアントとブラウザ内モック。Issue #272）、2026-10-03（何日も開かなかったときのシステムの記録。Issue #271）
 
 ## 背景
 
@@ -40,7 +40,7 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
 
 - 状態は PRD §12 の 12 個：選ぶ / 整える / 確かめる、Today の朝 / 日中 / 割り込み、Retro の開始 / 振り返り / 完了直前、Backlog の Capture / Detail / Recurrence。
 - 状態はルートの検索パラメータ `fixture` で選ぶ（例：`/today?fixture=today-morning`）。`retainSearchParams` で、画面を移っても保つ。ないときは「日中」（`today-daytime`）。`sprint` と `date` は `retainSearchParams` に入れない。ナビから開けば今の Sprint と今日に戻り、画面を移っても前に選んだ Sprint と日を持ち越さない（Issue #90）。
-- 開発用メニューは画面の右下に出し、状態を選ぶとその状態の画面を開く。`import.meta.env.DEV` のときだけ動的に読み込むので、本番ビルドには入らない。URL での切り替えは本番ビルドでも使える（services/api とつなぐまでは fixture がデータの唯一の出どころのため）。
+- 開発用メニューは画面の右下に出し、状態を選ぶとその状態の画面を開く。開発用メニューと URL での切り替えは、ブラウザ内モックを使う開発のときだけ動く。本番ビルドと API を使う開発（`--mode api`）には fixture がなく、`fixture` の検索パラメータは捨てる（#272。下の「Web のクライアントとブラウザ内モック」）。
 - fixture は、`packages/domain` のコマンドを 1 本の時系列（9/13〜10/5）で実行して作り、途中の記録をスナップショットとして取る（`packages/application/src/fixtures/timeline.ts`。#264 で `apps/web` から移した）。記録を手で書かないので、どの状態もドメインが作りうる記録だけになり、不変条件はコマンドが守る。ドメインモデルの Scenario A〜C を 1 人の利用者の 1 本の時系列に並べ直している。
 - 状態ごとに時計（「今日」の LocalDate と現在時刻の Instant）を持つ。画面とコマンドはこの時計を使い、ブラウザの時計を読まない。
 
@@ -91,13 +91,72 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
   - 毎日開いた場合との違い：記録の中身（選択の日付・状態、回の状態、Sprint の状態、Activity の種類と順）は同じになる（API のテスト `system-day.test.ts` で 2 週間の場合を確かめる）。違うのは、システムが作った記録と Activity の日時（`selectedAt`・`resolvedAt`・回の状態の日時・Retro の開始・Activity の `at`）が、その日ではなく処理した時点になることと、新しい選択の ID。日時は「システムがいつ記録したか」なので、処理した時点を正とする（#271 の範囲 4）。
   - ブラウザ内モックの `useSystemDay` は、今までどおり今日だけを進める（#277 で片づける）。
 - **時計**：本番の「今日」と現在時刻は、サーバーが利用者のタイムゾーンで決め、読み取りの結果で返す。ブラウザ内モックは、今までどおり fixture の状態ごとの時計を使う。
-- **本番ビルドの fixture**：本番ビルドは API を使い、fixture とモックを含めない。「fixture の状態」の節の「URL での切り替えは本番ビルドでも使える」は、#272 で開発ビルドだけに改める。
+- **本番ビルドの fixture**：本番ビルドは API を使い、fixture とモックを含めない。「fixture の状態」の節の「URL での切り替えは本番ビルドでも使える」は、#272 で開発ビルドだけに改めた。
+
+### Web のクライアントとブラウザ内モック（2026-10-03、Issue #272）
+
+画面を契約（ADR 0006）につなぐ土台。各画面のフックの差し替えは #273〜#276、`RecordStore` の片づけは #277。
+
+#### 依存と版
+
+| 対象 | 採用 | 版 | 置き場所 |
+| --- | --- | --- | --- |
+| 取得結果のキャッシュ | `@tanstack/react-query` | 5.104.1 | `apps/web` の dependencies。ADR 0006 と同じ版 |
+| 契約のクライアント | `@itera/api-contract`（`/client`・`/create-client`・`/react-query`） | workspace | `apps/web` の dependencies |
+| モックの入力の検証 | `valibot` | 1.5.0 | `apps/web` の devDependencies（モックだけが使い、本番ビルドに入らない）。ADR 0006 と同じ版 |
+
+使い方は 2026-10-03 に Context7 で TanStack Query v5（`QueryCache`・`MutationCache` の全体のコールバック、`invalidateQueries`）と Vite（`server.proxy`、`--mode`）の文書を確かめた。
+
+#### データの出どころ
+
+- `apps/web/src/app/data-source.ts` が、ブラウザ内モック（開発の既定。`pnpm --filter @itera/web dev`）か API（本番ビルドと `pnpm --filter @itera/web dev:api`）かを選ぶ。どちらも同じ `ApiProvider`（契約のクライアントと `QueryClient`）を画面に渡す。
+- 契約のクライアントは、データの出どころごとに `createClient` で作る（`@itera/api-contract/create-client` の `createClient`・`createConfig`）。生成した関数と options には `{ client }` で渡す（`getOverviewOptions({ client })`）。モジュールの既定の `client` を書き換えない。fixture の状態を替えるたびに、記録・クライアント・キャッシュを新しくする。
+- `--mode api` では、Vite の開発サーバーが `/api` を `wrangler dev`（既定 `http://localhost:8787`、`ITERA_API_ORIGIN` で変えられる）に中継する。Host と Origin は開発サーバーのままなので、`BETTER_AUTH_URL` は開発サーバーの origin にする（`services/api/README.md`）。
+
+#### Query のキーと無効化
+
+- キーは生成したもの（`getOverviewQueryKey` など。`[{ _id: <operationId>, baseUrl, path?, query? }]`）だけを使い、手で作らない。
+- 操作が成功したら、すべての読み取りを無効にする（`apps/web/src/api/reads.ts`）。表示中のものはすぐ取り直し、ほかは次に表示するときに取る。操作の Promise は、表示中の読み取りが戻ってから解決する（`MutationCache` の `onSuccess` が待つ）。
+  - 理由：読み取りはすべて利用者の記録の全体から作る派生値で（ADR 0004「操作と読み取りの処理」）、1 つの操作が複数の画面の読み取りを変える（今日の完了は、今日・実行中の Sprint・Backlog・ナビの件数を変える）。操作ごとに読み直す読み取りの表を持つと、派生値のたどり漏れが古い表示として残り、失敗として見えない。
+  - 代わりに払うもの：操作のたびに表示中の読み取りを 1 回ずつ取り直す。表示中の読み取りは 1 画面で 1〜3 個で、利用者は 1 人。
+  - 見直す条件：取り直しが遅いと分かったとき（読み取りの時間は ADR 0004 の Workers Logs で見る）。
+- 楽観的更新はしない（PRD §14）。
+
+#### エラーと送信中
+
+- 失敗は応答の `code` だけで分ける（`apps/web/src/api/failure.ts`）：`unauthenticated`（401）、`revisionConflict`（409）、受け付けられない（400・403・404・413・422。利用者の設定がまだない `userNotSetUp` もここ。設定を作る画面への入口は #279）、それ以外（500、通信の失敗、知らない `code`。ADR 0006「互換の規則」）。`message` は画面に出さない。
+  - エラーの `code` は開いた列挙（ADR 0006「列挙」）。生成した型は `code` をエラーごとの閉じた値で書いているが、Web は応答を実行時に検証しない（生成した SDK に応答の検証はない）。`failureOf` は失敗を `unknown` として受け、`code` を文字列として読むので、知らない `code`・知らない HTTP のステータス・JSON でない本文でも読み込みは失敗せず、一般の失敗になる（`failure.test.ts`）。Web が応答を実行時に検証するようにするなら、その前に開いた列挙の仕様での書き方を決める（ADR 0006）。
+- 操作が失敗したら、今までの `use-run.ts` と同じ danger の Toast（「保存できませんでした」）を出す。文言は `src/api/save-failed.ts` の 1 か所にまとめ、`use-run.ts` も使う。版の衝突（409）でも同じ Toast を出し、すべての読み取りを読み直す。操作は自動で送り直さない。
+- 未認証（401）は、読み取りでも操作でも、サインインの画面へ送る（`apps/web/src/app/sign-in.ts`。`/sign-in?redirect=<元の画面>`、履歴は置き換える）。Toast は出さない。画面とパス・戻り先の渡し方は #278 で作り、決め直してよい。
+- 読み取りは、サーバーと通信の失敗（500 など）と版の衝突のときだけ 1 回まで取り直す。受け付けられない要求と未認証は取り直さない。操作は取り直さない。
+- 操作は `useOperation(<生成した mutation の options>)`（`apps/web/src/api/use-operation.ts`）で呼ぶ。送信中は同じ操作を重ねて送らない（押し直しは送らずに失敗として返す）。`pending`（送信中。操作を受け付けない）と `loading`（送信中が 300ms 続いた。DESIGN.md の Spinner のとおり、Button・IconButton の `loading` でスピナーと文言を出す）を返す。送信中の見た目は DESIGN.md Components › Button・IconButton と docs/design/foundations.md の Loading に従い、各画面の Issue で付ける。
+
+#### ブラウザ内モック
+
+- `apps/web/src/mock/`：`createMock(store)` が、契約の要求（`Request`）を受けて `packages/application` の読み取りと操作を `RecordStore` の上で実行し、API と同じ形の応答（読み取りは `{ clock, view }`、操作は値か 204、エラーは ADR 0006 の status と `code`）を返す。クライアントの `fetch` として渡す（Service Worker は使わない）。
+- `getMe`（利用者と設定）は、API と同じく追いつきなしで、fixture の利用者の設定を返す。ほかの読み取りと操作の処理の順は API と同じ（ADR 0004「操作と読み取りの処理」）：入力を契約の Valibot のスキーマで確かめる（query の数と真偽は型に変えてから）→ システムの記録をその時点まで進める（終了日を過ぎた Sprint を Review にし、その日を始める。#271 と同じ処理）→ 読み取りか操作。利用者はサインイン済みで設定もある者として扱い（#278）、Origin・版の衝突・本文の大きさの上限は確かめない。日付が暦の上で実在するかは、`getDay` のパスだけで確かめる（画面は実在しない日付を送らない）。
+- ID は `packages/application` の `createIdSource`（TypeID）で作る。時計は fixture の状態ごとの時計（上の「時計」）。
+- 移行の途中の一致：モックと、まだ移していない画面は、同じ `RecordStore` を使う。画面が `RecordStore` で記録を変えたら、すべての読み取りを無効にする（`createMock` の `subscribeToScreens`）。モック自身の変更（要求への応答）では無効にしない（操作はクライアントが読み直し、読み取りはその応答がある）。
+- `packages/application` の `beginDay` は、その日がもう始まっていれば何も書かない（変更も Activity もない）ように改めた。前は実行中の Sprint を毎回書き直しており、要求のたびにシステムの記録を進めるモックでは、記録の差し替えと読み直しが止まらなかった。API（#271）でも書く行がなくなる。
+- まだ移していない画面のための `useSystemDay` は、モックを使うときだけ外枠で動かす（#277 で外す）。
+
+#### 本番ビルド
+
+- モックは `import.meta.env.DEV` が真で `--mode api` でないときだけ `import()` する（`apps/web/src/app/data-source.ts`。条件はここに 1 つだけ書き、ルーターなどはその結果を使う）。本番ビルドではこの分岐が消え、モックと fixture のチャンクが出力に入らない。条件をほかのモジュールの定数にして参照すると、Vite（Rolldown）は分岐を消さずチャンクが残る（2026-10-03 に確かめた。下の検査が捕まえる）ので、条件は `import()` の隣に直接書く。
+- `pnpm build`（`apps/web` の `vite build && node scripts/check-build.mjs`）が、出力にモックの応答のヘッダー名と fixture の状態の ID がないことを確かめる。あれば失敗する（CI と CD も同じコマンド）。
+- まだ移していない画面は、本番ビルドと `--mode api` では `RecordStore` がないので表示できない。その画面の代わりに、開発者向けの短い表示（英語。画面の文言ではない）で、どの Issue で移すかを出す（`NotOnContract`）。統合ブランチはデプロイしないので、この途中の状態を受け入れる（2026-10-03 オーナー決定、Issue #272 のコメント）。#277 で消す。
+
+#### import の境界
+
+- `eslint.config.js`：`apps/web` のうち `packages/domain` を import してよいのは `src/lib/domain-functions.ts`（上の「プレビューの例外」の関数をまとめたモジュール）とモックだけ、`packages/application` はモックだけ。型だけの import も同じ。2 つを別の規則（`no-restricted-imports` と `@typescript-eslint/no-restricted-imports`）にして、片方の設定がもう片方を上書きしないようにしている。
+- テスト（`*.test.*`、`src/test/`）は対象外：fixture の記録を開き、記録の ID で画面を指すため。
+- まだ移していないファイルは、移行の途中の例外として `MIGRATING` に、画面の Issue（#273〜#276）ごとと共有のものに分けて、ファイル名で並べる（パターンにしないので、新しいファイルは規則に従う）。各 Issue が自分のファイルを消し、#277 で一覧と仕組みを消す。
 
 ### 状態の置き場所
 
 グローバルな UI 状態のストアは入れない。
 
-- 記録：`RecordStore`（移行後は TanStack Query）。
+- 記録：`RecordStore`（移行後は TanStack Query。#272 から、契約に移した読み取りは TanStack Query）。
 - 画面の状態（fixture の状態、絞り込み、開いている詳細、開いている Sprint など）：ルートの検索パラメータ。選んでいる Sprint と日も Zustand などのアプリ全体のストアに持たない。再読み込み・ブラウザの戻る・新しいタブ・共有で同じ画面を開けるようにするため（Issue #90 のオーナー決定）。
 - 部品の中だけの状態（開閉、入力途中の値）：React の state。
 
