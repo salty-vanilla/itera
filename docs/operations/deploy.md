@@ -131,7 +131,7 @@ curl -i "<公開 URL>/sprint?sprint=3"         # 同じ
 ```
 
 - ブラウザで `<公開 URL>/` と `<公開 URL>/today?date=2026-10-01` を開くと画面が表示され、再読み込みしても同じ画面が開く。存在しないパス（`<公開 URL>/nothing`）は画面の「ページが見つかりません」になる。
-- `/` の HTML が参照する `/assets/index-<ハッシュ>.js` を `curl -I` で取ると、`Cache-Control: public, max-age=31536000, immutable`。
+- `/` の HTML が参照する `/assets/index-<ハッシュ>.js` を `curl -I` で取ると、200 と `Cache-Control: public, max-age=0, must-revalidate`、`ETag`。その `ETag` を `If-None-Match` に付けて取り直すと 304（`immutable` は付けない。ADR 0004「Web と API の配信」）。
 - ここで見る画面は、#272 が本番ビルドから fixture を外すまでは fixture のデータで動く（API を使わない）。
 
 ### 登録を絞る（許可の一覧にないアカウント）

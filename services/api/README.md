@@ -25,9 +25,10 @@ pnpm --filter @itera/api dev    # .dev.vars の BETTER_AUTH_URL は http://local
 | 存在しない画面のパス（`/nothing`） | `index.html`（200）。画面が「ページが見つかりません」を出す |
 | `/api/health` | `{"status":"ok"}` |
 | 存在しない `/api/xxx` | API の 404（`404 Not Found`）。画面にはならない |
-| `/assets/<ハッシュ付きのファイル>` | `Cache-Control: public, max-age=31536000, immutable` |
+| `/assets/<ハッシュ付きのファイル>` | 200、`Cache-Control: public, max-age=0, must-revalidate` と `ETag`（`If-None-Match` を付けると 304） |
+| 存在しない `/assets/<名前>` | `index.html`（200）。同じ既定の `Cache-Control`（固定されない） |
 
-`index.html` は Workers の既定の `Cache-Control: public, max-age=0, must-revalidate`（毎回確かめる）のまま。ハッシュ付きのアセットの設定は `apps/web/public/_headers`（Vite が `dist/` の直下へ写す。ADR 0004「Web と API の配信」）。コードを変えたら、`dist` を作り直す。Vite の開発サーバーから使う開発（`/api` の中継）は #272 で作る。
+すべてのアセットが Workers の既定の `Cache-Control: public, max-age=0, must-revalidate`（毎回 `ETag` で確かめる）。長く固定する設定（`immutable`）は意図して付けていない（ADR 0004「Web と API の配信」）。コードを変えたら、`dist` を作り直す。Vite の開発サーバーから使う開発（`/api` の中継）は #272 で作る。
 
 API の経路はすべて `/api` の下にある。同じ origin のほかの経路は Web の配信に使う（ADR 0004）。
 
