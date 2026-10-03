@@ -35,7 +35,7 @@ iOS（Swift）と Android（Kotlin）は MVP の後に足す。TypeScript の `p
 | 正本 | 何の正本か | 対象 | 使う実装 |
 | --- | --- | --- | --- |
 | ドメインモデルと ADR（`docs/domain/domain-model.md`、`docs/architecture/adr/`） | 意味の正本（semantic authority）：何が正しいか | Entity と値、状態遷移、不変条件、派生値の意味 | `packages/domain`（サーバー）。仕様ケースの期待値もここから書く |
-| OpenAPI（`packages/api-contract/openapi/`、ADR 0006） | 通信の正本（wire authority）：何を送受信するか | operation、要求と応答の形、エラーの `code`、互換の規則 | `services/api`、すべてのクライアント（生成した型とクライアント） |
+| OpenAPI（`packages/api-contract/openapi/`、ADR 0006） | 通信の正本（wire authority）：何を送受信するか | operation、要求と応答の形、エラーの `type`（Problem Details）、互換の規則 | `services/api`、すべてのクライアント（生成した型とクライアント） |
 | プレビューの一覧と共通のテストケース（下の「プレビュー」。iOS に着手するときに置く） | クライアントの計算の正本（client-computation authority）：クライアントが何を計算してよいか、その計算の意味 | 一覧に載せた関数と、その入力・出力・意味の出典、仕様ケースと生成ケース | すべてのクライアント |
 
 - 3 つ目が決める計算の意味は、1 つ目から来る。一覧は関数ごとに意味の出典（ドメインモデルの節、不変条件の番号、ADR）を持ち、1 つ目と食い違えば、1 つ目に合わせて一覧とテストケースを直す。

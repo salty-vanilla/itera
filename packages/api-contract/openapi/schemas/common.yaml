@@ -85,36 +85,79 @@ Clock:
     today: { $ref: '#/LocalDate' }
     now: { $ref: '#/Instant' }
 
-# Errors (ADR 0006). `code` is stable and decides what a client does;
-# `message` is for developers and is not shown to the person.
+# Errors (ADR 0006 エラー): Problem Details (RFC 9457), served as
+# `application/problem+json`. `type` is the one identifier a client decides
+# by; it names the kind of problem with a relative URI reference
+# (`/problems/<name>`) that is not meant to be resolved. `title` is the
+# same for every occurrence of a kind and `detail` describes this one; both
+# are for developers and are not shown to the person. `status` repeats the
+# HTTP status. A client ignores members it does not know (RFC 9457 §3.2).
 ValidationError:
-  description: The request does not match the contract.
+  description: >-
+    The request does not match the contract. `errors` says where, one item
+    for each place.
   type: object
-  required: [code, message]
+  required: [type, title, status, detail, errors]
   properties:
-    code: { const: validationFailed }
-    message: { type: string }
+    type: { const: /problems/validation-failed }
+    title: { type: string }
+    status: { const: 400 }
+    detail: { type: string }
+    errors:
+      type: array
+      minItems: 1
+      items: { $ref: '#/ValidationIssue' }
+ValidationIssue:
+  description: >-
+    One place in the request that does not match the contract, located by
+    exactly one of `pointer` (in the body), `parameter` (a path or query
+    parameter) or `header`.
+  type: object
+  required: [detail]
+  properties:
+    detail:
+      description: What is wrong there, for developers.
+      type: string
+    pointer:
+      description: >-
+        Where in the body, as a JSON Pointer in its URI fragment form
+        (RFC 6901 §6): `#/title`, `#/previous/setAt`; `#` is the whole body.
+      type: string
+      examples: ['#/title']
+    parameter:
+      description: The name of a path or query parameter, as the contract names it.
+      type: string
+      examples: [taskId]
+    header:
+      description: The name of a request header.
+      type: string
 UnauthenticatedError:
   description: No valid session.
   type: object
-  required: [code, message]
+  required: [type, title, status, detail]
   properties:
-    code: { const: unauthenticated }
-    message: { type: string }
+    type: { const: /problems/unauthenticated }
+    title: { type: string }
+    status: { const: 401 }
+    detail: { type: string }
 ForbiddenOriginError:
   description: A write whose Origin is not the app's own.
   type: object
-  required: [code, message]
+  required: [type, title, status, detail]
   properties:
-    code: { const: forbiddenOrigin }
-    message: { type: string }
+    type: { const: /problems/forbidden-origin }
+    title: { type: string }
+    status: { const: 403 }
+    detail: { type: string }
 NotFoundError:
   description: A record the request names is not among the person's records.
   type: object
-  required: [code, message]
+  required: [type, title, status, detail]
   properties:
-    code: { const: notFound }
-    message: { type: string }
+    type: { const: /problems/not-found }
+    title: { type: string }
+    status: { const: 404 }
+    detail: { type: string }
 RevisionConflictError:
   description: >-
     Another write came first (ADR 0004 同時の書き込み), and this one was not
@@ -122,43 +165,56 @@ RevisionConflictError:
     database's answer to a write that was made is lost, it also comes back
     as this; reading again shows what was saved.)
   type: object
-  required: [code, message]
+  required: [type, title, status, detail]
   properties:
-    code: { const: revisionConflict }
-    message: { type: string }
+    type: { const: /problems/revision-conflict }
+    title: { type: string }
+    status: { const: 409 }
+    detail: { type: string }
 RuleViolationError:
   description: >-
     The domain refused the operation (packages/domain DomainError): a value
     its rules do not accept, a transition the record's state does not allow,
     or completing a recurring Task.
   type: object
-  required: [code, message]
+  required: [type, title, status, detail]
   properties:
-    code:
+    type:
       type: string
-      enum: [invalidInput, invalidTransition, recurringTaskCannotComplete]
-    message: { type: string }
+      enum:
+        - /problems/invalid-input
+        - /problems/invalid-transition
+        - /problems/recurring-task-cannot-complete
+    title: { type: string }
+    status: { const: 422 }
+    detail: { type: string }
 UserNotSetUpError:
   description: >-
     The person has no settings yet (time zone, start of the week), so there
     is no 「今日」 to run an operation or a read with. Making the settings
     comes first.
   type: object
-  required: [code, message]
+  required: [type, title, status, detail]
   properties:
-    code: { const: userNotSetUp }
-    message: { type: string }
+    type: { const: /problems/user-not-set-up }
+    title: { type: string }
+    status: { const: 422 }
+    detail: { type: string }
 PayloadTooLargeError:
   description: The request's body is larger than the API takes (64 KiB).
   type: object
-  required: [code, message]
+  required: [type, title, status, detail]
   properties:
-    code: { const: payloadTooLarge }
-    message: { type: string }
+    type: { const: /problems/payload-too-large }
+    title: { type: string }
+    status: { const: 413 }
+    detail: { type: string }
 InternalError:
   description: An unexpected failure on the server.
   type: object
-  required: [code, message]
+  required: [type, title, status, detail]
   properties:
-    code: { const: internalError }
-    message: { type: string }
+    type: { const: /problems/internal-error }
+    title: { type: string }
+    status: { const: 500 }
+    detail: { type: string }

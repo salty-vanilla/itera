@@ -98,68 +98,95 @@ export const vCurrentSprints = v.object({
  * No valid session.
  */
 export const vUnauthenticatedError = v.object({
-    code: v.literal('unauthenticated'),
-    message: v.string()
+    type: v.literal('/problems/unauthenticated'),
+    title: v.string(),
+    status: v.literal(401),
+    detail: v.string()
 });
 
 /**
  * Another write came first (ADR 0004 同時の書き込み), and this one was not made; read the records again. Not retried automatically. (When the database's answer to a write that was made is lost, it also comes back as this; reading again shows what was saved.)
  */
 export const vRevisionConflictError = v.object({
-    code: v.literal('revisionConflict'),
-    message: v.string()
+    type: v.literal('/problems/revision-conflict'),
+    title: v.string(),
+    status: v.literal(409),
+    detail: v.string()
 });
 
 /**
  * An unexpected failure on the server.
  */
 export const vInternalError = v.object({
-    code: v.literal('internalError'),
-    message: v.string()
+    type: v.literal('/problems/internal-error'),
+    title: v.string(),
+    status: v.literal(500),
+    detail: v.string()
 });
 
 /**
- * The request does not match the contract.
+ * One place in the request that does not match the contract, located by exactly one of `pointer` (in the body), `parameter` (a path or query parameter) or `header`.
+ */
+export const vValidationIssue = v.object({
+    detail: v.string(),
+    pointer: v.optional(v.string()),
+    parameter: v.optional(v.string()),
+    header: v.optional(v.string())
+});
+
+/**
+ * The request does not match the contract. `errors` says where, one item for each place.
  */
 export const vValidationError = v.object({
-    code: v.literal('validationFailed'),
-    message: v.string()
+    type: v.literal('/problems/validation-failed'),
+    title: v.string(),
+    status: v.literal(400),
+    detail: v.string(),
+    errors: v.pipe(v.array(vValidationIssue), v.minLength(1))
 });
 
 /**
  * A write whose Origin is not the app's own.
  */
 export const vForbiddenOriginError = v.object({
-    code: v.literal('forbiddenOrigin'),
-    message: v.string()
+    type: v.literal('/problems/forbidden-origin'),
+    title: v.string(),
+    status: v.literal(403),
+    detail: v.string()
 });
 
 /**
  * The request's body is larger than the API takes (64 KiB).
  */
 export const vPayloadTooLargeError = v.object({
-    code: v.literal('payloadTooLarge'),
-    message: v.string()
+    type: v.literal('/problems/payload-too-large'),
+    title: v.string(),
+    status: v.literal(413),
+    detail: v.string()
 });
 
 /**
  * The domain refused the operation (packages/domain DomainError): a value its rules do not accept, a transition the record's state does not allow, or completing a recurring Task.
  */
 export const vRuleViolationError = v.object({
-    code: v.picklist([
-        'invalidInput',
-        'invalidTransition',
-        'recurringTaskCannotComplete'
+    type: v.picklist([
+        '/problems/invalid-input',
+        '/problems/invalid-transition',
+        '/problems/recurring-task-cannot-complete'
     ]),
-    message: v.string()
+    title: v.string(),
+    status: v.literal(422),
+    detail: v.string()
 });
 
 /**
  * The person has no settings yet (time zone, start of the week), so there is no 「今日」 to run an operation or a read with. Making the settings comes first.
  */
 export const vUserNotSetUpError = v.object({
-    code: v.literal('userNotSetUp'),
-    message: v.string()
+    type: v.literal('/problems/user-not-set-up'),
+    title: v.string(),
+    status: v.literal(422),
+    detail: v.string()
 });
 
 export const vAreaId = v.pipe(v.string(), v.regex(/^area_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
@@ -188,8 +215,10 @@ export const vEditableArea = v.object({
  * A record the request names is not among the person's records.
  */
 export const vNotFoundError = v.object({
-    code: v.literal('notFound'),
-    message: v.string()
+    type: v.literal('/problems/not-found'),
+    title: v.string(),
+    status: v.literal(404),
+    detail: v.string()
 });
 
 export const vTaskId = v.pipe(v.string(), v.regex(/^task_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));

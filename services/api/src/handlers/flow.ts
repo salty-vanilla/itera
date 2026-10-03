@@ -69,7 +69,7 @@ export type Flow = {
   /**
    * Runs an operation of the person, writes its changes and returns its
    * value. A `precondition` is checked once the records are loaded (so
-   * `userNotSetUp` comes first) and before the operation runs.
+   * `user-not-set-up` comes first) and before the operation runs.
    */
   operate<T>(
     c: Context<AppEnv>,
@@ -125,7 +125,10 @@ export function createFlow({
     const { db, userId } = c.var;
     const loaded = await loadRecords(db, userId);
     if (loaded.records === null) {
-      throw new ApiError('userNotSetUp', 'The user has no settings yet.');
+      throw ApiError.of(
+        '/problems/user-not-set-up',
+        'The user has no settings yet.',
+      );
     }
     const at = now();
     const clock: Clock = {
@@ -188,8 +191,8 @@ export function createFlow({
   }
 
   const conflict = () =>
-    new ApiError(
-      'revisionConflict',
+    ApiError.of(
+      '/problems/revision-conflict',
       'Another write came first; read the records again.',
     );
 

@@ -23,6 +23,7 @@ import { ApiProvider } from './api-provider';
 import { createQueryClient } from './query-client';
 import { useMe } from './use-me';
 import { useSetSettings } from './use-settings';
+import { problemResponse } from '@/test/problem';
 
 afterEach(cleanup);
 
@@ -84,10 +85,7 @@ describe('useSetSettings', () => {
   it('tells a failure with the danger Toast, and the settings are not made', async () => {
     const { wrapper } = setUp((request) =>
       request.method === 'PUT'
-        ? Response.json(
-            { code: 'internalError', message: 'for developers' },
-            { status: 500 },
-          )
+        ? problemResponse('/problems/internal-error')
         : undefined,
     );
     const { result } = renderHook(useSettingsAndMe, { wrapper });

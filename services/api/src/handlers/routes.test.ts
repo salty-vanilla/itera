@@ -22,6 +22,7 @@ import { createMemoryDatabase } from '../db/memory-database';
 import { saveRecords } from '../db/save-records';
 import { activity, user as authUser } from '../db/schema';
 import { testDependencies, testEnv, testNow, testOrigin } from '../test-env';
+import { problemIn } from '../test-problems';
 import { httpRequest } from './operation-cases';
 import { maxBodyBytes } from './body';
 
@@ -119,9 +120,8 @@ function get(app: App, path: string) {
   return app.request(`/api${path}`, {}, testEnv);
 }
 
-async function errorOf(response: Response) {
-  return { status: response.status, ...((await response.json()) as object) };
-}
+/** The problem of an error response (its `status` is the response's). */
+const errorOf = problemIn;
 
 describe('an operation', () => {
   it('loads, runs, writes and answers with what the contract says', async () => {
@@ -157,7 +157,7 @@ describe('an operation', () => {
     const response = await post(app, { name: '仕事' }, {});
     expect(await errorOf(response)).toMatchObject({
       status: 401,
-      code: 'unauthenticated',
+      type: '/problems/unauthenticated',
     });
   });
 
@@ -170,7 +170,7 @@ describe('an operation', () => {
     const response = await post(app, { name: '仕事' }, headers);
     expect(await errorOf(response)).toMatchObject({
       status: 403,
-      code: 'forbiddenOrigin',
+      type: '/problems/forbidden-origin',
     });
     expect(await loadRecords(db, alice)).toEqual({
       revision: 1,
@@ -200,7 +200,7 @@ describe('an operation', () => {
       );
       expect(await errorOf(response), name).toMatchObject({
         status: 403,
-        code: 'forbiddenOrigin',
+        type: '/problems/forbidden-origin',
       });
     }
     expect([...methods].toSorted()).toEqual(['DELETE', 'PATCH', 'POST', 'PUT']);
@@ -255,25 +255,75 @@ describe('an operation', () => {
       );
       expect(await errorOf(response)).toMatchObject({
         status: 400,
-        code: 'validationFailed',
+        type: '/problems/validation-failed',
       });
       expect((await loadRecords(db, alice)).revision).toBe(1);
     },
   );
 
   it.each([
-    ['a wrong type', { name: 1 }],
-    ['a missing property', {}],
-    ['an unknown property', { name: '仕事', color: 3 }],
-    ['a body that is not JSON', '{"name":'],
-  ])('answers 400 to %s, writing nothing', async (_, body) => {
+    ['a wrong type', { name: 1 }, '#/name'],
+    ['a missing property', {}, '#/name'],
+    ['an unknown property', { name: '仕事', color: 3 }, '#/color'],
+    ['a body that is not JSON', '{"name":', '#'],
+  ])('answers 400 to %s, at %s, writing nothing', async (_, body, pointer) => {
     const { app, db } = await setup();
     const response = await post(app, body);
     expect(await errorOf(response)).toMatchObject({
       status: 400,
-      code: 'validationFailed',
+      type: '/problems/validation-failed',
+      errors: [{ detail: expect.any(String), pointer }],
     });
     expect((await loadRecords(db, alice)).revision).toBe(1);
+  });
+
+  it('answers 400 with where in the body the type is wrong', async () => {
+    const { app } = await setup();
+    const response = await app.request(
+      '/api/tasks',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Origin: testOrigin },
+        body: JSON.stringify({ title: 1 }),
+      },
+      testEnv,
+    );
+    expect(await errorOf(response)).toMatchObject({
+      status: 400,
+      errors: [{ pointer: '#/title' }],
+    });
+  });
+
+  it.each([
+    ['a path parameter', '/days/2026-02-30', 'date'],
+    ['a query parameter', '/backlog?view=all', 'view'],
+    [
+      'an ID of another kind',
+      `/sprints/${ids.newId('Task', testNow)}`,
+      'sprintId',
+    ],
+  ])('answers 400 naming %s', async (_, path, parameter) => {
+    const { app } = await setup();
+    expect(await errorOf(await get(app, path))).toMatchObject({
+      status: 400,
+      errors: [{ detail: expect.any(String), parameter }],
+    });
+  });
+
+  it.each([
+    ['a path no route takes', 'GET', '/api/nothing'],
+    ['a method the path does not take', 'DELETE', '/api/me'],
+  ])('answers 404 to %s', async (_, method, path) => {
+    const { app } = await setup();
+    const response = await app.request(
+      path,
+      { method, headers: { Origin: testOrigin } },
+      testEnv,
+    );
+    expect(await errorOf(response)).toMatchObject({
+      status: 404,
+      type: '/problems/not-found',
+    });
   });
 
   it('answers 413 to a body larger than the limit', async () => {
@@ -282,7 +332,7 @@ describe('an operation', () => {
     const response = await post(app, { name });
     expect(await errorOf(response)).toMatchObject({
       status: 413,
-      code: 'payloadTooLarge',
+      type: '/problems/payload-too-large',
     });
   });
 
@@ -317,7 +367,7 @@ describe('an operation', () => {
       );
       expect(await errorOf(response)).toMatchObject({
         status: 413,
-        code: 'payloadTooLarge',
+        type: '/problems/payload-too-large',
       });
       expect((await loadRecords(db, alice)).revision).toBe(1);
     },
@@ -328,7 +378,7 @@ describe('an operation', () => {
     const response = await post(app, { name: '' });
     expect(await errorOf(response)).toMatchObject({
       status: 422,
-      code: 'invalidInput',
+      type: '/problems/invalid-input',
     });
     expect((await loadRecords(db, alice)).revision).toBe(1);
   });
@@ -362,7 +412,7 @@ describe('an operation', () => {
     const response = await post(app, { name: '仕事' });
     expect(await errorOf(response)).toMatchObject({
       status: 409,
-      code: 'revisionConflict',
+      type: '/problems/revision-conflict',
     });
     expect(await loadRecords(db, alice)).toEqual({
       revision: 2,
@@ -377,7 +427,7 @@ describe('an operation', () => {
     const response = await post(app, { name: '仕事' });
     expect(await errorOf(response)).toMatchObject({
       status: 422,
-      code: 'userNotSetUp',
+      type: '/problems/user-not-set-up',
     });
   });
 
@@ -406,8 +456,9 @@ describe('an operation', () => {
     const response = await post(app, { name: '秘密の領域' });
     expect(await errorOf(response)).toEqual({
       status: 500,
-      code: 'internalError',
-      message: 'An unexpected failure.',
+      type: '/problems/internal-error',
+      title: 'An unexpected failure',
+      detail: 'An unexpected failure.',
     });
     expect(log).toHaveBeenCalledOnce();
     const logged = String(log.mock.calls[0]?.[0]);
@@ -441,7 +492,7 @@ describe('a read', () => {
     const { app } = await setup({ signedIn: null });
     expect(await errorOf(await get(app, '/backlog'))).toMatchObject({
       status: 401,
-      code: 'unauthenticated',
+      type: '/problems/unauthenticated',
     });
   });
 
@@ -449,7 +500,7 @@ describe('a read', () => {
     const { app } = await setup({ settings: false });
     expect(await errorOf(await get(app, '/backlog'))).toMatchObject({
       status: 422,
-      code: 'userNotSetUp',
+      type: '/problems/user-not-set-up',
     });
   });
 });

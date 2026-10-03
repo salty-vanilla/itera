@@ -269,38 +269,38 @@ const failures: readonly Failure[] = [
     name: 'renameArea',
     body: () => ({ areaId: study, name: '' }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'renameArea',
     body: () => ({ areaId: missing('Area'), name: '学び' }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   {
     name: 'archiveArea',
     prepare: [['archiveArea', () => ({ areaId: life })]],
     body: () => ({ areaId: life }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'restoreArea',
     body: () => ({ areaId: life }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'createTask',
     body: () => ({ title: '  ' }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'saveTask',
     body: () => ({ taskId: bookshelf, update: { title: '' } }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'adoptSuggestion',
@@ -311,7 +311,7 @@ const failures: readonly Failure[] = [
       bound: 'lo',
     }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'undoAdoption',
@@ -321,7 +321,7 @@ const failures: readonly Failure[] = [
       previous: null,
     }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'adoptEditedSuggestion',
@@ -331,7 +331,7 @@ const failures: readonly Failure[] = [
       hours: 0,
     }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'rejectSuggestion',
@@ -340,7 +340,7 @@ const failures: readonly Failure[] = [
       suggestionId: missing('EstimateSuggestion'),
     }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   {
     name: 'undoRejection',
@@ -349,13 +349,13 @@ const failures: readonly Failure[] = [
       suggestionId: suggestionOf(r, interview).id,
     }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'addSubtask',
     body: () => ({ taskId: bookshelf, title: '' }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'setSubtaskDone',
@@ -365,7 +365,7 @@ const failures: readonly Failure[] = [
       done: true,
     }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   {
     name: 'setSubtaskEstimate',
@@ -375,32 +375,32 @@ const failures: readonly Failure[] = [
       hours: -1,
     }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'archiveTask',
     prepare: [['archiveTask', () => ({ taskId: bookshelf })]],
     body: () => ({ taskId: bookshelf }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'restoreTask',
     body: () => ({ taskId: bookshelf }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'completeTask',
     body: () => ({ taskId: reading }),
     status: 422,
-    code: 'recurringTaskCannotComplete',
+    type: '/problems/recurring-task-cannot-complete',
   },
   {
     name: 'undoCompleteTask',
     body: () => ({ taskId: dentist }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     // The week's Sprint is not active yet: it is still in Planning.
@@ -412,7 +412,7 @@ const failures: readonly Failure[] = [
       taskId: bookshelf,
     }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'addTaskToToday',
@@ -422,13 +422,13 @@ const failures: readonly Failure[] = [
       taskId: paper,
     }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'addTaskToToday',
     body: (r) => ({ sprintId: sprintOf(r).id, date: clock.today, taskId: tax }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'setRecurrence',
@@ -437,13 +437,13 @@ const failures: readonly Failure[] = [
       pattern: { freq: 'weekly', daysOfWeek: [] },
     }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'endRecurrence',
     body: () => ({ taskId: bookshelf }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
 ];
 
@@ -482,7 +482,9 @@ describe('the Backlog, Task and Area routes', () => {
     const before = await app.saved();
     const response = await app.post('archiveTask', { taskId: life });
     expect(response.status).toBe(400);
-    expect(await response.json()).toMatchObject({ code: 'validationFailed' });
+    expect(await response.json()).toMatchObject({
+      type: '/problems/validation-failed',
+    });
     expect(await app.saved()).toEqual(before);
   });
 });
@@ -716,6 +718,6 @@ describe('the Backlog reads', () => {
   ])('getBacklog answers 400 to %s', async (_, path) => {
     const { response, json } = await read(path);
     expect(response.status).toBe(400);
-    expect(json).toMatchObject({ code: 'validationFailed' });
+    expect(json).toMatchObject({ type: '/problems/validation-failed' });
   });
 });

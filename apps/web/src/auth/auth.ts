@@ -3,6 +3,7 @@
 // use this interface only. The data source picks what answers it: Better
 // Auth on the API (better-auth.ts), or the browser mock in development,
 // signed in from the start (#278).
+import { problemOf } from '@itera/api-contract/problems';
 
 /** The signed-in person. */
 export interface Session {
@@ -44,11 +45,14 @@ export type PasskeyOutcome =
     };
 
 /**
- * Thrown by `listPasskeys` without a session. The same `code` as the
+ * Thrown by `listPasskeys` without a session. The same problem as the
  * contract's 401 (ADR 0006), so the query cache sends the person to sign
  * in as it does for the API's reads (api/failure.ts).
  */
-export const UNAUTHENTICATED = { code: 'unauthenticated' } as const;
+export const UNAUTHENTICATED = problemOf(
+  '/problems/unauthenticated',
+  'No session.',
+);
 
 export interface Auth {
   /**

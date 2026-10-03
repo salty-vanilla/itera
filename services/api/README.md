@@ -47,11 +47,11 @@ API の経路はすべて `/api` の下にある。同じ origin のほかの経
 
 - `GET /api/health`：認証なし。ローカルの D1 に問い合わせて `{"status":"ok"}` を返す。
 - `GET /api/me`：セッションの Cookie から利用者を得て、`{"userId": "user_…", "settings": {…} | null}` を返す（契約の `getMe`）。Cookie がない・署名が合わない・期限切れ・サインアウト済みは 401。
-- `PUT /api/me/settings`：利用者の設定（表示名・タイムゾーン・週の始まり）を作る（契約の `setSettings`）。設定がなければ作って 201、あれば表示名だけを書き直して 204。タイムゾーンと週の始まりを変える値は 422 `invalidInput`。設定がない間、ほかの経路は 422 `userNotSetUp`。
+- `PUT /api/me/settings`：利用者の設定（表示名・タイムゾーン・週の始まり）を作る（契約の `setSettings`）。設定がなければ作って 201、あれば表示名だけを書き直して 204。タイムゾーンと週の始まりを変える値は 422 `/problems/invalid-input`。設定がない間、ほかの経路は 422 `/problems/user-not-set-up`。
 - 契約（`packages/api-contract`、ADR 0006）の読み取り（`GET /api/sprints/{sprintId}` など）と操作（資源の経路と HTTP のメソッド。`PATCH /api/areas/{areaId}` など。操作との対応は `@itera/api-contract/requests`）。読み取りは `src/handlers/reads.ts` の登録表に、操作は契約の面（`@itera/api-contract/requests`）ごとに登録してある。契約にない経路は 404。
 - `/api/auth/*`：Better Auth の経路（Google でのサインインとコールバック、パスキー、サインアウト、セッション）。
 
-契約の経路は、認証 → 書き込みの Origin の確認 → 入力の検証 → 記録の読み込み → 日付が変わったときの処理（#271）→ 操作の実行 → 版を確かめた書き込み、の順に通る（ADR 0004「操作と読み取りの処理」）。エラーは `{ code, message }`（ADR 0006「エラー」）。書き込みは `Origin` が `BETTER_AUTH_URL` の origin でないと 403、本文が 64 KiB を超えると 413、利用者の設定がまだないと 422 `userNotSetUp`。
+契約の経路は、認証 → 書き込みの Origin の確認 → 入力の検証 → 記録の読み込み → 日付が変わったときの処理（#271）→ 操作の実行 → 版を確かめた書き込み、の順に通る（ADR 0004「操作と読み取りの処理」）。エラーは Problem Details（RFC 9457、`application/problem+json`。ADR 0006「エラー」）。書き込みは `Origin` が `BETTER_AUTH_URL` の origin でないと 403、本文が 64 KiB を超えると 413、利用者の設定がまだないと 422 `/problems/user-not-set-up`。
 
 ## 認証の設定
 

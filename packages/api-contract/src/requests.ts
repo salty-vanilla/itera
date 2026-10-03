@@ -17,6 +17,7 @@ import type {
 } from '@itera/application';
 import * as v from 'valibot';
 import * as c from './index';
+import { issueAt, type RequestPart, type ValidationIssue } from './problems';
 
 /**
  * A type as JSON carries it: IDs, dates and other branded strings become
@@ -690,9 +691,14 @@ export type SettingsBody = c.SetSettingsData['body'];
 
 /**
  * A request the contract's schemas let through but no operation takes, or
- * an input no request can carry (400 `validationFailed`).
+ * an input no request can carry (400 `validation-failed`). `issue` says
+ * where.
  */
-export class RequestError extends Error {}
+export class RequestError extends Error {
+  constructor(readonly issue: ValidationIssue) {
+    super(issue.detail);
+  }
+}
 
 /**
  * A list for a query, which cannot carry an empty one (the contract's
@@ -700,7 +706,9 @@ export class RequestError extends Error {}
  */
 function nonEmpty<T>(list: readonly T[], name: string): T[] {
   if (list.length === 0)
-    throw new RequestError(`${name}: a query cannot carry an empty list.`);
+    throw new RequestError(
+      issueAt('query', [name], 'a query cannot carry an empty list.'),
+    );
   return [...list];
 }
 
@@ -721,7 +729,7 @@ export type ReceivedRequest = {
 export type CheckPart = (
   schema: v.GenericSchema,
   value: unknown,
-  part: 'path' | 'query' | 'body',
+  part: RequestPart,
 ) => unknown;
 
 /**
@@ -813,7 +821,8 @@ function retroPin(pin: string): Plain<OperationInput<'pinFact'>['pin']> {
     ['goal', c.vAreaId],
   ] as const;
   const kind = kinds.find(([, schema]) => v.is(schema, pin))?.[0];
-  if (kind === undefined) throw new RequestError(`path.pin: ${pin}`);
+  if (kind === undefined)
+    throw new RequestError(issueAt('path', ['pin'], `not a fact: ${pin}`));
   return { kind, id: pin };
 }
 

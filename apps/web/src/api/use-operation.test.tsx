@@ -24,6 +24,12 @@ import { ApiProvider } from './api-provider';
 import { createQueryClient } from './query-client';
 import { useOperation } from './use-operation';
 import { useMe } from './use-me';
+import { problemResponse } from '@/test/problem';
+import {
+  PROBLEM_CONTENT_TYPE,
+  validationProblem,
+  type PlainProblemType,
+} from '@itera/api-contract/problems';
 
 const ids = fixtureIds();
 
@@ -62,11 +68,9 @@ function setUp(answer?: Answer) {
   return { store, requests, onUnauthenticated, wrapper };
 }
 
-function answerWith(status: number, code: string) {
+function answerWith(type: PlainProblemType) {
   return (request: Request) =>
-    request.method !== 'GET'
-      ? Response.json({ code, message: 'for developers' }, { status })
-      : undefined;
+    request.method !== 'GET' ? problemResponse(type) : undefined;
 }
 
 /** An operation and a read, as a screen would use both. */
@@ -113,7 +117,7 @@ describe('useOperation', () => {
 
   it('sends the person to sign in without a session, with no Toast', async () => {
     const { onUnauthenticated, wrapper } = setUp(
-      answerWith(401, 'unauthenticated'),
+      answerWith('/problems/unauthenticated'),
     );
     const { result } = renderHook(useRenameAndOverview, { wrapper });
     await act(async () => {
@@ -226,25 +230,40 @@ const onWrite =
   (request) =>
     request.method !== 'GET' ? answer() : undefined;
 
+const validationFailed = onWrite(() =>
+  Response.json(
+    validationProblem([{ detail: 'for developers', pointer: '#/name' }]),
+    { status: 400, headers: { 'Content-Type': PROBLEM_CONTENT_TYPE } },
+  ),
+);
+
 const refused: readonly [string, Answer][] = [
-  ['400 validationFailed', answerWith(400, 'validationFailed')],
-  ['403 forbiddenOrigin', answerWith(403, 'forbiddenOrigin')],
-  ['404 notFound', answerWith(404, 'notFound')],
-  ['413 payloadTooLarge', answerWith(413, 'payloadTooLarge')],
-  ['422 invalidInput', answerWith(422, 'invalidInput')],
-  ['422 invalidTransition', answerWith(422, 'invalidTransition')],
+  ['400 validation-failed', validationFailed],
+  ['403 forbidden-origin', answerWith('/problems/forbidden-origin')],
+  ['404 not-found', answerWith('/problems/not-found')],
+  ['413 payload-too-large', answerWith('/problems/payload-too-large')],
+  ['422 invalid-input', answerWith('/problems/invalid-input')],
+  ['422 invalid-transition', answerWith('/problems/invalid-transition')],
   [
-    '422 recurringTaskCannotComplete',
-    answerWith(422, 'recurringTaskCannotComplete'),
+    '422 recurring-task-cannot-complete',
+    answerWith('/problems/recurring-task-cannot-complete'),
   ],
-  ['422 userNotSetUp', answerWith(422, 'userNotSetUp')],
+  ['422 user-not-set-up', answerWith('/problems/user-not-set-up')],
 ];
 
 const unknown: readonly [string, Answer][] = [
-  ['409 revisionConflict', answerWith(409, 'revisionConflict')],
-  ['500 internalError', answerWith(500, 'internalError')],
-  // ADR 0006 列挙: a code or a status this client does not know.
-  ['418 a code it does not know', answerWith(418, 'somethingNew')],
+  ['409 revision-conflict', answerWith('/problems/revision-conflict')],
+  ['500 internal-error', answerWith('/problems/internal-error')],
+  // ADR 0006 列挙: a type or a status this client does not know.
+  [
+    '418 a type it does not know',
+    onWrite(() =>
+      Response.json(
+        { type: '/problems/something-new', title: '', status: 418, detail: '' },
+        { status: 418, headers: { 'Content-Type': PROBLEM_CONTENT_TYPE } },
+      ),
+    ),
+  ],
   [
     '502 that is not JSON',
     onWrite(() => new Response('<html>Bad Gateway</html>', { status: 502 })),
@@ -355,10 +374,7 @@ describe('reading again after an operation', () => {
 describe('a read without a session', () => {
   it('sends the person to sign in', async () => {
     const { onUnauthenticated, wrapper } = setUp(() =>
-      Response.json(
-        { code: 'unauthenticated', message: 'for developers' },
-        { status: 401 },
-      ),
+      problemResponse('/problems/unauthenticated'),
     );
     renderHook(useMe, { wrapper });
     await waitFor(() => expect(onUnauthenticated).toHaveBeenCalled());

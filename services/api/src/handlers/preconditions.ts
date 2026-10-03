@@ -23,8 +23,8 @@ export const preconditions = {
     ({ sprintId, note }: Input<'restoreInterrupt'>): Precondition =>
     async (db, userId) => {
       if (!(await wasInterruptDeleted(db, userId, sprintId, note.id))) {
-        throw new ApiError(
-          'notFound',
+        throw ApiError.of(
+          '/problems/not-found',
           'The person has not deleted such an interrupt from the Sprint.',
         );
       }

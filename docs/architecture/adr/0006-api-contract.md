@@ -8,6 +8,7 @@
 - 改訂：2026-10-03（経路を資源（ドメインの名詞）から付け、HTTP のメソッドで表し、kebab-case にそろえる。Sprint は ID で経路に置く。状態の遷移はスラッシュの動作。Issue #295。初めの案 A は取り下げた）
 - 改訂：2026-10-03（`getMe` の `sprints.next` に `end` と `week` を足す。Issue #274）
 - 改訂：2026-10-04（利用者の設定を作る `PUT /me/settings`。契約の operation を足すだけなので `info.version` は 0.2.0 のまま。Issue #279）
+- 改訂：2026-10-04（エラーを Problem Details（RFC 9457）にする。応答の項目を消して名前を変える壊す変更なので `info.version` を 0.3.0 にする。Issue #319）
 
 ## 背景
 
@@ -170,34 +171,48 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 消した割り込みを戻す `restoreInterrupt` は、ID を残す。クライアントは、消す前の読み取りで得た note（ID・時刻・本文・分）をそのまま送り（ID は `PUT /sprints/{sprintId}/interrupts/{interruptNoteId}` の path に、ほかは本文に）、domain の `restoreInterrupt` が「同じ ID の note がない（利用者のほかの Sprint の note も含めて）」「今より後に記録されたものでない」「Sprint の期間の日に記録されたものである（利用者のタイムゾーンの日付で）」「本文が空でない」を確かめて、時刻の順の位置に戻す（F38）。ほかの Sprint の note の ID と時間帯は、domain の入力として `packages/application` が記録から渡す（#269）。
 
-- 戻せるのは、利用者がその Sprint から消した割り込みだけにする（#315）。サーバーは保存の前に、利用者自身の Activity にその Sprint からその ID を消した記録（`interruptDeleted`）があるかを確かめ（ADR 0004「Activity を読む 1 つの例外」）、なければ domain に渡さず 404 `notFound` で断る。ほかの利用者の割り込みの ID と、誰も持たない ID は、利用者自身の Activity にないという点で同じなので、状態・code・本文（ID を含めない固定の文）が同じ応答になる。ID は全体の主キーなので、この確かめがないと、ほかの利用者の ID は保存の主キーの衝突（500）になり、ID がほかの利用者にあるかどうかが応答で分かった。消していない割り込みや、別の Sprint から消した割り込みを戻す操作も、同じ 404 になる。ブラウザ内モック（ADR 0005）は Activity を残さないので、この確かめをしない（消していない割り込みも戻す。画面は消した直後にしか戻さないので、見える違いはない）。
+- 戻せるのは、利用者がその Sprint から消した割り込みだけにする（#315）。サーバーは保存の前に、利用者自身の Activity にその Sprint からその ID を消した記録（`interruptDeleted`）があるかを確かめ（ADR 0004「Activity を読む 1 つの例外」）、なければ domain に渡さず 404 `/problems/not-found` で断る。ほかの利用者の割り込みの ID と、誰も持たない ID は、利用者自身の Activity にないという点で同じなので、状態・`type`・本文（ID を含めない固定の文）が同じ応答になる。ID は全体の主キーなので、この確かめがないと、ほかの利用者の ID は保存の主キーの衝突（500）になり、ID がほかの利用者にあるかどうかが応答で分かった。消していない割り込みや、別の Sprint から消した割り込みを戻す操作も、同じ 404 になる。ブラウザ内モック（ADR 0005）は Activity を残さないので、この確かめをしない（消していない割り込みも戻す。画面は消した直後にしか戻さないので、見える違いはない）。
 - 内容で照合する案（サーバーが消した note の内容を覚えておき、本文と時刻で探す）は採らない。Activity の `interruptDeleted` は ID しか持たず、内容を別に保つには domain の記録か Activity の項目を変える必要があるため（ドメインモデルの正本の変更。別の Issue で決める）。内容は今までどおりクライアントが送った値で、domain が値の規則だけを確かめる。ID は TypeID で、接頭辞と書式を契約で確かめる。
 - 同じ考えで、`undoAdoption` の `previous`（採用する前の Estimate）も、クライアントが採用の前の読み取りで持っていた値を送る。Task は今の Estimate だけを持つため（packages/domain）。
 - 内容は自分が消した ID の note としてだけ戻せるので、作り話の内容を戻されても困るのは本人だけ。
 
 ### エラー
 
-形は 1 つ：`{ code, message }`。`code` は変わらない識別子で、クライアントはこれで振る舞いを決める。`message` は開発者向けで、画面に出さない（画面の文言は `docs/design/content.md` に従ってクライアントが作る）。
+形は 1 つ：Problem Details（RFC 9457）。メディアタイプは `application/problem+json`、本文は `{ type, title, status, detail }`（2026-10-04 オーナー決定「標準的なものに合わせる」、Issue #319。それまでの `{ code, message }` は #319 でなくした）。
 
-| HTTP | `code` | いつ |
+- `type` は問題の種類を表す相対の URI 参照 `/problems/<kebab-case の名前>` で、クライアントはこれだけで振る舞いを決める（RFC 9457 が `type` を主な識別子とするため。識別子を 2 つ持つと食い違いうるので `code` は残さない）。解決できる文書は置かない（Zalando RESTful API Guidelines 規則 176。文書は OpenAPI にある）。本番の公開する URL がまだ決まっていない（ADR 0004「デプロイ」）ので、絶対 URI にしない。
+- `title` は種類ごとに固定の英語、`detail` はその回の説明。どちらも開発者向けで、画面に出さない（画面の文言は `docs/design/content.md` に従ってクライアントが作る）。クライアントは `detail` を解析しない。`title` は契約では文字列とだけ書き、値は `packages/api-contract/src/problems.ts` の表に置く（言い回しを直しても壊す変更にしない）。
+- `status` は HTTP のステータスと同じ値（RFC 9457 では参考の値）。
+- `instance` は今は使わない（要求の ID でログと結びつけるときに改めて決める）。
+- クライアントは知らない項目を無視する（RFC 9457 §3.2）。種類に項目を足すのは、壊さない変更（下の「互換の規則」）。
+
+| HTTP | `type` | いつ |
 | --- | --- | --- |
-| 400 | `validationFailed` | 要求が契約と合わない（形・書式・必須） |
-| 401 | `unauthenticated` | 有効なセッションがない |
-| 403 | `forbiddenOrigin` | 書き込みの Origin が違う（ADR 0004「書き込みの API の CSRF への備え」） |
-| 404 | `notFound` | 要求が指す記録が利用者の記録にない（domain の `notFound`）。消した割り込みを戻す操作では、利用者がその Sprint から消していない ID（ほかの利用者の ID、存在しない ID を含む。どれも同じ応答） |
-| 409 | `revisionConflict` | ほかの書き込みが先に入り、この書き込みはしていない（ADR 0004「同時の書き込み」）。保存は確定したのに DB の応答が失われたときもこれになる（ADR 0004 の既知の限界）。どちらも読み直せば保存された記録が分かる |
-| 413 | `payloadTooLarge` | 操作の本文が上限（64 KiB）を超える（#266） |
-| 422 | `invalidInput`・`invalidTransition`・`recurringTaskCannotComplete` | domain が操作を受け付けない（値の規則、状態の遷移、繰り返しの Task の完了） |
-| 422 | `userNotSetUp` | 利用者の設定（タイムゾーン・週の始まり）がまだなく、「今日」が決まらない。`getMe` のほかの操作と読み取りはすべてこれで断る（#266） |
-| 500 | `internalError` | 予期しない失敗 |
+| 400 | `/problems/validation-failed` | 要求が契約と合わない（形・書式・必須）。誤りの場所を `errors` に持つ（下） |
+| 401 | `/problems/unauthenticated` | 有効なセッションがない |
+| 403 | `/problems/forbidden-origin` | 書き込みの Origin が違う（ADR 0004「書き込みの API の CSRF への備え」） |
+| 404 | `/problems/not-found` | 要求が指す記録が利用者の記録にない（domain の `notFound`）。消した割り込みを戻す操作では、利用者がその Sprint から消していない ID（ほかの利用者の ID、存在しない ID を含む。どれも同じ応答）。契約にない `/api/*` の経路とメソッドも同じ（Better Auth の `/api/auth/*` を除く。#319） |
+| 409 | `/problems/revision-conflict` | ほかの書き込みが先に入り、この書き込みはしていない（ADR 0004「同時の書き込み」）。保存は確定したのに DB の応答が失われたときもこれになる（ADR 0004 の既知の限界）。どちらも読み直せば保存された記録が分かる |
+| 413 | `/problems/payload-too-large` | 操作の本文が上限（64 KiB）を超える（#266） |
+| 422 | `/problems/invalid-input`・`/problems/invalid-transition`・`/problems/recurring-task-cannot-complete` | domain が操作を受け付けない（値の規則、状態の遷移、繰り返しの Task の完了）。domain の `code` との対応は `services/api/src/errors.ts` の `DOMAIN_PROBLEMS`（ブラウザ内モックも同じ表を持つ。契約は domain に依存しないため。ADR 0007） |
+| 422 | `/problems/user-not-set-up` | 利用者の設定（タイムゾーン・週の始まり）がまだなく、「今日」が決まらない。`getMe` のほかの操作と読み取りはすべてこれで断る（#266） |
+| 500 | `/problems/internal-error` | 予期しない失敗 |
 
-- 各 operation の応答に書く：操作は 400（path の値・query・本文のどれもない操作を除く）・401・403・404・409・413・422・500。読み取りは 400（パラメータのある読み取り）・401・409・422・500。`getMe` は 401・409・500（設定があれば追いつきを走らせるので 409 がありうる。#295 R1）。読み取りの 409 は、読み取りの前の追いつき（#271）の書き込みが、ほかの書き込みとぶつかったとき。操作の 422 は domain の 3 つの code と `userNotSetUp` のどれか、読み取りの 422 は `userNotSetUp` だけ。
-- `userNotSetUp` は domain の規則ではなく、記録を読み込んだときに設定の行がないことで決まる。判定はサーバーの流れの 1 か所（`services/api/src/handlers/flow.ts`）に置く。設定を作る `PUT /api/me/settings`（#279）は、記録を読む前に分かれるので、この code で断らない（`flow.setUp`）。
+400 の `errors`（拡張の項目。RFC 9457 §3 の例と同じ名前）は、契約と合わない場所ごとに 1 つの `{ detail, …場所 }` の配列（1 つ以上）。場所は次のどれか 1 つで表す（#319。SmartBear の problem registry の `validation-error` と同じ書き方。RFC 9457 §3 の例は本文だけ）。
+
+- 本文：`pointer`。JSON Pointer を URI の fragment の形（RFC 6901 §6）で書く：`#/title`、`#/previous/setAt`。本文全体（JSON でない本文など）は `#`。RFC 9457 §3 の例と registry に合わせた（2026-10-04 司令塔の判断、#319）。
+- path と query：`parameter`。契約の名前のまま（`taskId`、`apply-criterion`）。
+- ヘッダー：`header`。ヘッダーの名前。今はヘッダーを検証する経路がなく、冪等キー（#320）と記録ごとの版（#321）で使う。
+
+本文は `@itera/api-contract/problems`（手で書く。サーバーとブラウザ内モックが使う）の `problemOf`・`validationProblem` で作る。Valibot の誤りから場所を作るのも同じ module（`valibotIssues`・`issueAt`）。サーバーは `services/api/src/errors.ts` の `ApiError` と `errorResponse` の 1 か所で応答にする。Workers Logs に残すもの（ADR 0004）は変えない。
+
+- 各 operation の応答に書く：操作は 400（path の値・query・本文のどれもない操作を除く）・401・403・404・409・413・422・500。読み取りは 400（パラメータのある読み取り）・401・409・422・500。`getMe` は 401・409・500（設定があれば追いつきを走らせるので 409 がありうる。#295 R1）。読み取りの 409 は、読み取りの前の追いつき（#271）の書き込みが、ほかの書き込みとぶつかったとき。操作の 422 は domain の 3 つの種類と `/problems/user-not-set-up` のどれか、読み取りの 422 は `/problems/user-not-set-up` だけ。
+- `/problems/user-not-set-up` は domain の規則ではなく、記録を読み込んだときに設定の行がないことで決まる。判定はサーバーの流れの 1 か所（`services/api/src/handlers/flow.ts`）に置く。設定を作る `PUT /api/me/settings`（#279）は、記録を読む前に分かれるので、この種類で断らない（`flow.setUp`）。
 - 本文の大きさの上限は 64 KiB（書き込みのすべての面に Hono の `bodyLimit`。#295 までは `/api/operations/*`）。いちばん大きい本文は Task の説明を含む `saveTask` で、文章を書く欄として十分に大きく、D1 の文字列・行の上限（2 MB）より小さい。`Content-Length` があれば本文を読まずに 413 を返す（ない要求は上限まで読んでから 413）。上限は `info.version` を変えずに広げてよい（狭めるのは壊す変更）。
-- `requireAuth` の 401 の本文も、この形（`unauthenticated`）にした（#266）。
+- `requireAuth` の 401、Origin の 403、本文の大きさの 413（middleware が返すもの）も、この形にした（#266、#319）。
 - 422 にしたのは、要求の形は正しく、記録の今の状態や値の規則で受け付けられないことを、形の誤り（400）と分けるため。409 は版の衝突だけに使い、クライアントは 409 なら読み直す（ADR 0004）。
-- **断られた操作の後も、クライアントは読み直す**（2026-10-03 司令塔の判断、#295）。400・403・404・413・422 で断られた操作は何も保存していないが、送った値が古かったことがある：日付が変わった後の古い「今日」（W3 の 422）、週が終わって Review に入った後の古い実行中の Sprint（422 `invalidTransition`）など。読み直せば、クライアントは今の記録（`/me` の時計と今の Sprint）に戻る。Web は `apps/web/src/api/query-client.ts` で、操作が断られたら読み直してから失敗を返す。iOS・Android も同じ規則に従う。画面の文言は、断られたことを伝えるもの（記録は変わっていない）のまま。
-  - W3 のための専用の code（`dayChanged` など）は今は足さない。原因を文言で伝えたくなったら後から足せる（開いた列挙なので壊さない変更）。
+- **断られた操作の後も、クライアントは読み直す**（2026-10-03 司令塔の判断、#295）。400・403・404・413・422 で断られた操作は何も保存していないが、送った値が古かったことがある：日付が変わった後の古い「今日」（W3 の 422）、週が終わって Review に入った後の古い実行中の Sprint（422 `/problems/invalid-transition`）など。読み直せば、クライアントは今の記録（`/me` の時計と今の Sprint）に戻る。Web は `apps/web/src/api/query-client.ts` で、操作が断られたら読み直してから失敗を返す。iOS・Android も同じ規則に従う。画面の文言は、断られたことを伝えるもの（記録は変わっていない）のまま。
+  - W3 のための専用の種類（`/problems/day-changed` など）は今は足さない。原因を文言で伝えたくなったら後から足せる（開いた列挙なので壊さない変更）。
 
 ### 生成物
 
@@ -209,6 +224,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
   - `@itera/api-contract/create-client`：別のクライアントを作る `createClient`・`createConfig`。Web はデータの出どころ（API、ブラウザ内モック）ごとにクライアントを作る（#272、ADR 0005「Web のクライアントとブラウザ内モック」）。
   - `@itera/api-contract/react-query`：TanStack Query の options（Web）。React に依存する。
   - `@itera/api-contract/requests`：操作と面の振り分け（上の「経路の形」、#295）と `queryInput`。生成物ではなく手で書く。サーバー・ブラウザ内モック・Web が使う。
+  - `@itera/api-contract/problems`：エラーの本文（種類ごとのステータスと `title`、domain の拒否との対応、`errors` の場所の作り方。上の「エラー」、#319）。生成物ではなく手で書く。サーバー・ブラウザ内モック・Web（`failureOf` の型、テストの応答）が使う。domain には依存しない（ADR 0007）。
   - `@itera/api-contract/testing`：テストの道具（操作ごとの入力の例 `OPERATION_EXAMPLES` など）。テストだけが使う。
   - `services/api` から `client`・`create-client`・`react-query` の import を ESLint の `no-restricted-imports` で止める。API が React に依存しない。
 - Hey API がそのまま写す fetch の実行時のコード（`src/generated/client/`・`core/`）は `exactOptionalPropertyTypes` を前提に書かれておらず、`apps/web` はこの .ts を自分の設定で型検査する。そこで生成の後処理で、この 2 つのディレクトリのファイルにだけ `// @ts-nocheck` を付ける。契約から生成したコード（型・スキーマ・SDK・Query の options）は型検査の対象のまま。Hey API がこの設定に対応したら外す。
@@ -226,6 +242,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 - 往復（`src/requests.test.ts`）：操作ごとの入力の例（`OPERATION_EXAMPLES`。省略できる項目の有無を含む）を `requestOf` で要求にし、面のスキーマで検証して `operation` に通すと、同じ操作と入力に戻る。面のメソッドと経路が、生成したクライアントの関数が送るものと同じ。面のスキーマのすべての項目を、どれかの操作の要求が使う。すべての経路と query の名前が kebab-case。
 - 型：各操作の入力と要求は `requests.ts` の中で生成した型に対して型検査する。出力と応答（1 つの操作だけの面は同じ型、いくつかの操作の面は各出力が応答に合い、合わせて応答の項目になる）、各読み取りの結果と応答の `view`（`undefined` は `null`）と `clock` が、型として同じ（片方への代入ができるだけでなく、余分な・欠けたキーもない）。比べる前に、両方から brand（ID・日付）と `readonly` を外す。`pnpm typecheck` で確かめる。このテストは、今は application の結果から DTO への写像が恒等であることを確かめるもので、application の形が契約の正本であることを示すものではない（契約の正本は `openapi/`）。内部の変更で型が合わなくなったら、意図した契約の変更でない限り、契約は直さずに `services/api` に写像を置く（ADR 0007「アプリケーション層の読み取りと API の DTO」）。
 - fixture：PRD §12 の 12 状態で、すべての読み取り（Backlog の絞り込みごと、すべての Sprint の番号と次の週、昨日と明日）の結果を JSON にして `{ clock, view }` で包み、生成した応答のスキーマで検証する。
+- エラー：`problems.ts` が作る本文が、種類ごとに契約のスキーマを通る（`src/problems.test.ts`）。生成した型で、すべての operation のエラーの応答が `unknown` でなく Problem の型になる（`src/generated.test.ts`。Hey API 0.99.0 は `application/problem+json` の応答も `application/json` と同じく読む）。サーバーのテストは、エラーの応答の `Content-Type`・本文の `status`・そのステータスのスキーマを確かめる（`services/api/src/test-problems.ts`）。
 - ID：各種類の ID のスキーマが、`parseId` と同じものを受け付ける。型のテストは ID を文字列として比べるので、各操作の入力のどこがどの種類の ID を取るかは別に確かめる：application の入力の型から求めた種類の表（`pnpm typecheck` で型と照合）に沿って、例の入力の ID を別の種類の ID に替えると、その要求を面のスキーマが断る（`src/id-kinds.test.ts`）。
 
 ## 検討した代替案
@@ -262,10 +279,10 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 列挙は 2 種類に分け、どちらなのかを仕様の `description` に書く。
 
-- **開いた列挙**：値が増えることを前提にする列挙。エラーの `code` と、操作の可否（ADR 0007「操作の可否」）。値を足すのは壊さない変更。
-  - 受け取る側（すべてのクライアントと、そこで使う生成した型と検証）は、知らない値を受理しなければならない。知らない値で、読み込み（decode）も応答の検証も失敗させない。知らない `code` は一般の失敗として扱い、知らない操作は出さない。知らない HTTP のステータス（#266 で足した 413 のように、後から足すもの）も、一般の失敗として扱う。
+- **開いた列挙**：値が増えることを前提にする列挙。エラーの `type`（#319 までは `code`）と、操作の可否（ADR 0007「操作の可否」）。値を足すのは壊さない変更。
+  - 受け取る側（すべてのクライアントと、そこで使う生成した型と検証）は、知らない値を受理しなければならない。知らない値で、読み込み（decode）も応答の検証も失敗させない。知らない `type` は一般の失敗として扱い、知らない操作は出さない。知らない HTTP のステータス（#266 で足した 413 のように、後から足すもの）も、一般の失敗として扱う。
   - iOS・Android の生成した型がこれを満たすこと（知らない値を表す場合を持つか、文字列として受ける）を、生成の道具を選ぶ条件にする。満たさない道具は使わない。
-  - 今の仕様は、`code` をエラーごとに `const` で書いている（domain の 3 つの code の `RuleViolationError` だけ `enum`）。操作の 422 は `RuleViolationError` と `UserNotSetUpError` の `oneOf`（#266）。エラーの本文の `oneOf` のように、枝が `code` の値だけで分かれ、形がどれも `{ code, message }` のものは、開いた列挙として扱う。枝を足すのは `code` の値を足すのと同じで、壊さない変更。開いた列挙の仕様での書き方（拡張の印、`anyOf` で文字列を足すなど）は、iOS に着手する前に生成の道具と一緒に決め、そのとき `code` も書き直す。Web が応答を実行時に検証するようにするなら、それより前に決める。
+  - 今の仕様は、`type` をエラーごとに `const` で書いている（domain の 3 つの種類の `RuleViolationError` だけ `enum`）。操作の 422 は `RuleViolationError` と `UserNotSetUpError` の `oneOf`（#266）。エラーの本文の `oneOf` のように、枝が `type` の値だけで分かれ、形がどれも Problem Details（`{ type, title, status, detail }` と種類ごとの拡張）のものは、開いた列挙として扱う。枝を足すのは `type` の値を足すのと同じで、壊さない変更。開いた列挙の仕様での書き方（拡張の印、`anyOf` で文字列を足すなど）は、iOS に着手する前に生成の道具と一緒に決め、そのとき `type` も書き直す。Web が応答を実行時に検証するようにするなら、それより前に決める。
 - **閉じた列挙**：値ごとに意味が違い、知らない値では正しく表示できないもの。状態の名前、union の判別子（`base`・`kind` など）、`SprintWeek` など。値を足すのは壊す変更。判別子が閉じた列挙の union に種類（`oneOf` の枝）を足すのも同じ（エラーの本文の `oneOf` は上の開いた列挙）。
 - 閉じた列挙でも、知らない値で読み込み全体を失敗させないことが望ましい（その部分を一般の形で出すか、アプリの更新を促す）。ただし、これに頼って閉じた列挙に値を足さない。
 
@@ -294,7 +311,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 ### 壊す変更をするとき
 
 - `info.version` の major を上げ、ADR に書く。
-- ただし最初の本番の公開（統合ブランチを main に入れて CD でデプロイするとき）までは、SemVer（§4）の major 0（初期の開発中）として扱い、壊す変更で minor を上げる。最初の本番の公開で 1.0.0 にし、その後は major を上げる（2026-10-03 司令塔の判断、#295）。#295 の経路の変更で 0.2.0 にした。
+- ただし最初の本番の公開（統合ブランチを main に入れて CD でデプロイするとき）までは、SemVer（§4）の major 0（初期の開発中）として扱い、壊す変更で minor を上げる。最初の本番の公開で 1.0.0 にし、その後は major を上げる（2026-10-03 司令塔の判断、#295）。#295 の経路の変更で 0.2.0、#319 のエラーの形の変更で 0.3.0 にした。
 - 版の上げ方（経路、ヘッダー、受け付ける最低の版）と、古いクライアントの扱いは、iOS に着手するまでに決める。それまでは Web だけなので、壊す変更を入れた直後は、開いたままのタブの要求が失敗しうる（400 など）。利用者が 1 人の間は、読み直しで足りる。
 
 ### 決めていないこと（iOS に着手する前に決める）

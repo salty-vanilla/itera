@@ -252,26 +252,26 @@ const failures: readonly Failure[] = [
     state: 'today-morning',
     body: running,
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'beginRetro',
     body: reviewing,
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'beginRetro',
     body: () => ({ sprintId: ids.sprint.previous }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'beginRetro',
     state: 'today-morning',
     body: () => ({ sprintId: missing('Sprint') }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   // The Retro's operations are on a Sprint in Review.
   {
@@ -279,13 +279,13 @@ const failures: readonly Failure[] = [
     state: 'today-morning',
     body: (r) => ({ ...running(r), areaId: research, assessment: 'achieved' }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'assessGoal',
     body: (r) => ({ ...reviewing(r), areaId: life, assessment: 'achieved' }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   {
     name: 'assessGoal',
@@ -295,7 +295,7 @@ const failures: readonly Failure[] = [
       assessment: 'achieved',
     }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   {
     name: 'pinFact',
@@ -304,7 +304,7 @@ const failures: readonly Failure[] = [
       pin: { kind: 'sprintTask', id: missing('SprintTask') },
     }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   {
     // A fact of another Sprint is not one of this Retro's.
@@ -317,41 +317,41 @@ const failures: readonly Failure[] = [
       },
     }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   {
     name: 'pinFact',
     body: (r) => ({ ...reviewing(r), pin: { kind: 'goal', id: life } }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   {
     name: 'pinFact',
     state: 'today-morning',
     body: (r) => ({ ...running(r), pin: { kind: 'availableHours' } }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'unpinFact',
     state: 'today-morning',
     body: (r) => ({ ...running(r), pin: { kind: 'availableHours' } }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'setReflection',
     state: 'today-morning',
     body: (r) => ({ ...running(r), text: '早すぎる' }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'setImprovement',
     state: 'today-morning',
     body: (r) => ({ ...running(r), text: '早すぎる' }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     // The text cannot be emptied while a criterion is made from it.
@@ -359,73 +359,73 @@ const failures: readonly Failure[] = [
     prepare: [improve(), draft],
     body: (r) => ({ ...reviewing(r), text: '' }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'draftCriterion',
     body: (r) => ({ ...reviewing(r), policy }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'draftCriterion',
     prepare: [improve(), draft],
     body: (r) => ({ ...reviewing(r), policy: widerPolicy }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'draftCriterion',
     state: 'today-morning',
     body: (r) => ({ ...running(r), policy }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'setDraftPolicy',
     body: () => ({ criterionId: missing('PlanningCriterion'), policy }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   {
     // The active criterion is no draft of the Retro in progress.
     name: 'setDraftPolicy',
     body: (r) => ({ criterionId: activeCriterion(r).id, policy }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'dropCriterionDraft',
     body: () => ({ criterionId: missing('PlanningCriterion') }),
     status: 404,
-    code: 'notFound',
+    type: '/problems/not-found',
   },
   {
     name: 'dropCriterionDraft',
     body: (r) => ({ criterionId: activeCriterion(r).id }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     // Replacing needs the draft that replaces it.
     name: 'decideCriterion',
     body: (r) => ({ ...reviewing(r), decision: 'replace' }),
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'decideCriterion',
     state: 'today-morning',
     body: (r) => ({ ...running(r), decision: 'end' }),
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     // Invariant 36: the criterion the Sprint had is decided on first.
     name: 'completeRetro',
     body: reviewing,
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     // Invariant 35: continuing keeps the active one, so the draft goes first.
@@ -434,14 +434,14 @@ const failures: readonly Failure[] = [
     prepare: [draft],
     body: reviewing,
     status: 422,
-    code: 'invalidInput',
+    type: '/problems/invalid-input',
   },
   {
     name: 'completeRetro',
     state: 'today-morning',
     body: running,
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     // Closed with the Retro: no more actual time (F22).
@@ -456,14 +456,14 @@ const failures: readonly Failure[] = [
       };
     },
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
   {
     name: 'beginPlanning',
     state: 'planning-pick',
     body: () => undefined,
     status: 422,
-    code: 'invalidTransition',
+    type: '/problems/invalid-transition',
   },
 ];
 
@@ -518,7 +518,9 @@ describe('the Retro operations as a whole', () => {
     const before = await app.saved();
     const response = await app.post('assessGoal', body(before.records));
     expect(response.status).toBe(400);
-    expect(await response.json()).toMatchObject({ code: 'validationFailed' });
+    expect(await response.json()).toMatchObject({
+      type: '/problems/validation-failed',
+    });
     expect(await app.saved()).toEqual(before);
   });
 
@@ -692,7 +694,9 @@ describe('the Retro through the invariants', () => {
     expect(reviewOf(records).criterionUse?.retroDecision).toBeUndefined();
     const response = await app.post('completeRetro', sprint);
     expect(response.status).toBe(422);
-    expect(await response.json()).toMatchObject({ code: 'invalidTransition' });
+    expect(await response.json()).toMatchObject({
+      type: '/problems/invalid-transition',
+    });
   });
 
   it('a closed Sprint’s Retro is read only', async () => {
@@ -711,7 +715,7 @@ describe('the Retro through the invariants', () => {
       const response = await app.post(name, body);
       expect(response.status, name).toBe(422);
       expect(await response.json()).toMatchObject({
-        code: 'invalidTransition',
+        type: '/problems/invalid-transition',
       });
       expect(await app.saved()).toEqual(before);
     }
@@ -757,7 +761,9 @@ describe('the Retro through the invariants', () => {
     const before = await app.saved();
     const refused = await app.post('confirmSprint', confirm);
     expect(refused.status).toBe(422);
-    expect(await refused.json()).toMatchObject({ code: 'invalidTransition' });
+    expect(await refused.json()).toMatchObject({
+      type: '/problems/invalid-transition',
+    });
     expect(await app.saved()).toEqual(before);
 
     await app.run('completeRetro', sprint);
@@ -827,7 +833,7 @@ describe('the Retro read', () => {
       () => `/sprints/${missing('Sprint')}/retro`,
     );
     expect(response.status).toBe(404);
-    expect(json).toMatchObject({ code: 'notFound' });
+    expect(json).toMatchObject({ type: '/problems/not-found' });
   });
 
   it('answers 400 to an ID of another kind', async () => {
@@ -836,7 +842,7 @@ describe('the Retro read', () => {
       () => `/sprints/${ids.task.paper}/retro`,
     );
     expect(response.status).toBe(400);
-    expect(json).toMatchObject({ code: 'validationFailed' });
+    expect(json).toMatchObject({ type: '/problems/validation-failed' });
   });
 
   it('writes nothing', async () => {

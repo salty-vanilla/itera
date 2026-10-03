@@ -12,7 +12,7 @@
 // A person who has not made their settings yet (the fixture state
 // `before-settings`) is answered as the API answers them: `getMe` has
 // `settings: null`, `PUT /me/settings` makes them, and every other read and
-// operation is refused with 422 `userNotSetUp` until then (#279).
+// operation is refused with 422 `user-not-set-up` until then (#279).
 // 1. The request is checked against the contract's schemas (400).
 // 2. The system's records are brought up to now: a Sprint past its end goes
 //    to Review, then the running Sprint's day starts (#271).
@@ -22,6 +22,17 @@
 // the API does; in the operations' requests only the form is checked, which
 // is all the screens can send wrong.
 import * as contract from '@itera/api-contract';
+import {
+  issueAt,
+  PROBLEM_CONTENT_TYPE,
+  problemOf,
+  validationProblem,
+  valibotIssues,
+  type PlainProblemType,
+  type Problem,
+  type RequestPart,
+  type ValidationIssue,
+} from '@itera/api-contract/problems';
 import {
   queryInput,
   readRequest,
@@ -52,6 +63,7 @@ import {
 import {
   parseLocalDate,
   type DomainError,
+  type DomainErrorCode,
   type LocalDate,
 } from '@itera/domain';
 import * as v from 'valibot';
@@ -236,12 +248,12 @@ export function createMock(
       try {
         const response = isSignedIn()
           ? await answer(store, request, settings)
-          : failure(401, 'unauthenticated', 'No session.');
+          : failure('/problems/unauthenticated', 'No session.');
         response.headers.set(MOCK_HEADER, '1');
         return response;
       } catch (error) {
         console.error(error);
-        return failure(500, 'internalError', 'The mock failed.');
+        return failure('/problems/internal-error', 'The mock failed.');
       }
     },
   };
@@ -264,7 +276,10 @@ async function answer(
       settings: null,
     });
   if (!settings.made && (write !== undefined || readOf(path) !== undefined))
-    return failure(422, 'userNotSetUp', 'The user has no settings yet.');
+    return failure(
+      '/problems/user-not-set-up',
+      'The user has no settings yet.',
+    );
   if (request.method === 'GET' && path === '/me') {
     // The person and their settings; with them, the clock and the Sprints
     // they have now, after the catch-up, as the API reads them (#295 R1).
@@ -287,7 +302,7 @@ async function answer(
     const { records, clock } = store.getSnapshot();
     const result = read.read.read(records, clock, parts.value);
     return result === NOT_FOUND
-      ? failure(404, 'notFound', `Not found: ${path}`)
+      ? failure('/problems/not-found', `Not found: ${path}`)
       : view(clock, result);
   }
   if (write !== undefined) {
@@ -321,10 +336,10 @@ async function makeSettings(
   try {
     body = await request.json();
   } catch {
-    return failure(400, 'validationFailed', 'The body is not JSON.');
+    return invalidAt(issueAt('body', [], 'not JSON.'));
   }
   const checked = v.safeParse(settingsSurface.body, body);
-  if (!checked.success) return invalid(checked.issues);
+  if (!checked.success) return invalid('body', checked.issues);
   const { user } = store.getSnapshot().records;
   const result = settingsChange(
     user.id,
@@ -373,12 +388,13 @@ function partsOf(
   let path: Readonly<Record<string, string>> = {};
   if (read.path !== undefined) {
     const result = v.safeParse(read.path, values);
-    if (!result.success) return { ok: false, response: invalid(result.issues) };
+    if (!result.success)
+      return { ok: false, response: invalid('path', result.issues) };
     path = result.output as Record<string, string>;
     if (path.date !== undefined && !parseLocalDate(path.date).ok)
       return {
         ok: false,
-        response: failure(400, 'validationFailed', `Not a date: ${path.date}`),
+        response: invalidAt(issueAt('path', ['date'], 'not a day.')),
       };
   }
   if (read.query === undefined) return { ok: true, value: { path, query: {} } };
@@ -388,7 +404,7 @@ function partsOf(
   );
   return query.success
     ? { ok: true, value: { path, query: query.output as Parts['query'] } }
-    : { ok: false, response: invalid(query.issues) };
+    : { ok: false, response: invalid('query', query.issues) };
 }
 
 /** Each name of a query with all its values. */
@@ -426,15 +442,13 @@ async function operationOf(
           try {
             return await request.json();
           } catch {
-            throw new Refused(
-              failure(400, 'validationFailed', 'The body is not JSON.'),
-            );
+            throw new Refused(invalidAt(issueAt('body', [], 'not JSON.')));
           }
         },
       },
-      (schema, value) => {
+      (schema, value, part) => {
         const result = v.safeParse(schema, value);
-        if (!result.success) throw new Refused(invalid(result.issues));
+        if (!result.success) throw new Refused(invalid(part, result.issues));
         return result.output;
       },
     );
@@ -445,7 +459,7 @@ async function operationOf(
     if (error instanceof RequestError)
       return {
         ok: false,
-        response: failure(400, 'validationFailed', error.message),
+        response: invalidAt(error.issue),
       };
     throw error;
   }
@@ -455,25 +469,41 @@ function view(clock: Clock, view: unknown) {
   return json(200, { clock, view: view ?? null });
 }
 
-/** ADR 0006 エラー: `notFound` is 404, the domain's other refusals 422. */
+/** The problem of each refusal of the domain, as the API answers it. */
+const DOMAIN_PROBLEMS: { readonly [C in DomainErrorCode]: PlainProblemType } = {
+  notFound: '/problems/not-found',
+  invalidInput: '/problems/invalid-input',
+  invalidTransition: '/problems/invalid-transition',
+  recurringTaskCannotComplete: '/problems/recurring-task-cannot-complete',
+};
+
+/** ADR 0006 エラー: the domain's refusals, by their problem's type. */
 function domainFailure(error: DomainError) {
-  return failure(
-    error.code === 'notFound' ? 404 : 422,
-    error.code,
-    error.message,
-  );
+  return failure(DOMAIN_PROBLEMS[error.code], error.message);
 }
 
-function invalid(issues: readonly v.BaseIssue<unknown>[]) {
-  return failure(
-    400,
-    'validationFailed',
-    issues.map((i) => `${v.getDotPath(i) ?? ''}: ${i.message}`).join('; '),
-  );
+/** A 400 `validation-failed` at the places Valibot found in the part. */
+function invalid(
+  part: RequestPart,
+  issues: readonly [v.BaseIssue<unknown>, ...v.BaseIssue<unknown>[]],
+) {
+  return problem(validationProblem(valibotIssues(part, issues)));
 }
 
-function failure(status: number, code: string, message: string) {
-  return json(status, { code, message });
+/** A 400 `validation-failed` at one place. */
+function invalidAt(issue: ValidationIssue) {
+  return problem(validationProblem([issue]));
+}
+
+function failure(type: PlainProblemType, detail: string) {
+  return problem(problemOf(type, detail));
+}
+
+function problem(body: Problem) {
+  return new Response(JSON.stringify(body), {
+    status: body.status,
+    headers: { 'Content-Type': PROBLEM_CONTENT_TYPE },
+  });
 }
 
 function json(status: number, body: unknown) {

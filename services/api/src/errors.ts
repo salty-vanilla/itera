@@ -1,71 +1,79 @@
-import type {
-  ForbiddenOriginError,
-  InternalError,
-  NotFoundError,
-  PayloadTooLargeError,
-  RevisionConflictError,
-  RuleViolationError,
-  UnauthenticatedError,
-  UserNotSetUpError,
-  ValidationError,
-} from '@itera/api-contract';
-import type { DomainError } from '@itera/domain';
+import {
+  PROBLEM_CONTENT_TYPE,
+  problemOf,
+  validationProblem,
+  type PlainProblemType,
+  type Problem,
+  type ValidationIssue,
+} from '@itera/api-contract/problems';
+import type { DomainError, DomainErrorCode } from '@itera/domain';
 import { DrizzleQueryError } from 'drizzle-orm';
 import type { Context } from 'hono';
-import type { ContentfulStatusCode } from 'hono/utils/http-status';
 
-/** Every error body of the contract: `{ code, message }` (ADR 0006 エラー). */
-export type ErrorBody =
-  | ValidationError
-  | UnauthenticatedError
-  | ForbiddenOriginError
-  | NotFoundError
-  | RevisionConflictError
-  | PayloadTooLargeError
-  | RuleViolationError
-  | UserNotSetUpError
-  | InternalError;
-
-export type ErrorCode = ErrorBody['code'];
-
-/** The HTTP status of each code (ADR 0006 エラー). */
-const statusOf: Record<ErrorCode, ContentfulStatusCode> = {
-  validationFailed: 400,
-  unauthenticated: 401,
-  forbiddenOrigin: 403,
-  notFound: 404,
-  revisionConflict: 409,
-  payloadTooLarge: 413,
-  invalidInput: 422,
-  invalidTransition: 422,
-  recurringTaskCannotComplete: 422,
-  userNotSetUp: 422,
-  internalError: 500,
+/** The problem of each refusal of the domain (ADR 0006 エラー). */
+export const DOMAIN_PROBLEMS: {
+  readonly [C in DomainErrorCode]: PlainProblemType;
+} = {
+  notFound: '/problems/not-found',
+  invalidInput: '/problems/invalid-input',
+  invalidTransition: '/problems/invalid-transition',
+  recurringTaskCannotComplete: '/problems/recurring-task-cannot-complete',
 };
 
 /**
- * A failure the API answers with one of the contract's errors. Thrown from
- * anywhere in a request; `app.onError` turns it into the response. `message`
- * is for developers (ADR 0006): it names what failed, never the records.
+ * What a failure answers with: a problem's type and what happened this time
+ * (`detail`), or the places of a request that does not match the contract
+ * (ADR 0006 エラー).
+ */
+export type Failure =
+  | { readonly type: PlainProblemType; readonly detail: string }
+  | {
+      readonly type: '/problems/validation-failed';
+      readonly errors: readonly [ValidationIssue, ...ValidationIssue[]];
+    };
+
+/**
+ * A failure the API answers with one of the contract's problems. Thrown
+ * from anywhere in a request; `app.onError` turns it into the response.
+ * `detail` is for developers (ADR 0006): it names what failed, never the
+ * records.
  */
 export class ApiError extends Error {
   override readonly name = 'ApiError';
 
-  constructor(
-    readonly code: ErrorCode,
-    message: string,
-  ) {
-    super(message);
+  constructor(readonly failure: Failure) {
+    super(
+      failure.type === '/problems/validation-failed'
+        ? failure.errors.map((issue) => issue.detail).join('; ')
+        : failure.detail,
+    );
+  }
+
+  static of(type: PlainProblemType, detail: string): ApiError {
+    return new ApiError({ type, detail });
+  }
+
+  /** A 400 `validation-failed` at the places that do not match. */
+  static invalid(
+    ...errors: readonly [ValidationIssue, ...ValidationIssue[]]
+  ): ApiError {
+    return new ApiError({ type: '/problems/validation-failed', errors });
   }
 
   static fromDomain(error: DomainError): ApiError {
-    return new ApiError(error.code, error.message);
+    return ApiError.of(DOMAIN_PROBLEMS[error.code], error.message);
   }
 }
 
-export function errorResponse(c: Context, code: ErrorCode, message: string) {
-  const body = { code, message } as ErrorBody;
-  return c.json(body, statusOf[code]);
+/** The problem's response: `application/problem+json` with its status. */
+export function errorResponse(c: Context, failure: Failure) {
+  const body: Problem =
+    failure.type === '/problems/validation-failed'
+      ? validationProblem(failure.errors)
+      : problemOf(failure.type, failure.detail);
+  return c.body(JSON.stringify(body), body.status, {
+    'Content-Type': PROBLEM_CONTENT_TYPE,
+  });
 }
 
 type LoggedError = {

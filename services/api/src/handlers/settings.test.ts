@@ -17,6 +17,7 @@ import { createMemoryDatabase } from '../db/memory-database';
 import { loadUserSettings } from '../db/user-settings';
 import { activity, user as authUser } from '../db/schema';
 import { testDependencies, testEnv, testNow, testOrigin } from '../test-env';
+import { problemIn } from '../test-problems';
 import { httpRequest, missing } from './operation-cases';
 import { maxBodyBytes } from './body';
 
@@ -82,9 +83,8 @@ function put(
 
 const get = (app: App, path: string) => app.request(`/api${path}`, {}, testEnv);
 
-async function errorOf(response: Response) {
-  return { status: response.status, ...((await response.json()) as object) };
-}
+/** The problem of an error response (its `status` is the response's). */
+const errorOf = problemIn;
 
 describe('before the settings are made', () => {
   it('answers /me with null settings, and no clock', async () => {
@@ -106,7 +106,7 @@ describe('before the settings are made', () => {
       const response = await app.request(url, init, testEnv);
       expect(await errorOf(response)).toMatchObject({
         status: 422,
-        code: 'userNotSetUp',
+        type: '/problems/user-not-set-up',
       });
       expect(await loadRecords(db, alice)).toMatchObject({ revision: 0 });
     },
@@ -125,7 +125,7 @@ describe('before the settings are made', () => {
     const { app } = await setup();
     expect(await errorOf(await get(app, path))).toMatchObject({
       status: 422,
-      code: 'userNotSetUp',
+      type: '/problems/user-not-set-up',
     });
   });
 });
@@ -224,7 +224,7 @@ describe('PUT /api/me/settings', () => {
     const { app } = await setup({ signedIn: false });
     expect(await errorOf(await put(app, settings))).toMatchObject({
       status: 401,
-      code: 'unauthenticated',
+      type: '/problems/unauthenticated',
     });
   });
 
@@ -238,7 +238,7 @@ describe('PUT /api/me/settings', () => {
       await put(app, settings);
       expect(await errorOf(await put(app, other))).toMatchObject({
         status: 422,
-        code: 'invalidInput',
+        type: '/problems/invalid-input',
       });
       expect(await loadUserSettings(db, alice)).toEqual(settings);
       expect((await loadRecords(db, alice)).revision).toBe(1);
@@ -246,17 +246,21 @@ describe('PUT /api/me/settings', () => {
   );
 
   it.each([
-    ['an empty name', { ...settings, displayName: ' ' }, 'invalidInput'],
+    [
+      'an empty name',
+      { ...settings, displayName: ' ' },
+      '/problems/invalid-input',
+    ],
     [
       'a time zone that does not exist',
       { ...settings, timeZone: 'Mars/Olympus' },
-      'invalidInput',
+      '/problems/invalid-input',
     ],
-  ])('refuses %s: 422 %s', async (_, body, code) => {
+  ])('refuses %s: 422 %s', async (_, body, type) => {
     const { app, db } = await setup();
     expect(await errorOf(await put(app, body))).toMatchObject({
       status: 422,
-      code,
+      type,
     });
     expect(await loadUserSettings(db, alice)).toBeNull();
     expect((await loadRecords(db, alice)).revision).toBe(0);
@@ -273,7 +277,7 @@ describe('PUT /api/me/settings', () => {
     const { app, db } = await setup();
     expect(await errorOf(await put(app, body))).toMatchObject({
       status: 400,
-      code: 'validationFailed',
+      type: '/problems/validation-failed',
     });
     expect(await loadUserSettings(db, alice)).toBeNull();
   });
@@ -285,7 +289,7 @@ describe('PUT /api/me/settings', () => {
     });
     expect(await errorOf(response)).toMatchObject({
       status: 403,
-      code: 'forbiddenOrigin',
+      type: '/problems/forbidden-origin',
     });
   });
 
@@ -297,7 +301,7 @@ describe('PUT /api/me/settings', () => {
     });
     expect(await errorOf(response)).toMatchObject({
       status: 413,
-      code: 'payloadTooLarge',
+      type: '/problems/payload-too-large',
     });
   });
 
@@ -325,7 +329,7 @@ describe('PUT /api/me/settings', () => {
     );
     expect(await errorOf(await put(conflicting, settings))).toMatchObject({
       status: 409,
-      code: 'revisionConflict',
+      type: '/problems/revision-conflict',
     });
     expect((await loadRecords(db, alice)).revision).toBe(1);
   });

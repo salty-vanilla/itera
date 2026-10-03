@@ -7,6 +7,7 @@ import {
   vListSprintCandidatesPath,
   vListSprintsQuery,
 } from '@itera/api-contract';
+import { issueAt } from '@itera/api-contract/problems';
 import { queryInput } from '@itera/api-contract/requests';
 import {
   areaList,
@@ -97,7 +98,7 @@ function backlogFilter(query: {
   if (query.area === undefined) return { view: query.view };
   const area = parseId('Area', query.area);
   if (!area.ok)
-    throw new ApiError('validationFailed', 'query.area: not an ID.');
+    throw ApiError.invalid(issueAt('query', ['area'], 'not an ID.'));
   return { view: query.view, area: area.value };
 }
 
@@ -109,7 +110,7 @@ function backlogFilter(query: {
 function sprintIdIn(records: Records, sprintId: string): SprintId {
   const sprint = records.sprints.find((s) => s.id === sprintId);
   if (sprint === undefined)
-    throw new ApiError('notFound', `Sprint ${sprintId}`);
+    throw ApiError.of('/problems/not-found', `Sprint ${sprintId}`);
   return sprint.id;
 }
 
@@ -152,7 +153,7 @@ export const readRoutes: {
         { applyCriterion: query['apply-criterion'] ?? false },
       );
       if (view === undefined)
-        throw new ApiError('notFound', `Sprint ${params.sprintId}`);
+        throw ApiError.of('/problems/not-found', `Sprint ${params.sprintId}`);
       return view;
     },
   }),
@@ -175,7 +176,7 @@ export const readRoutes: {
       // The schema and `validate` have refused a day that does not exist.
       const date = parseLocalDate(params.date);
       if (!date.ok)
-        throw new ApiError('validationFailed', 'path.date: not a day.');
+        throw ApiError.invalid(issueAt('path', ['date'], 'not a day.'));
       return dayView(records, clock, date.value);
     },
   }),
