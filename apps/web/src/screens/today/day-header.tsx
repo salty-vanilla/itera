@@ -35,18 +35,26 @@ export function dateSearchOf(search: Record<string, unknown>): {
 type Control = 'previous' | 'next' | 'date';
 
 /**
- * The heading's control that opened another day. Between today and
- * another day the screen under the heading changes and the heading is made
- * anew, so the screen (which stays) keeps this to put focus back on it.
+ * The heading's control that opened another day. The screen under the
+ * heading changes with the day (today, a past day, one to come, and the
+ * words while it is read), and the heading is made anew when it does: the
+ * screen (which stays) keeps this to put the focus back on the control, and
+ * lets it go when the day is there.
  */
 const DayFocus = createContext<
   | {
       readonly set: (control: Control) => void;
-      /** The control to focus, once. */
-      readonly take: () => Control | undefined;
+      /** The control to focus, until `clear`. */
+      readonly peek: () => Control | undefined;
+      readonly clear: () => void;
     }
   | undefined
 >(undefined);
+
+/** The focus the heading's controls hand to the day that follows. */
+export function useDayFocus() {
+  return useContext(DayFocus);
+}
 
 function DayFocusScope({ children }: { children: ReactNode }) {
   const [value] = useState(() => {
@@ -55,10 +63,9 @@ function DayFocusScope({ children }: { children: ReactNode }) {
       set: (next: Control) => {
         control = next;
       },
-      take: () => {
-        const taken = control;
+      peek: () => control,
+      clear: () => {
         control = undefined;
-        return taken;
       },
     };
   });
@@ -104,15 +111,17 @@ function DayHeader({
     },
   });
 
+  // A heading made anew takes the focus its predecessor had (DayFocus). One
+  // that stays keeps it where it is: the control pressed is still there.
   useEffect(() => {
-    const control = focusAfter?.take();
+    const control = focusAfter?.peek();
     if (control === undefined) return;
     header.current
       ?.querySelector<HTMLElement>(
         control === 'date' ? 'input' : `[data-step="${control}"]`,
       )
       ?.focus();
-  }, [date, focusAfter]);
+  }, [focusAfter]);
 
   // The input's own value while it changes. Typing goes field by field
   // (the year 2 → 20 → 202 → 2026), so a typed date opens on Enter or on

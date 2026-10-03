@@ -7,7 +7,6 @@ import { MetaItem, TaskMetadata } from '@/components/task/task-metadata';
 import { formatDate, formatTime } from '@/lib/date-format';
 import { SELECTION_WORDS } from '@/lib/selection-words';
 import { formatHours } from '@/lib/time-format';
-import { DayFrame } from './day-frame';
 
 // A day other than today on the Today screen (#90), read only.
 // - Past: what was chosen that day and how each ended, and the interrupts.
@@ -21,18 +20,21 @@ import { DayFrame } from './day-frame';
 const link = 'whitespace-nowrap text-link underline focus-visible:focus-ring';
 const Repeat = semanticIcons.recurrence;
 
+/** The line above the date: where the day is in its Sprint. */
+function otherDayMeta({ within }: DayData) {
+  return within === undefined
+    ? undefined
+    : `Sprint ${within.number} · ${within.day.index}日目 / ${within.day.count}日`;
+}
+
+/**
+ * What the day has, under the frame the screen gives it (`DayFrame`, which
+ * it shares with the wait for the day, so that the heading stays).
+ */
 function OtherDay({ data }: { data: DayData }) {
   const { within } = data;
   return (
-    <DayFrame
-      date={data.date}
-      today={data.today}
-      meta={
-        within === undefined
-          ? undefined
-          : `Sprint ${within.number} · ${within.day.index}日目 / ${within.day.count}日`
-      }
-    >
+    <>
       <Where data={data} />
       {data.when === 'future' ? (
         <Future data={data} />
@@ -40,7 +42,7 @@ function OtherDay({ data }: { data: DayData }) {
         // With no Sprint, nothing could be chosen that day.
         within?.sprint !== undefined && <Past data={data} />
       )}
-    </DayFrame>
+    </>
   );
 }
 
@@ -224,4 +226,4 @@ function Future({ data }: { data: DayData }) {
   );
 }
 
-export { OtherDay };
+export { OtherDay, otherDayMeta };

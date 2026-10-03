@@ -17,21 +17,27 @@ export function useSelectionActions() {
   const removeFromToday = useOperation('removeFromToday');
   const on = useOnRunningDay();
   return {
-    start: (selectionId: DailySelectionId) =>
-      on(({ sprintId }) => start.run({ sprintId, selectionId })),
-    pause: (selectionId: DailySelectionId, hours?: number) =>
-      on(({ sprintId }) =>
-        pause.run({
-          sprintId,
-          selectionId,
-          ...(hours === undefined ? {} : { hours }),
-        }),
-      ),
-    defer: (selectionId: DailySelectionId) =>
-      on(({ sprintId }) => defer.run({ sprintId, selectionId })),
-    skip: (selectionId: DailySelectionId) =>
-      on(({ sprintId }) => skip.run({ sprintId, selectionId })),
-    removeFromToday: (selectionId: DailySelectionId) =>
-      on(({ sprintId }) => removeFromToday.run({ sprintId, selectionId })),
+    start: async (selectionId: DailySelectionId) =>
+      (await on(({ sprintId }) => start.run({ sprintId, selectionId }))).ok,
+    pause: async (selectionId: DailySelectionId, hours?: number) =>
+      (
+        await on(({ sprintId }) =>
+          pause.run({
+            sprintId,
+            selectionId,
+            ...(hours === undefined ? {} : { hours }),
+          }),
+        )
+      ).ok,
+    defer: async (selectionId: DailySelectionId) =>
+      (await on(({ sprintId }) => defer.run({ sprintId, selectionId }))).ok,
+    skip: async (selectionId: DailySelectionId) =>
+      (await on(({ sprintId }) => skip.run({ sprintId, selectionId }))).ok,
+    removeFromToday: async (selectionId: DailySelectionId) =>
+      (
+        await on(({ sprintId }) =>
+          removeFromToday.run({ sprintId, selectionId }),
+        )
+      ).ok,
   };
 }

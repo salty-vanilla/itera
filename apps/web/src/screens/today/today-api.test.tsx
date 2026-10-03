@@ -9,6 +9,7 @@ import {
 } from '@itera/application/fixtures';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import {
+  act,
   cleanup,
   render,
   screen,
@@ -170,9 +171,9 @@ describe('Today on the API', () => {
     );
   });
 
-  it('keeps the last day, heading and arrows, until the next one is read', async () => {
+  it('shows the date asked for with its arrows at once, and keeps the focus on the arrow', async () => {
     let release: () => void = () => {};
-    serve((request) =>
+    const { requests } = serve((request) =>
       pathOf(request) === '/api/days/2026-09-30'
         ? new Promise<undefined>((resolve) => {
             release = () => resolve(undefined);
@@ -181,23 +182,64 @@ describe('Today on the API', () => {
     );
     renderToday();
     await dayRead();
-    const next = screen.getByRole('link', { name: '前の日：9/30 (水)' });
-    await userEvent.click(next);
-    await waitFor(() => expect(release).not.toBe(undefined));
-    // Still today's day, with its arrows, while the 30th is being read.
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
-      '10月1日（木）',
+    await userEvent.click(
+      screen.getByRole('link', { name: '前の日：9/30 (水)' }),
     );
-    expect(screen.getByRole('link', { name: '前の日：9/30 (水)' })).toBe(next);
-    release();
+    // The heading is the date asked for, not the last day's, and the
+    // arrows go on from it: a second press is another day back.
     await waitFor(() =>
       expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
         '9月30日（水） 過去',
       ),
     );
+    expect(
+      screen.getByRole('link', { name: '前の日：9/29 (火)' }),
+    ).toBeTruthy();
+    expect(screen.queryByRole('region', { name: '今日やる' })).toBeNull();
+    expect(requests).toContain('GET /api/days/2026-09-30');
+    release();
+    await dayRead();
+    // Today's screen gave way to another day's, twice: the arrow is focused.
     expect(document.activeElement).toBe(
       screen.getByRole('link', { name: '前の日：9/29 (火)' }),
     );
+    // And back to today, whose screen is made anew.
+    await userEvent.click(
+      screen.getByRole('link', { name: '次の日：10/1 (木)' }),
+    );
+    await dayRead();
+    expect(
+      await screen.findByRole('region', { name: '今日やる' }),
+    ).toBeTruthy();
+    expect(document.activeElement).toBe(
+      screen.getByRole('link', { name: '次の日：10/2 (金)' }),
+    );
+  });
+
+  it('puts the focus on the heading of a screen opened before its records are read', async () => {
+    let release: () => void = () => {};
+    serve((request) =>
+      pathOf(request) === '/api/me'
+        ? new Promise<undefined>((resolve) => {
+            release = () => resolve(undefined);
+          }).then(() => undefined)
+        : undefined,
+    );
+    const router = renderToday('/backlog');
+    await screen.findByRole('heading', { level: 1, name: 'Backlog' });
+    await act(() => router.navigate({ to: '/today' }));
+    // No heading while the date is not known: the focus is not lost on one
+    // that is then replaced.
+    expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
+    release();
+    const heading = await screen.findByRole('heading', { level: 1 });
+    await dayRead();
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole('heading', { level: 1 }),
+      ),
+    );
+    expect(heading.textContent).toBe('10月1日（木）');
   });
 
   it('sends a choice as the contract’s request on the running Sprint and today', async () => {
@@ -273,8 +315,8 @@ describe('Today on the API', () => {
     let release: () => void = () => {};
     const { requests } = serve((request) =>
       request.method === 'POST'
-        ? new Promise<Response>((resolve) => {
-            release = () => resolve(Response.json({ id: 'x' }));
+        ? new Promise<undefined>((resolve) => {
+            release = () => resolve(undefined);
           })
         : undefined,
     );
@@ -287,6 +329,12 @@ describe('Today on the API', () => {
       expect(requests.filter((r) => r.startsWith('POST')).length).toBe(1),
     );
     release();
+    // The pressed ones that were not sent do not take the focus from the
+    // one that was: the chosen row's ○ has it.
+    const circle = await screen.findByRole('button', {
+      name: '完了にする：関連論文を 3本読む',
+    });
+    await waitFor(() => expect(document.activeElement).toBe(circle));
   });
 
   it('adds a Task for today with the Area chosen, and keeps what was typed when it is refused', async () => {

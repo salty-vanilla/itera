@@ -2,20 +2,21 @@ import type {
   AreaId,
   DailySelectionId,
   DayData,
+  DayView,
   InterruptNote,
   InterruptNoteId,
   LocalDate,
   OccurrenceId,
+  SprintId,
   SprintTaskId,
   TodayData,
 } from '@itera/api-contract';
 import { getDayOptions } from '@itera/api-contract/react-query';
-import type { DayView } from '@itera/api-contract';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useApiClient } from '@/api/api-provider';
 import { useRead, type Read } from '@/api/read-state';
 import { useOnRunningDay } from '@/api/use-me';
-import { useOperation } from '@/api/use-operation';
+import { useOperation, type Outcome } from '@/api/use-operation';
 
 /**
  * A day on the Today screen: today's choices on the running Sprint (`data`
@@ -35,27 +36,32 @@ function dayScreen({ view }: { view: DayView }): DayScreen {
 
 /**
  * A day of the Today screen: `getDay` through the contract's client (ADR
- * 0005). Moving to another day keeps the last day on screen until the new
- * one is back, so the heading and the focus on its arrows stay.
+ * 0005). Another day is read as it is asked for: the screen shows the date
+ * asked for, never one day's records under another's heading.
  */
 export function useDay(date: LocalDate): Read<DayScreen> {
-  const query = useQuery({
-    ...getDayOptions({ client: useApiClient(), path: { date } }),
-    placeholderData: keepPreviousData,
-  });
+  const query = useQuery(
+    getDayOptions({ client: useApiClient(), path: { date } }),
+  );
   return useRead(query, dayScreen);
 }
 
 const minutesOf = (minutes: number | undefined) =>
   minutes === undefined ? {} : { minutes };
 
+/** Whether an operation went through. */
+const wentThrough = async (outcome: Promise<Outcome<unknown>>) =>
+  (await outcome).ok;
+
 /**
  * The person's operations in Today, one named function each: the contract's
  * operations on the running Sprint and today (ADR 0005 API への移行). Each
  * gives back whether it went through, and when it did, the reads are read
  * again before it resolves (useOperation). A refused or failed one changes
- * nothing and is shown as a Toast. The day's start is the system's: the
- * server brings the records up to now before it answers (ADR 0004).
+ * nothing and is shown as a Toast. What an operation made (the choice for
+ * today, the interrupt) comes back as its ID. The day's start is the
+ * system's: the server brings the records up to now before it answers
+ * (ADR 0004).
  */
 export function useTodayActions() {
   const on = useOnRunningDay();
@@ -78,24 +84,29 @@ export function useTodayActions() {
   const createTaskForToday = useOperation('createTaskForToday');
   const beginRetro = useOperation('beginRetro');
 
-  type OnSelection = (input: {
-    sprintId: string;
-    selectionId: DailySelectionId;
-  }) => Promise<{ readonly ok: boolean }>;
   const onSelection = (
     selectionId: DailySelectionId,
-    send: OnSelection,
-  ): Promise<boolean> => on(({ sprintId }) => send({ sprintId, selectionId }));
+    send: (input: {
+      sprintId: SprintId;
+      selectionId: DailySelectionId;
+    }) => Promise<Outcome<unknown>>,
+  ) => wentThrough(on(({ sprintId }) => send({ sprintId, selectionId })));
 
   const actions = {
-    chooseForToday: (sprintTaskId: SprintTaskId, occurrenceId?: OccurrenceId) =>
-      on((day) =>
+    /** The new choice's ID, or `undefined` when it did not go through. */
+    chooseForToday: async (
+      sprintTaskId: SprintTaskId,
+      occurrenceId?: OccurrenceId,
+    ): Promise<DailySelectionId | undefined> => {
+      const outcome = await on((day) =>
         choose.run({
           ...day,
           sprintTaskId,
           ...(occurrenceId === undefined ? {} : { occurrenceId }),
         }),
-      ),
+      );
+      return outcome.ok ? outcome.value.selectionId : undefined;
+    },
     start: (selectionId: DailySelectionId) =>
       onSelection(selectionId, startSelection.run),
     defer: (selectionId: DailySelectionId) =>
@@ -109,12 +120,14 @@ export function useTodayActions() {
     undoRemove: (selectionId: DailySelectionId) =>
       onSelection(selectionId, undoRemoveFromToday.run),
     pause: (selectionId: DailySelectionId, hours?: number) =>
-      on(({ sprintId }) =>
-        pauseSelection.run({
-          sprintId,
-          selectionId,
-          ...(hours === undefined ? {} : { hours }),
-        }),
+      wentThrough(
+        on(({ sprintId }) =>
+          pauseSelection.run({
+            sprintId,
+            selectionId,
+            ...(hours === undefined ? {} : { hours }),
+          }),
+        ),
       ),
     complete: (selectionId: DailySelectionId) =>
       onSelection(selectionId, completeSelection.run),
@@ -133,45 +146,62 @@ export function useTodayActions() {
       },
       hours: number,
     ) =>
-      on(({ sprintId }) =>
-        recordActualTime.run({
-          sprintId,
-          sprintTaskId: selection.sprintTaskId,
-          date: selection.date,
-          hours,
-          ...(selection.occurrenceId === undefined
-            ? {}
-            : { occurrenceId: selection.occurrenceId }),
-        }),
+      wentThrough(
+        on(({ sprintId }) =>
+          recordActualTime.run({
+            sprintId,
+            sprintTaskId: selection.sprintTaskId,
+            date: selection.date,
+            hours,
+            ...(selection.occurrenceId === undefined
+              ? {}
+              : { occurrenceId: selection.occurrenceId }),
+          }),
+        ),
       ),
-    noteInterrupt: (text: string, minutes?: number) =>
-      on(({ sprintId }) =>
+    /** The new note's ID, or `undefined` when it did not go through. */
+    noteInterrupt: async (
+      text: string,
+      minutes?: number,
+    ): Promise<InterruptNoteId | undefined> => {
+      const outcome = await on(({ sprintId }) =>
         noteInterrupt.run({ sprintId, text, ...minutesOf(minutes) }),
-      ),
+      );
+      return outcome.ok ? outcome.value.interruptNoteId : undefined;
+    },
     editInterrupt: (id: InterruptNoteId, text: string, minutes?: number) =>
-      on(({ sprintId }) =>
-        editInterrupt.run({
-          sprintId,
-          interruptNoteId: id,
-          text,
-          ...minutesOf(minutes),
-        }),
+      wentThrough(
+        on(({ sprintId }) =>
+          editInterrupt.run({
+            sprintId,
+            interruptNoteId: id,
+            text,
+            ...minutesOf(minutes),
+          }),
+        ),
       ),
     deleteInterrupt: (id: InterruptNoteId) =>
-      on(({ sprintId }) =>
-        deleteInterrupt.run({ sprintId, interruptNoteId: id }),
+      wentThrough(
+        on(({ sprintId }) =>
+          deleteInterrupt.run({ sprintId, interruptNoteId: id }),
+        ),
       ),
     restoreInterrupt: (note: InterruptNote) =>
-      on(({ sprintId }) => restoreInterrupt.run({ sprintId, note })),
-    addToToday: (title: string, areaId?: AreaId) =>
-      on((day) =>
-        createTaskForToday.run({
-          ...day,
-          title,
-          ...(areaId === undefined ? {} : { areaId }),
-        }),
+      wentThrough(
+        on(({ sprintId }) => restoreInterrupt.run({ sprintId, note })),
       ),
-    beginRetro: () => on(({ sprintId }) => beginRetro.run({ sprintId })),
+    addToToday: (title: string, areaId?: AreaId) =>
+      wentThrough(
+        on((day) =>
+          createTaskForToday.run({
+            ...day,
+            title,
+            ...(areaId === undefined ? {} : { areaId }),
+          }),
+        ),
+      ),
+    beginRetro: () =>
+      wentThrough(on(({ sprintId }) => beginRetro.run({ sprintId }))),
   };
   // The sends that last (useOperation `loading`): the ones whose button
   // says so, while the surface or the field waits for the answer.
@@ -184,5 +214,3 @@ export function useTodayActions() {
   };
   return { ...actions, loading };
 }
-
-export type TodayActions = ReturnType<typeof useTodayActions>;

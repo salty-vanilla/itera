@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/toast';
 import { useApiClient } from './api-provider';
 import { useRead, type Read } from './read-state';
 import { SAVE_FAILED } from './save-failed';
+import type { Outcome } from './use-operation';
 
 /**
  * The signed-in person (`getMe`): their settings and, once they are made,
@@ -42,21 +43,21 @@ export function useRunningDay(): RunningDay | undefined {
 
 /**
  * Sends an operation on the running Sprint and today (`useRunningDay`) and
- * gives back whether it went through. With no Sprint running there is
+ * gives back its outcome (useOperation). With no Sprint running there is
  * nothing to send it to: the refusal's Toast (SAVE_FAILED), as the API
- * would answer it.
+ * would answer it, and the operation did not go through.
  */
 export function useOnRunningDay() {
   const day = useRunningDay();
   const toast = useToast();
-  return async (
-    send: (day: RunningDay) => Promise<{ readonly ok: boolean }>,
-  ): Promise<boolean> => {
+  return async <T>(
+    send: (day: RunningDay) => Promise<Outcome<T>>,
+  ): Promise<Outcome<T>> => {
     if (day === undefined) {
       toast.show(SAVE_FAILED);
-      return false;
+      return { ok: false };
     }
-    return (await send(day)).ok;
+    return send(day);
   };
 }
 

@@ -1,6 +1,5 @@
 import type { TaskId } from '@itera/api-contract';
-import { SAVE_FAILED } from '@/api/save-failed';
-import { useRunningDay } from '@/api/use-me';
+import { useOnRunningDay } from '@/api/use-me';
 import { useOperation } from '@/api/use-operation';
 import { useToast } from '@/components/ui/toast';
 
@@ -12,17 +11,19 @@ import { useToast } from '@/components/ui/toast';
 export function useAddToWeek() {
   const addToWeek = useOperation('addSprintTasks');
   const undoAddToWeek = useOperation('removeSprintTasks');
-  const sprintId = useRunningDay()?.sprintId;
+  const on = useOnRunningDay();
   const toast = useToast();
   return async (taskId: TaskId, title: string): Promise<boolean> => {
-    // No Sprint running: there is no week to put it in.
-    if (sprintId === undefined) {
-      toast.show(SAVE_FAILED);
-      return false;
-    }
-    const added = await addToWeek.run({ sprintId, taskIds: [taskId] });
+    // With no Sprint running there is no week to put it in (useOnRunningDay).
+    // The undo is for the Sprint it was added to, whichever runs by then.
+    const added = await on(async ({ sprintId }) => {
+      const sent = await addToWeek.run({ sprintId, taskIds: [taskId] });
+      return sent.ok
+        ? { ok: true as const, value: { sprintId, ...sent.value } }
+        : sent;
+    });
     if (!added.ok) return false;
-    const { sprintTaskIds } = added.value;
+    const { sprintId, sprintTaskIds } = added.value;
     toast.show({
       kind: 'added-to-week',
       title: `「${title}」を今週に入れました`,
