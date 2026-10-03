@@ -713,5 +713,10 @@ export const activity = sqliteTable(
   },
   (table) => [
     primaryKey({ columns: [table.userId, table.revision, table.position] }),
+    // The one place the log is searched: whether the user deleted an
+    // InterruptNote (src/db/deleted-interrupts.ts, ADR 0006 「消した記録を戻す操作の照合」).
+    index('activity_interrupt_deleted_idx')
+      .on(sql`${table.content} ->> '$.interruptId'`)
+      .where(sql`${table.kind} = 'interruptDeleted'`),
   ],
 );
