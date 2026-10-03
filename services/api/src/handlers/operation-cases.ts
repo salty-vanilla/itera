@@ -162,16 +162,17 @@ export function httpRequest(name: OperationName, input: unknown) {
 }
 
 /**
- * The records a case starts from: after its steps, and brought up to the
- * app's clock by a read (#271), so that what the operation writes is its
- * own and not the system's catch-up of the days since the fixture's.
+ * The records a case starts from: brought up to the app's clock by a read
+ * (#271) before its steps, so that a step's input is built from the records
+ * the app runs it on, and what the operation writes is its own and not the
+ * system's catch-up of the days since the fixture's.
  */
 async function prepared(app: FixtureApp, steps: readonly Step[] = []) {
+  expect((await app.get('/me')).status).toBe(200);
   for (const [name, body] of steps) {
     const response = await app.post(name, body((await app.saved()).records));
     expect(response.status, `${name} (prepare)`).toBeLessThan(300);
   }
-  expect((await app.get('/me')).status).toBe(200);
   return app.saved();
 }
 
