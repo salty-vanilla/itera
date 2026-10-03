@@ -499,7 +499,7 @@ function NotStarted({ sprint, steps }: { sprint: SprintItem; steps: Steps }) {
             <Button
               variant="primary"
               loading={loading}
-              loadingLabel="始めています…"
+              loadingLabel="保存中…"
               onClick={() => void beginRetro()}
             >
               振り返りを始める

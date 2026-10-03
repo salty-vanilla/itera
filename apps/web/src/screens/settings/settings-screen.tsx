@@ -91,7 +91,7 @@ function SettingsScreen() {
             パスキー
           </h3>
           {passkeys.status !== 'ready' ? (
-            <ReadStatus label="パスキー" read={passkeys} />
+            <ReadStatus label="パスキーの一覧" read={passkeys} />
           ) : passkeys.passkeys.length === 0 ? (
             <p className="text-body text-ink-muted">まだありません。</p>
           ) : (
@@ -136,9 +136,7 @@ function SettingsScreen() {
               variant="primary"
               onClick={() => void addPasskey()}
               disabled={signingOut}
-              {...(adding
-                ? { loading: true, loadingLabel: 'パスキーを追加中…' }
-                : {})}
+              {...(adding ? { loading: true, loadingLabel: '追加中…' } : {})}
             >
               パスキーを追加
             </Button>
