@@ -10,9 +10,10 @@ import {
   EMPTY_DURATION,
   hoursText,
   readMinutes,
-  sameMinutes,
+  sameDuration,
   type DurationText,
 } from '@/lib/duration-text';
+import { useDraftField } from '@/lib/use-draft-field';
 import { useSubtaskActions } from '@/screen-data/use-task-actions';
 
 // Subtasks (PRD §6): add, check off, and give each an Estimate. They take
@@ -122,20 +123,30 @@ function SubtaskList({
 
 function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
   const actions = useSubtaskActions();
-  const saved = hoursText(subtask.estimate);
-  const [hours, setHours] = useState(saved);
+  // Typed apart from the Subtask as read: left as it was, the field follows
+  // another device's change and saves nothing (#324).
+  const field = useDraftField(hoursText(subtask.estimate), sameDuration);
+  const hours = field.value;
   const [error, setError] = useState<string>();
 
-  async function commit() {
+  function commit() {
     const parsed = parseHours(hours);
     if (parsed === 'invalid') {
       setError(DURATION_ERROR);
       return;
     }
     setError(undefined);
-    if (sameMinutes(readMinutes(hours) ?? undefined, subtask.estimate)) return;
-    if (!(await actions.setSubtaskEstimate(task.id, subtask.id, parsed)))
-      setHours(saved);
+    // Compared with what the field showed when it was typed in, to the minute.
+    if (readMinutes(hours) === readMinutes(field.base)) {
+      field.leave();
+      return;
+    }
+    const saving = actions.setSubtaskEstimate(task.id, subtask.id, parsed);
+    field.hold(saving);
+    // A save that fails goes back to the value as read.
+    void saving.then((ok) => {
+      if (!ok) field.drop();
+    });
   }
 
   return (
@@ -166,7 +177,7 @@ function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
         error={error}
         className="basis-full pl-[calc(var(--spacing-target-touch)+var(--spacing-2))] medium:basis-auto medium:pl-0"
         value={hours}
-        onChange={setHours}
+        onChange={field.set}
         // Saved on leaving it, like the Task detail's own fields: a value
         // left in error keeps the detail open (Issue #95). Empty says it
         // has none; the sum above counts it (#241).

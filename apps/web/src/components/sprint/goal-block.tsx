@@ -3,6 +3,7 @@ import { AreaIndicator, type AreaColor } from '@/components/ui/area-indicator';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Textarea } from '@/components/ui/textarea';
+import { useDraftField } from '@/lib/use-draft-field';
 import { cn } from '@/lib/utils';
 import { weekText } from '@/lib/week-text';
 
@@ -65,7 +66,12 @@ function GoalBlock({
 }: GoalBlockProps) {
   const Heading = level === 2 ? 'h2' : 'h3';
   const [editing, setEditing] = useState(false);
-  const [text, setText] = useState(goal ?? '');
+  // Typed apart from the Goal as read: until it is typed in, the form shows
+  // the Goal as it is now, and 保存 compares with what the form showed when
+  // it was typed in, so that a form left as it was never writes the Goal it
+  // opened with over another device's (#324).
+  const field = useDraftField(goal ?? '');
+  const text = field.value;
   const [error, setError] = useState<string | undefined>(undefined);
   const headingId = useId();
   // The one-line form, until a Goal is being written.
@@ -87,6 +93,7 @@ function GoalBlock({
   }, [editing, goal]);
   const close = (saved: boolean) => {
     backToOpen.current = { goal, saved };
+    field.drop();
     setError(undefined);
     setEditing(false);
   };
@@ -119,7 +126,7 @@ function GoalBlock({
             variant="quiet"
             aria-label={`目標を書く：${area.name}`}
             onClick={() => {
-              setText('');
+              field.drop();
               setEditing(true);
             }}
           >
@@ -135,8 +142,9 @@ function GoalBlock({
           className="flex max-w-measure-read flex-col gap-2"
           onSubmit={async (event) => {
             event.preventDefault();
-            // Nothing written for an Area without a Goal: nothing to save.
-            if (goal === undefined && text.trim() === '') {
+            // The same as the form showed: nothing to save. That covers an
+            // Area without a Goal with nothing written.
+            if (text.trim() === field.base.trim()) {
               close(false);
               return;
             }
@@ -150,11 +158,6 @@ function GoalBlock({
                   ?.querySelector<HTMLElement>('[aria-invalid="true"]')
                   ?.focus(),
               );
-              return;
-            }
-            // The same text: nothing to save.
-            if (goal !== undefined && text.trim() === goal) {
-              close(false);
               return;
             }
             if (await onSave?.(text.trim())) close(true);
@@ -174,7 +177,7 @@ function GoalBlock({
               text="body-l"
               value={text}
               autoFocus
-              onChange={(e) => setText(e.currentTarget.value)}
+              onChange={(e) => field.set(e.currentTarget.value)}
             />
           </Field>
           <div className="flex gap-2">
@@ -211,7 +214,7 @@ function GoalBlock({
               className="text-ink-muted"
               aria-label={`目標を編集：${area.name}`}
               onClick={() => {
-                setText(goal);
+                field.drop();
                 setEditing(true);
               }}
             >
@@ -228,7 +231,7 @@ function GoalBlock({
               variant="quiet"
               aria-label={`目標を書く：${area.name}`}
               onClick={() => {
-                setText('');
+                field.drop();
                 setEditing(true);
               }}
             >

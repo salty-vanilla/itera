@@ -55,6 +55,11 @@ export function durationText(minutes: number | undefined): DurationText {
   };
 }
 
+/** The two fields hold the same text. */
+export function sameDuration(a: DurationText, b: DurationText): boolean {
+  return a.hours === b.hours && a.minutes === b.minutes;
+}
+
 /** `durationText` for a value kept in hours. */
 export function hoursText(hours: number | undefined): DurationText {
   return durationText(hours === undefined ? undefined : hours * 60);

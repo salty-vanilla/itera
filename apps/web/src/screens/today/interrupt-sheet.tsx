@@ -15,10 +15,11 @@ import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
 import {
   DURATION_ERROR,
-  EMPTY_DURATION,
   durationText,
   readMinutes,
+  sameDuration,
 } from '@/lib/duration-text';
+import { useDraftField } from '@/lib/use-draft-field';
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 
 // 割り込みを記録 (patterns.md Today): a short note and optional minutes,
@@ -54,15 +55,24 @@ function InterruptSheet({
   loading = false,
   editing,
 }: InterruptSheetProps) {
-  const [text, setText] = useState(editing?.text ?? '');
-  const [minutes, setMinutes] = useState(durationText(editing?.minutes));
+  // Typed apart from the note as read (`editing`): until they are typed in
+  // the fields show the note as it is now, and 保存 on a note nothing was
+  // typed in sends nothing, so that the words it was opened with never go
+  // over another device's (#324).
+  const textField = useDraftField(editing?.text ?? '');
+  const minutesField = useDraftField(
+    durationText(editing?.minutes),
+    sameDuration,
+  );
+  const text = textField.value;
+  const minutes = minutesField.value;
   const [errors, setErrors] = useState<{ text?: string; minutes?: string }>({});
   const formRef = useRef<HTMLFormElement>(null);
   const medium = useMediaQuery(MEDIUM_UP, true);
   const change = (next: boolean) => {
     if (!next) {
-      setText('');
-      setMinutes(EMPTY_DURATION);
+      textField.drop();
+      minutesField.drop();
       setErrors({});
     }
     onOpenChange(next);
@@ -83,6 +93,10 @@ function InterruptSheet({
           ?.querySelector<HTMLElement>('[aria-invalid="true"]')
           ?.focus(),
       );
+      return;
+    }
+    if (editing !== undefined && !textField.edited && !minutesField.edited) {
+      change(false);
       return;
     }
     if (await onSubmit(note, m ?? undefined)) change(false);
@@ -116,7 +130,7 @@ function InterruptSheet({
               <TextInput
                 value={text}
                 placeholder="例：障害対応、急な来客"
-                onChange={(e) => setText(e.currentTarget.value)}
+                onChange={(e) => textField.set(e.currentTarget.value)}
               />
             </Field>
             <DurationField
@@ -124,7 +138,7 @@ function InterruptSheet({
               necessity="optional"
               error={errors.minutes}
               value={minutes}
-              onChange={setMinutes}
+              onChange={minutesField.set}
             />
           </DrawerBody>
           <DrawerFooter>

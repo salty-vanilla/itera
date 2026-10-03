@@ -26,8 +26,10 @@ import {
   it,
   vi,
 } from 'vitest';
+import { updateRetro } from '@itera/api-contract/client';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { createMock } from '@/mock/mock-api';
+import { comeBack, otherDevice, until } from '@/test/other-device';
 import { waitForRead } from '@/test/read-ready';
 
 type CreateAppRouter = typeof import('@/app/router').createAppRouter;
@@ -234,6 +236,83 @@ describe('Retro on the API', () => {
     // Nothing was written, and the field still has what was typed.
     expect(store.getSnapshot().records).toEqual(before);
     expect((field as HTMLTextAreaElement).value).toContain('あとで足した言葉');
+  });
+
+  describe('when another device has written the words (#324)', () => {
+    // Looked up each time: the screen may draw the field anew when it reads.
+    const reflection = () =>
+      screen.getByRole('textbox', {
+        name: /気づいたこと/,
+      }) as HTMLTextAreaElement;
+    const improvement = () =>
+      screen.getByRole('textbox', {
+        name: '次に試すこと',
+      }) as HTMLTextAreaElement;
+    const patches = (requests: string[]) =>
+      requests.filter((r) => r.startsWith('PATCH'));
+
+    it("sends nothing on leaving 気づいたこと unedited, and shows the other device's words", async () => {
+      const { store, requests } = serve(undefined, 'retro-reflect');
+      renderRetro('/retro?stage=reflect');
+      await waitForRead();
+      const field = reflection;
+      const sprintId = reviewedId(store);
+      await updateRetro({
+        client: otherDevice(store),
+        path: { sprintId },
+        body: { reflection: 'スマホで書いた文' },
+      });
+      comeBack();
+      await until(() => expect(field().value).toBe('スマホで書いた文'));
+      const before = patches(requests).length;
+      await userEvent.click(field());
+      await userEvent.tab();
+      // Nothing was typed: nothing is sent, and the words are still there.
+      expect(patches(requests)).toHaveLength(before);
+      expect(field().value).toBe('スマホで書いた文');
+    });
+
+    it('saves 気づいたこと typed in, as it did', async () => {
+      const { requests } = serve(undefined, 'retro-reflect');
+      renderRetro('/retro?stage=reflect');
+      await waitForRead();
+      const field = reflection;
+      await userEvent.type(field(), 'PC で書いた文');
+      await userEvent.tab();
+      await until(() => expect(patches(requests)).toHaveLength(1));
+      expect(field().value).toContain('PC で書いた文');
+      // Read again, the field shows the words saved, not a stale copy.
+      await until(() => expect(reflection().value).toContain('PC で書いた文'));
+    });
+
+    it("sends nothing on leaving 次に試すこと unedited, and shows the other device's words", async () => {
+      const { store, requests } = serve(undefined, 'retro-reflect');
+      renderRetro('/retro?stage=reflect');
+      await waitForRead();
+      const field = improvement;
+      await updateRetro({
+        client: otherDevice(store),
+        path: { sprintId: reviewedId(store) },
+        body: { improvement: 'スマホで書いた試すこと' },
+      });
+      comeBack();
+      await until(() => expect(field().value).toBe('スマホで書いた試すこと'));
+      const before = patches(requests).length;
+      await userEvent.click(field());
+      await userEvent.tab();
+      expect(patches(requests)).toHaveLength(before);
+      expect(field().value).toBe('スマホで書いた試すこと');
+    });
+
+    it('saves 次に試すこと typed in, as it did', async () => {
+      const { requests } = serve(undefined, 'retro-reflect');
+      renderRetro('/retro?stage=reflect');
+      await waitForRead();
+      const field = improvement;
+      await userEvent.type(field(), '論文は 1本ずつ分ける');
+      await userEvent.tab();
+      await until(() => expect(patches(requests)).toHaveLength(1));
+    });
   });
 
   describe('completing', () => {
