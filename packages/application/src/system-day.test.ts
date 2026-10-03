@@ -24,6 +24,7 @@ describe.each(fixtureStateIds)('the catch-up in %s', (state) => {
         throw new Error('Nothing to make.');
       },
     });
+    expect(result.ok).toBe(true);
     if (result.ok)
       expect(result.value).toEqual({ changes: {}, activities: [] });
     store.run(catchUp(null), { actor: 'system' });

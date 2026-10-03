@@ -148,7 +148,7 @@ function subjectOf(
 
 /**
  * The system's start of the day, before the reads and operations (the API,
- * the browser mock) and when the app opens (useSystemDay, until #277):
+ * the browser mock):
  * earlier days' open selections become unresolved and today's recurring
  * occurrences appear. Repeating it changes nothing, and then writes
  * nothing: every change startDay makes has its Activity, so a day already

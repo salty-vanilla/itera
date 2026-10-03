@@ -11,8 +11,8 @@ Itera のアプリケーション層（ADR 0005「API への移行の改訂（20
 | `sprint-of.ts`、`sprint-changes.ts` | 操作が経路で指す Sprint を引く関数（ない Sprint は 404、状態が合わなければ 422。#295）と、計画中にも実行中にも効く Sprint の操作（目標・使える時間・Task を入れる・外す・実績） |
 | `system-changes.ts`、`today-changes.ts` の `beginDay` | システムの記録（終了日を過ぎた Sprint の Review、その日の始まり）。利用者の操作の一覧には入れない |
 | `resource-views.ts` | 契約の資源の読み取り（#295。`/me` の今の Sprint、Sprint の一覧・Sprint・候補・振り返り、日）。下の読み取りを組み合わせる |
-| `*-view.ts`、`sprint-choice.ts`、`overview-view.ts` | 読み取り（store のままの画面も使う）。結果はそのまま API の応答にできる形（関数・`Map`・`Set`・画面の語を含めない） |
-| `record-store.ts`、`records.ts` | 記録の形、`Change` の型、メモリ上のストア（fixture とブラウザ内モック）。操作と読み取りが受け取る `Records` は Activity を含まない（追記するだけで読み返さない。ADR 0004）。メモリ上のストアは追記した Activity も持つ（`RecordsWithActivity`） |
+| `*-view.ts`、`sprint-choice.ts`、`overview-view.ts` | 読み取り。結果はそのまま API の応答にできる形（関数・`Map`・`Set`・画面の語を含めない） |
+| `record-store.ts`、`records.ts` | 記録の形、`Change` の型、メモリ上のストア（ブラウザ内モックとテスト）。操作と読み取りが受け取る `Records` は Activity を含まない（追記するだけで読み返さない。ADR 0004）。メモリ上のストアは追記した Activity も持つ（`RecordsWithActivity`） |
 | `ids.ts` | TypeID（ADR 0004「ID の形式」）を作る関数と、外から来た ID を確かめる関数 |
 | `fixtures/` | fixture の時系列と PRD §12 の 12 状態。`@itera/application/fixtures` から使う。テストとブラウザ内モックのためのもので、本番のコードからは使わない |
 

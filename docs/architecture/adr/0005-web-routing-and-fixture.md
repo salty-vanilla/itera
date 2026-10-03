@@ -51,7 +51,7 @@ fixture の段階（#38〜#42）では、画面が `RecordStore` と `Change` �
 - 記録と派生値は API（OpenAPI の契約）から得る。クライアントでの取得結果のキャッシュは TanStack Query が持つ。
 - `RecordStore`（`getSnapshot`・`subscribe`・`run`）と `createMemoryStore` は `packages/application` にあり、使うのはブラウザ内モック（`apps/web/src/mock/`）と各パッケージのテストだけ。モックは fixture の状態をメモリ上のストアに開き、リロードすると fixture に戻る。永続化しない。画面と画面のフックは `RecordStore`・`Change`・`Records` を参照しない。
 - 変更は `packages/application` の `operations`（利用者の 1 操作を domain のコマンドの組み合わせで行う関数）として、API のハンドラーとモックが実行する。成功したら記録を差し替えて Activity を追記し、失敗したら何も変えずに domain のエラーを返す。ID はストアが作って文脈で渡す（domain は ID を作らない）。
-- `apps/web/src/store/` に残るのは、契約の読み取りを画面の形にするフックと、画面が使う値の変換だけ（名前は #39〜#42 の名残）。ストアではない。
+- `apps/web/src/store/` には、契約の読み取りを画面の形にするフック、画面の操作のフック（`useOperation` から作る）、画面が使う値の変換が残る（名前は #39〜#42 の名残で、ストアではない。`src/api/` のフックとの置き場所の分け方と名前の付け替えは、別に決める）。
 - クライアントの UI 状態を持つストア（Zustand など）は置かない。状態の置き場所は後の「状態の置き場所」のとおり。
 
 ### API への移行
@@ -156,7 +156,7 @@ fixture の段階（#38〜#42）では、画面が `RecordStore` と `Change` �
 
 - `eslint.config.js`：`apps/web` のうち `packages/domain` を import してよいのは `src/lib/domain-functions.ts`（上の「プレビューの例外」の関数をまとめたモジュール）とモックだけ、`packages/application` はモックだけ。型だけの import も同じ。2 つを別の規則（`no-restricted-imports` と `@typescript-eslint/no-restricted-imports`）にして、片方の設定がもう片方を上書きしないようにしている。
 - テスト（`*.test.*`、`src/test/`）は対象外：fixture の記録を開き、記録の ID で画面を指すため。
-- 移行の途中は、まだ移していないファイルを例外の一覧（`MIGRATING`）にファイル名で並べた。#277 で一覧を空にして仕組みごと消した。例外はテストとモック、`domain-functions.ts`、Better Auth のモジュールだけで、ここに挙げたもの以外が `@itera/domain` または `@itera/application` を import すると ESLint が失敗する。
+- 移行の途中は、まだ移していないファイルを例外の一覧（`MIGRATING`）にファイル名で並べた。#277 で一覧を空にして仕組みごと消した。例外はテストとモックと `domain-functions.ts` だけで（Better Auth のモジュールも両パッケージは import できない）、ここに挙げたもの以外が `@itera/domain` または `@itera/application` を import すると ESLint が失敗する。
 
 ### Backlog・Task の詳細・領域を契約に移す（2026-10-03、Issue #273）
 

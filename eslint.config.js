@@ -200,6 +200,39 @@ export default defineConfig(
     },
   },
   {
+    // The one module of Better Auth's client is checked for everything but
+    // Better Auth: it takes neither package.
+    files: [WEB_BETTER_AUTH],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            testingImportPattern(),
+            {
+              regex: '^@itera/domain(/|$)',
+              message:
+                'Better Auth stays apart from packages/domain (ADR 0005).',
+            },
+          ],
+        },
+      ],
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            testingImportPattern(),
+            {
+              regex: '^@itera/application(/|$)',
+              message:
+                'Better Auth stays apart from packages/application (ADR 0005).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: [
       'apps/web/*.ts',
       'apps/web/scripts/**',

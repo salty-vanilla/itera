@@ -81,9 +81,9 @@ export interface StoreSnapshot {
 }
 
 /**
- * The boundary between the screens and where the records live, until the
- * screens move to the API's contract (#273〜#276). The fixture and the
- * browser mock keep the records in memory (`createMemoryStore`).
+ * Where the records live for the browser mock and the tests, which keep
+ * them in memory (`createMemoryStore`). The screens do not see it: they
+ * read the API's contract (ADR 0005).
  */
 export interface RecordStore {
   getSnapshot(): StoreSnapshot;

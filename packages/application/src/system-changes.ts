@@ -1,8 +1,7 @@
 // The system's own records (actor = system): a Sprint past its end goes to
 // Review (F21, F23), and the day starts (startDay, invariant 24). The API
 // brings them up to now before every operation and read (catchUp, #271);
-// the browser mock runs them when the app opens and when the date changes
-// (owner decision in #54).
+// the browser mock does the same before every read and operation.
 import { addDays, type LocalDate } from '@itera/domain';
 import { andThen } from './changes';
 import type { Change } from './record-store';

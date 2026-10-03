@@ -25,8 +25,6 @@ const READS = {
 const NOT_READS = new Set([
   'operations',
   // The system's own records: the server runs them (ADR 0005).
-  'reviewEnded',
-  'beginDay',
   'catchUp',
   // The person's settings: the server's, with the first write (requests.ts).
   'settingsChange',
