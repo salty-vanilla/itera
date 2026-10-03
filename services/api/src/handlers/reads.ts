@@ -1,5 +1,6 @@
 import {
   vGetBacklogQuery,
+  vGetDayPath,
   vGetSprintPath,
   vGetSprintQuery,
   vListSprintCandidatesPath,
@@ -8,9 +9,9 @@ import {
 import { queryInput } from '@itera/api-contract/requests';
 import {
   areaList,
-  type dayView,
   type sprintRetro,
   backlogData,
+  dayView,
   parseId,
   sprintCandidates,
   sprintList,
@@ -23,7 +24,7 @@ import {
   type SprintItem,
   type SprintView,
 } from '@itera/application';
-import type { SprintId } from '@itera/domain';
+import { parseLocalDate, type SprintId } from '@itera/domain';
 import { Hono } from 'hono';
 import type * as v from 'valibot';
 import type { AppEnv } from '../env';
@@ -160,6 +161,17 @@ export const readRoutes: {
     read: (records, clock, { params }) =>
       sprintCandidates(records, clock, sprintIdIn(records, params.sprintId)),
   }),
+  getDay: readRoute({
+    path: '/days/:date',
+    params: vGetDayPath,
+    read: (records, clock, { params }) => {
+      // The schema and `validate` have refused a day that does not exist.
+      const date = parseLocalDate(params.date);
+      if (!date.ok)
+        throw new ApiError('validationFailed', 'path.date: not a day.');
+      return dayView(records, clock, date.value);
+    },
+  }),
 };
 
 /**
@@ -168,8 +180,6 @@ export const readRoutes: {
  * server's own (`getMe`) (registry.test.ts).
  */
 export const unimplementedReads: readonly ReadName[] = [
-  // #269: a day, today included.
-  'getDay',
   // #270: the Retro.
   'getSprintRetro',
 ];

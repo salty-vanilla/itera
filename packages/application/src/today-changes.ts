@@ -350,6 +350,7 @@ export const interrupt =
             id: interruptNoteId,
             text,
             ...(minutes === undefined ? {} : { minutes }),
+            timeZone: records.user.timeZone,
           },
           context,
         ),
@@ -377,9 +378,25 @@ export const editNote = (
 export const deleteNote = (sprintId: SprintId, id: InterruptNoteId): Change =>
   onActive(sprintId, (sprint, ctx) => deleteInterrupt(sprint, { id }, ctx));
 
-/** 元に戻す after 割り込みを消す: the same note, in its place (F38). */
+/**
+ * 元に戻す after 割り込みを消す: the same note, in its place (F38). The
+ * client sends the note back as it read it, so its ID is checked against
+ * the person's other Sprints' notes here, where all their records are.
+ */
 export const restoreNote = (sprintId: SprintId, note: InterruptNote): Change =>
-  onActive(sprintId, (sprint, ctx) => restoreInterrupt(sprint, { note }, ctx));
+  onActive(sprintId, (sprint, ctx, records) =>
+    restoreInterrupt(
+      sprint,
+      {
+        note,
+        otherNoteIds: records.sprints
+          .filter((s) => s.id !== sprint.id)
+          .flatMap((s) => s.interrupts.map((n) => n.id)),
+        timeZone: records.user.timeZone,
+      },
+      ctx,
+    ),
+  );
 
 /**
  * Today's quick add: a new Task, added to the Sprint and chosen for today
