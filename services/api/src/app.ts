@@ -56,7 +56,7 @@ export function createApp(dependencies: Dependencies) {
     user: requireAuth(dependencies.authenticator),
     origin: requireSameOrigin(dependencies.appOrigin),
   };
-  app.get('/api/me', guards.user, guards.origin, getMe);
+  app.get('/api/me', guards.user, guards.origin, (c) => getMe(c, flow));
   app.route('/api', readRoutesApp(flow, guards));
   app.route('/api', operationRoutes(flow, guards));
 

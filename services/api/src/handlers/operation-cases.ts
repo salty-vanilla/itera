@@ -171,7 +171,7 @@ async function prepared(app: FixtureApp, steps: readonly Step[] = []) {
     const response = await app.post(name, body((await app.saved()).records));
     expect(response.status, `${name} (prepare)`).toBeLessThan(300);
   }
-  expect((await app.get('/overview')).status).toBe(200);
+  expect((await app.get('/me')).status).toBe(200);
   return app.saved();
 }
 

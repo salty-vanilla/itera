@@ -1,35 +1,12 @@
-# The reads whose path has no write: each is a GET of one read of
-# packages/application (ADR 0006). The reads of a path with writes are with
-# them: listAreas (area.yaml), getPlanning, getRunning and getRetro.
-# The response is `{ clock, view }`: the clock the server read with (ADR
-# 0005 時計) and the read's result, `null` where the read has nothing to show.
-# Before reading, the server brings the records up to now (the end of a
-# Sprint, the start of a day, #271); that write may meet another write. A
-# person without settings yet gets 422 `userNotSetUp`.
+# The reads of aggregates across records (#295): each is a noun of the
+# domain, read only. The response is `{ clock, view }`: the clock the
+# server read with (ADR 0005 時計) and the view. Before reading, the server
+# brings the records up to now (the end of a Sprint, the start of a day,
+# #271); that write may meet another write. A person without settings yet
+# gets 422 `userNotSetUp`. The reads of a resource with writes are with them
+# (area.yaml, sprint.yaml, retro.yaml).
 
-getOverview:
-  get:
-    operationId: getOverview
-    tags: [Reads]
-    summary: What every screen's frame shows
-    description: The navigation's counts, the current Sprints and the clock (`appOverview`).
-    responses:
-      '200':
-        description: The overview.
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [clock, view]
-              properties:
-                clock: { $ref: '../schemas/common.yaml#/Clock' }
-                view: { $ref: '../schemas/views.yaml#/AppOverview' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '422': { $ref: '../responses.yaml#/UserNotSetUp' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-getBacklog:
+backlog:
   get:
     operationId: getBacklog
     tags: [Reads]
@@ -61,80 +38,15 @@ getBacklog:
       '422': { $ref: '../responses.yaml#/UserNotSetUp' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
-getSprintChoice:
-  get:
-    operationId: getSprintChoice
-    tags: [Reads]
-    summary: The Sprint a screen opens, and those before and after it
-    description: >-
-      `sprintChoice` (#90): the Sprint asked for by number, else the current
-      one for the screen. `null` for the Retro screen before the first
-      Sprint.
-    parameters:
-      - name: screen
-        in: query
-        required: true
-        schema:
-          type: string
-          enum: [sprint, retro]
-      - name: sprint
-        in: query
-        required: false
-        description: The Sprint's number (F25).
-        schema: { type: integer, minimum: 1 }
-    responses:
-      '200':
-        description: The choice.
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [clock, view]
-              properties:
-                clock: { $ref: '../schemas/common.yaml#/Clock' }
-                view:
-                  oneOf:
-                    - $ref: '../schemas/views.yaml#/SprintChoice'
-                    - type: 'null'
-      '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '422': { $ref: '../responses.yaml#/UserNotSetUp' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-getToday:
-  get:
-    operationId: getToday
-    tags: [Reads]
-    summary: Today in the running Sprint
-    description: '`todayData`. `null` when no Sprint is running.'
-    responses:
-      '200':
-        description: Today.
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [clock, view]
-              properties:
-                clock: { $ref: '../schemas/common.yaml#/Clock' }
-                view:
-                  oneOf:
-                    - $ref: '../schemas/views.yaml#/TodayData'
-                    - type: 'null'
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '422': { $ref: '../responses.yaml#/UserNotSetUp' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-getDay:
+day:
   get:
     operationId: getDay
     tags: [Reads]
-    summary: A day other than today (read only)
+    summary: A day, today, past or still to come
     description: >-
-      `dayData` (#90): a past day's records, or a future day's occurrences
-      and deadlines. `null` for today, which `getToday` reads.
+      Today's choices on the running Sprint, a past day's records, or a
+      future day's occurrences and deadlines (#295 R3), told apart by
+      `kind`.
     parameters:
       - name: date
         in: path
@@ -150,33 +62,8 @@ getDay:
               required: [clock, view]
               properties:
                 clock: { $ref: '../schemas/common.yaml#/Clock' }
-                view:
-                  oneOf:
-                    - $ref: '../schemas/views.yaml#/DayData'
-                    - type: 'null'
+                view: { $ref: '../schemas/views.yaml#/DayView' }
       '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '422': { $ref: '../responses.yaml#/UserNotSetUp' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-getNextPlanning:
-  get:
-    operationId: getNextPlanning
-    tags: [Reads]
-    summary: Where the next Planning starts
-    description: '`nextPlanningOf`: the Sprint being planned, or where a new Planning would start.'
-    responses:
-      '200':
-        description: The next Planning.
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [clock, view]
-              properties:
-                clock: { $ref: '../schemas/common.yaml#/Clock' }
-                view: { $ref: '../schemas/views.yaml#/NextPlanning' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
       '422': { $ref: '../responses.yaml#/UserNotSetUp' }

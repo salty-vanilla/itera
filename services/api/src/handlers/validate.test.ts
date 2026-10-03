@@ -1,7 +1,7 @@
 import * as contract from '@itera/api-contract';
 import {
   vCreateAreaBody,
-  vRecordReviewActualBody,
+  vRecordActualTimeBody,
   vUndoAdoptionBody,
 } from '@itera/api-contract';
 import { createIdSource } from '@itera/application';
@@ -32,13 +32,13 @@ describe('validate', () => {
   };
 
   it('returns the schema’s output', () => {
-    expect(validate(vRecordReviewActualBody, review, 'body')).toEqual(review);
+    expect(validate(vRecordActualTimeBody, review, 'body')).toEqual(review);
   });
 
   it('refuses a value the schema does not take, naming where', () => {
     expect(
       failure(() =>
-        validate(vRecordReviewActualBody, { ...review, hours: 'x' }, 'body'),
+        validate(vRecordActualTimeBody, { ...review, hours: 'x' }, 'body'),
       ),
     ).toMatchObject({
       code: 'validationFailed',
@@ -49,7 +49,7 @@ describe('validate', () => {
   it('refuses a date that does not exist (ADR 0006)', () => {
     const body = { ...review, date: '2026-02-30' };
     expect(
-      failure(() => validate(vRecordReviewActualBody, body, 'body')),
+      failure(() => validate(vRecordActualTimeBody, body, 'body')),
     ).toMatchObject({
       code: 'validationFailed',
       message: expect.stringMatching(/^body\.date: /),

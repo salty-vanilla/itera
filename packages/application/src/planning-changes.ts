@@ -8,9 +8,7 @@ import {
   excludeFromPlan,
   includeInPlan,
   selectTask,
-  setAvailableHours,
   setGoalLink,
-  setGoalText,
   unselectTask,
   updateTask,
   type Activity,
@@ -20,11 +18,11 @@ import {
   type OccurrenceId,
   type Result,
   type Sprint,
+  type SprintId,
   type SprintTaskId,
   type TaskId,
 } from '@itera/domain';
 import { find } from './changes';
-import { planningSprint } from './planning-view';
 import {
   changed,
   returning,
@@ -33,15 +31,11 @@ import {
   type Changed,
 } from './record-store';
 import type { Records } from './records';
+import { sprintIn } from './sprint-of';
 
-function inPlanning(records: Records): Result<Sprint> {
-  const sprint = planningSprint(records);
-  return sprint === undefined
-    ? {
-        ok: false,
-        error: { code: 'notFound', message: 'No Sprint in Planning.' },
-      }
-    : { ok: true, value: sprint };
+/** The Sprint being planned that the operation names (#295). */
+function inPlanning(records: Records, sprintId: SprintId): Result<Sprint> {
+  return sprintIn(records, sprintId, ['planning']);
 }
 
 /** Chooses one Task for the draft, as a carry-over when it is one. */
@@ -73,6 +67,7 @@ function choose(
 
 /** Runs one command per item on the same Sprint; all or nothing. */
 function each<T>(
+  sprintId: SprintId,
   items: readonly T[],
   step: (
     sprint: Sprint,
@@ -82,7 +77,7 @@ function each<T>(
   ) => Result<{ record: Sprint; activities: readonly Activity[] }>,
 ): Change {
   return (records, ctx) => {
-    const start = inPlanning(records);
+    const start = inPlanning(records, sprintId);
     if (!start.ok) return start;
     let sprint = start.value;
     const activities: Activity[] = [];
@@ -102,46 +97,43 @@ function each<T>(
  */
 export const chooseTasks =
   (
+    sprintId: SprintId,
     taskIds: readonly TaskId[],
   ): Change<{ sprintTaskIds: readonly SprintTaskId[] }> =>
   (records, ctx) => {
     const sprintTaskIds: SprintTaskId[] = [];
-    const result = each(taskIds, (sprint, taskId, current, context) => {
-      const sprintTaskId = context.newId('SprintTask');
-      sprintTaskIds.push(sprintTaskId);
-      return choose(sprint, taskId, current, context, sprintTaskId);
-    })(records, ctx);
+    const result = each(
+      sprintId,
+      taskIds,
+      (sprint, taskId, current, context) => {
+        const sprintTaskId = context.newId('SprintTask');
+        sprintTaskIds.push(sprintTaskId);
+        return choose(sprint, taskId, current, context, sprintTaskId);
+      },
+    )(records, ctx);
     return returning(result, { sprintTaskIds });
   };
 
 /** 今週から外す: one draft SprintTask or several. */
-export const unchooseTasks = (sprintTaskIds: readonly SprintTaskId[]) =>
-  each(sprintTaskIds, (sprint, id, _records, ctx) =>
+export const unchooseTasks = (
+  sprintId: SprintId,
+  sprintTaskIds: readonly SprintTaskId[],
+) =>
+  each(sprintId, sprintTaskIds, (sprint, id, _records, ctx) =>
     unselectTask(sprint, id, ctx),
   );
-
-/** 元に戻す after 今週へ選ぶ: the drafts of these Tasks leave the week. */
-export const unchooseByTask = (taskIds: readonly TaskId[]) =>
-  each(taskIds, (sprint, taskId, _records, ctx) => {
-    const draft = sprint.tasks.find(
-      (t) => t.taskId === taskId && t.outcome === 'draft',
-    );
-    return draft === undefined
-      ? {
-          ok: false,
-          error: { code: 'notFound', message: `No draft for ${taskId}` },
-        }
-      : unselectTask(sprint, draft.id, ctx);
-  });
 
 /**
  * 今週から外す for a recurring Task: every occurrence it has this week is
  * excluded (invariant 33); with the last one the draft leaves the Sprint.
  * Also the way out for a recurring Task archived during Planning.
  */
-export function excludeAllOccurrences(sprintTaskId: SprintTaskId): Change {
+export function excludeAllOccurrences(
+  sprintId: SprintId,
+  sprintTaskId: SprintTaskId,
+): Change {
   return (records, ctx) => {
-    const start = inPlanning(records);
+    const start = inPlanning(records, sprintId);
     if (!start.ok) return start;
     let sprint = start.value;
     const owner = find(sprint.tasks, sprintTaskId, 'SprintTask');
@@ -194,10 +186,11 @@ function include(
  * cannot be, none.
  */
 export function includeOccurrences(
+  sprintId: SprintId,
   occurrenceIds: readonly OccurrenceId[],
 ): Change {
   return (records, ctx) => {
-    const start = inPlanning(records);
+    const start = inPlanning(records, sprintId);
     if (!start.ok) return start;
     let sprint = start.value;
     const included: Occurrence[] = [];
@@ -225,11 +218,12 @@ export function includeOccurrences(
 
 /** 繰り返しの回を外す / 戻す (invariant 33). */
 export function setOccurrenceIncluded(
+  sprintId: SprintId,
   occurrenceId: OccurrenceId,
   included: boolean,
 ): Change {
   return (records, ctx) => {
-    const sprint = inPlanning(records);
+    const sprint = inPlanning(records, sprintId);
     if (!sprint.ok) return sprint;
     const occurrence = find(records.occurrences, occurrenceId, 'Occurrence');
     if (!occurrence.ok) return occurrence;
@@ -246,13 +240,17 @@ export function setOccurrenceIncluded(
   };
 }
 
-/** Planning で追加: a new Task, chosen at once. */
+/**
+ * Planning で追加: a new Task, chosen at once. Its SprintTask is in a list,
+ * as when choosing Tasks: the same request adds both (#295 W1).
+ */
 export function addAndChoose(
+  sprintId: SprintId,
   title: string,
   areaId: AreaId | undefined,
-): Change<{ taskId: TaskId; sprintTaskId: SprintTaskId }> {
+): Change<{ taskId: TaskId; sprintTaskIds: readonly SprintTaskId[] }> {
   return (records, ctx) => {
-    const sprint = inPlanning(records);
+    const sprint = inPlanning(records, sprintId);
     if (!sprint.ok) return sprint;
     const taskId = ctx.newId('Task');
     const sprintTaskId = ctx.newId('SprintTask');
@@ -276,29 +274,22 @@ export function addAndChoose(
       value: {
         changes: { tasks: [task], sprints: [chosen.value.record] },
         activities: [...activities, ...chosen.value.activities],
-        value: { taskId, sprintTaskId },
+        value: { taskId, sprintTaskIds: [sprintTaskId] },
       },
-    } satisfies Result<Changed<{ taskId: TaskId; sprintTaskId: SprintTaskId }>>;
+    } satisfies Result<
+      Changed<{ taskId: TaskId; sprintTaskIds: readonly SprintTaskId[] }>
+    >;
   };
 }
 
-export const setGoal =
-  (areaId: AreaId, text: string): Change =>
-  (records, ctx) => {
-    const sprint = inPlanning(records);
-    if (!sprint.ok) return sprint;
-    return changed(
-      setGoalText(sprint.value, { areaId, text }, ctx),
-      (next) => ({
-        sprints: [next],
-      }),
-    );
-  };
-
 export const setLink =
-  (sprintTaskId: SprintTaskId, goalLink: GoalLink): Change =>
+  (
+    sprintId: SprintId,
+    sprintTaskId: SprintTaskId,
+    goalLink: GoalLink,
+  ): Change =>
   (records, ctx) => {
-    const sprint = inPlanning(records);
+    const sprint = inPlanning(records, sprintId);
     if (!sprint.ok) return sprint;
     const sprintTask = find(sprint.value.tasks, sprintTaskId, 'SprintTask');
     if (!sprintTask.ok) return sprintTask;
@@ -314,21 +305,11 @@ export const setLink =
     );
   };
 
-export const setHours =
-  (hours: number | null): Change =>
-  (records, ctx) => {
-    const sprint = inPlanning(records);
-    if (!sprint.ok) return sprint;
-    return changed(setAvailableHours(sprint.value, { hours }, ctx), (next) => ({
-      sprints: [next],
-    }));
-  };
-
 /** Sprint を確定 (invariant 12, 16, 18, 36). */
 export const confirm =
-  (applyCriterion: boolean): Change =>
+  (sprintId: SprintId, applyCriterion: boolean): Change =>
   (records, ctx) => {
-    const sprint = inPlanning(records);
+    const sprint = inPlanning(records, sprintId);
     if (!sprint.ok) return sprint;
     const active = activeCriterion(records.criteria);
     return changed(

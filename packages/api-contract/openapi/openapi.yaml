@@ -8,8 +8,8 @@ info:
     truth. The API (services/api) and the clients (apps/web, later iOS and
     Android) take their types, schemas and clients from it. The rules are
     packages/domain's and only the server runs them; an operation is a name
-    and its input, carried by a path and an HTTP method (ADR 0005 API への移行,
-    ADR 0006 経路の形).
+    and its input, carried by a resource's path and an HTTP method (ADR 0005
+    API への移行, ADR 0006 経路の形).
   license:
     name: MIT
     identifier: MIT
@@ -20,124 +20,122 @@ security:
   - session: []
 tags:
   - name: Me
-    description: The signed-in person.
+    description: The signed-in person and the Sprints they have now.
   - name: Reads
-    description: The reads of packages/application.
+    description: The reads of the resources.
   - name: Area
     description: 領域.
   - name: Task
-    description: The Backlog and a Task's detail.
-  - name: Planning
-    description: Planning the Sprint, before 確定.
+    description: A Task and what it has (Subtasks, its recurrence, estimate suggestions).
+  - name: Sprint
+    description: A Sprint and what is in it (Goals, SprintTasks, occurrences, actual time).
   - name: Today
-    description: Today in the running Sprint.
-  - name: Running
-    description: The Sprint after 確定.
+    description: A day's choices and interrupts in the running Sprint.
   - name: Retro
-    description: The Retro of a Sprint in Review.
+    description: A Sprint's Retro.
+  - name: PlanningCriterion
+    description: 計画基準.
 paths:
   /me:
-    $ref: './paths/me.yaml#/getMe'
-  /overview:
-    $ref: './paths/reads.yaml#/getOverview'
-  /backlog:
-    $ref: './paths/reads.yaml#/getBacklog'
-  /sprint-choice:
-    $ref: './paths/reads.yaml#/getSprintChoice'
-  /today:
-    $ref: './paths/reads.yaml#/getToday'
-  /days/{date}:
-    $ref: './paths/reads.yaml#/getDay'
-  /next-planning:
-    $ref: './paths/reads.yaml#/getNextPlanning'
+    $ref: './paths/me.yaml#/me'
   /areas:
     $ref: './paths/area.yaml#/areas'
   /areas/{areaId}:
     $ref: './paths/area.yaml#/area'
+  /areas/{areaId}/archive:
+    $ref: './paths/area.yaml#/areaArchive'
+  /areas/{areaId}/restore:
+    $ref: './paths/area.yaml#/areaRestore'
   /tasks:
     $ref: './paths/task.yaml#/tasks'
   /tasks/{taskId}:
     $ref: './paths/task.yaml#/task'
-  /tasks/{taskId}/completion:
-    $ref: './paths/task.yaml#/taskCompletion'
+  /tasks/{taskId}/archive:
+    $ref: './paths/task.yaml#/taskArchive'
+  /tasks/{taskId}/restore:
+    $ref: './paths/task.yaml#/taskRestore'
+  /tasks/{taskId}/complete:
+    $ref: './paths/task.yaml#/taskComplete'
+  /tasks/{taskId}/undo-complete:
+    $ref: './paths/task.yaml#/taskUndoComplete'
   /tasks/{taskId}/recurrence:
     $ref: './paths/task.yaml#/taskRecurrence'
   /tasks/{taskId}/subtasks:
     $ref: './paths/task.yaml#/subtasks'
   /tasks/{taskId}/subtasks/{subtaskId}:
     $ref: './paths/task.yaml#/subtask'
-  /tasks/{taskId}/suggestions/{suggestionId}/adopt:
+  /tasks/{taskId}/estimate-suggestions/{suggestionId}/adopt:
     $ref: './paths/task.yaml#/suggestionAdopt'
-  /tasks/{taskId}/suggestions/{suggestionId}/undo-adoption:
-    $ref: './paths/task.yaml#/suggestionUndoAdoption'
-  /tasks/{taskId}/suggestions/{suggestionId}/reject:
+  /tasks/{taskId}/estimate-suggestions/{suggestionId}/undo-adopt:
+    $ref: './paths/task.yaml#/suggestionUndoAdopt'
+  /tasks/{taskId}/estimate-suggestions/{suggestionId}/reject:
     $ref: './paths/task.yaml#/suggestionReject'
-  /tasks/{taskId}/suggestions/{suggestionId}/undo-rejection:
-    $ref: './paths/task.yaml#/suggestionUndoRejection'
-  /planning:
-    $ref: './paths/planning.yaml#/planning'
-  /planning/confirm:
-    $ref: './paths/planning.yaml#/planningConfirm'
-  /planning/goals/{areaId}:
-    $ref: './paths/planning.yaml#/planningGoal'
-  /planning/tasks:
-    $ref: './paths/planning.yaml#/planningTasks'
-  /planning/tasks/{sprintTaskId}:
-    $ref: './paths/planning.yaml#/planningTask'
-  /planning/tasks/{sprintTaskId}/exclude-occurrences:
-    $ref: './paths/planning.yaml#/planningTaskExcludeOccurrences'
-  /planning/occurrences/include:
-    $ref: './paths/planning.yaml#/planningOccurrencesInclude'
-  /planning/occurrences/{occurrenceId}:
-    $ref: './paths/planning.yaml#/planningOccurrence'
-  /today/selections:
-    $ref: './paths/today.yaml#/selections'
-  /today/selections/{selectionId}/start:
-    $ref: './paths/today.yaml#/selectionStart'
-  /today/selections/{selectionId}/pause:
-    $ref: './paths/today.yaml#/selectionPause'
-  /today/selections/{selectionId}/defer:
-    $ref: './paths/today.yaml#/selectionDefer'
-  /today/selections/{selectionId}/remove:
-    $ref: './paths/today.yaml#/selectionRemove'
-  /today/selections/{selectionId}/complete:
-    $ref: './paths/today.yaml#/selectionComplete'
-  /today/selections/{selectionId}/skip:
-    $ref: './paths/today.yaml#/selectionSkip'
-  /today/selections/{selectionId}/undo-close:
-    $ref: './paths/today.yaml#/selectionUndoClose'
-  /today/selections/{selectionId}/undo-complete:
-    $ref: './paths/today.yaml#/selectionUndoComplete'
-  /today/selections/{selectionId}/undo-skip:
-    $ref: './paths/today.yaml#/selectionUndoSkip'
-  /today/selections/{selectionId}/actuals:
-    $ref: './paths/today.yaml#/selectionActuals'
-  /today/interrupts:
-    $ref: './paths/today.yaml#/interrupts'
-  /today/interrupts/{interruptNoteId}:
-    $ref: './paths/today.yaml#/interrupt'
-  /running:
-    $ref: './paths/running.yaml#/running'
-  /running/goals/{areaId}:
-    $ref: './paths/running.yaml#/runningGoal'
-  /running/tasks/{taskId}:
-    $ref: './paths/running.yaml#/runningTask'
-  /running/selections/{selectionId}/undo:
-    $ref: './paths/running.yaml#/runningSelectionUndo'
-  /retro:
+  /tasks/{taskId}/estimate-suggestions/{suggestionId}/undo-reject:
+    $ref: './paths/task.yaml#/suggestionUndoReject'
+  /backlog:
+    $ref: './paths/reads.yaml#/backlog'
+  /days/{date}:
+    $ref: './paths/reads.yaml#/day'
+  /sprints:
+    $ref: './paths/sprint.yaml#/sprints'
+  /sprints/{sprintId}:
+    $ref: './paths/sprint.yaml#/sprint'
+  /sprints/{sprintId}/confirm:
+    $ref: './paths/sprint.yaml#/sprintConfirm'
+  /sprints/{sprintId}/goals/{areaId}:
+    $ref: './paths/sprint.yaml#/sprintGoal'
+  /sprints/{sprintId}/sprint-tasks:
+    $ref: './paths/sprint.yaml#/sprintTasks'
+  /sprints/{sprintId}/sprint-tasks/{sprintTaskId}:
+    $ref: './paths/sprint.yaml#/sprintTask'
+  /sprints/{sprintId}/sprint-tasks/{sprintTaskId}/exclude-occurrences:
+    $ref: './paths/sprint.yaml#/sprintTaskExcludeOccurrences'
+  /sprints/{sprintId}/included-occurrences:
+    $ref: './paths/sprint.yaml#/includedOccurrences'
+  /sprints/{sprintId}/included-occurrences/{occurrenceId}:
+    $ref: './paths/sprint.yaml#/includedOccurrence'
+  /sprints/{sprintId}/candidates:
+    $ref: './paths/sprint.yaml#/candidates'
+  /sprints/{sprintId}/daily-selections:
+    $ref: './paths/sprint.yaml#/dailySelections'
+  /sprints/{sprintId}/daily-selections/{selectionId}/start:
+    $ref: './paths/sprint.yaml#/selectionStart'
+  /sprints/{sprintId}/daily-selections/{selectionId}/pause:
+    $ref: './paths/sprint.yaml#/selectionPause'
+  /sprints/{sprintId}/daily-selections/{selectionId}/defer:
+    $ref: './paths/sprint.yaml#/selectionDefer'
+  /sprints/{sprintId}/daily-selections/{selectionId}/undo-defer:
+    $ref: './paths/sprint.yaml#/selectionUndoDefer'
+  /sprints/{sprintId}/daily-selections/{selectionId}/remove:
+    $ref: './paths/sprint.yaml#/selectionRemove'
+  /sprints/{sprintId}/daily-selections/{selectionId}/undo-remove:
+    $ref: './paths/sprint.yaml#/selectionUndoRemove'
+  /sprints/{sprintId}/daily-selections/{selectionId}/complete:
+    $ref: './paths/sprint.yaml#/selectionComplete'
+  /sprints/{sprintId}/daily-selections/{selectionId}/undo-complete:
+    $ref: './paths/sprint.yaml#/selectionUndoComplete'
+  /sprints/{sprintId}/daily-selections/{selectionId}/skip:
+    $ref: './paths/sprint.yaml#/selectionSkip'
+  /sprints/{sprintId}/daily-selections/{selectionId}/undo-skip:
+    $ref: './paths/sprint.yaml#/selectionUndoSkip'
+  /sprints/{sprintId}/actual-times:
+    $ref: './paths/sprint.yaml#/actualTimes'
+  /sprints/{sprintId}/interrupts:
+    $ref: './paths/sprint.yaml#/interrupts'
+  /sprints/{sprintId}/interrupts/{interruptNoteId}:
+    $ref: './paths/sprint.yaml#/interrupt'
+  /sprints/{sprintId}/retro:
     $ref: './paths/retro.yaml#/retro'
-  /retro/begin:
-    $ref: './paths/retro.yaml#/retroBegin'
-  /retro/complete:
+  /sprints/{sprintId}/retro/complete:
     $ref: './paths/retro.yaml#/retroComplete'
-  /retro/goals/{areaId}:
-    $ref: './paths/retro.yaml#/retroGoal'
-  /retro/pins/{pin}:
+  /sprints/{sprintId}/retro/pins/{pin}:
     $ref: './paths/retro.yaml#/retroPin'
-  /retro/draft-criterion:
-    $ref: './paths/retro.yaml#/draftCriterion'
-  /retro/actuals:
-    $ref: './paths/retro.yaml#/retroActuals'
+  /sprints/{sprintId}/criterion-use:
+    $ref: './paths/retro.yaml#/criterionUse'
+  /planning-criteria:
+    $ref: './paths/planning-criterion.yaml#/planningCriteria'
+  /planning-criteria/{criterionId}:
+    $ref: './paths/planning-criterion.yaml#/planningCriterion'
 components:
   securitySchemes:
     session:

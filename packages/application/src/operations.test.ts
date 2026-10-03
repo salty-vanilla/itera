@@ -6,6 +6,18 @@ import { memoryStore } from './testing';
 
 const ids = fixtureIds();
 
+/** The ID of the store's Sprint in that state. */
+function sprintIdOf(
+  store: ReturnType<typeof memoryStore>,
+  state: 'planning' | 'active' | 'review',
+) {
+  const sprint = store
+    .getSnapshot()
+    .records.sprints.find((s) => s.state === state);
+  if (sprint === undefined) throw new Error(`No Sprint ${state}.`);
+  return sprint.id;
+}
+
 function value<T>(result: Result<T>): T {
   if (!result.ok) throw new Error(result.error.message);
   return result.value;
@@ -41,21 +53,31 @@ describe('operations return what they made (ADR 0005 2026-10-03)', () => {
   it('createAndChooseTask: the Task and its draft in the week', () => {
     const store = memoryStore(fixtureSnapshot('planning-pick'));
     const made = value(
-      store.run(operations.createAndChooseTask({ title: '書類を出す' })),
+      store.run(
+        operations.createAndChooseTask({
+          sprintId: sprintIdOf(store, 'planning'),
+          title: '書類を出す',
+        }),
+      ),
     );
     const planning = store
       .getSnapshot()
       .records.sprints.find((s) => s.state === 'planning');
     expect(
-      planning?.tasks.find((t) => t.id === made.sprintTaskId),
+      planning?.tasks.find((t) => t.id === made.sprintTaskIds[0]),
     ).toMatchObject({ taskId: made.taskId, outcome: 'draft' });
   });
 
-  it('chooseTasks: the drafts, in the order of the Tasks', () => {
+  it('addSprintTasks: the drafts, in the order of the Tasks', () => {
     const store = memoryStore(fixtureSnapshot('planning-pick'));
     const taskIds = [ids.task.bookshelf, ids.task.typescript];
     const { sprintTaskIds } = value(
-      store.run(operations.chooseTasks({ taskIds })),
+      store.run(
+        operations.addSprintTasks({
+          sprintId: sprintIdOf(store, 'planning'),
+          taskIds,
+        }),
+      ),
     );
     const planning = store
       .getSnapshot()
@@ -69,11 +91,21 @@ describe('operations return what they made (ADR 0005 2026-10-03)', () => {
 
   it('createTaskForToday and addTaskToToday: the SprintTask and the day’s choice', () => {
     const store = memoryStore(fixtureSnapshot('today-daytime'));
+    const sprintId = sprintIdOf(store, 'active');
+    const date = store.getSnapshot().clock.today;
     const created = value(
-      store.run(operations.createTaskForToday({ title: '電話する' })),
+      store.run(
+        operations.createTaskForToday({ sprintId, date, title: '電話する' }),
+      ),
     );
     const added = value(
-      store.run(operations.addTaskToToday({ taskId: ids.task.bookshelf })),
+      store.run(
+        operations.addTaskToToday({
+          sprintId,
+          date,
+          taskId: ids.task.bookshelf,
+        }),
+      ),
     );
     const sprint = store
       .getSnapshot()
@@ -93,12 +125,21 @@ describe('operations return what they made (ADR 0005 2026-10-03)', () => {
     const sprint = () =>
       store.getSnapshot().records.sprints.find((s) => s.state === 'active');
     const paper = sprint()?.tasks.find((t) => t.taskId === ids.task.paper);
+    const sprintId = sprintIdOf(store, 'active');
     const { selectionId } = value(
-      store.run(operations.chooseForToday({ sprintTaskId: paper!.id })),
+      store.run(
+        operations.chooseForToday({
+          sprintId,
+          date: store.getSnapshot().clock.today,
+          sprintTaskId: paper!.id,
+        }),
+      ),
     );
     expect(sprint()?.dailySelections.at(-1)?.id).toBe(selectionId);
     const { interruptNoteId } = value(
-      store.run(operations.noteInterrupt({ text: '来客', minutes: 10 })),
+      store.run(
+        operations.noteInterrupt({ sprintId, text: '来客', minutes: 10 }),
+      ),
     );
     expect(sprint()?.interrupts.at(-1)?.id).toBe(interruptNoteId);
     const { subtaskId } = value(
@@ -116,9 +157,11 @@ describe('operations return what they made (ADR 0005 2026-10-03)', () => {
 
   it('draftCriterion and beginPlanning: the criterion and the Sprint', () => {
     const store = memoryStore(fixtureSnapshot('retro-before-complete'));
+    const sprintId = sprintIdOf(store, 'review');
     const { criterionId } = value(
       store.run(
         operations.draftCriterion({
+          sprintId,
           policy: { scope: { kind: 'all' }, rangePolicy: 'mid' },
         }),
       ),
@@ -127,11 +170,12 @@ describe('operations return what they made (ADR 0005 2026-10-03)', () => {
       store.getSnapshot().records.criteria.find((c) => c.id === criterionId)
         ?.state,
     ).toBe('draft');
-    store.run(operations.dropCriterionDraft());
-    expect(store.run(operations.completeRetro()).ok).toBe(true);
-    const { sprintId } = value(store.run(operations.beginPlanning()));
+    store.run(operations.dropCriterionDraft({ criterionId }));
+    expect(store.run(operations.completeRetro({ sprintId })).ok).toBe(true);
+    const made = value(store.run(operations.beginPlanning()));
     expect(
-      store.getSnapshot().records.sprints.find((s) => s.id === sprintId)?.state,
+      store.getSnapshot().records.sprints.find((s) => s.id === made.sprintId)
+        ?.state,
     ).toBe('planning');
   });
 
@@ -186,6 +230,7 @@ describe('includeOccurrences (invariant 33)', () => {
     for (const o of reading) {
       store.run(
         operations.setOccurrenceIncluded({
+          sprintId: sprintIdOf(store, 'planning'),
           occurrenceId: o.id,
           included: false,
         }),
@@ -204,7 +249,12 @@ describe('includeOccurrences (invariant 33)', () => {
     expect(reading.length).toBeGreaterThan(1);
     expect(states(store, reading).every((s) => s === 'excluded')).toBe(true);
     expect(
-      store.run(operations.includeOccurrences({ occurrenceIds: reading })).ok,
+      store.run(
+        operations.includeOccurrences({
+          sprintId: sprintIdOf(store, 'planning'),
+          occurrenceIds: reading,
+        }),
+      ).ok,
     ).toBe(true);
     expect(states(store, reading).every((s) => s === 'pending')).toBe(true);
   });
@@ -217,10 +267,100 @@ describe('includeOccurrences (invariant 33)', () => {
     expect(
       store.run(
         operations.includeOccurrences({
+          sprintId: sprintIdOf(store, 'planning'),
           occurrenceIds: [...reading, missing],
         }),
       ).ok,
     ).toBe(false);
     expect(store.getSnapshot()).toBe(before);
+  });
+});
+
+describe('the Sprint an operation names (#295)', () => {
+  it('is refused when it is in another state, and not found when it is not the person’s', () => {
+    const store = memoryStore(fixtureSnapshot('today-daytime'));
+    const running = sprintIdOf(store, 'active');
+    const wrong = store.run(
+      operations.confirmSprint({ sprintId: running, applyCriterion: false }),
+    );
+    expect(!wrong.ok && wrong.error.code).toBe('invalidTransition');
+    const none = store.run(
+      operations.setAvailableHours({
+        sprintId: 'sprint_01h455vb4pex5vsknk084sn02q' as typeof running,
+        hours: 10,
+      }),
+    );
+    expect(!none.ok && none.error.code).toBe('notFound');
+  });
+
+  it('sets a Goal and the hours while planned and while running', () => {
+    for (const [state, fixture] of [
+      ['planning', 'planning-pick'],
+      ['active', 'today-daytime'],
+    ] as const) {
+      const store = memoryStore(fixtureSnapshot(fixture));
+      const sprintId = sprintIdOf(store, state);
+      expect(
+        store.run(
+          operations.setGoal({ sprintId, areaId: ids.area.work, text: '出す' }),
+        ).ok,
+      ).toBe(true);
+      expect(
+        store.run(operations.setAvailableHours({ sprintId, hours: 12 })).ok,
+      ).toBe(true);
+      const sprint = store
+        .getSnapshot()
+        .records.sprints.find((s) => s.id === sprintId);
+      expect(sprint?.availableHours).toBe(12);
+      expect(sprint?.goals.find((g) => g.areaId === ids.area.work)?.text).toBe(
+        '出す',
+      );
+    }
+  });
+
+  it('adds Tasks to a running Sprint as additions, and takes them back all or none', () => {
+    const store = memoryStore(fixtureSnapshot('today-daytime'));
+    const sprintId = sprintIdOf(store, 'active');
+    const { sprintTaskIds } = value(
+      store.run(
+        operations.addSprintTasks({
+          sprintId,
+          taskIds: [ids.task.bookshelf],
+        }),
+      ),
+    );
+    const sprint = () =>
+      store.getSnapshot().records.sprints.find((s) => s.id === sprintId);
+    expect(sprint()?.tasks.find((t) => t.id === sprintTaskIds[0])?.origin).toBe(
+      'midSprint',
+    );
+    const before = store.getSnapshot();
+    const missing =
+      'sprinttask_01h455vb4pex5vsknk084sn02q' as (typeof sprintTaskIds)[number];
+    expect(
+      store.run(
+        operations.removeSprintTasks({
+          sprintId,
+          sprintTaskIds: [...sprintTaskIds, missing],
+        }),
+      ).ok,
+    ).toBe(false);
+    expect(store.getSnapshot()).toBe(before);
+    expect(
+      store.run(operations.removeSprintTasks({ sprintId, sprintTaskIds })).ok,
+    ).toBe(true);
+    expect(sprint()?.tasks.some((t) => t.id === sprintTaskIds[0])).toBe(false);
+  });
+
+  it('refuses a choice for a day that is not today (W3)', () => {
+    const store = memoryStore(fixtureSnapshot('today-daytime'));
+    const result = store.run(
+      operations.addTaskToToday({
+        sprintId: sprintIdOf(store, 'active'),
+        date: '2026-09-30' as never,
+        taskId: ids.task.bookshelf,
+      }),
+    );
+    expect(!result.ok && result.error.code).toBe('invalidInput');
   });
 });

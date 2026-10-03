@@ -41,13 +41,17 @@ type PlainKey<K> = K extends string ? Plain<K> : K;
 /** Each surface's request, as generated (`<OperationId>Data`). */
 type Datas = {
   createArea: c.CreateAreaData;
-  updateArea: c.UpdateAreaData;
-  quickAddTask: c.QuickAddTaskData;
-  updateTask: c.UpdateTaskData;
+  renameArea: c.RenameAreaData;
+  archiveArea: c.ArchiveAreaData;
+  restoreArea: c.RestoreAreaData;
+  createTask: c.CreateTaskData;
+  saveTask: c.SaveTaskData;
+  archiveTask: c.ArchiveTaskData;
+  restoreTask: c.RestoreTaskData;
   completeTask: c.CompleteTaskData;
   undoCompleteTask: c.UndoCompleteTaskData;
-  setRecurrence: c.SetRecurrenceData;
   endRecurrence: c.EndRecurrenceData;
+  setRecurrence: c.SetRecurrenceData;
   addSubtask: c.AddSubtaskData;
   updateSubtask: c.UpdateSubtaskData;
   adoptEstimateSuggestion: c.AdoptEstimateSuggestionData;
@@ -55,57 +59,58 @@ type Datas = {
   rejectSuggestion: c.RejectSuggestionData;
   undoRejection: c.UndoRejectionData;
   beginPlanning: c.BeginPlanningData;
-  setPlanningAvailableHours: c.SetPlanningAvailableHoursData;
+  setAvailableHours: c.SetAvailableHoursData;
   confirmSprint: c.ConfirmSprintData;
-  setPlanningGoal: c.SetPlanningGoalData;
-  chooseTasks: c.ChooseTasksData;
-  unchoosePlanningTasks: c.UnchoosePlanningTasksData;
+  updateGoal: c.UpdateGoalData;
+  removeSprintTasks: c.RemoveSprintTasksData;
+  addToSprint: c.AddToSprintData;
+  removeSprintTask: c.RemoveSprintTaskData;
   setGoalLink: c.SetGoalLinkData;
   excludeAllOccurrences: c.ExcludeAllOccurrencesData;
-  setOccurrenceIncluded: c.SetOccurrenceIncludedData;
   includeOccurrences: c.IncludeOccurrencesData;
-  createDailySelection: c.CreateDailySelectionData;
+  excludeOccurrence: c.ExcludeOccurrenceData;
+  includeOccurrence: c.IncludeOccurrenceData;
+  chooseForDay: c.ChooseForDayData;
   startSelection: c.StartSelectionData;
   pauseSelection: c.PauseSelectionData;
   deferSelection: c.DeferSelectionData;
+  undoDeferSelection: c.UndoDeferSelectionData;
   removeFromToday: c.RemoveFromTodayData;
+  undoRemoveFromToday: c.UndoRemoveFromTodayData;
   completeSelection: c.CompleteSelectionData;
-  skipSelection: c.SkipSelectionData;
-  undoCloseSelection: c.UndoCloseSelectionData;
   undoCompleteSelection: c.UndoCompleteSelectionData;
+  skipSelection: c.SkipSelectionData;
   undoSkipSelection: c.UndoSkipSelectionData;
-  recordSelectionActual: c.RecordSelectionActualData;
+  recordActualTime: c.RecordActualTimeData;
   noteInterrupt: c.NoteInterruptData;
-  editInterrupt: c.EditInterruptData;
   deleteInterrupt: c.DeleteInterruptData;
+  editInterrupt: c.EditInterruptData;
   restoreInterrupt: c.RestoreInterruptData;
-  setRunningAvailableHours: c.SetRunningAvailableHoursData;
-  setRunningGoal: c.SetRunningGoalData;
-  addTaskToWeek: c.AddTaskToWeekData;
-  undoAddTaskToWeek: c.UndoAddTaskToWeekData;
-  undoPastDay: c.UndoPastDayData;
   updateRetro: c.UpdateRetroData;
   beginRetro: c.BeginRetroData;
   completeRetro: c.CompleteRetroData;
-  assessGoal: c.AssessGoalData;
-  pinFact: c.PinFactData;
   unpinFact: c.UnpinFactData;
+  pinFact: c.PinFactData;
+  decideCriterion: c.DecideCriterionData;
   draftCriterion: c.DraftCriterionData;
-  setDraftPolicy: c.SetDraftPolicyData;
   dropCriterionDraft: c.DropCriterionDraftData;
-  recordReviewActual: c.RecordReviewActualData;
+  setDraftPolicy: c.SetDraftPolicyData;
 };
 
 /** Each surface's responses by status, as generated (`<OperationId>Responses`). */
 type Responses = {
   createArea: c.CreateAreaResponses;
-  updateArea: c.UpdateAreaResponses;
-  quickAddTask: c.QuickAddTaskResponses;
-  updateTask: c.UpdateTaskResponses;
+  renameArea: c.RenameAreaResponses;
+  archiveArea: c.ArchiveAreaResponses;
+  restoreArea: c.RestoreAreaResponses;
+  createTask: c.CreateTaskResponses;
+  saveTask: c.SaveTaskResponses;
+  archiveTask: c.ArchiveTaskResponses;
+  restoreTask: c.RestoreTaskResponses;
   completeTask: c.CompleteTaskResponses;
   undoCompleteTask: c.UndoCompleteTaskResponses;
-  setRecurrence: c.SetRecurrenceResponses;
   endRecurrence: c.EndRecurrenceResponses;
+  setRecurrence: c.SetRecurrenceResponses;
   addSubtask: c.AddSubtaskResponses;
   updateSubtask: c.UpdateSubtaskResponses;
   adoptEstimateSuggestion: c.AdoptEstimateSuggestionResponses;
@@ -113,45 +118,42 @@ type Responses = {
   rejectSuggestion: c.RejectSuggestionResponses;
   undoRejection: c.UndoRejectionResponses;
   beginPlanning: c.BeginPlanningResponses;
-  setPlanningAvailableHours: c.SetPlanningAvailableHoursResponses;
+  setAvailableHours: c.SetAvailableHoursResponses;
   confirmSprint: c.ConfirmSprintResponses;
-  setPlanningGoal: c.SetPlanningGoalResponses;
-  chooseTasks: c.ChooseTasksResponses;
-  unchoosePlanningTasks: c.UnchoosePlanningTasksResponses;
+  updateGoal: c.UpdateGoalResponses;
+  removeSprintTasks: c.RemoveSprintTasksResponses;
+  addToSprint: c.AddToSprintResponses;
+  removeSprintTask: c.RemoveSprintTaskResponses;
   setGoalLink: c.SetGoalLinkResponses;
   excludeAllOccurrences: c.ExcludeAllOccurrencesResponses;
-  setOccurrenceIncluded: c.SetOccurrenceIncludedResponses;
   includeOccurrences: c.IncludeOccurrencesResponses;
-  createDailySelection: c.CreateDailySelectionResponses;
+  excludeOccurrence: c.ExcludeOccurrenceResponses;
+  includeOccurrence: c.IncludeOccurrenceResponses;
+  chooseForDay: c.ChooseForDayResponses;
   startSelection: c.StartSelectionResponses;
   pauseSelection: c.PauseSelectionResponses;
   deferSelection: c.DeferSelectionResponses;
+  undoDeferSelection: c.UndoDeferSelectionResponses;
   removeFromToday: c.RemoveFromTodayResponses;
+  undoRemoveFromToday: c.UndoRemoveFromTodayResponses;
   completeSelection: c.CompleteSelectionResponses;
-  skipSelection: c.SkipSelectionResponses;
-  undoCloseSelection: c.UndoCloseSelectionResponses;
   undoCompleteSelection: c.UndoCompleteSelectionResponses;
+  skipSelection: c.SkipSelectionResponses;
   undoSkipSelection: c.UndoSkipSelectionResponses;
-  recordSelectionActual: c.RecordSelectionActualResponses;
+  recordActualTime: c.RecordActualTimeResponses;
   noteInterrupt: c.NoteInterruptResponses;
-  editInterrupt: c.EditInterruptResponses;
   deleteInterrupt: c.DeleteInterruptResponses;
+  editInterrupt: c.EditInterruptResponses;
   restoreInterrupt: c.RestoreInterruptResponses;
-  setRunningAvailableHours: c.SetRunningAvailableHoursResponses;
-  setRunningGoal: c.SetRunningGoalResponses;
-  addTaskToWeek: c.AddTaskToWeekResponses;
-  undoAddTaskToWeek: c.UndoAddTaskToWeekResponses;
-  undoPastDay: c.UndoPastDayResponses;
   updateRetro: c.UpdateRetroResponses;
   beginRetro: c.BeginRetroResponses;
   completeRetro: c.CompleteRetroResponses;
-  assessGoal: c.AssessGoalResponses;
-  pinFact: c.PinFactResponses;
   unpinFact: c.UnpinFactResponses;
+  pinFact: c.PinFactResponses;
+  decideCriterion: c.DecideCriterionResponses;
   draftCriterion: c.DraftCriterionResponses;
-  setDraftPolicy: c.SetDraftPolicyResponses;
   dropCriterionDraft: c.DropCriterionDraftResponses;
-  recordReviewActual: c.RecordReviewActualResponses;
+  setDraftPolicy: c.SetDraftPolicyResponses;
 };
 
 export type { OperationName };
@@ -234,66 +236,70 @@ export const surfaces: { readonly [S in SurfaceId]: Surface<S> } = {
     body: c.vCreateAreaBody,
     operation: ({ body }) => call('createArea', body),
   }),
-  updateArea: surface('updateArea', {
+  renameArea: surface('renameArea', {
     method: 'PATCH',
     url: '/areas/{areaId}',
     status: 204,
-    path: c.vUpdateAreaPath,
-    body: c.vUpdateAreaBody,
-    operation: ({ path: { areaId }, body }) => {
-      if ('name' in body)
-        return call('renameArea', { areaId, name: body.name });
-      return call(body.archived ? 'archiveArea' : 'restoreArea', { areaId });
-    },
+    path: c.vRenameAreaPath,
+    body: c.vRenameAreaBody,
+    operation: ({ path, body }) => call('renameArea', { ...path, ...body }),
+  }),
+  archiveArea: surface('archiveArea', {
+    method: 'POST',
+    url: '/areas/{areaId}/archive',
+    status: 204,
+    path: c.vArchiveAreaPath,
+    operation: ({ path }) => call('archiveArea', path),
+  }),
+  restoreArea: surface('restoreArea', {
+    method: 'POST',
+    url: '/areas/{areaId}/restore',
+    status: 204,
+    path: c.vRestoreAreaPath,
+    operation: ({ path }) => call('restoreArea', path),
   }),
 
   // ---------------------------------------------------------------- Task
-  quickAddTask: surface('quickAddTask', {
+  createTask: surface('createTask', {
     method: 'POST',
     url: '/tasks',
     status: 201,
-    body: c.vQuickAddTaskBody,
-    operation: ({ body: { addTo, ...task } }) =>
-      call(
-        addTo === undefined
-          ? 'createTask'
-          : addTo === 'planning'
-            ? 'createAndChooseTask'
-            : 'createTaskForToday',
-        task,
-      ),
+    body: c.vCreateTaskBody,
+    operation: ({ body }) => call('createTask', body),
   }),
-  updateTask: surface('updateTask', {
+  saveTask: surface('saveTask', {
     method: 'PATCH',
     url: '/tasks/{taskId}',
     status: 204,
-    path: c.vUpdateTaskPath,
-    body: c.vUpdateTaskBody,
-    operation: ({ path: { taskId }, body }) => {
-      if ('archived' in body)
-        return call(body.archived ? 'archiveTask' : 'restoreTask', { taskId });
-      const { estimate, ...update } = body;
-      return call('saveTask', {
+    path: c.vSaveTaskPath,
+    body: c.vSaveTaskBody,
+    operation: ({ path: { taskId }, body: { estimate, ...update } }) =>
+      call('saveTask', {
         taskId,
         update,
         ...(estimate === undefined ? {} : { estimate }),
-      });
-    },
+      }),
   }),
-  completeTask: surface('completeTask', {
-    method: 'PUT',
-    url: '/tasks/{taskId}/completion',
-    status: 204,
-    path: c.vCompleteTaskPath,
-    operation: ({ path }) => call('completeTask', path),
-  }),
-  undoCompleteTask: surface('undoCompleteTask', {
-    method: 'DELETE',
-    url: '/tasks/{taskId}/completion',
-    status: 204,
-    path: c.vUndoCompleteTaskPath,
-    operation: ({ path }) => call('undoCompleteTask', path),
-  }),
+  archiveTask: onTask(
+    'archiveTask',
+    '/tasks/{taskId}/archive',
+    c.vArchiveTaskPath,
+  ),
+  restoreTask: onTask(
+    'restoreTask',
+    '/tasks/{taskId}/restore',
+    c.vRestoreTaskPath,
+  ),
+  completeTask: onTask(
+    'completeTask',
+    '/tasks/{taskId}/complete',
+    c.vCompleteTaskPath,
+  ),
+  undoCompleteTask: onTask(
+    'undoCompleteTask',
+    '/tasks/{taskId}/undo-complete',
+    c.vUndoCompleteTaskPath,
+  ),
   setRecurrence: surface('setRecurrence', {
     method: 'PUT',
     url: '/tasks/{taskId}/recurrence',
@@ -330,7 +336,7 @@ export const surfaces: { readonly [S in SurfaceId]: Surface<S> } = {
   }),
   adoptEstimateSuggestion: surface('adoptEstimateSuggestion', {
     method: 'POST',
-    url: '/tasks/{taskId}/suggestions/{suggestionId}/adopt',
+    url: '/tasks/{taskId}/estimate-suggestions/{suggestionId}/adopt',
     status: 204,
     path: c.vAdoptEstimateSuggestionPath,
     body: c.vAdoptEstimateSuggestionBody,
@@ -341,7 +347,7 @@ export const surfaces: { readonly [S in SurfaceId]: Surface<S> } = {
   }),
   undoAdoption: surface('undoAdoption', {
     method: 'POST',
-    url: '/tasks/{taskId}/suggestions/{suggestionId}/undo-adoption',
+    url: '/tasks/{taskId}/estimate-suggestions/{suggestionId}/undo-adopt',
     status: 204,
     path: c.vUndoAdoptionPath,
     body: c.vUndoAdoptionBody,
@@ -349,74 +355,85 @@ export const surfaces: { readonly [S in SurfaceId]: Surface<S> } = {
   }),
   rejectSuggestion: surface('rejectSuggestion', {
     method: 'POST',
-    url: '/tasks/{taskId}/suggestions/{suggestionId}/reject',
+    url: '/tasks/{taskId}/estimate-suggestions/{suggestionId}/reject',
     status: 204,
     path: c.vRejectSuggestionPath,
     operation: ({ path }) => call('rejectSuggestion', path),
   }),
   undoRejection: surface('undoRejection', {
     method: 'POST',
-    url: '/tasks/{taskId}/suggestions/{suggestionId}/undo-rejection',
+    url: '/tasks/{taskId}/estimate-suggestions/{suggestionId}/undo-reject',
     status: 204,
     path: c.vUndoRejectionPath,
     operation: ({ path }) => call('undoRejection', path),
   }),
 
-  // ------------------------------------------------------------ Planning
+  // -------------------------------------------------------------- Sprint
   beginPlanning: surface('beginPlanning', {
     method: 'POST',
-    url: '/planning',
+    url: '/sprints',
     status: 201,
     operation: () => call('beginPlanning', undefined),
   }),
-  setPlanningAvailableHours: surface('setPlanningAvailableHours', {
+  setAvailableHours: surface('setAvailableHours', {
     method: 'PATCH',
-    url: '/planning',
+    url: '/sprints/{sprintId}',
     status: 204,
-    body: c.vSetPlanningAvailableHoursBody,
-    operation: ({ body }) =>
-      call('setPlanningAvailableHours', { hours: body.availableHours }),
+    path: c.vSetAvailableHoursPath,
+    body: c.vSetAvailableHoursBody,
+    operation: ({ path, body }) =>
+      call('setAvailableHours', { ...path, hours: body.availableHours }),
   }),
   confirmSprint: surface('confirmSprint', {
     method: 'POST',
-    url: '/planning/confirm',
+    url: '/sprints/{sprintId}/confirm',
     status: 204,
+    path: c.vConfirmSprintPath,
     body: c.vConfirmSprintBody,
-    operation: ({ body }) => call('confirmSprint', body),
+    operation: ({ path, body }) => call('confirmSprint', { ...path, ...body }),
   }),
-  setPlanningGoal: surface('setPlanningGoal', {
-    method: 'PUT',
-    url: '/planning/goals/{areaId}',
+  updateGoal: surface('updateGoal', {
+    method: 'PATCH',
+    url: '/sprints/{sprintId}/goals/{areaId}',
     status: 204,
-    path: c.vSetPlanningGoalPath,
-    body: c.vSetPlanningGoalBody,
+    path: c.vUpdateGoalPath,
+    body: c.vUpdateGoalBody,
     operation: ({ path, body }) =>
-      call('setPlanningGoal', { ...path, ...body }),
+      'text' in body
+        ? call('setGoal', { ...path, text: body.text })
+        : call('assessGoal', { ...path, assessment: body.assessment }),
   }),
-  chooseTasks: surface('chooseTasks', {
+  addToSprint: surface('addToSprint', {
     method: 'POST',
-    url: '/planning/tasks',
+    url: '/sprints/{sprintId}/sprint-tasks',
     status: 201,
-    body: c.vChooseTasksBody,
-    operation: ({ body }) => call('chooseTasks', body),
+    path: c.vAddToSprintPath,
+    body: c.vAddToSprintBody,
+    operation: ({ path, body }) =>
+      'taskIds' in body
+        ? call('addSprintTasks', { ...path, taskIds: body.taskIds })
+        : call('createAndChooseTask', { ...path, ...body }),
   }),
-  unchoosePlanningTasks: surface('unchoosePlanningTasks', {
+  removeSprintTasks: surface('removeSprintTasks', {
     method: 'DELETE',
-    url: '/planning/tasks',
+    url: '/sprints/{sprintId}/sprint-tasks',
     status: 204,
-    query: c.vUnchoosePlanningTasksQuery,
-    operation: ({ query: { ids, 'task-ids': taskIds } }) => {
-      // The contract cannot say "exactly one of the two" for a query.
-      if (ids !== undefined && taskIds === undefined)
-        return call('unchooseTasks', { sprintTaskIds: ids });
-      if (taskIds !== undefined && ids === undefined)
-        return call('unchooseTasksByTask', { taskIds });
-      throw new RequestError('query: give either ids or task-ids.');
-    },
+    path: c.vRemoveSprintTasksPath,
+    query: c.vRemoveSprintTasksQuery,
+    operation: ({ path, query }) =>
+      call('removeSprintTasks', { ...path, sprintTaskIds: query.ids }),
+  }),
+  removeSprintTask: surface('removeSprintTask', {
+    method: 'DELETE',
+    url: '/sprints/{sprintId}/sprint-tasks/{sprintTaskId}',
+    status: 204,
+    path: c.vRemoveSprintTaskPath,
+    operation: ({ path: { sprintId, sprintTaskId } }) =>
+      call('removeSprintTasks', { sprintId, sprintTaskIds: [sprintTaskId] }),
   }),
   setGoalLink: surface('setGoalLink', {
     method: 'PATCH',
-    url: '/planning/tasks/{sprintTaskId}',
+    url: '/sprints/{sprintId}/sprint-tasks/{sprintTaskId}',
     status: 204,
     path: c.vSetGoalLinkPath,
     body: c.vSetGoalLinkBody,
@@ -424,47 +441,59 @@ export const surfaces: { readonly [S in SurfaceId]: Surface<S> } = {
   }),
   excludeAllOccurrences: surface('excludeAllOccurrences', {
     method: 'POST',
-    url: '/planning/tasks/{sprintTaskId}/exclude-occurrences',
+    url: '/sprints/{sprintId}/sprint-tasks/{sprintTaskId}/exclude-occurrences',
     status: 204,
     path: c.vExcludeAllOccurrencesPath,
     operation: ({ path }) => call('excludeAllOccurrences', path),
   }),
-  setOccurrenceIncluded: surface('setOccurrenceIncluded', {
-    method: 'PATCH',
-    url: '/planning/occurrences/{occurrenceId}',
-    status: 204,
-    path: c.vSetOccurrenceIncludedPath,
-    body: c.vSetOccurrenceIncludedBody,
-    operation: ({ path, body }) =>
-      call('setOccurrenceIncluded', { ...path, ...body }),
-  }),
   includeOccurrences: surface('includeOccurrences', {
     method: 'POST',
-    url: '/planning/occurrences/include',
+    url: '/sprints/{sprintId}/included-occurrences',
     status: 204,
+    path: c.vIncludeOccurrencesPath,
     body: c.vIncludeOccurrencesBody,
-    operation: ({ body }) => call('includeOccurrences', body),
+    operation: ({ path, body }) =>
+      call('includeOccurrences', { ...path, ...body }),
+  }),
+  includeOccurrence: surface('includeOccurrence', {
+    method: 'PUT',
+    url: '/sprints/{sprintId}/included-occurrences/{occurrenceId}',
+    status: 204,
+    path: c.vIncludeOccurrencePath,
+    operation: ({ path }) =>
+      call('setOccurrenceIncluded', { ...path, included: true }),
+  }),
+  excludeOccurrence: surface('excludeOccurrence', {
+    method: 'DELETE',
+    url: '/sprints/{sprintId}/included-occurrences/{occurrenceId}',
+    status: 204,
+    path: c.vExcludeOccurrencePath,
+    operation: ({ path }) =>
+      call('setOccurrenceIncluded', { ...path, included: false }),
   }),
 
   // --------------------------------------------------------------- Today
-  createDailySelection: surface('createDailySelection', {
+  chooseForDay: surface('chooseForDay', {
     method: 'POST',
-    url: '/today/selections',
+    url: '/sprints/{sprintId}/daily-selections',
     status: 201,
-    body: c.vCreateDailySelectionBody,
-    operation: ({ body }) =>
-      'taskId' in body
-        ? call('addTaskToToday', body)
-        : call('chooseForToday', body),
+    path: c.vChooseForDayPath,
+    body: c.vChooseForDayBody,
+    operation: ({ path, body }) => {
+      if ('sprintTaskId' in body)
+        return call('chooseForToday', { ...path, ...body });
+      if ('taskId' in body) return call('addTaskToToday', { ...path, ...body });
+      return call('createTaskForToday', { ...path, ...body });
+    },
   }),
   startSelection: onSelection(
     'startSelection',
-    '/today/selections/{selectionId}/start',
+    '/sprints/{sprintId}/daily-selections/{selectionId}/start',
     c.vStartSelectionPath,
   ),
   pauseSelection: surface('pauseSelection', {
     method: 'POST',
-    url: '/today/selections/{selectionId}/pause',
+    url: '/sprints/{sprintId}/daily-selections/{selectionId}/pause',
     status: 204,
     path: c.vPauseSelectionPath,
     body: c.vPauseSelectionBody,
@@ -472,58 +501,64 @@ export const surfaces: { readonly [S in SurfaceId]: Surface<S> } = {
   }),
   deferSelection: onSelection(
     'deferSelection',
-    '/today/selections/{selectionId}/defer',
+    '/sprints/{sprintId}/daily-selections/{selectionId}/defer',
     c.vDeferSelectionPath,
+  ),
+  undoDeferSelection: onSelection(
+    'undoDeferSelection',
+    '/sprints/{sprintId}/daily-selections/{selectionId}/undo-defer',
+    c.vUndoDeferSelectionPath,
   ),
   removeFromToday: onSelection(
     'removeFromToday',
-    '/today/selections/{selectionId}/remove',
+    '/sprints/{sprintId}/daily-selections/{selectionId}/remove',
     c.vRemoveFromTodayPath,
+  ),
+  undoRemoveFromToday: onSelection(
+    'undoRemoveFromToday',
+    '/sprints/{sprintId}/daily-selections/{selectionId}/undo-remove',
+    c.vUndoRemoveFromTodayPath,
   ),
   completeSelection: onSelection(
     'completeSelection',
-    '/today/selections/{selectionId}/complete',
+    '/sprints/{sprintId}/daily-selections/{selectionId}/complete',
     c.vCompleteSelectionPath,
-  ),
-  skipSelection: onSelection(
-    'skipSelection',
-    '/today/selections/{selectionId}/skip',
-    c.vSkipSelectionPath,
-  ),
-  undoCloseSelection: onSelection(
-    'undoCloseSelection',
-    '/today/selections/{selectionId}/undo-close',
-    c.vUndoCloseSelectionPath,
   ),
   undoCompleteSelection: onSelection(
     'undoCompleteSelection',
-    '/today/selections/{selectionId}/undo-complete',
+    '/sprints/{sprintId}/daily-selections/{selectionId}/undo-complete',
     c.vUndoCompleteSelectionPath,
+  ),
+  skipSelection: onSelection(
+    'skipSelection',
+    '/sprints/{sprintId}/daily-selections/{selectionId}/skip',
+    c.vSkipSelectionPath,
   ),
   undoSkipSelection: onSelection(
     'undoSkipSelection',
-    '/today/selections/{selectionId}/undo-skip',
+    '/sprints/{sprintId}/daily-selections/{selectionId}/undo-skip',
     c.vUndoSkipSelectionPath,
   ),
-  recordSelectionActual: surface('recordSelectionActual', {
+  recordActualTime: surface('recordActualTime', {
     method: 'POST',
-    url: '/today/selections/{selectionId}/actuals',
+    url: '/sprints/{sprintId}/actual-times',
     status: 204,
-    path: c.vRecordSelectionActualPath,
-    body: c.vRecordSelectionActualBody,
+    path: c.vRecordActualTimePath,
+    body: c.vRecordActualTimeBody,
     operation: ({ path, body }) =>
-      call('recordSelectionActual', { ...path, ...body }),
+      call('recordActualTime', { ...path, ...body }),
   }),
   noteInterrupt: surface('noteInterrupt', {
     method: 'POST',
-    url: '/today/interrupts',
+    url: '/sprints/{sprintId}/interrupts',
     status: 201,
+    path: c.vNoteInterruptPath,
     body: c.vNoteInterruptBody,
-    operation: ({ body }) => call('noteInterrupt', body),
+    operation: ({ path, body }) => call('noteInterrupt', { ...path, ...body }),
   }),
   editInterrupt: surface('editInterrupt', {
     method: 'PATCH',
-    url: '/today/interrupts/{interruptNoteId}',
+    url: '/sprints/{sprintId}/interrupts/{interruptNoteId}',
     status: 204,
     path: c.vEditInterruptPath,
     body: c.vEditInterruptBody,
@@ -536,136 +571,99 @@ export const surfaces: { readonly [S in SurfaceId]: Surface<S> } = {
   }),
   deleteInterrupt: surface('deleteInterrupt', {
     method: 'DELETE',
-    url: '/today/interrupts/{interruptNoteId}',
+    url: '/sprints/{sprintId}/interrupts/{interruptNoteId}',
     status: 204,
     path: c.vDeleteInterruptPath,
     operation: ({ path }) => call('deleteInterrupt', path),
   }),
   restoreInterrupt: surface('restoreInterrupt', {
     method: 'PUT',
-    url: '/today/interrupts/{interruptNoteId}',
+    url: '/sprints/{sprintId}/interrupts/{interruptNoteId}',
     status: 204,
     path: c.vRestoreInterruptPath,
     body: c.vRestoreInterruptBody,
-    operation: ({ path, body }) =>
+    operation: ({ path: { sprintId, interruptNoteId }, body }) =>
       call('restoreInterrupt', {
-        note: { id: path.interruptNoteId, ...body },
+        sprintId,
+        note: { id: interruptNoteId, ...body },
       }),
   }),
 
-  // ------------------------------------------------- Sprint after confirm
-  setRunningAvailableHours: surface('setRunningAvailableHours', {
-    method: 'PATCH',
-    url: '/running',
-    status: 204,
-    body: c.vSetRunningAvailableHoursBody,
-    operation: ({ body }) =>
-      call('setRunningAvailableHours', { hours: body.availableHours }),
-  }),
-  setRunningGoal: surface('setRunningGoal', {
-    method: 'PUT',
-    url: '/running/goals/{areaId}',
-    status: 204,
-    path: c.vSetRunningGoalPath,
-    body: c.vSetRunningGoalBody,
-    operation: ({ path, body }) => call('setRunningGoal', { ...path, ...body }),
-  }),
-  addTaskToWeek: surface('addTaskToWeek', {
-    method: 'PUT',
-    url: '/running/tasks/{taskId}',
-    status: 201,
-    path: c.vAddTaskToWeekPath,
-    operation: ({ path }) => call('addTaskToWeek', path),
-  }),
-  undoAddTaskToWeek: surface('undoAddTaskToWeek', {
-    method: 'DELETE',
-    url: '/running/tasks/{taskId}',
-    status: 204,
-    path: c.vUndoAddTaskToWeekPath,
-    operation: ({ path }) => call('undoAddTaskToWeek', path),
-  }),
-  undoPastDay: surface('undoPastDay', {
-    method: 'POST',
-    url: '/running/selections/{selectionId}/undo',
-    status: 204,
-    path: c.vUndoPastDayPath,
-    operation: ({ path }) => call('undoPastDay', path),
-  }),
-
   // --------------------------------------------------------------- Retro
-  updateRetro: surface('updateRetro', {
-    method: 'PATCH',
-    url: '/retro',
-    status: 204,
-    body: c.vUpdateRetroBody,
-    operation: ({ body }) => {
-      if ('reflection' in body)
-        return call('setReflection', { text: body.reflection });
-      if ('improvement' in body)
-        return call('setImprovement', { text: body.improvement });
-      return call('decideCriterion', { decision: body.criterionDecision });
-    },
-  }),
   beginRetro: surface('beginRetro', {
     method: 'POST',
-    url: '/retro/begin',
+    url: '/sprints/{sprintId}/retro',
+    status: 201,
+    path: c.vBeginRetroPath,
+    operation: ({ path }) => call('beginRetro', path),
+  }),
+  updateRetro: surface('updateRetro', {
+    method: 'PATCH',
+    url: '/sprints/{sprintId}/retro',
     status: 204,
-    operation: () => call('beginRetro', undefined),
+    path: c.vUpdateRetroPath,
+    body: c.vUpdateRetroBody,
+    operation: ({ path, body }) =>
+      'reflection' in body
+        ? call('setReflection', { ...path, text: body.reflection })
+        : call('setImprovement', { ...path, text: body.improvement }),
   }),
   completeRetro: surface('completeRetro', {
     method: 'POST',
-    url: '/retro/complete',
+    url: '/sprints/{sprintId}/retro/complete',
     status: 204,
-    operation: () => call('completeRetro', undefined),
-  }),
-  assessGoal: surface('assessGoal', {
-    method: 'PATCH',
-    url: '/retro/goals/{areaId}',
-    status: 204,
-    path: c.vAssessGoalPath,
-    body: c.vAssessGoalBody,
-    operation: ({ path, body }) => call('assessGoal', { ...path, ...body }),
+    path: c.vCompleteRetroPath,
+    operation: ({ path }) => call('completeRetro', path),
   }),
   pinFact: surface('pinFact', {
     method: 'PUT',
-    url: '/retro/pins/{pin}',
+    url: '/sprints/{sprintId}/retro/pins/{pin}',
     status: 204,
     path: c.vPinFactPath,
-    operation: ({ path }) => call('pinFact', { pin: retroPin(path.pin) }),
+    operation: ({ path: { sprintId, pin } }) =>
+      call('pinFact', { sprintId, pin: retroPin(pin) }),
   }),
   unpinFact: surface('unpinFact', {
     method: 'DELETE',
-    url: '/retro/pins/{pin}',
+    url: '/sprints/{sprintId}/retro/pins/{pin}',
     status: 204,
     path: c.vUnpinFactPath,
-    operation: ({ path }) => call('unpinFact', { pin: retroPin(path.pin) }),
+    operation: ({ path: { sprintId, pin } }) =>
+      call('unpinFact', { sprintId, pin: retroPin(pin) }),
   }),
+  decideCriterion: surface('decideCriterion', {
+    method: 'PATCH',
+    url: '/sprints/{sprintId}/criterion-use',
+    status: 204,
+    path: c.vDecideCriterionPath,
+    body: c.vDecideCriterionBody,
+    operation: ({ path, body }) =>
+      call('decideCriterion', { ...path, decision: body.retroDecision }),
+  }),
+
+  // -------------------------------------------------- Planning criteria
   draftCriterion: surface('draftCriterion', {
     method: 'POST',
-    url: '/retro/draft-criterion',
+    url: '/planning-criteria',
     status: 201,
     body: c.vDraftCriterionBody,
-    operation: ({ body }) => call('draftCriterion', body),
+    operation: ({ body: { sourceSprintId, policy } }) =>
+      call('draftCriterion', { sprintId: sourceSprintId, policy }),
   }),
   setDraftPolicy: surface('setDraftPolicy', {
     method: 'PATCH',
-    url: '/retro/draft-criterion',
+    url: '/planning-criteria/{criterionId}',
     status: 204,
+    path: c.vSetDraftPolicyPath,
     body: c.vSetDraftPolicyBody,
-    operation: ({ body }) => call('setDraftPolicy', body),
+    operation: ({ path, body }) => call('setDraftPolicy', { ...path, ...body }),
   }),
   dropCriterionDraft: surface('dropCriterionDraft', {
     method: 'DELETE',
-    url: '/retro/draft-criterion',
+    url: '/planning-criteria/{criterionId}',
     status: 204,
-    operation: () => call('dropCriterionDraft', undefined),
-  }),
-  recordReviewActual: surface('recordReviewActual', {
-    method: 'POST',
-    url: '/retro/actuals',
-    status: 204,
-    body: c.vRecordReviewActualBody,
-    operation: ({ body }) => call('recordReviewActual', body),
+    path: c.vDropCriterionDraftPath,
+    operation: ({ path }) => call('dropCriterionDraft', path),
   }),
 };
 
@@ -734,16 +732,17 @@ export async function readRequest(
 type SelectionSurface =
   | 'startSelection'
   | 'deferSelection'
+  | 'undoDeferSelection'
   | 'removeFromToday'
+  | 'undoRemoveFromToday'
   | 'completeSelection'
-  | 'skipSelection'
-  | 'undoCloseSelection'
   | 'undoCompleteSelection'
+  | 'skipSelection'
   | 'undoSkipSelection';
 
 /**
- * `POST /today/selections/{selectionId}/<verb>`: a change of today's
- * selection, the operation of the same name.
+ * `POST /sprints/{sprintId}/daily-selections/{selectionId}/<verb>`: a
+ * change of a day's choice, the operation of the same name.
  */
 function onSelection<S extends SelectionSurface>(
   name: S,
@@ -755,8 +754,27 @@ function onSelection<S extends SelectionSurface>(
     url,
     status: 204 as Surface<S>['status'],
     path,
-    operation: ({ path: { selectionId } }) =>
-      call(name, { selectionId } as Plain<OperationInput<S>>),
+    operation: ({ path: { sprintId, selectionId } }) =>
+      call(name, { sprintId, selectionId } as Plain<OperationInput<S>>),
+  };
+}
+
+type TaskVerbSurface =
+  'archiveTask' | 'restoreTask' | 'completeTask' | 'undoCompleteTask';
+
+/** `POST /tasks/{taskId}/<verb>`: a change of a Task's state. */
+function onTask<S extends TaskVerbSurface>(
+  name: S,
+  url: Datas[S]['url'],
+  path: v.GenericSchema,
+): Surface<S> {
+  return {
+    method: 'POST',
+    url,
+    status: 204 as Surface<S>['status'],
+    path,
+    operation: ({ path: { taskId } }) =>
+      call(name, { taskId } as Plain<OperationInput<S>>),
   };
 }
 
@@ -783,11 +801,11 @@ function retroPin(pin: string): Plain<OperationInput<'pinFact'>['pin']> {
 /** The surface each operation goes to (`requestOf`). */
 export type OperationSurfaces = {
   createArea: 'createArea';
-  renameArea: 'updateArea';
-  archiveArea: 'updateArea';
-  restoreArea: 'updateArea';
-  createTask: 'quickAddTask';
-  saveTask: 'updateTask';
+  renameArea: 'renameArea';
+  archiveArea: 'archiveArea';
+  restoreArea: 'restoreArea';
+  createTask: 'createTask';
+  saveTask: 'saveTask';
   adoptSuggestion: 'adoptEstimateSuggestion';
   undoAdoption: 'undoAdoption';
   adoptEditedSuggestion: 'adoptEstimateSuggestion';
@@ -796,58 +814,52 @@ export type OperationSurfaces = {
   addSubtask: 'addSubtask';
   setSubtaskDone: 'updateSubtask';
   setSubtaskEstimate: 'updateSubtask';
-  archiveTask: 'updateTask';
-  restoreTask: 'updateTask';
+  archiveTask: 'archiveTask';
+  restoreTask: 'restoreTask';
   completeTask: 'completeTask';
   undoCompleteTask: 'undoCompleteTask';
-  addTaskToToday: 'createDailySelection';
-  addTaskToWeek: 'addTaskToWeek';
-  undoAddTaskToWeek: 'undoAddTaskToWeek';
   setRecurrence: 'setRecurrence';
   endRecurrence: 'endRecurrence';
-  chooseTasks: 'chooseTasks';
-  unchooseTasks: 'unchoosePlanningTasks';
-  unchooseTasksByTask: 'unchoosePlanningTasks';
-  setOccurrenceIncluded: 'setOccurrenceIncluded';
-  includeOccurrences: 'includeOccurrences';
-  excludeAllOccurrences: 'excludeAllOccurrences';
-  createAndChooseTask: 'quickAddTask';
-  setPlanningGoal: 'setPlanningGoal';
-  setGoalLink: 'setGoalLink';
-  setPlanningAvailableHours: 'setPlanningAvailableHours';
+  beginPlanning: 'beginPlanning';
+  setAvailableHours: 'setAvailableHours';
   confirmSprint: 'confirmSprint';
-  chooseForToday: 'createDailySelection';
+  setGoal: 'updateGoal';
+  assessGoal: 'updateGoal';
+  addSprintTasks: 'addToSprint';
+  createAndChooseTask: 'addToSprint';
+  removeSprintTasks: 'removeSprintTask' | 'removeSprintTasks';
+  setGoalLink: 'setGoalLink';
+  excludeAllOccurrences: 'excludeAllOccurrences';
+  setOccurrenceIncluded: 'includeOccurrence' | 'excludeOccurrence';
+  includeOccurrences: 'includeOccurrences';
+  chooseForToday: 'chooseForDay';
+  addTaskToToday: 'chooseForDay';
+  createTaskForToday: 'chooseForDay';
   startSelection: 'startSelection';
-  deferSelection: 'deferSelection';
-  removeFromToday: 'removeFromToday';
-  undoCloseSelection: 'undoCloseSelection';
   pauseSelection: 'pauseSelection';
+  deferSelection: 'deferSelection';
+  undoDeferSelection: 'undoDeferSelection';
+  removeFromToday: 'removeFromToday';
+  undoRemoveFromToday: 'undoRemoveFromToday';
   completeSelection: 'completeSelection';
   undoCompleteSelection: 'undoCompleteSelection';
   skipSelection: 'skipSelection';
   undoSkipSelection: 'undoSkipSelection';
-  recordSelectionActual: 'recordSelectionActual';
+  recordActualTime: 'recordActualTime';
   noteInterrupt: 'noteInterrupt';
   editInterrupt: 'editInterrupt';
   deleteInterrupt: 'deleteInterrupt';
   restoreInterrupt: 'restoreInterrupt';
-  createTaskForToday: 'quickAddTask';
   beginRetro: 'beginRetro';
-  setRunningGoal: 'setRunningGoal';
-  setRunningAvailableHours: 'setRunningAvailableHours';
-  undoPastDay: 'undoPastDay';
-  assessGoal: 'assessGoal';
-  pinFact: 'pinFact';
-  unpinFact: 'unpinFact';
   setReflection: 'updateRetro';
   setImprovement: 'updateRetro';
+  completeRetro: 'completeRetro';
+  pinFact: 'pinFact';
+  unpinFact: 'unpinFact';
+  decideCriterion: 'decideCriterion';
   draftCriterion: 'draftCriterion';
   setDraftPolicy: 'setDraftPolicy';
   dropCriterionDraft: 'dropCriterionDraft';
-  decideCriterion: 'updateRetro';
-  recordReviewActual: 'recordReviewActual';
-  completeRetro: 'completeRetro';
-  beginPlanning: 'beginPlanning';
 };
 
 /** The request of an operation: the surface and its parts. */
@@ -878,16 +890,14 @@ const requests: {
   // ---------------------------------------------------------------- Area
   createArea: (body) => to('createArea', { body }),
   renameArea: ({ areaId, name }) =>
-    to('updateArea', { path: { areaId }, body: { name } }),
-  archiveArea: ({ areaId }) =>
-    to('updateArea', { path: { areaId }, body: { archived: true } }),
-  restoreArea: ({ areaId }) =>
-    to('updateArea', { path: { areaId }, body: { archived: false } }),
+    to('renameArea', { path: { areaId }, body: { name } }),
+  archiveArea: (path) => to('archiveArea', { path }),
+  restoreArea: (path) => to('restoreArea', { path }),
 
   // ---------------------------------------------------------------- Task
-  createTask: (body) => to('quickAddTask', { body }),
+  createTask: (body) => to('createTask', { body }),
   saveTask: ({ taskId, update, estimate }) =>
-    to('updateTask', {
+    to('saveTask', {
       path: { taskId },
       body: { ...update, ...(estimate === undefined ? {} : { estimate }) },
     }),
@@ -911,101 +921,104 @@ const requests: {
     to('updateSubtask', { path: { taskId, subtaskId }, body: { done } }),
   setSubtaskEstimate: ({ taskId, subtaskId, hours }) =>
     to('updateSubtask', { path: { taskId, subtaskId }, body: { hours } }),
-  archiveTask: ({ taskId }) =>
-    to('updateTask', { path: { taskId }, body: { archived: true } }),
-  restoreTask: ({ taskId }) =>
-    to('updateTask', { path: { taskId }, body: { archived: false } }),
+  archiveTask: (path) => to('archiveTask', { path }),
+  restoreTask: (path) => to('restoreTask', { path }),
   completeTask: (path) => to('completeTask', { path }),
   undoCompleteTask: (path) => to('undoCompleteTask', { path }),
-  addTaskToToday: (body) => to('createDailySelection', { body }),
-  addTaskToWeek: (path) => to('addTaskToWeek', { path }),
-  undoAddTaskToWeek: (path) => to('undoAddTaskToWeek', { path }),
   setRecurrence: ({ taskId, pattern }) =>
     to('setRecurrence', { path: { taskId }, body: { pattern } }),
   endRecurrence: (path) => to('endRecurrence', { path }),
 
-  // ------------------------------------------------------------ Planning
-  chooseTasks: ({ taskIds }) =>
-    to('chooseTasks', { body: { taskIds: [...taskIds] } }),
-  unchooseTasks: ({ sprintTaskIds }) =>
-    to('unchoosePlanningTasks', {
-      query: { ids: nonEmpty(sprintTaskIds, 'sprintTaskIds') },
+  // -------------------------------------------------------------- Sprint
+  beginPlanning: () => to('beginPlanning', {}),
+  setAvailableHours: ({ sprintId, hours }) =>
+    to('setAvailableHours', {
+      path: { sprintId },
+      body: { availableHours: hours },
     }),
-  unchooseTasksByTask: ({ taskIds }) =>
-    to('unchoosePlanningTasks', {
-      query: { 'task-ids': nonEmpty(taskIds, 'taskIds') },
-    }),
-  setOccurrenceIncluded: ({ occurrenceId, included }) =>
-    to('setOccurrenceIncluded', {
-      path: { occurrenceId },
-      body: { included },
-    }),
-  includeOccurrences: ({ occurrenceIds }) =>
-    to('includeOccurrences', {
-      body: { occurrenceIds: [...occurrenceIds] },
-    }),
+  confirmSprint: ({ sprintId, applyCriterion }) =>
+    to('confirmSprint', { path: { sprintId }, body: { applyCriterion } }),
+  setGoal: ({ sprintId, areaId, text }) =>
+    to('updateGoal', { path: { sprintId, areaId }, body: { text } }),
+  assessGoal: ({ sprintId, areaId, assessment }) =>
+    to('updateGoal', { path: { sprintId, areaId }, body: { assessment } }),
+  addSprintTasks: ({ sprintId, taskIds }) =>
+    to('addToSprint', { path: { sprintId }, body: { taskIds } }),
+  createAndChooseTask: ({ sprintId, ...body }) =>
+    to('addToSprint', { path: { sprintId }, body }),
+  removeSprintTasks: ({ sprintId, sprintTaskIds }) => {
+    const [only] = sprintTaskIds;
+    return sprintTaskIds.length === 1 && only !== undefined
+      ? to('removeSprintTask', { path: { sprintId, sprintTaskId: only } })
+      : to('removeSprintTasks', {
+          path: { sprintId },
+          query: { ids: nonEmpty(sprintTaskIds, 'sprintTaskIds') },
+        });
+  },
+  setGoalLink: ({ sprintId, sprintTaskId, goalLink }) =>
+    to('setGoalLink', { path: { sprintId, sprintTaskId }, body: { goalLink } }),
   excludeAllOccurrences: (path) => to('excludeAllOccurrences', { path }),
-  createAndChooseTask: (task) =>
-    to('quickAddTask', { body: { ...task, addTo: 'planning' } }),
-  setPlanningGoal: ({ areaId, text }) =>
-    to('setPlanningGoal', { path: { areaId }, body: { text } }),
-  setGoalLink: ({ sprintTaskId, goalLink }) =>
-    to('setGoalLink', { path: { sprintTaskId }, body: { goalLink } }),
-  setPlanningAvailableHours: ({ hours }) =>
-    to('setPlanningAvailableHours', { body: { availableHours: hours } }),
-  confirmSprint: (body) => to('confirmSprint', { body }),
+  setOccurrenceIncluded: ({ sprintId, occurrenceId, included }) =>
+    included
+      ? to('includeOccurrence', { path: { sprintId, occurrenceId } })
+      : to('excludeOccurrence', { path: { sprintId, occurrenceId } }),
+  includeOccurrences: ({ sprintId, occurrenceIds }) =>
+    to('includeOccurrences', { path: { sprintId }, body: { occurrenceIds } }),
 
   // --------------------------------------------------------------- Today
-  chooseForToday: (body) => to('createDailySelection', { body }),
+  chooseForToday: ({ sprintId, ...body }) =>
+    to('chooseForDay', { path: { sprintId }, body }),
+  addTaskToToday: ({ sprintId, ...body }) =>
+    to('chooseForDay', { path: { sprintId }, body }),
+  createTaskForToday: ({ sprintId, ...body }) =>
+    to('chooseForDay', { path: { sprintId }, body }),
   startSelection: (path) => to('startSelection', { path }),
+  pauseSelection: ({ sprintId, selectionId, ...body }) =>
+    to('pauseSelection', { path: { sprintId, selectionId }, body }),
   deferSelection: (path) => to('deferSelection', { path }),
+  undoDeferSelection: (path) => to('undoDeferSelection', { path }),
   removeFromToday: (path) => to('removeFromToday', { path }),
-  undoCloseSelection: (path) => to('undoCloseSelection', { path }),
-  pauseSelection: ({ selectionId, ...body }) =>
-    to('pauseSelection', { path: { selectionId }, body }),
+  undoRemoveFromToday: (path) => to('undoRemoveFromToday', { path }),
   completeSelection: (path) => to('completeSelection', { path }),
   undoCompleteSelection: (path) => to('undoCompleteSelection', { path }),
   skipSelection: (path) => to('skipSelection', { path }),
   undoSkipSelection: (path) => to('undoSkipSelection', { path }),
-  recordSelectionActual: ({ selectionId, hours }) =>
-    to('recordSelectionActual', { path: { selectionId }, body: { hours } }),
-  noteInterrupt: (body) => to('noteInterrupt', { body }),
-  editInterrupt: ({ interruptNoteId, text, minutes }) =>
+  recordActualTime: ({ sprintId, ...body }) =>
+    to('recordActualTime', { path: { sprintId }, body }),
+  noteInterrupt: ({ sprintId, ...body }) =>
+    to('noteInterrupt', { path: { sprintId }, body }),
+  editInterrupt: ({ sprintId, interruptNoteId, text, minutes }) =>
     to('editInterrupt', {
-      path: { interruptNoteId },
+      path: { sprintId, interruptNoteId },
       body: { text, minutes: minutes ?? null },
     }),
   deleteInterrupt: (path) => to('deleteInterrupt', { path }),
-  restoreInterrupt: ({ note: { id, ...body } }) =>
-    to('restoreInterrupt', { path: { interruptNoteId: id }, body }),
-  createTaskForToday: (task) =>
-    to('quickAddTask', { body: { ...task, addTo: 'today' } }),
-  beginRetro: () => to('beginRetro', {}),
-
-  // ------------------------------------------------- Sprint after confirm
-  setRunningGoal: ({ areaId, text }) =>
-    to('setRunningGoal', { path: { areaId }, body: { text } }),
-  setRunningAvailableHours: ({ hours }) =>
-    to('setRunningAvailableHours', { body: { availableHours: hours } }),
-  undoPastDay: (path) => to('undoPastDay', { path }),
+  restoreInterrupt: ({ sprintId, note: { id, ...body } }) =>
+    to('restoreInterrupt', { path: { sprintId, interruptNoteId: id }, body }),
 
   // --------------------------------------------------------------- Retro
-  assessGoal: ({ areaId, assessment }) =>
-    to('assessGoal', { path: { areaId }, body: { assessment } }),
-  pinFact: ({ pin }) => to('pinFact', { path: pinPath(pin) }),
-  unpinFact: ({ pin }) => to('unpinFact', { path: pinPath(pin) }),
-  setReflection: ({ text }) =>
-    to('updateRetro', { body: { reflection: text } }),
-  setImprovement: ({ text }) =>
-    to('updateRetro', { body: { improvement: text } }),
-  draftCriterion: (body) => to('draftCriterion', { body }),
-  setDraftPolicy: (body) => to('setDraftPolicy', { body }),
-  dropCriterionDraft: () => to('dropCriterionDraft', {}),
-  decideCriterion: ({ decision }) =>
-    to('updateRetro', { body: { criterionDecision: decision } }),
-  recordReviewActual: (body) => to('recordReviewActual', { body }),
-  completeRetro: () => to('completeRetro', {}),
-  beginPlanning: () => to('beginPlanning', {}),
+  beginRetro: (path) => to('beginRetro', { path }),
+  setReflection: ({ sprintId, text }) =>
+    to('updateRetro', { path: { sprintId }, body: { reflection: text } }),
+  setImprovement: ({ sprintId, text }) =>
+    to('updateRetro', { path: { sprintId }, body: { improvement: text } }),
+  completeRetro: (path) => to('completeRetro', { path }),
+  pinFact: ({ sprintId, pin }) =>
+    to('pinFact', { path: { sprintId, ...pinPath(pin) } }),
+  unpinFact: ({ sprintId, pin }) =>
+    to('unpinFact', { path: { sprintId, ...pinPath(pin) } }),
+  decideCriterion: ({ sprintId, decision }) =>
+    to('decideCriterion', {
+      path: { sprintId },
+      body: { retroDecision: decision },
+    }),
+
+  // -------------------------------------------------- Planning criteria
+  draftCriterion: ({ sprintId, policy }) =>
+    to('draftCriterion', { body: { sourceSprintId: sprintId, policy } }),
+  setDraftPolicy: ({ criterionId, policy }) =>
+    to('setDraftPolicy', { path: { criterionId }, body: { policy } }),
+  dropCriterionDraft: (path) => to('dropCriterionDraft', { path }),
 };
 
 /** The request of an operation and its input (the web app sends it). */

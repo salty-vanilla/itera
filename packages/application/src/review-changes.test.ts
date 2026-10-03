@@ -19,8 +19,11 @@ describe('planning the next Sprint mid-week', () => {
       (t) => t.outcome === 'planned' && t.occurrenceIds === undefined,
     );
     if (unfinished === undefined) throw new Error('No unfinished Task.');
-    expect(store.run(beginPlanning()).ok).toBe(true);
-    expect(store.run(chooseTasks([unfinished.taskId])).ok).toBe(true);
+    const begun = store.run(beginPlanning());
+    if (!begun.ok) throw new Error(begun.error.message);
+    expect(
+      store.run(chooseTasks(begun.value.sprintId, [unfinished.taskId])).ok,
+    ).toBe(true);
     return { store, running, unfinished };
   }
 
@@ -59,7 +62,8 @@ describe('planning the next Sprint mid-week', () => {
         records,
         clock: { today: day, now: instant(`${day}T00:05:00.000Z`) },
       });
-      const change = actor === 'system' ? reviewEnded() : beginRetro();
+      const change =
+        actor === 'system' ? reviewEnded() : beginRetro(running.id);
       expect(after.run(change, { actor }).ok).toBe(true);
       const next = after.getSnapshot();
       const draft = next.records.sprints

@@ -4,8 +4,8 @@
 // database with the migrations applied, behind a fake Authenticator.
 import {
   vCreateAreaResponse,
+  vGetBacklogResponse,
   vGetMeResponse,
-  vGetOverviewResponse,
 } from '@itera/api-contract';
 import { OPERATION_EXAMPLES } from '@itera/api-contract/testing';
 import { createIdSource, type Records } from '@itera/application';
@@ -207,11 +207,16 @@ describe('an operation', () => {
       `/areas/${ids.newId('Area', testNow)}`,
       { name: 'x', archived: true },
     ],
-    ['PATCH', '/retro', { reflection: 'a', improvement: 'b' }],
+    [
+      'PATCH',
+      `/sprints/${ids.newId('Sprint', testNow)}/retro`,
+      { reflection: 'a', improvement: 'b' },
+    ],
     [
       'POST',
-      '/today/selections',
+      `/sprints/${ids.newId('Sprint', testNow)}/daily-selections`,
       {
+        date: '2026-10-03',
         sprintTaskId: ids.newId('SprintTask', testNow),
         taskId: ids.newId('Task', testNow),
       },
@@ -219,10 +224,14 @@ describe('an operation', () => {
     ['POST', '/tasks', { title: 'x', addTo: 'week' }],
     [
       'DELETE',
-      `/planning/tasks?ids=${ids.newId('SprintTask', testNow)}&task-ids=${ids.newId('Task', testNow)}`,
+      `/sprints/${ids.newId('Sprint', testNow)}/sprint-tasks?ids=${ids.newId('Task', testNow)}`,
       undefined,
     ],
-    ['DELETE', '/planning/tasks', undefined],
+    [
+      'DELETE',
+      `/sprints/${ids.newId('Sprint', testNow)}/sprint-tasks`,
+      undefined,
+    ],
   ] as const)(
     'answers 400 to %s %s that names no one operation, writing nothing',
     async (method, path, body) => {
@@ -378,20 +387,17 @@ describe('an operation', () => {
 describe('a read', () => {
   it('answers { clock, view } with the injected clock in the person’s time zone', async () => {
     const { app } = await setup();
-    const response = await get(app, '/overview');
+    const response = await get(app, '/backlog');
     expect(response.status).toBe(200);
-    const body = v.parse(vGetOverviewResponse, await response.json());
+    const body = v.parse(vGetBacklogResponse, await response.json());
     expect(body.clock).toEqual({ today: '2026-10-03', now: testNow });
-    expect(body.view).toMatchObject({
-      backlogCount: 0,
-      timeZone: 'Asia/Tokyo',
-    });
+    expect(body.view).toMatchObject({ timeZone: 'Asia/Tokyo' });
   });
 
   it('needs no Origin', async () => {
     const { app } = await setup();
     const response = await app.request(
-      '/api/overview',
+      '/api/backlog',
       { headers: { Origin: 'https://evil.example' } },
       testEnv,
     );
@@ -400,7 +406,7 @@ describe('a read', () => {
 
   it('answers 401 without a session', async () => {
     const { app } = await setup({ signedIn: null });
-    expect(await errorOf(await get(app, '/overview'))).toMatchObject({
+    expect(await errorOf(await get(app, '/backlog'))).toMatchObject({
       status: 401,
       code: 'unauthenticated',
     });
@@ -408,7 +414,7 @@ describe('a read', () => {
 
   it('answers 422 userNotSetUp before the settings are made', async () => {
     const { app } = await setup({ settings: false });
-    expect(await errorOf(await get(app, '/overview'))).toMatchObject({
+    expect(await errorOf(await get(app, '/backlog'))).toMatchObject({
       status: 422,
       code: 'userNotSetUp',
     });
@@ -427,6 +433,10 @@ describe('GET /api/me', () => {
         timeZone: 'Asia/Tokyo',
         weekStartsOn: 1,
       },
+      // With the settings, the clock and the Sprints she has now (#295 R1):
+      // none yet, and the next Planning starts on this week's Monday.
+      clock: { today: '2026-10-03', now: testNow },
+      sprints: { next: { start: '2026-09-28', number: 1 } },
     });
   });
 

@@ -1,39 +1,15 @@
-# Area (領域). The paths of a resource and its methods (ADR 0006 経路の形):
+# Planning criterion (計画基準). The paths of a resource and its methods (ADR 0006 経路の形):
 # nouns of the domain, a state change a verb after the resource. A write
 # is one operation of packages/application or, where a path takes several,
 # the one its body names (@itera/api-contract/requests).
 
-areas:
-  get:
-    operationId: listAreas
-    tags: [Reads]
-    summary: "The Areas, in the person's order"
-    description: >-
-      Archived ones too.
-    responses:
-      '200':
-        description: The read.
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [clock, view]
-              properties:
-                clock: { $ref: '../schemas/common.yaml#/Clock' }
-                view:
-                  type: array
-                  items: { $ref: '../schemas/views.yaml#/EditableArea' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '422': { $ref: '../responses.yaml#/UserNotSetUp' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
+planningCriteria:
   post:
-    operationId: createArea
-    tags: [Area]
-    summary: Make an Area
+    operationId: draftCriterion
+    tags: [PlanningCriterion]
+    summary: '基準にもする: draft a criterion'
     description: >-
-      Last in the order, in the next color (the operation decides both).
+      From the improvement of the Sprint in Review (`sourceSprintId`).
     requestBody:
       required: true
       content:
@@ -41,9 +17,10 @@ areas:
           schema:
             type: object
             additionalProperties: false
-            required: [name]
+            required: [sourceSprintId, policy]
             properties:
-              name: { type: string }
+              sourceSprintId: { $ref: '../schemas/common.yaml#/SprintId' }
+              policy: { $ref: '../schemas/records.yaml#/CriterionPolicy' }
     responses:
       '201':
         description: Made. The IDs of what the operation made.
@@ -51,9 +28,10 @@ areas:
           application/json:
             schema:
               type: object
-              required: [areaId]
+              required: [criterionId]
               properties:
-                areaId: { $ref: '../schemas/common.yaml#/AreaId' }
+                criterionId:
+                  { $ref: '../schemas/common.yaml#/PlanningCriterionId' }
       '400': { $ref: '../responses.yaml#/BadRequest' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
@@ -63,16 +41,16 @@ areas:
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
-area:
+planningCriterion:
   patch:
-    operationId: renameArea
-    tags: [Area]
-    summary: Rename an Area
+    operationId: setDraftPolicy
+    tags: [PlanningCriterion]
+    summary: "Change a draft criterion's policy"
     parameters:
-      - name: areaId
+      - name: criterionId
         in: path
         required: true
-        schema: { $ref: '../schemas/common.yaml#/AreaId' }
+        schema: { $ref: '../schemas/common.yaml#/PlanningCriterionId' }
     requestBody:
       required: true
       content:
@@ -80,9 +58,9 @@ area:
           schema:
             type: object
             additionalProperties: false
-            required: [name]
+            required: [policy]
             properties:
-              name: { type: string }
+              policy: { $ref: '../schemas/records.yaml#/CriterionPolicy' }
     responses:
       '204':
         description: Done.
@@ -95,38 +73,15 @@ area:
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
-areaArchive:
-  post:
-    operationId: archiveArea
-    tags: [Area]
-    summary: Archive an Area
+  delete:
+    operationId: dropCriterionDraft
+    tags: [PlanningCriterion]
+    summary: Drop a draft criterion
     parameters:
-      - name: areaId
+      - name: criterionId
         in: path
         required: true
-        schema: { $ref: '../schemas/common.yaml#/AreaId' }
-    responses:
-      '204':
-        description: Done.
-      '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
-      '404': { $ref: '../responses.yaml#/NotFound' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
-      '422': { $ref: '../responses.yaml#/RuleViolation' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-areaRestore:
-  post:
-    operationId: restoreArea
-    tags: [Area]
-    summary: Bring an archived Area back
-    parameters:
-      - name: areaId
-        in: path
-        required: true
-        schema: { $ref: '../schemas/common.yaml#/AreaId' }
+        schema: { $ref: '../schemas/common.yaml#/PlanningCriterionId' }
     responses:
       '204':
         description: Done.

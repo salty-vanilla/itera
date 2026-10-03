@@ -10,7 +10,6 @@ import {
   editInterrupt,
   noteInterrupt,
   pauseSelection,
-  recordActualTime,
   removeFromToday,
   restoreInterrupt,
   selectForToday,
@@ -29,10 +28,12 @@ import {
   type DailySelectionId,
   type InterruptNote,
   type InterruptNoteId,
+  type LocalDate,
   type Occurrence,
   type OccurrenceId,
   type Result,
   type Sprint,
+  type SprintId,
   type SprintTaskId,
   type Task,
   type TaskId,
@@ -48,10 +49,12 @@ import {
 } from './record-store';
 import type { Records } from './records';
 import { reviewSprint } from './review-changes';
+import { onlyToday, sprintIn } from './sprint-of';
 import { midSprintAddition } from './task-changes';
 import { activeSprintOf } from './today-view';
 
-function active(records: Records): Result<Sprint> {
+/** The running Sprint the system's start of the day acts on. */
+function running(records: Records): Result<Sprint> {
   const sprint = activeSprintOf(records);
   return sprint === undefined
     ? {
@@ -61,8 +64,9 @@ function active(records: Records): Result<Sprint> {
     : { ok: true, value: sprint };
 }
 
-/** A command on the active Sprint. */
+/** A command on a Sprint: the running one the operation names (#295). */
 function onActive(
+  sprintId: SprintId | undefined,
   command: (
     sprint: Sprint,
     ctx: ChangeContext,
@@ -70,7 +74,10 @@ function onActive(
   ) => CommandResult<Sprint>,
 ): Change {
   return (records, ctx) => {
-    const sprint = active(records);
+    const sprint =
+      sprintId === undefined
+        ? running(records)
+        : sprintIn(records, sprintId, ['active']);
     if (!sprint.ok) return sprint;
     return changed(command(sprint.value, ctx, records), (next) => ({
       sprints: [next],
@@ -78,8 +85,9 @@ function onActive(
   };
 }
 
-/** A Today command on the active Sprint that may change a Task or occurrence. */
+/** A Today command on the running Sprint that may change a Task or occurrence. */
 function onActiveToday(
+  sprintId: SprintId,
   command: (
     sprint: Sprint,
     ctx: ChangeContext,
@@ -87,7 +95,7 @@ function onActiveToday(
   ) => CommandResult<TodayChange>,
 ): Change {
   return (records, ctx) => {
-    const sprint = active(records);
+    const sprint = sprintIn(records, sprintId, ['active']);
     if (!sprint.ok) return sprint;
     return onToday(sprint.value.id, command)(records, ctx);
   };
@@ -131,7 +139,7 @@ function subjectOf(
  * to write).
  */
 export const beginDay = (): Change => (records, ctx) => {
-  const result = onActive((sprint, context, current) =>
+  const result = onActive(undefined, (sprint, context, current) =>
     startDay(
       sprint,
       {
@@ -150,13 +158,17 @@ export const beginDay = (): Change => (records, ctx) => {
 /** 今日へ: a planned SprintTask, or one occurrence of it (F18). */
 export const choose =
   (
+    sprintId: SprintId,
+    date: LocalDate,
     sprintTaskId: SprintTaskId,
     occurrenceId?: OccurrenceId,
   ): Change<{ selectionId: DailySelectionId }> =>
   (records, ctx) => {
+    const today = onlyToday(date, ctx);
+    if (!today.ok) return today;
     const selectionId = ctx.newId('DailySelection');
     return returning(
-      onActive((sprint, context, current) => {
+      onActive(sprintId, (sprint, context, current) => {
         const occurrence =
           occurrenceId === undefined
             ? undefined
@@ -176,30 +188,55 @@ export const choose =
     );
   };
 
-export const start = (selectionId: DailySelectionId): Change =>
-  onActive((sprint, ctx) => startSelection(sprint, { selectionId }, ctx));
+export const start = (
+  sprintId: SprintId,
+  selectionId: DailySelectionId,
+): Change =>
+  onActive(sprintId, (sprint, ctx) =>
+    startSelection(sprint, { selectionId }, ctx),
+  );
 
-export const defer = (selectionId: DailySelectionId): Change =>
-  onActive((sprint, ctx) => deferSelection(sprint, { selectionId }, ctx));
+export const defer = (
+  sprintId: SprintId,
+  selectionId: DailySelectionId,
+): Change =>
+  onActive(sprintId, (sprint, ctx) =>
+    deferSelection(sprint, { selectionId }, ctx),
+  );
 
-export const remove = (selectionId: DailySelectionId): Change =>
-  onActive((sprint, ctx) => removeFromToday(sprint, { selectionId }, ctx));
+export const remove = (
+  sprintId: SprintId,
+  selectionId: DailySelectionId,
+): Change =>
+  onActive(sprintId, (sprint, ctx) =>
+    removeFromToday(sprint, { selectionId }, ctx),
+  );
 
-/** 見送り・今週の残りに戻したのを取り消す: back to 今日やる, today only (F37). */
-export const undoClose = (selectionId: DailySelectionId): Change =>
-  onActive((sprint, ctx) => {
-    const selection = find(sprint.dailySelections, selectionId, 'Selection');
-    if (!selection.ok) return selection;
-    const undo =
-      selection.value.resolution === 'removed'
-        ? undoRemoveFromToday
-        : undoDeferSelection;
-    return undo(sprint, { selectionId, today: ctx.today }, ctx);
-  });
+/** 見送りを取り消す: back to 今日やる, today only (F37). */
+export const undoDefer = (
+  sprintId: SprintId,
+  selectionId: DailySelectionId,
+): Change =>
+  onActive(sprintId, (sprint, ctx) =>
+    undoDeferSelection(sprint, { selectionId, today: ctx.today }, ctx),
+  );
+
+/** 今週の残りに戻したのを取り消す: back to 今日やる, today only (F37). */
+export const undoRemove = (
+  sprintId: SprintId,
+  selectionId: DailySelectionId,
+): Change =>
+  onActive(sprintId, (sprint, ctx) =>
+    undoRemoveFromToday(sprint, { selectionId, today: ctx.today }, ctx),
+  );
 
 /** 今日は中断する, with the day's actual hours if given. */
-export const pause = (selectionId: DailySelectionId, hours?: number): Change =>
-  onActive((sprint, ctx) =>
+export const pause = (
+  sprintId: SprintId,
+  selectionId: DailySelectionId,
+  hours?: number,
+): Change =>
+  onActive(sprintId, (sprint, ctx) =>
     pauseSelection(
       sprint,
       { selectionId, ...(hours === undefined ? {} : { actualHours: hours }) },
@@ -208,8 +245,11 @@ export const pause = (selectionId: DailySelectionId, hours?: number): Change =>
   );
 
 /** 完了: also a selection closed earlier today (F17). */
-export const complete = (selectionId: DailySelectionId): Change =>
-  onActiveToday((sprint, ctx, records) => {
+export const complete = (
+  sprintId: SprintId,
+  selectionId: DailySelectionId,
+): Change =>
+  onActiveToday(sprintId, (sprint, ctx, records) => {
     const subject = subjectOf(sprint, selectionId, records);
     if (!subject.ok) return subject;
     const { task, occurrence } = subject.value;
@@ -226,8 +266,11 @@ export const complete = (selectionId: DailySelectionId): Change =>
   });
 
 /** ○ again: back to how it was (selected, or closed as before: F17). */
-export const undoComplete = (selectionId: DailySelectionId): Change =>
-  onActiveToday((sprint, ctx, records) => {
+export const undoComplete = (
+  sprintId: SprintId,
+  selectionId: DailySelectionId,
+): Change =>
+  onActiveToday(sprintId, (sprint, ctx, records) => {
     const subject = subjectOf(sprint, selectionId, records);
     if (!subject.ok) return subject;
     const { task, occurrence } = subject.value;
@@ -244,9 +287,10 @@ export const undoComplete = (selectionId: DailySelectionId): Change =>
 
 function withOccurrence(
   command: typeof skipSelection,
+  sprintId: SprintId,
   selectionId: DailySelectionId,
 ): Change {
-  return onActiveToday((sprint, ctx, records) => {
+  return onActiveToday(sprintId, (sprint, ctx, records) => {
     const subject = subjectOf(sprint, selectionId, records);
     if (!subject.ok) return subject;
     const { occurrence } = subject.value;
@@ -261,50 +305,28 @@ function withOccurrence(
 }
 
 /** スキップ (recurring only). */
-export const skip = (selectionId: DailySelectionId): Change =>
-  withOccurrence(skipSelection, selectionId);
+export const skip = (
+  sprintId: SprintId,
+  selectionId: DailySelectionId,
+): Change => withOccurrence(skipSelection, sprintId, selectionId);
 
 /** スキップを取り消す (F19). */
-export const undoSkip = (selectionId: DailySelectionId): Change =>
-  withOccurrence(undoSkipSelection, selectionId);
-
-/** かかった時間を記録 (実績), after completing or pausing (append-only). */
-export const recordActual = (
+export const undoSkip = (
+  sprintId: SprintId,
   selectionId: DailySelectionId,
-  hours: number,
-): Change =>
-  onActive((sprint, ctx) => {
-    const selection = sprint.dailySelections.find((s) => s.id === selectionId);
-    if (selection === undefined) {
-      return {
-        ok: false,
-        error: { code: 'notFound', message: `Selection ${selectionId}` },
-      };
-    }
-    return recordActualTime(
-      sprint,
-      {
-        sprintTaskId: selection.sprintTaskId,
-        ...(selection.occurrenceId === undefined
-          ? {}
-          : { occurrenceId: selection.occurrenceId }),
-        hours,
-        date: selection.date,
-      },
-      ctx,
-    );
-  });
+): Change => withOccurrence(undoSkipSelection, sprintId, selectionId);
 
 /** 割り込みを記録. Nothing in Today changes (invariant 29). */
 export const interrupt =
   (
+    sprintId: SprintId,
     text: string,
     minutes?: number,
   ): Change<{ interruptNoteId: InterruptNoteId }> =>
   (records, ctx) => {
     const interruptNoteId = ctx.newId('InterruptNote');
     return returning(
-      onActive((sprint, context) =>
+      onActive(sprintId, (sprint, context) =>
         noteInterrupt(
           sprint,
           {
@@ -321,11 +343,12 @@ export const interrupt =
 
 /** 割り込みを編集: its note and minutes; the time stays (F38). */
 export const editNote = (
+  sprintId: SprintId,
   id: InterruptNoteId,
   text: string,
   minutes?: number,
 ): Change =>
-  onActive((sprint, ctx) =>
+  onActive(sprintId, (sprint, ctx) =>
     editInterrupt(
       sprint,
       { id, text, ...(minutes === undefined ? {} : { minutes }) },
@@ -334,18 +357,20 @@ export const editNote = (
   );
 
 /** 割り込みを消す (F38). */
-export const deleteNote = (id: InterruptNoteId): Change =>
-  onActive((sprint, ctx) => deleteInterrupt(sprint, { id }, ctx));
+export const deleteNote = (sprintId: SprintId, id: InterruptNoteId): Change =>
+  onActive(sprintId, (sprint, ctx) => deleteInterrupt(sprint, { id }, ctx));
 
 /** 元に戻す after 割り込みを消す: the same note, in its place (F38). */
-export const restoreNote = (note: InterruptNote): Change =>
-  onActive((sprint, ctx) => restoreInterrupt(sprint, { note }, ctx));
+export const restoreNote = (sprintId: SprintId, note: InterruptNote): Change =>
+  onActive(sprintId, (sprint, ctx) => restoreInterrupt(sprint, { note }, ctx));
 
 /**
  * Today's quick add: a new Task, added to the Sprint and chosen for today
  * in one operation (invariant 26).
  */
 export function addAndChoose(
+  sprintId: SprintId,
+  date: LocalDate,
   title: string,
   areaId: AreaId | undefined,
 ): Change<{
@@ -354,7 +379,9 @@ export function addAndChoose(
   selectionId: DailySelectionId;
 }> {
   return (records, ctx) => {
-    const sprint = active(records);
+    const today = onlyToday(date, ctx);
+    if (!today.ok) return today;
+    const sprint = sprintIn(records, sprintId, ['active']);
     if (!sprint.ok) return sprint;
     const taskId = ctx.newId('Task');
     const created = createTask(
@@ -392,8 +419,10 @@ export function addAndChoose(
 }
 
 /** Retro を始める, from the last day (F21). */
-export const beginRetro = (): Change => (records, ctx) => {
-  const sprint = active(records);
-  if (!sprint.ok) return sprint;
-  return reviewSprint(sprint.value)(records, ctx);
-};
+export const beginRetro =
+  (sprintId: SprintId): Change =>
+  (records, ctx) => {
+    const sprint = sprintIn(records, sprintId, ['active']);
+    if (!sprint.ok) return sprint;
+    return reviewSprint(sprint.value)(records, ctx);
+  };

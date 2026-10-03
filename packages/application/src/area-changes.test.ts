@@ -108,9 +108,12 @@ describe('Area changes (Issue #113)', () => {
       const store = memoryStore(fixtureSnapshot('today-daytime'));
       store.run(addArea('就活'));
       const made = store.getSnapshot().records.areas.at(-1)!;
-      expect(store.run(addAndChoose('ES を書く', made.id)).ok).toBe(true);
       const active = () =>
         store.getSnapshot().records.sprints.find((s) => s.state === 'active');
+      const { today } = store.getSnapshot().clock;
+      expect(
+        store.run(addAndChoose(active()!.id, today, 'ES を書く', made.id)).ok,
+      ).toBe(true);
       expect(active()?.areaSnapshot.at(-1)).toMatchObject({
         areaId: made.id,
         name: '就活',

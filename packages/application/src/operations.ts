@@ -15,10 +15,12 @@ import type {
   InterruptNoteId,
   LocalDate,
   OccurrenceId,
+  PlanningCriterionId,
   RecurrencePattern,
   RetroDecision,
   RetroPin,
   SelfAssessment,
+  SprintId,
   SprintTaskId,
   SubtaskId,
   SuggestionBound,
@@ -32,17 +34,23 @@ import type { Change, ChangeContext } from './record-store';
 import type { Records } from './records';
 import * as retro from './retro-changes';
 import * as running from './running-changes';
+import * as sprint from './sprint-changes';
 import * as task from './task-changes';
 import * as today from './today-changes';
 
 type OnTask = { readonly taskId: TaskId };
+/** The Sprint the operation is on: the request names it (#295). */
+type OnSprint = { readonly sprintId: SprintId };
+/** A choice for today names the day too, which must be today (#295 W3). */
+type ForToday = OnSprint & { readonly date: LocalDate };
+type OnCriterion = { readonly criterionId: PlanningCriterionId };
 type OnSuggestion = OnTask & {
   readonly suggestionId: EstimateSuggestionId;
 };
 type OnSubtask = OnTask & { readonly subtaskId: SubtaskId };
-type OnSelection = { readonly selectionId: DailySelectionId };
+type OnSelection = OnSprint & { readonly selectionId: DailySelectionId };
 type NewTask = { readonly title: string; readonly areaId?: AreaId };
-type OnInterrupt = { readonly interruptNoteId: InterruptNoteId };
+type OnInterrupt = OnSprint & { readonly interruptNoteId: InterruptNoteId };
 type InterruptText = { readonly text: string; readonly minutes?: number };
 
 export const operations = {
@@ -119,11 +127,6 @@ export const operations = {
   /** 完了にする in the Backlog (with today's selection in a Sprint). */
   completeTask: ({ taskId }: OnTask) => task.complete(taskId),
   undoCompleteTask: ({ taskId }: OnTask) => task.undoComplete(taskId),
-  /** 今日へ for a Task outside the active Sprint. */
-  addTaskToToday: ({ taskId }: OnTask) => task.toToday(taskId),
-  /** 今週へ for a Task outside the active Sprint (#155). */
-  addTaskToWeek: ({ taskId }: OnTask) => task.toWeek(taskId),
-  undoAddTaskToWeek: ({ taskId }: OnTask) => task.undoToWeek(taskId),
   setRecurrence: ({
     taskId,
     pattern,
@@ -131,154 +134,181 @@ export const operations = {
     task.setRule(taskId, pattern),
   endRecurrence: ({ taskId }: OnTask) => task.endRule(taskId),
 
-  // ------------------------------------------------------------- Planning
-  chooseTasks: ({ taskIds }: { readonly taskIds: readonly TaskId[] }) =>
-    planning.chooseTasks(taskIds),
-  unchooseTasks: ({
-    sprintTaskIds,
-  }: {
-    readonly sprintTaskIds: readonly SprintTaskId[];
-  }) => planning.unchooseTasks(sprintTaskIds),
-  /** 元に戻す after chooseTasks. */
-  unchooseTasksByTask: ({ taskIds }: { readonly taskIds: readonly TaskId[] }) =>
-    planning.unchooseByTask(taskIds),
-  setOccurrenceIncluded: ({
-    occurrenceId,
-    included,
-  }: {
-    readonly occurrenceId: OccurrenceId;
-    readonly included: boolean;
-  }) => planning.setOccurrenceIncluded(occurrenceId, included),
-  includeOccurrences: ({
-    occurrenceIds,
-  }: {
-    readonly occurrenceIds: readonly OccurrenceId[];
-  }) => planning.includeOccurrences(occurrenceIds),
-  excludeAllOccurrences: ({
-    sprintTaskId,
-  }: {
-    readonly sprintTaskId: SprintTaskId;
-  }) => planning.excludeAllOccurrences(sprintTaskId),
-  /** Planning で追加: a new Task, chosen at once. */
-  createAndChooseTask: ({ title, areaId }: NewTask) =>
-    planning.addAndChoose(title, areaId),
-  setPlanningGoal: ({
+  // -------------------------------------------- Sprint (planned, running)
+  /** 計画を始める for the next week not confirmed yet. */
+  beginPlanning: () => retro.beginPlanning(),
+  setAvailableHours: ({
+    sprintId,
+    hours,
+  }: OnSprint & { readonly hours: number | null }) =>
+    sprint.setHours(sprintId, hours),
+  confirmSprint: ({
+    sprintId,
+    applyCriterion,
+  }: OnSprint & { readonly applyCriterion: boolean }) =>
+    planning.confirm(sprintId, applyCriterion),
+  setGoal: ({
+    sprintId,
     areaId,
     text,
-  }: {
-    readonly areaId: AreaId;
-    readonly text: string;
-  }) => planning.setGoal(areaId, text),
+  }: OnSprint & { readonly areaId: AreaId; readonly text: string }) =>
+    sprint.setGoal(sprintId, areaId, text),
+  /** Tasks join the Sprint: drafts while planned, additions while running. */
+  addSprintTasks: ({
+    sprintId,
+    taskIds,
+  }: OnSprint & { readonly taskIds: readonly TaskId[] }) =>
+    sprint.addTasks(sprintId, taskIds),
+  /** SprintTasks leave the Sprint: all of them or none. */
+  removeSprintTasks: ({
+    sprintId,
+    sprintTaskIds,
+  }: OnSprint & { readonly sprintTaskIds: readonly SprintTaskId[] }) =>
+    sprint.removeTasks(sprintId, sprintTaskIds),
+  /** Planning で追加: a new Task, chosen at once. */
+  createAndChooseTask: ({ sprintId, title, areaId }: OnSprint & NewTask) =>
+    planning.addAndChoose(sprintId, title, areaId),
   setGoalLink: ({
+    sprintId,
     sprintTaskId,
     goalLink,
-  }: {
+  }: OnSprint & {
     readonly sprintTaskId: SprintTaskId;
     readonly goalLink: GoalLink;
-  }) => planning.setLink(sprintTaskId, goalLink),
-  setPlanningAvailableHours: ({ hours }: { readonly hours: number | null }) =>
-    planning.setHours(hours),
-  confirmSprint: ({ applyCriterion }: { readonly applyCriterion: boolean }) =>
-    planning.confirm(applyCriterion),
+  }) => planning.setLink(sprintId, sprintTaskId, goalLink),
+  excludeAllOccurrences: ({
+    sprintId,
+    sprintTaskId,
+  }: OnSprint & { readonly sprintTaskId: SprintTaskId }) =>
+    planning.excludeAllOccurrences(sprintId, sprintTaskId),
+  setOccurrenceIncluded: ({
+    sprintId,
+    occurrenceId,
+    included,
+  }: OnSprint & {
+    readonly occurrenceId: OccurrenceId;
+    readonly included: boolean;
+  }) => planning.setOccurrenceIncluded(sprintId, occurrenceId, included),
+  includeOccurrences: ({
+    sprintId,
+    occurrenceIds,
+  }: OnSprint & { readonly occurrenceIds: readonly OccurrenceId[] }) =>
+    planning.includeOccurrences(sprintId, occurrenceIds),
 
   // ---------------------------------------------------------------- Today
   chooseForToday: ({
+    sprintId,
+    date,
     sprintTaskId,
     occurrenceId,
-  }: {
+  }: ForToday & {
     readonly sprintTaskId: SprintTaskId;
     readonly occurrenceId?: OccurrenceId;
-  }) => today.choose(sprintTaskId, occurrenceId),
-  startSelection: ({ selectionId }: OnSelection) => today.start(selectionId),
-  deferSelection: ({ selectionId }: OnSelection) => today.defer(selectionId),
-  removeFromToday: ({ selectionId }: OnSelection) => today.remove(selectionId),
-  /** Takes back 見送り or 今週の残りに戻す, today only. */
-  undoCloseSelection: ({ selectionId }: OnSelection) =>
-    today.undoClose(selectionId),
+  }) => today.choose(sprintId, date, sprintTaskId, occurrenceId),
+  /** 今日へ for a Task outside the running Sprint. */
+  addTaskToToday: ({ sprintId, date, taskId }: ForToday & OnTask) =>
+    task.toToday(sprintId, date, taskId),
+  /** Today's quick add: a new Task, in the Sprint and chosen for today. */
+  createTaskForToday: ({ sprintId, date, title, areaId }: ForToday & NewTask) =>
+    today.addAndChoose(sprintId, date, title, areaId),
+  startSelection: ({ sprintId, selectionId }: OnSelection) =>
+    today.start(sprintId, selectionId),
   pauseSelection: ({
+    sprintId,
     selectionId,
     hours,
   }: OnSelection & { readonly hours?: number }) =>
-    today.pause(selectionId, hours),
-  completeSelection: ({ selectionId }: OnSelection) =>
-    today.complete(selectionId),
-  undoCompleteSelection: ({ selectionId }: OnSelection) =>
-    today.undoComplete(selectionId),
-  skipSelection: ({ selectionId }: OnSelection) => today.skip(selectionId),
-  undoSkipSelection: ({ selectionId }: OnSelection) =>
-    today.undoSkip(selectionId),
-  /** Actual hours of a selection, on its day. */
-  recordSelectionActual: ({
-    selectionId,
+    today.pause(sprintId, selectionId, hours),
+  deferSelection: ({ sprintId, selectionId }: OnSelection) =>
+    today.defer(sprintId, selectionId),
+  /** Takes back 見送り, today only. */
+  undoDeferSelection: ({ sprintId, selectionId }: OnSelection) =>
+    today.undoDefer(sprintId, selectionId),
+  removeFromToday: ({ sprintId, selectionId }: OnSelection) =>
+    today.remove(sprintId, selectionId),
+  /** Takes back 今週の残りに戻す, today only. */
+  undoRemoveFromToday: ({ sprintId, selectionId }: OnSelection) =>
+    today.undoRemove(sprintId, selectionId),
+  completeSelection: ({ sprintId, selectionId }: OnSelection) =>
+    today.complete(sprintId, selectionId),
+  /** Today's, or a past day's (#53). */
+  undoCompleteSelection: ({ sprintId, selectionId }: OnSelection) =>
+    running.undoCompletion(sprintId, selectionId),
+  skipSelection: ({ sprintId, selectionId }: OnSelection) =>
+    today.skip(sprintId, selectionId),
+  /** Today's, or a past day's (#53). */
+  undoSkipSelection: ({ sprintId, selectionId }: OnSelection) =>
+    running.undoSkipping(sprintId, selectionId),
+  /** Actual hours, while the Sprint runs or in its Review (F22). */
+  recordActualTime: ({
+    sprintId,
+    sprintTaskId,
+    date,
     hours,
-  }: OnSelection & { readonly hours: number }) =>
-    today.recordActual(selectionId, hours),
-  noteInterrupt: ({ text, minutes }: InterruptText) =>
-    today.interrupt(text, minutes),
+    occurrenceId,
+  }: OnSprint & {
+    readonly sprintTaskId: SprintTaskId;
+    readonly date: LocalDate;
+    readonly hours: number;
+    readonly occurrenceId?: OccurrenceId;
+  }) => sprint.recordActual(sprintId, sprintTaskId, date, hours, occurrenceId),
+  noteInterrupt: ({ sprintId, text, minutes }: OnSprint & InterruptText) =>
+    today.interrupt(sprintId, text, minutes),
   editInterrupt: ({
+    sprintId,
     interruptNoteId,
     text,
     minutes,
   }: OnInterrupt & InterruptText) =>
-    today.editNote(interruptNoteId, text, minutes),
-  deleteInterrupt: ({ interruptNoteId }: OnInterrupt) =>
-    today.deleteNote(interruptNoteId),
-  restoreInterrupt: ({ note }: { readonly note: InterruptNote }) =>
-    today.restoreNote(note),
-  /** Today's quick add: a new Task, in the Sprint and chosen for today. */
-  createTaskForToday: ({ title, areaId }: NewTask) =>
-    today.addAndChoose(title, areaId),
-  /** Retro を始める, from the last day (F21). */
-  beginRetro: () => today.beginRetro(),
-
-  // ------------------------------------------------- Sprint after confirm
-  setRunningGoal: ({
-    areaId,
-    text,
-  }: {
-    readonly areaId: AreaId;
-    readonly text: string;
-  }) => running.setGoal(areaId, text),
-  setRunningAvailableHours: ({ hours }: { readonly hours: number | null }) =>
-    running.setHours(hours),
-  /** 過去の日の完了・スキップを取り消す (#53). */
-  undoPastDay: ({ selectionId }: OnSelection) =>
-    running.undoPastDay(selectionId),
+    today.editNote(sprintId, interruptNoteId, text, minutes),
+  deleteInterrupt: ({ sprintId, interruptNoteId }: OnInterrupt) =>
+    today.deleteNote(sprintId, interruptNoteId),
+  restoreInterrupt: ({
+    sprintId,
+    note,
+  }: OnSprint & { readonly note: InterruptNote }) =>
+    today.restoreNote(sprintId, note),
 
   // ---------------------------------------------------------------- Retro
+  /** Retro を始める, from the last day (F21). */
+  beginRetro: ({ sprintId }: OnSprint) => today.beginRetro(sprintId),
   assessGoal: ({
+    sprintId,
     areaId,
     assessment,
-  }: {
+  }: OnSprint & {
     readonly areaId: AreaId;
     readonly assessment: SelfAssessment | null;
-  }) => retro.assess(areaId, assessment),
-  pinFact: ({ pin }: { readonly pin: RetroPin }) => retro.pin(pin),
-  unpinFact: ({ pin }: { readonly pin: RetroPin }) => retro.unpin(pin),
-  setReflection: ({ text }: { readonly text: string }) => retro.reflect(text),
-  setImprovement: ({ text }: { readonly text: string }) => retro.improve(text),
-  draftCriterion: ({ policy }: { readonly policy: CriterionPolicy }) =>
-    retro.draft(policy),
-  setDraftPolicy: ({ policy }: { readonly policy: CriterionPolicy }) =>
-    retro.setDraft(policy),
-  dropCriterionDraft: () => retro.dropDraft(),
-  decideCriterion: ({ decision }: { readonly decision: RetroDecision }) =>
-    retro.decide(decision),
-  /** Actual hours added in Review (F22). */
-  recordReviewActual: ({
-    sprintTaskId,
-    hours,
-    date,
-    occurrenceId,
-  }: {
-    readonly sprintTaskId: SprintTaskId;
-    readonly hours: number;
-    readonly date: LocalDate;
-    readonly occurrenceId?: OccurrenceId;
-  }) => retro.recordActual(sprintTaskId, hours, date, occurrenceId),
-  completeRetro: () => retro.complete(),
-  /** 計画を始める for the next week not confirmed yet. */
-  beginPlanning: () => retro.beginPlanning(),
+  }) => retro.assess(sprintId, areaId, assessment),
+  pinFact: ({ sprintId, pin }: OnSprint & { readonly pin: RetroPin }) =>
+    retro.pin(sprintId, pin),
+  unpinFact: ({ sprintId, pin }: OnSprint & { readonly pin: RetroPin }) =>
+    retro.unpin(sprintId, pin),
+  setReflection: ({ sprintId, text }: OnSprint & { readonly text: string }) =>
+    retro.reflect(sprintId, text),
+  setImprovement: ({ sprintId, text }: OnSprint & { readonly text: string }) =>
+    retro.improve(sprintId, text),
+  decideCriterion: ({
+    sprintId,
+    decision,
+  }: OnSprint & { readonly decision: RetroDecision }) =>
+    retro.decide(sprintId, decision),
+  completeRetro: ({ sprintId }: OnSprint) => retro.complete(sprintId),
+
+  // -------------------------------------------------- Planning criteria
+  /** 基準にもする: a draft from the improvement of the Sprint in Review. */
+  draftCriterion: ({
+    sprintId,
+    policy,
+  }: OnSprint & { readonly policy: CriterionPolicy }) =>
+    retro.draft(sprintId, policy),
+  setDraftPolicy: ({
+    criterionId,
+    policy,
+  }: OnCriterion & { readonly policy: CriterionPolicy }) =>
+    retro.setDraft(criterionId, policy),
+  dropCriterionDraft: ({ criterionId }: OnCriterion) =>
+    retro.dropDraft(criterionId),
 } satisfies Record<
   string,
   (input: never) => (records: Records, ctx: ChangeContext) => Result<object>

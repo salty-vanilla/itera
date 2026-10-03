@@ -28,6 +28,7 @@ import {
   type PlanningValue,
   type RetroImprovement,
   type Sprint,
+  type SprintId,
   type SprintGoal,
   type SprintTask,
   type SprintTotals,
@@ -178,8 +179,14 @@ export function planningData(
   records: Records,
   clock: Clock,
   options: { applyCriterion: boolean },
+  sprintId?: SprintId,
 ): PlanningData | undefined {
-  const sprint = planningSprint(records);
+  const sprint =
+    sprintId === undefined
+      ? planningSprint(records)
+      : records.sprints.find(
+          (s) => s.id === sprintId && s.state === 'planning',
+        );
   if (sprint === undefined) return undefined;
   const { tasks } = records;
   const now = clock.now;

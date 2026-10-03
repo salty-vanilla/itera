@@ -9,23 +9,33 @@ import { OPERATION_EXAMPLES } from './testing';
 
 /** The contract's reads and the functions whose result each returns. */
 const READS = {
-  getOverview: application.appOverview,
   listAreas: application.areaList,
   getBacklog: application.backlogData,
-  getSprintChoice: application.sprintChoice,
-  getPlanning: application.planningData,
-  getRunning: application.runningData,
-  getToday: application.todayData,
-  getDay: application.dayData,
-  getRetro: application.retroData,
-  getNextPlanning: application.nextPlanningOf,
+  listSprints: application.sprintList,
+  getSprint: application.sprintView,
+  listSprintCandidates: application.sprintCandidates,
+  getSprintRetro: application.sprintRetro,
+  getDay: application.dayView,
+  // The person and their settings are the server's (#266); the Sprints
+  // they have now are this read's (#295 R1).
+  getMe: application.currentSprints,
 };
 
 /**
- * The contract's reads that are the server's own, not a read of the
- * application: the signed-in person and their settings (#266).
+ * The reads of the screens still on the store, by screen, not resource
+ * (ADR 0006 経路の形): no contract read returns them. #274〜#276 move the
+ * screens to the contract and #277 takes them out of the exports.
  */
-const SERVER_READS = new Set(['getMe']);
+const STORE_READS = new Set([
+  'appOverview',
+  'sprintChoice',
+  'planningData',
+  'runningData',
+  'todayData',
+  'dayData',
+  'retroData',
+  'nextPlanningOf',
+]);
 
 /** The application's exports that are not reads of the person's records. */
 const NOT_READS = new Set([
@@ -40,6 +50,7 @@ const NOT_READS = new Set([
   'mergeChanges',
   'createIdSource',
   'parseId',
+  ...STORE_READS,
 ]);
 
 const contract = Object.entries(sdk)
@@ -48,7 +59,7 @@ const contract = Object.entries(sdk)
 
 describe('the contract', () => {
   it('has a surface for each operation of the application, and no other write', () => {
-    const reads = new Set([...Object.keys(READS), ...SERVER_READS]);
+    const reads = new Set(Object.keys(READS));
     expect(contract.filter((name) => !reads.has(name)).toSorted()).toEqual(
       Object.keys(surfaces).toSorted(),
     );

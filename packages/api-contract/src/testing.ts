@@ -117,6 +117,8 @@ const occurrence = newId('Occurrence');
 const sprintTask = newId('SprintTask');
 const selection = newId('DailySelection');
 const interrupt = newId('InterruptNote');
+const sprint = newId('Sprint');
+const criterion = newId('PlanningCriterion');
 const at = instant('2026-10-03T01:02:03.000Z');
 const date = localDate('2026-10-02');
 const policy = {
@@ -179,90 +181,119 @@ export const OPERATION_EXAMPLES: {
   restoreTask: [{ taskId: task }],
   completeTask: [{ taskId: task }],
   undoCompleteTask: [{ taskId: task }],
-  addTaskToToday: [{ taskId: task }],
-  addTaskToWeek: [{ taskId: task }],
-  undoAddTaskToWeek: [{ taskId: task }],
   setRecurrence: [
     { taskId: task, pattern: { freq: 'weekly', daysOfWeek: [1, 3] } },
   ],
   endRecurrence: [{ taskId: task }],
-  chooseTasks: [{ taskIds: [task, newId('Task')] }],
-  unchooseTasks: [{ sprintTaskIds: [sprintTask, newId('SprintTask')] }],
-  unchooseTasksByTask: [{ taskIds: [task] }],
-  setOccurrenceIncluded: [{ occurrenceId: occurrence, included: false }],
-  includeOccurrences: [{ occurrenceIds: [occurrence, newId('Occurrence')] }],
-  excludeAllOccurrences: [{ sprintTaskId: sprintTask }],
-  createAndChooseTask: [
-    { title: '発表の準備' },
-    { title: '発表の準備', areaId: area },
+  beginPlanning: [undefined],
+  setAvailableHours: [
+    { sprintId: sprint, hours: 20 },
+    { sprintId: sprint, hours: null },
   ],
-  setPlanningGoal: [{ areaId: area, text: '1 本書き上げる' }],
-  setGoalLink: [{ sprintTaskId: sprintTask, goalLink: 'unlinked' }],
-  setPlanningAvailableHours: [{ hours: 20 }, { hours: null }],
-  confirmSprint: [{ applyCriterion: true }],
-  chooseForToday: [
-    { sprintTaskId: sprintTask },
-    { sprintTaskId: sprintTask, occurrenceId: occurrence },
-  ],
-  startSelection: [{ selectionId: selection }],
-  deferSelection: [{ selectionId: selection }],
-  removeFromToday: [{ selectionId: selection }],
-  undoCloseSelection: [{ selectionId: selection }],
-  pauseSelection: [
-    { selectionId: selection },
-    { selectionId: selection, hours: 1 },
-  ],
-  completeSelection: [{ selectionId: selection }],
-  undoCompleteSelection: [{ selectionId: selection }],
-  skipSelection: [{ selectionId: selection }],
-  undoSkipSelection: [{ selectionId: selection }],
-  recordSelectionActual: [{ selectionId: selection, hours: 0.5 }],
-  noteInterrupt: [{ text: '電話' }, { text: '電話', minutes: 15 }],
-  editInterrupt: [
-    { interruptNoteId: interrupt, text: '来客' },
-    { interruptNoteId: interrupt, text: '来客', minutes: 30 },
-  ],
-  deleteInterrupt: [{ interruptNoteId: interrupt }],
-  restoreInterrupt: [
-    { note: { id: interrupt, at, text: '電話' } },
-    { note: { id: interrupt, at, text: '電話', minutes: 15 } },
-  ],
-  createTaskForToday: [
-    { title: '返信する' },
-    { title: '返信する', areaId: area },
-  ],
-  beginRetro: [undefined],
-  setRunningGoal: [{ areaId: area, text: '2 本書き上げる' }],
-  setRunningAvailableHours: [{ hours: 18 }, { hours: null }],
-  undoPastDay: [{ selectionId: selection }],
+  confirmSprint: [{ sprintId: sprint, applyCriterion: true }],
+  setGoal: [{ sprintId: sprint, areaId: area, text: '1 本書き上げる' }],
   assessGoal: [
-    { areaId: area, assessment: 'partly' },
-    { areaId: area, assessment: null },
+    { sprintId: sprint, areaId: area, assessment: 'partly' },
+    { sprintId: sprint, areaId: area, assessment: null },
   ],
+  addSprintTasks: [{ sprintId: sprint, taskIds: [task, newId('Task')] }],
+  createAndChooseTask: [
+    { sprintId: sprint, title: '発表の準備' },
+    { sprintId: sprint, title: '発表の準備', areaId: area },
+  ],
+  removeSprintTasks: [
+    { sprintId: sprint, sprintTaskIds: [sprintTask, newId('SprintTask')] },
+    { sprintId: sprint, sprintTaskIds: [sprintTask] },
+  ],
+  setGoalLink: [
+    { sprintId: sprint, sprintTaskId: sprintTask, goalLink: 'unlinked' },
+  ],
+  excludeAllOccurrences: [{ sprintId: sprint, sprintTaskId: sprintTask }],
+  setOccurrenceIncluded: [
+    { sprintId: sprint, occurrenceId: occurrence, included: true },
+    { sprintId: sprint, occurrenceId: occurrence, included: false },
+  ],
+  includeOccurrences: [
+    { sprintId: sprint, occurrenceIds: [occurrence, newId('Occurrence')] },
+  ],
+  chooseForToday: [
+    { sprintId: sprint, date, sprintTaskId: sprintTask },
+    {
+      sprintId: sprint,
+      date,
+      sprintTaskId: sprintTask,
+      occurrenceId: occurrence,
+    },
+  ],
+  addTaskToToday: [{ sprintId: sprint, date, taskId: task }],
+  createTaskForToday: [
+    { sprintId: sprint, date, title: '返信する' },
+    { sprintId: sprint, date, title: '返信する', areaId: area },
+  ],
+  startSelection: [{ sprintId: sprint, selectionId: selection }],
+  pauseSelection: [
+    { sprintId: sprint, selectionId: selection },
+    { sprintId: sprint, selectionId: selection, hours: 1 },
+  ],
+  deferSelection: [{ sprintId: sprint, selectionId: selection }],
+  undoDeferSelection: [{ sprintId: sprint, selectionId: selection }],
+  removeFromToday: [{ sprintId: sprint, selectionId: selection }],
+  undoRemoveFromToday: [{ sprintId: sprint, selectionId: selection }],
+  completeSelection: [{ sprintId: sprint, selectionId: selection }],
+  undoCompleteSelection: [{ sprintId: sprint, selectionId: selection }],
+  skipSelection: [{ sprintId: sprint, selectionId: selection }],
+  undoSkipSelection: [{ sprintId: sprint, selectionId: selection }],
+  recordActualTime: [
+    { sprintId: sprint, sprintTaskId: sprintTask, date, hours: 1 },
+    {
+      sprintId: sprint,
+      sprintTaskId: sprintTask,
+      date,
+      hours: 1,
+      occurrenceId: occurrence,
+    },
+  ],
+  noteInterrupt: [
+    { sprintId: sprint, text: '電話' },
+    { sprintId: sprint, text: '電話', minutes: 15 },
+  ],
+  editInterrupt: [
+    { sprintId: sprint, interruptNoteId: interrupt, text: '来客' },
+    { sprintId: sprint, interruptNoteId: interrupt, text: '来客', minutes: 30 },
+  ],
+  deleteInterrupt: [{ sprintId: sprint, interruptNoteId: interrupt }],
+  restoreInterrupt: [
+    { sprintId: sprint, note: { id: interrupt, at, text: '電話' } },
+    {
+      sprintId: sprint,
+      note: { id: interrupt, at, text: '電話', minutes: 15 },
+    },
+  ],
+  beginRetro: [{ sprintId: sprint }],
+  setReflection: [{ sprintId: sprint, text: '見送りが多かった' }],
+  setImprovement: [{ sprintId: sprint, text: '1 本ずつに分ける' }],
+  completeRetro: [{ sprintId: sprint }],
   pinFact: [
-    { pin: { kind: 'sprintTask', id: sprintTask } },
-    { pin: { kind: 'dailySelection', id: selection } },
-    { pin: { kind: 'occurrence', id: occurrence } },
-    { pin: { kind: 'interrupt', id: interrupt } },
-    { pin: { kind: 'goal', id: area } },
-    { pin: { kind: 'availableHours' } },
+    { sprintId: sprint, pin: { kind: 'sprintTask', id: sprintTask } },
+    { sprintId: sprint, pin: { kind: 'dailySelection', id: selection } },
+    { sprintId: sprint, pin: { kind: 'occurrence', id: occurrence } },
+    { sprintId: sprint, pin: { kind: 'interrupt', id: interrupt } },
+    { sprintId: sprint, pin: { kind: 'goal', id: area } },
+    { sprintId: sprint, pin: { kind: 'availableHours' } },
   ],
   unpinFact: [
-    { pin: { kind: 'sprintTask', id: sprintTask } },
-    { pin: { kind: 'availableHours' } },
+    { sprintId: sprint, pin: { kind: 'sprintTask', id: sprintTask } },
+    { sprintId: sprint, pin: { kind: 'availableHours' } },
   ],
-  setReflection: [{ text: '見送りが多かった' }],
-  setImprovement: [{ text: '1 本ずつに分ける' }],
-  draftCriterion: [{ policy }],
-  setDraftPolicy: [{ policy: { scope: { kind: 'all' }, rangePolicy: 'lo' } }],
-  dropCriterionDraft: [undefined],
-  decideCriterion: [{ decision: 'replace' }],
-  recordReviewActual: [
-    { sprintTaskId: sprintTask, hours: 1, date },
-    { sprintTaskId: sprintTask, hours: 1, date, occurrenceId: occurrence },
+  decideCriterion: [{ sprintId: sprint, decision: 'replace' }],
+  draftCriterion: [{ sprintId: sprint, policy }],
+  setDraftPolicy: [
+    {
+      criterionId: criterion,
+      policy: { scope: { kind: 'all' }, rangePolicy: 'lo' },
+    },
   ],
-  completeRetro: [undefined],
-  beginPlanning: [undefined],
+  dropCriterionDraft: [{ criterionId: criterion }],
 };
 
 /**

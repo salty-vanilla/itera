@@ -1,14 +1,13 @@
-# Task (the Backlog and its detail). The paths of a resource and its methods (ADR 0006 経路の形):
-# a write is one operation of packages/application or, where a path takes
-# several, the one its body names (@itera/api-contract/requests).
+# Task. The paths of a resource and its methods (ADR 0006 経路の形):
+# nouns of the domain, a state change a verb after the resource. A write
+# is one operation of packages/application or, where a path takes several,
+# the one its body names (@itera/api-contract/requests).
 
 tasks:
   post:
-    operationId: quickAddTask
+    operationId: createTask
     tags: [Task]
-    summary: 'Quick Add: make a Task'
-    description: >-
-      Without `addTo`, in the Backlog (createTask). `planning` also chooses it for the Sprint being planned (createAndChooseTask); `today` puts it in the running Sprint and chooses it for today (createTaskForToday).
+    summary: 'Quick Add: make a Task in the Backlog'
     requestBody:
       required: true
       content:
@@ -20,7 +19,6 @@ tasks:
             properties:
               title: { type: string }
               areaId: { $ref: '../schemas/common.yaml#/AreaId' }
-              addTo: { type: string, enum: [planning, today] }
     responses:
       '201':
         description: Made. The IDs of what the operation made.
@@ -31,12 +29,6 @@ tasks:
               required: [taskId]
               properties:
                 taskId: { $ref: '../schemas/common.yaml#/TaskId' }
-                sprintTaskId:
-                  description: With `addTo`.
-                  $ref: '../schemas/common.yaml#/SprintTaskId'
-                selectionId:
-                  description: 'With `addTo` today.'
-                  $ref: '../schemas/common.yaml#/DailySelectionId'
       '400': { $ref: '../responses.yaml#/BadRequest' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
@@ -48,11 +40,11 @@ tasks:
 
 task:
   patch:
-    operationId: updateTask
+    operationId: saveTask
     tags: [Task]
-    summary: "Save a Task's detail, or archive or restore it"
+    summary: "Save a Task's detail"
     description: >-
-      One change a request: the attributes and the Estimate, saved together (saveTask), or `archived` alone: true archives it (archiveTask), false brings it back (restoreTask).
+      The attributes and the Estimate, saved together: a property left out stays, `null` clears an optional one.
     parameters:
       - name: taskId
         in: path
@@ -63,34 +55,26 @@ task:
       content:
         application/json:
           schema:
-            oneOf:
-              - description: >-
-                  The detail's form (saveTask): a property left out stays; `null` clears an optional one.
-                type: object
-                additionalProperties: false
-                properties:
-                  title: { type: string }
-                  description: { type: string }
-                  areaId:
-                    oneOf:
-                      - { $ref: '../schemas/common.yaml#/AreaId' }
-                      - type: 'null'
-                  due:
-                    oneOf:
-                      - { $ref: '../schemas/common.yaml#/LocalDate' }
-                      - type: 'null'
-                  priority: { $ref: '../schemas/records.yaml#/TaskPriority' }
-                  timeBasis: { $ref: '../schemas/records.yaml#/TimeBasis' }
-                  estimate:
-                    description: Hours. `null` clears the Estimate.
-                    oneOf:
-                      - { type: number }
-                      - type: 'null'
-              - type: object
-                additionalProperties: false
-                required: [archived]
-                properties:
-                  archived: { type: boolean }
+            type: object
+            additionalProperties: false
+            properties:
+              title: { type: string }
+              description: { type: string }
+              areaId:
+                oneOf:
+                  - { $ref: '../schemas/common.yaml#/AreaId' }
+                  - type: 'null'
+              due:
+                oneOf:
+                  - { $ref: '../schemas/common.yaml#/LocalDate' }
+                  - type: 'null'
+              priority: { $ref: '../schemas/records.yaml#/TaskPriority' }
+              timeBasis: { $ref: '../schemas/records.yaml#/TimeBasis' }
+              estimate:
+                description: Hours. `null` clears the Estimate.
+                oneOf:
+                  - { type: number }
+                  - type: 'null'
     responses:
       '204':
         description: Done.
@@ -103,8 +87,52 @@ task:
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
-taskCompletion:
-  put:
+taskArchive:
+  post:
+    operationId: archiveTask
+    tags: [Task]
+    summary: Archive a Task
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+taskRestore:
+  post:
+    operationId: restoreTask
+    tags: [Task]
+    summary: Bring an archived Task back
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+taskComplete:
+  post:
     operationId: completeTask
     tags: [Task]
     summary: 完了にする in the Backlog
@@ -127,7 +155,8 @@ taskCompletion:
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
-  delete:
+taskUndoComplete:
+  post:
     operationId: undoCompleteTask
     tags: [Task]
     summary: Take back 完了にする in the Backlog
@@ -153,6 +182,8 @@ taskRecurrence:
     operationId: setRecurrence
     tags: [Task]
     summary: "Set or change a Task's recurrence"
+    description: >-
+      The rule is a record of the Task of its own, one at most.
     parameters:
       - name: taskId
         in: path
@@ -270,7 +301,7 @@ subtask:
     tags: [Task]
     summary: Check a Subtask, or set its hours
     description: >-
-      One change a request: `done` checks or unchecks it (setSubtaskDone); `hours` sets its hours, `null` clears them (setSubtaskEstimate).
+      One change a request: `done` (setSubtaskDone, a check with no rule) or `hours`, `null` to clear them (setSubtaskEstimate).
     parameters:
       - name: taskId
         in: path
@@ -315,7 +346,7 @@ suggestionAdopt:
   post:
     operationId: adoptEstimateSuggestion
     tags: [Task]
-    summary: 採用 a suggestion
+    summary: 採用 an estimate suggestion
     description: >-
       At one of its bounds (`bound`, adoptSuggestion), or with the hours edited (`hours`, 直して使う, adoptEditedSuggestion, F31).
     parameters:
@@ -355,7 +386,7 @@ suggestionAdopt:
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
-suggestionUndoAdoption:
+suggestionUndoAdopt:
   post:
     operationId: undoAdoption
     tags: [Task]
@@ -400,7 +431,7 @@ suggestionReject:
   post:
     operationId: rejectSuggestion
     tags: [Task]
-    summary: Reject a suggestion
+    summary: Reject an estimate suggestion
     parameters:
       - name: taskId
         in: path
@@ -422,7 +453,7 @@ suggestionReject:
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
-suggestionUndoRejection:
+suggestionUndoReject:
   post:
     operationId: undoRejection
     tags: [Task]

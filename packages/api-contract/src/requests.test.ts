@@ -133,26 +133,19 @@ describe('the surfaces', () => {
     },
   );
 
-  it('cannot carry an empty list in a query', () => {
-    expect(() => requestOf('unchooseTasks', { sprintTaskIds: [] })).toThrow(
-      RequestError,
-    );
-    expect(() => requestOf('unchooseTasksByTask', { taskIds: [] })).toThrow(
-      RequestError,
-    );
-  });
-
-  it('take one of ids and task-ids to unchoose', () => {
-    const { operation } = surfaces.unchoosePlanningTasks;
+  it('takes out one SprintTask by its path, several by the query, none not at all', () => {
+    const sprintId = OPERATION_EXAMPLES.setAvailableHours[0]!.sprintId;
+    const [one, two] = OPERATION_EXAMPLES.removeSprintTasks[0]!.sprintTaskIds;
+    expect(
+      requestOf('removeSprintTasks', { sprintId, sprintTaskIds: [one!] })
+        .operationId,
+    ).toBe('removeSprintTask');
+    expect(
+      requestOf('removeSprintTasks', { sprintId, sprintTaskIds: [one!, two!] })
+        .operationId,
+    ).toBe('removeSprintTasks');
     expect(() =>
-      operation({ path: {} as never, body: {} as never, query: {} }),
-    ).toThrow(RequestError);
-    expect(() =>
-      operation({
-        path: {} as never,
-        body: {} as never,
-        query: { ids: [], 'task-ids': [] },
-      }),
+      requestOf('removeSprintTasks', { sprintId, sprintTaskIds: [] }),
     ).toThrow(RequestError);
   });
 });
@@ -167,7 +160,7 @@ describe('the paths and query names', () => {
         'utf8',
       ).matchAll(/^ {2}(\/\S*):$/gm),
     ].map(([, path]) => path!);
-    expect(paths).toContain('/retro/draft-criterion');
+    expect(paths).toContain('/sprints/{sprintId}/included-occurrences');
     for (const path of paths) {
       for (const segment of path.split('/').slice(1)) {
         if (/^\{\w+\}$/.test(segment)) continue;
@@ -202,30 +195,30 @@ function keysOf(schema: v.GenericSchema): string[] {
 }
 
 describe('queryInput', () => {
-  const { vGetPlanningQuery, vGetRunningQuery, vUnchoosePlanningTasksQuery } =
+  const { vGetSprintQuery, vListSprintsQuery, vRemoveSprintTasksQuery } =
     contract;
 
   it('turns numbers and booleans into their type, and takes a list whole', () => {
-    expect(queryInput(vGetRunningQuery, { sprint: ['3'] })).toEqual({
-      sprint: 3,
+    expect(queryInput(vListSprintsQuery, { number: ['3'] })).toEqual({
+      number: 3,
     });
     expect(
-      queryInput(vGetPlanningQuery, { 'apply-criterion': ['false'] }),
+      queryInput(vGetSprintQuery, { 'apply-criterion': ['false'] }),
     ).toEqual({ 'apply-criterion': false });
-    expect(
-      queryInput(vUnchoosePlanningTasksQuery, { ids: ['a', 'b'] }),
-    ).toEqual({ ids: ['a', 'b'] });
+    expect(queryInput(vRemoveSprintTasksQuery, { ids: ['a', 'b'] })).toEqual({
+      ids: ['a', 'b'],
+    });
   });
 
   it.each([
-    [vGetRunningQuery, { sprint: ['three'] }],
-    [vGetRunningQuery, { sprint: [''] }],
-    [vGetRunningQuery, { sprint: ['1.5'] }],
-    [vGetRunningQuery, { sprint: ['0x10'] }],
-    [vGetRunningQuery, { sprint: ['1e1'] }],
-    [vGetRunningQuery, { sprint: [' 2'] }],
-    [vGetRunningQuery, { sprint: ['1', '2'] }],
-    [vGetPlanningQuery, { 'apply-criterion': ['yes'] }],
+    [vListSprintsQuery, { number: ['three'] }],
+    [vListSprintsQuery, { number: [''] }],
+    [vListSprintsQuery, { number: ['1.5'] }],
+    [vListSprintsQuery, { number: ['0x10'] }],
+    [vListSprintsQuery, { number: ['1e1'] }],
+    [vListSprintsQuery, { number: [' 2'] }],
+    [vListSprintsQuery, { number: ['1', '2'] }],
+    [vGetSprintQuery, { 'apply-criterion': ['yes'] }],
   ])('leaves what does not fit to fail the check: %j', (schema, query) => {
     expect(v.is(schema, queryInput(schema, query))).toBe(false);
   });

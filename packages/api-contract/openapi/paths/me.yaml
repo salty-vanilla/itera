@@ -1,15 +1,19 @@
-# The signed-in person: who they are and their settings. Not a read of
-# packages/application, and it runs no catch-up (#271): it answers before
-# the settings exist, so that a client knows to make them first.
+# The signed-in person: who they are, their settings and, once the settings
+# exist, the clock and the Sprints they have now (#295 R1). Before the
+# settings exist it answers without running the catch-up (#271), so that a
+# client knows to make them first; after, it runs it before answering, as
+# the reads do.
 
-getMe:
+me:
   get:
     operationId: getMe
     tags: [Me]
     summary: The signed-in person and their settings
     description: >-
       `settings` is `null` until the person has made them; every other
-      operation and read answers 422 `userNotSetUp` until then.
+      operation and read answers 422 `userNotSetUp` until then. With the
+      settings, `clock` and `sprints` (the Sprints by what each is now, and
+      where the next Planning starts).
     responses:
       '200':
         description: The person.
@@ -24,5 +28,8 @@ getMe:
                   oneOf:
                     - { $ref: '../schemas/records.yaml#/UserSettings' }
                     - { type: 'null' }
+                clock: { $ref: '../schemas/common.yaml#/Clock' }
+                sprints: { $ref: '../schemas/views.yaml#/CurrentSprints' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
       '500': { $ref: '../responses.yaml#/ServerError' }

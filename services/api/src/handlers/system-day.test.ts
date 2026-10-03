@@ -95,10 +95,10 @@ async function setup() {
       now: () => now,
     }),
   );
-  /** Reads the overview at `time` and answers with its 「今日」. */
+  /** Reads the Backlog at `time` and answers with its 「今日」. */
   async function readAt(time: Instant) {
     now = time;
-    const response = await app.request('/api/overview', {}, testEnv);
+    const response = await app.request('/api/backlog', {}, testEnv);
     expect(response.status).toBe(200);
     const body = (await response.json()) as { clock: { today: LocalDate } };
     return body.clock.today;

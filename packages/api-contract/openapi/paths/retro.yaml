@@ -1,26 +1,23 @@
-# Retro: the Retro of the Sprint in Review. The paths of a resource and its methods (ADR 0006 経路の形):
-# a write is one operation of packages/application or, where a path takes
-# several, the one its body names (@itera/api-contract/requests).
+# A Sprint's Retro, and the use of its criterion. The paths of a resource and its methods (ADR 0006 経路の形):
+# nouns of the domain, a state change a verb after the resource. A write
+# is one operation of packages/application or, where a path takes several,
+# the one its body names (@itera/api-contract/requests).
 
 retro:
   get:
-    operationId: getRetro
+    operationId: getSprintRetro
     tags: [Reads]
-    summary: A confirmed Sprint's Retro
+    summary: "A Sprint's Retro"
     description: >-
-      `retroData`: the Retro of the Sprint with the number asked for, once
-      its Retro has started (in Review or closed; a closed one is read
-      only), else of the Sprint in Review. `null` before its Retro starts,
-      for a number with no Sprint, or with no Sprint in Review.
+      `null` before its Retro starts; read only once closed.
     parameters:
-      - name: sprint
-        in: query
-        required: false
-        description: The Sprint's number (F25).
-        schema: { type: integer, minimum: 1 }
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
     responses:
       '200':
-        description: The Retro.
+        description: The read.
         content:
           application/json:
             schema:
@@ -30,12 +27,34 @@ retro:
                 clock: { $ref: '../schemas/common.yaml#/Clock' }
                 view:
                   oneOf:
-                    - $ref: '../schemas/views.yaml#/RetroData'
+                    - { $ref: '../schemas/views.yaml#/RetroData' }
                     - type: 'null'
       '400': { $ref: '../responses.yaml#/BadRequest' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
       '422': { $ref: '../responses.yaml#/UserNotSetUp' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+  post:
+    operationId: beginRetro
+    tags: [Retro]
+    summary: 'Retro を始める: make the Retro, from the last day (F21)'
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+    responses:
+      '201':
+        description: Made.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
   patch:
@@ -43,7 +62,12 @@ retro:
     tags: [Retro]
     summary: Write the Retro
     description: >-
-      One change a request: `reflection` (setReflection), `improvement` (setImprovement), or `criterionDecision`, 続ける / 終える / 置き換える for the criterion this Sprint had (decideCriterion).
+      One change a request: `reflection` (setReflection) or `improvement` (setImprovement).
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
     requestBody:
       required: true
       content:
@@ -60,12 +84,6 @@ retro:
                 required: [improvement]
                 properties:
                   improvement: { type: string }
-              - type: object
-                additionalProperties: false
-                required: [criterionDecision]
-                properties:
-                  criterionDecision:
-                    { $ref: '../schemas/records.yaml#/RetroDecision' }
     responses:
       '204':
         description: Done.
@@ -78,63 +96,16 @@ retro:
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
-retroBegin:
-  post:
-    operationId: beginRetro
-    tags: [Retro]
-    summary: Retro を始める, from the last day (F21)
-    responses:
-      '204':
-        description: Done.
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
-      '404': { $ref: '../responses.yaml#/NotFound' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
-      '422': { $ref: '../responses.yaml#/RuleViolation' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
 retroComplete:
   post:
     operationId: completeRetro
     tags: [Retro]
-    summary: Complete the Retro
-    responses:
-      '204':
-        description: Done.
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
-      '404': { $ref: '../responses.yaml#/NotFound' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
-      '422': { $ref: '../responses.yaml#/RuleViolation' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-retroGoal:
-  patch:
-    operationId: assessGoal
-    tags: [Retro]
-    summary: "Assess an Area's Goal"
-    description: >-
-      `null` clears the assessment.
+    summary: 'Complete the Retro: the Sprint closes'
     parameters:
-      - name: areaId
+      - name: sprintId
         in: path
         required: true
-        schema: { $ref: '../schemas/common.yaml#/AreaId' }
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [assessment]
-            properties:
-              assessment:
-                oneOf:
-                  - { $ref: '../schemas/records.yaml#/SelfAssessment' }
-                  - type: 'null'
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
     responses:
       '204':
         description: Done.
@@ -155,6 +126,10 @@ retroPin:
     description: >-
       Pinned already, nothing changes.
     parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
       - name: pin
         in: path
         required: true
@@ -187,6 +162,10 @@ retroPin:
     description: >-
       Not pinned, nothing changes.
     parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
       - name: pin
         in: path
         required: true
@@ -212,89 +191,18 @@ retroPin:
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
-draftCriterion:
-  post:
-    operationId: draftCriterion
-    tags: [Retro]
-    summary: '基準にもする: draft a planning criterion from the improvement'
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [policy]
-            properties:
-              policy: { $ref: '../schemas/records.yaml#/CriterionPolicy' }
-    responses:
-      '201':
-        description: Made. The IDs of what the operation made.
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [criterionId]
-              properties:
-                criterionId:
-                  { $ref: '../schemas/common.yaml#/PlanningCriterionId' }
-      '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
-      '404': { $ref: '../responses.yaml#/NotFound' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
-      '422': { $ref: '../responses.yaml#/RuleViolation' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
+criterionUse:
   patch:
-    operationId: setDraftPolicy
+    operationId: decideCriterion
     tags: [Retro]
-    summary: "Change the draft criterion's policy"
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [policy]
-            properties:
-              policy: { $ref: '../schemas/records.yaml#/CriterionPolicy' }
-    responses:
-      '204':
-        description: Done.
-      '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
-      '404': { $ref: '../responses.yaml#/NotFound' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
-      '422': { $ref: '../responses.yaml#/RuleViolation' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-  delete:
-    operationId: dropCriterionDraft
-    tags: [Retro]
-    summary: Drop the draft criterion
-    responses:
-      '204':
-        description: Done.
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
-      '404': { $ref: '../responses.yaml#/NotFound' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
-      '422': { $ref: '../responses.yaml#/RuleViolation' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-retroActuals:
-  post:
-    operationId: recordReviewActual
-    tags: [Retro]
-    summary: Add actual hours in Review (F22)
+    summary: Decide on the criterion this Sprint used
     description: >-
-      Added to what is recorded; nothing is returned to refer to it.
+      続ける / 終える / 置き換える (invariant 36).
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
     requestBody:
       required: true
       content:
@@ -302,12 +210,9 @@ retroActuals:
           schema:
             type: object
             additionalProperties: false
-            required: [sprintTaskId, hours, date]
+            required: [retroDecision]
             properties:
-              sprintTaskId: { $ref: '../schemas/common.yaml#/SprintTaskId' }
-              hours: { type: number }
-              date: { $ref: '../schemas/common.yaml#/LocalDate' }
-              occurrenceId: { $ref: '../schemas/common.yaml#/OccurrenceId' }
+              retroDecision: { $ref: '../schemas/records.yaml#/RetroDecision' }
     responses:
       '204':
         description: Done.

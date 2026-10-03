@@ -4,19 +4,17 @@
 // contract's types. Checked by `pnpm typecheck` (tsconfig.test.json); the
 // `it`s only list them.
 import type {
-  AppOverview,
   BacklogData,
   Clock,
-  DayData,
+  CurrentSprints,
+  DayView,
   EditableArea,
-  NextPlanning,
   OperationName,
   OperationOutput,
-  PlanningData,
   RetroData,
-  RunningData,
-  SprintChoice,
-  TodayData,
+  SprintItem,
+  SprintView,
+  sprintCandidates,
 } from '@itera/application';
 import type { BacklogSlice, User } from '@itera/domain';
 import { describe, expectTypeOf, it } from 'vitest';
@@ -35,6 +33,13 @@ type IsUnion<T, U = T> = T extends unknown
     : true
   : never;
 
+/**
+ * A surface's response as the operation's output: a response without
+ * content (201 for the Retro made, #295) is generated as `unknown`.
+ */
+type Response<S extends SurfaceId> =
+  unknown extends SurfaceResponse<S> ? void : SurfaceResponse<S>;
+
 /** The outputs of each of the operations, as a union. */
 type OutputsOf<N extends OperationName> = N extends OperationName
   ? OperationOutput<N>
@@ -51,14 +56,12 @@ type AllKeys<T> = T extends unknown ? keyof T : never;
  */
 type OutputMismatch = {
   [N in OperationName]: IsUnion<OperationsOf<OperationSurfaces[N]>> extends true
-    ? Plain<OperationOutput<N>> extends Plain<
-        SurfaceResponse<OperationSurfaces[N]>
-      >
+    ? Plain<OperationOutput<N>> extends Plain<Response<OperationSurfaces[N]>>
       ? never
       : N
     : Equal<
           Plain<OperationOutput<N>>,
-          Plain<SurfaceResponse<OperationSurfaces[N]>>
+          Plain<Response<OperationSurfaces[N]>>
         > extends true
       ? never
       : N;
@@ -67,7 +70,7 @@ type OutputMismatch = {
 /** The surfaces whose response has keys no operation of theirs returns. */
 type ResponseKeysMismatch = {
   [S in SurfaceId]: Equal<
-    AllKeys<Plain<SurfaceResponse<S>>>,
+    AllKeys<Plain<Response<S>>>,
     AllKeys<Plain<OutputsOf<OperationsOf<S>>>>
   > extends true
     ? never
@@ -76,17 +79,20 @@ type ResponseKeysMismatch = {
 
 /** Each read's result in packages/application, and the response's `view`. */
 type ContractReads = {
-  getOverview: [AppOverview, Gen.GetOverviewResponse];
   listAreas: [readonly EditableArea[], Gen.ListAreasResponse];
   getBacklog: [BacklogData, Gen.GetBacklogResponse];
-  getSprintChoice: [SprintChoice | undefined, Gen.GetSprintChoiceResponse];
-  getPlanning: [PlanningData | undefined, Gen.GetPlanningResponse];
-  getRunning: [RunningData | undefined, Gen.GetRunningResponse];
-  getToday: [TodayData | undefined, Gen.GetTodayResponse];
-  getDay: [DayData | undefined, Gen.GetDayResponse];
-  getRetro: [RetroData | undefined, Gen.GetRetroResponse];
-  getNextPlanning: [NextPlanning, Gen.GetNextPlanningResponse];
+  listSprints: [readonly SprintItem[], Gen.ListSprintsResponse];
+  getSprint: [SprintView, Gen.GetSprintResponse];
+  listSprintCandidates: [
+    SprintCandidates | undefined,
+    Gen.ListSprintCandidatesResponse,
+  ];
+  getSprintRetro: [RetroData | undefined, Gen.GetSprintRetroResponse];
+  getDay: [DayView, Gen.GetDayResponse];
 };
+
+/** What `sprintCandidates` returns. */
+type SprintCandidates = NonNullable<ReturnType<typeof sprintCandidates>>;
 
 /** The reads whose result differs from the response's `view`. */
 type ReadMismatch = {
@@ -132,6 +138,15 @@ describe('the contract and packages/application', () => {
     expectTypeOf<
       Plain<NonNullable<Gen.GetMeResponse['settings']>>
     >().toEqualTypeOf<Plain<Omit<User, 'id'>>>();
+  });
+
+  it('returns the current Sprints and the clock with the person (#295 R1)', () => {
+    expectTypeOf<
+      Plain<NonNullable<Gen.GetMeResponse['sprints']>>
+    >().toEqualTypeOf<Plain<CurrentSprints>>();
+    expectTypeOf<
+      Plain<NonNullable<Gen.GetMeResponse['clock']>>
+    >().toEqualTypeOf<Plain<Clock>>();
   });
 
   it("takes the Backlog's filter as the read's query", () => {
