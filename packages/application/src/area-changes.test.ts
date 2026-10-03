@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot, fixtureIds } from './fixtures/states';
 import { addArea, archive, rename, restore } from './area-changes';
 import { backlogData } from './backlog-view';
-import { planningData } from './planning-view';
+import { sprintPlanOf } from './planning-view';
 import { memoryStore } from './testing';
 import { retroData } from './retro-view';
 import { runningData } from './running-view';
@@ -136,8 +136,12 @@ describe('Area changes (Issue #113)', () => {
       store.run(rename(research, '研究室'));
       const { records, clock } = store.getSnapshot();
 
-      const planning = planningData(records, clock, { applyCriterion: true });
-      expect(planning?.areas.find((a) => a.id === research)?.name).toBe(
+      const sprint = records.sprints.find((s) => s.state === 'planning');
+      if (sprint === undefined) throw new Error('no Sprint being planned');
+      const planning = sprintPlanOf(records, clock, sprint, {
+        applyCriterion: true,
+      });
+      expect(planning.areas.find((a) => a.id === research)?.name).toBe(
         '研究室',
       );
       expect(

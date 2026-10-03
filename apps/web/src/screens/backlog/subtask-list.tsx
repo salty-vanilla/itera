@@ -13,7 +13,7 @@ import {
   sameMinutes,
   type DurationText,
 } from '@/lib/duration-text';
-import { useSubtaskActions } from '@/store/use-task-actions';
+import { useSubtaskActions } from '@/screen-data/use-task-actions';
 
 // Subtasks (PRD §6): add, check off, and give each an Estimate. They take
 // effect at once. A subtask without an Estimate is counted, not added, in

@@ -6,13 +6,13 @@ import { formatDate, formatDateRange } from '@/lib/date-format';
 import { weekCall, weekText, weekLabel } from '@/lib/week-text';
 import { ReadStatus } from '@/components/read-status';
 import type { NotReady } from '@/api/read-state';
-import { usePlanning } from '@/store/use-planning';
-import { useRunningSprint } from '@/store/use-running-sprint';
+import { usePlanning } from '@/screen-data/use-planning';
+import { useRunningSprint } from '@/screen-data/use-running-sprint';
 import {
   useSprintChoice,
   type SprintChoice,
   type SprintRef,
-} from '@/store/use-sprint-choice';
+} from '@/screen-data/use-sprint-choice';
 import { PlanningScreen } from './planning/planning-screen';
 import { RunningSprint } from './sprint/running-sprint';
 import { BeginPlanning } from './begin-planning';

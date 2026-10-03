@@ -52,7 +52,7 @@ export const GROUPS = [
     name: '画面をまたいで使う語（日付・時間・状態の語）',
     match: (file) =>
       file.startsWith('apps/web/src/lib/') ||
-      file.startsWith('apps/web/src/store/'),
+      file.startsWith('apps/web/src/screen-data/'),
   },
   {
     name: 'ドメインの規則が返す文（packages/domain）',

@@ -15,7 +15,7 @@ import { dayData, type DayData } from './day-view';
 import {
   planningCandidatesOf,
   sprintPlanOf,
-  type PlanningData,
+  type PlanningCandidates,
   type SprintPlan,
 } from './planning-view';
 import type { Clock, Records } from './records';
@@ -149,7 +149,7 @@ export function sprintCandidates(
   records: Records,
   clock: Clock,
   sprintId: SprintId,
-): PlanningData['candidates'] | undefined {
+): PlanningCandidates | undefined {
   const sprint = records.sprints.find((s) => s.id === sprintId);
   return sprint?.state === 'planning'
     ? planningCandidatesOf(records, clock, sprint)

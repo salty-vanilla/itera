@@ -15,7 +15,7 @@ import {
   criterionTargetText,
 } from '@/lib/criterion-text';
 import { formatRange } from '@/lib/time-format';
-import type { PlanningData } from '@/store/use-planning';
+import type { PlanningData } from '@/screen-data/use-planning';
 import { planSummary } from './plan-summary';
 
 // The head of 確かめる (Issue #93, owner decision S4): what the 確定 Dialog

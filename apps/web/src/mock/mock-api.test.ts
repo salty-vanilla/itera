@@ -15,7 +15,6 @@ import {
   sprintList,
   createIdSource,
   createMemoryStore,
-  operations,
 } from '@itera/application';
 import {
   fixtureIds,
@@ -25,7 +24,7 @@ import {
 } from '@itera/application/fixtures';
 import { addDays } from '@itera/domain';
 import * as v from 'valibot';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { READS } from '@/api/reads';
 import { fixtureSettingsMade } from './fixture-states';
 import { createMock, MOCK_HEADER, MOCK_READS } from './mock-api';
@@ -286,20 +285,6 @@ describe('the mock', () => {
     const { data } = await sdk.getMe({ client, throwOnError: true });
     expect(data.sprints?.active).toBeUndefined();
     expect(data.sprints?.review).toBeDefined();
-  });
-
-  it('tells the changes the screens make through the store, not its own', async () => {
-    const { store } = mockOf('backlog-capture');
-    const mock = createMock(store);
-    const client = createClient(
-      createConfig({ baseUrl: 'http://localhost/api', fetch: mock.fetch }),
-    );
-    const listener = vi.fn();
-    mock.subscribeToScreens(listener);
-    await sdk.createArea({ client, body: { name: '健康' } });
-    expect(listener).not.toHaveBeenCalled();
-    store.run(operations.createArea({ name: '趣味' }));
-    expect(listener).toHaveBeenCalledTimes(1);
   });
 
   it('answers every read of the contract', () => {

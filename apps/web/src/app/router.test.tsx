@@ -122,7 +122,7 @@ describe('the fixture states (PRD §12)', () => {
 });
 
 describe('the overview through the contract (#272)', () => {
-  it('shows the same records as a screen still on the store, after its change', async () => {
+  it('shows the count after a Task is added on the Backlog', async () => {
     renderAt('/backlog?fixture=backlog-capture');
     const [side] = await screen.findAllByRole('navigation', { name: 'メイン' });
     const backlog = () =>
@@ -130,7 +130,6 @@ describe('the overview through the contract (#272)', () => {
         a.textContent.startsWith('Backlog'),
       )?.textContent;
     await waitFor(() => expect(backlog()).toBe('Backlog12件'));
-    // Backlog still adds through the store; the mock reads the same records.
     await userEvent.type(
       screen.getByRole('textbox', { name: 'Backlog にタスクを追加' }),
       '請求書を送る{Enter}',

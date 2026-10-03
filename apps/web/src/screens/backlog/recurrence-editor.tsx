@@ -22,7 +22,7 @@ import {
   WEEK_ORDER,
   WEEKDAY_NAMES,
 } from '@/lib/recurrence-text';
-import { useRecurrenceActions } from '@/store/use-task-actions';
+import { useRecurrenceActions } from '@/screen-data/use-task-actions';
 
 // 繰り返し (PRD §6 Recurrence, F1, F7, F12, F15, F41). Like the other fields
 // of the Task detail, a change to a rule that exists is saved when it is

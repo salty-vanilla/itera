@@ -67,8 +67,8 @@ import {
 } from '@/lib/duration-text';
 import { formatHours } from '@/lib/time-format';
 import { startedText } from '@/lib/today-words';
-import type { BacklogView } from '@/store/use-backlog';
-import { useTaskActions } from '@/store/use-task-actions';
+import type { BacklogView } from '@/screen-data/use-backlog';
+import { useTaskActions } from '@/screen-data/use-task-actions';
 import { useNewAreaDialog } from './area-dialog';
 import { CarryOverText, RecurrenceText, SprintText } from './backlog-row';
 import { RecurrenceEditor } from './recurrence-editor';

@@ -16,9 +16,16 @@ import {
 import { formatDate, formatDateRange } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
 import { weekCall, weekText, weekLabel } from '@/lib/week-text';
-import type { ActualTarget, RetroData } from '@/store/retro-view';
-import { useRetroChoice, type RetroChoice } from '@/store/use-retro-choice';
-import { useBeginRetro, useRetro, useRetroActions } from '@/store/use-retro';
+import type { ActualTarget, RetroData } from '@/screen-data/retro-view';
+import {
+  useRetroChoice,
+  type RetroChoice,
+} from '@/screen-data/use-retro-choice';
+import {
+  useBeginRetro,
+  useRetro,
+  useRetroActions,
+} from '@/screen-data/use-retro';
 import { ActualTime } from '../today/actual-time';
 import { BeginPlanning } from '../begin-planning';
 import { ScreenFrame } from '../screen-frame';

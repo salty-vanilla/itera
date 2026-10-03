@@ -12,8 +12,7 @@ export {
   type OperationOutput,
   type Operations,
 } from './operations';
-export { catchUp, reviewEnded } from './system-changes';
-export { beginDay } from './today-changes';
+export { catchUp } from './system-changes';
 export { settingsChange, type SettingsInput } from './user-changes';
 
 // Running them over the records.
@@ -57,41 +56,26 @@ export {
   type SprintView,
 } from './resource-views';
 
-// The reads the screens still on the store use (#274〜#276; ADR 0006
-// 経路の形), and the parts of the reads above.
+// The reads the contract returns, and the types of their parts, which the
+// contract takes (ADR 0007 依存の向き). The functions that make the parts
+// stay in the package: `resource-views` puts them together.
 export {
   backlogData,
   type BacklogData,
   type BacklogFilter,
   type BacklogItem,
 } from './backlog-view';
+export { type DayArea, type DayData, type DayRecord } from './day-view';
+export { areaList, type EditableArea } from './area-view';
 export {
-  dayData,
-  type DayArea,
-  type DayData,
-  type DayRecord,
-} from './day-view';
-export {
-  appOverview,
-  areaList,
-  type AppOverview,
-  type EditableArea,
-  type SprintSummary,
-} from './overview-view';
-export {
-  planningData,
   type AreaPlan,
   type CandidateRow,
   type PlannedTask,
   type PlanningArea,
-  type PlanningData,
   type RecurringCandidate,
 } from './planning-view';
 export {
-  nextPlanningOf,
-  retroData,
   type ActualTarget,
-  type NextPlanning,
   type RetroArea,
   type RetroBlocker,
   type RetroCriterion,
@@ -99,7 +83,6 @@ export {
   type RetroOccurrence,
 } from './retro-view';
 export {
-  runningData,
   type PastDay,
   type PastDayRecord,
   type RunningArea,
@@ -107,14 +90,8 @@ export {
   type RunningData,
   type RunningTask,
 } from './running-view';
+export { type SprintWeek } from './sprint-choice';
 export {
-  sprintChoice,
-  type SprintChoice,
-  type SprintRef,
-  type SprintWeek,
-} from './sprint-choice';
-export {
-  todayData,
   type ClosedResolution,
   type ListedResolution,
   type TodayArea,

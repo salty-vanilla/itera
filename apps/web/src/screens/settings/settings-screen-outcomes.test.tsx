@@ -79,7 +79,7 @@ describe('the settings screen when adding does not go through', () => {
       }),
     );
     expect(
-      await screen.findByText('パスキーを読み込めませんでした', undefined, {
+      await screen.findByText('読み込めませんでした', undefined, {
         timeout: 5000,
       }),
     ).toBeTruthy();

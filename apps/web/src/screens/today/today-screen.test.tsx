@@ -12,8 +12,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { dayRead } from '@/test/day-read';
-import type { Clock } from '@/store/record-store';
-import type { StoreSnapshot } from '@/store/record-store';
+import type { Clock } from '@/mock/memory-store';
+import type { StoreSnapshot } from '@/mock/memory-store';
 import { findHours, getHours, getMinutes } from '@/test/duration';
 import { fixtureIds } from '@itera/application/fixtures';
 
@@ -31,8 +31,8 @@ beforeEach(() => {
 let lastSnapshot: () => StoreSnapshot;
 /** Opens a fixture state's records at another time (a later day). */
 let clockOverride: Clock | undefined;
-vi.mock('@/store/record-store', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/store/record-store')>();
+vi.mock('@/mock/memory-store', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/mock/memory-store')>();
   return {
     ...actual,
     createMemoryStore: (

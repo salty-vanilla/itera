@@ -94,51 +94,35 @@ function pureRules(name) {
   };
 }
 
-/**
- * The files of apps/web still on the store until their screen moves to the
- * contract (#272 import の境界), with what each imports: `domain`
- * (@itera/domain) or `application` (@itera/application). A file in no list
- * takes the contract only. Each screen's Issue removes its files; #277
- * empties the lists and removes them (ADR 0005 API への移行の改訂).
- * Listed by name, not by pattern, so that a new file is held to the rule.
- * @type {Record<string, Record<string, ('domain' | 'application')[]>>}
- */
-const MIGRATING = {
-  // shared by the screens: removed by the Issue that moves their last user, #277 at the latest.
-  shared: {
-    'apps/web/src/components/task/area-select.stories.tsx': ['domain'],
-    'apps/web/src/components/task/estimate-suggestion.stories.tsx': ['domain'],
-    'apps/web/src/components/task/task-quick-add.stories.tsx': ['domain'],
-    'apps/web/src/components/task/task-row.stories.tsx': ['domain'],
-    'apps/web/src/store/record-store.ts': ['application'],
-    'apps/web/src/store/store-provider.tsx': ['application'],
-    'apps/web/src/store/use-app-overview.ts': ['application'],
-    'apps/web/src/store/use-run.ts': ['domain', 'application'],
-    'apps/web/src/store/use-system-day.ts': ['application'],
-  },
-};
-
-/** @param {'domain' | 'application'} pkg */
-function migratingOn(pkg) {
-  return Object.values(MIGRATING).flatMap((files) =>
-    Object.entries(files)
-      .filter(([, uses]) => uses.includes(pkg))
-      .map(([file]) => file),
-  );
-}
-
 // Better Auth's client stays in the one module that implements `Auth`
 // (apps/web/src/auth/better-auth.ts, #278); the rest of apps/web uses the
 // interface, which the browser mock answers too. Put in both blocks below,
 // as their ignores differ: a file left out of one is still checked by the
-// other. Files out of both (the mock, the tests, the files migrating on both
-// packages) are not checked.
+// other. Files out of both (the mock and the tests) are not checked.
 const WEB_BETTER_AUTH = 'apps/web/src/auth/better-auth.ts';
 const webBetterAuthPattern = {
   regex: '^(better-auth|@better-auth/)',
   message:
     'Use Auth (@/auth/auth-provider); Better Auth stays in src/auth/better-auth.ts.',
 };
+
+const webDomainPattern = {
+  regex: '^@itera/domain(/|$)',
+  message:
+    'Take the types from the contract (@itera/api-contract) and the previews and dates from @/lib/domain-functions (ADR 0005).',
+};
+
+// src/screen-data/ shapes the contract for the screens; the layers under
+// the screens (api, components, lib, auth, foundations) never import it
+// (ADR 0005 置き場所の規則).
+const webScreenDataPattern = {
+  regex: '^(@/|(\\.\\./)+)screen-data(/|$)',
+  message:
+    'Only the screens import src/screen-data/; api, components, lib, auth and foundations stay below them (ADR 0005 置き場所の規則).',
+};
+const WEB_LAYERS = [
+  'apps/web/src/{api,components,lib,auth,foundations}/**/*.{ts,tsx}',
+];
 
 // Outside the rule: the tests and their helpers, which open the fixture's
 // records, and the browser mock (the server's stand-in).
@@ -195,7 +179,6 @@ export default defineConfig(
       ...WEB_NOT_SCREENS,
       'apps/web/src/lib/domain-functions.ts',
       WEB_BETTER_AUTH,
-      ...migratingOn('domain'),
     ],
     rules: {
       'no-restricted-imports': [
@@ -204,11 +187,49 @@ export default defineConfig(
           patterns: [
             webBetterAuthPattern,
             testingImportPattern(),
-            {
-              regex: '^@itera/domain(/|$)',
-              message:
-                'Take the types from the contract (@itera/api-contract) and the previews and dates from @/lib/domain-functions (ADR 0005).',
-            },
+            webDomainPattern,
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // The layers under the screens do not reach up to them. This block
+    // repeats the domain rule above for these files, since a later block
+    // replaces an earlier one's options; the two files the domain rule
+    // leaves out have a block of their own below.
+    files: WEB_LAYERS,
+    ignores: [
+      ...WEB_NOT_SCREENS,
+      'apps/web/src/lib/domain-functions.ts',
+      WEB_BETTER_AUTH,
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            webBetterAuthPattern,
+            testingImportPattern(),
+            webDomainPattern,
+            webScreenDataPattern,
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // The one module that may import packages/domain is still a layer
+    // under the screens.
+    files: ['apps/web/src/lib/domain-functions.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            webBetterAuthPattern,
+            testingImportPattern(),
+            webScreenDataPattern,
           ],
         },
       ],
@@ -216,11 +237,7 @@ export default defineConfig(
   },
   {
     files: ['apps/web/src/**/*.{ts,tsx}', 'apps/web/.storybook/**/*.{ts,tsx}'],
-    ignores: [
-      ...WEB_NOT_SCREENS,
-      WEB_BETTER_AUTH,
-      ...migratingOn('application'),
-    ],
+    ignores: [...WEB_NOT_SCREENS, WEB_BETTER_AUTH],
     rules: {
       '@typescript-eslint/no-restricted-imports': [
         'error',
@@ -232,6 +249,40 @@ export default defineConfig(
               regex: '^@itera/application(/|$)',
               message:
                 'Only the browser mock runs packages/application; the screens use the contract (ADR 0005).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // The one module of Better Auth's client is checked for everything but
+    // Better Auth: it takes neither package.
+    files: [WEB_BETTER_AUTH],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            testingImportPattern(),
+            webScreenDataPattern,
+            {
+              regex: '^@itera/domain(/|$)',
+              message:
+                'Better Auth stays apart from packages/domain (ADR 0005).',
+            },
+          ],
+        },
+      ],
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            testingImportPattern(),
+            {
+              regex: '^@itera/application(/|$)',
+              message:
+                'Better Auth stays apart from packages/application (ADR 0005).',
             },
           ],
         },

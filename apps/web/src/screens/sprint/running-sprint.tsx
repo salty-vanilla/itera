@@ -32,14 +32,14 @@ import {
   weekText,
   type WeekName,
 } from '@/lib/week-text';
-import { useAvailableHoursAction } from '@/store/use-planning';
-import { useBacklog } from '@/store/use-backlog';
+import { useAvailableHoursAction } from '@/screen-data/use-planning';
+import { useBacklog } from '@/screen-data/use-backlog';
 import {
   useRunningSprintActions,
   type RunningData,
   type RunningTask,
-} from '@/store/use-running-sprint';
-import { useTaskActions } from '@/store/use-task-actions';
+} from '@/screen-data/use-running-sprint';
+import { useTaskActions } from '@/screen-data/use-task-actions';
 import { CarryOverText } from '../backlog/backlog-row';
 import { TaskDetail } from '../backlog/task-detail';
 import { useTaskDetailLeave } from '../backlog/use-task-detail-leave';

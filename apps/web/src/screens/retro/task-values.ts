@@ -7,7 +7,7 @@ import {
   formatUnestimatedSubtasks,
   UNESTIMATED,
 } from '@/lib/time-format';
-import type { RetroData } from '@/store/retro-view';
+import type { RetroData } from '@/screen-data/retro-view';
 import { OUTCOME_WORDS } from './retro-words';
 
 // A Task's values in words, shared by the table and the stacked list of 事実を見る

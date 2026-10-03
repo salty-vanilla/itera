@@ -1,7 +1,6 @@
 // The browser mock of the API (ADR 0005): answers the contract's requests
 // (ADR 0006) by running packages/application over a RecordStore, as the API
-// does over the person's records in D1. The screens still on the store
-// (#274〜#276) change the same records, so both see one set of records.
+// does over the person's records in D1.
 //
 // The same steps as the API (ADR 0004 操作と読み取りの処理), less what has
 // no meaning here: the Origin is the app's own, and there is no version to
@@ -211,12 +210,6 @@ function writeOf(method: string, path: string) {
 export interface Mock {
   /** A `fetch` for the contract's client (`createClient({ fetch })`). */
   readonly fetch: typeof fetch;
-  /**
-   * Calls `listener` after a change a screen makes through the store, not
-   * after the mock's own: those are the answer to a request, which the
-   * client handles (an operation reads again; a read has its answer).
-   */
-  subscribeToScreens(listener: () => void): () => void;
 }
 
 /** The mock over a store: what answers the client, and what it changes. */
@@ -235,22 +228,12 @@ export function createMock(
   } = {},
 ): Mock {
   const settings = { made: settingsMade };
-  let answering = false;
-  /** Runs the store's changes of an answer, which are the mock's own. */
-  const own = <T>(run: () => T): T => {
-    answering = true;
-    try {
-      return run();
-    } finally {
-      answering = false;
-    }
-  };
   return {
     fetch: async (input, init) => {
       const request = new Request(input, init);
       try {
         const response = isSignedIn()
-          ? await answer(store, request, own, settings)
+          ? await answer(store, request, settings)
           : failure(401, 'unauthenticated', 'No session.');
         response.headers.set(MOCK_HEADER, '1');
         return response;
@@ -259,17 +242,12 @@ export function createMock(
         return failure(500, 'internalError', 'The mock failed.');
       }
     },
-    subscribeToScreens: (listener) =>
-      store.subscribe(() => {
-        if (!answering) listener();
-      }),
   };
 }
 
 async function answer(
   store: RecordStore,
   request: Request,
-  own: <T>(run: () => T) => T,
   settings: { made: boolean },
 ) {
   const url = new URL(request.url);
@@ -277,7 +255,7 @@ async function answer(
   const write = writeOf(request.method, path);
 
   if (request.method === settingsSurface.method && path === settingsSurface.url)
-    return makeSettings(store, request, own, settings);
+    return makeSettings(store, request, settings);
   if (request.method === 'GET' && path === '/me' && !settings.made)
     return json(200, {
       userId: store.getSnapshot().records.user.id,
@@ -289,7 +267,7 @@ async function answer(
     // The person and their settings; with them, the clock and the Sprints
     // they have now, after the catch-up, as the API reads them (#295 R1).
     // The fixture's person has made them.
-    own(() => catchUp(store));
+    catchUp(store);
     const { records, clock } = store.getSnapshot();
     const { id, displayName, timeZone, weekStartsOn } = records.user;
     return json(200, {
@@ -303,7 +281,7 @@ async function answer(
   if (read !== undefined) {
     const parts = partsOf(read.read, read.values, url.searchParams);
     if (!parts.ok) return parts.response;
-    own(() => catchUp(store));
+    catchUp(store);
     const { records, clock } = store.getSnapshot();
     const result = read.read.read(records, clock, parts.value);
     return result === NOT_FOUND
@@ -316,10 +294,8 @@ async function answer(
     if (!call.ok) return call.response;
     const { name, input } = call.value;
     const run = operations[name] as (input: unknown) => Change<unknown>;
-    const result = own(() => {
-      catchUp(store);
-      return store.run(run(input));
-    });
+    catchUp(store);
+    const result = store.run(run(input));
     if (!result.ok) return domainFailure(result.error);
     return result.value === undefined
       ? new Response(null, { status: surface.status })
@@ -337,7 +313,6 @@ async function answer(
 async function makeSettings(
   store: RecordStore,
   request: Request,
-  own: <T>(run: () => T) => T,
   settings: { made: boolean },
 ) {
   let body: unknown;
@@ -356,12 +331,10 @@ async function makeSettings(
   );
   if (!result.ok) return domainFailure(result.error);
   const { changes, created, user: person } = result.value;
-  own(() =>
-    store.run(() => ({
-      ok: true,
-      value: { changes, activities: [], value: undefined },
-    })),
-  );
+  store.run(() => ({
+    ok: true,
+    value: { changes, activities: [], value: undefined },
+  }));
   settings.made = true;
   if (!created)
     return new Response(null, { status: settingsSurface.status.written });

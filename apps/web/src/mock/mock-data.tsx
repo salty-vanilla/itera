@@ -1,13 +1,9 @@
 import { useRouter, useSearch } from '@tanstack/react-router';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ApiProvider } from '@/api/api-provider';
 import { apiBaseUrl, createApi } from '@/api/create-api';
-import { invalidateReads } from '@/api/reads';
 import { sendToSignIn } from '@/auth/sign-in';
 import { AuthProvider } from '@/auth/auth-provider';
-import { createMemoryStore } from '@/store/record-store';
-import { StoreProvider } from '@/store/store-provider';
-import { useSystemDay } from '@/store/use-system-day';
 import { DevMenu } from './dev-menu';
 import {
   defaultFixtureState,
@@ -16,6 +12,7 @@ import {
   isFixtureStateId,
   type FixtureStateId,
 } from './fixture-states';
+import { createMemoryStore } from './memory-store';
 import { createMock } from './mock-api';
 import { createMockAuth } from './mock-auth';
 
@@ -42,8 +39,8 @@ function MockData({ children }: { children: ReactNode }) {
 }
 
 /**
- * One fixture state's records in a RecordStore, which both the mock and
- * the screens not yet on the contract use (#272 移行の途中の一致).
+ * One fixture state's records in a RecordStore, which the mock answers
+ * from.
  */
 function FixtureData({
   fixture,
@@ -74,35 +71,14 @@ function FixtureData({
       }),
     };
   });
-  // A change a screen makes through the store is the API's change too: the
-  // reads are read again, as after an operation.
-  useEffect(
-    () =>
-      data.mock.subscribeToScreens(
-        () => void invalidateReads(data.queryClient),
-      ),
-    [data],
-  );
   return (
-    <StoreProvider store={data.store}>
-      <ApiProvider client={data.client} queryClient={data.queryClient}>
-        <AuthProvider auth={data.auth}>
-          <SystemDay />
-          {children}
-          <DevMenu current={fixture} />
-        </AuthProvider>
-      </ApiProvider>
-    </StoreProvider>
+    <ApiProvider client={data.client} queryClient={data.queryClient}>
+      <AuthProvider auth={data.auth}>
+        {children}
+        <DevMenu current={fixture} store={data.store} />
+      </AuthProvider>
+    </ApiProvider>
   );
-}
-
-/**
- * The system's start of the day for the screens still on the store (#54).
- * The mock does the same before every request; #277 removes this.
- */
-function SystemDay() {
-  useSystemDay();
-  return null;
 }
 
 export { MockData };

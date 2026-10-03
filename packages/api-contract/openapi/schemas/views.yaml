@@ -1,5 +1,5 @@
-# The reads of packages/application (*-view.ts, sprint-choice.ts,
-# overview-view.ts), in the same shape. They carry no screen words: an Area
+# The reads of packages/application (*-view.ts, sprint-choice.ts),
+# in the same shape. They carry no screen words: an Area
 # that is absent means 「領域なし」, and a week is previous, current or next.
 
 # ---------------------------------------------------------------- Common

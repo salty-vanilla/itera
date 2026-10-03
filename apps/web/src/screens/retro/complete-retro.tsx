@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { criterionQuotedName } from '@/lib/criterion-text';
-import type { RetroBlocker, RetroData } from '@/store/retro-view';
+import type { RetroBlocker, RetroData } from '@/screen-data/retro-view';
 import { carryOverWords, DECISION_WORDS } from './retro-words';
 
 // 「振り返りを完了」 (docs/design/patterns.md Retro › 引き継ぐ, Issue #106).
