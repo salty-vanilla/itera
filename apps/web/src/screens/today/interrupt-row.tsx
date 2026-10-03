@@ -1,4 +1,4 @@
-import type { InterruptNote } from '@itera/domain';
+import type { InterruptNote } from '@itera/api-contract';
 import { Ellipsis, Pencil, Trash2 } from 'lucide-react';
 import { IconButton } from '@/components/ui/icon-button';
 import {

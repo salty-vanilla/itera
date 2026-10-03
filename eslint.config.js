@@ -104,16 +104,6 @@ function pureRules(name) {
  * @type {Record<string, Record<string, ('domain' | 'application')[]>>}
  */
 const MIGRATING = {
-  // #275: Today.
-  '#275': {
-    'apps/web/src/screens/today/day-frame.tsx': ['domain'],
-    'apps/web/src/screens/today/day-header.tsx': ['domain'],
-    'apps/web/src/screens/today/interrupt-row.tsx': ['domain'],
-    'apps/web/src/screens/today/other-day.tsx': ['domain'],
-    'apps/web/src/screens/today/today-row.tsx': ['domain'],
-    'apps/web/src/screens/today/today-screen.tsx': ['domain'],
-    'apps/web/src/store/use-today.ts': ['domain', 'application'],
-  },
   // #276: the Retro.
   '#276': {
     'apps/web/src/screens/retro/facts-pane.tsx': ['domain'],

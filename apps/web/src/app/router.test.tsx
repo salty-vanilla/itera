@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { fixtureStates } from '@/mock/fixture-states';
+import { dayRead } from '@/test/day-read';
 import { createAppRouter } from './router';
 import { screens } from './screens';
 
@@ -260,7 +261,7 @@ describe('keyboard (#154)', () => {
 
   it('puts the focus on the heading on back and forward, and not on a filter', async () => {
     const router = renderAt('/today?fixture=backlog-capture');
-    await screen.findByRole('heading', { level: 1 });
+    await dayRead();
     await act(() => router.navigate({ to: '/backlog' }));
     const backlog = await screen.findByRole('heading', {
       level: 1,

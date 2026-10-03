@@ -788,7 +788,7 @@ export const recordActualTime = <ThrowOnError extends boolean = false>(options: 
 /**
  * 割り込みを記録
  *
- * Nothing in Today changes (invariant 29).
+ * Nothing in Today changes (invariant 29). Refused with 422 on a day outside the Sprint (in the person's time zone), as a note restored after a delete is.
  */
 export const noteInterrupt = <ThrowOnError extends boolean = false>(options: Options<NoteInterruptData, ThrowOnError>): RequestResult<NoteInterruptResponses, NoteInterruptErrors, ThrowOnError> => (options.client ?? client).post<NoteInterruptResponses, NoteInterruptErrors, ThrowOnError>({
     security: [{
@@ -839,7 +839,7 @@ export const editInterrupt = <ThrowOnError extends boolean = false>(options: Opt
 /**
  * 元に戻す after 割り込みを消す
  *
- * The client sends back the note as the read gave it, its ID in the path: the same note returns to its place (ADR 0006). Refused if a note with that ID is there, or if it was noted later than now.
+ * The client sends back the note as the read gave it, its ID in the path: the same note returns to its place (ADR 0006). Refused with 422 if a note with that ID is there, in this Sprint or in another of the person's, if it was noted later than now or on a day outside the Sprint (in the person's time zone), or if its text is empty.
  */
 export const restoreInterrupt = <ThrowOnError extends boolean = false>(options: Options<RestoreInterruptData, ThrowOnError>): RequestResult<RestoreInterruptResponses, RestoreInterruptErrors, ThrowOnError> => (options.client ?? client).put<RestoreInterruptResponses, RestoreInterruptErrors, ThrowOnError>({
     security: [{

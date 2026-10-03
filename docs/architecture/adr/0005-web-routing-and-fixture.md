@@ -166,7 +166,7 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
 - **操作のフック**：`useTaskActions`・`useSubtaskActions`・`useRecurrenceActions`・`useAreaActions` は、操作ごとに `useOperation` を呼び、操作ごとの名前つき関数を返す（1 つのフックが全部の操作の購読を作らないよう、使う部品ごとに分けた）。関数は非同期で、成功したかを `boolean` で（作ったものの ID は `string | undefined`、`setRecurrence` と `endRecurrence` は `{ ok, … }` で）返す。成功したときは、表示中の読み取りが戻ってから解決する。送信中に同じ操作を重ねて送らない。ただし、欄を離れたときや選んだときに保存する操作（Task の各欄の保存、サブタスクのチェックと見積もり、繰り返しの設定）は、重ねて送った分を捨てずに、前の分が終わってから順に送る（`useOperation` の `whileSending: 'wait'`）。捨てると、続けて変えた 2 つ目が黙って保存されない。`loading`（操作ごとの、300ms 続いた送信中）は、その操作のボタンの `loading` と `loadingLabel`（「追加中…」）に渡す。今回は追加（Quick Add、サブタスク、領域）のボタンに付けた。ほかの操作は、結果が Toast か行の変化で見えるので、送信中の見た目を付けない。
 - **操作は重ならない**：`useOperation` の操作は、どのフックから送っても同じ mutation の scope（`operations`）に入り、1 つずつ送られる（TanStack Query v5 の `scope`。文書で確かめた）。API は版を確かめて書くので（ADR 0004 同時の書き込み）、重なると片方が版の衝突になる。
 - **操作が終わっても、画面はまだ新しい記録を描いていないことがある**：キャッシュは更新済みでも、購読者への通知は次のタスクで届く。操作の結果に合わせて表示や焦点を動かす処理は、操作の前に頼みを置いておくか、記録が変わるのを待つ。Task の詳細の「今日と今週」は、押したときの選択肢の並びを覚えておき、並びが変わったときに焦点を動かす。
-- **Task の詳細が使う選択の操作**（開始・今日は中断する・今日は見送る・今日の回をスキップする・今週の残りに戻す）は、契約の operation を `screens/backlog/use-selection-actions.ts` から呼ぶ。Today の操作の一覧（`use-today.ts`）は #275 が移す。
+- **Task の詳細が使う選択の操作**（開始・今日は中断する・今日は見送る・今日の回をスキップする・今週の残りに戻す）は、契約の operation を `screens/backlog/use-selection-actions.ts` から呼ぶ。Today の操作の一覧（`use-today.ts`）は #275 で移した（次の節）。
 - **型**：Backlog の画面と部品は契約の型（`@itera/api-contract`）を使い、`packages/domain` を import しない。ID・`LocalDate`・`Instant` は契約では素の文字列で、domain のブランド付きの型を受ける部品も、契約の型を受けるように替えた（ブランド付きの値は文字列として渡せるので、まだ移していない画面はそのまま渡せる）。配列は読み取り専用にして受ける部品だけ、受け方を広げる。
 - **プレビューの例外のモジュール**：`lib/domain-functions.ts` の日付の関数（`addDays`・`dayOfWeek`・`toLocalDate`）は、契約の型を受けて、domain の関数に渡す。ブランドの付け替え（`as`）はここだけで、日付と時刻の形は契約のスキーマが確かめる。`presentedSuggestion` は、Task 全体でなく `suggestions` を持つものを受けるようにした（`packages/domain` の型の変更だけで、振る舞いは同じ）。
 - **import の境界**：`MIGRATING` から #273 のファイルと、契約の型だけになった共有のファイル（`components/task/`・`lib/` の一部）を消した。
@@ -189,11 +189,25 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
   - 送信中の語：追加（Quick Add）は「追加中…」、確定の Dialog のボタンは「確定中…」（DESIGN.md Components › Button の Loading）、「Sprint N の計画を始める」は「始めています…」（ボタンと同じ動詞。「開始」は今日の画面でタスクに取りかかる操作の語）。ほかの操作は、結果が Toast か行の変化で見えるので付けない。細い Backlog の欄（整える・確かめる、208px）の Quick Add には付けない（幅を保つ Button が広がり、領域の選択が「領域なし」を入れる幅を割る）。
 - **部品は結果を待つ**：`GoalBlock` の `onSave` と `AvailableHoursField` の `onChange` は `boolean | Promise<boolean>` を受ける。目標の文は、保存が通ってから形を閉じる。使える時間は、通らなかったとき入力した文字を前の値に戻す。
 - **描き直しを待ってから焦点を動かす**：目標を保存して形を閉じるとき、キャッシュは更新済みでも画面はまだ新しい目標を描いていない（上の #273「操作が終わっても…」）。「編集」へ戻す焦点は、形を閉じた直後ではなく、目標の文が変わるまで待つ（`GoalBlock`）。今と同じ文は保存せずに閉じる（変わらないので、待つ要求が残らない）。
-- **見出しの焦点**：画面を開くと焦点は見出しへ移る（#154）。記録を読む間の見出しは、読み終えた画面の見出しに替わる（別の要素）ので、焦点が体に戻ってしまう。`focusScreenHeading` は、焦点が見出しにあったまま見出しが消えたときだけ、次の見出しへ移し、そこでも続ける（Sprint は一覧と計画の 2 段で読むので、見出しが 2 回替わる。`use-screen-focus.test.ts`）。ほかへ焦点が動いた・押した・クリックしたら止める。
+- **見出しの焦点**：Sprint は一覧と計画の 2 段で読むので、読み込み中の見出しが読み終えた画面の見出しに替わるまでに 2 回作り直される。`useScreenFocus`（#275 で、見出しが作り直される画面に対応した）が、焦点がページに落ちているあいだ、今ある見出しへ何度でも移す。ほかへ移した焦点は取らない。
 - **共有のもの**：`BeginPlanning` は `getMe` と `beginPlanning` に移した。Retro の画面も使うので（#276 がその画面を移す）、枠（`AppShell`）が `getMe` を先に読み、「Sprint N の計画を始める」が現れる時点で答えがあるようにした。Retro が開く Sprint は、Retro の画面を移すまで store から求める（`use-retro-choice.ts`。#276 で消す）。`useSprintSteps` は番号だけを持つ参照を受ける。
 - **型**：計画と確定済みの Sprint の画面と部品は契約の型を使う。領域なしのまとまりの語は `store/screen-area.ts`（Retro の `views.ts` のものは domain の型なので別）。
 - **import の境界**：`MIGRATING` から #274 のファイルと、契約の型だけになった共有のファイル（`capacity-indicator.tsx`・`criterion-text.ts`・`selection-words.ts`・`week-text.ts`）を消した。`use-retro-choice.ts` を #276 の一覧に足した。
 - **画面の文言**：送信中の「確定中…」「始めています…」と、記録を読む間の見出し「Sprint」・ラベル「計画」。ほかの語は変えていない。
+
+### 今日を契約に移す（2026-10-03、Issue #275）
+
+Backlog（#273）の形で `/today`（今日、過去と先の日）を移した。
+
+- **今日の日付と日の読み取り**：今日の日付はサーバーが利用者のタイムゾーンで決める（「時計」）。画面は `getMe` の `clock.today` と `sprints`（`useNow`、`apps/web/src/api/use-me.ts`）を読み、その日付で `getDay`（`useDay`、`store/use-today.ts`）を読む。URL に `?date=` がなければ今日の日付、あれば `?date=` の日付を渡す。答えの `kind` が、今日（`today`。実行中の Sprint がなければ `today` は空）か、ほかの日（`past`・`future`）かを決める。画面は日付の比較で今日かどうかを決めず、答えに従う。`useToday` は作らず、`useDay` が今日も含む（今日かどうかは画面ではなく答えの `kind` が決めるので、日付ごとに別のフックを呼び分ける必要がない）。
+  - 代わりに払うもの：最初の表示は `getMe` → `getDay` の 2 つの読み取りが順に要る（契約に「今日」を指す経路がないため）。`getMe` は操作の対象の Sprint を決めるために操作のたびにも使うので、同じキャッシュを読む。
+- **日を替えるとき**：`getDay` は日ごとに読み、前の日を残さない（`placeholderData` を使わない）。見出しの日付と中身の日付が食い違う間を作らないため。新しい日が読めるまでは、その日付の見出し・矢印・日付の入力と `ReadStatus`（`aria-busy`。テストはこれで読み終わりを待つ。`src/test/day-read.ts`）を出す。ほかの日の画面（`OtherDay`）と読み込み中は同じ枠（`DayFrame`）なので、読み終わっても見出しは作り直されない。今日の画面（`TodayView`）に替わるときだけ作り直され、見出しの矢印・日付の入力に置いていた焦点は `DayFocusScope` が戻す（`peek`。日が読めたら `clear` する。#90）。最初の `getMe` が読めるまでは日付が分からないので、見出しを出さない（読み込めなかったときだけ「今日」）。
+  - 見出しに焦点を移す仕組み（`useScreenFocus`、#154）は、見出しがまだない画面・読み込みのあとで見出しが作り直される画面に対応する：焦点が見出しに置かれたあとで見出しが消え、焦点がページに落ちているときだけ、今ある見出しに移す。ほかへ移した焦点は取らない。Backlog（#273）も同じ形で、最初の読み込みのたびに見出しの焦点が外れていた。
+- **操作のフック**：`useTodayActions` は、操作ごとに `useOperation` を呼ぶ。実行中の Sprint と今日の日付は `useRunningDay`（`getMe`）から取り、`useOnRunningDay` が、実行中の Sprint がないときに保存できなかった Toast を出して、操作の結果（`Outcome`）をそのまま返す（Backlog の今日へ・今週へ・詳細の選択の操作も同じ）。操作が作ったものの ID（今日へで入れた選択の `selectionId`、割り込みの `interruptNoteId`）は戻り値で返し、焦点と「見る」の行き先に使う（記録の並びの差分や DOM の並びから拾わない）。「かかった時間を記録」は、画面が持っている選択の記録（`row.selection`）から、`sprintTaskId`・`date`・`occurrenceId` を渡す（記録の並びから引かない）。
+- **行を動かす操作と焦点**：操作は送り終わるまで画面に反映されないことがある（上の「操作が終わっても…」）。行が動く操作（完了・取り消し・見送り・今週の残りに戻すなど）は、焦点を移す先を送る前に決め、通らなかったら決める前の頼みに戻す（`follow`。送信中に押し直した分は先に返るので、先に送った分の頼みを消さない）。送ったあとにしか行が分からない今日へは、返った `selectionId` の行が描かれるまで待って移す。見送り・今週の残りに戻すの Toast と、割り込みの記録・消す Toast は、送り終わってから出す。
+- **送信中**：追加（今日やるタスク）は Backlog と同じ「追加中…」。割り込みの記録・編集と、かかった時間の記録・「今日は中断する」は、送信が 300ms 続いたら保存する Button を「保存中…」にする（foundations.md の Loading の語）。Sheet は送り終わるまで閉じず、通らなかったら入力を残して開いたままにする。
+- **型と共通の部品**：Today の部品は契約の型（`TodayData`・`TodayRow`・`TodayItem`・`DayData`・`InterruptNote`・`LocalDate`）を使い、`packages/domain` を import しない。日付の関数は `lib/domain-functions.ts`（`addDays`・`parseLocalDate`）。`lib/selection-words.ts` は契約の `DailyResolution` にした。`useRead` は、答えに画面で使えるものがないとき（利用者の設定がまだなく、時計がない）`view` が `undefined` を返し、`failed` になる。
+- **import の境界**：`MIGRATING` から #275 のファイルと `lib/selection-words.ts` を消した。`NotOnContract` の一覧から `/today` を消した。
 
 ### サインインと設定（2026-10-03、Issue #278）
 

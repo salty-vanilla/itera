@@ -45,7 +45,10 @@ export function useRunningSprint(sprintId: SprintId): Read<RunningData> {
   const query = useQuery(
     getSprintOptions({ client: useApiClient(), path: { sprintId } }),
   );
-  return useRead(query, runningView);
+  const read = useRead(query, runningView);
+  // `useRead` takes an answer with nothing to show for a failure; a Sprint
+  // read as it stops being planned is still on its way to the plan.
+  return query.data?.view.state === 'planning' ? { status: 'pending' } : read;
 }
 
 /**

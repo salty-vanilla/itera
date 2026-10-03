@@ -6,57 +6,17 @@ import { useEffect, type RefObject } from 'react';
  * decides. A heading takes the focus without joining the Tab order. The
  * `main` itself never takes it: a key pressed there would miss the screens'
  * shortcuts, which listen on the body and on their own content (Planning N).
+ * Gives back the heading, or `undefined` when the screen has none yet.
  */
 export function focusScreenHeading(
   main: HTMLElement | null,
   { preventScroll = false }: { preventScroll?: boolean } = {},
-) {
+): HTMLElement | undefined {
   const heading = main?.querySelector<HTMLElement>('h1');
-  if (main === null || heading === null || heading === undefined) return;
+  if (heading === null || heading === undefined) return undefined;
   heading.tabIndex = -1;
   heading.focus({ preventScroll });
-  keepOnHeading(main, heading, preventScroll);
-}
-
-/**
- * A screen whose records are still being read shows a heading of its own,
- * and the one it has once they are in replaces it (a screen that reads in
- * two steps replaces it twice). The focus on the first would be lost with
- * it, so it moves to the next, if nothing else has taken the focus
- * meanwhile (the person pressing or clicking anywhere leaves it be).
- */
-function keepOnHeading(
-  main: HTMLElement,
-  heading: HTMLElement,
-  preventScroll: boolean,
-) {
-  const stop = () => {
-    observer.disconnect();
-    document.removeEventListener('focusin', onFocusIn, true);
-    document.removeEventListener('pointerdown', stop, true);
-    document.removeEventListener('keydown', stop, true);
-    window.clearTimeout(timer);
-  };
-  const observer = new MutationObserver(() => {
-    if (heading.isConnected) return;
-    stop();
-    // Focus lost with the heading: it is on the body again.
-    if (document.activeElement !== document.body) return;
-    const next = main.querySelector<HTMLElement>('h1');
-    if (next === null) return;
-    next.tabIndex = -1;
-    next.focus({ preventScroll });
-    // This one may be replaced too (a screen that reads in two steps).
-    keepOnHeading(main, next, preventScroll);
-  });
-  const onFocusIn = (event: FocusEvent) => {
-    if (event.target !== heading) stop();
-  };
-  const timer = window.setTimeout(stop, 10_000);
-  observer.observe(main, { childList: true, subtree: true });
-  document.addEventListener('focusin', onFocusIn, true);
-  document.addEventListener('pointerdown', stop, true);
-  document.addEventListener('keydown', stop, true);
+  return heading;
 }
 
 /**
@@ -66,20 +26,45 @@ function keepOnHeading(
  * Only the screen counts: a filter, a day or a detail changes the search and
  * keeps the focus where it is. The first screen opened keeps the browser's
  * start, where the first Tab reaches the skip link.
+ *
+ * A screen whose records are still being read may have no heading yet, or
+ * make it anew when they arrive (the screens on the contract, ADR 0005):
+ * the focus then goes to the heading that is there, as long as it has not
+ * been moved elsewhere in the meantime.
  */
 export function useScreenFocus(mainRef: RefObject<HTMLElement | null>) {
   const router = useRouter();
 
   // After the render, not on the location: the location changes while the
   // previous screen is still shown, and its heading would take the focus.
-  useEffect(
-    () =>
-      router.subscribe('onRendered', (event) => {
-        if (event.fromLocation === undefined || !event.pathChanged) return;
-        // The router places the scroll: the top of a new screen, or where
-        // the entry was on back and forward (router.tsx, #111).
-        focusScreenHeading(mainRef.current, { preventScroll: true });
-      }),
-    [router, mainRef],
-  );
+  useEffect(() => {
+    let watch: MutationObserver | undefined;
+    const unsubscribe = router.subscribe('onRendered', (event) => {
+      if (event.fromLocation === undefined || !event.pathChanged) return;
+      watch?.disconnect();
+      const main = mainRef.current;
+      if (main === null) return;
+      // The router places the scroll: the top of a new screen, or where
+      // the entry was on back and forward (router.tsx, #111).
+      let heading = focusScreenHeading(main, { preventScroll: true });
+      const observer = new MutationObserver(() => {
+        const moved = document.activeElement;
+        if (heading?.isConnected === true) {
+          // Still there: leave it, until the focus is taken elsewhere.
+          if (moved !== heading) observer.disconnect();
+          return;
+        }
+        // Gone, or not made yet. The focus has fallen to the page, or is
+        // elsewhere (then it stays).
+        if (moved !== document.body) observer.disconnect();
+        else heading = focusScreenHeading(main, { preventScroll: true });
+      });
+      observer.observe(main, { childList: true, subtree: true });
+      watch = observer;
+    });
+    return () => {
+      unsubscribe();
+      watch?.disconnect();
+    };
+  }, [router, mainRef]);
 }

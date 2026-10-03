@@ -1,4 +1,4 @@
-import { addDays, parseLocalDate, type LocalDate } from '@itera/domain';
+import type { LocalDate } from '@itera/api-contract';
 import { useNavigate, useRouter } from '@tanstack/react-router';
 import {
   createContext,
@@ -14,7 +14,7 @@ import { StepLink } from '@/components/ui/step-link';
 import { TextInput } from '@/components/ui/text-input';
 import { formatDate, formatDateHeading } from '@/lib/date-format';
 import { isPlainClick } from '@/lib/plain-click';
-import { useAppOverview } from '@/store/use-app-overview';
+import { addDays, parseLocalDate } from '@/lib/domain-functions';
 
 // The Today screen's heading (#90): the date between links to the day
 // before and after, and a date to choose. Any day opens by `?date=` in the
@@ -35,18 +35,26 @@ export function dateSearchOf(search: Record<string, unknown>): {
 type Control = 'previous' | 'next' | 'date';
 
 /**
- * The heading's control that opened another day. Between today and
- * another day the screen under the heading changes and the heading is made
- * anew, so the screen (which stays) keeps this to put focus back on it.
+ * The heading's control that opened another day. The screen under the
+ * heading changes with the day (today, a past day, one to come, and the
+ * words while it is read), and the heading is made anew when it does: the
+ * screen (which stays) keeps this to put the focus back on the control, and
+ * lets it go when the day is there.
  */
 const DayFocus = createContext<
   | {
       readonly set: (control: Control) => void;
-      /** The control to focus, once. */
-      readonly take: () => Control | undefined;
+      /** The control to focus, until `clear`. */
+      readonly peek: () => Control | undefined;
+      readonly clear: () => void;
     }
   | undefined
 >(undefined);
+
+/** The focus the heading's controls hand to the day that follows. */
+export function useDayFocus() {
+  return useContext(DayFocus);
+}
 
 function DayFocusScope({ children }: { children: ReactNode }) {
   const [value] = useState(() => {
@@ -55,10 +63,9 @@ function DayFocusScope({ children }: { children: ReactNode }) {
       set: (next: Control) => {
         control = next;
       },
-      take: () => {
-        const taken = control;
+      peek: () => control,
+      clear: () => {
         control = undefined;
-        return taken;
       },
     };
   });
@@ -67,10 +74,13 @@ function DayFocusScope({ children }: { children: ReactNode }) {
 
 function DayHeader({
   date,
+  today,
   meta,
   children,
 }: {
   date: LocalDate;
+  /** Today as the server decided it: the day with no date in its URL. */
+  today: LocalDate;
   /** The line above the date: 「Sprint 2 · 4日目 / 7日」. */
   meta?: ReactNode;
   /** Under the date: Progress and the like. */
@@ -78,7 +88,6 @@ function DayHeader({
 }) {
   const router = useRouter();
   const navigate = useNavigate();
-  const { today } = useAppOverview();
   const inputId = useId();
   const header = useRef<HTMLElement>(null);
   const focusAfter = useContext(DayFocus);
@@ -102,15 +111,17 @@ function DayHeader({
     },
   });
 
+  // A heading made anew takes the focus its predecessor had (DayFocus). One
+  // that stays keeps it where it is: the control pressed is still there.
   useEffect(() => {
-    const control = focusAfter?.take();
+    const control = focusAfter?.peek();
     if (control === undefined) return;
     header.current
       ?.querySelector<HTMLElement>(
         control === 'date' ? 'input' : `[data-step="${control}"]`,
       )
       ?.focus();
-  }, [date, focusAfter]);
+  }, [focusAfter]);
 
   // The input's own value while it changes. Typing goes field by field
   // (the year 2 → 20 → 202 → 2026), so a typed date opens on Enter or on

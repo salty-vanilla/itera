@@ -25,22 +25,6 @@ import { validate } from './validate';
  * operation is known only then.
  */
 export const unimplementedOperations: readonly OperationName[] = [
-  // #269: a day's choices and interrupts.
-  'chooseForToday',
-  'createTaskForToday',
-  'startSelection',
-  'pauseSelection',
-  'deferSelection',
-  'undoDeferSelection',
-  'removeFromToday',
-  'undoRemoveFromToday',
-  'completeSelection',
-  'skipSelection',
-  'recordActualTime',
-  'noteInterrupt',
-  'editInterrupt',
-  'deleteInterrupt',
-  'restoreInterrupt',
   // #270: the Retro.
   'beginRetro',
   'assessGoal',

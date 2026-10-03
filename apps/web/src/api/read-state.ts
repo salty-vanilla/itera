@@ -20,8 +20,8 @@ export type NotReady = Exclude<Read<object>, { readonly status: 'ready' }>;
  * The read of a query, with `view` turning the answer into the screen's
  * data. Data that is there stays ready, however the next read ends: a
  * failure of a read made again shows what was last read, not a failure.
- * A `view` that gives `undefined` has nothing to show for that answer (a
- * Sprint read as it stops being planned): the read is `pending`.
+ * A `view` that gives `undefined` says the answer has nothing the screen
+ * can use (the person's settings are not made yet): the read is `failed`.
  */
 export function useRead<TData, TError, T extends object>(
   query: UseQueryResult<TData, TError>,
@@ -35,9 +35,11 @@ export function useRead<TData, TError, T extends object>(
   );
   return useMemo<Read<T>>(() => {
     if (ready !== undefined) return { ...ready, status: 'ready' };
-    if (query.isError) return { status: 'failed', retry: () => void refetch() };
+    if (query.isError || data !== undefined) {
+      return { status: 'failed', retry: () => void refetch() };
+    }
     return { status: 'pending' };
-  }, [ready, query.isError, refetch]);
+  }, [ready, data, query.isError, refetch]);
 }
 
 /**

@@ -54,7 +54,15 @@ export function useSprintChoice(asked?: number): Read<SprintChoice> {
         : choiceOf(list.view, person.sprints.next, asked),
     [asked],
   );
-  return useRead2(me, sprints, view);
+  const read = useRead2(me, sprints, view);
+  // The person's settings are not made yet: there are no Sprints to open.
+  if (
+    read.status === 'pending' &&
+    me.data !== undefined &&
+    me.data.sprints === undefined
+  )
+    return { status: 'failed', retry: () => void me.refetch() };
+  return read;
 }
 
 export function choiceOf(
