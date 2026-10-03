@@ -19,13 +19,12 @@ import {
   appOverview,
   areaList,
   backlogData,
-  beginDay,
+  catchUp as systemCatchUp,
   dayData,
   nextPlanningOf,
   operations,
   planningData,
   retroData,
-  reviewEnded,
   runningData,
   sprintChoice,
   todayData,
@@ -237,10 +236,13 @@ async function answer(
   return new Response('404 Not Found', { status: 404 });
 }
 
-/** The system's records up to now, before every read and operation. */
+/**
+ * The system's records up to now, before every read and operation: the
+ * API's catch-up (#271). A fixture state's clock does not move, so only its
+ * day is run.
+ */
 function catchUp(store: RecordStore) {
-  store.run(reviewEnded(), { actor: 'system' });
-  store.run(beginDay(), { actor: 'system' });
+  store.run(systemCatchUp(null), { actor: 'system' });
 }
 
 /** The Sprint by its number (F25), or the read's own default without one. */
