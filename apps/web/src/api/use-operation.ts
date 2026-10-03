@@ -7,8 +7,9 @@ import {
   type PlainOutput,
 } from '@itera/api-contract/requests';
 import { useMutation } from '@tanstack/react-query';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef } from 'react';
 import { useToast } from '@/components/ui/toast';
+import { useDelayed } from '@/lib/use-delayed';
 import { useApiClient } from './api-provider';
 import { failureOf } from './failure';
 import { saveFailedToast } from './save-failed';
@@ -17,11 +18,8 @@ import { saveFailedToast } from './save-failed';
 export type Outcome<T> =
   { readonly ok: true; readonly value: T } | { readonly ok: false };
 
-/**
- * Spinners wait this long: an operation that ends sooner shows none
- * (DESIGN.md Spinner, docs/design/foundations.md Loading).
- */
-export const LOADING_DELAY = 300;
+/** The mutation scope every operation shares: they run one after another. */
+const OPERATION_SCOPE = 'operations';
 
 /**
  * One operation of packages/application, by its name, sent as its request
@@ -29,7 +27,13 @@ export const LOADING_DELAY = 300;
  * then `run({ areaId, name })`. An operation without input is `run()`.
  *
  * - While one is being sent, `run` sends nothing more and gives back
- *   `{ ok: false }` (a double press, a key held down).
+ *   `{ ok: false }` (a double press, a key held down). For a field that
+ *   saves as it is edited, where a second `run` carries another value, pass
+ *   `{ whileSending: 'wait' }`: it is sent when the one before is done, in
+ *   order, and `run` resolves with its own outcome.
+ * - Operations never overlap, whichever hook sent them: they share one
+ *   scope, so a write is not made while another is, which the API would
+ *   answer with a version conflict (ADR 0004 同時の書き込み).
  * - When it went through, every read is read again before `run` resolves
  *   (query-client.ts), so the screen has the new records by then.
  * - When it did not, the danger Toast says so and `run` gives back
@@ -41,19 +45,25 @@ export const LOADING_DELAY = 300;
  *   `loading` once that has lasted `LOADING_DELAY` (show the spinner and
  *   its words: Button `loading`, IconButton `loading`).
  */
-export function useOperation<N extends OperationName>(name: N) {
+export function useOperation<N extends OperationName>(
+  name: N,
+  { whileSending = 'drop' }: { whileSending?: 'drop' | 'wait' } = {},
+) {
   const client = useApiClient();
   const toast = useToast();
   const { mutateAsync, isPending } = useMutation({
     mutationKey: [name],
     mutationFn: (input: PlainInput<N>) => sendOperation(client, name, input),
+    scope: { id: OPERATION_SCOPE },
   });
   // A ref, not `isPending`: a second press can come before the render.
   const sending = useRef(false);
   const run = useCallback(
     async (...[input]: Args<N>): Promise<Outcome<PlainOutput<N>>> => {
-      if (sending.current) return { ok: false };
-      sending.current = true;
+      if (whileSending === 'drop') {
+        if (sending.current) return { ok: false };
+        sending.current = true;
+      }
       try {
         return {
           ok: true,
@@ -64,10 +74,10 @@ export function useOperation<N extends OperationName>(name: N) {
         if (failed !== undefined) toast.show(failed);
         return { ok: false };
       } finally {
-        sending.current = false;
+        if (whileSending === 'drop') sending.current = false;
       }
     },
-    [mutateAsync, toast],
+    [mutateAsync, toast, whileSending],
   );
   return { run, pending: isPending, loading: useDelayed(isPending) };
 }
@@ -91,18 +101,4 @@ async function sendOperation<N extends OperationName>(
   ) => Promise<{ readonly data: unknown }>;
   const { data } = await send({ ...parts, client, throwOnError: true });
   return data as PlainOutput<N>;
-}
-
-/** True once `on` has stayed true for `LOADING_DELAY`. */
-function useDelayed(on: boolean): boolean {
-  const [late, setLate] = useState(false);
-  useEffect(() => {
-    if (!on) return;
-    const timer = setTimeout(() => setLate(true), LOADING_DELAY);
-    return () => {
-      clearTimeout(timer);
-      setLate(false);
-    };
-  }, [on]);
-  return on && late;
 }

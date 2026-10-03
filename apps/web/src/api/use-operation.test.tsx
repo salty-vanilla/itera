@@ -155,6 +155,71 @@ describe('useOperation', () => {
   });
 });
 
+describe('operations that overlap', () => {
+  /** An operation's answer waits `ms`, as on a slow network. */
+  const slow = (ms: number) => (request: Request) =>
+    request.method !== 'GET'
+      ? new Promise<Response>((resolve) =>
+          setTimeout(() => resolve(new Response(null, { status: 204 })), ms),
+        )
+      : undefined;
+
+  function useRenameWaiting() {
+    return useOperation('renameArea', { whileSending: 'wait' });
+  }
+
+  it('sends every one in order when it waits while sending', async () => {
+    const { store, requests, wrapper } = setUp();
+    const { result } = renderHook(useRenameWaiting, { wrapper });
+    let outcomes: unknown[] = [];
+    await act(async () => {
+      outcomes = await Promise.all([
+        result.current.run(rename('研究室')),
+        result.current.run(rename('研究会')),
+      ]);
+    });
+    expect(outcomes).toMatchObject([{ ok: true }, { ok: true }]);
+    expect(
+      requests.filter((r) => r === `PATCH /api/areas/${ids.area.research}`),
+    ).toHaveLength(2);
+    // The last one is what is saved.
+    expect(
+      store.getSnapshot().records.areas.find((a) => a.id === ids.area.research)
+        ?.name,
+    ).toBe('研究会');
+  });
+
+  it('does not send two operations at once, whichever hook sent them', async () => {
+    const { requests, wrapper } = setUp(slow(100));
+    const { result } = renderHook(
+      () => ({
+        rename: useOperation('renameArea'),
+        archive: useOperation('archiveArea'),
+      }),
+      { wrapper },
+    );
+    let both: Promise<unknown> = Promise.resolve();
+    await act(async () => {
+      both = Promise.all([
+        result.current.rename.run(rename('研究室')),
+        result.current.archive.run({ areaId: ids.area.research }),
+      ]);
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      // The second waits for the first (the API would answer 409 to both).
+      expect(requests.filter((r) => !r.startsWith('GET'))).toEqual([
+        `PATCH /api/areas/${ids.area.research}`,
+      ]);
+    });
+    await act(async () => {
+      await both;
+    });
+    expect(requests.filter((r) => !r.startsWith('GET'))).toEqual([
+      `PATCH /api/areas/${ids.area.research}`,
+      `PATCH /api/areas/${ids.area.research}`,
+    ]);
+  });
+});
+
 /** `answer` for the operation's request: anything but a read. */
 const onWrite =
   (answer: () => Response): Answer =>

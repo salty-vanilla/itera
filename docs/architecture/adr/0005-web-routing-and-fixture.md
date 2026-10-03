@@ -3,7 +3,7 @@
 - 状態：採用
 - 日付：2026-09-27
 - 関連：Issue #38、後続 Issue #39〜#42
-- 改訂：2026-09-27（API への移行と状態の置き場所を追記）、2026-09-28（クライアントとデータの方式を追記）、2026-09-30（Sprint を番号で、日を日付で開く検索パラメータ、Issue #90）、2026-10-03（アプリケーション層、プレビューの例外、#45 の分け方、システムの記録、時計、本番ビルドの fixture。Issue #262）、2026-10-03（プレビューの共通のテストケースを仕様ケースと生成ケースに分ける。読み取りの結果と DTO の関係。ADR 0007）、2026-10-03（Web のクライアントとブラウザ内モック。Issue #272）、2026-10-03（何日も開かなかったときのシステムの記録。Issue #271）
+- 改訂：2026-09-27（API への移行と状態の置き場所を追記）、2026-09-28（クライアントとデータの方式を追記）、2026-09-30（Sprint を番号で、日を日付で開く検索パラメータ、Issue #90）、2026-10-03（アプリケーション層、プレビューの例外、#45 の分け方、システムの記録、時計、本番ビルドの fixture。Issue #262）、2026-10-03（プレビューの共通のテストケースを仕様ケースと生成ケースに分ける。読み取りの結果と DTO の関係。ADR 0007）、2026-10-03（Web のクライアントとブラウザ内モック。Issue #272）、2026-10-03（何日も開かなかったときのシステムの記録。Issue #271）、2026-10-03（Backlog・Task の詳細・領域を契約に移す。Issue #273）
 
 ## 背景
 
@@ -155,6 +155,22 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
 - `eslint.config.js`：`apps/web` のうち `packages/domain` を import してよいのは `src/lib/domain-functions.ts`（上の「プレビューの例外」の関数をまとめたモジュール）とモックだけ、`packages/application` はモックだけ。型だけの import も同じ。2 つを別の規則（`no-restricted-imports` と `@typescript-eslint/no-restricted-imports`）にして、片方の設定がもう片方を上書きしないようにしている。
 - テスト（`*.test.*`、`src/test/`）は対象外：fixture の記録を開き、記録の ID で画面を指すため。
 - まだ移していないファイルは、移行の途中の例外として `MIGRATING` に、画面の Issue（#273〜#276）ごとと共有のものに分けて、ファイル名で並べる（パターンにしないので、新しいファイルは規則に従う）。各 Issue が自分のファイルを消し、#277 で一覧と仕組みを消す。
+
+### Backlog・Task の詳細・領域を契約に移す（2026-10-03、Issue #273）
+
+最初に移した画面。ほかの画面（#274〜#276）は、ここで決めた形で移す。
+
+- **読み取りのフック**：`useBacklog`・`useAreas` は、生成した options（`getBacklogOptions`・`listAreasOptions`）を `useQuery` で読み、`Read<T>`（`apps/web/src/api/read-state.ts`）を返す。`status` が `pending`（まだ答えがない）、`failed`（読めなかった。`retry` を持つ）、`ready`（画面のデータを持つ）のどれかで、画面は `ready` でない間、記録の場所を空白にせず `ReadStatus`（`components/read-status.tsx`）を出す。`ready` になったデータは、読み直しが失敗しても残る（最後に読めたものを見せる）。絞り込みを変えたときは、新しい答えが来るまで前の答えを残す（`placeholderData: keepPreviousData`。TanStack Query v5 の文書で確かめた）。
+  - `ReadStatus` は、`pending` が 300ms 続いたら線（不透明度だけが動く Progress）と「読み込み中…」を出し、それより早く終われば何も出さない（DESIGN.md の Loading）。`failed` は danger の Notice「読み込めませんでした」と「もう一度読み込む」。
+  - 別の画面が `useBacklog` の答え（Task の詳細を開くための `item` など）を使うときは、`status === 'ready'` を確かめてから使う。
+- **操作のフック**：`useTaskActions`・`useSubtaskActions`・`useRecurrenceActions`・`useAreaActions` は、操作ごとに `useOperation` を呼び、操作ごとの名前つき関数を返す（1 つのフックが全部の操作の購読を作らないよう、使う部品ごとに分けた）。関数は非同期で、成功したかを `boolean` で（作ったものの ID は `string | undefined`、`setRecurrence` と `endRecurrence` は `{ ok, … }` で）返す。成功したときは、表示中の読み取りが戻ってから解決する。送信中に同じ操作を重ねて送らない。ただし、欄を離れたときや選んだときに保存する操作（Task の各欄の保存、サブタスクのチェックと見積もり、繰り返しの設定）は、重ねて送った分を捨てずに、前の分が終わってから順に送る（`useOperation` の `whileSending: 'wait'`）。捨てると、続けて変えた 2 つ目が黙って保存されない。`loading`（操作ごとの、300ms 続いた送信中）は、その操作のボタンの `loading` と `loadingLabel`（「追加中…」）に渡す。今回は追加（Quick Add、サブタスク、領域）のボタンに付けた。ほかの操作は、結果が Toast か行の変化で見えるので、送信中の見た目を付けない。
+- **操作は重ならない**：`useOperation` の操作は、どのフックから送っても同じ mutation の scope（`operations`）に入り、1 つずつ送られる（TanStack Query v5 の `scope`。文書で確かめた）。API は版を確かめて書くので（ADR 0004 同時の書き込み）、重なると片方が版の衝突になる。
+- **操作が終わっても、画面はまだ新しい記録を描いていないことがある**：キャッシュは更新済みでも、購読者への通知は次のタスクで届く。操作の結果に合わせて表示や焦点を動かす処理は、操作の前に頼みを置いておくか、記録が変わるのを待つ。Task の詳細の「今日と今週」は、押したときの選択肢の並びを覚えておき、並びが変わったときに焦点を動かす。
+- **Task の詳細が使う選択の操作**（開始・今日は中断する・今日は見送る・今日の回をスキップする・今週の残りに戻す）は、契約の operation を `screens/backlog/use-selection-actions.ts` から呼ぶ。Today の操作の一覧（`use-today.ts`）は #275 が移す。
+- **型**：Backlog の画面と部品は契約の型（`@itera/api-contract`）を使い、`packages/domain` を import しない。ID・`LocalDate`・`Instant` は契約では素の文字列で、domain のブランド付きの型を受ける部品も、契約の型を受けるように替えた（ブランド付きの値は文字列として渡せるので、まだ移していない画面はそのまま渡せる）。配列は読み取り専用にして受ける部品だけ、受け方を広げる。
+- **プレビューの例外のモジュール**：`lib/domain-functions.ts` の日付の関数（`addDays`・`dayOfWeek`・`toLocalDate`）は、契約の型を受けて、domain の関数に渡す。ブランドの付け替え（`as`）はここだけで、日付と時刻の形は契約のスキーマが確かめる。`presentedSuggestion` は、Task 全体でなく `suggestions` を持つものを受けるようにした（`packages/domain` の型の変更だけで、振る舞いは同じ）。
+- **import の境界**：`MIGRATING` から #273 のファイルと、契約の型だけになった共有のファイル（`components/task/`・`lib/` の一部）を消した。
+- **画面の文言**：読み込めなかったときの「読み込めませんでした」と「もう一度読み込む」、読み込み中の「読み込み中…」、追加を送っている間の「追加中…」。content.md には載っていない語で、Notice・Progress・Button の部品の文書が例に挙げている。語として決めるかはオーナーの確認を待つ。
 
 ### 状態の置き場所
 

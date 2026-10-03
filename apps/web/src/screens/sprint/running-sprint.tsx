@@ -85,7 +85,7 @@ function RunningSprint({
   const openTask = (taskId: TaskId | undefined) =>
     detail.leave(() => showTask(taskId), taskId !== undefined);
   const openItem =
-    !running || search.task === undefined
+    !running || search.task === undefined || backlog.status !== 'ready'
       ? undefined
       : backlog.item(search.task);
 
@@ -246,15 +246,15 @@ function RunningSprint({
         }}
       >
         <DrawerContent>
-          {openItem !== undefined && (
+          {backlog.status === 'ready' && openItem !== undefined && (
             <TaskDetail
               key={openItem.task.id}
               item={openItem}
               areas={backlog.areas}
               timeZone={backlog.timeZone}
               onClose={() => showTask(undefined)}
-              onComplete={() => {
-                if (taskActions.completeTask(openItem.task.id)) {
+              onComplete={async () => {
+                if (await taskActions.completeTask(openItem.task.id)) {
                   showTask(undefined);
                 }
               }}

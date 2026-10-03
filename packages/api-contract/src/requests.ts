@@ -163,6 +163,12 @@ export type { OperationName };
 export type PlainInput<N extends OperationName> = Plain<OperationInput<N>>;
 export type PlainOutput<N extends OperationName> = Plain<OperationOutput<N>>;
 
+/**
+ * The attributes `saveTask` changes (`update`), as `PATCH /tasks/{taskId}`
+ * carries them at the top of its body with the Estimate.
+ */
+export type TaskAttributeUpdate = PlainInput<'saveTask'>['update'];
+
 /** The operationId of a surface: a write of the contract. */
 export type SurfaceId = keyof Datas;
 

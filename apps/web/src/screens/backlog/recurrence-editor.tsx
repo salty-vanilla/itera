@@ -1,4 +1,9 @@
-import type { DayOfWeek, LocalDate, RecurrencePattern } from '@itera/domain';
+import type {
+  BacklogItem,
+  DayOfWeek,
+  LocalDate,
+  RecurrencePattern,
+} from '@itera/api-contract';
 import {
   useEffect,
   useImperativeHandle,
@@ -17,8 +22,7 @@ import {
   WEEK_ORDER,
   WEEKDAY_NAMES,
 } from '@/lib/recurrence-text';
-import type { BacklogItem } from '@/store/views';
-import { useTaskActions } from '@/store/use-task-actions';
+import { useRecurrenceActions } from '@/store/use-task-actions';
 
 // 繰り返し (PRD §6 Recurrence, F1, F7, F12, F15, F41). Like the other fields
 // of the Task detail, a change to a rule that exists is saved when it is
@@ -52,7 +56,7 @@ function patternOf(
     case 'weekdays':
       return { freq };
     case 'weekly':
-      return { freq, daysOfWeek: days };
+      return { freq, daysOfWeek: [...days] };
     case 'monthly':
       return { freq, dayOfMonth };
   }
@@ -98,7 +102,7 @@ function RecurrenceEditor({
    */
   pendingRef?: Ref<() => HTMLElement | null> | undefined;
 }) {
-  const actions = useTaskActions();
+  const actions = useRecurrenceActions();
   const { task, rule } = item;
   const endsOn = item.recurrence?.endsOn;
   // A change starts from the latest version (it may begin next Sprint).
@@ -145,7 +149,7 @@ function RecurrenceEditor({
   }, [result]);
 
   /** Saves the choice as it now stands, when it is complete. */
-  function save(
+  async function save(
     next: Freq,
     nextDays: readonly DayOfWeek[],
     nextDayOfMonth: number,
@@ -155,7 +159,7 @@ function RecurrenceEditor({
       return;
     }
     setError(undefined);
-    const outcome = actions.setRecurrence(
+    const outcome = await actions.setRecurrence(
       task.id,
       patternOf(next, nextDays, nextDayOfMonth),
     );
@@ -170,8 +174,8 @@ function RecurrenceEditor({
   // With a rule, a choice is saved as it is made; without one, the button.
   const saves = rule !== undefined;
 
-  function end() {
-    const outcome = actions.endRecurrence(task.id);
+  async function end() {
+    const outcome = await actions.endRecurrence(task.id);
     if (!outcome.ok) return;
     setError(undefined);
     if (outcome.removed === true) {

@@ -1,6 +1,6 @@
 // A recurrence pattern in words (docs/design/content.md 繰り返し:
 // 「毎週 土」「毎週 月・木」「平日」). Days are listed from Monday.
-import type { DayOfWeek, RecurrencePattern } from '@itera/domain';
+import type { DayOfWeek, RecurrencePattern } from '@itera/api-contract';
 
 export const WEEKDAY_NAMES = [
   '日',

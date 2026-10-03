@@ -1,4 +1,4 @@
-import type { Subtask, Task } from '@itera/domain';
+import type { Subtask, Task } from '@itera/api-contract';
 import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { Button } from '@/components/ui/button';
 import { CheckboxControl } from '@/components/ui/checkbox';
@@ -13,7 +13,7 @@ import {
   sameMinutes,
   type DurationText,
 } from '@/lib/duration-text';
-import { useTaskActions } from '@/store/use-task-actions';
+import { useSubtaskActions } from '@/store/use-task-actions';
 
 // Subtasks (PRD §6): add, check off, and give each an Estimate. They take
 // effect at once. A subtask without an Estimate is counted, not added, in
@@ -36,7 +36,7 @@ function SubtaskList({
    */
   pendingRef?: Ref<() => HTMLElement | null> | undefined;
 }) {
-  const actions = useTaskActions();
+  const actions = useSubtaskActions();
   const [title, setTitle] = useState('');
   const [hours, setHours] = useState(EMPTY_DURATION);
   const [error, setError] = useState<string>();
@@ -65,7 +65,7 @@ function SubtaskList({
       <form
         className="flex flex-col gap-2"
         noValidate
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault();
           const parsed = parseHours(hours);
           if (title.trim() === '') return;
@@ -76,14 +76,17 @@ function SubtaskList({
             return;
           }
           setError(undefined);
-          const ok = actions.addSubtask(
+          const added = title.trim();
+          const sentHours = hours;
+          const ok = await actions.addSubtask(
             task.id,
-            title.trim(),
+            added,
             parsed ?? undefined,
           );
+          // What was typed while it was sent is the next subtask's.
           if (ok) {
-            setTitle('');
-            setHours(EMPTY_DURATION);
+            setTitle((typed) => (typed.trim() === added ? '' : typed));
+            setHours((typed) => (typed === sentHours ? EMPTY_DURATION : typed));
           }
         }}
       >
@@ -104,7 +107,13 @@ function SubtaskList({
             onChange={setHours}
             hoursProps={{ ref: hoursRef }}
           />
-          <Button type="submit">追加</Button>
+          <Button
+            type="submit"
+            loading={actions.loading.addSubtask}
+            loadingLabel="追加中…"
+          >
+            追加
+          </Button>
         </div>
       </form>
     </section>
@@ -112,12 +121,12 @@ function SubtaskList({
 }
 
 function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
-  const actions = useTaskActions();
+  const actions = useSubtaskActions();
   const saved = hoursText(subtask.estimate);
   const [hours, setHours] = useState(saved);
   const [error, setError] = useState<string>();
 
-  function commit() {
+  async function commit() {
     const parsed = parseHours(hours);
     if (parsed === 'invalid') {
       setError(DURATION_ERROR);
@@ -125,7 +134,7 @@ function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
     }
     setError(undefined);
     if (sameMinutes(readMinutes(hours) ?? undefined, subtask.estimate)) return;
-    if (!actions.setSubtaskEstimate(task.id, subtask.id, parsed))
+    if (!(await actions.setSubtaskEstimate(task.id, subtask.id, parsed)))
       setHours(saved);
   }
 

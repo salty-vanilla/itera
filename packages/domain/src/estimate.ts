@@ -47,9 +47,9 @@ export interface EstimateSuggestion {
 }
 
 /** The suggestion currently on show, if any. At most one is presented. */
-export function presentedSuggestion(
-  task: Task,
-): EstimateSuggestion | undefined {
+export function presentedSuggestion<
+  S extends { readonly state: SuggestionState },
+>(task: { readonly suggestions: readonly S[] }): S | undefined {
   return task.suggestions.find((s) => s.state === 'presented');
 }
 

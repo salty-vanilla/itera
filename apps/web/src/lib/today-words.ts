@@ -1,4 +1,4 @@
-import type { Instant, TimeZone } from '@itera/domain';
+import type { Instant, TimeZone } from '@itera/api-contract';
 import { formatTime } from './date-format';
 
 /** 「10:12 から」: when a started selection was started. */

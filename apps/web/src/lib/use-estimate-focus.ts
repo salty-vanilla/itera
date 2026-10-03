@@ -1,4 +1,4 @@
-import type { TaskId } from '@itera/domain';
+import type { TaskId } from '@itera/api-contract';
 import { useState } from 'react';
 
 /**

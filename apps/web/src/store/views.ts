@@ -7,7 +7,6 @@ import type { AreaColor, AreaId, TaskId } from '@itera/domain';
 
 export type {
   ActualTarget,
-  BacklogItem,
   CandidateRow,
   DayData,
   PastDayRecord,
@@ -34,23 +33,6 @@ export const NO_AREA: ScreenArea = {
   name: '領域なし',
   color: 'none',
 };
-
-export type BacklogData = Omit<app.BacklogData, 'shown' | 'items'> & {
-  /** The Tasks shown, in order. */
-  readonly items: readonly app.BacklogItem[];
-  /** Any active Task by ID, for the detail (even when filtered out). */
-  readonly item: (taskId: string) => app.BacklogItem | undefined;
-};
-
-export function backlogScreenData(data: app.BacklogData): BacklogData {
-  const { shown, items, ...rest } = data;
-  const byId: Readonly<Record<string, app.BacklogItem>> = items;
-  return {
-    ...rest,
-    items: shown.flatMap((taskId) => byId[taskId] ?? []),
-    item: (taskId) => byId[taskId],
-  };
-}
 
 export type AreaPlan = Omit<app.AreaPlan, 'area'> & {
   readonly area: ScreenArea;
