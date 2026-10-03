@@ -196,24 +196,32 @@ describe('a read without a session', () => {
 
 describe('the loading state', () => {
   it('waits 300ms before it shows', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let release = () => {};
+    const held = new Promise<void>((resolve) => (release = resolve));
+    const { wrapper } = setUp((request) =>
+      request.method === 'POST'
+        ? held.then(() => new Response(null, { status: 204 }))
+        : undefined,
+    );
+    const { result } = renderHook(useRenameAndOverview, { wrapper });
+    await waitFor(() => expect(result.current.overview.data).toBeDefined());
+    // The clock moves only when told: no real time between the checks.
+    vi.useFakeTimers();
     try {
-      let release = () => {};
-      const held = new Promise<void>((resolve) => (release = resolve));
-      const { wrapper } = setUp((request) =>
-        request.method === 'POST'
-          ? held.then(() => new Response(null, { status: 204 }))
-          : undefined,
-      );
-      const { result } = renderHook(useRenameAndOverview, { wrapper });
       let running: Promise<unknown> = Promise.resolve();
-      act(() => {
+      await act(async () => {
         running = result.current.rename.run(rename('研究室'));
       });
-      await waitFor(() => expect(result.current.rename.pending).toBe(true));
+      // TanStack Query tells the observers on a 0ms timer.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(result.current.rename.pending).toBe(true);
+      act(() => vi.advanceTimersByTime(299));
       expect(result.current.rename.loading).toBe(false);
-      act(() => vi.advanceTimersByTime(300));
+      act(() => vi.advanceTimersByTime(1));
       expect(result.current.rename.loading).toBe(true);
+      vi.useRealTimers();
       release();
       await act(() => running);
       await waitFor(() => expect(result.current.rename.loading).toBe(false));

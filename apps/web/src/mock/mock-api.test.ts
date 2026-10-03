@@ -24,7 +24,8 @@ import {
 import { addDays } from '@itera/domain';
 import * as v from 'valibot';
 import { describe, expect, it, vi } from 'vitest';
-import { createMock, MOCK_HEADER } from './mock-api';
+import { READS } from '@/api/reads';
+import { bodySchemaOf, createMock, MOCK_HEADER, MOCK_READS } from './mock-api';
 
 const ids = fixtureIds();
 
@@ -46,10 +47,15 @@ describe.each(fixtureStateIds)('the reads of %s', (state) => {
     const { client, store } = mockOf(state);
     const { clock } = store.getSnapshot();
     const reads = [
-      [contract.vGetOverviewResponse, sdk.getOverview({ client })],
-      [contract.vListAreasResponse, sdk.listAreas({ client })],
-      [contract.vGetBacklogResponse, sdk.getBacklog({ client })],
       [
+        'getOverview',
+        contract.vGetOverviewResponse,
+        sdk.getOverview({ client }),
+      ],
+      ['listAreas', contract.vListAreasResponse, sdk.listAreas({ client })],
+      ['getBacklog', contract.vGetBacklogResponse, sdk.getBacklog({ client })],
+      [
+        'getBacklog',
         contract.vGetBacklogResponse,
         sdk.getBacklog({
           client,
@@ -57,35 +63,47 @@ describe.each(fixtureStateIds)('the reads of %s', (state) => {
         }),
       ],
       [
+        'getSprintChoice',
         contract.vGetSprintChoiceResponse,
         sdk.getSprintChoice({ client, query: { screen: 'sprint' } }),
       ],
       [
+        'getSprintChoice',
         contract.vGetSprintChoiceResponse,
         sdk.getSprintChoice({ client, query: { screen: 'retro', sprint: 1 } }),
       ],
       [
+        'getPlanning',
         contract.vGetPlanningResponse,
         sdk.getPlanning({ client, query: { applyCriterion: true } }),
       ],
-      [contract.vGetRunningResponse, sdk.getRunning({ client })],
+      ['getRunning', contract.vGetRunningResponse, sdk.getRunning({ client })],
       [
+        'getRunning',
         contract.vGetRunningResponse,
         sdk.getRunning({ client, query: { sprint: 1 } }),
       ],
-      [contract.vGetTodayResponse, sdk.getToday({ client })],
+      ['getToday', contract.vGetTodayResponse, sdk.getToday({ client })],
       [
+        'getDay',
         contract.vGetDayResponse,
         sdk.getDay({ client, path: { date: addDays(clock.today, -1) } }),
       ],
-      [contract.vGetRetroResponse, sdk.getRetro({ client })],
+      ['getRetro', contract.vGetRetroResponse, sdk.getRetro({ client })],
       [
+        'getRetro',
         contract.vGetRetroResponse,
         sdk.getRetro({ client, query: { sprint: 1 } }),
       ],
-      [contract.vGetNextPlanningResponse, sdk.getNextPlanning({ client })],
+      [
+        'getNextPlanning',
+        contract.vGetNextPlanningResponse,
+        sdk.getNextPlanning({ client }),
+      ],
     ] as const;
-    for (const [schema, request] of reads) {
+    // Every read the mock answers is asked here.
+    expect(new Set(reads.map(([id]) => id))).toEqual(new Set(MOCK_READS));
+    for (const [, schema, request] of reads) {
       const { data, error, response } = await request;
       expect(error).toBeUndefined();
       expect(response?.headers.get(MOCK_HEADER)).toBe('1');
@@ -216,6 +234,22 @@ describe('the mock', () => {
     expect(listener).not.toHaveBeenCalled();
     store.run(operations.createArea({ name: '趣味' }));
     expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('answers every read of the contract', () => {
+    expect([...MOCK_READS].toSorted()).toEqual([...READS].toSorted());
+  });
+
+  it('finds the body schema of every operation that has a body (ADR 0006)', () => {
+    const without = Object.keys(operations).filter(
+      (name) => bodySchemaOf(name as keyof typeof operations) === undefined,
+    );
+    expect(without.toSorted()).toEqual([
+      'beginPlanning',
+      'beginRetro',
+      'completeRetro',
+      'dropCriterionDraft',
+    ]);
   });
 
   it('keys reads by the generated keys', () => {

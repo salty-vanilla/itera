@@ -105,7 +105,7 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
 
 #### データの出どころ
 
-- `apps/web/src/app/root-layout.tsx` が、ブラウザ内モック（開発の既定。`pnpm --filter @itera/web dev`）か API（本番ビルドと `pnpm --filter @itera/web dev:api`）かを選ぶ。どちらも同じ `ApiProvider`（契約のクライアントと `QueryClient`）を画面に渡す。
+- `apps/web/src/app/data-source.ts` が、ブラウザ内モック（開発の既定。`pnpm --filter @itera/web dev`）か API（本番ビルドと `pnpm --filter @itera/web dev:api`）かを選ぶ。どちらも同じ `ApiProvider`（契約のクライアントと `QueryClient`）を画面に渡す。
 - 契約のクライアントは、データの出どころごとに `createClient` で作る（`@itera/api-contract/client` から `createClient`・`createConfig` を出した）。生成した関数と options には `{ client }` で渡す（`getOverviewOptions({ client })`）。モジュールの既定の `client` を書き換えない。fixture の状態を替えるたびに、記録・クライアント・キャッシュを新しくする。
 - `--mode api` では、Vite の開発サーバーが `/api` を `wrangler dev`（既定 `http://localhost:8787`、`ITERA_API_ORIGIN` で変えられる）に中継する。Host と Origin は開発サーバーのままなので、`BETTER_AUTH_URL` は開発サーバーの origin にする（`services/api/README.md`）。
 
@@ -138,7 +138,7 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
 
 #### 本番ビルド
 
-- モックは `import.meta.env.DEV` が真で `--mode api` でないときだけ `import()` する。本番ビルドではこの分岐が消え、モックと fixture のチャンクが出力に入らない。
+- モックは `import.meta.env.DEV` が真で `--mode api` でないときだけ `import()` する（`apps/web/src/app/data-source.ts`。条件はここに 1 つだけ書き、ルーターなどはその結果を使う）。本番ビルドではこの分岐が消え、モックと fixture のチャンクが出力に入らない。条件をほかのモジュールの定数にして参照すると、Vite（Rolldown）は分岐を消さずチャンクが残る（2026-10-03 に確かめた。下の検査が捕まえる）ので、条件は `import()` の隣に直接書く。
 - `pnpm build`（`apps/web` の `vite build && node scripts/check-build.mjs`）が、出力にモックの応答のヘッダー名と fixture の状態の ID がないことを確かめる。あれば失敗する（CI と CD も同じコマンド）。
 - まだ移していない画面は、本番ビルドと `--mode api` では `RecordStore` がないので表示できない。その画面の代わりに、開発者向けの短い表示（英語。画面の文言ではない）で、どの Issue で移すかを出す（`NotOnContract`）。統合ブランチはデプロイしないので、この途中の状態を受け入れる（2026-10-03 オーナー決定、Issue #272 のコメント）。#277 で消す。
 

@@ -18,7 +18,8 @@ import { validateSprintSearch } from '@/screens/planning/planning-screen';
 import { RetroScreen, validateRetroSearch } from '@/screens/retro/retro-screen';
 import { SprintScreen } from '@/screens/sprint-screen';
 import { TodayScreen, validateTodaySearch } from '@/screens/today/today-screen';
-import { NotOnContract, NotOnContractError } from '@/store/store-provider';
+import { NotOnContractError } from '@/store/store-provider';
+import { NotOnContract } from './not-on-contract';
 import { usesMock } from './data-source';
 import { RootLayout } from './root-layout';
 

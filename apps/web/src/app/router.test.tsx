@@ -3,7 +3,9 @@ import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { fixtureStates } from '@/mock/fixture-states';
 import { createAppRouter } from './router';
+import { screens } from './screens';
 
 afterEach(cleanup);
 // jsdom has no scrolling; the router restores the scroll position on navigation.
@@ -94,6 +96,20 @@ describe('routes', () => {
       ).toEqual(['今日', 'Sprint', 'Backlog11件', '振り返り']),
     );
   });
+});
+
+describe('the fixture states (PRD §12)', () => {
+  it.each(fixtureStates)(
+    'opens $id from the URL, as the dev menu does',
+    async (state) => {
+      const path = screens.find((s) => s.id === state.screen)?.path;
+      const query = new URLSearchParams({ fixture: state.id, ...state.search });
+      const router = renderAt(`${path}?${query}`);
+      await screen.findByRole('heading', { level: 1 });
+      expect(router.state.location.pathname).toBe(path);
+      expect(router.state.location.search).toMatchObject({ fixture: state.id });
+    },
+  );
 });
 
 describe('the overview through the contract (#272)', () => {

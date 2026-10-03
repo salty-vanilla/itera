@@ -17,7 +17,9 @@ export interface QueryClientOptions {
  *   decides on the records as they now are.
  * - No session (401), from a read or an operation: `onUnauthenticated`.
  * - A read that failed on the server or the network, or met a conflict, is
- *   tried again once. One the API refused is not: it would be refused again.
+ *   tried again once (a read's 409 is the system's catch-up before it
+ *   meeting another write, ADR 0006 エラー). One the API refused is not: it
+ *   would be refused again.
  */
 export function createQueryClient({
   onUnauthenticated,

@@ -11,8 +11,9 @@
 //    to Review, then the running Sprint's day starts (#271).
 // 3. A read returns `{ clock, view }`; an operation runs, and a domain error
 //    is returned with its status (404, 422).
-// Dates are checked for their form only; the API also refuses dates that do
-// not exist (2026-02-30), which the screens never send.
+// A date that does not exist (2026-02-30) is refused in `getDay`'s path, as
+// the API does; in the operations' bodies only the form is checked, which is
+// all the screens can send wrong.
 import * as contract from '@itera/api-contract';
 import {
   appOverview,
@@ -54,21 +55,37 @@ type Read = (records: Records, clock: Clock, query: Query) => unknown;
 type Query = Readonly<Record<string, unknown>>;
 
 /**
- * The reads by path, with the schema of their query. The query's numbers
- * and booleans come as strings and are turned into their types before the
- * check, as the API does (ADR 0006 経路の形).
+ * The reads by operationId, with their path and the schema of their query
+ * (`getDay`, with the date in its path, is answered on its own). The
+ * query's numbers and booleans come as strings and are turned into their
+ * types before the check, as the API does (ADR 0006 経路の形).
  */
 const READS: Readonly<
-  Record<string, { readonly query?: v.GenericSchema; readonly read: Read }>
+  Record<
+    string,
+    {
+      readonly path: string;
+      readonly query?: v.GenericSchema;
+      readonly read: Read;
+    }
+  >
 > = {
-  '/overview': { read: (records, clock) => appOverview(records, clock) },
-  '/areas': { read: (records) => areaList(records) },
-  '/backlog': {
+  getOverview: {
+    path: '/overview',
+    read: (records, clock) => appOverview(records, clock),
+  },
+  listAreas: {
+    path: '/areas',
+    read: (records) => areaList(records),
+  },
+  getBacklog: {
+    path: '/backlog',
     query: contract.vGetBacklogQuery,
     read: (records, clock, query) =>
       backlogData(records, clock, query as BacklogFilter),
   },
-  '/sprint-choice': {
+  getSprintChoice: {
+    path: '/sprint-choice',
     query: contract.vGetSprintChoiceQuery,
     read: (records, clock, query) => {
       const { screen, sprint } = query as contract.GetSprintChoiceData['query'];
@@ -77,33 +94,44 @@ const READS: Readonly<
         : sprintChoice(records, clock, 'retro', sprint);
     },
   },
-  '/planning': {
+  getPlanning: {
+    path: '/planning',
     query: contract.vGetPlanningQuery,
     read: (records, clock, query) =>
       planningData(records, clock, {
         applyCriterion: query.applyCriterion === true,
       }),
   },
-  '/running': {
+  getRunning: {
+    path: '/running',
     query: contract.vGetRunningQuery,
     read: (records, clock, query) =>
       bySprintNumber(records, query.sprint, (id) =>
         runningData(records, clock, id),
       ),
   },
-  '/today': { read: (records, clock) => todayData(records, clock) },
-  '/retro': {
+  getToday: {
+    path: '/today',
+    read: (records, clock) => todayData(records, clock),
+  },
+  getRetro: {
+    path: '/retro',
     query: contract.vGetRetroQuery,
     read: (records, clock, query) =>
       bySprintNumber(records, query.sprint, (id) =>
         retroData(records, clock, id),
       ),
   },
-  '/next-planning': {
+  getNextPlanning: {
+    path: '/next-planning',
     read: (records, clock) => nextPlanningOf(records, clock),
   },
 };
 
+/** The reads the mock answers, by operationId. */
+export const MOCK_READS: readonly string[] = [...Object.keys(READS), 'getDay'];
+
+const READ_BY_PATH = new Map(Object.values(READS).map((r) => [r.path, r]));
 const DAY_PATH = /^\/days\/([^/]+)$/;
 const OPERATION_PATH = /^\/operations\/([^/]+)$/;
 
@@ -113,9 +141,7 @@ export interface Mock {
   /**
    * Calls `listener` after a change a screen makes through the store, not
    * after the mock's own: those are the answer to a request, which the
-   * client handles (an operation reads again; a read has its answer). The
-   * system's catch-up writes the running Sprint again on every request, so
-   * listening to it would read again for ever.
+   * client handles (an operation reads again; a read has its answer).
    */
   subscribeToScreens(listener: () => void): () => void;
 }
@@ -158,7 +184,7 @@ async function answer(
 ) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/^\/api(?=\/)/, '');
-  const read = READS[path];
+  const read = READ_BY_PATH.get(path);
   const day = DAY_PATH.exec(path)?.[1];
   const operation = OPERATION_PATH.exec(path)?.[1];
 
@@ -263,8 +289,11 @@ async function inputOf(
     : { ok: false, response: invalid(result.issues) };
 }
 
-/** `vCreateAreaBody` for `createArea`, as the contract names them. */
-function bodySchemaOf(name: OperationName): v.GenericSchema | undefined {
+/**
+ * `vCreateAreaBody` for `createArea`, as the contract names them; none for
+ * an operation without a body.
+ */
+export function bodySchemaOf(name: OperationName): v.GenericSchema | undefined {
   const schemas: Readonly<Record<string, unknown>> = contract;
   const schema = schemas[`v${name[0]?.toUpperCase()}${name.slice(1)}Body`];
   return schema as v.GenericSchema | undefined;

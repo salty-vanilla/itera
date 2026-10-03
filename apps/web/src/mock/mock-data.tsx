@@ -1,10 +1,8 @@
-import { createClient, createConfig } from '@itera/api-contract/client';
 import { useRouter, useSearch } from '@tanstack/react-router';
 import { useEffect, useState, type ReactNode } from 'react';
 import { ApiProvider } from '@/api/api-provider';
-import { createQueryClient } from '@/api/query-client';
+import { apiBaseUrl, createApi } from '@/api/create-api';
 import { invalidateReads } from '@/api/reads';
-import { apiBaseUrl } from '@/app/data-source';
 import { sendToSignIn } from '@/app/sign-in';
 import { createMemoryStore } from '@/store/record-store';
 import { StoreProvider } from '@/store/store-provider';
@@ -59,10 +57,9 @@ function FixtureData({
     return {
       store,
       mock,
-      client: createClient(
-        createConfig({ baseUrl: apiBaseUrl(), fetch: mock.fetch }),
-      ),
-      queryClient: createQueryClient({
+      ...createApi({
+        baseUrl: apiBaseUrl(),
+        fetch: mock.fetch,
         onUnauthenticated: () => sendToSignIn(router),
       }),
     };

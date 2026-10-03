@@ -1,10 +1,8 @@
-import { createClient, createConfig } from '@itera/api-contract/client';
 import { useRouter } from '@tanstack/react-router';
 import { useState, type ReactNode } from 'react';
 import { ApiProvider } from '@/api/api-provider';
-import { createQueryClient } from '@/api/query-client';
+import { apiBaseUrl, createApi } from '@/api/create-api';
 import { sendToSignIn } from './sign-in';
-import { apiBaseUrl } from './data-source';
 
 /**
  * The API as the data source. There is no RecordStore: a screen not yet
@@ -12,12 +10,12 @@ import { apiBaseUrl } from './data-source';
  */
 function ServerData({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const [data] = useState(() => ({
-    client: createClient(createConfig({ baseUrl: apiBaseUrl() })),
-    queryClient: createQueryClient({
+  const [data] = useState(() =>
+    createApi({
+      baseUrl: apiBaseUrl(),
       onUnauthenticated: () => sendToSignIn(router),
     }),
-  }));
+  );
   return (
     <ApiProvider client={data.client} queryClient={data.queryClient}>
       {children}
