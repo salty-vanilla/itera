@@ -88,22 +88,37 @@ type Choice = {
   dayOfMonth: number;
 };
 
-function choiceOf(latest: RecurrencePattern | undefined): Choice {
+/** The weekdays and the day of the month the rule had last, for a switch back. */
+type Kept = Pick<Choice, 'days' | 'dayOfMonth'>;
+
+const NOTHING_KEPT: Kept = { days: [], dayOfMonth: 1 };
+
+/** What is kept once the rule is `latest`: its own, else what was kept. */
+function keptOf(latest: RecurrencePattern | undefined, before: Kept): Kept {
   return {
-    freq: latest?.freq ?? 'weekly',
-    days: latest?.freq === 'weekly' ? latest.daysOfWeek : [],
-    dayOfMonth: latest?.freq === 'monthly' ? latest.dayOfMonth : 1,
+    days: latest?.freq === 'weekly' ? latest.daysOfWeek : before.days,
+    dayOfMonth:
+      latest?.freq === 'monthly' ? latest.dayOfMonth : before.dayOfMonth,
   };
+}
+
+function choiceOf(
+  latest: RecurrencePattern | undefined,
+  kept: Kept = NOTHING_KEPT,
+): Choice {
+  return { freq: latest?.freq ?? 'weekly', ...keptOf(latest, kept) };
 }
 
 /** The same choice: the frequency, and the weekdays or the day it takes. */
 function sameChoice(a: Choice, b: Choice): boolean {
-  return (
-    a.freq === b.freq &&
-    a.dayOfMonth === b.dayOfMonth &&
-    a.days.length === b.days.length &&
-    a.days.every((d) => b.days.includes(d))
-  );
+  if (a.freq !== b.freq) return false;
+  if (a.freq === 'monthly') return a.dayOfMonth === b.dayOfMonth;
+  if (a.freq === 'weekly') return sameDays(a.days, b.days);
+  return true;
+}
+
+function sameDays(a: readonly DayOfWeek[], b: readonly DayOfWeek[]): boolean {
+  return a.length === b.length && a.every((d) => b.includes(d));
 }
 
 function RecurrenceEditor({
@@ -127,7 +142,16 @@ function RecurrenceEditor({
   // The choice is the latest version as read until it is changed here, so
   // that a choice made on another device shows, and a change saves the
   // choice as it is now with the one thing changed (#324).
-  const choice = useDraftField(choiceOf(latest), sameChoice);
+  // The days and the day of the month it had last stay for a switch back
+  // (「Back to weekly with the days it had」, #171).
+  const [kept, setKept] = useState(() => keptOf(latest, NOTHING_KEPT));
+  const nextKept = keptOf(latest, kept);
+  if (
+    !sameDays(nextKept.days, kept.days) ||
+    nextKept.dayOfMonth !== kept.dayOfMonth
+  )
+    setKept(nextKept);
+  const choice = useDraftField(choiceOf(latest, kept), sameChoice);
   const { freq, days, dayOfMonth } = choice.value;
   const daysRef = useRef<HTMLFieldSetElement>(null);
   const createRef = useRef<HTMLButtonElement>(null);
