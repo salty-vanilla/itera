@@ -142,11 +142,6 @@ export interface RetroFactsInput {
   readonly sprints: readonly Sprint[];
 }
 
-/**
- * Retro の事実: derived from the records every time, never stored and
- * never edited in Retro, and without any score (invariant 40). The
- * records passed in are not changed.
- */
 /** The SprintTasks the week's facts are of: those confirmed, not drafts. */
 export function factSprintTasks(sprint: Sprint): readonly SprintTask[] {
   return sprint.tasks.filter((t) => t.outcome !== 'draft');
@@ -162,6 +157,11 @@ export function factOccurrenceIds(sprint: Sprint): ReadonlySet<OccurrenceId> {
   return new Set(factSprintTasks(sprint).flatMap((t) => t.occurrenceIds ?? []));
 }
 
+/**
+ * Retro の事実: derived from the records every time, never stored and
+ * never edited in Retro, and without any score (invariant 40). The
+ * records passed in are not changed.
+ */
 export function retroFacts(sprint: Sprint, input: RetroFactsInput): RetroFacts {
   const facts = factSprintTasks(sprint).map((t) => taskFact(sprint, t, input));
 
