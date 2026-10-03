@@ -521,7 +521,12 @@ export const surfaces: { readonly [S in SurfaceId]: Surface<S> } = {
     status: 204,
     path: c.vEditInterruptPath,
     body: c.vEditInterruptBody,
-    operation: ({ path, body }) => call('editInterrupt', { ...path, ...body }),
+    operation: ({ path, body: { text, minutes } }) =>
+      call('editInterrupt', {
+        ...path,
+        text,
+        ...(minutes === null ? {} : { minutes }),
+      }),
   }),
   deleteInterrupt: surface('deleteInterrupt', {
     method: 'DELETE',
@@ -658,8 +663,67 @@ export const surfaces: { readonly [S in SurfaceId]: Surface<S> } = {
   }),
 };
 
-/** A request the contract's schemas let through but no operation takes (400). */
+/**
+ * A request the contract's schemas let through but no operation takes, or
+ * an input no request can carry (400 `validationFailed`).
+ */
 export class RequestError extends Error {}
+
+/**
+ * A list for a query, which cannot carry an empty one (the contract's
+ * `minItems: 1`). Taking out no SprintTask is sending nothing.
+ */
+function nonEmpty<T>(list: readonly T[], name: string): T[] {
+  if (list.length === 0)
+    throw new RequestError(`${name}: a query cannot carry an empty list.`);
+  return [...list];
+}
+
+/** A request's parts as the server or the browser mock received them. */
+export type ReceivedRequest = {
+  /** The path's values by name (`{ areaId: 'area_…' }`). */
+  readonly path: Readonly<Record<string, string>>;
+  /** Each query name with all its values. */
+  readonly query: Readonly<Record<string, readonly string[]>>;
+  /** Reads the JSON body; only called for a surface that takes one. */
+  readonly body: () => Promise<unknown>;
+};
+
+/**
+ * Checks one part of a request with the surface's schema and gives the
+ * schema's output, or throws the receiver's own error (400).
+ */
+export type CheckPart = (
+  schema: v.GenericSchema,
+  value: unknown,
+  part: 'path' | 'query' | 'body',
+) => unknown;
+
+/**
+ * The operation a received request names, the same steps for the server
+ * and the browser mock: the path's values, the query (`queryInput`) and the
+ * body are checked in that order with the surface's schemas by `check`,
+ * then the surface names the operation. Throws `RequestError` for a
+ * request no operation takes.
+ */
+export async function readRequest(
+  surface: Surface,
+  received: ReceivedRequest,
+  check: CheckPart,
+): Promise<Call> {
+  const parts: Record<string, unknown> = {};
+  if (surface.path !== undefined)
+    parts.path = check(surface.path, received.path, 'path');
+  if (surface.query !== undefined)
+    parts.query = check(
+      surface.query,
+      queryInput(surface.query, received.query),
+      'query',
+    );
+  if (surface.body !== undefined)
+    parts.body = check(surface.body, await received.body(), 'body');
+  return surface.operation(parts as Parameters<Surface['operation']>[0]);
+}
 
 type SelectionSurface =
   | 'startSelection'
@@ -781,14 +845,14 @@ export type OperationSurfaces = {
 };
 
 /** The request of an operation: the surface and its parts. */
-export type Request<S extends SurfaceId = SurfaceId> = {
+export type OperationRequest<S extends SurfaceId = SurfaceId> = {
   readonly operationId: S;
 } & RequestParts<S>;
 
 function to<S extends SurfaceId>(
   operationId: S,
   parts: RequestParts<S>,
-): Request<S> {
+): OperationRequest<S> {
   return { operationId, ...parts };
 }
 
@@ -803,7 +867,7 @@ function pinPath(pin: PlainInput<'pinFact'>['pin']) {
 const requests: {
   readonly [N in OperationName]: (
     input: PlainInput<N>,
-  ) => Request<OperationSurfaces[N]>;
+  ) => OperationRequest<OperationSurfaces[N]>;
 } = {
   // ---------------------------------------------------------------- Area
   createArea: (body) => to('createArea', { body }),
@@ -858,9 +922,13 @@ const requests: {
   chooseTasks: ({ taskIds }) =>
     to('chooseTasks', { body: { taskIds: [...taskIds] } }),
   unchooseTasks: ({ sprintTaskIds }) =>
-    to('unchoosePlanningTasks', { query: { ids: [...sprintTaskIds] } }),
+    to('unchoosePlanningTasks', {
+      query: { ids: nonEmpty(sprintTaskIds, 'sprintTaskIds') },
+    }),
   unchooseTasksByTask: ({ taskIds }) =>
-    to('unchoosePlanningTasks', { query: { 'task-ids': [...taskIds] } }),
+    to('unchoosePlanningTasks', {
+      query: { 'task-ids': nonEmpty(taskIds, 'taskIds') },
+    }),
   setOccurrenceIncluded: ({ occurrenceId, included }) =>
     to('setOccurrenceIncluded', {
       path: { occurrenceId },
@@ -896,8 +964,11 @@ const requests: {
   recordSelectionActual: ({ selectionId, hours }) =>
     to('recordSelectionActual', { path: { selectionId }, body: { hours } }),
   noteInterrupt: (body) => to('noteInterrupt', { body }),
-  editInterrupt: ({ interruptNoteId, ...body }) =>
-    to('editInterrupt', { path: { interruptNoteId }, body }),
+  editInterrupt: ({ interruptNoteId, text, minutes }) =>
+    to('editInterrupt', {
+      path: { interruptNoteId },
+      body: { text, minutes: minutes ?? null },
+    }),
   deleteInterrupt: (path) => to('deleteInterrupt', { path }),
   restoreInterrupt: ({ note: { id, ...body } }) =>
     to('restoreInterrupt', { path: { interruptNoteId: id }, body }),
@@ -935,9 +1006,11 @@ const requests: {
 export function requestOf<N extends OperationName>(
   name: N,
   input: PlainInput<N>,
-): Request<OperationSurfaces[N]> {
+): OperationRequest<OperationSurfaces[N]> {
   return (
-    requests[name] as (input: PlainInput<N>) => Request<OperationSurfaces[N]>
+    requests[name] as (
+      input: PlainInput<N>,
+    ) => OperationRequest<OperationSurfaces[N]>
   )(input);
 }
 

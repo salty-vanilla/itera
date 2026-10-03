@@ -3681,7 +3681,7 @@ export type DeleteInterruptResponse = DeleteInterruptResponses[keyof DeleteInter
 export type EditInterruptData = {
     body: {
         text: string;
-        minutes?: number;
+        minutes: number | null;
     };
     path: {
         interruptNoteId: InterruptNoteId;

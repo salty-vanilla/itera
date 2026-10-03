@@ -228,7 +228,7 @@ index：利用者ごとに読むための `user_id`、子テーブルの持ち�
 7. 変わった行だけを 1 つの `batch()` で書く。同じ `batch()` の中で、利用者ごとの版を確かめて上げる（下の「同時の書き込み」）。
 8. 操作の結果（作った記録の ID、操作が返す値）を返す。
 
-- 実装（#266）：`services/api/src/handlers/`。1・2 は経路ごとの middleware（`requireAuth`・`requireSameOrigin`）、3 は経路（`validate.ts`。契約の Valibot のスキーマに加えて、日付と日時が暦の上で実在するかを domain の関数で確かめ、query の数と真偽は宣言した型に変えてから検証する）、4〜8 は `flow.ts` の 1 か所にある。operation は `operations.ts` の登録表に契約の本文のスキーマを足すだけで答える（実行するのは `packages/application` の `operations` の同じ名前の関数）。読み取りは `reads.ts` に、経路・パラメータのスキーマ・application の読み取りの関数を足す。まだ答えないものは同じファイルの未実装の一覧に置き、契約のすべての operation と読み取りがどちらかにあることをテストで確かめる。
+- 実装（#266）：`services/api/src/handlers/`。1・2 は経路ごとの middleware（`requireAuth`・`requireSameOrigin`）、3 は経路（`validate.ts`。契約の Valibot のスキーマに加えて、日付と日時が暦の上で実在するかを domain の関数で確かめる。query の数と真偽を宣言した型に変えるのは `@itera/api-contract/requests` の `queryInput`）、4〜8 は `flow.ts` の 1 か所にある。書き込みは、`@itera/api-contract/requests` の面（メソッドと経路）をすべて登録し、`readRequest` が選んだ `packages/application` の操作を実行する（ADR 0006「経路の形」、#295）。まだ答えない操作は `operations.ts` の未実装の一覧に置く。読み取りは `reads.ts` に、経路・パラメータのスキーマ・application の読み取りの関数を足し、まだ答えないものは同じファイルの未実装の一覧に置く。契約のすべての面と読み取りが登録されているか一覧にあることをテストで確かめる。
 - 4 の後、利用者の設定（タイムゾーン）がなければ「今日」が決まらないので、422 `userNotSetUp` で断る（ADR 0006「エラー」）。`GET /api/me` だけは設定を読んで `null` を返す。
 - 5 の変更は、操作のときは操作の変更と同じ `batch()` で書き（追いつきが先、操作が後。Activity も同じ版に入る）、読み取りのときは派生値を計算する前に書く（#271 の範囲 2）。テストでは追いつきを差し替えて、この書き方を確かめる（`createFlow` の `catchUp`）。
 - 5 の中身（#271）：`packages/application` の `catchUp`。前の保存のときに追いついた日（`record_revision.caught_up_to`）から今日まで、実行中の Sprint の日を 1 日ずつ始め、終了日を過ぎた Sprint を Review にする。日ごとに進める理由と、毎日開いた場合との違いは ADR 0005「システムの記録」。何もすることがなければ変更も Activity もなく、何も書かない。追いつきで作る記録と Activity の日時は、処理した時点の現在時刻（注入した時計）。

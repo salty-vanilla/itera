@@ -178,17 +178,12 @@ describe('an operation', () => {
     });
   });
 
-  it.each([
-    ['PUT', 'completeTask'],
-    ['PATCH', 'renameArea'],
-    ['DELETE', 'undoAddTaskToWeek'],
-  ] as const)(
-    'answers 403 to a %s (%s) from another origin, writing nothing',
-    async (method, name) => {
-      const { app, db } = await setup();
-      const [input] = OPERATION_EXAMPLES[name];
-      const { url, init } = httpRequest(name, input);
-      expect(init.method).toBe(method);
+  it('answers 403 to every write surface from another origin, before its checks', async () => {
+    const { app, db } = await setup();
+    const methods = new Set<string>();
+    for (const [name, [input]] of Object.entries(OPERATION_EXAMPLES)) {
+      const { url, init } = httpRequest(name as never, input);
+      methods.add(init.method);
       const response = await app.request(
         url,
         {
@@ -197,9 +192,53 @@ describe('an operation', () => {
         },
         testEnv,
       );
-      expect(await errorOf(response)).toMatchObject({
+      expect(await errorOf(response), name).toMatchObject({
         status: 403,
         code: 'forbiddenOrigin',
+      });
+    }
+    expect([...methods].toSorted()).toEqual(['DELETE', 'PATCH', 'POST', 'PUT']);
+    expect((await loadRecords(db, alice)).revision).toBe(1);
+  });
+
+  it.each([
+    [
+      'PATCH',
+      `/areas/${ids.newId('Area', testNow)}`,
+      { name: 'x', archived: true },
+    ],
+    ['PATCH', '/retro', { reflection: 'a', improvement: 'b' }],
+    [
+      'POST',
+      '/today/selections',
+      {
+        sprintTaskId: ids.newId('SprintTask', testNow),
+        taskId: ids.newId('Task', testNow),
+      },
+    ],
+    ['POST', '/tasks', { title: 'x', addTo: 'week' }],
+    [
+      'DELETE',
+      `/planning/tasks?ids=${ids.newId('SprintTask', testNow)}&task-ids=${ids.newId('Task', testNow)}`,
+      undefined,
+    ],
+    ['DELETE', '/planning/tasks', undefined],
+  ] as const)(
+    'answers 400 to %s %s that names no one operation, writing nothing',
+    async (method, path, body) => {
+      const { app, db } = await setup();
+      const response = await app.request(
+        `/api${path}`,
+        {
+          method,
+          headers: { 'Content-Type': 'application/json', Origin: testOrigin },
+          ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        },
+        testEnv,
+      );
+      expect(await errorOf(response)).toMatchObject({
+        status: 400,
+        code: 'validationFailed',
       });
       expect((await loadRecords(db, alice)).revision).toBe(1);
     },

@@ -6,6 +6,7 @@ import {
 } from '@itera/application';
 import { instant, localDate, type Id } from '@itera/domain';
 import * as contract from './index';
+import { surfaces, type OperationRequest } from './requests';
 
 export type { Plain } from './requests';
 
@@ -263,3 +264,31 @@ export const OPERATION_EXAMPLES: {
   completeRetro: [undefined],
   beginPlanning: [undefined],
 };
+
+/**
+ * An operation's request as HTTP: the surface's method, its path under
+ * `/api` with the path's values, the query (a list as the name repeated, as
+ * the generated client sends it) and the JSON body.
+ */
+export function httpOf(request: OperationRequest): {
+  readonly method: string;
+  readonly url: string;
+  readonly body?: string;
+} {
+  const { method, url } = surfaces[request.operationId];
+  const values = (request.path ?? {}) as Record<string, string>;
+  const path = url.replace(/\{(\w+)\}/g, (_, key: string) =>
+    encodeURIComponent(values[key]!),
+  );
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(request.query ?? {}))
+    for (const item of [value].flat()) query.append(key, String(item));
+  const search = query.size === 0 ? '' : `?${query}`;
+  return {
+    method,
+    url: `/api${path}${search}`,
+    ...(request.body === undefined
+      ? {}
+      : { body: JSON.stringify(request.body) }),
+  };
+}

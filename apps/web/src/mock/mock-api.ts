@@ -17,6 +17,7 @@
 import * as contract from '@itera/api-contract';
 import {
   queryInput,
+  readRequest,
   RequestError,
   surfaces,
   type Call,
@@ -312,10 +313,17 @@ function queryValues(params: URLSearchParams) {
   );
 }
 
+/** A part of a request the contract's schema refuses: the mock's 400. */
+class Refused extends Error {
+  constructor(readonly response: Response) {
+    super('refused');
+  }
+}
+
 /**
- * The operation a write names, from its path's values, its query and its
- * body as the surface's schemas check them (the form only, as the screens
- * can only get that wrong).
+ * The operation a write names (`readRequest`, as the API reads it): each
+ * part checked with the contract's schemas, the form only (the screens can
+ * only get that wrong), and a request no operation takes refused with 400.
  */
 async function operationOf(
   surface: Surface,
@@ -323,46 +331,38 @@ async function operationOf(
   params: URLSearchParams,
   request: Request,
 ): Promise<Checked<Call>> {
-  const parts: Record<string, unknown> = {};
-  const check = (part: string, schema: v.GenericSchema, value: unknown) => {
-    const result = v.safeParse(schema, value);
-    if (!result.success) return invalid(result.issues);
-    parts[part] = result.output;
-    return undefined;
-  };
-  if (surface.path !== undefined) {
-    const refused = check('path', surface.path, values);
-    if (refused !== undefined) return { ok: false, response: refused };
-  }
-  if (surface.query !== undefined) {
-    const query = queryInput(surface.query, queryValues(params));
-    const refused = check('query', surface.query, query);
-    if (refused !== undefined) return { ok: false, response: refused };
-  }
-  if (surface.body !== undefined) {
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
+  try {
+    const call = await readRequest(
+      surface,
+      {
+        path: values,
+        query: queryValues(params),
+        body: async () => {
+          try {
+            return await request.json();
+          } catch {
+            throw new Refused(
+              failure(400, 'validationFailed', 'The body is not JSON.'),
+            );
+          }
+        },
+      },
+      (schema, value) => {
+        const result = v.safeParse(schema, value);
+        if (!result.success) throw new Refused(invalid(result.issues));
+        return result.output;
+      },
+    );
+    return { ok: true, value: call };
+  } catch (error) {
+    if (error instanceof Refused)
+      return { ok: false, response: error.response };
+    if (error instanceof RequestError)
       return {
         ok: false,
-        response: failure(400, 'validationFailed', 'The body is not JSON.'),
+        response: failure(400, 'validationFailed', error.message),
       };
-    }
-    const refused = check('body', surface.body, body);
-    if (refused !== undefined) return { ok: false, response: refused };
-  }
-  try {
-    return {
-      ok: true,
-      value: surface.operation(parts as Parameters<Surface['operation']>[0]),
-    };
-  } catch (error) {
-    if (!(error instanceof RequestError)) throw error;
-    return {
-      ok: false,
-      response: failure(400, 'validationFailed', error.message),
-    };
+    throw error;
   }
 }
 

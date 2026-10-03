@@ -55,7 +55,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
   - 状態コード：作ったら 201、値を返すなら 200、返さないなら 204。変わった後の読み取りは返さない（下の「操作の応答に読み取りを含めない」）。
   - **HTTP の面**（1 つのメソッドと 1 つの経路）ごとに operationId が 1 つ。1 つの操作だけを受ける面は操作の名前をそのまま operationId にし、いくつかの操作を受ける面は新しい名前にする（`updateArea` など）。面と操作の対応は 1 対多になりうる。
   - 1 つの面がいくつかの操作を受けるときは、要求が運ぶもの（本文のどの項目があるか、定数の値、どの query か）だけで操作を選び、記録の今の状態では選ばない（遷移の規則を domain の外に持たない）。1 つの要求は 1 つの操作で、別の操作の項目を一緒に送ると 400（本文は `oneOf` の `strictObject`）。
-  - 振り分けの規則は `packages/api-contract/src/requests.ts`（`@itera/api-contract/requests`）の 1 か所に、両方向を並べて置く。`requestOf(名前, 入力)` が操作の要求（面と path・query・本文）を作り（Web）、面ごとの `surfaces[operationId].operation` が検証した要求から操作と入力を作る（サーバーとブラウザ内モック）。query の文字列を宣言した型に変える `queryInput` も同じ場所に置き、読み取りと書き込みで使う。application の型には型だけで依存する。
+  - 振り分けの規則は `packages/api-contract/src/requests.ts`（`@itera/api-contract/requests`）の 1 か所に、両方向を並べて置く。`requestOf(名前, 入力)` が操作の要求（面と path・query・本文）を作り（Web）、`readRequest` が受け取った要求を面のスキーマで path・query・本文の順に確かめてから、面の `operation` で操作と入力を作る（サーバーとブラウザ内モック。確かめ方とエラーの返し方だけをそれぞれが渡す。サーバーは暦の上の日付も確かめる）。query の文字列を宣言した型に変える `queryInput` も同じ場所に置き、読み取りと書き込みで使う。`requests.ts` は application に型だけで依存する。
   - 面の一覧（54 面で 66 操作。読み取りは下の表）：
 
   | メソッド・経路 | operationId | 受ける操作（選び方） | 成功 |
@@ -99,6 +99,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
   - 振り返りの印は、domain の `togglePin` を `pinFact`・`unpinFact` に分けた（#295 のオーナー決定）。付いている印を付ける・付いていない印を外すときは何も変えないので、同じ要求を何度送っても同じ結果になる。`{pin}` は印の付いた記録の ID（SprintTask・選択・回・割り込み、Goal は Area の ID）か `available-hours` で、記録の種類は TypeID の接頭辞から決まる。
   - 実績の追記（`recordSelectionActual`・`recordReviewActual`）は記録を作るが、ID を返さない（追記だけで、あとから指す操作がない）ので 204。
   - 割り込みを戻す `restoreInterrupt` は ID を残すので、その ID を path に置く `PUT`（下の「消した記録を戻す操作の照合」）。
+  - PATCH の本文で省いた項目は変えない。割り込みの編集（`PATCH /today/interrupts/{interruptNoteId}`）は本文と分を置き換える操作なので、`minutes` を必須にし、分がないことは `null` で表す（domain の入力では省略。`requests.ts` が変える）。
 - **読み取り**：`GET`。application の読み取りの関数ごとに 1 つ。
 
   | operationId | 経路 | application | 結果がないとき |
@@ -198,10 +199,9 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 ## 既知の制約
 
 - query の数と真偽は文字列で届くので、サーバーで変換が要る（#266）。
-- `DELETE /planning/tasks` の `ids` と `task-ids` は「どちらか一方」を契約で書けない（query の `oneOf` はない）。両方・どちらもないときは振り分けで 400 にする（`RequestError`）。
+- `DELETE /planning/tasks` の `ids` と `task-ids` は「どちらか一方」を契約で書けない（query の `oneOf` はない）。両方・どちらもないときは振り分けで 400 にする（`RequestError`）。query は空の配列を運べないので、どちらも `minItems: 1` とし、`requestOf` も空の配列を断る（1 つも外さないときは送らない）。
 - 印の `{pin}` は記録の ID から種類を決める。クライアントが別の種類として送った ID も、その ID の種類の印として扱う（契約が受け付ける ID の種類の中で）。
 - `PUT`・`DELETE` の 2 回目を、domain が `invalidTransition`（422）で断る操作がある（`completeTask` を完了の Task に、など）。記録は変わらないので状態としては冪等だが、応答は 1 回目と同じにならない。直すなら domain の変更。
-- `PATCH /today/interrupts/{interruptNoteId}` は本文と分を置き換える（`minutes` を省くと分がない）。PATCH の本文は JSON Merge Patch ではない。
 - 応答のスキーマは未知のキーを許すので、Valibot の検証だけでは余分なキーを見つけられない。型のテストで止めている。
 - `restoreInterrupt` と `undoAdoption` は、クライアントが前の読み取りの値を送る。版はサーバーが読み込んだ時点のものなので、クライアントの読み取りが古いことは 409 では分からない。`undoAdoption` は domain の確かめ（提案の状態）で守られるが、`restoreInterrupt` は古い note でも受け付ける。
 - `restoreInterrupt` の ID の重複を domain が確かめるのは今の Sprint の中だけで、DB の `interrupt_note.id` は全体の主キー。ほかの Sprint にある ID を送ると保存の `batch()` が失敗する（上書きはされない）。偶然には起きないが 500 になるので、Today の操作をつなぐ Issue（#269）で、利用者のすべての割り込みと照合して 422 にする。`note.at` が Sprint の期間の外でも受け付ける点も同じ。
@@ -256,7 +256,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 - 時間（h）の数の表し方（今は JSON の数。分の整数にするかなど）と丸め。後から変えると壊す変更になる。
 - 版の上げ方と、古いクライアントの扱い。
-- iOS・Android の生成の道具。開いた列挙の知らない値と応答の知らないキーで読み込みを失敗させないこと、省略と空を分けられること、型の混ざった `oneOf`（例：`SprintAreaLabel.color` の数と `none`）を扱えることを条件にして選ぶ。開いた列挙の仕様での書き方も、このとき決める。
+- iOS・Android の生成の道具。開いた列挙の知らない値と応答の知らないキーで読み込みを失敗させないこと、省略と空を分けられること、型の混ざった `oneOf`（例：`SprintAreaLabel.color` の数と `none`）を扱えること、判別子のない `oneOf` の要求の本文（どの項目があるかで枝が決まる。`updateTask` など、#295）を組み立てられることを条件にして選ぶ。開いた列挙の仕様での書き方も、このとき決める。
 
 ## 影響
 

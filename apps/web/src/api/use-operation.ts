@@ -80,7 +80,7 @@ type Args<N extends OperationName> =
  * Sends an operation as its request with the generated client's function
  * of the surface. Throws the response's error when it did not go through.
  */
-export async function sendOperation<N extends OperationName>(
+async function sendOperation<N extends OperationName>(
   client: Client,
   name: N,
   input: PlainInput<N>,

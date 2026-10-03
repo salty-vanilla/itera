@@ -9,10 +9,9 @@ import {
 import {
   requestOf,
   surfaces,
-  type Request as ContractRequest,
-  type Surface,
+  type OperationRequest,
 } from '@itera/api-contract/requests';
-import { OPERATION_EXAMPLES } from '@itera/api-contract/testing';
+import { httpOf, OPERATION_EXAMPLES } from '@itera/api-contract/testing';
 import * as sdk from '@itera/api-contract/client';
 import { createClient, createConfig } from '@itera/api-contract/create-client';
 import {
@@ -200,24 +199,15 @@ describe('the mock', () => {
     const answered = new Set<string>();
     for (const [name, inputs] of Object.entries(OPERATION_EXAMPLES)) {
       for (const input of inputs) {
-        const request: ContractRequest = requestOf(
+        const request: OperationRequest = requestOf(
           name as never,
           input as never,
         );
-        const surface = surfaces[request.operationId] as Surface;
-        const values = (request.path ?? {}) as Record<string, string>;
-        const url = new URL(
-          `http://localhost/api${surface.url.replace(/\{(\w+)\}/g, (_, key: string) => encodeURIComponent(values[key]!))}`,
-        );
-        for (const [key, value] of Object.entries(request.query ?? {}))
-          for (const item of [value].flat())
-            url.searchParams.append(key, String(item));
-        const response = await mock.fetch(url, {
-          method: surface.method,
+        const { method, url, body } = httpOf(request);
+        const response = await mock.fetch(`http://localhost${url}`, {
+          method,
           headers: { 'Content-Type': 'application/json' },
-          ...(request.body === undefined
-            ? {}
-            : { body: JSON.stringify(request.body) }),
+          ...(body === undefined ? {} : { body }),
         });
         // The examples' IDs are no records', so most are refused: by the
         // domain, never as a request out of the contract or without a route.

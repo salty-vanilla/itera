@@ -7,6 +7,7 @@
 // Authenticator. For tests only.
 import * as contract from '@itera/api-contract';
 import { requestOf, surfaces } from '@itera/api-contract/requests';
+import { httpOf } from '@itera/api-contract/testing';
 import {
   createIdSource,
   type Clock,
@@ -145,29 +146,17 @@ function responseOf(name: OperationName, input: unknown) {
 }
 
 /**
- * An operation and its input as an HTTP request of the contract: the
- * surface's method, its path with the path's values, the query and the
- * JSON body, from the app's own origin.
+ * An operation and its input as an HTTP request of the contract (`httpOf`),
+ * from the app's own origin.
  */
 export function httpRequest(name: OperationName, input: unknown) {
-  const request = requestOf(name, input as never);
-  const surface = surfaces[request.operationId];
-  const values = (request.path ?? {}) as Record<string, string>;
-  const path = surface.url.replace(/\{(\w+)\}/g, (_, key: string) =>
-    encodeURIComponent(values[key]!),
-  );
-  const query = new URLSearchParams();
-  for (const [key, value] of Object.entries(request.query ?? {}))
-    for (const item of [value].flat()) query.append(key, String(item));
-  const search = query.size === 0 ? '' : `?${query}`;
+  const { method, url, body } = httpOf(requestOf(name, input as never));
   return {
-    url: `/api${path}${search}`,
+    url,
     init: {
-      method: surface.method,
+      method,
       headers: { 'Content-Type': 'application/json', Origin: testOrigin },
-      ...(request.body === undefined
-        ? {}
-        : { body: JSON.stringify(request.body) }),
+      ...(body === undefined ? {} : { body }),
     },
   };
 }

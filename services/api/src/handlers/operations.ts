@@ -1,7 +1,8 @@
 import {
-  queryInput,
+  readRequest,
   RequestError,
   surfaces,
+  type ReceivedRequest,
   type Surface,
 } from '@itera/api-contract/requests';
 import {
@@ -19,7 +20,9 @@ import { validate } from './validate';
 /**
  * The operations the API does not answer yet, by the Issue that adds them;
  * it answers every other operation of packages/application (registry.test.ts).
- * A request for one of these answers 404, as if it had no route.
+ * A request for one of these answers 404 once it has passed the guards and
+ * the contract's checks: a surface may take others the API answers, so the
+ * operation is known only then.
  */
 export const unimplementedOperations: readonly OperationName[] = [
   // #269: today.
@@ -97,20 +100,11 @@ export function operationRoutes(flow: Flow, guards: Guards) {
       guards.origin,
       limit,
       async (c) => {
-        const request = {
-          path: surface.path && validate(surface.path, c.req.param(), 'path'),
-          query:
-            surface.query &&
-            validate(
-              surface.query,
-              queryInput(surface.query, c.req.queries()),
-              'query',
-            ),
-          body:
-            surface.body &&
-            validate(surface.body, await jsonBody(c.req), 'body'),
-        };
-        const { name, input } = operationOf(surface, request);
+        const { name, input } = await operationOf(surface, {
+          path: c.req.param(),
+          query: c.req.queries(),
+          body: () => jsonBody(c.req),
+        });
         if (unimplemented.has(name)) return c.notFound();
         const operation = operations[name] as (
           input: unknown,
@@ -125,10 +119,16 @@ export function operationRoutes(flow: Flow, guards: Guards) {
   return routes;
 }
 
-/** The operation the checked request names: a request no operation takes is 400. */
-function operationOf(surface: Surface, request: unknown) {
+/**
+ * The operation a request names (`readRequest`): each part checked with the
+ * contract's schemas and the domain's dates (`validate`), a request no
+ * operation takes refused with 400.
+ */
+async function operationOf(surface: Surface, received: ReceivedRequest) {
   try {
-    return surface.operation(request as Parameters<Surface['operation']>[0]);
+    return await readRequest(surface, received, (schema, value, part) =>
+      validate(schema, value, part),
+    );
   } catch (error) {
     if (error instanceof RequestError)
       throw new ApiError('validationFailed', error.message);

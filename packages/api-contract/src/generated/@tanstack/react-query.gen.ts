@@ -548,7 +548,7 @@ export const setPlanningGoalMutation = (options?: Partial<Options<SetPlanningGoa
 /**
  * Take SprintTasks out of the plan
  *
- * Exactly one of the two: `ids`, the SprintTasks (unchooseTasks), or `task-ids`, their Tasks: 元に戻す after choosing them (unchooseTasksByTask).
+ * Exactly one of the two, with one ID or more: `ids`, the SprintTasks (unchooseTasks), or `task-ids`, their Tasks: 元に戻す after choosing them (unchooseTasksByTask). A query cannot carry an empty list, so a client takes out none by sending nothing.
  */
 export const unchoosePlanningTasksMutation = (options?: Partial<Options<UnchoosePlanningTasksData>>): UseMutationOptions<UnchoosePlanningTasksResponse, UnchoosePlanningTasksError, Options<UnchoosePlanningTasksData>> => {
     const mutationOptions: UseMutationOptions<UnchoosePlanningTasksResponse, UnchoosePlanningTasksError, Options<UnchoosePlanningTasksData>> = {
@@ -883,7 +883,7 @@ export const deleteInterruptMutation = (options?: Partial<Options<DeleteInterrup
 /**
  * 割り込みを編集
  *
- * Its note and minutes; the time stays (F38). Without `minutes`, it has none.
+ * Its note and minutes, both given: `null` minutes for none. The time stays (F38).
  */
 export const editInterruptMutation = (options?: Partial<Options<EditInterruptData>>): UseMutationOptions<EditInterruptResponse, EditInterruptError, Options<EditInterruptData>> => {
     const mutationOptions: UseMutationOptions<EditInterruptResponse, EditInterruptError, Options<EditInterruptData>> = {

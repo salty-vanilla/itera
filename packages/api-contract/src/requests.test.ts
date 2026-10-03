@@ -15,11 +15,11 @@ import {
   requestOf,
   surfaces,
   type PlainInput,
-  type Request,
+  type OperationRequest,
   type Surface,
   type SurfaceId,
 } from './requests';
-import { OPERATION_EXAMPLES } from './testing';
+import { httpOf, OPERATION_EXAMPLES } from './testing';
 
 type Example = readonly [OperationName, OperationInput<OperationName>];
 
@@ -32,7 +32,7 @@ const requestOfExample = ([name, input]: Example) =>
   requestOf(name, input as PlainInput<typeof name>);
 
 /** The request's parts as the surface's schemas check them, or the issues. */
-function checked(surface: Surface, request: Request) {
+function checked(surface: Surface, request: OperationRequest) {
   const part = (schema: v.GenericSchema | undefined, value: unknown) =>
     schema === undefined ? undefined : v.parse(schema, value);
   return {
@@ -57,7 +57,7 @@ describe('each operation', () => {
 });
 
 describe('the surfaces', () => {
-  const reached = new Map<SurfaceId, Request[]>();
+  const reached = new Map<SurfaceId, OperationRequest[]>();
   for (const example of examples) {
     const request = requestOfExample(example);
     reached.set(request.operationId, [
@@ -104,13 +104,13 @@ describe('the surfaces', () => {
         operationId
       ]!;
       await send({ client, ...parts });
-      const path = surface.url.replace(/\{(\w+)\}/g, (_, key: string) =>
-        encodeURIComponent(
-          String((request!.path as Record<string, string>)[key]),
-        ),
-      );
+      const expected = new URL(httpOf(request!).url, 'http://itera.test');
+      const actual = new URL(sent!.url);
       expect(sent?.method).toBe(surface.method);
-      expect(new URL(sent!.url).pathname).toBe(`/api${path}`);
+      expect(actual.pathname).toBe(expected.pathname);
+      expect(actual.searchParams.toString()).toBe(
+        expected.searchParams.toString(),
+      );
       expect(surface.path).toBe(schemaNamed(`v${capitalized(id)}Path`));
       expect(surface.query).toBe(schemaNamed(`v${capitalized(id)}Query`));
       expect(surface.body).toBe(schemaNamed(`v${capitalized(id)}Body`));
@@ -132,6 +132,15 @@ describe('the surfaces', () => {
       }
     },
   );
+
+  it('cannot carry an empty list in a query', () => {
+    expect(() => requestOf('unchooseTasks', { sprintTaskIds: [] })).toThrow(
+      RequestError,
+    );
+    expect(() => requestOf('unchooseTasksByTask', { taskIds: [] })).toThrow(
+      RequestError,
+    );
+  });
 
   it('take one of ids and task-ids to unchoose', () => {
     const { operation } = surfaces.unchoosePlanningTasks;

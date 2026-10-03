@@ -1,6 +1,6 @@
 # Retro: the Retro of the Sprint in Review. The paths of a resource and its methods (ADR 0006 経路の形):
 # a write is one operation of packages/application or, where a path takes
-# several, the one its body names (@itera/api-contract/operations).
+# several, the one its body names (@itera/api-contract/requests).
 
 retro:
   get:

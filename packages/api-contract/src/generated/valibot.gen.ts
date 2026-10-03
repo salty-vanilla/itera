@@ -1524,8 +1524,8 @@ export const vSetPlanningGoalPath = v.object({
 export const vSetPlanningGoalResponse = v.void();
 
 export const vUnchoosePlanningTasksQuery = v.object({
-    ids: v.optional(v.array(vSprintTaskId)),
-    'task-ids': v.optional(v.array(vTaskId))
+    ids: v.optional(v.pipe(v.array(vSprintTaskId), v.minLength(1))),
+    'task-ids': v.optional(v.pipe(v.array(vTaskId), v.minLength(1)))
 });
 
 /**
@@ -1724,7 +1724,7 @@ export const vDeleteInterruptResponse = v.void();
 
 export const vEditInterruptBody = v.strictObject({
     text: v.string(),
-    minutes: v.optional(v.number())
+    minutes: v.nullable(v.number())
 });
 
 export const vEditInterruptPath = v.object({

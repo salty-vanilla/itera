@@ -1,6 +1,6 @@
 # Planning: the Sprint being planned, before 確定. The paths of a resource and its methods (ADR 0006 経路の形):
 # a write is one operation of packages/application or, where a path takes
-# several, the one its body names (@itera/api-contract/operations).
+# several, the one its body names (@itera/api-contract/requests).
 
 planning:
   get:
@@ -195,19 +195,21 @@ planningTasks:
     tags: [Planning]
     summary: Take SprintTasks out of the plan
     description: >-
-      Exactly one of the two: `ids`, the SprintTasks (unchooseTasks), or `task-ids`, their Tasks: 元に戻す after choosing them (unchooseTasksByTask).
+      Exactly one of the two, with one ID or more: `ids`, the SprintTasks (unchooseTasks), or `task-ids`, their Tasks: 元に戻す after choosing them (unchooseTasksByTask). A query cannot carry an empty list, so a client takes out none by sending nothing.
     parameters:
       - name: ids
         in: query
         required: false
         schema:
           type: array
+          minItems: 1
           items: { $ref: '../schemas/common.yaml#/SprintTaskId' }
       - name: task-ids
         in: query
         required: false
         schema:
           type: array
+          minItems: 1
           items: { $ref: '../schemas/common.yaml#/TaskId' }
     responses:
       '204':

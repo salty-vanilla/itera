@@ -1,6 +1,6 @@
 # Today: the running Sprint's today. The paths of a resource and its methods (ADR 0006 経路の形):
 # a write is one operation of packages/application or, where a path takes
-# several, the one its body names (@itera/api-contract/operations).
+# several, the one its body names (@itera/api-contract/requests).
 
 selections:
   post:
@@ -336,7 +336,8 @@ interrupt:
     tags: [Today]
     summary: 割り込みを編集
     description: >-
-      Its note and minutes; the time stays (F38). Without `minutes`, it has none.
+      Its note and minutes, both given: `null` minutes for none. The time
+      stays (F38).
     parameters:
       - name: interruptNoteId
         in: path
@@ -349,10 +350,13 @@ interrupt:
           schema:
             type: object
             additionalProperties: false
-            required: [text]
+            required: [text, minutes]
             properties:
               text: { type: string }
-              minutes: { type: number }
+              minutes:
+                oneOf:
+                  - { type: number }
+                  - type: 'null'
     responses:
       '204':
         description: Done.

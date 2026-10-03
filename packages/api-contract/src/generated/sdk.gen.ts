@@ -458,7 +458,7 @@ export const setPlanningGoal = <ThrowOnError extends boolean = false>(options: O
 /**
  * Take SprintTasks out of the plan
  *
- * Exactly one of the two: `ids`, the SprintTasks (unchooseTasks), or `task-ids`, their Tasks: 元に戻す after choosing them (unchooseTasksByTask).
+ * Exactly one of the two, with one ID or more: `ids`, the SprintTasks (unchooseTasks), or `task-ids`, their Tasks: 元に戻す after choosing them (unchooseTasksByTask). A query cannot carry an empty list, so a client takes out none by sending nothing.
  */
 export const unchoosePlanningTasks = <ThrowOnError extends boolean = false>(options?: Options<UnchoosePlanningTasksData, ThrowOnError>): RequestResult<UnchoosePlanningTasksResponses, UnchoosePlanningTasksErrors, ThrowOnError> => (options?.client ?? client).delete<UnchoosePlanningTasksResponses, UnchoosePlanningTasksErrors, ThrowOnError>({
     security: [{
@@ -749,7 +749,7 @@ export const deleteInterrupt = <ThrowOnError extends boolean = false>(options: O
 /**
  * 割り込みを編集
  *
- * Its note and minutes; the time stays (F38). Without `minutes`, it has none.
+ * Its note and minutes, both given: `null` minutes for none. The time stays (F38).
  */
 export const editInterrupt = <ThrowOnError extends boolean = false>(options: Options<EditInterruptData, ThrowOnError>): RequestResult<EditInterruptResponses, EditInterruptErrors, ThrowOnError> => (options.client ?? client).patch<EditInterruptResponses, EditInterruptErrors, ThrowOnError>({
     security: [{
