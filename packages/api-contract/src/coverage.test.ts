@@ -21,22 +21,6 @@ const READS = {
   getMe: application.currentSprints,
 };
 
-/**
- * The reads of the screens still on the store, by screen, not resource
- * (ADR 0006 経路の形): no contract read returns them. #274〜#276 move the
- * screens to the contract and #277 takes them out of the exports.
- */
-const STORE_READS = new Set([
-  'appOverview',
-  'sprintChoice',
-  'planningData',
-  'runningData',
-  'todayData',
-  'dayData',
-  'retroData',
-  'nextPlanningOf',
-]);
-
 /** The application's exports that are not reads of the person's records. */
 const NOT_READS = new Set([
   'operations',
@@ -52,7 +36,6 @@ const NOT_READS = new Set([
   'mergeChanges',
   'createIdSource',
   'parseId',
-  ...STORE_READS,
 ]);
 
 const contract = Object.entries(sdk)

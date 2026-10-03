@@ -1,14 +1,15 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useRouter } from '@tanstack/react-router';
 import { useState } from 'react';
+import { useRead } from '@/api/read-state';
 import { sendToSignIn, signInHref } from '@/auth/sign-in';
-import type { PasskeyOutcome } from '@/auth/auth';
+import type { Passkey, PasskeyOutcome } from '@/auth/auth';
 import { useAuth } from '@/auth/auth-provider';
 import { useSignOut } from '@/auth/use-sign-out';
 import { sessionQuery } from '@/auth/session-query';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Notice } from '@/components/ui/notice';
-import { Spinner } from '@/components/ui/spinner';
+import { ReadStatus } from '@/components/read-status';
 import { useToast } from '@/components/ui/toast';
 import { formatDeviceDate } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
@@ -24,6 +25,8 @@ const SETTINGS_PATH = '/settings';
 
 const PASSKEYS_KEY = ['auth', 'passkeys'] as const;
 
+const passkeysOf = (passkeys: readonly Passkey[]) => ({ passkeys });
+
 type AddProblem = Exclude<
   Extract<PasskeyOutcome, { ok: false }>['reason'],
   'cancelled' | 'unauthenticated'
@@ -37,10 +40,13 @@ function SettingsScreen() {
   const [problem, setProblem] = useState<AddProblem | null>(null);
 
   const session = useQuery(sessionQuery(auth));
-  const passkeys = useQuery({
-    queryKey: PASSKEYS_KEY,
-    queryFn: () => auth.listPasskeys(),
-  });
+  const passkeys = useRead(
+    useQuery({
+      queryKey: PASSKEYS_KEY,
+      queryFn: () => auth.listPasskeys(),
+    }),
+    passkeysOf,
+  );
 
   const [adding, setAdding] = useState(false);
   const { signOut, busy: signingOut } = useSignOut();
@@ -84,26 +90,16 @@ function SettingsScreen() {
           <h3 id="passkeys-heading" className="text-subheading text-ink">
             パスキー
           </h3>
-          {passkeys.isPending ? (
-            <Spinner label="読み込み中…" />
-          ) : passkeys.isError ? (
-            <Notice
-              tone="danger"
-              title="パスキーを読み込めませんでした"
-              action={
-                <Button size="sm" onClick={() => void passkeys.refetch()}>
-                  もう一度読み込む
-                </Button>
-              }
-            />
-          ) : passkeys.data.length === 0 ? (
+          {passkeys.status !== 'ready' ? (
+            <ReadStatus label="パスキー" read={passkeys} />
+          ) : passkeys.passkeys.length === 0 ? (
             <p className="text-body text-ink-muted">まだありません。</p>
           ) : (
             <ul
               aria-labelledby="passkeys-heading"
               className="flex flex-col divide-y divide-border border-y border-border"
             >
-              {passkeys.data.map((passkey) => (
+              {passkeys.passkeys.map((passkey) => (
                 <li key={passkey.id} className="py-3 text-body text-ink">
                   {passkey.name === undefined
                     ? `${formatDeviceDate(passkey.createdAt)} に追加`

@@ -1,4 +1,5 @@
 import { useNavigate } from '@tanstack/react-router';
+import { useSyncExternalStore } from 'react';
 import { FlaskConical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,16 +18,27 @@ import {
   type FixtureStateId,
 } from './fixture-states';
 import { formatDate, formatTime } from '@/lib/date-format';
-import { useAppOverview } from '@/store/use-app-overview';
 import { screens } from '@/app/screens';
+import type { RecordStore } from './memory-store';
 
 // Development only, with the browser mock (mock-data.tsx).
 // Switches the fixture state (PRD §12) and opens its screen. The same state
 // opens from the URL: `?fixture=<id>`.
 
-function DevMenu({ current }: { current: FixtureStateId }) {
+function DevMenu({
+  current,
+  store,
+}: {
+  current: FixtureStateId;
+  store: RecordStore;
+}) {
   const navigate = useNavigate();
-  const { today, now, timeZone } = useAppOverview();
+  const { records, clock } = useSyncExternalStore(
+    store.subscribe,
+    store.getSnapshot,
+  );
+  const { today, now } = clock;
+  const { timeZone } = records.user;
   const state = fixtureStates.find((s) => s.id === current);
   const screenLabel = screens.find((s) => s.id === state?.screen)?.label;
   const clockText = `${formatDate(today)} ${formatTime(now, timeZone)}`;

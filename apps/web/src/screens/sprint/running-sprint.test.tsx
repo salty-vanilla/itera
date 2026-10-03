@@ -10,7 +10,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import type { StoreSnapshot } from '@/store/record-store';
+import type { StoreSnapshot } from '@/mock/memory-store';
 import { dayRead } from '@/test/day-read';
 import { getHours } from '@/test/duration';
 import { waitForSprintScreen } from '@/test/sprint-ready';
@@ -60,8 +60,8 @@ function withoutCriterionTarget(initial: StoreSnapshot): StoreSnapshot {
     },
   };
 }
-vi.mock('@/store/record-store', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/store/record-store')>();
+vi.mock('@/mock/memory-store', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/mock/memory-store')>();
   return {
     ...actual,
     createMemoryStore: (

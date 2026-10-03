@@ -1,7 +1,5 @@
 import {
   createRootRoute,
-  ErrorComponent,
-  type ErrorComponentProps,
   createRoute,
   createRouter,
   redirect,
@@ -18,8 +16,6 @@ import { validateSprintSearch } from '@/screens/planning/planning-screen';
 import { RetroScreen, validateRetroSearch } from '@/screens/retro/retro-screen';
 import { SprintScreen } from '@/screens/sprint-screen';
 import { TodayScreen, validateTodaySearch } from '@/screens/today/today-screen';
-import { NotOnContractError } from '@/store/store-provider';
-import { NotOnContract } from './not-on-contract';
 import { usesMock } from './data-source';
 import { SettingsScreen } from '@/screens/settings/settings-screen';
 import {
@@ -143,20 +139,7 @@ export function createAppRouter(options: { history?: RouterHistory } = {}) {
     scrollToTopSelectors: ['[data-scroll-restoration-id="main"]'],
     ...(options.history === undefined ? {} : { history: options.history }),
     defaultNotFoundComponent: NotFoundScreen,
-    defaultErrorComponent: ScreenError,
   });
-}
-
-/**
- * A screen that failed. One not yet moved to the contract fails with the
- * API as the data source (no RecordStore) and says so, for the developer.
- */
-function ScreenError(props: ErrorComponentProps) {
-  return props.error instanceof NotOnContractError ? (
-    <NotOnContract />
-  ) : (
-    <ErrorComponent {...props} />
-  );
 }
 
 declare module '@tanstack/react-router' {

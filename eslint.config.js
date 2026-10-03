@@ -94,45 +94,11 @@ function pureRules(name) {
   };
 }
 
-/**
- * The files of apps/web still on the store until their screen moves to the
- * contract (#272 import の境界), with what each imports: `domain`
- * (@itera/domain) or `application` (@itera/application). A file in no list
- * takes the contract only. Each screen's Issue removes its files; #277
- * empties the lists and removes them (ADR 0005 API への移行の改訂).
- * Listed by name, not by pattern, so that a new file is held to the rule.
- * @type {Record<string, Record<string, ('domain' | 'application')[]>>}
- */
-const MIGRATING = {
-  // shared by the screens: removed by the Issue that moves their last user, #277 at the latest.
-  shared: {
-    'apps/web/src/components/task/area-select.stories.tsx': ['domain'],
-    'apps/web/src/components/task/estimate-suggestion.stories.tsx': ['domain'],
-    'apps/web/src/components/task/task-quick-add.stories.tsx': ['domain'],
-    'apps/web/src/components/task/task-row.stories.tsx': ['domain'],
-    'apps/web/src/store/record-store.ts': ['application'],
-    'apps/web/src/store/store-provider.tsx': ['application'],
-    'apps/web/src/store/use-app-overview.ts': ['application'],
-    'apps/web/src/store/use-run.ts': ['domain', 'application'],
-    'apps/web/src/store/use-system-day.ts': ['application'],
-  },
-};
-
-/** @param {'domain' | 'application'} pkg */
-function migratingOn(pkg) {
-  return Object.values(MIGRATING).flatMap((files) =>
-    Object.entries(files)
-      .filter(([, uses]) => uses.includes(pkg))
-      .map(([file]) => file),
-  );
-}
-
 // Better Auth's client stays in the one module that implements `Auth`
 // (apps/web/src/auth/better-auth.ts, #278); the rest of apps/web uses the
 // interface, which the browser mock answers too. Put in both blocks below,
 // as their ignores differ: a file left out of one is still checked by the
-// other. Files out of both (the mock, the tests, the files migrating on both
-// packages) are not checked.
+// other. Files out of both (the mock and the tests) are not checked.
 const WEB_BETTER_AUTH = 'apps/web/src/auth/better-auth.ts';
 const webBetterAuthPattern = {
   regex: '^(better-auth|@better-auth/)',
@@ -195,7 +161,6 @@ export default defineConfig(
       ...WEB_NOT_SCREENS,
       'apps/web/src/lib/domain-functions.ts',
       WEB_BETTER_AUTH,
-      ...migratingOn('domain'),
     ],
     rules: {
       'no-restricted-imports': [
@@ -216,11 +181,7 @@ export default defineConfig(
   },
   {
     files: ['apps/web/src/**/*.{ts,tsx}', 'apps/web/.storybook/**/*.{ts,tsx}'],
-    ignores: [
-      ...WEB_NOT_SCREENS,
-      WEB_BETTER_AUTH,
-      ...migratingOn('application'),
-    ],
+    ignores: [...WEB_NOT_SCREENS, WEB_BETTER_AUTH],
     rules: {
       '@typescript-eslint/no-restricted-imports': [
         'error',

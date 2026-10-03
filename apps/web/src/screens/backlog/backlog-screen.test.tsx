@@ -10,7 +10,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import type { StoreSnapshot } from '@/store/record-store';
+import type { StoreSnapshot } from '@/mock/memory-store';
 import { findHours, getHours, getMinutes, queryHours } from '@/test/duration';
 import { fixtureIds } from '@itera/application/fixtures';
 
@@ -24,8 +24,8 @@ beforeEach(() => {
 // The store is created inside the app; read it back through a spy on the
 // memory store's getSnapshot.
 let lastSnapshot: () => StoreSnapshot;
-vi.mock('@/store/record-store', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/store/record-store')>();
+vi.mock('@/mock/memory-store', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/mock/memory-store')>();
   return {
     ...actual,
     createMemoryStore: (

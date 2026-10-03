@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import type { AreaId } from '@itera/domain';
+import type { AreaId } from '@itera/api-contract';
 import { useState } from 'react';
 import { AreaSelect } from './area-select';
 
