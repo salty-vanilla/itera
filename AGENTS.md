@@ -44,7 +44,7 @@ PRD §14「クライアントとデータの方式」に従う。規則の正本
 ## ドメインの扱い
 
 - コードの識別子はドメインモデルの英語名（`Task`、`SprintTask`、`DailySelection`、`Occurrence`、`PlanningValue`、`CriterionUse` など）を使う。
-- 「採用」（EstimateSuggestion → Estimate。Task の値が変わる）と「適用」（PlanningCriterion → PlanningValue。Task は変わらない）を、コードでも画面でも混ぜない。コードとモデル名は「採用」「適用」のまま、画面の語は採用が「使う」（「多めの 4h を使う」「直して使う」）、適用が「このルールで計画する」。
+- 「採用」（EstimateSuggestion → Estimate。Task の値が変わる）と「適用」（PlanningCriterion → PlanningValue。Task は変わらない）を、コードでも画面でも混ぜない。コードとモデル名は「採用」「適用」のまま、画面の語は採用が「使う」（「多めの 4時間を使う」「直して使う」）、適用が「このルールで計画する」。
 - 「持ち越し回数」「連続見送り」「Retro の事実」「計画時との差分」「昨日の続き」は保存せず、記録から派生させる。
 - 生産性スコアや点数による評価を作らない。`danger`（赤）はエラー・期限超過・確定的な容量超過（下限でも超える場合）・破壊的操作だけに使い、持ち越し・見送り・未達・超過の可能性には使わない（PRD §12、DESIGN.md Colors）。
 - ドメインモデルの厳密さを UI の複雑さとして見せない。内部で状態を分けても、利用者に毎回分類を求めない（PRD §13）。
@@ -70,7 +70,7 @@ PRD §14「クライアントとデータの方式」に従う。規則の正本
 
 ## Agent ツール
 
-共有の Skill と CLI はリポジトリ内で固定している。個人の Skill やグローバル CLI を前提にしない。セットアップと更新手順は `docs/development/agent-setup.md`。
+共有の Skill と CLI はリポジトリ内で固定している。個人の Skill やグローバル CLI を前提にしない。例外として、Orca（worktree と並列実行の道具。`orca.yaml`）は任意で使ってよい。Orca を前提にする手順は `issue-harness` の `references/coordinate-orca.md` に限り、ほかの手順は Orca がなくても成り立つようにする。セットアップと更新手順は `docs/development/agent-setup.md`。
 
 - Node は `.node-version` の系列を使う（Claude Code では SessionStart hook が direnv の環境を Bash に読み込む）。`node -v` がその系列でなければ、別の Node を入れたり回避策を探したりせず、その旨を報告する。
 - Skill の正本は `.agents/skills/`（`.claude/skills` はそこへのシンボリックリンク）。上流由来の Skill は `tooling/agents/sources.json` にハッシュを記録しており、`pnpm agent:check` で改変を検出する。直接編集しない。
