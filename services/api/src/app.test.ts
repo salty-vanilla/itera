@@ -25,13 +25,13 @@ function me(
   app: ReturnType<typeof createApp>,
   headers: Record<string, string> = {},
 ): Promise<Response> {
-  return Promise.resolve(app.request('/me', { headers }, testEnv));
+  return Promise.resolve(app.request('/api/me', { headers }, testEnv));
 }
 
-describe('GET /health', () => {
+describe('GET /api/health', () => {
   it('queries the injected database without building the authenticator', async () => {
     const { app, queries, createAuthenticator } = setup();
-    const response = await app.request('/health', {}, testEnv);
+    const response = await app.request('/api/health', {}, testEnv);
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ status: 'ok' });
     expect(queries).toEqual(['select 1']);
@@ -39,7 +39,7 @@ describe('GET /health', () => {
   });
 });
 
-describe('GET /me (requireAuth)', () => {
+describe('GET /api/me (requireAuth)', () => {
   it('returns the user the authenticator accepts', async () => {
     const { app, db, authenticator, createAuthenticator } = setup(async () => ({
       userId: 'user_01',
@@ -99,10 +99,24 @@ describe('the auth service routes', () => {
     ]);
   });
 
-  it('does not route /me or /health to the authenticator', async () => {
+  it('does not route /api/me or /api/health to the authenticator', async () => {
     const { app, authenticator } = setup(async () => ({ userId: 'user_01' }));
-    await app.request('/health', {}, testEnv);
+    await app.request('/api/health', {}, testEnv);
     await me(app);
     expect(authenticator.handle).not.toHaveBeenCalled();
+  });
+});
+
+describe('routes outside /api', () => {
+  // The API answers only under /api, so the same origin can serve the Web
+  // app everywhere else (ADR 0004).
+  it.each(['/health', '/me'])('does not answer %s', async (path) => {
+    const { app, queries, createAuthenticator } = setup(async () => ({
+      userId: 'user_01',
+    }));
+    const response = await app.request(path, {}, testEnv);
+    expect(response.status).toBe(404);
+    expect(queries).toEqual([]);
+    expect(createAuthenticator).not.toHaveBeenCalled();
   });
 });
