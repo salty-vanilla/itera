@@ -374,7 +374,9 @@ describe('Retro — 振り返る', () => {
       '午後が崩れた',
     );
     await userEvent.tab();
-    expect(reviewed().retro?.reflection).toBe('午後が崩れた');
+    await waitFor(() =>
+      expect(reviewed().retro?.reflection).toBe('午後が崩れた'),
+    );
     await userEvent.type(
       screen.getByRole('textbox', {
         name: '次に試すこと',
@@ -382,7 +384,9 @@ describe('Retro — 振り返る', () => {
       '論文は 1本ずつ',
     );
     await userEvent.tab();
-    expect(reviewed().retro?.improvement?.text).toBe('論文は 1本ずつ');
+    await waitFor(() =>
+      expect(reviewed().retro?.improvement?.text).toBe('論文は 1本ずつ'),
+    );
     await userEvent.click(
       screen.getByRole('button', { name: '次に試すことを確定' }),
     );
@@ -414,8 +418,12 @@ describe('Retro — 引き継ぐ and 完了', () => {
     ).toBe(true);
     const before = completeButton();
     await userEvent.click(screen.getByRole('radio', { name: '終える' }));
-    expect(reviewed().criterionUse?.retroDecision).toBe('end');
-    expect(completeButton().getAttribute('aria-disabled')).toBeNull();
+    await waitFor(() =>
+      expect(reviewed().criterionUse?.retroDecision).toBe('end'),
+    );
+    await waitFor(() =>
+      expect(completeButton().getAttribute('aria-disabled')).toBeNull(),
+    );
     // Now it can, and says that no improvement goes on; the button stays.
     expect(
       screen.queryByText(decisionMissingText, { selector: 'p' }),

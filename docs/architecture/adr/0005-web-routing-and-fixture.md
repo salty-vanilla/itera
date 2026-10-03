@@ -18,8 +18,8 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
 
 ### ルーター
 
-| 対象     | 採用                     | 版       | 理由                                                                                                                                                                                               |
-| -------- | ------------------------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 対象 | 採用 | 版 | 理由 |
+| --- | --- | --- | --- |
 | ルーター | `@tanstack/react-router` | 1.170.39 | 検索パラメータを型つきで検証し、遷移のあいだ保てる（`validateSearch`・`retainSearchParams`）。fixture の状態と、後の画面の状態（絞り込み、開いている詳細）を URL に置ける。React 19 に対応している |
 
 依存は ADR 0001 と同じく完全一致で固定する。
@@ -99,11 +99,11 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
 
 #### 依存と版
 
-| 対象                 | 採用                                                                 | 版        | 置き場所                                                                                   |
-| -------------------- | -------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------ |
-| 取得結果のキャッシュ | `@tanstack/react-query`                                              | 5.104.1   | `apps/web` の dependencies。ADR 0006 と同じ版                                              |
-| 契約のクライアント   | `@itera/api-contract`（`/client`・`/create-client`・`/react-query`） | workspace | `apps/web` の dependencies                                                                 |
-| モックの入力の検証   | `valibot`                                                            | 1.5.0     | `apps/web` の devDependencies（モックだけが使い、本番ビルドに入らない）。ADR 0006 と同じ版 |
+| 対象 | 採用 | 版 | 置き場所 |
+| --- | --- | --- | --- |
+| 取得結果のキャッシュ | `@tanstack/react-query` | 5.104.1 | `apps/web` の dependencies。ADR 0006 と同じ版 |
+| 契約のクライアント | `@itera/api-contract`（`/client`・`/create-client`・`/react-query`） | workspace | `apps/web` の dependencies |
+| モックの入力の検証 | `valibot` | 1.5.0 | `apps/web` の devDependencies（モックだけが使い、本番ビルドに入らない）。ADR 0006 と同じ版 |
 
 使い方は 2026-10-03 に Context7 で TanStack Query v5（`QueryCache`・`MutationCache` の全体のコールバック、`invalidateQueries`）と Vite（`server.proxy`、`--mode`）の文書を確かめた。
 
@@ -231,11 +231,11 @@ Better Auth（ADR 0004「認証の構成」）の API を使う、Web のサイ�
 
 #### 依存と版
 
-| 対象                        | 採用                                  | 版    | 置き場所                                                                     |
-| --------------------------- | ------------------------------------- | ----- | ---------------------------------------------------------------------------- |
-| 認証のクライアント          | `better-auth`（`better-auth/client`） | 1.7.6 | `apps/web` の dependencies。サーバーと同じ版（ADR 0004「導入した依存と版」） |
-| パスキーのクライアント      | `@better-auth/passkey`（`/client`）   | 1.7.6 | `apps/web` の dependencies。サーバーと同じ版                                 |
-| `better-call` の任意の peer | `zod`                                 | 4.6.5 | `apps/web` の devDependencies。画面のコードは使わない                        |
+| 対象 | 採用 | 版 | 置き場所 |
+| --- | --- | --- | --- |
+| 認証のクライアント | `better-auth`（`better-auth/client`） | 1.7.6 | `apps/web` の dependencies。サーバーと同じ版（ADR 0004「導入した依存と版」） |
+| パスキーのクライアント | `@better-auth/passkey`（`/client`） | 1.7.6 | `apps/web` の dependencies。サーバーと同じ版 |
+| `better-call` の任意の peer | `zod` | 4.6.5 | `apps/web` の devDependencies。画面のコードは使わない |
 
 - `zod` を足す理由：`better-auth` が使う `better-call` は `zod` を任意の peer に持つ。`apps/web` では shadcn（CLI）が持ち込む zod 3 がその peer に解決され、pnpm が `better-auth` の 1 つの実体を `services/api` と共有するため（`dedupePeerDependents`）、API の `better-auth` まで zod 3 の組み合わせに移った（2026-10-03 に lockfile で確かめた）。`apps/web` に zod 4.6.5 を置くと peer がそれに解決され、`services/api` の解決は変わらない。pnpm の `overrides` は peer の解決を変えなかった（範囲だけが変わり、警告が残る）。同じ lockfile の変更で、`eslint-plugin-react-hooks` の依存の zod も 3.25.76 から 4.6.5 に寄った（その範囲が両方を許すため）。`better-auth` を外すか、shadcn が zod 4 に移ったら、この devDependency を外せるか確かめる。
 - 使い方は 2026-10-03 に Context7（Better Auth の client、passkey プラグイン、`sessionOptions`）と、固定した 1.7.6 のコード（`@better-auth/passkey/client` の `signIn.passkey`・`passkey.addPasskey` の戻り値、OAuth のコールバックが `errorCallbackURL` に `error` を足す処理）で確かめた。
