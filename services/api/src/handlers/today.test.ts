@@ -35,7 +35,7 @@ afterEach(closeFixtureApps);
 const today = clock.today;
 const yesterday = addDays(today, -1);
 
-const { paper, interview, cleaning, reading } = ids.task;
+const { paper, cleaning, reading } = ids.task;
 const { work } = ids.area;
 
 const activeOf = (records: Records) =>
@@ -113,7 +113,7 @@ const successes: readonly Success[] = [
     },
   },
   {
-    // A recurring Task is chosen by one of its occurrences.
+    // A recurring Task is chosen by one of its occurrences (F18).
     name: 'chooseForToday',
     body: (r) => ({
       ...running(r),
@@ -129,20 +129,6 @@ const successes: readonly Success[] = [
         sprintTaskId: sprintTaskOf(after, reading).id,
         occurrenceId: pendingOccurrence(before).id,
         date: today,
-        resolution: 'selected',
-      });
-    },
-  },
-  {
-    name: 'addTaskToToday',
-    body: (r) => ({ ...running(r), date: today, taskId: interview }),
-    check: (after, before, response) => {
-      expect(activeOf(before).tasks.some((t) => t.taskId === interview)).toBe(
-        false,
-      );
-      const { selectionId } = response as { selectionId: string };
-      expect(selectionOf(after, interview, today)).toMatchObject({
-        id: selectionId,
         resolution: 'selected',
       });
     },
@@ -523,12 +509,6 @@ const failures: readonly Failure[] = [
     code: 'notFound',
   },
   {
-    name: 'addTaskToToday',
-    body: (r) => ({ ...running(r), date: yesterday, taskId: interview }),
-    status: 422,
-    code: 'invalidInput',
-  },
-  {
     name: 'createTaskForToday',
     body: (r) => ({ ...running(r), date: today, title: '   ' }),
     status: 422,
@@ -810,7 +790,6 @@ const failures: readonly Failure[] = [
 describe('the Today routes', () => {
   const answered = [
     'chooseForToday',
-    'addTaskToToday',
     'createTaskForToday',
     'startSelection',
     'pauseSelection',
@@ -875,6 +854,7 @@ describe('the Today routes', () => {
       sprintTaskId: sprintTaskOf(before.records, paper).id,
     });
     expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ code: 'validationFailed' });
     expect(await app.saved()).toEqual(before);
   });
 });
@@ -1020,7 +1000,7 @@ describe('the decisions of Today, through the API', () => {
     const app = await setup('today-morning', (records) => ({
       ...records,
       sprints: records.sprints.map((s) =>
-        s.state === 'active'
+        s.id !== ids.sprint.previous
           ? s
           : {
               ...s,
@@ -1118,13 +1098,28 @@ describe('the Today read', () => {
       expect(body.view.kind).toBe(kind);
     });
 
-    it('answers today with its choices, and a past day with its records', async () => {
+    it('answers today with its choices', async () => {
       const { json } = await readOn('today-interrupt', () => `/days/${today}`);
       const { view } = v.parse(contract.vGetDayResponse, json);
-      expect(view.kind === 'today' && view.today?.today).toBe(today);
-      const past = await readOn('today-interrupt', () => '/days/2026-10-01');
-      const day = v.parse(contract.vGetDayResponse, past.json).view;
-      expect(day.kind).toBe('past');
+      if (view.kind !== 'today') throw new Error(`a ${view.kind} day`);
+      expect(view.today?.today).toBe(today);
+      expect(view.today?.rows.map((r) => r.task.id)).toEqual([cleaning]);
+    });
+
+    it('answers a past day with what was chosen and noted on it', async () => {
+      // 10/1 of the fixture: three choices (one done) and two interrupts.
+      const { json } = await readOn(
+        'today-interrupt',
+        () => '/days/2026-10-01',
+      );
+      const { view } = v.parse(contract.vGetDayResponse, json);
+      if (view.kind !== 'past') throw new Error(`a ${view.kind} day`);
+      expect(
+        view.day.records.map((r) => r.selection.resolution).toSorted(),
+      ).toEqual(['done', 'unresolved', 'unresolved']);
+      expect(view.day.interrupts.map((n) => n.id)).toEqual(
+        fixtureNotes().map((n) => n.id),
+      );
     });
 
     it('answers a day with no running Sprint as today with nothing', async () => {
@@ -1134,7 +1129,7 @@ describe('the Today read', () => {
       );
       expect(response.status).toBe(200);
       const { view } = v.parse(contract.vGetDayResponse, json);
-      expect(view.kind).toBe('today');
+      expect(view).toEqual({ kind: 'today' });
     });
 
     it('shows what an operation just changed', async () => {

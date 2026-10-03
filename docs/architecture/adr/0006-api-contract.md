@@ -244,6 +244,8 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 - `PUT`・`DELETE` の 2 回目を、domain が `invalidTransition`（422）で断る操作がある（含めた回をもう一度含める `PUT …/included-occurrences/{occurrenceId}` など）。記録は変わらないので状態としては冪等だが、応答は 1 回目と同じにならない。直すなら domain の変更。
 - 応答のスキーマは未知のキーを許すので、Valibot の検証だけでは余分なキーを見つけられない。型のテストで止めている。
 - `restoreInterrupt` と `undoAdoption` は、クライアントが前の読み取りの値を送る。版はサーバーが読み込んだ時点のものなので、クライアントの読み取りが古いことは 409 では分からない。`undoAdoption` は domain の確かめ（提案の状態）で守られるが、`restoreInterrupt` は古い note でも受け付ける。
+- `restoreInterrupt` が確かめる ID の重複は、利用者自身の Sprint の中だけ（#269）。`interrupt_note.id` は全体の主キーなので、ほかの利用者の note の ID を送ると保存の `batch()` が失敗して 500 になる（上書きはされない）。TypeID を知る必要があり、利用者が 1 人の間は起きない。
+- `noteInterrupt` は Sprint が実行中かどうかしか見ないので、確定済みで開始日前の Sprint（F34）にも割り込みを記録できるが、その note を消した後の `restoreInterrupt` は、期間の外の日として 422 になる。画面は開始日前の Today を読み取り専用にするので、web からは起きない。記録と戻すの条件を揃える方法（記録を期間に限るか、戻す下限を変えるか）は、ドメインモデルの意味に関わるのでオーナーの判断を待つ。
 - 文字列・配列の長さに、契約では上限を置いていない。本文の大きさは 64 KiB で止める（上の「エラー」、#266）ので、1 つの値が D1 の上限を超えることはない。
 
 ## 互換の規則

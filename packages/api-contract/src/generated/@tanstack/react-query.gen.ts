@@ -995,7 +995,7 @@ export const editInterruptMutation = (options?: Partial<Options<EditInterruptDat
 /**
  * 元に戻す after 割り込みを消す
  *
- * The client sends back the note as the read gave it, its ID in the path: the same note returns to its place (ADR 0006). Refused if a note with that ID is there, or if it was noted later than now.
+ * The client sends back the note as the read gave it, its ID in the path: the same note returns to its place (ADR 0006). Refused with 422 if a note with that ID is there, in this Sprint or in another of the person's, if it was noted later than now or on a day outside the Sprint (in the person's time zone), or if its text is empty.
  */
 export const restoreInterruptMutation = (options?: Partial<Options<RestoreInterruptData>>): UseMutationOptions<RestoreInterruptResponse, RestoreInterruptError, Options<RestoreInterruptData>> => {
     const mutationOptions: UseMutationOptions<RestoreInterruptResponse, RestoreInterruptError, Options<RestoreInterruptData>> = {
