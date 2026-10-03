@@ -22,7 +22,7 @@ export function focusScreenHeading(
 /**
  * WCAG 2.4.3 (#154): moving to another screen, from the navigation or with
  * the browser's back and forward, puts the focus on the new screen's heading,
- * so the keyboard starts there and a screen reads where it landed.
+ * so the keyboard starts there and a screen reader reads where it landed.
  * Only the screen counts: a filter, a day or a detail changes the search and
  * keeps the focus where it is. The first screen opened keeps the browser's
  * start, where the first Tab reaches the skip link.
