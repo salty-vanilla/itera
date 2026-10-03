@@ -1,4 +1,4 @@
-import type { TaskFact } from '@itera/domain';
+import type { TaskFact } from '@itera/api-contract';
 import { SELECTION_WORDS } from '@/lib/selection-words';
 import {
   formatHours,
@@ -7,7 +7,7 @@ import {
   formatUnestimatedSubtasks,
   UNESTIMATED,
 } from '@/lib/time-format';
-import type { RetroData } from '@/store/views';
+import type { RetroData } from '@/store/retro-view';
 import { OUTCOME_WORDS } from './retro-words';
 
 // A Task's values in words, shared by the table and the stacked list of 事実を見る

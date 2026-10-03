@@ -104,19 +104,6 @@ function pureRules(name) {
  * @type {Record<string, Record<string, ('domain' | 'application')[]>>}
  */
 const MIGRATING = {
-  // #276: the Retro.
-  '#276': {
-    'apps/web/src/screens/retro/facts-pane.tsx': ['domain'],
-    'apps/web/src/screens/retro/handoff-pane.tsx': ['domain'],
-    'apps/web/src/screens/retro/materials.tsx': ['domain'],
-    'apps/web/src/screens/retro/reflect-pane.tsx': ['domain'],
-    'apps/web/src/screens/retro/retro-screen.tsx': ['domain'],
-    'apps/web/src/screens/retro/retro-words.tsx': ['domain'],
-    'apps/web/src/screens/retro/task-result.tsx': ['domain'],
-    'apps/web/src/screens/retro/task-values.ts': ['domain'],
-    'apps/web/src/store/use-retro-choice.ts': ['application'],
-    'apps/web/src/store/use-retro.ts': ['domain', 'application'],
-  },
   // shared by the screens: removed by the Issue that moves their last user, #277 at the latest.
   shared: {
     'apps/web/src/components/task/area-select.stories.tsx': ['domain'],
@@ -128,7 +115,6 @@ const MIGRATING = {
     'apps/web/src/store/use-app-overview.ts': ['application'],
     'apps/web/src/store/use-run.ts': ['domain', 'application'],
     'apps/web/src/store/use-system-day.ts': ['application'],
-    'apps/web/src/store/views.ts': ['domain', 'application'],
   },
 };
 

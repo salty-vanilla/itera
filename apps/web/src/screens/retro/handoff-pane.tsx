@@ -4,7 +4,7 @@ import type {
   CriterionPolicy,
   RetroDecision,
   SuggestionBound,
-} from '@itera/domain';
+} from '@itera/api-contract';
 import { Link } from '@tanstack/react-router';
 import { ChevronDown, ChevronRight, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -21,8 +21,8 @@ import {
 } from '@/lib/criterion-text';
 import { formatHours, formatRange } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
-import type { RetroCriterion, RetroData } from '@/store/views';
-import { useNextPlanning } from '@/store/use-retro';
+import type { RetroCriterion, RetroData } from '@/store/retro-view';
+import { useNextPlanning } from '@/store/use-begin-planning';
 import { CARRY_OVER_PLACE_WORDS, DECISION_WORDS } from './retro-words';
 import { UsedCriterion } from './used-criterion';
 
@@ -43,10 +43,10 @@ type HandoffPaneProps = {
   readOnly?: boolean | undefined;
   /** The Task titles, for the preview. */
   titleOf: (taskId: string) => string;
-  onDraft: (policy: CriterionPolicy) => boolean;
-  onDraftPolicy: (policy: CriterionPolicy) => boolean;
-  onDropDraft: () => boolean;
-  onDecide: (decision: RetroDecision) => boolean;
+  onDraft: (policy: CriterionPolicy) => Promise<boolean>;
+  onDraftPolicy: (policy: CriterionPolicy) => Promise<boolean>;
+  onDropDraft: () => Promise<boolean>;
+  onDecide: (decision: RetroDecision) => Promise<boolean>;
   /** Opens 振り返る, where the improvement is written. */
   onWriteImprovement: () => void;
   className?: string | undefined;
@@ -253,7 +253,8 @@ function CarryOverList({
       {tasks.some((t) => t.place === 'candidate') && (
         <p className="text-body text-ink-muted [word-break:auto-phrase]">
           次の Sprint の「選ぶ」で決めます。
-          {next.planning !== undefined ? (
+          {/* Where the next Planning is, once the person's Sprints are read. */}
+          {next?.planning !== undefined ? (
             <Link
               to="/sprint"
               search={{ sprint: next.number }}
@@ -262,7 +263,7 @@ function CarryOverList({
               Sprint {next.number} を開く
             </Link>
           ) : (
-            '振り返りの完了後に始まります。'
+            next !== undefined && '振り返りの完了後に始まります。'
           )}
         </p>
       )}
@@ -348,7 +349,7 @@ function DraftCriterion({
   /** Still the same setting as this Sprint's criterion. */
   sameAsUsed: boolean;
   titleOf: (taskId: string) => string;
-  onChange: (policy: CriterionPolicy) => boolean;
+  onChange: (policy: CriterionPolicy) => Promise<boolean>;
 }) {
   const { policy } = draft.criterion;
   const scopeValue = policy.scope.kind === 'all' ? '' : policy.scope.areaId;

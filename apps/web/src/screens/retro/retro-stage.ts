@@ -1,4 +1,4 @@
-import type { RetroData } from '@/store/views';
+import type { RetroData } from '@/store/retro-view';
 import type { RetroStage } from './retro-screen';
 
 /**

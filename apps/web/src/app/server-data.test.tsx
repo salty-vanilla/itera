@@ -83,19 +83,14 @@ describe('the API as the data source', () => {
     });
   });
 
-  it("reads the Backlog's count from the API, and says a screen is not moved yet", async () => {
+  it("reads the Backlog's count from the API", async () => {
     const requests = serve((path) =>
       path === '/api/backlog'
         ? Response.json(overview)
         : new Response('404 Not Found', { status: 404 }),
     );
-    renderAt('/retro');
-    expect(
-      await screen.findByText(
-        /^Not on the API yet: \/retro moves to the contract in #276\./,
-      ),
-    ).toBeTruthy();
-    const [side] = screen.getAllByRole('navigation', { name: 'メイン' });
+    renderAt('/sprint');
+    const [side] = await screen.findAllByRole('navigation', { name: 'メイン' });
     await waitFor(() =>
       expect(side?.textContent).toContain(
         `Backlog${backlog.sliceCounts.all}件`,
@@ -106,9 +101,8 @@ describe('the API as the data source', () => {
 
   it('has no fixture: the URL cannot switch the records', async () => {
     serve(() => Response.json(overview));
-    const router = renderAt('/retro?fixture=today-morning');
-    await screen.findByText(/^Not on the API yet: \/retro/);
-    expect(router.state.location.search).toEqual({});
+    const router = renderAt('/sprint?fixture=today-morning');
+    await waitFor(() => expect(router.state.location.search).toEqual({}));
   });
 });
 

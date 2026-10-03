@@ -13,6 +13,7 @@ import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { StoreSnapshot } from '@/store/record-store';
 import { findHours } from '@/test/duration';
+import { waitForRead } from '@/test/read-ready';
 import { waitForSprintScreen } from '@/test/sprint-ready';
 import { fixtureIds } from '@itera/application/fixtures';
 
@@ -61,9 +62,9 @@ async function renderAt(url: string) {
       <RouterProvider router={router} />
     </TooltipProvider>,
   );
-  await screen.findByRole('heading', { level: 1 });
   // The Sprint screen shows its header once its records are read.
   if (url.startsWith('/sprint')) await waitForSprintScreen();
+  else await waitForRead();
   return router;
 }
 
@@ -114,6 +115,14 @@ const decisionMissingText = reasonText(
 const continueWithDraftText = reasonText(
   '新しいルールにするなら、「今回の計画のルール」で「置き換える」を選んでください。今回のルールを続けるなら、「計画のルールにもする」をオフにしてください。',
 );
+/** 置き換える, once there is a draft to replace with (it waits for it). */
+const replaceRadio = async () => {
+  const radio = screen.getByRole('radio', { name: '置き換える' });
+  await waitFor(() =>
+    expect(radio.getAttribute('aria-disabled')).not.toBe('true'),
+  );
+  return radio;
+};
 const completeButton = () =>
   screen.getByRole('button', { name: '振り返りを完了' });
 
@@ -231,9 +240,11 @@ describe('Retro — 事実を見る', () => {
         name: /振り返りに使う.*障害の問い合わせに対応/,
       })[0]!,
     );
-    expect(reviewed().retro?.pins).toEqual([
-      { kind: 'interrupt', id: expect.any(String) },
-    ]);
+    await waitFor(() =>
+      expect(reviewed().retro?.pins).toEqual([
+        { kind: 'interrupt', id: expect.any(String) },
+      ]),
+    );
     // 事実を見る has no materials beside it (#73); 振り返る gathers them.
     expect(screen.queryByRole('region', { name: '振り返りの材料' })).toBeNull();
     await userEvent.click(
@@ -270,11 +281,13 @@ describe('Retro — 事実を見る', () => {
     );
     await userEvent.type(await findHours(screen, /かかった時間/), '0.5');
     await userEvent.click(screen.getByRole('button', { name: '記録する' }));
-    expect(reviewed().actualTimes.at(-1)).toMatchObject({
-      hours: 0.5,
-      via: 'later',
-      date: '2026-10-04',
-    });
+    await waitFor(() =>
+      expect(reviewed().actualTimes.at(-1)).toMatchObject({
+        hours: 0.5,
+        via: 'later',
+        date: '2026-10-04',
+      }),
+    );
     // The button leaves with the time entered; the focus goes to the row's
     // 振り返りに使う, not to the page (#241).
     expect(
@@ -361,7 +374,9 @@ describe('Retro — 振り返る', () => {
       '午後が崩れた',
     );
     await userEvent.tab();
-    expect(reviewed().retro?.reflection).toBe('午後が崩れた');
+    await waitFor(() =>
+      expect(reviewed().retro?.reflection).toBe('午後が崩れた'),
+    );
     await userEvent.type(
       screen.getByRole('textbox', {
         name: '次に試すこと',
@@ -369,7 +384,9 @@ describe('Retro — 振り返る', () => {
       '論文は 1本ずつ',
     );
     await userEvent.tab();
-    expect(reviewed().retro?.improvement?.text).toBe('論文は 1本ずつ');
+    await waitFor(() =>
+      expect(reviewed().retro?.improvement?.text).toBe('論文は 1本ずつ'),
+    );
     await userEvent.click(
       screen.getByRole('button', { name: '次に試すことを確定' }),
     );
@@ -401,8 +418,12 @@ describe('Retro — 引き継ぐ and 完了', () => {
     ).toBe(true);
     const before = completeButton();
     await userEvent.click(screen.getByRole('radio', { name: '終える' }));
-    expect(reviewed().criterionUse?.retroDecision).toBe('end');
-    expect(completeButton().getAttribute('aria-disabled')).toBeNull();
+    await waitFor(() =>
+      expect(reviewed().criterionUse?.retroDecision).toBe('end'),
+    );
+    await waitFor(() =>
+      expect(completeButton().getAttribute('aria-disabled')).toBeNull(),
+    );
     // Now it can, and says that no improvement goes on; the button stays.
     expect(
       screen.queryByText(decisionMissingText, { selector: 'p' }),
@@ -450,7 +471,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
       name: 'Sprint 2 の振り返りを完了しますか？',
     });
     // The Sprint is still in Review behind it, and 戻る has the focus.
-    expect(reviewed().state).toBe('review');
+    await waitFor(() => expect(reviewed().state).toBe('review'));
     await waitFor(() =>
       expect(document.activeElement).toBe(
         within(dialog).getByRole('button', { name: '戻る' }),
@@ -468,7 +489,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(reviewed().state).toBe('review');
     // Nothing was written: not the Sprint, nor the criteria.
-    expect(lastSnapshot().records).toEqual(recordsBefore);
+    await waitFor(() => expect(lastSnapshot().records).toEqual(recordsBefore));
     expect(document.activeElement).toBe(completeButton());
   });
 
@@ -496,7 +517,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
     await userEvent.click(
       within(dialog).getByRole('button', { name: '振り返りを完了' }),
     );
-    expect(reviewed().state).toBe('closed');
+    await waitFor(() => expect(reviewed().state).toBe('closed'));
     // The Toast that follows is a dialog too; the question is gone.
     await waitFor(() =>
       expect(
@@ -512,10 +533,12 @@ describe('Retro — 引き継ぐ and 完了', () => {
     await userEvent.click(
       screen.getByRole('switch', { name: /計画のルールにもする/ }),
     );
+    await waitFor(() =>
+      expect(reviewed().retro?.improvement?.criterionId).toBeDefined(),
+    );
     const draftId = reviewed().retro?.improvement?.criterionId;
-    expect(draftId).toBeDefined();
     // 続ける with a draft cannot complete (invariant 35).
-    expect(screen.getByText(continueWithDraftText)).toBeTruthy();
+    expect(await screen.findByText(continueWithDraftText)).toBeTruthy();
     // The setting, its effect and preview from one value (invariant 39).
     await userEvent.selectOptions(
       screen.getByRole('combobox', {
@@ -530,7 +553,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
     expect(
       screen.getAllByText(/見積もりなしは提案のふつうの値で計画/).length,
     ).toBeGreaterThan(0);
-    await userEvent.click(screen.getByRole('radio', { name: '置き換える' }));
+    await userEvent.click(await replaceRadio());
     await userEvent.click(completeButton());
     const dialog = await screen.findByRole('dialog');
     // The new criterion is not 「使う」d: it is in the next Sprint (#245).
@@ -544,7 +567,7 @@ describe('Retro — 引き継ぐ and 完了', () => {
       within(dialog).getByRole('button', { name: '振り返りを完了' }),
     );
 
-    expect(reviewed().state).toBe('closed');
+    await waitFor(() => expect(reviewed().state).toBe('closed'));
     const criteria = lastSnapshot().records.criteria;
     expect(criteria.find((c) => c.id === draftId)?.state).toBe('active');
     expect(criteria.filter((c) => c.state === 'active')).toHaveLength(1);
@@ -710,8 +733,11 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
     expect(titles).toHaveLength(2);
     expect(titles).toEqual(['関連論文を 3本読む', '実験データの前処理']);
     // Not started yet: it says when, and offers nothing to choose.
-    expect(list?.textContent).toContain(
-      '次の Sprint の「選ぶ」で決めます。振り返りの完了後に始まります。',
+    // (Where the next Planning is comes with the person's Sprints.)
+    await waitFor(() =>
+      expect(list?.textContent).toContain(
+        '次の Sprint の「選ぶ」で決めます。振り返りの完了後に始まります。',
+      ),
     );
     expect(list?.querySelector('input, a')).toBeNull();
     await userEvent.click(screen.getByRole('radio', { name: '終える' }));
@@ -804,7 +830,7 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
         name: '振り返りを完了',
       }),
     );
-    expect(reviewed().state).toBe('closed');
+    await waitFor(() => expect(reviewed().state).toBe('closed'));
     await router.navigate({ to: '/retro', search: { stage: 'handoff' } });
     const section = await screen.findByRole('region', {
       name: '今回の計画のルール',
@@ -879,7 +905,9 @@ describe('Retro — 引き継ぐ: the criterion and the carry-overs (#107)', () 
       rows.filter((r) => r.endsWith('次の Sprint に入っています')),
     ).toHaveLength(1);
     // Planning has started: it links to that Sprint, to decide there.
-    expect(within(list).getByRole('link').textContent).toBe('Sprint 3 を開く');
+    expect((await within(list).findByRole('link')).textContent).toBe(
+      'Sprint 3 を開く',
+    );
     expect(list.textContent).toContain('次の Sprint の「選ぶ」で決めます。');
   });
 });
@@ -927,7 +955,7 @@ describe('Retro — boundaries', () => {
         name: '振り返りを完了',
       }),
     );
-    expect(reviewed().state).toBe('closed');
+    await waitFor(() => expect(reviewed().state).toBe('closed'));
   });
 
   it('clears 置き換える when the draft is turned off, and waits again', async () => {
@@ -936,11 +964,17 @@ describe('Retro — boundaries', () => {
       name: /計画のルールにもする/,
     });
     await userEvent.click(draftSwitch);
-    await userEvent.click(screen.getByRole('radio', { name: '置き換える' }));
-    expect(reviewed().criterionUse?.retroDecision).toBe('replace');
+    await userEvent.click(await replaceRadio());
+    await waitFor(() =>
+      expect(reviewed().criterionUse?.retroDecision).toBe('replace'),
+    );
     await userEvent.click(draftSwitch);
-    expect(reviewed().retro?.improvement?.criterionId).toBeUndefined();
-    expect(reviewed().criterionUse?.retroDecision).toBeUndefined();
+    await waitFor(() =>
+      expect(reviewed().retro?.improvement?.criterionId).toBeUndefined(),
+    );
+    await waitFor(() =>
+      expect(reviewed().criterionUse?.retroDecision).toBeUndefined(),
+    );
     expect(
       screen.getByText(decisionMissingText, { selector: 'p' }),
     ).toBeTruthy();
@@ -969,10 +1003,11 @@ describe('Retro — boundaries', () => {
       },
     });
     await renderAt('/retro?fixture=today-interrupt');
+    // Today comes with the person's Sprints: the last day is known then.
     await userEvent.click(
-      screen.getByRole('button', { name: '振り返りを始める' }),
+      await screen.findByRole('button', { name: '振り返りを始める' }),
     );
-    expect(reviewed().state).toBe('review');
+    await waitFor(() => expect(reviewed().state).toBe('review'));
     // In Review it is no longer 「今週」: the next week to start is (#90).
     expect(
       await screen.findByRole('heading', {
@@ -1555,12 +1590,14 @@ describe('Retro — actual time per occurrence (#56)', () => {
     const occurrence = lastSnapshot().records.occurrences.find(
       (o) => o.taskId === ids.task.reading && o.scheduledDate === '2026-09-28',
     );
-    expect(reviewed().actualTimes.at(-1)).toMatchObject({
-      occurrenceId: occurrence?.id,
-      date: '2026-09-28',
-      hours: 0.25,
-      via: 'later',
-    });
+    await waitFor(() =>
+      expect(reviewed().actualTimes.at(-1)).toMatchObject({
+        occurrenceId: occurrence?.id,
+        date: '2026-09-28',
+        hours: 0.25,
+        via: 'later',
+      }),
+    );
     expect(occurrenceRow('9/28 (月) 英語の多読 30分').textContent).toContain(
       '実績 15分',
     );
@@ -1576,10 +1613,12 @@ describe('Retro — actual time per occurrence (#56)', () => {
     );
     await userEvent.type(await findHours(screen, /かかった時間/), '0.5');
     await userEvent.click(screen.getByRole('button', { name: '記録する' }));
-    expect(reviewed().actualTimes.at(-1)).toMatchObject({
-      date: '2026-10-02',
-      hours: 0.5,
-    });
+    await waitFor(() =>
+      expect(reviewed().actualTimes.at(-1)).toMatchObject({
+        date: '2026-10-02',
+        hours: 0.5,
+      }),
+    );
   });
 });
 
