@@ -1,4 +1,4 @@
-import { vCreateAreaBody } from '@itera/api-contract';
+import * as contract from '@itera/api-contract';
 import {
   operations,
   type Change,
@@ -25,7 +25,29 @@ export const operationBodies: {
     ? null
     : v.GenericSchema;
 } = {
-  createArea: vCreateAreaBody,
+  createArea: contract.vCreateAreaBody,
+  renameArea: contract.vRenameAreaBody,
+  archiveArea: contract.vArchiveAreaBody,
+  restoreArea: contract.vRestoreAreaBody,
+  createTask: contract.vCreateTaskBody,
+  saveTask: contract.vSaveTaskBody,
+  adoptSuggestion: contract.vAdoptSuggestionBody,
+  undoAdoption: contract.vUndoAdoptionBody,
+  adoptEditedSuggestion: contract.vAdoptEditedSuggestionBody,
+  rejectSuggestion: contract.vRejectSuggestionBody,
+  undoRejection: contract.vUndoRejectionBody,
+  addSubtask: contract.vAddSubtaskBody,
+  setSubtaskDone: contract.vSetSubtaskDoneBody,
+  setSubtaskEstimate: contract.vSetSubtaskEstimateBody,
+  archiveTask: contract.vArchiveTaskBody,
+  restoreTask: contract.vRestoreTaskBody,
+  completeTask: contract.vCompleteTaskBody,
+  undoCompleteTask: contract.vUndoCompleteTaskBody,
+  addTaskToToday: contract.vAddTaskToTodayBody,
+  addTaskToWeek: contract.vAddTaskToWeekBody,
+  undoAddTaskToWeek: contract.vUndoAddTaskToWeekBody,
+  setRecurrence: contract.vSetRecurrenceBody,
+  endRecurrence: contract.vEndRecurrenceBody,
 };
 
 /**
@@ -34,29 +56,6 @@ export const operationBodies: {
  * here (registry.test.ts).
  */
 export const unimplementedOperations: readonly OperationName[] = [
-  // #267: the Backlog, Tasks and Areas.
-  'renameArea',
-  'archiveArea',
-  'restoreArea',
-  'createTask',
-  'saveTask',
-  'adoptSuggestion',
-  'undoAdoption',
-  'adoptEditedSuggestion',
-  'rejectSuggestion',
-  'undoRejection',
-  'addSubtask',
-  'setSubtaskDone',
-  'setSubtaskEstimate',
-  'archiveTask',
-  'restoreTask',
-  'completeTask',
-  'undoCompleteTask',
-  'addTaskToToday',
-  'addTaskToWeek',
-  'undoAddTaskToWeek',
-  'setRecurrence',
-  'endRecurrence',
   // #268: the Sprint, planning and running.
   'chooseTasks',
   'unchooseTasks',
