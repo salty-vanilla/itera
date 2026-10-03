@@ -249,6 +249,42 @@ describe('a failed operation', () => {
   );
 });
 
+describe('reading again after an operation', () => {
+  it('waits for the first answer of each read, not for its retries', async () => {
+    // The operation fails on the network, and so does the read again.
+    let down = false;
+    const { requests, wrapper } = setUp(() =>
+      down ? Promise.reject(new TypeError('Failed to fetch')) : undefined,
+    );
+    const { result } = renderHook(useRenameAndOverview, { wrapper });
+    await waitFor(() => expect(result.current.overview.data).toBeDefined());
+    down = true;
+    requests.length = 0;
+    // A read's retry waits 1000ms: the clock does not move unless told.
+    vi.useFakeTimers();
+    try {
+      let outcome: unknown;
+      await act(async () => {
+        void result.current.rename
+          .run(rename('研究室'))
+          .then((o) => (outcome = o));
+        await vi.advanceTimersByTimeAsync(10);
+      });
+      expect(outcome).toEqual({ ok: false });
+      expect(requests).toEqual([
+        'POST /api/operations/renameArea',
+        'GET /api/overview',
+      ]);
+      expect(
+        screen.getAllByText('保存できたか確かめられませんでした'),
+      ).not.toHaveLength(0);
+      expect(result.current.rename.pending).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe('a read without a session', () => {
   it('sends the person to sign in', async () => {
     const { onUnauthenticated, wrapper } = setUp(() =>

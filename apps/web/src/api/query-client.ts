@@ -1,6 +1,6 @@
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
 import { failureOf } from './failure';
-import { invalidateReads } from './reads';
+import { readAgain } from './reads';
 
 export interface QueryClientOptions {
   /** A request had no session (401): send the person to sign in (#278). */
@@ -11,7 +11,8 @@ export interface QueryClientOptions {
  * The cache of the contract's reads (ADR 0005 状態の置き場所), and what
  * every operation and read does after it settles (reads.ts):
  * - An operation that went through reads every read again before its
- *   promise resolves, so the screen has the new records by then.
+ *   promise resolves, so the screen has the new records by then. It waits
+ *   for each read's first answer only, not for its retries (`readAgain`).
  * - An operation that may have been saved after all (a version conflict,
  *   409, the server or the network failed, an answer this client does not
  *   know: ADR 0006) reads every read again before its promise rejects, so
@@ -34,12 +35,12 @@ export function createQueryClient({
       },
     }),
     mutationCache: new MutationCache({
-      onSuccess: () => invalidateReads(queryClient),
+      onSuccess: () => readAgain(queryClient),
       onError: (error) => {
         const failure = failureOf(error);
         if (failure.kind === 'unauthenticated') onUnauthenticated();
         if (failure.kind === 'revisionConflict' || failure.kind === 'failed')
-          return invalidateReads(queryClient);
+          return readAgain(queryClient);
         return undefined;
       },
     }),
