@@ -26,8 +26,12 @@ import { CompletionCircle, TaskRow } from '@/components/task/task-row';
 import { formatDate } from '@/lib/date-format';
 import { formatHours } from '@/lib/time-format';
 import { startedSince } from '@/lib/today-words';
-import type { PlanningValue, TimeZone } from '@itera/domain';
-import type { TodayItem, TodayRow as TodayRowData } from '@/store/views';
+import type {
+  PlanningValue,
+  TimeZone,
+  TodayItem,
+  TodayRow as TodayRowData,
+} from '@itera/api-contract';
 
 // A row of 今日やる, or one closed today (DESIGN.md Task Row, patterns.md
 // Today). ○ is always there; the other daily operations are in the `…`

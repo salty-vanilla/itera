@@ -11,6 +11,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { dayRead } from '@/test/day-read';
 import type { Clock } from '@/store/record-store';
 import type { StoreSnapshot } from '@/store/record-store';
 import { findHours, getHours, getMinutes } from '@/test/duration';
@@ -64,7 +65,7 @@ async function renderAt(url: string) {
       <RouterProvider router={router} />
     </TooltipProvider>,
   );
-  await screen.findByRole('heading', { level: 1 });
+  await dayRead();
   return router;
 }
 
