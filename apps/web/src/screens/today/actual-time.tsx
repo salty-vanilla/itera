@@ -27,6 +27,7 @@ import {
   readActualHours,
 } from '@/lib/actual-hours';
 import { EMPTY_DURATION } from '@/lib/duration-text';
+import { LAST_DAY_CLOSED_WORDS } from '@/lib/selection-words';
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 
 // かかった時間 (実績時間, patterns.md Today): optional, added lightly after completing or
@@ -57,6 +58,11 @@ type ActualTimeProps = {
   loading?: boolean;
   /** Replaces the mode's description, e.g. which day it goes to in Retro. */
   description?: string | undefined;
+  /**
+   * 今日は中断する on the Sprint's last day (the read's `lastDay`): the Task
+   * does not come back to 今週の残り tomorrow (#314).
+   */
+  lastDay?: boolean;
 };
 
 const words: Record<
@@ -94,12 +100,17 @@ function ActualTime({
   onSubmit,
   loading = false,
   description: descriptionOverride,
+  lastDay = false,
 }: ActualTimeProps) {
   const sheet = !useMediaQuery(MEDIUM_UP, true);
   const [text, setText] = useState(EMPTY_DURATION);
   const [error, setError] = useState<string | undefined>(undefined);
   const { title, submit } = words[mode];
-  const description = descriptionOverride ?? words[mode].description;
+  const description =
+    descriptionOverride ??
+    (mode === 'pause' && lastDay
+      ? LAST_DAY_CLOSED_WORDS.section
+      : words[mode].description);
   const optional = mode === 'pause';
   const formRef = useRef<HTMLFormElement>(null);
   // After a failed save, focus goes to the field in error (accessibility.md).

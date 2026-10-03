@@ -26,6 +26,7 @@ import {
 } from '@itera/domain';
 import type { Clock, Records } from './records';
 import { nextWeekSprintOf, thisWeekSprintOf } from './sprint-choice';
+import { isLastDay } from './sprint-day';
 import { activeSprint } from './task-changes';
 import {
   isClosedResolution,
@@ -241,6 +242,12 @@ export const SLICES: readonly (BacklogSlice | 'all')[] = [
 
 export interface BacklogData {
   readonly today: LocalDate;
+  /**
+   * Today is the last day of the active Sprint (the same value as Today's
+   * `lastDay`). What is closed for the day does not come back to 今週の残り
+   * tomorrow: the detail says so (#314).
+   */
+  readonly lastDay: boolean;
   readonly timeZone: Records['user']['timeZone'];
   /** Areas to filter and file under, in the person's order. */
   readonly areas: readonly {
@@ -289,8 +296,10 @@ export function backlogData(
     : undefined;
   const shown =
     area === undefined ? bySlice : bySlice.filter((t) => t.areaId === area);
+  const active = activeSprint(records);
   return {
     today: clock.today,
+    lastDay: active !== undefined && isLastDay(active, clock.today),
     timeZone: records.user.timeZone,
     areas: choices.map((a) => ({
       id: a.id,

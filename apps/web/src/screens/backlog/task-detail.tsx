@@ -65,6 +65,7 @@ import {
   sameMinutes,
   type DurationText,
 } from '@/lib/duration-text';
+import { LAST_DAY_CLOSED_WORDS } from '@/lib/selection-words';
 import { formatHours } from '@/lib/time-format';
 import { startedText } from '@/lib/today-words';
 import type { BacklogView } from '@/screen-data/use-backlog';
@@ -225,22 +226,28 @@ function dayText(
   }
 }
 
-/** The line under 今日と今週 after the Task was closed for the day. */
-const closedText: Record<
-  NonNullable<BacklogItem['closedToday']>,
-  { result: string; rest?: string }
-> = {
-  paused: {
-    result: '今日は中断しました。',
-    rest: '明日から今週の残りに出ます。',
-  },
-  deferred: {
-    result: '今日は見送りました。',
-    rest: '明日から今週の残りに出ます。',
-  },
-  // Back in the week at once: no 「明日から」 (#233).
-  removed: { result: '今週の残りに戻しました。' },
-};
+/**
+ * The line under 今日と今週 after the Task was closed for the day. On the
+ * Sprint's last day (the read's `lastDay`) it does not come back to 今週の
+ * 残り tomorrow (#314).
+ */
+function closedText(
+  closed: NonNullable<BacklogItem['closedToday']>,
+  lastDay: boolean,
+): { result: string; rest?: string } {
+  const rest = lastDay
+    ? LAST_DAY_CLOSED_WORDS.detail
+    : '明日から今週の残りに出ます。';
+  switch (closed) {
+    case 'paused':
+      return { result: '今日は中断しました。', rest };
+    case 'deferred':
+      return { result: '今日は見送りました。', rest };
+    // Back in the week at once: no 「明日から」 (#233).
+    case 'removed':
+      return { result: '今週の残りに戻しました。' };
+  }
+}
 
 type Outcome =
   | {
@@ -262,6 +269,7 @@ function TaskDetail({
   item,
   areas,
   timeZone,
+  lastDay,
   onClose,
   onComplete,
   focusEstimate,
@@ -272,6 +280,8 @@ function TaskDetail({
   /** The Areas to choose from, in the person's order. */
   areas: BacklogView['areas'];
   timeZone: BacklogView['timeZone'];
+  /** The read's `lastDay`: what is closed today does not return tomorrow. */
+  lastDay: BacklogView['lastDay'];
   onClose: () => void;
   /** 完了にする: the screen closes the detail and leaves the undo line. */
   onComplete: () => void;
@@ -310,6 +320,10 @@ function TaskDetail({
     facts.thisWeek?.confirmed === true &&
     facts.today === undefined &&
     !onTodayScreen;
+  const closedLine =
+    facts.closedToday === undefined
+      ? undefined
+      : closedText(facts.closedToday, lastDay);
   const nowRef = useRef<HTMLElement>(null);
   const openTodayRef = useRef<HTMLAnchorElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -857,20 +871,20 @@ function TaskDetail({
                 role="status"
                 className="text-body text-ink [text-wrap:pretty] [word-break:auto-phrase]"
               >
-                {facts.today !== undefined ? (
-                  dayText(facts.today, timeZone)
-                ) : (
-                  <>
-                    {closedText[facts.closedToday!].result}
-                    {closedText[facts.closedToday!].rest !== undefined && (
-                      // The consequence on its own line, so that no line ends
-                      // with a word's last letters.
-                      <span className="block text-help text-ink-muted">
-                        {closedText[facts.closedToday!].rest}
-                      </span>
+                {facts.today !== undefined
+                  ? dayText(facts.today, timeZone)
+                  : closedLine !== undefined && (
+                      <>
+                        {closedLine.result}
+                        {closedLine.rest !== undefined && (
+                          // The consequence on its own line, so that no line ends
+                          // with a word's last letters.
+                          <span className="block text-help text-ink-muted">
+                            {closedLine.rest}
+                          </span>
+                        )}
+                      </>
                     )}
-                  </>
-                )}
               </p>
             )}
             <div className="flex flex-wrap items-center gap-2">
