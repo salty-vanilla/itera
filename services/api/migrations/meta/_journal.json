@@ -15,6 +15,13 @@
       "when": 1790990894997,
       "tag": "0001_records",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791013712192,
+      "tag": "0002_record_revision_caught_up_to",
+      "breakpoints": true
     }
   ]
 }

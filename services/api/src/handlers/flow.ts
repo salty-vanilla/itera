@@ -1,5 +1,6 @@
 import {
   applyRecordChanges,
+  catchUp as systemCatchUp,
   createIdSource,
   mergeChanges,
   type Change,
@@ -12,6 +13,7 @@ import {
   toLocalDate,
   type Activity,
   type Actor,
+  type LocalDate,
   type UserId,
 } from '@itera/domain';
 import type { Context, MiddlewareHandler } from 'hono';
@@ -20,7 +22,6 @@ import { loadRecords } from '../db/load-records';
 import { saveRecords } from '../db/save-records';
 import type { Dependencies } from '../dependencies';
 import type { AppEnv } from '../env';
-import { catchUp as systemCatchUp } from './catch-up';
 import { ApiError } from '../errors';
 
 /**
@@ -32,8 +33,15 @@ export type Guards = {
   readonly origin: MiddlewareHandler<AppEnv>;
 };
 
-/** A user's records as last saved, with their revision. */
-type Current = { readonly revision: number; readonly records: Records };
+/**
+ * A user's records as last saved, with their revision and the day the
+ * system's records were brought up to.
+ */
+type Current = {
+  readonly revision: number;
+  readonly records: Records;
+  readonly caughtUpTo: LocalDate | null;
+};
 
 /** A read's response: the clock it was read with and its result (ADR 0006). */
 export type ReadResponse<View> = {
@@ -60,10 +68,11 @@ export type Flow = {
 
 export type FlowOptions = Pick<Dependencies, 'now'> & {
   /**
-   * What the system does when the date has moved on (#271). Tests put in
-   * one that writes, to hold the course of a catch-up that writes.
+   * What the system does when the date has moved on, from the day the
+   * records were last brought up to (#271). Tests put in others, to hold
+   * the course of a catch-up that writes.
    */
-  readonly catchUp?: Change;
+  readonly catchUp?: (caughtUpTo: LocalDate | null) => Change;
 };
 
 export function createFlow({
@@ -100,6 +109,7 @@ export function createFlow({
     const current: Current = {
       revision: loaded.revision,
       records: loaded.records,
+      caughtUpTo: loaded.caughtUpTo,
     };
     return { current, clock };
   }
@@ -111,7 +121,10 @@ export function createFlow({
    * is the server's failure (500), not the person's.
    */
   function caughtUp(current: Current, clock: Clock) {
-    const result = catchUp(current.records, contextOf(clock, 'system'));
+    const result = catchUp(current.caughtUpTo)(
+      current.records,
+      contextOf(clock, 'system'),
+    );
     if (!result.ok) {
       throw new Error(
         `The system's catch-up was refused: ${result.error.code}.`,
@@ -126,13 +139,15 @@ export function createFlow({
   }
 
   /**
-   * Writes the changes in one batch, checking the revision: another write
-   * since the load is a conflict, and nothing is written.
+   * Writes the changes in one batch, checking the revision, with the day
+   * the records are now brought up to. Another write since the load is a
+   * conflict, and nothing is written.
    */
   async function save(
     db: Database,
     userId: UserId,
     current: Current,
+    clock: Clock,
     changes: RecordChanges,
     activities: readonly Activity[],
   ) {
@@ -141,13 +156,34 @@ export function createFlow({
       loaded: current,
       changes,
       activities,
+      caughtUpTo: clock.today,
     });
-    if (!saved.ok) {
-      throw new ApiError(
-        'revisionConflict',
-        'Another write came first; read the records again.',
-      );
+    return saved.ok;
+  }
+
+  const conflict = () =>
+    new ApiError(
+      'revisionConflict',
+      'Another write came first; read the records again.',
+    );
+
+  /**
+   * The records brought up to now for a read, the system's changes written
+   * first (nothing when it had nothing to do). Another write in between
+   * came with its own catch-up, so the records are loaded again, once
+   * (#271).
+   */
+  async function caughtUpForRead(c: Context<AppEnv>) {
+    const { db, userId } = c.var;
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      const { current, clock } = await load(c);
+      const system = caughtUp(current, clock);
+      const { changes, activities } = system;
+      if (await save(db, userId, current, clock, changes, activities)) {
+        return { records: system.records, clock };
+      }
     }
+    throw conflict();
   }
 
   return {
@@ -159,19 +195,20 @@ export function createFlow({
       if (!result.ok) throw ApiError.fromDomain(result.error);
       const { changes, activities, value } = result.value;
       // The system's changes and the person's go in one batch (#271).
-      await save(db, userId, current, mergeChanges(system.changes, changes), [
-        ...system.activities,
-        ...activities,
-      ]);
+      const saved = await save(
+        db,
+        userId,
+        current,
+        clock,
+        mergeChanges(system.changes, changes),
+        [...system.activities, ...activities],
+      );
+      if (!saved) throw conflict();
       return value as T;
     },
     async read(c, read) {
-      const { db, userId } = c.var;
-      const { current, clock } = await load(c);
-      const system = caughtUp(current, clock);
-      // Nothing to write when the system had nothing to do.
-      await save(db, userId, current, system.changes, system.activities);
-      const view = read(system.records, clock);
+      const { records, clock } = await caughtUpForRead(c);
+      const view = read(records, clock);
       // A read with nothing to show answers `null` (ADR 0006).
       return {
         clock,

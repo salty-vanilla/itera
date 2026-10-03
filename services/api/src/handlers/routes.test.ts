@@ -8,7 +8,7 @@ import {
   vGetOverviewResponse,
 } from '@itera/api-contract';
 import { createIdSource, type Records } from '@itera/application';
-import { timeZone, type UserId } from '@itera/domain';
+import { localDate, timeZone, type UserId } from '@itera/domain';
 import { DrizzleQueryError } from 'drizzle-orm';
 import * as v from 'valibot';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -41,6 +41,9 @@ const settled: Records = {
   criteria: [],
 };
 
+/** 「今日」 at the tests' clock, in Alice's time zone. */
+const today = localDate('2026-10-03');
+
 let close: (() => void) | undefined;
 afterEach(() => {
   close?.();
@@ -71,9 +74,10 @@ async function setup({
   if (settings) {
     await saveRecords(db, {
       userId: alice,
-      loaded: { revision: 0, records: null },
+      loaded: { revision: 0, records: null, caughtUpTo: null },
       changes: settled,
       activities: [],
+      caughtUpTo: today,
     });
   }
   const authenticator: Authenticator = {
@@ -168,6 +172,7 @@ describe('an operation', () => {
     expect(await loadRecords(db, alice)).toEqual({
       revision: 1,
       records: settled,
+      caughtUpTo: today,
     });
   });
 
@@ -221,9 +226,10 @@ describe('an operation', () => {
                 interfered = true;
                 await saveRecords(target, {
                   userId: alice,
-                  loaded: { revision: 1, records: settled },
+                  loaded: { revision: 1, records: settled, caughtUpTo: null },
                   changes: { user: { ...settled.user, displayName: 'A' } },
                   activities: [],
+                  caughtUpTo: today,
                 });
               }
               return result;
@@ -239,6 +245,7 @@ describe('an operation', () => {
     expect(await loadRecords(db, alice)).toEqual({
       revision: 2,
       records: { ...settled, user: { ...settled.user, displayName: 'A' } },
+      caughtUpTo: today,
     });
     expect(await db.select().from(activity)).toEqual([]);
   });

@@ -1,5 +1,5 @@
 import type { RecordChanges, Records } from '@itera/application';
-import type { Activity, UserId } from '@itera/domain';
+import type { Activity, LocalDate, UserId } from '@itera/domain';
 import { and, eq, getTableColumns, sql, type SQL } from 'drizzle-orm';
 import type { BatchItem } from 'drizzle-orm/batch';
 import {
@@ -42,6 +42,11 @@ export interface SaveRecordsInput {
   readonly changes: RecordChanges;
   /** Appended in this order. */
   readonly activities: readonly Activity[];
+  /**
+   * The day the system's records are brought up to by this save (#271):
+   * 「今日」 of the catch-up that came before the change.
+   */
+  readonly caughtUpTo: LocalDate;
 }
 
 /**
@@ -78,7 +83,7 @@ export async function saveRecords(
   );
   try {
     await db.batch([
-      raiseRevision(db, userId, loaded.revision),
+      raiseRevision(db, userId, loaded.revision, input.caughtUpTo),
       ...rowStatements,
       ...chunks(activityRows, rowsPerInsert(activity)).map((rows) =>
         db.insert(activity).values(rows),
@@ -100,20 +105,27 @@ export async function saveRecords(
 }
 
 /**
- * Raises the revision from `expected`, or fails the batch: a row that has
- * moved on is set to 0, which breaks `record_revision_positive`. A first
+ * Raises the revision from `expected` and keeps the day the records were
+ * brought up to, or fails the batch: a row that has moved on is set to 0,
+ * which breaks `record_revision_positive`. A first
  * save (`expected` 0) inserts the row, so another first save that went in
  * before finds it and fails the same way. SQLite checks the inserted values
  * before the conflict, so they must pass the check themselves.
  */
-function raiseRevision(db: Database, userId: UserId, expected: number) {
+function raiseRevision(
+  db: Database,
+  userId: UserId,
+  expected: number,
+  caughtUpTo: LocalDate,
+) {
   return db
     .insert(recordRevision)
-    .values({ userId, revision: expected + 1 })
+    .values({ userId, revision: expected + 1, caughtUpTo })
     .onConflictDoUpdate({
       target: recordRevision.userId,
       set: {
         revision: sql`case when ${recordRevision.revision} = ${expected} then ${expected + 1} else 0 end`,
+        caughtUpTo,
       },
     });
 }
