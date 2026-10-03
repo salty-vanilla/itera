@@ -1,4 +1,4 @@
-import { id, type AreaId, type TaskId } from '@itera/domain';
+import type { AreaId, TaskId } from '@itera/api-contract';
 import {
   Link,
   useNavigate,
@@ -33,9 +33,13 @@ import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { useStuckBar } from '@/lib/use-stuck-bar';
 import { cn } from '@/lib/utils';
 import { weekCall, weekText, weekLabel } from '@/lib/week-text';
-import type { PlanningData } from '@/store/views';
 import { useBacklog } from '@/store/use-backlog';
-import { usePlanningActions } from '@/store/use-planning';
+import {
+  useAvailableHoursAction,
+  useConfirmSprint,
+  usePickActions,
+  type PlanningData,
+} from '@/store/use-planning';
 import { useTaskActions } from '@/store/use-task-actions';
 import { TaskDetail } from '../backlog/task-detail';
 import { useTaskDetailLeave } from '../backlog/use-task-detail-leave';
@@ -115,9 +119,7 @@ export function validateSprintSearch(
     ...sprintSearchOf(search),
     ...(stage === undefined ? {} : { stage }),
     ...(search.criterion === 'off' ? { criterion: 'off' as const } : {}),
-    ...(typeof search.task === 'string'
-      ? { task: id<'Task'>(search.task) }
-      : {}),
+    ...(typeof search.task === 'string' ? { task: search.task } : {}),
   };
 }
 
@@ -132,7 +134,10 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
   const navigate = useNavigate({ from: '/sprint' });
   const router = useRouter();
   const toast = useToast();
-  const actions = usePlanningActions();
+  const sprintId = data.sprint.id;
+  const picking = usePickActions(sprintId);
+  const setAvailableHours = useAvailableHoursAction(sprintId);
+  const confirmation = useConfirmSprint(sprintId);
   const taskActions = useTaskActions();
   const backlog = useBacklog({});
   const stage = search.stage ?? 'pick';
@@ -182,14 +187,13 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
       check={stage === 'check'}
       sheet={sheet}
       // 確かめる takes the hours in its summary only: one field (#93).
-      onAvailableHours={
-        stage === 'check' ? undefined : actions.setAvailableHours
-      }
+      onAvailableHours={stage === 'check' ? undefined : setAvailableHours}
     />
   );
 
-  const confirm = () => {
-    if (!actions.confirmSprint(data.criterion?.applied ?? false)) return;
+  const confirm = async () => {
+    if (!(await confirmation.confirmSprint(data.criterion?.applied ?? false)))
+      return;
     setConfirming(false);
     toast.show({
       kind: 'sprint-confirmed',
@@ -199,8 +203,8 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
     setSearch({ stage: undefined, criterion: undefined });
   };
 
-  const addTask = (title: string, areaId: AreaId | undefined) => {
-    const created = actions.addAndChoose(title, areaId);
+  const addTask = async (title: string, areaId: AreaId | undefined) => {
+    const created = await picking.addAndChoose(title, areaId);
     if (created === undefined) return false;
     setAddedTaskId(created);
     toast.show({
@@ -405,6 +409,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
         <BacklogPane
           data={data}
           slim={stage !== 'pick'}
+          actions={picking}
           onAdd={addTask}
           onOpenTask={openTask}
           onEstimateTask={openEstimate}
@@ -425,7 +430,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
                   onApplyCriterion={(applied) =>
                     setSearch({ criterion: applied ? undefined : 'off' })
                   }
-                  onAvailableHours={actions.setAvailableHours}
+                  onAvailableHours={setAvailableHours}
                   onEstimateTask={openEstimate}
                   onOpenTask={openTask}
                 />
@@ -502,6 +507,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
         open={confirming}
         onOpenChange={setConfirming}
         onConfirm={confirm}
+        loading={confirmation.loading}
       />
     </div>
   );

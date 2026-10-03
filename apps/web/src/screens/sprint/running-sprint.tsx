@@ -1,4 +1,4 @@
-import type { TaskId } from '@itera/domain';
+import type { TaskId } from '@itera/api-contract';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { Info, Rewind, Route } from 'lucide-react';
 import { useId } from 'react';
@@ -32,9 +32,13 @@ import {
   weekText,
   type WeekName,
 } from '@/lib/week-text';
-import type { RunningData, RunningTask } from '@/store/views';
+import { useAvailableHoursAction } from '@/store/use-planning';
 import { useBacklog } from '@/store/use-backlog';
-import { useRunningSprintActions } from '@/store/use-running-sprint';
+import {
+  useRunningSprintActions,
+  type RunningData,
+  type RunningTask,
+} from '@/store/use-running-sprint';
 import { useTaskActions } from '@/store/use-task-actions';
 import { CarryOverText } from '../backlog/backlog-row';
 import { TaskDetail } from '../backlog/task-detail';
@@ -60,7 +64,8 @@ function RunningSprint({
   /** The previous and next Sprints (#90). */
   steps?: SprintHeaderProps['steps'];
 }) {
-  const actions = useRunningSprintActions();
+  const actions = useRunningSprintActions(data.sprint.id);
+  const setAvailableHours = useAvailableHoursAction(data.sprint.id);
   const period = formatDateRange(data.sprint.start, data.sprint.end);
   const byArea = data.totals.byArea;
   const { state } = data.sprint;
@@ -90,10 +95,7 @@ function RunningSprint({
       : backlog.item(search.task);
 
   const outlook = (
-    <Outlook
-      data={data}
-      onHours={running ? actions.setAvailableHours : undefined}
-    />
+    <Outlook data={data} onHours={running ? setAvailableHours : undefined} />
   );
 
   return (
@@ -374,7 +376,7 @@ function Outlook({
 }: {
   data: RunningData;
   /** Absent once the Sprint has ended: the hours are read only. */
-  onHours: ((hours: number | null) => boolean) | undefined;
+  onHours: ((hours: number | null) => boolean | Promise<boolean>) | undefined;
 }) {
   const ids = useId();
   const { planned, current } = data.availableHours;

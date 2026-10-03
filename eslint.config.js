@@ -104,34 +104,17 @@ function pureRules(name) {
  * @type {Record<string, Record<string, ('domain' | 'application')[]>>}
  */
 const MIGRATING = {
-  // #274: the Sprint (Planning and running).
-  '#274': {
-    'apps/web/src/screens/planning/backlog-pane.tsx': ['domain'],
-    'apps/web/src/screens/planning/check-summary.tsx': ['domain'],
-    'apps/web/src/screens/planning/plan-pane.tsx': ['domain'],
-    'apps/web/src/screens/planning/planned-source.ts': ['domain'],
-    'apps/web/src/screens/planning/planning-screen.tsx': ['domain'],
-    'apps/web/src/screens/sprint-screen.tsx': ['domain'],
-    'apps/web/src/screens/sprint/running-sprint.tsx': ['domain'],
-    'apps/web/src/store/use-planning.ts': ['domain', 'application'],
-    'apps/web/src/store/use-running-sprint.ts': ['domain', 'application'],
-    'apps/web/src/store/use-sprint-choice.ts': ['application'],
-  },
   // shared by the screens: removed by the Issue that moves their last user, #277 at the latest.
   shared: {
-    'apps/web/src/components/sprint/capacity-indicator.tsx': ['domain'],
     'apps/web/src/components/task/area-select.stories.tsx': ['domain'],
     'apps/web/src/components/task/estimate-suggestion.stories.tsx': ['domain'],
     'apps/web/src/components/task/task-quick-add.stories.tsx': ['domain'],
     'apps/web/src/components/task/task-row.stories.tsx': ['domain'],
-    'apps/web/src/lib/criterion-text.ts': ['domain'],
-    'apps/web/src/lib/week-text.ts': ['application'],
     'apps/web/src/store/record-store.ts': ['application'],
     'apps/web/src/store/store-provider.tsx': ['application'],
     'apps/web/src/store/use-app-overview.ts': ['application'],
     'apps/web/src/store/use-run.ts': ['domain', 'application'],
     'apps/web/src/store/use-system-day.ts': ['application'],
-    'apps/web/src/store/views.ts': ['domain', 'application'],
   },
 };
 
