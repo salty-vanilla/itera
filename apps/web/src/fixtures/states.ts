@@ -1,10 +1,16 @@
-// The fixture states of PRD §12, to open from the dev menu or the URL
-// (`?fixture=today-morning`). Each is a snapshot of the timeline: the
-// records and the clock (「今日」 and the current time).
-import type { StoreSnapshot } from '@/store/record-store';
-import { buildTimeline, type FixtureStateId } from './timeline';
+// The fixture states of PRD §12 as the dev menu offers them. The records
+// and the clock of each are `@itera/application`'s fixture.
+import {
+  fixtureIds,
+  fixtureStateIds,
+  type FixtureStateId,
+} from '@itera/application/fixtures';
 
-export type { FixtureStateId };
+export {
+  fixtureSnapshot,
+  isFixtureStateId,
+  type FixtureStateId,
+} from '@itera/application/fixtures';
 
 export type ScreenId = 'today' | 'sprint' | 'backlog' | 'retro';
 
@@ -18,61 +24,48 @@ export interface FixtureState {
   readonly search?: Readonly<Record<string, string>>;
 }
 
-export const fixtureStates: readonly FixtureState[] = [
-  { id: 'backlog-capture', screen: 'backlog', label: 'Capture' },
-  {
-    id: 'backlog-detail',
+const ids = fixtureIds();
+
+const states: Readonly<Record<FixtureStateId, Omit<FixtureState, 'id'>>> = {
+  'backlog-capture': { screen: 'backlog', label: 'Capture' },
+  'backlog-detail': {
     screen: 'backlog',
     label: 'Detail',
     // Scenario B's Task: a suggestion, subtasks, a due date, added mid-Sprint.
-    search: { task: 'task-interview' },
+    search: { task: ids.task.interview },
   },
-  {
-    id: 'backlog-recurrence',
+  'backlog-recurrence': {
     screen: 'backlog',
     label: 'Recurrence',
     // Scenario C's Task, its rule changed for the next Sprint.
-    search: { view: 'recurring', task: 'task-cleaning' },
+    search: { view: 'recurring', task: ids.task.cleaning },
   },
-  {
-    id: 'planning-pick',
+  'planning-pick': {
     screen: 'sprint',
     label: '選ぶ（Pick）',
     search: { stage: 'pick' },
   },
-  {
-    id: 'planning-shape',
+  'planning-shape': {
     screen: 'sprint',
     label: '整える（Shape）',
     search: { stage: 'shape' },
   },
-  {
-    id: 'planning-check',
+  'planning-check': {
     screen: 'sprint',
     label: '確かめる（Check）',
     search: { stage: 'check' },
   },
-  { id: 'today-morning', screen: 'today', label: '朝' },
-  { id: 'today-daytime', screen: 'today', label: '日中' },
-  { id: 'today-interrupt', screen: 'today', label: '割り込み' },
-  { id: 'retro-start', screen: 'retro', label: '開始' },
-  { id: 'retro-reflect', screen: 'retro', label: '振り返り' },
-  { id: 'retro-before-complete', screen: 'retro', label: '完了直前' },
-];
+  'today-morning': { screen: 'today', label: '朝' },
+  'today-daytime': { screen: 'today', label: '日中' },
+  'today-interrupt': { screen: 'today', label: '割り込み' },
+  'retro-start': { screen: 'retro', label: '開始' },
+  'retro-reflect': { screen: 'retro', label: '振り返り' },
+  'retro-before-complete': { screen: 'retro', label: '完了直前' },
+};
+
+export const fixtureStates: readonly FixtureState[] = fixtureStateIds.map(
+  (id) => ({ id, ...states[id] }),
+);
 
 /** The state opened when the URL names none. */
 export const defaultFixtureState: FixtureStateId = 'today-daytime';
-
-export function isFixtureStateId(value: unknown): value is FixtureStateId {
-  return fixtureStates.some((state) => state.id === value);
-}
-
-let timeline: ReadonlyMap<FixtureStateId, StoreSnapshot> | undefined;
-
-/** The records and clock of a state. The timeline is played once, on first use. */
-export function fixtureSnapshot(state: FixtureStateId): StoreSnapshot {
-  timeline ??= buildTimeline();
-  const snapshot = timeline.get(state);
-  if (snapshot === undefined) throw new Error(`No fixture state ${state}`);
-  return snapshot;
-}

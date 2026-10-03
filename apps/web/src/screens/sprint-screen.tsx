@@ -3,8 +3,8 @@ import { Link, useSearch } from '@tanstack/react-router';
 import type { SprintHeaderProps } from '@/components/sprint/sprint-header';
 import { SprintHeader } from '@/components/sprint/sprint-header';
 import { formatDate, formatDateRange } from '@/lib/date-format';
-import { weekCall, weekText } from '@/lib/week-text';
-import type { SprintChoice } from '@/store/sprint-choice';
+import { weekCall, weekText, weekLabel } from '@/lib/week-text';
+import type { SprintChoice } from '@/store/views';
 import { usePlanning } from '@/store/use-planning';
 import { useRunningSprint } from '@/store/use-running-sprint';
 import { useSprintChoice } from '@/store/use-sprint-choice';
@@ -61,7 +61,7 @@ function NextSprint({ choice, steps }: { choice: SprintChoice; steps: Steps }) {
     <div className="flex min-h-full w-full max-w-[calc(var(--spacing-pane-sprint)+var(--spacing-pane-side)+var(--spacing-12))] flex-col gap-8 px-4 pt-6 pb-16 medium:px-6 medium:pt-8">
       <SprintHeader
         title={`Sprint ${current.number}`}
-        week={current.week}
+        week={weekLabel(current.week)}
         period={formatDateRange(current.start, current.end)}
         steps={steps}
         actions={<BeginPlanning />}

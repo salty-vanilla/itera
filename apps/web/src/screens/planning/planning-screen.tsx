@@ -32,8 +32,8 @@ import { formatPlanningSum } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { useStuckBar } from '@/lib/use-stuck-bar';
 import { cn } from '@/lib/utils';
-import { weekCall, weekText } from '@/lib/week-text';
-import type { PlanningData } from '@/store/planning-view';
+import { weekCall, weekText, weekLabel } from '@/lib/week-text';
+import type { PlanningData } from '@/store/views';
 import { useBacklog } from '@/store/use-backlog';
 import { usePlanningActions } from '@/store/use-planning';
 import { useTaskActions } from '@/store/use-task-actions';
@@ -284,7 +284,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
         <SprintHeader
           status={<Tag tone="draft">計画中 · 未確定</Tag>}
           title={`Sprint ${data.number}`}
-          week={data.week}
+          week={weekLabel(data.week)}
           period={formatDateRange(data.sprint.start, data.sprint.end)}
           steps={steps}
           stages={STAGES.map((s) => ({

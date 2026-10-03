@@ -17,7 +17,7 @@ import {
   WEEK_ORDER,
   WEEKDAY_NAMES,
 } from '@/lib/recurrence-text';
-import type { BacklogItem } from '@/store/backlog-view';
+import type { BacklogItem } from '@/store/views';
 import { useTaskActions } from '@/store/use-task-actions';
 
 // 繰り返し (PRD §6 Recurrence, F1, F7, F12, F15, F41). Like the other fields

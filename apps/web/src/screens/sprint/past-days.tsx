@@ -14,7 +14,7 @@ import {
 import { useToast } from '@/components/ui/toast';
 import { formatDate } from '@/lib/date-format';
 import { SELECTION_WORDS } from '@/lib/selection-words';
-import type { PastDayRecord, RunningData } from '@/store/running-view';
+import type { PastDayRecord, RunningData } from '@/store/views';
 
 // 日ごとの記録 (#53, owner decisions): the days before today with their
 // completions and skips, each with 「取り消す」, an IconButton that keeps a

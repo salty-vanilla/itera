@@ -1,9 +1,9 @@
+import { operations, runningData } from '@itera/application';
 import type { AreaId, DailySelectionId, SprintId } from '@itera/domain';
 import { useMemo } from 'react';
-import * as changes from './running-changes';
-import { runningData } from './running-view';
 import { useStoreSnapshot } from './store-provider';
 import { useRun } from './use-run';
+import { runningScreenData } from './views';
 
 /**
  * A confirmed Sprint's screen data (ADR 0005: screens read through hooks):
@@ -11,10 +11,10 @@ import { useRun } from './use-run';
  */
 export function useRunningSprint(sprintId?: SprintId) {
   const { records, clock } = useStoreSnapshot();
-  return useMemo(
-    () => runningData(records, clock, sprintId),
-    [records, clock, sprintId],
-  );
+  return useMemo(() => {
+    const data = runningData(records, clock, sprintId);
+    return data && runningScreenData(data);
+  }, [records, clock, sprintId]);
 }
 
 /** What may change after confirm, one named function each. */
@@ -23,11 +23,12 @@ export function useRunningSprintActions() {
   return useMemo(
     () => ({
       setGoal: (areaId: AreaId, text: string) =>
-        run(changes.setGoal(areaId, text)),
-      setAvailableHours: (hours: number | null) => run(changes.setHours(hours)),
+        run(operations.setRunningGoal({ areaId, text })).ok,
+      setAvailableHours: (hours: number | null) =>
+        run(operations.setRunningAvailableHours({ hours })).ok,
       /** 過去の日の完了・スキップを取り消す (#53, F33). */
       undoPastDay: (selectionId: DailySelectionId) =>
-        run(changes.undoPastDay(selectionId)),
+        run(operations.undoPastDay({ selectionId })).ok,
     }),
     [run],
   );

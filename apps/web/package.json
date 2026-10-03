@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",
+    "@itera/application": "workspace:*",
     "@itera/domain": "workspace:*",
     "@tanstack/react-router": "1.170.39",
     "class-variance-authority": "0.7.1",

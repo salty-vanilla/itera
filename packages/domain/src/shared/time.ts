@@ -93,6 +93,12 @@ export function addDays(date: LocalDate, days: number): LocalDate {
   return d.toISOString().slice(0, 10) as LocalDate;
 }
 
+/** Days from `from` to `to`: 0 for the same day, negative when `to` is earlier. */
+export function daysBetween(from: LocalDate, to: LocalDate): number {
+  const ms = toUtcDate(to).getTime() - toUtcDate(from).getTime();
+  return Math.round(ms / 86_400_000);
+}
+
 export function dayOfWeek(date: LocalDate): DayOfWeek {
   return toUtcDate(date).getUTCDay() as DayOfWeek;
 }

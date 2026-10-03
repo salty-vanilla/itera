@@ -1,36 +1,18 @@
-import type { AreaColor, AreaId } from '@itera/domain';
+import { areaList, operations } from '@itera/application';
+import type { AreaId } from '@itera/domain';
 import { useMemo } from 'react';
-import * as changes from './area-changes';
-import { useRecordStore, useStoreSnapshot } from './store-provider';
+import { useStoreSnapshot } from './store-provider';
 import { useRun } from './use-run';
 
-export interface EditableArea {
-  readonly id: AreaId;
-  /** The current name (the Area is the person's, not a Sprint's, F5). */
-  readonly name: string;
-  readonly color: AreaColor;
-  readonly archived: boolean;
-}
+export type { EditableArea } from '@itera/application';
 
 /**
  * Every Area, archived ones too, in the person's order (`order`), each by
  * its current name. The choices are the ones not archived.
  */
-export function useAreas(): readonly EditableArea[] {
-  const { records } = useStoreSnapshot();
-  const { areas } = records;
-  return useMemo(
-    () =>
-      areas
-        .toSorted((a, b) => a.order - b.order)
-        .map((a) => ({
-          id: a.id,
-          name: a.name,
-          color: a.color,
-          archived: a.archived,
-        })),
-    [areas],
-  );
+export function useAreas() {
+  const { areas } = useStoreSnapshot().records;
+  return useMemo(() => areaList({ areas }), [areas]);
 }
 
 /**
@@ -40,20 +22,21 @@ export function useAreas(): readonly EditableArea[] {
  */
 export function useAreaActions() {
   const run = useRun();
-  const store = useRecordStore();
   return useMemo(
     () => ({
       /** The new Area's ID, or `undefined` when it did not go through. */
-      addArea: (name: string): AreaId | undefined =>
-        run(changes.addArea(name))
-          ? store.getSnapshot().records.areas.at(-1)?.id
-          : undefined,
+      addArea: (name: string): AreaId | undefined => {
+        const result = run(operations.createArea({ name }));
+        return result.ok ? result.value.areaId : undefined;
+      },
       renameArea: (areaId: AreaId, name: string) =>
-        run(changes.rename(areaId, name)),
-      archiveArea: (areaId: AreaId) => run(changes.archive(areaId)),
-      restoreArea: (areaId: AreaId) => run(changes.restore(areaId)),
+        run(operations.renameArea({ areaId, name })).ok,
+      archiveArea: (areaId: AreaId) =>
+        run(operations.archiveArea({ areaId })).ok,
+      restoreArea: (areaId: AreaId) =>
+        run(operations.restoreArea({ areaId })).ok,
     }),
-    [run, store],
+    [run],
   );
 }
 

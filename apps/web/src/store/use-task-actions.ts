@@ -1,5 +1,5 @@
+import { operations } from '@itera/application';
 import type {
-  Activity,
   AreaId,
   Estimate,
   EstimateSuggestionId,
@@ -11,14 +11,7 @@ import type {
   TaskId,
 } from '@itera/domain';
 import { useMemo } from 'react';
-import { useRecordStore } from './store-provider';
-import * as changes from './task-changes';
 import { useRun } from './use-run';
-
-type RuleActivity = Extract<
-  Activity,
-  { kind: 'recurrenceRuleCreated' | 'recurrenceRuleChanged' }
->;
 
 /**
  * The person's operations on Tasks, one named function each (ADR 0005 API
@@ -27,97 +20,102 @@ type RuleActivity = Extract<
  */
 export function useTaskActions() {
   const run = useRun();
-  const store = useRecordStore();
   return useMemo(
     () => ({
       /** The new Task's ID, or `undefined` when it did not go through. */
-      addTask: (title: string, areaId?: AreaId): TaskId | undefined =>
-        run(changes.addTask(title, areaId))
-          ? store.getSnapshot().records.tasks.at(-1)?.id
-          : undefined,
+      addTask: (title: string, areaId?: AreaId): TaskId | undefined => {
+        const result = run(
+          operations.createTask({
+            title,
+            ...(areaId === undefined ? {} : { areaId }),
+          }),
+        );
+        return result.ok ? result.value.taskId : undefined;
+      },
       saveTask: (
         taskId: TaskId,
         update: TaskAttributeUpdate,
         estimate: number | null | undefined,
-      ) => run(changes.saveTask(taskId, update, estimate)),
+      ) =>
+        run(
+          operations.saveTask({
+            taskId,
+            update,
+            ...(estimate === undefined ? {} : { estimate }),
+          }),
+        ).ok,
       adoptSuggestion: (
         taskId: TaskId,
         suggestionId: EstimateSuggestionId,
         bound: SuggestionBound,
-      ) => run(changes.adopt(taskId, suggestionId, bound)),
+      ) => run(operations.adoptSuggestion({ taskId, suggestionId, bound })).ok,
       undoAdoption: (
         taskId: TaskId,
         suggestionId: EstimateSuggestionId,
         previous: Estimate | null,
-      ) => run(changes.undoAdopt(taskId, suggestionId, previous)),
+      ) => run(operations.undoAdoption({ taskId, suggestionId, previous })).ok,
       adoptEditedSuggestion: (
         taskId: TaskId,
         suggestionId: EstimateSuggestionId,
         hours: number,
-      ) => run(changes.adoptEdited(taskId, suggestionId, hours)),
+      ) =>
+        run(operations.adoptEditedSuggestion({ taskId, suggestionId, hours }))
+          .ok,
       rejectSuggestion: (taskId: TaskId, suggestionId: EstimateSuggestionId) =>
-        run(changes.reject(taskId, suggestionId)),
+        run(operations.rejectSuggestion({ taskId, suggestionId })).ok,
       undoRejection: (taskId: TaskId, suggestionId: EstimateSuggestionId) =>
-        run(changes.undoReject(taskId, suggestionId)),
+        run(operations.undoRejection({ taskId, suggestionId })).ok,
       addSubtask: (taskId: TaskId, title: string, hours?: number) =>
-        run(changes.addTaskSubtask(taskId, title, hours)),
+        run(
+          operations.addSubtask({
+            taskId,
+            title,
+            ...(hours === undefined ? {} : { hours }),
+          }),
+        ).ok,
       setSubtaskDone: (taskId: TaskId, subtaskId: SubtaskId, done: boolean) =>
-        run(changes.toggleSubtask(taskId, subtaskId, done)),
+        run(operations.setSubtaskDone({ taskId, subtaskId, done })).ok,
       setSubtaskEstimate: (
         taskId: TaskId,
         subtaskId: SubtaskId,
         hours: number | null,
-      ) => run(changes.estimateSubtask(taskId, subtaskId, hours)),
-      archiveTask: (taskId: TaskId) => run(changes.archive(taskId)),
-      restoreTask: (taskId: TaskId) => run(changes.restore(taskId)),
-      completeTask: (taskId: TaskId) => run(changes.complete(taskId)),
-      undoCompleteTask: (taskId: TaskId) => run(changes.undoComplete(taskId)),
-      addToToday: (taskId: TaskId) => run(changes.toToday(taskId)),
-      addToWeek: (taskId: TaskId) => run(changes.toWeek(taskId)),
-      undoAddToWeek: (taskId: TaskId) => run(changes.undoToWeek(taskId)),
+      ) => run(operations.setSubtaskEstimate({ taskId, subtaskId, hours })).ok,
+      archiveTask: (taskId: TaskId) =>
+        run(operations.archiveTask({ taskId })).ok,
+      restoreTask: (taskId: TaskId) =>
+        run(operations.restoreTask({ taskId })).ok,
+      completeTask: (taskId: TaskId) =>
+        run(operations.completeTask({ taskId })).ok,
+      undoCompleteTask: (taskId: TaskId) =>
+        run(operations.undoCompleteTask({ taskId })).ok,
+      addToToday: (taskId: TaskId) =>
+        run(operations.addTaskToToday({ taskId })).ok,
+      addToWeek: (taskId: TaskId) =>
+        run(operations.addTaskToWeek({ taskId })).ok,
+      undoAddToWeek: (taskId: TaskId) =>
+        run(operations.undoAddTaskToWeek({ taskId })).ok,
       /**
        * Makes the Task recurring or changes its rule. `effectiveFrom` is the
        * day the change takes effect (「次の Sprint から反映」), absent when
-       * the pattern was already the rule's (nothing changed). It is read
-       * from the change's Activity, since a change to a version not in
-       * effect yet replaces it instead of adding one (F39).
+       * the pattern was already the rule's (nothing changed).
        */
       setRecurrence: (
         taskId: TaskId,
         pattern: RecurrencePattern,
       ): { ok: boolean; effectiveFrom?: LocalDate } => {
-        const activitiesOf = () => store.getSnapshot().records.activities;
-        const before = activitiesOf().length;
-        if (!run(changes.setRule(taskId, pattern))) return { ok: false };
-        const change = activitiesOf()
-          .slice(before)
-          .find(
-            (a): a is RuleActivity =>
-              (a.kind === 'recurrenceRuleCreated' ||
-                a.kind === 'recurrenceRuleChanged') &&
-              a.taskId === taskId,
-          );
-        return change === undefined
-          ? { ok: true }
-          : { ok: true, effectiveFrom: change.effectiveFrom };
+        const result = run(operations.setRecurrence({ taskId, pattern }));
+        return result.ok ? { ok: true, ...result.value } : { ok: false };
       },
       /**
        * 繰り返しをやめる (F41). `removed` when the rule had made no
        * occurrence and was taken off: the Task is one-off again.
        */
       endRecurrence: (taskId: TaskId): { ok: boolean; removed?: boolean } => {
-        const activitiesOf = () => store.getSnapshot().records.activities;
-        const before = activitiesOf().length;
-        if (!run(changes.endRule(taskId))) return { ok: false };
-        const removed = activitiesOf()
-          .slice(before)
-          .some(
-            (a) => a.kind === 'recurrenceRuleRemoved' && a.taskId === taskId,
-          );
-        return { ok: true, removed };
+        const result = run(operations.endRecurrence({ taskId }));
+        return result.ok ? { ok: true, ...result.value } : { ok: false };
       },
     }),
-    [run, store],
+    [run],
   );
 }
 

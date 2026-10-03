@@ -1,7 +1,7 @@
 import { useNavigate, useRouter } from '@tanstack/react-router';
 import type { SprintHeaderProps } from '@/components/sprint/sprint-header';
 import { isPlainClick } from '@/lib/plain-click';
-import type { SprintChoice, SprintRef } from '@/store/sprint-choice';
+import type { SprintChoice, SprintRef } from '@/store/views';
 
 /**
  * The Sprint Header's ‹ ›: the previous and next Sprint on the same screen,

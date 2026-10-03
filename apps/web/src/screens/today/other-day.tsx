@@ -7,7 +7,7 @@ import { MetaItem, TaskMetadata } from '@/components/task/task-metadata';
 import { formatDate, formatTime } from '@/lib/date-format';
 import { SELECTION_WORDS } from '@/lib/selection-words';
 import { formatHours } from '@/lib/time-format';
-import type { DayData } from '@/store/day-view';
+import type { DayData } from '@/store/views';
 import { useDay } from '@/store/use-today';
 import { DayFrame } from './day-frame';
 

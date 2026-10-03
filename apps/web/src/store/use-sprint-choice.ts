@@ -1,5 +1,5 @@
+import { sprintChoice, type SprintChoice } from '@itera/application';
 import { useMemo } from 'react';
-import { sprintChoice, type SprintChoice } from './sprint-choice';
 import { useStoreSnapshot } from './store-provider';
 
 /**

@@ -5,7 +5,7 @@ import { Field } from '@/components/ui/field';
 import { Tag } from '@/components/ui/tag';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import type { RetroData } from '@/store/retro-view';
+import type { RetroData } from '@/store/views';
 import { Materials } from './materials';
 
 // 振り返る (patterns.md Retro): two inputs only — 「気づいたこと」

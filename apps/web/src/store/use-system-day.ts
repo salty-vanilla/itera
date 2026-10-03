@@ -1,6 +1,5 @@
+import { beginDay, reviewEnded } from '@itera/application';
 import { useLayoutEffect } from 'react';
-import { beginDay } from './today-changes';
-import { reviewEnded } from './system-changes';
 import { useRecordStore, useStoreSnapshot } from './store-provider';
 
 /**

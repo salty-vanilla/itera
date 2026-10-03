@@ -4,7 +4,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
-import type { RecordStore, StoreSnapshot } from './record-store';
+import type { RecordStore, StoreSnapshot } from '@itera/application';
 
 const StoreContext = createContext<RecordStore | null>(null);
 

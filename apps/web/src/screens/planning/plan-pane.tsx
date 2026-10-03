@@ -18,11 +18,7 @@ import { TaskRow } from '@/components/task/task-row';
 import { formatPlanningSum, formatPlanningTotal } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
 import { weekCall, weekText } from '@/lib/week-text';
-import type {
-  AreaPlan,
-  PlannedTask,
-  PlanningData,
-} from '@/store/planning-view';
+import type { AreaPlan, PlannedTask, PlanningData } from '@/store/views';
 import { usePlanningActions } from '@/store/use-planning';
 import { plannedSourceText } from './planned-source';
 

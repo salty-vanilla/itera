@@ -50,6 +50,9 @@ importers:
       '@base-ui/react':
         specifier: 1.8.0
         version: 1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@itera/application':
+        specifier: workspace:*
+        version: link:../../packages/application
       '@itera/domain':
         specifier: workspace:*
         version: link:../../packages/domain
@@ -129,6 +132,19 @@ importers:
       yaml:
         specifier: 2.9.1
         version: 2.9.1
+
+  packages/application:
+    dependencies:
+      '@itera/domain':
+        specifier: workspace:*
+        version: link:../domain
+    devDependencies:
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 5.0.2
+        version: 5.0.2(@types/node@26.6.3)(jsdom@30.1.1(@noble/hashes@2.4.0))(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/domain:
     devDependencies:

@@ -12,9 +12,13 @@ import {
 } from '@/components/sprint/sprint-header';
 import { formatDate, formatDateRange } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
-import { weekCall, weekText } from '@/lib/week-text';
-import type { ActualTarget, RetroData } from '@/store/retro-view';
-import { type SprintChoice, type SprintRef } from '@/store/sprint-choice';
+import { weekCall, weekText, weekLabel } from '@/lib/week-text';
+import type {
+  ActualTarget,
+  RetroData,
+  SprintChoice,
+  SprintRef,
+} from '@/store/views';
 import { useAppOverview } from '@/store/use-app-overview';
 import { useRetro, useRetroActions } from '@/store/use-retro';
 import { useSprintChoice } from '@/store/use-sprint-choice';
@@ -210,7 +214,7 @@ function RetroView({
           )
         }
         title={`Sprint ${data.number}`}
-        week={data.week}
+        week={weekLabel(data.week)}
         period={formatDateRange(data.sprint.start, data.sprint.end)}
         steps={steps}
         stages={RETRO_STAGES.map((s) => ({
@@ -413,7 +417,7 @@ function NotStarted({
           )
         }
         title={`Sprint ${current.number}`}
-        week={current.week}
+        week={weekLabel(current.week)}
         period={formatDateRange(sprint.start, sprint.end)}
         steps={steps}
         actions={

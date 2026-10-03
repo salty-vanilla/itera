@@ -23,7 +23,7 @@ import { formatPlanningTotal } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { useStuckBar } from '@/lib/use-stuck-bar';
 import { cn } from '@/lib/utils';
-import type { TodayData, TodayRow as TodayRowData } from '@/store/today-view';
+import type { TodayData, TodayRow as TodayRowData } from '@/store/views';
 import { useAppOverview } from '@/store/use-app-overview';
 import { useBacklog } from '@/store/use-backlog';
 import { useTaskActions } from '@/store/use-task-actions';
