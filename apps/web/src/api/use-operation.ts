@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useToast } from '@/components/ui/toast';
 import { useApiClient } from './api-provider';
 import { failureOf } from './failure';
-import { SAVE_FAILED } from './save-failed';
+import { saveFailedToast } from './save-failed';
 
 /** What running an operation gives back: its value, or that it did not go through. */
 export type Outcome<T> =
@@ -25,8 +25,10 @@ export const LOADING_DELAY = 300;
  * - When it went through, every read is read again before `run` resolves
  *   (query-client.ts), so the screen has the new records by then.
  * - When it did not, the danger Toast says so and `run` gives back
- *   `{ ok: false }`. A version conflict also reads again. Without a session
- *   there is no Toast: the person is sent to sign in.
+ *   `{ ok: false }` (save-failed.ts). When it may have been saved after all
+ *   (a version conflict, the server or the network failed), every read is
+ *   read again before the Toast. Without a session there is no Toast: the
+ *   person is sent to sign in.
  * - `pending` is true while it is being sent (block the control), and
  *   `loading` once that has lasted `LOADING_DELAY` (show the spinner and
  *   its words: Button `loading`, IconButton `loading`).
@@ -48,8 +50,8 @@ export function useOperation<TData, TError, TVariables>(
       try {
         return { ok: true, value: await mutateAsync(variables) };
       } catch (error) {
-        if (failureOf(error).kind !== 'unauthenticated')
-          toast.show(SAVE_FAILED);
+        const failed = saveFailedToast(failureOf(error));
+        if (failed !== undefined) toast.show(failed);
         return { ok: false };
       } finally {
         sending.current = false;

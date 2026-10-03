@@ -116,7 +116,7 @@ describe('collectFiles', () => {
     if (root) rmSync(root, { recursive: true, force: true });
   });
 
-  it('leaves out tests, stories, fixtures and test helpers', () => {
+  it('leaves out tests, stories, fixtures, the mock and test helpers', () => {
     root = mkdtempSync(join(tmpdir(), 'copy-list-'));
     for (const file of [
       'apps/web/src/screens/today-row.tsx',
@@ -124,7 +124,8 @@ describe('collectFiles', () => {
       'apps/web/src/components/button.stories.tsx',
       'apps/web/src/fixtures/states.ts',
       'apps/web/src/foundations/token-lists.ts',
-      'apps/web/src/app/dev-menu.tsx',
+      'apps/web/src/mock/dev-menu.tsx',
+      'apps/web/src/mock/fixture-states.ts',
       'apps/web/src/vite-env.d.ts',
       'apps/web/src/styles/globals.css',
       'packages/domain/src/task.ts',
