@@ -117,8 +117,10 @@ NotFoundError:
     message: { type: string }
 RevisionConflictError:
   description: >-
-    Another write came first (ADR 0004 同時の書き込み). Nothing was written;
-    read the records again. Not retried automatically.
+    Another write came first (ADR 0004 同時の書き込み), and this one was not
+    made; read the records again. Not retried automatically. (When the
+    database's answer to a write that was made is lost, it also comes back
+    as this; reading again shows what was saved.)
   type: object
   required: [code, message]
   properties:

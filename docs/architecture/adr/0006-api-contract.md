@@ -37,10 +37,10 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 - 説明（summary・description）は英語で書く（生成したコードの JSDoc になり、コードのコメントと揃える）。画面の語は使わない。
 - 記録の DTO は domain の型と同じ形にする。省略できる属性はキーを省き、`null` にしない（domain の `exactOptionalPropertyTypes`）。`null` を値として使うのは、domain がそう決めている入力（`TaskAttributeUpdate` の `areaId`・`due`、時間の消去など）と、`AreaTotal` などの `areaId: null`（領域なし）だけ。
 - ID は TypeID（ADR 0004「ID の形式」）。種類ごとに schema（`TaskId` など）を置き、接頭辞と、UUIDv7 の version（11 文字目が e か f）と variant（14 文字目が 89abrstv のどれか）までを正規表現で決める。`parseId` が受け付けるものと同じであることをテストで確かめる。
-- `LocalDate` は `format: date`、`Instant` は `format: date-time` に domain と同じ正規表現（UTC・ミリ秒つき）を足す。日付が実在するか（2 月 30 日など）は、サーバーが domain の `parseLocalDate` で確かめる。
+- `LocalDate` は `format: date`、`Instant` は `format: date-time` に domain と同じ正規表現（UTC・ミリ秒つき）を足す。Valibot の書式の検査は暦の上で実在するか（2 月 30 日など）までは見ないので、サーバーは入力の検証の段階で、入力の日付と日時を domain の `parseLocalDate`・`parseInstant` でも確かめ、実在しなければ 400 `validationFailed` にする（形の誤りとして扱い、操作の入力でも読み取りのパラメータでも同じ）。
 - 契約が検証するのは形と書式（型、必須、ID と日付の書式、列挙）だけにする。値の規則（正の時間、空でない題名、状態の遷移）は domain の規則で、422 で返す。規則を契約と domain に二重に持たないため。
-- 要求の本文の最上位は `additionalProperties: false`（Valibot の `strictObject`）。応答は未知のキーを許す（クライアントが後から足した項目で壊れないように）。応答の余分な・欠けたキーは、下の型のテストで止める。
-- 一覧（`BacklogData.items` など、ID をキーにする表）は `additionalProperties` で書き、`propertyNames` は使わない（Hey API 0.99.0 は `propertyNames` があると Valibot で値を検証しない `v.object({})` を出すため）。
+- 要求の本文の最上位と、要求にしか使わない入れ子（`TaskAttributeUpdate`）は `additionalProperties: false`（Valibot の `strictObject`）。綴りの誤りなどの未知のキーは 400 になる。応答と共有する入れ子（`InterruptNote`・`RetroPin`・`Estimate`・`RecurrencePattern`・`CriterionPolicy`）は未知のキーを許し、Valibot の `object` が出力から落とす。サーバーは、要求の本文ではなく検証の出力だけを application に渡す。応答は未知のキーを許す（クライアントが後から足した項目で壊れないように）。応答の余分な・欠けたキーは、下の型のテストで止める。
+- 一覧（`BacklogData.items`・`RetroData.sprintAreas` など、ID をキーにする表）は `additionalProperties` で書き、`propertyNames` は使わない（Hey API 0.99.0 は `propertyNames` があると値を検証しない `v.object({})` を出す）。値が `$ref` の表も、0.99.0 の Valibot の出力では同じく `v.object({})` になる（Valibot のプラグインが `$ref` の値を読まない）。これは下の「生成物」の patch で直す。
 
 ### 経路の形
 
@@ -92,7 +92,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 | 401 | `unauthenticated` | 有効なセッションがない |
 | 403 | `forbiddenOrigin` | 書き込みの Origin が違う（ADR 0004「書き込みの API の CSRF への備え」） |
 | 404 | `notFound` | 要求が指す記録が利用者の記録にない（domain の `notFound`） |
-| 409 | `revisionConflict` | ほかの書き込みが先に入った（ADR 0004「同時の書き込み」）。何も書いていない |
+| 409 | `revisionConflict` | ほかの書き込みが先に入り、この書き込みはしていない（ADR 0004「同時の書き込み」）。保存は確定したのに DB の応答が失われたときもこれになる（ADR 0004 の既知の限界）。どちらも読み直せば保存された記録が分かる |
 | 422 | `invalidInput`・`invalidTransition`・`recurringTaskCannotComplete` | domain が操作を受け付けない（値の規則、状態の遷移、繰り返しの Task の完了） |
 | 500 | `internalError` | 予期しない失敗 |
 
@@ -110,6 +110,10 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
   - `@itera/api-contract/react-query`：TanStack Query の options（Web）。React に依存する。
   - `services/api` から `client`・`react-query` の import を ESLint の `no-restricted-imports` で止める。API が React に依存しない。
 - Hey API がそのまま写す fetch の実行時のコード（`src/generated/client/`・`core/`）は `exactOptionalPropertyTypes` を前提に書かれておらず、`apps/web` はこの .ts を自分の設定で型検査する。そこで生成の後処理で、この 2 つのディレクトリのファイルにだけ `// @ts-nocheck` を付ける。契約から生成したコード（型・スキーマ・SDK・Query の options）は型検査の対象のまま。Hey API がこの設定に対応したら外す。
+- Hey API 0.99.0 の Valibot のプラグインは、`additionalProperties` の値が `$ref` だと値を読まず、`v.record` の代わりに何も検証しない `v.object({})` を出す（`BacklogData.items`、`RetroData.sprintAreas`）。仕様の書き方（`allOf`・`anyOf`・`type` を並べる）では避けられなかった。そこで `pnpm patch` で、その条件の 1 行（`$ref` の値も読む）だけを直す（`patches/@hey-api__openapi-ts@0.99.0.patch`、`pnpm-workspace.yaml` の `patchedDependencies`）。
+  - 境界：Valibot のプラグインの `additionalProperties` の扱いの 1 行だけ。ほかの出力は変えない。
+  - 検査：生成した Valibot に `v.object({})`・`v.unknown()` があればテストが失敗し、2 つの表が `v.record` で値を検証していることもテストで確かめる（`src/generated.test.ts`）。版を上げて patch が当たらなくなったときも、ここで止まる。
+  - 戻す条件：Hey API が `$ref` の値の表に `v.record` を出すようになったら、版を上げて patch を消す。
 - 生成物は Prettier と ESLint の対象外（`.prettierignore`、`eslint.config.js` の ignores）。正しさは `contract:check` と下のテストで確かめる。
 
 ### 契約と実装の一致
@@ -119,7 +123,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 - 一覧：生成したクライアントの operation が、`operations` のすべての名前と読み取りの 10 個に一致する。`@itera/application` の関数の export のうち、読み取りでも操作の道具でもないものがあれば失敗する（読み取りを足したら契約にも足す）。
 - 型：各操作の入力と本文、出力と応答、各読み取りの結果と応答の `view`（`undefined` は `null`）と `clock` が、型として同じ（片方への代入ができるだけでなく、余分な・欠けたキーもない）。比べる前に、両方から brand（ID・日付）と `readonly` を外す。`pnpm typecheck` で確かめる。
 - fixture：PRD §12 の 12 状態で、すべての読み取り（Backlog の絞り込みごと、すべての Sprint の番号と次の週、昨日と明日）の結果を JSON にして `{ clock, view }` で包み、生成した応答のスキーマで検証する。
-- ID：各種類の ID のスキーマが、`parseId` と同じものを受け付ける。
+- ID：各種類の ID のスキーマが、`parseId` と同じものを受け付ける。型のテストは ID を文字列として比べるので、各操作の本文のどの属性がどの種類の ID を取るかは別に確かめる：application の入力の型から求めた種類の表（`pnpm typecheck` で型と照合）と、生成した本文のスキーマが参照する ID のスキーマを照らす（`src/id-kinds.test.ts`）。
 
 ## 検討した代替案
 
@@ -133,11 +137,22 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 - query の数と真偽は文字列で届くので、サーバーで変換が要る（#266）。
 - 応答のスキーマは未知のキーを許すので、Valibot の検証だけでは余分なキーを見つけられない。型のテストで止めている。
-- `restoreInterrupt` と `undoAdoption` は、クライアントが前の読み取りの値を送る。読み取りが古いと、戻す値も古い（409 の扱いは ADR 0004 のとおり）。
+- `restoreInterrupt` と `undoAdoption` は、クライアントが前の読み取りの値を送る。版はサーバーが読み込んだ時点のものなので、クライアントの読み取りが古いことは 409 では分からない。`undoAdoption` は domain の確かめ（提案の状態）で守られるが、`restoreInterrupt` は古い note でも受け付ける。
+- `restoreInterrupt` の ID の重複を domain が確かめるのは今の Sprint の中だけで、DB の `interrupt_note.id` は全体の主キー。ほかの Sprint にある ID を送ると保存の `batch()` が失敗する（上書きはされない）。偶然には起きないが 500 になるので、Today の操作をつなぐ Issue で、利用者のすべての割り込みと照合して 422 にする。`note.at` が Sprint の期間の外でも受け付ける点も同じ。
+- 文字列・配列の長さと本文の大きさに、契約では上限を置いていない。D1 の上限を超えると 500 になる。登録を許可の一覧で絞っている間は実害が小さい。本文の大きさの上限とそのときの応答（413 など）は #266 で決め、契約に足す。
+
+## 互換の規則
+
+Web は API と同じ Worker で配信するので同時に入れ替わるが、後から出る iOS・Android には古い版が残る。
+
+- 壊さない変更：応答に省略できる項目を足す、要求に省略できる項目を足す、operation を足す、判別子のない `oneOf` に `discriminator` を足す（通信の形は変わらない）。
+- 壊す変更：応答の enum・`code` に値を足す（古いクライアントが知らない値を受ける）、要求に必須の項目を足す、項目の型・名前・必須を変える、operation を消す、`SprintAreaLabel.color` のような通信の形を変える。
+- 壊す変更をするときは `info.version` の major を上げ、ADR に書く（MVP の間は Web だけなので、iOS に着手するまでに版の上げ方と古いクライアントの扱いを決める）。
+- クライアントは、知らない `code` を一般の失敗として扱う。
 
 ## 影響
 
 - `services/api`（#266）は、`@itera/api-contract` のスキーマで入力を検証し、この ADR の割り当てでエラーを返す。
 - `apps/web`（#272）は、`@itera/api-contract/client` と `/react-query` を使い、`@tanstack/react-query` 5.104.1 を入れる。
-- iOS・Android は、`openapi/` を 1 ファイルにまとめたもの（`redocly bundle`）から生成できる。
+- iOS・Android は、`openapi/` を 1 ファイルにまとめたもの（`redocly bundle`）から生成できる。セッションの Cookie と書き込みの Origin の検査（ADR 0004）は、Origin を送らないネイティブのクライアントでは 403 になるので、ネイティブの認証の方式は iOS に着手するときに決める。
 - 契約を変えるときは、`openapi/` を直し、`pnpm contract:generate` を実行して、生成物と一緒にコミットする。

@@ -1,7 +1,9 @@
 // What Hey API generates from the contract (ADR 0006). The output is
 // committed; `pnpm contract:check` generates it again and fails on any
-// difference. Run `pnpm contract:generate` after changing openapi/
-// (scripts/generated.mjs bundles the files into one first).
+// difference. Run `pnpm contract:generate` after changing openapi/.
+// generated.mjs bundles the files into one first, then calls Hey API with
+// this; it is not a config file for the openapi-ts CLI, which would skip
+// those steps.
 import type { UserConfig } from '@hey-api/openapi-ts';
 
 export const OUTPUT = 'src/generated';

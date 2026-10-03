@@ -58,7 +58,7 @@ export type UnauthenticatedError = {
 };
 
 /**
- * Another write came first (ADR 0004 同時の書き込み). Nothing was written; read the records again. Not retried automatically.
+ * Another write came first (ADR 0004 同時の書き込み), and this one was not made; read the records again. Not retried automatically. (When the database's answer to a write that was made is lost, it also comes back as this; reading again shows what was saved.)
  */
 export type RevisionConflictError = {
     code: 'revisionConflict';
@@ -1148,7 +1148,7 @@ export type RuleViolationError = {
 };
 
 /**
- * The attributes to change; a property left out stays. `null` clears an optional attribute.
+ * The attributes to change; a property left out stays. `null` clears an optional attribute. Only in requests, so unknown keys are refused.
  */
 export type TaskAttributeUpdate = {
     title?: string;
@@ -1172,7 +1172,7 @@ export type GetOverviewErrors = {
      */
     401: UnauthenticatedError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -1208,7 +1208,7 @@ export type ListAreasErrors = {
      */
     401: UnauthenticatedError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -1251,7 +1251,7 @@ export type GetBacklogErrors = {
      */
     401: UnauthenticatedError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -1297,7 +1297,7 @@ export type GetSprintChoiceErrors = {
      */
     401: UnauthenticatedError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -1342,7 +1342,7 @@ export type GetPlanningErrors = {
      */
     401: UnauthenticatedError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -1387,7 +1387,7 @@ export type GetRunningErrors = {
      */
     401: UnauthenticatedError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -1423,7 +1423,7 @@ export type GetTodayErrors = {
      */
     401: UnauthenticatedError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -1465,7 +1465,7 @@ export type GetDayErrors = {
      */
     401: UnauthenticatedError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -1510,7 +1510,7 @@ export type GetRetroErrors = {
      */
     401: UnauthenticatedError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -1546,7 +1546,7 @@ export type GetNextPlanningErrors = {
      */
     401: UnauthenticatedError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -1596,7 +1596,7 @@ export type CreateAreaErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -1650,7 +1650,7 @@ export type RenameAreaErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -1701,7 +1701,7 @@ export type ArchiveAreaErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -1752,7 +1752,7 @@ export type RestoreAreaErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -1804,7 +1804,7 @@ export type CreateTaskErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -1862,7 +1862,7 @@ export type SaveTaskErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -1915,7 +1915,7 @@ export type AdoptSuggestionErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -1968,7 +1968,7 @@ export type UndoAdoptionErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -2021,7 +2021,7 @@ export type AdoptEditedSuggestionErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -2073,7 +2073,7 @@ export type RejectSuggestionErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -2125,7 +2125,7 @@ export type UndoRejectionErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -2178,7 +2178,7 @@ export type AddSubtaskErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -2233,7 +2233,7 @@ export type SetSubtaskDoneErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -2286,7 +2286,7 @@ export type SetSubtaskEstimateErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -2337,7 +2337,7 @@ export type ArchiveTaskErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -2388,7 +2388,7 @@ export type RestoreTaskErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -2439,7 +2439,7 @@ export type CompleteTaskErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -2490,7 +2490,7 @@ export type UndoCompleteTaskErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -2541,7 +2541,7 @@ export type AddTaskToTodayErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -2595,7 +2595,7 @@ export type AddTaskToWeekErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -2648,7 +2648,7 @@ export type UndoAddTaskToWeekErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -2700,7 +2700,7 @@ export type SetRecurrenceErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -2756,7 +2756,7 @@ export type EndRecurrenceErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -2812,7 +2812,7 @@ export type ChooseTasksErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -2868,7 +2868,7 @@ export type UnchooseTasksErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -2919,7 +2919,7 @@ export type UnchooseTasksByTaskErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -2971,7 +2971,7 @@ export type SetOccurrenceIncludedErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -3022,7 +3022,7 @@ export type IncludeOccurrencesErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -3073,7 +3073,7 @@ export type ExcludeAllOccurrencesErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -3125,7 +3125,7 @@ export type CreateAndChooseTaskErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -3180,7 +3180,7 @@ export type SetPlanningGoalErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -3232,7 +3232,7 @@ export type SetGoalLinkErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -3283,7 +3283,7 @@ export type SetPlanningAvailableHoursErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -3334,7 +3334,7 @@ export type ConfirmSprintErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -3386,7 +3386,7 @@ export type ChooseForTodayErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -3439,7 +3439,7 @@ export type StartSelectionErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -3490,7 +3490,7 @@ export type DeferSelectionErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -3541,7 +3541,7 @@ export type RemoveFromTodayErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -3592,7 +3592,7 @@ export type UndoCloseSelectionErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -3644,7 +3644,7 @@ export type PauseSelectionErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -3695,7 +3695,7 @@ export type CompleteSelectionErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -3746,7 +3746,7 @@ export type UndoCompleteSelectionErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -3797,7 +3797,7 @@ export type SkipSelectionErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -3848,7 +3848,7 @@ export type UndoSkipSelectionErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -3900,7 +3900,7 @@ export type RecordSelectionActualErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -3952,7 +3952,7 @@ export type NoteInterruptErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -4007,7 +4007,7 @@ export type EditInterruptErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -4058,7 +4058,7 @@ export type DeleteInterruptErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -4109,7 +4109,7 @@ export type RestoreInterruptErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -4161,7 +4161,7 @@ export type CreateTaskForTodayErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -4210,7 +4210,7 @@ export type BeginRetroErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -4262,7 +4262,7 @@ export type SetRunningGoalErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -4313,7 +4313,7 @@ export type SetRunningAvailableHoursErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -4364,7 +4364,7 @@ export type UndoPastDayErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -4416,7 +4416,7 @@ export type AssessGoalErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -4467,7 +4467,7 @@ export type TogglePinErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -4518,7 +4518,7 @@ export type SetReflectionErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -4569,7 +4569,7 @@ export type SetImprovementErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -4620,7 +4620,7 @@ export type DraftCriterionErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -4673,7 +4673,7 @@ export type SetDraftPolicyErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -4718,7 +4718,7 @@ export type DropCriterionDraftErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -4769,7 +4769,7 @@ export type DecideCriterionErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -4823,7 +4823,7 @@ export type RecordReviewActualErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -4868,7 +4868,7 @@ export type CompleteRetroErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**
@@ -4913,7 +4913,7 @@ export type BeginPlanningErrors = {
      */
     404: NotFoundError;
     /**
-     * Another write came first; nothing was written.
+     * Another write came first; this one was not made.
      */
     409: RevisionConflictError;
     /**

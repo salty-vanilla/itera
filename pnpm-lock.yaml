@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@hey-api/openapi-ts@0.99.0':
+    hash: 61d025d5f829ed7fa0ea7271b5602f30fba4d1340f2dd058fd1d852bb98ae018
+    path: patches/@hey-api__openapi-ts@0.99.0.patch
+
 importers:
 
   .:
@@ -141,7 +146,7 @@ importers:
     devDependencies:
       '@hey-api/openapi-ts':
         specifier: 0.99.0
-        version: 0.99.0(typescript@6.0.3)
+        version: 0.99.0(patch_hash=61d025d5f829ed7fa0ea7271b5602f30fba4d1340f2dd058fd1d852bb98ae018)(typescript@6.0.3)
       '@itera/application':
         specifier: workspace:*
         version: link:../application
@@ -5968,7 +5973,7 @@ snapshots:
       '@types/json-schema': 7.0.15
       js-yaml: 4.2.0
 
-  '@hey-api/openapi-ts@0.99.0(typescript@6.0.3)':
+  '@hey-api/openapi-ts@0.99.0(patch_hash=61d025d5f829ed7fa0ea7271b5602f30fba4d1340f2dd058fd1d852bb98ae018)(typescript@6.0.3)':
     dependencies:
       '@hey-api/codegen-core': 0.9.1
       '@hey-api/json-schema-ref-parser': 1.4.4

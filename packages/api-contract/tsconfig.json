@@ -6,6 +6,6 @@
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": []
   },
-  "include": ["src", "openapi-ts.config.ts"],
+  "include": ["src"],
   "exclude": ["src/**/*.test.ts", "src/testing.ts"]
 }

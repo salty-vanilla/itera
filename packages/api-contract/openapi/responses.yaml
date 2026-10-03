@@ -20,7 +20,7 @@ NotFound:
     application/json:
       schema: { $ref: './schemas/common.yaml#/NotFoundError' }
 RevisionConflict:
-  description: Another write came first; nothing was written.
+  description: Another write came first; this one was not made.
   content:
     application/json:
       schema: { $ref: './schemas/common.yaml#/RevisionConflictError' }

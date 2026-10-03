@@ -9,3 +9,5 @@ ignoredBuiltDependencies:
   - esbuild
   - lefthook
   - workerd
+patchedDependencies:
+  '@hey-api/openapi-ts@0.99.0': patches/@hey-api__openapi-ts@0.99.0.patch

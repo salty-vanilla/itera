@@ -1,0 +1,13 @@
+diff --git a/dist/init-D6Y8JFUS.mjs b/dist/init-D6Y8JFUS.mjs
+index 8a1c4f9652f2a57086f4ecdeb88c02e7e55edc76..5c30273a15c4b25f1afd0a6a290c4568cca4174c 100644
+--- a/dist/init-D6Y8JFUS.mjs
++++ b/dist/init-D6Y8JFUS.mjs
+@@ -13787,7 +13787,7 @@ function numberToPipes({ path, plugin, schema }) {
+ //#region src/plugins/valibot/v1/toAst/object.ts
+ function additionalPropertiesNode$3(ctx) {
+ 	const { pipes, schema } = ctx;
+-	if (!schema.additionalProperties || !schema.additionalProperties.type) return;
++	if (!schema.additionalProperties || !schema.additionalProperties.type && !schema.additionalProperties.$ref) return;
+ 	if (schema.additionalProperties.type === "never") return null;
+ 	const additionalResult = ctx.walk(schema.additionalProperties, {
+ 		path: ref([...fromRef(ctx.path), "additionalProperties"]),

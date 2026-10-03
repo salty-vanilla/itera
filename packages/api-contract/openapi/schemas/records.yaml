@@ -121,8 +121,9 @@ Task:
 TaskAttributeUpdate:
   description: >-
     The attributes to change; a property left out stays. `null` clears an
-    optional attribute.
+    optional attribute. Only in requests, so unknown keys are refused.
   type: object
+  additionalProperties: false
   properties:
     title: { type: string }
     description: { type: string }

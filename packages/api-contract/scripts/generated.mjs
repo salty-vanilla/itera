@@ -6,7 +6,7 @@ import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { createClient } from '@hey-api/openapi-ts';
-import { OUTPUT, contractConfig } from '../openapi-ts.config.ts';
+import { OUTPUT, contractConfig } from './contract-config.ts';
 
 /** @param {string} dir */
 async function files(dir) {
@@ -56,6 +56,9 @@ async function differences(actual, expected) {
   }
   return found;
 }
+
+// Paths are the package's: run from anywhere.
+process.chdir(join(import.meta.dirname, '..'));
 
 const mode = process.argv[2];
 if (mode !== 'write' && mode !== 'check') {

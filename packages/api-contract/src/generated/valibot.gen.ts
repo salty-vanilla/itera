@@ -61,7 +61,7 @@ export const vUnauthenticatedError = v.object({
 });
 
 /**
- * Another write came first (ADR 0004 同時の書き込み). Nothing was written; read the records again. Not retried automatically.
+ * Another write came first (ADR 0004 同時の書き込み), and this one was not made; read the records again. Not retried automatically. (When the database's answer to a write that was made is lost, it also comes back as this; reading again shows what was saved.)
  */
 export const vRevisionConflictError = v.object({
     code: v.literal('revisionConflict'),
@@ -374,7 +374,7 @@ export const vBacklogData = v.object({
         noArea: v.pipe(v.number(), v.integer())
     }),
     shown: v.array(vTaskId),
-    items: v.object({})
+    items: v.record(v.string(), vBacklogItem)
 });
 
 /**
@@ -1126,7 +1126,7 @@ export const vRetroData = v.object({
     today: vLocalDate,
     timeZone: vTimeZone,
     facts: vRetroFacts,
-    sprintAreas: v.object({}),
+    sprintAreas: v.record(v.string(), vSprintAreaLabel),
     areas: v.array(vSprintAreaLabel),
     taskTitles: v.record(v.string(), v.string()),
     used: v.optional(v.object({
@@ -1183,9 +1183,9 @@ export const vRuleViolationError = v.object({
 });
 
 /**
- * The attributes to change; a property left out stays. `null` clears an optional attribute.
+ * The attributes to change; a property left out stays. `null` clears an optional attribute. Only in requests, so unknown keys are refused.
  */
-export const vTaskAttributeUpdate = v.object({
+export const vTaskAttributeUpdate = v.strictObject({
     title: v.optional(v.string()),
     description: v.optional(v.string()),
     areaId: v.nullish(vAreaId),
