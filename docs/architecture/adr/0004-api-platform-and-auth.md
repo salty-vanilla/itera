@@ -2,8 +2,8 @@
 
 - 状態：採用
 - 日付：2026-09-27
-- 関連：Issue #25、後続 Issue #26、#30、#121、#262
-- 改訂：2026-09-30（認証を WorkOS AuthKit から Better Auth に変更。Issue #121）、2026-10-03（記録のテーブル、操作と読み取りの処理、ID の形式、同時の書き込み、CSRF、Web と API の配信、使い始めの間のスキーマの変更。Issue #262）
+- 関連：Issue #25、後続 Issue #26、#30、#121、#262、#263
+- 改訂：2026-09-30（認証を WorkOS AuthKit から Better Auth に変更。Issue #121）、2026-10-03（記録のテーブル、操作と読み取りの処理、ID の形式、同時の書き込み、CSRF、Web と API の配信、使い始めの間のスキーマの変更。Issue #262）、2026-10-03（記録のテーブルの列・制約・index、読み込みと書き込み、版の確かめ方。Issue #263）
 
 ## 背景
 
@@ -118,7 +118,53 @@ Better Auth の文書（Context7 と better-auth.com）と、固定した 1.7.6 
 - 値オブジェクト（Estimate、PlanSnapshot と PlanningValue、CriterionPolicy、RecurrencePattern など）は、持ち主の行の列に展開する。union は判別の列（`kind`・`base` など）と、種類ごとの列で表す。
 - 利用者の設定（domain の `User`：表示名・タイムゾーン・週の始まり）は、Better Auth の `user` とは別のテーブルに置き、Better Auth の利用者 ID で 1 対 1 に結ぶ。Better Auth のテーブルに列を足さない。
 - Activity は追記だけの履歴で、種類（75 種）ごとに項目が違う。共通の項目（利用者、追記の順、日時、actor、kind）を列にし、種類ごとの内容を JSON の列に置く。Activity は判定に読み返さない履歴なので、内容の列では検索しない。
-- 列・制約・index は #263 で決め、この節に追記する。
+- 列・制約・index は #263 で次のとおり決めた（`services/api/src/db/schema.ts`）。
+
+#### 列（#263）
+
+- テーブルは記録の種類ごとに 1 つ（`area`、`task`、`recurrence_rule`、`occurrence`、`planning_criterion`、`sprint`）と、集約の中身ごとに 1 つ（`subtask`、`estimate_suggestion`、`recurrence_rule_version`、`sprint_goal`、`sprint_task`、`sprint_area_snapshot`、`criterion_use`、`daily_selection`、`actual_time`、`interrupt_note`、`retro`、`retro_pin`）。利用者の設定は `user_settings`。
+- 値の配列も子テーブルにする：提案の `uncertainties` は `estimate_suggestion_uncertainty`、毎週の繰り返しの曜日は `recurrence_rule_version_day`、SprintTask の `occurrenceIds` は結びつきのテーブル `sprint_task_occurrence`。`occurrenceIds` は「ない」と「空」が違う（繰り返しの Task の回をすべて外した SprintTask は空）ので、`sprint_task.has_occurrences` で区別する。
+- 順序に意味がある配列は `position`（0 から）で保つ。ID のない中身（ActualTime、RetroPin、uncertainties、曜日）は、持ち主と `position` を主キーにする。追記だけの ActualTime はこれで足りる。RetroPin は外すと後ろの行の `position` が変わり、その行が書き直される。
+- 値オブジェクトと union は持ち主の行の列に展開する（Estimate とその source、PlanSnapshot と PlanningValue、CriterionPolicy、RecurrencePattern、`closedBefore`、Retro の improvement）。判別の列（`estimate_source_kind`、`plan_value_base`、`scope_kind`、`freq` など）と、その種類にだけある列を置き、ほかの種類では NULL。省略できる属性は NULL にし、読み込むときはキーを持たない形に戻す。
+- RecurrenceRule と Occurrence は、domain の型では利用者を持たないが、行には `user_id` を置く（利用者ごとに読み、利用者とともに消すため）。
+- 日付と日時は domain の文字列のまま（`LocalDate`、`Instant`）、時間（h）は `real` で置く。
+- 状態名などの値の範囲は CHECK にしない。domain の型と、書き込む前の domain のコマンドで守る。
+
+#### 外部キー（#263）
+
+- 記録の種類ごとのテーブルと `user_settings`・`record_revision`・`activity` は、Better Auth の `user.id` を指し、利用者とともに消える（`ON DELETE CASCADE`）。
+- 集約の中身は持ち主（Task、RecurrenceRule とその版、Sprint、Retro）を指し、持ち主とともに消える。Sprint の中で SprintTask を指す DailySelection と ActualTime も外部キーを持つ（消えずに残る参照を DB で止める）。
+- 集約をまたぐ参照（Task の Area・RecurrenceRule、Occurrence の Task・RecurrenceRule、SprintTask の Task・Occurrence・`carriedFrom`、Goal・スナップショットの Area、CriterionUse や Retro の計画基準など）には外部キーを置かない。domain は Occurrence・計画基準・RecurrenceRule を消すことがあり（`RecordChanges.deleted`）、過去の記録からの参照がどう残るかは domain が決める。Task と RecurrenceRule は互いを指すので、外部キーにすると書く順序が決まらない。
+
+#### 一意制約と index（#263）
+
+DB で守る不変条件：
+
+| 不変条件 | 制約 |
+| --- | --- |
+| 11 Active の Sprint は同時に 1 つ | `sprint`：`state = 'active'` の行に、利用者ごとの部分一意 index |
+| 11 Sprint の期間は重ならない（一部） | `sprint`：利用者と `start` の一意 index。始まりの違う期間の重なり（週の始まりを変えたとき）は domain に任せる |
+| 13 SprintGoal は Sprint × Area に 0..1 | `sprint_goal` の主キー（Sprint、Area） |
+| 21 DailySelection は日付 × SprintTask（繰り返しは × Occurrence）に 0..1 | `daily_selection`：（SprintTask、日付）の一意 index（`occurrence_id` が NULL の行）と、（SprintTask、Occurrence、日付）の一意 index |
+| 35 Active な計画基準は最大 1 つ | `planning_criterion`：`state = 'active'` の行に、利用者ごとの部分一意 index |
+| 36・38 CriterionUse・Retro・RetroImprovement は Sprint に 0..1 | `criterion_use`・`retro` の主キーが Sprint。improvement は `retro` の列 |
+| 提示中の提案は Task に 1 つまで（packages/domain README、#20） | `estimate_suggestion`：`state = 'presented'` の行に、Task ごとの部分一意 index |
+| 回は Rule と日付に 1 つ（`generateOccurrences` は回のある日を飛ばす） | `occurrence`：（Rule、予定日）の一意 index |
+
+DB で守らない不変条件：上の表にないもの。たとえば 14（非繰り返しの Task は同じ Sprint に SprintTask 1 件まで）は、繰り返しかどうかが `task` の行にあり、`sprint_task` の index では書けない。ほかは状態の遷移、時刻の前後、記録をまたぐ判定で、domain のコマンドが守る。
+
+index：利用者ごとに読むための `user_id`、子テーブルの持ち主の列（主キーの先頭にないもの）、ActualTime の SprintTask。Activity は（利用者、版、`position`）を主キーにし、ほかの index は置かない。
+
+#### 読み込みと書き込み（#263）
+
+- 読み込み（`loadRecords`）：利用者 ID を受け取り、利用者の版と、Activity を除く記録を 1 回の `batch()`（23 の SELECT）で読む。子テーブルは持ち主のテーブルを利用者で絞った副問い合わせで選ぶ。記録の種類ごとの配列は ID の順（TypeID では作った順）、集約の中身は `position` の順。最初の保存の前は版 0、記録なし。
+- 書き込み（`saveRecords`）：変えた・足した記録、消す記録の ID、追記する Activity、読み込んだときの記録と版を受け取る。変えた記録を読み込んだときの記録と行の単位で比べ、消えた行を DELETE、変わった行を変わった列だけ UPDATE、新しい行を INSERT する。これと Activity の INSERT を 1 つの `batch()` で送る。何も変わらず Activity もなければ、何も書かない。
+  - 順序：DELETE を先に、子から親の順で行う（同じ一意キーで作り直す行、たとえば作り直した回が入れるように）。続いて UPDATE と INSERT を親から子の順で行う。部分一意 index の枠（Active な計画基準・Sprint、提示中の提案）は、同じテーブルの中で、枠を離れる行を先に、枠に入る行を後に書く（SQLite は一意制約を文ごとに確かめる）。
+  - D1 の 1 文あたりのバインド変数の上限（100）に収まるよう、INSERT は列の数に合わせて行を分ける。
+  - 利用者の記録でないもの（ほかの利用者の `userId` を持つ記録、読み込んでいない記録の削除）は、呼び出し側の誤りとして例外にする。読み込んでいない ID の記録は INSERT になり、ほかの利用者の行と主キーがぶつかって失敗するので、上書きはできない。
+  - 最初の保存には利用者の設定（`User`）を含める。
+- Activity は（保存で上げた版、その保存の中の順）で並べる。共通の項目のほかは JSON の `content` に置く。
+- 型は `packages/domain` の型で書いた（`StoredRecords`・`RecordChanges`。形は `apps/web` の `Records`・`RecordChanges` と同じ）。#264 がこれらを `packages/application` に移したら、#266 でそちらの型に合わせる。
 
 ### 操作と読み取りの処理（2026-10-03）
 
@@ -150,7 +196,10 @@ Better Auth の文書（Context7 と better-auth.com）と、固定した 1.7.6 
 PC とスマホから同じ利用者の記録を書く。後から来た書き込みが、古い記録をもとにほかの書き込みを上書きしないように、利用者ごとの版（revision）で楽観的に排他する。
 
 - 読み込んだときの版を、書き込みの `batch()` の中で確かめて上げる。ほかの書き込みが先に入っていたら `batch()` 全体を取り消し、409 を返す。`batch()` は 1 つのトランザクションで、途中の文が失敗すると全体が取り消される（上の「トランザクション」）。
-- 版の確かめ方（`batch()` を失敗させる文の作り方）は #263 で決め、ローカルの D1 で確かめる。
+- 版は利用者ごとの行（`record_revision`）に置き、`CHECK (revision >= 1)` を付ける。行がなければ版 0。
+- 版の確かめ方（#263）：`batch()` の最初の文を `INSERT INTO record_revision (user_id, revision) VALUES (?, 読み込んだ版 + 1) ON CONFLICT (user_id) DO UPDATE SET revision = CASE WHEN revision = 読み込んだ版 THEN 読み込んだ版 + 1 ELSE 0 END` にする。ほかの書き込みが先に版を上げていれば 0 を書こうとして CHECK に反し、`batch()` 全体が取り消される。最初の保存（版 0）が同時に 2 つ来たときは、後の方が先の行とぶつかり、同じく 0 になって失敗する。SQLite は INSERT の値を衝突より先に CHECK で確かめるので、INSERT の値は CHECK を満たす値（読み込んだ版 + 1）にする。読み込んだ版が 1 以上なのに行がない場合（行は利用者を消すときにしか消えない）はそのまま入る。
+- `batch()` が失敗したら版を読み直し、読み込んだ版と違えば「版の衝突」を返す。同じなら衝突ではないので、失敗をそのまま投げる。エラーの文言は D1 と libSQL で違うので、文言では見分けない。
+- ローカルの D1（`wrangler dev`、wrangler 4.141.0）で確かめた（2026-10-03）：同じ版から始めた 2 つの書き込みは、後の方が衝突になり、その中の Task と Activity は 1 行も書かれなかった。同じ版から同時に送った 2 つの書き込みも、片方だけが通った。
 - クライアントは 409 を受けたら記録を読み直し、操作が通らなかったことを知らせる。自動ではやり直さない（読み直した記録では、その操作の意味が変わっていることがあるため）。
 
 ### 書き込みの API の CSRF への備え（2026-10-03）
@@ -209,7 +258,7 @@ Issue #121 は「Better Auth は原子的な処理に `batch()` を使う」を�
 
 - `services/api` は Workers 向けに作り、wrangler が束ねてデプロイする。ADR 0001 の「Node で直接動かして出力する `services/api`」という前提は、この ADR で置き換わる。
 - #32（デプロイ）は、認証の設定を Better Auth と Google の OAuth クライアントに合わせる。あわせて、デプロイ先の API に `cf-connecting-ip` が届くこと（届かないとレート制限が全員で 1 つになる）と、`BETTER_AUTH_URL` が https であること（Cookie が Secure になる）を確かめる。
-- 決めていないもの：API の契約（エンドポイント、OpenAPI。ADR 0006 で決める、#265）、テーブルの列・制約・index（上の「記録のテーブル」の方針で #263 が決める）、Web のログイン画面とログインの流れ（#278）、データの同期・削除・エクスポート、一般公開の範囲。書き込みを伴う API の CSRF への備えは、上の「書き込みの API の CSRF への備え」で決めた（2026-10-03）。
+- 決めていないもの：API の契約（エンドポイント、OpenAPI。ADR 0006 で決める、#265）、Web のログイン画面とログインの流れ（#278）、データの同期・削除・エクスポート、一般公開の範囲。書き込みを伴う API の CSRF への備えは、上の「書き込みの API の CSRF への備え」で決めた（2026-10-03）。
 - Cloudflare の料金・上限・機能の区分は、2026-09-27 に下の一次資料で確認した。Better Auth の挙動は 2026-09-30 に 1.7.6 で確認した。変わった場合はこの ADR を見直す。
 
 ## 参照

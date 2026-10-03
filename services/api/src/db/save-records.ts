@@ -1,0 +1,332 @@
+import type { Activity, UserId } from '@itera/domain';
+import { and, eq, getTableColumns, sql, type SQL } from 'drizzle-orm';
+import type { BatchItem } from 'drizzle-orm/batch';
+import {
+  getTableConfig,
+  type SQLiteColumn,
+  type SQLiteTable,
+} from 'drizzle-orm/sqlite-core';
+import type { Database } from './database';
+import {
+  addAreaRows,
+  addCriterionRows,
+  addOccurrenceRows,
+  addRuleRows,
+  addSprintRows,
+  addTaskRows,
+  addUserRows,
+  recordTables,
+  RowSet,
+  type RecordTable,
+} from './record-rows';
+import type {
+  LoadedRecords,
+  RecordChanges,
+  SaveResult,
+  StoredRecords,
+} from './records';
+import {
+  activity,
+  estimateSuggestion,
+  planningCriterion,
+  recordRevision,
+  sprint,
+} from './schema';
+
+/** D1 binds at most 100 parameters per statement, in a batch too. */
+const MAX_PARAMETERS = 100;
+
+type Row = Record<string, unknown>;
+type Statement = BatchItem<'sqlite'>;
+
+export interface SaveRecordsInput {
+  readonly userId: UserId;
+  /** The records the change was made from, as loadRecords returned them. */
+  readonly loaded: LoadedRecords;
+  readonly changes: RecordChanges;
+  /** Appended in this order. */
+  readonly activities: readonly Activity[];
+}
+
+/**
+ * Writes a change in one batch: only the rows that differ from the loaded
+ * records, then the Activity entries. The first statement of the batch
+ * checks the user's revision against the loaded one and raises it; if
+ * another save went in first, the batch fails as a whole and nothing is
+ * written (ADR 0004 「同時の書き込み」).
+ *
+ * Throws on a change that does not fit the loaded records (another user's
+ * record, a deletion of a record not loaded): those are bugs in the caller.
+ */
+export async function saveRecords(
+  db: Database,
+  input: SaveRecordsInput,
+): Promise<SaveResult> {
+  const { userId, loaded } = input;
+  const [before, after] = changedRows(input);
+  const rowStatements = diff(db, before, after);
+  if (rowStatements.length === 0 && input.activities.length === 0) {
+    return { ok: true, revision: loaded.revision };
+  }
+  const revision = loaded.revision + 1;
+  const activityRows = input.activities.map(
+    ({ at, actor, kind, ...content }, position) => ({
+      userId,
+      revision,
+      position,
+      at,
+      actor,
+      kind,
+      content,
+    }),
+  );
+  try {
+    await db.batch([
+      raiseRevision(db, userId, loaded.revision),
+      ...rowStatements,
+      ...chunks(activityRows, rowsPerInsert(activity)).map((rows) =>
+        db.insert(activity).values(rows),
+      ),
+    ]);
+  } catch (error) {
+    if ((await currentRevision(db, userId)) !== loaded.revision) {
+      return { ok: false, reason: 'revisionConflict' };
+    }
+    throw error;
+  }
+  return { ok: true, revision };
+}
+
+/**
+ * Raises the revision from `expected`, or fails the batch: a row that has
+ * moved on is set to 0, which breaks `record_revision_positive`. A first
+ * save (`expected` 0) inserts the row, so another first save that went in
+ * before finds it and fails the same way. SQLite checks the inserted values
+ * before the conflict, so they must pass the check themselves.
+ */
+function raiseRevision(db: Database, userId: UserId, expected: number) {
+  return db
+    .insert(recordRevision)
+    .values({ userId, revision: expected + 1 })
+    .onConflictDoUpdate({
+      target: recordRevision.userId,
+      set: {
+        revision: sql`case when ${recordRevision.revision} = ${expected} then ${expected + 1} else 0 end`,
+      },
+    });
+}
+
+async function currentRevision(db: Database, userId: UserId) {
+  const [row] = await db
+    .select({ revision: recordRevision.revision })
+    .from(recordRevision)
+    .where(eq(recordRevision.userId, userId));
+  return row?.revision ?? 0;
+}
+
+/**
+ * The rows of the records the change touches, before (as loaded) and after.
+ * An aggregate is compared as a whole, so a changed part shows up as its own
+ * row.
+ */
+function changedRows(input: SaveRecordsInput): [RowSet, RowSet] {
+  const { userId, changes } = input;
+  const loaded = input.loaded.records ?? emptyRecords(changes, userId);
+  const before = new RowSet();
+  const after = new RowSet();
+
+  if (changes.user !== undefined) {
+    expectOwner(changes.user.id, userId);
+    if (input.loaded.records !== null) addUserRows(before, loaded.user);
+    addUserRows(after, changes.user);
+  }
+  const each = <R extends { readonly id: string }>(
+    current: readonly R[],
+    changed: readonly R[] | undefined,
+    deleted: readonly R['id'][] | undefined,
+    add: (rows: RowSet, record: R) => void,
+    owner: (record: R) => string | undefined,
+  ) => {
+    const byId = new Map(current.map((r) => [r.id, r]));
+    for (const record of changed ?? []) {
+      const ownerId = owner(record);
+      if (ownerId !== undefined) expectOwner(ownerId, userId);
+      const old = byId.get(record.id);
+      if (old !== undefined) add(before, old);
+      add(after, record);
+    }
+    for (const id of deleted ?? []) {
+      const old = byId.get(id);
+      if (old === undefined) {
+        throw new Error(`Cannot delete ${id}: it is not a loaded record.`);
+      }
+      add(before, old);
+    }
+  };
+  each(loaded.areas, changes.areas, undefined, addAreaRows, (r) => r.userId);
+  each(loaded.tasks, changes.tasks, undefined, addTaskRows, (r) => r.userId);
+  each(
+    loaded.rules,
+    changes.rules,
+    changes.deleted?.rules,
+    (rows, r) => addRuleRows(rows, r, userId),
+    () => undefined,
+  );
+  each(
+    loaded.occurrences,
+    changes.occurrences,
+    changes.deleted?.occurrences,
+    (rows, r) => addOccurrenceRows(rows, r, userId),
+    () => undefined,
+  );
+  each(
+    loaded.criteria,
+    changes.criteria,
+    changes.deleted?.criteria,
+    addCriterionRows,
+    (r) => r.userId,
+  );
+  each(
+    loaded.sprints,
+    changes.sprints,
+    undefined,
+    addSprintRows,
+    (r) => r.userId,
+  );
+  return [before, after];
+}
+
+/** Before the first save there is nothing to compare with; the user comes with it. */
+function emptyRecords(changes: RecordChanges, userId: UserId): StoredRecords {
+  if (changes.user === undefined) {
+    throw new Error(
+      `The first save for ${userId} must include the user's settings.`,
+    );
+  }
+  return {
+    user: changes.user,
+    areas: [],
+    tasks: [],
+    rules: [],
+    occurrences: [],
+    sprints: [],
+    criteria: [],
+  };
+}
+
+function expectOwner(ownerId: string, userId: UserId): void {
+  if (ownerId !== userId) {
+    throw new Error(`A record of ${ownerId} cannot be saved for ${userId}.`);
+  }
+}
+
+/**
+ * Rows that may hold the one slot of a partial unique index. Within a table
+ * they are written after the rows that may leave it, so handing the slot
+ * over (an active criterion replaced by another) never holds two at once.
+ */
+const holdsUniqueSlot = new Map<RecordTable, (row: Row) => boolean>([
+  [estimateSuggestion, (row) => row.state === 'presented'],
+  [planningCriterion, (row) => row.state === 'active'],
+  [sprint, (row) => row.state === 'active'],
+]);
+
+/**
+ * The statements that turn the `before` rows into the `after` rows. Rows
+ * gone are deleted first, children before parents, so a row added again
+ * under the same unique key (an occurrence generated again) fits. Then rows
+ * are updated (changed columns only) and inserted, parents before children.
+ */
+function diff(db: Database, before: RowSet, after: RowSet): Statement[] {
+  const deletes: Statement[] = [];
+  const writes: Statement[] = [];
+  for (const table of [...recordTables].reverse()) {
+    const { key, where } = keyOf(table);
+    const kept = new Set(after.plain(table).map(key));
+    for (const row of before.plain(table)) {
+      if (!kept.has(key(row))) deletes.push(db.delete(table).where(where(row)));
+    }
+  }
+  for (const table of recordTables) {
+    const { key, where } = keyOf(table);
+    const old = new Map(before.plain(table).map((row) => [key(row), row]));
+    const holds = holdsUniqueSlot.get(table) ?? (() => false);
+    const rows = after.plain(table);
+    for (const holding of [false, true]) {
+      const inserts: Row[] = [];
+      for (const row of rows.filter((r) => holds(r) === holding)) {
+        const previous = old.get(key(row));
+        if (previous === undefined) {
+          inserts.push(row);
+          continue;
+        }
+        const changed = changedColumns(previous, row);
+        if (changed !== null) {
+          writes.push(db.update(table).set(changed).where(where(row)));
+        }
+      }
+      for (const chunk of chunks(inserts, rowsPerInsert(table))) {
+        const target: SQLiteTable = table;
+        writes.push(db.insert(target).values(chunk));
+      }
+    }
+  }
+  return [...deletes, ...writes];
+}
+
+function changedColumns(previous: Row, row: Row): Row | null {
+  const changed: Row = {};
+  let any = false;
+  for (const [column, value] of Object.entries(row)) {
+    if (!Object.is(previous[column], value)) {
+      changed[column] = value;
+      any = true;
+    }
+  }
+  return any ? changed : null;
+}
+
+interface TableKey {
+  /** The primary key of a row as one string. */
+  readonly key: (row: Row) => string;
+  /** The condition that picks the row by its primary key. */
+  readonly where: (row: Row) => SQL | undefined;
+}
+
+const tableKeys = new Map<RecordTable, TableKey>();
+
+function keyOf(table: RecordTable): TableKey {
+  const cached = tableKeys.get(table);
+  if (cached !== undefined) return cached;
+  const config = getTableConfig(table);
+  const keyColumns: SQLiteColumn[] =
+    config.primaryKeys[0]?.columns ??
+    config.columns.filter((column) => column.primary);
+  const properties = Object.entries(getTableColumns(table));
+  const keys = keyColumns.map((column) => {
+    const entry = properties.find(([, c]) => c === column);
+    if (entry === undefined) throw new Error(`No property for ${column.name}.`);
+    return [entry[0], column] as const;
+  });
+  const result: TableKey = {
+    key: (row) => JSON.stringify(keys.map(([property]) => row[property])),
+    where: (row) =>
+      and(...keys.map(([property, column]) => eq(column, row[property]))),
+  };
+  tableKeys.set(table, result);
+  return result;
+}
+
+function rowsPerInsert(table: RecordTable | typeof activity): number {
+  return Math.floor(
+    MAX_PARAMETERS / Object.keys(getTableColumns(table)).length,
+  );
+}
+
+function chunks<T>(items: readonly T[], size: number): T[][] {
+  const result: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    result.push(items.slice(i, i + size));
+  }
+  return result;
+}
