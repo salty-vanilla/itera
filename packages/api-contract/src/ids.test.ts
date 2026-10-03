@@ -5,22 +5,7 @@ import { createIdSource, parseId } from '@itera/application';
 import { instant } from '@itera/domain';
 import * as v from 'valibot';
 import { describe, expect, it } from 'vitest';
-import * as contract from './index';
-
-const KINDS = {
-  User: contract.vUserId,
-  Area: contract.vAreaId,
-  Task: contract.vTaskId,
-  Subtask: contract.vSubtaskId,
-  EstimateSuggestion: contract.vEstimateSuggestionId,
-  RecurrenceRule: contract.vRecurrenceRuleId,
-  Occurrence: contract.vOccurrenceId,
-  Sprint: contract.vSprintId,
-  SprintTask: contract.vSprintTaskId,
-  DailySelection: contract.vDailySelectionId,
-  InterruptNote: contract.vInterruptNoteId,
-  PlanningCriterion: contract.vPlanningCriterionId,
-} as const;
+import { ID_SCHEMAS } from './testing';
 
 let seed = 1;
 const ids = createIdSource((bytes) => {
@@ -53,7 +38,7 @@ function around(id: string): string[] {
   ];
 }
 
-describe.each(Object.entries(KINDS))('the %s ID', (kind, schema) => {
+describe.each(Object.entries(ID_SCHEMAS))('the %s ID', (kind, schema) => {
   it('accepts what parseId accepts, and nothing else', () => {
     for (const ms of [0, 1_700_000_000_000, 2_000_000_000_000]) {
       const id = ids.newId(kind, instant(new Date(ms).toISOString()));

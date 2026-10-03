@@ -138,7 +138,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 - query の数と真偽は文字列で届くので、サーバーで変換が要る（#266）。
 - 応答のスキーマは未知のキーを許すので、Valibot の検証だけでは余分なキーを見つけられない。型のテストで止めている。
 - `restoreInterrupt` と `undoAdoption` は、クライアントが前の読み取りの値を送る。版はサーバーが読み込んだ時点のものなので、クライアントの読み取りが古いことは 409 では分からない。`undoAdoption` は domain の確かめ（提案の状態）で守られるが、`restoreInterrupt` は古い note でも受け付ける。
-- `restoreInterrupt` の ID の重複を domain が確かめるのは今の Sprint の中だけで、DB の `interrupt_note.id` は全体の主キー。ほかの Sprint にある ID を送ると保存の `batch()` が失敗する（上書きはされない）。偶然には起きないが 500 になるので、Today の操作をつなぐ Issue で、利用者のすべての割り込みと照合して 422 にする。`note.at` が Sprint の期間の外でも受け付ける点も同じ。
+- `restoreInterrupt` の ID の重複を domain が確かめるのは今の Sprint の中だけで、DB の `interrupt_note.id` は全体の主キー。ほかの Sprint にある ID を送ると保存の `batch()` が失敗する（上書きはされない）。偶然には起きないが 500 になるので、Today の操作をつなぐ Issue（#269）で、利用者のすべての割り込みと照合して 422 にする。`note.at` が Sprint の期間の外でも受け付ける点も同じ。
 - 文字列・配列の長さと本文の大きさに、契約では上限を置いていない。D1 の上限を超えると 500 になる。登録を許可の一覧で絞っている間は実害が小さい。本文の大きさの上限とそのときの応答（413 など）は #266 で決め、契約に足す。
 
 ## 互換の規則
