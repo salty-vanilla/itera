@@ -104,7 +104,7 @@ secret はリポジトリの secret ではなく、この Environment の secret
 
 1. 2 の PR をマージする。
 2. Actions の Deploy の実行で、`check` と `preflight` が通り、`deploy` が承認待ちになるのを待つ。
-3. 承認すると、`wrangler d1 migrations apply DB --remote` → `wrangler deploy` の順に動く。
+3. 承認すると、Web のビルド（`pnpm --filter @itera/web build`）→ `wrangler d1 migrations apply DB --remote` → `wrangler deploy` の順に動く。`wrangler deploy` は `apps/web/dist` を同じ Worker の静的アセットとして上げる。
 4. 失敗したら、ログの最後のエラーを見る。secret の不足は `wrangler deploy` が名前を挙げて失敗する。トークンの権限不足は 403 になる。
 
 以後、main への push のたびに同じ順で動き、承認を待つ。手動で出し直すときは、Actions の Deploy から main を指定して実行する（Run workflow）。
@@ -118,9 +118,21 @@ secret はリポジトリの secret ではなく、この Environment の secret
 ```sh
 curl -i <公開 URL>/api/health   # 200 と {"status":"ok"}
 curl -i <公開 URL>/api/me       # 401（セッションなし）
-curl -i <公開 URL>/health       # 404（旧い経路は応答しない）
-curl -i <公開 URL>/me           # 404
+curl -i <公開 URL>/api/xxx      # 404（text/plain の "404 Not Found"。画面の HTML ではない）
+curl -i <公開 URL>/health       # 200 だが API ではなく、画面の HTML（旧い経路は API として応答しない）
 ```
+
+### Web の配信（Issue #280）
+
+```sh
+curl -i <公開 URL>/                          # 200、text/html、Cache-Control: public, max-age=0, must-revalidate
+curl -i "<公開 URL>/today?date=2026-10-01"   # 同じ index.html（直接開ける）
+curl -i "<公開 URL>/sprint?sprint=3"         # 同じ
+```
+
+- ブラウザで `<公開 URL>/` と `<公開 URL>/today?date=2026-10-01` を開くと画面が表示され、再読み込みしても同じ画面が開く。存在しないパス（`<公開 URL>/nothing`）は画面の「ページが見つかりません」になる。
+- `/` の HTML が参照する `/assets/index-<ハッシュ>.js` を `curl -I` で取ると、`Cache-Control: public, max-age=31536000, immutable`。
+- ここで見る画面は、#272 が本番ビルドから fixture を外すまでは fixture のデータで動く（API を使わない）。
 
 ### 登録を絞る（許可の一覧にないアカウント）
 

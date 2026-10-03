@@ -3,7 +3,7 @@
 - 状態：採用
 - 日付：2026-09-27
 - 関連：Issue #25、後続 Issue #26、#30、#32、#121、#262
-- 改訂：2026-09-30（認証を WorkOS AuthKit から Better Auth に変更。Issue #121）、2026-10-03（デプロイの方式、API の経路を `/api` の下に、登録を許可の一覧で絞る。Issue #32）、2026-10-03（記録のテーブル、操作と読み取りの処理、ID の形式、同時の書き込み、CSRF、Web と API の配信、使い始めの間のスキーマの変更。Issue #262）
+- 改訂：2026-09-30（認証を WorkOS AuthKit から Better Auth に変更。Issue #121）、2026-10-03（デプロイの方式、API の経路を `/api` の下に、登録を許可の一覧で絞る。Issue #32）、2026-10-03（記録のテーブル、操作と読み取りの処理、ID の形式、同時の書き込み、CSRF、Web と API の配信、使い始めの間のスキーマの変更。Issue #262）、2026-10-03（Web の配信の実装とキャッシュ。Issue #280）
 
 ## 背景
 
@@ -110,14 +110,14 @@ Better Auth の文書（Context7 と better-auth.com）と、固定した 1.7.6 
 
 ### API の経路（Issue #32、2026-10-03）
 
-API の経路はすべて `/api` の下に置く（`/api/health`、`/api/me`、`/api/auth/*`）。旧い経路（`/health`・`/me`）は残さず、404 を返す。同じ Worker で Web を配信するとき（#280）、`/api/*` だけを API に回し、ほかを画面にするため（#262）。
+API の経路はすべて `/api` の下に置く（`/api/health`、`/api/me`、`/api/auth/*`）。旧い経路（`/health`・`/me`）は残さない（API としては応答せず、Web を配信するようになってからは画面の `index.html` が返る）。同じ Worker で Web を配信するとき（#280）、`/api/*` だけを API に回し、ほかを画面にするため（#262）。
 
 ### デプロイ（Issue #32、2026-10-03）
 
 2026-09-27、オーナーが次のとおり決めた（Issue #32）。
 
 1. **資源の管理は wrangler で行い、Terraform は使わない**。Worker・D1 の binding・`compatibility_date`・observability・公開の設定（`workers_dev`・`preview_urls`・`routes`）は `wrangler.jsonc`、D1 のスキーマは `migrations/` で Git 管理する。資源は Worker 1 つ・D1 1 つで、Terraform の state を管理する手間のほうが大きい。wrangler で管理できない設定（下の「手で行う設定」）は手順書にする。環境が増える・Access や WAF のルールが増える・複数人で運用する、のどれかになったら見直す。
-2. **CD は GitHub Actions で行う**（`.github/workflows/deploy.yml`）。main への push（と main を指定した手動実行）で、`pnpm check`（`check.yml` を `workflow_call` で呼ぶ）が通ったときだけ、D1 のマイグレーション（`wrangler d1 migrations apply DB --remote`）→ Worker のデプロイ（`wrangler deploy`）の順に実行する。production の GitHub Environment の承認を挟む。
+2. **CD は GitHub Actions で行う**（`.github/workflows/deploy.yml`）。main への push（と main を指定した手動実行）で、`pnpm check`（`check.yml` を `workflow_call` で呼ぶ）が通ったときだけ、Web のビルド（#280）→ D1 のマイグレーション（`wrangler d1 migrations apply DB --remote`）→ Worker のデプロイ（`wrangler deploy`）の順に実行する。production の GitHub Environment の承認を挟む。
    - 既存の CI と同じ流れで、検査に通ったものだけをデプロイし、マイグレーションとデプロイの順序を保証できる。actions の commit SHA 固定（ADR 0001）と、lockfile の wrangler（`services/api` の固定版）を使う方針に合う。サードパーティの action（`cloudflare/wrangler-action`）は使わず、`pnpm --filter @itera/api exec wrangler` を直接実行する。
    - Cloudflare の Workers Builds は見送る。2026-10-03 に文書で確かめたところ、Workers Builds は接続した Git の push ごとに Cloudflare の環境でビルドとデプロイのコマンドを実行する仕組みで、GitHub の CI の結果や Environment の承認を待つ機能は書かれていない。見送る理由（CI と別の場所でビルドされ、検査に通ったものだけを出す保証がしにくい）は崩れていない。
 
@@ -209,6 +209,14 @@ PC とスマホから同じ利用者の記録を書く。後から来た書き�
 - `assets.not_found_handling` を `single-page-application` にし、`assets.run_worker_first` を `["/api/*"]` にする（2026-10-03 に Cloudflare の文書で確認）。
 - API の経路はすべて `/api` の下に置く（`/api/health`、`/api/me`、`/api/auth/*`、契約の operation）。画面の経路（`/today` など）と重ならない。
 - ローカルの開発では、Vite の開発サーバーが `/api` を `wrangler dev` に中継する（ブラウザから見て同じ origin）。
+
+実装（Issue #280、2026-10-03）：
+
+- `wrangler.jsonc` の `assets` は `directory: "../../apps/web/dist"`（Vite の既定の出力先）、上の 2 つの設定。`binding` は置かない（Worker のコードはアセットを取りに行かない）。`dist` がないと `wrangler dev` と `wrangler deploy` は失敗する。型の検査（`wrangler types --check`）は `dist` がなくても通るので、`pnpm check` の前に Web をビルドしなくてよい。
+- CD は、`wrangler` を実行する前に `pnpm --filter @itera/web build` を実行する（ビルドの失敗でマイグレーションの前に止まる。ビルドには Cloudflare のトークンを渡さない）。
+- キャッシュ：Workers Static Assets の既定は、すべてのアセットに `Cache-Control: public, max-age=0, must-revalidate` と `ETag`（2026-10-03 に Cloudflare の文書で確認）。`index.html` はこの既定で足りる（毎回確かめ、変わっていなければ 304）。ハッシュ付きのファイル（Vite の `assets/`）は既定では長く持たれないので、`apps/web/public/_headers` で `/assets/*` に `public, max-age=31536000, immutable` を付ける（Vite が `dist/` の直下へ写し、`_headers` 自身はアセットとして配信されない）。`_headers` は Worker のコードが作る応答（`/api/*`）には効かない。
+- 既知の制約：`not_found_handling` が `single-page-application` なので、存在しない `/assets/<名前>`（デプロイで消えた古いハッシュのファイルなど）にも `index.html`（200）が返り、`/assets/*` の規則で `immutable` が付く（`wrangler dev` 4.141.0 で確認）。その URL は消えたファイルのものなので、再び有効にならない限り害はない。ビルドを複数のチャンクに分けて古い画面が新しいデプロイ後にチャンクを取りに行くようになったら、この扱いを見直す。
+- 検査：`services/api/src/app.test.ts` が、アプリの経路がすべて `/api` の下にあることを確かめる（`/api` の外の経路は Worker に届かない）。
 
 ### 使い始めの間のスキーマの変更（2026-10-02）
 

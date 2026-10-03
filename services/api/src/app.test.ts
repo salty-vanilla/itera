@@ -28,6 +28,20 @@ function me(
   return Promise.resolve(app.request('/api/me', { headers }, testEnv));
 }
 
+describe('routes', () => {
+  // wrangler.jsonc sends only /api/* to the Worker; every other path is the
+  // Web app's (ADR 0004). A route outside /api would never be reached. The
+  // only other entry is the middleware that sets up the request.
+  it('are all under /api', () => {
+    const { app } = setup();
+    const paths = app.routes.map((route) => route.path);
+    expect(paths.length).toBeGreaterThan(0);
+    for (const path of paths) {
+      expect(path === '/*' || path.startsWith('/api/')).toBe(true);
+    }
+  });
+});
+
 describe('GET /api/health', () => {
   it('queries the injected database without building the authenticator', async () => {
     const { app, queries, createAuthenticator } = setup();
