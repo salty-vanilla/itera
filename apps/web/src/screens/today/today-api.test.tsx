@@ -306,7 +306,7 @@ describe('Today on the API', () => {
     const before = reads();
     await userEvent.click(choose('関連論文を 3本読む'));
     expect(
-      await screen.findAllByText('保存できたか確かめられませんでした'),
+      await screen.findAllByText('保存できたかわかりませんでした'),
     ).not.toHaveLength(0);
     await waitFor(() => expect(reads()).toBeGreaterThan(before));
   });
