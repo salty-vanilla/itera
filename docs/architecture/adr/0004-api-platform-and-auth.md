@@ -3,7 +3,7 @@
 - 状態：採用
 - 日付：2026-09-27
 - 関連：Issue #25、後続 Issue #26、#30、#32、#121、#262、#263
-- 改訂：2026-09-30（認証を WorkOS AuthKit から Better Auth に変更。Issue #121）、2026-10-03（デプロイの方式、API の経路を `/api` の下に、登録を許可の一覧で絞る。Issue #32）、2026-10-03（記録のテーブル、操作と読み取りの処理、ID の形式、同時の書き込み、CSRF、Web と API の配信、使い始めの間のスキーマの変更。Issue #262）、2026-10-03（記録のテーブルの列・制約・index、読み込みと書き込み、版の確かめ方。Issue #263）、2026-10-03（Web の配信の実装とキャッシュ。Issue #280）
+- 改訂：2026-09-30（認証を WorkOS AuthKit から Better Auth に変更。Issue #121）、2026-10-03（デプロイの方式、API の経路を `/api` の下に、登録を許可の一覧で絞る。Issue #32）、2026-10-03（記録のテーブル、操作と読み取りの処理、ID の形式、同時の書き込み、CSRF、Web と API の配信、使い始めの間のスキーマの変更。Issue #262）、2026-10-03（記録のテーブルの列・制約・index、読み込みと書き込み、版の確かめ方。Issue #263）、2026-10-03（Web の配信の実装とキャッシュ。Issue #280）、2026-10-03（操作と読み取りの処理の実装、Better Auth の ID、依存に Origin と時計。Issue #266）
 
 ## 背景
 
@@ -44,7 +44,7 @@ Better Auth が自分で書き込む行（利用者・アカウント・セッ�
 - セッションは D1 の行と、署名した Cookie（`better-auth.session_token`、https では `__Secure-` 付き。HttpOnly、SameSite=Lax）で持つ。有効期間は Better Auth の既定（7 日。1 日を過ぎると `/api/auth/get-session` が延長し、Cookie を送り直す）。Cookie キャッシュは使わないので、サインアウトやセッションの削除はすぐに効く。
 - **セッションを延長するのは `/api/auth/get-session` だけ**。`requireAuth` を通る API の経路はセッションを読むだけで延長しない（Cookie を送り直せないため。期限切れの行は Better Auth が削除する）。そのためクライアントは、起動時など定期的に `/api/auth/get-session` を呼ぶ。呼ばないと、最後の延長から 7 日で API が 401 を返す。
 - Cookie を使うので、**Web と API は同じ origin で配信する**。CORS と、`BETTER_AUTH_URL` 以外の信頼する origin は設定しない。Web のログイン画面とログインの流れは別の Issue で作る。
-- 利用者の識別子は Better Auth の利用者 ID（`user.id`、Better Auth が生成するランダムな文字列）。
+- 利用者の識別子は Better Auth の利用者 ID（`user.id`）。形は TypeID（`user_…`。下の「ID の形式」、#266）。
 - **登録できる人を許可の一覧で絞る**（2026-10-03 オーナー決定、Issue #32）。Better Auth の `databaseHooks.user.create.before` で、利用者を作る前にメールアドレスを `SIGN_UP_ALLOWED_EMAILS`（カンマ区切り。前後の空白と大文字・小文字は無視する）と照らし、一覧にないか、Google が確認済みとしていない（`emailVerified` が true でない）なら `APIError`（403、code `SIGN_UP_NOT_ALLOWED`）を投げて作らない。未確認のメールアドレスは主張にすぎず、許可の根拠にしない。Google のコールバックは、サインインの開始で渡した `errorCallbackURL`（渡さなければ `/api/auth/error` の Better Auth のページ）へ、この code を `error` に、英語の説明を `error_description` に付けて戻す。クライアントが頼るのは `error` の code だけにする。Better Auth が利用者を作る経路（`internalAdapter` の `createUser`・`createOAuthUser`）はすべてこの hook を通るので、Better Auth の別の作り方を足しても一覧が効く。アプリが `user` テーブルへ直接書き込む経路は作らない（hook を迂回するため）。照らすのは作るときだけで、すでにある利用者は一覧から外してもサインインできる（外したら利用者を消すかは、PRD §14 の削除の方式と一緒に決める）。一覧は wrangler の secret で渡し、リポジトリに書かない。空なら、ほかの設定値と同じく認証を使うリクエストを 500 で失敗させる。Google の同意画面のテストユーザー（オーナーだけ）と二重にする。一般公開（PRD §14）を決めるまでの備え。
 - Google から受け取ったアクセストークンとリフレッシュトークンは、`account.encryptOAuthTokens` で `BETTER_AUTH_SECRET` から作る鍵で暗号化して保存する。Itera は Google の API を呼ばないが、Better Auth がアカウントの行に保存するため。
 - 設定値（`BETTER_AUTH_SECRET`・`BETTER_AUTH_URL`・`GOOGLE_CLIENT_ID`・`GOOGLE_CLIENT_SECRET`・`SIGN_UP_ALLOWED_EMAILS`）は環境変数と wrangler の secret で渡し、リポジトリに書かない。どれかが空、または `BETTER_AUTH_SECRET` が 32 文字未満なら、認証を使うリクエストは 500 で失敗する（下の確認事項の 5）。
@@ -87,6 +87,7 @@ Better Auth の文書（Context7 と better-auth.com）と、固定した 1.7.6 
 | テストの DB | @libsql/client（devDependencies） | 0.18.0 | Better Auth の実装を、マイグレーションを適用したメモリ DB で確かめる（Issue #121） |
 | 実行・開発 | wrangler（devDependencies） | 4.141.0 | ローカルの実行（workerd とローカルの D1）、型の生成、D1 のマイグレーションの適用 |
 | 型 | TypeScript・Vitest | 6.0.3 / 5.0.2 | ADR 0001 と同じ版 |
+| 入力の検証 | valibot | 1.5.0 | 契約（ADR 0006）から生成したスキーマで、要求を検証する。`@itera/api-contract` と同じ版（Issue #266） |
 
 `services/api` の構成：
 
@@ -101,7 +102,7 @@ Better Auth の文書（Context7 と better-auth.com）と、固定した 1.7.6 
 
 2026-09-27、オーナーが「DB・認証など実装の選択肢がある依存は、ハンドラーや middleware に直接書かず、構成時（合成ルート）に注入する」と決めた。以後 `services/api` に足す依存（メール送信、外部 API など）も同じ扱いにする。ルールは `.claude/rules/api.md`。
 
-- `createApp(dependencies)` が依存を 1 つの引数で受け取る。Workers の env はリクエストの中でしか得られないので、依存は env から実装を作る関数（`Dependencies`：`database`・`authenticator`）にする。`authenticator` は、そのリクエストの DB（`database` で作ったもの）も受け取る。本番の構成（D1、Better Auth）は `src/default-dependencies.ts` にあり、それを選ぶのは `src/index.ts` だけ。
+- `createApp(dependencies)` が依存を 1 つの引数で受け取る。Workers の env はリクエストの中でしか得られないので、依存は env から実装を作る関数（`Dependencies`：`database`・`authenticator`・`appOrigin`）にする。現在時刻（`now`）も注入し、テストで日時を固定する（#266）。`appOrigin` は書き込みの Origin の検査に使う origin で、本番は `BETTER_AUTH_URL` の origin（ハンドラーが `BETTER_AUTH_*` を直接読まないため）。`authenticator` は、そのリクエストの DB（`database` で作ったもの）も受け取る。本番の構成（D1、Better Auth）は `src/default-dependencies.ts` にあり、それを選ぶのは `src/index.ts` だけ。
 - DB：ハンドラーは `c.var.db`（型は `Database`）だけを使う。`Database` は Drizzle の非同期の SQLite の型に `batch()` を加えたもので、D1・libSQL・sqlite-proxy のどれでも満たせる（`src/db/database.test.ts` で型を確かめる）。同期の API の better-sqlite3 は満たさない。`drizzle-orm/d1` を使うのは既定の構成だけ。
 - 認証：`Authenticator` は、リクエストのヘッダー（セッションの Cookie）から利用者を返すか、有効なセッションがなければ `null` を返す（サーバー側の失敗は例外）。あわせて、認証サービス自身の経路（`/api/auth/*`）の応答を受け持つ。`requireAuth` は `Authenticator` だけを使い、401 の応答と `c.var.userId` の設定を受け持つ。Bearer トークンは受け付けないので、401 に `WWW-Authenticate: Bearer` は付けない。Better Auth の実装は `src/auth/better-auth.ts` の 1 実装。
 - テストでは、DB に sqlite-proxy の Drizzle（実行した SQL を記録し、行を返さない）を、認証に仮の `Authenticator` を渡す。Better Auth の実装は、libSQL のメモリ DB に `migrations/` を適用したもの（`src/db/memory-database.ts`）を渡し、アプリ越しに確かめる。セッションは Better Auth の内部の adapter で作り、署名した Cookie を付けて送る（あり・なし・期限切れ・別の鍵の署名・サインアウト後）。Google での登録は、Google のトークンのエンドポイントへの `fetch` をテストの中で差し替えて、サインインの開始からコールバック、`/api/me` までを通す。許可の一覧にないメールアドレスでは、同じ流れで利用者・アカウント・セッションが作られないことを確かめる。
@@ -212,7 +213,7 @@ index：利用者ごとに読むための `user_id`、子テーブルの持ち�
   - 利用者の記録でないもの（ほかの利用者の `userId` を持つ記録、読み込んでいない記録の削除）は、呼び出し側の誤りとして例外にする。読み込んでいない ID の記録は INSERT になり、ほかの利用者の行と主キーがぶつかって失敗するので、上書きはできない。
   - 最初の保存には利用者の設定（`User`）を含める。
 - Activity は（保存で上げた版、その保存の中の順）で並べる。共通の項目のほかは JSON の `content` に置く。
-- 型は `packages/domain` の型で書いた（`StoredRecords`・`RecordChanges`。形は `apps/web` の `Records`・`RecordChanges` と同じ）。#264 がこれらを `packages/application` に移したら、#266 でそちらの型に合わせる。
+- 型は `packages/application` の `Records`・`RecordChanges`（#266 でそろえた）。`Records` は Activity を含まない（追記するだけで読み返さないため）。
 
 ### 操作と読み取りの処理（2026-10-03）
 
@@ -227,6 +228,11 @@ index：利用者ごとに読むための `user_id`、子テーブルの持ち�
 7. 変わった行だけを 1 つの `batch()` で書く。同じ `batch()` の中で、利用者ごとの版を確かめて上げる（下の「同時の書き込み」）。
 8. 操作の結果（作った記録の ID、操作が返す値）を返す。
 
+- 実装（#266）：`services/api/src/handlers/`。1・2 は経路ごとの middleware（`requireAuth`・`requireSameOrigin`）、3 は経路（`validate.ts`。契約の Valibot のスキーマに加えて、日付と日時が暦の上で実在するかを domain の関数で確かめ、query の数と真偽は宣言した型に変えてから検証する）、4〜8 は `flow.ts` の 1 か所にある。operation は `operations.ts` の登録表に契約の本文のスキーマを足すだけで答える（実行するのは `packages/application` の `operations` の同じ名前の関数）。読み取りは `reads.ts` に、経路・パラメータのスキーマ・application の読み取りの関数を足す。まだ答えないものは同じファイルの未実装の一覧に置き、契約のすべての operation と読み取りがどちらかにあることをテストで確かめる。
+- 4 の後、利用者の設定（タイムゾーン）がなければ「今日」が決まらないので、422 `userNotSetUp` で断る（ADR 0006「エラー」）。`GET /api/me` だけは設定を読んで `null` を返す。
+- 5 の変更は、操作のときは操作の変更と同じ `batch()` で書き（追いつきが先、操作が後。Activity も同じ版に入る）、読み取りのときは派生値を計算する前に書く（#271 の範囲 2）。追いつきの中身、読み取りの衝突のやり直しは #271 で、#266 の追いつきは何も書かない。テストでは追いつきを差し替えて、この書き方を確かめる（`createFlow` の `catchUp`）。
+- 追いつきは時計と記録だけで決まり、要求の入力に左右されない。GET の読み取りでも書くので（GET は Origin を確かめない）、CSRF の備えはこの前提に立つ。システムの変更が domain に断られたら、利用者の誤りではないので 500 にする。
+- 予期しない例外は 500 `internalError` にし、Workers Logs に経路・例外の種類・文言・スタックを残す。要求の本文と記録は出さない。Drizzle の失敗した問い合わせの文言にはパラメータ（利用者の文字列）が入るので、その文言は出さず、原因（DB 自身の文言）だけを出す。Better Auth 自身のログ（セッションを読む途中の DB の失敗など）も、`logger` で同じように伏せる（引数は例外の種類と原因だけ）。
 - 4 では、その利用者の記録を、Activity を除いてすべて読む。派生値（持ち越し回数、連続見送り、Retro の事実）は過去の Sprint をたどるので、操作ごとに読む範囲を切り出すと、範囲を決める規則が `packages/domain` の外に増えるため。1 回の `batch()`（テーブルの数の SELECT）で読む。Workers Logs で読み込みの時間を見て、目安（p95 で 100ms）を超えたら、読む範囲の切り出しを検討する。
 
 ### ID の形式（2026-10-03）
@@ -237,6 +243,7 @@ index：利用者ごとに読むための `user_id`、子テーブルの持ち�
 - UUIDv7 は作った時刻の順に並ぶので、domain が同時刻の記録を ID の順で並べる規則（packages/domain README）を満たす。
 - ID は `packages/domain` の外で作る（domain は時計と乱数に依存しない）。作る関数は API とブラウザ内モックで共有する（#264）。外から来た ID は、接頭辞と形式を検証してから使う（契約のスキーマ、#265）。
 - Better Auth が作る ID（利用者・セッション・アカウントなど）も TypeID にそろえる。domain の利用者 ID は Better Auth の利用者 ID と同じ値（`user_…`）。
+  - 実装（#266）：Better Auth 1.7.6 の `advanced.database.generateId` に、モデルの名前（`user`・`session`・`account`・`verification`・`passkey`・`rateLimit`）を受けて TypeID を返す関数を渡す（Context7 と 1.7.6 のコードで確認。adapter の INSERT と、Better Auth が自分で作る利用者・セッションの ID の両方がこれを通る）。接頭辞はモデルの名前を snake_case にしたもの。時刻は注入した `now` を使う。#266 より前に作った行（#32 の確認で作った利用者など）の ID は TypeID ではない。移す SQL は書かず（下の「使い始めの間のスキーマの変更」）、その利用者を消して登録し直す（オーナーの手作業）。TypeID でない利用者 ID のセッションは、`Authenticator` が利用者 ID を確かめた段階でサーバー側の失敗（500）にし、Workers Logs に残す。
 - D1 には文字列のまま置く。
 - 作る関数と確かめる関数は `packages/application` の `ids.ts`（#264）。ライブラリは使わずに仕様を実装した。仕様は小さく（接頭辞の規則と、128 ビットを 26 文字にする base32）、作る時刻を引数で渡せること（fixture は見本データの日時から毎回同じ ID を作り、メモリ上のストアは fixture の時計の時刻で作る）と、同じミリ秒の中でも作った順に並ぶこと（RFC 9562 §6.2 の、乱数の部分を前の ID から数え上げる方法）が要るため。乱数は引数で受け取り、Workers とブラウザでは `crypto.getRandomValues` を渡す。仕様のリポジトリの `valid.json`・`invalid.json` の例をテストで通す。
 - 外から来た ID は、接頭辞が記録の種類と一致し、UUID が v7（version 7、variant `10`）のときだけ受け付ける（`parseId`）。
@@ -256,6 +263,8 @@ PC とスマホから同じ利用者の記録を書く。後から来た書き�
 ### 書き込みの API の CSRF への備え（2026-10-03）
 
 「影響」で後回しにしていた点を決める。セッションの Cookie は SameSite=Lax だが、それだけに頼らず、`/api/*` の GET・HEAD 以外のリクエストは、`Origin` ヘッダーが `BETTER_AUTH_URL` の origin と一致しなければ 403 にする。Better Auth 自身の経路（`/api/auth/*`）は Better Auth の検査に任せる。
+
+実装（#266）：契約の経路（`/api/me`・読み取り・`/api/operations/*`）に、認証の後で `requireSameOrigin` を置く。origin は注入した `appOrigin`。`Origin` ヘッダーのない書き込みも 403 にする（ブラウザは POST に必ず付ける）。ポートが違えば別の origin として断る。
 
 ### Web と API の配信（2026-10-03）
 

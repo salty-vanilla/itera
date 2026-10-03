@@ -1,13 +1,16 @@
+import { parseId } from '@itera/application';
 import { makeSignature } from 'better-auth/crypto';
-import { eq } from 'drizzle-orm';
+import { DrizzleQueryError, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app';
 import type { Database } from '../db/database';
 import { createMemoryDatabase } from '../db/memory-database';
 import * as schema from '../db/schema';
-import { testEnv as env } from '../test-env';
+import { testDependencies, testEnv as env, testNow } from '../test-env';
 import {
+  authIdSource,
   betterAuthAuthenticator,
+  betterAuthLogger,
   betterAuthSettings,
   createBetterAuth,
   signUpNotAllowedCode,
@@ -17,6 +20,7 @@ import {
 // in-memory database with the real migrations applied.
 
 const settings = betterAuthSettings(env);
+const newId = authIdSource(() => testNow);
 
 let db: Database;
 let close: () => void;
@@ -24,21 +28,24 @@ let app: ReturnType<typeof createApp>;
 
 beforeEach(async () => {
   ({ db, close } = await createMemoryDatabase());
-  app = createApp({
-    database: () => db,
-    authenticator: betterAuthAuthenticator(),
-  });
+  app = createApp(
+    testDependencies({
+      database: () => db,
+      authenticator: betterAuthAuthenticator(() => testNow),
+    }),
+  );
 });
 
 afterEach(() => {
   close();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 // Signs a user in the way a finished Google sign-in would: a user with a
 // Google account, a session row, and the signed session cookie.
 async function signIn(secret = env.BETTER_AUTH_SECRET) {
-  const context = await createBetterAuth(db, settings).$context;
+  const context = await createBetterAuth(db, settings, newId).$context;
   const { user } = await context.internalAdapter.createOAuthUser(
     { name: 'Ada', email: 'ada@example.com', emailVerified: true },
     { providerId: 'google', accountId: 'google-user-1' },
@@ -147,7 +154,7 @@ describe('Better Auth authenticator (GET /api/me)', () => {
     const { user, cookie } = await signIn();
     const response = await me(cookie);
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ userId: user.id });
+    expect(await response.json()).toEqual({ userId: user.id, settings: null });
   });
 
   it('rejects a request without a session cookie', async () => {
@@ -203,10 +210,12 @@ describe('Better Auth authenticator (GET /api/me)', () => {
     'SIGN_UP_ALLOWED_EMAILS',
   ] as const)('fails closed (500) when %s is not set', async (name) => {
     const { cookie } = await signIn();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     expect((await me(cookie, { ...env, [name]: '' })).status).toBe(500);
   });
 
   it('fails closed (500) when the allowed emails list has no address', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     const { cookie } = await signIn();
     const response = await me(cookie, {
       ...env,
@@ -216,6 +225,7 @@ describe('Better Auth authenticator (GET /api/me)', () => {
   });
 
   it('fails closed (500) when the secret is shorter than 32 characters', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     const { cookie } = await signIn();
     const response = await me(cookie, {
       ...env,
@@ -224,8 +234,27 @@ describe('Better Auth authenticator (GET /api/me)', () => {
     expect(response.status).toBe(500);
   });
 
+  it('fails closed (500) for a user whose ID is not a TypeID', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    // A user made before #266, with Better Auth's own random ID.
+    await db
+      .insert(schema.user)
+      .values({ id: 'Bx3tQ9legacyId', name: 'Ada', email: 'ada@example.com' });
+    const context = await createBetterAuth(db, settings, newId).$context;
+    const session = await context.internalAdapter.createSession(
+      'Bx3tQ9legacyId',
+      false,
+    );
+    const signature = await makeSignature(
+      session.token,
+      env.BETTER_AUTH_SECRET,
+    );
+    const cookie = `${context.authCookies.sessionToken.name}=${session.token}.${signature}`;
+    expect((await me(cookie)).status).toBe(500);
+  });
+
   it('matches the Drizzle schema Better Auth expects', async () => {
-    const context = await createBetterAuth(db, settings).$context;
+    const context = await createBetterAuth(db, settings, newId).$context;
     await expect(context.explicitSchemaCheck?.()).resolves.toBeUndefined();
   });
 
@@ -279,13 +308,21 @@ describe('Better Auth sign-in methods', () => {
       providerId: 'google',
       accountId: 'google-user-42',
     });
+    // TypeIDs, as the records' IDs are (ADR 0004 ID の形式): the user's is
+    // the domain's user ID.
+    expect(parseId('User', user?.id ?? '').ok).toBe(true);
+    expect(parseId('Account', account?.id ?? '').ok).toBe(true);
+    const [session] = await db.select().from(schema.session);
+    expect(parseId('Session', session?.id ?? '').ok).toBe(true);
+    // The session's token stays Better Auth's random string.
+    expect(session?.token).not.toMatch(/^session_/);
     // Better Auth encrypts the access and refresh tokens, not the ID token.
     expect(account?.accessToken).toBeTruthy();
     expect(account?.accessToken).not.toContain('google-access-token');
 
     const response = await me(cookiesFrom(callback));
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ userId: user?.id });
+    expect(await response.json()).toEqual({ userId: user?.id, settings: null });
   });
 
   it.each([
@@ -317,7 +354,7 @@ describe('Better Auth sign-in methods', () => {
       SIGN_UP_ALLOWED_EMAILS: 'grace@example.com',
     });
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ userId: user.id });
+    expect(await response.json()).toEqual({ userId: user.id, settings: null });
   });
 
   it('rejects other social providers', async () => {
@@ -390,5 +427,25 @@ describe('Better Auth rate limiting', () => {
     expect((await signInFrom('203.0.113.7')).status).toBe(429);
     expect((await signInFrom('203.0.113.8')).status).toBe(200);
     expect(await db.select().from(schema.rateLimit)).toHaveLength(2);
+  });
+});
+
+describe('Better Auth logging', () => {
+  it('keeps a failed query’s parameters out of the log', () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    betterAuthLogger.log(
+      'error',
+      'INTERNAL_SERVER_ERROR',
+      new DrizzleQueryError(
+        'select * from "session" where "token" = ?',
+        ['secret-session-token'],
+        new Error('D1_ERROR: network connection lost'),
+      ),
+    );
+    expect(log).toHaveBeenCalledOnce();
+    const line = String(log.mock.calls[0]?.[0]);
+    expect(line).not.toContain('secret-session-token');
+    expect(line).toContain('INTERNAL_SERVER_ERROR');
+    expect(line).toContain('network connection lost');
   });
 });

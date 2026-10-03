@@ -18,6 +18,12 @@ const READS = {
   getNextPlanning: application.nextPlanningOf,
 };
 
+/**
+ * The contract's reads that are the server's own, not a read of the
+ * application: the signed-in person and their settings (#266).
+ */
+const SERVER_READS = new Set(['getMe']);
+
 /** The application's exports that are not reads of the person's records. */
 const NOT_READS = new Set([
   'operations',
@@ -26,6 +32,8 @@ const NOT_READS = new Set([
   'beginDay',
   // Running operations, and IDs.
   'createMemoryStore',
+  'applyRecordChanges',
+  'mergeChanges',
   'createIdSource',
   'parseId',
 ]);
@@ -36,7 +44,7 @@ const contract = Object.entries(sdk)
 
 describe('the contract', () => {
   it('has an operation for each operation of the application, by its name', () => {
-    const reads = new Set(Object.keys(READS));
+    const reads = new Set([...Object.keys(READS), ...SERVER_READS]);
     expect(contract.filter((name) => !reads.has(name)).toSorted()).toEqual(
       Object.keys(application.operations).toSorted(),
     );

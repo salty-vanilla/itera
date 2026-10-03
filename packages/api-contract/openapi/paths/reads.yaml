@@ -2,7 +2,8 @@
 # The response is `{ clock, view }`: the clock the server read with (ADR
 # 0005 時計) and the read's result, `null` where the read has nothing to show.
 # Before reading, the server brings the records up to now (the end of a
-# Sprint, the start of a day, #271); that write may meet another write.
+# Sprint, the start of a day, #271); that write may meet another write. A
+# person without settings yet gets 422 `userNotSetUp`.
 
 getOverview:
   get:
@@ -23,6 +24,7 @@ getOverview:
                 view: { $ref: '../schemas/views.yaml#/AppOverview' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/UserNotSetUp' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
 listAreas:
@@ -46,6 +48,7 @@ listAreas:
                   items: { $ref: '../schemas/views.yaml#/EditableArea' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/UserNotSetUp' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
 getBacklog:
@@ -77,6 +80,7 @@ getBacklog:
       '400': { $ref: '../responses.yaml#/BadRequest' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/UserNotSetUp' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
 getSprintChoice:
@@ -117,6 +121,7 @@ getSprintChoice:
       '400': { $ref: '../responses.yaml#/BadRequest' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/UserNotSetUp' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
 getPlanning:
@@ -151,6 +156,7 @@ getPlanning:
       '400': { $ref: '../responses.yaml#/BadRequest' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/UserNotSetUp' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
 getRunning:
@@ -185,6 +191,7 @@ getRunning:
       '400': { $ref: '../responses.yaml#/BadRequest' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/UserNotSetUp' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
 getToday:
@@ -209,6 +216,7 @@ getToday:
                     - type: 'null'
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/UserNotSetUp' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
 getDay:
@@ -241,6 +249,7 @@ getDay:
       '400': { $ref: '../responses.yaml#/BadRequest' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/UserNotSetUp' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
 getRetro:
@@ -276,6 +285,7 @@ getRetro:
       '400': { $ref: '../responses.yaml#/BadRequest' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/UserNotSetUp' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
 getNextPlanning:
@@ -297,4 +307,5 @@ getNextPlanning:
                 view: { $ref: '../schemas/views.yaml#/NextPlanning' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/UserNotSetUp' }
       '500': { $ref: '../responses.yaml#/ServerError' }

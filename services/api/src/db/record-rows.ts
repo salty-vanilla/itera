@@ -1,3 +1,4 @@
+import type { Records } from '@itera/application';
 import type {
   Area,
   DailySelection,
@@ -40,7 +41,6 @@ import {
   task,
   userSettings,
 } from './schema';
-import type { StoredRecords } from './records';
 
 // How the records of `@itera/domain` map to rows of src/db/schema.ts, both
 // ways. A row has every column, NULL for an absent attribute, so two rows of
@@ -399,7 +399,7 @@ function sprintTaskRow(
  * The records the rows hold. Parts must come in `position` order within
  * their parent. `null` when the user has no settings yet (no save so far).
  */
-export function recordsFromRows(rows: RowSet): StoredRecords | null {
+export function recordsFromRows(rows: RowSet): Records | null {
   const [settings] = rows.get(userSettings);
   if (settings === undefined) return null;
   const subtasks = groupBy(rows.get(subtask), (r) => r.taskId);

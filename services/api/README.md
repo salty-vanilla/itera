@@ -33,8 +33,11 @@ pnpm --filter @itera/api dev    # .dev.vars の BETTER_AUTH_URL は http://local
 API の経路はすべて `/api` の下にある。同じ origin のほかの経路は Web の配信に使う（ADR 0004）。
 
 - `GET /api/health`：認証なし。ローカルの D1 に問い合わせて `{"status":"ok"}` を返す。
-- `GET /api/me`：セッションの Cookie から利用者を得て、`{"userId": "<Better Auth の利用者 ID>"}` を返す。Cookie がない・署名が合わない・期限切れ・サインアウト済みは 401。
+- `GET /api/me`：セッションの Cookie から利用者を得て、`{"userId": "user_…", "settings": {…} | null}` を返す（契約の `getMe`）。Cookie がない・署名が合わない・期限切れ・サインアウト済みは 401。
+- 契約（`packages/api-contract`、ADR 0006）の読み取り（`GET /api/overview` など）と操作（`POST /api/operations/{名前}`）。答えるのは `src/handlers/operations.ts`・`reads.ts` の登録表にあるものだけで、ほかは 404（未実装の一覧にある）。
 - `/api/auth/*`：Better Auth の経路（Google でのサインインとコールバック、パスキー、サインアウト、セッション）。
+
+契約の経路は、認証 → 書き込みの Origin の確認 → 入力の検証 → 記録の読み込み → 日付が変わったときの処理（#271）→ 操作の実行 → 版を確かめた書き込み、の順に通る（ADR 0004「操作と読み取りの処理」）。エラーは `{ code, message }`（ADR 0006「エラー」）。書き込みは `Origin` が `BETTER_AUTH_URL` の origin でないと 403、本文が 64 KiB を超えると 413、利用者の設定がまだないと 422 `userNotSetUp`。
 
 ## 認証の設定
 
@@ -58,16 +61,18 @@ API の経路はすべて `/api` の下にある。同じ origin のほかの経
 
 ## 構成
 
-DB と認証は `createApp` に注入する（ADR 0004「依存の組み立て方」、`.claude/rules/api.md`）。
+DB・認証・アプリの origin・現在時刻は `createApp` に注入する（ADR 0004「依存の組み立て方」、`.claude/rules/api.md`）。ハンドラーが `drizzle-orm/d1`・Better Auth・D1 と認証の binding を直接使わないことは ESLint で検査する。
 
 | ファイル | 役割 |
 | --- | --- |
 | `src/index.ts` | 本番の構成（`default-dependencies.ts`）で `createApp` を呼ぶ |
-| `src/dependencies.ts` | 注入する依存の型（`database`・`authenticator`） |
-| `src/default-dependencies.ts` | 本番の構成：D1 と Better Auth |
-| `src/app.ts` | ルート。`c.var.db` と、注入された `Authenticator`（`requireAuth` と `/api/auth/*`）だけを使う |
+| `src/dependencies.ts` | 注入する依存の型（`database`・`authenticator`・`appOrigin`・`now`） |
+| `src/default-dependencies.ts` | 本番の構成：D1、Better Auth、`BETTER_AUTH_URL` の origin、システムの時計 |
+| `src/app.ts` | ルート。`c.var.db` と、注入された依存（`requireAuth` と `/api/auth/*` の `Authenticator` など）だけを使う |
+| `src/handlers/` | 契約の経路の土台：流れ（`flow.ts`）、検証（`validate.ts`）、エラー（`errors.ts`）、Origin の確認、operation と読み取りの登録表（`operations.ts`・`reads.ts`）、`/api/me` |
 | `src/db/database.ts` | ハンドラーが使う DB の型（D1・libSQL・sqlite-proxy で満たせる） |
 | `src/db/schema.ts` | テーブルの定義（Better Auth のテーブルと、Itera の記録のテーブル。ADR 0004「記録のテーブル」） |
+| `src/db/user-settings.ts` | 利用者の設定だけを読む（`/api/me`） |
 | `src/db/load-records.ts`・`save-records.ts` | 利用者の記録（Activity を除く）と版を 1 回の `batch()` で読む。変わった行と Activity を、版を確かめて 1 回の `batch()` で書く |
 | `src/db/record-rows.ts` | `packages/domain` の記録とテーブルの行の対応（両方向） |
 | `src/auth/` | `Authenticator` の型、`requireAuth`、Better Auth の実装 |

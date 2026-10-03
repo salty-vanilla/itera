@@ -5,6 +5,18 @@ import globals from 'globals';
 import reactHooks from 'eslint-plugin-react-hooks';
 import storybook from 'eslint-plugin-storybook';
 
+// What services/api's production code must not import (ADR 0005, ADR 0006).
+const apiImportPatterns = [
+  {
+    regex: '^@itera/application/fixtures$',
+    message: 'The fixture is for tests and the browser mock only.',
+  },
+  {
+    regex: '^@itera/api-contract/(client|react-query)$',
+    message: "The API takes the contract's types and schemas only (ADR 0006).",
+  },
+];
+
 /**
  * packages/domain and packages/application are pure: the current time,
  * randomness and IDs come in as arguments (.claude/rules/domain.md, ADR 0005
@@ -171,20 +183,47 @@ export default defineConfig(
     files: ['services/api/src/**/*.ts'],
     ignores: ['services/api/src/**/*.test.ts'],
     rules: {
+      'no-restricted-imports': ['error', { patterns: apiImportPatterns }],
+    },
+  },
+  {
+    // Handlers and middleware use `c.var` and the injected dependencies'
+    // types only (.claude/rules/api.md, ADR 0004 依存の組み立て方). D1 and
+    // Better Auth, and the env values for them, belong to the production
+    // composition and the Better Auth module.
+    files: ['services/api/src/**/*.ts'],
+    ignores: [
+      'services/api/src/**/*.test.ts',
+      'services/api/src/test-env.ts',
+      'services/api/src/default-dependencies.ts',
+      'services/api/src/auth/better-auth.ts',
+    ],
+    rules: {
       'no-restricted-imports': [
         'error',
         {
           patterns: [
+            ...apiImportPatterns,
             {
-              regex: '^@itera/application/fixtures$',
-              message: 'The fixture is for tests and the browser mock only.',
+              regex: '^drizzle-orm/d1$',
+              message:
+                'Use c.var.db (Database); only default-dependencies.ts picks D1.',
             },
             {
-              regex: '^@itera/api-contract/(client|react-query)$',
+              regex: '^(better-auth|@better-auth/)',
               message:
-                "The API takes the contract's types and schemas only (ADR 0006).",
+                'Use the injected Authenticator; Better Auth stays in src/auth/better-auth.ts.',
             },
           ],
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            'MemberExpression[property.name=/^(DB|BETTER_AUTH_\\w+|GOOGLE_\\w+|SIGN_UP_ALLOWED_EMAILS)$/]',
+          message:
+            'Read bindings in default-dependencies.ts or src/auth/better-auth.ts and inject what they make.',
         },
       ],
     },
