@@ -10,11 +10,12 @@ const migrationsFolder = decodeURIComponent(
 
 // Test double: an in-memory SQLite database (libSQL, Node only) with the
 // migrations in `migrations/` applied, the same files wrangler applies to D1.
-// For tests that need rows to persist, unlike createRecordingDatabase.
+// For tests that need rows to persist, unlike createRecordingDatabase. The
+// libSQL client is there for tests that look at the SQL sent.
 export async function createMemoryDatabase() {
   const client = createClient({ url: ':memory:' });
   const libsql = drizzle(client, { schema });
   await migrate(libsql, { migrationsFolder });
   const db: Database = libsql;
-  return { db, close: () => client.close() };
+  return { db, client, close: () => client.close() };
 }

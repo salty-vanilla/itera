@@ -12,7 +12,7 @@ export {
   type OperationOutput,
   type Operations,
 } from './operations';
-export { reviewEnded } from './system-changes';
+export { catchUp, reviewEnded } from './system-changes';
 export { beginDay } from './today-changes';
 
 // Running them over the records.

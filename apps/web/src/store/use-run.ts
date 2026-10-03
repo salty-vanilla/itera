@@ -1,6 +1,7 @@
 import type { Change } from '@itera/application';
 import type { Result } from '@itera/domain';
 import { useCallback } from 'react';
+import { SAVE_FAILED } from '@/api/save-failed';
 import { useToast } from '@/components/ui/toast';
 import { useRecordStore } from './store-provider';
 
@@ -16,15 +17,7 @@ export function useRun() {
   return useCallback(
     <T>(change: Change<T>): Result<T> => {
       const result = store.run(change);
-      if (!result.ok) {
-        toast.show({
-          kind: 'save-failed',
-          tone: 'danger',
-          title: '保存できませんでした',
-          description:
-            '記録は変わっていません。内容を確かめてもう一度試してください。',
-        });
-      }
+      if (!result.ok) toast.show(SAVE_FAILED);
       return result;
     },
     [store, toast],

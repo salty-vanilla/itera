@@ -122,23 +122,30 @@ function subjectOf(
 }
 
 /**
- * The system's start of the day, when the app opens (startDay, run by
- * useSystemDay): earlier
- * days' open selections become unresolved and today's recurring
- * occurrences appear. Repeating it changes nothing.
+ * The system's start of the day, before the reads and operations (the API,
+ * the browser mock) and when the app opens (useSystemDay, until #277):
+ * earlier days' open selections become unresolved and today's recurring
+ * occurrences appear. Repeating it changes nothing, and then writes
+ * nothing: every change startDay makes has its Activity, so a day already
+ * started leaves the records as they are (no new snapshot to draw, no row
+ * to write).
  */
-export const beginDay = (): Change =>
-  onActive((sprint, ctx, records) =>
+export const beginDay = (): Change => (records, ctx) => {
+  const result = onActive((sprint, context, current) =>
     startDay(
       sprint,
       {
-        today: ctx.today,
-        occurrences: records.occurrences,
-        newSelectionId: () => ctx.newId('DailySelection'),
+        today: context.today,
+        occurrences: current.occurrences,
+        newSelectionId: () => context.newId('DailySelection'),
       },
-      ctx,
+      context,
     ),
-  );
+  )(records, ctx);
+  if (result.ok && result.value.activities.length === 0)
+    return { ok: true, value: { changes: {}, activities: [] } };
+  return result;
+};
 
 /** 今日へ: a planned SprintTask, or one occurrence of it (F18). */
 export const choose =

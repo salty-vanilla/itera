@@ -240,6 +240,10 @@ export const userSettings = sqliteTable('user_settings', {
  * save checks and raises it in the same batch (src/db/save-records.ts).
  * No row means no save yet (revision 0). A mismatch writes 0, which the
  * check rejects, so the whole batch fails.
+ *
+ * `caught_up_to` is the day the system's records were brought up to by the
+ * last save (「今日」 in the user's time zone then, #271): every save comes
+ * after the catch-up. NULL for a save made before it was kept.
  */
 export const recordRevision = sqliteTable(
   'record_revision',
@@ -249,6 +253,7 @@ export const recordRevision = sqliteTable(
       .primaryKey()
       .references(() => user.id, { onDelete: 'cascade' }),
     revision: integer('revision').notNull(),
+    caughtUpTo: localDateColumn('caught_up_to'),
   },
   (table) => [check('record_revision_positive', sql`${table.revision} >= 1`)],
 );

@@ -654,8 +654,9 @@ describe('the Sprint reads', () => {
 
   async function readOn(state: Parameters<typeof setup>[0], path: string) {
     const app = await setup(state);
-    const { records } = await app.saved();
     const response = await app.get(path);
+    // The records as the read left them, brought up to the clock's day (#271).
+    const { records } = await app.saved();
     return { response, records, json: await response.json() };
   }
 
@@ -680,6 +681,9 @@ describe('the Sprint reads', () => {
 
     it('writes nothing, whatever it is asked', async () => {
       const app = await setup('planning-check');
+      // The first read brings the records up to the day (#271); the asked
+      // read after it writes nothing.
+      await app.get('/overview');
       const before = await app.saved();
       await app.get('/planning?applyCriterion=true');
       expect(await app.saved()).toEqual(before);

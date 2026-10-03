@@ -1,4 +1,4 @@
-// The course of a catch-up that writes (#271 fills it in): with the
+// The course of a catch-up that writes: with the
 // operation's changes in one batch, or written before a read; refused, the
 // server's failure.
 import {
@@ -7,14 +7,16 @@ import {
   type Change,
   type Records,
 } from '@itera/application';
-import { timeZone } from '@itera/domain';
+import { localDate, timeZone } from '@itera/domain';
 import { Hono } from 'hono';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import type { Database } from '../db/database';
 import { loadRecords } from '../db/load-records';
 import { createMemoryDatabase } from '../db/memory-database';
 import { saveRecords } from '../db/save-records';
 import { activity, user as authUser } from '../db/schema';
 import type { AppEnv } from '../env';
+import { ApiError, errorResponse } from '../errors';
 import { testNow } from '../test-env';
 import { createFlow } from './flow';
 
@@ -37,10 +39,7 @@ const settled: Records = {
 };
 
 let close: (() => void) | undefined;
-afterEach(() => {
-  close?.();
-  vi.restoreAllMocks();
-});
+afterEach(() => close?.());
 
 /** A catch-up that writes: an Area made by the system. */
 const writingCatchUp: Change = (records, ctx) => {
@@ -50,8 +49,14 @@ const writingCatchUp: Change = (records, ctx) => {
   return { ok: true, value: { changes, activities } };
 };
 
-/** The flow behind a route of each kind, signed in as Alice. */
-async function setup(catchUp: Change) {
+/**
+ * The flow behind a route of each kind, signed in as Alice. `interfere`
+ * runs before each batch the flow sends, on the database itself.
+ */
+async function setup(
+  catchUp: Change,
+  interfere: (db: Database) => Promise<void> = async () => {},
+) {
   const memory = await createMemoryDatabase();
   close = memory.close;
   const { db } = memory;
@@ -63,11 +68,27 @@ async function setup(catchUp: Change) {
     loaded: { revision: 0, records: null },
     changes: settled,
     activities: [],
+    caughtUpTo: localDate('2026-10-03'),
   });
-  const flow = createFlow({ now: () => testNow, catchUp });
+  const flow = createFlow({ now: () => testNow, catchUp: () => catchUp });
   const app = new Hono<AppEnv>();
+  // The contract's errors as the app answers them; anything else is 500.
+  app.onError((error, c) =>
+    error instanceof ApiError
+      ? errorResponse(c, error.code, error.message)
+      : c.text('', 500),
+  );
+  const interfering = new Proxy(db, {
+    get(target, key, receiver) {
+      if (key !== 'batch') return Reflect.get(target, key, receiver);
+      return async (statements: Parameters<Database['batch']>[0]) => {
+        await interfere(target);
+        return target.batch(statements);
+      };
+    },
+  });
   app.use(async (c, next) => {
-    c.set('db', db);
+    c.set('db', interfering);
     c.set('userId', alice);
     await next();
   });
@@ -120,13 +141,62 @@ describe('a catch-up that writes', () => {
     const { app, db } = await setup(
       operations.renameArea({ areaId: ids.newId('Area', testNow), name: 'x' }),
     );
-    // Hono's own error handler, which logs it: the app's turns it into
-    // internalError.
-    vi.spyOn(console, 'error').mockImplementation(() => {});
     expect((await app.request('/operate', { method: 'POST' })).status).toBe(
       500,
     );
     expect((await app.request('/read')).status).toBe(500);
     expect((await loadRecords(db, alice)).revision).toBe(1);
+  });
+});
+
+describe('a read whose catch-up meets another write', () => {
+  /** Another device's save: the settings, renamed. */
+  async function anotherSave(db: Database) {
+    const loaded = await loadRecords(db, alice);
+    await saveRecords(db, {
+      userId: alice,
+      loaded,
+      changes: {
+        user: { ...settled.user, displayName: `A${loaded.revision}` },
+      },
+      activities: [],
+      caughtUpTo: localDate('2026-10-03'),
+    });
+  }
+
+  /** Interferes before the first `times` saves (a load is a batch too). */
+  function before(times: number) {
+    let saves = 0;
+    let loads = 0;
+    return async (db: Database) => {
+      loads += 1;
+      // The flow loads, then saves: every second batch is a save.
+      if (loads % 2 === 0 && saves < times) {
+        saves += 1;
+        await anotherSave(db);
+      }
+    };
+  }
+
+  it('loads again and writes once', async () => {
+    const { app, db } = await setup(writingCatchUp, before(1));
+    const response = await app.request('/read');
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ view: ['システム'] });
+    const { revision, records } = await loadRecords(db, alice);
+    // The other save, then the catch-up on top of it.
+    expect(revision).toBe(3);
+    expect(records?.user.displayName).toBe('A1');
+    expect(records?.areas.map((a) => a.name)).toEqual(['システム']);
+  });
+
+  it('meeting another write again, answers 409', async () => {
+    const { app, db } = await setup(writingCatchUp, before(2));
+    const response = await app.request('/read');
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ code: 'revisionConflict' });
+    const { revision, records } = await loadRecords(db, alice);
+    expect(revision).toBe(3);
+    expect(records?.areas).toEqual([]);
   });
 });
