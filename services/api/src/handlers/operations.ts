@@ -48,6 +48,20 @@ export const operationBodies: {
   undoAddTaskToWeek: contract.vUndoAddTaskToWeekBody,
   setRecurrence: contract.vSetRecurrenceBody,
   endRecurrence: contract.vEndRecurrenceBody,
+  chooseTasks: contract.vChooseTasksBody,
+  unchooseTasks: contract.vUnchooseTasksBody,
+  unchooseTasksByTask: contract.vUnchooseTasksByTaskBody,
+  setOccurrenceIncluded: contract.vSetOccurrenceIncludedBody,
+  includeOccurrences: contract.vIncludeOccurrencesBody,
+  excludeAllOccurrences: contract.vExcludeAllOccurrencesBody,
+  createAndChooseTask: contract.vCreateAndChooseTaskBody,
+  setPlanningGoal: contract.vSetPlanningGoalBody,
+  setGoalLink: contract.vSetGoalLinkBody,
+  setPlanningAvailableHours: contract.vSetPlanningAvailableHoursBody,
+  confirmSprint: contract.vConfirmSprintBody,
+  setRunningGoal: contract.vSetRunningGoalBody,
+  setRunningAvailableHours: contract.vSetRunningAvailableHoursBody,
+  undoPastDay: contract.vUndoPastDayBody,
 };
 
 /**
@@ -56,21 +70,6 @@ export const operationBodies: {
  * here (registry.test.ts).
  */
 export const unimplementedOperations: readonly OperationName[] = [
-  // #268: the Sprint, planning and running.
-  'chooseTasks',
-  'unchooseTasks',
-  'unchooseTasksByTask',
-  'setOccurrenceIncluded',
-  'includeOccurrences',
-  'excludeAllOccurrences',
-  'createAndChooseTask',
-  'setPlanningGoal',
-  'setGoalLink',
-  'setPlanningAvailableHours',
-  'confirmSprint',
-  'setRunningGoal',
-  'setRunningAvailableHours',
-  'undoPastDay',
   // #269: today.
   'chooseForToday',
   'startSelection',
