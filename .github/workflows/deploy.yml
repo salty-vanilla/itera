@@ -1,0 +1,73 @@
+name: Deploy
+
+# Deploys services/api to Cloudflare Workers (Issue #32, ADR 0004). Only what
+# passed `pnpm check` is deployed, and the D1 migrations are applied before
+# the Worker that needs them. Setting up the accounts, tokens and secrets this
+# relies on: docs/operations/deploy.md.
+
+on:
+  push:
+    branches: [main]
+  # Redeploys main by hand (for example after the first setup).
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    uses: ./.github/workflows/check.yml
+
+  # Stops before asking for approval while wrangler.jsonc still has the
+  # placeholder database_id (the D1 database is created by hand first).
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check that the D1 database ID is set
+        run: |
+          if grep -Eq '"database_id"[[:space:]]*:[[:space:]]*"0{8}-0{4}-0{4}-0{4}-0{12}"' services/api/wrangler.jsonc; then
+            echo "::error file=services/api/wrangler.jsonc::database_id is still the placeholder. Create the D1 database and put its ID in wrangler.jsonc first (docs/operations/deploy.md)."
+            exit 1
+          fi
+
+  deploy:
+    needs: [check, preflight]
+    # workflow_dispatch can be started from any branch; deploy only main.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Waits for a reviewer's approval. The environment's secrets are released
+    # only to this job, and only for main (deployment branch rule).
+    environment: production
+    # One deployment at a time, never cancelled halfway through migrations.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Reads the pnpm version from packageManager in package.json.
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The wrangler pinned in services/api. In CI it applies without asking.
+      # The token is given only to the steps that run wrangler.
+      - name: Apply D1 migrations
+        run: pnpm --filter @itera/api exec wrangler d1 migrations apply DB --remote
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      # Fails before uploading when a secret in secrets.required is not set.
+      - name: Deploy the Worker
+        run: pnpm --filter @itera/api exec wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
