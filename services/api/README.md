@@ -15,7 +15,7 @@ pnpm --filter @itera/api dev                                  # http://localhost
 `wrangler.jsonc` の `assets` が `apps/web/dist`（Web のビルドの出力）を指す。ビルドしてから `wrangler dev` を起動すると、Web と API が 1 つの origin から返る。`dist` がないと wrangler は起動しない。
 
 ```sh
-pnpm --filter @itera/web build
+pnpm build                      # apps/web/dist を作る
 pnpm --filter @itera/api dev    # .dev.vars の BETTER_AUTH_URL は http://localhost:8787 のままでよい
 ```
 

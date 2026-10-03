@@ -104,7 +104,7 @@ secret はリポジトリの secret ではなく、この Environment の secret
 
 1. 2 の PR をマージする。
 2. Actions の Deploy の実行で、`check` と `preflight` が通り、`deploy` が承認待ちになるのを待つ。
-3. 承認すると、Web のビルド（`pnpm --filter @itera/web build`）→ `wrangler d1 migrations apply DB --remote` → `wrangler deploy` の順に動く。`wrangler deploy` は `apps/web/dist` を同じ Worker の静的アセットとして上げる。
+3. 承認すると、Web のビルド（`pnpm build`）→ `wrangler d1 migrations apply DB --remote` → `wrangler deploy` の順に動く。`wrangler deploy` は `apps/web/dist` を同じ Worker の静的アセットとして上げる。
 4. 失敗したら、ログの最後のエラーを見る。secret の不足は `wrangler deploy` が名前を挙げて失敗する。トークンの権限不足は 403 になる。
 
 以後、main への push のたびに同じ順で動き、承認を待つ。手動で出し直すときは、Actions の Deploy から main を指定して実行する（Run workflow）。

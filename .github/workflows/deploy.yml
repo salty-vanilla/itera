@@ -63,7 +63,7 @@ jobs:
       # build failure stops the run before it touches the database. No Cloudflare
       # token is given to the build.
       - name: Build the Web app
-        run: pnpm --filter @itera/web build
+        run: pnpm build
       # The wrangler pinned in services/api. In CI it applies without asking.
       # The token is given only to the steps that run wrangler.
       - name: Apply D1 migrations

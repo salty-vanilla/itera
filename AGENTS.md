@@ -62,6 +62,7 @@ PRD §14「クライアントとデータの方式」に従う。規則の正本
 - `pnpm lint`（ESLint と React ファイル名の kebab-case）
 - `pnpm typecheck`
 - `pnpm test`（Vitest。パッケージごとの `vitest.config.ts` と `tooling` project）
+- `pnpm build`（`apps/web` の本番ビルド。CD が Worker の静的アセットに載せるものと同じ）
 - `pnpm design:lint`（DESIGN.md のトークンを公式の linter で検査）
 - `pnpm agent:check`（Skill の整合性）
 
