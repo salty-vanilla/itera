@@ -142,7 +142,7 @@ type CommandResult<T> =
 - **Retro の完了**（`completeRetro`）：Review → Closed。続けるなら Active のまま、終えるなら Ended、置き換えるなら Replaced（`replacedBy` = 下書き）にして下書きを Active にする。下書きは、Active が続く場合を除いて Active になる（続けるのに下書きがあると Active が 2 つになるので拒否する。不変条件 35）。変わった基準の記録を返す。
 - **次の Planning の入口**：`previousImprovement` で前の Sprint の Improvement を出す。
 - **不変条件 39**：`criterionView(policy, tasks, now)` が、設定値・効果（どちらの端か、どこに効くか）・次の Planning のプレビューを同じ 1 つの `CriterionPolicy` から作る。文言は画面が作る。
-- **Retro の事実**（`retroFacts`）：記録から毎回計算し、保存も編集もしない。点数は作らない（不変条件 40）。Area ごとの Goal（計画時と今、自己判定。Area は Sprint の並び順で、Area のない Task は最後）、Goal に紐づく / 紐づかない Task、完了・持ち越し・外した Task、週の途中の追加、繰り返しの回（回ごとに属する SprintTask・実績・完了した日も返す。#56。Sprint に含めた回。途中で外した繰り返しの、外す前に済ませた回も出す：F24。Excluded は出さない：F2・F14）、見送り・今日はここまで（F17 で完了になった選択も数える）、割り込み、使える時間の計画時と今、計画値の合計（確定時の分と、週の途中の追加を含めた分）、実績。Task ごとに持ち越し回数（`carryCount`：この SprintTask より前に続いた持ち越しの数。この Sprint での持ち越しは含まない）と最長の連続見送り（Today の `deferralStreak` と同じ規則。F17 で完了した日はそこで区切り、見送りの日の一覧には含める）を返す。
+- **Retro の事実**（`retroFacts`）：記録から毎回計算し、保存も編集もしない。点数は作らない（不変条件 40）。Area ごとの Goal（計画時と今、自己判定。Area は Sprint の並び順で、Area のない Task は最後）、Goal に紐づく / 紐づかない Task、完了・持ち越し・外した Task、週の途中の追加、繰り返しの回（回ごとに属する SprintTask・実績・完了した日も返す。#56。Sprint に含めた回。途中で外した繰り返しの、外す前に済ませた回も出す：F24。Excluded は出さない：F2・F14）、見送り・中断（F17 で完了になった選択も数える）、割り込み、使える時間の計画時と今、計画値の合計（確定時の分と、週の途中の追加を含めた分）、実績。Task ごとに持ち越し回数（`carryCount`：この SprintTask より前に続いた持ち越しの数。この Sprint での持ち越しは含まない）と最長の連続見送り（Today の `deferralStreak` と同じ規則。F17 で完了した日はそこで区切り、見送りの日の一覧には含める）を返す。
 - **実績**：Review 中も `recordActualTime` で足せる（F22）。
 
 ## Backlog の画面で決めた細部（#39）
