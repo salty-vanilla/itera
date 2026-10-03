@@ -5,7 +5,7 @@ import type { Context } from 'hono';
 import { loadUserSettings } from '../db/user-settings';
 import type { AppEnv } from '../env';
 import type { Flow } from './flow';
-import { jsonBody } from './operations';
+import { jsonBody } from './body';
 import { validate } from './validate';
 
 /**

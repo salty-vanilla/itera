@@ -8,7 +8,8 @@ import type { AppEnv } from './env';
 import { ApiError, errorResponse, loggedError } from './errors';
 import { createFlow, type Guards } from './handlers/flow';
 import { getMe, putSettings } from './handlers/me';
-import { limitBody, operationRoutes } from './handlers/operations';
+import { limitBody } from './handlers/body';
+import { operationRoutes } from './handlers/operations';
 import { readRoutesApp } from './handlers/reads';
 import { requireSameOrigin } from './handlers/same-origin';
 

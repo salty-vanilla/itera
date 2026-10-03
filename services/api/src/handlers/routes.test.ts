@@ -23,7 +23,7 @@ import { saveRecords } from '../db/save-records';
 import { activity, user as authUser } from '../db/schema';
 import { testDependencies, testEnv, testNow, testOrigin } from '../test-env';
 import { httpRequest } from './operation-cases';
-import { maxBodyBytes } from './operations';
+import { maxBodyBytes } from './body';
 
 const ids = createIdSource((bytes) => crypto.getRandomValues(bytes));
 const alice = ids.newId('User', testNow);

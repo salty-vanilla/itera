@@ -15,7 +15,7 @@ Itera の API の契約（ADR 0006）。OpenAPI の仕様（`openapi/`）が正�
 | `src/client.ts` | `@itera/api-contract/client`：fetch のクライアント（Web）。関数は契約の operation と読み取りだけ |
 | `src/create-client.ts` | `@itera/api-contract/create-client`：別のクライアントを作る `createClient`・`createConfig`（Web がデータの出どころごとに作る） |
 | `src/react-query.ts` | `@itera/api-contract/react-query`：TanStack Query の options（Web。React に依存する） |
-| `src/requests.ts` | `@itera/api-contract/requests`：`packages/application` の操作と HTTP の面（メソッドと経路）の対応を両方向に（`requestOf`・`surfaces`）。query の型の変換（`queryInput`）。サーバー・ブラウザ内モック・Web が使う |
+| `src/requests.ts` | `@itera/api-contract/requests`：`packages/application` の操作と HTTP の面（メソッドと経路）の対応を両方向に（`requestOf`・`surfaces`）。操作ではない書き込み、利用者の設定を作る `PUT /me/settings` は `settingsSurface`。query の型の変換（`queryInput`）。サーバー・ブラウザ内モック・Web が使う |
 | `src/testing.ts` | `@itera/api-contract/testing`：テストの道具（操作ごとの入力の例など） |
 
 ## 契約を変える

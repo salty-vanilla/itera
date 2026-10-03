@@ -234,7 +234,11 @@ export function createFlow({
           loaded,
           changes,
           activities: [],
-          caughtUpTo: toLocalDate(now(), user.timeZone),
+          // Written without a catch-up: the day the records were brought up
+          // to stays (ADR 0004 追いついた日), so that the days between are
+          // still run by the next read or operation. The first time has no
+          // records to bring up, so it starts from today.
+          caughtUpTo: loaded.caughtUpTo ?? toLocalDate(now(), user.timeZone),
         });
         if (!saved.ok) throw conflict();
       }

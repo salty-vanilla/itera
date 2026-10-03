@@ -59,7 +59,7 @@ export function useOperation<N extends OperationName>(
 /**
  * What `useOperation` does for one write of the contract, for any request
  * (the person's settings are a write that no operation of
- * packages/application takes, `useSettings`): the sending, the Toast of a
+ * packages/application takes, `useSetSettings`): the sending, the Toast of a
  * failure, the reads read again. `key` names the mutation.
  */
 export function useSend<Input, Output>(
@@ -101,7 +101,7 @@ export function useSend<Input, Output>(
 }
 
 /** `run`'s arguments: the input, none for an operation without one. */
-type Args<Input> = Input extends undefined ? [] : [input: Input];
+type Args<Input> = [Input] extends [undefined] ? [] : [input: Input];
 
 /**
  * Sends an operation as its request with the generated client's function

@@ -101,6 +101,7 @@ type CommandResult<T> =
 
 - **集約**：Sprint が根で、SprintGoal・SprintTask・SprintAreaSnapshot・CriterionUse を中に持つ。Occurrence は Task 側の記録で、SprintTask は `occurrenceIds` で参照する。コマンドは Sprint と、変えた Occurrence を一緒に返す。
 - **期間**：1 週（開始日は `User.weekStartsOn`、両端を含む）。新しい Sprint は既存のどの Sprint よりも後に始まり、Planning 中の Sprint は同時に 1 つまで。前の Sprint（`previousSprintId`）は、開始日より前で最後の Sprint。
+- **利用者の設定**：`setUpUser`。最初に作り、作った後は表示名だけ書き直せる。タイムゾーンと週の始まりは変えられない（`invalidInput`）。「今日」はタイムゾーンで、Sprint の開始日は週の始まりで決まるので、すでにある Sprint がある利用者の値を変えると、それらが動くため。変えたときの扱いは決まっておらず、設定を後から変える画面の Issue で決める（暫定の規則。ADR 0006「利用者」）。同じ値をもう一度書いても変わらない。
 - **繰り返しの SprintTask**：`occurrenceIds` は Sprint に含めた（外していない）回。Planning で最後の回を外すと、draft の SprintTask はなくなる。Sprint 中に外した回を戻すと、その回だけの SprintTask（origin = midSprint）を新しく作る。
 - **planSnapshot**：計画値に加えて、その時点の Estimate・提示中の提案・timeBasis・回数（繰り返しのとき）を写し取る（Retro の「計画時の Estimate」用）。繰り返しの計画値は 1 回の値 × 回数。 見積もりのないサブタスクの件数は回数倍にしない（毎回同じサブタスクなので）。
 - **Goal**：Planning では空の文で Goal を消せる。確定後は文を変えられるが消せない。確定後に新しく書いた Goal には `plannedText` がない。（F16）

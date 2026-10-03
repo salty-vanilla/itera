@@ -6,6 +6,7 @@ import type { Session } from '@/auth/auth';
 import { sessionQuery } from '@/auth/session-query';
 import { useSignOut } from '@/auth/use-sign-out';
 import { Button } from '@/components/ui/button';
+import { Notice } from '@/components/ui/notice';
 import { Radio, RadioGroup } from '@/components/ui/radio-group';
 
 // The first settings (#279, ADR 0006「利用者」). A person with no settings
@@ -31,7 +32,8 @@ function deviceTimeZone(): string {
 }
 
 function FirstSettingsScreen() {
-  const session = useQuery(sessionQuery(useAuth())).data;
+  const sessionRead = useQuery(sessionQuery(useAuth()));
+  const session = sessionRead.data;
   const { run, pending, loading } = useSetSettings();
   const { signOut, busy: signingOut } = useSignOut();
   const [weekStartsOn, setWeekStartsOn] = useState<FirstDay>(1);
@@ -56,7 +58,7 @@ function FirstSettingsScreen() {
         }}
       >
         <p className="text-subheading text-ink">Itera</p>
-        <h1 className="text-display-m text-ink">はじめの設定</h1>
+        <h1 className="text-display-m text-ink">最初の設定</h1>
         <RadioGroup<FirstDay>
           legend="週の始まり"
           description="Sprint はこの曜日から始まります。"
@@ -66,26 +68,42 @@ function FirstSettingsScreen() {
           <Radio value={1} label="月曜" />
           <Radio value={0} label="日曜" />
         </RadioGroup>
-        <div className="flex flex-col gap-1">
-          <p className="text-body text-ink">タイムゾーン：{timeZone}</p>
-          <p className="text-body text-ink-muted">
-            週の始まりとタイムゾーンは、あとから変えられません。
-          </p>
-        </div>
+        <dl className="flex flex-col gap-1">
+          <dt className="text-label text-ink">タイムゾーン</dt>
+          <dd className="text-body text-ink">{timeZone}</dd>
+        </dl>
+        <p className="text-body text-ink-muted">
+          週の始まりとタイムゾーンは、あとから変えられません。
+        </p>
+        {sessionRead.isError && (
+          <Notice
+            tone="danger"
+            title="サインインの情報を読み込めませんでした"
+            action={
+              <Button size="sm" onClick={() => void sessionRead.refetch()}>
+                もう一度読み込む
+              </Button>
+            }
+          />
+        )}
         <div className="flex flex-col gap-3">
           <Button
             type="submit"
             variant="primary"
             size="lg"
             disabled={session === null || session === undefined || signingOut}
-            {...(loading ? { loading: true, loadingLabel: '設定中…' } : {})}
+            {...(loading ? { loading: true, loadingLabel: '保存中…' } : {})}
           >
-            はじめる
+            始める
           </Button>
           <Button
             variant="quiet"
-            disabled={pending || signingOut}
+            size="lg"
+            disabled={pending}
             onClick={() => void signOut()}
+            {...(signingOut
+              ? { loading: true, loadingLabel: 'サインアウト中…' }
+              : {})}
           >
             サインアウト
           </Button>

@@ -6,6 +6,7 @@
 import { vGetMeResponse, vSetSettingsResponse } from '@itera/api-contract';
 import { OPERATION_EXAMPLES } from '@itera/api-contract/testing';
 import { createIdSource, type OperationName } from '@itera/application';
+import { instant, type Instant } from '@itera/domain';
 import * as v from 'valibot';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app';
@@ -16,9 +17,8 @@ import { createMemoryDatabase } from '../db/memory-database';
 import { loadUserSettings } from '../db/user-settings';
 import { activity, user as authUser } from '../db/schema';
 import { testDependencies, testEnv, testNow, testOrigin } from '../test-env';
-import { missing } from './operation-cases';
-import { httpRequest } from './operation-cases';
-import { maxBodyBytes } from './operations';
+import { httpRequest, missing } from './operation-cases';
+import { maxBodyBytes } from './body';
 
 const ids = createIdSource((bytes) => crypto.getRandomValues(bytes));
 const alice = ids.newId('User', testNow);
@@ -33,7 +33,8 @@ let close: (() => void) | undefined;
 afterEach(() => close?.());
 
 /** A new person: signed up, with no settings and no records. */
-async function setup({ now = testNow } = {}) {
+async function setup({ signedIn = true } = {}) {
+  let now: Instant = testNow;
   const memory = await createMemoryDatabase();
   close = memory.close;
   const { db } = memory;
@@ -41,7 +42,7 @@ async function setup({ now = testNow } = {}) {
     .insert(authUser)
     .values({ id: alice, name: 'Alice', email: 'alice@example.com' });
   const authenticator: Authenticator = {
-    authenticate: async () => ({ userId: alice }),
+    authenticate: async () => (signedIn ? { userId: alice } : null),
     handle: async () => new Response(null, { status: 404 }),
   };
   const app = createApp(
@@ -51,7 +52,14 @@ async function setup({ now = testNow } = {}) {
       now: () => now,
     }),
   );
-  return { app, db };
+  return {
+    app,
+    db,
+    /** Moves the app's clock. */
+    at: (time: Instant) => {
+      now = time;
+    },
+  };
 }
 
 type App = Awaited<ReturnType<typeof setup>>['app'];
@@ -172,6 +180,16 @@ describe('PUT /api/me/settings', () => {
     expect((await loadRecords(db, alice)).revision).toBe(1);
   });
 
+  it('stores the time zone as Intl spells it', async () => {
+    const { app, db } = await setup();
+    await put(app, { ...settings, timeZone: 'asia/tokyo' });
+    expect(await loadUserSettings(db, alice)).toEqual(settings);
+    // The same zone in another spelling is the same settings again.
+    expect(
+      (await put(app, { ...settings, timeZone: 'ASIA/TOKYO' })).status,
+    ).toBe(204);
+  });
+
   it('trims the name, and answers with the settings as made', async () => {
     const { app, db } = await setup();
     const response = await put(app, { ...settings, displayName: '  Alice ' });
@@ -189,6 +207,25 @@ describe('PUT /api/me/settings', () => {
       displayName: 'Alice A.',
     });
     expect((await loadRecords(db, alice)).revision).toBe(2);
+  });
+
+  it('does not move the day the records were brought up to when it writes the name again', async () => {
+    // Nothing is caught up by this write, so the days since the last
+    // catch-up must still be run by the next read or operation.
+    const { app, db, at } = await setup();
+    await put(app, settings);
+    expect((await loadRecords(db, alice)).caughtUpTo).toBe('2026-10-03');
+    at(instant('2026-10-07T01:00:00.000Z'));
+    await put(app, { ...settings, displayName: 'Alice A.' });
+    expect((await loadRecords(db, alice)).caughtUpTo).toBe('2026-10-03');
+  });
+
+  it('refuses without a session: 401', async () => {
+    const { app } = await setup({ signedIn: false });
+    expect(await errorOf(await put(app, settings))).toMatchObject({
+      status: 401,
+      code: 'unauthenticated',
+    });
   });
 
   it.each([
@@ -264,7 +301,7 @@ describe('PUT /api/me/settings', () => {
     });
   });
 
-  it('answers 409 when another write came first, and makes nothing', async () => {
+  it('answers 409 when another write came first, and the first write stands', async () => {
     const { db } = await setup();
     // Another save makes the first row of this person between the load and
     // the write: the second first-save fails on the revision.
