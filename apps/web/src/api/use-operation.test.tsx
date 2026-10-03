@@ -6,7 +6,6 @@ import {
   createConfig,
   type Client,
 } from '@itera/api-contract/create-client';
-import { renameAreaMutation } from '@itera/api-contract/react-query';
 import { createMemoryStore } from '@itera/application';
 import { fixtureIds, fixtureSnapshot } from '@itera/application/fixtures';
 import {
@@ -63,7 +62,7 @@ function setUp(
 
 function answerWith(status: number, code: string) {
   return (request: Request) =>
-    request.method === 'POST'
+    request.method !== 'GET'
       ? Response.json({ code, message: 'for developers' }, { status })
       : undefined;
 }
@@ -71,14 +70,12 @@ function answerWith(status: number, code: string) {
 /** An operation and the overview, as a screen would use both. */
 function useRenameAndOverview() {
   return {
-    rename: useOperation(renameAreaMutation),
+    rename: useOperation('renameArea'),
     overview: useOverview(),
   };
 }
 
-const rename = (name: string) => ({
-  body: { areaId: ids.area.research, name },
-});
+const rename = (name: string) => ({ areaId: ids.area.research, name });
 
 describe('useOperation', () => {
   it('gives back the outcome and reads the reads again before it resolves', async () => {
@@ -92,7 +89,7 @@ describe('useOperation', () => {
     });
     expect(outcome).toMatchObject({ ok: true });
     expect(requests).toEqual([
-      'POST /api/operations/renameArea',
+      `PATCH /api/areas/${ids.area.research}`,
       'GET /api/overview',
     ]);
   });
@@ -121,7 +118,7 @@ describe('useOperation', () => {
       await result.current.rename.run(rename('研究室'));
     });
     expect(requests).toEqual([
-      'POST /api/operations/renameArea',
+      `PATCH /api/areas/${ids.area.research}`,
       'GET /api/overview',
     ]);
     expect(await screen.findAllByText('保存できませんでした')).not.toHaveLength(
@@ -157,7 +154,7 @@ describe('useOperation', () => {
     const held = new Promise<void>((resolve) => (release = resolve));
     // The operation's answer waits, as on a slow network.
     const { requests, wrapper } = setUp((request) =>
-      request.method === 'POST'
+      request.method !== 'GET'
         ? held.then(() => new Response(null, { status: 204 }))
         : undefined,
     );
@@ -175,7 +172,7 @@ describe('useOperation', () => {
       expect(await first).toMatchObject({ ok: true });
     });
     expect(
-      requests.filter((r) => r === 'POST /api/operations/renameArea'),
+      requests.filter((r) => r === `PATCH /api/areas/${ids.area.research}`),
     ).toHaveLength(1);
     await waitFor(() => expect(result.current.rename.pending).toBe(false));
   });
@@ -199,7 +196,7 @@ describe('the loading state', () => {
     let release = () => {};
     const held = new Promise<void>((resolve) => (release = resolve));
     const { wrapper } = setUp((request) =>
-      request.method === 'POST'
+      request.method !== 'GET'
         ? held.then(() => new Response(null, { status: 204 }))
         : undefined,
     );

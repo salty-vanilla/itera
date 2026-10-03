@@ -3,10 +3,16 @@
 // operations' values, and the errors by status and code.
 import * as contract from '@itera/api-contract';
 import {
-  createAreaMutation,
   getDayOptions,
   getOverviewOptions,
 } from '@itera/api-contract/react-query';
+import {
+  requestOf,
+  surfaces,
+  type Request as ContractRequest,
+  type Surface,
+} from '@itera/api-contract/requests';
+import { OPERATION_EXAMPLES } from '@itera/api-contract/testing';
 import * as sdk from '@itera/api-contract/client';
 import { createClient, createConfig } from '@itera/api-contract/create-client';
 import {
@@ -25,7 +31,7 @@ import { addDays } from '@itera/domain';
 import * as v from 'valibot';
 import { describe, expect, it, vi } from 'vitest';
 import { READS } from '@/api/reads';
-import { bodySchemaOf, createMock, MOCK_HEADER, MOCK_READS } from './mock-api';
+import { createMock, MOCK_HEADER, MOCK_READS } from './mock-api';
 
 const ids = fixtureIds();
 
@@ -76,7 +82,7 @@ describe.each(fixtureStateIds)('the reads of %s', (state) => {
       [
         'getPlanning',
         contract.vGetPlanningResponse,
-        sdk.getPlanning({ client, query: { applyCriterion: true } }),
+        sdk.getPlanning({ client, query: { 'apply-criterion': true } }),
       ],
       ['getRunning', contract.vGetRunningResponse, sdk.getRunning({ client })],
       [
@@ -134,10 +140,13 @@ describe('the mock', () => {
     expect(none.data?.view).toBeNull();
   });
 
-  it('runs an operation and returns what it made, a TypeID', async () => {
+  it('runs an operation and returns what it made, a TypeID, with 201', async () => {
     const { client, store } = mockOf('backlog-capture');
-    const { mutationFn } = createAreaMutation({ client });
-    const made = await mutationFn?.({ body: { name: '健康' } }, undefined!);
+    const { data: made, response } = await sdk.createArea({
+      client,
+      body: { name: '健康' },
+    });
+    expect(response?.status).toBe(201);
     expect(made?.areaId).toMatch(/^area_[0-9a-z]{26}$/);
     expect(store.getSnapshot().records.areas.at(-1)).toMatchObject({
       id: made?.areaId,
@@ -147,9 +156,10 @@ describe('the mock', () => {
 
   it('answers 204 for an operation that returns nothing', async () => {
     const { client } = mockOf('backlog-capture');
-    const { response, error } = await sdk.renameArea({
+    const { response, error } = await sdk.updateArea({
       client,
-      body: { areaId: ids.area.research, name: '研究室' },
+      path: { areaId: ids.area.research },
+      body: { name: '研究室' },
     });
     expect(error).toBeUndefined();
     expect(response?.status).toBe(204);
@@ -160,9 +170,10 @@ describe('the mock', () => {
     // A read first: it brings the system's records up to now.
     await sdk.getOverview({ client });
     const before = store.getSnapshot();
-    const { error, response } = await sdk.renameArea({
+    const { error, response } = await sdk.updateArea({
       client,
-      body: { areaId: ids.area.research, name: '' },
+      path: { areaId: ids.area.research },
+      body: { name: '' },
     });
     expect(response?.status).toBe(422);
     expect(error).toMatchObject({ code: 'invalidInput' });
@@ -174,12 +185,51 @@ describe('the mock', () => {
     const areaId = createIdSource((bytes) =>
       crypto.getRandomValues(bytes),
     ).newId('area', store.getSnapshot().clock.now);
-    const { error, response } = await sdk.archiveArea({
+    const { error, response } = await sdk.updateArea({
       client,
-      body: { areaId },
+      path: { areaId },
+      body: { archived: true },
     });
     expect(response?.status).toBe(404);
     expect(error).toMatchObject({ code: 'notFound' });
+  });
+
+  it('answers every write surface with its operation (ADR 0006 経路の形)', async () => {
+    const { store } = mockOf('today-daytime');
+    const mock = createMock(store);
+    const answered = new Set<string>();
+    for (const [name, inputs] of Object.entries(OPERATION_EXAMPLES)) {
+      for (const input of inputs) {
+        const request: ContractRequest = requestOf(
+          name as never,
+          input as never,
+        );
+        const surface = surfaces[request.operationId] as Surface;
+        const values = (request.path ?? {}) as Record<string, string>;
+        const url = new URL(
+          `http://localhost/api${surface.url.replace(/\{(\w+)\}/g, (_, key: string) => encodeURIComponent(values[key]!))}`,
+        );
+        for (const [key, value] of Object.entries(request.query ?? {}))
+          for (const item of [value].flat())
+            url.searchParams.append(key, String(item));
+        const response = await mock.fetch(url, {
+          method: surface.method,
+          headers: { 'Content-Type': 'application/json' },
+          ...(request.body === undefined
+            ? {}
+            : { body: JSON.stringify(request.body) }),
+        });
+        // The examples' IDs are no records', so most are refused: by the
+        // domain, never as a request out of the contract or without a route.
+        const answer = response.status < 300 ? {} : await response.json();
+        expect(answer, name).not.toMatchObject({ code: 'validationFailed' });
+        expect(response.headers.get('Content-Type') ?? '', name).not.toMatch(
+          /^text\/plain/,
+        );
+        answered.add(request.operationId);
+      }
+    }
+    expect([...answered].toSorted()).toEqual(Object.keys(surfaces).toSorted());
   });
 
   it('answers a request out of the contract with 400', async () => {
@@ -239,18 +289,6 @@ describe('the mock', () => {
 
   it('answers every read of the contract', () => {
     expect([...MOCK_READS].toSorted()).toEqual([...READS].toSorted());
-  });
-
-  it('finds the body schema of every operation that has a body (ADR 0006)', () => {
-    const without = Object.keys(operations).filter(
-      (name) => bodySchemaOf(name as keyof typeof operations) === undefined,
-    );
-    expect(without.toSorted()).toEqual([
-      'beginPlanning',
-      'beginRetro',
-      'completeRetro',
-      'dropCriterionDraft',
-    ]);
   });
 
   it('keys reads by the generated keys', () => {

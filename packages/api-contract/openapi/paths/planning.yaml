@@ -1,224 +1,56 @@
-# Planning the Sprint: its operations. Each operation is named in packages/application
-# operations.ts and is a POST of its input (ADR 0006).
+# Planning: the Sprint being planned, before 確定. The paths of a resource and its methods (ADR 0006 経路の形):
+# a write is one operation of packages/application or, where a path takes
+# several, the one its body names (@itera/api-contract/operations).
 
-chooseTasks:
-  post:
-    operationId: chooseTasks
-    tags: [Planning]
-    summary: Choose Tasks for the Sprint being planned
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [taskIds]
-            properties:
-              taskIds:
-                {
-                  type: array,
-                  items: { $ref: '../schemas/common.yaml#/TaskId' },
-                }
+planning:
+  get:
+    operationId: getPlanning
+    tags: [Reads]
+    summary: The Sprint being planned
+    description: >-
+      `planningData`. `apply-criterion` is the screen's choice at the Check
+      whether to apply the active criterion (a preview; nothing is
+      written). `null` when no Sprint is being planned.
+    parameters:
+      - name: apply-criterion
+        in: query
+        required: false
+        description: Left out, the criterion is not applied.
+        schema: { type: boolean }
     responses:
       '200':
-        description: Done. What the operation made or decided.
+        description: The Planning.
         content:
           application/json:
             schema:
               type: object
-              required: [sprintTaskIds]
+              required: [clock, view]
               properties:
-                sprintTaskIds:
-                  description: >-
-                    The draft SprintTasks, in the order of `taskIds`.
-                  type: array
-                  items: { $ref: '../schemas/common.yaml#/SprintTaskId' }
+                clock: { $ref: '../schemas/common.yaml#/Clock' }
+                view:
+                  oneOf:
+                    - $ref: '../schemas/views.yaml#/PlanningData'
+                    - type: 'null'
       '400': { $ref: '../responses.yaml#/BadRequest' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
-      '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
-      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '422': { $ref: '../responses.yaml#/UserNotSetUp' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
-unchooseTasks:
   post:
-    operationId: unchooseTasks
+    operationId: beginPlanning
     tags: [Planning]
-    summary: Take SprintTasks out of the plan
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [sprintTaskIds]
-            properties:
-              sprintTaskIds:
-                {
-                  type: array,
-                  items: { $ref: '../schemas/common.yaml#/SprintTaskId' },
-                }
+    summary: 計画を始める for the next week not confirmed yet
     responses:
-      '204':
-        description: Done.
-      '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
-      '404': { $ref: '../responses.yaml#/NotFound' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
-      '422': { $ref: '../responses.yaml#/RuleViolation' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-unchooseTasksByTask:
-  post:
-    operationId: unchooseTasksByTask
-    tags: [Planning]
-    summary: 元に戻す after chooseTasks
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [taskIds]
-            properties:
-              taskIds:
-                {
-                  type: array,
-                  items: { $ref: '../schemas/common.yaml#/TaskId' },
-                }
-    responses:
-      '204':
-        description: Done.
-      '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
-      '404': { $ref: '../responses.yaml#/NotFound' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
-      '422': { $ref: '../responses.yaml#/RuleViolation' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-setOccurrenceIncluded:
-  post:
-    operationId: setOccurrenceIncluded
-    tags: [Planning]
-    summary: Include or leave out one occurrence
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [occurrenceId, included]
-            properties:
-              occurrenceId: { $ref: '../schemas/common.yaml#/OccurrenceId' }
-              included: { type: boolean }
-    responses:
-      '204':
-        description: Done.
-      '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
-      '404': { $ref: '../responses.yaml#/NotFound' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
-      '422': { $ref: '../responses.yaml#/RuleViolation' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-includeOccurrences:
-  post:
-    operationId: includeOccurrences
-    tags: [Planning]
-    summary: Include occurrences
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [occurrenceIds]
-            properties:
-              occurrenceIds:
-                {
-                  type: array,
-                  items: { $ref: '../schemas/common.yaml#/OccurrenceId' },
-                }
-    responses:
-      '204':
-        description: Done.
-      '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
-      '404': { $ref: '../responses.yaml#/NotFound' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
-      '422': { $ref: '../responses.yaml#/RuleViolation' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-excludeAllOccurrences:
-  post:
-    operationId: excludeAllOccurrences
-    tags: [Planning]
-    summary: Leave out all of a SprintTask's occurrences
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [sprintTaskId]
-            properties:
-              sprintTaskId: { $ref: '../schemas/common.yaml#/SprintTaskId' }
-    responses:
-      '204':
-        description: Done.
-      '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
-      '404': { $ref: '../responses.yaml#/NotFound' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
-      '422': { $ref: '../responses.yaml#/RuleViolation' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-createAndChooseTask:
-  post:
-    operationId: createAndChooseTask
-    tags: [Planning]
-    summary: 'Planning で追加: a new Task, chosen at once'
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [title]
-            properties:
-              title: { type: string }
-              areaId: { $ref: '../schemas/common.yaml#/AreaId' }
-    responses:
-      '200':
-        description: Done. What the operation made or decided.
+      '201':
+        description: Made. The IDs of what the operation made.
         content:
           application/json:
             schema:
               type: object
-              required: [taskId, sprintTaskId]
+              required: [sprintId]
               properties:
-                taskId: { $ref: '../schemas/common.yaml#/TaskId' }
-                sprintTaskId: { $ref: '../schemas/common.yaml#/SprintTaskId' }
-      '400': { $ref: '../responses.yaml#/BadRequest' }
+                sprintId: { $ref: '../schemas/common.yaml#/SprintId' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
@@ -227,67 +59,10 @@ createAndChooseTask:
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
-setPlanningGoal:
-  post:
-    operationId: setPlanningGoal
-    tags: [Planning]
-    summary: Set an Area's Goal while planning
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [areaId, text]
-            properties:
-              areaId: { $ref: '../schemas/common.yaml#/AreaId' }
-              text: { type: string }
-    responses:
-      '204':
-        description: Done.
-      '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
-      '404': { $ref: '../responses.yaml#/NotFound' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
-      '422': { $ref: '../responses.yaml#/RuleViolation' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-setGoalLink:
-  post:
-    operationId: setGoalLink
-    tags: [Planning]
-    summary: Link a SprintTask to its Goal or not
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [sprintTaskId, goalLink]
-            properties:
-              sprintTaskId: { $ref: '../schemas/common.yaml#/SprintTaskId' }
-              goalLink: { $ref: '../schemas/records.yaml#/GoalLink' }
-    responses:
-      '204':
-        description: Done.
-      '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
-      '404': { $ref: '../responses.yaml#/NotFound' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
-      '422': { $ref: '../responses.yaml#/RuleViolation' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-setPlanningAvailableHours:
-  post:
+  patch:
     operationId: setPlanningAvailableHours
     tags: [Planning]
-    summary: Set the week's available hours while planning
+    summary: "Set the week's available hours while planning"
     description: >-
       `null` clears them.
     requestBody:
@@ -297,9 +72,9 @@ setPlanningAvailableHours:
           schema:
             type: object
             additionalProperties: false
-            required: [hours]
+            required: [availableHours]
             properties:
-              hours:
+              availableHours:
                 oneOf:
                   - { type: number }
                   - type: 'null'
@@ -315,7 +90,7 @@ setPlanningAvailableHours:
       '422': { $ref: '../responses.yaml#/RuleViolation' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
-confirmSprint:
+planningConfirm:
   post:
     operationId: confirmSprint
     tags: [Planning]
@@ -332,6 +107,225 @@ confirmSprint:
             required: [applyCriterion]
             properties:
               applyCriterion: { type: boolean }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+planningGoal:
+  put:
+    operationId: setPlanningGoal
+    tags: [Planning]
+    summary: "Set an Area's Goal while planning"
+    parameters:
+      - name: areaId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/AreaId' }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [text]
+            properties:
+              text: { type: string }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+planningTasks:
+  post:
+    operationId: chooseTasks
+    tags: [Planning]
+    summary: Choose Tasks for the Sprint being planned
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [taskIds]
+            properties:
+              taskIds:
+                type: array
+                items: { $ref: '../schemas/common.yaml#/TaskId' }
+    responses:
+      '201':
+        description: Made. The IDs of what the operation made.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sprintTaskIds]
+              properties:
+                sprintTaskIds:
+                  description: The draft SprintTasks, in the order of `taskIds`.
+                  type: array
+                  items: { $ref: '../schemas/common.yaml#/SprintTaskId' }
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+  delete:
+    operationId: unchoosePlanningTasks
+    tags: [Planning]
+    summary: Take SprintTasks out of the plan
+    description: >-
+      Exactly one of the two: `ids`, the SprintTasks (unchooseTasks), or `task-ids`, their Tasks: 元に戻す after choosing them (unchooseTasksByTask).
+    parameters:
+      - name: ids
+        in: query
+        required: false
+        schema:
+          type: array
+          items: { $ref: '../schemas/common.yaml#/SprintTaskId' }
+      - name: task-ids
+        in: query
+        required: false
+        schema:
+          type: array
+          items: { $ref: '../schemas/common.yaml#/TaskId' }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+planningTask:
+  patch:
+    operationId: setGoalLink
+    tags: [Planning]
+    summary: Link a SprintTask to its Goal or not
+    parameters:
+      - name: sprintTaskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintTaskId' }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [goalLink]
+            properties:
+              goalLink: { $ref: '../schemas/records.yaml#/GoalLink' }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+planningTaskExcludeOccurrences:
+  post:
+    operationId: excludeAllOccurrences
+    tags: [Planning]
+    summary: "Leave out all of a SprintTask's occurrences"
+    parameters:
+      - name: sprintTaskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintTaskId' }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+planningOccurrence:
+  patch:
+    operationId: setOccurrenceIncluded
+    tags: [Planning]
+    summary: Include or leave out one occurrence
+    parameters:
+      - name: occurrenceId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/OccurrenceId' }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [included]
+            properties:
+              included: { type: boolean }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+planningOccurrencesInclude:
+  post:
+    operationId: includeOccurrences
+    tags: [Planning]
+    summary: Include occurrences
+    description: >-
+      元に戻す after leaving out all of a SprintTask's occurrences.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [occurrenceIds]
+            properties:
+              occurrenceIds:
+                type: array
+                items: { $ref: '../schemas/common.yaml#/OccurrenceId' }
     responses:
       '204':
         description: Done.

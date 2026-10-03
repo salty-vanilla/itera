@@ -107,7 +107,7 @@ async function setup() {
   async function createAreaAt(time: Instant) {
     now = time;
     const response = await app.request(
-      '/api/operations/createArea',
+      '/api/areas',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Origin: testOrigin },
@@ -115,7 +115,7 @@ async function setup() {
       },
       testEnv,
     );
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(201);
   }
   return { db, statements, readAt, createAreaAt };
 }

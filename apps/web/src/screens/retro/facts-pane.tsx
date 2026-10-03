@@ -62,7 +62,8 @@ type FactsPaneProps = {
   data: RetroData;
   /** A closed Retro (#90). */
   readOnly?: boolean | undefined;
-  onPin: (pin: RetroPin) => void;
+  /** Pins (`on`) or unpins a fact. */
+  onPin: (pin: RetroPin, on: boolean) => void;
   onAssess: (areaId: AreaId, assessment: SelfAssessment | null) => void;
   /**
    * かかった時間を記録: opens the actual time surface by the pressed button;
@@ -87,7 +88,7 @@ function FactsPane({
       <PinToggle
         pinned={pinned(pin)}
         subject={subject}
-        onToggle={() => onPin(pin)}
+        onToggle={() => onPin(pin, !pinned(pin))}
       />
     );
   const onAddActual = readOnly ? undefined : addActual;

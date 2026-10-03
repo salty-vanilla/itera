@@ -283,7 +283,7 @@ function RetroView({
             <FactsPane
               data={data}
               readOnly={readOnly}
-              onPin={actions.togglePin}
+              onPin={actions.setPinned}
               onAssess={actions.assessGoal}
               onAddActual={(target, title, anchor) =>
                 setEditing({
@@ -302,7 +302,7 @@ function RetroView({
             <ReflectPane
               data={data}
               readOnly={readOnly}
-              onPin={actions.togglePin}
+              onPin={actions.setPinned}
               onReflect={actions.setReflection}
               onImprove={actions.setImprovement}
               showMaterials
@@ -351,7 +351,7 @@ function RetroView({
             <div className="sticky top-8">
               <Materials
                 data={data}
-                onPin={readOnly ? undefined : actions.togglePin}
+                onPin={readOnly ? undefined : actions.setPinned}
               />
             </div>
           </aside>

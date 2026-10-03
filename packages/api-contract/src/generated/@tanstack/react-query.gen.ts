@@ -3,8 +3,8 @@
 import { queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { addSubtask, addTaskToToday, addTaskToWeek, adoptEditedSuggestion, adoptSuggestion, archiveArea, archiveTask, assessGoal, beginPlanning, beginRetro, chooseForToday, chooseTasks, completeRetro, completeSelection, completeTask, confirmSprint, createAndChooseTask, createArea, createTask, createTaskForToday, decideCriterion, deferSelection, deleteInterrupt, draftCriterion, dropCriterionDraft, editInterrupt, endRecurrence, excludeAllOccurrences, getBacklog, getDay, getMe, getNextPlanning, getOverview, getPlanning, getRetro, getRunning, getSprintChoice, getToday, includeOccurrences, listAreas, noteInterrupt, type Options, pauseSelection, recordReviewActual, recordSelectionActual, rejectSuggestion, removeFromToday, renameArea, restoreArea, restoreInterrupt, restoreTask, saveTask, setDraftPolicy, setGoalLink, setImprovement, setOccurrenceIncluded, setPlanningAvailableHours, setPlanningGoal, setRecurrence, setReflection, setRunningAvailableHours, setRunningGoal, setSubtaskDone, setSubtaskEstimate, skipSelection, startSelection, togglePin, unchooseTasks, unchooseTasksByTask, undoAddTaskToWeek, undoAdoption, undoCloseSelection, undoCompleteSelection, undoCompleteTask, undoPastDay, undoRejection, undoSkipSelection } from '../sdk.gen';
-import type { AddSubtaskData, AddSubtaskError, AddSubtaskResponse, AddTaskToTodayData, AddTaskToTodayError, AddTaskToTodayResponse, AddTaskToWeekData, AddTaskToWeekError, AddTaskToWeekResponse, AdoptEditedSuggestionData, AdoptEditedSuggestionError, AdoptEditedSuggestionResponse, AdoptSuggestionData, AdoptSuggestionError, AdoptSuggestionResponse, ArchiveAreaData, ArchiveAreaError, ArchiveAreaResponse, ArchiveTaskData, ArchiveTaskError, ArchiveTaskResponse, AssessGoalData, AssessGoalError, AssessGoalResponse, BeginPlanningData, BeginPlanningError, BeginPlanningResponse, BeginRetroData, BeginRetroError, BeginRetroResponse, ChooseForTodayData, ChooseForTodayError, ChooseForTodayResponse, ChooseTasksData, ChooseTasksError, ChooseTasksResponse, CompleteRetroData, CompleteRetroError, CompleteRetroResponse, CompleteSelectionData, CompleteSelectionError, CompleteSelectionResponse, CompleteTaskData, CompleteTaskError, CompleteTaskResponse, ConfirmSprintData, ConfirmSprintError, ConfirmSprintResponse, CreateAndChooseTaskData, CreateAndChooseTaskError, CreateAndChooseTaskResponse, CreateAreaData, CreateAreaError, CreateAreaResponse, CreateTaskData, CreateTaskError, CreateTaskForTodayData, CreateTaskForTodayError, CreateTaskForTodayResponse, CreateTaskResponse, DecideCriterionData, DecideCriterionError, DecideCriterionResponse, DeferSelectionData, DeferSelectionError, DeferSelectionResponse, DeleteInterruptData, DeleteInterruptError, DeleteInterruptResponse, DraftCriterionData, DraftCriterionError, DraftCriterionResponse, DropCriterionDraftData, DropCriterionDraftError, DropCriterionDraftResponse, EditInterruptData, EditInterruptError, EditInterruptResponse, EndRecurrenceData, EndRecurrenceError, EndRecurrenceResponse, ExcludeAllOccurrencesData, ExcludeAllOccurrencesError, ExcludeAllOccurrencesResponse, GetBacklogData, GetBacklogError, GetBacklogResponse, GetDayData, GetDayError, GetDayResponse, GetMeData, GetMeError, GetMeResponse, GetNextPlanningData, GetNextPlanningError, GetNextPlanningResponse, GetOverviewData, GetOverviewError, GetOverviewResponse, GetPlanningData, GetPlanningError, GetPlanningResponse, GetRetroData, GetRetroError, GetRetroResponse, GetRunningData, GetRunningError, GetRunningResponse, GetSprintChoiceData, GetSprintChoiceError, GetSprintChoiceResponse, GetTodayData, GetTodayError, GetTodayResponse, IncludeOccurrencesData, IncludeOccurrencesError, IncludeOccurrencesResponse, ListAreasData, ListAreasError, ListAreasResponse, NoteInterruptData, NoteInterruptError, NoteInterruptResponse, PauseSelectionData, PauseSelectionError, PauseSelectionResponse, RecordReviewActualData, RecordReviewActualError, RecordReviewActualResponse, RecordSelectionActualData, RecordSelectionActualError, RecordSelectionActualResponse, RejectSuggestionData, RejectSuggestionError, RejectSuggestionResponse, RemoveFromTodayData, RemoveFromTodayError, RemoveFromTodayResponse, RenameAreaData, RenameAreaError, RenameAreaResponse, RestoreAreaData, RestoreAreaError, RestoreAreaResponse, RestoreInterruptData, RestoreInterruptError, RestoreInterruptResponse, RestoreTaskData, RestoreTaskError, RestoreTaskResponse, SaveTaskData, SaveTaskError, SaveTaskResponse, SetDraftPolicyData, SetDraftPolicyError, SetDraftPolicyResponse, SetGoalLinkData, SetGoalLinkError, SetGoalLinkResponse, SetImprovementData, SetImprovementError, SetImprovementResponse, SetOccurrenceIncludedData, SetOccurrenceIncludedError, SetOccurrenceIncludedResponse, SetPlanningAvailableHoursData, SetPlanningAvailableHoursError, SetPlanningAvailableHoursResponse, SetPlanningGoalData, SetPlanningGoalError, SetPlanningGoalResponse, SetRecurrenceData, SetRecurrenceError, SetRecurrenceResponse, SetReflectionData, SetReflectionError, SetReflectionResponse, SetRunningAvailableHoursData, SetRunningAvailableHoursError, SetRunningAvailableHoursResponse, SetRunningGoalData, SetRunningGoalError, SetRunningGoalResponse, SetSubtaskDoneData, SetSubtaskDoneError, SetSubtaskDoneResponse, SetSubtaskEstimateData, SetSubtaskEstimateError, SetSubtaskEstimateResponse, SkipSelectionData, SkipSelectionError, SkipSelectionResponse, StartSelectionData, StartSelectionError, StartSelectionResponse, TogglePinData, TogglePinError, TogglePinResponse, UnchooseTasksByTaskData, UnchooseTasksByTaskError, UnchooseTasksByTaskResponse, UnchooseTasksData, UnchooseTasksError, UnchooseTasksResponse, UndoAddTaskToWeekData, UndoAddTaskToWeekError, UndoAddTaskToWeekResponse, UndoAdoptionData, UndoAdoptionError, UndoAdoptionResponse, UndoCloseSelectionData, UndoCloseSelectionError, UndoCloseSelectionResponse, UndoCompleteSelectionData, UndoCompleteSelectionError, UndoCompleteSelectionResponse, UndoCompleteTaskData, UndoCompleteTaskError, UndoCompleteTaskResponse, UndoPastDayData, UndoPastDayError, UndoPastDayResponse, UndoRejectionData, UndoRejectionError, UndoRejectionResponse, UndoSkipSelectionData, UndoSkipSelectionError, UndoSkipSelectionResponse } from '../types.gen';
+import { addSubtask, addTaskToWeek, adoptEstimateSuggestion, assessGoal, beginPlanning, beginRetro, chooseTasks, completeRetro, completeSelection, completeTask, confirmSprint, createArea, createDailySelection, deferSelection, deleteInterrupt, draftCriterion, dropCriterionDraft, editInterrupt, endRecurrence, excludeAllOccurrences, getBacklog, getDay, getMe, getNextPlanning, getOverview, getPlanning, getRetro, getRunning, getSprintChoice, getToday, includeOccurrences, listAreas, noteInterrupt, type Options, pauseSelection, pinFact, quickAddTask, recordReviewActual, recordSelectionActual, rejectSuggestion, removeFromToday, restoreInterrupt, setDraftPolicy, setGoalLink, setOccurrenceIncluded, setPlanningAvailableHours, setPlanningGoal, setRecurrence, setRunningAvailableHours, setRunningGoal, skipSelection, startSelection, unchoosePlanningTasks, undoAddTaskToWeek, undoAdoption, undoCloseSelection, undoCompleteSelection, undoCompleteTask, undoPastDay, undoRejection, undoSkipSelection, unpinFact, updateArea, updateRetro, updateSubtask, updateTask } from '../sdk.gen';
+import type { AddSubtaskData, AddSubtaskError, AddSubtaskResponse, AddTaskToWeekData, AddTaskToWeekError, AddTaskToWeekResponse, AdoptEstimateSuggestionData, AdoptEstimateSuggestionError, AdoptEstimateSuggestionResponse, AssessGoalData, AssessGoalError, AssessGoalResponse, BeginPlanningData, BeginPlanningError, BeginPlanningResponse, BeginRetroData, BeginRetroError, BeginRetroResponse, ChooseTasksData, ChooseTasksError, ChooseTasksResponse, CompleteRetroData, CompleteRetroError, CompleteRetroResponse, CompleteSelectionData, CompleteSelectionError, CompleteSelectionResponse, CompleteTaskData, CompleteTaskError, CompleteTaskResponse, ConfirmSprintData, ConfirmSprintError, ConfirmSprintResponse, CreateAreaData, CreateAreaError, CreateAreaResponse, CreateDailySelectionData, CreateDailySelectionError, CreateDailySelectionResponse, DeferSelectionData, DeferSelectionError, DeferSelectionResponse, DeleteInterruptData, DeleteInterruptError, DeleteInterruptResponse, DraftCriterionData, DraftCriterionError, DraftCriterionResponse, DropCriterionDraftData, DropCriterionDraftError, DropCriterionDraftResponse, EditInterruptData, EditInterruptError, EditInterruptResponse, EndRecurrenceData, EndRecurrenceError, EndRecurrenceResponse, ExcludeAllOccurrencesData, ExcludeAllOccurrencesError, ExcludeAllOccurrencesResponse, GetBacklogData, GetBacklogError, GetBacklogResponse, GetDayData, GetDayError, GetDayResponse, GetMeData, GetMeError, GetMeResponse, GetNextPlanningData, GetNextPlanningError, GetNextPlanningResponse, GetOverviewData, GetOverviewError, GetOverviewResponse, GetPlanningData, GetPlanningError, GetPlanningResponse, GetRetroData, GetRetroError, GetRetroResponse, GetRunningData, GetRunningError, GetRunningResponse, GetSprintChoiceData, GetSprintChoiceError, GetSprintChoiceResponse, GetTodayData, GetTodayError, GetTodayResponse, IncludeOccurrencesData, IncludeOccurrencesError, IncludeOccurrencesResponse, ListAreasData, ListAreasError, ListAreasResponse, NoteInterruptData, NoteInterruptError, NoteInterruptResponse, PauseSelectionData, PauseSelectionError, PauseSelectionResponse, PinFactData, PinFactError, PinFactResponse, QuickAddTaskData, QuickAddTaskError, QuickAddTaskResponse, RecordReviewActualData, RecordReviewActualError, RecordReviewActualResponse, RecordSelectionActualData, RecordSelectionActualError, RecordSelectionActualResponse, RejectSuggestionData, RejectSuggestionError, RejectSuggestionResponse, RemoveFromTodayData, RemoveFromTodayError, RemoveFromTodayResponse, RestoreInterruptData, RestoreInterruptError, RestoreInterruptResponse, SetDraftPolicyData, SetDraftPolicyError, SetDraftPolicyResponse, SetGoalLinkData, SetGoalLinkError, SetGoalLinkResponse, SetOccurrenceIncludedData, SetOccurrenceIncludedError, SetOccurrenceIncludedResponse, SetPlanningAvailableHoursData, SetPlanningAvailableHoursError, SetPlanningAvailableHoursResponse, SetPlanningGoalData, SetPlanningGoalError, SetPlanningGoalResponse, SetRecurrenceData, SetRecurrenceError, SetRecurrenceResponse, SetRunningAvailableHoursData, SetRunningAvailableHoursError, SetRunningAvailableHoursResponse, SetRunningGoalData, SetRunningGoalError, SetRunningGoalResponse, SkipSelectionData, SkipSelectionError, SkipSelectionResponse, StartSelectionData, StartSelectionError, StartSelectionResponse, UnchoosePlanningTasksData, UnchoosePlanningTasksError, UnchoosePlanningTasksResponse, UndoAddTaskToWeekData, UndoAddTaskToWeekError, UndoAddTaskToWeekResponse, UndoAdoptionData, UndoAdoptionError, UndoAdoptionResponse, UndoCloseSelectionData, UndoCloseSelectionError, UndoCloseSelectionResponse, UndoCompleteSelectionData, UndoCompleteSelectionError, UndoCompleteSelectionResponse, UndoCompleteTaskData, UndoCompleteTaskError, UndoCompleteTaskResponse, UndoPastDayData, UndoPastDayError, UndoPastDayResponse, UndoRejectionData, UndoRejectionError, UndoRejectionResponse, UndoSkipSelectionData, UndoSkipSelectionError, UndoSkipSelectionResponse, UnpinFactData, UnpinFactError, UnpinFactResponse, UpdateAreaData, UpdateAreaError, UpdateAreaResponse, UpdateRetroData, UpdateRetroError, UpdateRetroResponse, UpdateSubtaskData, UpdateSubtaskError, UpdateSubtaskResponse, UpdateTaskData, UpdateTaskError, UpdateTaskResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -79,26 +79,6 @@ export const getOverviewOptions = (options?: Options<GetOverviewData>) => queryO
     queryKey: getOverviewQueryKey(options)
 });
 
-export const listAreasQueryKey = (options?: Options<ListAreasData>) => createQueryKey('listAreas', options);
-
-/**
- * The Areas to edit, in the person's order
- *
- * Archived ones too (`areaList`).
- */
-export const listAreasOptions = (options?: Options<ListAreasData>) => queryOptions<ListAreasResponse, ListAreasError, ListAreasResponse, ReturnType<typeof listAreasQueryKey>>({
-    queryFn: async ({ queryKey, signal }) => {
-        const { data } = await listAreas({
-            ...options,
-            ...queryKey[0],
-            signal,
-            throwOnError: true
-        });
-        return data;
-    },
-    queryKey: listAreasQueryKey(options)
-});
-
 export const getBacklogQueryKey = (options?: Options<GetBacklogData>) => createQueryKey('getBacklog', options);
 
 /**
@@ -137,46 +117,6 @@ export const getSprintChoiceOptions = (options: Options<GetSprintChoiceData>) =>
         return data;
     },
     queryKey: getSprintChoiceQueryKey(options)
-});
-
-export const getPlanningQueryKey = (options?: Options<GetPlanningData>) => createQueryKey('getPlanning', options);
-
-/**
- * The Sprint being planned
- *
- * `planningData`. `applyCriterion` is the screen's choice at the Check whether to apply the active criterion (a preview; nothing is written). `null` when no Sprint is being planned.
- */
-export const getPlanningOptions = (options?: Options<GetPlanningData>) => queryOptions<GetPlanningResponse, GetPlanningError, GetPlanningResponse, ReturnType<typeof getPlanningQueryKey>>({
-    queryFn: async ({ queryKey, signal }) => {
-        const { data } = await getPlanning({
-            ...options,
-            ...queryKey[0],
-            signal,
-            throwOnError: true
-        });
-        return data;
-    },
-    queryKey: getPlanningQueryKey(options)
-});
-
-export const getRunningQueryKey = (options?: Options<GetRunningData>) => createQueryKey('getRunning', options);
-
-/**
- * A confirmed Sprint's plan and how it went
- *
- * `runningData`: the Sprint with the number asked for, else the running one. `null` for a Sprint still being planned, a number with no Sprint, or no running Sprint.
- */
-export const getRunningOptions = (options?: Options<GetRunningData>) => queryOptions<GetRunningResponse, GetRunningError, GetRunningResponse, ReturnType<typeof getRunningQueryKey>>({
-    queryFn: async ({ queryKey, signal }) => {
-        const { data } = await getRunning({
-            ...options,
-            ...queryKey[0],
-            signal,
-            throwOnError: true
-        });
-        return data;
-    },
-    queryKey: getRunningQueryKey(options)
 });
 
 export const getTodayQueryKey = (options?: Options<GetTodayData>) => createQueryKey('getToday', options);
@@ -219,26 +159,6 @@ export const getDayOptions = (options: Options<GetDayData>) => queryOptions<GetD
     queryKey: getDayQueryKey(options)
 });
 
-export const getRetroQueryKey = (options?: Options<GetRetroData>) => createQueryKey('getRetro', options);
-
-/**
- * A confirmed Sprint's Retro
- *
- * `retroData`: the Retro of the Sprint with the number asked for, once its Retro has started (in Review or closed; a closed one is read only), else of the Sprint in Review. `null` before its Retro starts, for a number with no Sprint, or with no Sprint in Review.
- */
-export const getRetroOptions = (options?: Options<GetRetroData>) => queryOptions<GetRetroResponse, GetRetroError, GetRetroResponse, ReturnType<typeof getRetroQueryKey>>({
-    queryFn: async ({ queryKey, signal }) => {
-        const { data } = await getRetro({
-            ...options,
-            ...queryKey[0],
-            signal,
-            throwOnError: true
-        });
-        return data;
-    },
-    queryKey: getRetroQueryKey(options)
-});
-
 export const getNextPlanningQueryKey = (options?: Options<GetNextPlanningData>) => createQueryKey('getNextPlanning', options);
 
 /**
@@ -257,6 +177,26 @@ export const getNextPlanningOptions = (options?: Options<GetNextPlanningData>) =
         return data;
     },
     queryKey: getNextPlanningQueryKey(options)
+});
+
+export const listAreasQueryKey = (options?: Options<ListAreasData>) => createQueryKey('listAreas', options);
+
+/**
+ * The Areas to edit, in the person's order
+ *
+ * Archived ones too (`areaList`).
+ */
+export const listAreasOptions = (options?: Options<ListAreasData>) => queryOptions<ListAreasResponse, ListAreasError, ListAreasResponse, ReturnType<typeof listAreasQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await listAreas({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: listAreasQueryKey(options)
 });
 
 /**
@@ -279,82 +219,14 @@ export const createAreaMutation = (options?: Partial<Options<CreateAreaData>>): 
 };
 
 /**
- * Rename an Area
- */
-export const renameAreaMutation = (options?: Partial<Options<RenameAreaData>>): UseMutationOptions<RenameAreaResponse, RenameAreaError, Options<RenameAreaData>> => {
-    const mutationOptions: UseMutationOptions<RenameAreaResponse, RenameAreaError, Options<RenameAreaData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await renameArea({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * Archive an Area
- */
-export const archiveAreaMutation = (options?: Partial<Options<ArchiveAreaData>>): UseMutationOptions<ArchiveAreaResponse, ArchiveAreaError, Options<ArchiveAreaData>> => {
-    const mutationOptions: UseMutationOptions<ArchiveAreaResponse, ArchiveAreaError, Options<ArchiveAreaData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await archiveArea({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * Bring an archived Area back
- */
-export const restoreAreaMutation = (options?: Partial<Options<RestoreAreaData>>): UseMutationOptions<RestoreAreaResponse, RestoreAreaError, Options<RestoreAreaData>> => {
-    const mutationOptions: UseMutationOptions<RestoreAreaResponse, RestoreAreaError, Options<RestoreAreaData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await restoreArea({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * Quick Add in the Backlog
- */
-export const createTaskMutation = (options?: Partial<Options<CreateTaskData>>): UseMutationOptions<CreateTaskResponse, CreateTaskError, Options<CreateTaskData>> => {
-    const mutationOptions: UseMutationOptions<CreateTaskResponse, CreateTaskError, Options<CreateTaskData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await createTask({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * Save the detail's form
+ * Rename, archive or restore an Area
  *
- * The attributes and the Estimate, saved together.
+ * One change a request: `name` renames it (renameArea); `archived` archives it (true, archiveArea) or brings it back (false, restoreArea).
  */
-export const saveTaskMutation = (options?: Partial<Options<SaveTaskData>>): UseMutationOptions<SaveTaskResponse, SaveTaskError, Options<SaveTaskData>> => {
-    const mutationOptions: UseMutationOptions<SaveTaskResponse, SaveTaskError, Options<SaveTaskData>> = {
+export const updateAreaMutation = (options?: Partial<Options<UpdateAreaData>>): UseMutationOptions<UpdateAreaResponse, UpdateAreaError, Options<UpdateAreaData>> => {
+    const mutationOptions: UseMutationOptions<UpdateAreaResponse, UpdateAreaError, Options<UpdateAreaData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await saveTask({
+            const { data } = await updateArea({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -366,12 +238,158 @@ export const saveTaskMutation = (options?: Partial<Options<SaveTaskData>>): UseM
 };
 
 /**
- * 採用 a suggestion at one of its bounds
+ * Quick Add: make a Task
+ *
+ * Without `addTo`, in the Backlog (createTask). `planning` also chooses it for the Sprint being planned (createAndChooseTask); `today` puts it in the running Sprint and chooses it for today (createTaskForToday).
  */
-export const adoptSuggestionMutation = (options?: Partial<Options<AdoptSuggestionData>>): UseMutationOptions<AdoptSuggestionResponse, AdoptSuggestionError, Options<AdoptSuggestionData>> => {
-    const mutationOptions: UseMutationOptions<AdoptSuggestionResponse, AdoptSuggestionError, Options<AdoptSuggestionData>> = {
+export const quickAddTaskMutation = (options?: Partial<Options<QuickAddTaskData>>): UseMutationOptions<QuickAddTaskResponse, QuickAddTaskError, Options<QuickAddTaskData>> => {
+    const mutationOptions: UseMutationOptions<QuickAddTaskResponse, QuickAddTaskError, Options<QuickAddTaskData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await adoptSuggestion({
+            const { data } = await quickAddTask({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Save a Task's detail, or archive or restore it
+ *
+ * One change a request: the attributes and the Estimate, saved together (saveTask), or `archived` alone: true archives it (archiveTask), false brings it back (restoreTask).
+ */
+export const updateTaskMutation = (options?: Partial<Options<UpdateTaskData>>): UseMutationOptions<UpdateTaskResponse, UpdateTaskError, Options<UpdateTaskData>> => {
+    const mutationOptions: UseMutationOptions<UpdateTaskResponse, UpdateTaskError, Options<UpdateTaskData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await updateTask({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Take back 完了にする in the Backlog
+ */
+export const undoCompleteTaskMutation = (options?: Partial<Options<UndoCompleteTaskData>>): UseMutationOptions<UndoCompleteTaskResponse, UndoCompleteTaskError, Options<UndoCompleteTaskData>> => {
+    const mutationOptions: UseMutationOptions<UndoCompleteTaskResponse, UndoCompleteTaskError, Options<UndoCompleteTaskData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await undoCompleteTask({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * 完了にする in the Backlog
+ *
+ * With today's selection when the Task is in the running Sprint.
+ */
+export const completeTaskMutation = (options?: Partial<Options<CompleteTaskData>>): UseMutationOptions<CompleteTaskResponse, CompleteTaskError, Options<CompleteTaskData>> => {
+    const mutationOptions: UseMutationOptions<CompleteTaskResponse, CompleteTaskError, Options<CompleteTaskData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await completeTask({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * End a Task's recurrence
+ */
+export const endRecurrenceMutation = (options?: Partial<Options<EndRecurrenceData>>): UseMutationOptions<EndRecurrenceResponse, EndRecurrenceError, Options<EndRecurrenceData>> => {
+    const mutationOptions: UseMutationOptions<EndRecurrenceResponse, EndRecurrenceError, Options<EndRecurrenceData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await endRecurrence({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Set or change a Task's recurrence
+ */
+export const setRecurrenceMutation = (options?: Partial<Options<SetRecurrenceData>>): UseMutationOptions<SetRecurrenceResponse, SetRecurrenceError, Options<SetRecurrenceData>> => {
+    const mutationOptions: UseMutationOptions<SetRecurrenceResponse, SetRecurrenceError, Options<SetRecurrenceData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await setRecurrence({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Add a Subtask
+ */
+export const addSubtaskMutation = (options?: Partial<Options<AddSubtaskData>>): UseMutationOptions<AddSubtaskResponse, AddSubtaskError, Options<AddSubtaskData>> => {
+    const mutationOptions: UseMutationOptions<AddSubtaskResponse, AddSubtaskError, Options<AddSubtaskData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await addSubtask({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Check a Subtask, or set its hours
+ *
+ * One change a request: `done` checks or unchecks it (setSubtaskDone); `hours` sets its hours, `null` clears them (setSubtaskEstimate).
+ */
+export const updateSubtaskMutation = (options?: Partial<Options<UpdateSubtaskData>>): UseMutationOptions<UpdateSubtaskResponse, UpdateSubtaskError, Options<UpdateSubtaskData>> => {
+    const mutationOptions: UseMutationOptions<UpdateSubtaskResponse, UpdateSubtaskError, Options<UpdateSubtaskData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await updateSubtask({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * 採用 a suggestion
+ *
+ * At one of its bounds (`bound`, adoptSuggestion), or with the hours edited (`hours`, 直して使う, adoptEditedSuggestion, F31).
+ */
+export const adoptEstimateSuggestionMutation = (options?: Partial<Options<AdoptEstimateSuggestionData>>): UseMutationOptions<AdoptEstimateSuggestionResponse, AdoptEstimateSuggestionError, Options<AdoptEstimateSuggestionData>> => {
+    const mutationOptions: UseMutationOptions<AdoptEstimateSuggestionResponse, AdoptEstimateSuggestionError, Options<AdoptEstimateSuggestionData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await adoptEstimateSuggestion({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -391,23 +409,6 @@ export const undoAdoptionMutation = (options?: Partial<Options<UndoAdoptionData>
     const mutationOptions: UseMutationOptions<UndoAdoptionResponse, UndoAdoptionError, Options<UndoAdoptionData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await undoAdoption({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * 直して使う: adopt a suggestion with the hours edited (F31)
- */
-export const adoptEditedSuggestionMutation = (options?: Partial<Options<AdoptEditedSuggestionData>>): UseMutationOptions<AdoptEditedSuggestionResponse, AdoptEditedSuggestionError, Options<AdoptEditedSuggestionData>> => {
-    const mutationOptions: UseMutationOptions<AdoptEditedSuggestionResponse, AdoptEditedSuggestionError, Options<AdoptEditedSuggestionData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await adoptEditedSuggestion({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -452,366 +453,25 @@ export const undoRejectionMutation = (options?: Partial<Options<UndoRejectionDat
     return mutationOptions;
 };
 
-/**
- * Add a Subtask
- */
-export const addSubtaskMutation = (options?: Partial<Options<AddSubtaskData>>): UseMutationOptions<AddSubtaskResponse, AddSubtaskError, Options<AddSubtaskData>> => {
-    const mutationOptions: UseMutationOptions<AddSubtaskResponse, AddSubtaskError, Options<AddSubtaskData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await addSubtask({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
+export const getPlanningQueryKey = (options?: Options<GetPlanningData>) => createQueryKey('getPlanning', options);
 
 /**
- * Check or uncheck a Subtask
- */
-export const setSubtaskDoneMutation = (options?: Partial<Options<SetSubtaskDoneData>>): UseMutationOptions<SetSubtaskDoneResponse, SetSubtaskDoneError, Options<SetSubtaskDoneData>> => {
-    const mutationOptions: UseMutationOptions<SetSubtaskDoneResponse, SetSubtaskDoneError, Options<SetSubtaskDoneData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await setSubtaskDone({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * Set a Subtask's hours
+ * The Sprint being planned
  *
- * `null` clears them.
+ * `planningData`. `apply-criterion` is the screen's choice at the Check whether to apply the active criterion (a preview; nothing is written). `null` when no Sprint is being planned.
  */
-export const setSubtaskEstimateMutation = (options?: Partial<Options<SetSubtaskEstimateData>>): UseMutationOptions<SetSubtaskEstimateResponse, SetSubtaskEstimateError, Options<SetSubtaskEstimateData>> => {
-    const mutationOptions: UseMutationOptions<SetSubtaskEstimateResponse, SetSubtaskEstimateError, Options<SetSubtaskEstimateData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await setSubtaskEstimate({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * Archive a Task
- */
-export const archiveTaskMutation = (options?: Partial<Options<ArchiveTaskData>>): UseMutationOptions<ArchiveTaskResponse, ArchiveTaskError, Options<ArchiveTaskData>> => {
-    const mutationOptions: UseMutationOptions<ArchiveTaskResponse, ArchiveTaskError, Options<ArchiveTaskData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await archiveTask({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * Bring an archived Task back
- */
-export const restoreTaskMutation = (options?: Partial<Options<RestoreTaskData>>): UseMutationOptions<RestoreTaskResponse, RestoreTaskError, Options<RestoreTaskData>> => {
-    const mutationOptions: UseMutationOptions<RestoreTaskResponse, RestoreTaskError, Options<RestoreTaskData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await restoreTask({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * 完了にする in the Backlog
- *
- * With today's selection when the Task is in the running Sprint.
- */
-export const completeTaskMutation = (options?: Partial<Options<CompleteTaskData>>): UseMutationOptions<CompleteTaskResponse, CompleteTaskError, Options<CompleteTaskData>> => {
-    const mutationOptions: UseMutationOptions<CompleteTaskResponse, CompleteTaskError, Options<CompleteTaskData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await completeTask({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * Take back 完了にする in the Backlog
- */
-export const undoCompleteTaskMutation = (options?: Partial<Options<UndoCompleteTaskData>>): UseMutationOptions<UndoCompleteTaskResponse, UndoCompleteTaskError, Options<UndoCompleteTaskData>> => {
-    const mutationOptions: UseMutationOptions<UndoCompleteTaskResponse, UndoCompleteTaskError, Options<UndoCompleteTaskData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await undoCompleteTask({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * 今日へ for a Task outside the running Sprint
- */
-export const addTaskToTodayMutation = (options?: Partial<Options<AddTaskToTodayData>>): UseMutationOptions<AddTaskToTodayResponse, AddTaskToTodayError, Options<AddTaskToTodayData>> => {
-    const mutationOptions: UseMutationOptions<AddTaskToTodayResponse, AddTaskToTodayError, Options<AddTaskToTodayData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await addTaskToToday({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * 今週へ for a Task outside the running Sprint (#155)
- */
-export const addTaskToWeekMutation = (options?: Partial<Options<AddTaskToWeekData>>): UseMutationOptions<AddTaskToWeekResponse, AddTaskToWeekError, Options<AddTaskToWeekData>> => {
-    const mutationOptions: UseMutationOptions<AddTaskToWeekResponse, AddTaskToWeekError, Options<AddTaskToWeekData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await addTaskToWeek({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * Take back 今週へ
- */
-export const undoAddTaskToWeekMutation = (options?: Partial<Options<UndoAddTaskToWeekData>>): UseMutationOptions<UndoAddTaskToWeekResponse, UndoAddTaskToWeekError, Options<UndoAddTaskToWeekData>> => {
-    const mutationOptions: UseMutationOptions<UndoAddTaskToWeekResponse, UndoAddTaskToWeekError, Options<UndoAddTaskToWeekData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await undoAddTaskToWeek({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * Set or change a Task's recurrence
- */
-export const setRecurrenceMutation = (options?: Partial<Options<SetRecurrenceData>>): UseMutationOptions<SetRecurrenceResponse, SetRecurrenceError, Options<SetRecurrenceData>> => {
-    const mutationOptions: UseMutationOptions<SetRecurrenceResponse, SetRecurrenceError, Options<SetRecurrenceData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await setRecurrence({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * End a Task's recurrence
- */
-export const endRecurrenceMutation = (options?: Partial<Options<EndRecurrenceData>>): UseMutationOptions<EndRecurrenceResponse, EndRecurrenceError, Options<EndRecurrenceData>> => {
-    const mutationOptions: UseMutationOptions<EndRecurrenceResponse, EndRecurrenceError, Options<EndRecurrenceData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await endRecurrence({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * Choose Tasks for the Sprint being planned
- */
-export const chooseTasksMutation = (options?: Partial<Options<ChooseTasksData>>): UseMutationOptions<ChooseTasksResponse, ChooseTasksError, Options<ChooseTasksData>> => {
-    const mutationOptions: UseMutationOptions<ChooseTasksResponse, ChooseTasksError, Options<ChooseTasksData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await chooseTasks({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * Take SprintTasks out of the plan
- */
-export const unchooseTasksMutation = (options?: Partial<Options<UnchooseTasksData>>): UseMutationOptions<UnchooseTasksResponse, UnchooseTasksError, Options<UnchooseTasksData>> => {
-    const mutationOptions: UseMutationOptions<UnchooseTasksResponse, UnchooseTasksError, Options<UnchooseTasksData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await unchooseTasks({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * 元に戻す after chooseTasks
- */
-export const unchooseTasksByTaskMutation = (options?: Partial<Options<UnchooseTasksByTaskData>>): UseMutationOptions<UnchooseTasksByTaskResponse, UnchooseTasksByTaskError, Options<UnchooseTasksByTaskData>> => {
-    const mutationOptions: UseMutationOptions<UnchooseTasksByTaskResponse, UnchooseTasksByTaskError, Options<UnchooseTasksByTaskData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await unchooseTasksByTask({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * Include or leave out one occurrence
- */
-export const setOccurrenceIncludedMutation = (options?: Partial<Options<SetOccurrenceIncludedData>>): UseMutationOptions<SetOccurrenceIncludedResponse, SetOccurrenceIncludedError, Options<SetOccurrenceIncludedData>> => {
-    const mutationOptions: UseMutationOptions<SetOccurrenceIncludedResponse, SetOccurrenceIncludedError, Options<SetOccurrenceIncludedData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await setOccurrenceIncluded({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * Include occurrences
- */
-export const includeOccurrencesMutation = (options?: Partial<Options<IncludeOccurrencesData>>): UseMutationOptions<IncludeOccurrencesResponse, IncludeOccurrencesError, Options<IncludeOccurrencesData>> => {
-    const mutationOptions: UseMutationOptions<IncludeOccurrencesResponse, IncludeOccurrencesError, Options<IncludeOccurrencesData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await includeOccurrences({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * Leave out all of a SprintTask's occurrences
- */
-export const excludeAllOccurrencesMutation = (options?: Partial<Options<ExcludeAllOccurrencesData>>): UseMutationOptions<ExcludeAllOccurrencesResponse, ExcludeAllOccurrencesError, Options<ExcludeAllOccurrencesData>> => {
-    const mutationOptions: UseMutationOptions<ExcludeAllOccurrencesResponse, ExcludeAllOccurrencesError, Options<ExcludeAllOccurrencesData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await excludeAllOccurrences({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * Planning で追加: a new Task, chosen at once
- */
-export const createAndChooseTaskMutation = (options?: Partial<Options<CreateAndChooseTaskData>>): UseMutationOptions<CreateAndChooseTaskResponse, CreateAndChooseTaskError, Options<CreateAndChooseTaskData>> => {
-    const mutationOptions: UseMutationOptions<CreateAndChooseTaskResponse, CreateAndChooseTaskError, Options<CreateAndChooseTaskData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await createAndChooseTask({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * Set an Area's Goal while planning
- */
-export const setPlanningGoalMutation = (options?: Partial<Options<SetPlanningGoalData>>): UseMutationOptions<SetPlanningGoalResponse, SetPlanningGoalError, Options<SetPlanningGoalData>> => {
-    const mutationOptions: UseMutationOptions<SetPlanningGoalResponse, SetPlanningGoalError, Options<SetPlanningGoalData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await setPlanningGoal({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * Link a SprintTask to its Goal or not
- */
-export const setGoalLinkMutation = (options?: Partial<Options<SetGoalLinkData>>): UseMutationOptions<SetGoalLinkResponse, SetGoalLinkError, Options<SetGoalLinkData>> => {
-    const mutationOptions: UseMutationOptions<SetGoalLinkResponse, SetGoalLinkError, Options<SetGoalLinkData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await setGoalLink({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
+export const getPlanningOptions = (options?: Options<GetPlanningData>) => queryOptions<GetPlanningResponse, GetPlanningError, GetPlanningResponse, ReturnType<typeof getPlanningQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getPlanning({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getPlanningQueryKey(options)
+});
 
 /**
  * Set the week's available hours while planning
@@ -822,6 +482,23 @@ export const setPlanningAvailableHoursMutation = (options?: Partial<Options<SetP
     const mutationOptions: UseMutationOptions<SetPlanningAvailableHoursResponse, SetPlanningAvailableHoursError, Options<SetPlanningAvailableHoursData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await setPlanningAvailableHours({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * 計画を始める for the next week not confirmed yet
+ */
+export const beginPlanningMutation = (options?: Partial<Options<BeginPlanningData>>): UseMutationOptions<BeginPlanningResponse, BeginPlanningError, Options<BeginPlanningData>> => {
+    const mutationOptions: UseMutationOptions<BeginPlanningResponse, BeginPlanningError, Options<BeginPlanningData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await beginPlanning({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -852,12 +529,137 @@ export const confirmSprintMutation = (options?: Partial<Options<ConfirmSprintDat
 };
 
 /**
- * Choose a SprintTask (or an occurrence of it) for today
+ * Set an Area's Goal while planning
  */
-export const chooseForTodayMutation = (options?: Partial<Options<ChooseForTodayData>>): UseMutationOptions<ChooseForTodayResponse, ChooseForTodayError, Options<ChooseForTodayData>> => {
-    const mutationOptions: UseMutationOptions<ChooseForTodayResponse, ChooseForTodayError, Options<ChooseForTodayData>> = {
+export const setPlanningGoalMutation = (options?: Partial<Options<SetPlanningGoalData>>): UseMutationOptions<SetPlanningGoalResponse, SetPlanningGoalError, Options<SetPlanningGoalData>> => {
+    const mutationOptions: UseMutationOptions<SetPlanningGoalResponse, SetPlanningGoalError, Options<SetPlanningGoalData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await chooseForToday({
+            const { data } = await setPlanningGoal({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Take SprintTasks out of the plan
+ *
+ * Exactly one of the two: `ids`, the SprintTasks (unchooseTasks), or `task-ids`, their Tasks: 元に戻す after choosing them (unchooseTasksByTask).
+ */
+export const unchoosePlanningTasksMutation = (options?: Partial<Options<UnchoosePlanningTasksData>>): UseMutationOptions<UnchoosePlanningTasksResponse, UnchoosePlanningTasksError, Options<UnchoosePlanningTasksData>> => {
+    const mutationOptions: UseMutationOptions<UnchoosePlanningTasksResponse, UnchoosePlanningTasksError, Options<UnchoosePlanningTasksData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await unchoosePlanningTasks({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Choose Tasks for the Sprint being planned
+ */
+export const chooseTasksMutation = (options?: Partial<Options<ChooseTasksData>>): UseMutationOptions<ChooseTasksResponse, ChooseTasksError, Options<ChooseTasksData>> => {
+    const mutationOptions: UseMutationOptions<ChooseTasksResponse, ChooseTasksError, Options<ChooseTasksData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await chooseTasks({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Link a SprintTask to its Goal or not
+ */
+export const setGoalLinkMutation = (options?: Partial<Options<SetGoalLinkData>>): UseMutationOptions<SetGoalLinkResponse, SetGoalLinkError, Options<SetGoalLinkData>> => {
+    const mutationOptions: UseMutationOptions<SetGoalLinkResponse, SetGoalLinkError, Options<SetGoalLinkData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await setGoalLink({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Leave out all of a SprintTask's occurrences
+ */
+export const excludeAllOccurrencesMutation = (options?: Partial<Options<ExcludeAllOccurrencesData>>): UseMutationOptions<ExcludeAllOccurrencesResponse, ExcludeAllOccurrencesError, Options<ExcludeAllOccurrencesData>> => {
+    const mutationOptions: UseMutationOptions<ExcludeAllOccurrencesResponse, ExcludeAllOccurrencesError, Options<ExcludeAllOccurrencesData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await excludeAllOccurrences({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Include occurrences
+ *
+ * 元に戻す after leaving out all of a SprintTask's occurrences.
+ */
+export const includeOccurrencesMutation = (options?: Partial<Options<IncludeOccurrencesData>>): UseMutationOptions<IncludeOccurrencesResponse, IncludeOccurrencesError, Options<IncludeOccurrencesData>> => {
+    const mutationOptions: UseMutationOptions<IncludeOccurrencesResponse, IncludeOccurrencesError, Options<IncludeOccurrencesData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await includeOccurrences({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Include or leave out one occurrence
+ */
+export const setOccurrenceIncludedMutation = (options?: Partial<Options<SetOccurrenceIncludedData>>): UseMutationOptions<SetOccurrenceIncludedResponse, SetOccurrenceIncludedError, Options<SetOccurrenceIncludedData>> => {
+    const mutationOptions: UseMutationOptions<SetOccurrenceIncludedResponse, SetOccurrenceIncludedError, Options<SetOccurrenceIncludedData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await setOccurrenceIncluded({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Choose for today
+ *
+ * A SprintTask (or an occurrence of it) of the running Sprint (`sprintTaskId`, chooseForToday), or a Task outside it, put in the Sprint too (`taskId`, 今日へ, addTaskToToday).
+ */
+export const createDailySelectionMutation = (options?: Partial<Options<CreateDailySelectionData>>): UseMutationOptions<CreateDailySelectionResponse, CreateDailySelectionError, Options<CreateDailySelectionData>> => {
+    const mutationOptions: UseMutationOptions<CreateDailySelectionResponse, CreateDailySelectionError, Options<CreateDailySelectionData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await createDailySelection({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -875,6 +677,25 @@ export const startSelectionMutation = (options?: Partial<Options<StartSelectionD
     const mutationOptions: UseMutationOptions<StartSelectionResponse, StartSelectionError, Options<StartSelectionData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await startSelection({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * 今日は中断する
+ *
+ * With the actual hours so far, if given.
+ */
+export const pauseSelectionMutation = (options?: Partial<Options<PauseSelectionData>>): UseMutationOptions<PauseSelectionResponse, PauseSelectionError, Options<PauseSelectionData>> => {
+    const mutationOptions: UseMutationOptions<PauseSelectionResponse, PauseSelectionError, Options<PauseSelectionData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await pauseSelection({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -920,42 +741,6 @@ export const removeFromTodayMutation = (options?: Partial<Options<RemoveFromToda
 };
 
 /**
- * Take back 見送り or 今週の残りに戻す, today only
- */
-export const undoCloseSelectionMutation = (options?: Partial<Options<UndoCloseSelectionData>>): UseMutationOptions<UndoCloseSelectionResponse, UndoCloseSelectionError, Options<UndoCloseSelectionData>> => {
-    const mutationOptions: UseMutationOptions<UndoCloseSelectionResponse, UndoCloseSelectionError, Options<UndoCloseSelectionData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await undoCloseSelection({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * 今日は中断する
- *
- * With the actual hours so far, if given.
- */
-export const pauseSelectionMutation = (options?: Partial<Options<PauseSelectionData>>): UseMutationOptions<PauseSelectionResponse, PauseSelectionError, Options<PauseSelectionData>> => {
-    const mutationOptions: UseMutationOptions<PauseSelectionResponse, PauseSelectionError, Options<PauseSelectionData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await pauseSelection({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
  * Complete a choice for today
  */
 export const completeSelectionMutation = (options?: Partial<Options<CompleteSelectionData>>): UseMutationOptions<CompleteSelectionResponse, CompleteSelectionError, Options<CompleteSelectionData>> => {
@@ -973,12 +758,12 @@ export const completeSelectionMutation = (options?: Partial<Options<CompleteSele
 };
 
 /**
- * Take back a completion today
+ * Skip a recurring Task's occurrence (F19)
  */
-export const undoCompleteSelectionMutation = (options?: Partial<Options<UndoCompleteSelectionData>>): UseMutationOptions<UndoCompleteSelectionResponse, UndoCompleteSelectionError, Options<UndoCompleteSelectionData>> => {
-    const mutationOptions: UseMutationOptions<UndoCompleteSelectionResponse, UndoCompleteSelectionError, Options<UndoCompleteSelectionData>> = {
+export const skipSelectionMutation = (options?: Partial<Options<SkipSelectionData>>): UseMutationOptions<SkipSelectionResponse, SkipSelectionError, Options<SkipSelectionData>> => {
+    const mutationOptions: UseMutationOptions<SkipSelectionResponse, SkipSelectionError, Options<SkipSelectionData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await undoCompleteSelection({
+            const { data } = await skipSelection({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -990,12 +775,29 @@ export const undoCompleteSelectionMutation = (options?: Partial<Options<UndoComp
 };
 
 /**
- * Skip a recurring Task's occurrence (F19)
+ * Take back 見送り or 今週の残りに戻す, today only
  */
-export const skipSelectionMutation = (options?: Partial<Options<SkipSelectionData>>): UseMutationOptions<SkipSelectionResponse, SkipSelectionError, Options<SkipSelectionData>> => {
-    const mutationOptions: UseMutationOptions<SkipSelectionResponse, SkipSelectionError, Options<SkipSelectionData>> = {
+export const undoCloseSelectionMutation = (options?: Partial<Options<UndoCloseSelectionData>>): UseMutationOptions<UndoCloseSelectionResponse, UndoCloseSelectionError, Options<UndoCloseSelectionData>> => {
+    const mutationOptions: UseMutationOptions<UndoCloseSelectionResponse, UndoCloseSelectionError, Options<UndoCloseSelectionData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await skipSelection({
+            const { data } = await undoCloseSelection({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Take back a completion today
+ */
+export const undoCompleteSelectionMutation = (options?: Partial<Options<UndoCompleteSelectionData>>): UseMutationOptions<UndoCompleteSelectionResponse, UndoCompleteSelectionError, Options<UndoCompleteSelectionData>> => {
+    const mutationOptions: UseMutationOptions<UndoCompleteSelectionResponse, UndoCompleteSelectionError, Options<UndoCompleteSelectionData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await undoCompleteSelection({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -1025,6 +827,8 @@ export const undoSkipSelectionMutation = (options?: Partial<Options<UndoSkipSele
 
 /**
  * Record a choice's actual hours, on its day
+ *
+ * Added to what is recorded; nothing is returned to refer to it.
  */
 export const recordSelectionActualMutation = (options?: Partial<Options<RecordSelectionActualData>>): UseMutationOptions<RecordSelectionActualResponse, RecordSelectionActualError, Options<RecordSelectionActualData>> => {
     const mutationOptions: UseMutationOptions<RecordSelectionActualResponse, RecordSelectionActualError, Options<RecordSelectionActualData>> = {
@@ -1060,25 +864,6 @@ export const noteInterruptMutation = (options?: Partial<Options<NoteInterruptDat
 };
 
 /**
- * 割り込みを編集
- *
- * Its note and minutes; the time stays (F38).
- */
-export const editInterruptMutation = (options?: Partial<Options<EditInterruptData>>): UseMutationOptions<EditInterruptResponse, EditInterruptError, Options<EditInterruptData>> => {
-    const mutationOptions: UseMutationOptions<EditInterruptResponse, EditInterruptError, Options<EditInterruptData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await editInterrupt({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
  * 割り込みを消す (F38)
  */
 export const deleteInterruptMutation = (options?: Partial<Options<DeleteInterruptData>>): UseMutationOptions<DeleteInterruptResponse, DeleteInterruptError, Options<DeleteInterruptData>> => {
@@ -1096,9 +881,28 @@ export const deleteInterruptMutation = (options?: Partial<Options<DeleteInterrup
 };
 
 /**
+ * 割り込みを編集
+ *
+ * Its note and minutes; the time stays (F38). Without `minutes`, it has none.
+ */
+export const editInterruptMutation = (options?: Partial<Options<EditInterruptData>>): UseMutationOptions<EditInterruptResponse, EditInterruptError, Options<EditInterruptData>> => {
+    const mutationOptions: UseMutationOptions<EditInterruptResponse, EditInterruptError, Options<EditInterruptData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await editInterrupt({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
  * 元に戻す after 割り込みを消す
  *
- * The client sends back the note as the read gave it, with its ID and time: the same note returns to its place (ADR 0006). Refused if a note with that ID is there, or if it was noted later than now.
+ * The client sends back the note as the read gave it, its ID in the path: the same note returns to its place (ADR 0006). Refused if a note with that ID is there, or if it was noted later than now.
  */
 export const restoreInterruptMutation = (options?: Partial<Options<RestoreInterruptData>>): UseMutationOptions<RestoreInterruptResponse, RestoreInterruptError, Options<RestoreInterruptData>> => {
     const mutationOptions: UseMutationOptions<RestoreInterruptResponse, RestoreInterruptError, Options<RestoreInterruptData>> = {
@@ -1114,30 +918,35 @@ export const restoreInterruptMutation = (options?: Partial<Options<RestoreInterr
     return mutationOptions;
 };
 
-/**
- * Today's quick add: a new Task, in the Sprint and chosen for today
- */
-export const createTaskForTodayMutation = (options?: Partial<Options<CreateTaskForTodayData>>): UseMutationOptions<CreateTaskForTodayResponse, CreateTaskForTodayError, Options<CreateTaskForTodayData>> => {
-    const mutationOptions: UseMutationOptions<CreateTaskForTodayResponse, CreateTaskForTodayError, Options<CreateTaskForTodayData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await createTaskForToday({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
+export const getRunningQueryKey = (options?: Options<GetRunningData>) => createQueryKey('getRunning', options);
 
 /**
- * Retro を始める, from the last day (F21)
+ * A confirmed Sprint's plan and how it went
+ *
+ * `runningData`: the Sprint with the number asked for, else the running one. `null` for a Sprint still being planned, a number with no Sprint, or no running Sprint.
  */
-export const beginRetroMutation = (options?: Partial<Options<BeginRetroData>>): UseMutationOptions<BeginRetroResponse, BeginRetroError, Options<BeginRetroData>> => {
-    const mutationOptions: UseMutationOptions<BeginRetroResponse, BeginRetroError, Options<BeginRetroData>> = {
+export const getRunningOptions = (options?: Options<GetRunningData>) => queryOptions<GetRunningResponse, GetRunningError, GetRunningResponse, ReturnType<typeof getRunningQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getRunning({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getRunningQueryKey(options)
+});
+
+/**
+ * Change the week's available hours while the Sprint runs
+ *
+ * `null` clears them.
+ */
+export const setRunningAvailableHoursMutation = (options?: Partial<Options<SetRunningAvailableHoursData>>): UseMutationOptions<SetRunningAvailableHoursResponse, SetRunningAvailableHoursError, Options<SetRunningAvailableHoursData>> => {
+    const mutationOptions: UseMutationOptions<SetRunningAvailableHoursResponse, SetRunningAvailableHoursError, Options<SetRunningAvailableHoursData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await beginRetro({
+            const { data } = await setRunningAvailableHours({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -1166,14 +975,31 @@ export const setRunningGoalMutation = (options?: Partial<Options<SetRunningGoalD
 };
 
 /**
- * Change the week's available hours while the Sprint runs
- *
- * `null` clears them.
+ * Take back 今週へ
  */
-export const setRunningAvailableHoursMutation = (options?: Partial<Options<SetRunningAvailableHoursData>>): UseMutationOptions<SetRunningAvailableHoursResponse, SetRunningAvailableHoursError, Options<SetRunningAvailableHoursData>> => {
-    const mutationOptions: UseMutationOptions<SetRunningAvailableHoursResponse, SetRunningAvailableHoursError, Options<SetRunningAvailableHoursData>> = {
+export const undoAddTaskToWeekMutation = (options?: Partial<Options<UndoAddTaskToWeekData>>): UseMutationOptions<UndoAddTaskToWeekResponse, UndoAddTaskToWeekError, Options<UndoAddTaskToWeekData>> => {
+    const mutationOptions: UseMutationOptions<UndoAddTaskToWeekResponse, UndoAddTaskToWeekError, Options<UndoAddTaskToWeekData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await setRunningAvailableHours({
+            const { data } = await undoAddTaskToWeek({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * 今週へ for a Task outside the running Sprint (#155)
+ *
+ * The path takes the Task's ID: a Task is in the running Sprint once.
+ */
+export const addTaskToWeekMutation = (options?: Partial<Options<AddTaskToWeekData>>): UseMutationOptions<AddTaskToWeekResponse, AddTaskToWeekError, Options<AddTaskToWeekData>> => {
+    const mutationOptions: UseMutationOptions<AddTaskToWeekResponse, AddTaskToWeekError, Options<AddTaskToWeekData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await addTaskToWeek({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -1191,6 +1017,79 @@ export const undoPastDayMutation = (options?: Partial<Options<UndoPastDayData>>)
     const mutationOptions: UseMutationOptions<UndoPastDayResponse, UndoPastDayError, Options<UndoPastDayData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await undoPastDay({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getRetroQueryKey = (options?: Options<GetRetroData>) => createQueryKey('getRetro', options);
+
+/**
+ * A confirmed Sprint's Retro
+ *
+ * `retroData`: the Retro of the Sprint with the number asked for, once its Retro has started (in Review or closed; a closed one is read only), else of the Sprint in Review. `null` before its Retro starts, for a number with no Sprint, or with no Sprint in Review.
+ */
+export const getRetroOptions = (options?: Options<GetRetroData>) => queryOptions<GetRetroResponse, GetRetroError, GetRetroResponse, ReturnType<typeof getRetroQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getRetro({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getRetroQueryKey(options)
+});
+
+/**
+ * Write the Retro
+ *
+ * One change a request: `reflection` (setReflection), `improvement` (setImprovement), or `criterionDecision`, 続ける / 終える / 置き換える for the criterion this Sprint had (decideCriterion).
+ */
+export const updateRetroMutation = (options?: Partial<Options<UpdateRetroData>>): UseMutationOptions<UpdateRetroResponse, UpdateRetroError, Options<UpdateRetroData>> => {
+    const mutationOptions: UseMutationOptions<UpdateRetroResponse, UpdateRetroError, Options<UpdateRetroData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await updateRetro({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Retro を始める, from the last day (F21)
+ */
+export const beginRetroMutation = (options?: Partial<Options<BeginRetroData>>): UseMutationOptions<BeginRetroResponse, BeginRetroError, Options<BeginRetroData>> => {
+    const mutationOptions: UseMutationOptions<BeginRetroResponse, BeginRetroError, Options<BeginRetroData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await beginRetro({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Complete the Retro
+ */
+export const completeRetroMutation = (options?: Partial<Options<CompleteRetroData>>): UseMutationOptions<CompleteRetroResponse, CompleteRetroError, Options<CompleteRetroData>> => {
+    const mutationOptions: UseMutationOptions<CompleteRetroResponse, CompleteRetroError, Options<CompleteRetroData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await completeRetro({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -1221,12 +1120,14 @@ export const assessGoalMutation = (options?: Partial<Options<AssessGoalData>>): 
 };
 
 /**
- * Pin or unpin a fact
+ * Unpin a fact
+ *
+ * Not pinned, nothing changes.
  */
-export const togglePinMutation = (options?: Partial<Options<TogglePinData>>): UseMutationOptions<TogglePinResponse, TogglePinError, Options<TogglePinData>> => {
-    const mutationOptions: UseMutationOptions<TogglePinResponse, TogglePinError, Options<TogglePinData>> = {
+export const unpinFactMutation = (options?: Partial<Options<UnpinFactData>>): UseMutationOptions<UnpinFactResponse, UnpinFactError, Options<UnpinFactData>> => {
+    const mutationOptions: UseMutationOptions<UnpinFactResponse, UnpinFactError, Options<UnpinFactData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await togglePin({
+            const { data } = await unpinFact({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -1238,63 +1139,14 @@ export const togglePinMutation = (options?: Partial<Options<TogglePinData>>): Us
 };
 
 /**
- * Write the reflection
+ * Pin a fact
+ *
+ * Pinned already, nothing changes.
  */
-export const setReflectionMutation = (options?: Partial<Options<SetReflectionData>>): UseMutationOptions<SetReflectionResponse, SetReflectionError, Options<SetReflectionData>> => {
-    const mutationOptions: UseMutationOptions<SetReflectionResponse, SetReflectionError, Options<SetReflectionData>> = {
+export const pinFactMutation = (options?: Partial<Options<PinFactData>>): UseMutationOptions<PinFactResponse, PinFactError, Options<PinFactData>> => {
+    const mutationOptions: UseMutationOptions<PinFactResponse, PinFactError, Options<PinFactData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await setReflection({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * Write the improvement
- */
-export const setImprovementMutation = (options?: Partial<Options<SetImprovementData>>): UseMutationOptions<SetImprovementResponse, SetImprovementError, Options<SetImprovementData>> => {
-    const mutationOptions: UseMutationOptions<SetImprovementResponse, SetImprovementError, Options<SetImprovementData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await setImprovement({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * 基準にもする: draft a planning criterion from the improvement
- */
-export const draftCriterionMutation = (options?: Partial<Options<DraftCriterionData>>): UseMutationOptions<DraftCriterionResponse, DraftCriterionError, Options<DraftCriterionData>> => {
-    const mutationOptions: UseMutationOptions<DraftCriterionResponse, DraftCriterionError, Options<DraftCriterionData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await draftCriterion({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * Change the draft criterion's policy
- */
-export const setDraftPolicyMutation = (options?: Partial<Options<SetDraftPolicyData>>): UseMutationOptions<SetDraftPolicyResponse, SetDraftPolicyError, Options<SetDraftPolicyData>> => {
-    const mutationOptions: UseMutationOptions<SetDraftPolicyResponse, SetDraftPolicyError, Options<SetDraftPolicyData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await setDraftPolicy({
+            const { data } = await pinFact({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -1323,12 +1175,29 @@ export const dropCriterionDraftMutation = (options?: Partial<Options<DropCriteri
 };
 
 /**
- * 続ける / 終える / 置き換える for the criterion this Sprint had
+ * Change the draft criterion's policy
  */
-export const decideCriterionMutation = (options?: Partial<Options<DecideCriterionData>>): UseMutationOptions<DecideCriterionResponse, DecideCriterionError, Options<DecideCriterionData>> => {
-    const mutationOptions: UseMutationOptions<DecideCriterionResponse, DecideCriterionError, Options<DecideCriterionData>> = {
+export const setDraftPolicyMutation = (options?: Partial<Options<SetDraftPolicyData>>): UseMutationOptions<SetDraftPolicyResponse, SetDraftPolicyError, Options<SetDraftPolicyData>> => {
+    const mutationOptions: UseMutationOptions<SetDraftPolicyResponse, SetDraftPolicyError, Options<SetDraftPolicyData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await decideCriterion({
+            const { data } = await setDraftPolicy({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * 基準にもする: draft a planning criterion from the improvement
+ */
+export const draftCriterionMutation = (options?: Partial<Options<DraftCriterionData>>): UseMutationOptions<DraftCriterionResponse, DraftCriterionError, Options<DraftCriterionData>> => {
+    const mutationOptions: UseMutationOptions<DraftCriterionResponse, DraftCriterionError, Options<DraftCriterionData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await draftCriterion({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -1341,45 +1210,13 @@ export const decideCriterionMutation = (options?: Partial<Options<DecideCriterio
 
 /**
  * Add actual hours in Review (F22)
+ *
+ * Added to what is recorded; nothing is returned to refer to it.
  */
 export const recordReviewActualMutation = (options?: Partial<Options<RecordReviewActualData>>): UseMutationOptions<RecordReviewActualResponse, RecordReviewActualError, Options<RecordReviewActualData>> => {
     const mutationOptions: UseMutationOptions<RecordReviewActualResponse, RecordReviewActualError, Options<RecordReviewActualData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await recordReviewActual({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * Complete the Retro
- */
-export const completeRetroMutation = (options?: Partial<Options<CompleteRetroData>>): UseMutationOptions<CompleteRetroResponse, CompleteRetroError, Options<CompleteRetroData>> => {
-    const mutationOptions: UseMutationOptions<CompleteRetroResponse, CompleteRetroError, Options<CompleteRetroData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await completeRetro({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * 計画を始める for the next week not confirmed yet
- */
-export const beginPlanningMutation = (options?: Partial<Options<BeginPlanningData>>): UseMutationOptions<BeginPlanningResponse, BeginPlanningError, Options<BeginPlanningData>> => {
-    const mutationOptions: UseMutationOptions<BeginPlanningResponse, BeginPlanningError, Options<BeginPlanningData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await beginPlanning({
                 ...options,
                 ...fnOptions,
                 throwOnError: true

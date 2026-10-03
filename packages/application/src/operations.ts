@@ -253,7 +253,8 @@ export const operations = {
     readonly areaId: AreaId;
     readonly assessment: SelfAssessment | null;
   }) => retro.assess(areaId, assessment),
-  togglePin: ({ pin }: { readonly pin: RetroPin }) => retro.pin(pin),
+  pinFact: ({ pin }: { readonly pin: RetroPin }) => retro.pin(pin),
+  unpinFact: ({ pin }: { readonly pin: RetroPin }) => retro.unpin(pin),
   setReflection: ({ text }: { readonly text: string }) => retro.reflect(text),
   setImprovement: ({ text }: { readonly text: string }) => retro.improve(text),
   draftCriterion: ({ policy }: { readonly policy: CriterionPolicy }) =>

@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AddSubtaskData, AddSubtaskErrors, AddSubtaskResponses, AddTaskToTodayData, AddTaskToTodayErrors, AddTaskToTodayResponses, AddTaskToWeekData, AddTaskToWeekErrors, AddTaskToWeekResponses, AdoptEditedSuggestionData, AdoptEditedSuggestionErrors, AdoptEditedSuggestionResponses, AdoptSuggestionData, AdoptSuggestionErrors, AdoptSuggestionResponses, ArchiveAreaData, ArchiveAreaErrors, ArchiveAreaResponses, ArchiveTaskData, ArchiveTaskErrors, ArchiveTaskResponses, AssessGoalData, AssessGoalErrors, AssessGoalResponses, BeginPlanningData, BeginPlanningErrors, BeginPlanningResponses, BeginRetroData, BeginRetroErrors, BeginRetroResponses, ChooseForTodayData, ChooseForTodayErrors, ChooseForTodayResponses, ChooseTasksData, ChooseTasksErrors, ChooseTasksResponses, CompleteRetroData, CompleteRetroErrors, CompleteRetroResponses, CompleteSelectionData, CompleteSelectionErrors, CompleteSelectionResponses, CompleteTaskData, CompleteTaskErrors, CompleteTaskResponses, ConfirmSprintData, ConfirmSprintErrors, ConfirmSprintResponses, CreateAndChooseTaskData, CreateAndChooseTaskErrors, CreateAndChooseTaskResponses, CreateAreaData, CreateAreaErrors, CreateAreaResponses, CreateTaskData, CreateTaskErrors, CreateTaskForTodayData, CreateTaskForTodayErrors, CreateTaskForTodayResponses, CreateTaskResponses, DecideCriterionData, DecideCriterionErrors, DecideCriterionResponses, DeferSelectionData, DeferSelectionErrors, DeferSelectionResponses, DeleteInterruptData, DeleteInterruptErrors, DeleteInterruptResponses, DraftCriterionData, DraftCriterionErrors, DraftCriterionResponses, DropCriterionDraftData, DropCriterionDraftErrors, DropCriterionDraftResponses, EditInterruptData, EditInterruptErrors, EditInterruptResponses, EndRecurrenceData, EndRecurrenceErrors, EndRecurrenceResponses, ExcludeAllOccurrencesData, ExcludeAllOccurrencesErrors, ExcludeAllOccurrencesResponses, GetBacklogData, GetBacklogErrors, GetBacklogResponses, GetDayData, GetDayErrors, GetDayResponses, GetMeData, GetMeErrors, GetMeResponses, GetNextPlanningData, GetNextPlanningErrors, GetNextPlanningResponses, GetOverviewData, GetOverviewErrors, GetOverviewResponses, GetPlanningData, GetPlanningErrors, GetPlanningResponses, GetRetroData, GetRetroErrors, GetRetroResponses, GetRunningData, GetRunningErrors, GetRunningResponses, GetSprintChoiceData, GetSprintChoiceErrors, GetSprintChoiceResponses, GetTodayData, GetTodayErrors, GetTodayResponses, IncludeOccurrencesData, IncludeOccurrencesErrors, IncludeOccurrencesResponses, ListAreasData, ListAreasErrors, ListAreasResponses, NoteInterruptData, NoteInterruptErrors, NoteInterruptResponses, PauseSelectionData, PauseSelectionErrors, PauseSelectionResponses, RecordReviewActualData, RecordReviewActualErrors, RecordReviewActualResponses, RecordSelectionActualData, RecordSelectionActualErrors, RecordSelectionActualResponses, RejectSuggestionData, RejectSuggestionErrors, RejectSuggestionResponses, RemoveFromTodayData, RemoveFromTodayErrors, RemoveFromTodayResponses, RenameAreaData, RenameAreaErrors, RenameAreaResponses, RestoreAreaData, RestoreAreaErrors, RestoreAreaResponses, RestoreInterruptData, RestoreInterruptErrors, RestoreInterruptResponses, RestoreTaskData, RestoreTaskErrors, RestoreTaskResponses, SaveTaskData, SaveTaskErrors, SaveTaskResponses, SetDraftPolicyData, SetDraftPolicyErrors, SetDraftPolicyResponses, SetGoalLinkData, SetGoalLinkErrors, SetGoalLinkResponses, SetImprovementData, SetImprovementErrors, SetImprovementResponses, SetOccurrenceIncludedData, SetOccurrenceIncludedErrors, SetOccurrenceIncludedResponses, SetPlanningAvailableHoursData, SetPlanningAvailableHoursErrors, SetPlanningAvailableHoursResponses, SetPlanningGoalData, SetPlanningGoalErrors, SetPlanningGoalResponses, SetRecurrenceData, SetRecurrenceErrors, SetRecurrenceResponses, SetReflectionData, SetReflectionErrors, SetReflectionResponses, SetRunningAvailableHoursData, SetRunningAvailableHoursErrors, SetRunningAvailableHoursResponses, SetRunningGoalData, SetRunningGoalErrors, SetRunningGoalResponses, SetSubtaskDoneData, SetSubtaskDoneErrors, SetSubtaskDoneResponses, SetSubtaskEstimateData, SetSubtaskEstimateErrors, SetSubtaskEstimateResponses, SkipSelectionData, SkipSelectionErrors, SkipSelectionResponses, StartSelectionData, StartSelectionErrors, StartSelectionResponses, TogglePinData, TogglePinErrors, TogglePinResponses, UnchooseTasksByTaskData, UnchooseTasksByTaskErrors, UnchooseTasksByTaskResponses, UnchooseTasksData, UnchooseTasksErrors, UnchooseTasksResponses, UndoAddTaskToWeekData, UndoAddTaskToWeekErrors, UndoAddTaskToWeekResponses, UndoAdoptionData, UndoAdoptionErrors, UndoAdoptionResponses, UndoCloseSelectionData, UndoCloseSelectionErrors, UndoCloseSelectionResponses, UndoCompleteSelectionData, UndoCompleteSelectionErrors, UndoCompleteSelectionResponses, UndoCompleteTaskData, UndoCompleteTaskErrors, UndoCompleteTaskResponses, UndoPastDayData, UndoPastDayErrors, UndoPastDayResponses, UndoRejectionData, UndoRejectionErrors, UndoRejectionResponses, UndoSkipSelectionData, UndoSkipSelectionErrors, UndoSkipSelectionResponses } from './types.gen';
+import type { AddSubtaskData, AddSubtaskErrors, AddSubtaskResponses, AddTaskToWeekData, AddTaskToWeekErrors, AddTaskToWeekResponses, AdoptEstimateSuggestionData, AdoptEstimateSuggestionErrors, AdoptEstimateSuggestionResponses, AssessGoalData, AssessGoalErrors, AssessGoalResponses, BeginPlanningData, BeginPlanningErrors, BeginPlanningResponses, BeginRetroData, BeginRetroErrors, BeginRetroResponses, ChooseTasksData, ChooseTasksErrors, ChooseTasksResponses, CompleteRetroData, CompleteRetroErrors, CompleteRetroResponses, CompleteSelectionData, CompleteSelectionErrors, CompleteSelectionResponses, CompleteTaskData, CompleteTaskErrors, CompleteTaskResponses, ConfirmSprintData, ConfirmSprintErrors, ConfirmSprintResponses, CreateAreaData, CreateAreaErrors, CreateAreaResponses, CreateDailySelectionData, CreateDailySelectionErrors, CreateDailySelectionResponses, DeferSelectionData, DeferSelectionErrors, DeferSelectionResponses, DeleteInterruptData, DeleteInterruptErrors, DeleteInterruptResponses, DraftCriterionData, DraftCriterionErrors, DraftCriterionResponses, DropCriterionDraftData, DropCriterionDraftErrors, DropCriterionDraftResponses, EditInterruptData, EditInterruptErrors, EditInterruptResponses, EndRecurrenceData, EndRecurrenceErrors, EndRecurrenceResponses, ExcludeAllOccurrencesData, ExcludeAllOccurrencesErrors, ExcludeAllOccurrencesResponses, GetBacklogData, GetBacklogErrors, GetBacklogResponses, GetDayData, GetDayErrors, GetDayResponses, GetMeData, GetMeErrors, GetMeResponses, GetNextPlanningData, GetNextPlanningErrors, GetNextPlanningResponses, GetOverviewData, GetOverviewErrors, GetOverviewResponses, GetPlanningData, GetPlanningErrors, GetPlanningResponses, GetRetroData, GetRetroErrors, GetRetroResponses, GetRunningData, GetRunningErrors, GetRunningResponses, GetSprintChoiceData, GetSprintChoiceErrors, GetSprintChoiceResponses, GetTodayData, GetTodayErrors, GetTodayResponses, IncludeOccurrencesData, IncludeOccurrencesErrors, IncludeOccurrencesResponses, ListAreasData, ListAreasErrors, ListAreasResponses, NoteInterruptData, NoteInterruptErrors, NoteInterruptResponses, PauseSelectionData, PauseSelectionErrors, PauseSelectionResponses, PinFactData, PinFactErrors, PinFactResponses, QuickAddTaskData, QuickAddTaskErrors, QuickAddTaskResponses, RecordReviewActualData, RecordReviewActualErrors, RecordReviewActualResponses, RecordSelectionActualData, RecordSelectionActualErrors, RecordSelectionActualResponses, RejectSuggestionData, RejectSuggestionErrors, RejectSuggestionResponses, RemoveFromTodayData, RemoveFromTodayErrors, RemoveFromTodayResponses, RestoreInterruptData, RestoreInterruptErrors, RestoreInterruptResponses, SetDraftPolicyData, SetDraftPolicyErrors, SetDraftPolicyResponses, SetGoalLinkData, SetGoalLinkErrors, SetGoalLinkResponses, SetOccurrenceIncludedData, SetOccurrenceIncludedErrors, SetOccurrenceIncludedResponses, SetPlanningAvailableHoursData, SetPlanningAvailableHoursErrors, SetPlanningAvailableHoursResponses, SetPlanningGoalData, SetPlanningGoalErrors, SetPlanningGoalResponses, SetRecurrenceData, SetRecurrenceErrors, SetRecurrenceResponses, SetRunningAvailableHoursData, SetRunningAvailableHoursErrors, SetRunningAvailableHoursResponses, SetRunningGoalData, SetRunningGoalErrors, SetRunningGoalResponses, SkipSelectionData, SkipSelectionErrors, SkipSelectionResponses, StartSelectionData, StartSelectionErrors, StartSelectionResponses, UnchoosePlanningTasksData, UnchoosePlanningTasksErrors, UnchoosePlanningTasksResponses, UndoAddTaskToWeekData, UndoAddTaskToWeekErrors, UndoAddTaskToWeekResponses, UndoAdoptionData, UndoAdoptionErrors, UndoAdoptionResponses, UndoCloseSelectionData, UndoCloseSelectionErrors, UndoCloseSelectionResponses, UndoCompleteSelectionData, UndoCompleteSelectionErrors, UndoCompleteSelectionResponses, UndoCompleteTaskData, UndoCompleteTaskErrors, UndoCompleteTaskResponses, UndoPastDayData, UndoPastDayErrors, UndoPastDayResponses, UndoRejectionData, UndoRejectionErrors, UndoRejectionResponses, UndoSkipSelectionData, UndoSkipSelectionErrors, UndoSkipSelectionResponses, UnpinFactData, UnpinFactErrors, UnpinFactResponses, UpdateAreaData, UpdateAreaErrors, UpdateAreaResponses, UpdateRetroData, UpdateRetroErrors, UpdateRetroResponses, UpdateSubtaskData, UpdateSubtaskErrors, UpdateSubtaskResponses, UpdateTaskData, UpdateTaskErrors, UpdateTaskResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -49,21 +49,6 @@ export const getOverview = <ThrowOnError extends boolean = false>(options?: Opti
 });
 
 /**
- * The Areas to edit, in the person's order
- *
- * Archived ones too (`areaList`).
- */
-export const listAreas = <ThrowOnError extends boolean = false>(options?: Options<ListAreasData, ThrowOnError>): RequestResult<ListAreasResponses, ListAreasErrors, ThrowOnError> => (options?.client ?? client).get<ListAreasResponses, ListAreasErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/areas',
-    ...options
-});
-
-/**
  * The Backlog, filtered
  *
  * `backlogData`. Without `view` it shows all; with `area`, that Area's Tasks.
@@ -90,36 +75,6 @@ export const getSprintChoice = <ThrowOnError extends boolean = false>(options: O
             type: 'apiKey'
         }],
     url: '/sprint-choice',
-    ...options
-});
-
-/**
- * The Sprint being planned
- *
- * `planningData`. `applyCriterion` is the screen's choice at the Check whether to apply the active criterion (a preview; nothing is written). `null` when no Sprint is being planned.
- */
-export const getPlanning = <ThrowOnError extends boolean = false>(options?: Options<GetPlanningData, ThrowOnError>): RequestResult<GetPlanningResponses, GetPlanningErrors, ThrowOnError> => (options?.client ?? client).get<GetPlanningResponses, GetPlanningErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/planning',
-    ...options
-});
-
-/**
- * A confirmed Sprint's plan and how it went
- *
- * `runningData`: the Sprint with the number asked for, else the running one. `null` for a Sprint still being planned, a number with no Sprint, or no running Sprint.
- */
-export const getRunning = <ThrowOnError extends boolean = false>(options?: Options<GetRunningData, ThrowOnError>): RequestResult<GetRunningResponses, GetRunningErrors, ThrowOnError> => (options?.client ?? client).get<GetRunningResponses, GetRunningErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/running',
     ...options
 });
 
@@ -154,21 +109,6 @@ export const getDay = <ThrowOnError extends boolean = false>(options: Options<Ge
 });
 
 /**
- * A confirmed Sprint's Retro
- *
- * `retroData`: the Retro of the Sprint with the number asked for, once its Retro has started (in Review or closed; a closed one is read only), else of the Sprint in Review. `null` before its Retro starts, for a number with no Sprint, or with no Sprint in Review.
- */
-export const getRetro = <ThrowOnError extends boolean = false>(options?: Options<GetRetroData, ThrowOnError>): RequestResult<GetRetroResponses, GetRetroErrors, ThrowOnError> => (options?.client ?? client).get<GetRetroResponses, GetRetroErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/retro',
-    ...options
-});
-
-/**
  * Where the next Planning starts
  *
  * `nextPlanningOf`: the Sprint being planned, or where a new Planning would start.
@@ -184,6 +124,21 @@ export const getNextPlanning = <ThrowOnError extends boolean = false>(options?: 
 });
 
 /**
+ * The Areas to edit, in the person's order
+ *
+ * Archived ones too (`areaList`).
+ */
+export const listAreas = <ThrowOnError extends boolean = false>(options?: Options<ListAreasData, ThrowOnError>): RequestResult<ListAreasResponses, ListAreasErrors, ThrowOnError> => (options?.client ?? client).get<ListAreasResponses, ListAreasErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'better-auth.session_token',
+            type: 'apiKey'
+        }],
+    url: '/areas',
+    ...options
+});
+
+/**
  * Make an Area
  *
  * Last in the order, in the next color (the operation decides both).
@@ -194,7 +149,7 @@ export const createArea = <ThrowOnError extends boolean = false>(options: Option
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/createArea',
+    url: '/areas',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -203,85 +158,17 @@ export const createArea = <ThrowOnError extends boolean = false>(options: Option
 });
 
 /**
- * Rename an Area
- */
-export const renameArea = <ThrowOnError extends boolean = false>(options: Options<RenameAreaData, ThrowOnError>): RequestResult<RenameAreaResponses, RenameAreaErrors, ThrowOnError> => (options.client ?? client).post<RenameAreaResponses, RenameAreaErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/renameArea',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Archive an Area
- */
-export const archiveArea = <ThrowOnError extends boolean = false>(options: Options<ArchiveAreaData, ThrowOnError>): RequestResult<ArchiveAreaResponses, ArchiveAreaErrors, ThrowOnError> => (options.client ?? client).post<ArchiveAreaResponses, ArchiveAreaErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/archiveArea',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Bring an archived Area back
- */
-export const restoreArea = <ThrowOnError extends boolean = false>(options: Options<RestoreAreaData, ThrowOnError>): RequestResult<RestoreAreaResponses, RestoreAreaErrors, ThrowOnError> => (options.client ?? client).post<RestoreAreaResponses, RestoreAreaErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/restoreArea',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Quick Add in the Backlog
- */
-export const createTask = <ThrowOnError extends boolean = false>(options: Options<CreateTaskData, ThrowOnError>): RequestResult<CreateTaskResponses, CreateTaskErrors, ThrowOnError> => (options.client ?? client).post<CreateTaskResponses, CreateTaskErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/createTask',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Save the detail's form
+ * Rename, archive or restore an Area
  *
- * The attributes and the Estimate, saved together.
+ * One change a request: `name` renames it (renameArea); `archived` archives it (true, archiveArea) or brings it back (false, restoreArea).
  */
-export const saveTask = <ThrowOnError extends boolean = false>(options: Options<SaveTaskData, ThrowOnError>): RequestResult<SaveTaskResponses, SaveTaskErrors, ThrowOnError> => (options.client ?? client).post<SaveTaskResponses, SaveTaskErrors, ThrowOnError>({
+export const updateArea = <ThrowOnError extends boolean = false>(options: Options<UpdateAreaData, ThrowOnError>): RequestResult<UpdateAreaResponses, UpdateAreaErrors, ThrowOnError> => (options.client ?? client).patch<UpdateAreaResponses, UpdateAreaErrors, ThrowOnError>({
     security: [{
             in: 'cookie',
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/saveTask',
+    url: '/areas/{areaId}',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -290,15 +177,149 @@ export const saveTask = <ThrowOnError extends boolean = false>(options: Options<
 });
 
 /**
- * 採用 a suggestion at one of its bounds
+ * Quick Add: make a Task
+ *
+ * Without `addTo`, in the Backlog (createTask). `planning` also chooses it for the Sprint being planned (createAndChooseTask); `today` puts it in the running Sprint and chooses it for today (createTaskForToday).
  */
-export const adoptSuggestion = <ThrowOnError extends boolean = false>(options: Options<AdoptSuggestionData, ThrowOnError>): RequestResult<AdoptSuggestionResponses, AdoptSuggestionErrors, ThrowOnError> => (options.client ?? client).post<AdoptSuggestionResponses, AdoptSuggestionErrors, ThrowOnError>({
+export const quickAddTask = <ThrowOnError extends boolean = false>(options: Options<QuickAddTaskData, ThrowOnError>): RequestResult<QuickAddTaskResponses, QuickAddTaskErrors, ThrowOnError> => (options.client ?? client).post<QuickAddTaskResponses, QuickAddTaskErrors, ThrowOnError>({
     security: [{
             in: 'cookie',
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/adoptSuggestion',
+    url: '/tasks',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Save a Task's detail, or archive or restore it
+ *
+ * One change a request: the attributes and the Estimate, saved together (saveTask), or `archived` alone: true archives it (archiveTask), false brings it back (restoreTask).
+ */
+export const updateTask = <ThrowOnError extends boolean = false>(options: Options<UpdateTaskData, ThrowOnError>): RequestResult<UpdateTaskResponses, UpdateTaskErrors, ThrowOnError> => (options.client ?? client).patch<UpdateTaskResponses, UpdateTaskErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'better-auth.session_token',
+            type: 'apiKey'
+        }],
+    url: '/tasks/{taskId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Take back 完了にする in the Backlog
+ */
+export const undoCompleteTask = <ThrowOnError extends boolean = false>(options: Options<UndoCompleteTaskData, ThrowOnError>): RequestResult<UndoCompleteTaskResponses, UndoCompleteTaskErrors, ThrowOnError> => (options.client ?? client).delete<UndoCompleteTaskResponses, UndoCompleteTaskErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'better-auth.session_token',
+            type: 'apiKey'
+        }],
+    url: '/tasks/{taskId}/completion',
+    ...options
+});
+
+/**
+ * 完了にする in the Backlog
+ *
+ * With today's selection when the Task is in the running Sprint.
+ */
+export const completeTask = <ThrowOnError extends boolean = false>(options: Options<CompleteTaskData, ThrowOnError>): RequestResult<CompleteTaskResponses, CompleteTaskErrors, ThrowOnError> => (options.client ?? client).put<CompleteTaskResponses, CompleteTaskErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'better-auth.session_token',
+            type: 'apiKey'
+        }],
+    url: '/tasks/{taskId}/completion',
+    ...options
+});
+
+/**
+ * End a Task's recurrence
+ */
+export const endRecurrence = <ThrowOnError extends boolean = false>(options: Options<EndRecurrenceData, ThrowOnError>): RequestResult<EndRecurrenceResponses, EndRecurrenceErrors, ThrowOnError> => (options.client ?? client).delete<EndRecurrenceResponses, EndRecurrenceErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'better-auth.session_token',
+            type: 'apiKey'
+        }],
+    url: '/tasks/{taskId}/recurrence',
+    ...options
+});
+
+/**
+ * Set or change a Task's recurrence
+ */
+export const setRecurrence = <ThrowOnError extends boolean = false>(options: Options<SetRecurrenceData, ThrowOnError>): RequestResult<SetRecurrenceResponses, SetRecurrenceErrors, ThrowOnError> => (options.client ?? client).put<SetRecurrenceResponses, SetRecurrenceErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'better-auth.session_token',
+            type: 'apiKey'
+        }],
+    url: '/tasks/{taskId}/recurrence',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Add a Subtask
+ */
+export const addSubtask = <ThrowOnError extends boolean = false>(options: Options<AddSubtaskData, ThrowOnError>): RequestResult<AddSubtaskResponses, AddSubtaskErrors, ThrowOnError> => (options.client ?? client).post<AddSubtaskResponses, AddSubtaskErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'better-auth.session_token',
+            type: 'apiKey'
+        }],
+    url: '/tasks/{taskId}/subtasks',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Check a Subtask, or set its hours
+ *
+ * One change a request: `done` checks or unchecks it (setSubtaskDone); `hours` sets its hours, `null` clears them (setSubtaskEstimate).
+ */
+export const updateSubtask = <ThrowOnError extends boolean = false>(options: Options<UpdateSubtaskData, ThrowOnError>): RequestResult<UpdateSubtaskResponses, UpdateSubtaskErrors, ThrowOnError> => (options.client ?? client).patch<UpdateSubtaskResponses, UpdateSubtaskErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'better-auth.session_token',
+            type: 'apiKey'
+        }],
+    url: '/tasks/{taskId}/subtasks/{subtaskId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * 採用 a suggestion
+ *
+ * At one of its bounds (`bound`, adoptSuggestion), or with the hours edited (`hours`, 直して使う, adoptEditedSuggestion, F31).
+ */
+export const adoptEstimateSuggestion = <ThrowOnError extends boolean = false>(options: Options<AdoptEstimateSuggestionData, ThrowOnError>): RequestResult<AdoptEstimateSuggestionResponses, AdoptEstimateSuggestionErrors, ThrowOnError> => (options.client ?? client).post<AdoptEstimateSuggestionResponses, AdoptEstimateSuggestionErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'better-auth.session_token',
+            type: 'apiKey'
+        }],
+    url: '/tasks/{taskId}/suggestions/{suggestionId}/adopt',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -317,24 +338,7 @@ export const undoAdoption = <ThrowOnError extends boolean = false>(options: Opti
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/undoAdoption',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * 直して使う: adopt a suggestion with the hours edited (F31)
- */
-export const adoptEditedSuggestion = <ThrowOnError extends boolean = false>(options: Options<AdoptEditedSuggestionData, ThrowOnError>): RequestResult<AdoptEditedSuggestionResponses, AdoptEditedSuggestionErrors, ThrowOnError> => (options.client ?? client).post<AdoptEditedSuggestionResponses, AdoptEditedSuggestionErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/adoptEditedSuggestion',
+    url: '/tasks/{taskId}/suggestions/{suggestionId}/undo-adoption',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -351,12 +355,8 @@ export const rejectSuggestion = <ThrowOnError extends boolean = false>(options: 
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/rejectSuggestion',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
+    url: '/tasks/{taskId}/suggestions/{suggestionId}/reject',
+    ...options
 });
 
 /**
@@ -368,60 +368,37 @@ export const undoRejection = <ThrowOnError extends boolean = false>(options: Opt
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/undoRejection',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
+    url: '/tasks/{taskId}/suggestions/{suggestionId}/undo-rejection',
+    ...options
 });
 
 /**
- * Add a Subtask
+ * The Sprint being planned
+ *
+ * `planningData`. `apply-criterion` is the screen's choice at the Check whether to apply the active criterion (a preview; nothing is written). `null` when no Sprint is being planned.
  */
-export const addSubtask = <ThrowOnError extends boolean = false>(options: Options<AddSubtaskData, ThrowOnError>): RequestResult<AddSubtaskResponses, AddSubtaskErrors, ThrowOnError> => (options.client ?? client).post<AddSubtaskResponses, AddSubtaskErrors, ThrowOnError>({
+export const getPlanning = <ThrowOnError extends boolean = false>(options?: Options<GetPlanningData, ThrowOnError>): RequestResult<GetPlanningResponses, GetPlanningErrors, ThrowOnError> => (options?.client ?? client).get<GetPlanningResponses, GetPlanningErrors, ThrowOnError>({
     security: [{
             in: 'cookie',
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/addSubtask',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
+    url: '/planning',
+    ...options
 });
 
 /**
- * Check or uncheck a Subtask
- */
-export const setSubtaskDone = <ThrowOnError extends boolean = false>(options: Options<SetSubtaskDoneData, ThrowOnError>): RequestResult<SetSubtaskDoneResponses, SetSubtaskDoneErrors, ThrowOnError> => (options.client ?? client).post<SetSubtaskDoneResponses, SetSubtaskDoneErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/setSubtaskDone',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Set a Subtask's hours
+ * Set the week's available hours while planning
  *
  * `null` clears them.
  */
-export const setSubtaskEstimate = <ThrowOnError extends boolean = false>(options: Options<SetSubtaskEstimateData, ThrowOnError>): RequestResult<SetSubtaskEstimateResponses, SetSubtaskEstimateErrors, ThrowOnError> => (options.client ?? client).post<SetSubtaskEstimateResponses, SetSubtaskEstimateErrors, ThrowOnError>({
+export const setPlanningAvailableHours = <ThrowOnError extends boolean = false>(options: Options<SetPlanningAvailableHoursData, ThrowOnError>): RequestResult<SetPlanningAvailableHoursResponses, SetPlanningAvailableHoursErrors, ThrowOnError> => (options.client ?? client).patch<SetPlanningAvailableHoursResponses, SetPlanningAvailableHoursErrors, ThrowOnError>({
     security: [{
             in: 'cookie',
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/setSubtaskEstimate',
+    url: '/planning',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -430,51 +407,30 @@ export const setSubtaskEstimate = <ThrowOnError extends boolean = false>(options
 });
 
 /**
- * Archive a Task
+ * 計画を始める for the next week not confirmed yet
  */
-export const archiveTask = <ThrowOnError extends boolean = false>(options: Options<ArchiveTaskData, ThrowOnError>): RequestResult<ArchiveTaskResponses, ArchiveTaskErrors, ThrowOnError> => (options.client ?? client).post<ArchiveTaskResponses, ArchiveTaskErrors, ThrowOnError>({
+export const beginPlanning = <ThrowOnError extends boolean = false>(options?: Options<BeginPlanningData, ThrowOnError>): RequestResult<BeginPlanningResponses, BeginPlanningErrors, ThrowOnError> => (options?.client ?? client).post<BeginPlanningResponses, BeginPlanningErrors, ThrowOnError>({
     security: [{
             in: 'cookie',
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/archiveTask',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
+    url: '/planning',
+    ...options
 });
 
 /**
- * Bring an archived Task back
- */
-export const restoreTask = <ThrowOnError extends boolean = false>(options: Options<RestoreTaskData, ThrowOnError>): RequestResult<RestoreTaskResponses, RestoreTaskErrors, ThrowOnError> => (options.client ?? client).post<RestoreTaskResponses, RestoreTaskErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/restoreTask',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * 完了にする in the Backlog
+ * 確定: start the Sprint
  *
- * With today's selection when the Task is in the running Sprint.
+ * The plan is fixed (planSnapshot) with or without the active criterion.
  */
-export const completeTask = <ThrowOnError extends boolean = false>(options: Options<CompleteTaskData, ThrowOnError>): RequestResult<CompleteTaskResponses, CompleteTaskErrors, ThrowOnError> => (options.client ?? client).post<CompleteTaskResponses, CompleteTaskErrors, ThrowOnError>({
+export const confirmSprint = <ThrowOnError extends boolean = false>(options: Options<ConfirmSprintData, ThrowOnError>): RequestResult<ConfirmSprintResponses, ConfirmSprintErrors, ThrowOnError> => (options.client ?? client).post<ConfirmSprintResponses, ConfirmSprintErrors, ThrowOnError>({
     security: [{
             in: 'cookie',
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/completeTask',
+    url: '/planning/confirm',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -483,15 +439,15 @@ export const completeTask = <ThrowOnError extends boolean = false>(options: Opti
 });
 
 /**
- * Take back 完了にする in the Backlog
+ * Set an Area's Goal while planning
  */
-export const undoCompleteTask = <ThrowOnError extends boolean = false>(options: Options<UndoCompleteTaskData, ThrowOnError>): RequestResult<UndoCompleteTaskResponses, UndoCompleteTaskErrors, ThrowOnError> => (options.client ?? client).post<UndoCompleteTaskResponses, UndoCompleteTaskErrors, ThrowOnError>({
+export const setPlanningGoal = <ThrowOnError extends boolean = false>(options: Options<SetPlanningGoalData, ThrowOnError>): RequestResult<SetPlanningGoalResponses, SetPlanningGoalErrors, ThrowOnError> => (options.client ?? client).put<SetPlanningGoalResponses, SetPlanningGoalErrors, ThrowOnError>({
     security: [{
             in: 'cookie',
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/undoCompleteTask',
+    url: '/planning/goals/{areaId}',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -500,88 +456,18 @@ export const undoCompleteTask = <ThrowOnError extends boolean = false>(options: 
 });
 
 /**
- * 今日へ for a Task outside the running Sprint
+ * Take SprintTasks out of the plan
+ *
+ * Exactly one of the two: `ids`, the SprintTasks (unchooseTasks), or `task-ids`, their Tasks: 元に戻す after choosing them (unchooseTasksByTask).
  */
-export const addTaskToToday = <ThrowOnError extends boolean = false>(options: Options<AddTaskToTodayData, ThrowOnError>): RequestResult<AddTaskToTodayResponses, AddTaskToTodayErrors, ThrowOnError> => (options.client ?? client).post<AddTaskToTodayResponses, AddTaskToTodayErrors, ThrowOnError>({
+export const unchoosePlanningTasks = <ThrowOnError extends boolean = false>(options?: Options<UnchoosePlanningTasksData, ThrowOnError>): RequestResult<UnchoosePlanningTasksResponses, UnchoosePlanningTasksErrors, ThrowOnError> => (options?.client ?? client).delete<UnchoosePlanningTasksResponses, UnchoosePlanningTasksErrors, ThrowOnError>({
     security: [{
             in: 'cookie',
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/addTaskToToday',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * 今週へ for a Task outside the running Sprint (#155)
- */
-export const addTaskToWeek = <ThrowOnError extends boolean = false>(options: Options<AddTaskToWeekData, ThrowOnError>): RequestResult<AddTaskToWeekResponses, AddTaskToWeekErrors, ThrowOnError> => (options.client ?? client).post<AddTaskToWeekResponses, AddTaskToWeekErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/addTaskToWeek',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Take back 今週へ
- */
-export const undoAddTaskToWeek = <ThrowOnError extends boolean = false>(options: Options<UndoAddTaskToWeekData, ThrowOnError>): RequestResult<UndoAddTaskToWeekResponses, UndoAddTaskToWeekErrors, ThrowOnError> => (options.client ?? client).post<UndoAddTaskToWeekResponses, UndoAddTaskToWeekErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/undoAddTaskToWeek',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Set or change a Task's recurrence
- */
-export const setRecurrence = <ThrowOnError extends boolean = false>(options: Options<SetRecurrenceData, ThrowOnError>): RequestResult<SetRecurrenceResponses, SetRecurrenceErrors, ThrowOnError> => (options.client ?? client).post<SetRecurrenceResponses, SetRecurrenceErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/setRecurrence',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * End a Task's recurrence
- */
-export const endRecurrence = <ThrowOnError extends boolean = false>(options: Options<EndRecurrenceData, ThrowOnError>): RequestResult<EndRecurrenceResponses, EndRecurrenceErrors, ThrowOnError> => (options.client ?? client).post<EndRecurrenceResponses, EndRecurrenceErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/endRecurrence',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
+    url: '/planning/tasks',
+    ...options
 });
 
 /**
@@ -593,7 +479,7 @@ export const chooseTasks = <ThrowOnError extends boolean = false>(options: Optio
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/chooseTasks',
+    url: '/planning/tasks',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -602,66 +488,15 @@ export const chooseTasks = <ThrowOnError extends boolean = false>(options: Optio
 });
 
 /**
- * Take SprintTasks out of the plan
+ * Link a SprintTask to its Goal or not
  */
-export const unchooseTasks = <ThrowOnError extends boolean = false>(options: Options<UnchooseTasksData, ThrowOnError>): RequestResult<UnchooseTasksResponses, UnchooseTasksErrors, ThrowOnError> => (options.client ?? client).post<UnchooseTasksResponses, UnchooseTasksErrors, ThrowOnError>({
+export const setGoalLink = <ThrowOnError extends boolean = false>(options: Options<SetGoalLinkData, ThrowOnError>): RequestResult<SetGoalLinkResponses, SetGoalLinkErrors, ThrowOnError> => (options.client ?? client).patch<SetGoalLinkResponses, SetGoalLinkErrors, ThrowOnError>({
     security: [{
             in: 'cookie',
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/unchooseTasks',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * 元に戻す after chooseTasks
- */
-export const unchooseTasksByTask = <ThrowOnError extends boolean = false>(options: Options<UnchooseTasksByTaskData, ThrowOnError>): RequestResult<UnchooseTasksByTaskResponses, UnchooseTasksByTaskErrors, ThrowOnError> => (options.client ?? client).post<UnchooseTasksByTaskResponses, UnchooseTasksByTaskErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/unchooseTasksByTask',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Include or leave out one occurrence
- */
-export const setOccurrenceIncluded = <ThrowOnError extends boolean = false>(options: Options<SetOccurrenceIncludedData, ThrowOnError>): RequestResult<SetOccurrenceIncludedResponses, SetOccurrenceIncludedErrors, ThrowOnError> => (options.client ?? client).post<SetOccurrenceIncludedResponses, SetOccurrenceIncludedErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/setOccurrenceIncluded',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Include occurrences
- */
-export const includeOccurrences = <ThrowOnError extends boolean = false>(options: Options<IncludeOccurrencesData, ThrowOnError>): RequestResult<IncludeOccurrencesResponses, IncludeOccurrencesErrors, ThrowOnError> => (options.client ?? client).post<IncludeOccurrencesResponses, IncludeOccurrencesErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/includeOccurrences',
+    url: '/planning/tasks/{sprintTaskId}',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -678,77 +513,22 @@ export const excludeAllOccurrences = <ThrowOnError extends boolean = false>(opti
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/excludeAllOccurrences',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
+    url: '/planning/tasks/{sprintTaskId}/exclude-occurrences',
+    ...options
 });
 
 /**
- * Planning で追加: a new Task, chosen at once
- */
-export const createAndChooseTask = <ThrowOnError extends boolean = false>(options: Options<CreateAndChooseTaskData, ThrowOnError>): RequestResult<CreateAndChooseTaskResponses, CreateAndChooseTaskErrors, ThrowOnError> => (options.client ?? client).post<CreateAndChooseTaskResponses, CreateAndChooseTaskErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/createAndChooseTask',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Set an Area's Goal while planning
- */
-export const setPlanningGoal = <ThrowOnError extends boolean = false>(options: Options<SetPlanningGoalData, ThrowOnError>): RequestResult<SetPlanningGoalResponses, SetPlanningGoalErrors, ThrowOnError> => (options.client ?? client).post<SetPlanningGoalResponses, SetPlanningGoalErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/setPlanningGoal',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Link a SprintTask to its Goal or not
- */
-export const setGoalLink = <ThrowOnError extends boolean = false>(options: Options<SetGoalLinkData, ThrowOnError>): RequestResult<SetGoalLinkResponses, SetGoalLinkErrors, ThrowOnError> => (options.client ?? client).post<SetGoalLinkResponses, SetGoalLinkErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/setGoalLink',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Set the week's available hours while planning
+ * Include occurrences
  *
- * `null` clears them.
+ * 元に戻す after leaving out all of a SprintTask's occurrences.
  */
-export const setPlanningAvailableHours = <ThrowOnError extends boolean = false>(options: Options<SetPlanningAvailableHoursData, ThrowOnError>): RequestResult<SetPlanningAvailableHoursResponses, SetPlanningAvailableHoursErrors, ThrowOnError> => (options.client ?? client).post<SetPlanningAvailableHoursResponses, SetPlanningAvailableHoursErrors, ThrowOnError>({
+export const includeOccurrences = <ThrowOnError extends boolean = false>(options: Options<IncludeOccurrencesData, ThrowOnError>): RequestResult<IncludeOccurrencesResponses, IncludeOccurrencesErrors, ThrowOnError> => (options.client ?? client).post<IncludeOccurrencesResponses, IncludeOccurrencesErrors, ThrowOnError>({
     security: [{
             in: 'cookie',
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/setPlanningAvailableHours',
+    url: '/planning/occurrences/include',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -757,34 +537,34 @@ export const setPlanningAvailableHours = <ThrowOnError extends boolean = false>(
 });
 
 /**
- * 確定: start the Sprint
+ * Include or leave out one occurrence
+ */
+export const setOccurrenceIncluded = <ThrowOnError extends boolean = false>(options: Options<SetOccurrenceIncludedData, ThrowOnError>): RequestResult<SetOccurrenceIncludedResponses, SetOccurrenceIncludedErrors, ThrowOnError> => (options.client ?? client).patch<SetOccurrenceIncludedResponses, SetOccurrenceIncludedErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'better-auth.session_token',
+            type: 'apiKey'
+        }],
+    url: '/planning/occurrences/{occurrenceId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Choose for today
  *
- * The plan is fixed (planSnapshot) with or without the active criterion.
+ * A SprintTask (or an occurrence of it) of the running Sprint (`sprintTaskId`, chooseForToday), or a Task outside it, put in the Sprint too (`taskId`, 今日へ, addTaskToToday).
  */
-export const confirmSprint = <ThrowOnError extends boolean = false>(options: Options<ConfirmSprintData, ThrowOnError>): RequestResult<ConfirmSprintResponses, ConfirmSprintErrors, ThrowOnError> => (options.client ?? client).post<ConfirmSprintResponses, ConfirmSprintErrors, ThrowOnError>({
+export const createDailySelection = <ThrowOnError extends boolean = false>(options: Options<CreateDailySelectionData, ThrowOnError>): RequestResult<CreateDailySelectionResponses, CreateDailySelectionErrors, ThrowOnError> => (options.client ?? client).post<CreateDailySelectionResponses, CreateDailySelectionErrors, ThrowOnError>({
     security: [{
             in: 'cookie',
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/confirmSprint',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Choose a SprintTask (or an occurrence of it) for today
- */
-export const chooseForToday = <ThrowOnError extends boolean = false>(options: Options<ChooseForTodayData, ThrowOnError>): RequestResult<ChooseForTodayResponses, ChooseForTodayErrors, ThrowOnError> => (options.client ?? client).post<ChooseForTodayResponses, ChooseForTodayErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/chooseForToday',
+    url: '/today/selections',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -801,7 +581,22 @@ export const startSelection = <ThrowOnError extends boolean = false>(options: Op
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/startSelection',
+    url: '/today/selections/{selectionId}/start',
+    ...options
+});
+
+/**
+ * 今日は中断する
+ *
+ * With the actual hours so far, if given.
+ */
+export const pauseSelection = <ThrowOnError extends boolean = false>(options: Options<PauseSelectionData, ThrowOnError>): RequestResult<PauseSelectionResponses, PauseSelectionErrors, ThrowOnError> => (options.client ?? client).post<PauseSelectionResponses, PauseSelectionErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'better-auth.session_token',
+            type: 'apiKey'
+        }],
+    url: '/today/selections/{selectionId}/pause',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -818,12 +613,8 @@ export const deferSelection = <ThrowOnError extends boolean = false>(options: Op
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/deferSelection',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
+    url: '/today/selections/{selectionId}/defer',
+    ...options
 });
 
 /**
@@ -835,48 +626,8 @@ export const removeFromToday = <ThrowOnError extends boolean = false>(options: O
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/removeFromToday',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Take back 見送り or 今週の残りに戻す, today only
- */
-export const undoCloseSelection = <ThrowOnError extends boolean = false>(options: Options<UndoCloseSelectionData, ThrowOnError>): RequestResult<UndoCloseSelectionResponses, UndoCloseSelectionErrors, ThrowOnError> => (options.client ?? client).post<UndoCloseSelectionResponses, UndoCloseSelectionErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/undoCloseSelection',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * 今日は中断する
- *
- * With the actual hours so far, if given.
- */
-export const pauseSelection = <ThrowOnError extends boolean = false>(options: Options<PauseSelectionData, ThrowOnError>): RequestResult<PauseSelectionResponses, PauseSelectionErrors, ThrowOnError> => (options.client ?? client).post<PauseSelectionResponses, PauseSelectionErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/pauseSelection',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
+    url: '/today/selections/{selectionId}/remove',
+    ...options
 });
 
 /**
@@ -888,29 +639,8 @@ export const completeSelection = <ThrowOnError extends boolean = false>(options:
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/completeSelection',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Take back a completion today
- */
-export const undoCompleteSelection = <ThrowOnError extends boolean = false>(options: Options<UndoCompleteSelectionData, ThrowOnError>): RequestResult<UndoCompleteSelectionResponses, UndoCompleteSelectionErrors, ThrowOnError> => (options.client ?? client).post<UndoCompleteSelectionResponses, UndoCompleteSelectionErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/undoCompleteSelection',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
+    url: '/today/selections/{selectionId}/complete',
+    ...options
 });
 
 /**
@@ -922,12 +652,34 @@ export const skipSelection = <ThrowOnError extends boolean = false>(options: Opt
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/skipSelection',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
+    url: '/today/selections/{selectionId}/skip',
+    ...options
+});
+
+/**
+ * Take back 見送り or 今週の残りに戻す, today only
+ */
+export const undoCloseSelection = <ThrowOnError extends boolean = false>(options: Options<UndoCloseSelectionData, ThrowOnError>): RequestResult<UndoCloseSelectionResponses, UndoCloseSelectionErrors, ThrowOnError> => (options.client ?? client).post<UndoCloseSelectionResponses, UndoCloseSelectionErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'better-auth.session_token',
+            type: 'apiKey'
+        }],
+    url: '/today/selections/{selectionId}/undo-close',
+    ...options
+});
+
+/**
+ * Take back a completion today
+ */
+export const undoCompleteSelection = <ThrowOnError extends boolean = false>(options: Options<UndoCompleteSelectionData, ThrowOnError>): RequestResult<UndoCompleteSelectionResponses, UndoCompleteSelectionErrors, ThrowOnError> => (options.client ?? client).post<UndoCompleteSelectionResponses, UndoCompleteSelectionErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'better-auth.session_token',
+            type: 'apiKey'
+        }],
+    url: '/today/selections/{selectionId}/undo-complete',
+    ...options
 });
 
 /**
@@ -939,16 +691,14 @@ export const undoSkipSelection = <ThrowOnError extends boolean = false>(options:
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/undoSkipSelection',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
+    url: '/today/selections/{selectionId}/undo-skip',
+    ...options
 });
 
 /**
  * Record a choice's actual hours, on its day
+ *
+ * Added to what is recorded; nothing is returned to refer to it.
  */
 export const recordSelectionActual = <ThrowOnError extends boolean = false>(options: Options<RecordSelectionActualData, ThrowOnError>): RequestResult<RecordSelectionActualResponses, RecordSelectionActualErrors, ThrowOnError> => (options.client ?? client).post<RecordSelectionActualResponses, RecordSelectionActualErrors, ThrowOnError>({
     security: [{
@@ -956,7 +706,7 @@ export const recordSelectionActual = <ThrowOnError extends boolean = false>(opti
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/recordSelectionActual',
+    url: '/today/selections/{selectionId}/actuals',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -975,26 +725,7 @@ export const noteInterrupt = <ThrowOnError extends boolean = false>(options: Opt
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/noteInterrupt',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * 割り込みを編集
- *
- * Its note and minutes; the time stays (F38).
- */
-export const editInterrupt = <ThrowOnError extends boolean = false>(options: Options<EditInterruptData, ThrowOnError>): RequestResult<EditInterruptResponses, EditInterruptErrors, ThrowOnError> => (options.client ?? client).post<EditInterruptResponses, EditInterruptErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/editInterrupt',
+    url: '/today/interrupts',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1005,13 +736,28 @@ export const editInterrupt = <ThrowOnError extends boolean = false>(options: Opt
 /**
  * 割り込みを消す (F38)
  */
-export const deleteInterrupt = <ThrowOnError extends boolean = false>(options: Options<DeleteInterruptData, ThrowOnError>): RequestResult<DeleteInterruptResponses, DeleteInterruptErrors, ThrowOnError> => (options.client ?? client).post<DeleteInterruptResponses, DeleteInterruptErrors, ThrowOnError>({
+export const deleteInterrupt = <ThrowOnError extends boolean = false>(options: Options<DeleteInterruptData, ThrowOnError>): RequestResult<DeleteInterruptResponses, DeleteInterruptErrors, ThrowOnError> => (options.client ?? client).delete<DeleteInterruptResponses, DeleteInterruptErrors, ThrowOnError>({
     security: [{
             in: 'cookie',
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/deleteInterrupt',
+    url: '/today/interrupts/{interruptNoteId}',
+    ...options
+});
+
+/**
+ * 割り込みを編集
+ *
+ * Its note and minutes; the time stays (F38). Without `minutes`, it has none.
+ */
+export const editInterrupt = <ThrowOnError extends boolean = false>(options: Options<EditInterruptData, ThrowOnError>): RequestResult<EditInterruptResponses, EditInterruptErrors, ThrowOnError> => (options.client ?? client).patch<EditInterruptResponses, EditInterruptErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'better-auth.session_token',
+            type: 'apiKey'
+        }],
+    url: '/today/interrupts/{interruptNoteId}',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1022,15 +768,15 @@ export const deleteInterrupt = <ThrowOnError extends boolean = false>(options: O
 /**
  * 元に戻す after 割り込みを消す
  *
- * The client sends back the note as the read gave it, with its ID and time: the same note returns to its place (ADR 0006). Refused if a note with that ID is there, or if it was noted later than now.
+ * The client sends back the note as the read gave it, its ID in the path: the same note returns to its place (ADR 0006). Refused if a note with that ID is there, or if it was noted later than now.
  */
-export const restoreInterrupt = <ThrowOnError extends boolean = false>(options: Options<RestoreInterruptData, ThrowOnError>): RequestResult<RestoreInterruptResponses, RestoreInterruptErrors, ThrowOnError> => (options.client ?? client).post<RestoreInterruptResponses, RestoreInterruptErrors, ThrowOnError>({
+export const restoreInterrupt = <ThrowOnError extends boolean = false>(options: Options<RestoreInterruptData, ThrowOnError>): RequestResult<RestoreInterruptResponses, RestoreInterruptErrors, ThrowOnError> => (options.client ?? client).put<RestoreInterruptResponses, RestoreInterruptErrors, ThrowOnError>({
     security: [{
             in: 'cookie',
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/restoreInterrupt',
+    url: '/today/interrupts/{interruptNoteId}',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1039,15 +785,124 @@ export const restoreInterrupt = <ThrowOnError extends boolean = false>(options: 
 });
 
 /**
- * Today's quick add: a new Task, in the Sprint and chosen for today
+ * A confirmed Sprint's plan and how it went
+ *
+ * `runningData`: the Sprint with the number asked for, else the running one. `null` for a Sprint still being planned, a number with no Sprint, or no running Sprint.
  */
-export const createTaskForToday = <ThrowOnError extends boolean = false>(options: Options<CreateTaskForTodayData, ThrowOnError>): RequestResult<CreateTaskForTodayResponses, CreateTaskForTodayErrors, ThrowOnError> => (options.client ?? client).post<CreateTaskForTodayResponses, CreateTaskForTodayErrors, ThrowOnError>({
+export const getRunning = <ThrowOnError extends boolean = false>(options?: Options<GetRunningData, ThrowOnError>): RequestResult<GetRunningResponses, GetRunningErrors, ThrowOnError> => (options?.client ?? client).get<GetRunningResponses, GetRunningErrors, ThrowOnError>({
     security: [{
             in: 'cookie',
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/createTaskForToday',
+    url: '/running',
+    ...options
+});
+
+/**
+ * Change the week's available hours while the Sprint runs
+ *
+ * `null` clears them.
+ */
+export const setRunningAvailableHours = <ThrowOnError extends boolean = false>(options: Options<SetRunningAvailableHoursData, ThrowOnError>): RequestResult<SetRunningAvailableHoursResponses, SetRunningAvailableHoursErrors, ThrowOnError> => (options.client ?? client).patch<SetRunningAvailableHoursResponses, SetRunningAvailableHoursErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'better-auth.session_token',
+            type: 'apiKey'
+        }],
+    url: '/running',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Change an Area's Goal while the Sprint runs
+ */
+export const setRunningGoal = <ThrowOnError extends boolean = false>(options: Options<SetRunningGoalData, ThrowOnError>): RequestResult<SetRunningGoalResponses, SetRunningGoalErrors, ThrowOnError> => (options.client ?? client).put<SetRunningGoalResponses, SetRunningGoalErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'better-auth.session_token',
+            type: 'apiKey'
+        }],
+    url: '/running/goals/{areaId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Take back 今週へ
+ */
+export const undoAddTaskToWeek = <ThrowOnError extends boolean = false>(options: Options<UndoAddTaskToWeekData, ThrowOnError>): RequestResult<UndoAddTaskToWeekResponses, UndoAddTaskToWeekErrors, ThrowOnError> => (options.client ?? client).delete<UndoAddTaskToWeekResponses, UndoAddTaskToWeekErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'better-auth.session_token',
+            type: 'apiKey'
+        }],
+    url: '/running/tasks/{taskId}',
+    ...options
+});
+
+/**
+ * 今週へ for a Task outside the running Sprint (#155)
+ *
+ * The path takes the Task's ID: a Task is in the running Sprint once.
+ */
+export const addTaskToWeek = <ThrowOnError extends boolean = false>(options: Options<AddTaskToWeekData, ThrowOnError>): RequestResult<AddTaskToWeekResponses, AddTaskToWeekErrors, ThrowOnError> => (options.client ?? client).put<AddTaskToWeekResponses, AddTaskToWeekErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'better-auth.session_token',
+            type: 'apiKey'
+        }],
+    url: '/running/tasks/{taskId}',
+    ...options
+});
+
+/**
+ * Take back a past day's completion or skip (#53)
+ */
+export const undoPastDay = <ThrowOnError extends boolean = false>(options: Options<UndoPastDayData, ThrowOnError>): RequestResult<UndoPastDayResponses, UndoPastDayErrors, ThrowOnError> => (options.client ?? client).post<UndoPastDayResponses, UndoPastDayErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'better-auth.session_token',
+            type: 'apiKey'
+        }],
+    url: '/running/selections/{selectionId}/undo',
+    ...options
+});
+
+/**
+ * A confirmed Sprint's Retro
+ *
+ * `retroData`: the Retro of the Sprint with the number asked for, once its Retro has started (in Review or closed; a closed one is read only), else of the Sprint in Review. `null` before its Retro starts, for a number with no Sprint, or with no Sprint in Review.
+ */
+export const getRetro = <ThrowOnError extends boolean = false>(options?: Options<GetRetroData, ThrowOnError>): RequestResult<GetRetroResponses, GetRetroErrors, ThrowOnError> => (options?.client ?? client).get<GetRetroResponses, GetRetroErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'better-auth.session_token',
+            type: 'apiKey'
+        }],
+    url: '/retro',
+    ...options
+});
+
+/**
+ * Write the Retro
+ *
+ * One change a request: `reflection` (setReflection), `improvement` (setImprovement), or `criterionDecision`, 続ける / 終える / 置き換える for the criterion this Sprint had (decideCriterion).
+ */
+export const updateRetro = <ThrowOnError extends boolean = false>(options: Options<UpdateRetroData, ThrowOnError>): RequestResult<UpdateRetroResponses, UpdateRetroErrors, ThrowOnError> => (options.client ?? client).patch<UpdateRetroResponses, UpdateRetroErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'better-auth.session_token',
+            type: 'apiKey'
+        }],
+    url: '/retro',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1064,61 +919,21 @@ export const beginRetro = <ThrowOnError extends boolean = false>(options?: Optio
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/beginRetro',
+    url: '/retro/begin',
     ...options
 });
 
 /**
- * Change an Area's Goal while the Sprint runs
+ * Complete the Retro
  */
-export const setRunningGoal = <ThrowOnError extends boolean = false>(options: Options<SetRunningGoalData, ThrowOnError>): RequestResult<SetRunningGoalResponses, SetRunningGoalErrors, ThrowOnError> => (options.client ?? client).post<SetRunningGoalResponses, SetRunningGoalErrors, ThrowOnError>({
+export const completeRetro = <ThrowOnError extends boolean = false>(options?: Options<CompleteRetroData, ThrowOnError>): RequestResult<CompleteRetroResponses, CompleteRetroErrors, ThrowOnError> => (options?.client ?? client).post<CompleteRetroResponses, CompleteRetroErrors, ThrowOnError>({
     security: [{
             in: 'cookie',
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/setRunningGoal',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Change the week's available hours while the Sprint runs
- *
- * `null` clears them.
- */
-export const setRunningAvailableHours = <ThrowOnError extends boolean = false>(options: Options<SetRunningAvailableHoursData, ThrowOnError>): RequestResult<SetRunningAvailableHoursResponses, SetRunningAvailableHoursErrors, ThrowOnError> => (options.client ?? client).post<SetRunningAvailableHoursResponses, SetRunningAvailableHoursErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/setRunningAvailableHours',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Take back a past day's completion or skip (#53)
- */
-export const undoPastDay = <ThrowOnError extends boolean = false>(options: Options<UndoPastDayData, ThrowOnError>): RequestResult<UndoPastDayResponses, UndoPastDayErrors, ThrowOnError> => (options.client ?? client).post<UndoPastDayResponses, UndoPastDayErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/undoPastDay',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
+    url: '/retro/complete',
+    ...options
 });
 
 /**
@@ -1126,13 +941,13 @@ export const undoPastDay = <ThrowOnError extends boolean = false>(options: Optio
  *
  * `null` clears the assessment.
  */
-export const assessGoal = <ThrowOnError extends boolean = false>(options: Options<AssessGoalData, ThrowOnError>): RequestResult<AssessGoalResponses, AssessGoalErrors, ThrowOnError> => (options.client ?? client).post<AssessGoalResponses, AssessGoalErrors, ThrowOnError>({
+export const assessGoal = <ThrowOnError extends boolean = false>(options: Options<AssessGoalData, ThrowOnError>): RequestResult<AssessGoalResponses, AssessGoalErrors, ThrowOnError> => (options.client ?? client).patch<AssessGoalResponses, AssessGoalErrors, ThrowOnError>({
     security: [{
             in: 'cookie',
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/assessGoal',
+    url: '/retro/goals/{areaId}',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1141,49 +956,58 @@ export const assessGoal = <ThrowOnError extends boolean = false>(options: Option
 });
 
 /**
- * Pin or unpin a fact
+ * Unpin a fact
+ *
+ * Not pinned, nothing changes.
  */
-export const togglePin = <ThrowOnError extends boolean = false>(options: Options<TogglePinData, ThrowOnError>): RequestResult<TogglePinResponses, TogglePinErrors, ThrowOnError> => (options.client ?? client).post<TogglePinResponses, TogglePinErrors, ThrowOnError>({
+export const unpinFact = <ThrowOnError extends boolean = false>(options: Options<UnpinFactData, ThrowOnError>): RequestResult<UnpinFactResponses, UnpinFactErrors, ThrowOnError> => (options.client ?? client).delete<UnpinFactResponses, UnpinFactErrors, ThrowOnError>({
     security: [{
             in: 'cookie',
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/togglePin',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
+    url: '/retro/pins/{pin}',
+    ...options
 });
 
 /**
- * Write the reflection
+ * Pin a fact
+ *
+ * Pinned already, nothing changes.
  */
-export const setReflection = <ThrowOnError extends boolean = false>(options: Options<SetReflectionData, ThrowOnError>): RequestResult<SetReflectionResponses, SetReflectionErrors, ThrowOnError> => (options.client ?? client).post<SetReflectionResponses, SetReflectionErrors, ThrowOnError>({
+export const pinFact = <ThrowOnError extends boolean = false>(options: Options<PinFactData, ThrowOnError>): RequestResult<PinFactResponses, PinFactErrors, ThrowOnError> => (options.client ?? client).put<PinFactResponses, PinFactErrors, ThrowOnError>({
     security: [{
             in: 'cookie',
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/setReflection',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
+    url: '/retro/pins/{pin}',
+    ...options
 });
 
 /**
- * Write the improvement
+ * Drop the draft criterion
  */
-export const setImprovement = <ThrowOnError extends boolean = false>(options: Options<SetImprovementData, ThrowOnError>): RequestResult<SetImprovementResponses, SetImprovementErrors, ThrowOnError> => (options.client ?? client).post<SetImprovementResponses, SetImprovementErrors, ThrowOnError>({
+export const dropCriterionDraft = <ThrowOnError extends boolean = false>(options?: Options<DropCriterionDraftData, ThrowOnError>): RequestResult<DropCriterionDraftResponses, DropCriterionDraftErrors, ThrowOnError> => (options?.client ?? client).delete<DropCriterionDraftResponses, DropCriterionDraftErrors, ThrowOnError>({
     security: [{
             in: 'cookie',
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/setImprovement',
+    url: '/retro/draft-criterion',
+    ...options
+});
+
+/**
+ * Change the draft criterion's policy
+ */
+export const setDraftPolicy = <ThrowOnError extends boolean = false>(options: Options<SetDraftPolicyData, ThrowOnError>): RequestResult<SetDraftPolicyResponses, SetDraftPolicyErrors, ThrowOnError> => (options.client ?? client).patch<SetDraftPolicyResponses, SetDraftPolicyErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'better-auth.session_token',
+            type: 'apiKey'
+        }],
+    url: '/retro/draft-criterion',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1200,54 +1024,7 @@ export const draftCriterion = <ThrowOnError extends boolean = false>(options: Op
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/draftCriterion',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Change the draft criterion's policy
- */
-export const setDraftPolicy = <ThrowOnError extends boolean = false>(options: Options<SetDraftPolicyData, ThrowOnError>): RequestResult<SetDraftPolicyResponses, SetDraftPolicyErrors, ThrowOnError> => (options.client ?? client).post<SetDraftPolicyResponses, SetDraftPolicyErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/setDraftPolicy',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Drop the draft criterion
- */
-export const dropCriterionDraft = <ThrowOnError extends boolean = false>(options?: Options<DropCriterionDraftData, ThrowOnError>): RequestResult<DropCriterionDraftResponses, DropCriterionDraftErrors, ThrowOnError> => (options?.client ?? client).post<DropCriterionDraftResponses, DropCriterionDraftErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/dropCriterionDraft',
-    ...options
-});
-
-/**
- * 続ける / 終える / 置き換える for the criterion this Sprint had
- */
-export const decideCriterion = <ThrowOnError extends boolean = false>(options: Options<DecideCriterionData, ThrowOnError>): RequestResult<DecideCriterionResponses, DecideCriterionErrors, ThrowOnError> => (options.client ?? client).post<DecideCriterionResponses, DecideCriterionErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/decideCriterion',
+    url: '/retro/draft-criterion',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1257,6 +1034,8 @@ export const decideCriterion = <ThrowOnError extends boolean = false>(options: O
 
 /**
  * Add actual hours in Review (F22)
+ *
+ * Added to what is recorded; nothing is returned to refer to it.
  */
 export const recordReviewActual = <ThrowOnError extends boolean = false>(options: Options<RecordReviewActualData, ThrowOnError>): RequestResult<RecordReviewActualResponses, RecordReviewActualErrors, ThrowOnError> => (options.client ?? client).post<RecordReviewActualResponses, RecordReviewActualErrors, ThrowOnError>({
     security: [{
@@ -1264,36 +1043,10 @@ export const recordReviewActual = <ThrowOnError extends boolean = false>(options
             name: 'better-auth.session_token',
             type: 'apiKey'
         }],
-    url: '/operations/recordReviewActual',
+    url: '/retro/actuals',
     ...options,
     headers: {
         'Content-Type': 'application/json',
         ...options.headers
     }
-});
-
-/**
- * Complete the Retro
- */
-export const completeRetro = <ThrowOnError extends boolean = false>(options?: Options<CompleteRetroData, ThrowOnError>): RequestResult<CompleteRetroResponses, CompleteRetroErrors, ThrowOnError> => (options?.client ?? client).post<CompleteRetroResponses, CompleteRetroErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/completeRetro',
-    ...options
-});
-
-/**
- * 計画を始める for the next week not confirmed yet
- */
-export const beginPlanning = <ThrowOnError extends boolean = false>(options?: Options<BeginPlanningData, ThrowOnError>): RequestResult<BeginPlanningResponses, BeginPlanningErrors, ThrowOnError> => (options?.client ?? client).post<BeginPlanningResponses, BeginPlanningErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'better-auth.session_token',
-            type: 'apiKey'
-        }],
-    url: '/operations/beginPlanning',
-    ...options
 });

@@ -17,7 +17,7 @@ type ReflectPaneProps = {
   data: RetroData;
   /** A closed Retro: the words as they were written (#90). */
   readOnly?: boolean | undefined;
-  onPin: (pin: RetroPin) => void;
+  onPin: (pin: RetroPin, on: boolean) => void;
   onReflect: (text: string) => boolean;
   onImprove: (text: string) => boolean;
   /** The materials sit here below 1200px; beside the facts above it. */

@@ -7,6 +7,7 @@ import {
   vGetMeResponse,
   vGetOverviewResponse,
 } from '@itera/api-contract';
+import { OPERATION_EXAMPLES } from '@itera/api-contract/testing';
 import { createIdSource, type Records } from '@itera/application';
 import { localDate, timeZone, type UserId } from '@itera/domain';
 import { DrizzleQueryError } from 'drizzle-orm';
@@ -20,6 +21,7 @@ import { createMemoryDatabase } from '../db/memory-database';
 import { saveRecords } from '../db/save-records';
 import { activity, user as authUser } from '../db/schema';
 import { testDependencies, testEnv, testNow, testOrigin } from '../test-env';
+import { httpRequest } from './operation-cases';
 import { maxBodyBytes, unimplementedOperations } from './operations';
 
 const ids = createIdSource((bytes) => crypto.getRandomValues(bytes));
@@ -95,14 +97,14 @@ async function setup({
 
 type App = Awaited<ReturnType<typeof setup>>['app'];
 
+/** `createArea`: `POST /api/areas` with the body (a string as it is). */
 function post(
   app: App,
-  name: string,
   body: unknown,
   headers: Record<string, string> = { Origin: testOrigin },
 ) {
   return app.request(
-    `/api/operations/${name}`,
+    '/api/areas',
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
@@ -123,8 +125,8 @@ async function errorOf(response: Response) {
 describe('an operation', () => {
   it('loads, runs, writes and answers with what the contract says', async () => {
     const { app, db } = await setup();
-    const response = await post(app, 'createArea', { name: '仕事' });
-    expect(response.status).toBe(200);
+    const response = await post(app, { name: '仕事' });
+    expect(response.status).toBe(201);
     const body = v.parse(vCreateAreaResponse, await response.json());
 
     const { revision, records } = await loadRecords(db, alice);
@@ -151,7 +153,7 @@ describe('an operation', () => {
 
   it('answers 401 without a session, before the Origin check', async () => {
     const { app } = await setup({ signedIn: null });
-    const response = await post(app, 'createArea', { name: '仕事' }, {});
+    const response = await post(app, { name: '仕事' }, {});
     expect(await errorOf(response)).toMatchObject({
       status: 401,
       code: 'unauthenticated',
@@ -164,7 +166,7 @@ describe('an operation', () => {
     ['from another port', { Origin: 'http://localhost:5841' }],
   ])('answers 403 to a write %s, writing nothing', async (_, headers) => {
     const { app, db } = await setup();
-    const response = await post(app, 'createArea', { name: '仕事' }, headers);
+    const response = await post(app, { name: '仕事' }, headers);
     expect(await errorOf(response)).toMatchObject({
       status: 403,
       code: 'forbiddenOrigin',
@@ -177,13 +179,40 @@ describe('an operation', () => {
   });
 
   it.each([
+    ['PUT', 'completeTask'],
+    ['PATCH', 'renameArea'],
+    ['DELETE', 'undoAddTaskToWeek'],
+  ] as const)(
+    'answers 403 to a %s (%s) from another origin, writing nothing',
+    async (method, name) => {
+      const { app, db } = await setup();
+      const [input] = OPERATION_EXAMPLES[name];
+      const { url, init } = httpRequest(name, input);
+      expect(init.method).toBe(method);
+      const response = await app.request(
+        url,
+        {
+          ...init,
+          headers: { ...init.headers, Origin: 'https://evil.example' },
+        },
+        testEnv,
+      );
+      expect(await errorOf(response)).toMatchObject({
+        status: 403,
+        code: 'forbiddenOrigin',
+      });
+      expect((await loadRecords(db, alice)).revision).toBe(1);
+    },
+  );
+
+  it.each([
     ['a wrong type', { name: 1 }],
     ['a missing property', {}],
     ['an unknown property', { name: '仕事', color: 3 }],
     ['a body that is not JSON', '{"name":'],
   ])('answers 400 to %s, writing nothing', async (_, body) => {
     const { app, db } = await setup();
-    const response = await post(app, 'createArea', body);
+    const response = await post(app, body);
     expect(await errorOf(response)).toMatchObject({
       status: 400,
       code: 'validationFailed',
@@ -194,7 +223,7 @@ describe('an operation', () => {
   it('answers 413 to a body larger than the limit', async () => {
     const { app } = await setup();
     const name = 'あ'.repeat(maxBodyBytes / 3 + 1);
-    const response = await post(app, 'createArea', { name });
+    const response = await post(app, { name });
     expect(await errorOf(response)).toMatchObject({
       status: 413,
       code: 'payloadTooLarge',
@@ -203,7 +232,7 @@ describe('an operation', () => {
 
   it('answers 422 with the domain’s code when the domain refuses it', async () => {
     const { app, db } = await setup();
-    const response = await post(app, 'createArea', { name: '' });
+    const response = await post(app, { name: '' });
     expect(await errorOf(response)).toMatchObject({
       status: 422,
       code: 'invalidInput',
@@ -237,7 +266,7 @@ describe('an operation', () => {
           },
         }),
     });
-    const response = await post(app, 'createArea', { name: '仕事' });
+    const response = await post(app, { name: '仕事' });
     expect(await errorOf(response)).toMatchObject({
       status: 409,
       code: 'revisionConflict',
@@ -252,7 +281,7 @@ describe('an operation', () => {
 
   it('answers 422 userNotSetUp before the settings are made', async () => {
     const { app } = await setup({ settings: false });
-    const response = await post(app, 'createArea', { name: '仕事' });
+    const response = await post(app, { name: '仕事' });
     expect(await errorOf(response)).toMatchObject({
       status: 422,
       code: 'userNotSetUp',
@@ -281,7 +310,7 @@ describe('an operation', () => {
           },
         }),
     });
-    const response = await post(app, 'createArea', { name: '秘密の領域' });
+    const response = await post(app, { name: '秘密の領域' });
     expect(await errorOf(response)).toEqual({
       status: 500,
       code: 'internalError',
@@ -291,7 +320,7 @@ describe('an operation', () => {
     const logged = String(log.mock.calls[0]?.[0]);
     expect(logged).not.toContain('秘密');
     expect(logged).toContain('SQLITE_FULL');
-    expect(logged).toContain('/api/operations/createArea');
+    expect(logged).toContain('/api/areas');
   });
 
   it('is not answered when the API does not implement it yet', async () => {
@@ -299,7 +328,10 @@ describe('an operation', () => {
     // Every operation the API answers is registered, so these are the ones
     // that are not.
     for (const name of unimplementedOperations) {
-      expect((await post(app, name, {})).status, name).toBe(404);
+      for (const input of OPERATION_EXAMPLES[name]) {
+        const { url, init } = httpRequest(name, input);
+        expect((await app.request(url, init, testEnv)).status, name).toBe(404);
+      }
     }
   });
 });

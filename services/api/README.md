@@ -47,7 +47,7 @@ API の経路はすべて `/api` の下にある。同じ origin のほかの経
 
 - `GET /api/health`：認証なし。ローカルの D1 に問い合わせて `{"status":"ok"}` を返す。
 - `GET /api/me`：セッションの Cookie から利用者を得て、`{"userId": "user_…", "settings": {…} | null}` を返す（契約の `getMe`）。Cookie がない・署名が合わない・期限切れ・サインアウト済みは 401。
-- 契約（`packages/api-contract`、ADR 0006）の読み取り（`GET /api/overview` など）と操作（`POST /api/operations/{名前}`）。答えるのは `src/handlers/operations.ts`・`reads.ts` の登録表にあるものだけで、ほかは 404（未実装の一覧にある）。
+- 契約（`packages/api-contract`、ADR 0006）の読み取り（`GET /api/overview` など）と操作（資源の経路と HTTP のメソッド。`PATCH /api/areas/{areaId}` など。操作との対応は `@itera/api-contract/requests`）。読み取りは `src/handlers/reads.ts` の登録表にあるものだけ、操作は `src/handlers/operations.ts` の未実装の一覧にないものだけに答え、ほかは 404。
 - `/api/auth/*`：Better Auth の経路（Google でのサインインとコールバック、パスキー、サインアウト、セッション）。
 
 契約の経路は、認証 → 書き込みの Origin の確認 → 入力の検証 → 記録の読み込み → 日付が変わったときの処理（#271）→ 操作の実行 → 版を確かめた書き込み、の順に通る（ADR 0004「操作と読み取りの処理」）。エラーは `{ code, message }`（ADR 0006「エラー」）。書き込みは `Origin` が `BETTER_AUTH_URL` の origin でないと 403、本文が 64 KiB を超えると 413、利用者の設定がまだないと 422 `userNotSetUp`。

@@ -539,7 +539,7 @@ describe('the invariants, through the API', () => {
 
     expect(
       (await app.post('addTaskToWeek', { taskId: bookshelf })).status,
-    ).toBe(200);
+    ).toBe(201);
     expect(sprintOf((await app.saved()).records).areaSnapshot.at(-1)).toEqual({
       areaId: made.areaId,
       name: '趣味',

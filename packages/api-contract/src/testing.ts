@@ -1,26 +1,13 @@
 // Helpers for the tests that hold the contract against packages/application.
-import type { Id } from '@itera/domain';
+import {
+  createIdSource,
+  type OperationInput,
+  type OperationName,
+} from '@itera/application';
+import { instant, localDate, type Id } from '@itera/domain';
 import * as contract from './index';
 
-/**
- * A type as JSON carries it: IDs, dates and other branded strings become
- * `string`, `readonly` goes, and intersections become one object. The
- * generated types have no brands and no `readonly`; this makes both sides
- * comparable.
- */
-export type Plain<T> = T extends string
-  ? [Exclude<keyof T, keyof string>] extends [never]
-    ? T
-    : string
-  : T extends number | boolean | null | undefined | void
-    ? T
-    : T extends readonly (infer U)[]
-      ? Plain<U>[]
-      : T extends object
-        ? { -readonly [K in keyof T as PlainKey<K>]: Plain<T[K]> }
-        : T;
-
-type PlainKey<K> = K extends string ? Plain<K> : K;
+export type { Plain } from './requests';
 
 /** A read's result as the response carries it: `undefined` becomes `null`. */
 export type WithNull<T> =
@@ -108,3 +95,171 @@ type ObjectKinds<T> =
         ? never
         : O
       : never;
+
+let seed = 7;
+const idSource = createIdSource((bytes) => {
+  for (let i = 0; i < bytes.length; i += 1) {
+    seed = (seed * 1103515245 + 12345) % 2 ** 31;
+    bytes[i] = seed % 256;
+  }
+});
+
+/** A new ID of the kind, as the server makes them. */
+export const newId = <Kind extends keyof typeof ID_SCHEMAS>(kind: Kind) =>
+  idSource.newId(kind, instant('2026-10-03T00:00:00.000Z'));
+
+const area = newId('Area');
+const task = newId('Task');
+const subtask = newId('Subtask');
+const suggestion = newId('EstimateSuggestion');
+const occurrence = newId('Occurrence');
+const sprintTask = newId('SprintTask');
+const selection = newId('DailySelection');
+const interrupt = newId('InterruptNote');
+const at = instant('2026-10-03T01:02:03.000Z');
+const date = localDate('2026-10-02');
+const policy = {
+  scope: { kind: 'area', areaId: area },
+  rangePolicy: 'hi',
+} as const;
+
+/**
+ * An input of each operation, with every optional property that changes
+ * its request (requests.test.ts sends each through the contract and back).
+ */
+export const OPERATION_EXAMPLES: {
+  readonly [N in OperationName]: readonly OperationInput<N>[];
+} = {
+  createArea: [{ name: '研究' }],
+  renameArea: [{ areaId: area, name: '仕事' }],
+  archiveArea: [{ areaId: area }],
+  restoreArea: [{ areaId: area }],
+  createTask: [{ title: '論文を読む' }, { title: '論文を読む', areaId: area }],
+  saveTask: [
+    {
+      taskId: task,
+      update: {
+        title: '論文を読む',
+        description: '3 章まで',
+        areaId: area,
+        due: date,
+        priority: 'high',
+        timeBasis: 'subtasks',
+      },
+      estimate: 2,
+    },
+    { taskId: task, update: { areaId: null, due: null }, estimate: null },
+    { taskId: task, update: {} },
+  ],
+  adoptSuggestion: [{ taskId: task, suggestionId: suggestion, bound: 'mid' }],
+  undoAdoption: [
+    {
+      taskId: task,
+      suggestionId: suggestion,
+      previous: { hours: 3, setAt: at, source: { kind: 'manual' } },
+    },
+    { taskId: task, suggestionId: suggestion, previous: null },
+  ],
+  adoptEditedSuggestion: [
+    { taskId: task, suggestionId: suggestion, hours: 1.5 },
+  ],
+  rejectSuggestion: [{ taskId: task, suggestionId: suggestion }],
+  undoRejection: [{ taskId: task, suggestionId: suggestion }],
+  addSubtask: [
+    { taskId: task, title: '図を描く' },
+    { taskId: task, title: '図を描く', hours: 1 },
+  ],
+  setSubtaskDone: [{ taskId: task, subtaskId: subtask, done: true }],
+  setSubtaskEstimate: [
+    { taskId: task, subtaskId: subtask, hours: 0.5 },
+    { taskId: task, subtaskId: subtask, hours: null },
+  ],
+  archiveTask: [{ taskId: task }],
+  restoreTask: [{ taskId: task }],
+  completeTask: [{ taskId: task }],
+  undoCompleteTask: [{ taskId: task }],
+  addTaskToToday: [{ taskId: task }],
+  addTaskToWeek: [{ taskId: task }],
+  undoAddTaskToWeek: [{ taskId: task }],
+  setRecurrence: [
+    { taskId: task, pattern: { freq: 'weekly', daysOfWeek: [1, 3] } },
+  ],
+  endRecurrence: [{ taskId: task }],
+  chooseTasks: [{ taskIds: [task, newId('Task')] }],
+  unchooseTasks: [{ sprintTaskIds: [sprintTask, newId('SprintTask')] }],
+  unchooseTasksByTask: [{ taskIds: [task] }],
+  setOccurrenceIncluded: [{ occurrenceId: occurrence, included: false }],
+  includeOccurrences: [{ occurrenceIds: [occurrence, newId('Occurrence')] }],
+  excludeAllOccurrences: [{ sprintTaskId: sprintTask }],
+  createAndChooseTask: [
+    { title: '発表の準備' },
+    { title: '発表の準備', areaId: area },
+  ],
+  setPlanningGoal: [{ areaId: area, text: '1 本書き上げる' }],
+  setGoalLink: [{ sprintTaskId: sprintTask, goalLink: 'unlinked' }],
+  setPlanningAvailableHours: [{ hours: 20 }, { hours: null }],
+  confirmSprint: [{ applyCriterion: true }],
+  chooseForToday: [
+    { sprintTaskId: sprintTask },
+    { sprintTaskId: sprintTask, occurrenceId: occurrence },
+  ],
+  startSelection: [{ selectionId: selection }],
+  deferSelection: [{ selectionId: selection }],
+  removeFromToday: [{ selectionId: selection }],
+  undoCloseSelection: [{ selectionId: selection }],
+  pauseSelection: [
+    { selectionId: selection },
+    { selectionId: selection, hours: 1 },
+  ],
+  completeSelection: [{ selectionId: selection }],
+  undoCompleteSelection: [{ selectionId: selection }],
+  skipSelection: [{ selectionId: selection }],
+  undoSkipSelection: [{ selectionId: selection }],
+  recordSelectionActual: [{ selectionId: selection, hours: 0.5 }],
+  noteInterrupt: [{ text: '電話' }, { text: '電話', minutes: 15 }],
+  editInterrupt: [
+    { interruptNoteId: interrupt, text: '来客' },
+    { interruptNoteId: interrupt, text: '来客', minutes: 30 },
+  ],
+  deleteInterrupt: [{ interruptNoteId: interrupt }],
+  restoreInterrupt: [
+    { note: { id: interrupt, at, text: '電話' } },
+    { note: { id: interrupt, at, text: '電話', minutes: 15 } },
+  ],
+  createTaskForToday: [
+    { title: '返信する' },
+    { title: '返信する', areaId: area },
+  ],
+  beginRetro: [undefined],
+  setRunningGoal: [{ areaId: area, text: '2 本書き上げる' }],
+  setRunningAvailableHours: [{ hours: 18 }, { hours: null }],
+  undoPastDay: [{ selectionId: selection }],
+  assessGoal: [
+    { areaId: area, assessment: 'partly' },
+    { areaId: area, assessment: null },
+  ],
+  pinFact: [
+    { pin: { kind: 'sprintTask', id: sprintTask } },
+    { pin: { kind: 'dailySelection', id: selection } },
+    { pin: { kind: 'occurrence', id: occurrence } },
+    { pin: { kind: 'interrupt', id: interrupt } },
+    { pin: { kind: 'goal', id: area } },
+    { pin: { kind: 'availableHours' } },
+  ],
+  unpinFact: [
+    { pin: { kind: 'sprintTask', id: sprintTask } },
+    { pin: { kind: 'availableHours' } },
+  ],
+  setReflection: [{ text: '見送りが多かった' }],
+  setImprovement: [{ text: '1 本ずつに分ける' }],
+  draftCriterion: [{ policy }],
+  setDraftPolicy: [{ policy: { scope: { kind: 'all' }, rangePolicy: 'lo' } }],
+  dropCriterionDraft: [undefined],
+  decideCriterion: [{ decision: 'replace' }],
+  recordReviewActual: [
+    { sprintTaskId: sprintTask, hours: 1, date },
+    { sprintTaskId: sprintTask, hours: 1, date, occurrenceId: occurrence },
+  ],
+  completeRetro: [undefined],
+  beginPlanning: [undefined],
+};

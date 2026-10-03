@@ -665,8 +665,8 @@ describe('the Sprint reads', () => {
 
   describe('getPlanning', () => {
     it.each([
-      ['applying the criterion', '?applyCriterion=true', true],
-      ['not applying it', '?applyCriterion=false', false],
+      ['applying the criterion', '?apply-criterion=true', true],
+      ['not applying it', '?apply-criterion=false', false],
       ['by default', '', false],
     ])('answers planningData %s', async (_, query, applyCriterion) => {
       const { response, records, json } = await readOn(
@@ -688,7 +688,7 @@ describe('the Sprint reads', () => {
       // read after it writes nothing.
       await app.get('/overview');
       const before = await app.saved();
-      await app.get('/planning?applyCriterion=true');
+      await app.get('/planning?apply-criterion=true');
       expect(await app.saved()).toEqual(before);
     });
 
@@ -711,7 +711,7 @@ describe('the Sprint reads', () => {
     it('answers 400 to a value that is not a boolean', async () => {
       const { response, json } = await readOn(
         'planning-check',
-        '/planning?applyCriterion=yes',
+        '/planning?apply-criterion=yes',
       );
       expect(response.status).toBe(400);
       expect(json).toMatchObject({ code: 'validationFailed' });

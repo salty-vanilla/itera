@@ -1,4 +1,6 @@
-# The reads: each is a GET of one read of packages/application (ADR 0006).
+# The reads whose path has no write: each is a GET of one read of
+# packages/application (ADR 0006). The reads of a path with writes are with
+# them: listAreas (area.yaml), getPlanning, getRunning and getRetro.
 # The response is `{ clock, view }`: the clock the server read with (ADR
 # 0005 時計) and the read's result, `null` where the read has nothing to show.
 # Before reading, the server brings the records up to now (the end of a
@@ -22,30 +24,6 @@ getOverview:
               properties:
                 clock: { $ref: '../schemas/common.yaml#/Clock' }
                 view: { $ref: '../schemas/views.yaml#/AppOverview' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '422': { $ref: '../responses.yaml#/UserNotSetUp' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-listAreas:
-  get:
-    operationId: listAreas
-    tags: [Reads]
-    summary: The Areas to edit, in the person's order
-    description: Archived ones too (`areaList`).
-    responses:
-      '200':
-        description: The Areas.
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [clock, view]
-              properties:
-                clock: { $ref: '../schemas/common.yaml#/Clock' }
-                view:
-                  type: array
-                  items: { $ref: '../schemas/views.yaml#/EditableArea' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
       '422': { $ref: '../responses.yaml#/UserNotSetUp' }
@@ -124,76 +102,6 @@ getSprintChoice:
       '422': { $ref: '../responses.yaml#/UserNotSetUp' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
-getPlanning:
-  get:
-    operationId: getPlanning
-    tags: [Reads]
-    summary: The Sprint being planned
-    description: >-
-      `planningData`. `applyCriterion` is the screen's choice at the Check
-      whether to apply the active criterion (a preview; nothing is
-      written). `null` when no Sprint is being planned.
-    parameters:
-      - name: applyCriterion
-        in: query
-        required: false
-        description: Left out, the criterion is not applied.
-        schema: { type: boolean }
-    responses:
-      '200':
-        description: The Planning.
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [clock, view]
-              properties:
-                clock: { $ref: '../schemas/common.yaml#/Clock' }
-                view:
-                  oneOf:
-                    - $ref: '../schemas/views.yaml#/PlanningData'
-                    - type: 'null'
-      '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '422': { $ref: '../responses.yaml#/UserNotSetUp' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-getRunning:
-  get:
-    operationId: getRunning
-    tags: [Reads]
-    summary: A confirmed Sprint's plan and how it went
-    description: >-
-      `runningData`: the Sprint with the number asked for, else the running
-      one. `null` for a Sprint still being planned, a number with no
-      Sprint, or no running Sprint.
-    parameters:
-      - name: sprint
-        in: query
-        required: false
-        description: The Sprint's number (F25).
-        schema: { type: integer, minimum: 1 }
-    responses:
-      '200':
-        description: The Sprint.
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [clock, view]
-              properties:
-                clock: { $ref: '../schemas/common.yaml#/Clock' }
-                view:
-                  oneOf:
-                    - $ref: '../schemas/views.yaml#/RunningData'
-                    - type: 'null'
-      '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '422': { $ref: '../responses.yaml#/UserNotSetUp' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
 getToday:
   get:
     operationId: getToday
@@ -245,42 +153,6 @@ getDay:
                 view:
                   oneOf:
                     - $ref: '../schemas/views.yaml#/DayData'
-                    - type: 'null'
-      '400': { $ref: '../responses.yaml#/BadRequest' }
-      '401': { $ref: '../responses.yaml#/Unauthenticated' }
-      '409': { $ref: '../responses.yaml#/RevisionConflict' }
-      '422': { $ref: '../responses.yaml#/UserNotSetUp' }
-      '500': { $ref: '../responses.yaml#/ServerError' }
-
-getRetro:
-  get:
-    operationId: getRetro
-    tags: [Reads]
-    summary: A confirmed Sprint's Retro
-    description: >-
-      `retroData`: the Retro of the Sprint with the number asked for, once
-      its Retro has started (in Review or closed; a closed one is read
-      only), else of the Sprint in Review. `null` before its Retro starts,
-      for a number with no Sprint, or with no Sprint in Review.
-    parameters:
-      - name: sprint
-        in: query
-        required: false
-        description: The Sprint's number (F25).
-        schema: { type: integer, minimum: 1 }
-    responses:
-      '200':
-        description: The Retro.
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [clock, view]
-              properties:
-                clock: { $ref: '../schemas/common.yaml#/Clock' }
-                view:
-                  oneOf:
-                    - $ref: '../schemas/views.yaml#/RetroData'
                     - type: 'null'
       '400': { $ref: '../responses.yaml#/BadRequest' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }

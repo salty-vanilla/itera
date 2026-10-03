@@ -1,14 +1,15 @@
 openapi: 3.1.1
 info:
   title: Itera API
-  version: 0.1.0
+  version: 0.2.0
   summary: The contract between Itera's clients and its API (ADR 0006).
   description: >-
     Spec-first: this file and the files it refers to are the source of
     truth. The API (services/api) and the clients (apps/web, later iOS and
     Android) take their types, schemas and clients from it. The rules are
     packages/domain's and only the server runs them; an operation is a name
-    and its input, and a read is a GET (ADR 0005 API への移行).
+    and its input, carried by a path and an HTTP method (ADR 0005 API への移行,
+    ADR 0006 経路の形).
   license:
     name: MIT
     identifier: MIT
@@ -39,154 +40,104 @@ paths:
     $ref: './paths/me.yaml#/getMe'
   /overview:
     $ref: './paths/reads.yaml#/getOverview'
-  /areas:
-    $ref: './paths/reads.yaml#/listAreas'
   /backlog:
     $ref: './paths/reads.yaml#/getBacklog'
   /sprint-choice:
     $ref: './paths/reads.yaml#/getSprintChoice'
-  /planning:
-    $ref: './paths/reads.yaml#/getPlanning'
-  /running:
-    $ref: './paths/reads.yaml#/getRunning'
   /today:
     $ref: './paths/reads.yaml#/getToday'
   /days/{date}:
     $ref: './paths/reads.yaml#/getDay'
-  /retro:
-    $ref: './paths/reads.yaml#/getRetro'
   /next-planning:
     $ref: './paths/reads.yaml#/getNextPlanning'
-  /operations/createArea:
-    $ref: './paths/area.yaml#/createArea'
-  /operations/renameArea:
-    $ref: './paths/area.yaml#/renameArea'
-  /operations/archiveArea:
-    $ref: './paths/area.yaml#/archiveArea'
-  /operations/restoreArea:
-    $ref: './paths/area.yaml#/restoreArea'
-  /operations/createTask:
-    $ref: './paths/task.yaml#/createTask'
-  /operations/saveTask:
-    $ref: './paths/task.yaml#/saveTask'
-  /operations/adoptSuggestion:
-    $ref: './paths/task.yaml#/adoptSuggestion'
-  /operations/undoAdoption:
-    $ref: './paths/task.yaml#/undoAdoption'
-  /operations/adoptEditedSuggestion:
-    $ref: './paths/task.yaml#/adoptEditedSuggestion'
-  /operations/rejectSuggestion:
-    $ref: './paths/task.yaml#/rejectSuggestion'
-  /operations/undoRejection:
-    $ref: './paths/task.yaml#/undoRejection'
-  /operations/addSubtask:
-    $ref: './paths/task.yaml#/addSubtask'
-  /operations/setSubtaskDone:
-    $ref: './paths/task.yaml#/setSubtaskDone'
-  /operations/setSubtaskEstimate:
-    $ref: './paths/task.yaml#/setSubtaskEstimate'
-  /operations/archiveTask:
-    $ref: './paths/task.yaml#/archiveTask'
-  /operations/restoreTask:
-    $ref: './paths/task.yaml#/restoreTask'
-  /operations/completeTask:
-    $ref: './paths/task.yaml#/completeTask'
-  /operations/undoCompleteTask:
-    $ref: './paths/task.yaml#/undoCompleteTask'
-  /operations/addTaskToToday:
-    $ref: './paths/task.yaml#/addTaskToToday'
-  /operations/addTaskToWeek:
-    $ref: './paths/task.yaml#/addTaskToWeek'
-  /operations/undoAddTaskToWeek:
-    $ref: './paths/task.yaml#/undoAddTaskToWeek'
-  /operations/setRecurrence:
-    $ref: './paths/task.yaml#/setRecurrence'
-  /operations/endRecurrence:
-    $ref: './paths/task.yaml#/endRecurrence'
-  /operations/chooseTasks:
-    $ref: './paths/planning.yaml#/chooseTasks'
-  /operations/unchooseTasks:
-    $ref: './paths/planning.yaml#/unchooseTasks'
-  /operations/unchooseTasksByTask:
-    $ref: './paths/planning.yaml#/unchooseTasksByTask'
-  /operations/setOccurrenceIncluded:
-    $ref: './paths/planning.yaml#/setOccurrenceIncluded'
-  /operations/includeOccurrences:
-    $ref: './paths/planning.yaml#/includeOccurrences'
-  /operations/excludeAllOccurrences:
-    $ref: './paths/planning.yaml#/excludeAllOccurrences'
-  /operations/createAndChooseTask:
-    $ref: './paths/planning.yaml#/createAndChooseTask'
-  /operations/setPlanningGoal:
-    $ref: './paths/planning.yaml#/setPlanningGoal'
-  /operations/setGoalLink:
-    $ref: './paths/planning.yaml#/setGoalLink'
-  /operations/setPlanningAvailableHours:
-    $ref: './paths/planning.yaml#/setPlanningAvailableHours'
-  /operations/confirmSprint:
-    $ref: './paths/planning.yaml#/confirmSprint'
-  /operations/chooseForToday:
-    $ref: './paths/today.yaml#/chooseForToday'
-  /operations/startSelection:
-    $ref: './paths/today.yaml#/startSelection'
-  /operations/deferSelection:
-    $ref: './paths/today.yaml#/deferSelection'
-  /operations/removeFromToday:
-    $ref: './paths/today.yaml#/removeFromToday'
-  /operations/undoCloseSelection:
-    $ref: './paths/today.yaml#/undoCloseSelection'
-  /operations/pauseSelection:
-    $ref: './paths/today.yaml#/pauseSelection'
-  /operations/completeSelection:
-    $ref: './paths/today.yaml#/completeSelection'
-  /operations/undoCompleteSelection:
-    $ref: './paths/today.yaml#/undoCompleteSelection'
-  /operations/skipSelection:
-    $ref: './paths/today.yaml#/skipSelection'
-  /operations/undoSkipSelection:
-    $ref: './paths/today.yaml#/undoSkipSelection'
-  /operations/recordSelectionActual:
-    $ref: './paths/today.yaml#/recordSelectionActual'
-  /operations/noteInterrupt:
-    $ref: './paths/today.yaml#/noteInterrupt'
-  /operations/editInterrupt:
-    $ref: './paths/today.yaml#/editInterrupt'
-  /operations/deleteInterrupt:
-    $ref: './paths/today.yaml#/deleteInterrupt'
-  /operations/restoreInterrupt:
-    $ref: './paths/today.yaml#/restoreInterrupt'
-  /operations/createTaskForToday:
-    $ref: './paths/today.yaml#/createTaskForToday'
-  /operations/beginRetro:
-    $ref: './paths/today.yaml#/beginRetro'
-  /operations/setRunningGoal:
-    $ref: './paths/running.yaml#/setRunningGoal'
-  /operations/setRunningAvailableHours:
-    $ref: './paths/running.yaml#/setRunningAvailableHours'
-  /operations/undoPastDay:
-    $ref: './paths/running.yaml#/undoPastDay'
-  /operations/assessGoal:
-    $ref: './paths/retro.yaml#/assessGoal'
-  /operations/togglePin:
-    $ref: './paths/retro.yaml#/togglePin'
-  /operations/setReflection:
-    $ref: './paths/retro.yaml#/setReflection'
-  /operations/setImprovement:
-    $ref: './paths/retro.yaml#/setImprovement'
-  /operations/draftCriterion:
+  /areas:
+    $ref: './paths/area.yaml#/areas'
+  /areas/{areaId}:
+    $ref: './paths/area.yaml#/area'
+  /tasks:
+    $ref: './paths/task.yaml#/tasks'
+  /tasks/{taskId}:
+    $ref: './paths/task.yaml#/task'
+  /tasks/{taskId}/completion:
+    $ref: './paths/task.yaml#/taskCompletion'
+  /tasks/{taskId}/recurrence:
+    $ref: './paths/task.yaml#/taskRecurrence'
+  /tasks/{taskId}/subtasks:
+    $ref: './paths/task.yaml#/subtasks'
+  /tasks/{taskId}/subtasks/{subtaskId}:
+    $ref: './paths/task.yaml#/subtask'
+  /tasks/{taskId}/suggestions/{suggestionId}/adopt:
+    $ref: './paths/task.yaml#/suggestionAdopt'
+  /tasks/{taskId}/suggestions/{suggestionId}/undo-adoption:
+    $ref: './paths/task.yaml#/suggestionUndoAdoption'
+  /tasks/{taskId}/suggestions/{suggestionId}/reject:
+    $ref: './paths/task.yaml#/suggestionReject'
+  /tasks/{taskId}/suggestions/{suggestionId}/undo-rejection:
+    $ref: './paths/task.yaml#/suggestionUndoRejection'
+  /planning:
+    $ref: './paths/planning.yaml#/planning'
+  /planning/confirm:
+    $ref: './paths/planning.yaml#/planningConfirm'
+  /planning/goals/{areaId}:
+    $ref: './paths/planning.yaml#/planningGoal'
+  /planning/tasks:
+    $ref: './paths/planning.yaml#/planningTasks'
+  /planning/tasks/{sprintTaskId}:
+    $ref: './paths/planning.yaml#/planningTask'
+  /planning/tasks/{sprintTaskId}/exclude-occurrences:
+    $ref: './paths/planning.yaml#/planningTaskExcludeOccurrences'
+  /planning/occurrences/include:
+    $ref: './paths/planning.yaml#/planningOccurrencesInclude'
+  /planning/occurrences/{occurrenceId}:
+    $ref: './paths/planning.yaml#/planningOccurrence'
+  /today/selections:
+    $ref: './paths/today.yaml#/selections'
+  /today/selections/{selectionId}/start:
+    $ref: './paths/today.yaml#/selectionStart'
+  /today/selections/{selectionId}/pause:
+    $ref: './paths/today.yaml#/selectionPause'
+  /today/selections/{selectionId}/defer:
+    $ref: './paths/today.yaml#/selectionDefer'
+  /today/selections/{selectionId}/remove:
+    $ref: './paths/today.yaml#/selectionRemove'
+  /today/selections/{selectionId}/complete:
+    $ref: './paths/today.yaml#/selectionComplete'
+  /today/selections/{selectionId}/skip:
+    $ref: './paths/today.yaml#/selectionSkip'
+  /today/selections/{selectionId}/undo-close:
+    $ref: './paths/today.yaml#/selectionUndoClose'
+  /today/selections/{selectionId}/undo-complete:
+    $ref: './paths/today.yaml#/selectionUndoComplete'
+  /today/selections/{selectionId}/undo-skip:
+    $ref: './paths/today.yaml#/selectionUndoSkip'
+  /today/selections/{selectionId}/actuals:
+    $ref: './paths/today.yaml#/selectionActuals'
+  /today/interrupts:
+    $ref: './paths/today.yaml#/interrupts'
+  /today/interrupts/{interruptNoteId}:
+    $ref: './paths/today.yaml#/interrupt'
+  /running:
+    $ref: './paths/running.yaml#/running'
+  /running/goals/{areaId}:
+    $ref: './paths/running.yaml#/runningGoal'
+  /running/tasks/{taskId}:
+    $ref: './paths/running.yaml#/runningTask'
+  /running/selections/{selectionId}/undo:
+    $ref: './paths/running.yaml#/runningSelectionUndo'
+  /retro:
+    $ref: './paths/retro.yaml#/retro'
+  /retro/begin:
+    $ref: './paths/retro.yaml#/retroBegin'
+  /retro/complete:
+    $ref: './paths/retro.yaml#/retroComplete'
+  /retro/goals/{areaId}:
+    $ref: './paths/retro.yaml#/retroGoal'
+  /retro/pins/{pin}:
+    $ref: './paths/retro.yaml#/retroPin'
+  /retro/draft-criterion:
     $ref: './paths/retro.yaml#/draftCriterion'
-  /operations/setDraftPolicy:
-    $ref: './paths/retro.yaml#/setDraftPolicy'
-  /operations/dropCriterionDraft:
-    $ref: './paths/retro.yaml#/dropCriterionDraft'
-  /operations/decideCriterion:
-    $ref: './paths/retro.yaml#/decideCriterion'
-  /operations/recordReviewActual:
-    $ref: './paths/retro.yaml#/recordReviewActual'
-  /operations/completeRetro:
-    $ref: './paths/retro.yaml#/completeRetro'
-  /operations/beginPlanning:
-    $ref: './paths/retro.yaml#/beginPlanning'
+  /retro/actuals:
+    $ref: './paths/retro.yaml#/retroActuals'
 components:
   securitySchemes:
     session:

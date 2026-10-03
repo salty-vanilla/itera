@@ -36,6 +36,7 @@ import {
   localDate,
   noteInterrupt,
   pauseSelection,
+  pinFact,
   presentSuggestion,
   selectForToday,
   selectTask,
@@ -51,7 +52,6 @@ import {
   startSelection,
   timeZone,
   toLocalDate,
-  togglePin,
   updateTask,
   type Actor,
   type AreaColor,
@@ -861,7 +861,7 @@ export function buildTimeline(): Timeline {
   at(
     '10-05 09:00',
     onSprint(current, (s, ctx) =>
-      togglePin(
+      pinFact(
         s,
         {
           pin: { kind: 'sprintTask', id: sprintTaskOf(current, task.paper).id },

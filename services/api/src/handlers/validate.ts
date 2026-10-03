@@ -133,35 +133,3 @@ export function validate<S extends Schema>(
   });
   return result.output;
 }
-
-/**
- * A query string as the query schema declares it. Query values arrive as
- * strings; numbers and booleans are turned into their type first (ADR
- * 0006). A value that does not convert stays a string and fails validation.
- */
-export function queryInput(
-  schema: Schema,
-  query: Readonly<Record<string, string>>,
-): Record<string, unknown> {
-  const entries = (schema as unknown as Node).entries ?? {};
-  return Object.fromEntries(
-    Object.entries(query).map(([key, text]) => {
-      const entry = entries[key];
-      return [key, entry === undefined ? text : converted(entry, text)];
-    }),
-  );
-}
-
-function converted(schema: Schema, text: string): unknown {
-  let node = schema as unknown as Node;
-  while (node.wrapped !== undefined) node = node.wrapped as unknown as Node;
-  // Decimal digits only: `Number` would also take ` 2`, `0x10` and `1e1`.
-  if (node.type === 'number') {
-    return /^-?\d+(\.\d+)?$/.test(text) ? Number(text) : text;
-  }
-  if (node.type === 'boolean') {
-    if (text === 'true') return true;
-    if (text === 'false') return false;
-  }
-  return text;
-}

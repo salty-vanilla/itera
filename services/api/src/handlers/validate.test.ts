@@ -1,16 +1,14 @@
 import * as contract from '@itera/api-contract';
 import {
   vCreateAreaBody,
-  vGetPlanningQuery,
-  vGetRunningQuery,
   vRecordReviewActualBody,
-  vRestoreInterruptBody,
+  vUndoAdoptionBody,
 } from '@itera/api-contract';
 import { createIdSource } from '@itera/application';
 import { instant } from '@itera/domain';
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '../errors';
-import { assertWalkable, queryInput, validate } from './validate';
+import { assertWalkable, validate } from './validate';
 
 const ids = createIdSource((bytes) => crypto.getRandomValues(bytes));
 const at = instant('2026-10-03T00:30:00.000Z');
@@ -59,16 +57,16 @@ describe('validate', () => {
   });
 
   it('refuses a time that does not exist, inside an object', () => {
-    const note = {
-      id: ids.newId('InterruptNote', at),
-      at: '2026-02-30T00:00:00.000Z',
-      text: '電話',
+    const previous = {
+      hours: 2,
+      setAt: '2026-02-30T00:00:00.000Z',
+      source: { kind: 'manual' },
     };
     expect(
-      failure(() => validate(vRestoreInterruptBody, { note }, 'body')),
+      failure(() => validate(vUndoAdoptionBody, { previous }, 'body')),
     ).toMatchObject({
       code: 'validationFailed',
-      message: expect.stringMatching(/^body\.note\.at: /),
+      message: expect.stringMatching(/^body\.previous\.setAt: /),
     });
   });
 
@@ -86,30 +84,5 @@ describe('validate', () => {
     for (const [, schema] of requests) {
       expect(() => assertWalkable(schema as never)).not.toThrow();
     }
-  });
-});
-
-describe('queryInput', () => {
-  it('turns numbers and booleans into their type', () => {
-    expect(queryInput(vGetRunningQuery, { sprint: '3' })).toEqual({
-      sprint: 3,
-    });
-    expect(queryInput(vGetPlanningQuery, { applyCriterion: 'false' })).toEqual({
-      applyCriterion: false,
-    });
-  });
-
-  it.each([
-    [vGetRunningQuery, { sprint: 'three' }],
-    [vGetRunningQuery, { sprint: '' }],
-    [vGetRunningQuery, { sprint: '1.5' }],
-    [vGetRunningQuery, { sprint: '0x10' }],
-    [vGetRunningQuery, { sprint: '1e1' }],
-    [vGetRunningQuery, { sprint: ' 2' }],
-    [vGetPlanningQuery, { applyCriterion: 'yes' }],
-  ])('leaves what does not convert to fail validation: %j', (schema, query) => {
-    expect(
-      failure(() => validate(schema, queryInput(schema, query), 'query')),
-    ).toMatchObject({ code: 'validationFailed' });
   });
 });

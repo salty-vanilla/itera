@@ -58,7 +58,7 @@ export function createApp(dependencies: Dependencies) {
   };
   app.get('/api/me', guards.user, guards.origin, getMe);
   app.route('/api', readRoutesApp(flow, guards));
-  app.route('/api/operations', operationRoutes(flow, guards));
+  app.route('/api', operationRoutes(flow, guards));
 
   return app;
 }

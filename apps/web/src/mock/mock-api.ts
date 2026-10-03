@@ -16,6 +16,13 @@
 // all the screens can send wrong.
 import * as contract from '@itera/api-contract';
 import {
+  queryInput,
+  RequestError,
+  surfaces,
+  type Call,
+  type Surface,
+} from '@itera/api-contract/requests';
+import {
   appOverview,
   areaList,
   backlogData,
@@ -31,7 +38,6 @@ import {
   type BacklogFilter,
   type Change,
   type Clock,
-  type OperationName,
   type RecordStore,
   type Records,
 } from '@itera/application';
@@ -99,7 +105,7 @@ const READS: Readonly<
     query: contract.vGetPlanningQuery,
     read: (records, clock, query) =>
       planningData(records, clock, {
-        applyCriterion: query.applyCriterion === true,
+        applyCriterion: query['apply-criterion'] === true,
       }),
   },
   getRunning: {
@@ -137,7 +143,33 @@ export const MOCK_READS: readonly string[] = [
 
 const READ_BY_PATH = new Map(Object.values(READS).map((r) => [r.path, r]));
 const DAY_PATH = /^\/days\/([^/]+)$/;
-const OPERATION_PATH = /^\/operations\/([^/]+)$/;
+
+/**
+ * Each write surface of the contract with the pattern of its path:
+ * `/areas/{areaId}` matches `/areas/area_…` and names the value `areaId`.
+ */
+const WRITES = (Object.values(surfaces) as Surface[]).map((surface) => {
+  const names: string[] = [];
+  const pattern = surface.url.replace(/\{(\w+)\}/g, (_, name: string) => {
+    names.push(name);
+    return '([^/]+)';
+  });
+  return { surface, names, pattern: new RegExp(`^${pattern}$`) };
+});
+
+/** The write surface of a request, with its path's values. */
+function writeOf(method: string, path: string) {
+  for (const { surface, names, pattern } of WRITES) {
+    if (surface.method !== method) continue;
+    const match = pattern.exec(path);
+    if (match === null) continue;
+    const values = Object.fromEntries(
+      names.map((name, i) => [name, decodeURIComponent(match[i + 1]!)]),
+    );
+    return { surface, values };
+  }
+  return undefined;
+}
 
 export interface Mock {
   /** A `fetch` for the contract's client (`createClient({ fetch })`). */
@@ -190,7 +222,7 @@ async function answer(
   const path = url.pathname.replace(/^\/api(?=\/)/, '');
   const read = READ_BY_PATH.get(path);
   const day = DAY_PATH.exec(path)?.[1];
-  const operation = OPERATION_PATH.exec(path)?.[1];
+  const write = writeOf(request.method, path);
 
   if (request.method === 'GET' && path === '/me') {
     // The person and their settings, with no catch-up, as the API reads
@@ -218,20 +250,20 @@ async function answer(
     const { records, clock } = store.getSnapshot();
     return view(clock, dayData(records, clock, date as LocalDate));
   }
-  if (request.method === 'POST' && operation !== undefined) {
-    if (!isOperationName(operation))
-      return new Response('404 Not Found', { status: 404 });
-    const input = await inputOf(operation, request);
-    if (!input.ok) return input.response;
-    const run = operations[operation] as (input: unknown) => Change<unknown>;
+  if (write !== undefined) {
+    const { surface, values } = write;
+    const call = await operationOf(surface, values, url.searchParams, request);
+    if (!call.ok) return call.response;
+    const { name, input } = call.value;
+    const run = operations[name] as (input: unknown) => Change<unknown>;
     const result = own(() => {
       catchUp(store);
-      return store.run(run(input.value));
+      return store.run(run(input));
     });
     if (!result.ok) return domainFailure(result.error);
-    return result.value === undefined
+    return surface.status === 204
       ? new Response(null, { status: 204 })
-      : json(200, result.value);
+      : json(surface.status, result.value);
   }
   return new Response('404 Not Found', { status: 404 });
 }
@@ -266,58 +298,72 @@ function queryOf(
   params: URLSearchParams,
   schema: v.GenericSchema | undefined,
 ): Checked<Query> {
-  const raw = Object.fromEntries(
-    [...params].map(([key, value]) => [key, typed(value)]),
-  );
   if (schema === undefined) return { ok: true, value: {} };
-  const result = v.safeParse(schema, raw);
+  const result = v.safeParse(schema, queryInput(schema, queryValues(params)));
   return result.success
     ? { ok: true, value: result.output as Query }
     : { ok: false, response: invalid(result.issues) };
 }
 
-/** A query's number or boolean as its type; anything else as it came. */
-function typed(value: string): unknown {
-  if (/^-?\d+(\.\d+)?$/.test(value)) return Number(value);
-  if (value === 'true') return true;
-  if (value === 'false') return false;
-  return value;
-}
-
-/** The operation's body, checked; none for those that take none. */
-async function inputOf(
-  name: OperationName,
-  request: Request,
-): Promise<Checked<unknown>> {
-  const schema = bodySchemaOf(name);
-  if (schema === undefined) return { ok: true, value: undefined };
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return {
-      ok: false,
-      response: failure(400, 'validationFailed', 'The body is not JSON.'),
-    };
-  }
-  const result = v.safeParse(schema, body);
-  return result.success
-    ? { ok: true, value: result.output }
-    : { ok: false, response: invalid(result.issues) };
+/** Each name of a query with all its values. */
+function queryValues(params: URLSearchParams) {
+  return Object.fromEntries(
+    [...new Set(params.keys())].map((key) => [key, params.getAll(key)]),
+  );
 }
 
 /**
- * `vCreateAreaBody` for `createArea`, as the contract names them; none for
- * an operation without a body.
+ * The operation a write names, from its path's values, its query and its
+ * body as the surface's schemas check them (the form only, as the screens
+ * can only get that wrong).
  */
-export function bodySchemaOf(name: OperationName): v.GenericSchema | undefined {
-  const schemas: Readonly<Record<string, unknown>> = contract;
-  const schema = schemas[`v${name[0]?.toUpperCase()}${name.slice(1)}Body`];
-  return schema as v.GenericSchema | undefined;
-}
-
-function isOperationName(name: string): name is OperationName {
-  return Object.hasOwn(operations, name);
+async function operationOf(
+  surface: Surface,
+  values: Readonly<Record<string, string>>,
+  params: URLSearchParams,
+  request: Request,
+): Promise<Checked<Call>> {
+  const parts: Record<string, unknown> = {};
+  const check = (part: string, schema: v.GenericSchema, value: unknown) => {
+    const result = v.safeParse(schema, value);
+    if (!result.success) return invalid(result.issues);
+    parts[part] = result.output;
+    return undefined;
+  };
+  if (surface.path !== undefined) {
+    const refused = check('path', surface.path, values);
+    if (refused !== undefined) return { ok: false, response: refused };
+  }
+  if (surface.query !== undefined) {
+    const query = queryInput(surface.query, queryValues(params));
+    const refused = check('query', surface.query, query);
+    if (refused !== undefined) return { ok: false, response: refused };
+  }
+  if (surface.body !== undefined) {
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return {
+        ok: false,
+        response: failure(400, 'validationFailed', 'The body is not JSON.'),
+      };
+    }
+    const refused = check('body', surface.body, body);
+    if (refused !== undefined) return { ok: false, response: refused };
+  }
+  try {
+    return {
+      ok: true,
+      value: surface.operation(parts as Parameters<Surface['operation']>[0]),
+    };
+  } catch (error) {
+    if (!(error instanceof RequestError)) throw error;
+    return {
+      ok: false,
+      response: failure(400, 'validationFailed', error.message),
+    };
+  }
 }
 
 function view(clock: Clock, view: unknown) {

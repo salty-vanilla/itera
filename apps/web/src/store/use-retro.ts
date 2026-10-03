@@ -44,7 +44,10 @@ export function useRetroActions() {
       beginRetro: () => run(operations.beginRetro()).ok,
       assessGoal: (areaId: AreaId, assessment: SelfAssessment | null) =>
         run(operations.assessGoal({ areaId, assessment })).ok,
-      togglePin: (pin: RetroPin) => run(operations.togglePin({ pin })).ok,
+      /** 振り返りに使う印をつける (`on`) / 外す. */
+      setPinned: (pin: RetroPin, on: boolean) =>
+        run(on ? operations.pinFact({ pin }) : operations.unpinFact({ pin }))
+          .ok,
       setReflection: (text: string) =>
         run(operations.setReflection({ text })).ok,
       setImprovement: (text: string) =>

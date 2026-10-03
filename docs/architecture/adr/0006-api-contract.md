@@ -5,6 +5,7 @@
 - 関連：Issue #265、#45（範囲の分け方は #262）、先行 #264、後続 #266・#272
 - 改訂：2026-10-03（互換の規則を書き直す。型のテストが失敗したときの直し方。ADR 0007）
 - 改訂：2026-10-03（利用者と設定の読み取り `getMe`、設定がないときのエラー、本文の大きさの上限。Issue #266）
+- 改訂：2026-10-03（経路を資源と HTTP のメソッドで表し、kebab-case にそろえる。operationId は HTTP の面ごとに 1 つ。Issue #295、案 A）
 
 ## 背景
 
@@ -33,7 +34,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 - 契約は `packages/api-contract`（`apps/web` と `services/api` のどちらにも属さない）。仕様は `openapi/`：
   - `openapi.yaml`：info、`servers`（`/api`）、`security`、tags、`paths` の一覧（各 path は下のファイルを `$ref` で指す）。
-  - `paths/`：読み取り（`reads.yaml`）と、画面の領域ごとの操作（`area`・`task`・`planning`・`today`・`running`・`retro`）。
+  - `paths/`：資源ごとの path item（`area`・`task`・`planning`・`today`・`running`・`retro`）と、書き込みのない経路の読み取り（`reads.yaml`）。同じ経路の読み取りと書き込みは 1 つの path item に置く（例：`/planning` の GET・POST・PATCH は `planning.yaml`）。
   - `schemas/`：`common.yaml`（ID・日付・時計・エラー）、`records.yaml`（domain の記録）、`values.yaml`（domain の派生値）、`views.yaml`（application の読み取りの結果）。
   - `responses.yaml`：エラーの応答。
 - 説明（summary・description）は英語で書く（生成したコードの JSDoc になり、コードのコメントと揃える）。画面の語は使わない。
@@ -47,8 +48,57 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 ### 経路の形
 
 - 経路はすべて `/api` の下（ADR 0004「API の経路」）。仕様の `servers` が `/api` で、生成したクライアントは同じ origin の `/api` を呼ぶ。
-- **操作**：`POST /api/operations/{名前}`。名前と operationId は `packages/application` の `operations` のキーそのもの（例：`POST /api/operations/createArea`）。本文は入力のオブジェクト。入力のない操作（`beginRetro`・`dropCriterionDraft`・`completeRetro`・`beginPlanning`）は本文を持たない。
-- **操作の応答**：値を返す操作（作った ID、`effectiveFrom`・`removed` など）は 200 でその値（`OperationOutput`）、返さない操作は 204。変わった後の読み取りは返さない（下の「操作の応答に読み取りを含めない」）。
+- **操作**：経路を資源で、操作をその資源への HTTP のメソッドで表す（#295、2026-10-03 オーナー決定。案 A）。判定はサーバーの `packages/domain` だけが行い、操作は `packages/application` の `operations` の名前と入力で表すという ADR 0005 の考えは変えない。変えたのは、操作をどのメソッドと経路に載せるか。
+  - 経路と query の名前は kebab-case。path の値の名前（`{areaId}` など）と JSON の項目名と operationId は camelCase（生成する関数名が TypeScript の慣習に合う）。Better Auth の経路（`/api/auth/get-session` など、契約の外）とも同じ書き方になる。
+  - 資源は名詞（集まりは複数形）。1 つしかない今の Sprint は、読み取りと同じ名前を使う：`/planning`（計画中）、`/running`（実行中）、`/today`（実行中の Sprint の今日）、`/retro`（Review 中の Sprint の振り返り）。
+  - 作る：`POST /<集まり>` → 201 と作った ID。欄を変える：`PATCH`。置き換える・付ける（冪等）：`PUT`。消す・外す・取り消す（冪等）：`DELETE`（本文は持たない。RFC 9110 で意味が決まっていない）。資源で表せない状態の遷移（確定、振り返りを始める・終える、開始・中断・見送り、採用など）：`POST /<資源>/<動詞>`（kebab-case）。
+  - 状態コード：作ったら 201、値を返すなら 200、返さないなら 204。変わった後の読み取りは返さない（下の「操作の応答に読み取りを含めない」）。
+  - **HTTP の面**（1 つのメソッドと 1 つの経路）ごとに operationId が 1 つ。1 つの操作だけを受ける面は操作の名前をそのまま operationId にし、いくつかの操作を受ける面は新しい名前にする（`updateArea` など）。面と操作の対応は 1 対多になりうる。
+  - 1 つの面がいくつかの操作を受けるときは、要求が運ぶもの（本文のどの項目があるか、定数の値、どの query か）だけで操作を選び、記録の今の状態では選ばない（遷移の規則を domain の外に持たない）。1 つの要求は 1 つの操作で、別の操作の項目を一緒に送ると 400（本文は `oneOf` の `strictObject`）。
+  - 振り分けの規則は `packages/api-contract/src/requests.ts`（`@itera/api-contract/requests`）の 1 か所に、両方向を並べて置く。`requestOf(名前, 入力)` が操作の要求（面と path・query・本文）を作り（Web）、面ごとの `surfaces[operationId].operation` が検証した要求から操作と入力を作る（サーバーとブラウザ内モック）。query の文字列を宣言した型に変える `queryInput` も同じ場所に置き、読み取りと書き込みで使う。application の型には型だけで依存する。
+  - 面の一覧（54 面で 66 操作。読み取りは下の表）：
+
+  | メソッド・経路 | operationId | 受ける操作（選び方） | 成功 |
+  | --- | --- | --- | --- |
+  | `POST /areas` | `createArea` | `createArea` | 201 |
+  | `PATCH /areas/{areaId}` | `updateArea` | `name` → `renameArea`、`archived: true` → `archiveArea`、`false` → `restoreArea` | 204 |
+  | `POST /tasks` | `quickAddTask` | `addTo` なし → `createTask`、`planning` → `createAndChooseTask`、`today` → `createTaskForToday` | 201 |
+  | `PATCH /tasks/{taskId}` | `updateTask` | 属性と `estimate` → `saveTask`（`estimate` 以外が `update`）、`archived` → `archiveTask` / `restoreTask` | 204 |
+  | `PUT` / `DELETE /tasks/{taskId}/completion` | `completeTask` / `undoCompleteTask` | 同名 | 204 |
+  | `PUT` / `DELETE /tasks/{taskId}/recurrence` | `setRecurrence` / `endRecurrence` | 同名 | 200 |
+  | `POST /tasks/{taskId}/subtasks` | `addSubtask` | 同名 | 201 |
+  | `PATCH /tasks/{taskId}/subtasks/{subtaskId}` | `updateSubtask` | `done` → `setSubtaskDone`、`hours` → `setSubtaskEstimate` | 204 |
+  | `POST /tasks/{taskId}/suggestions/{suggestionId}/adopt` | `adoptEstimateSuggestion` | `bound` → `adoptSuggestion`、`hours` → `adoptEditedSuggestion` | 204 |
+  | `POST …/suggestions/{suggestionId}/undo-adoption`・`/reject`・`/undo-rejection` | `undoAdoption`・`rejectSuggestion`・`undoRejection` | 同名 | 204 |
+  | `POST /planning` | `beginPlanning` | 同名 | 201 |
+  | `PATCH /planning` | `setPlanningAvailableHours` | 同名（`availableHours` → `hours`） | 204 |
+  | `POST /planning/confirm` | `confirmSprint` | 同名 | 204 |
+  | `PUT /planning/goals/{areaId}` | `setPlanningGoal` | 同名 | 204 |
+  | `POST /planning/tasks` | `chooseTasks` | 同名 | 201 |
+  | `DELETE /planning/tasks?ids=…` / `?task-ids=…` | `unchoosePlanningTasks` | `ids` → `unchooseTasks`、`task-ids` → `unchooseTasksByTask`（どちらか一方） | 204 |
+  | `PATCH /planning/tasks/{sprintTaskId}` | `setGoalLink` | 同名 | 204 |
+  | `POST /planning/tasks/{sprintTaskId}/exclude-occurrences` | `excludeAllOccurrences` | 同名 | 204 |
+  | `PATCH /planning/occurrences/{occurrenceId}` | `setOccurrenceIncluded` | 同名 | 204 |
+  | `POST /planning/occurrences/include` | `includeOccurrences` | 同名 | 204 |
+  | `POST /today/selections` | `createDailySelection` | `sprintTaskId` → `chooseForToday`、`taskId` → `addTaskToToday` | 201 |
+  | `POST /today/selections/{selectionId}/start`・`/pause`・`/defer`・`/remove`・`/complete`・`/skip`・`/undo-close`・`/undo-complete`・`/undo-skip` | `startSelection`・`pauseSelection`・`deferSelection`・`removeFromToday`・`completeSelection`・`skipSelection`・`undoCloseSelection`・`undoCompleteSelection`・`undoSkipSelection` | 同名 | 204 |
+  | `POST /today/selections/{selectionId}/actuals` | `recordSelectionActual` | 同名 | 204 |
+  | `POST /today/interrupts` | `noteInterrupt` | 同名 | 201 |
+  | `PATCH` / `DELETE` / `PUT /today/interrupts/{interruptNoteId}` | `editInterrupt` / `deleteInterrupt` / `restoreInterrupt` | 同名 | 204 |
+  | `PATCH /running` | `setRunningAvailableHours` | 同名（`availableHours` → `hours`） | 204 |
+  | `PUT /running/goals/{areaId}` | `setRunningGoal` | 同名 | 204 |
+  | `PUT` / `DELETE /running/tasks/{taskId}` | `addTaskToWeek` / `undoAddTaskToWeek` | 同名（path の値は Task の ID） | 201 / 204 |
+  | `POST /running/selections/{selectionId}/undo` | `undoPastDay` | 同名 | 204 |
+  | `PATCH /retro` | `updateRetro` | `reflection` → `setReflection`、`improvement` → `setImprovement`、`criterionDecision` → `decideCriterion` | 204 |
+  | `POST /retro/begin`・`/retro/complete` | `beginRetro`・`completeRetro` | 同名 | 204 |
+  | `PATCH /retro/goals/{areaId}` | `assessGoal` | 同名 | 204 |
+  | `PUT` / `DELETE /retro/pins/{pin}` | `pinFact` / `unpinFact` | 同名 | 204 |
+  | `POST` / `PATCH` / `DELETE /retro/draft-criterion` | `draftCriterion` / `setDraftPolicy` / `dropCriterionDraft` | 同名 | 201 / 204 / 204 |
+  | `POST /retro/actuals` | `recordReviewActual` | 同名 | 204 |
+
+  - 振り返りの印は、domain の `togglePin` を `pinFact`・`unpinFact` に分けた（#295 のオーナー決定）。付いている印を付ける・付いていない印を外すときは何も変えないので、同じ要求を何度送っても同じ結果になる。`{pin}` は印の付いた記録の ID（SprintTask・選択・回・割り込み、Goal は Area の ID）か `available-hours` で、記録の種類は TypeID の接頭辞から決まる。
+  - 実績の追記（`recordSelectionActual`・`recordReviewActual`）は記録を作るが、ID を返さない（追記だけで、あとから指す操作がない）ので 204。
+  - 割り込みを戻す `restoreInterrupt` は ID を残すので、その ID を path に置く `PUT`（下の「消した記録を戻す操作の照合」）。
 - **読み取り**：`GET`。application の読み取りの関数ごとに 1 つ。
 
   | operationId | 経路 | application | 結果がないとき |
@@ -57,7 +107,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
   | `listAreas` | `/api/areas` | `areaList` | — |
   | `getBacklog` | `/api/backlog?view=&area=` | `backlogData` | — |
   | `getSprintChoice` | `/api/sprint-choice?screen=sprint\|retro&sprint=N` | `sprintChoice` | 最初の Sprint の前の Retro |
-  | `getPlanning` | `/api/planning?applyCriterion=` | `planningData` | 計画中の Sprint がない |
+  | `getPlanning` | `/api/planning?apply-criterion=` | `planningData` | 計画中の Sprint がない |
   | `getRunning` | `/api/running?sprint=N` | `runningData` | 実行中がない・番号の Sprint がない・計画中 |
   | `getToday` | `/api/today` | `todayData` | 実行中の Sprint がない |
   | `getDay` | `/api/days/{date}` | `dayData` | 今日（`getToday` で読む） |
@@ -66,7 +116,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
   - Sprint は番号（F25）で、日は日付で指定する（#90）。番号から Sprint を引くのはサーバー（#266〜#270）。
   - 応答は `{ clock, view }`。`clock` は、サーバーがその応答のために決めた「今日」と現在時刻（ADR 0005「時計」）。`view` は、今は application の関数の結果そのもので（写像は恒等。ADR 0007）、結果がない（`undefined`）ときは `null`（TanStack Query は `undefined` をデータにできない）。
-  - query の数と真偽（`sprint`・`applyCriterion`）は、通信の上では文字列。サーバーは宣言した型に変えてから、生成したスキーマで検証する。
+  - query の数と真偽（`sprint`・`apply-criterion`）は、通信の上では文字列。サーバーは宣言した型に変えてから、生成したスキーマで検証する（`queryInput`。同じ名前を繰り返した値は、配列の項目なら全部、それ以外は検証で 400）。
 - **利用者**：`GET /api/me`（`getMe`）は、サインインしている利用者の ID と設定（表示名・タイムゾーン・週の始まり。domain の `User` から ID を除いたもの）を `{ userId, settings }` で返す。設定をまだ作っていなければ `settings` は `null`。application の読み取りではないので `{ clock, view }` で包まず、日付が変わったときの処理（#271）も走らせない。設定がない間もこの読み取りだけは答え、クライアントは設定を作る画面を出す（#279。2026-10-03 司令塔経由のオーナー方針、#266）。
 - `/api/health`・`/api/auth/*` はこの契約の外にある。
 
@@ -79,7 +129,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 ### 消した記録を戻す操作の照合
 
-消した割り込みを戻す `restoreInterrupt` は、ID を残す。クライアントは、消す前の読み取りで得た note（ID・時刻・本文・分）をそのまま送り、domain の `restoreInterrupt` が「同じ ID の note がない」「今より後に記録されたものでない」「本文が空でない」を確かめて、時刻の順の位置に戻す（F38）。
+消した割り込みを戻す `restoreInterrupt` は、ID を残す。クライアントは、消す前の読み取りで得た note（ID・時刻・本文・分）をそのまま送り（ID は `PUT /today/interrupts/{interruptNoteId}` の path に、ほかは本文に）、domain の `restoreInterrupt` が「同じ ID の note がない」「今より後に記録されたものでない」「本文が空でない」を確かめて、時刻の順の位置に戻す（F38）。
 
 - 内容で照合する案（サーバーが消した note を覚えておき、本文と時刻で探す）は採らない。サーバーは Activity を判定に読み返さず（ADR 0004「記録のテーブル」）、消した note を別に保つ場所が要るため。ID は TypeID で、接頭辞と書式を契約で確かめる。
 - 同じ考えで、`undoAdoption` の `previous`（採用する前の Estimate）も、クライアントが採用の前の読み取りで持っていた値を送る。Task は今の Estimate だけを持つため（packages/domain）。
@@ -101,9 +151,9 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 | 422 | `userNotSetUp` | 利用者の設定（タイムゾーン・週の始まり）がまだなく、「今日」が決まらない。`getMe` のほかの操作と読み取りはすべてこれで断る（#266） |
 | 500 | `internalError` | 予期しない失敗 |
 
-- 各 operation の応答に書く：操作は 400（本文のない操作を除く）・401・403・404・409・413・422・500。読み取りは 400（パラメータのある読み取り）・401・409・422・500。`getMe` は 401・500。読み取りの 409 は、読み取りの前の追いつき（#271）の書き込みが、ほかの書き込みとぶつかったとき。操作の 422 は domain の 3 つの code と `userNotSetUp` のどれか、読み取りの 422 は `userNotSetUp` だけ。
+- 各 operation の応答に書く：操作は 400（path の値・query・本文のどれもない操作を除く）・401・403・404・409・413・422・500。読み取りは 400（パラメータのある読み取り）・401・409・422・500。`getMe` は 401・500。読み取りの 409 は、読み取りの前の追いつき（#271）の書き込みが、ほかの書き込みとぶつかったとき。操作の 422 は domain の 3 つの code と `userNotSetUp` のどれか、読み取りの 422 は `userNotSetUp` だけ。
 - `userNotSetUp` は domain の規則ではなく、記録を読み込んだときに設定の行がないことで決まる。判定はサーバーの流れの 1 か所（`services/api/src/handlers/flow.ts`）に置く。設定を作る operation（#279）は、この code を断る対象から外す。
-- 本文の大きさの上限は 64 KiB（`/api/operations/*` に Hono の `bodyLimit`）。いちばん大きい本文は Task の説明を含む `saveTask` で、文章を書く欄として十分に大きく、D1 の文字列・行の上限（2 MB）より小さい。`Content-Length` があれば本文を読まずに 413 を返す（ない要求は上限まで読んでから 413）。上限は `info.version` を変えずに広げてよい（狭めるのは壊す変更）。
+- 本文の大きさの上限は 64 KiB（書き込みのすべての面に Hono の `bodyLimit`。#295 までは `/api/operations/*`）。いちばん大きい本文は Task の説明を含む `saveTask` で、文章を書く欄として十分に大きく、D1 の文字列・行の上限（2 MB）より小さい。`Content-Length` があれば本文を読まずに 413 を返す（ない要求は上限まで読んでから 413）。上限は `info.version` を変えずに広げてよい（狭めるのは壊す変更）。
 - `requireAuth` の 401 の本文も、この形（`unauthenticated`）にした（#266）。
 - 422 にしたのは、要求の形は正しく、記録の今の状態や値の規則で受け付けられないことを、形の誤り（400）と分けるため。409 は版の衝突だけに使い、クライアントは 409 なら読み直す（ADR 0004）。
 
@@ -116,6 +166,8 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
   - `@itera/api-contract/client`：fetch のクライアント（Web）。関数は契約の operation と読み取りだけにする（一覧のテストが、関数の export を operation として数える）。
   - `@itera/api-contract/create-client`：別のクライアントを作る `createClient`・`createConfig`。Web はデータの出どころ（API、ブラウザ内モック）ごとにクライアントを作る（#272、ADR 0005「Web のクライアントとブラウザ内モック」）。
   - `@itera/api-contract/react-query`：TanStack Query の options（Web）。React に依存する。
+  - `@itera/api-contract/requests`：操作と面の振り分け（上の「経路の形」、#295）と `queryInput`。生成物ではなく手で書く。サーバー・ブラウザ内モック・Web が使う。
+  - `@itera/api-contract/testing`：テストの道具（操作ごとの入力の例 `OPERATION_EXAMPLES` など）。テストだけが使う。
   - `services/api` から `client`・`create-client`・`react-query` の import を ESLint の `no-restricted-imports` で止める。API が React に依存しない。
 - Hey API がそのまま写す fetch の実行時のコード（`src/generated/client/`・`core/`）は `exactOptionalPropertyTypes` を前提に書かれておらず、`apps/web` はこの .ts を自分の設定で型検査する。そこで生成の後処理で、この 2 つのディレクトリのファイルにだけ `// @ts-nocheck` を付ける。契約から生成したコード（型・スキーマ・SDK・Query の options）は型検査の対象のまま。Hey API がこの設定に対応したら外す。
 - Hey API 0.99.0 の Valibot のプラグインは、`additionalProperties` の値が `$ref` だと値を読まず、`v.record` の代わりに何も検証しない `v.object({})` を出す（`BacklogData.items`、`RetroData.sprintAreas`）。仕様の書き方（`allOf`・`anyOf`・`type` を並べる）では避けられなかった。そこで `pnpm patch` で、その条件の 1 行（`$ref` の値も読む）だけを直す（`patches/@hey-api__openapi-ts@0.99.0.patch`、`pnpm-workspace.yaml` の `patchedDependencies`）。
@@ -128,22 +180,28 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 `packages/api-contract` のテストで確かめる。
 
-- 一覧：生成したクライアントの operation が、`operations` のすべての名前と読み取りの 10 個と `getMe` に一致する。`@itera/application` の関数の export のうち、読み取りでも操作の道具でもないものがあれば失敗する（読み取りを足したら契約にも足す）。
-- 型：各操作の入力と本文、出力と応答、各読み取りの結果と応答の `view`（`undefined` は `null`）と `clock` が、型として同じ（片方への代入ができるだけでなく、余分な・欠けたキーもない）。比べる前に、両方から brand（ID・日付）と `readonly` を外す。`pnpm typecheck` で確かめる。このテストは、今は application の結果から DTO への写像が恒等であることを確かめるもので、application の形が契約の正本であることを示すものではない（契約の正本は `openapi/`）。内部の変更で型が合わなくなったら、意図した契約の変更でない限り、契約は直さずに `services/api` に写像を置く（ADR 0007「アプリケーション層の読み取りと API の DTO」）。
+- 一覧：生成したクライアントの operation が、`surfaces` の面と読み取りの 10 個と `getMe` に一致し、`operations` のすべての名前が面のどれかに行く。`@itera/application` の関数の export のうち、読み取りでも操作の道具でもないものがあれば失敗する（読み取りを足したら契約にも足す）。
+- 往復（`src/requests.test.ts`）：操作ごとの入力の例（`OPERATION_EXAMPLES`。省略できる項目の有無を含む）を `requestOf` で要求にし、面のスキーマで検証して `operation` に通すと、同じ操作と入力に戻る。面のメソッドと経路が、生成したクライアントの関数が送るものと同じ。面のスキーマのすべての項目を、どれかの操作の要求が使う。すべての経路と query の名前が kebab-case。
+- 型：各操作の入力と要求は `requests.ts` の中で生成した型に対して型検査する。出力と応答（1 つの操作だけの面は同じ型、いくつかの操作の面は各出力が応答に合い、合わせて応答の項目になる）、各読み取りの結果と応答の `view`（`undefined` は `null`）と `clock` が、型として同じ（片方への代入ができるだけでなく、余分な・欠けたキーもない）。比べる前に、両方から brand（ID・日付）と `readonly` を外す。`pnpm typecheck` で確かめる。このテストは、今は application の結果から DTO への写像が恒等であることを確かめるもので、application の形が契約の正本であることを示すものではない（契約の正本は `openapi/`）。内部の変更で型が合わなくなったら、意図した契約の変更でない限り、契約は直さずに `services/api` に写像を置く（ADR 0007「アプリケーション層の読み取りと API の DTO」）。
 - fixture：PRD §12 の 12 状態で、すべての読み取り（Backlog の絞り込みごと、すべての Sprint の番号と次の週、昨日と明日）の結果を JSON にして `{ clock, view }` で包み、生成した応答のスキーマで検証する。
-- ID：各種類の ID のスキーマが、`parseId` と同じものを受け付ける。型のテストは ID を文字列として比べるので、各操作の本文のどの属性がどの種類の ID を取るかは別に確かめる：application の入力の型から求めた種類の表（`pnpm typecheck` で型と照合）と、生成した本文のスキーマが参照する ID のスキーマを照らす（`src/id-kinds.test.ts`）。
+- ID：各種類の ID のスキーマが、`parseId` と同じものを受け付ける。型のテストは ID を文字列として比べるので、各操作の入力のどこがどの種類の ID を取るかは別に確かめる：application の入力の型から求めた種類の表（`pnpm typecheck` で型と照合）に沿って、例の入力の ID を別の種類の ID に替えると、その要求を面のスキーマが断る（`src/id-kinds.test.ts`）。
 
 ## 検討した代替案
 
 - **TS の型から仕様を出力する**（Hono のルート定義、型からの JSON Schema 生成）：#45 のオーナーの決定（仕様が正本）のとおり採らない。iOS・Android が使う契約が TypeScript の実装に従うことになる。
 - **操作を 1 つの経路にまとめる**（`POST /api/operations` に `{ name, input }`）：operation ごとの型・スキーマ・クライアントの関数が生成できず、OpenAPI で契約にする意味が薄れる。
-- **REST の資源の形にする**（`PATCH /api/tasks/{id}` など）：操作の多くは複数の記録を変え（例：今日へ＝SprintTask と DailySelection）、資源の形にすると判定がクライアントに寄る。ADR 0005 のとおり、操作は名前と入力で表す。
+- **すべての操作を `POST /api/operations/{名前}` にする**（#265〜#268 の形。#295 で改めた）：HTTP のメソッドで冪等さ・取り消しを表せず、経路の書き方もそろっていなかった（操作は camelCase、読み取りは kebab-case）。iOS・Android が同じ契約を使う前に、資源とメソッドの形にした。判定は今も domain だけにあり、資源の形にしても判定がクライアントに寄ることはない（面は操作の名前と入力に戻すだけ）。
+- **状態の遷移も PATCH の状態の項目にまとめる**（#295 の案 B。54 面のところ 34 面）：選択の `resolution`、提案の `state` などを PATCH で送り、今の状態と求める状態から domain の操作を選ぶ。採らない：どの遷移を選ぶかの知識が写像（または application）にも要り、domain と 2 か所に分かれる。取り消しの行き先は今の状態で決まる（完了の取り消しは中断に戻ることもある）ので、結果の状態と一致しない値（「取り消す」）を送ることになり、写像も記録を読んでからでないと選べない。
 - **読み取りの応答をそのまま結果にする**（包まない）：結果がないとき（`undefined`）を 404 にすると、空の状態がエラーとして扱われる。今日と現在時刻を応答に含める必要もある（ADR 0005「時計」）。
 - **生成物をコミットせず、CI とインストールのたびに生成する**：`pnpm install` の後に生成の手順が増え、差分のレビューで契約の変化が見えない。
 
 ## 既知の制約
 
 - query の数と真偽は文字列で届くので、サーバーで変換が要る（#266）。
+- `DELETE /planning/tasks` の `ids` と `task-ids` は「どちらか一方」を契約で書けない（query の `oneOf` はない）。両方・どちらもないときは振り分けで 400 にする（`RequestError`）。
+- 印の `{pin}` は記録の ID から種類を決める。クライアントが別の種類として送った ID も、その ID の種類の印として扱う（契約が受け付ける ID の種類の中で）。
+- `PUT`・`DELETE` の 2 回目を、domain が `invalidTransition`（422）で断る操作がある（`completeTask` を完了の Task に、など）。記録は変わらないので状態としては冪等だが、応答は 1 回目と同じにならない。直すなら domain の変更。
+- `PATCH /today/interrupts/{interruptNoteId}` は本文と分を置き換える（`minutes` を省くと分がない）。PATCH の本文は JSON Merge Patch ではない。
 - 応答のスキーマは未知のキーを許すので、Valibot の検証だけでは余分なキーを見つけられない。型のテストで止めている。
 - `restoreInterrupt` と `undoAdoption` は、クライアントが前の読み取りの値を送る。版はサーバーが読み込んだ時点のものなので、クライアントの読み取りが古いことは 409 では分からない。`undoAdoption` は domain の確かめ（提案の状態）で守られるが、`restoreInterrupt` は古い note でも受け付ける。
 - `restoreInterrupt` の ID の重複を domain が確かめるのは今の Sprint の中だけで、DB の `interrupt_note.id` は全体の主キー。ほかの Sprint にある ID を送ると保存の `batch()` が失敗する（上書きはされない）。偶然には起きないが 500 になるので、Today の操作をつなぐ Issue（#269）で、利用者のすべての割り込みと照合して 422 にする。`note.at` が Sprint の期間の外でも受け付ける点も同じ。
@@ -191,6 +249,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 ### 壊す変更をするとき
 
 - `info.version` の major を上げ、ADR に書く。
+- ただし最初の本番の公開（統合ブランチを main に入れて CD でデプロイするとき）までは、SemVer（§4）の major 0（初期の開発中）として扱い、壊す変更で minor を上げる。最初の本番の公開で 1.0.0 にし、その後は major を上げる（2026-10-03 司令塔の判断、#295）。#295 の経路の変更で 0.2.0 にした。
 - 版の上げ方（経路、ヘッダー、受け付ける最低の版）と、古いクライアントの扱いは、iOS に着手するまでに決める。それまでは Web だけなので、壊す変更を入れた直後は、開いたままのタブの要求が失敗しうる（400 など）。利用者が 1 人の間は、読み直しで足りる。
 
 ### 決めていないこと（iOS に着手する前に決める）
@@ -201,7 +260,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 ## 影響
 
-- `services/api`（#266）は、`@itera/api-contract` のスキーマで入力を検証し、この ADR の割り当てでエラーを返す。operation と読み取りは `src/handlers/` の登録表（`operations.ts`・`reads.ts`）に足し、まだ答えないものは同じファイルの未実装の一覧に置く（契約のすべての operation がどちらかにあることをテストで確かめる）。
-- `apps/web`（#272）は、`@itera/api-contract/client` と `/react-query` を使い、`@tanstack/react-query` 5.104.1 を入れる。
+- `services/api`（#266）は、`@itera/api-contract` のスキーマで入力を検証し、この ADR の割り当てでエラーを返す。書き込みは `@itera/api-contract/requests` の面をすべて登録し（#295）、まだ答えない操作は `src/handlers/operations.ts` の未実装の一覧に置いて 404 にする。読み取りは `reads.ts` の登録表に足し、まだ答えないものは同じファイルの未実装の一覧に置く。
+- `apps/web`（#272）は、`@itera/api-contract/client` と `/react-query` を使い、`@tanstack/react-query` 5.104.1 を入れる。操作は `useOperation('<名前>')` で、`@itera/api-contract/requests` を通して送る（#295）。
 - iOS・Android は、`openapi/` を 1 ファイルにまとめたもの（`redocly bundle`）から生成できる。セッションの Cookie と書き込みの Origin の検査（ADR 0004）は、Origin を送らないネイティブのクライアントでは 403 になるので、ネイティブの認証の方式は iOS に着手するときに決める。
 - 契約を変えるときは、`openapi/` を直し、`pnpm contract:generate` を実行して、生成物と一緒にコミットする。

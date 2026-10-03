@@ -1,3 +1,4 @@
+import { queryInput } from '@itera/api-contract/requests';
 import {
   vGetBacklogQuery,
   vGetPlanningQuery,
@@ -31,7 +32,7 @@ import type * as v from 'valibot';
 import type { AppEnv } from '../env';
 import { ApiError } from '../errors';
 import type { Flow, Guards } from './flow';
-import { queryInput, validate } from './validate';
+import { validate } from './validate';
 
 /**
  * Each read of the contract, by its operationId, and the `view` it answers
@@ -150,7 +151,7 @@ export const readRoutes: {
     query: vGetPlanningQuery,
     read: (records, clock, { query }) =>
       planningData(records, clock, {
-        applyCriterion: query.applyCriterion ?? false,
+        applyCriterion: query['apply-criterion'] ?? false,
       }),
   }),
   getRunning: readRoute({
@@ -194,7 +195,7 @@ export function readRoutesApp(flow: Flow, guards: Guards) {
             ? undefined
             : validate(
                 route.query,
-                queryInput(route.query, c.req.query()),
+                queryInput(route.query, c.req.queries()),
                 'query',
               ),
         params:

@@ -267,7 +267,7 @@ PC とスマホから同じ利用者の記録を書く。後から来た書き�
 
 「影響」で後回しにしていた点を決める。セッションの Cookie は SameSite=Lax だが、それだけに頼らず、`/api/*` の GET・HEAD 以外のリクエストは、`Origin` ヘッダーが `BETTER_AUTH_URL` の origin と一致しなければ 403 にする。Better Auth 自身の経路（`/api/auth/*`）は Better Auth の検査に任せる。
 
-実装（#266）：契約の経路（`/api/me`・読み取り・`/api/operations/*`）に、認証の後で `requireSameOrigin` を置く。origin は注入した `appOrigin`。`Origin` ヘッダーのない書き込みも 403 にする（ブラウザは POST に必ず付ける）。ポートが違えば別の origin として断る。
+実装（#266）：契約の経路（`/api/me`・読み取り・書き込み。#295 からは書き込みが資源の経路の POST・PUT・PATCH・DELETE）に、認証の後で `requireSameOrigin` を置く。GET・HEAD 以外のすべてのメソッドを書き込みとして確かめる。origin は注入した `appOrigin`。`Origin` ヘッダーのない書き込みも 403 にする（ブラウザは POST に必ず付ける）。ポートが違えば別の origin として断る。
 
 ### Web と API の配信（2026-10-03）
 

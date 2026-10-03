@@ -1,8 +1,11 @@
-// Every operation and read of packages/application has its operation in
-// the contract, and the contract has no other (#265 完了条件).
+// Every operation and read of packages/application is in the contract, and
+// the contract has nothing else (#265 完了条件): the operations through the
+// surfaces of requests.ts (#295), the reads one each.
 import * as application from '@itera/application';
 import { describe, expect, it } from 'vitest';
 import * as sdk from './client';
+import { requestOf, surfaces } from './requests';
+import { OPERATION_EXAMPLES } from './testing';
 
 /** The contract's reads and the functions whose result each returns. */
 const READS = {
@@ -44,11 +47,19 @@ const contract = Object.entries(sdk)
   .map(([name]) => name);
 
 describe('the contract', () => {
-  it('has an operation for each operation of the application, by its name', () => {
+  it('has a surface for each operation of the application, and no other write', () => {
     const reads = new Set([...Object.keys(READS), ...SERVER_READS]);
     expect(contract.filter((name) => !reads.has(name)).toSorted()).toEqual(
+      Object.keys(surfaces).toSorted(),
+    );
+    expect(Object.keys(OPERATION_EXAMPLES).toSorted()).toEqual(
       Object.keys(application.operations).toSorted(),
     );
+    for (const [name, [input]] of Object.entries(OPERATION_EXAMPLES)) {
+      expect(Object.keys(surfaces), name).toContain(
+        requestOf(name as never, input as never).operationId,
+      );
+    }
   });
 
   it('has a read for each read of the application', () => {

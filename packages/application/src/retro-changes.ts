@@ -8,12 +8,13 @@ import {
   draftCriterion,
   dropCriterionDraft,
   nextUnconfirmedSprintStart,
+  pinFact,
   recordActualTime,
   setDraftPolicy,
   setImprovement,
   setReflection,
   startPlanning,
-  togglePin,
+  unpinFact,
   type AreaId,
   type CommandResult,
   type CriterionPolicy,
@@ -69,9 +70,13 @@ function onReview(
 export const assess = (areaId: AreaId, assessment: SelfAssessment | null) =>
   onReview((sprint, ctx) => assessGoal(sprint, { areaId, assessment }, ctx));
 
-/** 振り返りに使う印をつける / 外す. */
+/** 振り返りに使う印をつける (nothing changes when it is on already). */
 export const pin = (target: RetroPin) =>
-  onReview((sprint, ctx) => togglePin(sprint, { pin: target }, ctx));
+  onReview((sprint, ctx) => pinFact(sprint, { pin: target }, ctx));
+
+/** 振り返りに使う印を外す (nothing changes when it is off already). */
+export const unpin = (target: RetroPin) =>
+  onReview((sprint, ctx) => unpinFact(sprint, { pin: target }, ctx));
 
 /** 気づいたこと (optional). */
 export const reflect = (text: string) =>

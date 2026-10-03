@@ -1,7 +1,8 @@
 // The contract and packages/application agree (#265 完了条件): every
-// operation and read of the application has its operation in the contract,
-// and their inputs, outputs and results are the contract's types. Checked
-// by `pnpm typecheck` (tsconfig.test.json); the `it`s only list them.
+// operation of the application goes to a surface of the contract and every
+// read has its read there, and their outputs and results are the
+// contract's types. Checked by `pnpm typecheck` (tsconfig.test.json); the
+// `it`s only list them.
 import type {
   AppOverview,
   BacklogData,
@@ -9,7 +10,6 @@ import type {
   DayData,
   EditableArea,
   NextPlanning,
-  OperationInput,
   OperationName,
   OperationOutput,
   PlanningData,
@@ -21,154 +21,58 @@ import type {
 import type { BacklogSlice, User } from '@itera/domain';
 import { describe, expectTypeOf, it } from 'vitest';
 import type * as Gen from './index';
+import type { OperationSurfaces, SurfaceId, SurfaceResponse } from './requests';
 import type { Equal, Plain, WithNull } from './testing';
 
-/** Each operation's request body and response, as generated. */
-type ContractOperations = {
-  createArea: [Gen.CreateAreaData['body'], Gen.CreateAreaResponse];
-  renameArea: [Gen.RenameAreaData['body'], Gen.RenameAreaResponse];
-  archiveArea: [Gen.ArchiveAreaData['body'], Gen.ArchiveAreaResponse];
-  restoreArea: [Gen.RestoreAreaData['body'], Gen.RestoreAreaResponse];
-  chooseTasks: [Gen.ChooseTasksData['body'], Gen.ChooseTasksResponse];
-  unchooseTasks: [Gen.UnchooseTasksData['body'], Gen.UnchooseTasksResponse];
-  unchooseTasksByTask: [
-    Gen.UnchooseTasksByTaskData['body'],
-    Gen.UnchooseTasksByTaskResponse,
-  ];
-  setOccurrenceIncluded: [
-    Gen.SetOccurrenceIncludedData['body'],
-    Gen.SetOccurrenceIncludedResponse,
-  ];
-  includeOccurrences: [
-    Gen.IncludeOccurrencesData['body'],
-    Gen.IncludeOccurrencesResponse,
-  ];
-  excludeAllOccurrences: [
-    Gen.ExcludeAllOccurrencesData['body'],
-    Gen.ExcludeAllOccurrencesResponse,
-  ];
-  createAndChooseTask: [
-    Gen.CreateAndChooseTaskData['body'],
-    Gen.CreateAndChooseTaskResponse,
-  ];
-  setPlanningGoal: [
-    Gen.SetPlanningGoalData['body'],
-    Gen.SetPlanningGoalResponse,
-  ];
-  setGoalLink: [Gen.SetGoalLinkData['body'], Gen.SetGoalLinkResponse];
-  setPlanningAvailableHours: [
-    Gen.SetPlanningAvailableHoursData['body'],
-    Gen.SetPlanningAvailableHoursResponse,
-  ];
-  confirmSprint: [Gen.ConfirmSprintData['body'], Gen.ConfirmSprintResponse];
-  createTask: [Gen.CreateTaskData['body'], Gen.CreateTaskResponse];
-  saveTask: [Gen.SaveTaskData['body'], Gen.SaveTaskResponse];
-  adoptSuggestion: [
-    Gen.AdoptSuggestionData['body'],
-    Gen.AdoptSuggestionResponse,
-  ];
-  undoAdoption: [Gen.UndoAdoptionData['body'], Gen.UndoAdoptionResponse];
-  adoptEditedSuggestion: [
-    Gen.AdoptEditedSuggestionData['body'],
-    Gen.AdoptEditedSuggestionResponse,
-  ];
-  rejectSuggestion: [
-    Gen.RejectSuggestionData['body'],
-    Gen.RejectSuggestionResponse,
-  ];
-  undoRejection: [Gen.UndoRejectionData['body'], Gen.UndoRejectionResponse];
-  addSubtask: [Gen.AddSubtaskData['body'], Gen.AddSubtaskResponse];
-  setSubtaskDone: [Gen.SetSubtaskDoneData['body'], Gen.SetSubtaskDoneResponse];
-  setSubtaskEstimate: [
-    Gen.SetSubtaskEstimateData['body'],
-    Gen.SetSubtaskEstimateResponse,
-  ];
-  archiveTask: [Gen.ArchiveTaskData['body'], Gen.ArchiveTaskResponse];
-  restoreTask: [Gen.RestoreTaskData['body'], Gen.RestoreTaskResponse];
-  completeTask: [Gen.CompleteTaskData['body'], Gen.CompleteTaskResponse];
-  undoCompleteTask: [
-    Gen.UndoCompleteTaskData['body'],
-    Gen.UndoCompleteTaskResponse,
-  ];
-  addTaskToToday: [Gen.AddTaskToTodayData['body'], Gen.AddTaskToTodayResponse];
-  addTaskToWeek: [Gen.AddTaskToWeekData['body'], Gen.AddTaskToWeekResponse];
-  undoAddTaskToWeek: [
-    Gen.UndoAddTaskToWeekData['body'],
-    Gen.UndoAddTaskToWeekResponse,
-  ];
-  setRecurrence: [Gen.SetRecurrenceData['body'], Gen.SetRecurrenceResponse];
-  endRecurrence: [Gen.EndRecurrenceData['body'], Gen.EndRecurrenceResponse];
-  chooseForToday: [Gen.ChooseForTodayData['body'], Gen.ChooseForTodayResponse];
-  startSelection: [Gen.StartSelectionData['body'], Gen.StartSelectionResponse];
-  deferSelection: [Gen.DeferSelectionData['body'], Gen.DeferSelectionResponse];
-  removeFromToday: [
-    Gen.RemoveFromTodayData['body'],
-    Gen.RemoveFromTodayResponse,
-  ];
-  undoCloseSelection: [
-    Gen.UndoCloseSelectionData['body'],
-    Gen.UndoCloseSelectionResponse,
-  ];
-  pauseSelection: [Gen.PauseSelectionData['body'], Gen.PauseSelectionResponse];
-  completeSelection: [
-    Gen.CompleteSelectionData['body'],
-    Gen.CompleteSelectionResponse,
-  ];
-  undoCompleteSelection: [
-    Gen.UndoCompleteSelectionData['body'],
-    Gen.UndoCompleteSelectionResponse,
-  ];
-  skipSelection: [Gen.SkipSelectionData['body'], Gen.SkipSelectionResponse];
-  undoSkipSelection: [
-    Gen.UndoSkipSelectionData['body'],
-    Gen.UndoSkipSelectionResponse,
-  ];
-  recordSelectionActual: [
-    Gen.RecordSelectionActualData['body'],
-    Gen.RecordSelectionActualResponse,
-  ];
-  noteInterrupt: [Gen.NoteInterruptData['body'], Gen.NoteInterruptResponse];
-  editInterrupt: [Gen.EditInterruptData['body'], Gen.EditInterruptResponse];
-  deleteInterrupt: [
-    Gen.DeleteInterruptData['body'],
-    Gen.DeleteInterruptResponse,
-  ];
-  restoreInterrupt: [
-    Gen.RestoreInterruptData['body'],
-    Gen.RestoreInterruptResponse,
-  ];
-  createTaskForToday: [
-    Gen.CreateTaskForTodayData['body'],
-    Gen.CreateTaskForTodayResponse,
-  ];
-  beginRetro: [Gen.BeginRetroData['body'], Gen.BeginRetroResponse];
-  setRunningGoal: [Gen.SetRunningGoalData['body'], Gen.SetRunningGoalResponse];
-  setRunningAvailableHours: [
-    Gen.SetRunningAvailableHoursData['body'],
-    Gen.SetRunningAvailableHoursResponse,
-  ];
-  undoPastDay: [Gen.UndoPastDayData['body'], Gen.UndoPastDayResponse];
-  assessGoal: [Gen.AssessGoalData['body'], Gen.AssessGoalResponse];
-  togglePin: [Gen.TogglePinData['body'], Gen.TogglePinResponse];
-  setReflection: [Gen.SetReflectionData['body'], Gen.SetReflectionResponse];
-  setImprovement: [Gen.SetImprovementData['body'], Gen.SetImprovementResponse];
-  draftCriterion: [Gen.DraftCriterionData['body'], Gen.DraftCriterionResponse];
-  setDraftPolicy: [Gen.SetDraftPolicyData['body'], Gen.SetDraftPolicyResponse];
-  dropCriterionDraft: [
-    Gen.DropCriterionDraftData['body'],
-    Gen.DropCriterionDraftResponse,
-  ];
-  decideCriterion: [
-    Gen.DecideCriterionData['body'],
-    Gen.DecideCriterionResponse,
-  ];
-  recordReviewActual: [
-    Gen.RecordReviewActualData['body'],
-    Gen.RecordReviewActualResponse,
-  ];
-  completeRetro: [Gen.CompleteRetroData['body'], Gen.CompleteRetroResponse];
-  beginPlanning: [Gen.BeginPlanningData['body'], Gen.BeginPlanningResponse];
-};
+/** The operations a surface takes. */
+type OperationsOf<S extends SurfaceId> = {
+  [N in OperationName]: OperationSurfaces[N] extends S ? N : never;
+}[OperationName];
+
+type IsUnion<T, U = T> = T extends unknown
+  ? [U] extends [T]
+    ? false
+    : true
+  : never;
+
+/** The outputs of each of the operations, as a union. */
+type OutputsOf<N extends OperationName> = N extends OperationName
+  ? OperationOutput<N>
+  : never;
+
+/** Every key of a union of objects (not only the common ones). */
+type AllKeys<T> = T extends unknown ? keyof T : never;
+
+/**
+ * The operations whose output is not their surface's response: the same
+ * type where the surface takes one operation; where it takes several (made
+ * told apart by the body), each output fits the response and together they
+ * have its keys.
+ */
+type OutputMismatch = {
+  [N in OperationName]: IsUnion<OperationsOf<OperationSurfaces[N]>> extends true
+    ? Plain<OperationOutput<N>> extends Plain<
+        SurfaceResponse<OperationSurfaces[N]>
+      >
+      ? never
+      : N
+    : Equal<
+          Plain<OperationOutput<N>>,
+          Plain<SurfaceResponse<OperationSurfaces[N]>>
+        > extends true
+      ? never
+      : N;
+}[OperationName];
+
+/** The surfaces whose response has keys no operation of theirs returns. */
+type ResponseKeysMismatch = {
+  [S in SurfaceId]: Equal<
+    AllKeys<Plain<SurfaceResponse<S>>>,
+    AllKeys<Plain<OutputsOf<OperationsOf<S>>>>
+  > extends true
+    ? never
+    : S;
+}[SurfaceId];
 
 /** Each read's result in packages/application, and the response's `view`. */
 type ContractReads = {
@@ -183,26 +87,6 @@ type ContractReads = {
   getRetro: [RetroData | undefined, Gen.GetRetroResponse];
   getNextPlanning: [NextPlanning, Gen.GetNextPlanningResponse];
 };
-
-/** The operations whose input differs from the contract's request body. */
-type InputMismatch = {
-  [N in OperationName]: Equal<
-    Plain<OperationInput<N>>,
-    Plain<ContractOperations[N][0]>
-  > extends true
-    ? never
-    : N;
-}[OperationName];
-
-/** The operations whose output differs from the contract's response. */
-type OutputMismatch = {
-  [N in OperationName]: Equal<
-    Plain<OperationOutput<N>>,
-    Plain<ContractOperations[N][1]>
-  > extends true
-    ? never
-    : N;
-}[OperationName];
 
 /** The reads whose result differs from the response's `view`. */
 type ReadMismatch = {
@@ -225,16 +109,18 @@ type ClockMismatch = {
 }[keyof ContractReads];
 
 describe('the contract and packages/application', () => {
-  it('lists every operation, and nothing else', () => {
-    expectTypeOf<keyof ContractOperations>().toEqualTypeOf<OperationName>();
+  it('sends every operation to a surface, and every surface takes one', () => {
+    expectTypeOf<keyof OperationSurfaces>().toEqualTypeOf<OperationName>();
+    expectTypeOf<OperationSurfaces[OperationName]>().toEqualTypeOf<SurfaceId>();
   });
 
-  it("takes each operation's input as its request body", () => {
-    expectTypeOf<InputMismatch>().toEqualTypeOf<never>();
-  });
+  // Each operation's input is its request: `requestOf` and the surfaces'
+  // `operation` are typed against the generated requests (requests.ts), and
+  // requests.test.ts sends every input there and back.
 
-  it("returns each operation's output as its response", () => {
+  it("returns each operation's output as its surface's response", () => {
     expectTypeOf<OutputMismatch>().toEqualTypeOf<never>();
+    expectTypeOf<ResponseKeysMismatch>().toEqualTypeOf<never>();
   });
 
   it("returns each read's result as the response's view, null for none", () => {

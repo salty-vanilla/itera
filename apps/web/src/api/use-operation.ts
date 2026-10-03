@@ -1,5 +1,12 @@
 import type { Client } from '@itera/api-contract/create-client';
-import { useMutation, type UseMutationOptions } from '@tanstack/react-query';
+import * as sdk from '@itera/api-contract/client';
+import {
+  requestOf,
+  type OperationName,
+  type PlainInput,
+  type PlainOutput,
+} from '@itera/api-contract/requests';
+import { useMutation } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useToast } from '@/components/ui/toast';
 import { useApiClient } from './api-provider';
@@ -17,8 +24,9 @@ export type Outcome<T> =
 export const LOADING_DELAY = 300;
 
 /**
- * One operation of the contract, from its generated mutation options:
- * `useOperation(createAreaMutation)`, then `run({ body: { name } })`.
+ * One operation of packages/application, by its name, sent as its request
+ * of the contract (`requestOf`, ADR 0006 経路の形): `useOperation('renameArea')`,
+ * then `run({ areaId, name })`. An operation without input is `run()`.
  *
  * - While one is being sent, `run` sends nothing more and gives back
  *   `{ ok: false }` (a double press, a key held down).
@@ -31,22 +39,24 @@ export const LOADING_DELAY = 300;
  *   `loading` once that has lasted `LOADING_DELAY` (show the spinner and
  *   its words: Button `loading`, IconButton `loading`).
  */
-export function useOperation<TData, TError, TVariables>(
-  options: (options: {
-    client: Client;
-  }) => UseMutationOptions<TData, TError, TVariables>,
-) {
+export function useOperation<N extends OperationName>(name: N) {
   const client = useApiClient();
   const toast = useToast();
-  const { mutateAsync, isPending } = useMutation(options({ client }));
+  const { mutateAsync, isPending } = useMutation({
+    mutationKey: [name],
+    mutationFn: (input: PlainInput<N>) => sendOperation(client, name, input),
+  });
   // A ref, not `isPending`: a second press can come before the render.
   const sending = useRef(false);
   const run = useCallback(
-    async (variables: TVariables): Promise<Outcome<TData>> => {
+    async (...[input]: Args<N>): Promise<Outcome<PlainOutput<N>>> => {
       if (sending.current) return { ok: false };
       sending.current = true;
       try {
-        return { ok: true, value: await mutateAsync(variables) };
+        return {
+          ok: true,
+          value: await mutateAsync(input as PlainInput<N>),
+        };
       } catch (error) {
         if (failureOf(error).kind !== 'unauthenticated')
           toast.show(SAVE_FAILED);
@@ -58,6 +68,27 @@ export function useOperation<TData, TError, TVariables>(
     [mutateAsync, toast],
   );
   return { run, pending: isPending, loading: useDelayed(isPending) };
+}
+
+/** `run`'s arguments: the input, none for an operation without one. */
+type Args<N extends OperationName> =
+  PlainInput<N> extends undefined ? [] : [input: PlainInput<N>];
+
+/**
+ * Sends an operation as its request with the generated client's function
+ * of the surface. Throws the response's error when it did not go through.
+ */
+export async function sendOperation<N extends OperationName>(
+  client: Client,
+  name: N,
+  input: PlainInput<N>,
+): Promise<PlainOutput<N>> {
+  const { operationId, ...parts } = requestOf(name, input);
+  const send = sdk[operationId] as (
+    options: object,
+  ) => Promise<{ readonly data: unknown }>;
+  const { data } = await send({ ...parts, client, throwOnError: true });
+  return data as PlainOutput<N>;
 }
 
 /** True once `on` has stayed true for `LOADING_DELAY`. */
