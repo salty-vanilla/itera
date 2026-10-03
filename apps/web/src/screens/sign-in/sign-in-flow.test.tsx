@@ -27,7 +27,7 @@ function renderAt(url: string) {
 
 describe('signing in again', () => {
   it('sends a request without a session to sign in, and comes back after', async () => {
-    const router = renderAt('/account');
+    const router = renderAt('/settings');
     await userEvent.click(
       await screen.findByRole('button', { name: 'サインアウト' }),
     );

@@ -4,7 +4,7 @@ import {
   useNavigate,
   useRouter,
 } from '@tanstack/react-router';
-import { CircleUser, Inbox, Rewind, Route, Sun } from 'lucide-react';
+import { Inbox, Rewind, Route, Settings, Sun } from 'lucide-react';
 import { useRef, type ReactElement, type ReactNode } from 'react';
 import { buttonVariants } from '@/components/ui/button';
 import { iconButtonVariants } from '@/components/ui/icon-button';
@@ -24,18 +24,14 @@ const icons: Record<ScreenId, ReactElement> = {
   retro: <Rewind aria-hidden />,
 };
 
-const ACCOUNT = {
-  id: 'account',
-  path: '/account',
-  label: 'アカウント',
-} as const;
+const SETTINGS = { id: 'settings', path: '/settings', label: '設定' } as const;
 
 /**
  * The app's frame (DESIGN.md Layout › Responsive, Navigation): the sidebar
  * (224px) from 1440px, the rail (64px, icons with names) from 768px, and
- * under 768px the bottom tab bar under a one-column screen. The account
+ * under 768px the bottom tab bar under a one-column screen. The settings
  * screen is the navigation's last item; the tab bar keeps its four, and
- * under 768px the account is the button at the top right of every screen
+ * under 768px the settings are the button at the top right of every screen
  * (DESIGN.md Navigation, #278).
  */
 function AppShell({ children }: { children: ReactNode }) {
@@ -62,15 +58,15 @@ function AppShell({ children }: { children: ReactNode }) {
         : {}),
     })),
     {
-      id: ACCOUNT.id,
-      label: ACCOUNT.label,
-      icon: <CircleUser aria-hidden />,
-      href: router.buildLocation({ to: ACCOUNT.path }).href,
+      id: SETTINGS.id,
+      label: SETTINGS.label,
+      icon: <Settings aria-hidden />,
+      href: router.buildLocation({ to: SETTINGS.path }).href,
       inTabBar: false,
     },
   ];
   const current =
-    [...screens, ACCOUNT].find((screen) => pathname.startsWith(screen.path))
+    [...screens, SETTINGS].find((screen) => pathname.startsWith(screen.path))
       ?.id ?? '';
 
   return (
@@ -97,7 +93,7 @@ function AppShell({ children }: { children: ReactNode }) {
         brand="Itera"
         current={current}
         onNavigate={(id, event) => {
-          const screen = [...screens, ACCOUNT].find((s) => s.id === id);
+          const screen = [...screens, SETTINGS].find((s) => s.id === id);
           if (screen === undefined || !isPlainClick(event)) return;
           event.preventDefault();
           void navigate({ to: screen.path });
@@ -106,15 +102,15 @@ function AppShell({ children }: { children: ReactNode }) {
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex justify-end px-2 pt-1 medium:hidden">
           <Link
-            to={ACCOUNT.path}
-            aria-label={ACCOUNT.label}
-            aria-current={current === ACCOUNT.id ? 'page' : undefined}
+            to={SETTINGS.path}
+            aria-label={SETTINGS.label}
+            aria-current={current === SETTINGS.id ? 'page' : undefined}
             className={cn(
               iconButtonVariants({ variant: 'quiet', size: 'md' }),
               'aria-[current=page]:text-ink',
             )}
           >
-            <CircleUser aria-hidden />
+            <Settings aria-hidden />
           </Link>
         </div>
         <main

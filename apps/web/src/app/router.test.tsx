@@ -85,7 +85,7 @@ describe('routes', () => {
     ).toBeTruthy();
   });
 
-  it('shows the four screens in the navigation, then the account', async () => {
+  it('shows the four screens in the navigation, then the settings', async () => {
     renderAt('/backlog');
     await screen.findByRole('heading', { level: 1, name: 'Backlog' });
     const [side] = screen.getAllByRole('navigation', { name: 'メイン' });
@@ -93,16 +93,16 @@ describe('routes', () => {
     await waitFor(() =>
       expect(
         Array.from(side!.querySelectorAll('a')).map((a) => a.textContent),
-      ).toEqual(['今日', 'Sprint', 'Backlog11件', '振り返り', 'アカウント']),
+      ).toEqual(['今日', 'Sprint', 'Backlog11件', '振り返り', '設定']),
     );
-    // The tab bar keeps its four; the account is at the top right instead.
+    // The tab bar keeps its four; the settings are at the top right instead.
     const [, tabBar] = screen.getAllByRole('navigation', { name: 'メイン' });
     expect(tabBar!.querySelectorAll('a')).toHaveLength(4);
     expect(
       screen
-        .getAllByRole('link', { name: 'アカウント' })
+        .getAllByRole('link', { name: '設定' })
         .map((link) => link.getAttribute('href')),
-    ).toEqual(['/account', '/account']);
+    ).toEqual(['/settings', '/settings']);
   });
 });
 

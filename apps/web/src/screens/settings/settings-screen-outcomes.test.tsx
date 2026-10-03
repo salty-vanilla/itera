@@ -3,19 +3,19 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Auth } from '@/auth/auth';
 import { fakeAuth, renderWithAuth } from '@/test/render-with-auth';
-import { AccountScreen } from './account-screen';
+import { SettingsScreen } from './settings-screen';
 
 afterEach(cleanup);
 beforeEach(() => {
   Element.prototype.scrollTo ??= () => {};
 });
 
-function renderAccount(auth: Auth) {
+function renderSettings(auth: Auth) {
   return renderWithAuth({
     auth,
-    path: '/account',
-    component: AccountScreen,
-    url: '/account',
+    path: '/settings',
+    component: SettingsScreen,
+    url: '/settings',
   });
 }
 
@@ -25,9 +25,9 @@ async function add() {
   );
 }
 
-describe('the account screen when adding does not go through', () => {
+describe('the settings screen when adding does not go through', () => {
   it('offers to sign in again when the sign-in is too old', async () => {
-    renderAccount(
+    renderSettings(
       fakeAuth({ addPasskey: async () => ({ ok: false, reason: 'notFresh' }) }),
     );
     await add();
@@ -38,12 +38,12 @@ describe('the account screen when adding does not go through', () => {
       screen
         .getByRole('link', { name: 'もう一度サインイン' })
         .getAttribute('href'),
-    ).toBe('/sign-in?redirect=%2Faccount');
+    ).toBe('/sign-in?redirect=%2Fsettings');
   });
 
   it('says a passkey is already added, and a failure', async () => {
     let reason: 'alreadyAdded' | 'failed' = 'alreadyAdded';
-    renderAccount(
+    renderSettings(
       fakeAuth({ addPasskey: async () => ({ ok: false, reason }) }),
     );
     await add();
@@ -61,7 +61,7 @@ describe('the account screen when adding does not go through', () => {
       ok: false as const,
       reason: 'cancelled' as const,
     }));
-    renderAccount(fakeAuth({ addPasskey }));
+    renderSettings(fakeAuth({ addPasskey }));
     await add();
     expect(addPasskey).toHaveBeenCalledOnce();
     expect(screen.queryByRole('alert')).toBeNull();
@@ -70,7 +70,7 @@ describe('the account screen when adding does not go through', () => {
 
   it('says so when the passkeys cannot be read, and reads them again', async () => {
     let fail = true;
-    renderAccount(
+    renderSettings(
       fakeAuth({
         listPasskeys: async () => {
           if (fail) throw new Error('down');
@@ -93,7 +93,7 @@ describe('the account screen when adding does not go through', () => {
 
 describe('signing out', () => {
   it('empties the cache and opens the sign-in screen', async () => {
-    const { router, queryClient } = renderAccount(fakeAuth());
+    const { router, queryClient } = renderSettings(fakeAuth());
     await screen.findByText('まだありません。');
     await userEvent.click(screen.getByRole('button', { name: 'サインアウト' }));
     await vi.waitFor(() =>
@@ -103,7 +103,7 @@ describe('signing out', () => {
   });
 
   it('stays and says so when it fails', async () => {
-    const { router } = renderAccount(
+    const { router } = renderSettings(
       fakeAuth({
         signOut: async () => {
           throw new Error('down');
@@ -117,6 +117,6 @@ describe('signing out', () => {
     expect(
       await screen.findAllByText('サインアウトできませんでした'),
     ).not.toHaveLength(0);
-    expect(router.state.location.pathname).toBe('/account');
+    expect(router.state.location.pathname).toBe('/settings');
   });
 });

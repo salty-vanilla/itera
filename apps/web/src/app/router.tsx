@@ -21,7 +21,7 @@ import { TodayScreen, validateTodaySearch } from '@/screens/today/today-screen';
 import { NotOnContractError } from '@/store/store-provider';
 import { NotOnContract } from './not-on-contract';
 import { usesMock } from './data-source';
-import { AccountScreen } from '@/screens/account/account-screen';
+import { SettingsScreen } from '@/screens/settings/settings-screen';
 import {
   SignInScreen,
   validateSignInSearch,
@@ -100,10 +100,10 @@ const retroRoute = createRoute({
   component: RetroScreen,
 });
 
-const accountRoute = createRoute({
+const settingsRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: 'account',
-  component: AccountScreen,
+  path: 'settings',
+  component: SettingsScreen,
 });
 
 const routeTree = rootRoute.addChildren([
@@ -113,7 +113,7 @@ const routeTree = rootRoute.addChildren([
   sprintRoute,
   backlogRoute,
   retroRoute,
-  accountRoute,
+  settingsRoute,
 ]);
 
 /**

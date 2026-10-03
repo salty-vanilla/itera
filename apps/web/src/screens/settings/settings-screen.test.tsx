@@ -13,9 +13,9 @@ beforeEach(() => {
   Element.prototype.scrollTo ??= () => {};
 });
 
-function renderAccount() {
+function renderSettings() {
   const router = createAppRouter({
-    history: createMemoryHistory({ initialEntries: ['/account'] }),
+    history: createMemoryHistory({ initialEntries: ['/settings'] }),
   });
   render(
     <TooltipProvider>
@@ -25,11 +25,11 @@ function renderAccount() {
   return router;
 }
 
-describe('the account screen', () => {
+describe('the settings screen', () => {
   it('shows who is signed in and the passkeys', async () => {
-    renderAccount();
+    renderSettings();
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'アカウント' }),
+      await screen.findByRole('heading', { level: 1, name: '設定' }),
     ).toBeTruthy();
     expect(await screen.findByText(`サインイン中：${MOCK_EMAIL}`)).toBeTruthy();
     const list = await screen.findByRole('list', { name: 'パスキー' });
@@ -37,11 +37,11 @@ describe('the account screen', () => {
     expect(list.textContent).toMatch(/^\d+\/\d+ \(.\) に追加$/);
     // The navigation marks where the person is.
     const [current] = screen.getAllByRole('link', { current: 'page' });
-    expect(current?.textContent).toBe('アカウント');
+    expect(current?.textContent).toBe('設定');
   });
 
   it('adds a passkey', async () => {
-    renderAccount();
+    renderSettings();
     await screen.findByRole('list', { name: 'パスキー' });
     await userEvent.click(
       screen.getByRole('button', { name: 'パスキーを追加' }),

@@ -8,7 +8,7 @@ import { Notice } from '@/components/ui/notice';
 import { signInProblem, type SignInProblem } from './sign-in-problems';
 
 // The sign-in screen (#278, ADR 0004 認証の構成): Google, which also
-// registers the person, and a passkey added from the account screen. It
+// registers the person, and a passkey added from the settings screen. It
 // stands outside the app's frame. After signing in it opens the screen the
 // person was sent from (`?redirect=`); Google comes back there by itself,
 // or here with `&error=<code>` when it did not sign in.
