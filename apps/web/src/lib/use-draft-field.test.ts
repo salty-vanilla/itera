@@ -124,3 +124,52 @@ describe('useDraftField when the read changes while typing', () => {
     expect(result.current.edited).toBe(true);
   });
 });
+
+describe('useDraftField with saves that overlap', () => {
+  it('keeps the latest typing while an earlier save is read again and a later one is still sent', async () => {
+    const { result, rerender } = setup();
+    let first: (ok: boolean) => void = () => {};
+    let second: (ok: boolean) => void = () => {};
+    act(() => result.current.set('one'));
+    act(() =>
+      result.current.hold(new Promise<boolean>((resolve) => (first = resolve))),
+    );
+    act(() => result.current.set('one two'));
+    act(() =>
+      result.current.hold(
+        new Promise<boolean>((resolve) => (second = resolve)),
+      ),
+    );
+    // The first is answered and read again; the second is on its way.
+    await act(async () => first(true));
+    rerender({ read: 'one' });
+    expect(result.current.value).toBe('one two');
+    await act(async () => second(true));
+    rerender({ read: 'one two' });
+    expect(result.current.value).toBe('one two');
+    rerender({ read: 'later, from another device' });
+    expect(result.current.value).toBe('later, from another device');
+  });
+
+  it('gives the typing back only when the last save fails', async () => {
+    const { result } = setup();
+    let first: (ok: boolean) => void = () => {};
+    let second: (ok: boolean) => void = () => {};
+    act(() => result.current.set('one'));
+    act(() =>
+      result.current.hold(new Promise<boolean>((resolve) => (first = resolve))),
+    );
+    act(() => result.current.set('one two'));
+    act(() =>
+      result.current.hold(
+        new Promise<boolean>((resolve) => (second = resolve)),
+      ),
+    );
+    await act(async () => first(false));
+    // The last save has the whole value: still shown as sent.
+    expect(result.current.edited).toBe(false);
+    await act(async () => second(false));
+    expect(result.current.edited).toBe(true);
+    expect(result.current.value).toBe('one two');
+  });
+});

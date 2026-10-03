@@ -246,6 +246,51 @@ describe('the Backlog on the API', () => {
     expect(screen.queryByText('保存できませんでした')).toBeNull();
   });
 
+  it('keeps a weekday ticked while an earlier save is read again and a later one is still sent', async () => {
+    const { store } = serve(
+      (request) =>
+        request.method === 'GET'
+          ? undefined
+          : new Promise<undefined>((resolve) => setTimeout(resolve, 150)).then(
+              () => undefined,
+            ),
+      'backlog-recurrence',
+    );
+    const router = renderBacklog();
+    await list();
+    await router.navigate({
+      to: '/backlog',
+      search: { task: ids.task.cleaning },
+    });
+    const detail = await screen.findByRole('dialog', { name: '部屋の掃除' });
+    const days = within(
+      within(detail).getByRole('region', { name: '繰り返し' }),
+    ).getByRole('group', { name: '曜日' });
+    const tick = (name: string) => within(days).getByRole('checkbox', { name });
+    const wanted = ['火', '水', '木'].filter(
+      (name) => tick(name).getAttribute('aria-checked') !== 'true',
+    );
+    expect(wanted).toHaveLength(3);
+    await userEvent.click(tick(wanted[0]!));
+    await userEvent.click(tick(wanted[1]!));
+    // The first is saved and read again; the second is still on its way.
+    await new Promise((resolve) => setTimeout(resolve, 230));
+    expect(tick(wanted[1]!).getAttribute('aria-checked')).toBe('true');
+    await userEvent.click(tick(wanted[2]!));
+    await until(() => {
+      const rule = store
+        .getSnapshot()
+        .records.rules.find((r) => r.taskId === ids.task.cleaning);
+      const latest = rule?.versions.at(-1)?.pattern;
+      expect(latest && 'daysOfWeek' in latest ? latest.daysOfWeek : []).toEqual(
+        expect.arrayContaining([2, 3, 4]),
+      );
+    });
+    for (const name of wanted) {
+      expect(tick(name).getAttribute('aria-checked')).toBe('true');
+    }
+  });
+
   it('saves both weekdays ticked while the first is sent', async () => {
     const { store } = serve(slow(150), 'backlog-recurrence');
     const router = renderBacklog();

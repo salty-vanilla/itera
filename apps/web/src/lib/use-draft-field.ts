@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 type Draft<T> = {
   /** What is typed. */
@@ -9,6 +9,10 @@ type Draft<T> = {
   from: T;
   /** Sent for saving: shown only until the read comes back with something else. */
   held: boolean;
+  /** Saves sent and not answered yet: an earlier one's read is not the last's. */
+  sending: number;
+  /** The save sent last. */
+  last: number;
 };
 
 type DraftField<T> = {
@@ -56,17 +60,23 @@ type DraftField<T> = {
  * a value is not an edit, so the field goes back to following the read.
  *
  * Typing is not touched by a re-read. After `hold`, the typing is shown
- * (the read has not caught up) until the read changes.
+ * (the read has not caught up) until the read changes, once every save sent
+ * has been answered: the read that follows an earlier save does not take
+ * what was typed after it.
  */
 function useDraftField<T>(
   read: T,
   equal: (a: T, b: T) => boolean = Object.is,
 ): DraftField<T> {
   const [draft, setDraft] = useState<Draft<T>>();
-  // The read changed after the save: the draft's job is done.
-  if (draft?.held && !equal(draft.from, read)) setDraft(undefined);
-  const live = draft?.held && !equal(draft.from, read) ? undefined : draft;
-  const release = () => setDraft((d) => d && { ...d, held: false });
+  const sent = useRef(0);
+  // The read changed after the last save was answered: the draft's job is
+  // done. While a save is still on the way, the read is an earlier save's.
+  const done = (d: Draft<T> | undefined) =>
+    d?.held === true && d.sending === 0 && !equal(d.from, read);
+  if (done(draft)) setDraft(undefined);
+  const live = done(draft) ? undefined : draft;
+  const counts = { sending: live?.sending ?? 0, last: live?.last ?? 0 };
   return {
     value: live === undefined ? read : live.value,
     base: live === undefined ? read : live.held ? live.value : live.base,
@@ -78,15 +88,35 @@ function useDraftField<T>(
         base: live === undefined ? read : live.held ? live.value : live.base,
         from: live === undefined || live.held ? read : live.from,
         held: false,
+        ...counts,
       }),
     put: (next) =>
-      setDraft({ value: next, base: next, from: read, held: true }),
+      setDraft({ value: next, base: next, from: read, held: true, ...counts }),
     hold: (saving) => {
+      const id = ++sent.current;
       // The read as it is when the save is sent: what the read is to change
       // from before the typing is given up.
-      setDraft((d) => d && { ...d, held: true, from: read });
+      setDraft(
+        (d) =>
+          d && {
+            ...d,
+            held: true,
+            from: read,
+            sending: d.sending + 1,
+            last: id,
+          },
+      );
       void Promise.resolve(saving).then((ok) => {
-        if (ok === false) release();
+        // Only the last save gives the typing back: an earlier one that
+        // failed is carried by the last, which has the whole value.
+        setDraft(
+          (d) =>
+            d && {
+              ...d,
+              sending: Math.max(0, d.sending - 1),
+              held: ok === false && d.last === id ? false : d.held,
+            },
+        );
       });
     },
     drop: () => setDraft(undefined),
