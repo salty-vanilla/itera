@@ -113,9 +113,10 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 - `pnpm contract:check`（`pnpm check` の中）は、仕様を lint し、一時ディレクトリに生成し直して、コミットした生成物とファイルの一覧と中身が同じかを確かめる。違えば失敗する（CI でも同じ）。
 - 出力：`@hey-api/typescript`（型）、`valibot`（定義・要求・応答のスキーマ）、`@hey-api/client-fetch` と `@hey-api/sdk`（fetch のクライアント）、`@tanstack/react-query`（Query と Mutation の options）。生成の入口ファイルは作らず、次の 3 つの入口で出し分ける。
   - `@itera/api-contract`：型と Valibot のスキーマだけ。`services/api` はこれだけを使う。
-  - `@itera/api-contract/client`：fetch のクライアント（Web）。
+  - `@itera/api-contract/client`：fetch のクライアント（Web）。関数は契約の operation と読み取りだけにする（一覧のテストが、関数の export を operation として数える）。
+  - `@itera/api-contract/create-client`：別のクライアントを作る `createClient`・`createConfig`。Web はデータの出どころ（API、ブラウザ内モック）ごとにクライアントを作る（#272、ADR 0005「Web のクライアントとブラウザ内モック」）。
   - `@itera/api-contract/react-query`：TanStack Query の options（Web）。React に依存する。
-  - `services/api` から `client`・`react-query` の import を ESLint の `no-restricted-imports` で止める。API が React に依存しない。
+  - `services/api` から `client`・`create-client`・`react-query` の import を ESLint の `no-restricted-imports` で止める。API が React に依存しない。
 - Hey API がそのまま写す fetch の実行時のコード（`src/generated/client/`・`core/`）は `exactOptionalPropertyTypes` を前提に書かれておらず、`apps/web` はこの .ts を自分の設定で型検査する。そこで生成の後処理で、この 2 つのディレクトリのファイルにだけ `// @ts-nocheck` を付ける。契約から生成したコード（型・スキーマ・SDK・Query の options）は型検査の対象のまま。Hey API がこの設定に対応したら外す。
 - Hey API 0.99.0 の Valibot のプラグインは、`additionalProperties` の値が `$ref` だと値を読まず、`v.record` の代わりに何も検証しない `v.object({})` を出す（`BacklogData.items`、`RetroData.sprintAreas`）。仕様の書き方（`allOf`・`anyOf`・`type` を並べる）では避けられなかった。そこで `pnpm patch` で、その条件の 1 行（`$ref` の値も読む）だけを直す（`patches/@hey-api__openapi-ts@0.99.0.patch`、`pnpm-workspace.yaml` の `patchedDependencies`）。
   - 境界：Valibot のプラグインの `additionalProperties` の扱いの 1 行だけ。ほかの出力は変えない。

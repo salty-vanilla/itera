@@ -1,5 +1,7 @@
 import {
   createRootRoute,
+  ErrorComponent,
+  type ErrorComponentProps,
   createRoute,
   createRouter,
   redirect,
@@ -7,7 +9,6 @@ import {
   retainSearchParams,
   type RouterHistory,
 } from '@tanstack/react-router';
-import { isFixtureStateId, type FixtureStateId } from '@/fixtures/states';
 import {
   BacklogScreen,
   validateBacklogSearch,
@@ -17,22 +18,35 @@ import { validateSprintSearch } from '@/screens/planning/planning-screen';
 import { RetroScreen, validateRetroSearch } from '@/screens/retro/retro-screen';
 import { SprintScreen } from '@/screens/sprint-screen';
 import { TodayScreen, validateTodaySearch } from '@/screens/today/today-screen';
+import { NotOnContractError } from '@/store/store-provider';
+import { NotOnContract } from './not-on-contract';
+import { usesMock } from './data-source';
 import { RootLayout } from './root-layout';
 
-// Routes (ADR 0005). One path per screen; the fixture state is a search
-// parameter on the root, kept on every navigation, so that a URL opens the
-// same records and clock. Screen state (a filter, an open detail) is added
-// by each screen as its own search parameters.
+// Routes (ADR 0005). One path per screen. With the browser mock, the
+// fixture state is a search parameter on the root, kept on every
+// navigation, so that a URL opens the same records and clock; the mock
+// checks it against the states (an unknown one opens the default). With the
+// API there is no fixture, and the parameter is dropped. Screen state (a
+// filter, an open detail) is added by each screen as its own search
+// parameters.
 
 export interface RootSearch {
-  /** The fixture state to open (PRD §12). Absent: the default state. */
-  readonly fixture?: FixtureStateId;
+  /** The fixture state to open (PRD §12), with the mock only. */
+  readonly fixture?: string | undefined;
 }
 
 const rootRoute = createRootRoute({
-  validateSearch: (search: Record<string, unknown>): RootSearch =>
-    isFixtureStateId(search.fixture) ? { fixture: search.fixture } : {},
-  search: { middlewares: [retainSearchParams(['fixture'])] },
+  // `undefined`, not left out, to drop the URL's value (ADR 0005).
+  validateSearch: (search: Record<string, unknown>): RootSearch => ({
+    fixture:
+      usesMock && typeof search.fixture === 'string'
+        ? search.fixture
+        : undefined,
+  }),
+  search: {
+    middlewares: usesMock ? [retainSearchParams(['fixture'])] : [],
+  },
   component: RootLayout,
 });
 
@@ -107,7 +121,20 @@ export function createAppRouter(options: { history?: RouterHistory } = {}) {
     scrollToTopSelectors: ['[data-scroll-restoration-id="main"]'],
     ...(options.history === undefined ? {} : { history: options.history }),
     defaultNotFoundComponent: NotFoundScreen,
+    defaultErrorComponent: ScreenError,
   });
+}
+
+/**
+ * A screen that failed. One not yet moved to the contract fails with the
+ * API as the data source (no RecordStore) and says so, for the developer.
+ */
+function ScreenError(props: ErrorComponentProps) {
+  return props.error instanceof NotOnContractError ? (
+    <NotOnContract />
+  ) : (
+    <ErrorComponent {...props} />
+  );
 }
 
 declare module '@tanstack/react-router' {
