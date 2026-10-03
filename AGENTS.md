@@ -39,7 +39,7 @@ PRD §14 の「Frontend 実装を止めない未決定事項」3 件（＝ドメ
 
 ### クライアントとデータの方式
 
-PRD §14「クライアントとデータの方式」に従う。規則の正本は `packages/domain` で、使うのはサーバー（`services/api`）だけ。クライアント（Web、MVP の後に iOS・Android）は OpenAPI の契約だけに依存し、プレビューだけをそれぞれの言語で計算する。`apps/web` は #272〜#277 で契約に移し、その後はプレビューと日付の関数だけを当面 `packages/domain` から使う（ADR 0005 の例外、Issue #262）。操作と派生値は `packages/application` にあり、API とブラウザ内モックが使う。
+PRD §14「クライアントとデータの方式」に従う。規則の正本は `packages/domain` で、使うのはサーバー（`services/api`）だけ。クライアント（Web、MVP の後に iOS・Android）は OpenAPI の契約だけに依存し、プレビューだけをそれぞれの言語で計算する。`apps/web` は #272〜#277 で契約に移し、その後はプレビューと日付の関数だけを当面 `packages/domain` から使う（ADR 0005 の例外、Issue #262）。操作と派生値は `packages/application` にあり、API とブラウザ内モックが使う。クライアントに許す計算、プレビューの共通のテストケース、共通の実装を検討する条件は ADR 0007。
 
 ## ドメインの扱い
 
