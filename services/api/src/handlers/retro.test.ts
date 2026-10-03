@@ -4,7 +4,11 @@
 // through the API, and the Retro read answers what the application's
 // function gives on the same records and the same clock.
 import * as contract from '@itera/api-contract';
-import { retroData, sprintCandidates, type Records } from '@itera/application';
+import {
+  sprintCandidates,
+  sprintRetro,
+  type Records,
+} from '@itera/application';
 import { fixtureIds } from '@itera/application/fixtures';
 import { instant, localDate } from '@itera/domain';
 import * as v from 'valibot';
@@ -96,7 +100,11 @@ const successes: readonly Success[] = [
   },
   ...(
     [
-      ['sprintTask', (r: Records) => reviewOf(r).tasks[2]!.id],
+      [
+        'sprintTask',
+        (r: Records) =>
+          reviewOf(r).tasks.find((t) => t.outcome === 'carriedOver')!.id,
+      ],
       ['dailySelection', (r: Records) => reviewOf(r).dailySelections[0]!.id],
       [
         'occurrence',
@@ -295,8 +303,8 @@ const failures: readonly Failure[] = [
       ...reviewing(r),
       pin: { kind: 'sprintTask', id: missing('SprintTask') },
     }),
-    status: 422,
-    code: 'invalidInput',
+    status: 404,
+    code: 'notFound',
   },
   {
     // A fact of another Sprint is not one of this Retro's.
@@ -308,14 +316,14 @@ const failures: readonly Failure[] = [
         id: r.sprints.find((s) => s.id === ids.sprint.previous)!.tasks[0]!.id,
       },
     }),
-    status: 422,
-    code: 'invalidInput',
+    status: 404,
+    code: 'notFound',
   },
   {
     name: 'pinFact',
     body: (r) => ({ ...reviewing(r), pin: { kind: 'goal', id: life } }),
-    status: 422,
-    code: 'invalidInput',
+    status: 404,
+    code: 'notFound',
   },
   {
     name: 'pinFact',
@@ -465,7 +473,7 @@ describeOperations('the Retro operations', {
   failures,
 });
 
-describe('the Retro operations', () => {
+describe('the Retro operations as a whole', () => {
   const answered = [
     'beginRetro',
     'assessGoal',
@@ -792,7 +800,7 @@ describe('the Retro read', () => {
       const body = v.parse(contract.vGetSprintRetroResponse, json);
       expect(body).toEqual({
         clock,
-        view: asJson(retroData(records, clock, sprintId(records))),
+        view: asJson(sprintRetro(records, clock, sprintId(records))),
       });
       expect(body.view?.sprint.id).toBe(sprintId(records));
     },
@@ -873,7 +881,7 @@ describe('the Retro read', () => {
     );
     expect(body).toEqual({
       clock: lastDayClock,
-      view: asJson(retroData(records, lastDayClock, sprintId)),
+      view: asJson(sprintRetro(records, lastDayClock, sprintId)),
     });
   });
 

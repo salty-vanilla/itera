@@ -124,7 +124,7 @@ retroPin:
     tags: [Retro]
     summary: Pin a fact
     description: >-
-      Pinned already, nothing changes. Only a fact of this Sprint can be pinned: another Sprint's, or none's, is 422 `invalidInput`.
+      Pinned already, nothing changes. Only a fact of this Sprint can be pinned: another Sprint's, or none's, is 404.
     parameters:
       - name: sprintId
         in: path

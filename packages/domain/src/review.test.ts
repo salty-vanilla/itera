@@ -326,8 +326,12 @@ describe('Retro', () => {
     ];
     for (const pin of refused) {
       const result = pinFact(sprint, { pin }, ctx);
+      // An ID that is no fact of the Sprint is not found; a pin that does
+      // not name its ID, or names one for the hours, is malformed.
+      const malformed =
+        (pin.kind === 'availableHours') !== (pin.id === undefined);
       expect(!result.ok && result.error.code, JSON.stringify(pin)).toBe(
-        'invalidInput',
+        malformed ? 'invalidInput' : 'notFound',
       );
     }
     // Taking a pin off needs no fact: an ID that is not one is just not pinned.
@@ -335,7 +339,7 @@ describe('Retro', () => {
     expect(gone.ok && gone.value.activities).toEqual([]);
   });
 
-  it('does not pin a draft SprintTask’s occurrence', () => {
+  it('does not pin a draft SprintTask or its occurrence', () => {
     // The occurrences that are facts of the week are those of the SprintTasks
     // that were confirmed (as `retroFacts` counts them).
     const { sprint } = reviewed();
@@ -343,12 +347,14 @@ describe('Retro', () => {
       outcome: 'draft',
       occurrenceIds: [id('occ-draft')],
     });
-    const result = pinFact(
-      { ...sprint, tasks: [...sprint.tasks, draft] },
-      { pin: { kind: 'occurrence', id: 'occ-draft' } },
-      ctx,
-    );
-    expect(!result.ok && result.error.code).toBe('invalidInput');
+    const withDraft = { ...sprint, tasks: [...sprint.tasks, draft] };
+    for (const pin of [
+      { kind: 'occurrence', id: 'occ-draft' },
+      { kind: 'sprintTask', id: draft.id },
+    ] as const) {
+      const result = pinFact(withDraft, { pin }, ctx);
+      expect(!result.ok && result.error.code).toBe('notFound');
+    }
   });
 
   it('pins only in a Retro', () => {

@@ -2,7 +2,7 @@ import type { Area } from './area';
 import { capacityOf, type Capacity } from './capacity';
 import type { Occurrence } from './occurrence';
 import { totalPlanningValues, type PlanningTotal } from './planning-value';
-import type { AreaId, SprintTaskId, TaskId } from './shared/ids';
+import type { AreaId, OccurrenceId, SprintTaskId, TaskId } from './shared/ids';
 import type { LocalDate } from './shared/time';
 import {
   sprintAreaName,
@@ -147,10 +147,23 @@ export interface RetroFactsInput {
  * never edited in Retro, and without any score (invariant 40). The
  * records passed in are not changed.
  */
+/** The SprintTasks the week's facts are of: those confirmed, not drafts. */
+export function factSprintTasks(sprint: Sprint): readonly SprintTask[] {
+  return sprint.tasks.filter((t) => t.outcome !== 'draft');
+}
+
+/**
+ * Every occurrence the Sprint took in, including those of a SprintTask
+ * removed later: what was done or skipped before removing stays a fact
+ * (F24). Excluded ones (left out in Planning, F2, or at removal, F14) are
+ * taken in by no SprintTask.
+ */
+export function factOccurrenceIds(sprint: Sprint): ReadonlySet<OccurrenceId> {
+  return new Set(factSprintTasks(sprint).flatMap((t) => t.occurrenceIds ?? []));
+}
+
 export function retroFacts(sprint: Sprint, input: RetroFactsInput): RetroFacts {
-  const facts = sprint.tasks
-    .filter((t) => t.outcome !== 'draft')
-    .map((t) => taskFact(sprint, t, input));
+  const facts = factSprintTasks(sprint).map((t) => taskFact(sprint, t, input));
 
   // In the Sprint's Area order (SprintAreaSnapshot), Tasks without an
   // Area last.
@@ -197,15 +210,9 @@ export function retroFacts(sprint: Sprint, input: RetroFactsInput): RetroFacts {
     };
   });
 
-  // Every occurrence the Sprint took in, including those of a SprintTask
-  // removed later: what was done or skipped before removing stays a fact
-  // (F24). Excluded ones (left out in Planning, F2, or at removal, F14)
-  // are not shown, as only done / skipped / missed are listed.
-  const inSprint = new Set(
-    sprint.tasks
-      .filter((t) => t.outcome !== 'draft')
-      .flatMap((t) => t.occurrenceIds ?? []),
-  );
+  // Excluded occurrences are not shown, as only done / skipped / missed are
+  // listed.
+  const inSprint = factOccurrenceIds(sprint);
   const occurrences = input.occurrences.filter((o) => inSprint.has(o.id));
 
   const counted = facts.filter((f) => f.outcome !== 'removed');

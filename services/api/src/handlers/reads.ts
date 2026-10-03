@@ -118,7 +118,7 @@ function sprintIdIn(records: Records, sprintId: string): SprintId {
  * own (`getMe`) (registry.test.ts). To answer another, add it here.
  */
 export const readRoutes: {
-  readonly [N in ReadName]?: ReadRoute<ReadViews[N]>;
+  readonly [N in ReadName]: ReadRoute<ReadViews[N]>;
 } = {
   listAreas: readRoute({
     path: '/areas',

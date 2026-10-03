@@ -933,7 +933,7 @@ export const unpinFact = <ThrowOnError extends boolean = false>(options: Options
 /**
  * Pin a fact
  *
- * Pinned already, nothing changes. Only a fact of this Sprint can be pinned: another Sprint's, or none's, is 422 `invalidInput`.
+ * Pinned already, nothing changes. Only a fact of this Sprint can be pinned: another Sprint's, or none's, is 404.
  */
 export const pinFact = <ThrowOnError extends boolean = false>(options: Options<PinFactData, ThrowOnError>): RequestResult<PinFactResponses, PinFactErrors, ThrowOnError> => (options.client ?? client).put<PinFactResponses, PinFactErrors, ThrowOnError>({
     security: [{

@@ -189,7 +189,7 @@ async function prepared(app: FixtureApp, steps: readonly Step[] = []) {
 
 /**
  * Runs the tables. A success answers what the contract says (its surface's
- * status, and a body the response schema parses unless 204), raises
+ * status, and a body the response schema parses, or none where it has none), raises
  * the revision once and writes the person's Activity in the same batch. A
  * failure answers the status and code and leaves the records as they were.
  */
