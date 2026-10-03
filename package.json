@@ -22,7 +22,9 @@
     "lint": "node tooling/checks/names.mjs && eslint . --max-warnings 0",
     "typecheck": "tsc -p tsconfig.json && pnpm -r --if-present typecheck",
     "test": "vitest run",
-    "check": "pnpm agent:check && pnpm design:lint && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "copy:list": "node tooling/copy/list.mjs",
+    "copy:lint": "node tooling/copy/lint.mjs",
+    "check": "pnpm agent:check && pnpm design:lint && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm copy:lint",
     "design:lint": "designmd lint DESIGN.md"
   },
   "devDependencies": {

@@ -1,18 +1,18 @@
 import { Check } from 'lucide-react';
-import type { ReactNode, Ref } from 'react';
+import type { FocusEvent, ReactNode, Ref } from 'react';
 import { rowKeyHandlers, type RowKeys } from '@/lib/row-keys';
 import { cn } from '@/lib/utils';
 
 // DESIGN.md Components › Task Row. One Task, the same structure in Backlog,
 // Sprint and Today: a control (○ complete / □ choose / none), the title
-// (`task`, one line), Task Metadata, the Estimate at the right end and the
+// (`task`, two lines under 768px, one from it), Task Metadata, the Estimate at the right end and the
 // row's `…` actions. Rows are separated by `border-soft`, with no gap, no
 // corners and no Card.
 //
 // The title is a button that opens the Task; it stretches over the row so
 // that the whole row opens it, while the control and the actions sit above
 // it. The actions show on hover and focus, and always under 768px (no
-// hover there).
+// hover there); a screen can keep them shown at every width (Backlog).
 //
 // The row takes the list keys of docs/design/accessibility.md while the
 // focus is in it (`@/lib/row-keys`): Space presses the control, Enter opens
@@ -24,44 +24,91 @@ type TaskRowProps = {
   control?: ReactNode;
   metadata?: ReactNode;
   estimate?: ReactNode;
+  /**
+   * The Estimate at the end of the row from 768px only. Under it the caller
+   * puts the value in the metadata, so that the title keeps the row's width
+   * (Today, #241).
+   */
+  estimateFromMedium?: boolean;
   /** The `…` Menu or other row actions. */
   actions?: ReactNode;
+  /**
+   * Keeps the width of the `…` when there are no `actions`, so that the
+   * Estimate ends where it does in the rows of the same list that have them
+   * (Today: 今日やる and 今週の残り share one column of values). From 768px
+   * only: under it the `…` is 44px, and the title needs the room more.
+   */
+  reserveActions?: boolean;
+  /**
+   * Shows the `actions` at every width, not only on hover and focus: for
+   * a way back (「取り消す」) that must not be hidden behind the pointer, and
+   * for Backlog's `…`, where 今日へ is looked for (Issue #164).
+   */
+  actionsVisible?: boolean;
   /** Opens the Task (its detail). Without it the title is plain text. */
   onOpen?: (() => void) | undefined;
   /** Read out with the title, e.g. that the detail is open. */
   current?: boolean | undefined;
   done?: boolean | undefined;
+  /**
+   * The Task being worked on now (Today: 開始 and not yet closed): a `here`
+   * 4px bar on the leading edge and the title in 700, with the word in the
+   * metadata, as the nav marks where you are (#163).
+   */
+  inProgress?: boolean | undefined;
   /** E and Delete on the row; Space and Enter need nothing. */
   keys?: RowKeys | undefined;
   className?: string | undefined;
 };
+
+/**
+ * The ring goes round the row, but the browser scrolls only the title into
+ * view: when the focus comes by the keyboard, the row is scrolled in as well,
+ * so that its ring is not left under a bar stuck to the edge of the screen
+ * (#152). The row's scroll margin keeps it clear of the bar
+ * (styles/globals.css).
+ */
+function revealRow(event: FocusEvent<HTMLButtonElement>) {
+  if (!event.currentTarget.matches(':focus-visible')) return;
+  event.currentTarget
+    .closest('[data-slot="task-row"]')
+    ?.scrollIntoView?.({ block: 'nearest' });
+}
 
 function TaskRow({
   title,
   control,
   metadata,
   estimate,
+  estimateFromMedium = false,
   actions,
+  reserveActions = false,
+  actionsVisible = false,
   onOpen,
   current = false,
   done = false,
+  inProgress = false,
   keys,
   className,
 }: TaskRowProps) {
   const titleClass = cn(
-    'min-w-0 truncate text-left text-task',
+    'min-w-0 text-left text-task',
     done ? 'text-ink-subtle line-through' : 'text-ink',
+    inProgress && 'font-bold',
   );
   return (
     <div
       data-slot="task-row"
       data-current={current || undefined}
+      data-in-progress={inProgress || undefined}
       {...rowKeyHandlers(keys)}
       className={cn(
         'group/row relative flex min-h-row-touch items-center gap-2 border-b border-border-soft px-2 py-2 medium:min-h-row-task medium:px-3',
         'transition-colors duration-(--duration-fast) ease-standard',
         onOpen && 'hover:bg-surface-hover',
         current && 'bg-here-subtle hover:bg-here-subtle',
+        inProgress &&
+          'before:absolute before:inset-y-0 before:start-0 before:w-1 before:bg-here',
         className,
       )}
     >
@@ -75,6 +122,7 @@ function TaskRow({
           <button
             type="button"
             onClick={onOpen}
+            onFocus={revealRow}
             data-row-focus
             aria-current={current || undefined}
             className={cn(
@@ -83,28 +131,79 @@ function TaskRow({
               'after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:focus-ring-inset',
             )}
           >
-            {title}
+            <TaskTitleLines>{title}</TaskTitleLines>
           </button>
         ) : (
-          <span className={titleClass}>{title}</span>
+          <span className={titleClass}>
+            <TaskTitleLines>{title}</TaskTitleLines>
+          </span>
         )}
         {metadata}
       </div>
       {estimate !== undefined && (
-        <div className="flex shrink-0">{estimate}</div>
+        <div
+          className={cn(
+            'flex shrink-0',
+            estimateFromMedium && 'hidden medium:flex',
+          )}
+        >
+          {estimate}
+        </div>
       )}
       {actions !== undefined && (
         <div
           className={cn(
             'relative z-1 flex shrink-0',
-            'medium:opacity-0 medium:group-hover/row:opacity-100 medium:group-focus-within/row:opacity-100',
-            'medium:has-[[aria-expanded=true]]:opacity-100',
+            !actionsVisible && [
+              'medium:opacity-0 medium:group-hover/row:opacity-100 medium:group-focus-within/row:opacity-100',
+              'medium:has-[[aria-expanded=true]]:opacity-100',
+            ],
           )}
         >
           {actions}
         </div>
       )}
+      {actions === undefined && reserveActions && (
+        // The size of the `…` (IconButton sm).
+        <div
+          aria-hidden
+          className="hidden size-control-sm shrink-0 medium:block"
+        />
+      )}
     </div>
+  );
+}
+
+/**
+ * A Task's title: up to two lines under 768px, where the control and the
+ * values take the room of a long title, and one line from 768px
+ * (DESIGN.md Task Row). The clamp is on this inner box, as a button's own
+ * box does not take it in every browser; `pretty` keeps a lone character
+ * off the second line.
+ *
+ * `wrap` is for the Planning Backlog pane, whose column is narrow at every
+ * width: `two` clamps at two lines and `all` keeps the whole title, in
+ * both from 768px up too (Issue #158).
+ */
+function TaskTitleLines({
+  children,
+  wrap,
+}: {
+  children: ReactNode;
+  wrap?: 'two' | 'all';
+}) {
+  return (
+    <span
+      className={cn(
+        'text-pretty',
+        wrap === undefined && 'line-clamp-2 medium:block medium:truncate',
+        wrap === 'two' && 'line-clamp-2',
+        // `anywhere` so that a long word (TypeScript) cannot push the row wider.
+        wrap === 'all' && 'block [overflow-wrap:anywhere]',
+      )}
+    >
+      {children}
+    </span>
   );
 }
 
@@ -131,7 +230,7 @@ function CompletionCircle({
       type="button"
       onClick={onToggle}
       disabled={disabled}
-      aria-label={`${done ? '完了を取り消す' : '完了にする'}: ${title}`}
+      aria-label={`${done ? '完了を取り消す' : '完了にする'}：${title}`}
       data-slot="completion-circle"
       className={cn(
         'group/circle grid size-target-touch shrink-0 place-items-center rounded-full medium:size-target-min',
@@ -156,5 +255,5 @@ function CompletionCircle({
   );
 }
 
-export { CompletionCircle, TaskRow };
+export { CompletionCircle, TaskRow, TaskTitleLines };
 export type { TaskRowProps };

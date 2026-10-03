@@ -22,7 +22,7 @@ function renderMenu(onArchive = () => {}) {
         <MenuContent>
           <MenuItem>今日へ</MenuItem>
           <MenuItem disabled>上へ</MenuItem>
-          <MenuCheckboxItem defaultChecked>Goal に紐づける</MenuCheckboxItem>
+          <MenuCheckboxItem defaultChecked>目標に入れる</MenuCheckboxItem>
           <MenuSeparator />
           <MenuItem variant="danger" onClick={onArchive}>
             アーカイブ
@@ -58,7 +58,7 @@ describe('Menu', () => {
     );
     await userEvent.keyboard('{ArrowDown}');
     expect(document.activeElement).toBe(
-      screen.getByRole('menuitemcheckbox', { name: 'Goal に紐づける' }),
+      screen.getByRole('menuitemcheckbox', { name: '目標に入れる' }),
     );
     await userEvent.keyboard('{End}');
     expect(document.activeElement).toBe(

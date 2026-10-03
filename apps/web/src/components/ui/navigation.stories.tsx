@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Inbox, NotebookPen, Route, Settings, Sun } from 'lucide-react';
+import { Inbox, Rewind, Route, Settings, Sun } from 'lucide-react';
 import { useState } from 'react';
 import { Navigation, type NavigationItem } from './navigation';
 
@@ -29,7 +29,7 @@ const items: NavigationItem[] = [
   {
     id: 'retro',
     label: '振り返り',
-    icon: <NotebookPen aria-hidden />,
+    icon: <Rewind aria-hidden />,
     href: '#retro',
   },
   {
@@ -61,6 +61,7 @@ function Shell() {
     <div className="flex h-dvh flex-col-reverse bg-canvas medium:flex-row">
       <Navigation
         items={items}
+        brand="Itera"
         current={current}
         onNavigate={(id, event) => {
           event.preventDefault();
@@ -90,7 +91,7 @@ type Story = StoryObj<typeof meta>;
 
 /**
  * 既定の responsive。1440px 以上はサイドバー（224px）、768–1439px は rail（64px、
- * アイコンだけ＋Tooltip）、768px 未満は下部タブバー（今日 / Sprint / Backlog /
+ * アイコンの下に名前）、768px 未満は下部タブバー（今日 / Sprint / Backlog /
  * 振り返り）。現在地は `here` の 4px の線＋`ink` 700＋aria-current="page"。
  */
 export const Responsive: Story = {
@@ -103,7 +104,7 @@ export const Compact: Story = {
   render: () => <Shell />,
 };
 
-/** 768–1199px：2 ペインを保つため rail（64px）。ラベルは Tooltip と読み上げで示す。 */
+/** 768–1199px：2 ペインを保つため rail（64px）。名前はアイコンの下に出す。 */
 export const Medium: Story = {
   globals: { viewport: { value: 'medium', isRotated: false } },
   render: () => <Shell />,
@@ -147,13 +148,13 @@ const stateItems: NavigationItem[] = [
   {
     id: 'hover',
     label: 'hover',
-    icon: <NotebookPen aria-hidden />,
+    icon: <Rewind aria-hidden />,
     href: '#hover',
   },
   {
     id: 'focus',
     label: 'focus',
-    icon: <NotebookPen aria-hidden />,
+    icon: <Rewind aria-hidden />,
     href: '#focus',
   },
   {
@@ -191,6 +192,7 @@ export const States: Story = {
         <figcaption className="text-label text-ink-muted">sidebar</figcaption>
         <Navigation
           items={stateItems}
+          brand="Itera"
           current="sprint"
           layout="sidebar"
           label="sidebar"
@@ -200,6 +202,7 @@ export const States: Story = {
         <figcaption className="text-label text-ink-muted">rail</figcaption>
         <Navigation
           items={stateItems}
+          brand="Itera"
           current="sprint"
           layout="rail"
           label="rail"

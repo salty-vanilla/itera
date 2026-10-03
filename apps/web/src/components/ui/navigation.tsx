@@ -9,8 +9,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './tooltip';
 //
 // Layouts (DESIGN.md Layout › Responsive):
 // - sidebar: 224px (`pane-nav`), 1440px and wider.
-// - rail: 64px (`pane-rail`), icons only with the label in a Tooltip. Used
-//   from 768px up to 1439px, so that the medium width keeps its two panes.
+// - rail: 64px (`pane-rail`), the icon with a small name under it, as in the
+//   tab bar (the name is always readable, not only on hover). The Tooltip
+//   adds the count. Used from 768px up to 1439px, so that the medium width
+//   keeps its two panes.
 // - tab-bar: the bottom tab bar under 768px. It is a separate layout, not the
 //   sidebar made smaller.
 // `responsive` (the default) switches between them with the breakpoints.
@@ -45,6 +47,11 @@ type NavigationProps = {
   onNavigate?: (id: string, event: MouseEvent<HTMLAnchorElement>) => void;
   /** Accessible name of the landmark. */
   label?: string;
+  /**
+   * The app's name, at the top of the sidebar and the rail (plain text, not a
+   * link). The bottom tab bar does not show it.
+   */
+  brand?: string;
   layout?: NavigationLayout;
   /** Classes for the sidebar or rail. */
   className?: string | undefined;
@@ -57,22 +64,39 @@ type SideLayout = 'responsive' | 'sidebar' | 'rail';
 // Classes per layout. `responsive` is the rail from 768px and the sidebar
 // from 1440px (the `nav` breakpoint).
 const side = {
+  // The rail has 4px of padding: the 48px left of 64px would not hold
+  // 「Backlog」 at 12px (about 49px, more when bold).
   root: {
-    sidebar: 'flex w-pane-nav',
-    rail: 'flex w-pane-rail',
-    responsive: 'hidden medium:flex w-pane-rail nav:w-pane-nav',
+    sidebar: 'flex w-pane-nav p-2',
+    rail: 'flex w-pane-rail p-1',
+    responsive: 'hidden medium:flex w-pane-rail p-1 nav:w-pane-nav nav:p-2',
   },
   item: {
-    sidebar: 'h-control-md justify-start gap-2 px-3',
-    rail: 'h-control-lg justify-center',
+    sidebar: 'h-control-md justify-start gap-2 px-3 before:left-0',
+    // The `here` bar sits in the rail's own 4px of padding, off the name:
+    // the bold name fills nearly the whole item.
+    rail: 'flex-col justify-center gap-1 py-2 text-meta before:-left-1',
     responsive:
-      'h-control-lg justify-center nav:h-control-md nav:justify-start nav:gap-2 nav:px-3',
+      'flex-col justify-center gap-1 py-2 text-meta before:-left-1 nav:before:left-0 nav:h-control-md nav:flex-row nav:justify-start nav:gap-2 nav:px-3 nav:py-0 nav:text-body',
   },
-  // In the rail the words are read, not shown; the Tooltip shows the label.
+  // In the rail the name is centred under the icon and never cut.
   text: {
+    sidebar: 'min-w-0 flex-1 truncate text-left',
+    rail: 'text-center',
+    responsive: 'text-center nav:min-w-0 nav:flex-1 nav:truncate nav:text-left',
+  },
+  // The count is read in the rail, not shown (the Tooltip shows it).
+  count: {
     sidebar: '',
     rail: 'sr-only',
     responsive: 'sr-only nav:not-sr-only',
+  },
+  // Aligned with the item's icon and name (px-3 = 12px in the sidebar).
+  brand: {
+    sidebar: 'px-3 pt-2 text-body',
+    rail: 'pt-2 text-center text-meta',
+    responsive:
+      'pt-2 text-center text-meta nav:px-3 nav:text-left nav:text-body',
   },
   tooltip: {
     sidebar: 'hidden',
@@ -154,6 +178,7 @@ function NavigationSide({
   current,
   onNavigate,
   label = 'メイン',
+  brand,
   layout,
   className,
 }: Omit<NavigationProps, 'layout' | 'tabBarClassName'> & {
@@ -165,11 +190,19 @@ function NavigationSide({
       data-slot="navigation"
       data-layout={layout}
       className={cn(
-        'shrink-0 flex-col border-r border-border bg-canvas-subtle p-2',
+        'shrink-0 flex-col border-r border-border bg-canvas-subtle',
         side.root[layout],
         className,
       )}
     >
+      {brand !== undefined && (
+        <p
+          data-slot="navigation-brand"
+          className={cn('mb-2 font-bold text-ink', side.brand[layout])}
+        >
+          {brand}
+        </p>
+      )}
       <ul className="flex flex-col gap-1">
         {items.map((item) => (
           <li key={item.id}>
@@ -182,23 +215,16 @@ function NavigationSide({
                     {...linkProps(item, current, onNavigate)}
                     className={cn(
                       itemBase,
-                      'before:inset-y-1 before:left-0 before:w-1',
+                      'before:inset-y-1 before:w-1',
                       side.item[layout],
                     )}
                   />
                 }
               >
                 {item.icon}
-                <span
-                  className={cn(
-                    'min-w-0 flex-1 truncate text-left',
-                    side.text[layout],
-                  )}
-                >
-                  {item.label}
-                </span>
+                <span className={side.text[layout]}>{item.label}</span>
                 {item.count !== undefined && (
-                  <Count value={item.count} className={side.text[layout]} />
+                  <Count value={item.count} className={side.count[layout]} />
                 )}
               </TooltipTrigger>
               <TooltipContent side="right" className={side.tooltip[layout]}>
@@ -223,7 +249,7 @@ function NavigationTabBar({
   onNavigate,
   label = 'メイン',
   className,
-}: Omit<NavigationProps, 'layout' | 'tabBarClassName'>) {
+}: Omit<NavigationProps, 'layout' | 'tabBarClassName' | 'brand'>) {
   const tabs = items.filter((item) => item.inTabBar !== false);
   return (
     <nav

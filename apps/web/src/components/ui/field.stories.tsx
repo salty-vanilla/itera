@@ -16,10 +16,10 @@ const meta = {
   title: 'Components/Field',
   component: Field,
   args: {
-    label: '見積もり',
+    label: '毎月の日',
     necessity: 'optional',
-    description: '時間で入力（例: 1.5）',
-    children: <TextInput inputMode="decimal" suffix="h" />,
+    description: '1〜31 の数字（例：15）',
+    children: <TextInput inputMode="numeric" suffix="日" />,
   },
   argTypes: {
     necessity: {
@@ -39,8 +39,8 @@ export const Playground: Story = {};
 /** エラーはアイコンと「何が問題で、どう直すか」の文で、入力の直下に出す。 */
 export const WithError: Story = {
   args: {
-    error: '数値で入力してください（例: 1.5）',
-    children: <TextInput inputMode="decimal" defaultValue="3時間" suffix="h" />,
+    error: '1〜31 の数字を入れてください（例：15）',
+    children: <TextInput inputMode="numeric" defaultValue="32" suffix="日" />,
   },
 };
 
@@ -51,8 +51,12 @@ function validate(name: keyof Values, value: string): string | undefined {
   if (name === 'title' && value.trim() === '') {
     return 'タイトルを入力してください';
   }
-  if (name === 'estimate' && value !== '' && !/^\d+(\.\d+)?$/.test(value)) {
-    return '数値で入力してください（例: 1.5）';
+  if (
+    name === 'estimate' &&
+    value !== '' &&
+    !(/^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= 31)
+  ) {
+    return '1〜31 の数字を入れてください（例：15）';
   }
   return undefined;
 }
@@ -61,7 +65,7 @@ function validate(name: keyof Values, value: string): string | undefined {
  * エラーは入力中に出さず、離脱時（blur）と送信時に出す。送信時は最初のエラーへ
  * フォーカスを移す。エラーのときも入力内容は消さない。出ているエラーは、直した
  * 時点で消す（新しいエラーは入力中には出さない）。タイトルを空のまま離れるか、
- * 見積もりに「3時間」と入れて離れると確認できる。
+ * 毎月の日に「32」と入れて離れると確認できる。時間の入力は DurationField。
  */
 export const ValidateOnBlurAndSubmit: Story = {
   render: function ValidationDemo() {
@@ -120,15 +124,15 @@ export const ValidateOnBlurAndSubmit: Story = {
           />
         </Field>
         <Field
-          label="見積もり"
+          label="毎月の日"
           necessity="optional"
-          description="時間で入力（例: 1.5）。空欄なら未見積"
+          description="1〜31 の数字（例：15）"
           error={errors.estimate}
         >
           <TextInput
             ref={refs.estimate}
-            inputMode="decimal"
-            suffix="h"
+            inputMode="numeric"
+            suffix="日"
             value={values.estimate}
             onValueChange={change('estimate')}
             onBlur={blur('estimate')}
@@ -165,19 +169,19 @@ export const Composition: Story = {
   render: () => (
     <form noValidate className="flex max-w-measure-read flex-col gap-6">
       <Field
-        label="Goal"
+        label="目標"
         necessity="optional"
         description="「〜な状態にする」「〜を終える」の形で"
       >
         <Textarea defaultValue="関連研究の章を書き終える" />
       </Field>
-      <RadioGroup legend="Goal の自己判定" necessity="optional">
+      <RadioGroup legend="目標の自己判定" necessity="optional">
         <Radio value="achieved" label="できた" />
         <Radio value="partial" label="一部できた" />
         <Radio value="notAchieved" label="できなかった" />
-        <Radio value="noJudgement" label="判断しない" />
+        <Radio value="noJudgement" label="決めない" />
       </RadioGroup>
-      <Field label="気になったこと" necessity="optional">
+      <Field label="気づいたこと" necessity="optional">
         <Textarea text="body-l" maxLength={400} />
       </Field>
     </form>

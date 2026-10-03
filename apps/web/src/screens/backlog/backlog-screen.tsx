@@ -1,30 +1,39 @@
 import { id, type AreaId, type BacklogSlice, type TaskId } from '@itera/domain';
 import { useNavigate, useSearch } from '@tanstack/react-router';
+import { Pencil } from 'lucide-react';
 import { Fragment, useEffect, useId, useRef, useState, type Ref } from 'react';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
-import { Field } from '@/components/ui/field';
 import { Filter, FilterGroup } from '@/components/ui/filter';
-import { Select } from '@/components/ui/select';
 import { useToast } from '@/components/ui/toast';
+import { AreaSelect, chosenArea } from '@/components/task/area-select';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
+import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
+import { useStuckBar } from '@/lib/use-stuck-bar';
 import { cn } from '@/lib/utils';
 import { useBacklog } from '@/store/use-backlog';
 import { useTaskActions } from '@/store/use-task-actions';
+import { AreaDialog, useNewAreaDialog } from './area-dialog';
 import { BacklogRow } from './backlog-row';
 import { TaskDetail } from './task-detail';
+import { useAddToToday } from './use-add-to-today';
+import { useAddToWeek } from './use-add-to-week';
+import { useTaskDetailLeave } from './use-task-detail-leave';
 
-// Backlog (docs/design/patterns.md Backlog, PRD §5 A). The active Tasks in
-// the order they were made (never by priority, invariant 5), narrowed by a
+// Backlog (docs/design/patterns.md Backlog, PRD §5 A). The active Tasks,
+// newest first (Issue #86; never by priority, invariant 5), narrowed by a
 // 切り口 and an Area. The 切り口, the Area and the open Task are search
 // parameters, so a state opens from its URL (ADR 0005).
+
+/** How long the row just added flashes; the same as `added-flash` in the CSS. */
+const ADDED_MS = 2500;
 
 export const slices: readonly { value: BacklogSlice | 'all'; label: string }[] =
   [
     { value: 'all', label: 'すべて' },
     { value: 'dueSoon', label: '期限が近い' },
-    { value: 'overdue', label: '期限超過' },
+    { value: 'overdue', label: '期限切れ' },
     { value: 'carriedOver', label: '持ち越し' },
     { value: 'recurring', label: '繰り返し' },
     { value: 'noArea', label: '領域なし' },
@@ -56,11 +65,19 @@ function BacklogScreen() {
   const search = useSearch({ from: '/backlog' });
   const navigate = useNavigate({ from: '/backlog' });
   const actions = useTaskActions();
+  const addToToday = useAddToToday();
+  const addToWeek = useAddToWeek();
   const toast = useToast();
   // The Area of the next Quick Add: the one used last, else the Area filter.
   const [quickArea, setQuickArea] = useState<string>();
+  // 領域を編集, from the end of the Area filters (Issue #113).
+  const [editingAreas, setEditingAreas] = useState(false);
+  const newArea = useNewAreaDialog();
   const backlog = useBacklog({ view: search.view, area: search.area });
   const { areas, items, today } = backlog;
+  // The Area of the next Quick Add. One archived since it was chosen is no
+  // longer a choice: none (#113).
+  const quickChoice = chosenArea(quickArea ?? search.area ?? '', areas);
   const open =
     search.task === undefined ? undefined : backlog.item(search.task);
   // The Task just completed, kept as one line where its row was until the
@@ -75,7 +92,37 @@ function BacklogScreen() {
   // next operation clears it, so a row shown again later does not take it.
   const [refocus, setRefocus] = useState<TaskId>();
   const undoRef = useRef<HTMLButtonElement>(null);
+  // Under 768px the Quick Add sticks to the bottom: the Toast goes above it.
+  const quickAddRef = useRef<HTMLDivElement>(null);
+  useStuckBar(quickAddRef, 'bottom', !useMediaQuery(MEDIUM_UP, true));
+  // The Task just added: its row flashes for a moment (ADDED_MS), and a Toast says
+  // so (Issue #86). A Task the current 切り口 or Area does not show has no
+  // row to mark: the Toast says why it is not in the list.
+  const [justAdded, setJustAdded] = useState<{ id: TaskId; title: string }>();
+  const announced = useRef<TaskId>(undefined);
+  useEffect(() => {
+    if (justAdded === undefined || announced.current === justAdded.id) return;
+    announced.current = justAdded.id;
+    const shown = items.some((i) => i.task.id === justAdded.id);
+    toast.show({
+      kind: 'task-added',
+      title: `「${justAdded.title}」を追加しました`,
+      ...(shown
+        ? {}
+        : { description: '今の絞り込みでは、一覧に表示されません。' }),
+    });
+    // Under 768px the Quick Add is at the bottom and the list may be scrolled.
+    document
+      .querySelector(`[data-task="${justAdded.id}"]`)
+      ?.scrollIntoView?.({ block: 'nearest' });
+  }, [justAdded, items, toast]);
+  useEffect(() => {
+    if (justAdded === undefined) return;
+    const timer = window.setTimeout(() => setJustAdded(undefined), ADDED_MS);
+    return () => window.clearTimeout(timer);
+  }, [justAdded]);
   const estimateFocus = useEstimateFocus(search.task);
+  const detail = useTaskDetailLeave();
   /** Another operation: the completed line and the pending focus go. */
   const endUndo = () => {
     setCompleted(undefined);
@@ -138,6 +185,7 @@ function BacklogScreen() {
         ?.focus(),
     );
     toast.show({
+      kind: 'task-archived',
       title: `「${title}」をアーカイブしました`,
       action: {
         label: '元に戻す',
@@ -154,7 +202,7 @@ function BacklogScreen() {
     <div className={cn('flex min-h-full flex-col', open && 'wide:pr-drawer')}>
       <div className="flex flex-col gap-4 px-4 pt-10 pb-4 medium:px-6 xl:max-w-pane-rows">
         <h1 className="text-display-m text-ink">Backlog</h1>
-        <FilterGroup label="切り口">
+        <FilterGroup label="絞り込み">
           {slices.map((s) => {
             const pressed = (search.view ?? 'all') === s.value;
             return (
@@ -171,55 +219,68 @@ function BacklogScreen() {
             );
           })}
         </FilterGroup>
-        {areas.length > 0 && (
-          <FilterGroup label="領域で絞り込む">
-            {areas.map((a) => (
-              <Filter
-                key={a.id}
-                area={{ name: a.name, color: a.color }}
-                pressed={search.area === a.id}
-                count={a.count}
-                onPressedChange={(pressed) =>
-                  setSearch({ area: pressed ? a.id : undefined })
-                }
-              >
-                {a.name}
-              </Filter>
-            ))}
-          </FilterGroup>
-        )}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-4 medium:gap-y-2">
+          {areas.length > 0 && (
+            <FilterGroup label="領域で絞り込む" className="contents">
+              {areas.map((a) => (
+                <Filter
+                  key={a.id}
+                  area={{ name: a.name, color: a.color }}
+                  pressed={search.area === a.id}
+                  count={a.count}
+                  onPressedChange={(pressed) =>
+                    setSearch({ area: pressed ? a.id : undefined })
+                  }
+                >
+                  {a.name}
+                </Filter>
+              ))}
+            </FilterGroup>
+          )}
+          <Button
+            size="sm"
+            variant="quiet"
+            className="shrink-0"
+            onClick={() => setEditingAreas(true)}
+          >
+            <Pencil />
+            領域を編集
+          </Button>
+        </div>
+        <AreaDialog open={editingAreas} onOpenChange={setEditingAreas} />
       </div>
 
       {/* Quick Add: at the top from 768px; under it, sticky at the bottom
           above the tab bar (DESIGN.md Responsive › compact). */}
-      <div className="sticky bottom-0 z-(--layer-sticky) order-last border-t border-border bg-canvas px-4 py-3 medium:static medium:order-none medium:border-t-0 medium:px-6 medium:py-0 medium:pb-4 xl:max-w-pane-rows">
+      <div
+        ref={quickAddRef}
+        className="mt-[var(--toast-above-room,0px)] sticky bottom-0 z-(--layer-sticky) order-last border-t border-border bg-canvas px-4 py-3 medium:static medium:order-none medium:mt-0 medium:border-t-0 medium:px-6 medium:py-0 medium:pb-4 xl:max-w-pane-rows"
+      >
         <TaskQuickAdd
+          label="Backlog にタスクを追加"
           onAdd={(title) => {
-            const chosen = quickArea ?? search.area ?? '';
-            const areaId = chosen === '' ? undefined : id<'Area'>(chosen);
+            const areaId =
+              quickChoice === '' ? undefined : id<'Area'>(quickChoice);
             endUndo();
-            return actions.addTask(title, areaId);
+            const created = actions.addTask(title, areaId);
+            if (created === undefined) return false;
+            setJustAdded({ id: created, title });
+            return true;
           }}
           area={
-            <Field label="追加する Task の領域" hideLabel className="shrink-0">
-              <Select
-                value={quickArea ?? search.area ?? ''}
-                onChange={(e) => setQuickArea(e.currentTarget.value)}
-              >
-                <option value="">領域なし</option>
-                {areas.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
+            <AreaSelect
+              areas={areas}
+              value={quickChoice}
+              onChange={setQuickArea}
+              onNewArea={() => newArea.open(setQuickArea)}
+            />
           }
         />
+        {newArea.dialog}
       </div>
 
       <section
-        aria-label="Task の一覧"
+        aria-label="タスクの一覧"
         className="flex-1 pb-10 xl:max-w-pane-rows"
       >
         <p
@@ -230,7 +291,7 @@ function BacklogScreen() {
         </p>
         {items.length === 0 && completed === undefined ? (
           <p className="px-4 py-6 text-body text-ink-muted medium:px-6">
-            この切り口の Task はありません。
+            該当するタスクはありません。
           </p>
         ) : (
           <ul className="border-t border-border-soft medium:mx-3">
@@ -246,22 +307,34 @@ function BacklogScreen() {
                       onUndo={undoCompleted}
                     />
                   )}
-                  <li data-task={task.id}>
+                  <li
+                    data-task={task.id}
+                    data-added={task.id === justAdded?.id || undefined}
+                  >
                     <BacklogRow
+                      added={task.id === justAdded?.id}
                       item={item}
                       today={today}
                       current={task.id === open?.task.id}
-                      onOpen={() => setSearch({ task: task.id })}
+                      onOpen={() =>
+                        detail.leave(() => setSearch({ task: task.id }), true)
+                      }
                       onComplete={() => completeWithUndo(task.id, task.title)}
                       onToday={() => {
                         endUndo();
-                        actions.addToToday(task.id);
+                        addToToday(task.id, task.title);
+                      }}
+                      onWeek={() => {
+                        endUndo();
+                        addToWeek(task.id, task.title);
                       }}
                       onArchive={() => archiveWithUndo(task.id, task.title)}
-                      onEstimate={() => {
-                        estimateFocus.request(task.id);
-                        setSearch({ task: task.id });
-                      }}
+                      onEstimate={() =>
+                        detail.leave(() => {
+                          estimateFocus.request(task.id);
+                          setSearch({ task: task.id });
+                        }, true)
+                      }
                       focusControl={refocus === task.id}
                     />
                   </li>
@@ -285,7 +358,7 @@ function BacklogScreen() {
       <Drawer
         open={open !== undefined}
         onOpenChange={(next) => {
-          if (!next) setSearch({ task: undefined });
+          if (!next) detail.leave(() => setSearch({ task: undefined }));
         }}
       >
         <DrawerContent
@@ -302,6 +375,7 @@ function BacklogScreen() {
               onClose={() => setSearch({ task: undefined })}
               onComplete={() => completeWithUndo(open.task.id, open.task.title)}
               focusEstimate={estimateFocus.of(open.task.id)}
+              leaveRef={detail.ref}
             />
           )}
         </DrawerContent>

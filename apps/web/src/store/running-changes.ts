@@ -36,7 +36,7 @@ function onRunning(
 export const setGoal = (areaId: AreaId, text: string) =>
   onRunning((sprint, ctx) => setGoalText(sprint, { areaId, text }, ctx));
 
-/** 可用時間を変える. The planned hours stay (invariant 18). */
+/** 使える時間を変える. The planned hours stay (invariant 18). */
 export const setHours = (hours: number | null) =>
   onRunning((sprint, ctx) => setAvailableHours(sprint, { hours }, ctx));
 

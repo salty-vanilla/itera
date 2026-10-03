@@ -1,20 +1,25 @@
 # アクセシビリティ
 
-更新：2026-09-27（Dialog の初期フォーカスと `menuitemradio`、Issue #9。リストの Space の対象を Backlog 画面と Planning で分けた、Issue #47）。2026-09-26 に DESIGN.md v0.2 から分離。
+更新：2026-10-03（輪郭の 3:1 の対象から、文字のラベルがあるボタンの補助の輪郭を外す、Issue #251）。2026-10-01（期限を過ぎた日数を「2日過ぎ」と書く、Issue #205。見積もりの提案の読み上げ、Issue #162。Drawer の名前、割り込みの面をどの幅でもモーダルにする、行の `…` の名前、操作の名前の対象の付け方、Toast の伝わり方、Issue #153。スキップリンクと画面を移ったときのフォーカス、Issue #154。今日以外の日の「過去」「未来」の読み上げ、日付の入力、Issue #90）。2026-09-30（タスクの詳細を開いたときのフォーカス、Issue #95。□ の読み上げの週の語、Sprint Header と今日の日付の前後の矢印、Issue #90）。2026-09-27（Dialog の初期フォーカスと `menuitemradio`、Issue #9。リストの Space の対象を Backlog 画面と Planning で分けた、Issue #47）。2026-09-26 に DESIGN.md v0.2 から分離。
 
 DADS の品質基準（WCAG 2.2 AA）を下限にする。後から足すのではなく、部品の仕様に含める。色のコントラストと状態の見た目は [DESIGN.md](../../DESIGN.md) の Colors と Components。一次資料の引き方は `design-references` Skill。
 
 ## 色に頼らない
 
 - テキスト 4.5:1、24px 以上または 19px 太字は 3:1。操作部品の輪郭・フォーカス・意味のある印は 3:1。light / dark の両方で満たす。
-- **状態を色だけで伝えない**：選択 = 背景＋チェック（Filter は背景＋`ink` の 2px の枠＋太字）、期限超過 = 色＋アイコン＋「2日超過」、Agent 提案 = 破線＋「提案」、Area = 印＋ラベル、エラー = 色＋アイコン＋文。
+- 輪郭の 3:1 は、操作部品を見分けるのに要る輪郭に適用する。文字のラベルがあるボタンの補助の輪郭（Quiet Button の `border`、Filter の Pill）は対象外（Issue #251）。
+- **状態を色だけで伝えない**：選択 = 背景＋チェック（Filter は背景＋`ink` の 2px の枠＋太字）、期限切れ = 色＋アイコン＋「2日過ぎ」、Agent 提案 = 破線＋「提案」、Area = 印＋ラベル、エラー = 色＋アイコン＋文。
 - `forced-colors: active` では Area の路線記号と Capacity のセグメントの色を保ち、操作部品の輪郭は `CanvasText` にする。背景色で描く線（Divider、Progress の塗りとトラック）と Notice の面の境界も `CanvasText` で描く。
 
 ## フォーカス
 
 - 全要素共通：`outline: 2px solid var(--focus); outline-offset: 2px`（`:focus-visible`）。リスト内・タブ・メニュー項目は `outline-offset: -2px`。
 - フォーカスを消すスタイル（`outline: none` だけ）を書かない。
-- Dialog とモーダル Drawer は、開いたらフォーカスを中に移し、Tab を閉じ込め、閉じたら呼び出し元に戻す。Esc で閉じる。移す先は、Dialog は入力があっても最も安全な操作（[DESIGN.md](../../DESIGN.md) の Dialog。確定では「戻って調整」）、Drawer と Popover は最初の入力（なければ最も安全な操作）。
+- Dialog とモーダル Drawer は、開いたらフォーカスを中に移し、Tab を閉じ込め、閉じたら呼び出し元に戻す。Esc で閉じる。移す先は、Dialog は入力があっても最も安全な操作（[DESIGN.md](../../DESIGN.md) の Dialog。確定では「戻って調整」）、Drawer と Popover は最初の入力（なければ最も安全な操作）。ただしタスクの詳細の Drawer は、見出し（Task のタイトル。`tabindex="-1"`）に移し、どの欄にも入れない（見るだけで開いたときに書き換えそうにならず、compact でキーボードが出ない）。行の E で開いたときだけ Estimate の欄に移す（[patterns.md](patterns.md) の Backlog Organize）。
+- Dialog と Drawer は、見出しを名前にする（`aria-labelledby`。タスクの詳細は Task のタイトル）。
+- 割り込みを記録・編集の面は、どの幅でもモーダル Drawer にする（背後で使うものがない短い入力のため。暗幕を出す。medium 以上では、入力を捨てないよう暗幕のクリックでは閉じない）。閉じたら開いたボタン（「割り込みを記録」、または割り込みの行の `…`）に戻す。
+- アプリのシェルの先頭に「本文へ移動」のスキップリンクを置く。フォーカスがあるときだけ左上に Secondary Button の形で見え、押すと、画面を移ったときと同じく本文の見出し（`h1`）にフォーカスを移す。`main` 自体はフォーカスを受けない（受けると、そこで押したキーが Planning の N などのショートカットに届かない）。
+- ナビやブラウザの戻る・進むで画面を移ったら、フォーカスを移った先の画面の見出し（`h1`。`tabindex="-1"`）に置き、見出しを読ませる。最初に開いた画面ではフォーカスを動かさない（最初の Tab でスキップリンクに届く）。Filter・日付・詳細のように同じ画面の中で変わるときは動かさない。
 
 ## キーボード
 
@@ -23,7 +28,7 @@ DADS の品質基準（WCAG 2.2 AA）を下限にする。後から足すので�
 | 全体 | Tab / Shift+Tab で移動、Enter / Space で実行 |
 | Tabs | ← → で移動、Home / End |
 | Menu | ↓ ↑ で移動、Home / End、Enter で実行、Esc で閉じてトリガーに戻る |
-| Backlog / Today のリスト | Space：その行のコントロールを押す（Backlog は ○ 完了、Planning の Backlog ペインは □ 今週へ、Today の今日やるは ○ 完了、今週の残り・昨日の続きは「今日へ」）、Enter：詳細、E：Estimate の編集、Alt+↑↓：並べ替え。Backlog では Delete：アーカイブ（元に戻せる） |
+| Backlog / Today のリスト | Space：その行のコントロールを押す（Backlog は ○ 完了、Planning の Backlog ペインは □ 今週へ、Today の今日やるは ○ 完了、今週の残り・昨日の続きは「今日へ」）、Enter：詳細、E：Estimate の編集（行の `…` の「見積もりを入れる」も同じ）、Alt+↑↓：並べ替え。Backlog では Delete：アーカイブ（元に戻せる） |
 | Planning | N：タスク追加欄へ、⌘/Ctrl+Enter：Sprint を確定（確認 Dialog を開く） |
 | Tooltip | focus で即表示、Esc で閉じる |
 
@@ -34,22 +39,25 @@ DADS の品質基準（WCAG 2.2 AA）を下限にする。後から足すので�
 
 - pointer：24px 以上（`target-min`）。行内の小さな操作は 28px の見た目で、周囲に余白を取る。
 - compact 幅（768px 未満）：44px 以上（`target-touch`）。Checkbox と完了サークルは 44px の当たり判定を持つ。
-- 文字の 200% 拡大と、幅 320px でも情報が欠けない。Task のタイトルは省略するが、詳細で全文を読める。
+- 文字の 200% 拡大と、幅 320px でも情報が欠けない。Task のタイトルは省略する（compact は 2 行まで、medium 以上は 1 行）が、詳細で全文を読める。
 
 ## フォーム（DADS の構造）
 
 - 順序は **ラベル → サポートテキスト → 入力 → エラー**。サポートテキストとエラーは `aria-describedby` で入力に結ぶ。
 - 必須は「必須」の語で示す（色や記号だけにしない）。Itera は任意項目が多いので、任意を示す場合は「任意」。
-- エラーは入力の直下に、アイコン＋「何が問題で、どう直すか」を書く（「数値で入力してください（例: 1.5）」）。送信時に最初のエラーへフォーカスを移す。
+- エラーは入力の直下に、アイコン＋「何が問題で、どう直すか」を書く（「数値で入力してください（例：1.5）」）。送信時に最初のエラーへフォーカスを移す。
 - プレースホルダーをラベルの代わりにしない（検索欄とクイック追加だけ、視覚ラベルを省略して `aria-label` を付ける）。
 - 無効化したボタンは理由を近くに書く。可能なら無効化せず、押したときに理由を示す。
-- 数値の入力は `inputMode="decimal"`。
+- 数値の入力は `inputMode="decimal"`。時間の入力は「時間」と「分」の 2 欄（DESIGN.md の DurationField）で、2 欄とも `inputMode="numeric"`。2 欄を見えるラベルの名前の `role="group"` にし、各欄の名前は「時間」「分」。説明とエラーは 2 欄の両方に `aria-describedby` で結び、エラーのときは時間の欄にフォーカスを移す。フォーカスは自動で次の欄へ移さない。時間の欄の Enter は分の欄へ移り（`enterkeyhint="next"`）、2 欄の外へ出たとき（か分の欄の Enter）に保存する（Issue #252）。
 
 ## スクリーンリーダー
 
-- □ は「今週に入れる: タスク名」、○ は「完了にする: タスク名」と読ませる。
-- Agent 提案の値は「Agent の提案（未確定）: 2〜4時間」、Estimate は「見積もり 3時間」と読ませる。
-- 動的な結果（Toast、Capacity の状態、保存エラー）は `role="status"` / `role="alert"` で通知する。
+- □ は「今週に入れる：タスク名」、○ は「完了にする：タスク名」と読ませる。□ とグループの Checkbox の「今週」は、開いている Sprint の呼び名に従う（実行中の Sprint があるあいだの次の計画では「来週に入れる：タスク名」「持ち越しをすべて来週に入れる」。[文言と用語](content.md) の「週の呼び名」）。
+- Sprint Header の前後の矢印はリンクで、「前の Sprint（Sprint 1）」「次の Sprint（Sprint 3）」と読ませる（Tooltip も同じ語）。端で行き先がない矢印は、無効の形で残して読み上げない。今日の画面の日付の矢印も同じ形で、「前の日：9/30 (水)」「次の日：10/2 (金)」と読ませる。今日以外の日の「過去」「未来」は、見出しの中に視覚的に隠して入れ、見出しと一緒に「9月30日（水） 過去」と読ませる。矢印の後ろに見える同じ語は `aria-hidden` にして、2 回読ませない。日付の選択は、見える「日付を選ぶ」のラベルを入力に結ぶ。キーボードで打った日付は、欄ごとに移らず、Enter か入力から離れたときに開く（年を打つ途中の 0202 年などを開かない）。ピッカーで選んだ日付はすぐに開く。今日と今日以外の日のあいだで画面が変わっても、フォーカスは押した矢印（または日付の選択）に戻す。
+- Agent 提案の値は「見積もりの提案（未確定）：2〜4時間」、Estimate は「見積もり 3時間」と読ませる。
+- 行の `…` は「その他の操作：タスク名」と読ませる（割り込みの行は「その他の操作：割り込み 15:00「メモ」」）。
+- 見える語のあとに対象を足して読ませるボタン（「今日へ：タスク名」「かかった時間を記録：タスク名」）は、名前全体を `aria-label` で付ける。アイコンだけのボタン（Retro の「振り返りに使う：タスク名」など）も、同じ形の名前を付け、Tooltip にも同じ語を出す。視覚的に隠した要素で「：タスク名」を足すと、ブラウザが別の塊として扱い「今日へ ：タスク名」と空白を挟んで読む。
+- 動的な結果（Toast、Capacity の状態、保存エラー）は `role="status"` / `role="alert"` で通知する。Toast は「通知」の領域（`aria-live="polite"`。`role="status"` と同じく、割り込まずに読む）に足し、danger の Toast だけを `role="alert"` で読む。各 Toast は文を名前に持つ。
 - 装飾のアイコンは `aria-hidden`。意味を持つアイコンだけに `aria-label`。
 - Menu の選べる項目は `menuitemcheckbox`（並び順のように 1 つだけ選ぶものは `menuitemradio`）、Filter の選択は `aria-pressed`、Navigation の現在地は `aria-current="page"`（フォーカスは内側のリング）。
 - 部品ごとの role：Dialog は `role="dialog"`（破壊的な確認は `alertdialog`）＋`aria-modal`、Tabs は `role="tablist"` と roving tabindex、Switch は `role="switch"`＋`aria-checked`、Progress は `role="progressbar"`＋`aria-valuetext`、Tooltip は `role="tooltip"` で、pointer を載せても消えない（WCAG 1.4.13）。

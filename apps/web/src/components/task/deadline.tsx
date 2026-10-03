@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 // colour alone:
 // - upcoming: `calendar` 「10/5 (月)」 ink-muted
 // - soon (within 2 days) and today: `clock` 「あと2日」「今日まで」 warning
-// - overdue: `circle-alert` 「2日超過」 danger
+// - overdue: `circle-alert` 「2日過ぎ」 danger
 // The 切り口 「期限が近い」 is a different, wider range (to the end of the
 // Sprint); this is only how a date reads.
 
@@ -23,7 +23,7 @@ function Deadline({
   const days = daysBetween(today, due);
   const [Icon, text, tone] =
     days < 0
-      ? [semanticIcons.overdue, `${-days}日超過`, 'text-danger']
+      ? [semanticIcons.overdue, `${-days}日過ぎ`, 'text-danger']
       : days === 0
         ? [semanticIcons.deadlineSoon, '今日まで', 'text-warning']
         : days <= 2
@@ -45,7 +45,7 @@ function Deadline({
       <span>
         <span className="sr-only">期限 </span>
         {text}
-        {days <= 2 && <span className="sr-only">（{formatDate(due)}）</span>}
+        {days <= 2 && <span className="sr-only">、{formatDate(due)}</span>}
       </span>
     </span>
   );

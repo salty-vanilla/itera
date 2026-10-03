@@ -1,5 +1,6 @@
-import type { TaskId } from '@itera/domain';
+import type { SuggestionBound, TaskId } from '@itera/domain';
 import { Ellipsis, Target, Undo2 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { IconButton } from '@/components/ui/icon-button';
 import { semanticIcons } from '@/components/ui/icon';
@@ -7,39 +8,61 @@ import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
 import { useToast } from '@/components/ui/toast';
 import { GoalBlock } from '@/components/sprint/goal-block';
 import { Estimate } from '@/components/task/estimate';
-import { MetaItem, TaskMetadata } from '@/components/task/task-metadata';
+import { EstimateMenuItem } from '@/components/task/estimate-menu-item';
+import {
+  MetaItem,
+  PriorityText,
+  TaskMetadata,
+} from '@/components/task/task-metadata';
 import { TaskRow } from '@/components/task/task-row';
-import { formatPlanningTotal } from '@/lib/time-format';
+import { formatPlanningSum, formatPlanningTotal } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
+import { weekCall, weekText } from '@/lib/week-text';
 import type {
   AreaPlan,
   PlannedTask,
   PlanningData,
 } from '@/store/planning-view';
 import { usePlanningActions } from '@/store/use-planning';
+import { plannedSourceText } from './planned-source';
 
 // The Sprint pane of Planning (Thinking space, at most 680px; from 1920px
 // (bp-xl) it takes the width that is left, and the Area blocks sit in
 // columns). It holds both limits, so the caller sets no width. One
 // workspace that changes with the stage (PRD §5 B), never a forced wizard:
-// - 選ぶ: 「今週、何を進めますか」, the chosen Tasks per Area.
+// - 選ぶ: 「今週、何を進めるか」, the chosen Tasks per Area.
 // - 整える: 「今週、どんな状態にしたいか」, each Area's Goal (optional) with
-//   its Tasks; a Task is linked to the Goal or not, and both count.
-// - 確かめる: 「この計画で、進められそうか」, Goals, Tasks and their values.
+//   its Tasks; a Task is linked to the Goal or not, and both count. An Area
+//   with neither is one line, so that a Goal can still be written first.
+// - 確かめる: 「この計画で、進められそうか」, the summary first (what the 確定
+//   Dialog sums up, #93), then the Goals, Tasks and their values, to read:
+//   a Goal is written in 整える.
+// 「今週」 is the Sprint's name next to now: next week's Planning, started
+// while this week runs, says 「来週」 (#90).
 // Before confirm the values are a preview, drawn solid (owner decision in
 // #40): they come from the person's own choices.
 
 export type Stage = 'pick' | 'shape' | 'check';
 
-export const STAGE_HEADINGS: Readonly<Record<Stage, string>> = {
-  pick: '今週、何を進めますか',
-  shape: '今週、どんな状態にしたいか',
-  check: 'この計画で、進められそうか',
-};
+/** The stage's heading, in the week's words (「来週、何を進めるか」). */
+export function stageHeading(stage: Stage, week: string): string {
+  switch (stage) {
+    case 'pick':
+      return weekText(week, '、何を進めるか');
+    case 'shape':
+      return weekText(week, '、どんな状態にしたいか');
+    case 'check':
+      return 'この計画で、進められそうか';
+  }
+}
 
 type PlanPaneProps = {
   data: PlanningData;
   stage: Stage;
+  /** 確かめる: the summary under the heading (#93). */
+  summary?: ReactNode;
+  /** The Task just added in the Quick Add: its row flashes (Issue #92). */
+  addedTaskId?: TaskId | undefined;
   onOpenTask: (taskId: TaskId) => void;
   /** E on a row: the Task's detail, at its Estimate. */
   onEstimateTask: (taskId: TaskId) => void;
@@ -49,11 +72,15 @@ type PlanPaneProps = {
 function PlanPane({
   data,
   stage,
+  summary,
+  addedTaskId,
   onOpenTask,
   onEstimateTask,
   className,
 }: PlanPaneProps) {
   const actions = usePlanningActions();
+  const week = weekCall(data.week, data.number);
+  const criterionBound = data.criterion?.active.policy.rangePolicy;
   const withTasks = data.plan.filter((p) => p.tasks.length > 0);
   // 整える shows every Area (a Goal can be written before choosing Tasks);
   // 領域なし has no Goal and shows only with Tasks.
@@ -74,13 +101,16 @@ function PlanPane({
         className,
       )}
     >
-      <h1 className="text-display-m text-ink">{STAGE_HEADINGS[stage]}</h1>
-      {stage === 'pick' && data.chosenCount === 0 && (
-        <p className="text-body text-ink-muted">
-          Backlog から □
-          で今週へ選びます。今週発生する繰り返しは最初から入っています。
+      <h1 className="text-display-m text-ink">{stageHeading(stage, week)}</h1>
+      {stage === 'pick' && data.candidates.recurring.length > 0 && (
+        <p className="max-w-measure-read text-body text-ink-muted [text-wrap:pretty] [word-break:auto-phrase]">
+          {weekText(
+            week,
+            'の繰り返しは最初から入っています。外すと今日の画面にも出ません。',
+          )}
         </p>
       )}
+      {summary}
       {/*
         From 1920px (bp-xl) the Area blocks sit in 1 to 3 columns, as many as
         fit: a column is at least 26rem and at least a third of the row (less
@@ -103,12 +133,15 @@ function PlanPane({
                   variant="heading"
                 />
                 <span className="text-meta text-ink-muted">
-                  {summaryOf(block)}
+                  {summaryOf(block, stage)}
                 </span>
               </h2>
               <PlannedList
                 block={block}
                 stage={stage}
+                week={week}
+                criterionBound={criterionBound}
+                addedTaskId={addedTaskId}
                 onOpenTask={onOpenTask}
                 onEstimateTask={onEstimateTask}
               />
@@ -116,13 +149,17 @@ function PlanPane({
           ) : (
             <GoalBlock
               key={block.area.id ?? 'none'}
-              // From 1920px the blocks sit side by side (see above).
-              headingRowClassName="xl:min-h-control-sm"
               area={{ name: block.area.name, color: block.area.color }}
-              summary={block.tasks.length > 0 ? summaryOf(block) : undefined}
+              summary={
+                block.tasks.length > 0 ? summaryOf(block, stage) : undefined
+              }
               goal={block.goal?.text}
+              week={week}
+              // An Area with neither a Goal nor a Task is one line (#161).
+              bare={block.tasks.length === 0 && block.goal === undefined}
+              // 確かめる is for reading: no 編集, no 「+ 目標を書く」 (#93).
               onSave={
-                block.area.id === null
+                block.area.id === null || stage === 'check'
                   ? undefined
                   : (text) =>
                       actions.setGoal(
@@ -135,6 +172,9 @@ function PlanPane({
                 <PlannedList
                   block={block}
                   stage={stage}
+                  week={week}
+                  criterionBound={criterionBound}
+                  addedTaskId={addedTaskId}
                   onOpenTask={onOpenTask}
                   onEstimateTask={onEstimateTask}
                 />
@@ -147,31 +187,48 @@ function PlanPane({
   );
 }
 
-function summaryOf(block: AreaPlan): string {
+/**
+ * 「2件 · 7時間30分（ほかに見積もりなし 1件）」; in 確かめる without the count
+ * left out, which its 「見積もりなし」 section says once (#241).
+ */
+function summaryOf(block: AreaPlan, stage: Stage): string {
   const count = `${block.tasks.length}件`;
-  return block.total === undefined
-    ? count
-    : `${count} · ${formatPlanningTotal(block.total)}`;
+  if (block.total === undefined) return count;
+  return `${count} · ${
+    stage === 'check'
+      ? formatPlanningSum(block.total)
+      : formatPlanningTotal(block.total)
+  }`;
 }
 
 function PlannedList({
   block,
   stage,
+  week,
+  criterionBound,
+  addedTaskId,
   onOpenTask,
   onEstimateTask,
 }: {
   block: AreaPlan;
   stage: Stage;
+  week: string;
+  criterionBound: SuggestionBound | undefined;
+  addedTaskId: TaskId | undefined;
   onOpenTask: (taskId: TaskId) => void;
   onEstimateTask: (taskId: TaskId) => void;
 }) {
   return (
     <ul className="flex flex-col border-t border-border-soft">
       {block.tasks.map((planned) => (
-        <li key={planned.sprintTask.id}>
+        <li key={planned.sprintTask.id} data-task={planned.task.id}>
           <PlannedRow
             planned={planned}
             stage={stage}
+            week={week}
+            criterionBound={criterionBound}
+            hasGoal={block.goal !== undefined}
+            added={planned.task.id === addedTaskId}
             onOpen={() => onOpenTask(planned.task.id)}
             onEstimate={() => onEstimateTask(planned.task.id)}
           />
@@ -184,11 +241,23 @@ function PlannedList({
 function PlannedRow({
   planned,
   stage,
+  week,
+  criterionBound,
+  hasGoal,
+  added,
   onOpen,
   onEstimate,
 }: {
   planned: PlannedTask;
   stage: Stage;
+  /** 「今週」「来週」 (#90). */
+  week: string;
+  /** The value of the suggestion the Sprint's criterion plans with. */
+  criterionBound: SuggestionBound | undefined;
+  /** The Task's Area has a Goal: only then is the link shown and changed. */
+  hasGoal: boolean;
+  /** Just added in the Quick Add: the row flashes for a moment (Issue #92). */
+  added: boolean;
   onOpen: () => void;
   onEstimate: () => void;
 }) {
@@ -197,21 +266,30 @@ function PlannedRow({
   const { sprintTask, task, value, occurrenceCount, suggestion, inactive } =
     planned;
   const recurring = occurrenceCount !== undefined;
+  const source =
+    suggestion === undefined
+      ? undefined
+      : plannedSourceText(value, criterionBound, occurrenceCount);
   const linked = sprintTask.goalLink === 'linked';
-  // A Task without an Area has no Goal to link to.
-  const canLink = task.areaId !== undefined;
+  // The link means something only where the Area has a Goal (a Task in an
+  // Area without one is unlinked at confirm, goalLinkAtConfirm), so the row
+  // says it, in the words of its menu item, only there (#159).
+  const showLink = stage !== 'pick' && hasGoal;
   const Repeat = semanticIcons.recurrence;
   const Carry = semanticIcons.carriedOver;
   const meta = [
     inactive !== undefined && (
       <MetaItem key="i" className="text-ink">
-        {inactive === 'completed' ? '完了済み' : 'アーカイブ済み'} ·
-        今週から外すと確定できます
+        {inactive === 'completed' ? '完了済み' : 'アーカイブ済み'} ·{' '}
+        {weekText(week, 'から外すと確定できます')}
       </MetaItem>
+    ),
+    task.priority !== 'normal' && (
+      <PriorityText key="p" priority={task.priority} />
     ),
     recurring && (
       <MetaItem key="r" icon={<Repeat aria-hidden />}>
-        今週 {occurrenceCount}回
+        {week} {occurrenceCount}回
       </MetaItem>
     ),
     sprintTask.carriedFrom !== undefined && (
@@ -219,13 +297,10 @@ function PlannedRow({
         持ち越し
       </MetaItem>
     ),
-    // 「Goal なし」 as confirming will set it (goalLinkAtConfirm): also for
-    // a linked Task whose Area has no Goal yet.
-    stage !== 'pick' && planned.linkAtConfirm === 'unlinked' && (
-      <MetaItem key="g" className="text-ink-subtle">
-        Goal なし
-      </MetaItem>
-    ),
+    // Only the exception is marked: a linked Task says nothing (#241). In
+    // the tone of the other metadata, not lighter or warned (DESIGN.md Do's
+    // and Don'ts).
+    showLink && !linked && <MetaItem key="g">目標に入っていない</MetaItem>,
   ].filter(Boolean);
 
   const unchoose = () => {
@@ -235,7 +310,8 @@ function PlannedRow({
       : actions.unchooseTasks([sprintTask.id]);
     if (!done) return;
     toast.show({
-      title: `「${task.title}」を今週から外しました`,
+      kind: 'sprint-pick',
+      title: `「${task.title}」を${weekText(week, 'から外しました')}`,
       // A completed or archived Task cannot be chosen again, so there is
       // nothing to undo.
       ...(inactive === undefined
@@ -256,10 +332,10 @@ function PlannedRow({
     <MenuItem key="out" onClick={unchoose}>
       <Undo2 aria-hidden />
       {recurring
-        ? `今週から外す（${occurrenceCount}回すべて）`
-        : '今週から外す'}
+        ? weekText(week, `から外す（${occurrenceCount}回すべて）`)
+        : weekText(week, 'から外す')}
     </MenuItem>,
-    stage !== 'pick' && canLink && (
+    showLink && (
       <MenuItem
         key="link"
         onClick={() =>
@@ -267,43 +343,52 @@ function PlannedRow({
         }
       >
         <Target aria-hidden />
-        {linked ? 'Goal に紐づけない' : 'Goal に紐づける'}
+        {linked ? '目標から外す' : '目標に入れる'}
       </MenuItem>
+    ),
+    // A completed or archived Task has no detail to open (as in Today).
+    inactive === undefined && (
+      <EstimateMenuItem key="estimate" onSelect={onEstimate} />
     ),
   ].filter(Boolean);
 
   return (
     <TaskRow
       title={task.title}
+      // Flashes `here-subtle` once and fades, as the Backlog does (#86;
+      // 2.5s: ADDED_MS in planning-screen.tsx). These rows have no ground of
+      // their own, so the flash shows.
+      className={
+        added ? 'animate-[added-flash_2.5s_ease-in-out_forwards]' : undefined
+      }
       onOpen={onOpen}
-      keys={{ onEstimate }}
+      keys={inactive === undefined ? { onEstimate } : undefined}
       metadata={
         meta.length > 0 ? <TaskMetadata>{meta}</TaskMetadata> : undefined
       }
       estimate={
-        // A value from a suggestion shows where it came from (DESIGN.md
-        // Estimate: 「提案 3–5h / 今回は 5h で計画」). The preview is solid.
-        <span className="flex flex-wrap items-center justify-end gap-2">
-          {/* Always, when the value comes from a suggestion: it is not the
-              person's Estimate yet (invariant 7, patterns.md Planning). For
-              a recurring Task the suggestion is one occurrence's. */}
-          {value.base === 'suggestion' && suggestion !== undefined && (
-            <span className="inline-flex items-center gap-1">
-              <Estimate
-                value={{
-                  base: 'suggestion',
-                  lo: suggestion.lo,
-                  hi: suggestion.hi,
-                  criterionApplied: false,
-                  computedAt: value.computedAt,
-                }}
-              />
-              {recurring && (
-                <span className="text-meta text-ink-muted">/ 1回</span>
-              )}
+        // One value: the planning value, solid (a preview from the person's
+        // choice), and where it comes from a suggestion, which value, after
+        // it (「3〜5時間（提案）」「5時間（提案の多めの値）」,
+        // plannedSourceText). It is not the person's Estimate yet (invariant
+        // 7, patterns.md Planning), so it says so on these rows only (#250).
+        <span className="inline-flex flex-wrap items-center justify-end">
+          <Estimate
+            value={value}
+            planned={value.base !== 'none'}
+            // 確かめる says the subtasks left out once, in 「見積もりなし」 (#241).
+            withoutMissing={stage === 'check'}
+            enter={
+              inactive === undefined
+                ? { title: task.title, onEnter: onEstimate }
+                : undefined
+            }
+          />
+          {source !== undefined && (
+            <span className="text-meta whitespace-nowrap text-ink-muted">
+              {source}
             </span>
           )}
-          <Estimate value={value} planned={value.base !== 'none'} />
         </span>
       }
       actions={
@@ -313,7 +398,7 @@ function PlannedRow({
               render={
                 <IconButton
                   size="sm"
-                  label={`操作: ${task.title}`}
+                  label={`その他の操作：${task.title}`}
                   icon={<Ellipsis />}
                 />
               }

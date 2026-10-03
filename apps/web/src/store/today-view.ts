@@ -23,8 +23,8 @@ import {
   type TodayRemaining,
   type WeekProgress,
 } from '@itera/domain';
-import { daysBetween } from '@/lib/date-format';
 import type { Clock, Records } from './records';
+import { dayInPeriod, selectionActualHours } from './sprint-day';
 
 export interface TodayArea {
   readonly id: AreaId;
@@ -43,6 +43,12 @@ export interface TodayItem {
   readonly value: PlanningValue;
   /** 「N回続けて見送り」 (F4), 0 when there is none. */
   readonly streak: number;
+  /**
+   * 今週の残り only: today's choice of it, put back with 今週の残りに戻す
+   * (Removed). 今日へ takes that choice back (F37) rather than making a
+   * second one, which the day does not allow (F17, #233).
+   */
+  readonly removedToday?: DailySelection['id'];
 }
 
 /** A row of 今日やる, or one closed today. */
@@ -76,12 +82,20 @@ export interface TodayData {
    * from the Backlog come last.
    */
   readonly rows: readonly TodayRow[];
-  /** 今日はここまで・見送り・外すにした選択. Still completable today (F17). */
+  /**
+   * 今日は中断する・今日は見送るにした選択. Still completable today (F17).
+   * One put back with 今週の残りに戻す is in 今週の残り instead (#233).
+   */
   readonly closed: readonly TodayRow[];
   /** 昨日の続き (F6): candidates only, never chosen automatically. */
   readonly continuation: readonly TodayItem[];
   /** 今週の残り: planned and not chosen today (occurrences of any day, F18). */
   readonly rest: readonly TodayItem[];
+  /**
+   * The planned Tasks and pending occurrences, whether or not chosen or
+   * continued: what 今週の計画 shows before the first day (#156).
+   */
+  readonly plan: readonly TodayItem[];
   /** Today's interrupts, oldest first. */
   readonly interrupts: readonly InterruptNote[];
   /** Areas for the quick add, in the person's order. */
@@ -93,8 +107,31 @@ export function activeSprintOf(records: Records): Sprint | undefined {
   return records.sprints.find((s) => s.state === 'active');
 }
 
-const OPEN_OR_DONE = new Set(['selected', 'started', 'done', 'skipped']);
+/**
+ * The resolutions of a selection that Today lists in 今日やる. The Backlog's
+ * 「今日」 (Issue #94) is the same set, so that the two agree.
+ */
+export type ListedResolution = 'selected' | 'started' | 'done' | 'skipped';
+export function isListedResolution(
+  resolution: DailySelection['resolution'],
+): resolution is ListedResolution {
+  return (
+    resolution === 'selected' ||
+    resolution === 'started' ||
+    resolution === 'done' ||
+    resolution === 'skipped'
+  );
+}
+
 const CLOSED = new Set(['paused', 'deferred', 'removed']);
+
+/** A selection closed for the day: back among the week's remaining. */
+export type ClosedResolution = 'paused' | 'deferred' | 'removed';
+export function isClosedResolution(
+  resolution: DailySelection['resolution'],
+): resolution is ClosedResolution {
+  return CLOSED.has(resolution);
+}
 
 export function todayData(
   records: Records,
@@ -146,14 +183,7 @@ export function todayData(
     if (sprintTask === undefined || sprintTask.outcome === 'removed') return [];
     const base = item(sprintTask, selection.occurrenceId);
     if (base === undefined) return [];
-    const actualHours = sprint.actualTimes
-      .filter(
-        (a) =>
-          a.date === selection.date &&
-          a.sprintTaskId === selection.sprintTaskId &&
-          a.occurrenceId === selection.occurrenceId,
-      )
-      .reduce((sum, a) => sum + a.hours, 0);
+    const actualHours = selectionActualHours(sprint, selection);
     return [{ ...base, selection, actualHours }];
   };
 
@@ -164,13 +194,17 @@ export function todayData(
     );
   const rows = [
     ...todays.filter(
-      (s) => OPEN_OR_DONE.has(s.resolution) && s.origin !== 'backlogCompletion',
+      (s) =>
+        isListedResolution(s.resolution) && s.origin !== 'backlogCompletion',
     ),
     ...todays.filter(
-      (s) => OPEN_OR_DONE.has(s.resolution) && s.origin === 'backlogCompletion',
+      (s) =>
+        isListedResolution(s.resolution) && s.origin === 'backlogCompletion',
     ),
   ].flatMap(row);
-  const closed = todays.filter((s) => CLOSED.has(s.resolution)).flatMap(row);
+  const closed = todays
+    .filter((s) => CLOSED.has(s.resolution) && s.resolution !== 'removed')
+    .flatMap(row);
 
   const continuation = yesterdaysContinuation(sprint, sprints, today).flatMap(
     (c) => item(c.sprintTask, c.occurrenceId) ?? [],
@@ -180,8 +214,8 @@ export function todayData(
       (c) =>
         c.sprintTask.id === sprintTask.id && c.occurrence?.id === occurrenceId,
     );
-  const chosenToday = (sprintTask: SprintTask, occurrenceId?: string) =>
-    todays.some(
+  const todayOf = (sprintTask: SprintTask, occurrenceId?: string) =>
+    todays.find(
       (s) =>
         s.sprintTaskId === sprintTask.id && s.occurrenceId === occurrenceId,
     );
@@ -189,14 +223,10 @@ export function todayData(
   const planned = sprint.tasks.filter((t) => t.outcome === 'planned');
   // The Tasks first, then each pending occurrence, which can be chosen on
   // any day of the Sprint (F18), in the order of their dates.
-  const rest = [
+  const plan = [
     ...planned
       .filter((t) => t.occurrenceIds === undefined)
-      .flatMap((sprintTask) =>
-        chosenToday(sprintTask) || inContinuation(sprintTask)
-          ? []
-          : (item(sprintTask) ?? []),
-      ),
+      .flatMap((sprintTask) => item(sprintTask) ?? []),
     ...planned
       .filter((t) => t.occurrenceIds !== undefined)
       .flatMap((sprintTask) =>
@@ -204,9 +234,7 @@ export function todayData(
           .filter(
             (o) =>
               (sprintTask.occurrenceIds ?? []).includes(o.id) &&
-              o.state === 'pending' &&
-              !chosenToday(sprintTask, o.id) &&
-              !inContinuation(sprintTask, o.id),
+              o.state === 'pending',
           )
           .flatMap((o) => item(sprintTask, o.id) ?? []),
       )
@@ -217,6 +245,15 @@ export function todayData(
           : 1,
       ),
   ];
+  // Put back with 今週の残りに戻す: in 今週の残り again at once (#233).
+  const rest = plan.flatMap((i): TodayItem[] => {
+    if (inContinuation(i.sprintTask, i.occurrence?.id)) return [];
+    const chosen = todayOf(i.sprintTask, i.occurrence?.id);
+    if (chosen === undefined) return [i];
+    return chosen.resolution === 'removed'
+      ? [{ ...i, removedToday: chosen.id }]
+      : [];
+  });
 
   const areas = records.areas
     .filter((a) => !a.archived)
@@ -247,10 +284,7 @@ export function todayData(
     sprint,
     number: sprintNumber(sprint, sprints),
     today,
-    day: {
-      index: daysBetween(sprint.start, today) + 1,
-      count: daysBetween(sprint.start, sprint.end) + 1,
-    },
+    day: dayInPeriod(sprint, today),
     lastDay: today === sprint.end,
     timeZone: records.user.timeZone,
     progress: weekProgress(sprint, occurrences),
@@ -260,6 +294,7 @@ export function todayData(
     closed,
     continuation,
     rest,
+    plan,
     interrupts: sprint.interrupts.filter(
       (n) => toLocalDate(n.at, records.user.timeZone) === today,
     ),

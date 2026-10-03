@@ -1,6 +1,7 @@
 import { CircleCheck, SkipForward, Undo2 } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import {
   Dialog,
   DialogClose,
@@ -12,13 +13,15 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import { formatDate } from '@/lib/date-format';
+import { SELECTION_WORDS } from '@/lib/selection-words';
 import type { PastDayRecord, RunningData } from '@/store/running-view';
 
 // 日ごとの記録 (#53, owner decisions): the days before today with their
-// completions and skips, each with 「取り消す」. Undoing leaves that day's
-// choice unresolved (F33: the system closes it, invariant 24); a Task goes
-// back to the week, an occurrence to pending. Only during the Sprint.
-// Today stays about today alone.
+// completions and skips, each with 「取り消す」, an IconButton that keeps a
+// list read back quiet (#160). Undoing leaves that day's choice unresolved
+// (F33: the system closes it, invariant 24); a Task goes back to the week,
+// an occurrence to pending. Only during the Sprint. Today stays about today
+// alone.
 
 type PastDaysProps = {
   days: RunningData['pastDays'];
@@ -40,6 +43,7 @@ function PastDays({ days, onUndo }: PastDaysProps) {
     if (!onUndo(record)) return;
     setAsking(undefined);
     toast.show({
+      kind: 'day-record-undone',
       title: `${formatDate(record.selection.date)} の「${record.title}」の${word(record)}を取り消しました`,
     });
   };
@@ -56,8 +60,8 @@ function PastDays({ days, onUndo }: PastDaysProps) {
         >
           日ごとの記録
         </h2>
-        <p className="text-help text-ink-muted">
-          昨日までの完了とスキップです。取り消すと、その日は未処理になります（見送りなどの後に完了した日は、元の状態に戻ります）。
+        <p className="text-help text-ink-muted [text-wrap:pretty] [word-break:auto-phrase]">
+          取り消すと、その日は完了・スキップする前の状態に戻ります。
         </p>
       </div>
       {days.map((day) => (
@@ -88,18 +92,15 @@ function PastDays({ days, onUndo }: PastDaysProps) {
                       <span className="text-ink-muted"> · {word(r)}</span>
                     </span>
                   </span>
-                  <Button
+                  {/* Quiet, as a list read back rather than worked in
+                      (#160): the icon of Today's way back, always shown. */}
+                  <IconButton
                     size="sm"
-                    variant="quiet"
                     className="ms-auto"
+                    label={`取り消す（${word(r)}）：${formatDate(r.selection.date)} ${r.title}`}
+                    icon={<Undo2 />}
                     onClick={() => setAsking(r)}
-                  >
-                    <Undo2 aria-hidden />
-                    取り消す
-                    <span className="sr-only">
-                      : {formatDate(r.selection.date)} {r.title} の{word(r)}
-                    </span>
-                  </Button>
+                  />
                 </li>
               );
             })}
@@ -121,11 +122,13 @@ function PastDays({ days, onUndo }: PastDaysProps) {
                   {formatDate(asking.selection.date)} の「{asking.title}」の
                   {word(asking)}を取り消しますか？
                 </DialogTitle>
-                <DialogDescription>{consequence(asking)}</DialogDescription>
+                <DialogDescription className="[text-wrap:pretty] [word-break:auto-phrase]">
+                  {consequence(asking)}
+                </DialogDescription>
               </DialogHeader>
               <DialogFooter>
-                <DialogClose render={<Button />}>やめる</DialogClose>
-                <Button onClick={confirm}>取り消す</Button>
+                <DialogClose render={<Button />}>キャンセル</DialogClose>
+                <Button onClick={confirm}>{word(asking)}を取り消す</Button>
               </DialogFooter>
             </>
           )}
@@ -135,28 +138,29 @@ function PastDays({ days, onUndo }: PastDaysProps) {
   );
 }
 
-const CLOSED_WORDS = {
-  paused: '今日はここまで',
-  deferred: '見送り',
-  removed: '今日から外した',
-} as const;
-
 /** What undoing leaves, in words (F33, F17, F29). */
 function consequence(r: PastDayRecord): string {
-  const back = r.recurring
-    ? 'この回は未完了に戻ります。'
-    : 'タスクは今週の残りに戻ります。';
-  const day =
-    r.after.kind === 'gone'
-      ? 'Backlog から完了した記録なので、その日の記録ごと消え、'
-      : r.after.kind === 'closed'
-        ? `その日の記録は、完了にする前の「${CLOSED_WORDS[r.after.resolution]}」に戻り、`
-        : 'その日の記録は未処理になり、';
   const noWayBack =
     r.selection.resolution === 'skipped'
-      ? '過ぎた日をスキップに戻すことはできません。'
-      : '過ぎた日を完了に戻すことはできません。';
+      ? '取り消したあと、その日の記録をもう一度スキップにはできません。'
+      : '取り消したあと、その日の記録をもう一度完了にはできません。';
+  // Unresolved reads 「未完了」 (#205), the state before the completion or
+  // skip, as 日ごとの記録 says. With an occurrence both go back to it: one
+  // sentence.
+  if (r.after.kind === 'unresolved' && r.recurring)
+    return `その日の記録と繰り返しは未完了に戻ります。${noWayBack}`;
+  const back = r.recurring
+    ? '繰り返しは未完了に戻ります。'
+    : 'タスクは今週の残りに戻ります。';
+  // A choice put back to the week is not listed on another day (#233).
+  const day =
+    r.after.kind === 'gone' ||
+    (r.after.kind === 'closed' && r.after.resolution === 'removed')
+      ? 'その日の記録は消え、'
+      : r.after.kind === 'closed'
+        ? `その日の記録は「${SELECTION_WORDS[r.after.resolution]}」に戻り、`
+        : 'その日の記録は未完了に戻り、';
   return `${day}${back}${noWayBack}`;
 }
 
-export { PastDays };
+export { consequence, PastDays };

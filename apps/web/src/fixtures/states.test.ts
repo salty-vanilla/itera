@@ -136,8 +136,8 @@ describe('fixture states', () => {
       occurrences: start.records.occurrences,
       sprints: start.records.sprints,
     });
-    // Scenario A step 13: 提案 3–5h · 計画値 5h · 実績 4.5h、2回続けて見送り
-    // （9/28・9/29）、9/30 は「今日はここまで」.
+    // Scenario A step 13: 提案 3〜5時間 · 計画値 5時間 · 実績 4時間30分、2回続けて見送り
+    // （9/28・9/29）、9/30 は「中断」.
     expect(
       facts.carriedOver.find((t) => t.taskId === 'task-paper'),
     ).toMatchObject({

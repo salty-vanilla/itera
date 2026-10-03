@@ -93,11 +93,11 @@ export const typographyGroups = [
   {
     title: '見出しと確定した言葉',
     description:
-      '階層は 700 とサイズの差で作る。本人が確定した言葉（Goal、改善策、振り返り）は goal / reflection で本文より一段大きく組む。',
+      '階層は 700 とサイズの差で作る。本人が確定した言葉（Goal、次に試すこと、振り返り）は goal / reflection で本文より一段大きく組む。',
     samples: [
       ['display-l', 'text-display-l', 'Sprint 14'],
-      ['display-m', 'text-display-m', '今週、何を進めますか'],
-      ['goal', 'text-goal', '論文の第 3 章の草稿を終える'],
+      ['display-m', 'text-display-m', '今週、何を進めるか'],
+      ['goal', 'text-goal', '論文の第3章の草稿を終える'],
       [
         'reflection',
         'text-reflection',
@@ -116,16 +116,16 @@ export const typographyGroups = [
       [
         'body-l',
         'text-body-l',
-        'Estimate の幅を計画値のどこで使うかを決めます。',
+        '見積もりがないとき、提案のどの値で計画するかを決めます。',
       ],
       [
         'body',
         'text-body',
-        '可用時間から計画値の合計を引いた残りを、幅のまま示します。',
+        '少なく済めば 2時間15分残る · 多くかかれば 45分超える',
       ],
       ['task', 'text-task', '関連研究のメモを整理する'],
-      ['label', 'text-label', '可用時間'],
-      ['help', 'text-help', '0.5時間単位で入力します'],
+      ['label', 'text-label', '使える時間'],
+      ['help', 'text-help', 'あとから追加もできます'],
       ['meta', 'text-meta', '10/5 (月) · 持ち越し 1回'],
       ['kicker', 'text-kicker', 'Agent 提案'],
     ],
@@ -133,11 +133,11 @@ export const typographyGroups = [
   {
     title: '数字と Kbd',
     description:
-      '数字も LINE Seed JP で組む。数字はプロポーショナルなので、並ぶ列は右揃えにする。–（範囲）と −（負号）はハイフンと見分けられる。',
+      '数字も LINE Seed JP で組む。数字はプロポーショナルなので、並ぶ列は右揃えにする。〜（範囲）と −（負号）はハイフンと見分けられる。',
     samples: [
-      ['num-l', 'text-num-l', '残り −1 〜 1h'],
-      ['num-m', 'text-num-m', '16.5–18.5h'],
-      ['num-s', 'text-num-s', '2–4h / 2-4'],
+      ['num-l', 'text-num-l', '2時間15分'],
+      ['num-m', 'text-num-m', '16時間30分〜18時間30分'],
+      ['num-s', 'text-num-s', '2〜4時間 / 2-4'],
       ['code', 'text-code', '⌘ Enter'],
     ],
   },
@@ -174,10 +174,13 @@ export const dimensions = [
   'pane-rail',
   'pane-list',
   'pane-list-slim',
+  'pane-list-xl',
+  'pane-list-slim-xl',
   'pane-sprint',
   'pane-today',
   'pane-rows',
   'pane-side',
+  'toast',
   'drawer',
   'popover',
   'dialog-sm',

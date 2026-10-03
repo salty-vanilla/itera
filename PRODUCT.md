@@ -22,7 +22,7 @@ web
 
 ## Positioning
 
-見積もりを 3 つに分けて扱う：本人の Estimate、製品の Estimate Suggestion（幅）、今回の Planning Value。提案を Estimate に「採用」する操作（下限・中央・上限のどれか、または値を直して「編集して採用」）と、計画基準を「適用」して計画値を作る操作を分ける。Retro Improvement（自然文）と Planning Criterion（機械適用できるルール）を分け、次の Planning に引き継ぐ。持ち越し・見送り・割り込み・Sprint 中の追加を失敗として消さず、次の判断材料として残す。
+見積もりを 3 つに分けて扱う：本人の Estimate、製品の Estimate Suggestion（幅）、今回の Planning Value。提案を Estimate に「採用」する操作（下限・中央・上限のどれか、または値を直して「編集して採用」）と、計画基準を「適用」して計画値を作る操作を分ける。Retro Improvement（自然文）と Planning Criterion（機械適用できるルール）を分け、次の Planning に引き継ぐ。持ち越し・見送り・割り込み・週の途中の追加を失敗として消さず、次の判断材料として残す。
 
 ## Operating Context
 
@@ -34,8 +34,9 @@ web
 ## Capabilities and Constraints
 
 - Task はタイトルだけで成立する。領域・期限・Estimate・繰り返しは後から。
+- 領域（Area）は本人が作り、名前を変え、アーカイブできる。名前の変更は次の Sprint から Sprint の画面に反映し、アーカイブしても Task と過去の記録からは消さない。
 - 繰り返しは毎日 / 平日 / 毎週（曜日は複数可）/ 毎月。Rule と各回（Occurrence）を分ける。
-- Today の操作：開始 / 完了 / 今日はここまで / 今日は見送る / 今日から外す / 繰り返しのスキップ。実績時間は任意。割り込み（Interrupt）は Task と別に記録する。
+- Today の操作：開始 / 完了 / 今日はここまで / 今日は見送る / 今日の予定から外す / 繰り返しのスキップ。実績時間は任意。割り込み（Interrupt）は Task と別に記録する。
 - AI / Agent は候補・根拠・差分を出すだけで、確定は本人がする。AI がなくても全フローを完了できる。
 - MVP の対象外：チーム機能、外部カレンダー等との同期、通知、生産性スコア、全体 Goal、複雑な依存関係、課金。
 - 未決：データの同期・削除・エクスポート、外部 Agent / MCP を初回リリースに含めるか。API の実行基盤・DB・認証は決定済み（Cloudflare Workers + D1、Better Auth。ADR 0004）。

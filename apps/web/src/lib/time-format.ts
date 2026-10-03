@@ -1,133 +1,141 @@
 // Time values as text (DESIGN.md 原則 4 and Components › Estimate,
-// docs/design/content.md 表記). The font's digits are proportional, so the
-// format itself carries the precision:
-// - under 1h in minutes (`30m`), otherwise in hours (`1.5h`);
-// - a total is always in hours (`0.5h`);
-// - a range uses an en dash without spaces (`2–4h`);
-// - a range that includes a negative value, and any difference from the
-//   available hours (残り・超過), uses `〜` with spaces and the minus sign
-//   U+2212 (`−1 〜 1h`, `残り 1 〜 3h`, `超過 3 〜 5h`);
-// - no value is 「未見積」, never 0h, and unestimated parts left out of a sum
-//   are counted after it (`2.5h ＋ 未見積 1`).
-// The words around a value (「提案」「計画」「残り」「超過」) belong to the screen.
+// docs/design/content.md 表記). Hours and minutes in words, the same text on
+// the screen and read out (#239):
+// - rounded to the minute: 「30分」「3時間」「2時間15分」, a total too, and
+//   0 as 「0時間」;
+// - a range uses 〜 without spaces, the unit once when both ends share it
+//   (「2〜4時間」「30〜45分」) and on each end when they do not
+//   (「1時間30分〜3時間」); the difference from the available hours is not
+//   a range but a sentence for each end of the total, made by the Capacity
+//   Indicator (#93, #234);
+// - a negative value, which no screen shows, takes the minus sign U+2212;
+// - no value is 「見積もりなし」, never 0時間, and unestimated parts left out
+//   of a sum are counted after it (`2時間30分（サブタスク 1件は見積もりなし）`,
+//   `12〜16時間（ほかに見積もりなし 2件）`).
+// The words around a value (「提案」「計画」「残る」「超える」) belong to the screen.
 
 import type { PlanningTotal, PlanningValue } from '@itera/domain';
 
 const MINUS = '−';
-const EN_DASH = '–';
+const WAVE_DASH = '〜';
 
-export const UNESTIMATED = '未見積';
+export const UNESTIMATED = '見積もりなし';
 
-type HoursOptions = {
-  /** A total (合計): always in hours, even under 1h. */
-  total?: boolean;
-};
-
-/** Up to two decimals, without trailing zeros: 1.5, 0.25, 3. */
-function number(value: number): string {
-  const rounded = Math.round(Math.abs(value) * 100) / 100;
-  return `${value < 0 && rounded !== 0 ? MINUS : ''}${rounded}`;
+/** 「30分」「3時間」「1時間15分」, without the sign. */
+function unsigned(minutes: number): string {
+  if (minutes === 0) return '0時間';
+  if (minutes < 60) return `${minutes}分`;
+  const rest = minutes % 60;
+  return `${Math.floor(minutes / 60)}時間${rest === 0 ? '' : `${rest}分`}`;
 }
 
-function inMinutes(hours: number, options: HoursOptions): boolean {
-  // A value that rounds to 60 minutes is written as 1h.
-  return !options.total && hours >= 0 && Math.round(hours * 60) < 60;
+function inMinutes(hours: number): number {
+  return Math.round(hours * 60);
 }
 
-function minutes(hours: number): string {
-  return `${Math.round(hours * 60)}`;
+function signed(minutes: number): string {
+  return `${minutes < 0 ? MINUS : ''}${unsigned(Math.abs(minutes))}`;
 }
 
-/** One value: `30m`, `1.5h`, or `0.5h` for a total. */
-export function formatHours(hours: number, options: HoursOptions = {}): string {
-  if (inMinutes(hours, options)) return `${minutes(hours)}m`;
-  return `${number(hours)}h`;
+/** One value: 「30分」「1時間30分」「3時間」. */
+export function formatHours(hours: number): string {
+  return signed(inMinutes(hours));
 }
 
 /**
- * A range. The unit is written once when both ends share it (`2–4h`,
- * `30–45m`) and on each end when they do not (`30m–1.5h`). Equal ends are
- * one value.
+ * A range. The unit is written once when both ends share it (「2〜4時間」,
+ * 「30〜45分」) and on each end when they do not (「30分〜1時間30分」). Ends
+ * that round to the same minute are one value.
  */
-export function formatRange(
-  lo: number,
-  hi: number,
-  options: HoursOptions = {},
-): string {
-  if (lo === hi) return formatHours(lo, options);
-  if (lo < 0 || hi < 0) return `${number(lo)} 〜 ${number(hi)}h`;
-  const loInMinutes = inMinutes(lo, options);
-  const hiInMinutes = inMinutes(hi, options);
-  if (loInMinutes && hiInMinutes) {
-    return `${minutes(lo)}${EN_DASH}${minutes(hi)}m`;
+export function formatRange(lo: number, hi: number): string {
+  const loMinutes = inMinutes(lo);
+  const hiMinutes = inMinutes(hi);
+  if (loMinutes === hiMinutes) return signed(loMinutes);
+  const hiText = signed(hiMinutes);
+  if (loMinutes >= 0) {
+    // The unit once, when both ends are in it: 「0〜2時間」「0〜30分」.
+    if (loMinutes % 60 === 0 && hiMinutes % 60 === 0) {
+      return `${loMinutes / 60}${WAVE_DASH}${hiText}`;
+    }
+    if (hiMinutes < 60) return `${loMinutes}${WAVE_DASH}${hiText}`;
   }
-  if (loInMinutes) return `${minutes(lo)}m${EN_DASH}${number(hi)}h`;
-  return `${number(lo)}${EN_DASH}${number(hi)}h`;
+  return `${signed(loMinutes)}${WAVE_DASH}${hiText}`;
 }
 
-/**
- * A difference from the available hours (残り, 超過), in hours. Its sign can
- * flip within the range, so it always uses `〜` (DESIGN.md 原則 4).
- */
-export function formatDifference(lo: number, hi: number): string {
-  if (lo === hi) return formatHours(lo, { total: true });
-  return `${number(lo)} 〜 ${number(hi)}h`;
-}
-
-/** An Estimate or a planning value that may be missing: 「未見積」 then. */
+/** An Estimate or a planning value that may be missing: 「見積もりなし」 then. */
 export function formatEstimate(
   value: number | { readonly lo: number; readonly hi: number } | undefined,
-  options: HoursOptions = {},
 ): string {
   if (value === undefined) return UNESTIMATED;
-  if (typeof value === 'number') return formatHours(value, options);
-  return formatRange(value.lo, value.hi, options);
+  if (typeof value === 'number') return formatHours(value);
+  return formatRange(value.lo, value.hi);
 }
 
-function withUnestimated(text: string, count: number): string {
-  return count === 0 ? text : `${text} ＋ ${UNESTIMATED} ${count}`;
+/** 「サブタスク 1件は見積もりなし」: the subtasks left out of a subtask sum. */
+export function formatUnestimatedSubtasks(count: number): string {
+  return `サブタスク ${count}件は${UNESTIMATED}`;
 }
 
-/** A planning value (計画値), with the subtasks left out of a subtask sum. */
-export function formatPlanningValue(value: PlanningValue): string {
+/**
+ * A planning value (計画の時間), with the subtasks left out of a subtask sum.
+ * Where the value is already named 「サブタスクの合計」, `subtasksNamed` leaves
+ * 「サブタスク」 out of the count: 「2時間30分（1件は見積もりなし）」.
+ */
+export function formatPlanningValue(
+  value: PlanningValue,
+  options: { subtasksNamed?: boolean } = {},
+): string {
   if (value.base === 'none') return UNESTIMATED;
   const text = formatRange(value.lo, value.hi);
-  return value.base === 'subtasks'
-    ? withUnestimated(text, value.unestimatedSubtasks)
-    : text;
+  const missing = value.base === 'subtasks' ? value.unestimatedSubtasks : 0;
+  if (missing === 0) return text;
+  return options.subtasksNamed === true
+    ? `${text}（${missing}件は${UNESTIMATED}）`
+    : `${text}（${formatUnestimatedSubtasks(missing)}）`;
+}
+
+/**
+ * A sum of planning values, in hours, without what is left out of it (for a
+ * value that has its count in a sentence of its own, `formatLeftOut`). With
+ * nothing estimated at all the sum is 「見積もりなし 3件」.
+ */
+export function formatPlanningSum(total: PlanningTotal): string {
+  const unestimated = total.unestimated + total.unestimatedSubtasks;
+  if (total.lo === 0 && total.hi === 0 && unestimated > 0) {
+    return `${UNESTIMATED} ${unestimated}件`;
+  }
+  return formatRange(total.lo, total.hi);
 }
 
 /**
  * A sum of planning values, in hours. Unestimated values and subtasks are
- * not in the sum and are counted after it. With nothing estimated at all
- * the sum is 「未見積」.
+ * not in the sum and are counted after it (`12〜16時間（ほかに見積もりなし 2件）`).
  */
 export function formatPlanningTotal(total: PlanningTotal): string {
-  const unestimated = total.unestimated + total.unestimatedSubtasks;
-  if (total.lo === 0 && total.hi === 0 && unestimated > 0) {
-    return `${UNESTIMATED} ${unestimated}`;
-  }
-  return withUnestimated(
-    formatRange(total.lo, total.hi, { total: true }),
-    unestimated,
-  );
-}
-
-function spokenOne(hours: number): string {
-  const minutes = Math.round(hours * 60);
-  return minutes < 60 ? `${minutes}分` : `${Math.round(hours * 100) / 100}時間`;
+  return `${formatPlanningSum(total)}${formatPlanningAside(total) ?? ''}`;
 }
 
 /**
- * The value as it is read out (DESIGN.md Estimate: 「見積もり 3時間」
- * 「2〜4時間」): the symbols and units are spelled as words.
+ * What `formatPlanningTotal` adds after the sum, 「（ほかに見積もりなし 2件）」,
+ * for a line that keeps the sum and the count each whole (#239). Nothing
+ * when everything is estimated, or when nothing is and the sum says so.
  */
-export function spokenHours(lo: number, hi: number = lo): string {
-  if (lo === hi) return spokenOne(lo);
-  const loText = spokenOne(lo);
-  const hiText = spokenOne(hi);
-  if (loText.endsWith('時間') && hiText.endsWith('時間')) {
-    return `${loText.replace('時間', '')}〜${hiText}`;
-  }
-  return `${loText}〜${hiText}`;
+export function formatPlanningAside(total: PlanningTotal): string | undefined {
+  const unestimated = total.unestimated + total.unestimatedSubtasks;
+  if (unestimated === 0 || (total.lo === 0 && total.hi === 0)) return undefined;
+  return `（ほかに${UNESTIMATED} ${unestimated}件）`;
+}
+
+/**
+ * What a sum leaves out, as sentences: 「見積もりのないタスク 1件は合計に
+ * 含まれていません。」. Nothing when everything is estimated.
+ */
+export function formatLeftOut(total: PlanningTotal): string | undefined {
+  const sentences = [
+    total.unestimated > 0 &&
+      `見積もりのないタスク ${total.unestimated}件は合計に含まれていません。`,
+    total.unestimatedSubtasks > 0 &&
+      `見積もりのないサブタスク ${total.unestimatedSubtasks}件は合計に含まれていません。`,
+  ].filter(Boolean);
+  return sentences.length === 0 ? undefined : sentences.join(' ');
 }

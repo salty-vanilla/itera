@@ -2,6 +2,8 @@
 // The screen reads it through `useRetro`; nothing here is stored. The facts
 // are never edited in Retro and carry no score (invariant 40).
 import {
+  carryOverPlaces,
+  carryOverTasks,
   criterionResult,
   criterionView,
   nextUnconfirmedSprintStart,
@@ -10,6 +12,8 @@ import {
   sprintNumber,
   type AreaColor,
   type AreaId,
+  type CarryOverPlaces,
+  type CarryOverTask,
   type CriterionResult,
   type CriterionView,
   type LocalDate,
@@ -24,6 +28,7 @@ import {
   type SprintTaskId,
 } from '@itera/domain';
 import type { Clock, Records } from './records';
+import { weekOf, type WeekLabel } from './sprint-choice';
 
 export interface RetroArea {
   readonly id: AreaId | null;
@@ -69,6 +74,8 @@ export interface RetroData {
   readonly sprint: Sprint;
   /** 「Sprint 14」 (F25). */
   readonly number: number;
+  /** 「先週」, if it is last week's: beside the period (#168). */
+  readonly week?: WeekLabel;
   readonly today: LocalDate;
   readonly timeZone: Records['user']['timeZone'];
   readonly facts: RetroFacts;
@@ -99,6 +106,10 @@ export interface RetroData {
   readonly actualDate: LocalDate;
   /** Done, skipped and missed occurrences, by date (F2, F14, F24). */
   readonly occurrences: readonly RetroOccurrence[];
+  /** Where the carried-over Tasks are now (#107, F35). */
+  readonly carryOver: CarryOverPlaces;
+  /** The carried-over Tasks and their places, for 引き継ぐ (#169). */
+  readonly carryOverTasks: readonly CarryOverTask[];
 }
 
 const NO_AREA: RetroArea = { id: null, name: '領域なし', color: 'none' };
@@ -108,11 +119,19 @@ export function reviewSprintOf(records: Records): Sprint | undefined {
   return records.sprints.find((s) => s.state === 'review');
 }
 
+/**
+ * The Retro of the Sprint in Review, or of the one asked for once it is in
+ * Review or closed (#90; a closed one is read only). `undefined` before it.
+ */
 export function retroData(
   records: Records,
   clock: Clock,
+  sprintId?: SprintId,
 ): RetroData | undefined {
-  const sprint = reviewSprintOf(records);
+  const sprint =
+    sprintId === undefined
+      ? reviewSprintOf(records)
+      : records.sprints.find((s) => s.id === sprintId);
   if (sprint?.retro === undefined) return undefined;
   const { tasks, areas: allAreas, criteria } = records;
   const facts = retroFacts(sprint, {
@@ -157,9 +176,13 @@ export function retroData(
   const decision = use?.retroDecision;
   const used = use === undefined ? undefined : usedCriterion;
 
+  const following = records.sprints.find(
+    (s) => s.previousSprintId === sprint.id,
+  );
   return {
     sprint,
     number: sprintNumber(sprint, records.sprints),
+    ...weekOf(sprint, records, clock),
     today: clock.today,
     timeZone: records.user.timeZone,
     facts,
@@ -209,6 +232,8 @@ export function retroData(
         date: f.doneOn ?? f.occurrence.scheduledDate,
       },
     })),
+    carryOver: carryOverPlaces(sprint, following, tasks),
+    carryOverTasks: carryOverTasks(sprint, following, tasks),
   };
 }
 
@@ -233,26 +258,5 @@ export function nextPlanningOf(records: Records, clock: Clock): NextPlanning {
     start,
     // Its number as F25 counts it: one after every Sprint before it.
     number: records.sprints.filter((s) => s.start < start).length + 1,
-  };
-}
-
-/** After the Retro: the Sprint just closed (owner decision in #42). */
-export interface AfterRetro {
-  readonly closed: Sprint;
-  readonly number: number;
-  readonly improvement?: string;
-}
-
-export function afterRetro(records: Records): AfterRetro | undefined {
-  const closed = records.sprints
-    .filter((s) => s.state === 'closed')
-    .toSorted((a, b) => (a.start < b.start ? 1 : -1))[0];
-  if (closed === undefined) return undefined;
-  return {
-    closed,
-    number: sprintNumber(closed, records.sprints),
-    ...(closed.retro?.improvement === undefined
-      ? {}
-      : { improvement: closed.retro.improvement.text }),
   };
 }

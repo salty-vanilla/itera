@@ -52,7 +52,7 @@ type TextInputProps = Omit<
     /** A Lucide icon shown before the text, e.g. <Search />. Decorative. */
     prefix?: ReactNode | undefined;
     /**
-     * A unit shown after the text, e.g. 「h」. It is not read out: put the
+     * A unit shown after the text, e.g. 「時間」. It is not read out: put the
      * unit in the label or the support text as well.
      */
     suffix?: ReactNode | undefined;

@@ -137,10 +137,13 @@
   --spacing-pane-rail: 64px;
   --spacing-pane-list: 384px;
   --spacing-pane-list-slim: 240px;
+  --spacing-pane-list-xl: 480px;
+  --spacing-pane-list-slim-xl: 320px;
   --spacing-pane-sprint: 680px;
   --spacing-pane-today: 720px;
   --spacing-pane-rows: 1280px;
   --spacing-pane-side: 336px;
+  --spacing-toast: 480px;
   --spacing-drawer: 400px;
   --spacing-popover: 320px;
   --spacing-dialog-sm: 440px;
@@ -261,10 +264,27 @@
    * overflow-wrap: anywhere. `anywhere` also lets tables and flex items shrink
    * to one character wide, so the page default is break-word (same wrapping,
    * no effect on minimum widths) and paragraphs add the wrap-anywhere utility.
+   * Text breaks between phrases, not inside a word or a value (「表 / 示します」
+   * 「対象者の選定 / 1〜2時間」), and a paragraph does not leave one character
+   * on its last line (「含まれていませ / ん。」). Both are where the browser
+   * supports them (#250).
    */
   body {
     line-break: strict;
     overflow-wrap: break-word;
+    word-break: auto-phrase;
+    text-wrap: pretty;
+  }
+
+  /*
+   * Headings break between phrases and keep their lines even (#166), so
+   * 「来週の計画はまだありません」 never ends a line on 「ん」 at 375px.
+   */
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+    word-break: auto-phrase;
   }
 
   /*
@@ -293,6 +313,33 @@
   :focus-visible {
     outline: var(--stroke-strong) solid var(--focus);
     outline-offset: 2px;
+  }
+
+  /*
+   * WCAG 2.4.11 (#152): what takes the focus in `main` scrolls clear of the
+   * bars stuck to its edges (lib/use-stuck-bar.ts), with room for the focus
+   * ring. A margin on the content rather than padding on `main`: the bars'
+   * own controls are in view already, and focusing them does not move the
+   * screen.
+   */
+  main * {
+    scroll-margin-top: calc(var(--stuck-bar-top, 0px) + var(--spacing-2));
+    scroll-margin-bottom: calc(var(--stuck-bar-bottom, 0px) + var(--spacing-2));
+  }
+
+  main [data-stuck-bar],
+  main [data-stuck-bar] * {
+    scroll-margin-block: 0;
+  }
+
+  /*
+   * #154: a new screen puts the focus on its heading (app/use-screen-focus.ts).
+   * The ring fits the words, as on the Task's heading in the detail, rather
+   * than the column. Every heading, so taking the focus moves nothing.
+   */
+  main h1 {
+    width: fit-content;
+    border-radius: var(--radius-sm);
   }
 
   /*
@@ -348,6 +395,22 @@
     }
     [data-slot='notice'] {
       border: var(--stroke-hairline) solid CanvasText;
+    }
+  }
+
+  /*
+   * The row just added in the Backlog flashes `here-subtle` and fades out
+   * (docs/design/foundations.md, Issue #86). Once, over the 2.5s the screen
+   * keeps it (backlog-screen.tsx): it holds for the first second, so that the
+   * row can be found, and then fades.
+   */
+  @keyframes added-flash {
+    0%,
+    40% {
+      background-color: var(--here-subtle);
+    }
+    100% {
+      background-color: transparent;
     }
   }
 

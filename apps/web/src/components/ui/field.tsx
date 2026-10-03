@@ -23,7 +23,28 @@ function NecessityWord({ necessity }: { necessity?: Necessity | undefined }) {
 }
 
 // Icon and words: an error is never shown by color alone. The message says
-// what is wrong and how to fix it, e.g. 「数値で入力してください（例: 1.5）」.
+// what is wrong and how to fix it, e.g. 「数値で入力してください（例：1.5）」.
+const fieldErrorStyles = [
+  'flex items-start gap-1 text-help text-danger',
+  '[&_svg]:size-icon-s [&_svg]:[stroke-width:var(--icon-stroke-s)]',
+];
+
+/** The inside of an error line, for a group of controls too (DurationField). */
+function FieldErrorContent({ children }: { children: ReactNode }) {
+  return (
+    <>
+      {/* One text line high, so the icon sits on the first line. */}
+      <span className="flex h-5 shrink-0 items-center">
+        <CircleAlert aria-hidden />
+      </span>
+      {/* Same break rule as FieldDescription: no lone 「）」 on the last line. */}
+      <span className="[text-wrap:pretty] [word-break:auto-phrase]">
+        {children}
+      </span>
+    </>
+  );
+}
+
 function FieldError({
   children,
   className,
@@ -36,20 +57,16 @@ function FieldError({
       data-slot="field-error"
       // Always rendered while there is a message; the message itself decides.
       match
-      className={cn(
-        'flex items-start gap-1 text-help text-danger',
-        '[&_svg]:size-icon-s [&_svg]:[stroke-width:var(--icon-stroke-s)]',
-        className,
-      )}
+      className={cn(fieldErrorStyles, className)}
     >
-      {/* One text line high, so the icon sits on the first line. */}
-      <span className="flex h-5 shrink-0 items-center">
-        <CircleAlert aria-hidden />
-      </span>
-      <span>{children}</span>
+      <FieldErrorContent>{children}</FieldErrorContent>
     </FieldPrimitive.Error>
   );
 }
+
+// A phrase stays whole when the line breaks (「確かめる」, 「できます」).
+const fieldDescriptionStyles =
+  'text-help text-ink-muted [text-wrap:pretty] [word-break:auto-phrase]';
 
 function FieldDescription({
   className,
@@ -58,7 +75,7 @@ function FieldDescription({
   return (
     <FieldPrimitive.Description
       data-slot="field-description"
-      className={cn('text-help text-ink-muted', className)}
+      className={cn(fieldDescriptionStyles, className)}
       {...props}
     />
   );
@@ -69,13 +86,15 @@ type FieldProps = {
   label: ReactNode;
   /** Adds 「必須」 or 「任意」 after the label. */
   necessity?: Necessity | undefined;
-  /** Support text above the control: units or an example (「0.5時間単位」). */
+  /** Support text above the control: a unit or an example (「1〜31 の数字（例：15）」). */
   description?: ReactNode | undefined;
   /**
    * Error message below the control. Setting it marks the field invalid
    * (aria-invalid). Set it on blur or submit, not while typing.
    */
   error?: ReactNode | undefined;
+  /** Classes for the error line, e.g. to let it span a row the field only shares. */
+  errorClassName?: string | undefined;
   /**
    * Hides the label visually but keeps it as the accessible name. Only for
    * the search field and Quick Add (docs/design/accessibility.md).
@@ -98,6 +117,7 @@ function Field({
   necessity,
   description,
   error,
+  errorClassName,
   hideLabel = false,
   disabled,
   name,
@@ -124,10 +144,18 @@ function Field({
         <FieldDescription>{description}</FieldDescription>
       )}
       {children}
-      {invalid && <FieldError>{error}</FieldError>}
+      {invalid && <FieldError className={errorClassName}>{error}</FieldError>}
     </FieldPrimitive.Root>
   );
 }
 
-export { Field, FieldDescription, FieldError, NecessityWord };
+export {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldErrorContent,
+  NecessityWord,
+  fieldDescriptionStyles,
+  fieldErrorStyles,
+};
 export type { FieldProps, Necessity };

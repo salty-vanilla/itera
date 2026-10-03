@@ -1,5 +1,14 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Ellipsis, PanelRight, Pencil, Save, Search, X } from 'lucide-react';
+import {
+  Check,
+  Ellipsis,
+  PanelRight,
+  Pencil,
+  Pin,
+  Save,
+  Search,
+  X,
+} from 'lucide-react';
 import { useState } from 'react';
 import { IconButton } from './icon-button';
 
@@ -68,6 +77,44 @@ export const Pressed: Story = {
         pressed={pressed}
         onClick={() => setPressed((value) => !value)}
       />
+    );
+  },
+};
+
+/**
+ * pressedLook="selection"：多くの行の 1 つに付ける印（振り返りに使う）。オンは
+ * 墨の反転ではなく、選んだ項目と同じ here-subtle の地にし、ピンをチェックに替えて
+ * 色だけに頼らない。画面の Primary と競わせないため（DESIGN.md Selected の例外、Issue #242）。
+ */
+export const PressedSelection: Story = {
+  parameters: { pseudo: { hover: ['[data-demo="hover"]'] } },
+  render: function PressedSelectionDemo() {
+    const [pressed, setPressed] = useState(true);
+    return (
+      <div className="flex items-center gap-6 text-label text-ink-muted">
+        <span className="flex items-center gap-2">
+          押して切り替え
+          <IconButton
+            size="sm"
+            label="振り返りに使う：関連論文を 3本読む"
+            icon={pressed ? <Check aria-hidden /> : <Pin aria-hidden />}
+            pressed={pressed}
+            pressedLook="selection"
+            onClick={() => setPressed((value) => !value)}
+          />
+        </span>
+        <span className="flex items-center gap-2">
+          pressed + hover
+          <IconButton
+            size="sm"
+            label="振り返りに使う：英語の多読 30分"
+            icon={<Check aria-hidden />}
+            pressed
+            pressedLook="selection"
+            data-demo="hover"
+          />
+        </span>
+      </div>
     );
   },
 };

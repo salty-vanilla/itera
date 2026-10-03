@@ -60,10 +60,10 @@ describe('Filter with 0 items', () => {
     let pressed = true;
     render(
       <Filter count={0} pressed onPressedChange={(value) => (pressed = value)}>
-        期限超過
+        期限切れ
       </Filter>,
     );
-    const filter = screen.getByRole('button', { name: /^期限超過\s?0件$/ });
+    const filter = screen.getByRole('button', { name: /^期限切れ\s?0件$/ });
     expect(filter.getAttribute('aria-disabled')).not.toBe('true');
     await userEvent.click(filter);
     expect(pressed).toBe(false);

@@ -30,16 +30,16 @@ describe('Field', () => {
       <Field
         label="見積もり"
         description="0.5時間単位"
-        error="数値で入力してください（例: 1.5）"
+        error="数値で入力してください（例：1.5）"
       >
-        <TextInput defaultValue="abc" suffix="h" />
+        <TextInput defaultValue="abc" suffix="時間" />
       </Field>,
     );
     const input = screen.getByRole('textbox', { name: '見積もり' });
     expect(input.getAttribute('aria-invalid')).toBe('true');
     expect(describedBy(input)).toEqual([
       '0.5時間単位',
-      '数値で入力してください（例: 1.5）',
+      '数値で入力してください（例：1.5）',
     ]);
     // The error does not clear what was entered.
     expect((input as HTMLInputElement).value).toBe('abc');
@@ -69,13 +69,13 @@ describe('Field', () => {
 
   it('focuses the input when the unit is pressed', async () => {
     render(
-      <Field label="可用時間">
-        <TextInput suffix="h" />
+      <Field label="使える時間">
+        <TextInput suffix="時間" />
       </Field>,
     );
-    await userEvent.click(screen.getByText('h'));
+    await userEvent.click(screen.getByText('時間'));
     expect(document.activeElement).toBe(
-      screen.getByRole('textbox', { name: '可用時間' }),
+      screen.getByRole('textbox', { name: '使える時間' }),
     );
   });
 
@@ -135,11 +135,11 @@ describe('Textarea handlers', () => {
   it('still calls onChange', async () => {
     const values: string[] = [];
     render(
-      <Field label="Goal">
+      <Field label="目標">
         <Textarea onChange={(event) => values.push(event.target.value)} />
       </Field>,
     );
-    await userEvent.type(screen.getByRole('textbox', { name: 'Goal' }), 'ab');
+    await userEvent.type(screen.getByRole('textbox', { name: '目標' }), 'ab');
     expect(values).toEqual(['a', 'ab']);
   });
 });

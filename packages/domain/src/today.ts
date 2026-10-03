@@ -26,6 +26,7 @@ import type {
   DailyResolution,
   DailySelection,
   DailySelectionOrigin,
+  InterruptNote,
   Sprint,
   SprintTask,
 } from './sprint';
@@ -235,7 +236,7 @@ export function deferSelection(
   );
 }
 
-/** 今日から外す: selected → removed. A re-pick; not a deferral. */
+/** 今日の予定から外す: selected → removed. A re-pick; not a deferral. */
 export function removeFromToday(
   sprint: Sprint,
   input: SelectionActionInput,
@@ -249,6 +250,66 @@ export function removeFromToday(
     'todayRemoved',
     ctx,
   );
+}
+
+export interface UndoCloseInput extends SelectionActionInput {
+  /** Today, in the user's time zone: only today's selection goes back (F37). */
+  readonly today: LocalDate;
+}
+
+/**
+ * 見送りを取り消す (F37): deferred → selected, or started if it had been
+ * started, the same day only. The same selection goes back (invariant 21),
+ * so the deferral no longer counts toward 連続見送り (invariant 23); the
+ * Activity keeps both.
+ */
+export function undoDeferSelection(
+  sprint: Sprint,
+  input: UndoCloseInput,
+  ctx: CommandContext,
+): CommandResult<Sprint> {
+  return reopenClosed(sprint, input, 'deferred', 'todayDeferUndone', ctx);
+}
+
+/** 外したのを取り消す (F37): removed → selected, the same day only. */
+export function undoRemoveFromToday(
+  sprint: Sprint,
+  input: UndoCloseInput,
+  ctx: CommandContext,
+): CommandResult<Sprint> {
+  return reopenClosed(sprint, input, 'removed', 'todayRemoveUndone', ctx);
+}
+
+function reopenClosed(
+  sprint: Sprint,
+  input: UndoCloseInput,
+  from: 'deferred' | 'removed',
+  kind: 'todayDeferUndone' | 'todayRemoveUndone',
+  ctx: CommandContext,
+): CommandResult<Sprint> {
+  const found = selectionAndTask(sprint, input.selectionId);
+  if (!found.ok) return found;
+  const { selection } = found.value;
+  if (selection.resolution !== from) {
+    return err(
+      'invalidTransition',
+      `Cannot undo ${from} on a ${selection.resolution} selection.`,
+    );
+  }
+  if (selection.date !== input.today) {
+    return err(
+      'invalidTransition',
+      `Only today's selection can go back, not one of ${selection.date}.`,
+    );
+  }
+  // Back to how it was before it was closed: started keeps its time.
+  const reopened: DailySelection = {
+    ...omit(selection, 'resolvedAt'),
+    resolution: selection.startedAt === undefined ? 'selected' : 'started',
+  };
+  return applied(replaceSelection(sprint, reopened), [
+    selectionActivity(kind, sprint, reopened, ctx),
+  ]);
 }
 
 export interface PauseInput extends SelectionActionInput {
@@ -537,6 +598,24 @@ export function completeFromBacklog(
           (t) => t.taskId === task.id && t.outcome === 'planned',
         )
       : undefined;
+  // A rule ended this Sprint (F41) leaves the Task one-off, but this
+  // Sprint's occurrences are still done one by one, in Today. The Backlog
+  // is stricter: it offers no completion until the rule's last day
+  // (`recurrenceOf`), which is this Sprint's end.
+  if (
+    sprint.state === 'active' &&
+    sprint.tasks.some(
+      (t) =>
+        t.taskId === task.id &&
+        t.occurrenceIds !== undefined &&
+        t.outcome !== 'removed',
+    )
+  ) {
+    return err(
+      'recurringTaskCannotComplete',
+      'This Sprint has the Task’s occurrences; they are completed one by one.',
+    );
+  }
   if (sprintTask === undefined) {
     const completed = completeTask(task, ctx);
     if (!completed.ok) return completed;
@@ -758,6 +837,148 @@ export function noteInterrupt(
       actor: ctx.actor,
       sprintId: sprint.id,
       interruptId: input.id,
+    },
+  ]);
+}
+
+export interface EditInterruptInput {
+  readonly id: InterruptNoteId;
+  readonly text: string;
+  /** Absent clears the minutes. */
+  readonly minutes?: number;
+}
+
+/**
+ * 割り込みを直す: its note and minutes, while the Sprint runs (F38). The
+ * time it was noted stays. After the Review starts it is fixed, as the
+ * Retro's facts are (invariant 40).
+ */
+export function editInterrupt(
+  sprint: Sprint,
+  input: EditInterruptInput,
+  ctx: CommandContext,
+): CommandResult<Sprint> {
+  if (sprint.state !== 'active') {
+    return err('invalidTransition', 'Interrupts are edited during the Sprint.');
+  }
+  const note = sprint.interrupts.find((n) => n.id === input.id);
+  if (note === undefined) return err('notFound', 'No such interrupt.');
+  const text = input.text.trim();
+  if (text === '') return err('invalidInput', 'The note is empty.');
+  if (input.minutes !== undefined && !isPositiveHours(input.minutes)) {
+    return err('invalidInput', 'Minutes must be positive.');
+  }
+  if (text === note.text && input.minutes === note.minutes) {
+    return applied(sprint, []);
+  }
+  const edited =
+    input.minutes === undefined
+      ? { id: note.id, at: note.at, text }
+      : { id: note.id, at: note.at, text, minutes: input.minutes };
+  return applied(
+    {
+      ...sprint,
+      interrupts: sprint.interrupts.map((n) => (n.id === note.id ? edited : n)),
+    },
+    [
+      {
+        kind: 'interruptEdited',
+        at: ctx.now,
+        actor: ctx.actor,
+        sprintId: sprint.id,
+        interruptId: note.id,
+      },
+    ],
+  );
+}
+
+export interface DeleteInterruptInput {
+  readonly id: InterruptNoteId;
+}
+
+/**
+ * 割り込みを消す while the Sprint runs (F38). It leaves Today and the
+ * Retro's facts; the Activity keeps that it was deleted.
+ */
+export function deleteInterrupt(
+  sprint: Sprint,
+  input: DeleteInterruptInput,
+  ctx: CommandContext,
+): CommandResult<Sprint> {
+  if (sprint.state !== 'active') {
+    return err(
+      'invalidTransition',
+      'Interrupts are deleted during the Sprint.',
+    );
+  }
+  if (!sprint.interrupts.some((n) => n.id === input.id)) {
+    return err('notFound', 'No such interrupt.');
+  }
+  return applied(
+    {
+      ...sprint,
+      interrupts: sprint.interrupts.filter((n) => n.id !== input.id),
+    },
+    [
+      {
+        kind: 'interruptDeleted',
+        at: ctx.now,
+        actor: ctx.actor,
+        sprintId: sprint.id,
+        interruptId: input.id,
+      },
+    ],
+  );
+}
+
+export interface RestoreInterruptInput {
+  /** The note as it was deleted. */
+  readonly note: InterruptNote;
+}
+
+/**
+ * 元に戻す after 割り込みを消す: the same note comes back with its time
+ * (F38), in its place among the others (oldest first).
+ */
+export function restoreInterrupt(
+  sprint: Sprint,
+  input: RestoreInterruptInput,
+  ctx: CommandContext,
+): CommandResult<Sprint> {
+  if (sprint.state !== 'active') {
+    return err(
+      'invalidTransition',
+      'Interrupts are restored during the Sprint.',
+    );
+  }
+  const { note } = input;
+  if (sprint.interrupts.some((n) => n.id === note.id)) {
+    return err('invalidTransition', 'The interrupt is still there.');
+  }
+  if (note.text.trim() === '') return err('invalidInput', 'The note is empty.');
+  if (note.minutes !== undefined && !isPositiveHours(note.minutes)) {
+    return err('invalidInput', 'Minutes must be positive.');
+  }
+  // A note is restored, not made: it was noted before now.
+  if (note.at > ctx.now) {
+    return err('invalidInput', 'The note was noted later than now.');
+  }
+  const after = sprint.interrupts.findIndex((n) => n.at > note.at);
+  const interrupts =
+    after === -1
+      ? [...sprint.interrupts, note]
+      : [
+          ...sprint.interrupts.slice(0, after),
+          note,
+          ...sprint.interrupts.slice(after),
+        ];
+  return applied({ ...sprint, interrupts }, [
+    {
+      kind: 'interruptRestored',
+      at: ctx.now,
+      actor: ctx.actor,
+      sprintId: sprint.id,
+      interruptId: note.id,
     },
   ]);
 }

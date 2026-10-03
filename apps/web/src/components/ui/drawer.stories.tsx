@@ -85,7 +85,7 @@ function TaskDetailDrawer({
               <textarea
                 id={id}
                 rows={12}
-                defaultValue="先行研究を 3 つの観点で分類し、各章で扱う範囲を決める。"
+                defaultValue="先行研究を 3つの観点で分類し、各章で扱う範囲を決める。"
                 className={`${inputClassName} resize-y py-2`}
               />
             )}
@@ -131,6 +131,9 @@ function Backdrop({ children }: { children: ReactNode }) {
  * 背後の一覧を見ながら操作できる（scrim なし、外側のクリックでは閉じない）。
  * compact 幅では Bottom Sheet（上角 12px、グリップ）になり、画面の大半を覆うので
  * 常にモーダル（scrim あり）。ヘッダーと フッターは固定で、本文だけがスクロールする。
+ * ここは Drawer の既定の形（キャンセル / 保存、最初の入力にフォーカス）。実際の
+ * タスクの詳細は欄ごとに保存し、フッターは「閉じる」だけ、フォーカスは見出しに置く
+ * （Issue #95、docs/design/patterns.md の Backlog Organize）。
  */
 export const TaskDetail: Story = {
   render: () => (

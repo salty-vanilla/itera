@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Drawer,
@@ -10,7 +10,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
-import { Field } from '@/components/ui/field';
+import { DurationField } from '@/components/ui/duration-field';
 import {
   Popover,
   PopoverBody,
@@ -21,18 +21,25 @@ import {
   PopoverHeader,
   PopoverTitle,
 } from '@/components/ui/popover';
-import { TextInput } from '@/components/ui/text-input';
+import {
+  ACTUAL_HOURS_ERROR,
+  ACTUAL_HOURS_HINT,
+  readActualHours,
+} from '@/lib/actual-hours';
+import { EMPTY_DURATION } from '@/lib/duration-text';
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 
-// 実績時間 (patterns.md Today): optional, added lightly after completing or
-// with 今日はここまで; never a stopwatch. Owner decision in #41: a Bottom
+// かかった時間 (実績時間, patterns.md Today): optional, added lightly after completing or
+// with 今日は中断する; never a stopwatch. Owner decision in #41: a Bottom
 // Sheet on compact, a Popover by the row's `…` from medium up.
 
 export type ActualTimeMode =
-  /** 今日はここまで, with the day's hours if given. */
+  /** 今日は中断する, with the day's hours if given. */
   | 'pause'
-  /** 実績を残す after completing or pausing: the hours are the point. */
-  | 'record';
+  /** かかった時間を記録 after completing or pausing: the hours are the point. */
+  | 'record'
+  /** かかった時間を記録 from Retro, where the time goes to a day of the Sprint. */
+  | 'add';
 
 type ActualTimeProps = {
   mode: ActualTimeMode;
@@ -49,18 +56,27 @@ type ActualTimeProps = {
 
 const words: Record<
   ActualTimeMode,
-  { title: string; description: string; submit: string }
+  { title: string; description?: ReactNode; submit: string }
 > = {
   pause: {
-    title: '今日はここまで',
-    description:
-      '作業したが終わっていない Task を、今週の残りに戻します。明日は「昨日の続き」に出ます。',
-    submit: '今日はここまで',
+    title: '今日は中断する',
+    // The screen's word stays whole when the line breaks.
+    description: (
+      <>
+        途中のタスクは今週の残りに戻り、明日
+        <span className="whitespace-nowrap">「昨日の続き」</span>
+        に出ます。
+      </>
+    ),
+    submit: '今日は中断する',
   },
   record: {
-    title: '実績を残す',
-    description: '今日この Task にかけた時間を足します。',
-    submit: '残す',
+    title: 'かかった時間を記録',
+    submit: '記録する',
+  },
+  add: {
+    title: 'かかった時間を記録',
+    submit: '記録する',
   },
 };
 
@@ -74,7 +90,7 @@ function ActualTime({
   description: descriptionOverride,
 }: ActualTimeProps) {
   const sheet = !useMediaQuery(MEDIUM_UP, true);
-  const [text, setText] = useState('');
+  const [text, setText] = useState(EMPTY_DURATION);
   const [error, setError] = useState<string | undefined>(undefined);
   const { title, submit } = words[mode];
   const description = descriptionOverride ?? words[mode].description;
@@ -90,21 +106,20 @@ function ActualTime({
 
   const change = (next: boolean) => {
     if (!next) {
-      setText('');
+      setText(EMPTY_DURATION);
       setError(undefined);
     }
     onOpenChange(next);
   };
   const save = (event: FormEvent) => {
     event.preventDefault();
-    const trimmed = text.trim();
-    if (trimmed === '' && optional) {
+    const hours = readActualHours(text);
+    if (hours === undefined && optional) {
       if (onSubmit(undefined)) change(false);
       return;
     }
-    const hours = Number(trimmed);
-    if (trimmed === '' || !Number.isFinite(hours) || hours <= 0) {
-      setError('0 より大きい時間を数字で入れてください（例: 1.5）');
+    if (hours === undefined || hours === null) {
+      setError(ACTUAL_HOURS_ERROR);
       focusError();
       return;
     }
@@ -112,21 +127,16 @@ function ActualTime({
   };
 
   const field = (
-    <Field
-      label="実績時間"
+    <DurationField
+      label="かかった時間"
       necessity={optional ? 'optional' : 'required'}
-      description="時間単位（例: 1.5）。記録は残り、あとから足せます"
+      description={ACTUAL_HOURS_HINT}
       error={error}
-    >
-      <TextInput
-        inputMode="decimal"
-        suffix="h"
-        value={text}
-        onChange={(e) => setText(e.currentTarget.value)}
-      />
-    </Field>
+      value={text}
+      onChange={setText}
+    />
   );
-  const heading = `${title}: ${taskTitle}`;
+  const heading = `${title}：${taskTitle}`;
 
   if (sheet) {
     return (
@@ -140,7 +150,11 @@ function ActualTime({
           >
             <DrawerHeader>
               <DrawerTitle>{heading}</DrawerTitle>
-              <DrawerDescription>{description}</DrawerDescription>
+              {description !== undefined && (
+                <DrawerDescription className="[text-wrap:pretty] [word-break:auto-phrase]">
+                  {description}
+                </DrawerDescription>
+              )}
             </DrawerHeader>
             <DrawerBody>{field}</DrawerBody>
             <DrawerFooter>
@@ -169,7 +183,11 @@ function ActualTime({
         >
           <PopoverHeader>
             <PopoverTitle>{heading}</PopoverTitle>
-            <PopoverDescription>{description}</PopoverDescription>
+            {description !== undefined && (
+              <PopoverDescription className="[text-wrap:pretty] [word-break:auto-phrase]">
+                {description}
+              </PopoverDescription>
+            )}
           </PopoverHeader>
           <PopoverBody>{field}</PopoverBody>
           <PopoverFooter>

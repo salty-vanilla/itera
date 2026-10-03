@@ -132,7 +132,7 @@ type Unlisted = Exclude<
 >;
 type UnlistedDeletion = Exclude<
   keyof NonNullable<RecordChanges['deleted']>,
-  'occurrences' | 'criteria'
+  'occurrences' | 'criteria' | 'rules'
 >;
 const everyFieldListed: [Unlisted | UnlistedDeletion] extends [never]
   ? true
@@ -157,11 +157,16 @@ function mergeChanges(a: RecordChanges, b: RecordChanges): RecordChanges {
     ...(a.deleted?.criteria ?? []),
     ...(b.deleted?.criteria ?? []),
   ];
+  const deletedRules = [
+    ...(a.deleted?.rules ?? []),
+    ...(b.deleted?.rules ?? []),
+  ];
   const merged: RecordChanges = Object.assign(
     {},
     ...LIST_FIELDS.map((key) => lists(key)),
     user === undefined ? {} : { user },
-    deletedOccurrences.length + deletedCriteria.length === 0
+    deletedOccurrences.length + deletedCriteria.length + deletedRules.length ===
+      0
       ? {}
       : {
           deleted: {
@@ -171,6 +176,7 @@ function mergeChanges(a: RecordChanges, b: RecordChanges): RecordChanges {
             ...(deletedCriteria.length === 0
               ? {}
               : { criteria: deletedCriteria }),
+            ...(deletedRules.length === 0 ? {} : { rules: deletedRules }),
           },
         },
   ) as RecordChanges;

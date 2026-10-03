@@ -28,6 +28,8 @@
 | `shadcn` | shadcn/ui（CLI 4.21.0） | 部品の追加・構成。`pnpm agent:shadcn <command> --cwd apps/web` |
 | `playwright-cli` | microsoft/playwright-cli（0.1.21） | 実ブラウザでの操作・確認。`pnpm agent:playwright <command>` |
 | `design-references` | このリポジトリで作成 | DADS / Apple HIG の一次資料の取得 |
+| `copy-review` | このリポジトリで作成 | 画面の日本語の定期の評価。`pnpm copy:list` で一覧を作り、ペルソナを演じる評価役に読ませて集計する |
+| `ui-copy` | このリポジトリで作成 | 画面の日本語を書く・変える前に読む。`docs/design/content.md` に沿って書き、`pnpm copy:lint` と自己点検で確かめる |
 | `issue-harness` | このリポジトリで作成 | Issue 駆動の実装と独立した受け入れ |
 | `wrangler` | cloudflare/skills（Apache-2.0） | wrangler の設定とコマンド。`services/api` の固定版を `pnpm --filter @itera/api exec wrangler <command>` か package の script で使う |
 | `workers-best-practices` | cloudflare/skills（Apache-2.0） | Workers のコードと設定の作法・レビュー観点 |
@@ -84,7 +86,7 @@ direnv のシェル hook は対話シェルのプロンプトでしか動かな�
 
 ## ハーネス
 
-`issue-harness` Skill を使う。メインセッションが調査から修正までを担当し、レビューだけを `harness-reviewer` subagent に新しいコンテキストで任せる。レビューの観点（`general` / `acceptance` / `quality` / `specialist:<領域>`）は変更の区分で決め、apps/web の見た目が変わるときは `visual` を加える。曖昧な要望や重要な設計判断だけ `harness-planner` に相談する。区分・手順・上限・返す形式は `.agents/skills/issue-harness/` を参照する。
+`issue-harness` Skill を使う。メインセッションが調査から修正までを担当し、レビューだけを `harness-reviewer` subagent に新しいコンテキストで任せる。レビューの観点（`general` / `acceptance` / `quality` / `specialist:<領域>`）は変更の区分で決め、apps/web の見た目が変わるときは `visual` を、画面の文言が変わるときは `copy` を加える。曖昧な要望や重要な設計判断だけ `harness-planner` に相談する。区分・手順・上限・返す形式は `.agents/skills/issue-harness/` を参照する。
 
 ```text
 /issue-harness この要望を Issue に整理してください。まだ実装は始めないでください。
@@ -106,4 +108,4 @@ direnv のシェル hook は対話シェルのプロンプトでしか動かな�
 4. Node CLI は `tooling/agents/package.json` の固定版を変え、`pnpm --dir tooling/agents --ignore-workspace install` で専用 lockfile を更新する。
 5. `agent:check`・`agent:doctor` と代表的な操作を確認する。
 
-リポジトリで作った Skill（`issue-harness`、`design-references`）を変えたときも、`sources.json` の該当ファイルのハッシュを更新する。
+リポジトリで作った Skill（`issue-harness`、`design-references`、`copy-review`、`ui-copy`）を変えたときも、`sources.json` の該当ファイルのハッシュを更新する。

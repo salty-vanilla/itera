@@ -1,7 +1,8 @@
+import { recurrenceOf, type RecurrenceRule } from './recurrence';
 import { carryCount } from './retro-facts';
 import type { AreaId, SprintId, TaskId } from './shared/ids';
 import type { LocalDate } from './shared/time';
-import { sprintEnd, weekStartOf, type Sprint } from './sprint';
+import { sprintEnd, weekStartOf, type Sprint, type SprintTask } from './sprint';
 import type { User } from './user';
 import type { Task } from './task';
 
@@ -48,7 +49,9 @@ export interface CarryOver {
  * The Task's carry-over, as the Backlog shows it (F26): from its latest
  * SprintTask, the carriedFrom chain behind it, plus one if that SprintTask
  * was itself carried over. A Task chosen again from a carry-over keeps the
- * count while it is in the new Sprint. `undefined` when it has none.
+ * count while it is in the new Sprint. A draft in a Sprint not yet
+ * confirmed does not count as the latest (F36), so choosing a Task for the
+ * next Sprint does not hide its carry-over. `undefined` when it has none.
  */
 export function carryOverOf(
   taskId: TaskId,
@@ -57,7 +60,9 @@ export function carryOverOf(
   let latest:
     { sprint: Sprint; sprintTask: Sprint['tasks'][number] } | undefined;
   for (const sprint of sprints) {
-    const sprintTask = sprint.tasks.find((t) => t.taskId === taskId);
+    const sprintTask = sprint.tasks.find(
+      (t) => t.taskId === taskId && t.outcome !== 'draft',
+    );
     if (
       sprintTask !== undefined &&
       (latest === undefined || sprint.start > latest.sprint.start)
@@ -67,12 +72,27 @@ export function carryOverOf(
   }
   if (latest === undefined) return undefined;
   const { sprintTask } = latest;
+  const behind = carryOriginOf(sprintTask, sprints);
   const count =
-    carryCount(sprintTask, sprints) +
-    (sprintTask.outcome === 'carriedOver' ? 1 : 0);
+    (behind?.count ?? 0) + (sprintTask.outcome === 'carriedOver' ? 1 : 0);
+  if (count === 0) return undefined;
+  return { count, fromSprintId: behind?.fromSprintId ?? latest.sprint.id };
+}
+
+/**
+ * Where a SprintTask's carry-over began (F26): the carriedFrom chain behind
+ * it, as the Sprint screen shows a Task carried into it (「持ち越し 1回
+ * （Sprint 13から）」, #160). Unlike `carryOverOf`, it does not count the
+ * SprintTask itself being carried over. `undefined` when nothing is behind.
+ */
+export function carryOriginOf(
+  sprintTask: SprintTask,
+  sprints: readonly Sprint[],
+): CarryOver | undefined {
+  const count = carryCount(sprintTask, sprints);
   if (count === 0) return undefined;
   // Walk back to the first SprintTask of the run.
-  let first = latest.sprint;
+  let first: Sprint | undefined;
   let from = sprintTask.carriedFrom;
   const seen = new Set<string>();
   while (from !== undefined && !seen.has(from)) {
@@ -83,7 +103,7 @@ export function carryOverOf(
     first = sprint;
     from = sprint.tasks.find((t) => t.id === id)?.carriedFrom;
   }
-  return { count, fromSprintId: first.id };
+  return first === undefined ? undefined : { count, fromSprintId: first.id };
 }
 
 /** The Backlog's 切り口 besides すべて (PRD §5 A Browse). */
@@ -95,6 +115,8 @@ export interface BacklogSliceContext {
   /** Today, in the user's time zone. */
   readonly today: LocalDate;
   readonly sprints: readonly Sprint[];
+  /** Every rule of the user, for 繰り返し (an ended one until its last day, F41). */
+  readonly rules: readonly RecurrenceRule[];
 }
 
 /**
@@ -107,6 +129,11 @@ export function dueSoonUntil(context: BacklogSliceContext): LocalDate {
     (s) => s.start <= today && today <= s.end,
   );
   return current?.end ?? sprintEnd(weekStartOf(today, context.user));
+}
+
+/** 期限超過: due before today. Backlog and Planning share it (Issue #151). */
+export function isOverdue(task: Task, today: LocalDate): boolean {
+  return task.due !== undefined && task.due < today;
 }
 
 /** Whether a Task falls in a 切り口. Tasks with no due date are never due. */
@@ -123,11 +150,11 @@ export function inBacklogSlice(
         task.due <= dueSoonUntil(context)
       );
     case 'overdue':
-      return task.due !== undefined && task.due < context.today;
+      return isOverdue(task, context.today);
     case 'carriedOver':
       return carryOverOf(task.id, context.sprints) !== undefined;
     case 'recurring':
-      return task.recurrenceRuleId !== undefined;
+      return recurrenceOf(task, context.rules, context.today) !== undefined;
     case 'noArea':
       return task.areaId === undefined;
   }

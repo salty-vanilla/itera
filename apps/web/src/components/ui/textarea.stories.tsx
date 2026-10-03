@@ -15,7 +15,7 @@ const meta = {
   },
   render: (args) => (
     <Field
-      label="気になったこと"
+      label="気づいたこと"
       necessity="optional"
       className="max-w-measure-read"
     >
@@ -36,9 +36,9 @@ export const Playground: Story = {};
 export const WithCount: Story = {
   render: () => (
     <Field
-      label="次の Sprint で 1 つだけ変えてみること"
+      label="次に試すこと"
       necessity="optional"
-      description="自然文で 1 件"
+      description="次の Sprint を計画するときに表示されます"
       className="max-w-measure-read"
     >
       <Textarea
@@ -56,13 +56,13 @@ export const WithCount: Story = {
 export const BodyLarge: Story = {
   render: () => (
     <Field
-      label="気になったこと"
+      label="気づいたこと"
       necessity="optional"
       className="max-w-measure-read"
     >
       <Textarea
         text="body-l"
-        defaultValue="水曜に割り込みが 2 件入り、研究の時間が半分になった。"
+        defaultValue="水曜に割り込みが 2件入り、研究の時間が半分になった。"
       />
     </Field>
   ),

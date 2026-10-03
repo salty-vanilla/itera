@@ -1,7 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { useId, useState } from 'react';
+import { useState } from 'react';
 import { expect, screen, userEvent, waitFor } from 'storybook/test';
+import { durationText, readMinutes } from '@/lib/duration-text';
+import { formatHours } from '@/lib/time-format';
 import { Button } from './button';
+import { DurationField } from './duration-field';
 import {
   Popover,
   PopoverBody,
@@ -21,55 +24,38 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// The Estimate field is a stand-in until the input components land; it
-// follows label → help → input with tokens (docs/design/accessibility.md).
+// The Estimate is typed in DurationField, as on the screens (#252).
 function EstimatePopover({ defaultOpen }: { defaultOpen?: boolean }) {
-  const id = useId();
-  const [estimate, setEstimate] = useState('3');
-  const [draft, setDraft] = useState(estimate);
+  const [estimate, setEstimate] = useState(180);
+  const [draft, setDraft] = useState(() => durationText(estimate));
   return (
     <Popover
       defaultOpen={defaultOpen}
       onOpenChange={(open) => {
-        if (open) setDraft(estimate);
+        if (open) setDraft(durationText(estimate));
       }}
     >
       <PopoverTrigger
         render={<Button size="sm" variant="quiet" />}
-        aria-label={`見積もり ${estimate}時間。編集する`}
+        aria-label={`見積もり ${formatHours(estimate / 60)}。編集する`}
       >
-        {estimate}h
+        {formatHours(estimate / 60)}
       </PopoverTrigger>
       <PopoverContent>
         <PopoverHeader>
-          <PopoverTitle>Estimate を編集</PopoverTitle>
+          <PopoverTitle>見積もりを編集</PopoverTitle>
         </PopoverHeader>
         <PopoverBody>
-          <div className="flex flex-col gap-1">
-            <label htmlFor={id} className="text-label text-ink">
-              Estimate
-            </label>
-            <p id={`${id}-help`} className="text-help text-ink-muted">
-              0.5時間単位
-            </p>
-            <div className="flex items-center gap-2">
-              <input
-                id={id}
-                inputMode="decimal"
-                aria-describedby={`${id}-help`}
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                className="h-control-lg w-24 rounded-sm border border-border-strong bg-surface px-3 text-right text-body-l text-ink focus-visible:focus-ring medium:h-control-md medium:text-body"
-              />
-              <span className="text-body text-ink-muted">h</span>
-            </div>
-          </div>
+          <DurationField label="見積もり" value={draft} onChange={setDraft} />
         </PopoverBody>
         <PopoverFooter>
           <PopoverClose render={<Button variant="quiet" />}>
             キャンセル
           </PopoverClose>
-          <PopoverClose render={<Button />} onClick={() => setEstimate(draft)}>
+          <PopoverClose
+            render={<Button />}
+            onClick={() => setEstimate(readMinutes(draft) || estimate)}
+          >
             保存
           </PopoverClose>
         </PopoverFooter>
@@ -104,9 +90,9 @@ export const FocusFlow: Story = {
   play: async ({ canvas }) => {
     const trigger = canvas.getByRole('button', { name: /見積もり 3時間/ });
     await userEvent.click(trigger);
-    await screen.findByRole('dialog', { name: 'Estimate を編集' });
+    await screen.findByRole('dialog', { name: '見積もりを編集' });
     await waitFor(() =>
-      expect(screen.getByRole('textbox', { name: 'Estimate' })).toHaveFocus(),
+      expect(screen.getByRole('textbox', { name: '時間' })).toHaveFocus(),
     );
     await userEvent.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());

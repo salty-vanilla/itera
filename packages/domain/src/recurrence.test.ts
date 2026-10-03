@@ -8,6 +8,7 @@ import {
 import {
   changeRecurrenceRule,
   createRecurrenceRule,
+  endRecurrenceRule,
   nextOccurrence,
   recurrenceSummary,
   scheduledDates,
@@ -204,7 +205,42 @@ describe('RecurrenceRule', () => {
     });
   });
 
-  it('a second change for the same day supersedes the first, which stays as history', () => {
+  it('F39: changes for the same day replace the version not in effect yet', () => {
+    const { rule } = recurring({ freq: 'daily' }, '2026-08-03');
+    const change = (from: RecurrenceRule, pattern: RecurrencePattern) =>
+      changeRecurrenceRule(
+        from,
+        { pattern, effectiveFrom: d('2026-08-24') },
+        ctx,
+      );
+    const once = unwrap(change(rule, { freq: 'weekly', daysOfWeek: [1] }));
+    const twice = change(once, { freq: 'weekly', daysOfWeek: [1, 3] });
+    const thrice = unwrap(change(unwrap(twice), { freq: 'weekdays' }));
+    expect(thrice.versions).toEqual([
+      {
+        version: 1,
+        pattern: { freq: 'daily' },
+        effectiveFrom: '2026-08-03',
+        effectiveTo: '2026-08-23',
+      },
+      {
+        version: 2,
+        pattern: { freq: 'weekdays' },
+        effectiveFrom: '2026-08-24',
+      },
+    ]);
+    expect(versionOn(thrice, d('2026-08-23'))?.version).toBe(1);
+    // The replacement is still a change of the rule in the Activity.
+    expect(twice.ok && twice.value.activities).toEqual([
+      expect.objectContaining({
+        kind: 'recurrenceRuleChanged',
+        version: 2,
+        effectiveFrom: '2026-08-24',
+      }),
+    ]);
+  });
+
+  it('F39: going back to the previous pattern drops the version not in effect yet', () => {
     const { rule } = recurring({ freq: 'daily' }, '2026-08-03');
     const once = unwrap(
       changeRecurrenceRule(
@@ -213,9 +249,23 @@ describe('RecurrenceRule', () => {
         ctx,
       ),
     );
-    const twice = unwrap(
+    const back = changeRecurrenceRule(
+      once,
+      { pattern: { freq: 'daily' }, effectiveFrom: d('2026-08-24') },
+      ctx,
+    );
+    expect(unwrap(back)).toEqual(rule);
+    expect(back.ok && back.value.activities).toEqual([
+      expect.objectContaining({
+        kind: 'recurrenceRuleChanged',
+        version: 1,
+        effectiveFrom: '2026-08-24',
+      }),
+    ]);
+    // A later change adds one version again.
+    const again = unwrap(
       changeRecurrenceRule(
-        once,
+        unwrap(back),
         {
           pattern: { freq: 'weekly', daysOfWeek: [3] },
           effectiveFrom: d('2026-08-24'),
@@ -223,14 +273,58 @@ describe('RecurrenceRule', () => {
         ctx,
       ),
     );
-    expect(
-      twice.versions.map((v) => [v.version, v.effectiveFrom, v.effectiveTo]),
-    ).toEqual([
-      [1, '2026-08-03', '2026-08-23'],
-      [2, '2026-08-24', '2026-08-23'],
-      [3, '2026-08-24', undefined],
+    expect(again.versions.map((v) => v.version)).toEqual([1, 2]);
+  });
+
+  it('F39: the first version is replaced while it has not taken effect', () => {
+    const { rule } = recurring({ freq: 'daily' }, '2026-08-24');
+    const result = changeRecurrenceRule(
+      rule,
+      { pattern: { freq: 'weekdays' }, effectiveFrom: d('2026-08-24') },
+      ctx,
+    );
+    expect(unwrap(result).versions).toEqual([
+      {
+        version: 1,
+        pattern: { freq: 'weekdays' },
+        effectiveFrom: '2026-08-24',
+      },
     ]);
-    expect(versionOn(twice, d('2026-08-24'))?.version).toBe(3);
+    expect(result.ok && result.value.activities).toEqual([
+      expect.objectContaining({ kind: 'recurrenceRuleChanged', version: 1 }),
+    ]);
+  });
+
+  it('invariant 31 / F39: a version in effect before the new day is never replaced', () => {
+    const { rule } = recurring({ freq: 'daily' }, '2026-08-03');
+    const once = unwrap(
+      changeRecurrenceRule(
+        rule,
+        { pattern: { freq: 'weekdays' }, effectiveFrom: d('2026-08-24') },
+        ctx,
+      ),
+    );
+    // A week later the 8/24 version has taken effect: the next change adds
+    // a version, and going back to daily does not drop the 8/24 one.
+    const later = unwrap(
+      changeRecurrenceRule(
+        once,
+        { pattern: { freq: 'daily' }, effectiveFrom: d('2026-08-31') },
+        ctx,
+      ),
+    );
+    expect(
+      later.versions.map((v) => [
+        v.version,
+        v.pattern.freq,
+        v.effectiveFrom,
+        v.effectiveTo,
+      ]),
+    ).toEqual([
+      [1, 'daily', '2026-08-03', '2026-08-23'],
+      [2, 'weekdays', '2026-08-24', '2026-08-30'],
+      [3, 'daily', '2026-08-31', undefined],
+    ]);
   });
 
   it('rejects a version that would start before the latest one', () => {
@@ -404,6 +498,113 @@ describe('RecurrenceRule', () => {
         effectiveFrom: '2026-09-14',
       },
       next: { scheduledDate: '2026-09-12', ruleVersion: 1, generated: false },
+    });
+  });
+});
+
+describe('endRecurrenceRule (F41)', () => {
+  it('ends the latest version the day before; earlier days keep their version', () => {
+    const { rule } = recurring(
+      { freq: 'weekly', daysOfWeek: [6] },
+      '2026-08-03',
+    );
+    const result = endRecurrenceRule(rule, { endFrom: d('2026-10-05') }, ctx);
+    const ended = unwrap(result);
+    expect(ended.versions).toEqual([
+      {
+        version: 1,
+        pattern: { freq: 'weekly', daysOfWeek: [6] },
+        effectiveFrom: '2026-08-03',
+        effectiveTo: '2026-10-04',
+      },
+    ]);
+    expect(dates(ended, '2026-09-28', '2026-10-18')).toEqual(['2026-10-03']);
+    expect(result.ok && result.value.activities).toEqual([
+      expect.objectContaining({
+        kind: 'recurrenceRuleEnded',
+        version: 1,
+        effectiveTo: '2026-10-04',
+      }),
+    ]);
+  });
+
+  it('F39: a version not in effect by then is dropped, and the one before ends', () => {
+    const { rule } = recurring({ freq: 'daily' }, '2026-08-03');
+    const changed = unwrap(
+      changeRecurrenceRule(
+        rule,
+        { pattern: { freq: 'weekdays' }, effectiveFrom: d('2026-10-05') },
+        ctx,
+      ),
+    );
+    const result = endRecurrenceRule(
+      changed,
+      { endFrom: d('2026-10-05') },
+      ctx,
+    );
+    expect(unwrap(result).versions).toEqual([
+      {
+        version: 1,
+        pattern: { freq: 'daily' },
+        effectiveFrom: '2026-08-03',
+        effectiveTo: '2026-10-04',
+      },
+    ]);
+    expect(result.ok && result.value.activities[0]).toMatchObject({
+      version: 1,
+    });
+  });
+
+  it('an ended rule is neither ended again nor changed', () => {
+    const { rule } = recurring({ freq: 'daily' }, '2026-08-03');
+    const ended = unwrap(
+      endRecurrenceRule(rule, { endFrom: d('2026-10-05') }, ctx),
+    );
+    expect(
+      endRecurrenceRule(ended, { endFrom: d('2026-10-12') }, ctx),
+    ).toMatchObject({ ok: false, error: { code: 'invalidTransition' } });
+    expect(
+      changeRecurrenceRule(
+        ended,
+        { pattern: { freq: 'weekdays' }, effectiveFrom: d('2026-10-12') },
+        ctx,
+      ),
+    ).toMatchObject({ ok: false, error: { code: 'invalidTransition' } });
+  });
+
+  it('refuses a rule with no version in effect before the day', () => {
+    const { rule } = recurring({ freq: 'daily' }, '2026-10-05');
+    expect(
+      endRecurrenceRule(rule, { endFrom: d('2026-10-05') }, ctx),
+    ).toMatchObject({ ok: false, error: { code: 'invalidInput' } });
+  });
+
+  it('the Backlog summary has the last day and no projection after it', () => {
+    const { rule } = recurring(
+      { freq: 'weekly', daysOfWeek: [6] },
+      '2026-08-03',
+    );
+    const ended = unwrap(
+      endRecurrenceRule(rule, { endFrom: d('2026-10-05') }, ctx),
+    );
+    expect(
+      recurrenceSummary(ended, [], {
+        today: d('2026-10-01'),
+        projectFrom: d('2026-10-01'),
+      }),
+    ).toEqual({
+      pattern: { freq: 'weekly', daysOfWeek: [6] },
+      next: { scheduledDate: '2026-10-03', ruleVersion: 1, generated: false },
+      endsOn: '2026-10-04',
+    });
+    expect(
+      recurrenceSummary(ended, [], {
+        today: d('2026-10-05'),
+        projectFrom: d('2026-10-05'),
+      }),
+    ).toEqual({
+      pattern: { freq: 'weekly', daysOfWeek: [6] },
+      endsOn: '2026-10-04',
     });
   });
 });

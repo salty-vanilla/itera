@@ -1,10 +1,11 @@
+import type { TaskPriority } from '@itera/domain';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 // DESIGN.md Components › Task Metadata. A Task's attributes in one line of
 // text and icons (12px `meta`, 12px apart), not Badges: Area, deadline,
-// carry-over, recurrence, Goal, notes. An attribute with no value is left
-// out, never filled with 「—」.
+// priority (高・低 only), carry-over, recurrence, Goal, notes. An attribute
+// with no value is left out, never filled with 「—」.
 
 function TaskMetadata({
   children,
@@ -55,4 +56,14 @@ function MetaItem({
   );
 }
 
-export { MetaItem, TaskMetadata };
+/**
+ * 優先度 (Issue #97): only 高 and 低, in words. 通常 is the default, so it is
+ * left out like any attribute with no value. No colour, and never an order
+ * (invariant 5).
+ */
+function PriorityText({ priority }: { priority: TaskPriority }) {
+  if (priority === 'normal') return null;
+  return <MetaItem>優先度 {priority === 'high' ? '高' : '低'}</MetaItem>;
+}
+
+export { MetaItem, PriorityText, TaskMetadata };

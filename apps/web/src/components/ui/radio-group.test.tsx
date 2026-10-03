@@ -16,25 +16,25 @@ describe('RadioGroup', () => {
   function SelfAssessment({ error }: { error?: string }) {
     return (
       <RadioGroup
-        legend="Goal の自己判定"
-        description="今週の Goal にどこまで近づけたかを選びます。"
+        legend="目標の自己判定"
+        description="今週の目標にどこまで近づけたかを選びます。"
         error={error}
       >
         <Radio value="achieved" label="できた" />
         <Radio value="partial" label="一部できた" />
         <Radio value="notAchieved" label="できなかった" />
-        <Radio value="noJudgement" label="判断しない" />
+        <Radio value="noJudgement" label="決めない" />
       </RadioGroup>
     );
   }
 
   it('is a fieldset named by its legend, with nothing chosen at first', () => {
     render(<SelfAssessment />);
-    const group = screen.getByRole('radiogroup', { name: 'Goal の自己判定' });
+    const group = screen.getByRole('radiogroup', { name: '目標の自己判定' });
     expect(group.tagName).toBe('FIELDSET');
-    expect(group.querySelector('legend')?.textContent).toBe('Goal の自己判定');
+    expect(group.querySelector('legend')?.textContent).toBe('目標の自己判定');
     expect(describedBy(group)).toEqual([
-      '今週の Goal にどこまで近づけたかを選びます。',
+      '今週の目標にどこまで近づけたかを選びます。',
     ]);
     for (const radio of screen.getAllByRole('radio')) {
       expect(radio.getAttribute('aria-checked')).toBe('false');
@@ -53,9 +53,9 @@ describe('RadioGroup', () => {
   });
 
   it('ties the error to the group', () => {
-    render(<SelfAssessment error="どれか 1 つを選んでください" />);
-    const group = screen.getByRole('radiogroup', { name: 'Goal の自己判定' });
+    render(<SelfAssessment error="どれか 1つを選んでください" />);
+    const group = screen.getByRole('radiogroup', { name: '目標の自己判定' });
     expect(group.getAttribute('aria-invalid')).toBe('true');
-    expect(describedBy(group)).toContain('どれか 1 つを選んでください');
+    expect(describedBy(group)).toContain('どれか 1つを選んでください');
   });
 });

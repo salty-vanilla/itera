@@ -5,15 +5,17 @@ import {
   carryOverOf,
   inBacklogSlice,
   isCounted,
-  isRecurring,
   planningValueOf,
   projectFrom,
+  recurrenceOf,
   recurrenceSummary,
   sprintNumber,
   versionOn,
   type AreaColor,
   type AreaId,
   type BacklogSlice,
+  type DailySelectionId,
+  type Instant,
   type LocalDate,
   type PlanningValue,
   type RecurrencePattern,
@@ -22,7 +24,14 @@ import {
   type Task,
 } from '@itera/domain';
 import type { Clock, Records } from './records';
+import { nextWeekSprintOf, thisWeekSprintOf } from './sprint-choice';
 import { activeSprint } from './task-changes';
+import {
+  isClosedResolution,
+  isListedResolution,
+  type ClosedResolution,
+  type ListedResolution,
+} from './today-view';
 
 export interface BacklogItem {
   readonly task: Task;
@@ -37,19 +46,50 @@ export interface BacklogItem {
     readonly latest: RecurrencePattern;
   };
   /**
-   * In this week's Sprint: 「今週」, and 「Sprint 中に追加」 if mid-Sprint.
+   * In this week's Sprint: 「今週」, and 「週の途中で追加」 if mid-Sprint.
    * `confirmed` is false while that Sprint is still being planned.
    */
   readonly thisWeek?: {
     readonly midSprint: boolean;
     readonly confirmed: boolean;
   };
+  /**
+   * In the draft for next week (「来週」, #90): chosen while this week runs.
+   * It may also be in this week's (`thisWeek`); the row says both (#150).
+   */
+  readonly nextWeek?: true;
+  /**
+   * In today's 今日やる (a selection made today that is open, done or
+   * skipped: what Today lists there). The Backlog row says 「今日」 instead
+   * of 「今週」 (Issue #94), and the detail offers the day's operations.
+   * A Task chosen today and then closed (中断, 見送り, 今週の残りに戻した) is
+   * back among the week's, so it has none.
+   */
+  readonly today?: {
+    readonly selectionId: DailySelectionId;
+    readonly resolution: ListedResolution;
+    readonly startedAt?: Instant;
+    /** An occurrence of a recurring Task: it can be skipped (F19). */
+    readonly recurring: boolean;
+  };
+  /**
+   * Chosen today and closed for the day (中断, 見送り, 今週の残りに戻した): it
+   * is among the week's remaining again, and the detail says what happened.
+   */
+  readonly closedToday?: ClosedResolution;
   /** The Task's own time: Estimate, suggestion, subtask sum or none. */
   readonly value: PlanningValue;
+  /** The Task's own Estimate, for choosing it as the time basis in the detail. */
+  readonly taskValue: PlanningValue;
   /** The subtask sum, for choosing it as the time basis in the detail. */
   readonly subtaskValue: PlanningValue;
   /** 今日へ: only for a Task outside the active Sprint (invariant 26). */
   readonly canAddToToday: boolean;
+  /**
+   * 今週へ (#155): a one-off Task outside the active Sprint, without a day.
+   * Also before the Sprint starts, since no day is chosen.
+   */
+  readonly canAddToWeek: boolean;
   /**
    * 今日へ waits for the Sprint's first day (#59): the Sprint is confirmed
    * but has not started, so there is no day to choose on yet.
@@ -62,17 +102,6 @@ export interface BacklogItem {
   readonly canComplete: boolean;
 }
 
-/**
- * The Sprint 「今週」 refers to: the active one, or, before one is
- * confirmed, the one being planned (Scenario A step 3). A draft for next
- * week while this week still runs is not 「今週」.
- */
-function thisWeeksSprint(records: Records) {
-  return (
-    activeSprint(records) ?? records.sprints.find((s) => s.state === 'planning')
-  );
-}
-
 export function backlogItem(
   task: Task,
   records: Records,
@@ -81,18 +110,46 @@ export function backlogItem(
   const area = records.areas.find((a) => a.id === task.areaId);
   const carry = carryOverOf(task.id, records.sprints);
   const carryFrom = records.sprints.find((s) => s.id === carry?.fromSprintId);
-  const rule = records.rules.find((r) => r.id === task.recurrenceRuleId);
-  const week = thisWeeksSprint(records);
+  // An ended rule is shown until its last day (F41).
+  const rule = recurrenceOf(task, records.rules, clock.today);
+  // 「今週」: the active one, or, before one is confirmed, the one being
+  // planned (Scenario A step 3); a draft for next week is 「来週」 (#90).
+  const week = thisWeekSprintOf(records, clock);
   const inWeek: SprintTask | undefined = week?.tasks.find(
+    (t) => t.taskId === task.id && isCounted(t),
+  );
+  const inNextWeek = nextWeekSprintOf(records, clock)?.tasks.some(
     (t) => t.taskId === task.id && isCounted(t),
   );
   const active = activeSprint(records);
   const latest = rule?.versions.at(-1);
   const canChoose =
     active !== undefined &&
-    !isRecurring(task) &&
+    rule === undefined &&
     !active.tasks.some((t) => t.taskId === task.id);
   const beforeStart = active !== undefined && clock.today < active.start;
+  // Today's selections of this Task (of its occurrences, if recurring).
+  const todays =
+    active?.dailySelections.filter(
+      (s) =>
+        s.date === clock.today &&
+        active.tasks.some(
+          (t) =>
+            t.id === s.sprintTaskId &&
+            t.taskId === task.id &&
+            t.outcome !== 'removed',
+        ),
+    ) ?? [];
+  const chosen = todays
+    .filter((s) => isListedResolution(s.resolution))
+    // What can still be done comes first: the detail acts on that one.
+    .toSorted(
+      (a, b) =>
+        Number(b.resolution === 'selected' || b.resolution === 'started') -
+        Number(a.resolution === 'selected' || a.resolution === 'started'),
+    )
+    .at(0);
+  const closed = todays.findLast((s) => isClosedResolution(s.resolution));
   return {
     task,
     ...(area === undefined
@@ -126,12 +183,35 @@ export function backlogItem(
             confirmed: week?.state === 'active',
           },
         }),
+    ...(inNextWeek === true ? { nextWeek: true as const } : {}),
+    ...(chosen === undefined || !isListedResolution(chosen.resolution)
+      ? {}
+      : {
+          today: {
+            selectionId: chosen.id,
+            resolution: chosen.resolution,
+            ...(chosen.startedAt === undefined
+              ? {}
+              : { startedAt: chosen.startedAt }),
+            recurring: chosen.occurrenceId !== undefined,
+          },
+        }),
+    ...(chosen !== undefined ||
+    closed === undefined ||
+    !isClosedResolution(closed.resolution)
+      ? {}
+      : { closedToday: closed.resolution }),
     value: planningValueOf(task, { now: clock.now }),
+    taskValue: planningValueOf(
+      { ...task, timeBasis: 'task' },
+      { now: clock.now },
+    ),
     subtaskValue: planningValueOf(
       { ...task, timeBasis: 'subtasks' },
       { now: clock.now },
     ),
     canAddToToday: canChoose && !beforeStart,
+    canAddToWeek: canChoose,
     ...(canChoose && beforeStart && active !== undefined
       ? {
           todayOpensOn: {
@@ -140,7 +220,7 @@ export function backlogItem(
           },
         }
       : {}),
-    canComplete: !isRecurring(task),
+    canComplete: rule === undefined,
   };
 }
 
@@ -170,7 +250,12 @@ export interface BacklogData {
     readonly count: number;
   }[];
   readonly sliceCounts: Readonly<Record<BacklogSlice | 'all', number>>;
-  /** The Tasks shown, in creation order (invariant 5). */
+  /**
+   * The Tasks shown, newest first (Issue #86). The domain's `backlogView` is
+   * in creation order; the newest first is the screen's choice, so that a
+   * Task just added is right under the Quick Add. Never by priority
+   * (invariant 5).
+   */
   readonly items: readonly BacklogItem[];
   /** Any active Task by ID, for the detail (even when filtered out). */
   readonly item: (taskId: string) => BacklogItem | undefined;
@@ -186,32 +271,36 @@ export function backlogData(
     user: records.user,
     today: clock.today,
     sprints: records.sprints,
+    rules: records.rules,
   };
   const inSlice = (slice: BacklogSlice | 'all') =>
     slice === 'all'
       ? all
       : all.filter((t) => inBacklogSlice(t, slice, context));
   const bySlice = inSlice(filter.view ?? 'all');
+  const choices = records.areas
+    .filter((a) => !a.archived)
+    .toSorted((a, b) => a.order - b.order);
+  // An Area archived while chosen has no filter left to take it off (#113):
+  // it narrows nothing.
+  const area = choices.some((a) => a.id === filter.area)
+    ? filter.area
+    : undefined;
   const shown =
-    filter.area === undefined
-      ? bySlice
-      : bySlice.filter((t) => t.areaId === filter.area);
+    area === undefined ? bySlice : bySlice.filter((t) => t.areaId === area);
   return {
     today: clock.today,
     timeZone: records.user.timeZone,
-    areas: records.areas
-      .filter((a) => !a.archived)
-      .toSorted((a, b) => a.order - b.order)
-      .map((a) => ({
-        id: a.id,
-        name: a.name,
-        color: a.color,
-        count: bySlice.filter((t) => t.areaId === a.id).length,
-      })),
+    areas: choices.map((a) => ({
+      id: a.id,
+      name: a.name,
+      color: a.color,
+      count: bySlice.filter((t) => t.areaId === a.id).length,
+    })),
     sliceCounts: Object.fromEntries(
       SLICES.map((slice) => [slice, inSlice(slice).length]),
     ) as Record<BacklogSlice | 'all', number>,
-    items: shown.map((task) => backlogItem(task, records, clock)),
+    items: shown.toReversed().map((task) => backlogItem(task, records, clock)),
     item: (taskId) => {
       const task = all.find((t) => t.id === taskId);
       return task === undefined ? undefined : backlogItem(task, records, clock);

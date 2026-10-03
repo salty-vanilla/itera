@@ -1,10 +1,11 @@
 // Dates and times as text (docs/design/content.md 日付と時刻):
-// 「9/28 (月)」, headings 「9月29日（火）」, ranges 「9/28 (月) – 10/4 (日)」,
-// times in 24 hours 「14:02」.
+// 「9/28 (月)」, headings 「9月29日（火）」, ranges 「9/28 (月)〜10/4 (日)」,
+// times in 24 hours 「14:02」, a day with its time 「9/30 (水) 14:02」.
 import {
   dayOfWeek,
   type Instant,
   type LocalDate,
+  toLocalDate,
   type TimeZone,
 } from '@itera/domain';
 
@@ -21,15 +22,21 @@ export function formatDate(date: LocalDate): string {
   return `${month}/${day} (${weekday})`;
 }
 
+/** 「9/28」, where the weekday would only add width. */
+export function formatMonthDay(date: LocalDate): string {
+  const { month, day } = parts(date);
+  return `${month}/${day}`;
+}
+
 /** 「9月29日（火）」, for a heading. */
 export function formatDateHeading(date: LocalDate): string {
   const { month, day, weekday } = parts(date);
   return `${month}月${day}日（${weekday}）`;
 }
 
-/** 「9/28 (月) – 10/4 (日)」 */
+/** 「9/28 (月)〜10/4 (日)」 */
 export function formatDateRange(start: LocalDate, end: LocalDate): string {
-  return `${formatDate(start)} – ${formatDate(end)}`;
+  return `${formatDate(start)}〜${formatDate(end)}`;
 }
 
 /** 「14:02」 in the user's time zone. */
@@ -40,6 +47,11 @@ export function formatTime(at: Instant, timeZone: TimeZone): string {
     minute: '2-digit',
     hourCycle: 'h23',
   }).format(new Date(at));
+}
+
+/** 「9/30 (水) 14:02」: the day and the time of a record, in the user's time zone. */
+export function formatDateTime(at: Instant, timeZone: TimeZone): string {
+  return `${formatDate(toLocalDate(at, timeZone))} ${formatTime(at, timeZone)}`;
 }
 
 /** Whole days from `from` to `to` (negative when `to` is earlier). */

@@ -40,6 +40,7 @@ const motion = [
   ['duration-base', 'Menu・Popover・Tooltip の出現、行の追加・除外'],
   ['duration-slow', 'Dialog・Drawer の出入り（最大）'],
   ['duration-toast', 'Toast の表示時間'],
+  ['duration-toast-action', '操作付きの Toast の表示時間'],
   ['ease-standard', '既定'],
   ['ease-enter', '出現'],
   ['ease-exit', '退場'],
@@ -124,7 +125,7 @@ function ShapeAndSpacePage() {
             </Cell>
             <Value name="stroke-strong" />
             <Cell className="w-full text-help text-ink-muted">
-              フォーカスリング、選択中タブの下線、可用時間マーカー
+              フォーカスリング、選択中タブの下線、使える時間マーカー
             </Cell>
           </TokenRow>
           <TokenRow>
@@ -149,7 +150,7 @@ function ShapeAndSpacePage() {
 
       <TokenSection
         title="余白"
-        description="4px 基準。Task density（Backlog・Today）と Thinking space（Goal・Capacity・Retro）を同じ spacing で組まない。"
+        description="4px 基準。Task density（Backlog・Today）と Thinking space（目標・Capacity・振り返り）を同じ spacing で組まない。"
       >
         <TokenTable columns={['見本', 'トークン', '値']}>
           {spacingScale.map((name) => (

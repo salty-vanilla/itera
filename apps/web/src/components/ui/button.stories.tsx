@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { ChevronDown, Plus } from 'lucide-react';
+import { Check, ChevronDown, Pin, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from './button';
 
@@ -27,8 +27,8 @@ type Story = StoryObj<typeof meta>;
 export const Playground: Story = {};
 
 /**
- * 既定は Secondary。Primary は 1 画面に 1 つ。danger はアーカイブの入口、
- * danger-solid は破壊的操作の確認 Dialog の実行ボタンだけに使う。
+ * 既定は Secondary。Primary は 1 画面に 1 つ。danger と danger-solid は破壊的操作だけに使う。
+ * danger-solid は確認 Dialog の実行ボタンだけ。アーカイブには使わない。
  */
 export const Variants: Story = {
   render: () => (
@@ -36,8 +36,32 @@ export const Variants: Story = {
       <Button variant="primary">Sprint を確定</Button>
       <Button variant="secondary">差分を確認</Button>
       <Button variant="quiet">キャンセル</Button>
-      <Button variant="danger">アーカイブ</Button>
+      <Button variant="danger">削除</Button>
       <Button variant="danger-solid">完全に削除</Button>
+    </div>
+  ),
+};
+
+/**
+ * トグル（`pressed`、`aria-pressed`）。オンは墨の反転（DESIGN.md Selected）。
+ * 語は変えず、アイコンを替える（例：振り返りに使う）。
+ */
+export const Toggle: Story = {
+  render: () => (
+    <div className="flex flex-wrap items-center gap-3">
+      <Button
+        size="sm"
+        variant="quiet"
+        pressed={false}
+        className="text-ink-muted"
+      >
+        <Pin aria-hidden />
+        振り返りに使う
+      </Button>
+      <Button size="sm" variant="quiet" pressed>
+        <Check aria-hidden />
+        振り返りに使う
+      </Button>
     </div>
   ),
 };
@@ -62,7 +86,7 @@ export const WithIcon: Story = {
         タスクを追加
       </Button>
       <Button>
-        並び順: 期限
+        並び順：期限
         <ChevronDown aria-hidden />
       </Button>
     </div>
@@ -73,7 +97,7 @@ const variants = [
   ['primary', 'Sprint を確定', '確定中…'],
   ['secondary', '下書きを保存', '保存中…'],
   ['quiet', '計画案を取り消す', '取り消し中…'],
-  ['danger', 'アーカイブ', 'アーカイブ中…'],
+  ['danger', '削除', '削除中…'],
   ['danger-solid', '完全に削除', '削除中…'],
 ] as const;
 

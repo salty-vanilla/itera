@@ -25,6 +25,8 @@ import {
   startSelection,
   undoCompleteFromBacklog,
   undoCompleteSelection,
+  undoDeferSelection,
+  undoRemoveFromToday,
   undoSkipSelection,
 } from './today';
 import {
@@ -239,6 +241,151 @@ describe('F17: a selection closed earlier the same day can still be completed th
     const deferred = unwrap(deferSelection(chosen(), sel, ctx));
     const done = unwrap(complete(deferred)).sprint;
     expect(deferralStreak([done], id('task-1'))).toBe(0);
+  });
+});
+
+describe('F37: a deferral or removal can be undone the same day', () => {
+  const today = { ...sel, today: d('2026-09-28') };
+
+  it.each([
+    [
+      'deferred',
+      deferSelection,
+      undoDeferSelection,
+      'todayDeferUndone',
+    ] as const,
+    [
+      'removed',
+      removeFromToday,
+      undoRemoveFromToday,
+      'todayRemoveUndone',
+    ] as const,
+  ])(
+    'invariant 21: %s → selected, the same selection (no second one)',
+    (_, close, undo, kind) => {
+      const closed = unwrap(close(chosen(), sel, ctx));
+      const result = undo(closed, today, ctx);
+      const sprint = unwrap(result);
+      expect(sprint.dailySelections).toHaveLength(1);
+      expect(sprint.dailySelections[0]).toMatchObject({
+        id: 'sel-1',
+        resolution: 'selected',
+      });
+      expect(sprint.dailySelections[0]).not.toHaveProperty('resolvedAt');
+      expect(result.ok && result.value.activities).toMatchObject([
+        { kind, actor: 'user', selectionId: 'sel-1', date: '2026-09-28' },
+      ]);
+      // Still one per day: it cannot be chosen again beside it.
+      expect(
+        selectForToday(
+          sprint,
+          {
+            selectionId: id('sel-2'),
+            date: d('2026-09-28'),
+            sprintTaskId: id('st-task-1'),
+          },
+          ctx,
+        ),
+      ).toMatchObject({ ok: false, error: { code: 'invalidInput' } });
+    },
+  );
+
+  it('a deferral after starting goes back to started, keeping its time', () => {
+    const started = unwrap(startSelection(chosen(), sel, ctx));
+    const deferred = unwrap(deferSelection(started, sel, ctx));
+    const undone = unwrap(undoDeferSelection(deferred, today, ctx));
+    expect(undone.dailySelections[0]).toMatchObject({
+      resolution: 'started',
+      startedAt: ctx.now,
+    });
+    expect(undone.dailySelections[0]).not.toHaveProperty('resolvedAt');
+  });
+
+  it('not the next day', () => {
+    const deferred = unwrap(deferSelection(chosen(), sel, ctx));
+    const removed = unwrap(removeFromToday(chosen(), sel, ctx));
+    const tomorrow = { ...sel, today: d('2026-09-29') };
+    expect(undoDeferSelection(deferred, tomorrow, ctx)).toMatchObject({
+      ok: false,
+      error: { code: 'invalidTransition' },
+    });
+    expect(undoRemoveFromToday(removed, tomorrow, ctx)).toMatchObject({
+      ok: false,
+      error: { code: 'invalidTransition' },
+    });
+  });
+
+  it('only from its own state', () => {
+    const deferred = unwrap(deferSelection(chosen(), sel, ctx));
+    const paused = unwrap(
+      pauseSelection(unwrap(startSelection(chosen(), sel, ctx)), sel, ctx),
+    );
+    for (const sprint of [chosen(), paused]) {
+      expect(undoDeferSelection(sprint, today, ctx)).toMatchObject({
+        ok: false,
+        error: { code: 'invalidTransition' },
+      });
+      expect(undoRemoveFromToday(sprint, today, ctx)).toMatchObject({
+        ok: false,
+        error: { code: 'invalidTransition' },
+      });
+    }
+    expect(undoRemoveFromToday(deferred, today, ctx)).toMatchObject({
+      ok: false,
+      error: { code: 'invalidTransition' },
+    });
+  });
+
+  it('invariant 23: the run counts the state after the undo', () => {
+    const monday = unwrap(deferSelection(chosen(), sel, ctx));
+    const sel2 = { selectionId: id<'DailySelection'>('sel-2') };
+    const tuesday = unwrap(
+      deferSelection(
+        unwrap(
+          selectForToday(
+            monday,
+            {
+              ...sel2,
+              date: d('2026-09-29'),
+              sprintTaskId: id('st-task-1'),
+            },
+            ctx,
+          ),
+        ),
+        sel2,
+        ctx,
+      ),
+    );
+    expect(deferralStreak([tuesday], id('task-1'))).toBe(2);
+    const undone = unwrap(
+      undoDeferSelection(tuesday, { ...sel2, today: d('2026-09-29') }, ctx),
+    );
+    expect(deferralStreak([undone], id('task-1'))).toBe(1);
+    // Monday's deferral is a past day's and stays.
+    expect(
+      undoDeferSelection(undone, { ...sel, today: d('2026-09-29') }, ctx),
+    ).toMatchObject({ ok: false, error: { code: 'invalidTransition' } });
+  });
+
+  it('after a completion is undone back to the deferral (F17), the deferral can be undone too', () => {
+    const deferred = unwrap(deferSelection(chosen(), sel, ctx));
+    const done = unwrap(complete(deferred));
+    const back = unwrap(
+      undoCompleteSelection(
+        done.sprint,
+        { ...sel, task: done.task as Task },
+        ctx,
+      ),
+    );
+    const undone = unwrap(undoDeferSelection(back.sprint, today, ctx));
+    expect(undone.dailySelections[0]?.resolution).toBe('selected');
+  });
+
+  it('not in review', () => {
+    const deferred = unwrap(deferSelection(chosen(), sel, ctx));
+    expect(
+      undoDeferSelection({ ...deferred, state: 'review' }, today, ctx),
+    ).toMatchObject({ ok: false, error: { code: 'invalidTransition' } });
   });
 });
 

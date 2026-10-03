@@ -2,6 +2,9 @@ import {
   id,
   type AreaId,
   type DailySelectionId,
+  type InterruptNote,
+  type LocalDate,
+  type OccurrenceId,
   type TaskId,
 } from '@itera/domain';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
@@ -9,24 +12,32 @@ import { useEffect, useRef, useState } from 'react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
-import { Field } from '@/components/ui/field';
 import { Progress } from '@/components/ui/progress';
-import { Select } from '@/components/ui/select';
+import { useToast } from '@/components/ui/toast';
+import { AreaSelect, chosenArea } from '@/components/task/area-select';
+import { TaskMetadata } from '@/components/task/task-metadata';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
-import { formatDate, formatDateHeading, formatTime } from '@/lib/date-format';
-import { formatHours, formatPlanningTotal } from '@/lib/time-format';
+import { TaskRow } from '@/components/task/task-row';
+import { formatDate, formatTime } from '@/lib/date-format';
+import { formatPlanningTotal } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
+import { useStuckBar } from '@/lib/use-stuck-bar';
 import { cn } from '@/lib/utils';
 import type { TodayData, TodayRow as TodayRowData } from '@/store/today-view';
 import { useAppOverview } from '@/store/use-app-overview';
 import { useBacklog } from '@/store/use-backlog';
 import { useTaskActions } from '@/store/use-task-actions';
 import { useToday, useTodayActions } from '@/store/use-today';
+import { useNewAreaDialog } from '../backlog/area-dialog';
 import { TaskDetail } from '../backlog/task-detail';
-import { ScreenFrame } from '../screen-frame';
+import { useTaskDetailLeave } from '../backlog/use-task-detail-leave';
+import { DayFocusScope, DayHeader, dateSearchOf } from './day-header';
+import { DayColumns, DayFrame } from './day-frame';
 import { ActualTime, type ActualTimeMode } from './actual-time';
+import { InterruptRow } from './interrupt-row';
 import { InterruptSheet } from './interrupt-sheet';
-import { TodayRow } from './today-row';
+import { OtherDay } from './other-day';
+import { ItemMetadata, PlannedValue, TodayRow } from './today-row';
 import { WeekRow } from './week-row';
 
 // Today (docs/design/patterns.md Today, PRD §5 C). The light screen used
@@ -34,10 +45,16 @@ import { WeekRow } from './week-row';
 // week's Goals as the background, and 今日やる in front. There is no daily
 // capacity and nothing is judged as going over (invariant 25).
 //
-// Layout: one column, at most 720px; on wide screens the Goals move to the
-// right. Under 768px the quick add is sticky above the tab bar (no FAB).
+// Layout: one column, at most 720px. The Goals are the background: to the
+// right on wide screens, under Progress on medium ones, and after 今週の残り
+// under 768px, so that a phone's first screen reaches the Tasks to choose
+// (#100). 「割り込みを記録」 is at the top, right of 今日の残り, at every
+// width. The quick add is sticky at the bottom (above the tab bar under
+// 768px, no FAB); a Toast shows above it.
 
 export interface TodaySearch {
+  /** A day other than today, read only (#90). Absent: today. */
+  readonly date?: LocalDate | undefined;
   /** The open Task (its detail). */
   readonly task?: TaskId;
 }
@@ -45,12 +62,31 @@ export interface TodaySearch {
 export function validateTodaySearch(
   search: Record<string, unknown>,
 ): TodaySearch {
-  return typeof search.task === 'string'
-    ? { task: id<'Task'>(search.task) }
-    : {};
+  return {
+    ...dateSearchOf(search),
+    ...(typeof search.task === 'string'
+      ? { task: id<'Task'>(search.task) }
+      : {}),
+  };
 }
 
+// Any day opens by `?date=` (#90); today is the screen without it, and a
+// date that is today opens today as well.
 function TodayScreen() {
+  const { date } = useSearch({ from: '/today' });
+  const { today } = useAppOverview();
+  return (
+    <DayFocusScope>
+      {date !== undefined && date !== today ? (
+        <OtherDay date={date} />
+      ) : (
+        <ThisDay />
+      )}
+    </DayFocusScope>
+  );
+}
+
+function ThisDay() {
   const data = useToday();
   // The day itself is started by the app (useSystemDay, #54).
   if (data === undefined) return <NoActiveSprint />;
@@ -60,23 +96,29 @@ function TodayScreen() {
 
 /**
  * Before the Sprint's first day (confirmed on Sunday evening, say): the
- * date, when it starts, and the week's Goals. Choosing and adding wait for
- * the first day, as the domain keeps them within the period (owner
- * decision in #54).
+ * date, when it starts, the week's Goals and the planned Tasks, read only.
+ * Choosing and adding wait for the first day, as the domain keeps them
+ * within the period (owner decision in #54); the Tasks are what that day's
+ * 今週の残り will hold (#156).
  */
 function BeforeStart({ data }: { data: TodayData }) {
   return (
-    <ScreenFrame heading={formatDateHeading(data.today)}>
+    <DayFrame date={data.today}>
       <p className="text-body text-ink-muted">
         Sprint {data.number} は {formatDate(data.sprint.start)} から始まります。
+        {/* One step to the Sprint (#90). */}{' '}
+        <Link
+          to="/sprint"
+          search={{ sprint: data.number }}
+          className="whitespace-nowrap text-link underline focus-visible:focus-ring"
+        >
+          Sprint {data.number} を開く
+        </Link>
       </p>
       {data.goals.length > 0 && (
-        <section
-          aria-labelledby="before-goals"
-          className="mt-6 flex flex-col gap-3"
-        >
+        <section aria-labelledby="before-goals" className="flex flex-col gap-3">
           <h2 id="before-goals" className="text-subheading text-ink-muted">
-            今週の Goal
+            今週の目標
           </h2>
           <ul className="flex flex-col gap-3">
             {data.goals.map((g) => (
@@ -88,37 +130,67 @@ function BeforeStart({ data }: { data: TodayData }) {
           </ul>
         </section>
       )}
-    </ScreenFrame>
+      {data.plan.length > 0 && (
+        <section aria-labelledby="before-plan" className="flex flex-col gap-2">
+          <h2 id="before-plan" className="text-subheading text-ink-muted">
+            今週の計画
+          </h2>
+          <ul className="flex flex-col border-t border-border-soft">
+            {data.plan.map((item) => (
+              <li key={`${item.sprintTask.id}-${item.occurrence?.id ?? ''}`}>
+                <TaskRow
+                  title={item.task.title}
+                  metadata={
+                    <TaskMetadata>
+                      <PlannedValue value={item.value} at="metadata" />
+                      <ItemMetadata item={item} occurrenceDate />
+                    </TaskMetadata>
+                  }
+                  estimate={
+                    item.value.base === 'none' ? undefined : (
+                      <PlannedValue value={item.value} at="end" />
+                    )
+                  }
+                  estimateFromMedium
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </DayFrame>
   );
 }
 
 /** Today without an active Sprint: the date, and where the week is. */
 function NoActiveSprint() {
   const { today, reviewSprint, planningSprint } = useAppOverview();
-  const link = 'ms-1 text-link underline focus-visible:focus-ring';
+  // After the sentence's space, the link moves to the next line whole.
+  const link = 'whitespace-nowrap text-link underline focus-visible:focus-ring';
   return (
-    <ScreenFrame heading={formatDateHeading(today)}>
+    <DayFrame date={today}>
       <p className="text-body text-ink-muted">
-        {/* A week in Retro comes first, even when the next is being planned. */}
+        {/* A week in Retro comes first, even when the next is being planned.
+            It is not 「今週」：that is the next one to start (#90). */}
         {reviewSprint !== undefined ? (
           <>
-            今週の Sprint は振り返り中です。
+            Sprint {reviewSprint.number} は振り返り中です。{' '}
             <Link to="/retro" className={link}>
               振り返りを開く
             </Link>
           </>
         ) : planningSprint !== undefined ? (
           <>
-            今週の計画を確定すると、ここで今日やることを選べます。
+            今週の計画を確定すると、ここで今日やることを選べます。{' '}
             <Link to="/sprint" className={link}>
               計画を開く
             </Link>
           </>
         ) : (
-          '実行中の Sprint はありません。'
+          '進行中の Sprint はありません。'
         )}
       </p>
-    </ScreenFrame>
+    </DayFrame>
   );
 }
 
@@ -137,7 +209,18 @@ function TodayView({ data }: { data: TodayData }) {
   const backlog = useBacklog({});
   const [editing, setEditing] = useState<Editing | undefined>(undefined);
   const [interrupting, setInterrupting] = useState(false);
+  const [editingNote, setEditingNote] = useState<InterruptNote | undefined>(
+    undefined,
+  );
+  const toast = useToast();
   const [quickArea, setQuickArea] = useState('');
+  const newArea = useNewAreaDialog();
+  // One archived since it was chosen is no longer a choice (#113).
+  const quickChoice = chosenArea(quickArea, data.areas);
+  // The Quick Add sticks to the bottom at every width: the Toast goes above
+  // it, and the Quick Add does not move (DESIGN.md Toast).
+  const quickAddRef = useRef<HTMLDivElement>(null);
+  useStuckBar(quickAddRef, 'bottom');
   // The `…` of each row, for the actual time surface to sit by.
   const triggers = useRef(new Map<DailySelectionId, HTMLButtonElement>());
   // Where the focus goes once the records have changed: the row that
@@ -146,11 +229,15 @@ function TodayView({ data }: { data: TodayData }) {
   const focusNext = useRef<
     | { selection: DailySelectionId }
     | { chosenAfter: ReadonlySet<DailySelectionId> }
-    | { rest: TodayRowData['sprintTask']['id'] }
+    | {
+        rest: TodayRowData['sprintTask']['id'];
+        occurrence?: OccurrenceId | undefined;
+      }
     | undefined
   >(undefined);
 
-  const openTask = (taskId: TaskId | undefined) =>
+  const detail = useTaskDetailLeave();
+  const showTask = (taskId: TaskId | undefined) =>
     void navigate({
       search: (prev) =>
         taskId === undefined
@@ -159,13 +246,17 @@ function TodayView({ data }: { data: TodayData }) {
             )
           : { ...prev, task: taskId },
     });
+  // Closing the detail or opening another Task asks the detail first.
+  const openTask = (taskId: TaskId | undefined) =>
+    detail.leave(() => showTask(taskId), taskId !== undefined);
   const openItem =
     search.task === undefined ? undefined : backlog.item(search.task);
   const estimateFocus = useEstimateFocus(search.task);
-  const openEstimate = (taskId: TaskId) => {
-    estimateFocus.request(taskId);
-    openTask(taskId);
-  };
+  const openEstimate = (taskId: TaskId) =>
+    detail.leave(() => {
+      estimateFocus.request(taskId);
+      showTask(taskId);
+    }, true);
 
   const moved = (selectionId: DailySelectionId, done: boolean) => {
     if (done) focusNext.current = { selection: selectionId };
@@ -178,7 +269,11 @@ function TodayView({ data }: { data: TodayData }) {
     if ('selection' in next) {
       selector = `[data-selection="${next.selection}"] :is([data-slot="completion-circle"], [data-action="undo-skip"])`;
     } else if ('rest' in next) {
-      selector = `[data-item="${next.rest}"] [data-action="choose"]`;
+      selector = `[data-item="${next.rest}"]${
+        next.occurrence === undefined
+          ? ''
+          : `[data-occurrence="${next.occurrence}"]`
+      } [data-action="choose"]`;
     } else {
       const added = data.rows.find(
         (r) => !next.chosenAfter.has(r.selection.id),
@@ -193,6 +288,91 @@ function TodayView({ data }: { data: TodayData }) {
       document.querySelector<HTMLElement>(selector)?.focus(),
     );
   }, [data]);
+  // 消す: at once, with 「元に戻す」 in a Toast rather than a Dialog, since
+  // it can be undone (DESIGN.md Toast, F38). The focus goes to the next
+  // note's `…`, or to 「割り込みを記録」 when none is left.
+  const deleteInterrupt = (note: InterruptNote) => {
+    const index = data.interrupts.findIndex((n) => n.id === note.id);
+    const next = data.interrupts[index + 1] ?? data.interrupts[index - 1];
+    if (!actions.deleteInterrupt(note.id)) return;
+    toast.show({
+      kind: 'interrupt-deleted',
+      title: `割り込み「${note.text}」を消しました`,
+      action: {
+        label: '元に戻す',
+        onClick: () => actions.restoreInterrupt(note),
+      },
+    });
+    requestAnimationFrame(() =>
+      document
+        .querySelector<HTMLElement>(
+          next === undefined
+            ? '[data-action="note-interrupt"]'
+            : `[data-interrupt="${next.id}"] [data-action="interrupt-actions"]`,
+        )
+        ?.focus(),
+    );
+  };
+  // 記録する: the list is below the fold, so the Toast says it went through
+  // and 「見る」 takes the focus to the new note (#157).
+  const noteInterrupt = (text: string, minutes: number | undefined) => {
+    if (!actions.noteInterrupt(text, minutes)) return false;
+    toast.show({
+      kind: 'interrupt-noted',
+      title: '割り込みを記録しました',
+      action: {
+        label: '見る',
+        onClick: () =>
+          document
+            .querySelector<HTMLElement>(
+              '[data-interrupt]:last-child [data-action="interrupt-actions"]',
+            )
+            ?.focus(),
+      },
+    });
+    return true;
+  };
+  // 今日は見送る and 今週の残りに戻す from the `…`, with 「元に戻す」 in a
+  // Toast (F37, #163). A deferred row moves to 今日はもうやらない with its
+  // own 「取り消す」; one put back leaves today for 今週の残り, where the
+  // focus goes to its 「今日へ」 (#233).
+  // Once the row itself is undone or completed, its 「元に戻す」 would point
+  // to a state that is gone: the Toast closes.
+  const closedToast = useRef<{ selection: DailySelectionId; toast: string }>(
+    undefined,
+  );
+  const closed = (
+    row: TodayRowData,
+    result: string,
+    done: boolean,
+    backToWeek = false,
+  ) => {
+    const selectionId = row.selection.id;
+    if (!done) return;
+    if (backToWeek) {
+      focusNext.current = {
+        rest: row.sprintTask.id,
+        occurrence: row.occurrence?.id,
+      };
+    } else moved(selectionId, done);
+    const shown = toast.show({
+      kind: 'today-closed',
+      title: `「${row.task.title}」${result}`,
+      action: {
+        label: '元に戻す',
+        onClick: () => {
+          closedToast.current = undefined;
+          moved(selectionId, actions.undoClose(selectionId));
+        },
+      },
+    });
+    closedToast.current = { selection: selectionId, toast: shown };
+  };
+  const dropClosedToast = (selectionId: DailySelectionId) => {
+    if (closedToast.current?.selection !== selectionId) return;
+    toast.close(closedToast.current.toast);
+    closedToast.current = undefined;
+  };
   const editingRow = [...data.rows, ...data.closed].find(
     (r) => r.selection.id === editing?.selectionId,
   );
@@ -211,7 +391,10 @@ function TodayView({ data }: { data: TodayData }) {
         row.task.lifecycle === 'active'
           ? () => openEstimate(row.task.id)
           : undefined,
-      onComplete: () => moved(selectionId, actions.complete(selectionId)),
+      onComplete: () => {
+        dropClosedToast(selectionId);
+        moved(selectionId, actions.complete(selectionId));
+      },
       onUndoComplete: () => {
         // Completed from the Backlog: undone as the Backlog does (F29), so
         // the choice it made for today goes away with it.
@@ -224,10 +407,20 @@ function TodayView({ data }: { data: TodayData }) {
         moved(selectionId, actions.undoComplete(selectionId));
       },
       onStart: () => actions.start(selectionId),
-      onDefer: () => moved(selectionId, actions.defer(selectionId)),
-      onRemove: () => moved(selectionId, actions.removeFromToday(selectionId)),
+      onDefer: () => closed(row, 'を見送りました', actions.defer(selectionId)),
+      onRemove: () =>
+        closed(
+          row,
+          'を今週の残りに戻しました',
+          actions.removeFromToday(selectionId),
+          true,
+        ),
       onSkip: () => moved(selectionId, actions.skip(selectionId)),
       onUndoSkip: () => moved(selectionId, actions.undoSkip(selectionId)),
+      onUndoClose: () => {
+        dropClosedToast(selectionId);
+        moved(selectionId, actions.undoClose(selectionId));
+      },
       onPause: () =>
         setEditing({
           selectionId,
@@ -249,6 +442,12 @@ function TodayView({ data }: { data: TodayData }) {
 
   // 今日へ: the new row in 今日やる takes the focus.
   const choose = (item: TodayData['rest'][number]) => {
+    // Put back today: the same choice comes back (F37), its row where it was.
+    if (item.removedToday !== undefined) {
+      dropClosedToast(item.removedToday);
+      moved(item.removedToday, actions.undoClose(item.removedToday));
+      return;
+    }
     const before = new Set(data.rows.map((r) => r.selection.id));
     if (actions.chooseForToday(item.sprintTask.id, item.occurrence?.id)) {
       focusNext.current = { chosenAfter: before };
@@ -256,11 +455,14 @@ function TodayView({ data }: { data: TodayData }) {
   };
 
   const remaining = data.remaining;
-  const goals = (headingId: string) =>
+  const goals = (headingId: string, className?: string) =>
     data.goals.length > 0 && (
-      <section aria-labelledby={headingId} className="flex flex-col gap-3">
+      <section
+        aria-labelledby={headingId}
+        className={cn('flex flex-col gap-3', className)}
+      >
         <h2 id={headingId} className="text-subheading text-ink-muted">
-          今週の Goal
+          今週の目標
         </h2>
         <ul className="flex flex-col gap-3">
           {data.goals.map((g) => (
@@ -274,178 +476,214 @@ function TodayView({ data }: { data: TodayData }) {
     );
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-[calc(var(--spacing-pane-today)+var(--spacing-pane-side)+var(--spacing-12))] gap-12 wide:px-6">
-      <div className="flex min-w-0 flex-1 flex-col gap-8 px-4 pt-6 medium:mx-auto medium:max-w-pane-today medium:px-6 medium:pt-8 wide:mx-0 wide:px-0">
-        <header className="flex flex-col gap-3">
-          <p className="text-meta text-ink-muted">
-            Sprint {data.number} · {data.day.index}日目 / {data.day.count}日
-          </p>
-          <h1 className="text-display-m text-ink">
-            {formatDateHeading(data.today)}
-          </h1>
-          <Progress
-            label="今週の完了"
-            value={data.progress.done}
-            max={data.progress.total}
-            unit="件"
-            className="max-w-measure-read"
-          />
-          <p className="text-body text-ink-muted">
-            {remaining.count === 0
-              ? '今日の残りはありません'
-              : `今日の残り ${remaining.count}件 · 見込み ${formatPlanningTotal({ ...remaining, unestimatedSubtasks: 0 })}`}
-          </p>
-          {data.lastDay && (
-            <div className="flex flex-wrap items-center gap-3">
-              <p className="text-body text-ink">
-                今日はこの Sprint の最終日です。
-              </p>
+    <>
+      <DayColumns
+        side={
+          <aside
+            aria-label="今週の目標のまとめ"
+            className="hidden w-pane-side shrink-0 pt-8 wide:block"
+          >
+            <div className="sticky top-8">{goals('today-goals-side')}</div>
+          </aside>
+        }
+      >
+        {/* A Toast above the stuck Quick Add covers what is just before it:
+            the room is left here (app/use-toast-clearance.ts). */}
+        <div className="flex flex-col gap-8 pb-[var(--toast-above-room,0px)]">
+          <DayHeader
+            date={data.today}
+            meta={`Sprint ${data.number} · ${data.day.index}日目 / ${data.day.count}日`}
+          >
+            <Progress
+              label="今週の完了"
+              value={data.progress.done}
+              max={data.progress.total}
+              unit="件"
+              className="max-w-measure-read"
+            />
+            {/* 「割り込みを記録」 on the right, reached without scrolling at
+              every width (#100); it stays there with no 今日の残り line. */}
+            <div className="flex items-center justify-end gap-4">
+              {/* Nothing chosen yet (no done and no closed row): the empty 今日やる already says so. */}
+              {(data.rows.length > 0 || data.closed.length > 0) && (
+                // Two lines if need be under 768px: the button stays on the right.
+                <p className="min-w-0 flex-1 text-body text-ink-muted">
+                  {remaining.count === 0 ? (
+                    '今日の残りはありません'
+                  ) : (
+                    // Broken between the parts (and before 「（ほかに見積もり
+                    // なし 1件）」), not in the range or the note.
+                    <>
+                      <span className="inline-block">
+                        今日の残り {remaining.count}件 ·
+                      </span>{' '}
+                      {formatPlanningTotal({
+                        ...remaining,
+                        unestimatedSubtasks: 0,
+                      })
+                        .split(/(?=（)/)
+                        .map((part, i) => (
+                          <span key={i} className="inline-block">
+                            {part}
+                          </span>
+                        ))}
+                    </>
+                  )}
+                </p>
+              )}
               <Button
-                onClick={() => {
-                  if (actions.beginRetro()) void navigate({ to: '/retro' });
-                }}
+                size="sm"
+                data-action="note-interrupt"
+                className="shrink-0"
+                onClick={() => setInterrupting(true)}
               >
-                Retro を始める
+                割り込みを記録
               </Button>
             </div>
-          )}
-        </header>
-
-        <div className="wide:hidden">{goals('today-goals')}</div>
-
-        <section aria-labelledby="today-rows" className="flex flex-col gap-2">
-          <h2 id="today-rows" className="text-heading text-ink">
-            今日やる
-          </h2>
-          {data.rows.length === 0 ? (
-            <p className="text-body text-ink-muted">
-              まだありません。下の「今週の残り」から「今日へ」で選びます。
-            </p>
-          ) : (
-            <ul className="flex flex-col border-t border-border-soft">
-              {data.rows.map((row) => (
-                <li key={row.selection.id} data-selection={row.selection.id}>
-                  <TodayRow {...rowProps(row)} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        {data.closed.length > 0 && (
-          <section
-            aria-labelledby="today-closed"
-            className="flex flex-col gap-2"
-          >
-            <h2 id="today-closed" className="text-subheading text-ink-muted">
-              今日はここまでにしたもの
-            </h2>
-            <p className="text-help text-ink-muted">
-              明日から今週の残りに出ます。今日のうちに終わったら ○
-              で完了にできます。
-            </p>
-            <ul className="flex flex-col border-t border-border-soft">
-              {data.closed.map((row) => (
-                <li key={row.selection.id} data-selection={row.selection.id}>
-                  <TodayRow {...rowProps(row)} />
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        {data.continuation.length > 0 && (
-          <section
-            aria-labelledby="today-continuation"
-            className="flex flex-col gap-2"
-          >
-            <h2 id="today-continuation" className="text-subheading text-ink">
-              昨日の続き
-            </h2>
-            <ul className="flex flex-col border-t border-border-soft">
-              {data.continuation.map((item) => (
-                <li
-                  key={`${item.sprintTask.id}-${item.occurrence?.id ?? ''}`}
-                  data-item={item.sprintTask.id}
+            {data.lastDay && (
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-body text-ink">
+                  今日はこの Sprint の最終日です。
+                </p>
+                <Button
+                  onClick={() => {
+                    if (actions.beginRetro()) void navigate({ to: '/retro' });
+                  }}
                 >
-                  <WeekRow
-                    item={item}
-                    onOpen={() => openTask(item.task.id)}
-                    onEstimate={() => openEstimate(item.task.id)}
-                    onChoose={() => choose(item)}
-                  />
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+                  振り返りを始める
+                </Button>
+              </div>
+            )}
+          </DayHeader>
 
-        <section aria-labelledby="today-rest" className="flex flex-col gap-2">
-          <h2 id="today-rest" className="text-subheading text-ink">
-            今週の残り
-          </h2>
-          {data.rest.length === 0 ? (
-            <p className="text-body text-ink-muted">今週の残りはありません。</p>
-          ) : (
-            <ul className="flex flex-col border-t border-border-soft">
-              {data.rest.map((item) => (
-                <li
-                  key={`${item.sprintTask.id}-${item.occurrence?.id ?? ''}`}
-                  data-item={item.sprintTask.id}
-                >
-                  <WeekRow
-                    item={item}
-                    onOpen={() => openTask(item.task.id)}
-                    onEstimate={() => openEstimate(item.task.id)}
-                    onChoose={() => choose(item)}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+          {goals('today-goals', 'hidden medium:flex wide:hidden')}
 
-        <section
-          aria-labelledby="today-interrupts"
-          className="flex flex-col gap-2"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 id="today-interrupts" className="text-subheading text-ink">
-              割り込み
+          <section aria-labelledby="today-rows" className="flex flex-col gap-2">
+            <h2 id="today-rows" className="text-heading text-ink">
+              今日やる
             </h2>
-            <Button size="sm" onClick={() => setInterrupting(true)}>
-              割り込みを記録
-            </Button>
-          </div>
-          {data.interrupts.length === 0 ? (
-            <p className="text-help text-ink-muted">
-              予定外の出来事があれば、短くメモできます。
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-1 text-body text-ink">
-              {data.interrupts.map((n) => (
-                <li key={n.id} className="flex gap-3">
-                  <span className="shrink-0 text-meta leading-(--text-body--line-height) text-ink-muted">
-                    {formatTime(n.at, data.timeZone)}
-                  </span>
-                  <span>
-                    {n.text}
-                    {n.minutes !== undefined && (
-                      <span className="text-ink-muted">
-                        {' '}
-                        · {formatHours(n.minutes / 60)}
-                      </span>
-                    )}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+            {data.rows.length === 0 ? (
+              <p className="text-body text-ink-muted">
+                まだありません。下の「今週の残り」から「今日へ」で入れられます。
+              </p>
+            ) : (
+              <ul className="flex flex-col border-t border-border-soft">
+                {data.rows.map((row) => (
+                  <li key={row.selection.id} data-selection={row.selection.id}>
+                    <TodayRow {...rowProps(row)} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
 
-        {/* Sticky above the tab bar under 768px (DESIGN.md Layout); last in
-            the column so that it stays at the bottom while scrolling. */}
+          {data.closed.length > 0 && (
+            <section
+              aria-labelledby="today-closed"
+              className="flex flex-col gap-2"
+            >
+              <h2 id="today-closed" className="text-subheading text-ink-muted">
+                今日はもうやらない
+              </h2>
+              <p className="text-help text-ink-muted">
+                明日から、今週の残りに戻ります。
+              </p>
+              <ul className="flex flex-col border-t border-border-soft">
+                {data.closed.map((row) => (
+                  <li key={row.selection.id} data-selection={row.selection.id}>
+                    <TodayRow {...rowProps(row)} />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {data.continuation.length > 0 && (
+            <section
+              aria-labelledby="today-continuation"
+              className="flex flex-col gap-2"
+            >
+              <h2 id="today-continuation" className="text-subheading text-ink">
+                昨日の続き
+              </h2>
+              <ul className="flex flex-col border-t border-border-soft">
+                {data.continuation.map((item) => (
+                  <li
+                    key={`${item.sprintTask.id}-${item.occurrence?.id ?? ''}`}
+                    data-item={item.sprintTask.id}
+                  >
+                    <WeekRow
+                      item={item}
+                      onOpen={() => openTask(item.task.id)}
+                      onEstimate={() => openEstimate(item.task.id)}
+                      onChoose={() => choose(item)}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          <section aria-labelledby="today-rest" className="flex flex-col gap-2">
+            <h2 id="today-rest" className="text-subheading text-ink">
+              今週の残り
+            </h2>
+            {data.rest.length === 0 ? (
+              <p className="text-body text-ink-muted">
+                今週の残りはありません。
+              </p>
+            ) : (
+              <ul className="flex flex-col border-t border-border-soft">
+                {data.rest.map((item) => (
+                  <li
+                    key={`${item.sprintTask.id}-${item.occurrence?.id ?? ''}`}
+                    data-item={item.sprintTask.id}
+                    data-occurrence={item.occurrence?.id}
+                  >
+                    <WeekRow
+                      item={item}
+                      onOpen={() => openTask(item.task.id)}
+                      onEstimate={() => openEstimate(item.task.id)}
+                      onChoose={() => choose(item)}
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {data.interrupts.length > 0 && (
+            <section
+              aria-labelledby="today-interrupts"
+              className="flex flex-col gap-2"
+            >
+              <h2 id="today-interrupts" className="text-subheading text-ink">
+                割り込み
+              </h2>
+              <ul className="flex flex-col gap-1 text-body text-ink">
+                {data.interrupts.map((n) => (
+                  <li key={n.id} data-interrupt={n.id}>
+                    <InterruptRow
+                      note={n}
+                      time={formatTime(n.at, data.timeZone)}
+                      onEdit={() => setEditingNote(n)}
+                      onDelete={() => deleteInterrupt(n)}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* The background under 768px, after the Tasks (#100). */}
+          {goals('today-goals-compact', 'medium:hidden')}
+        </div>
+
+        {/* Stuck to the bottom of the screen (above the tab bar under 768px,
+            DESIGN.md Layout); last in the column so that it stays at the
+            bottom while scrolling. A Toast shows above it, never over it. */}
         <div
+          ref={quickAddRef}
           className={cn(
             'sticky bottom-0 z-(--layer-sticky) -mx-4 mt-auto border-t border-border bg-canvas px-4 py-3',
             'medium:-mx-6 medium:px-6 wide:mx-0 wide:px-0',
@@ -456,38 +694,21 @@ function TodayView({ data }: { data: TodayData }) {
             onAdd={(title) =>
               actions.addToToday(
                 title,
-                quickArea === '' ? undefined : (quickArea as AreaId),
+                quickChoice === '' ? undefined : (quickChoice as AreaId),
               )
             }
             area={
-              <Field
-                label="追加する Task の領域"
-                hideLabel
-                className="shrink-0"
-              >
-                <Select
-                  value={quickArea}
-                  onChange={(e) => setQuickArea(e.currentTarget.value)}
-                >
-                  <option value="">領域なし</option>
-                  {data.areas.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
+              <AreaSelect
+                areas={data.areas}
+                value={quickChoice}
+                onChange={setQuickArea}
+                onNewArea={() => newArea.open(setQuickArea)}
+              />
             }
           />
+          {newArea.dialog}
         </div>
-      </div>
-
-      <aside
-        aria-label="今週の Goal の要約"
-        className="hidden w-pane-side shrink-0 pt-8 wide:block"
-      >
-        <div className="sticky top-8">{goals('today-goals-side')}</div>
-      </aside>
+      </DayColumns>
 
       {editingRow !== undefined && editing !== undefined && (
         <ActualTime
@@ -516,8 +737,27 @@ function TodayView({ data }: { data: TodayData }) {
       <InterruptSheet
         open={interrupting}
         onOpenChange={setInterrupting}
-        onSubmit={(text, minutes) => actions.noteInterrupt(text, minutes)}
+        onSubmit={noteInterrupt}
       />
+      {editingNote !== undefined && (
+        <InterruptSheet
+          key={editingNote.id}
+          open
+          onOpenChange={(open) => {
+            if (!open) setEditingNote(undefined);
+          }}
+          editing={{
+            text: editingNote.text,
+            ...(editingNote.minutes === undefined
+              ? {}
+              : { minutes: editingNote.minutes }),
+            time: formatTime(editingNote.at, data.timeZone),
+          }}
+          onSubmit={(text, minutes) =>
+            actions.editInterrupt(editingNote.id, text, minutes)
+          }
+        />
+      )}
 
       <Drawer
         open={openItem !== undefined}
@@ -532,18 +772,19 @@ function TodayView({ data }: { data: TodayData }) {
               item={openItem}
               areas={backlog.areas}
               timeZone={backlog.timeZone}
-              onClose={() => openTask(undefined)}
+              onClose={() => showTask(undefined)}
               onComplete={() => {
                 if (taskActions.completeTask(openItem.task.id)) {
-                  openTask(undefined);
+                  showTask(undefined);
                 }
               }}
               focusEstimate={estimateFocus.of(openItem.task.id)}
+              leaveRef={detail.ref}
             />
           )}
         </DrawerContent>
       </Drawer>
-    </div>
+    </>
   );
 }
 

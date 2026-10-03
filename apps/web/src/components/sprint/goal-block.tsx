@@ -4,20 +4,30 @@ import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { weekText } from '@/lib/week-text';
 
 // DESIGN.md Components › Goal. Sprint × Area: 「今週どんな状態にしたいか」.
 // A `border` rule on top, the heading (Area Indicator heading, the number of
-// Tasks and their time, an edit action), the Goal text in `goal` within
-// `measure-read`, then the Area's chosen Tasks. States: set / empty (「+
-// Goal を書く」 and that it is optional) / editing (`body-l` Textarea with
-// 保存 / キャンセル). A Goal is optional per Area; an Area without one is
-// never shown as a warning. No Card.
+// Tasks and their time), the Goal text in `goal` within `measure-read` with
+// its edit action right under it (#160), then the Area's chosen Tasks.
+// States: set / empty (「+ Goal を書く」, and while planning that it is
+// optional, #155) / editing (`body-l` Textarea with 保存 / キャンセル). A Goal
+// is optional per Area; an Area without one is never shown as a warning. An Area with neither a Goal
+// nor a Task is `bare`: its name and 「+ 目標を書く」 on one line, without the
+// note that it is optional (#161). No Card.
 
 type GoalBlockProps = {
   area: { name: string; color: AreaColor };
-  /** 「3件 · 8–10h」 */
+  /** 「3件 · 8〜10時間」 */
   summary?: string | undefined;
   goal?: string | undefined;
+  /** 「今週」「来週」, or 「Sprint N」: the week the Goal is for (#90). */
+  week: string;
+  /**
+   * An Area with no Goal and no Task: one line (the name and 「+ 目標を
+   * 書く」). Writing a Goal opens the form below it, as in any empty Area.
+   */
+  bare?: boolean | undefined;
   /** The heading level; the screen's h1 is followed by h2 by default. */
   level?: 2 | 3 | undefined;
   /** Saves the text; an empty text removes the Goal. Returns success. */
@@ -30,36 +40,33 @@ type GoalBlockProps = {
   /**
    * After confirm: the text at confirm (plannedText), shown beside the
    * current one when they differ; `null` when the Goal was written after
-   * confirm (「計画時にはなかった」).
+   * confirm (「確定したときにはなかった」).
    */
   planned?: string | null | undefined;
   children?: ReactNode;
   className?: string | undefined;
-  /**
-   * The heading row's own classes. Where blocks sit side by side, the caller
-   * gives it the button's height, so that a block without 編集 (no Goal) lines
-   * up with the rest.
-   */
-  headingRowClassName?: string | undefined;
 };
 
 function GoalBlock({
   area,
   summary,
   goal,
+  week,
+  bare = false,
   level = 2,
   onSave,
   removable = true,
   planned,
   children,
   className,
-  headingRowClassName,
 }: GoalBlockProps) {
   const Heading = level === 2 ? 'h2' : 'h3';
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(goal ?? '');
   const [error, setError] = useState<string | undefined>(undefined);
   const headingId = useId();
+  // The one-line form, until a Goal is being written.
+  const line = bare && !editing && goal === undefined;
   const openRef = useRef<HTMLButtonElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const backToOpen = useRef(false);
@@ -81,15 +88,11 @@ function GoalBlock({
       data-slot="goal-block"
       className={cn(
         'flex flex-col gap-3 border-t border-border pt-4',
+        line && 'gap-0 pt-2',
         className,
       )}
     >
-      <div
-        className={cn(
-          'flex flex-wrap items-center justify-between gap-2',
-          headingRowClassName,
-        )}
-      >
+      <div className={cn(line && 'flex flex-wrap items-center gap-x-3')}>
         <Heading id={headingId} className="flex items-center gap-2">
           <AreaIndicator
             name={area.name}
@@ -100,18 +103,18 @@ function GoalBlock({
             <span className="text-meta text-ink-muted">{summary}</span>
           )}
         </Heading>
-        {onSave !== undefined && !editing && goal !== undefined && (
+        {line && onSave !== undefined && (
           <Button
             ref={openRef}
             size="sm"
             variant="quiet"
-            aria-label={`Goal を編集: ${area.name}`}
+            aria-label={`目標を書く：${area.name}`}
             onClick={() => {
-              setText(goal);
+              setText('');
               setEditing(true);
             }}
           >
-            編集
+            + 目標を書く
           </Button>
         )}
       </div>
@@ -130,7 +133,7 @@ function GoalBlock({
             }
             if (!removable && text.trim() === '') {
               setError(
-                '確定した後の Goal は消せません。文を書いて保存してください',
+                '確定した後の目標は消せません。文を書いて保存してください',
               );
               // The field in error takes the focus (accessibility.md).
               requestAnimationFrame(() =>
@@ -144,11 +147,11 @@ function GoalBlock({
           }}
         >
           <Field
-            label="Goal（今週の終わりにどんな状態にしたいか）"
+            label={`目標（${weekText(week, 'の終わりにどんな状態にしたいか')}）`}
             necessity="optional"
             description={
               removable
-                ? '「〜な状態にする」「〜を終える」の形がおすすめです。空にすると Goal はなくなります'
+                ? '「〜な状態にする」「〜を終える」の形がおすすめです。空にすると目標はなくなります'
                 : '「〜な状態にする」「〜を終える」の形がおすすめです。確定した後は文を変えられますが、消せません'
             }
             error={error}
@@ -170,38 +173,54 @@ function GoalBlock({
           </div>
         </form>
       ) : goal !== undefined ? (
-        <div className="flex flex-col gap-1">
+        // 編集 under the text it changes, where 「+ 目標を書く」 is without one.
+        <div className="flex flex-col items-start gap-1">
           <p className="max-w-measure-read text-goal text-ink">{goal}</p>
           {planned === null && (
             <p className="text-meta text-ink-muted">
-              確定した後に書いた Goal です（計画時にはありませんでした）
+              確定した後に書いた目標です
             </p>
           )}
           {planned !== undefined && planned !== null && planned !== goal && (
             <p className="max-w-measure-read text-meta text-ink-muted">
-              計画時：「{planned}」
+              確定したとき：「{planned}」
             </p>
           )}
+          {onSave !== undefined && (
+            <Button
+              ref={openRef}
+              size="sm"
+              variant="quiet"
+              // The outline lines up with the Goal text's left edge, and
+              // the words are quieter than it: the Goal is what the block
+              // says (#242, #251).
+              className="text-ink-muted"
+              aria-label={`目標を編集：${area.name}`}
+              onClick={() => {
+                setText(goal);
+                setEditing(true);
+              }}
+            >
+              編集
+            </Button>
+          )}
         </div>
-      ) : (
+      ) : line ? null : (
         <div className="flex flex-col items-start gap-1">
           {onSave !== undefined && (
             <Button
               ref={openRef}
               size="sm"
               variant="quiet"
-              aria-label={`Goal を書く: ${area.name}`}
+              aria-label={`目標を書く：${area.name}`}
               onClick={() => {
                 setText('');
                 setEditing(true);
               }}
             >
-              + Goal を書く
+              + 目標を書く
             </Button>
           )}
-          <p className="text-help text-ink-muted">
-            この領域の Goal は任意です。タスクだけでも計画できます。
-          </p>
         </div>
       )}
 

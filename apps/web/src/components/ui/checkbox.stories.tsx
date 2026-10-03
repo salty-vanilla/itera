@@ -33,21 +33,21 @@ export const WithDescription: Story = {
 
 /**
  * ラベルを横に置かない場所（Backlog の行など）では、四角だけを使い、
- * aria-label で「今週に入れる: タスク名」と読ませる。
+ * aria-label で「今週に入れる：タスク名」と読ませる。
  */
 export const BareControl: Story = {
   render: () => (
     <div className="flex items-center gap-1 border-y border-border-soft">
-      <CheckboxControl aria-label="今週に入れる: 関連研究を読む" />
+      <CheckboxControl aria-label="今週に入れる：関連研究を読む" />
       <span className="text-task text-ink">関連研究を読む</span>
     </div>
   ),
 };
 
 const diffRows = [
-  ['add', '＋追加: 関連研究を読む'],
-  ['remove', '−除外: 発表資料の下書き'],
-  ['change', '→変更: 実験の再実行 3h → 5h'],
+  ['add', '＋追加：関連研究を読む'],
+  ['remove', '−除外：発表資料の下書き'],
+  ['change', '→変更：実験の再実行 3時間 → 5時間'],
 ] as const;
 
 /**
@@ -170,6 +170,6 @@ export const States: Story = {
 export const WithError: Story = {
   args: {
     label: '差分を反映する',
-    error: '反映する行を 1 つ以上選んでください',
+    error: '反映する行を 1つ以上選んでください',
   },
 };

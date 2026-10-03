@@ -34,6 +34,7 @@ import {
   type Task,
 } from '@itera/domain';
 import type { Clock, Records } from './records';
+import { weekOf, type WeekLabel } from './sprint-choice';
 
 export interface PlanningArea {
   /** `null` for Tasks without an Area (「領域なし」). */
@@ -50,8 +51,9 @@ export interface PlannedTask {
   /** Recurring: the occurrences included this week. */
   readonly occurrenceCount?: number;
   /**
-   * The suggestion the value comes from, when it does (「提案 3–5h / 今回は 5h
-   * で計画」): one occurrence's range for a recurring Task.
+   * The suggestion the value comes from, when it does (the row says
+   * 「5時間（提案の多めの値）」, #250): one occurrence's range for a recurring
+   * Task.
    */
   readonly suggestion?: { readonly lo: number; readonly hi: number };
   /** The goalLink the Task will have once confirmed (`goalLinkAtConfirm`). */
@@ -82,6 +84,12 @@ export interface CandidateRow {
   readonly value: PlanningValue;
   /** 持ち越し N回（Sprint M から）(F25, F26). */
   readonly carry?: { readonly count: number; readonly fromSprint: number };
+  /**
+   * 「Sprint N で進行中」: the Task is still unfinished in the running Sprint
+   * (#89). Choosing it stays possible; when that Sprint enters Review, the
+   * choice is linked to its carry-over (F35).
+   */
+  readonly running?: { readonly sprint: number };
 }
 
 export interface RecurringCandidate {
@@ -94,14 +102,28 @@ export interface PlanningData {
   readonly sprint: Sprint;
   /** 「Sprint 14」 (F25). */
   readonly number: number;
+  /**
+   * 「今週」, or 「来週」 while this week runs (#90): the words of the
+   * screen follow it.
+   */
+  readonly week?: WeekLabel;
   readonly today: LocalDate;
   readonly timeZone: Records['user']['timeZone'];
   /** Areas to plan with, in the person's order, then 領域なし. */
   readonly areas: readonly PlanningArea[];
+  /** The Areas a new Task can be added to: not archived (Backlog, Today). */
+  readonly addAreas: readonly {
+    readonly id: AreaId;
+    readonly name: string;
+    readonly color: AreaColor;
+  }[];
   /** 選ぶ: the Backlog in groups. */
   readonly candidates: {
     readonly carriedOver: readonly CandidateRow[];
+    readonly overdue: readonly CandidateRow[];
     readonly dueSoon: readonly CandidateRow[];
+    /** The last day 期限が近い reaches (shown in its heading). */
+    readonly dueSoonUntil: LocalDate;
     readonly recurring: readonly RecurringCandidate[];
     readonly others: readonly CandidateRow[];
   };
@@ -121,6 +143,12 @@ export interface PlanningData {
     readonly applied: boolean;
     /** What applying it does to the chosen Tasks (`criterionEffect`). */
     readonly effect: CriterionEffect;
+    /**
+     * Whether any chosen Task is one it acts on (`effect.count` > 0). The
+     * screens show the criterion only then (#161); whether it is applied at
+     * confirm is not changed by it.
+     */
+    readonly hasTarget: boolean;
   };
   /**
    * Why 確定 is not possible yet, if it is not. Editing the draft stays
@@ -129,6 +157,13 @@ export interface PlanningData {
    * archived and must leave the week first.
    */
   readonly blockers: readonly ('previousRetroOpen' | 'inactiveTasks')[];
+  /** The previous Sprint while its Retro is open: where 振り返り opens. */
+  readonly previous?: {
+    readonly number: number;
+    /** Its last day, from which its Retro can start (F21). */
+    readonly end: LocalDate;
+    readonly state: Sprint['state'];
+  };
 }
 
 const NO_AREA: PlanningArea = { id: null, name: '領域なし', color: 'none' };
@@ -178,6 +213,7 @@ export function planningData(
 
   // 選ぶ
   const groups = planningCandidates(sprint, {
+    today: clock.today,
     tasks,
     sprints: records.sprints,
     occurrences: records.occurrences,
@@ -185,6 +221,11 @@ export function planningData(
   const previous = records.sprints.find(
     (s) => s.id === sprint.previousSprintId,
   );
+  // The Sprint still running is the one before this draft; its unfinished
+  // Tasks are linked when it enters Review (F35).
+  const running = previous?.state === 'active' ? previous : undefined;
+  const runningNumber =
+    running === undefined ? undefined : sprintNumber(running, records.sprints);
   const row = (task: Task): CandidateRow => {
     const chosen = sprint.tasks.find(
       (t) => t.taskId === task.id && t.outcome === 'draft',
@@ -195,6 +236,9 @@ export function planningData(
     const area = areaOf(task);
     const carry = carryOverOf(task.id, records.sprints);
     const carryFrom = records.sprints.find((s) => s.id === carry?.fromSprintId);
+    const unfinished = running?.tasks.some(
+      (t) => t.taskId === task.id && t.outcome === 'planned',
+    );
     return {
       task,
       ...(chosen === undefined ? {} : { chosen }),
@@ -209,6 +253,9 @@ export function planningData(
               fromSprint: sprintNumber(carryFrom, records.sprints),
             },
           }),
+      ...(unfinished === true && runningNumber !== undefined
+        ? { running: { sprint: runningNumber } }
+        : {}),
     };
   };
 
@@ -257,16 +304,27 @@ export function planningData(
     scope?.kind === 'area'
       ? records.areas.find((a) => a.id === scope.areaId)?.name
       : undefined;
+  const effect =
+    criterion === undefined
+      ? undefined
+      : criterionEffect(sprint, { tasks, now, criterion });
 
   return {
     sprint,
     number: sprintNumber(sprint, records.sprints),
+    ...weekOf(sprint, records, clock),
     today: clock.today,
     timeZone: records.user.timeZone,
     areas,
+    addAreas: records.areas
+      .filter((a) => !a.archived)
+      .toSorted((a, b) => a.order - b.order)
+      .map((a) => ({ id: a.id, name: a.name, color: a.color })),
     candidates: {
       carriedOver: groups.carriedOver.map(row),
+      overdue: groups.overdue.map(row),
       dueSoon: groups.dueSoon.map(row),
+      dueSoonUntil: groups.dueSoonUntil,
       recurring: groups.recurring.map((r) => {
         const area = areaOf(r.task);
         return { ...r, ...(area === undefined ? {} : { area }) };
@@ -278,7 +336,7 @@ export function planningData(
     totals,
     drivers: capacityDrivers(sprint, valueOptions),
     ...(improvement === undefined ? {} : { improvement }),
-    ...(criterion === undefined
+    ...(criterion === undefined || effect === undefined
       ? {}
       : {
           criterion: {
@@ -286,7 +344,8 @@ export function planningData(
             view: criterionView(criterion.policy, tasks, now),
             ...(scopeArea === undefined ? {} : { areaName: scopeArea }),
             applied: options.applyCriterion,
-            effect: criterionEffect(sprint, { tasks, now, criterion }),
+            effect,
+            hasTarget: effect.count > 0,
           },
         }),
     blockers: [
@@ -297,5 +356,14 @@ export function planningData(
         ? (['inactiveTasks'] as const)
         : []),
     ],
+    ...(previous === undefined || previous.state === 'closed'
+      ? {}
+      : {
+          previous: {
+            number: sprintNumber(previous, records.sprints),
+            end: previous.end,
+            state: previous.state,
+          },
+        }),
   };
 }

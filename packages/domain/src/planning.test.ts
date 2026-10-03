@@ -5,6 +5,8 @@ import { presentSuggestion, setEstimate } from './estimate';
 import type { Occurrence } from './occurrence';
 import {
   carryOverCandidates,
+  carryOverPlaces,
+  carryOverTasks,
   confirmSprint,
   excludeFromPlan,
   includeInPlan,
@@ -229,6 +231,59 @@ describe('startPlanning', () => {
       outcome: 'draft',
     });
     expect(carryOverCandidates(previous, chosen, [paperTask()])).toEqual([]);
+  });
+
+  it('invariant 20: counts where the carry-overs are, without moving them (F35)', () => {
+    const carried = (n: number): SprintTask => ({
+      id: id(`st-old-${n}`),
+      taskId: id(`task-paper-${n}`),
+      origin: 'planning',
+      addedAt: ctx.now,
+      goalLink: 'linked',
+      outcome: 'carriedOver',
+    });
+    const previous = sprintFixture('2026-09-21', 'review', {
+      tasks: [carried(1), carried(2), carried(3), carried(4)],
+    });
+    const tasks = [
+      paperTask('task-paper-1'),
+      paperTask('task-paper-2'),
+      unwrap(domain.completeTask(paperTask('task-paper-3'), ctx)),
+      unwrap(archiveTask(paperTask('task-paper-4'), ctx)),
+    ];
+    // Before the next Planning: all still open ones are candidates.
+    expect(carryOverPlaces(previous, undefined, tasks)).toEqual({
+      total: 4,
+      inNext: 0,
+      candidates: 2,
+      completed: 1,
+      archived: 1,
+    });
+    // Per Task, in the Sprint's order, with the same places.
+    expect(carryOverTasks(previous, undefined, tasks)).toEqual([
+      { taskId: 'task-paper-1', place: 'candidate' },
+      { taskId: 'task-paper-2', place: 'candidate' },
+      { taskId: 'task-paper-3', place: 'completed' },
+      { taskId: 'task-paper-4', place: 'archived' },
+    ]);
+    // The next Sprint chose one before Review (F35).
+    const { sprint } = plan([previous]);
+    const chosen = unwrap(
+      selectTask(sprint, { sprintTaskId: id('st-new'), task: tasks[0]! }, ctx),
+    );
+    expect(carryOverPlaces(previous, chosen, tasks)).toMatchObject({
+      inNext: 1,
+      candidates: 1,
+    });
+    expect(carryOverCandidates(previous, chosen, tasks)).toEqual([carried(2)]);
+    // A Sprint that does not follow it takes none in.
+    expect(
+      carryOverPlaces(
+        previous,
+        { ...chosen, previousSprintId: id('sprint-other') },
+        tasks,
+      ).inNext,
+    ).toBe(0);
   });
 });
 
@@ -622,6 +677,31 @@ describe('confirmSprint', () => {
       ),
     );
     expect(none).not.toHaveProperty('criterionUse');
+  });
+
+  it('F42: a criterion that acts on no planned value is not applied', () => {
+    // Only a work Task: the research criterion covers nothing.
+    const job = unwrap(
+      updateTask(newTask('面談の設計', 'task-job'), { areaId: workId }, ctx),
+    );
+    const workOnly = unwrap(
+      confirm(withTask(plan().sprint, job), { tasks: [job] }),
+    );
+    expect(workOnly.criterionUse).toEqual({
+      criterionId: 'criterion-1',
+      appliedAtConfirm: false,
+    });
+
+    // A research Task with an Estimate has no range for it to act on.
+    const estimated = unwrap(setEstimate(paperTask(), 4, ctx));
+    const pointOnly = confirm(withTask(plan().sprint, estimated), {
+      tasks: [estimated],
+    });
+    expect(unwrap(pointOnly).criterionUse?.appliedAtConfirm).toBe(false);
+    expect(pointOnly.ok && pointOnly.value.activities[0]).toMatchObject({
+      kind: 'sprintConfirmed',
+      criterion: { criterionId: 'criterion-1', appliedAtConfirm: false },
+    });
   });
 
   it('cannot apply a criterion when none is active', () => {

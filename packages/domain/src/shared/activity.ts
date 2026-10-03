@@ -104,9 +104,26 @@ export type Activity =
       readonly kind: 'recurrenceRuleCreated' | 'recurrenceRuleChanged';
       readonly taskId: TaskId;
       readonly ruleId: RecurrenceRuleId;
-      /** The version this entry added and the day it takes effect. */
+      /**
+       * The version this entry added or replaced (the one gone back to, when
+       * a replacement drops it, F39) and the day the change takes effect.
+       */
       readonly version: number;
       readonly effectiveFrom: LocalDate;
+    })
+  | (ActivityBase & {
+      /** F41: the version that now ends, and its last day. */
+      readonly kind: 'recurrenceRuleEnded';
+      readonly taskId: TaskId;
+      readonly ruleId: RecurrenceRuleId;
+      readonly version: number;
+      readonly effectiveTo: LocalDate;
+    })
+  | (ActivityBase & {
+      /** F41: a rule with no occurrence left, taken off; the Task is one-off again. */
+      readonly kind: 'recurrenceRuleRemoved';
+      readonly taskId: TaskId;
+      readonly ruleId: RecurrenceRuleId;
     })
   | (ActivityBase & {
       readonly kind:
@@ -147,9 +164,27 @@ export type Activity =
       readonly via: SprintTaskAddedVia;
     })
   | (ActivityBase & {
-      /** Unselected in Planning (draft), removed after confirm, or restored (F13). */
+      /**
+       * A draft chosen on its own linked to its carry-over when the previous
+       * Sprint entered Review (F35). Always the system's record.
+       */
+      readonly kind: 'sprintTaskCarryLinked';
+      readonly sprintId: SprintId;
+      readonly sprintTaskId: SprintTaskId;
+      readonly taskId: TaskId;
+      /** The previous Sprint's carried-over SprintTask. */
+      readonly carriedFrom: SprintTaskId;
+    })
+  | (ActivityBase & {
+      /**
+       * Unselected in Planning (draft), removed after confirm, restored
+       * (F13), or a mid-Sprint addition undone with its record (F40).
+       */
       readonly kind:
-        'sprintTaskUnselected' | 'sprintTaskRemoved' | 'sprintTaskRestored';
+        | 'sprintTaskUnselected'
+        | 'sprintTaskRemoved'
+        | 'sprintTaskRestored'
+        | 'sprintTaskAddUndone';
       readonly sprintId: SprintId;
       readonly sprintTaskId: SprintTaskId;
       readonly taskId: TaskId;
@@ -187,7 +222,10 @@ export type Activity =
         | 'todayBacklogCompletionUndone'
         | 'todayPaused'
         | 'todayDeferred'
+        /** 見送り・外すを、その日のうちに取り消した (F37). */
+        | 'todayDeferUndone'
         | 'todayRemoved'
+        | 'todayRemoveUndone'
         | 'todaySkipped'
         | 'todaySkipUndone'
         | 'todayUnresolved';
@@ -211,7 +249,11 @@ export type Activity =
       readonly date: LocalDate;
     })
   | (ActivityBase & {
-      readonly kind: 'interruptNoted';
+      readonly kind:
+        | 'interruptNoted'
+        | 'interruptEdited'
+        | 'interruptDeleted'
+        | 'interruptRestored';
       readonly sprintId: SprintId;
       readonly interruptId: InterruptNoteId;
     })

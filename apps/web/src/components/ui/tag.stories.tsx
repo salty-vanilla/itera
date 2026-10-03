@@ -35,7 +35,7 @@ export const Tones: Story = {
       <dt className="text-label text-ink-muted">neutral</dt>
       <dd className="flex gap-2">
         <Tag icon={Info}>同期中</Tag>
-        <Tag icon={Info}>次の Sprint で試す</Tag>
+        <Tag icon={Info}>次に試す</Tag>
       </dd>
       <dt className="text-label text-ink-muted">warning</dt>
       <dd className="flex gap-2">
@@ -59,8 +59,8 @@ export const Tones: Story = {
 };
 
 /**
- * danger は保存・同期の失敗だけ。期限超過は Tag にせず、Task Metadata の文字
- * （circle-alert＋「2日超過」）で示す。Goal の自己判定「できなかった」・持ち越し・
+ * danger は保存・同期の失敗だけ。期限切れは Tag にせず、Task Metadata の文字
+ * （circle-alert＋「2日過ぎ」）で示す。Goal の自己判定「できなかった」・持ち越し・
  * 見送りは danger にも warning にもしない（DESIGN.md Colors）。自己判定の
  * アイコンは Retro の最初の実装 Issue で決めるので、ここには例を置かない。
  * 持ち越し・繰り返し・期限・Estimate・Area は Tag にしない。1 行に 3 つ以上並べない。

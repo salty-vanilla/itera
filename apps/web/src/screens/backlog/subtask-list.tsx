@@ -1,27 +1,52 @@
 import type { Subtask, Task } from '@itera/domain';
-import { useRef, useState } from 'react';
+import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { Button } from '@/components/ui/button';
 import { CheckboxControl } from '@/components/ui/checkbox';
+import { DurationField } from '@/components/ui/duration-field';
 import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
+import {
+  DURATION_ERROR,
+  EMPTY_DURATION,
+  hoursText,
+  readMinutes,
+  sameMinutes,
+  type DurationText,
+} from '@/lib/duration-text';
 import { useTaskActions } from '@/store/use-task-actions';
 
 // Subtasks (PRD §6): add, check off, and give each an Estimate. They take
 // effect at once. A subtask without an Estimate is counted, not added, in
 // the sum (F11), which the time basis choice shows.
 
-function parseHours(text: string): number | null | 'invalid' {
-  if (text.trim() === '') return null;
-  const hours = Number(text);
-  return Number.isFinite(hours) && hours > 0 ? hours : 'invalid';
+function parseHours(text: DurationText): number | null | 'invalid' {
+  const minutes = readMinutes(text);
+  if (minutes === undefined) return null;
+  return minutes === null || minutes === 0 ? 'invalid' : minutes / 60;
 }
 
-function SubtaskList({ task }: { task: Task }) {
+function SubtaskList({
+  task,
+  pendingRef,
+}: {
+  task: Task;
+  /**
+   * For the Task detail's close (Issue #95): the field holding a subtask
+   * typed but not added, or null.
+   */
+  pendingRef?: Ref<() => HTMLElement | null> | undefined;
+}) {
   const actions = useTaskActions();
   const [title, setTitle] = useState('');
-  const [hours, setHours] = useState('');
+  const [hours, setHours] = useState(EMPTY_DURATION);
   const [error, setError] = useState<string>();
+  const titleRef = useRef<HTMLInputElement>(null);
   const hoursRef = useRef<HTMLInputElement>(null);
+  useImperativeHandle(pendingRef, () => () => {
+    if (title.trim() !== '') return titleRef.current;
+    if (readMinutes(hours) !== undefined) return hoursRef.current;
+    return null;
+  });
 
   return (
     <section aria-labelledby="subtasks-heading" className="flex flex-col gap-2">
@@ -35,15 +60,17 @@ function SubtaskList({ task }: { task: Task }) {
           ))}
         </ul>
       )}
+      {/* The title on a line of its own, the time and 追加 under it, so
+          the title is not cut short in the detail's width (#252). */}
       <form
-        className="flex flex-wrap items-start gap-2"
+        className="flex flex-col gap-2"
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
           const parsed = parseHours(hours);
           if (title.trim() === '') return;
           if (parsed === 'invalid') {
-            setError('0 より大きい数で入力してください（例: 0.5）');
+            setError(DURATION_ERROR);
             // Focus goes to the field in error (accessibility.md).
             hoursRef.current?.focus();
             return;
@@ -56,33 +83,29 @@ function SubtaskList({ task }: { task: Task }) {
           );
           if (ok) {
             setTitle('');
-            setHours('');
+            setHours(EMPTY_DURATION);
           }
         }}
       >
         <Field label="サブタスクを追加" hideLabel className="min-w-0 flex-1">
           <TextInput
+            ref={titleRef}
             value={title}
             placeholder="サブタスクのタイトル"
             onChange={(e) => setTitle(e.currentTarget.value)}
           />
         </Field>
-        <Field
-          label="サブタスクの Estimate（時間、任意）"
-          hideLabel
-          error={error}
-          className="w-1/4 min-w-16 shrink-0"
-        >
-          <TextInput
-            inputMode="decimal"
-            suffix="h"
-            ref={hoursRef}
-            placeholder="任意"
+        <div className="flex items-start gap-2">
+          <DurationField
+            label="サブタスクの見積もり（任意）"
+            hideLabel
+            error={error}
             value={hours}
-            onChange={(e) => setHours(e.currentTarget.value)}
+            onChange={setHours}
+            hoursProps={{ ref: hoursRef }}
           />
-        </Field>
-        <Button type="submit">追加</Button>
+          <Button type="submit">追加</Button>
+        </div>
       </form>
     </section>
   );
@@ -90,28 +113,28 @@ function SubtaskList({ task }: { task: Task }) {
 
 function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
   const actions = useTaskActions();
-  const saved = subtask.estimate === undefined ? '' : String(subtask.estimate);
+  const saved = hoursText(subtask.estimate);
   const [hours, setHours] = useState(saved);
   const [error, setError] = useState<string>();
 
   function commit() {
     const parsed = parseHours(hours);
     if (parsed === 'invalid') {
-      setError('0 より大きい数で入力してください（例: 0.5）');
+      setError(DURATION_ERROR);
       return;
     }
     setError(undefined);
-    if ((parsed ?? undefined) === subtask.estimate) return;
+    if (sameMinutes(readMinutes(hours) ?? undefined, subtask.estimate)) return;
     if (!actions.setSubtaskEstimate(task.id, subtask.id, parsed))
       setHours(saved);
   }
 
   return (
-    <li className="flex items-start gap-2 border-b border-border-soft py-2">
+    <li className="flex flex-wrap items-start gap-2 border-b border-border-soft py-2">
       <span className="grid size-target-touch shrink-0 place-items-center medium:size-target-min">
         <CheckboxControl
           checked={subtask.done}
-          aria-label={`完了: ${subtask.title}`}
+          aria-label={`完了：${subtask.title}`}
           onCheckedChange={(done) =>
             actions.setSubtaskDone(task.id, subtask.id, done)
           }
@@ -126,28 +149,22 @@ function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
       >
         {subtask.title}
       </span>
-      <Field
-        label={`Estimate（時間）: ${subtask.title}`}
+      {/* Compact: under the title, from the checkbox's edge (#252). */}
+      <DurationField
+        label={`見積もり：${subtask.title}`}
         hideLabel
+        size="sm"
         error={error}
-        className="w-1/4 min-w-16 shrink-0"
-      >
-        <TextInput
-          size="sm"
-          inputMode="decimal"
-          suffix="h"
-          placeholder="未見積"
-          value={hours}
-          onChange={(e) => setHours(e.currentTarget.value)}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              commit();
-            }
-          }}
-        />
-      </Field>
+        className="basis-full pl-[calc(var(--spacing-target-touch)+var(--spacing-2))] medium:basis-auto medium:pl-0"
+        value={hours}
+        onChange={setHours}
+        // Saved on leaving it, like the Task detail's own fields: a value
+        // left in error keeps the detail open (Issue #95). Empty says it
+        // has none; the sum above counts it (#241).
+        onCommit={commit}
+        hoursProps={{ 'data-detail-field': true }}
+        minutesProps={{ 'data-detail-field': true }}
+      />
     </li>
   );
 }

@@ -62,19 +62,19 @@ function onReview(
 export const assess = (areaId: AreaId, assessment: SelfAssessment | null) =>
   onReview((sprint, ctx) => assessGoal(sprint, { areaId, assessment }, ctx));
 
-/** 気になる印をつける / 外す. */
+/** 振り返りに使う印をつける / 外す. */
 export const pin = (target: RetroPin) =>
   onReview((sprint, ctx) => togglePin(sprint, { pin: target }, ctx));
 
-/** 気になったこと (optional). */
+/** 気づいたこと (optional). */
 export const reflect = (text: string) =>
   onReview((sprint, ctx) => setReflection(sprint, { text }, ctx));
 
-/** 改善策として確定: one natural-language text (invariant 38). */
+/** 次に試すことを確定: one natural-language text (invariant 38). */
 export const improve = (text: string) =>
   onReview((sprint, ctx) => setImprovement(sprint, { text }, ctx));
 
-/** 計画基準にもする: a draft criterion from the improvement. */
+/** 計画のルールにもする: a draft criterion from the improvement. */
 export const draft =
   (policy: CriterionPolicy): Change =>
   (records, ctx) => {

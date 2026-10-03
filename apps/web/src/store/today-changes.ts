@@ -2,21 +2,24 @@
 // (and the system's start of a day). Each calls `@itera/domain` commands
 // only. Screens go through `useTodayActions` (ADR 0005).
 import {
-  activeCriterion,
   addToToday,
   completeSelection,
   createTask,
   deferSelection,
-  enterReview,
+  deleteInterrupt,
+  editInterrupt,
   noteInterrupt,
   pauseSelection,
   recordActualTime,
   removeFromToday,
+  restoreInterrupt,
   selectForToday,
   skipSelection,
   startDay,
   startSelection,
   undoCompleteSelection,
+  undoDeferSelection,
+  undoRemoveFromToday,
   undoSkipSelection,
   updateTask,
   type Activity,
@@ -24,6 +27,8 @@ import {
   type CommandResult,
   type DailySelection,
   type DailySelectionId,
+  type InterruptNote,
+  type InterruptNoteId,
   type Occurrence,
   type OccurrenceId,
   type Result,
@@ -40,6 +45,8 @@ import {
   type Changed,
 } from './record-store';
 import type { Records } from './records';
+import { reviewSprint } from './review-changes';
+import { midSprintAddition } from './task-changes';
 import { activeSprintOf } from './today-view';
 
 function active(records: Records): Result<Sprint> {
@@ -162,7 +169,19 @@ export const defer = (selectionId: DailySelectionId): Change =>
 export const remove = (selectionId: DailySelectionId): Change =>
   onActive((sprint, ctx) => removeFromToday(sprint, { selectionId }, ctx));
 
-/** 今日はここまで, with the day's actual hours if given. */
+/** 見送り・今週の残りに戻したのを取り消す: back to 今日やる, today only (F37). */
+export const undoClose = (selectionId: DailySelectionId): Change =>
+  onActive((sprint, ctx) => {
+    const selection = find(sprint.dailySelections, selectionId, 'Selection');
+    if (!selection.ok) return selection;
+    const undo =
+      selection.value.resolution === 'removed'
+        ? undoRemoveFromToday
+        : undoDeferSelection;
+    return undo(sprint, { selectionId, today: ctx.today }, ctx);
+  });
+
+/** 今日は中断する, with the day's actual hours if given. */
 export const pause = (selectionId: DailySelectionId, hours?: number): Change =>
   onActive((sprint, ctx) =>
     pauseSelection(
@@ -233,7 +252,7 @@ export const skip = (selectionId: DailySelectionId): Change =>
 export const undoSkip = (selectionId: DailySelectionId): Change =>
   withOccurrence(undoSkipSelection, selectionId);
 
-/** 実績を残す, after completing or pausing (append-only). */
+/** かかった時間を記録 (実績), after completing or pausing (append-only). */
 export const recordActual = (
   selectionId: DailySelectionId,
   hours: number,
@@ -274,6 +293,28 @@ export const interrupt = (text: string, minutes?: number): Change =>
     ),
   );
 
+/** 割り込みを編集: its note and minutes; the time stays (F38). */
+export const editNote = (
+  id: InterruptNoteId,
+  text: string,
+  minutes?: number,
+): Change =>
+  onActive((sprint, ctx) =>
+    editInterrupt(
+      sprint,
+      { id, text, ...(minutes === undefined ? {} : { minutes }) },
+      ctx,
+    ),
+  );
+
+/** 割り込みを消す (F38). */
+export const deleteNote = (id: InterruptNoteId): Change =>
+  onActive((sprint, ctx) => deleteInterrupt(sprint, { id }, ctx));
+
+/** 元に戻す after 割り込みを消す: the same note, in its place (F38). */
+export const restoreNote = (note: InterruptNote): Change =>
+  onActive((sprint, ctx) => restoreInterrupt(sprint, { note }, ctx));
+
 /**
  * Today's quick add: a new Task, added to the Sprint and chosen for today
  * in one operation (invariant 26).
@@ -298,16 +339,10 @@ export function addAndChoose(
       task = placed.value.record;
       activities.push(...placed.value.activities);
     }
-    const criterion = activeCriterion(records.criteria);
     const added = addToToday(
       sprint.value,
       {
-        sprintTaskId: ctx.newId('SprintTask'),
-        task,
-        areas: records.areas,
-        ...(criterion === undefined
-          ? {}
-          : { criterion: { id: criterion.id, policy: criterion.policy } }),
+        ...midSprintAddition(records, task, ctx),
         via: 'today',
         selectionId: ctx.newId('DailySelection'),
         date: ctx.today,
@@ -329,12 +364,5 @@ export function addAndChoose(
 export const beginRetro = (): Change => (records, ctx) => {
   const sprint = active(records);
   if (!sprint.ok) return sprint;
-  return changed(
-    enterReview(
-      sprint.value,
-      { today: ctx.today, occurrences: records.occurrences },
-      ctx,
-    ),
-    (next) => ({ sprints: [next.sprint], occurrences: next.occurrences }),
-  );
+  return reviewSprint(sprint.value)(records, ctx);
 };

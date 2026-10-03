@@ -25,6 +25,7 @@ import type {
   PlanningCriterionId,
   SprintId,
   SprintTaskId,
+  TaskId,
 } from './shared/ids';
 import { omit } from './shared/record';
 import { err } from './shared/result';
@@ -244,16 +245,81 @@ export function carryOverCandidates(
   tasks: readonly Task[],
 ): readonly SprintTask[] {
   if (sprint.previousSprintId !== previous.id) return [];
-  return previous.tasks.filter((t) => {
-    const task = tasks.find((x) => x.id === t.taskId);
-    return (
-      t.outcome === 'carriedOver' &&
-      task !== undefined &&
-      task.lifecycle === 'active' &&
-      !isRecurring(task) &&
-      !sprint.tasks.some((s) => s.taskId === t.taskId)
-    );
+  return previous.tasks.filter(
+    (t) => carryOverPlace(t, sprint, tasks) === 'candidate',
+  );
+}
+
+/** Where a Sprint's carried-over Tasks are now, by count (Retro, #107). */
+export interface CarryOverPlaces {
+  readonly total: number;
+  /** Already chosen for the next Sprint, being planned (F35). */
+  readonly inNext: number;
+  /** Offered as the next Planning's 「持ち越し」 (carryOverCandidates). */
+  readonly candidates: number;
+  /** Completed or archived since, so no longer offered. */
+  readonly completed: number;
+  readonly archived: number;
+}
+
+/** Where a carried-over Task is: the next Sprint, offered, or closed. */
+export type CarryOverPlace = 'inNext' | 'candidate' | 'completed' | 'archived';
+
+/** One carried-over Task and where it is now (Retro 引き継ぐ, #169). */
+export interface CarryOverTask {
+  readonly taskId: TaskId;
+  readonly place: CarryOverPlace;
+}
+
+/**
+ * `sprint`'s carried-over Tasks, in the Sprint's order, each with its place:
+ * in `next` (the Sprint after it, if Planning has started), still offered as
+ * its candidates, or closed since. Recurring Tasks have none. Nothing moves
+ * them (invariant 20).
+ */
+export function carryOverTasks(
+  sprint: Sprint,
+  next: Sprint | undefined,
+  tasks: readonly Task[],
+): readonly CarryOverTask[] {
+  const following = next?.previousSprintId === sprint.id ? next : undefined;
+  return sprint.tasks.flatMap((t) => {
+    const place = carryOverPlace(t, following, tasks);
+    return place === undefined ? [] : [{ taskId: t.taskId, place }];
   });
+}
+
+/** Where `sprint`'s carried-over Tasks are, by count (see carryOverTasks). */
+export function carryOverPlaces(
+  sprint: Sprint,
+  next: Sprint | undefined,
+  tasks: readonly Task[],
+): CarryOverPlaces {
+  const places = carryOverTasks(sprint, next, tasks).map((t) => t.place);
+  const count = (place: (typeof places)[number]) =>
+    places.filter((p) => p === place).length;
+  return {
+    total: places.length,
+    inNext: count('inNext'),
+    candidates: count('candidate'),
+    completed: count('completed'),
+    archived: count('archived'),
+  };
+}
+
+/** One carried-over SprintTask's place; the candidates' one condition. */
+function carryOverPlace(
+  carried: SprintTask,
+  next: Sprint | undefined,
+  tasks: readonly Task[],
+): CarryOverPlace | undefined {
+  if (carried.outcome !== 'carriedOver') return undefined;
+  const task = tasks.find((x) => x.id === carried.taskId);
+  if (task === undefined || isRecurring(task)) return undefined;
+  if (next?.tasks.some((s) => s.taskId === carried.taskId) === true) {
+    return 'inNext';
+  }
+  return task.lifecycle === 'active' ? 'candidate' : task.lifecycle;
 }
 
 /**
@@ -513,7 +579,8 @@ export interface ConfirmSprintInput {
  * no other Sprint is active (invariant 11). Copies what may change later:
  * each SprintTask's plan (invariant 16), Goal texts, available hours and
  * Area names (invariant 18), and how the active criterion was treated
- * (invariant 36). A linked SprintTask whose Area has no Goal becomes
+ * (invariant 36). The criterion counts as applied only if it acted on a
+ * planned value (F42). A linked SprintTask whose Area has no Goal becomes
  * unlinked.
  */
 export function confirmSprint(
@@ -546,6 +613,9 @@ export function confirmSprint(
   const criterion = input.applyCriterion ? input.criterion : undefined;
 
   const planned: SprintTask[] = [];
+  // Whether the criterion acted on any planned value: if it covers none of
+  // the chosen Tasks, it is not applied (F42).
+  let criterionActed = false;
   for (const sprintTask of sprint.tasks) {
     if (sprintTask.outcome !== 'draft') {
       planned.push(sprintTask);
@@ -562,11 +632,13 @@ export function confirmSprint(
         `Task ${task.id} is ${task.lifecycle}; unselect it before confirming.`,
       );
     }
+    const planSnapshot = planSnapshotOf(task, sprintTask, criterion, ctx);
+    if (planSnapshot.value.criterionApplied) criterionActed = true;
     planned.push({
       ...sprintTask,
       outcome: 'planned',
       goalLink: goalLinkAtConfirm(sprint, sprintTask, task),
-      planSnapshot: planSnapshotOf(task, sprintTask, criterion, ctx),
+      planSnapshot,
     });
   }
 
@@ -586,7 +658,7 @@ export function confirmSprint(
       ? undefined
       : {
           criterionId: input.criterion.id,
-          appliedAtConfirm: input.applyCriterion,
+          appliedAtConfirm: criterionActed,
         };
 
   const confirmed: Sprint = {

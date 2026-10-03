@@ -1,4 +1,5 @@
 import type {
+  Activity,
   AreaId,
   Estimate,
   EstimateSuggestionId,
@@ -14,6 +15,11 @@ import { useRecordStore } from './store-provider';
 import * as changes from './task-changes';
 import { useRun } from './use-run';
 
+type RuleActivity = Extract<
+  Activity,
+  { kind: 'recurrenceRuleCreated' | 'recurrenceRuleChanged' }
+>;
+
 /**
  * The person's operations on Tasks, one named function each (ADR 0005 API
  * への移行: this list becomes the API's operations). Each returns whether
@@ -24,8 +30,11 @@ export function useTaskActions() {
   const store = useRecordStore();
   return useMemo(
     () => ({
-      addTask: (title: string, areaId?: AreaId) =>
-        run(changes.addTask(title, areaId)),
+      /** The new Task's ID, or `undefined` when it did not go through. */
+      addTask: (title: string, areaId?: AreaId): TaskId | undefined =>
+        run(changes.addTask(title, areaId))
+          ? store.getSnapshot().records.tasks.at(-1)?.id
+          : undefined,
       saveTask: (
         taskId: TaskId,
         update: TaskAttributeUpdate,
@@ -64,25 +73,48 @@ export function useTaskActions() {
       completeTask: (taskId: TaskId) => run(changes.complete(taskId)),
       undoCompleteTask: (taskId: TaskId) => run(changes.undoComplete(taskId)),
       addToToday: (taskId: TaskId) => run(changes.toToday(taskId)),
+      addToWeek: (taskId: TaskId) => run(changes.toWeek(taskId)),
+      undoAddToWeek: (taskId: TaskId) => run(changes.undoToWeek(taskId)),
       /**
        * Makes the Task recurring or changes its rule. `effectiveFrom` is the
-       * new version's first day (「次の Sprint から反映」), absent when the
-       * pattern was already the rule's (nothing changed).
+       * day the change takes effect (「次の Sprint から反映」), absent when
+       * the pattern was already the rule's (nothing changed). It is read
+       * from the change's Activity, since a change to a version not in
+       * effect yet replaces it instead of adding one (F39).
        */
       setRecurrence: (
         taskId: TaskId,
         pattern: RecurrencePattern,
       ): { ok: boolean; effectiveFrom?: LocalDate } => {
-        const versionsOf = () =>
-          store.getSnapshot().records.rules.find((r) => r.taskId === taskId)
-            ?.versions ?? [];
-        const before = versionsOf().length;
+        const activitiesOf = () => store.getSnapshot().records.activities;
+        const before = activitiesOf().length;
         if (!run(changes.setRule(taskId, pattern))) return { ok: false };
-        const after = versionsOf();
-        const added = after.length > before ? after.at(-1) : undefined;
-        return added === undefined
+        const change = activitiesOf()
+          .slice(before)
+          .find(
+            (a): a is RuleActivity =>
+              (a.kind === 'recurrenceRuleCreated' ||
+                a.kind === 'recurrenceRuleChanged') &&
+              a.taskId === taskId,
+          );
+        return change === undefined
           ? { ok: true }
-          : { ok: true, effectiveFrom: added.effectiveFrom };
+          : { ok: true, effectiveFrom: change.effectiveFrom };
+      },
+      /**
+       * 繰り返しをやめる (F41). `removed` when the rule had made no
+       * occurrence and was taken off: the Task is one-off again.
+       */
+      endRecurrence: (taskId: TaskId): { ok: boolean; removed?: boolean } => {
+        const activitiesOf = () => store.getSnapshot().records.activities;
+        const before = activitiesOf().length;
+        if (!run(changes.endRule(taskId))) return { ok: false };
+        const removed = activitiesOf()
+          .slice(before)
+          .some(
+            (a) => a.kind === 'recurrenceRuleRemoved' && a.taskId === taskId,
+          );
+        return { ok: true, removed };
       },
     }),
     [run, store],

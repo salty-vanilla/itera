@@ -5,9 +5,9 @@
 // Based on the Scenarios of docs/domain/domain-model.md, on one user and one
 // timeline (Asia/Tokyo, weeks start on Monday):
 // - Sprint 9/21–9/27 is the previous week. Its Retro makes the criterion
-//   「研究の推定幅 → 上限」 active.
-// - Sprint 9/28–10/4 follows Scenario A (関連論文を 3 本読む: deferred twice,
-//   4.5h then 今日はここまで, 昨日の続き, carried over; the available hours
+//   「研究：見積もりなしは提案の多めの値で計画」 active.
+// - Sprint 9/28–10/4 follows Scenario A (関連論文を 3本読む: deferred twice,
+//   4時間30分 then 中断, 昨日の続き, carried over; the available hours
 //   differ, see the Check) and Scenario B
 //   (顧客インタビューの設計 added to Today from the Backlog). Scenario C's
 //   weekly 部屋の掃除 is changed from Saturday to Sunday during the Sprint,
@@ -28,7 +28,6 @@ import {
   decideCriterion,
   deferSelection,
   draftCriterion,
-  enterReview,
   id,
   instant,
   localDate,
@@ -67,6 +66,7 @@ import {
 import { find, onSprint, onTask, onToday } from '@/store/changes';
 import { changed, type Change, type StoreSnapshot } from '@/store/record-store';
 import { applyChanges, type Records } from '@/store/records';
+import { reviewSprint } from '@/store/review-changes';
 
 export type FixtureStateId =
   | 'planning-pick'
@@ -470,14 +470,7 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
   const review =
     (sprintId: SprintId): Change =>
     (r, ctx) =>
-      changed(
-        enterReview(
-          get(r.sprints, sprintId),
-          { today: ctx.today, occurrences: r.occurrences },
-          ctx,
-        ),
-        ({ sprint, occurrences }) => ({ sprints: [sprint], occurrences }),
-      );
+      reviewSprint(get(r.sprints, sprintId))(r, ctx);
 
   // ------------------------------------------------------------ 9/13 setup
 
@@ -531,9 +524,12 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
   // The Backlog grows during the week.
   at(
     '09-24 12:00',
-    newTask(task.paper, '関連論文を 3 本読む', { areaId: area.research }),
+    newTask(task.paper, '関連論文を 3本読む', { areaId: area.research }),
   );
-  at('09-24 12:01', suggest(task.paper, 3, 5, '1 本 1–1.5h', ['論文の長さ']));
+  at(
+    '09-24 12:01',
+    suggest(task.paper, 3, 5, '1本 1時間〜1時間30分', ['論文の長さ']),
+  );
   at(
     '09-24 12:10',
     newTask(task.interview, '顧客インタビューの設計', {
@@ -544,7 +540,7 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
   );
   at(
     '09-24 12:11',
-    suggest(task.interview, 2, 3, '質問項目 1h、対象者の選定 1–2h', [
+    suggest(task.interview, 2, 3, '質問項目 1時間、対象者の選定 1〜2時間', [
       '対象者の人数',
     ]),
   );
@@ -583,7 +579,7 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
   );
   at(
     '09-25 09:01',
-    suggest(task.onboarding, 3, 5, '既存資料の更新 2h、新規 1–3h'),
+    suggest(task.onboarding, 3, 5, '既存資料の更新 2時間、新規 1〜3時間'),
   );
   at(
     '09-25 09:10',
@@ -597,7 +593,7 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
   at('09-25 09:13', subtask(task.dataset, '結果を共有する'));
   at(
     '09-25 09:20',
-    newTask(task.reading, '英語の多読 30 分', { areaId: area.study }),
+    newTask(task.reading, '英語の多読 30分', { areaId: area.study }),
   );
   at('09-25 09:21', estimate(task.reading, 0.5));
   at('09-25 09:22', recurring(task.reading, monWedFri, '09-28'));
@@ -613,7 +609,7 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
     onSprint(previous, (s, ctx) =>
       setReflection(
         s,
-        { text: '研究の Task は提案の幅の上のほうまでかかった。' },
+        { text: '研究のタスクは提案の幅の上のほうまでかかった。' },
         ctx,
       ),
     ),
@@ -627,7 +623,11 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
   at(
     '09-27 18:20',
     onSprint(previous, (s, ctx) =>
-      setImprovement(s, { text: '研究の見積りは幅の上限で計画する' }, ctx),
+      setImprovement(
+        s,
+        { text: '研究の見積もりは提案の多めの値で計画する' },
+        ctx,
+      ),
     ),
   );
   at('09-27 18:21', (r, ctx) =>
@@ -678,8 +678,8 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
 
   at(
     '09-27 20:40',
-    // 17h rather than Scenario A's 18h, so that the Check shows a total that
-    // may exceed the available hours (13.25–17.25h against 17h).
+    // 17 hours rather than Scenario A's 18, so that the Check shows a total that
+    // may exceed the available hours (13時間15分〜17時間15分 against 17時間).
     onSprint(current, (s, ctx) => setAvailableHours(s, { hours: 17 }, ctx)),
   );
   snapshot('planning-check', '09-27 20:45');
@@ -853,7 +853,7 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
       setReflection(
         s,
         {
-          text: '論文は 3 本まとめてだと手が止まる。割り込みがあった日は午後が崩れた。',
+          text: '論文は 3本まとめてだと手が止まる。割り込みがあった日は午後が崩れた。',
         },
         ctx,
       ),
@@ -876,7 +876,7 @@ export function buildTimeline(): ReadonlyMap<FixtureStateId, StoreSnapshot> {
   at(
     '10-05 09:45',
     onSprint(current, (s, ctx) =>
-      setImprovement(s, { text: '論文は 1 本ずつ Task に分ける' }, ctx),
+      setImprovement(s, { text: '論文は 1本ずつタスクに分ける' }, ctx),
     ),
   );
   at(

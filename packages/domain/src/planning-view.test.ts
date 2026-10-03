@@ -4,9 +4,14 @@ import type { Occurrence } from './occurrence';
 import {
   capacityDrivers,
   criterionEffect,
+  criterionHasTarget,
   planningCandidates,
 } from './planning-view';
-import { carryOverCandidates, goalLinkAtConfirm } from './planning';
+import {
+  carryOverCandidates,
+  goalLinkAtConfirm,
+  planSnapshotOf,
+} from './planning';
 import { id } from './shared/ids';
 import { instant, localDate } from './shared/time';
 import type { SprintTask } from './sprint';
@@ -77,6 +82,7 @@ describe('planningCandidates', () => {
     occurrence('o-old', 'cleaning', '2026-09-26', 'done'),
   ];
   const groups = planningCandidates(sprint, {
+    today: localDate('2026-09-29'),
     tasks,
     sprints: [previous, sprint],
     occurrences,
@@ -87,8 +93,42 @@ describe('planningCandidates', () => {
     expect(ids(groups.carriedOver)).toEqual(['carried']);
   });
 
-  it('期限が近い: due by the end of the planned Sprint, overdue included', () => {
-    expect(ids(groups.dueSoon)).toEqual(['due', 'overdue']);
+  it('期限超過: due before today, apart from 期限が近い', () => {
+    expect(ids(groups.overdue)).toEqual(['overdue']);
+  });
+
+  it('期限が近い: from today to the end of the planned Sprint', () => {
+    expect(ids(groups.dueSoon)).toEqual(['due']);
+    expect(groups.dueSoonUntil).toBe(sprint.end);
+  });
+
+  it('期限が近い: a Task due today is not overdue; one due after the Sprint is neither', () => {
+    const today = localDate('2026-10-02');
+    const edge = planningCandidates(sprint, {
+      today,
+      tasks: [
+        task('on-today', '2026-09-10T00:00:00.000Z', '2026-10-02'),
+        task('on-end', '2026-09-11T00:00:00.000Z', '2026-10-04'),
+        task('day-before', '2026-09-12T00:00:00.000Z', '2026-10-01'),
+        task('after', '2026-09-13T00:00:00.000Z', '2026-10-05'),
+      ],
+      sprints: [previous, sprint],
+      occurrences: [],
+    });
+    expect(ids(edge.overdue)).toEqual(['day-before']);
+    expect(ids(edge.dueSoon)).toEqual(['on-today', 'on-end']);
+    expect(ids(edge.others)).toEqual(['after']);
+  });
+
+  it('a carried-over Task stays in 持ち越し when it is overdue (each Task in one group)', () => {
+    const late = planningCandidates(sprint, {
+      today: localDate('2026-10-02'),
+      tasks,
+      sprints: [previous, sprint],
+      occurrences,
+    });
+    expect(ids(late.carriedOver)).toEqual(['carried']);
+    expect(ids(late.overdue)).not.toContain('carried');
   });
 
   it('今週発生する繰り返し: this period’s pending and excluded occurrences', () => {
@@ -289,11 +329,127 @@ describe('planningCandidates and carryOverCandidates agree (invariant 20)', () =
       (t) => t.taskId,
     );
     const group = planningCandidates(sprint, {
+      today: localDate('2026-09-29'),
       tasks,
       sprints: [previous, sprint],
       occurrences: [],
     }).carriedOver.map((t) => t.id);
     expect(candidates).toEqual(['b']);
     expect(group).toEqual(['a', 'b']);
+  });
+});
+
+describe('criterionHasTarget (#161, F42)', () => {
+  const criterion = {
+    id: id<'PlanningCriterion'>('crit'),
+    policy: { scope: { kind: 'area', areaId: researchId }, rangePolicy: 'hi' },
+  } as const;
+  const research = unwrap(
+    updateTask(
+      unwrap(
+        presentSuggestion(
+          newTask('paper', 'paper'),
+          {
+            id: id('sug-paper'),
+            lo: 3,
+            hi: 5,
+            rationale: '',
+            uncertainties: [],
+          },
+          ctx,
+        ),
+      ),
+      { areaId: researchId },
+      ctx,
+    ),
+  );
+  const other = unwrap(
+    presentSuggestion(
+      newTask('other', 'other'),
+      { id: id('sug-other'), lo: 1, hi: 2, rationale: '', uncertainties: [] },
+      ctx,
+    ),
+  );
+  const planned = (
+    t: Task,
+    applied: boolean,
+    extra: Partial<SprintTask> = {},
+  ): SprintTask => {
+    const sprintTask = st(t.id, { outcome: 'planned', ...extra });
+    return {
+      ...sprintTask,
+      planSnapshot: planSnapshotOf(
+        t,
+        sprintTask,
+        applied ? criterion : undefined,
+        ctx,
+      ),
+    };
+  };
+  const has = (tasks: SprintTask[]) =>
+    criterionHasTarget(
+      { ...sprintFixture('2026-09-28', 'active'), tasks },
+      { tasks: [research, other], policy: criterion.policy },
+    );
+
+  it('has a target when it acted on a value, or would have', () => {
+    expect(has([planned(research, true)])).toBe(true);
+    // Switched off at the Check: the range in its scope is still a target.
+    expect(has([planned(research, false)])).toBe(true);
+  });
+
+  it('has none outside its scope, on a point or after removal', () => {
+    expect(has([planned(other, false)])).toBe(false);
+    expect(has([])).toBe(false);
+    const estimated = unwrap(setEstimate(research, 4, ctx));
+    expect(has([planned(estimated, false)])).toBe(false);
+    expect(has([planned(research, true, { outcome: 'removed' })])).toBe(false);
+    // Added mid-Sprint without it: not planned at confirm (F3).
+    expect(has([planned(research, false, { origin: 'midSprint' })])).toBe(
+      false,
+    );
+  });
+
+  it('has none on a point suggestion; every Area is in scope for 「all」', () => {
+    const point = unwrap(
+      updateTask(
+        unwrap(
+          presentSuggestion(
+            newTask('point', 'point'),
+            {
+              id: id('sug-point'),
+              lo: 3,
+              hi: 3,
+              rationale: '',
+              uncertainties: [],
+            },
+            ctx,
+          ),
+        ),
+        { areaId: researchId },
+        ctx,
+      ),
+    );
+    expect(
+      criterionHasTarget(
+        {
+          ...sprintFixture('2026-09-28', 'active'),
+          tasks: [planned(point, false)],
+        },
+        { tasks: [point], policy: criterion.policy },
+      ),
+    ).toBe(false);
+    expect(
+      criterionHasTarget(
+        {
+          ...sprintFixture('2026-09-28', 'active'),
+          tasks: [planned(other, false)],
+        },
+        {
+          tasks: [other],
+          policy: { scope: { kind: 'all' }, rangePolicy: 'hi' },
+        },
+      ),
+    ).toBe(true);
   });
 });

@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { completeOccurrence, type Occurrence } from './occurrence';
-import { excludeFromPlan, startPlanning } from './planning';
-import { createRecurrenceRule } from './recurrence';
+import { excludeFromPlan, selectTask, startPlanning } from './planning';
+import { createRecurrenceRule, recurrenceOf } from './recurrence';
+import { omit } from './shared/record';
 import { id } from './shared/ids';
 import { localDate } from './shared/time';
 import type { Sprint } from './sprint';
+import { completeTask } from './task';
+import { completeFromBacklog } from './today';
 import {
   changeRuleForNextSprint,
   createRuleForNextSprint,
+  endRuleForNextSprint,
 } from './sprint-recurrence';
 import { at, ctx, ids, newTask, sprintFixture, unwrap, user } from './testing';
 
@@ -201,6 +205,74 @@ describe('changeRuleForNextSprint (F1, F7)', () => {
   });
 });
 
+describe('changeRuleForNextSprint (F39)', () => {
+  it('F39 / invariant 31: changes before the draft is confirmed replace one version and rebuild only the draft', () => {
+    const { task, rule, active, draft, occurrences, newOccurrenceId } = setUp();
+    const change = (
+      state: { rule: typeof rule; sprint: Sprint; occurrences: Occurrence[] },
+      pattern: Parameters<typeof changeRuleForNextSprint>[0]['pattern'],
+    ) => {
+      const result = changeRuleForNextSprint(
+        {
+          task,
+          rule: state.rule,
+          pattern,
+          user,
+          today: d('2026-10-04'),
+          sprints: [active, state.sprint],
+          occurrences: state.occurrences,
+          newOccurrenceId,
+          newSprintTaskId: ids('st-new'),
+        },
+        ctx,
+      );
+      const applied = unwrap(result);
+      const gone = new Set(applied.discarded);
+      return {
+        result,
+        rule: applied.rule,
+        sprint: applied.sprint ?? state.sprint,
+        occurrences: [
+          ...state.occurrences.filter((o) => !gone.has(o.id)),
+          ...applied.generated,
+        ],
+      };
+    };
+    const first = change({ rule, sprint: draft, occurrences }, sunday);
+    const second = change(first, { freq: 'weekly', daysOfWeek: [0, 3] });
+    expect(second.rule.versions.map((v) => v.version)).toEqual([1, 2]);
+    expect(second.rule.versions.at(-1)).toEqual({
+      version: 2,
+      pattern: { freq: 'weekly', daysOfWeek: [0, 3] },
+      effectiveFrom: '2026-10-05',
+    });
+    expect(
+      second.occurrences.map((o) => [o.scheduledDate, o.ruleVersion, o.state]),
+    ).toEqual([
+      ['2026-10-03', 1, 'done'],
+      ['2026-10-07', 2, 'pending'],
+      ['2026-10-11', 2, 'pending'],
+    ]);
+
+    // Back to Saturdays: the draft is rebuilt from version 1 again.
+    const back = change(second, saturday);
+    expect(back.rule).toEqual(rule);
+    expect(
+      back.occurrences.map((o) => [o.scheduledDate, o.ruleVersion, o.state]),
+    ).toEqual([
+      ['2026-10-03', 1, 'done'],
+      ['2026-10-10', 1, 'pending'],
+    ]);
+    expect(back.result.ok && back.result.value.activities[0]).toMatchObject({
+      kind: 'recurrenceRuleChanged',
+      version: 1,
+      effectiveFrom: '2026-10-05',
+    });
+    // The confirmed Sprint's occurrence is the same record throughout.
+    expect(back.occurrences[0]).toBe(occurrences[0]);
+  });
+});
+
 describe('changeRuleForNextSprint — guards and edges', () => {
   function change(
     input: Partial<Parameters<typeof changeRuleForNextSprint>[0]>,
@@ -318,15 +390,9 @@ describe('changeRuleForNextSprint — guards and edges', () => {
       ),
     );
     expect(applied.effectiveFrom).toBe('2026-10-12');
-    expect(
-      applied.rule.versions.map((v) => [
-        v.version,
-        v.effectiveFrom,
-        v.effectiveTo,
-      ]),
-    ).toEqual([
-      [1, '2026-10-12', '2026-10-11'],
-      [2, '2026-10-12', undefined],
+    // Version 1 has not taken effect, so it is replaced (F39).
+    expect(applied.rule.versions).toEqual([
+      { version: 1, pattern: sunday, effectiveFrom: '2026-10-12' },
     ]);
   });
 });
@@ -426,6 +492,368 @@ describe('createRuleForNextSprint (F15)', () => {
       }),
     ]);
     expect(applied.sprint?.tasks[0]).not.toHaveProperty('carriedFrom');
+  });
+});
+
+describe('endRuleForNextSprint (F41)', () => {
+  it('ends before the draft and takes the rule out of it; the Task and past occurrences remain', () => {
+    const { task, rule, active, draft, occurrences } = setUp();
+    const result = endRuleForNextSprint(
+      {
+        task,
+        rule,
+        user,
+        today: d('2026-10-04'),
+        sprints: [active, draft],
+        occurrences,
+      },
+      ctx,
+    );
+    const ended = unwrap(result);
+    // Off the rule: one-off for the Sprints after it. The rule keeps the Task.
+    expect(ended.task).toEqual(omit(task, 'recurrenceRuleId'));
+    expect(ended.removed).toBe(false);
+    expect(ended.rule.taskId).toBe(task.id);
+    expect(ended.rule?.versions).toEqual([
+      {
+        version: 1,
+        pattern: saturday,
+        effectiveFrom: '2026-09-28',
+        effectiveTo: '2026-10-04',
+      },
+    ]);
+    expect(ended.discarded).toEqual(['occ-2']);
+    expect(ended.sprint?.tasks).toEqual([]);
+    expect(result.ok && result.value.activities.map((a) => a.kind)).toEqual([
+      'recurrenceRuleEnded',
+      'occurrenceDiscarded',
+      'sprintTaskUnselected',
+    ]);
+    // The 9/28 week is untouched (invariant 31).
+    expect(occurrences[0]).toMatchObject({ state: 'done', ruleVersion: 1 });
+  });
+
+  it('without a draft, ends with the active Sprint and changes no Sprint', () => {
+    const { task, rule, active, occurrences } = setUp({ completeOct3: false });
+    const ended = unwrap(
+      endRuleForNextSprint(
+        {
+          task,
+          rule,
+          user,
+          today: d('2026-09-30'),
+          sprints: [{ ...active, state: 'active' }],
+          occurrences: occurrences.slice(0, 1),
+        },
+        ctx,
+      ),
+    );
+    // The pending 10/3 of the running week stays (invariant 31).
+    expect(ended.rule?.versions.at(-1)?.effectiveTo).toBe('2026-10-04');
+    expect(ended.discarded).toEqual([]);
+    expect(ended).not.toHaveProperty('sprint');
+  });
+
+  it('F39: a change not in effect yet is dropped with the draft', () => {
+    const { task, rule, active, draft, occurrences, newOccurrenceId } = setUp();
+    const changed = unwrap(
+      changeRuleForNextSprint(
+        {
+          task,
+          rule,
+          pattern: sunday,
+          user,
+          today: d('2026-10-04'),
+          sprints: [active, draft],
+          occurrences,
+          newOccurrenceId,
+          newSprintTaskId: ids('st-new'),
+        },
+        ctx,
+      ),
+    );
+    const ended = unwrap(
+      endRuleForNextSprint(
+        {
+          task,
+          rule: changed.rule,
+          user,
+          today: d('2026-10-04'),
+          sprints: [active, changed.sprint ?? draft],
+          occurrences: [occurrences[0]!, ...changed.generated],
+        },
+        ctx,
+      ),
+    );
+    expect(ended.rule?.versions).toEqual([
+      {
+        version: 1,
+        pattern: saturday,
+        effectiveFrom: '2026-09-28',
+        effectiveTo: '2026-10-04',
+      },
+    ]);
+    expect(ended.discarded).toEqual(changed.generated.map((o) => o.id));
+    expect(ended.sprint?.tasks).toEqual([]);
+  });
+
+  it('a rule just made, with only draft occurrences, is removed: the Task is one-off again', () => {
+    const sprints = [
+      sprintFixture('2026-09-28', 'active'),
+      sprintFixture('2026-10-05', 'planning'),
+    ];
+    const created = unwrap(
+      createRuleForNextSprint(
+        {
+          task: newTask('ストレッチ', 'task-stretch'),
+          ruleId: id('rule-s'),
+          pattern: { freq: 'weekly', daysOfWeek: [1, 3] },
+          user,
+          today: d('2026-10-02'),
+          sprints,
+          occurrences: [],
+          newOccurrenceId: ids('occ'),
+          newSprintTaskId: ids('st'),
+        },
+        ctx,
+      ),
+    );
+    const result = endRuleForNextSprint(
+      {
+        task: created.task,
+        rule: created.rule,
+        user,
+        today: d('2026-10-02'),
+        sprints: [sprints[0]!, created.sprint!],
+        occurrences: created.generated,
+      },
+      ctx,
+    );
+    const removed = unwrap(result);
+    expect(removed.task).not.toHaveProperty('recurrenceRuleId');
+    expect(removed).toMatchObject({ removed: true, rule: { id: 'rule-s' } });
+    expect(removed.discarded).toEqual(['occ-1', 'occ-2']);
+    expect(removed.sprint?.tasks).toEqual([]);
+    expect(result.ok && result.value.activities.map((a) => a.kind)).toEqual([
+      'recurrenceRuleRemoved',
+      'occurrenceDiscarded',
+      'occurrenceDiscarded',
+      'sprintTaskUnselected',
+    ]);
+  });
+
+  it('a rule just made without a draft is removed too', () => {
+    const created = unwrap(
+      createRuleForNextSprint(
+        {
+          task: newTask('ストレッチ', 'task-stretch'),
+          ruleId: id('rule-s'),
+          pattern: { freq: 'daily' },
+          user,
+          today: d('2026-09-30'),
+          sprints: [sprintFixture('2026-09-28', 'active')],
+          occurrences: [],
+          newOccurrenceId: ids('occ'),
+          newSprintTaskId: ids('st'),
+        },
+        ctx,
+      ),
+    );
+    const removed = unwrap(
+      endRuleForNextSprint(
+        {
+          task: created.task,
+          rule: created.rule,
+          user,
+          today: d('2026-09-30'),
+          sprints: [sprintFixture('2026-09-28', 'active')],
+          occurrences: [],
+        },
+        ctx,
+      ),
+    );
+    expect(removed.task).not.toHaveProperty('recurrenceRuleId');
+    expect(removed.removed).toBe(true);
+    expect(removed).not.toHaveProperty('sprint');
+    expect(removed.discarded).toEqual([]);
+  });
+
+  it('refuses a rule of another Task, a Task not active, or a rule already ended', () => {
+    const { task, rule, active, occurrences } = setUp();
+    const end = (input: Partial<Parameters<typeof endRuleForNextSprint>[0]>) =>
+      endRuleForNextSprint(
+        {
+          task,
+          rule,
+          user,
+          today: d('2026-09-30'),
+          sprints: [{ ...active, state: 'active' }],
+          occurrences: occurrences.slice(0, 1),
+          ...input,
+        },
+        ctx,
+      );
+    expect(end({ task: newTask('別', 'task-other') })).toMatchObject({
+      ok: false,
+      error: { code: 'invalidInput' },
+    });
+    expect(end({ task: { ...task, lifecycle: 'archived' } })).toMatchObject({
+      ok: false,
+      error: { code: 'invalidTransition' },
+    });
+    const ended = unwrap(end({}));
+    // Ended, the rule is off the Task; ending it again is refused either way.
+    expect(end({ task: ended.task, rule: ended.rule })).toMatchObject({
+      ok: false,
+      error: { code: 'invalidInput' },
+    });
+    expect(end({ rule: ended.rule })).toMatchObject({
+      ok: false,
+      error: { code: 'invalidTransition' },
+    });
+  });
+
+  it('a later Planning generates no occurrence of an ended rule', () => {
+    const { task, rule, active, occurrences } = setUp({ completeOct3: false });
+    const ended = unwrap(
+      endRuleForNextSprint(
+        {
+          task,
+          rule,
+          user,
+          today: d('2026-09-30'),
+          sprints: [{ ...active, state: 'active' }],
+          occurrences: occurrences.slice(0, 1),
+        },
+        ctx,
+      ),
+    );
+    const next = unwrap(
+      startPlanning(
+        {
+          sprintId: id('sprint-2026-10-05'),
+          user,
+          start: d('2026-10-05'),
+          sprints: [{ ...active, state: 'review' }],
+          recurring: [{ task: ended.task, rule: ended.rule }],
+          occurrences: occurrences.slice(0, 1),
+          newOccurrenceId: ids('occ-later'),
+          newSprintTaskId: ids('st-later'),
+        },
+        ctx,
+      ),
+    );
+    expect(next.occurrences).toEqual([]);
+    expect(next.sprint.tasks).toEqual([]);
+    // The Task is one-off there: it can be chosen like any other (F41).
+    const chosen = unwrap(
+      selectTask(
+        next.sprint,
+        {
+          sprintTaskId: id('st-one-off'),
+          task: ended.task,
+        },
+        ctx,
+      ),
+    );
+    expect(chosen.tasks).toMatchObject([{ taskId: task.id, outcome: 'draft' }]);
+    expect(chosen.tasks[0]).not.toHaveProperty('occurrenceIds');
+  });
+
+  it('this Sprint’s occurrences stay done one by one: no completion from the Backlog until it ends', () => {
+    const { task, rule, active, occurrences } = setUp({ completeOct3: false });
+    const running: Sprint = {
+      ...active,
+      state: 'active',
+      tasks: active.tasks.map((t) => ({ ...t, outcome: 'planned' })),
+    };
+    const ended = unwrap(
+      endRuleForNextSprint(
+        {
+          task,
+          rule,
+          user,
+          today: d('2026-09-30'),
+          sprints: [running],
+          occurrences: occurrences.slice(0, 1),
+        },
+        ctx,
+      ),
+    );
+    expect(
+      completeFromBacklog(
+        running,
+        { task: ended.task, date: d('2026-09-30'), selectionId: id('sel') },
+        ctx,
+      ),
+    ).toMatchObject({
+      ok: false,
+      error: { code: 'recurringTaskCannotComplete' },
+    });
+    // After its last day the Task is one-off: it completes as a whole.
+    expect(completeTask(ended.task, ctx).ok).toBe(true);
+  });
+
+  it('after its last day the Task can be made recurring again, with a rule of its own', () => {
+    const { task, rule, active, occurrences } = setUp({ completeOct3: false });
+    const ended = unwrap(
+      endRuleForNextSprint(
+        {
+          task,
+          rule,
+          user,
+          today: d('2026-09-30'),
+          sprints: [{ ...active, state: 'active' }],
+          occurrences: occurrences.slice(0, 1),
+        },
+        ctx,
+      ),
+    );
+    const again = unwrap(
+      createRuleForNextSprint(
+        {
+          task: ended.task,
+          ruleId: id('rule-2'),
+          pattern: sunday,
+          user,
+          today: d('2026-10-06'),
+          sprints: [{ ...active, state: 'closed' }],
+          occurrences: [],
+          newOccurrenceId: ids('occ-again'),
+          newSprintTaskId: ids('st-again'),
+        },
+        ctx,
+      ),
+    );
+    expect(again.task.recurrenceRuleId).toBe('rule-2');
+    // The Backlog follows the Task's own rule, not the ended one.
+    const rules = [ended.rule, again.rule];
+    expect(recurrenceOf(again.task, rules, d('2026-10-06'))).toBe(again.rule);
+    expect(again.rule.versions[0]?.effectiveFrom).toBe('2026-10-05');
+  });
+
+  it('recurrenceOf: the Backlog shows an ended rule until its last day', () => {
+    const { task, rule, active, occurrences } = setUp({ completeOct3: false });
+    const ended = unwrap(
+      endRuleForNextSprint(
+        {
+          task,
+          rule,
+          user,
+          today: d('2026-09-30'),
+          sprints: [{ ...active, state: 'active' }],
+          occurrences: occurrences.slice(0, 1),
+        },
+        ctx,
+      ),
+    );
+    expect(recurrenceOf(ended.task, [ended.rule], d('2026-10-04'))).toBe(
+      ended.rule,
+    );
+    expect(
+      recurrenceOf(ended.task, [ended.rule], d('2026-10-05')),
+    ).toBeUndefined();
+    expect(recurrenceOf(task, [rule], d('2027-01-01'))).toBe(rule);
   });
 });
 

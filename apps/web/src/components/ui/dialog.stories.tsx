@@ -41,8 +41,7 @@ function SprintConfirmDialog({ defaultOpen }: { defaultOpen?: boolean }) {
         <DialogHeader>
           <DialogTitle>Sprint 14 を確定しますか？</DialogTitle>
           <DialogDescription>
-            確定すると、各タスクの計画値がこの Sprint
-            の値として固定されます。確定した後もタスクは追加できます。
+            確定すると、各タスクの計画の時間は変わらなくなります。確定した後もタスクは追加できます。
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -84,19 +83,17 @@ export const DestructiveConfirm: Story = {
   render: () => (
     <AlertDialog defaultOpen>
       <AlertDialogTrigger render={<Button variant="danger" />}>
-        アーカイブ
+        削除
       </AlertDialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>選んだ 3件のタスクをアーカイブしますか？</DialogTitle>
-          <DialogDescription>
-            Backlog から外れます。過去の Sprint の記録には残ります。
-          </DialogDescription>
+          <DialogTitle>選んだ 3件を削除しますか？</DialogTitle>
+          <DialogDescription>取り消せません。</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <DialogClose render={<Button />}>キャンセル</DialogClose>
           <DialogClose render={<Button variant="danger-solid" />}>
-            3件をアーカイブ
+            3件を削除
           </DialogClose>
         </DialogFooter>
       </DialogContent>

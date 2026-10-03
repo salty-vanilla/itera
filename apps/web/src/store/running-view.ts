@@ -1,26 +1,37 @@
-// What the running Sprint's screen shows (#51), derived from the records by
-// `@itera/domain`. The values are the plan fixed at confirm (planSnapshot,
-// invariant 16); Goals and available hours may change after confirm and
-// their planned values stay beside them (invariant 18, F16).
+// What the Sprint screen shows of a confirmed Sprint (#51), derived from the
+// records by `@itera/domain`: the running one, or, read only, one in Review
+// or closed with how each Task ended (#90). The values are the plan fixed
+// at confirm (planSnapshot, invariant 16); Goals and available hours may
+// change after confirm and their planned values stay beside them
+// (invariant 18, F16).
 import {
+  carryOriginOf,
+  criterionHasTarget,
   isCounted,
+  occurrenceProgress,
   sprintAreaName,
   sprintNumber,
   sprintTotals,
+  retroFacts,
+  weekProgress,
   type AreaColor,
   type AreaId,
   type CriterionPolicy,
   type DailySelection,
   type LocalDate,
+  type OccurrenceProgress,
   type PlanningValue,
   type Sprint,
   type SprintGoal,
+  type SprintId,
   type SprintTask,
   type SprintTotals,
   type Task,
+  type WeekProgress,
 } from '@itera/domain';
 import { daysBetween } from '@/lib/date-format';
 import type { Clock, Records } from './records';
+import { nextWeekSprintOf, weekOf, type WeekLabel } from './sprint-choice';
 
 export interface RunningArea {
   /** `null` for Tasks without an Area (「領域なし」). */
@@ -34,6 +45,18 @@ export interface RunningTask {
   readonly task: Task;
   /** The planning value fixed for this Sprint (the whole week for a recurring Task). */
   readonly value: PlanningValue;
+  /** Recurring only: its occurrences done of the week's (F32). */
+  readonly occurrences?: OccurrenceProgress;
+  /**
+   * Carried over into this Sprint: how many times in a row, and the number
+   * of the Sprint the run began in (「持ち越し 1回（Sprint 13から）」, F25).
+   */
+  readonly carry?: { readonly count: number; readonly fromSprint: number };
+  /**
+   * Also in the draft for next week (「来週」, #90): chosen there while this
+   * week runs. Only the running Sprint says it (#150).
+   */
+  readonly nextWeek?: true;
 }
 
 export interface RunningAreaPlan {
@@ -70,16 +93,27 @@ export interface RunningData {
   readonly sprint: Sprint;
   /** 「Sprint 14」 (F25). */
   readonly number: number;
+  /** 「今週」; none for one that has ended (#90). */
+  readonly week?: WeekLabel;
   readonly today: LocalDate;
-  /** 「2日目 / 7日」, absent before the first day. */
+  /** 「2日目 / 7日」, absent before the first day and once it has ended. */
   readonly day?: { readonly index: number; readonly count: number };
-  /** Areas with a Goal or chosen Tasks, in the Sprint's order, then 領域なし. */
+  /**
+   * Areas with a Goal or chosen Tasks, in the Sprint's order, then 領域なし.
+   * Once the Sprint has ended, the carried-over Tasks are in it too.
+   */
   readonly plan: readonly RunningAreaPlan[];
-  readonly totals: SprintTotals;
+  /**
+   * The planned values of the Tasks in `plan`. Once ended, the total is the
+   * Retro's (retroFacts) and there are no per-Area totals.
+   */
+  readonly totals: Pick<SprintTotals, 'total' | 'byArea'>;
   readonly availableHours: {
     readonly planned?: number;
     readonly current?: number;
   };
+  /** 「今週の完了 N / M件」 (F32), as Today counts it; only while running. */
+  readonly progress?: WeekProgress;
   /** Before today, newest first: the days' completions and skips (#53). */
   readonly pastDays: readonly PastDay[];
   /** The criterion as this Sprint treated it at confirm (read only, invariant 37). */
@@ -88,17 +122,32 @@ export interface RunningData {
     /** The Area it covers, when its scope is an Area. */
     readonly areaName?: string;
     readonly applied: boolean;
+    /**
+     * Nothing in the Sprint it acted on or would have acted on
+     * (`criterionHasTarget`): the screen folds it to a line (#161). Not
+     * applied with a Task to act on: the person chose that at the Check, so
+     * it stays whole. With no Task to act on it is not applied (F42).
+     */
+    readonly noEffect: boolean;
   };
 }
 
 const NO_AREA: RunningArea = { id: null, name: '領域なし', color: 'none' };
 
+/**
+ * A confirmed Sprint's plan and how it went: the running one by default,
+ * or the one asked for. `undefined` for a Sprint still being planned.
+ */
 export function runningData(
   records: Records,
   clock: Clock,
+  sprintId?: SprintId,
 ): RunningData | undefined {
-  const sprint = records.sprints.find((s) => s.state === 'active');
-  if (sprint === undefined) return undefined;
+  const sprint = records.sprints.find((s) =>
+    sprintId === undefined ? s.state === 'active' : s.id === sprintId,
+  );
+  if (sprint === undefined || sprint.state === 'planning') return undefined;
+  const ended = sprint.state !== 'active';
   const { tasks, areas } = records;
 
   const areaOf = (areaId: AreaId): RunningArea => {
@@ -109,14 +158,42 @@ export function runningData(
       color: area?.color ?? 'none',
     };
   };
+  // Only the running Sprint says 「来週にも」: a Sprint that has ended has
+  // no next week to be in (#150).
+  const nextWeekTasks = new Set(
+    ended
+      ? []
+      : (nextWeekSprintOf(records, clock)?.tasks ?? [])
+          .filter(isCounted)
+          .map((t) => t.taskId),
+  );
   const counted: RunningTask[] = sprint.tasks
-    .filter(isCounted)
+    // Carried over at the end (Review): still part of what was planned.
+    .filter((t) => isCounted(t) || t.outcome === 'carriedOver')
     .flatMap((sprintTask) => {
       const task = tasks.find((t) => t.id === sprintTask.taskId);
       const value = sprintTask.planSnapshot?.value;
-      return task === undefined || value === undefined
-        ? []
-        : [{ sprintTask, task, value }];
+      if (task === undefined || value === undefined) return [];
+      const occurrences = occurrenceProgress(sprintTask, records.occurrences);
+      const carry = carryOriginOf(sprintTask, records.sprints);
+      const from = records.sprints.find((s) => s.id === carry?.fromSprintId);
+      return [
+        {
+          sprintTask,
+          task,
+          value,
+          ...(nextWeekTasks.has(task.id) ? { nextWeek: true as const } : {}),
+          ...(occurrences === undefined ? {} : { occurrences }),
+          ...(carry === undefined || from === undefined
+            ? {}
+            : {
+                carry: {
+                  count: carry.count,
+                  fromSprint: sprintNumber(from, records.sprints),
+                },
+              }),
+        },
+      ];
     });
 
   // The Sprint's Area order (snapshot), then Areas first seen later (F9).
@@ -135,8 +212,11 @@ export function runningData(
       const inArea = counted.filter((t) => t.task.areaId === areaId);
       // A Goal can be written for any Area of the Sprint, even without
       // Tasks (F16: it has no planned text then).
+      // Once ended, an Area with neither has nothing to show.
       const archived = areas.find((a) => a.id === areaId)?.archived ?? false;
-      if (goal === undefined && inArea.length === 0 && archived) return [];
+      if (goal === undefined && inArea.length === 0 && (archived || ended)) {
+        return [];
+      }
       return [
         {
           area: areaOf(areaId),
@@ -159,11 +239,26 @@ export function runningData(
   const criterion = records.criteria.find((c) => c.id === use?.criterionId);
   const scope = criterion?.policy.scope;
 
+  // Once ended, the planned total is the Retro's: carried-over Tasks
+  // count too (retroFacts), and it has no per-Area totals.
+  const totals = ended
+    ? {
+        total: retroFacts(sprint, {
+          tasks,
+          areas,
+          occurrences: records.occurrences,
+          sprints: records.sprints,
+        }).plannedTotal.withAdditions,
+        byArea: [],
+      }
+    : sprintTotals(sprint, { tasks, now: clock.now });
+
   return {
     sprint,
     number: sprintNumber(sprint, records.sprints),
+    ...weekOf(sprint, records, clock),
     today: clock.today,
-    ...(clock.today < sprint.start
+    ...(clock.today < sprint.start || ended
       ? {}
       : {
           day: {
@@ -172,8 +267,10 @@ export function runningData(
           },
         }),
     plan,
-    pastDays: pastDaysOf(sprint, tasks, clock.today),
-    totals: sprintTotals(sprint, { tasks, now: clock.now }),
+    ...(ended ? {} : { progress: weekProgress(sprint, records.occurrences) }),
+    // Undoing a past day is for the running Sprint only (F33).
+    pastDays: ended ? [] : pastDaysOf(sprint, tasks, clock.today),
+    totals,
     availableHours: {
       ...(sprint.plannedAvailableHours === undefined
         ? {}
@@ -191,6 +288,10 @@ export function runningData(
               ? { areaName: areaOf(scope.areaId).name }
               : {}),
             applied: use.appliedAtConfirm,
+            noEffect: !criterionHasTarget(sprint, {
+              tasks,
+              policy: criterion.policy,
+            }),
           },
         }),
   };

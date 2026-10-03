@@ -36,6 +36,16 @@ describe('Navigation', () => {
     expect(backlog.getAttribute('aria-current')).toBeNull();
   });
 
+  it('shows the app name at the top of the sidebar, not in the tab bar', () => {
+    const { container } = render(
+      <Navigation items={items} current="today" brand="Itera" />,
+    );
+    const brands = container.querySelectorAll('[data-slot="navigation-brand"]');
+    expect(brands).toHaveLength(1);
+    expect(brands[0]?.textContent).toBe('Itera');
+    expect(brands[0]?.closest('[data-layout="tab-bar"]')).toBeNull();
+  });
+
   it('keeps a disabled item focusable and ignores presses', async () => {
     const visited: string[] = [];
     render(
@@ -74,6 +84,15 @@ describe('Navigation', () => {
       screen.getByRole('link', { name: /^Backlog\s?42件$/ }),
     );
     expect(visited).toEqual(['backlog']);
+  });
+
+  it('shows the name under the icon in the rail, not only in a tooltip', () => {
+    render(<Navigation items={items} current="today" layout="rail" />);
+    const nav = screen.getByRole('navigation', { name: 'メイン' });
+    const name = within(nav).getByText('Backlog');
+    expect(name.className).not.toContain('sr-only');
+    // The count is read but not shown.
+    expect(within(nav).getByText('42').className).toContain('sr-only');
   });
 
   it('shows the label in a tooltip in the rail', async () => {

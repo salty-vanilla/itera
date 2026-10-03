@@ -1,6 +1,6 @@
 # アイコンと動き
 
-更新：2026-09-26（DESIGN.md v0.2 から分離）。DESIGN.md の spec に対応する節がないため、ここに置く。
+更新：2026-10-01（計画のルールの語、Issue #162。操作付きの Toast の表示時間、Issue #170。ナビのアイコンを固定し、振り返りを `rewind` に替えた、Issue #112）。2026-09-26（DESIGN.md v0.2 から分離）。DESIGN.md の spec に対応する節がないため、ここに置く。
 
 ## アイコン
 
@@ -25,8 +25,9 @@
 | Goal への紐づけ | `target` |
 | 元に戻す | `undo-2` |
 | 変更履歴 | `history` |
+| ナビ：今日 / Sprint / Backlog / 振り返り | `sun` / `route` / `inbox` / `rewind`（rail と下部タブバーは名前を添える。振り返りの印は、Sprint の状態の Tag でも同じ） |
 | Agent 提案・下書き | `circle-dashed`（破線の円 = 未確定） |
-| 計画基準 | `info` |
+| 計画のルール | `info` |
 | 成功 / 注意 / エラー / 情報 | `circle-check` / `triangle-alert` / `circle-alert` / `info`（成功と情報は墨、注意は `warning`、エラーは `danger`） |
 
 **使わない**：Sparkle、魔法の杖、ロボット、脳など「AI らしさ」を示すアイコン。Agent は語（「Agent 提案」）と破線で示す。絵文字を UI に使わない。
@@ -41,12 +42,14 @@
 | `duration-base` | 160ms | Menu・Popover・Tooltip の出現、行の追加・除外、Toast の出現 |
 | `duration-slow` | 240ms | Dialog・Drawer の出入り（最大） |
 | `duration-toast` | 8000ms | Toast の表示時間（hover / focus 中は止める） |
+| `duration-toast-action` | 16000ms | 操作付き（元に戻す・今日を開く・見る）の Toast の表示時間 |
 | `easing-standard` | `cubic-bezier(0.2, 0, 0, 1)` | 既定 |
 | `easing-enter` | `cubic-bezier(0, 0, 0.2, 1)` | 出現 |
 | `easing-exit` | `cubic-bezier(0.4, 0, 1, 1)` | 退場 |
 
 - 動かしてよいプロパティは `opacity`、`transform`（8px 以内の移動）、`background-color`、`border-color`、`color`。サイズとレイアウトを動かさない。
 - Backlog から今週に入れたとき：行の背景が `here-subtle` に変わり、チェックが付く（`duration-fast`）＋ Toast「〜を今週に入れました · 元に戻す」。行を飛ばすアニメーションは作らない。
+- Backlog と Planning の選ぶで Task を追加した直後（Planning は中央の、入り先の領域の塊の行。Issue #92）：その行が `here-subtle` の地で点滅する。最初の 1 秒は保ち、2.5 秒までに透明に戻る（1 回だけ。繰り返さない。Issue #86 でオーナーが決めた。ほかの動きより長いのは、追加した行を見つけるため）。`prefers-reduced-motion: reduce` では動かさず、Toast が知らせる。
 - 完了：サークルが塗られる（`duration-fast`）。紙吹雪・チェックの跳ねなどの祝福の演出を作らない。
 - Drawer は `duration-slow` で 16px スライドする。
 - Loading：300ms 未満で終わる処理にはスピナーを出さない。スピナーは必ず文言と一緒に（「見積中」「保存中…」）。

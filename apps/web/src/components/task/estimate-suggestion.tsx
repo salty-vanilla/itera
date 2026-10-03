@@ -3,34 +3,32 @@ import type {
   SuggestionBound,
 } from '@itera/domain';
 import { boundValue } from '@itera/domain';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Field } from '@/components/ui/field';
-import { TextInput } from '@/components/ui/text-input';
-import { formatHours, formatRange, spokenHours } from '@/lib/time-format';
+import { DurationField } from '@/components/ui/duration-field';
+import { BOUND_WORDS } from '@/lib/criterion-text';
+import { DURATION_ERROR, hoursText, readMinutes } from '@/lib/duration-text';
+import { formatHours, formatRange } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
 
 // DESIGN.md Components › Agent 提案 and docs/design/agent-ui.md, for an
 // Estimate suggestion. A dashed box with 「Agent 提案 · Estimate」, the
-// source and time, the range with its middle, the rationale and the
-// uncertain points. The person adopts (採用) one end as their Estimate, or
+// source and time, the range with its middle (ふつう), the rationale and the
+// uncertain points. The person adopts (採用) one of the three values
+// (少なめ / ふつう / 多め, #234) as their Estimate, or
 // edits the value first (編集して採用, F31): adopting is Secondary, editing
 // and rejecting are Quiet, never Primary. Nothing changes
 // until they choose. This is 採用 (the Task's Estimate changes), never 適用
 // of a planning criterion (invariant 7).
 
-const bounds: readonly { bound: SuggestionBound; word: string }[] = [
-  { bound: 'lo', word: '下限' },
-  { bound: 'mid', word: '中央' },
-  { bound: 'hi', word: '上限' },
-];
+const bounds: readonly SuggestionBound[] = ['lo', 'mid', 'hi'];
 
 type EstimateSuggestionProps = {
   suggestion: Suggestion;
   /** When it was made, as text (「9/24 (木) 12:01」). */
   madeAt: string;
   onAdopt: (bound: SuggestionBound) => void;
-  /** 編集して採用: the person's hours. Returns whether it went through. */
+  /** 直して使う (編集して採用): the person's hours. Returns whether it went through. */
   onAdoptEdited: (hours: number) => boolean;
   onReject: () => void;
   /**
@@ -53,11 +51,12 @@ function EstimateSuggestion({
   const mid = boundValue(suggestion, 'mid');
   // 編集して採用: an inline field that starts from the middle value.
   const [editing, setEditing] = useState(false);
-  const [hours, setHours] = useState(String(mid));
+  const [hours, setHours] = useState(() => hoursText(mid));
   const [error, setError] = useState<string>();
   const fieldRef = useRef<HTMLInputElement>(null);
   const firstRef = useRef<HTMLButtonElement>(null);
   const editRef = useRef<HTMLButtonElement>(null);
+  const valuesLabelId = useId();
   // Where focus goes when the inline field closes by キャンセル.
   const backToEdit = useRef(false);
   useEffect(() => {
@@ -71,19 +70,19 @@ function EstimateSuggestion({
   }, [editing]);
 
   function adoptEdited() {
-    const value = Number(hours);
-    if (hours.trim() === '' || !Number.isFinite(value) || value <= 0) {
-      setError('0 より大きい数で入力してください（例: 2.5）');
+    const minutes = readMinutes(hours);
+    if (minutes === undefined || minutes === null || minutes === 0) {
+      setError(DURATION_ERROR);
       fieldRef.current?.focus();
       return;
     }
     setError(undefined);
-    if (onAdoptEdited(value)) setEditing(false);
+    if (onAdoptEdited(minutes / 60)) setEditing(false);
   }
 
   return (
     <section
-      aria-label="Agent 提案 · Estimate"
+      aria-label="見積もりの提案"
       data-slot="estimate-suggestion"
       className={cn(
         'flex flex-col gap-3 rounded-md border border-dashed border-proposal-border bg-surface p-4',
@@ -91,24 +90,25 @@ function EstimateSuggestion({
       )}
     >
       <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <p className="text-kicker text-ink-muted">Agent 提案 · Estimate</p>
-        <p className="text-meta text-ink-subtle">
-          製品内の見積もり支援 · {madeAt}
-        </p>
+        <p className="text-kicker text-ink-muted">見積もりの提案</p>
+        <p className="text-meta text-ink-subtle">Itera · {madeAt}</p>
       </header>
       <p className="flex flex-wrap items-baseline gap-x-3">
         <span className="text-num-m text-ink">
           <span aria-hidden>{formatRange(suggestion.lo, suggestion.hi)}</span>
           <span className="sr-only">
-            Agent の提案（未確定）: {spokenHours(suggestion.lo, suggestion.hi)}
+            見積もりの提案（未確定）：
+            {formatRange(suggestion.lo, suggestion.hi)}
           </span>
         </span>
+        {/* No 「提案」 after it: the card's heading says it (#241). */}
         <span className="text-meta text-ink-muted">
-          中央 {formatHours(mid)}
+          {BOUND_WORDS.mid} {formatHours(mid)}
         </span>
-        <span className="text-meta text-ink-muted">提案</span>
       </p>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-body">
+      {/* Free text with times in it: broken between phrases, so that
+          「1〜2時間」 is not broken inside (#239). */}
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-body [text-wrap:pretty] [word-break:auto-phrase]">
         <dt className="text-label text-ink-muted">根拠</dt>
         <dd className="text-ink">
           {suggestion.rationale === ''
@@ -117,7 +117,7 @@ function EstimateSuggestion({
         </dd>
         {suggestion.uncertainties.length > 0 && (
           <>
-            <dt className="text-label text-ink-muted">不確実な点</dt>
+            <dt className="text-label text-ink-muted">わからない点</dt>
             <dd className="text-ink">{suggestion.uncertainties.join('、')}</dd>
           </>
         )}
@@ -131,24 +131,17 @@ function EstimateSuggestion({
             adoptEdited();
           }}
         >
-          <Field
-            label="採用する Estimate（時間）"
-            description="提案の値を直して、本人の Estimate にします"
+          <DurationField
+            label="使う見積もり"
+            size="sm"
             error={error}
-          >
-            <TextInput
-              ref={fieldRef}
-              size="sm"
-              inputMode="decimal"
-              suffix="h"
-              value={hours}
-              autoFocus
-              onChange={(e) => setHours(e.currentTarget.value)}
-            />
-          </Field>
+            value={hours}
+            onChange={setHours}
+            hoursProps={{ ref: fieldRef, autoFocus: true }}
+          />
           <div className="flex gap-2">
             <Button size="sm" type="submit">
-              採用
+              使う
             </Button>
             <Button
               size="sm"
@@ -164,33 +157,54 @@ function EstimateSuggestion({
           </div>
         </form>
       ) : (
-        <div className="flex flex-wrap gap-2">
-          {bounds.map(({ bound, word }, index) => (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          {/* The three values in one row, as one control that shares its
+              frame: one strong part rather than three, which never breaks
+              apart at any width (#234, #242); where they do not fit after
+              「使う：」, the label goes on the line above. The values alone
+              are shown; each button reads out its word (少なめ / ふつう /
+              多め) with its value. */}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span id={valuesLabelId} className="text-body text-ink">
+              使う：
+            </span>
+            <div role="group" aria-labelledby={valuesLabelId} className="flex">
+              {bounds.map((bound, index) => (
+                <Button
+                  key={bound}
+                  ref={index === 0 ? firstRef : undefined}
+                  size="sm"
+                  className={cn(
+                    'focus-visible:z-1',
+                    index > 0 && '-ms-px rounded-s-none',
+                    index < bounds.length - 1 && 'rounded-e-none',
+                  )}
+                  aria-label={`${BOUND_WORDS[bound]}の ${formatHours(boundValue(suggestion, bound))}を使う`}
+                  onClick={() => onAdopt(bound)}
+                >
+                  {formatHours(boundValue(suggestion, bound))}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
             <Button
-              key={bound}
-              ref={index === 0 ? firstRef : undefined}
+              ref={editRef}
               size="sm"
-              onClick={() => onAdopt(bound)}
+              variant="quiet"
+              onClick={() => {
+                // Always start from the middle of this suggestion.
+                setHours(hoursText(mid));
+                setError(undefined);
+                setEditing(true);
+              }}
             >
-              {word} {formatHours(boundValue(suggestion, bound))} を採用
+              直して使う
             </Button>
-          ))}
-          <Button
-            ref={editRef}
-            size="sm"
-            variant="quiet"
-            onClick={() => {
-              // Always start from the middle of this suggestion.
-              setHours(String(mid));
-              setError(undefined);
-              setEditing(true);
-            }}
-          >
-            編集して採用
-          </Button>
-          <Button size="sm" variant="quiet" onClick={onReject}>
-            却下
-          </Button>
+            <Button size="sm" variant="quiet" onClick={onReject}>
+              使わない
+            </Button>
+          </div>
         </div>
       )}
     </section>

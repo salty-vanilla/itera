@@ -1,14 +1,21 @@
 // What the Planning screen reads (PRD §5 B): the Backlog grouped for 選ぶ,
 // and, for 確かめる, which values make the total a range (「何が上振れすると
 // 超過するか」). Derived from records, never stored.
+import { isOverdue } from './backlog';
 import type { Occurrence } from './occurrence';
 import { sprintTaskValue, type ActiveCriterion } from './planning';
-import type { PlanningValue } from './planning-value';
-import type { Instant } from './shared/time';
+import {
+  criterionActsOn,
+  type CriterionPolicy,
+  type PlanningValue,
+} from './planning-value';
+import type { Instant, LocalDate } from './shared/time';
 import { isCounted, type Sprint, type SprintTask } from './sprint';
 import { isRecurring, type Task } from './task';
 
 export interface PlanningCandidatesInput {
+  /** Today, in the user's time zone: 期限超過 is before it, as in Backlog. */
+  readonly today: LocalDate;
   /** Every Task of the user. */
   readonly tasks: readonly Task[];
   /** Every Sprint of the user, to find the previous one. */
@@ -23,8 +30,15 @@ export interface PlanningCandidates {
    * this Sprint yet or not. Nothing joins automatically (invariant 20).
    */
   readonly carriedOver: readonly Task[];
-  /** 期限が近い: due by the end of this Sprint (overdue included). */
+  /** 期限超過: due before today, apart from 期限が近い as in Backlog. */
+  readonly overdue: readonly Task[];
+  /**
+   * 期限が近い: due from today to the end of the Sprint being planned.
+   * The Backlog's 切り口 ends with the Sprint that holds today instead (F28).
+   */
   readonly dueSoon: readonly Task[];
+  /** The last day 期限が近い reaches: the end of the Sprint being planned. */
+  readonly dueSoonUntil: LocalDate;
   /**
    * 今週発生する繰り返し: recurring Tasks with occurrences in this period,
    * included (pending) or left out (excluded), in date order.
@@ -38,7 +52,7 @@ export interface PlanningCandidates {
 }
 
 /**
- * The Backlog pane of 選ぶ: the active Tasks in four groups, each Task in
+ * The Backlog pane of 選ぶ: the active Tasks in five groups, each Task in
  * one group only, in creation order within a group (invariant 5).
  */
 export function planningCandidates(
@@ -64,6 +78,7 @@ export function planningCandidates(
     (o.state === 'pending' || o.state === 'excluded');
 
   const carriedOver: Task[] = [];
+  const overdue: Task[] = [];
   const dueSoon: Task[] = [];
   const recurring: { task: Task; occurrences: Occurrence[] }[] = [];
   const others: Task[] = [];
@@ -76,11 +91,19 @@ export function planningCandidates(
       continue;
     }
     if (carried.has(task.id)) carriedOver.push(task);
+    else if (isOverdue(task, input.today)) overdue.push(task);
     else if (task.due !== undefined && task.due <= sprint.end)
       dueSoon.push(task);
     else others.push(task);
   }
-  return { carriedOver, dueSoon, recurring, others };
+  return {
+    carriedOver,
+    overdue,
+    dueSoon,
+    dueSoonUntil: sprint.end,
+    recurring,
+    others,
+  };
 }
 
 export interface CapacityDriver {
@@ -195,4 +218,38 @@ export function criterionEffect(
     hi += withIt.hi - without.hi;
   }
   return { count, delta: { lo, hi } };
+}
+
+/**
+ * Whether a confirmed Sprint has a value the criterion acted on, or one
+ * planned at confirm from a range in its scope (so it would have acted on
+ * it, had it been applied). False when the criterion had nothing to act on:
+ * the running Sprint shows it as 「対象なし」 (#161, F42). The Task's Area is
+ * today's: a planSnapshot does not keep it.
+ */
+export function criterionHasTarget(
+  sprint: Sprint,
+  input: {
+    readonly tasks: readonly Task[];
+    readonly policy: CriterionPolicy;
+  },
+): boolean {
+  return sprint.tasks.some((sprintTask) => {
+    const snapshot = sprintTask.planSnapshot;
+    if (!isCounted(sprintTask) || snapshot === undefined) return false;
+    if (snapshot.value.criterionApplied) return true;
+    // Planned at confirm from the suggestion, without the criterion.
+    if (
+      sprintTask.origin !== 'planning' ||
+      snapshot.value.base !== 'suggestion' ||
+      snapshot.suggestion === undefined
+    ) {
+      return false;
+    }
+    const task = input.tasks.find((t) => t.id === sprintTask.taskId);
+    return (
+      task !== undefined &&
+      criterionActsOn(input.policy, task, snapshot.suggestion)
+    );
+  });
 }

@@ -19,7 +19,7 @@ const meta = {
   title: 'Components/Task Row',
   component: TaskRow,
   parameters: { layout: 'padded' },
-  args: { title: '関連論文を 3 本読む' },
+  args: { title: '関連論文を 3本読む' },
 } satisfies Meta<typeof TaskRow>;
 
 export default meta;
@@ -35,13 +35,13 @@ function Row({
   const [done, setDone] = useState(initial);
   return (
     <TaskRow
-      title="関連論文を 3 本読む"
+      title="関連論文を 3本読む"
       done={done}
       current={current}
       onOpen={() => {}}
       control={
         <CompletionCircle
-          title="関連論文を 3 本読む"
+          title="関連論文を 3本読む"
           done={done}
           onToggle={() => setDone((d) => !d)}
         />
@@ -70,7 +70,7 @@ function Row({
       actions={
         <IconButton
           size="sm"
-          label="操作: 関連論文を 3 本読む"
+          label="その他の操作：関連論文を 3本読む"
           icon={<Ellipsis />}
         />
       }
@@ -99,7 +99,7 @@ export const Deadlines: Story = {
   ),
 };
 
-/** Estimate：本人の値（実線）、提案（破線＋「提案」）、計画値、サブタスク合計、未見積。 */
+/** Estimate：本人の値（実線）、提案（破線＋「提案」）、計画値（実績が並ぶ行だけ「計画」付き）、サブタスク合計、見積もりなし。 */
 export const Estimates: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-2">
@@ -137,6 +137,17 @@ export const Estimates: Story = {
           lo: 5,
           hi: 5,
           criterionApplied: true,
+          computedAt,
+        }}
+      />
+      <Estimate
+        planned
+        labeled
+        value={{
+          base: 'estimate',
+          lo: 2,
+          hi: 2,
+          criterionApplied: false,
           computedAt,
         }}
       />

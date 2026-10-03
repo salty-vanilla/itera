@@ -1,10 +1,9 @@
 import { ArrowUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Estimate } from '@/components/task/estimate';
 import { TaskMetadata } from '@/components/task/task-metadata';
 import { TaskRow } from '@/components/task/task-row';
 import type { TodayItem } from '@/store/today-view';
-import { ItemMetadata } from './today-row';
+import { ItemMetadata, PlannedValue } from './today-row';
 
 // A row of 昨日の続き or 今週の残り. It is chosen with 「今日へ」, always
 // visible at the start of the row; never a □, which means choosing for the
@@ -25,22 +24,35 @@ function WeekRow({ item, onOpen, onEstimate, onChoose }: WeekRowProps) {
       onOpen={onOpen}
       keys={{ onEstimate }}
       control={
-        <Button size="sm" data-action="choose" onClick={onChoose}>
+        <Button
+          size="sm"
+          // Quiet, so that the row being worked on stays the strongest thing
+          // on the screen; the words and the arrow keep it in sight (#242).
+          variant="quiet"
+          data-action="choose"
+          // The whole name, not a visually hidden 「: タイトル」: browsers
+          // read a hidden span apart, as 「今日へ : タイトル」 (#153).
+          aria-label={`今日へ：${item.task.title}`}
+          onClick={onChoose}
+        >
           <ArrowUp aria-hidden />
           今日へ
-          <span className="sr-only">: {item.task.title}</span>
         </Button>
       }
       metadata={
         <TaskMetadata>
+          <PlannedValue value={item.value} at="metadata" />
           <ItemMetadata item={item} occurrenceDate />
         </TaskMetadata>
       }
       estimate={
         item.value.base === 'none' ? undefined : (
-          <Estimate value={item.value} planned />
+          <PlannedValue value={item.value} at="end" />
         )
       }
+      estimateFromMedium
+      // 今日やる has the `…`; the values line up with it.
+      reserveActions
     />
   );
 }

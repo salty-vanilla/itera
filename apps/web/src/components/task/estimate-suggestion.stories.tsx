@@ -6,7 +6,7 @@ const suggestion = {
   id: id<'EstimateSuggestion'>('sug-1'),
   lo: 2,
   hi: 4,
-  rationale: '過去の類似タスク 3件（実績 2h / 2.5h / 4h）',
+  rationale: '過去の類似タスク 3件（実績 2時間 / 2時間30分 / 4時間）',
   uncertainties: ['調査範囲（対象データの件数が未定）'],
   createdAt: instant('2026-09-29T03:00:00.000Z'),
   state: 'presented' as const,
@@ -28,26 +28,31 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** 提示中：破線の枠。採用（下限・中央・上限）は Secondary、編集して採用と却下は Quiet。 */
+/** 提示中：破線の枠。「使う：」の後の 3 つの値は枠を共有した 1 つの群（Secondary）、「直して使う」と「使わない」は Quiet。 */
 export const Pending: Story = {};
+
+/**
+ * 3 つの値がどれも「X時間Y分」のとき。「使う：」の後に群が入らない幅では、
+ * 「使う：」が群の上の行に回り、群は折れない（Issue #242）。
+ */
+export const LongValues: Story = {
+  args: { suggestion: { ...suggestion, lo: 1.5, hi: 3.5 } },
+};
 
 /** 根拠がないとき。 */
 export const NoRationale: Story = {
   args: { suggestion: { ...suggestion, rationale: '', uncertainties: [] } },
 };
 
-/** 採用・却下の後：実線の canvas-subtle の 1 行と「元に戻す」。 */
+/** 使う・使わないの後：実線の canvas-subtle の 1 行と「元に戻す」。 */
 export const Outcome: Story = {
   render: () => (
     <div className="flex flex-col gap-2">
       <SuggestionOutcome onUndo={() => {}}>
-        Estimate 3h を採用しました（Agent 提案 2–4h）
+        見積もりを 3時間にしました
       </SuggestionOutcome>
       <SuggestionOutcome onUndo={() => {}}>
-        Estimate 2.5h を採用しました（Agent 提案 2–4h を編集）
-      </SuggestionOutcome>
-      <SuggestionOutcome onUndo={() => {}}>
-        提案 2–4h を却下しました
+        提案を使いませんでした
       </SuggestionOutcome>
     </div>
   ),

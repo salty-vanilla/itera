@@ -2,6 +2,7 @@ import type { Instant, LocalDate } from '@itera/domain';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from '@/fixtures/states';
 import type { Records } from './records';
+import { retroData } from './retro-view';
 import { runningData } from './running-view';
 
 const withActive = (
@@ -65,6 +66,74 @@ describe('runningData', () => {
     expect(data?.criterion).toBeUndefined();
   });
 
+  it('knows whether the criterion had a planned value to act on (#161, F42)', () => {
+    const { records, clock } = fixtureSnapshot('today-interrupt');
+    expect(runningData(records, clock)?.criterion).toMatchObject({
+      applied: true,
+      noEffect: false,
+    });
+    // Applied at confirm, but no planned value came from it (the
+    // suggestions were points).
+    const none = withActive(records, (s) => ({
+      ...s,
+      tasks: s.tasks.map((t) =>
+        t.planSnapshot === undefined
+          ? t
+          : {
+              ...t,
+              planSnapshot: {
+                ...t.planSnapshot,
+                ...(t.planSnapshot.suggestion === undefined
+                  ? {}
+                  : {
+                      suggestion: {
+                        ...t.planSnapshot.suggestion,
+                        hi: t.planSnapshot.suggestion.lo,
+                      },
+                    }),
+                value: { ...t.planSnapshot.value, criterionApplied: false },
+              },
+            },
+      ),
+    }));
+    expect(runningData(none, clock)?.criterion).toMatchObject({
+      applied: true,
+      noEffect: true,
+    });
+    // Switched off by the person with a range it would act on: it stays
+    // whole. Without one it is a line, as it is not applied (F42, #162).
+    const switchedOff = (from: typeof records, range: boolean) =>
+      withActive(from, (s) => ({
+        ...s,
+        tasks: s.tasks.map((t) => {
+          const snapshot = t.planSnapshot;
+          if (snapshot?.suggestion === undefined) return t;
+          if (snapshot.value.base !== 'suggestion') return t;
+          // Without a range, the suggestion was a point (invariant 9).
+          const { lo, hi } = range
+            ? snapshot.suggestion
+            : { lo: snapshot.suggestion.lo, hi: snapshot.suggestion.lo };
+          return {
+            ...t,
+            planSnapshot: {
+              ...snapshot,
+              suggestion: { ...snapshot.suggestion, lo, hi },
+              value: { ...snapshot.value, lo, hi, criterionApplied: false },
+            },
+          };
+        }),
+        ...(s.criterionUse === undefined
+          ? {}
+          : { criterionUse: { ...s.criterionUse, appliedAtConfirm: false } }),
+      }));
+    expect(
+      runningData(switchedOff(records, true), clock)?.criterion,
+    ).toMatchObject({ applied: false, noEffect: false });
+    expect(
+      runningData(switchedOff(records, false), clock)?.criterion,
+    ).toMatchObject({ applied: false, noEffect: true });
+  });
+
   it('tells what undoing a past day leaves (F33, F17, F29)', () => {
     const { records } = fixtureSnapshot('today-interrupt');
     const withKinds = withActive(records, (s) => ({
@@ -98,5 +167,54 @@ describe('runningData', () => {
       '2026-09-29': ['closed'],
       '2026-09-28': ['unresolved'],
     });
+  });
+
+  it('shows an ended Sprint by id, read only, with its carried-over Tasks (#90)', () => {
+    const { records, clock } = fixtureSnapshot('today-daytime');
+    const closed = records.sprints.find((s) => s.state === 'closed')!;
+    const data = runningData(records, clock, closed.id);
+    expect(data?.sprint.id).toBe(closed.id);
+    // Last week: the Sprint Header says so (#168).
+    expect(data?.week).toBe('先週');
+    expect(data?.day).toBeUndefined();
+    expect(data?.pastDays).toEqual([]);
+    const outcomes = data?.plan.flatMap((p) =>
+      p.tasks.map((t) => [t.task.id, t.sprintTask.outcome]),
+    );
+    expect(outcomes).toContainEqual(['task-api-review', 'carriedOver']);
+    // The Retro's planned total, carried-over Tasks included.
+    const facts = retroData(records, clock, closed.id)?.facts;
+    expect(data?.totals.total).toEqual(facts?.plannedTotal.withAdditions);
+    expect(data?.totals.byArea).toEqual([]);
+    // Areas with neither a Goal nor Tasks are left out once ended.
+    expect(
+      data?.plan.every((p) => p.goal !== undefined || p.tasks.length > 0),
+    ).toBe(true);
+  });
+
+  it('calls the running Sprint 「今週」 and is absent for one being planned', () => {
+    const { records, clock } = fixtureSnapshot('planning-pick');
+    const planning = records.sprints.find((s) => s.state === 'planning')!;
+    expect(runningData(records, clock, planning.id)).toBeUndefined();
+    const running = fixtureSnapshot('today-daytime');
+    expect(runningData(running.records, running.clock)?.week).toBe('今週');
+  });
+});
+
+describe('retroData (#90)', () => {
+  it('opens a closed Sprint’s Retro by id', () => {
+    const { records, clock } = fixtureSnapshot('today-daytime');
+    const closed = records.sprints.find((s) => s.state === 'closed')!;
+    const data = retroData(records, clock, closed.id);
+    expect(data?.number).toBe(1);
+    expect(data?.improvement).toBe('研究の見積もりは提案の多めの値で計画する');
+    // No Sprint in Review: nothing by default.
+    expect(retroData(records, clock)).toBeUndefined();
+  });
+
+  it('is absent for a Sprint whose Retro has not started', () => {
+    const { records, clock } = fixtureSnapshot('today-daytime');
+    const running = records.sprints.find((s) => s.state === 'active')!;
+    expect(retroData(records, clock, running.id)).toBeUndefined();
   });
 });

@@ -1,6 +1,6 @@
 import { Toast as ToastPrimitive } from '@base-ui/react/toast';
 import { X } from 'lucide-react';
-import { useMemo, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from './button';
 import { Icon, semanticIcons } from './icon';
@@ -16,15 +16,55 @@ import { IconButton } from './icon-button';
 // - timers stop while the pointer is over the Toasts or focus is inside them
 //   (F6 moves focus to them),
 // - beyond the limit the oldest Toasts are marked data-limited and made inert.
+//
+// Toasts of one kind do not stack: `kind` gives them one ID, and a Toast
+// with that ID closes the one showing and takes its place as the newest
+// (DESIGN.md Toast).
 
 /** docs/design/foundations.md `duration-toast`. */
 const TOAST_TIMEOUT = 8000;
+/**
+ * `duration-toast-action`: a Toast with an action (元に戻す, 今日を開く) is
+ * pressed after it is read, and it takes longer to reach (#170).
+ */
+const TOAST_ACTION_TIMEOUT = 16000;
 /** Three at a time at most (Issue #8). Older ones are hidden. */
 const TOAST_LIMIT = 3;
 
 type ToastTone = 'neutral' | 'done' | 'danger';
 
+/**
+ * The kinds of operation a Toast reports (DESIGN.md Toast). One list, so that
+ * a misspelt kind is a type error instead of a Toast that stacks.
+ */
+type ToastKind =
+  /** Chosen for or removed from the week: 「入れました」「外しました」. */
+  | 'sprint-pick'
+  | 'sprint-confirmed'
+  | 'retro-completed'
+  | 'task-added'
+  /** 今日へ (a Backlog row or a Task detail): 「「タイトル」を「今日やる」に入れました」. */
+  | 'added-to-today'
+  /** 今週へ (a Backlog row or a Task detail), with 元に戻す (#155). */
+  | 'added-to-week'
+  | 'task-archived'
+  | 'day-record-undone'
+  /** 今日は見送る / 今週の残りに戻す from a Today row, with 元に戻す (#163). */
+  | 'today-closed'
+  | 'interrupt-deleted'
+  /** 割り込みを記録 from the sheet, with 見る to the list (#157). */
+  | 'interrupt-noted'
+  | 'save-failed';
+
 type ToastOptions = {
+  /**
+   * The kind of operation. A Toast of a kind that is already showing takes
+   * the place of the old one (its text, action and timer are replaced), so
+   * that repeating one operation never stacks Toasts and 「元に戻す」 acts on
+   * the latest one. Toasts of other kinds stay. Without a kind a Toast is
+   * always added.
+   */
+  kind?: ToastKind;
   tone?: ToastTone;
   /** The result, stated plainly: 「3件を今週に入れました」. */
   title: string;
@@ -46,9 +86,14 @@ function ToastProvider({ children }: { children: ReactNode }) {
             // Newest at the bottom, nearest the edge.
             'fixed z-(--layer-toast) flex flex-col-reverse gap-2 focus-visible:focus-ring',
             // compact: full width above the bottom tab bar, whose height the
-            // screen sets in --toast-offset-bottom. medium and up: bottom left.
-            'inset-x-4 bottom-[calc(var(--toast-offset-bottom,0px)+var(--spacing-4))]',
-            'medium:right-auto medium:bottom-6 medium:left-6 medium:w-pane-side',
+            // screen sets in --toast-offset-bottom, and above a bar the screen
+            // sticks over it (--toast-offset-above, lib/use-stuck-bar.ts).
+            // medium and up: bottom left, and above such a bar too. 480px wide;
+            // while a Drawer is open (400px at the right edge) short of it, 24px
+            // from the left edge and 8px between: 336px at 768px (#170).
+            'inset-x-4 bottom-[calc(var(--toast-offset-bottom,0px)+var(--toast-offset-above,0px)+var(--spacing-4))]',
+            'medium:right-auto medium:bottom-[calc(var(--toast-offset-above,0px)+var(--spacing-6))] medium:left-6 medium:w-toast',
+            'medium:[body:has([data-slot=drawer-content])_&]:w-[min(var(--spacing-toast),calc(100vw-var(--spacing-drawer)-var(--spacing-8)))]',
           )}
         >
           <ToastList />
@@ -102,10 +147,10 @@ function ToastList() {
             {/* A sentence, not a heading of the page. */}
             <ToastPrimitive.Title
               render={<p />}
-              className="text-body text-ink"
+              className="text-body text-ink [word-break:auto-phrase]"
             />
             {toast.description !== undefined && (
-              <ToastPrimitive.Description className="text-help text-ink-muted" />
+              <ToastPrimitive.Description className="text-help text-ink-muted [word-break:auto-phrase]" />
             )}
           </div>
           {toast.actionProps && (
@@ -139,24 +184,43 @@ function useToast() {
   const manager = ToastPrimitive.useToastManager();
   return useMemo(
     () => ({
-      show({ tone = 'neutral', title, description, action }: ToastOptions) {
-        const id: string = manager.add({
+      show({
+        kind,
+        tone = 'neutral',
+        title,
+        description,
+        action,
+      }: ToastOptions) {
+        const id: string | undefined =
+          kind === undefined ? undefined : `kind:${kind}`;
+        // Base UI updates a Toast added with an existing ID in place, which
+        // would keep its place in the stack and, past the limit, keep it
+        // hidden. Closing it first makes the add a new, newest Toast (the
+        // closing one is removed by the add, with no second Toast to see).
+        if (id !== undefined) manager.close(id);
+        const shownId: string = manager.add({
+          ...(id !== undefined && { id }),
           type: tone,
           title,
           description,
           priority: tone === 'danger' ? 'high' : 'low',
           // A failure stays until it is closed, so that 「再試行」 does not
           // disappear with it (DESIGN.md common states › Error).
-          timeout: tone === 'danger' ? 0 : TOAST_TIMEOUT,
+          timeout:
+            tone === 'danger'
+              ? 0
+              : action
+                ? TOAST_ACTION_TIMEOUT
+                : TOAST_TIMEOUT,
           actionProps: action && {
             children: action.label,
             onClick: () => {
               action.onClick();
-              manager.close(id);
+              manager.close(shownId);
             },
           },
         });
-        return id;
+        return shownId;
       },
       close: (id: string) => manager.close(id),
     }),
@@ -164,5 +228,40 @@ function useToast() {
   );
 }
 
-export { TOAST_LIMIT, TOAST_TIMEOUT, ToastProvider, useToast };
-export type { ToastOptions, ToastTone };
+/**
+ * The Toasts showing, for a screen that makes room for them
+ * (app/use-toast-clearance.ts). A shown or replaced Toast is a new object.
+ */
+function useToasts() {
+  return ToastPrimitive.useToastManager().toasts;
+}
+
+/**
+ * Closes the Toasts of the screen that was left (#170). A failure (danger)
+ * stays: its 「再試行」 is not to be lost, and it is closed by the person.
+ * The returned function is stable and acts on the Toasts showing when it is
+ * called.
+ */
+function useCloseToastsOnLeave(): () => void {
+  const manager = ToastPrimitive.useToastManager();
+  const latest = useRef(manager);
+  useEffect(() => {
+    latest.current = manager;
+  }, [manager]);
+  return useCallback(() => {
+    for (const toast of latest.current.toasts) {
+      if (toast.type !== 'danger') latest.current.close(toast.id);
+    }
+  }, []);
+}
+
+export {
+  TOAST_ACTION_TIMEOUT,
+  TOAST_LIMIT,
+  TOAST_TIMEOUT,
+  ToastProvider,
+  useCloseToastsOnLeave,
+  useToast,
+  useToasts,
+};
+export type { ToastKind, ToastOptions, ToastTone };
