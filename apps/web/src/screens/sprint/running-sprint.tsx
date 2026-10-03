@@ -258,6 +258,7 @@ function RunningSprint({
               item={openItem}
               areas={backlog.areas}
               timeZone={backlog.timeZone}
+              lastDay={backlog.lastDay}
               onClose={() => showTask(undefined)}
               onComplete={async () => {
                 if (await taskActions.completeTask(openItem.task.id)) {

@@ -1,7 +1,8 @@
-import type { Instant, Sprint } from '@itera/domain';
+import { localDate, type Instant, type Sprint } from '@itera/domain';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot, fixtureIds } from './fixtures/states';
 import type { Records } from './records';
+import { backlogData } from './backlog-view';
 import { todayData } from './today-view';
 
 const ids = fixtureIds();
@@ -122,5 +123,37 @@ describe('todayData', () => {
     }));
     const texts = todayData(withEarlier, clock)?.interrupts.map((n) => n.text);
     expect(texts).toEqual(['障害の問い合わせに対応', '急ぎのレビュー依頼']);
+  });
+});
+
+// Only the Sprint's end date is its last day, whichever screen asks: Today
+// and the Backlog give the same answer, and no Sprint is not a last day (#314).
+describe('lastDay', () => {
+  const { records, clock } = fixtureSnapshot('today-interrupt');
+  const end = records.sprints.find((s) => s.state === 'active')?.end;
+  const on = (today: string) => ({ ...clock, today: localDate(today) });
+
+  it('is true only on the active Sprint’s end date, in Today and the Backlog', () => {
+    expect(end).toBe('2026-10-04');
+    const answers = ['2026-10-01', '2026-10-03', '2026-10-04'].map((day) => ({
+      day,
+      today: todayData(records, on(day))?.lastDay,
+      backlog: backlogData(records, on(day), {}).lastDay,
+    }));
+    expect(answers).toEqual([
+      { day: '2026-10-01', today: false, backlog: false },
+      { day: '2026-10-03', today: false, backlog: false },
+      { day: '2026-10-04', today: true, backlog: true },
+    ]);
+  });
+
+  it('is false in the Backlog when no Sprint is active', () => {
+    const planning = fixtureSnapshot('planning-pick');
+    expect(planning.records.sprints.some((s) => s.state === 'active')).toBe(
+      false,
+    );
+    expect(backlogData(planning.records, planning.clock, {}).lastDay).toBe(
+      false,
+    );
   });
 });

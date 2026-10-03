@@ -383,6 +383,7 @@ function LoadedBacklog({ backlog }: { backlog: BacklogView }) {
               item={open}
               areas={areas}
               timeZone={backlog.timeZone}
+              lastDay={backlog.lastDay}
               onClose={() => setSearch({ task: undefined })}
               onComplete={() => completeWithUndo(open.task.id, open.task.title)}
               focusEstimate={estimateFocus.of(open.task.id)}

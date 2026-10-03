@@ -23,6 +23,7 @@ import { TaskMetadata } from '@/components/task/task-metadata';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
 import { TaskRow } from '@/components/task/task-row';
 import { formatDate, formatTime } from '@/lib/date-format';
+import { LAST_DAY_CLOSED_WORDS } from '@/lib/selection-words';
 import { formatPlanningTotal } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { useStuckBar } from '@/lib/use-stuck-bar';
@@ -675,8 +676,10 @@ function TodayView({ data }: { data: TodayData }) {
               <h2 id="today-closed" className="text-subheading text-ink-muted">
                 今日はもうやらない
               </h2>
-              <p className="text-help text-ink-muted">
-                明日から、今週の残りに戻ります。
+              <p className="text-help text-ink-muted [text-wrap:pretty] [word-break:auto-phrase]">
+                {data.lastDay
+                  ? LAST_DAY_CLOSED_WORDS.section
+                  : '明日から、今週の残りに戻ります。'}
               </p>
               <ul className="flex flex-col border-t border-border-soft">
                 {data.closed.map((row) => (
@@ -811,6 +814,11 @@ function TodayView({ data }: { data: TodayData }) {
             if (!open) setEditing(undefined);
           }}
           anchor={editing.anchor}
+          description={
+            editing.mode === 'pause' && data.lastDay
+              ? LAST_DAY_CLOSED_WORDS.section
+              : undefined
+          }
           loading={
             editing.mode === 'pause'
               ? actions.loading.pause
@@ -871,6 +879,7 @@ function TodayView({ data }: { data: TodayData }) {
               item={openItem}
               areas={backlog.areas}
               timeZone={backlog.timeZone}
+              lastDay={backlog.lastDay}
               onClose={() => showTask(undefined)}
               onComplete={async () => {
                 if (await taskActions.completeTask(openItem.task.id)) {

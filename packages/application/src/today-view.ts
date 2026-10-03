@@ -24,7 +24,7 @@ import {
   type WeekProgress,
 } from '@itera/domain';
 import type { Clock, Records } from './records';
-import { dayInPeriod, selectionActualHours } from './sprint-day';
+import { dayInPeriod, isLastDay, selectionActualHours } from './sprint-day';
 
 export interface TodayArea {
   readonly id: AreaId;
@@ -285,7 +285,7 @@ export function todayData(
     number: sprintNumber(sprint, sprints),
     today,
     day: dayInPeriod(sprint, today),
-    lastDay: today === sprint.end,
+    lastDay: isLastDay(sprint, today),
     timeZone: records.user.timeZone,
     progress: weekProgress(sprint, occurrences),
     remaining: todayRemaining(sprint, today),
