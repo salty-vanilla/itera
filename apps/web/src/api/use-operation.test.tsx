@@ -5,7 +5,7 @@ import {
   createClient,
   createConfig,
   type Client,
-} from '@itera/api-contract/client';
+} from '@itera/api-contract/create-client';
 import { renameAreaMutation } from '@itera/api-contract/react-query';
 import { createMemoryStore } from '@itera/application';
 import { fixtureIds, fixtureSnapshot } from '@itera/application/fixtures';

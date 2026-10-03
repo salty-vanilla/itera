@@ -98,7 +98,7 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
 | 対象 | 採用 | 版 | 置き場所 |
 | --- | --- | --- | --- |
 | 取得結果のキャッシュ | `@tanstack/react-query` | 5.104.1 | `apps/web` の dependencies。ADR 0006 と同じ版 |
-| 契約のクライアント | `@itera/api-contract`（`/client`・`/react-query`） | workspace | `apps/web` の dependencies |
+| 契約のクライアント | `@itera/api-contract`（`/client`・`/create-client`・`/react-query`） | workspace | `apps/web` の dependencies |
 | モックの入力の検証 | `valibot` | 1.5.0 | `apps/web` の devDependencies（モックだけが使い、本番ビルドに入らない）。ADR 0006 と同じ版 |
 
 使い方は 2026-10-03 に Context7 で TanStack Query v5（`QueryCache`・`MutationCache` の全体のコールバック、`invalidateQueries`）と Vite（`server.proxy`、`--mode`）の文書を確かめた。
@@ -106,7 +106,7 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
 #### データの出どころ
 
 - `apps/web/src/app/data-source.ts` が、ブラウザ内モック（開発の既定。`pnpm --filter @itera/web dev`）か API（本番ビルドと `pnpm --filter @itera/web dev:api`）かを選ぶ。どちらも同じ `ApiProvider`（契約のクライアントと `QueryClient`）を画面に渡す。
-- 契約のクライアントは、データの出どころごとに `createClient` で作る（`@itera/api-contract/client` から `createClient`・`createConfig` を出した）。生成した関数と options には `{ client }` で渡す（`getOverviewOptions({ client })`）。モジュールの既定の `client` を書き換えない。fixture の状態を替えるたびに、記録・クライアント・キャッシュを新しくする。
+- 契約のクライアントは、データの出どころごとに `createClient` で作る（`@itera/api-contract/create-client` の `createClient`・`createConfig`）。生成した関数と options には `{ client }` で渡す（`getOverviewOptions({ client })`）。モジュールの既定の `client` を書き換えない。fixture の状態を替えるたびに、記録・クライアント・キャッシュを新しくする。
 - `--mode api` では、Vite の開発サーバーが `/api` を `wrangler dev`（既定 `http://localhost:8787`、`ITERA_API_ORIGIN` で変えられる）に中継する。Host と Origin は開発サーバーのままなので、`BETTER_AUTH_URL` は開発サーバーの origin にする（`services/api/README.md`）。
 
 #### Query のキーと無効化
@@ -120,7 +120,7 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
 
 #### エラーと送信中
 
-- 失敗は応答の `code` だけで分ける（`apps/web/src/api/failure.ts`）：`unauthenticated`（401）、`revisionConflict`（409）、受け付けられない（400・403・404・422）、それ以外（500、通信の失敗、知らない `code`。ADR 0006「互換の規則」）。`message` は画面に出さない。
+- 失敗は応答の `code` だけで分ける（`apps/web/src/api/failure.ts`）：`unauthenticated`（401）、`revisionConflict`（409）、受け付けられない（400・403・404・413・422。利用者の設定がまだない `userNotSetUp` もここ。設定を作る画面への入口は #279）、それ以外（500、通信の失敗、知らない `code`。ADR 0006「互換の規則」）。`message` は画面に出さない。
   - エラーの `code` は開いた列挙（ADR 0006「列挙」）。生成した型は `code` をエラーごとの閉じた値で書いているが、Web は応答を実行時に検証しない（生成した SDK に応答の検証はない）。`failureOf` は失敗を `unknown` として受け、`code` を文字列として読むので、知らない `code`・知らない HTTP のステータス・JSON でない本文でも読み込みは失敗せず、一般の失敗になる（`failure.test.ts`）。Web が応答を実行時に検証するようにするなら、その前に開いた列挙の仕様での書き方を決める（ADR 0006）。
 - 操作が失敗したら、今までの `use-run.ts` と同じ danger の Toast（「保存できませんでした」）を出す。文言は `src/api/save-failed.ts` の 1 か所にまとめ、`use-run.ts` も使う。版の衝突（409）でも同じ Toast を出し、すべての読み取りを読み直す。操作は自動で送り直さない。
 - 未認証（401）は、読み取りでも操作でも、サインインの画面へ送る（`apps/web/src/app/sign-in.ts`。`/sign-in?redirect=<元の画面>`、履歴は置き換える）。Toast は出さない。画面とパス・戻り先の渡し方は #278 で作り、決め直してよい。
@@ -130,7 +130,7 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
 #### ブラウザ内モック
 
 - `apps/web/src/mock/`：`createMock(store)` が、契約の要求（`Request`）を受けて `packages/application` の読み取りと操作を `RecordStore` の上で実行し、API と同じ形の応答（読み取りは `{ clock, view }`、操作は値か 204、エラーは ADR 0006 の status と `code`）を返す。クライアントの `fetch` として渡す（Service Worker は使わない）。
-- 処理の順は API と同じ（ADR 0004「操作と読み取りの処理」）：入力を契約の Valibot のスキーマで確かめる（query の数と真偽は型に変えてから）→ システムの記録をその時点まで進める（終了日を過ぎた Sprint を Review にし、その日を始める。#271 と同じ処理）→ 読み取りか操作。利用者はサインイン済みとして扱い（#278）、Origin と版の衝突は確かめない。日付が暦の上で実在するかは、`getDay` のパスだけで確かめる（画面は実在しない日付を送らない）。
+- `getMe`（利用者と設定）は、API と同じく追いつきなしで、fixture の利用者の設定を返す。ほかの読み取りと操作の処理の順は API と同じ（ADR 0004「操作と読み取りの処理」）：入力を契約の Valibot のスキーマで確かめる（query の数と真偽は型に変えてから）→ システムの記録をその時点まで進める（終了日を過ぎた Sprint を Review にし、その日を始める。#271 と同じ処理）→ 読み取りか操作。利用者はサインイン済みで設定もある者として扱い（#278）、Origin・版の衝突・本文の大きさの上限は確かめない。日付が暦の上で実在するかは、`getDay` のパスだけで確かめる（画面は実在しない日付を送らない）。
 - ID は `packages/application` の `createIdSource`（TypeID）で作る。時計は fixture の状態ごとの時計（上の「時計」）。
 - 移行の途中の一致：モックと、まだ移していない画面は、同じ `RecordStore` を使う。画面が `RecordStore` で記録を変えたら、すべての読み取りを無効にする（`createMock` の `subscribeToScreens`）。モック自身の変更（要求への応答）では無効にしない（操作はクライアントが読み直し、読み取りはその応答がある）。
 - `packages/application` の `beginDay` は、その日がもう始まっていれば何も書かない（変更も Activity もない）ように改めた。前は実行中の Sprint を毎回書き直しており、要求のたびにシステムの記録を進めるモックでは、記録の差し替えと読み直しが止まらなかった。API（#271）でも書く行がなくなる。

@@ -15,9 +15,11 @@ describe('failureOf', () => {
       'validationFailed',
       'forbiddenOrigin',
       'notFound',
+      'payloadTooLarge',
       'invalidInput',
       'invalidTransition',
       'recurringTaskCannotComplete',
+      'userNotSetUp',
     ])
       expect(failureOf({ code, message: '' })).toEqual({
         kind: 'refused',
@@ -30,7 +32,7 @@ describe('failureOf', () => {
 
   it('takes what it does not know as a plain failure', () => {
     // A code added later, with or without a message.
-    expect(failureOf({ code: 'payloadTooLarge' })).toEqual({ kind: 'failed' });
+    expect(failureOf({ code: 'quotaExceeded' })).toEqual({ kind: 'failed' });
     // Not JSON (a proxy's page), no answer (the network), nothing at all.
     expect(failureOf('413 Request Entity Too Large')).toEqual({
       kind: 'failed',

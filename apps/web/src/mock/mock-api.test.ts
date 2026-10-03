@@ -8,7 +8,7 @@ import {
   getOverviewOptions,
 } from '@itera/api-contract/react-query';
 import * as sdk from '@itera/api-contract/client';
-import { createClient, createConfig } from '@itera/api-contract/client';
+import { createClient, createConfig } from '@itera/api-contract/create-client';
 import {
   appOverview,
   createIdSource,
@@ -47,6 +47,7 @@ describe.each(fixtureStateIds)('the reads of %s', (state) => {
     const { client, store } = mockOf(state);
     const { clock } = store.getSnapshot();
     const reads = [
+      ['getMe', contract.vGetMeResponse, sdk.getMe({ client })],
       [
         'getOverview',
         contract.vGetOverviewResponse,

@@ -38,13 +38,8 @@ const NOT_READS = new Set([
   'parseId',
 ]);
 
-/** What `./client` exports besides the operations and reads. */
-const NOT_OPERATIONS = new Set(['client', 'createClient', 'createConfig']);
-
 const contract = Object.entries(sdk)
-  .filter(
-    ([name, value]) => typeof value === 'function' && !NOT_OPERATIONS.has(name),
-  )
+  .filter(([name, value]) => typeof value === 'function' && name !== 'client')
   .map(([name]) => name);
 
 describe('the contract', () => {

@@ -56,7 +56,8 @@ type Query = Readonly<Record<string, unknown>>;
 
 /**
  * The reads by operationId, with their path and the schema of their query
- * (`getDay`, with the date in its path, is answered on its own). The
+ * (`getDay`, with the date in its path, and `getMe`, the person's settings
+ * with no catch-up, are answered on their own). The
  * query's numbers and booleans come as strings and are turned into their
  * types before the check, as the API does (ADR 0006 経路の形).
  */
@@ -129,7 +130,11 @@ const READS: Readonly<
 };
 
 /** The reads the mock answers, by operationId. */
-export const MOCK_READS: readonly string[] = [...Object.keys(READS), 'getDay'];
+export const MOCK_READS: readonly string[] = [
+  ...Object.keys(READS),
+  'getDay',
+  'getMe',
+];
 
 const READ_BY_PATH = new Map(Object.values(READS).map((r) => [r.path, r]));
 const DAY_PATH = /^\/days\/([^/]+)$/;
@@ -188,6 +193,16 @@ async function answer(
   const day = DAY_PATH.exec(path)?.[1];
   const operation = OPERATION_PATH.exec(path)?.[1];
 
+  if (request.method === 'GET' && path === '/me') {
+    // The person and their settings, with no catch-up, as the API reads
+    // them (#266). The fixture's person has made them.
+    const { id, displayName, timeZone, weekStartsOn } =
+      store.getSnapshot().records.user;
+    return json(200, {
+      userId: id,
+      settings: { displayName, timeZone, weekStartsOn },
+    });
+  }
   if (request.method === 'GET' && read !== undefined) {
     const query = queryOf(url.searchParams, read.query);
     if (!query.ok) return query.response;

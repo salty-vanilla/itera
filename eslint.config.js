@@ -12,7 +12,7 @@ const apiImportPatterns = [
     message: 'The fixture is for tests and the browser mock only.',
   },
   {
-    regex: '^@itera/api-contract/(client|react-query)$',
+    regex: '^@itera/api-contract/(client|create-client|react-query)$',
     message: "The API takes the contract's types and schemas only (ADR 0006).",
   },
 ];

@@ -1,4 +1,4 @@
-import type { Client } from '@itera/api-contract/client';
+import type { Client } from '@itera/api-contract/create-client';
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import { createContext, use, type ReactNode } from 'react';
 

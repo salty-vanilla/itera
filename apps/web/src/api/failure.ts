@@ -9,9 +9,11 @@ import type {
   ForbiddenOriginError,
   InternalError,
   NotFoundError,
+  PayloadTooLargeError,
   RevisionConflictError,
   RuleViolationError,
   UnauthenticatedError,
+  UserNotSetUpError,
   ValidationError,
 } from '@itera/api-contract';
 
@@ -20,8 +22,10 @@ export type ErrorCode =
   | UnauthenticatedError['code']
   | ForbiddenOriginError['code']
   | NotFoundError['code']
+  | PayloadTooLargeError['code']
   | RevisionConflictError['code']
   | RuleViolationError['code']
+  | UserNotSetUpError['code']
   | InternalError['code'];
 
 /**
@@ -29,7 +33,9 @@ export type ErrorCode =
  * - `revisionConflict`: another write came first, and this one was not made
  *   (409). The reads are read again.
  * - `refused`: the request or the records' state does not allow it (400,
- *   403, 404, 422). Sending it again gives the same answer.
+ *   403, 404, 413, 422). Sending it again gives the same answer. Among
+ *   them `userNotSetUp`: the person has no settings yet (#279 makes the way
+ *   to them).
  * - `failed`: anything else: the server failed (500), the network, a code
  *   this client does not know (ADR 0006 互換の規則).
  */
@@ -43,9 +49,11 @@ const REFUSED: ReadonlySet<string> = new Set<ErrorCode>([
   'validationFailed',
   'forbiddenOrigin',
   'notFound',
+  'payloadTooLarge',
   'invalidInput',
   'invalidTransition',
   'recurringTaskCannotComplete',
+  'userNotSetUp',
 ]);
 
 /**

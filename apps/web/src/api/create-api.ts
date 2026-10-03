@@ -2,7 +2,7 @@ import {
   createClient,
   createConfig,
   type Client,
-} from '@itera/api-contract/client';
+} from '@itera/api-contract/create-client';
 import type { QueryClient } from '@tanstack/react-query';
 import { createQueryClient, type QueryClientOptions } from './query-client';
 

@@ -12,7 +12,8 @@ Itera の API の契約（ADR 0006）。OpenAPI の仕様（`openapi/`）が正�
 | `openapi/responses.yaml` | エラーの応答 |
 | `src/generated/` | Hey API の生成物（手で直さない） |
 | `src/index.ts` | `@itera/api-contract`：型と Valibot のスキーマ。`services/api` はこれだけを使う |
-| `src/client.ts` | `@itera/api-contract/client`：fetch のクライアント（Web）と、別のクライアントを作る `createClient`・`createConfig` |
+| `src/client.ts` | `@itera/api-contract/client`：fetch のクライアント（Web）。関数は契約の operation と読み取りだけ |
+| `src/create-client.ts` | `@itera/api-contract/create-client`：別のクライアントを作る `createClient`・`createConfig`（Web がデータの出どころごとに作る） |
 | `src/react-query.ts` | `@itera/api-contract/react-query`：TanStack Query の options（Web。React に依存する） |
 
 ## 契約を変える

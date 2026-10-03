@@ -1,4 +1,4 @@
-import type { Client } from '@itera/api-contract/client';
+import type { Client } from '@itera/api-contract/create-client';
 import { useMutation, type UseMutationOptions } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useToast } from '@/components/ui/toast';

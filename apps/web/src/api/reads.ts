@@ -18,6 +18,7 @@ import type { Query, QueryClient } from '@tanstack/react-query';
 
 /** The operationIds of the contract's reads. */
 export const READS: ReadonlySet<string> = new Set([
+  'getMe',
   'getOverview',
   'listAreas',
   'getBacklog',

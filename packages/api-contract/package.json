@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
+    "./create-client": "./src/create-client.ts",
     "./react-query": "./src/react-query.ts"
   },
   "scripts": {
