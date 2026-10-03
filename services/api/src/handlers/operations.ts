@@ -1,4 +1,28 @@
-import { vCreateAreaBody } from '@itera/api-contract';
+import {
+  vCreateAreaBody,
+  vRenameAreaBody,
+  vArchiveAreaBody,
+  vRestoreAreaBody,
+  vCreateTaskBody,
+  vSaveTaskBody,
+  vAdoptSuggestionBody,
+  vUndoAdoptionBody,
+  vAdoptEditedSuggestionBody,
+  vRejectSuggestionBody,
+  vUndoRejectionBody,
+  vAddSubtaskBody,
+  vSetSubtaskDoneBody,
+  vSetSubtaskEstimateBody,
+  vArchiveTaskBody,
+  vRestoreTaskBody,
+  vCompleteTaskBody,
+  vUndoCompleteTaskBody,
+  vAddTaskToTodayBody,
+  vAddTaskToWeekBody,
+  vUndoAddTaskToWeekBody,
+  vSetRecurrenceBody,
+  vEndRecurrenceBody,
+} from '@itera/api-contract';
 import {
   operations,
   type Change,
@@ -26,6 +50,28 @@ export const operationBodies: {
     : v.GenericSchema;
 } = {
   createArea: vCreateAreaBody,
+  renameArea: vRenameAreaBody,
+  archiveArea: vArchiveAreaBody,
+  restoreArea: vRestoreAreaBody,
+  createTask: vCreateTaskBody,
+  saveTask: vSaveTaskBody,
+  adoptSuggestion: vAdoptSuggestionBody,
+  undoAdoption: vUndoAdoptionBody,
+  adoptEditedSuggestion: vAdoptEditedSuggestionBody,
+  rejectSuggestion: vRejectSuggestionBody,
+  undoRejection: vUndoRejectionBody,
+  addSubtask: vAddSubtaskBody,
+  setSubtaskDone: vSetSubtaskDoneBody,
+  setSubtaskEstimate: vSetSubtaskEstimateBody,
+  archiveTask: vArchiveTaskBody,
+  restoreTask: vRestoreTaskBody,
+  completeTask: vCompleteTaskBody,
+  undoCompleteTask: vUndoCompleteTaskBody,
+  addTaskToToday: vAddTaskToTodayBody,
+  addTaskToWeek: vAddTaskToWeekBody,
+  undoAddTaskToWeek: vUndoAddTaskToWeekBody,
+  setRecurrence: vSetRecurrenceBody,
+  endRecurrence: vEndRecurrenceBody,
 };
 
 /**
@@ -34,29 +80,6 @@ export const operationBodies: {
  * here (registry.test.ts).
  */
 export const unimplementedOperations: readonly OperationName[] = [
-  // #267: the Backlog, Tasks and Areas.
-  'renameArea',
-  'archiveArea',
-  'restoreArea',
-  'createTask',
-  'saveTask',
-  'adoptSuggestion',
-  'undoAdoption',
-  'adoptEditedSuggestion',
-  'rejectSuggestion',
-  'undoRejection',
-  'addSubtask',
-  'setSubtaskDone',
-  'setSubtaskEstimate',
-  'archiveTask',
-  'restoreTask',
-  'completeTask',
-  'undoCompleteTask',
-  'addTaskToToday',
-  'addTaskToWeek',
-  'undoAddTaskToWeek',
-  'setRecurrence',
-  'endRecurrence',
   // #268: the Sprint, planning and running.
   'chooseTasks',
   'unchooseTasks',

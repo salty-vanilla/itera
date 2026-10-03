@@ -1,7 +1,12 @@
+import { vGetBacklogQuery } from '@itera/api-contract';
 import {
   appOverview,
+  areaList,
+  backlogData,
+  parseId,
   type AppOverview,
   type BacklogData,
+  type BacklogFilter,
   type Clock,
   type DayData,
   type EditableArea,
@@ -13,9 +18,11 @@ import {
   type SprintChoice,
   type TodayData,
 } from '@itera/application';
+import type { BacklogSlice } from '@itera/domain';
 import { Hono } from 'hono';
 import type * as v from 'valibot';
 import type { AppEnv } from '../env';
+import { ApiError } from '../errors';
 import type { Flow, Guards } from './flow';
 import { queryInput, validate } from './validate';
 
@@ -75,6 +82,21 @@ export function readRoute<View, Query = undefined, Params = undefined>(route: {
 }
 
 /**
+ * The Backlog's filter from the query. The schema has checked the Area's
+ * ID is an Area ID's form; `parseId` gives it the domain's type.
+ */
+function backlogFilter(query: {
+  readonly view?: BacklogSlice | undefined;
+  readonly area?: string | undefined;
+}): BacklogFilter {
+  if (query.area === undefined) return { view: query.view };
+  const area = parseId('Area', query.area);
+  if (!area.ok)
+    throw new ApiError('validationFailed', 'query.area: not an ID.');
+  return { view: query.view, area: area.value };
+}
+
+/**
  * The reads the API answers. To answer another, add it here and take it
  * off `unimplementedReads`.
  */
@@ -85,6 +107,16 @@ export const readRoutes: {
     path: '/overview',
     read: (records, clock) => appOverview(records, clock),
   }),
+  listAreas: readRoute({
+    path: '/areas',
+    read: (records) => areaList(records),
+  }),
+  getBacklog: readRoute({
+    path: '/backlog',
+    query: vGetBacklogQuery,
+    read: (records, clock, { query }) =>
+      backlogData(records, clock, backlogFilter(query)),
+  }),
 };
 
 /**
@@ -93,9 +125,6 @@ export const readRoutes: {
  * server's own (`getMe`) (registry.test.ts).
  */
 export const unimplementedReads: readonly ReadName[] = [
-  // #267: the Backlog, Tasks and Areas.
-  'listAreas',
-  'getBacklog',
   // #268: the Sprint, planning and running.
   'getSprintChoice',
   'getPlanning',
