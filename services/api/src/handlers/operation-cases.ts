@@ -45,10 +45,17 @@ export function closeFixtureApps() {
   for (const close of open.splice(0)) close();
 }
 
-/** The app on a database holding the fixture's state, signed in as its user. */
-export async function setupFixtureApp(state: FixtureStateId) {
+/**
+ * The app on a database holding the fixture's state, signed in as its user.
+ * `edit` changes the records first, for a state the fixture does not have.
+ */
+export async function setupFixtureApp(
+  state: FixtureStateId,
+  edit: (records: Records) => Records = (records) => records,
+) {
   const { records: all, clock } = fixtureSnapshot(state);
-  const { activities, ...records } = all;
+  const { activities, ...fixture } = all;
+  const records = edit(fixture);
   const memory = await createMemoryDatabase();
   open.push(memory.close);
   const { db } = memory;
@@ -75,18 +82,25 @@ export async function setupFixtureApp(state: FixtureStateId) {
       authenticator: () => authenticator,
     }),
   );
+  const post = (name: OperationName, body: unknown) =>
+    app.request(
+      `/api/operations/${name}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Origin: testOrigin },
+        body: JSON.stringify(body),
+      },
+      testEnv,
+    );
   return {
     db,
-    post: (name: OperationName, body: unknown) =>
-      app.request(
-        `/api/operations/${name}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Origin: testOrigin },
-          body: JSON.stringify(body),
-        },
-        testEnv,
-      ),
+    post,
+    /** `post` for a step that must work: it fails the test, naming the operation, when it does not. */
+    run: async (name: OperationName, body: unknown) => {
+      const response = await post(name, body);
+      expect(response.status, `${name} (set-up)`).toBeLessThan(300);
+      return response;
+    },
     get: (path: string) => app.request(`/api${path}`, {}, testEnv),
     /** The user's records as saved, with their revision. */
     async saved() {
@@ -183,12 +197,14 @@ export function describeOperations(
         expect(after.revision).toBe(before.revision + 1);
         expect(after.records).not.toEqual(before.records);
         await c.check(after.records, before.records, body);
+        // The person's entry is in the revision's batch; an operation may
+        // also leave the system's (undoPastDay closes the day, invariant 24).
         const entries = await app.db.select().from(activity);
-        expect(entries.at(-1)).toMatchObject({
-          revision: after.revision,
-          actor: 'user',
-          at: testNow,
-        });
+        expect(
+          entries.filter((e) => e.revision === after.revision),
+        ).toContainEqual(
+          expect.objectContaining({ actor: 'user', at: testNow }),
+        );
       });
     });
 

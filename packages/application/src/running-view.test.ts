@@ -30,6 +30,15 @@ describe('runningData', () => {
     expect(data?.day).toBeUndefined();
   });
 
+  it('has the planned total and the totals per Area only, with no capacity', () => {
+    const { records, clock } = fixtureSnapshot('today-interrupt');
+    const data = runningData(records, clock);
+    expect(Object.keys(data?.totals ?? {}).toSorted()).toEqual([
+      'byArea',
+      'total',
+    ]);
+  });
+
   it('leaves out Tasks removed from the Sprint, from the list and the total', () => {
     const { records, clock } = fixtureSnapshot('today-interrupt');
     const before = runningData(records, clock);
