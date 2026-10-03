@@ -165,7 +165,9 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
       setSearch({ task: taskId });
     }, true);
   const openItem =
-    search.task === undefined ? undefined : backlog.item(search.task);
+    search.task === undefined || backlog.status !== 'ready'
+      ? undefined
+      : backlog.item(search.task);
   const estimateFocus = useEstimateFocus(search.task);
   const openEstimate = (taskId: TaskId) =>
     detail.leave(() => {
@@ -292,7 +294,14 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
             label: s.label,
             href: router.buildLocation({
               to: '/sprint',
-              search: (prev) => ({ ...prev, stage: s.id }),
+              // As `setSearch` above: `prev` is every screen's search, whose
+              // Task is the contract's string (#273), not this screen's.
+              search: (prev) =>
+                Object.fromEntries(
+                  Object.entries({ ...prev, stage: s.id }).filter(
+                    ([, v]) => v !== undefined,
+                  ),
+                ),
             }).href,
           }))}
           currentStage={stage}
@@ -455,15 +464,15 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
         }}
       >
         <DrawerContent>
-          {openItem !== undefined && (
+          {backlog.status === 'ready' && openItem !== undefined && (
             <TaskDetail
               key={openItem.task.id}
               item={openItem}
               areas={backlog.areas}
               timeZone={backlog.timeZone}
               onClose={() => setSearch({ task: undefined })}
-              onComplete={() => {
-                if (taskActions.completeTask(openItem.task.id)) {
+              onComplete={async () => {
+                if (await taskActions.completeTask(openItem.task.id)) {
                   setSearch({ task: undefined });
                 }
               }}

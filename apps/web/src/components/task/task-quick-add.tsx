@@ -14,8 +14,13 @@ import { cn } from '@/lib/utils';
 // in the field for the next one. Never a modal.
 
 type TaskQuickAddProps = {
-  /** Adds the Task. Return false to keep the text (the add failed). */
-  onAdd: (title: string) => boolean;
+  /**
+   * Adds the Task. Return false to keep the text (the add failed). An add
+   * that is sent returns when it is done; the text stays until then.
+   */
+  onAdd: (title: string) => boolean | Promise<boolean>;
+  /** The add has been sent for a while (useOperation `loading`). */
+  loading?: boolean;
   /** Accessible name and placeholder: where the Task goes (#98). */
   label: string;
   /** An Area Select, placed after the field. */
@@ -27,6 +32,7 @@ type TaskQuickAddProps = {
 
 function TaskQuickAdd({
   onAdd,
+  loading,
   label,
   area,
   stackArea = false,
@@ -63,15 +69,25 @@ function TaskQuickAdd({
     </Field>
   );
   // Pressing it with nothing typed adds nothing; the focus goes to the field.
-  const button = <Button type="submit">追加</Button>;
+  const button =
+    loading === undefined ? (
+      <Button type="submit">追加</Button>
+    ) : (
+      <Button type="submit" loading={loading} loadingLabel="追加中…">
+        追加
+      </Button>
+    );
   return (
     <form
       data-slot="task-quick-add"
       className={cn('flex flex-col gap-1', className)}
-      onSubmit={(event) => {
+      onSubmit={async (event) => {
         event.preventDefault();
-        if (title.trim() !== '' && onAdd(title.trim())) setTitle('');
         inputRef.current?.focus();
+        const added = title.trim();
+        if (added === '' || !(await onAdd(added))) return;
+        // Typing went on while it was sent: that text is the next Task's.
+        setTitle((typed) => (typed.trim() === added ? '' : typed));
       }}
     >
       {/* Under 768px, and in a narrow pane, the field has the whole first

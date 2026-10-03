@@ -1,4 +1,4 @@
-import type { LocalDate } from '@itera/domain';
+import type { LocalDate } from '@itera/api-contract';
 import { semanticIcons } from '@/components/ui/icon';
 import { daysBetween, formatDate } from '@/lib/date-format';
 import { cn } from '@/lib/utils';

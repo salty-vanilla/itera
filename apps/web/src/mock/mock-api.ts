@@ -1,7 +1,7 @@
 // The browser mock of the API (ADR 0005): answers the contract's requests
 // (ADR 0006) by running packages/application over a RecordStore, as the API
 // does over the person's records in D1. The screens still on the store
-// (#273〜#276) change the same records, so both see one set of records.
+// (#274〜#276) change the same records, so both see one set of records.
 //
 // The same steps as the API (ADR 0004 操作と読み取りの処理), less what has
 // no meaning here: the person is always signed in (#278), the Origin is the
