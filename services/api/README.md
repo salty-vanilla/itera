@@ -27,7 +27,7 @@ API の経路はすべて `/api` の下にある。同じ origin のほかの経
 | `GOOGLE_CLIENT_ID`・`GOOGLE_CLIENT_SECRET` | Google の OAuth クライアント（種類は「ウェブ アプリケーション」）。手元にクライアントがなければ空でない仮の値を入れる。Google との往復以外は動く |
 | `SIGN_UP_ALLOWED_EMAILS` | 登録できるメールアドレス。カンマで区切る（大文字・小文字は区別しない） |
 
-- **登録を絞る**：利用者を作る前に、Google のメールアドレスを `SIGN_UP_ALLOWED_EMAILS` と照らし、一覧にないときは作らずに失敗させる（コールバックはエラーのページへ `error=SIGN_UP_NOT_ALLOWED` を付けて戻す）。照らすのは利用者を作るときだけで、すでにある利用者は一覧から外してもサインインできる。一般公開（PRD §14）を決めるまでの備えで、Google の同意画面のテストユーザーと二重にしている。
+- **登録を絞る**：利用者を作る前に、Google のメールアドレスを `SIGN_UP_ALLOWED_EMAILS` と照らし、一覧にないときは作らずに失敗させる（Google が確認済みとしたメールアドレスでなければ、一覧にあっても作らない）。Google のコールバックは、サインインの開始で渡した `errorCallbackURL`（渡さなければ `/api/auth/error`）へ `error=SIGN_UP_NOT_ALLOWED` を付けて戻す。`error_description` も付くが、クライアントが頼るのは `error` の code だけにする。照らすのは利用者を作るときだけで、すでにある利用者は一覧から外してもサインインできる。一般公開（PRD §14）を決めるまでの備えで、Google の同意画面のテストユーザーと二重にしている。
 - **サインイン方法**：Google とパスキーだけ。利用者は Google で登録し、パスキーはログイン済みの利用者があとから追加する（`/api/auth/passkey/generate-register-options` はセッションが要る）。パスキーでのサインインはセッションなしで行える。
 - **Google**：OAuth クライアントの承認済みリダイレクト URI に `<BETTER_AUTH_URL>/api/auth/callback/google`（ローカルなら `http://localhost:8787/api/auth/callback/google`）を登録する。
 - **パスキー**：RP ID は `BETTER_AUTH_URL` のホスト名、origin は `BETTER_AUTH_URL` の origin。ローカルは `localhost` のままで動く（RP ID はポートを含まないので、同じ `localhost` のポート違いでも登録したパスキーを使える。origin はポートまで一致させる）。本番のドメインで登録したパスキーは、別のドメインでは使えない。
@@ -63,4 +63,4 @@ wrangler はこのパッケージの固定版を使う（`pnpm --filter @itera/a
 
 ## デプロイ
 
-main への push で、GitHub Actions（`.github/workflows/deploy.yml`）が `pnpm check` → D1 のマイグレーション（`--remote`）→ `wrangler deploy` の順に実行する。production の Environment の承認を待ってから動く。Cloudflare・Google・GitHub の設定と公開後の確認は [`docs/operations/deploy.md`](../../docs/operations/deploy.md)。手元からのデプロイや `--remote` のマイグレーションはしない。
+main への push で、GitHub Actions（`.github/workflows/deploy.yml`）が `pnpm check` → D1 のマイグレーション（`--remote`）→ `wrangler deploy` の順に実行する。production の Environment の承認を待ってから動く。Cloudflare・Google・GitHub の設定と公開後の確認は [`docs/operations/deploy.md`](../../docs/operations/deploy.md)。コードのデプロイとマイグレーションは CD だけで行う。secret の登録・版の戻し・本番の D1 の読み取りは手元の wrangler で行う（手順書の「設定を変えるとき」）。

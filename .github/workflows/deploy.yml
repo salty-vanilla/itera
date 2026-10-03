@@ -20,7 +20,7 @@ jobs:
 
   # Stops before asking for approval while wrangler.jsonc still has the
   # placeholder database_id (the D1 database is created by hand first).
-  setup:
+  preflight:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -29,13 +29,13 @@ jobs:
           persist-credentials: false
       - name: Check that the D1 database ID is set
         run: |
-          if grep -Eq '"database_id": "0{8}-0{4}-0{4}-0{4}-0{12}"' services/api/wrangler.jsonc; then
+          if grep -Eq '"database_id"[[:space:]]*:[[:space:]]*"0{8}-0{4}-0{4}-0{4}-0{12}"' services/api/wrangler.jsonc; then
             echo "::error file=services/api/wrangler.jsonc::database_id is still the placeholder. Create the D1 database and put its ID in wrangler.jsonc first (docs/operations/deploy.md)."
             exit 1
           fi
 
   deploy:
-    needs: [check, setup]
+    needs: [check, preflight]
     # workflow_dispatch can be started from any branch; deploy only main.
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest

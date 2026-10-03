@@ -17,7 +17,9 @@
 | 7 | GitHub | 2 の PR をマージし、CD の承認をする |
 | 8 | 公開した Worker | 公開後の確認 |
 
-`wrangler.jsonc` の `database_id` が仮の値（`00000000-…`）のあいだ、CD は承認を求める前に `setup` の job で失敗する。2 の PR をマージするまで、production の承認はしない。
+`wrangler.jsonc` の `database_id` が仮の値（`00000000-…`）のあいだ、CD は承認を求める前に `preflight` の job で失敗する（マージ直後の Deploy の失敗は想定どおり）。2 の PR をマージするまで、production の承認はしない。
+
+2 の PR は、6 で `production` の Environment を作ってからマージする。Environment がないうちに workflow が参照すると、GitHub は保護ルールのない Environment を自動で作り、承認なしで `deploy` の job が動く（secret がないので wrangler の認証で失敗するが、順序を守る）。
 
 手元の wrangler は、リポジトリで固定した版を使う（`pnpm --filter @itera/api exec wrangler <command>`）。以下では `wrangler` と略す。
 
@@ -38,7 +40,7 @@
 ## 2. D1 を作り、`database_id` を差し替える
 
 1. 手元で `wrangler login` を実行し、Cloudflare にログインする。
-2. `wrangler d1 create itera` を実行する。表示された `database_id` を控える（秘密ではない）。
+2. `wrangler d1 create itera` を実行する。「Would you like Wrangler to add it on your behalf?」と聞かれたら No と答える（`wrangler.jsonc` に 2 つ目の binding が足されるため）。表示された `database_id` を控える（秘密ではない）。
 3. 作業ブランチで `services/api/wrangler.jsonc` の `database_id` をその値に置き換え、近くのコメント（仮の値である旨）を消す。独自ドメインを使うなら、1 の `routes` と `workers_dev: false` も同じ PR に入れる。
 4. `pnpm check` を通し、main 向けの PR を作る。マージは 7 で行う。
 
@@ -59,11 +61,11 @@ Google Cloud Console で、Itera 用のプロジェクトを選ぶ（なけれ�
 
 ## 4. Worker の secret を登録する
 
-`wrangler secret put <名前>` を実行し、値は対話の入力で渡す（シェルの履歴やファイルに残さない）。最初の 1 回は「Worker がない。作るか」と聞かれるので、作る（`itera-api` の Worker ができる）。
+`wrangler secret put <名前>` を実行し、値は対話の入力で渡す（シェルの履歴やファイルに残さない）。`BETTER_AUTH_SECRET` だけは、値を画面にも出さないように `openssl rand -base64 32 | wrangler secret put BETTER_AUTH_SECRET` とパイプで渡す。最初の 1 回は「Worker がない。作るか」と聞かれるので、作る（`itera-api` の Worker ができる）。
 
 | 名前 | 値 |
 | --- | --- |
-| `BETTER_AUTH_SECRET` | `openssl rand -base64 32` で作った値。手元にも残さない（変えると、全員のセッションが無効になる） |
+| `BETTER_AUTH_SECRET` | `openssl rand -base64 32` で作った値（上のパイプで渡し、手元に残さない）。変えると、全員のセッションが無効になる |
 | `BETTER_AUTH_URL` | 公開 URL（`https://…`。`https` でないと Cookie が `Secure` にならない） |
 | `GOOGLE_CLIENT_ID` | 3 の client ID |
 | `GOOGLE_CLIENT_SECRET` | 3 の client secret |
@@ -71,7 +73,7 @@ Google Cloud Console で、Itera 用のプロジェクトを選ぶ（なけれ�
 
 - `wrangler secret list` で 5 つの名前が並ぶことを確かめる（値は表示されない）。
 - `wrangler.jsonc` の `secrets.required` にある名前が 1 つでも欠けていると、CD の `wrangler deploy` は失敗する。
-- `SIGN_UP_ALLOWED_EMAILS` は、利用者が作られるとき（Google での初回サインイン）にだけ照らす。一覧から外しても、すでにある利用者は消えず、サインインもできる。
+- `SIGN_UP_ALLOWED_EMAILS` は、利用者が作られるとき（Google での初回サインイン）にだけ照らす。Google が確認済みとしたメールアドレスでなければ、一覧にあっても作らない。一覧から外しても、すでにある利用者は消えず、サインインもできる。
 
 ## 5. CD 用の API トークン
 
@@ -101,7 +103,7 @@ secret はリポジトリの secret ではなく、この Environment の secret
 ## 7. 最初のデプロイ
 
 1. 2 の PR をマージする。
-2. Actions の Deploy の実行で、`check` と `setup` が通り、`deploy` が承認待ちになるのを待つ。
+2. Actions の Deploy の実行で、`check` と `preflight` が通り、`deploy` が承認待ちになるのを待つ。
 3. 承認すると、`wrangler d1 migrations apply DB --remote` → `wrangler deploy` の順に動く。
 4. 失敗したら、ログの最後のエラーを見る。secret の不足は `wrangler deploy` が名前を挙げて失敗する。トークンの権限不足は 403 になる。
 
@@ -109,7 +111,7 @@ secret はリポジトリの secret ではなく、この Environment の secret
 
 ## 8. 公開後の確認
 
-結果は Issue #32 か PR に残す。公開 URL のホスト名・トークン・アカウント ID・メールアドレスは伏せる。
+結果は Issue #32 か PR に残す。トークン・アカウント ID・メールアドレス・IP は伏せる。公開 URL は秘密として扱わない（リポジトリが public なので、`wrangler deploy` が Actions のログに出す）。守りは許可の一覧、同意画面のテストユーザー、レート制限で行う。
 
 ### API の経路
 
@@ -135,7 +137,7 @@ curl -i <公開 URL>/me           # 404
    location.href = (await r.json()).url;
    ```
 
-2. オーナーのアカウントで同意すると、Itera に戻り、URL に `error=SIGN_UP_NOT_ALLOWED` が付く。
+2. オーナーのアカウントで同意すると、Better Auth のエラーのページ（`<公開 URL>/api/auth/error`）に戻り、URL に `error=SIGN_UP_NOT_ALLOWED` が付く。
 3. `wrangler d1 execute DB --remote --command "select count(*) from user"` が 0 を返す（利用者が作られていない）。
 4. `wrangler secret put SIGN_UP_ALLOWED_EMAILS` で、オーナーのメールアドレスに変える。
 
@@ -210,7 +212,11 @@ for (let i = 0; i < 4; i++) {
 
 `wrangler d1 execute DB --remote --command "select key from rate_limit"` で、キーが `<IP>|<経路>` の形であることも確かめる。`no-trusted-ip|…` なら IP が届いておらず、全員で 1 つの回数を分け合っている。IP は記録に残さない。
 
+設定と確認が終わったら、手元で `wrangler logout` を実行する。以後に残る権限は CD のトークンだけになる。設定を変えるときにもう一度ログインする。
+
 ## 設定を変えるとき
+
+コードのデプロイとマイグレーションは CD だけで行う。次の操作だけは手元の wrangler で行う（ログインが要る）。
 
 | 変えるもの | 手順 |
 | --- | --- |
@@ -218,4 +224,4 @@ for (let i = 0; i < 4; i++) {
 | 許可の一覧 | `wrangler secret put SIGN_UP_ALLOWED_EMAILS` |
 | 公開 URL | `BETTER_AUTH_URL`、Google のリダイレクト URI、（独自ドメインなら）`routes` を同時に変える。登録済みのパスキーは使えなくなる |
 | API トークン | 作り直して `production` の secret を差し替え、古いトークンを無効にする |
-| 版の戻し | `wrangler rollback`（Worker のコードだけが戻る。D1 のマイグレーションは戻らない。データは D1 の Time Travel で戻す） |
+| 版の戻し | `wrangler rollback`（Worker のコードだけが戻る。D1 のマイグレーションは戻らない。データは D1 の Time Travel で戻す）。次に main へ push すると CD が上書きするので、戻したら main も直す。承認待ちの古い Deploy は却下してよい |

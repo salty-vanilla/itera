@@ -93,7 +93,7 @@ function cookiesFrom(response: Response): string {
 // endpoint answers the authorization code exchange with an ID token for
 // `email`. The ID token is only decoded, not verified: it comes straight from
 // Google over TLS in this flow.
-async function signInWithGoogle(email: string) {
+async function signInWithGoogle(email: string, emailVerified = true) {
   const encode = (value: object) =>
     btoa(JSON.stringify(value))
       .replace(/\+/g, '-')
@@ -107,7 +107,7 @@ async function signInWithGoogle(email: string) {
       aud: env.GOOGLE_CLIENT_ID,
       sub: 'google-user-42',
       email,
-      email_verified: true,
+      email_verified: emailVerified,
       name: 'Grace',
       iat: now,
       exp: now + 3600,
@@ -288,19 +288,27 @@ describe('Better Auth sign-in methods', () => {
     expect(await response.json()).toEqual({ userId: user?.id });
   });
 
-  it('does not create a user for a Google account outside the allowed emails', async () => {
-    const { callback, google } = await signInWithGoogle('eve@example.com');
-    expect(google).toHaveBeenCalledOnce();
-    expect(callback.status).toBe(302);
-    const location = new URL(callback.headers.get('Location') ?? '');
-    expect(location.searchParams.get('error')).toBe(signUpNotAllowedCode);
-    expect(callback.headers.getSetCookie().join()).not.toContain(
-      'session_token',
-    );
-    expect(await db.select().from(schema.user)).toEqual([]);
-    expect(await db.select().from(schema.account)).toEqual([]);
-    expect(await db.select().from(schema.session)).toEqual([]);
-  });
+  it.each([
+    ['an email outside the allowed list', 'eve@example.com', true],
+    ['an allowed email Google has not verified', 'grace@example.com', false],
+  ])(
+    'does not create a user for a Google account with %s',
+    async (_, email, emailVerified) => {
+      const { callback, google } = await signInWithGoogle(email, emailVerified);
+      expect(google).toHaveBeenCalledOnce();
+      expect(callback.status).toBe(302);
+      // Without an errorCallbackURL, Better Auth's own error page.
+      const location = new URL(callback.headers.get('Location') ?? '');
+      expect(location.pathname).toBe('/api/auth/error');
+      expect(location.searchParams.get('error')).toBe(signUpNotAllowedCode);
+      expect(callback.headers.getSetCookie().join()).not.toContain(
+        'session_token',
+      );
+      expect(await db.select().from(schema.user)).toEqual([]);
+      expect(await db.select().from(schema.account)).toEqual([]);
+      expect(await db.select().from(schema.session)).toEqual([]);
+    },
+  );
 
   it('keeps existing users signed in after their email leaves the list', async () => {
     const { user, cookie } = await signIn();

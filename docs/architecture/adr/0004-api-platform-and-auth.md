@@ -45,7 +45,7 @@ Better Auth が自分で書き込む行（利用者・アカウント・セッ�
 - **セッションを延長するのは `/api/auth/get-session` だけ**。`requireAuth` を通る API の経路はセッションを読むだけで延長しない（Cookie を送り直せないため。期限切れの行は Better Auth が削除する）。そのためクライアントは、起動時など定期的に `/api/auth/get-session` を呼ぶ。呼ばないと、最後の延長から 7 日で API が 401 を返す。
 - Cookie を使うので、**Web と API は同じ origin で配信する**。CORS と、`BETTER_AUTH_URL` 以外の信頼する origin は設定しない。Web のログイン画面とログインの流れは別の Issue で作る。
 - 利用者の識別子は Better Auth の利用者 ID（`user.id`、Better Auth が生成するランダムな文字列）。
-- **登録できる人を許可の一覧で絞る**（2026-10-03 オーナー決定、Issue #32）。Better Auth の `databaseHooks.user.create.before` で、利用者を作る前にメールアドレスを `SIGN_UP_ALLOWED_EMAILS`（カンマ区切り。前後の空白と大文字・小文字は無視する）と照らし、一覧になければ `APIError`（403、code `SIGN_UP_NOT_ALLOWED`）を投げて作らない。Google のコールバックは、この code を `error` に付けてエラーのページへ戻す。利用者を作る経路はすべてこの hook を通るので、Google 以外の作り方を足しても一覧が効く。照らすのは作るときだけで、すでにある利用者は一覧から外してもサインインできる（外したら利用者を消すかは、PRD §14 の削除の方式と一緒に決める）。一覧は wrangler の secret で渡し、リポジトリに書かない。空なら、ほかの設定値と同じく認証を使うリクエストを 500 で失敗させる。Google の同意画面のテストユーザー（オーナーだけ）と二重にする。一般公開（PRD §14）を決めるまでの備え。
+- **登録できる人を許可の一覧で絞る**（2026-10-03 オーナー決定、Issue #32）。Better Auth の `databaseHooks.user.create.before` で、利用者を作る前にメールアドレスを `SIGN_UP_ALLOWED_EMAILS`（カンマ区切り。前後の空白と大文字・小文字は無視する）と照らし、一覧にないか、Google が確認済みとしていない（`emailVerified` が true でない）なら `APIError`（403、code `SIGN_UP_NOT_ALLOWED`）を投げて作らない。未確認のメールアドレスは主張にすぎず、許可の根拠にしない。Google のコールバックは、サインインの開始で渡した `errorCallbackURL`（渡さなければ `/api/auth/error` の Better Auth のページ）へ、この code を `error` に、英語の説明を `error_description` に付けて戻す。クライアントが頼るのは `error` の code だけにする。Better Auth が利用者を作る経路（`internalAdapter` の `createUser`・`createOAuthUser`）はすべてこの hook を通るので、Better Auth の別の作り方を足しても一覧が効く。アプリが `user` テーブルへ直接書き込む経路は作らない（hook を迂回するため）。照らすのは作るときだけで、すでにある利用者は一覧から外してもサインインできる（外したら利用者を消すかは、PRD §14 の削除の方式と一緒に決める）。一覧は wrangler の secret で渡し、リポジトリに書かない。空なら、ほかの設定値と同じく認証を使うリクエストを 500 で失敗させる。Google の同意画面のテストユーザー（オーナーだけ）と二重にする。一般公開（PRD §14）を決めるまでの備え。
 - Google から受け取ったアクセストークンとリフレッシュトークンは、`account.encryptOAuthTokens` で `BETTER_AUTH_SECRET` から作る鍵で暗号化して保存する。Itera は Google の API を呼ばないが、Better Auth がアカウントの行に保存するため。
 - 設定値（`BETTER_AUTH_SECRET`・`BETTER_AUTH_URL`・`GOOGLE_CLIENT_ID`・`GOOGLE_CLIENT_SECRET`・`SIGN_UP_ALLOWED_EMAILS`）は環境変数と wrangler の secret で渡し、リポジトリに書かない。どれかが空、または `BETTER_AUTH_SECRET` が 32 文字未満なら、認証を使うリクエストは 500 で失敗する（下の確認事項の 5）。
 
@@ -124,7 +124,7 @@ API の経路はすべて `/api` の下に置く（`/api/health`、`/api/me`、`
 workflow の構成：
 
 - `check.yml` は PR と `workflow_call` で動く。main への push の検査は `deploy.yml` が呼ぶ（同じ commit で 2 回動かさない）。
-- `setup` の job が、`wrangler.jsonc` の `database_id` が仮の値（`00000000-…`）なら、承認を求める前に分かる文言で失敗する（2026-10-03 司令塔の決定。wrangler の失敗に頼らない）。
+- `preflight` の job が、`wrangler.jsonc` の `database_id` が仮の値（`00000000-…`）なら、承認を求める前に分かる文言で失敗する（2026-10-03 司令塔の決定。wrangler の失敗に頼らない）。
 - `deploy` の job は `environment: production`、`if: github.ref == 'refs/heads/main'`、`concurrency: deploy-production`（途中で取り消さない）。Cloudflare の API トークンとアカウント ID は production の Environment の secret に置き、wrangler を実行する 2 つの step にだけ渡す（`pnpm install` などには渡さない）。`permissions` は `contents: read` だけ、checkout は `persist-credentials: false`。
 - `pull_request_target` は使わない。fork を含む PR の CI には Environment の secret が渡らない。Environment の deployment branch を `main` に限る（手順書）。
 - 2 つ目の環境（staging）、PR ごとのプレビューは作らない（URL が公開になるため。必要になったら判断する）。`preview_urls` を `false` にし、アップロードした版ごとの URL も出さない。

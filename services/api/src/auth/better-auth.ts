@@ -35,8 +35,9 @@ export function betterAuthSettings(
   };
 }
 
-// The error code a refused sign-up ends with. Google's callback passes it on
-// to the error page as `error`.
+// The error code a refused sign-up ends with. Google's callback redirects to
+// the sign-in's errorCallbackURL (default: authBasePath/error) with it as
+// `error`; clients rely on that code only, not on `error_description`.
 export const signUpNotAllowedCode = 'SIGN_UP_NOT_ALLOWED';
 
 // Normalized like the email Better Auth stores: trimmed and lowercased.
@@ -107,14 +108,19 @@ export function createBetterAuth(db: Database, settings: BetterAuthSettings) {
     // access and refresh tokens on the account row. Keep them unreadable in
     // D1 and its backups. (The ID token is stored as is.)
     account: { encryptOAuthTokens: true },
-    // Every way of creating a user (today only Google's first sign-in) passes
-    // through this hook, so nobody outside the list gets a user row. Existing
-    // users keep signing in; removing an address does not delete its user.
+    // Every way Better Auth creates a user (today only Google's first
+    // sign-in) passes through this hook, so nobody outside the list gets a
+    // user row. The address must also be verified by Google: an unverified
+    // one is only a claim. Existing users keep signing in; removing an
+    // address does not delete its user.
     databaseHooks: {
       user: {
         create: {
           before: async (user) => {
-            if (!signUpAllowedEmails.has(user.email.trim().toLowerCase())) {
+            if (
+              user.emailVerified !== true ||
+              !signUpAllowedEmails.has(user.email.trim().toLowerCase())
+            ) {
               throw new APIError('FORBIDDEN', {
                 code: signUpNotAllowedCode,
                 message: 'This account is not allowed to sign up.',
