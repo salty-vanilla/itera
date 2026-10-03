@@ -12,6 +12,10 @@ const apiImportPatterns = [
     message: 'The fixture is for tests and the browser mock only.',
   },
   {
+    regex: '(^|/)operation-cases$',
+    message: "operation-cases.ts is the tests' helper.",
+  },
+  {
     regex: '^@itera/api-contract/(client|create-client|react-query)$',
     message: "The API takes the contract's types and schemas only (ADR 0006).",
   },
@@ -332,9 +336,13 @@ export default defineConfig(
   },
   {
     // The fixture is for tests and the browser mock (ADR 0005), not for the
-    // API's production code.
+    // API's production code. handlers/operation-cases.ts is the tests' own
+    // helper (the app on a fixture state); nothing but tests imports it.
     files: ['services/api/src/**/*.ts'],
-    ignores: ['services/api/src/**/*.test.ts'],
+    ignores: [
+      'services/api/src/**/*.test.ts',
+      'services/api/src/handlers/operation-cases.ts',
+    ],
     rules: {
       'no-restricted-imports': ['error', { patterns: apiImportPatterns }],
     },
@@ -347,6 +355,7 @@ export default defineConfig(
     files: ['services/api/src/**/*.ts'],
     ignores: [
       'services/api/src/**/*.test.ts',
+      'services/api/src/handlers/operation-cases.ts',
       'services/api/src/test-env.ts',
       'services/api/src/default-dependencies.ts',
       'services/api/src/auth/better-auth.ts',

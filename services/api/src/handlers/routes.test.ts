@@ -20,7 +20,7 @@ import { createMemoryDatabase } from '../db/memory-database';
 import { saveRecords } from '../db/save-records';
 import { activity, user as authUser } from '../db/schema';
 import { testDependencies, testEnv, testNow, testOrigin } from '../test-env';
-import { maxBodyBytes } from './operations';
+import { maxBodyBytes, unimplementedOperations } from './operations';
 
 const ids = createIdSource((bytes) => crypto.getRandomValues(bytes));
 const alice = ids.newId('User', testNow);
@@ -289,8 +289,11 @@ describe('an operation', () => {
 
   it('is not answered when the API does not implement it yet', async () => {
     const { app } = await setup();
-    const response = await post(app, 'renameArea', {});
-    expect(response.status).toBe(404);
+    // Every operation the API answers is registered, so these are the ones
+    // that are not.
+    for (const name of unimplementedOperations) {
+      expect((await post(app, name, {})).status, name).toBe(404);
+    }
   });
 });
 
