@@ -106,6 +106,24 @@ const webBetterAuthPattern = {
     'Use Auth (@/auth/auth-provider); Better Auth stays in src/auth/better-auth.ts.',
 };
 
+const webDomainPattern = {
+  regex: '^@itera/domain(/|$)',
+  message:
+    'Take the types from the contract (@itera/api-contract) and the previews and dates from @/lib/domain-functions (ADR 0005).',
+};
+
+// src/screen-data/ shapes the contract for the screens; the layers under
+// the screens (api, components, lib, auth, foundations) never import it
+// (ADR 0005 置き場所の規則).
+const webScreenDataPattern = {
+  regex: '^(@/|(\\.\\./)+)screen-data(/|$)',
+  message:
+    'Only the screens import src/screen-data/; api, components, lib, auth and foundations stay below them (ADR 0005 置き場所の規則).',
+};
+const WEB_LAYERS = [
+  'apps/web/src/{api,components,lib,auth,foundations}/**/*.{ts,tsx}',
+];
+
 // Outside the rule: the tests and their helpers, which open the fixture's
 // records, and the browser mock (the server's stand-in).
 const WEB_NOT_SCREENS = [
@@ -169,24 +187,18 @@ export default defineConfig(
           patterns: [
             webBetterAuthPattern,
             testingImportPattern(),
-            {
-              regex: '^@itera/domain(/|$)',
-              message:
-                'Take the types from the contract (@itera/api-contract) and the previews and dates from @/lib/domain-functions (ADR 0005).',
-            },
+            webDomainPattern,
           ],
         },
       ],
     },
   },
   {
-    // The layers under the screens do not reach up to them: src/api/ (the
-    // contract's client, reads, operations, failures) and the parts and
-    // helpers (components, lib, auth, foundations) never import
-    // src/screen-data/, the hooks that shape the contract for a screen
-    // (ADR 0005 置き場所の規則). This block repeats the domain rule above
-    // for these files, since a later block replaces an earlier one's options.
-    files: ['apps/web/src/{api,components,lib,auth,foundations}/**/*.{ts,tsx}'],
+    // The layers under the screens do not reach up to them. This block
+    // repeats the domain rule above for these files, since a later block
+    // replaces an earlier one's options; the two files the domain rule
+    // leaves out have a block of their own below.
+    files: WEB_LAYERS,
     ignores: [
       ...WEB_NOT_SCREENS,
       'apps/web/src/lib/domain-functions.ts',
@@ -199,16 +211,25 @@ export default defineConfig(
           patterns: [
             webBetterAuthPattern,
             testingImportPattern(),
-            {
-              regex: '^@itera/domain(/|$)',
-              message:
-                'Take the types from the contract (@itera/api-contract) and the previews and dates from @/lib/domain-functions (ADR 0005).',
-            },
-            {
-              regex: '^(@/|(\\.\\./)+)screen-data(/|$)',
-              message:
-                'Only the screens import src/screen-data/; api, components and lib stay below them (ADR 0005 置き場所の規則).',
-            },
+            webDomainPattern,
+            webScreenDataPattern,
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // The one module that may import packages/domain is still a layer
+    // under the screens.
+    files: ['apps/web/src/lib/domain-functions.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            webBetterAuthPattern,
+            testingImportPattern(),
+            webScreenDataPattern,
           ],
         },
       ],
@@ -244,6 +265,7 @@ export default defineConfig(
         {
           patterns: [
             testingImportPattern(),
+            webScreenDataPattern,
             {
               regex: '^@itera/domain(/|$)',
               message:

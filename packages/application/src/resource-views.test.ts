@@ -1,7 +1,7 @@
 import { addDays } from '@itera/domain';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot, fixtureStateIds } from './fixtures/states';
-import { currentSprints } from './resource-views';
+import { currentSprints, sprintCandidates, sprintView } from './resource-views';
 
 describe.each(fixtureStateIds)('the current Sprints of %s', (state) => {
   const { records, clock } = fixtureSnapshot(state);
@@ -13,5 +13,36 @@ describe.each(fixtureStateIds)('the current Sprints of %s', (state) => {
 
   it('calls the next week 来週 while a Sprint runs, 今週 when none does (#90)', () => {
     expect(next.week).toBe(active === undefined ? 'current' : 'next');
+  });
+});
+
+describe.each(fixtureStateIds)('a Sprint of %s', (state) => {
+  const { records, clock } = fixtureSnapshot(state);
+
+  it.each(records.sprints.map((s) => [s.state, s.id] as const))(
+    'offers candidates only while planned, and a plan or a running view by state (%s)',
+    (sprintState, sprintId) => {
+      const candidates = sprintCandidates(records, clock, sprintId);
+      const view = sprintView(records, clock, sprintId, {
+        applyCriterion: false,
+      });
+      expect(candidates !== undefined).toBe(sprintState === 'planning');
+      expect(view?.state).toBe(sprintState);
+      expect(view !== undefined && 'plan' in view).toBe(
+        sprintState === 'planning',
+      );
+      expect(view !== undefined && 'running' in view).toBe(
+        sprintState !== 'planning',
+      );
+    },
+  );
+
+  it('has no view of a Sprint the person does not have', () => {
+    const unknown = records.sprints[0]?.id.replace(/.$/, 'x') ?? 'none';
+    const id = unknown as (typeof records.sprints)[number]['id'];
+    expect(sprintCandidates(records, clock, id)).toBeUndefined();
+    expect(
+      sprintView(records, clock, id, { applyCriterion: false }),
+    ).toBeUndefined();
   });
 });

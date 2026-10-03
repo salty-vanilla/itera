@@ -20,12 +20,6 @@ function planOf(
 }
 
 describe('sprintPlanOf', () => {
-  it('is absent when no Sprint is being planned', () => {
-    expect(
-      planOf(fixtureSnapshot('today-daytime'), { applyCriterion: true }),
-    ).toBeUndefined();
-  });
-
   it('can be confirmed once the previous Retro is complete (invariant 12)', () => {
     const { records, clock } = fixtureSnapshot('planning-pick');
     const data = planOf({ records, clock }, { applyCriterion: true });
