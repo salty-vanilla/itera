@@ -43,7 +43,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 - 説明（summary・description）は英語で書く（生成したコードの JSDoc になり、コードのコメントと揃える）。画面の語は使わない。
 - 記録の DTO は、今は domain の型と同じ形にする（写像は恒等。ADR 0007「アプリケーション層の読み取りと API の DTO」）。省略できる属性はキーを省き、`null` にしない（domain の `exactOptionalPropertyTypes`）。`null` を値として使うのは、domain がそう決めている入力（`saveTask` の本文の `areaId`・`due`、時間の消去など）と、`AreaTotal` などの `areaId: null`（領域なし）だけ。
 - ID は TypeID（ADR 0004「ID の形式」）。種類ごとに schema（`TaskId` など）を置き、接頭辞と、UUIDv7 の version（11 文字目が e か f）と variant（14 文字目が 89abrstv のどれか）までを正規表現で決める。`parseId` が受け付けるものと同じであることをテストで確かめる。
-- `LocalDate` は `format: date`、`Instant` は `format: date-time` に domain と同じ正規表現（UTC・ミリ秒つき）を足す。Valibot の書式の検査は暦の上で実在するか（2 月 30 日など）までは見ないので、サーバーは入力の検証の段階で、入力の日付と日時を domain の `parseLocalDate`・`parseInstant` でも確かめ、実在しなければ 400 `validationFailed` にする（形の誤りとして扱い、操作の入力でも読み取りのパラメータでも同じ）。
+- `LocalDate` は `format: date`、`Instant` は `format: date-time` に domain と同じ正規表現（UTC・ミリ秒つき）を足す。Valibot の書式の検査は暦の上で実在するか（2 月 30 日など）までは見ないので、サーバーは入力の検証の段階で、入力の日付と日時を domain の `parseLocalDate`・`parseInstant` でも確かめ、実在しなければ 400 `/problems/validation-failed` にする（形の誤りとして扱い、操作の入力でも読み取りのパラメータでも同じ）。
 - 契約が検証するのは形と書式（型、必須、ID と日付の書式、列挙）だけにする。値の規則（正の時間、空でない題名、状態の遷移）は domain の規則で、422 で返す。規則を契約と domain に二重に持たないため。
 - 要求の本文の最上位は `additionalProperties: false`（Valibot の `strictObject`）。綴りの誤りなどの未知のキーは 400 になる。応答と共有する入れ子（`InterruptNote`・`RetroPin`・`Estimate`・`RecurrencePattern`・`CriterionPolicy`）は未知のキーを許し、Valibot の `object` が出力から落とす。サーバーは、要求の本文ではなく検証の出力だけを application に渡す。応答は未知のキーを許す（クライアントが後から足した項目で壊れないように）。応答の余分な・欠けたキーは、下の型のテストで止める。
 - 一覧（`BacklogData.items`・`RetroData.sprintAreas` など、ID をキーにする表）は `additionalProperties` で書き、`propertyNames` は使わない（Hey API 0.99.0 は `propertyNames` があると値を検証しない `v.object({})` を出す）。値が `$ref` の表も、0.99.0 の Valibot の出力では同じく `v.object({})` になる（Valibot のプラグインが `$ref` の値を読まない）。これは下の「生成物」の patch で直す。
@@ -95,7 +95,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 - 経路の段（資源の名前と動作）と query の名前は kebab-case。path の値の名前（`{sprintId}` など）と JSON の項目名と operationId は camelCase（生成する関数名が TypeScript の慣習に合う）。
 - 作る：`POST /<集まり>` → 201（作った ID。何も返さないものは本文なし）。属性を変える：`PATCH`（省いた項目は変えない）。子の資源を置く・置き換える（冪等）：`PUT`。消す・外す（冪等）：`DELETE`（本文は持たない。RFC 9110 で意味が決まっていない）。状態の遷移：`POST …/<動詞>`。取り消し：`POST …/undo-<元の動作>`（domain の取り消しは元の動作ごとに別のコマンドで、条件も違う。逆の動詞にすると何を取り消すかが読めない）。値を返すなら 200、返さないなら 204。変わった後の読み取りは返さない（下の「操作の応答に読み取りを含めない」）。
 - 操作は `packages/application` の `operations` の名前と入力で表す（ADR 0005）。判定は `packages/domain` だけが行う。面（1 つのメソッドと 1 つの経路）ごとに operationId が 1 つで、1 つの操作だけを受ける面は操作の名前をそのまま operationId にする。いくつかの操作を受ける面は新しい名前にし、要求が運ぶもの（本文のどの項目があるか、query の件数）で操作を選ぶ（W1 の Sprint の状態での選び分けは application の操作の中）。別の操作の項目を一緒に送ると 400（本文は `oneOf` の `strictObject`）。
-- 経路の子（SprintTask・選択・割り込み・目標など）が経路の Sprint にないときは 404。Sprint の状態に合わない操作は 422 `invalidTransition`。
+- 経路の子（SprintTask・選択・割り込み・目標など）が経路の Sprint にないときは 404。Sprint の状態に合わない操作は 422 `/problems/invalid-transition`。
 - 振り分けの規則は `packages/api-contract/src/requests.ts`（`@itera/api-contract/requests`）の 1 か所に、両方向を並べて置く。`requestOf(名前, 入力)` が操作の要求（面と path・query・本文）を作り（Web）、`readRequest` が受け取った要求を面のスキーマで path・query・本文の順に確かめてから、面の `operation` で操作と入力を作る（サーバーとブラウザ内モック。確かめ方とエラーの返し方だけをそれぞれが渡す。サーバーは暦の上の日付も確かめる）。query の文字列を宣言した型に変える `queryInput` も同じ場所に置き、読み取りと書き込みで使う。`requests.ts` は application に型だけで依存する。
 
 #### 書き込みの面（55 面で 60 操作）
@@ -157,7 +157,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 - 応答は `{ clock, view }`。`clock` は、サーバーがその応答のために決めた「今日」と現在時刻（ADR 0005「時計」）。`view` は、今は application の関数の結果そのもので（写像は恒等。ADR 0007）、結果がない（`undefined`）ときは `null`（TanStack Query は `undefined` をデータにできない）。
 - query の数と真偽（`number`・`apply-criterion`）は、通信の上では文字列。サーバーは宣言した型に変えてから、生成したスキーマで検証する（`queryInput`。同じ名前を繰り返した値は、配列の項目なら全部、それ以外は検証で 400）。
 - **利用者**：`GET /api/me`（`getMe`）は、サインインしている利用者の ID と設定（表示名・タイムゾーン・週の始まり。domain の `User` から ID を除いたもの）を返す。設定をまだ作っていなければ `settings` は `null` で、日付が変わったときの処理（#271）を走らせずに答える（設定がない間もこの読み取りだけは答え、クライアントは設定を作る画面を出す。#279、#266）。設定があれば、処理を走らせてから、`clock` と今の Sprint の参照（`sprints`：実行中・Review 中・計画中のそれぞれと、次に計画を始める週）も返す（R1）。次に計画を始める週（`next`）は、開始日・終了日・番号と、その週の名前（`week`。Sprint の `week` と同じ。省略可）を持つ。Sprint がまだない週を画面が開くのに要る（#274）。`end` は必須で足した（下の「壊さない変更」の、応答に必須の項目を足す規則）。
-- **利用者の設定を作る**：`PUT /api/me/settings`（`setSettings`。本文は `{ displayName, timeZone, weekStartsOn }`）。設定がなければ作り（201）、あれば表示名だけを書き直す（204。同じ値をもう一度送っても 204 で、何も書かない）。タイムゾーンと週の始まりを別の値で送ると 422 `invalidInput` で断る。理由：「今日」はタイムゾーンで、Sprint の期間は週の始まりで決まるので、すでにある Sprint がある利用者の値を変えると、それらの Sprint が動く。変えたときに既存の Sprint をどうするかは決まっていない。戻す条件：設定を後から変える画面の Issue が、その扱いを決めたとき（2026-10-03 司令塔の判断。オーナーへ要確認として Issue #279 に記録）。タイムゾーンは名前で、契約のスキーマは文字列としか見ないので、実在する名前かは domain の `parseTimeZone` が確かめ（なければ 422 `invalidInput`）、表示名は前後の空白を除いて空なら同じく 422。201 は作った設定を返す（表示名は前後の空白を除くので、送った値と違いうる）。ここだけ「作る → 201 は作った ID」の規則（本文のない 201 は生成物が `unknown` になり、`generated.test.ts` が断る）から外れる例外で、書き直し（204）や再送には本文がないので、クライアントはこの本文に頼らない（今の Web は使わない）。タイムゾーンは `Intl` の綴り（`asia/tokyo` は `Asia/Tokyo`）にそろえて保存・比べる。操作ではなく読み取りでもないので、`surfaces`（操作の面）には入れず、`requests.ts` の `settingsSurface` に置く。記録がなくても作れる唯一の書き込みで、サーバーは `flow.setUp` が受け持つ（読み込み → `settingsChange` → 最初の保存。ほかの書き込みと同じく版を確かめ、Activity は残さない）。
+- **利用者の設定を作る**：`PUT /api/me/settings`（`setSettings`。本文は `{ displayName, timeZone, weekStartsOn }`）。設定がなければ作り（201）、あれば表示名だけを書き直す（204。同じ値をもう一度送っても 204 で、何も書かない）。タイムゾーンと週の始まりを別の値で送ると 422 `/problems/invalid-input` で断る。理由：「今日」はタイムゾーンで、Sprint の期間は週の始まりで決まるので、すでにある Sprint がある利用者の値を変えると、それらの Sprint が動く。変えたときに既存の Sprint をどうするかは決まっていない。戻す条件：設定を後から変える画面の Issue が、その扱いを決めたとき（2026-10-03 司令塔の判断。オーナーへ要確認として Issue #279 に記録）。タイムゾーンは名前で、契約のスキーマは文字列としか見ないので、実在する名前かは domain の `parseTimeZone` が確かめ（なければ 422 `invalidInput`）、表示名は前後の空白を除いて空なら同じく 422。201 は作った設定を返す（表示名は前後の空白を除くので、送った値と違いうる）。ここだけ「作る → 201 は作った ID」の規則（本文のない 201 は生成物が `unknown` になり、`generated.test.ts` が断る）から外れる例外で、書き直し（204）や再送には本文がないので、クライアントはこの本文に頼らない（今の Web は使わない）。タイムゾーンは `Intl` の綴り（`asia/tokyo` は `Asia/Tokyo`）にそろえて保存・比べる。操作ではなく読み取りでもないので、`surfaces`（操作の面）には入れず、`requests.ts` の `settingsSurface` に置く。記録がなくても作れる唯一の書き込みで、サーバーは `flow.setUp` が受け持つ（読み込み → `settingsChange` → 最初の保存。ほかの書き込みと同じく版を確かめ、Activity は残さない）。
 - 以前の画面ごとの読み取り（`getOverview`・`getSprintChoice`・`getPlanning`・`getRunning`・`getToday`・`getRetro`・`getNextPlanning`）はなくした。画面が開く Sprint とその前後は `/me` の参照と `/sprints` の一覧（番号の並び、週の名前の出力専用の項目）から求まる。ナビの Backlog の件数は `/backlog` の件数。application のこれらの関数（`appOverview`・`sprintChoice`・`planningData`・`runningData`・`todayData`・`dayData`・`retroData`・`nextPlanningOf`）は、store のままの画面が使うので残していた。画面を移し終えたので、#277 で index の export から外した（`coverage.test.ts` の一覧も消した）。
 
 ### 操作の応答に読み取りを含めない
@@ -180,7 +180,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 形は 1 つ：Problem Details（RFC 9457）。メディアタイプは `application/problem+json`、本文は `{ type, title, status, detail }`（2026-10-04 オーナー決定「標準的なものに合わせる」、Issue #319。それまでの `{ code, message }` は #319 でなくした）。
 
-- `type` は問題の種類を表す相対の URI 参照 `/problems/<kebab-case の名前>` で、クライアントはこれだけで振る舞いを決める（RFC 9457 が `type` を主な識別子とするため。識別子を 2 つ持つと食い違いうるので `code` は残さない）。解決できる文書は置かない（Zalando RESTful API Guidelines 規則 176。文書は OpenAPI にある）。本番の公開する URL がまだ決まっていない（ADR 0004「デプロイ」）ので、絶対 URI にしない。
+- `type` は問題の種類を表す相対の URI 参照 `/problems/<kebab-case の名前>` で、クライアントはこれだけで振る舞いを決める（RFC 9457 が `type` を主な識別子とするため。識別子を 2 つ持つと食い違いうるので `code` は残さない）。解決できる文書は置かない（Zalando RESTful API Guidelines 規則 176。文書は OpenAPI にある）。クライアントは `type` を解決せず（base URI と合わせて絶対 URI にしない）、文字列のまま比べる。本番の公開する URL がまだ決まっていない（ADR 0004「デプロイ」）ので、絶対 URI にしない。
 - `title` は種類ごとに固定の英語、`detail` はその回の説明。どちらも開発者向けで、画面に出さない（画面の文言は `docs/design/content.md` に従ってクライアントが作る）。クライアントは `detail` を解析しない。`title` は契約では文字列とだけ書き、値は `packages/api-contract/src/problems.ts` の表に置く（言い回しを直しても壊す変更にしない）。
 - `status` は HTTP のステータスと同じ値（RFC 9457 では参考の値）。
 - `instance` は今は使わない（要求の ID でログと結びつけるときに改めて決める）。
@@ -194,7 +194,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 | 404 | `/problems/not-found` | 要求が指す記録が利用者の記録にない（domain の `notFound`）。消した割り込みを戻す操作では、利用者がその Sprint から消していない ID（ほかの利用者の ID、存在しない ID を含む。どれも同じ応答）。契約にない `/api/*` の経路とメソッドも同じ（Better Auth の `/api/auth/*` を除く。#319） |
 | 409 | `/problems/revision-conflict` | ほかの書き込みが先に入り、この書き込みはしていない（ADR 0004「同時の書き込み」）。保存は確定したのに DB の応答が失われたときもこれになる（ADR 0004 の既知の限界）。どちらも読み直せば保存された記録が分かる |
 | 413 | `/problems/payload-too-large` | 操作の本文が上限（64 KiB）を超える（#266） |
-| 422 | `/problems/invalid-input`・`/problems/invalid-transition`・`/problems/recurring-task-cannot-complete` | domain が操作を受け付けない（値の規則、状態の遷移、繰り返しの Task の完了）。domain の `code` との対応は `services/api/src/errors.ts` の `DOMAIN_PROBLEMS`（ブラウザ内モックも同じ表を持つ。契約は domain に依存しないため。ADR 0007） |
+| 422 | `/problems/invalid-input`・`/problems/invalid-transition`・`/problems/recurring-task-cannot-complete` | domain が操作を受け付けない（値の規則、状態の遷移、繰り返しの Task の完了）。domain の `code` との対応は `problems.ts` の `DOMAIN_PROBLEMS`（サーバーとブラウザ内モックが使う） |
 | 422 | `/problems/user-not-set-up` | 利用者の設定（タイムゾーン・週の始まり）がまだなく、「今日」が決まらない。`getMe` のほかの操作と読み取りはすべてこれで断る（#266） |
 | 500 | `/problems/internal-error` | 予期しない失敗 |
 
@@ -224,7 +224,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
   - `@itera/api-contract/create-client`：別のクライアントを作る `createClient`・`createConfig`。Web はデータの出どころ（API、ブラウザ内モック）ごとにクライアントを作る（#272、ADR 0005「Web のクライアントとブラウザ内モック」）。
   - `@itera/api-contract/react-query`：TanStack Query の options（Web）。React に依存する。
   - `@itera/api-contract/requests`：操作と面の振り分け（上の「経路の形」、#295）と `queryInput`。生成物ではなく手で書く。サーバー・ブラウザ内モック・Web が使う。
-  - `@itera/api-contract/problems`：エラーの本文（種類ごとのステータスと `title`、domain の拒否との対応、`errors` の場所の作り方。上の「エラー」、#319）。生成物ではなく手で書く。サーバー・ブラウザ内モック・Web（`failureOf` の型、テストの応答）が使う。domain には依存しない（ADR 0007）。
+  - `@itera/api-contract/problems`：エラーの本文（種類ごとのステータスと `title`、domain の拒否との対応、`errors` の場所の作り方。上の「エラー」、#319）。生成物ではなく手で書く。サーバー・ブラウザ内モック・Web（`failureOf` の型、テストの応答）が使う。domain には依存しない（ADR 0007）。domain の拒否の `code` は、表のキーとして契約が自分で名前を持ち、サーバーとモックが `DomainError` の `code` で引く。domain に `code` が増えると、引く側が型の検査で失敗する。
   - `@itera/api-contract/testing`：テストの道具（操作ごとの入力の例 `OPERATION_EXAMPLES` など）。テストだけが使う。
   - `services/api` から `client`・`create-client`・`react-query` の import を ESLint の `no-restricted-imports` で止める。API が React に依存しない。
 - Hey API がそのまま写す fetch の実行時のコード（`src/generated/client/`・`core/`）は `exactOptionalPropertyTypes` を前提に書かれておらず、`apps/web` はこの .ts を自分の設定で型検査する。そこで生成の後処理で、この 2 つのディレクトリのファイルにだけ `// @ts-nocheck` を付ける。契約から生成したコード（型・スキーマ・SDK・Query の options）は型検査の対象のまま。Hey API がこの設定に対応したら外す。
@@ -262,7 +262,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 - query の数と真偽は文字列で届くので、サーバーで変換が要る（#266）。
 - query は空の配列を運べないので、`DELETE /sprints/{sprintId}/sprint-tasks?ids=` は `minItems: 1` とし、`requestOf` も空の配列を断る（1 つも外さないときは送らない）。
 - 印の `{pin}` は記録の ID から種類を決める。クライアントが別の種類として送った ID も、その ID の種類の印として扱う（契約が受け付ける ID の種類の中で）。印を付けられるのは、その Sprint の事実だけで、ほかの Sprint や存在しない ID は domain が `notFound`（404。経路の子が経路の Sprint にないとき、と同じ）で断る（#270、不変条件 40）。
-- `PUT`・`DELETE` の 2 回目を、domain が `invalidTransition`（422）で断る操作がある（含めた回をもう一度含める `PUT …/included-occurrences/{occurrenceId}` など）。記録は変わらないので状態としては冪等だが、応答は 1 回目と同じにならない。直すなら domain の変更。
+- `PUT`・`DELETE` の 2 回目を、domain が `/problems/invalid-transition`（422）で断る操作がある（含めた回をもう一度含める `PUT …/included-occurrences/{occurrenceId}` など）。記録は変わらないので状態としては冪等だが、応答は 1 回目と同じにならない。直すなら domain の変更。
 - 応答のスキーマは未知のキーを許すので、Valibot の検証だけでは余分なキーを見つけられない。型のテストで止めている。
 - `restoreInterrupt` と `undoAdoption` は、クライアントが前の読み取りの値を送る。版はサーバーが読み込んだ時点のものなので、クライアントの読み取りが古いことは 409 では分からない。`undoAdoption` は domain の確かめ（提案の状態）で守られるが、`restoreInterrupt` は消した後の内容を覚えていないので、古い note（別の端末で直した後の、直す前の本文など）でも、消した ID のものなら受け付ける。直すには、消した割り込みの内容をサーバーが持つ必要がある（`interruptDeleted` が内容を持つ Activity の変更か、domain の記録。ドメインモデルの正本の変更で、別の Issue）。
 - `restoreInterrupt` が domain で確かめる ID の重複は、利用者自身の Sprint の中だけ（#269）。ほかの利用者の割り込みの ID は、保存の前の確かめ（上の「消した記録を戻す操作の照合」、#315）で 404 になり、保存の主キーの衝突は起きない。`interrupt_note.id` に主キーの衝突を起こしうるのは、クライアントが新しい行の ID を決める経路だけで、契約ではこの操作だけ（#315 で、path と本文に ID を持つすべての操作を確かめた：ほかの操作の ID は既存の記録を指し、新しい行の ID はサーバーが作る）。クライアントが新しい行の ID を決める操作を足すときは、同じ確かめを `services/api/src/handlers/preconditions.ts` に足す。

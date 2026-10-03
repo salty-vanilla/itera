@@ -92,6 +92,20 @@ export const PROBLEMS: {
   '/problems/internal-error': { status: 500, title: 'An unexpected failure' },
 };
 
+/**
+ * The problem of each refusal of the domain, by the code of its
+ * `DomainError`. The contract does not depend on packages/domain (ADR
+ * 0007), so it names the codes here; the API and the browser mock look a
+ * `DomainError` up by its code, which stops compiling when the domain has
+ * a code this table does not name.
+ */
+export const DOMAIN_PROBLEMS = {
+  notFound: '/problems/not-found',
+  invalidInput: '/problems/invalid-input',
+  invalidTransition: '/problems/invalid-transition',
+  recurringTaskCannotComplete: '/problems/recurring-task-cannot-complete',
+} as const satisfies Readonly<Record<string, PlainProblemType>>;
+
 /** Any type but `validation-failed`, which says where (`validationProblem`). */
 export type PlainProblemType = Exclude<
   ProblemType,
@@ -161,11 +175,24 @@ export function valibotIssues(
   return [first!, ...rest];
 }
 
+/**
+ * A lone surrogate, which JSON's keys may hold but a URI cannot carry
+ * (`encodeURIComponent` throws on it): it becomes U+FFFD, so a body with
+ * such a key is still told where it is wrong.
+ */
+const LONE_SURROGATE =
+  /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
+
 function pointerOf(keys: readonly PropertyKey[]): string {
   return `#${keys
     .map(
       (key) =>
-        `/${encodeURIComponent(String(key).replaceAll('~', '~0').replaceAll('/', '~1'))}`,
+        `/${encodeURIComponent(
+          String(key)
+            .replace(LONE_SURROGATE, '\uFFFD')
+            .replaceAll('~', '~0')
+            .replaceAll('/', '~1'),
+        )}`,
     )
     .join('')}`;
 }

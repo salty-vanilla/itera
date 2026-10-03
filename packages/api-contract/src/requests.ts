@@ -982,7 +982,7 @@ const requests: {
       ? to('removeSprintTask', { path: { sprintId, sprintTaskId: only } })
       : to('removeSprintTasks', {
           path: { sprintId },
-          query: { ids: nonEmpty(sprintTaskIds, 'sprintTaskIds') },
+          query: { ids: nonEmpty(sprintTaskIds, 'ids') },
         });
   },
   setGoalLink: ({ sprintId, sprintTaskId, goalLink }) =>

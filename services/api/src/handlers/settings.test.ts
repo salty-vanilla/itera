@@ -1,6 +1,6 @@
 // The person's settings (#279): `PUT /api/me/settings` makes them (201) and
 // writes the display name again (204), and until they are made every other operation and read is refused with 422
-// `userNotSetUp` while `GET /api/me` answers. Through the app, on an
+// `/problems/user-not-set-up` while `GET /api/me` answers. Through the app, on an
 // in-memory database with the migrations applied, behind a fake
 // Authenticator.
 import { vGetMeResponse, vSetSettingsResponse } from '@itera/api-contract';
@@ -98,7 +98,7 @@ describe('before the settings are made', () => {
   });
 
   it.each(Object.keys(OPERATION_EXAMPLES) as OperationName[])(
-    'refuses the operation %s with 422 userNotSetUp',
+    'refuses the operation %s with 422 user-not-set-up',
     async (name) => {
       const { app, db } = await setup();
       const [input] = OPERATION_EXAMPLES[name] as readonly unknown[];
@@ -121,7 +121,7 @@ describe('before the settings are made', () => {
     `/sprints/${sprintId}/candidates`,
     `/sprints/${sprintId}/retro`,
     '/days/2026-10-03',
-  ])('refuses the read %s with 422 userNotSetUp', async (path) => {
+  ])('refuses the read %s with 422 user-not-set-up', async (path) => {
     const { app } = await setup();
     expect(await errorOf(await get(app, path))).toMatchObject({
       status: 422,
@@ -232,7 +232,7 @@ describe('PUT /api/me/settings', () => {
     ['time zone', { ...settings, timeZone: 'UTC' }],
     ['first day of the week', { ...settings, weekStartsOn: 0 }],
   ])(
-    'refuses another %s once they are made: 422 invalidInput',
+    'refuses another %s once they are made: 422 invalid-input',
     async (_, other) => {
       const { app, db } = await setup();
       await put(app, settings);
@@ -273,7 +273,7 @@ describe('PUT /api/me/settings', () => {
     ['a first day that is not a day', { ...settings, weekStartsOn: 7 }],
     ['a property the contract does not have', { ...settings, extra: 1 }],
     ['a name that is not text', { ...settings, displayName: 1 }],
-  ])('refuses %s: 400 validationFailed', async (_, body) => {
+  ])('refuses %s: 400 validation-failed', async (_, body) => {
     const { app, db } = await setup();
     expect(await errorOf(await put(app, body))).toMatchObject({
       status: 400,

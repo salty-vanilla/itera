@@ -244,9 +244,10 @@ describe('the mock', () => {
         expect(answer, name).not.toMatchObject({
           type: '/problems/validation-failed',
         });
-        expect(response.headers.get('Content-Type') ?? '', name).not.toMatch(
-          /^text\/plain/,
-        );
+        // Without a route, the mock answers 404 as the API does.
+        expect(answer, name).not.toMatchObject({
+          detail: expect.stringMatching(/ in the API\.$/),
+        });
         answered.add(request.operationId);
       }
     }

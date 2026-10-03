@@ -1,4 +1,5 @@
 import {
+  DOMAIN_PROBLEMS,
   PROBLEM_CONTENT_TYPE,
   problemOf,
   validationProblem,
@@ -6,19 +7,9 @@ import {
   type Problem,
   type ValidationIssue,
 } from '@itera/api-contract/problems';
-import type { DomainError, DomainErrorCode } from '@itera/domain';
+import type { DomainError } from '@itera/domain';
 import { DrizzleQueryError } from 'drizzle-orm';
 import type { Context } from 'hono';
-
-/** The problem of each refusal of the domain (ADR 0006 エラー). */
-export const DOMAIN_PROBLEMS: {
-  readonly [C in DomainErrorCode]: PlainProblemType;
-} = {
-  notFound: '/problems/not-found',
-  invalidInput: '/problems/invalid-input',
-  invalidTransition: '/problems/invalid-transition',
-  recurringTaskCannotComplete: '/problems/recurring-task-cannot-complete',
-};
 
 /**
  * What a failure answers with: a problem's type and what happened this time

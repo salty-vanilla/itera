@@ -24,7 +24,7 @@ pnpm --filter @itera/api dev    # .dev.vars の BETTER_AUTH_URL は http://local
 | `/`、`/today?date=2026-10-01`、`/sprint?sprint=3`（直接開く・再読み込み） | `index.html`（200）。画面のルーターが開く |
 | 存在しない画面のパス（`/nothing`） | `index.html`（200）。画面が「ページが見つかりません」を出す |
 | `/api/health` | `{"status":"ok"}` |
-| 存在しない `/api/xxx` | API の 404（`404 Not Found`）。画面にはならない |
+| 存在しない `/api/xxx` | API の 404（`/problems/not-found`）。画面にはならない |
 | `/assets/<ハッシュ付きのファイル>` | 200、`Cache-Control: public, max-age=0, must-revalidate` と `ETag`（`If-None-Match` を付けると 304） |
 | 存在しない `/assets/<名前>` | `index.html`（200）。同じ既定の `Cache-Control`（固定されない） |
 

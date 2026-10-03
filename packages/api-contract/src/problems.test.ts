@@ -4,6 +4,7 @@ import * as v from 'valibot';
 import { describe, expect, it } from 'vitest';
 import * as contract from './index';
 import {
+  DOMAIN_PROBLEMS,
   issueAt,
   PROBLEMS,
   problemOf,
@@ -41,6 +42,11 @@ describe('problemOf', () => {
     }
   });
 
+  it('gives every refusal of the domain a type of the contract', () => {
+    for (const type of Object.values(DOMAIN_PROBLEMS))
+      expect(v.is(schemaOf[type], problemOf(type, ''))).toBe(true);
+  });
+
   it('uses relative URI references in kebab-case (ADR 0006)', () => {
     for (const type of Object.keys(PROBLEMS))
       expect(type).toMatch(/^\/problems\/[a-z]+(-[a-z]+)*$/);
@@ -70,6 +76,9 @@ describe('issueAt', () => {
     expect(issueAt('body', ['ids', 2], 'x').pointer).toBe('#/ids/2');
     // RFC 6901: `~` and `/` escaped, then what a fragment cannot carry.
     expect(issueAt('body', ['a/b~c d'], 'x').pointer).toBe('#/a~1b~0c%20d');
+    // A key JSON may hold but a URI cannot: a lone surrogate.
+    const lone = Object.keys(JSON.parse('{"\\ud800x":1}') as object)[0]!;
+    expect(issueAt('body', [lone], 'x').pointer).toBe('#/%EF%BF%BDx');
   });
 
   it('names a path or query parameter', () => {

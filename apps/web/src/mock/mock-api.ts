@@ -23,6 +23,7 @@
 // is all the screens can send wrong.
 import * as contract from '@itera/api-contract';
 import {
+  DOMAIN_PROBLEMS,
   issueAt,
   PROBLEM_CONTENT_TYPE,
   problemOf,
@@ -63,7 +64,6 @@ import {
 import {
   parseLocalDate,
   type DomainError,
-  type DomainErrorCode,
   type LocalDate,
 } from '@itera/domain';
 import * as v from 'valibot';
@@ -318,7 +318,10 @@ async function answer(
       ? new Response(null, { status: surface.status })
       : json(surface.status, result.value);
   }
-  return new Response('404 Not Found', { status: 404 });
+  return failure(
+    '/problems/not-found',
+    `No ${request.method} ${url.pathname} in the API.`,
+  );
 }
 
 /**
@@ -468,14 +471,6 @@ async function operationOf(
 function view(clock: Clock, view: unknown) {
   return json(200, { clock, view: view ?? null });
 }
-
-/** The problem of each refusal of the domain, as the API answers it. */
-const DOMAIN_PROBLEMS: { readonly [C in DomainErrorCode]: PlainProblemType } = {
-  notFound: '/problems/not-found',
-  invalidInput: '/problems/invalid-input',
-  invalidTransition: '/problems/invalid-transition',
-  recurringTaskCannotComplete: '/problems/recurring-task-cannot-complete',
-};
 
 /** ADR 0006 エラー: the domain's refusals, by their problem's type. */
 function domainFailure(error: DomainError) {

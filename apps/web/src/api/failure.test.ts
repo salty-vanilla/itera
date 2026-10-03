@@ -1,8 +1,8 @@
 // The problem's `type` is an open enum (ADR 0006 列挙): what this client
 // does not know is a plain failure, never a failure to read the answer.
 import {
-  PROBLEMS,
   problemOf,
+  validationProblem,
   type PlainProblemType,
 } from '@itera/api-contract/problems';
 import { describe, expect, it } from 'vitest';
@@ -28,12 +28,7 @@ describe('failureOf', () => {
     for (const type of refused)
       expect(failureOf(problemOf(type, ''))).toEqual({ kind: 'refused', type });
     expect(
-      failureOf({
-        ...PROBLEMS['/problems/validation-failed'],
-        type: '/problems/validation-failed',
-        detail: '',
-        errors: [{ detail: '', pointer: '#/title' }],
-      }),
+      failureOf(validationProblem([{ detail: '', pointer: '#/title' }])),
     ).toEqual({ kind: 'refused', type: '/problems/validation-failed' });
     expect(failureOf(problemOf('/problems/internal-error', ''))).toEqual({
       kind: 'failed',

@@ -266,6 +266,12 @@ describe('an operation', () => {
     ['a missing property', {}, '#/name'],
     ['an unknown property', { name: '仕事', color: 3 }, '#/color'],
     ['a body that is not JSON', '{"name":', '#'],
+    // A key a URI cannot carry as it is (a lone surrogate).
+    [
+      'an unknown key no URI can carry',
+      '{"name":"x","\\ud800":1}',
+      '#/%EF%BF%BD',
+    ],
   ])('answers 400 to %s, at %s, writing nothing', async (_, body, pointer) => {
     const { app, db } = await setup();
     const response = await post(app, body);
@@ -373,7 +379,7 @@ describe('an operation', () => {
     },
   );
 
-  it('answers 422 with the domain’s code when the domain refuses it', async () => {
+  it('answers 422 with the domain’s problem when the domain refuses it', async () => {
     const { app, db } = await setup();
     const response = await post(app, { name: '' });
     expect(await errorOf(response)).toMatchObject({
@@ -422,7 +428,7 @@ describe('an operation', () => {
     expect(await db.select().from(activity)).toEqual([]);
   });
 
-  it('answers 422 userNotSetUp before the settings are made', async () => {
+  it('answers 422 user-not-set-up before the settings are made', async () => {
     const { app } = await setup({ settings: false });
     const response = await post(app, { name: '仕事' });
     expect(await errorOf(response)).toMatchObject({
@@ -496,7 +502,7 @@ describe('a read', () => {
     });
   });
 
-  it('answers 422 userNotSetUp before the settings are made', async () => {
+  it('answers 422 user-not-set-up before the settings are made', async () => {
     const { app } = await setup({ settings: false });
     expect(await errorOf(await get(app, '/backlog'))).toMatchObject({
       status: 422,
