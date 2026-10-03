@@ -54,7 +54,9 @@ type ToastKind =
   | 'interrupt-deleted'
   /** 割り込みを記録 from the sheet, with 見る to the list (#157). */
   | 'interrupt-noted'
-  | 'save-failed';
+  | 'save-failed'
+  | 'passkey-added'
+  | 'sign-out-failed';
 
 type ToastOptions = {
   /**

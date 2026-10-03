@@ -3,7 +3,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { ApiProvider } from '@/api/api-provider';
 import { apiBaseUrl, createApi } from '@/api/create-api';
 import { invalidateReads } from '@/api/reads';
-import { sendToSignIn } from '@/app/sign-in';
+import { sendToSignIn } from '@/auth/sign-in';
+import { AuthProvider } from '@/auth/auth-provider';
 import { createMemoryStore } from '@/store/record-store';
 import { StoreProvider } from '@/store/store-provider';
 import { useSystemDay } from '@/store/use-system-day';
@@ -15,6 +16,7 @@ import {
   type FixtureStateId,
 } from './fixture-states';
 import { createMock } from './mock-api';
+import { createMockAuth } from './mock-auth';
 
 // Development only: root-layout.tsx loads this module only when the mock is
 // the data source, so the production build leaves it out.
@@ -53,10 +55,14 @@ function FixtureData({
   // State, not a memo: the store lives as long as the fixture state.
   const [data] = useState(() => {
     const store = createMemoryStore(fixtureSnapshot(fixture));
-    const mock = createMock(store);
+    const auth = createMockAuth({
+      now: () => store.getSnapshot().clock.now,
+    });
+    const mock = createMock(store, { isSignedIn: auth.isSignedIn });
     return {
       store,
       mock,
+      auth,
       ...createApi({
         baseUrl: apiBaseUrl(),
         fetch: mock.fetch,
@@ -76,9 +82,11 @@ function FixtureData({
   return (
     <StoreProvider store={data.store}>
       <ApiProvider client={data.client} queryClient={data.queryClient}>
-        <SystemDay />
-        {children}
-        <DevMenu current={fixture} />
+        <AuthProvider auth={data.auth}>
+          <SystemDay />
+          {children}
+          <DevMenu current={fixture} />
+        </AuthProvider>
       </ApiProvider>
     </StoreProvider>
   );

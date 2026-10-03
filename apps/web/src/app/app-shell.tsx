@@ -1,7 +1,13 @@
-import { useLocation, useNavigate, useRouter } from '@tanstack/react-router';
-import { Inbox, Rewind, Route, Sun } from 'lucide-react';
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useRouter,
+} from '@tanstack/react-router';
+import { Inbox, Rewind, Route, Settings, Sun } from 'lucide-react';
 import { useRef, type ReactElement, type ReactNode } from 'react';
 import { buttonVariants } from '@/components/ui/button';
+import { iconButtonVariants } from '@/components/ui/icon-button';
 import { Navigation, type NavigationItem } from '@/components/ui/navigation';
 import { isPlainClick } from '@/lib/plain-click';
 import { useOverview } from '@/api/use-overview';
@@ -18,10 +24,15 @@ const icons: Record<ScreenId, ReactElement> = {
   retro: <Rewind aria-hidden />,
 };
 
+const SETTINGS = { id: 'settings', path: '/settings', label: '設定' } as const;
+
 /**
  * The app's frame (DESIGN.md Layout › Responsive, Navigation): the sidebar
  * (224px) from 1440px, the rail (64px, icons with names) from 768px, and
- * under 768px the bottom tab bar under a one-column screen.
+ * under 768px the bottom tab bar under a one-column screen. The settings
+ * screen is the navigation's last item; the tab bar keeps its four, and
+ * under 768px the settings are the button at the top right of every screen
+ * (DESIGN.md Navigation, #278).
  */
 function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -34,19 +45,29 @@ function AppShell({ children }: { children: ReactNode }) {
   useScreenFocus(mainRef);
   useCloseToastsOnScreenChange();
 
-  const items: NavigationItem[] = screens.map((screen) => ({
-    id: screen.id,
-    label: screen.label,
-    icon: icons[screen.id],
-    // The fixture search parameter is kept (ADR 0005); the Sprint and the
-    // day are not, so the navigation opens the current ones (#90).
-    href: router.buildLocation({ to: screen.path }).href,
-    ...(screen.id === 'backlog' && backlogCount !== undefined
-      ? { count: backlogCount }
-      : {}),
-  }));
+  const items: NavigationItem[] = [
+    ...screens.map((screen) => ({
+      id: screen.id,
+      label: screen.label,
+      icon: icons[screen.id],
+      // The fixture search parameter is kept (ADR 0005); the Sprint and the
+      // day are not, so the navigation opens the current ones (#90).
+      href: router.buildLocation({ to: screen.path }).href,
+      ...(screen.id === 'backlog' && backlogCount !== undefined
+        ? { count: backlogCount }
+        : {}),
+    })),
+    {
+      id: SETTINGS.id,
+      label: SETTINGS.label,
+      icon: <Settings aria-hidden />,
+      href: router.buildLocation({ to: SETTINGS.path }).href,
+      inTabBar: false,
+    },
+  ];
   const current =
-    screens.find((screen) => pathname.startsWith(screen.path))?.id ?? '';
+    [...screens, SETTINGS].find((screen) => pathname.startsWith(screen.path))
+      ?.id ?? '';
 
   return (
     <div className="flex h-dvh flex-col-reverse bg-canvas text-ink medium:flex-row">
@@ -72,24 +93,39 @@ function AppShell({ children }: { children: ReactNode }) {
         brand="Itera"
         current={current}
         onNavigate={(id, event) => {
-          const screen = screens.find((s) => s.id === id);
+          const screen = [...screens, SETTINGS].find((s) => s.id === id);
           if (screen === undefined || !isPlainClick(event)) return;
           event.preventDefault();
           void navigate({ to: screen.path });
         }}
       />
-      <main
-        ref={mainRef}
-        id="main"
-        // The router resets and restores this element's scroll (router.tsx).
-        data-scroll-restoration-id="main"
-        // `relative` makes the `main` the containing block of `sr-only`
-        // (absolute) text, so `overflow-auto` clips it and the document
-        // never grows past the shell (#149).
-        className="relative min-h-0 flex-1 overflow-auto pb-[var(--toast-clearance,0px)]"
-      >
-        {children}
-      </main>
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex justify-end px-2 pt-1 medium:hidden">
+          <Link
+            to={SETTINGS.path}
+            aria-label={SETTINGS.label}
+            aria-current={current === SETTINGS.id ? 'page' : undefined}
+            className={cn(
+              iconButtonVariants({ variant: 'quiet', size: 'md' }),
+              'aria-[current=page]:text-ink',
+            )}
+          >
+            <Settings aria-hidden />
+          </Link>
+        </div>
+        <main
+          ref={mainRef}
+          id="main"
+          // The router resets and restores this element's scroll (router.tsx).
+          data-scroll-restoration-id="main"
+          // `relative` makes the `main` the containing block of `sr-only`
+          // (absolute) text, so `overflow-auto` clips it and the document
+          // never grows past the shell (#149).
+          className="relative min-h-0 flex-1 overflow-auto pb-[var(--toast-clearance,0px)]"
+        >
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

@@ -3,7 +3,7 @@
 - 状態：採用
 - 日付：2026-09-27
 - 関連：Issue #38、後続 Issue #39〜#42
-- 改訂：2026-09-27（API への移行と状態の置き場所を追記）、2026-09-28（クライアントとデータの方式を追記）、2026-09-30（Sprint を番号で、日を日付で開く検索パラメータ、Issue #90）、2026-10-03（アプリケーション層、プレビューの例外、#45 の分け方、システムの記録、時計、本番ビルドの fixture。Issue #262）、2026-10-03（プレビューの共通のテストケースを仕様ケースと生成ケースに分ける。読み取りの結果と DTO の関係。ADR 0007）、2026-10-03（Web のクライアントとブラウザ内モック。Issue #272）、2026-10-03（何日も開かなかったときのシステムの記録。Issue #271）、2026-10-03（Backlog・Task の詳細・領域を契約に移す。Issue #273）
+- 改訂：2026-09-27（API への移行と状態の置き場所を追記）、2026-09-28（クライアントとデータの方式を追記）、2026-09-30（Sprint を番号で、日を日付で開く検索パラメータ、Issue #90）、2026-10-03（アプリケーション層、プレビューの例外、#45 の分け方、システムの記録、時計、本番ビルドの fixture。Issue #262）、2026-10-03（プレビューの共通のテストケースを仕様ケースと生成ケースに分ける。読み取りの結果と DTO の関係。ADR 0007）、2026-10-03（Web のクライアントとブラウザ内モック。Issue #272）、2026-10-03（何日も開かなかったときのシステムの記録。Issue #271）、2026-10-03（Backlog・Task の詳細・領域を契約に移す。Issue #273）、2026-10-03（サインインと設定。Issue #278）
 
 ## 背景
 
@@ -131,14 +131,14 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
   - 保存できたか分からない（409 `revisionConflict`、500、通信の失敗、知らない `code`・ステータス・JSON でない本文）：409 は応答が失われただけで保存は済んでいることがあり（ADR 0006「エラー」）、ほかはサーバーが書いた後に失敗したかもしれないので、「記録は変わっていません」とは言わない。すべての読み取りを読み直してから（成功のときと同じく最初の答えまで）、「保存できたか確かめられませんでした」「最新の記録を確かめてください。」を出す。
   - 未認証（401）は Toast を出さず、下のサインインの入口へ送る。
   - 分け方は `use-operation.test.tsx` の「a failed operation」が、code・ステータスごとに Toast と読み直しの有無で確かめる。
-- 未認証（401）は、読み取りでも操作でも、サインインの画面へ送る（`apps/web/src/app/sign-in.ts`。`/sign-in?redirect=<元の画面>`、履歴は置き換える）。Toast は出さない。画面とパス・戻り先の渡し方は #278 で作り、決め直してよい。
+- 未認証（401）は、読み取りでも操作でも、サインインの画面へ送る（`apps/web/src/auth/sign-in.ts`。`/sign-in?redirect=<元の画面>`、履歴は置き換える）。Toast は出さない。画面と戻り先の扱いは下の「サインインと設定」（#278）。
 - 読み取りは、サーバーと通信の失敗（500 など）と版の衝突のときだけ 1 回まで取り直す。受け付けられない要求と未認証は取り直さない。操作は取り直さない。
 - 操作は `useOperation('<操作の名前>')` と `run(<入力>)`（`apps/web/src/api/use-operation.ts`）で呼ぶ。名前と入力は `packages/application` の操作のもので、HTTP のメソッドと経路への載せ方は `@itera/api-contract/requests` が決める（ADR 0006「経路の形」、#295。2026-10-03 改訂。それまでは生成した mutation の options を渡していた）。送信中は同じ操作を重ねて送らない（押し直しは送らずに失敗として返す）。`pending`（送信中。操作を受け付けない）と `loading`（送信中が 300ms 続いた。DESIGN.md の Spinner のとおり、Button・IconButton の `loading` でスピナーと文言を出す）を返す。送信中の見た目は DESIGN.md Components › Button・IconButton と docs/design/foundations.md の Loading に従い、各画面の Issue で付ける。
 
 #### ブラウザ内モック
 
 - `apps/web/src/mock/`：`createMock(store)` が、契約の要求（`Request`）を受けて `packages/application` の読み取りと操作を `RecordStore` の上で実行し、API と同じ形の応答（読み取りは `{ clock, view }`、操作は値か 204、エラーは ADR 0006 の status と `code`）を返す。クライアントの `fetch` として渡す（Service Worker は使わない）。
-- `getMe`（利用者と設定）は、API と同じく追いつきなしで、fixture の利用者の設定を返す。ほかの読み取りと操作の処理の順は API と同じ（ADR 0004「操作と読み取りの処理」）：入力を契約の Valibot のスキーマで確かめる（query の数と真偽は型に変えてから）→ システムの記録をその時点まで進める（終了日を過ぎた Sprint を Review にし、その日を始める。#271 と同じ処理）→ 読み取りか操作。利用者はサインイン済みで設定もある者として扱い（#278）、Origin・版の衝突・本文の大きさの上限は確かめない。日付が暦の上で実在するかは、`getDay` のパスだけで確かめる（画面は実在しない日付を送らない）。
+- `getMe`（利用者と設定）は、API と同じく追いつきなしで、fixture の利用者の設定を返す。ほかの読み取りと操作の処理の順は API と同じ（ADR 0004「操作と読み取りの処理」）：入力を契約の Valibot のスキーマで確かめる（query の数と真偽は型に変えてから）→ システムの記録をその時点まで進める（終了日を過ぎた Sprint を Review にし、その日を始める。#271 と同じ処理）→ 読み取りか操作。利用者は設定のある者として扱い、サインインはモックの認証に従う（サインアウトした後はすべての要求に 401。下の「サインインと設定」）。Origin・版の衝突・本文の大きさの上限は確かめない。日付が暦の上で実在するかは、`getDay` のパスだけで確かめる（画面は実在しない日付を送らない）。
 - ID は `packages/application` の `createIdSource`（TypeID）で作る。時計は fixture の状態ごとの時計（上の「時計」）。
 - 移行の途中の一致：モックと、まだ移していない画面は、同じ `RecordStore` を使う。画面が `RecordStore` で記録を変えたら、すべての読み取りを無効にする（`createMock` の `subscribeToScreens`）。モック自身の変更（要求への応答）では無効にしない（操作はクライアントが読み直し、読み取りはその応答がある）。
 - `packages/application` の `beginDay` は、その日がもう始まっていれば何も書かない（変更も Activity もない）ように改めた。前は実行中の Sprint を毎回書き直しており、要求のたびにシステムの記録を進めるモックでは、記録の差し替えと読み直しが止まらなかった。API（#271）でも書く行がなくなる。
@@ -171,6 +171,46 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
 - **プレビューの例外のモジュール**：`lib/domain-functions.ts` の日付の関数（`addDays`・`dayOfWeek`・`toLocalDate`）は、契約の型を受けて、domain の関数に渡す。ブランドの付け替え（`as`）はここだけで、日付と時刻の形は契約のスキーマが確かめる。`presentedSuggestion` は、Task 全体でなく `suggestions` を持つものを受けるようにした（`packages/domain` の型の変更だけで、振る舞いは同じ）。
 - **import の境界**：`MIGRATING` から #273 のファイルと、契約の型だけになった共有のファイル（`components/task/`・`lib/` の一部）を消した。
 - **画面の文言**：読み込めなかったときの「読み込めませんでした」と「もう一度読み込む」、読み込み中の「読み込み中…」、追加を送っている間の「追加中…」。content.md には載っていない語で、Notice・Progress・Button の部品の文書が例に挙げている。語として決めるかはオーナーの確認を待つ。
+
+### サインインと設定（2026-10-03、Issue #278）
+
+Better Auth（ADR 0004「認証の構成」）の API を使う、Web のサインインの画面と設定の画面。パスキーの追加とサインアウトの置き場所は、2026-10-03 のオーナー決定（Issue #278 のコメント）で設定の画面（`/settings`）の「アカウント」の欄にした。初めは「アカウント」の画面（`/account`）としたが、rail の 55px の項目に「アカウント」（12px で約 59px）が収まらないため、同じ日のオーナー決定で「設定」に改めた。利用者の設定（週の始まりなど）も、あとでこの画面の欄として置ける。入口は DESIGN.md の Navigation「設定の入口」。
+
+#### 依存と版
+
+| 対象 | 採用 | 版 | 置き場所 |
+| --- | --- | --- | --- |
+| 認証のクライアント | `better-auth`（`better-auth/client`） | 1.7.6 | `apps/web` の dependencies。サーバーと同じ版（ADR 0004「導入した依存と版」） |
+| パスキーのクライアント | `@better-auth/passkey`（`/client`） | 1.7.6 | `apps/web` の dependencies。サーバーと同じ版 |
+| `better-call` の任意の peer | `zod` | 4.6.5 | `apps/web` の devDependencies。画面のコードは使わない |
+
+- `zod` を足す理由：`better-auth` が使う `better-call` は `zod` を任意の peer に持つ。`apps/web` では shadcn（CLI）が持ち込む zod 3 がその peer に解決され、pnpm が `better-auth` の 1 つの実体を `services/api` と共有するため（`dedupePeerDependents`）、API の `better-auth` まで zod 3 の組み合わせに移った（2026-10-03 に lockfile で確かめた）。`apps/web` に zod 4.6.5 を置くと peer がそれに解決され、`services/api` の解決は変わらない。pnpm の `overrides` は peer の解決を変えなかった（範囲だけが変わり、警告が残る）。同じ lockfile の変更で、`eslint-plugin-react-hooks` の依存の zod も 3.25.76 から 4.6.5 に寄った（その範囲が両方を許すため）。`better-auth` を外すか、shadcn が zod 4 に移ったら、この devDependency を外せるか確かめる。
+- 使い方は 2026-10-03 に Context7（Better Auth の client、passkey プラグイン、`sessionOptions`）と、固定した 1.7.6 のコード（`@better-auth/passkey/client` の `signIn.passkey`・`passkey.addPasskey` の戻り値、OAuth のコールバックが `errorCallbackURL` に `error` を足す処理）で確かめた。
+
+#### 境界
+
+- 画面は `apps/web/src/auth/auth.ts` の `Auth`（セッション、Google とパスキーでのサインイン、パスキーの一覧と追加、サインアウト）だけを使い、`useAuth()` で受け取る。データの出どころが実装を選ぶ：API では `src/auth/better-auth.ts`（Better Auth のクライアント。同じ origin の `/api/auth`）、開発のモックでは `src/mock/mock-auth.ts`。
+- `better-auth`・`@better-auth/*` を import してよいのは `src/auth/better-auth.ts` だけ（ESLint の `no-restricted-imports`。`services/api` の `src/auth/better-auth.ts` と同じ形）。画面の domain と application の 2 つの規則に入れたので、両方の外にあるファイル（モック、テスト、両方を移行中のファイル）は検査されない。
+- 戻り先とサインインの入口（`SIGN_IN_PATH`・`signInHref`・`returnPath`・`sendToSignIn`）は `src/auth/sign-in.ts` に置く（#272 では `src/app/sign-in.ts`）。依存の向きを app → screens → auth の一方にするため。
+- Better Auth の React の hook（`useSession` など）と、クライアントのセッションの自動の取り直しは使わない。延長の呼び方を下の 1 か所で決め、テストで確かめるため。
+
+#### 画面と経路
+
+- `/sign-in`（`?redirect=<元の画面>`、Google が失敗して戻ったときは `&error=<code>`）。アプリの枠（ナビ）の外に出す。枠の中の画面は読み取りをするので、セッションのない画面に置くと 401 をくり返すため。経路は平らなまま（各画面の `getRouteApi('/today')` などの ID を変えない）、`root-layout.tsx` がパスで枠を付けるかを決める。
+- 戻り先（`returnPath`）は、アプリの中のパス（`/` で始まり、別の origin にならず、サインインの画面と `/api` でない。比べるときは大文字小文字と末尾の `/` を無視する）だけを受け、ほかは今日を開く。URL から来る値なので、外のサイトへ送らない。URL の解析は `.` と `..` を消すので（`/.//host` が `//host` になる）、解析した後のパスも確かめ、`//` で始まる・`\` を含む・`%2F` か `%5C` を含むものは断る（Better Auth 1.7.6 の相対の `callbackURL` の検査と同じ条件）。
+- Google：`signIn.social` に `callbackURL`（戻り先）と `errorCallbackURL`（`/sign-in?redirect=<戻り先>`）を渡す。失敗の文言は `error` の code だけで分ける（`access_denied`：取り消した。`SIGN_UP_NOT_ALLOWED`：許可の一覧にない。ほか：失敗）。`error_description` は使わない（ADR 0004）。
+- パスキー：プロンプトを閉じた・時間切れ（`AUTH_CANCELLED`、`ERROR_CEREMONY_ABORTED`、`ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY`）は何も言わない。追加では、追加済み（`ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED`）と、サインインが古い（`SESSION_NOT_FRESH`。Better Auth の fresh session は 1 日）を分け、後者はもう一度サインインする入口を出す。ほかは失敗。
+- サインインした後とサインアウトした後は `QueryClient` を空にする。前の人の記録と、401 で失敗した取得を残さない。設定の画面の操作は `useMutation` にしない（`MutationCache` が成功のたびに契約の読み取りをすべて読み直し、サインアウトの直後に 401 で別の遷移が起きるため）。
+
+#### セッションの延長
+
+- セッションは 1 つのクエリ（`src/auth/session-query.ts`）として取る。延長はそのクエリを取り直し（`fetchQuery`）、設定の画面は同じクエリを読む。`/api/auth/get-session` を呼ぶ場所を 1 つにするため。
+- `src/auth/session-refresh.ts`：枠の中の画面を開いたとき、画面が隠れてから 1 時間以上たって戻ってきたとき（`visibilitychange`）、表示している間は 1 時間ごとに `getSession`（`/api/auth/get-session`）を呼ぶ。ADR 0004 の延長は 1 日を過ぎたセッションで起きるので、1 時間おきなら開いている日には延びる。セッションがなければサインインの画面へ送る。サーバーや通信の失敗は捨て、次の呼び出しに任せる。
+
+#### ブラウザ内モック
+
+- モックの認証はサインイン済みで始まり、パスキーを 1 つ持つ。サインアウトすると、モックの API はすべての要求に 401（`unauthenticated`）を返す。パスキーでのサインインはすぐに通る。Google は戻り先をそのまま開く。再読み込みで最初に戻る（記録と同じく保存しない）。
+- 401 でサインインの画面へ送られ、サインインの後に元の画面に戻ることを、このモックで確かめる（`sign-in-flow.test.tsx`）。モックにない結果（サインインが古い、失敗）は、偽の `Auth` で画面を描いて確かめる（`src/test/render-with-auth.tsx`）。API の側の流れ（セッションの延長、Google の開始と失敗の戻り）は、`fetch` を差し替えて確かめる（`server-data.test.tsx`）。
 
 ### 状態の置き場所
 
