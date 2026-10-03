@@ -122,7 +122,11 @@ AGENTS.md の手順 4（`apps/web`）では、fixture だけで Backlog・Planni
 
 - 失敗は応答の `code` だけで分ける（`apps/web/src/api/failure.ts`）：`unauthenticated`（401）、`revisionConflict`（409）、受け付けられない（400・403・404・413・422。利用者の設定がまだない `userNotSetUp` もここ。設定を作る画面への入口は #279）、それ以外（500、通信の失敗、知らない `code`。ADR 0006「互換の規則」）。`message` は画面に出さない。
   - エラーの `code` は開いた列挙（ADR 0006「列挙」）。生成した型は `code` をエラーごとの閉じた値で書いているが、Web は応答を実行時に検証しない（生成した SDK に応答の検証はない）。`failureOf` は失敗を `unknown` として受け、`code` を文字列として読むので、知らない `code`・知らない HTTP のステータス・JSON でない本文でも読み込みは失敗せず、一般の失敗になる（`failure.test.ts`）。Web が応答を実行時に検証するようにするなら、その前に開いた列挙の仕様での書き方を決める（ADR 0006）。
-- 操作が失敗したら、今までの `use-run.ts` と同じ danger の Toast（「保存できませんでした」）を出す。文言は `src/api/save-failed.ts` の 1 か所にまとめ、`use-run.ts` も使う。版の衝突（409）でも同じ Toast を出し、すべての読み取りを読み直す。操作は自動で送り直さない。
+- 操作が失敗したら、失敗が記録について言えることで danger の Toast を分ける（2026-10-03 オーナー決定、Issue #272。文言は `src/api/save-failed.ts` の 1 か所にまとめ、`use-run.ts` も使う）。操作は自動で送り直さない。
+  - 保存の前に断った（受け付けられない：400・403・404・413・422）：「保存できませんでした」「記録は変わっていません。内容を確かめてもう一度試してください。」。読み直さない。
+  - 保存できたか分からない（409 `revisionConflict`、500、通信の失敗、知らない `code`・ステータス・JSON でない本文）：409 は応答が失われただけで保存は済んでいることがあり（ADR 0006「エラー」）、ほかはサーバーが書いた後に失敗したかもしれないので、「記録は変わっていません」とは言わない。すべての読み取りを読み直してから、「保存できたか確かめられませんでした」「最新の記録を確かめてください。」を出す。
+  - 未認証（401）は Toast を出さず、下のサインインの入口へ送る。
+  - 分け方は `use-operation.test.tsx` の「a failed operation」が、code・ステータスごとに Toast と読み直しの有無で確かめる。
 - 未認証（401）は、読み取りでも操作でも、サインインの画面へ送る（`apps/web/src/app/sign-in.ts`。`/sign-in?redirect=<元の画面>`、履歴は置き換える）。Toast は出さない。画面とパス・戻り先の渡し方は #278 で作り、決め直してよい。
 - 読み取りは、サーバーと通信の失敗（500 など）と版の衝突のときだけ 1 回まで取り直す。受け付けられない要求と未認証は取り直さない。操作は取り直さない。
 - 操作は `useOperation(<生成した mutation の options>)`（`apps/web/src/api/use-operation.ts`）で呼ぶ。送信中は同じ操作を重ねて送らない（押し直しは送らずに失敗として返す）。`pending`（送信中。操作を受け付けない）と `loading`（送信中が 300ms 続いた。DESIGN.md の Spinner のとおり、Button・IconButton の `loading` でスピナーと文言を出す）を返す。送信中の見た目は DESIGN.md Components › Button・IconButton と docs/design/foundations.md の Loading に従い、各画面の Issue で付ける。

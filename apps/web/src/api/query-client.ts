@@ -12,9 +12,12 @@ export interface QueryClientOptions {
  * every operation and read does after it settles (reads.ts):
  * - An operation that went through reads every read again before its
  *   promise resolves, so the screen has the new records by then.
- * - A version conflict (409) wrote nothing; the reads are read again so the
- *   screen shows what is saved. The operation is not sent again: the person
- *   decides on the records as they now are.
+ * - An operation that may have been saved after all (a version conflict,
+ *   409, the server or the network failed, an answer this client does not
+ *   know: ADR 0006) reads every read again before its promise rejects, so
+ *   the screen shows what is saved. It is not sent again: the person decides
+ *   on the records as they now are. One the API refused (400, 403, 404,
+ *   413, 422) saved nothing and reads nothing again.
  * - No session (401), from a read or an operation: `onUnauthenticated`.
  * - A read that failed on the server or the network, or met a conflict, is
  *   tried again once (a read's 409 is the system's catch-up before it
@@ -35,7 +38,7 @@ export function createQueryClient({
       onError: (error) => {
         const failure = failureOf(error);
         if (failure.kind === 'unauthenticated') onUnauthenticated();
-        if (failure.kind === 'revisionConflict')
+        if (failure.kind === 'revisionConflict' || failure.kind === 'failed')
           return invalidateReads(queryClient);
         return undefined;
       },
