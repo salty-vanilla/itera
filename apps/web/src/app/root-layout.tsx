@@ -1,68 +1,30 @@
-import { lazy, Suspense, useState, type ReactNode } from 'react';
-import { Outlet, useSearch } from '@tanstack/react-router';
-import {
-  defaultFixtureState,
-  fixtureSnapshot,
-  isFixtureStateId,
-  type FixtureStateId,
-} from '@/fixtures/states';
+import type { ReactNode } from 'react';
+import { Outlet } from '@tanstack/react-router';
 import { ToastProvider } from '@/components/ui/toast';
-import { createMemoryStore } from '@/store/record-store';
-import { StoreProvider } from '@/store/store-provider';
-import { useSystemDay } from '@/store/use-system-day';
 import { AppShell } from './app-shell';
+import { ServerData } from './server-data';
 
-// The dev menu is left out of production builds: with `import.meta.env.DEV`
-// false the import is dead code and Vite drops the chunk.
-const DevMenu = import.meta.env.DEV
-  ? lazy(() => import('./dev-menu').then((m) => ({ default: m.DevMenu })))
-  : null;
+// The browser mock and the fixture are left out of production builds: with
+// `import.meta.env.DEV` false the import is dead code and Vite drops the
+// chunk (data-source.ts; scripts/check-build.mjs checks it). `--mode api`
+// leaves them out in development too. Loaded before the app renders, so the
+// first screen does not wait for it.
+const MockData: ((props: { children: ReactNode }) => ReactNode) | null =
+  import.meta.env.DEV && import.meta.env.MODE !== 'api'
+    ? (await import('@/mock/mock-data')).MockData
+    : null;
 
-/**
- * Opens the fixture state named in the URL. Choosing another state starts
- * a new store from its snapshot; nothing is persisted, so a reload also
- * starts over (#38).
- */
 function RootLayout() {
-  // Checked again here: on a path with no route the search is not validated.
-  const search: { fixture?: unknown } = useSearch({ strict: false });
-  const fixture = isFixtureStateId(search.fixture)
-    ? search.fixture
-    : defaultFixtureState;
+  const Data = MockData ?? ServerData;
   return (
-    // Keyed by the state: another state mounts a new store.
-    <FixtureStore key={fixture} fixture={fixture}>
+    <Data>
       <ToastProvider>
-        <SystemDay />
         <AppShell>
           <Outlet />
         </AppShell>
-        {DevMenu !== null && (
-          <Suspense>
-            <DevMenu current={fixture} />
-          </Suspense>
-        )}
       </ToastProvider>
-    </FixtureStore>
+    </Data>
   );
-}
-
-/** The system's start of the day, whatever screen is open (#54). */
-function SystemDay() {
-  useSystemDay();
-  return null;
-}
-
-/** Holds one store for the life of a fixture state (state, not a memo). */
-function FixtureStore({
-  fixture,
-  children,
-}: {
-  fixture: FixtureStateId;
-  children: ReactNode;
-}) {
-  const [store] = useState(() => createMemoryStore(fixtureSnapshot(fixture)));
-  return <StoreProvider store={store}>{children}</StoreProvider>;
 }
 
 export { RootLayout };

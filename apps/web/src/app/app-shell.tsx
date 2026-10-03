@@ -3,14 +3,13 @@ import { Inbox, Rewind, Route, Sun } from 'lucide-react';
 import { useRef, type ReactElement, type ReactNode } from 'react';
 import { buttonVariants } from '@/components/ui/button';
 import { Navigation, type NavigationItem } from '@/components/ui/navigation';
-import type { ScreenId } from '@/fixtures/states';
 import { isPlainClick } from '@/lib/plain-click';
+import { useOverview } from '@/api/use-overview';
 import { cn } from '@/lib/utils';
 import { useCloseToastsOnScreenChange } from './use-close-toasts-on-screen-change';
 import { focusScreenHeading, useScreenFocus } from './use-screen-focus';
 import { useToastClearance } from './use-toast-clearance';
-import { useAppOverview } from '@/store/use-app-overview';
-import { screens } from './screens';
+import { screens, type ScreenId } from './screens';
 
 const icons: Record<ScreenId, ReactElement> = {
   today: <Sun aria-hidden />,
@@ -28,7 +27,8 @@ function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const navigate = useNavigate();
   const pathname = useLocation({ select: (location) => location.pathname });
-  const { backlogCount } = useAppOverview();
+  // The overview is read through the contract (#272); absent until it is.
+  const backlogCount = useOverview().data?.view.backlogCount;
   const mainRef = useRef<HTMLElement>(null);
   useToastClearance(mainRef);
   useScreenFocus(mainRef);
@@ -41,7 +41,9 @@ function AppShell({ children }: { children: ReactNode }) {
     // The fixture search parameter is kept (ADR 0005); the Sprint and the
     // day are not, so the navigation opens the current ones (#90).
     href: router.buildLocation({ to: screen.path }).href,
-    ...(screen.id === 'backlog' ? { count: backlogCount } : {}),
+    ...(screen.id === 'backlog' && backlogCount !== undefined
+      ? { count: backlogCount }
+      : {}),
   }));
   const current =
     screens.find((screen) => pathname.startsWith(screen.path))?.id ?? '';

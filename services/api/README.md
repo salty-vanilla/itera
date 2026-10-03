@@ -28,7 +28,20 @@ pnpm --filter @itera/api dev    # .dev.vars の BETTER_AUTH_URL は http://local
 | `/assets/<ハッシュ付きのファイル>` | 200、`Cache-Control: public, max-age=0, must-revalidate` と `ETag`（`If-None-Match` を付けると 304） |
 | 存在しない `/assets/<名前>` | `index.html`（200）。同じ既定の `Cache-Control`（固定されない） |
 
-すべてのアセットが Workers の既定の `Cache-Control: public, max-age=0, must-revalidate`（毎回 `ETag` で確かめる）。長く固定する設定（`immutable`）は意図して付けていない（ADR 0004「Web と API の配信」）。コードを変えたら、`dist` を作り直す。Vite の開発サーバーから使う開発（`/api` の中継）は #272 で作る。
+すべてのアセットが Workers の既定の `Cache-Control: public, max-age=0, must-revalidate`（毎回 `ETag` で確かめる）。長く固定する設定（`immutable`）は意図して付けていない（ADR 0004「Web と API の配信」）。コードを変えたら、`dist` を作り直す。
+
+### Vite の開発サーバーから使う（画面を直しながら API につなぐ）
+
+Web の開発サーバーを `--mode api` で起動すると、ブラウザ内モックの代わりにこの API を使う。開発サーバーが `/api` を `wrangler dev` に中継するので、ブラウザから見て 1 つの origin になる（ADR 0004「Web と API の配信」、ADR 0005「Web のクライアントとブラウザ内モック」）。
+
+```sh
+pnpm --filter @itera/api dev            # http://localhost:8787（dist が要る。先に pnpm build）
+pnpm --filter @itera/web dev:api        # http://localhost:5173 。/api を 8787 に中継する
+```
+
+- `.dev.vars` の `BETTER_AUTH_URL` は、**開発サーバーの origin**（既定 `http://localhost:5173`）にする。中継は Host と Origin を書き換えないので、Better Auth と書き込みの Origin の確認は開発サーバーの origin を見る。Google の OAuth クライアントの承認済みリダイレクト URI も `http://localhost:5173/api/auth/callback/google` にする。
+- `wrangler dev` を別のポートで動かすときは、`ITERA_API_ORIGIN=http://localhost:<port>` を付けて開発サーバーを起動する。開発サーバーのポートを変えたら、`BETTER_AUTH_URL` もそれに合わせる。
+- この動かし方には fixture がない。開発用メニューと `?fixture=` は、モックを使う既定の `pnpm --filter @itera/web dev` だけで動く。
 
 API の経路はすべて `/api` の下にある。同じ origin のほかの経路は Web の配信に使う（ADR 0004）。
 

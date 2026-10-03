@@ -5,14 +5,13 @@ import {
   fixtureStateIds,
   type FixtureStateId,
 } from '@itera/application/fixtures';
+import type { ScreenId } from '@/app/screens';
 
 export {
   fixtureSnapshot,
   isFixtureStateId,
   type FixtureStateId,
 } from '@itera/application/fixtures';
-
-export type ScreenId = 'today' | 'sprint' | 'backlog' | 'retro';
 
 export interface FixtureState {
   readonly id: FixtureStateId;

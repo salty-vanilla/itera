@@ -15,12 +15,12 @@ import {
   fixtureStates,
   isFixtureStateId,
   type FixtureStateId,
-} from '@/fixtures/states';
+} from './fixture-states';
 import { formatDate, formatTime } from '@/lib/date-format';
 import { useAppOverview } from '@/store/use-app-overview';
-import { screens } from './screens';
+import { screens } from '@/app/screens';
 
-// Development only (root-layout.tsx keeps it out of production builds).
+// Development only, with the browser mock (mock-data.tsx).
 // Switches the fixture state (PRD §12) and opens its screen. The same state
 // opens from the URL: `?fixture=<id>`.
 

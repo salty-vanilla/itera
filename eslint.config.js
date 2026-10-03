@@ -66,6 +66,111 @@ function pureRules(name) {
   };
 }
 
+/**
+ * The files of apps/web still on the store until their screen moves to the
+ * contract (#272 import の境界), with what each imports: `domain`
+ * (@itera/domain) or `application` (@itera/application). A file in no list
+ * takes the contract only. Each screen's Issue removes its files; #277
+ * empties the lists and removes them (ADR 0005 API への移行の改訂).
+ * Listed by name, not by pattern, so that a new file is held to the rule.
+ * @type {Record<string, Record<string, ('domain' | 'application')[]>>}
+ */
+const MIGRATING = {
+  // #273: Backlog, the Task detail and the Areas.
+  '#273': {
+    'apps/web/src/screens/backlog/area-dialog.tsx': ['domain'],
+    'apps/web/src/screens/backlog/backlog-row.tsx': ['domain'],
+    'apps/web/src/screens/backlog/backlog-screen.tsx': ['domain'],
+    'apps/web/src/screens/backlog/recurrence-editor.tsx': ['domain'],
+    'apps/web/src/screens/backlog/subtask-list.tsx': ['domain'],
+    'apps/web/src/screens/backlog/task-detail.tsx': ['domain'],
+    'apps/web/src/screens/backlog/use-add-to-today.ts': ['domain'],
+    'apps/web/src/screens/backlog/use-add-to-week.ts': ['domain'],
+    'apps/web/src/store/use-areas.ts': ['domain', 'application'],
+    'apps/web/src/store/use-backlog.ts': ['application'],
+    'apps/web/src/store/use-task-actions.ts': ['domain', 'application'],
+  },
+  // #274: the Sprint (Planning and running).
+  '#274': {
+    'apps/web/src/screens/planning/backlog-pane.tsx': ['domain'],
+    'apps/web/src/screens/planning/check-summary.tsx': ['domain'],
+    'apps/web/src/screens/planning/plan-pane.tsx': ['domain'],
+    'apps/web/src/screens/planning/planned-source.ts': ['domain'],
+    'apps/web/src/screens/planning/planning-screen.tsx': ['domain'],
+    'apps/web/src/screens/sprint-screen.tsx': ['domain'],
+    'apps/web/src/screens/sprint/running-sprint.tsx': ['domain'],
+    'apps/web/src/store/use-planning.ts': ['domain', 'application'],
+    'apps/web/src/store/use-running-sprint.ts': ['domain', 'application'],
+    'apps/web/src/store/use-sprint-choice.ts': ['application'],
+  },
+  // #275: Today.
+  '#275': {
+    'apps/web/src/screens/today/day-frame.tsx': ['domain'],
+    'apps/web/src/screens/today/day-header.tsx': ['domain'],
+    'apps/web/src/screens/today/interrupt-row.tsx': ['domain'],
+    'apps/web/src/screens/today/other-day.tsx': ['domain'],
+    'apps/web/src/screens/today/today-row.tsx': ['domain'],
+    'apps/web/src/screens/today/today-screen.tsx': ['domain'],
+    'apps/web/src/store/use-today.ts': ['domain', 'application'],
+  },
+  // #276: the Retro.
+  '#276': {
+    'apps/web/src/screens/retro/facts-pane.tsx': ['domain'],
+    'apps/web/src/screens/retro/handoff-pane.tsx': ['domain'],
+    'apps/web/src/screens/retro/materials.tsx': ['domain'],
+    'apps/web/src/screens/retro/reflect-pane.tsx': ['domain'],
+    'apps/web/src/screens/retro/retro-screen.tsx': ['domain'],
+    'apps/web/src/screens/retro/retro-words.tsx': ['domain'],
+    'apps/web/src/screens/retro/task-result.tsx': ['domain'],
+    'apps/web/src/screens/retro/task-values.ts': ['domain'],
+    'apps/web/src/store/use-retro.ts': ['domain', 'application'],
+  },
+  // shared by the screens: removed by the Issue that moves their last user, #277 at the latest.
+  shared: {
+    'apps/web/src/components/sprint/capacity-indicator.tsx': ['domain'],
+    'apps/web/src/components/task/area-select.stories.tsx': ['domain'],
+    'apps/web/src/components/task/area-select.tsx': ['domain'],
+    'apps/web/src/components/task/deadline.tsx': ['domain'],
+    'apps/web/src/components/task/estimate-suggestion.stories.tsx': ['domain'],
+    'apps/web/src/components/task/estimate-suggestion.tsx': ['domain'],
+    'apps/web/src/components/task/estimate.tsx': ['domain'],
+    'apps/web/src/components/task/task-metadata.tsx': ['domain'],
+    'apps/web/src/components/task/task-quick-add.stories.tsx': ['domain'],
+    'apps/web/src/components/task/task-row.stories.tsx': ['domain'],
+    'apps/web/src/lib/criterion-text.ts': ['domain'],
+    'apps/web/src/lib/date-format.ts': ['domain'],
+    'apps/web/src/lib/recurrence-text.ts': ['domain'],
+    'apps/web/src/lib/selection-words.ts': ['domain'],
+    'apps/web/src/lib/time-format.ts': ['domain'],
+    'apps/web/src/lib/today-words.ts': ['domain'],
+    'apps/web/src/lib/use-estimate-focus.ts': ['domain'],
+    'apps/web/src/lib/week-text.ts': ['application'],
+    'apps/web/src/store/record-store.ts': ['application'],
+    'apps/web/src/store/store-provider.tsx': ['application'],
+    'apps/web/src/store/use-app-overview.ts': ['application'],
+    'apps/web/src/store/use-run.ts': ['domain', 'application'],
+    'apps/web/src/store/use-system-day.ts': ['application'],
+    'apps/web/src/store/views.ts': ['domain', 'application'],
+  },
+};
+
+/** @param {'domain' | 'application'} pkg */
+function migratingOn(pkg) {
+  return Object.values(MIGRATING).flatMap((files) =>
+    Object.entries(files)
+      .filter(([, uses]) => uses.includes(pkg))
+      .map(([file]) => file),
+  );
+}
+
+// Outside the rule: the tests and their helpers, which open the fixture's
+// records, and the browser mock (the server's stand-in).
+const WEB_NOT_SCREENS = [
+  'apps/web/src/**/*.test.{ts,tsx}',
+  'apps/web/src/test/**',
+  'apps/web/src/mock/**',
+];
+
 // Keep ESLint configuration in this one file. ESLint 10 looks up the nearest
 // eslint.config.* per directory, so a nested config would replace this one
 // for its subtree instead of extending it. Add package rules here with `files`.
@@ -104,7 +209,55 @@ export default defineConfig(
     languageOptions: { globals: globals.browser },
   },
   {
-    files: ['apps/web/*.ts', 'apps/web/.storybook/main.ts'],
+    // apps/web takes the records and the derived values from the contract
+    // (ADR 0005 API への移行の改訂, PRD §14). packages/domain only through
+    // the one module of previews and dates, packages/application not at
+    // all; type imports too. Two rules, so that neither replaces the other.
+    files: ['apps/web/src/**/*.{ts,tsx}', 'apps/web/.storybook/**/*.{ts,tsx}'],
+    ignores: [
+      ...WEB_NOT_SCREENS,
+      'apps/web/src/lib/domain-functions.ts',
+      ...migratingOn('domain'),
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '^@itera/domain(/|$)',
+              message:
+                'Take the types from the contract (@itera/api-contract) and the previews and dates from @/lib/domain-functions (ADR 0005).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['apps/web/src/**/*.{ts,tsx}', 'apps/web/.storybook/**/*.{ts,tsx}'],
+    ignores: [...WEB_NOT_SCREENS, ...migratingOn('application')],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '^@itera/application(/|$)',
+              message:
+                'Only the browser mock runs packages/application; the screens use the contract (ADR 0005).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: [
+      'apps/web/*.ts',
+      'apps/web/scripts/**',
+      'apps/web/.storybook/main.ts',
+    ],
     languageOptions: { globals: globals.node },
   },
   {
