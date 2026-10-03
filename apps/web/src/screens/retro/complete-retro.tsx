@@ -207,7 +207,7 @@ function CompleteDialog({
           <Button
             variant="primary"
             loading={loading}
-            loadingLabel="完了中…"
+            loadingLabel="保存中…"
             onClick={onConfirm}
           >
             振り返りを完了

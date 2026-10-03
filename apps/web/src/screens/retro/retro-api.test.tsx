@@ -269,7 +269,7 @@ describe('Retro on the API', () => {
           ),
         ).toBe(true),
       );
-      expect(await dialog.findByText('完了中…')).toBeTruthy();
+      expect(await dialog.findByText('保存中…')).toBeTruthy();
       expect(screen.getByRole('dialog')).toBeTruthy();
       release?.();
       expect(
