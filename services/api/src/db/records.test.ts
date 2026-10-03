@@ -1,3 +1,4 @@
+import type { Records } from '@itera/application';
 import {
   id,
   instant,
@@ -20,7 +21,7 @@ import type { Database } from './database';
 import { loadRecords } from './load-records';
 import { createMemoryDatabase } from './memory-database';
 import { recordTables } from './record-rows';
-import type { LoadedRecords, StoredRecords } from './records';
+import type { LoadedRecords } from './records';
 import { createRecordingDatabase } from './recording-database';
 import { fixedUniqueIndexes, saveRecords, uniqueSlots } from './save-records';
 import { activity, recordRevision, user as authUser } from './schema';
@@ -49,7 +50,7 @@ function userOf(userId: UserId): User {
  * Records covering every optional attribute both present and absent, and
  * every form of each union, for one user. `n` keeps two users' IDs apart.
  */
-function recordsOf(userId: UserId, n: number): StoredRecords {
+function recordsOf(userId: UserId, n: number): Records {
   const ids = (prefix: string, i: number) => tid(prefix, n * 100 + i);
   const areaId = id<'Area'>(ids('area', 1));
   const taskIds = [1, 2, 3, 4].map((i) => id<'Task'>(ids('task', i)));
@@ -545,7 +546,7 @@ async function signUp(db: Database, userId: UserId, email: string) {
 }
 
 /** Saves `records` as the user's first save. */
-async function saveAll(db: Database, records: StoredRecords) {
+async function saveAll(db: Database, records: Records) {
   return saveRecords(db, {
     userId: records.user.id,
     loaded: empty,
@@ -778,7 +779,7 @@ describe('loadRecords and saveRecords', () => {
   it.each([
     [
       'two active criteria',
-      (records: StoredRecords) => ({
+      (records: Records) => ({
         criteria: [
           {
             ...records.criteria[1]!,
@@ -789,7 +790,7 @@ describe('loadRecords and saveRecords', () => {
     ],
     [
       'two presented suggestions on a Task',
-      (records: StoredRecords) => {
+      (records: Records) => {
         const task = records.tasks[1]!;
         const presented = task.suggestions[1]!;
         return {
@@ -810,7 +811,7 @@ describe('loadRecords and saveRecords', () => {
     ],
     [
       'a non-recurring Task twice in a Sprint (invariant 14)',
-      (records: StoredRecords) => {
+      (records: Records) => {
         const sprint = records.sprints[0]!;
         const once = sprint.tasks[0]!;
         return {
@@ -828,7 +829,7 @@ describe('loadRecords and saveRecords', () => {
     ],
     [
       'a DailySelection whose SprintTask is gone',
-      (records: StoredRecords) => {
+      (records: Records) => {
         const sprint = records.sprints[0]!;
         return { sprints: [{ ...sprint, tasks: sprint.tasks.slice(1) }] };
       },

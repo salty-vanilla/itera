@@ -1,3 +1,4 @@
+import type { RecordChanges, Records } from '@itera/application';
 import type { Activity, UserId } from '@itera/domain';
 import { and, eq, getTableColumns, sql, type SQL } from 'drizzle-orm';
 import type { BatchItem } from 'drizzle-orm/batch';
@@ -19,12 +20,7 @@ import {
   RowSet,
   type RecordTable,
 } from './record-rows';
-import type {
-  LoadedRecords,
-  RecordChanges,
-  SaveResult,
-  StoredRecords,
-} from './records';
+import type { LoadedRecords, SaveResult } from './records';
 import {
   activity,
   estimateSuggestion,
@@ -208,7 +204,7 @@ function changedRows(input: SaveRecordsInput): [RowSet, RowSet] {
 }
 
 /** Before the first save there is nothing to compare with; the user comes with it. */
-function emptyRecords(changes: RecordChanges, userId: UserId): StoredRecords {
+function emptyRecords(changes: RecordChanges, userId: UserId): Records {
   if (changes.user === undefined) {
     throw new Error(
       `The first save for ${userId} must include the user's settings.`,

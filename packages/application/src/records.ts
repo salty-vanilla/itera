@@ -12,9 +12,11 @@ import type {
 } from '@itera/domain';
 
 /**
- * Everything the app keeps: the records of `@itera/domain`, as they are.
- * Derived values (Backlog, totals, streaks, Retro facts, …) are never
- * stored here; screens compute them with the domain's functions.
+ * The records of `@itera/domain`, as they are, that operations and reads
+ * take: everything but Activity, which they only append (the API never
+ * reads it back, ADR 0004). Derived values (Backlog, totals, streaks, Retro
+ * facts, …) are never stored here; reads compute them with the domain's
+ * functions.
  */
 export interface Records {
   readonly user: User;
@@ -25,6 +27,10 @@ export interface Records {
   /** Sprint is the aggregate root of SprintTask, DailySelection, Retro, … */
   readonly sprints: readonly Sprint[];
   readonly criteria: readonly PlanningCriterion[];
+}
+
+/** The records with the Activity appended so far: what the memory store keeps. */
+export interface RecordsWithActivity extends Records {
   /** Append-only. */
   readonly activities: readonly Activity[];
 }
@@ -80,11 +86,10 @@ function remove<T extends WithId>(
   return records.filter((record) => !gone.has(record.id));
 }
 
-/** The records after a change and its Activity. Returns new arrays only where something changed. */
-export function applyChanges(
+/** The records after a change. Returns new arrays only where something changed. */
+export function applyRecordChanges(
   records: Records,
   changes: RecordChanges,
-  activities: readonly Activity[],
 ): Records {
   return {
     user: changes.user ?? records.user,
@@ -103,6 +108,17 @@ export function applyChanges(
       upsert(records.criteria, changes.criteria ?? []),
       changes.deleted?.criteria,
     ),
+  };
+}
+
+/** The records after a change and its Activity. Returns new arrays only where something changed. */
+export function applyChanges(
+  records: RecordsWithActivity,
+  changes: RecordChanges,
+  activities: readonly Activity[],
+): RecordsWithActivity {
+  return {
+    ...applyRecordChanges(records, changes),
     activities:
       activities.length === 0
         ? records.activities

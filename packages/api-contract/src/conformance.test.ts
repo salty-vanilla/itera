@@ -18,7 +18,7 @@ import type {
   SprintChoice,
   TodayData,
 } from '@itera/application';
-import type { BacklogSlice } from '@itera/domain';
+import type { BacklogSlice, User } from '@itera/domain';
 import { describe, expectTypeOf, it } from 'vitest';
 import type * as Gen from './index';
 import type { Equal, Plain, WithNull } from './testing';
@@ -240,6 +240,12 @@ describe('the contract and packages/application', () => {
   it("returns each read's result as the response's view, null for none", () => {
     expectTypeOf<ReadMismatch>().toEqualTypeOf<never>();
     expectTypeOf<ClockMismatch>().toEqualTypeOf<never>();
+  });
+
+  it("returns the person's settings as the domain's User without its ID", () => {
+    expectTypeOf<
+      Plain<NonNullable<Gen.GetMeResponse['settings']>>
+    >().toEqualTypeOf<Plain<Omit<User, 'id'>>>();
   });
 
   it("takes the Backlog's filter as the read's query", () => {

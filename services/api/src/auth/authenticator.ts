@@ -1,3 +1,5 @@
+import type { UserId } from '@itera/domain';
+
 // Where the auth service answers its own requests: sign-in, OAuth callbacks,
 // passkeys, sign-out and the session. Web and API share one origin, so the
 // session cookie reaches these routes and the API's routes alike.
@@ -11,7 +13,7 @@ export type Authenticator = {
   //   answered with 401).
   // - Throws for server-side failures such as missing settings or an
   //   unreachable database (answered with 5xx).
-  authenticate(headers: Headers): Promise<{ userId: string } | null>;
+  authenticate(headers: Headers): Promise<{ userId: UserId } | null>;
   // Answers a request under authBasePath.
   handle(request: Request): Promise<Response>;
 };

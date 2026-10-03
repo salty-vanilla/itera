@@ -2,6 +2,51 @@
 
 import * as v from 'valibot';
 
+export const vUserId = v.pipe(v.string(), v.regex(/^user_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
+
+/**
+ * An IANA time zone name.
+ */
+export const vTimeZone = v.string();
+
+/**
+ * 0 is Sunday, 6 is Saturday.
+ */
+export const vDayOfWeek = v.picklist([
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+]);
+
+/**
+ * The person's settings: the domain's User without its ID. The week's first day decides a Sprint's dates.
+ */
+export const vUserSettings = v.object({
+    displayName: v.string(),
+    timeZone: vTimeZone,
+    weekStartsOn: vDayOfWeek
+});
+
+/**
+ * No valid session.
+ */
+export const vUnauthenticatedError = v.object({
+    code: v.literal('unauthenticated'),
+    message: v.string()
+});
+
+/**
+ * An unexpected failure on the server.
+ */
+export const vInternalError = v.object({
+    code: v.literal('internalError'),
+    message: v.string()
+});
+
 /**
  * A calendar day in the person's time zone.
  */
@@ -19,11 +64,6 @@ export const vClock = v.object({
     today: vLocalDate,
     now: vInstant
 });
-
-/**
- * An IANA time zone name.
- */
-export const vTimeZone = v.string();
 
 export const vSprintState = v.picklist([
     'planning',
@@ -53,14 +93,6 @@ export const vAppOverview = v.object({
 });
 
 /**
- * No valid session.
- */
-export const vUnauthenticatedError = v.object({
-    code: v.literal('unauthenticated'),
-    message: v.string()
-});
-
-/**
  * Another write came first (ADR 0004 同時の書き込み), and this one was not made; read the records again. Not retried automatically. (When the database's answer to a write that was made is lost, it also comes back as this; reading again shows what was saved.)
  */
 export const vRevisionConflictError = v.object({
@@ -69,10 +101,10 @@ export const vRevisionConflictError = v.object({
 });
 
 /**
- * An unexpected failure on the server.
+ * The person has no settings yet (time zone, start of the week), so there is no 「今日」 to run an operation or a read with. Making the settings comes first.
  */
-export const vInternalError = v.object({
-    code: v.literal('internalError'),
+export const vUserNotSetUpError = v.object({
+    code: v.literal('userNotSetUp'),
     message: v.string()
 });
 
@@ -107,8 +139,6 @@ export const vBacklogSlice = v.picklist([
 ]);
 
 export const vTaskId = v.pipe(v.string(), v.regex(/^task_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
-
-export const vUserId = v.pipe(v.string(), v.regex(/^user_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
 
 export const vTaskPriority = v.picklist([
     'high',
@@ -221,19 +251,6 @@ export const vCarryCount = v.object({
     count: v.pipe(v.number(), v.integer()),
     fromSprint: v.pipe(v.number(), v.integer())
 });
-
-/**
- * 0 is Sunday, 6 is Saturday.
- */
-export const vDayOfWeek = v.picklist([
-    0,
-    1,
-    2,
-    3,
-    4,
-    5,
-    6
-]);
 
 export const vRecurrencePattern = v.union([
     v.object({
@@ -1171,6 +1188,14 @@ export const vNotFoundError = v.object({
 });
 
 /**
+ * The request's body is larger than the API takes (64 KiB).
+ */
+export const vPayloadTooLargeError = v.object({
+    code: v.literal('payloadTooLarge'),
+    message: v.string()
+});
+
+/**
  * The domain refused the operation (packages/domain DomainError): a value its rules do not accept, a transition the record's state does not allow, or completing a recurring Task.
  */
 export const vRuleViolationError = v.object({
@@ -1192,6 +1217,14 @@ export const vTaskAttributeUpdate = v.strictObject({
     due: v.nullish(vLocalDate),
     priority: v.optional(vTaskPriority),
     timeBasis: v.optional(vTimeBasis)
+});
+
+/**
+ * The person.
+ */
+export const vGetMeResponse = v.object({
+    userId: vUserId,
+    settings: v.nullable(vUserSettings)
 });
 
 /**

@@ -13,6 +13,7 @@ import {
   type Clock,
   type RecordChanges,
   type Records,
+  type RecordsWithActivity,
 } from './records';
 
 /**
@@ -75,7 +76,7 @@ export function returning<T>(
 
 /** The records and the clock: what a screen, the API or a test reads. */
 export interface StoreSnapshot {
-  readonly records: Records;
+  readonly records: RecordsWithActivity;
   readonly clock: Clock;
 }
 

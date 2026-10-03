@@ -10,7 +10,7 @@ Itera のアプリケーション層（ADR 0005「API への移行の改訂（20
 | `*-changes.ts` | 操作の中身（`Change`）。作った記録の ID と操作の結果の値を `value` で返す |
 | `system-changes.ts`、`today-changes.ts` の `beginDay` | システムの記録（終了日を過ぎた Sprint の Review、その日の始まり）。利用者の操作の一覧には入れない |
 | `*-view.ts`、`sprint-choice.ts`、`overview-view.ts` | 読み取り。結果はそのまま API の応答にできる形（関数・`Map`・`Set`・画面の語を含めない） |
-| `record-store.ts`、`records.ts` | 記録の形、`Change` の型、メモリ上のストア（fixture とブラウザ内モック） |
+| `record-store.ts`、`records.ts` | 記録の形、`Change` の型、メモリ上のストア（fixture とブラウザ内モック）。操作と読み取りが受け取る `Records` は Activity を含まない（追記するだけで読み返さない。ADR 0004）。メモリ上のストアは追記した Activity も持つ（`RecordsWithActivity`） |
 | `ids.ts` | TypeID（ADR 0004「ID の形式」）を作る関数と、外から来た ID を確かめる関数 |
 | `fixtures/` | fixture の時系列と PRD §12 の 12 状態。`@itera/application/fixtures` から使う。テストとブラウザ内モックのためのもので、本番のコードからは使わない |
 

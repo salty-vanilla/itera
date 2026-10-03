@@ -71,7 +71,11 @@ import {
 import { find, onSprint, onTask, onToday } from '../changes';
 import { createIdSource } from '../ids';
 import { changed, type Change, type StoreSnapshot } from '../record-store';
-import { applyChanges, type Records } from '../records';
+import {
+  applyChanges,
+  type Records,
+  type RecordsWithActivity,
+} from '../records';
 import { reviewSprint } from '../review-changes';
 
 export type FixtureStateId =
@@ -150,7 +154,7 @@ export function buildTimeline(): Timeline {
   const area = named<AreaName, AreaId>('Area');
   const task = named<TaskName, TaskId>('Task');
   const sprint = named<SprintName, SprintId>('Sprint');
-  let records: Records = {
+  let records: RecordsWithActivity = {
     user,
     areas: [],
     tasks: [],

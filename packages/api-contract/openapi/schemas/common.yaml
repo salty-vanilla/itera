@@ -138,6 +138,23 @@ RuleViolationError:
       type: string
       enum: [invalidInput, invalidTransition, recurringTaskCannotComplete]
     message: { type: string }
+UserNotSetUpError:
+  description: >-
+    The person has no settings yet (time zone, start of the week), so there
+    is no 「今日」 to run an operation or a read with. Making the settings
+    comes first.
+  type: object
+  required: [code, message]
+  properties:
+    code: { const: userNotSetUp }
+    message: { type: string }
+PayloadTooLargeError:
+  description: The request's body is larger than the API takes (64 KiB).
+  type: object
+  required: [code, message]
+  properties:
+    code: { const: payloadTooLarge }
+    message: { type: string }
 InternalError:
   description: An unexpected failure on the server.
   type: object

@@ -1,4 +1,6 @@
 import { passkey } from '@better-auth/passkey';
+import { createIdSource, parseId } from '@itera/application';
+import type { Instant } from '@itera/domain';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { APIError } from 'better-auth/api';
@@ -82,9 +84,25 @@ function requireSettings(settings: BetterAuthSettings) {
   };
 }
 
+// Makes the ID of a new row of Better Auth's, by the row's model (`user`,
+// `session`, `account`, `verification`, `passkey`, `rateLimit`).
+export type NewAuthId = (model: string) => string;
+
+// TypeIDs at `now`, as the records' IDs are (ADR 0004 ID の形式): the
+// model's name in snake_case, then a UUIDv7. A user's ID is then the
+// domain's user ID too (`user_…`).
+export function authIdSource(now: () => Instant): NewAuthId {
+  const ids = createIdSource((bytes) => crypto.getRandomValues(bytes));
+  return (model) => ids.newId(model, now());
+}
+
 // Better Auth for Itera (Issue #121, ADR 0004). Sign-in methods are Google
 // and passkeys only; a passkey is added by a user who is already signed in.
-export function createBetterAuth(db: Database, settings: BetterAuthSettings) {
+export function createBetterAuth(
+  db: Database,
+  settings: BetterAuthSettings,
+  newId: NewAuthId,
+) {
   const {
     secret,
     origin,
@@ -136,6 +154,10 @@ export function createBetterAuth(db: Database, settings: BetterAuthSettings) {
     // Kept in D1: memory would be per Worker isolate.
     rateLimit: { enabled: true, storage: 'database' },
     advanced: {
+      // Every row Better Auth makes gets its ID here (1.7.6 calls it with
+      // the model's name, for the adapter's inserts and for the user and
+      // session it makes itself).
+      database: { generateId: ({ model }) => newId(model) },
       // Set by Cloudflare for every request; clients cannot forge it.
       ipAddress: { ipAddressHeaders: ['cf-connecting-ip'] },
       // Better Auth turns this check off when NODE_ENV is test. Keep it on so
@@ -150,8 +172,9 @@ export function createBetterAuth(db: Database, settings: BetterAuthSettings) {
 function createBetterAuthAuthenticator(
   db: Database,
   settings: BetterAuthSettings,
+  newId: NewAuthId,
 ): Authenticator {
-  const auth = createBetterAuth(db, settings);
+  const auth = createBetterAuth(db, settings, newId);
   return {
     async authenticate(headers) {
       // Does not extend the session: only Better Auth's own session route
@@ -161,14 +184,22 @@ function createBetterAuthAuthenticator(
         headers,
         query: { disableRefresh: true },
       });
-      return session ? { userId: session.user.id } : null;
+      if (!session) return null;
+      // Better Auth's user ID is the domain's (authIdSource). A user made
+      // before IDs were TypeIDs is a server-side failure: they sign up
+      // again (ADR 0004 ID の形式).
+      const userId = parseId('User', session.user.id);
+      if (!userId.ok) throw new Error('The user ID is not a TypeID.');
+      return { userId: userId.value };
     },
     handle: (request) => auth.handler(request),
   };
 }
 
-// Dependencies['authenticator'] for Better Auth.
-export function betterAuthAuthenticator() {
+// Dependencies['authenticator'] for Better Auth. New rows' IDs are made at
+// `now` (Dependencies['now']).
+export function betterAuthAuthenticator(now: () => Instant) {
+  const newId = authIdSource(now);
   return (env: CloudflareBindings, db: Database): Authenticator =>
-    createBetterAuthAuthenticator(db, betterAuthSettings(env));
+    createBetterAuthAuthenticator(db, betterAuthSettings(env), newId);
 }

@@ -12,7 +12,7 @@ import type {
 } from '@itera/domain';
 import { changed, type Change, type ChangeContext } from './record-store';
 import {
-  applyChanges,
+  applyRecordChanges,
   upsert,
   type RecordChanges,
   type Records,
@@ -101,7 +101,7 @@ export function andThen(
   return (records, ctx) => {
     const a = first(records, ctx);
     if (!a.ok) return a;
-    const between = applyChanges(records, a.value.changes, []);
+    const between = applyRecordChanges(records, a.value.changes);
     const b = second(
       between,
       secondActor === undefined ? ctx : { ...ctx, actor: secondActor },

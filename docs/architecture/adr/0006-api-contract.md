@@ -3,6 +3,7 @@
 - 状態：採用
 - 日付：2026-10-03
 - 関連：Issue #265、#45（範囲の分け方は #262）、先行 #264、後続 #266・#272
+- 改訂：2026-10-03（利用者と設定の読み取り `getMe`、設定がないときのエラー、本文の大きさの上限。Issue #266）
 
 ## 背景
 
@@ -65,7 +66,8 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
   - Sprint は番号（F25）で、日は日付で指定する（#90）。番号から Sprint を引くのはサーバー（#266〜#270）。
   - 応答は `{ clock, view }`。`clock` は、サーバーがその応答のために決めた「今日」と現在時刻（ADR 0005「時計」）。`view` は application の関数の結果そのもので、結果がない（`undefined`）ときは `null`（TanStack Query は `undefined` をデータにできない）。
   - query の数と真偽（`sprint`・`applyCriterion`）は、通信の上では文字列。サーバーは宣言した型に変えてから、生成したスキーマで検証する。
-- `/api/health`・`/api/me`・`/api/auth/*` は今はこの契約の外にある。利用者の設定（`/api/me`）を契約の形にするのは #266。
+- **利用者**：`GET /api/me`（`getMe`）は、サインインしている利用者の ID と設定（表示名・タイムゾーン・週の始まり。domain の `User` から ID を除いたもの）を `{ userId, settings }` で返す。設定をまだ作っていなければ `settings` は `null`。application の読み取りではないので `{ clock, view }` で包まず、日付が変わったときの処理（#271）も走らせない。設定がない間もこの読み取りだけは答え、クライアントは設定を作る画面を出す（#279。2026-10-03 司令塔経由のオーナー方針、#266）。
+- `/api/health`・`/api/auth/*` はこの契約の外にある。
 
 ### 操作の応答に読み取りを含めない
 
@@ -93,11 +95,15 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 | 403 | `forbiddenOrigin` | 書き込みの Origin が違う（ADR 0004「書き込みの API の CSRF への備え」） |
 | 404 | `notFound` | 要求が指す記録が利用者の記録にない（domain の `notFound`） |
 | 409 | `revisionConflict` | ほかの書き込みが先に入り、この書き込みはしていない（ADR 0004「同時の書き込み」）。保存は確定したのに DB の応答が失われたときもこれになる（ADR 0004 の既知の限界）。どちらも読み直せば保存された記録が分かる |
+| 413 | `payloadTooLarge` | 操作の本文が上限（64 KiB）を超える（#266） |
 | 422 | `invalidInput`・`invalidTransition`・`recurringTaskCannotComplete` | domain が操作を受け付けない（値の規則、状態の遷移、繰り返しの Task の完了） |
+| 422 | `userNotSetUp` | 利用者の設定（タイムゾーン・週の始まり）がまだなく、「今日」が決まらない。`getMe` のほかの操作と読み取りはすべてこれで断る（#266） |
 | 500 | `internalError` | 予期しない失敗 |
 
-- 各 operation の応答に書く：操作は 400（本文のない操作を除く）・401・403・404・409・422・500。読み取りは 400（パラメータのある読み取り）・401・409・500。読み取りの 409 は、読み取りの前の追いつき（#271）の書き込みが、ほかの書き込みとぶつかったとき。
-- 今の `requireAuth` の 401 の本文（`{ error: 'unauthorized' }`）は、#266 でこの形にそろえる。
+- 各 operation の応答に書く：操作は 400（本文のない操作を除く）・401・403・404・409・413・422・500。読み取りは 400（パラメータのある読み取り）・401・409・422・500。`getMe` は 401・500。読み取りの 409 は、読み取りの前の追いつき（#271）の書き込みが、ほかの書き込みとぶつかったとき。操作の 422 は domain の 3 つの code と `userNotSetUp` のどれか、読み取りの 422 は `userNotSetUp` だけ。
+- `userNotSetUp` は domain の規則ではなく、記録を読み込んだときに設定の行がないことで決まる。判定はサーバーの流れの 1 か所（`services/api/src/handlers/flow.ts`）に置く。設定を作る operation（#279）は、この code を断る対象から外す。
+- 本文の大きさの上限は 64 KiB（`/api/operations/*` に Hono の `bodyLimit`）。いちばん大きい本文は Task の説明を含む `saveTask` で、文章を書く欄として十分に大きく、D1 の 1 文の上限（100 KB）より小さい。超えたら本文を読まずに 413 を返す。上限は `info.version` を変えずに広げてよい（狭めるのは壊す変更）。
+- `requireAuth` の 401 の本文も、この形（`unauthenticated`）にした（#266）。
 - 422 にしたのは、要求の形は正しく、記録の今の状態や値の規則で受け付けられないことを、形の誤り（400）と分けるため。409 は版の衝突だけに使い、クライアントは 409 なら読み直す（ADR 0004）。
 
 ### 生成物
@@ -120,7 +126,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 `packages/api-contract` のテストで確かめる。
 
-- 一覧：生成したクライアントの operation が、`operations` のすべての名前と読み取りの 10 個に一致する。`@itera/application` の関数の export のうち、読み取りでも操作の道具でもないものがあれば失敗する（読み取りを足したら契約にも足す）。
+- 一覧：生成したクライアントの operation が、`operations` のすべての名前と読み取りの 10 個と `getMe` に一致する。`@itera/application` の関数の export のうち、読み取りでも操作の道具でもないものがあれば失敗する（読み取りを足したら契約にも足す）。
 - 型：各操作の入力と本文、出力と応答、各読み取りの結果と応答の `view`（`undefined` は `null`）と `clock` が、型として同じ（片方への代入ができるだけでなく、余分な・欠けたキーもない）。比べる前に、両方から brand（ID・日付）と `readonly` を外す。`pnpm typecheck` で確かめる。
 - fixture：PRD §12 の 12 状態で、すべての読み取り（Backlog の絞り込みごと、すべての Sprint の番号と次の週、昨日と明日）の結果を JSON にして `{ clock, view }` で包み、生成した応答のスキーマで検証する。
 - ID：各種類の ID のスキーマが、`parseId` と同じものを受け付ける。型のテストは ID を文字列として比べるので、各操作の本文のどの属性がどの種類の ID を取るかは別に確かめる：application の入力の型から求めた種類の表（`pnpm typecheck` で型と照合）と、生成した本文のスキーマが参照する ID のスキーマを照らす（`src/id-kinds.test.ts`）。
@@ -139,7 +145,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 - 応答のスキーマは未知のキーを許すので、Valibot の検証だけでは余分なキーを見つけられない。型のテストで止めている。
 - `restoreInterrupt` と `undoAdoption` は、クライアントが前の読み取りの値を送る。版はサーバーが読み込んだ時点のものなので、クライアントの読み取りが古いことは 409 では分からない。`undoAdoption` は domain の確かめ（提案の状態）で守られるが、`restoreInterrupt` は古い note でも受け付ける。
 - `restoreInterrupt` の ID の重複を domain が確かめるのは今の Sprint の中だけで、DB の `interrupt_note.id` は全体の主キー。ほかの Sprint にある ID を送ると保存の `batch()` が失敗する（上書きはされない）。偶然には起きないが 500 になるので、Today の操作をつなぐ Issue（#269）で、利用者のすべての割り込みと照合して 422 にする。`note.at` が Sprint の期間の外でも受け付ける点も同じ。
-- 文字列・配列の長さと本文の大きさに、契約では上限を置いていない。D1 の上限を超えると 500 になる。登録を許可の一覧で絞っている間は実害が小さい。本文の大きさの上限とそのときの応答（413 など）は #266 で決め、契約に足す。
+- 文字列・配列の長さに、契約では上限を置いていない。本文の大きさは 64 KiB で止める（上の「エラー」、#266）ので、1 つの値が D1 の上限を超えることはない。
 
 ## 互換の規則
 
@@ -148,11 +154,12 @@ Web は API と同じ Worker で配信するので同時に入れ替わるが、
 - 壊さない変更：応答に省略できる項目を足す、要求に省略できる項目を足す、operation を足す、判別子のない `oneOf` に `discriminator` を足す（通信の形は変わらない）。
 - 壊す変更：応答の enum・`code` に値を足す（古いクライアントが知らない値を受ける）、要求に必須の項目を足す、項目の型・名前・必須を変える、operation を消す、`SprintAreaLabel.color` のような通信の形を変える。
 - 壊す変更をするときは `info.version` の major を上げ、ADR に書く（MVP の間は Web だけなので、iOS に着手するまでに版の上げ方と古いクライアントの扱いを決める）。
+- #266 で `code` に `payloadTooLarge`・`userNotSetUp` を足し、応答に 413・422 を足した。契約を使うクライアントがまだない（Web が契約に移るのは #272）ので、`info.version` は 0.1.0 のままにした。
 - クライアントは、知らない `code` を一般の失敗として扱う。
 
 ## 影響
 
-- `services/api`（#266）は、`@itera/api-contract` のスキーマで入力を検証し、この ADR の割り当てでエラーを返す。
+- `services/api`（#266）は、`@itera/api-contract` のスキーマで入力を検証し、この ADR の割り当てでエラーを返す。operation と読み取りは `src/handlers/` の登録表（`operations.ts`・`reads.ts`）に足し、まだ答えないものは同じファイルの未実装の一覧に置く（契約のすべての operation がどちらかにあることをテストで確かめる）。
 - `apps/web`（#272）は、`@itera/api-contract/client` と `/react-query` を使い、`@tanstack/react-query` 5.104.1 を入れる。
 - iOS・Android は、`openapi/` を 1 ファイルにまとめたもの（`redocly bundle`）から生成できる。セッションの Cookie と書き込みの Origin の検査（ADR 0004）は、Origin を送らないネイティブのクライアントでは 403 になるので、ネイティブの認証の方式は iOS に着手するときに決める。
 - 契約を変えるときは、`openapi/` を直し、`pnpm contract:generate` を実行して、生成物と一緒にコミットする。

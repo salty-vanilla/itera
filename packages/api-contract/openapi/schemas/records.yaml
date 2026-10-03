@@ -3,6 +3,18 @@
 # Value rules (positive hours, a non-empty title, state transitions) are the
 # domain's: the contract describes the shape only.
 
+# ------------------------------------------------------------------ User
+UserSettings:
+  description: >-
+    The person's settings: the domain's User without its ID. The week's
+    first day decides a Sprint's dates.
+  type: object
+  required: [displayName, timeZone, weekStartsOn]
+  properties:
+    displayName: { type: string }
+    timeZone: { $ref: './common.yaml#/TimeZone' }
+    weekStartsOn: { $ref: './common.yaml#/DayOfWeek' }
+
 # ------------------------------------------------------------------ Area
 AreaColor:
   description: The Area's color, `area-1` to `area-7` (DESIGN.md).
