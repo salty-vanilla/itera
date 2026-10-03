@@ -191,6 +191,36 @@ describe('guidelines', () => {
   });
 });
 
+describe('loading-label', () => {
+  const labelRules = (text, name) =>
+    lintText(text, rules, name)
+      .map(({ rule }) => rule)
+      .filter((rule) => rule === 'loading-label');
+
+  it('finds a label of a Button while sent that is not 「〜中…」', () => {
+    const label = (text) => labelRules(text, 'loadingLabel');
+    expect(label('始めています…')).toEqual(['loading-label']);
+    expect(label('保存中...')).toEqual(['loading-label']);
+    expect(label('保存中…')).toEqual([]);
+    expect(label('Google に移動中…')).toEqual([]);
+  });
+
+  it('reads only the loadingLabel of a Button', () => {
+    expect(labelRules('始めています…', 'title')).toEqual([]);
+    expect(labelRules('始めています…')).toEqual([]);
+  });
+
+  it('is checked on the items that copy:list extracts', () => {
+    const items = [
+      { file: 'a.tsx', line: 1, name: 'loadingLabel', text: '完了中…' },
+      { file: 'a.tsx', line: 1, name: 'loadingLabel', text: '確定しています…' },
+    ];
+    expect(lintItems(items, rules, () => ['']).map(({ rule }) => rule)).toEqual(
+      ['banned-word', 'loading-label'],
+    );
+  });
+});
+
 // Copy that Issues #204–#209 replaced, as it was before the fix.
 describe('the copy before Issues #204–#209', () => {
   const before = [
