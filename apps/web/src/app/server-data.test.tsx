@@ -106,8 +106,8 @@ describe('the API as the data source', () => {
 
   it('has no fixture: the URL cannot switch the records', async () => {
     serve(() => Response.json(overview));
-    const router = renderAt('/today?fixture=today-morning');
-    await screen.findByText(/^Not on the API yet: \/today/);
+    const router = renderAt('/retro?fixture=today-morning');
+    await screen.findByText(/^Not on the API yet: \/retro/);
     expect(router.state.location.search).toEqual({});
   });
 });

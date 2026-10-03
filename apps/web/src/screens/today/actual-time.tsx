@@ -48,8 +48,13 @@ type ActualTimeProps = {
   onOpenChange: (open: boolean) => void;
   /** The row's `…`: the Popover sits by it and focus returns to it. */
   anchor: HTMLElement | null;
-  /** Returns whether it went through; the surface then closes. */
-  onSubmit: (hours: number | undefined) => boolean;
+  /**
+   * Returns whether it went through; the surface then closes. One that is
+   * sent returns when it is done.
+   */
+  onSubmit: (hours: number | undefined) => boolean | Promise<boolean>;
+  /** The save has been sent for a while (useOperation `loading`). */
+  loading?: boolean;
   /** Replaces the mode's description, e.g. which day it goes to in Retro. */
   description?: string | undefined;
 };
@@ -87,6 +92,7 @@ function ActualTime({
   onOpenChange,
   anchor,
   onSubmit,
+  loading = false,
   description: descriptionOverride,
 }: ActualTimeProps) {
   const sheet = !useMediaQuery(MEDIUM_UP, true);
@@ -111,11 +117,11 @@ function ActualTime({
     }
     onOpenChange(next);
   };
-  const save = (event: FormEvent) => {
+  const save = async (event: FormEvent) => {
     event.preventDefault();
     const hours = readActualHours(text);
     if (hours === undefined && optional) {
-      if (onSubmit(undefined)) change(false);
+      if (await onSubmit(undefined)) change(false);
       return;
     }
     if (hours === undefined || hours === null) {
@@ -123,7 +129,7 @@ function ActualTime({
       focusError();
       return;
     }
-    if (onSubmit(hours)) change(false);
+    if (await onSubmit(hours)) change(false);
   };
 
   const field = (
@@ -161,7 +167,9 @@ function ActualTime({
               <DrawerClose render={<Button variant="quiet" />}>
                 キャンセル
               </DrawerClose>
-              <Button type="submit">{submit}</Button>
+              <Button type="submit" loading={loading} loadingLabel="保存中…">
+                {submit}
+              </Button>
             </DrawerFooter>
           </form>
         </DrawerContent>
@@ -194,7 +202,12 @@ function ActualTime({
             <PopoverClose render={<Button size="sm" variant="quiet" />}>
               キャンセル
             </PopoverClose>
-            <Button size="sm" type="submit">
+            <Button
+              size="sm"
+              type="submit"
+              loading={loading}
+              loadingLabel="保存中…"
+            >
               {submit}
             </Button>
           </PopoverFooter>

@@ -8,7 +8,6 @@ import type { AreaColor, AreaId, TaskId } from '@itera/domain';
 export type {
   ActualTarget,
   CandidateRow,
-  DayData,
   PastDayRecord,
   PlannedTask,
   RetroBlocker,
@@ -16,9 +15,6 @@ export type {
   RunningTask,
   SprintChoice,
   SprintRef,
-  TodayData,
-  TodayItem,
-  TodayRow,
 } from '@itera/application';
 
 /** An Area as a screen shows it, or the Tasks without one (`id: null`). */

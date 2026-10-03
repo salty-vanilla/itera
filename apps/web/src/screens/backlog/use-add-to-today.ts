@@ -1,8 +1,7 @@
 import { useNavigate } from '@tanstack/react-router';
 import type { TaskId } from '@itera/api-contract';
-import { useRunningDay } from '@/api/use-me';
+import { useOnRunningDay } from '@/api/use-me';
 import { useOperation } from '@/api/use-operation';
-import { SAVE_FAILED } from '@/api/save-failed';
 import { useToast } from '@/components/ui/toast';
 
 /**
@@ -13,16 +12,14 @@ import { useToast } from '@/components/ui/toast';
  */
 export function useAddToToday() {
   const addToToday = useOperation('addTaskToToday');
-  const day = useRunningDay();
+  const on = useOnRunningDay();
   const toast = useToast();
   const navigate = useNavigate();
   return async (taskId: TaskId, title: string): Promise<boolean> => {
-    // No Sprint running: there is no today to put it in.
-    if (day === undefined) {
-      toast.show(SAVE_FAILED);
+    // With no Sprint running there is no today to put it in (useOnRunningDay).
+    if (!(await on((day) => addToToday.run({ ...day, taskId }))).ok) {
       return false;
     }
-    if (!(await addToToday.run({ ...day, taskId })).ok) return false;
     toast.show({
       kind: 'added-to-today',
       title: `「${title}」を「今日やる」に入れました`,

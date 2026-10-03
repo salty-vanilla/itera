@@ -3,11 +3,9 @@
 // open at the end of its day is closed by the system as unresolved (F33).
 // The same words for today and for another day (#233). A choice put back
 // with 今週の残りに戻す (Removed) is not listed on another day (#233).
-import type { DailySelection } from '@itera/domain';
+import type { DailyResolution } from '@itera/api-contract';
 
-export const SELECTION_WORDS: Readonly<
-  Record<DailySelection['resolution'], string>
-> = {
+export const SELECTION_WORDS: Readonly<Record<DailyResolution, string>> = {
   selected: '未完了',
   started: '未完了',
   unresolved: '未完了',

@@ -3,7 +3,6 @@ import { useLocation } from '@tanstack/react-router';
 /** The screens and the Issues that move them to the contract. */
 const MOVES: Readonly<Record<string, string>> = {
   '/sprint': '#274',
-  '/today': '#275',
   '/retro': '#276',
 };
 
