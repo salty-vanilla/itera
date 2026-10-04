@@ -4,7 +4,7 @@ import { fixtureSnapshot, fixtureIds } from './fixtures/states';
 import { addArea, archive, rename, restore } from './area-changes';
 import { backlogData } from './backlog-view';
 import { sprintPlanOf } from './planning-view';
-import { memoryStore } from './testing';
+import { memoryStore, tagged } from './testing';
 import { retroData } from './retro-view';
 import { runningData } from './running-view';
 import { addAndChoose } from './today-changes';
@@ -62,7 +62,7 @@ describe('Area changes (Issue #113)', () => {
     const store = memoryStore(fixtureSnapshot('backlog-capture'));
     store.run(archive(research));
     const { records, clock } = store.getSnapshot();
-    const data = backlogData(records, clock, {});
+    const data = backlogData(tagged(records), clock, {});
     expect(data.areas.map((a) => a.id)).not.toContain(research);
     const inIt = data.shown
       .map((taskId) => data.items[taskId])
@@ -71,7 +71,7 @@ describe('Area changes (Issue #113)', () => {
     store.run(restore(research));
     const back = store.getSnapshot();
     expect(
-      backlogData(back.records, back.clock, {}).areas.map((a) => a.id),
+      backlogData(tagged(back.records), back.clock, {}).areas.map((a) => a.id),
     ).toContain(research);
   });
 
@@ -86,7 +86,7 @@ describe('Area changes (Issue #113)', () => {
         to: '研究室',
       });
 
-      const backlog = backlogData(records, clock, {});
+      const backlog = backlogData(tagged(records), clock, {});
       expect(backlog.areas.find((a) => a.id === research)?.name).toBe('研究室');
       expect(
         backlog.shown
@@ -95,9 +95,9 @@ describe('Area changes (Issue #113)', () => {
       ).toBe('研究室');
 
       // The running Sprint keeps the name it took (SprintAreaSnapshot).
-      const today = todayData(records, clock);
+      const today = todayData(tagged(records), clock);
       expect(today?.areas.find((a) => a.id === research)?.name).toBe('研究');
-      const running = runningData(records, clock);
+      const running = runningData(tagged(records), clock);
       expect(
         running?.plan.find((p) => p.area?.id === research)?.area?.name,
       ).toBe('研究');
@@ -120,10 +120,13 @@ describe('Area changes (Issue #113)', () => {
       });
       store.run(rename(made.id, '就職活動'));
       const { records, clock } = store.getSnapshot();
-      expect(todayData(records, clock)?.areas.at(-1)?.name).toBe('就活');
+      expect(todayData(tagged(records), clock)?.areas.at(-1)?.name).toBe(
+        '就活',
+      );
       expect(
-        backlogData(records, clock, {}).areas.find((a) => a.id === made.id)
-          ?.name,
+        backlogData(tagged(records), clock, {}).areas.find(
+          (a) => a.id === made.id,
+        )?.name,
       ).toBe('就職活動');
     });
 
@@ -134,7 +137,8 @@ describe('Area changes (Issue #113)', () => {
         .records.sprints.find((s) => s.state === 'closed');
       if (past === undefined) throw new Error('no closed Sprint');
       store.run(rename(research, '研究室'));
-      const { records, clock } = store.getSnapshot();
+      const { clock } = store.getSnapshot();
+      const records = tagged(store.getSnapshot().records);
 
       const sprint = records.sprints.find((s) => s.state === 'planning');
       if (sprint === undefined) throw new Error('no Sprint being planned');
@@ -145,7 +149,7 @@ describe('Area changes (Issue #113)', () => {
         '研究室',
       );
       expect(
-        retroData(records, clock, past.id)?.sprintAreas[research]?.name,
+        retroData(tagged(records), clock, past.id)?.sprintAreas[research]?.name,
       ).toBe('研究');
     });
   });

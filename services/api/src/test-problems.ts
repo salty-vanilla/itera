@@ -15,12 +15,14 @@ const schemas: Readonly<Record<number, v.GenericSchema>> = {
   403: contract.vForbiddenOriginError,
   404: contract.vNotFoundError,
   409: contract.vRevisionConflictError,
+  412: contract.vPreconditionFailedError,
   413: contract.vPayloadTooLargeError,
   422: v.union([
     contract.vRuleViolationError,
     contract.vUserNotSetUpError,
     contract.vIdempotencyKeyReusedError,
   ]),
+  428: contract.vPreconditionRequiredError,
   500: contract.vInternalError,
 };
 

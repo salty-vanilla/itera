@@ -11,6 +11,7 @@ import {
   sprintList,
   sprintRetro,
   sprintView,
+  tagRecords,
 } from '@itera/application';
 import {
   fixtureIds,
@@ -46,7 +47,10 @@ type Read = {
 };
 
 function readsOf(state: (typeof fixtureStateIds)[number]) {
-  const { records, clock } = fixtureSnapshot(state);
+  const snapshot = fixtureSnapshot(state);
+  const { clock } = snapshot;
+  // Every record at version 0: the fixture is not saved (#321).
+  const records = tagRecords(snapshot.records, new Map());
   const ids = fixtureIds();
   const numbers = records.sprints.map((_, i) => i + 1);
   const reads: Record<string, Read> = {

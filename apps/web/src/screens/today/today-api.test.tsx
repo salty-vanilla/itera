@@ -465,7 +465,8 @@ describe('Today on the API', () => {
       const { note, sprintId } = await openEdit(store);
       await editInterrupt({
         client: otherDevice(store),
-        headers: newWrite(),
+        // Another device's write, whatever it read (#321).
+        headers: { ...newWrite(), 'If-Match': '*' },
         path: { sprintId, interruptNoteId: note.id },
         body: { text: 'スマホで直したメモ', minutes: 20 },
       });

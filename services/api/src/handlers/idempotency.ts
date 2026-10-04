@@ -45,14 +45,27 @@ async function fingerprintOf(c: Context<AppEnv>): Promise<string> {
     .join('');
 }
 
-/** The response of a write's answer, the same each time it is given. */
-export function answerResponse(c: Context<AppEnv>, { status, body }: Answer) {
-  if (body === null || status === 204) return c.body(null, status);
-  return c.body(body, status, { 'Content-Type': 'application/json' });
+/**
+ * The response of a write's answer, the same each time it is given: with
+ * the record's new `ETag` after a write that replaced its values (#321).
+ */
+export function answerResponse(
+  c: Context<AppEnv>,
+  { status, body, etag }: Answer,
+) {
+  const headers = etag === null ? undefined : { ETag: etag };
+  if (body === null || status === 204) return c.body(null, status, headers);
+  return c.body(body, status, {
+    'Content-Type': 'application/json',
+    ...headers,
+  });
 }
 
 /** A write's answer: its status, and its value as JSON when it has one. */
-export function answerOf(status: Answer['status'], value: unknown): Answer {
+export function answerOf(
+  status: Answer['status'],
+  value: unknown,
+): Omit<Answer, 'etag'> {
   return {
     status,
     body: value === undefined ? null : JSON.stringify(value),

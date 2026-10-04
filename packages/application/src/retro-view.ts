@@ -22,13 +22,19 @@ import {
   type RetroDecision,
   type RetroFacts,
   type RetroPin,
-  type Sprint,
   type SprintId,
   type SprintTaskId,
   type TaskId,
 } from '@itera/domain';
 import type { Clock, Records } from './records';
 import { weekOf, type SprintWeek } from './sprint-choice';
+import {
+  taggedIn,
+  type TaggedCriterion,
+  type TaggedInterruptNote,
+  type TaggedRecords,
+  type TaggedSprint,
+} from './versions';
 
 export interface RetroArea {
   readonly id: AreaId;
@@ -38,7 +44,7 @@ export interface RetroArea {
 }
 
 export interface RetroCriterion {
-  readonly criterion: PlanningCriterion;
+  readonly criterion: TaggedCriterion;
   readonly view: CriterionView;
   /** The Area it covers, when its scope is an Area. */
   readonly areaName?: string;
@@ -72,14 +78,16 @@ export type RetroBlocker =
   | 'continueWithDraft';
 
 export interface RetroData {
-  readonly sprint: Sprint;
+  readonly sprint: TaggedSprint;
   /** 「Sprint 14」 (F25). */
   readonly number: number;
   /** The previous week, if it is last week's: beside the period (#168). */
   readonly week?: SprintWeek;
   readonly today: LocalDate;
   readonly timeZone: Records['user']['timeZone'];
-  readonly facts: RetroFacts;
+  readonly facts: Omit<RetroFacts, 'interrupts'> & {
+    readonly interrupts: readonly TaggedInterruptNote[];
+  };
   /** Every Area by ID, its name and color as this Sprint shows them (F5). */
   readonly sprintAreas: Readonly<Record<AreaId, RetroArea>>;
   /** Areas to make a criterion for, in the person's order. */
@@ -119,7 +127,7 @@ export interface RetroData {
  * Review or closed (#90; a closed one is read only). `undefined` before it.
  */
 export function retroData(
-  records: Records,
+  records: TaggedRecords,
   clock: Clock,
   sprintId?: SprintId,
 ): RetroData | undefined {
@@ -149,7 +157,7 @@ export function retroData(
     c.policy.scope.kind === 'area'
       ? areaOf(c.policy.scope.areaId).name
       : undefined;
-  const described = (c: PlanningCriterion): RetroCriterion => {
+  const described = (c: TaggedCriterion): RetroCriterion => {
     const areaName = nameOf(c);
     return {
       criterion: c,
@@ -188,7 +196,10 @@ export function retroData(
     ...weekOf(sprint, records, clock),
     today: clock.today,
     timeZone: records.user.timeZone,
-    facts,
+    facts: {
+      ...facts,
+      interrupts: facts.interrupts.map(taggedIn(sprint.interrupts)),
+    },
     sprintAreas: Object.fromEntries(allAreas.map((a) => [a.id, areaOf(a.id)])),
     areas: allAreas
       .filter((a) => !a.archived)

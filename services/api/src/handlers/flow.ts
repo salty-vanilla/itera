@@ -9,7 +9,10 @@ import {
   type Clock,
   type RecordChanges,
   type Records,
+  type RecordVersions,
   type SettingsInput,
+  tagRecords,
+  type TaggedRecords,
 } from '@itera/application';
 import {
   toLocalDate,
@@ -24,7 +27,7 @@ import type { Database } from '../db/database';
 import {
   loadKeptAnswer,
   type Answer,
-  type AnsweredWrite,
+  type AnsweringWrite,
   type IdempotentWrite,
   type KeptAnswer,
 } from '../db/idempotency';
@@ -51,6 +54,7 @@ type Current = {
   readonly revision: number;
   readonly records: Records;
   readonly caughtUpTo: LocalDate | null;
+  readonly versions: RecordVersions;
 };
 
 /**
@@ -59,6 +63,17 @@ type Current = {
  * that refuses the operation.
  */
 export type Precondition = (db: Database, userId: UserId) => Promise<void>;
+
+/**
+ * Whether a write that replaces a record's values was made from the
+ * record as loaded (its `If-Match`, `If-None-Match`): `checkCondition` of
+ * packages/application on the loaded records and their versions (ADR 0006
+ * 記録ごとの版).
+ */
+export type WriteCondition = (
+  records: Records,
+  versions: RecordVersions,
+) => 'met' | 'failed' | 'required';
 
 /** A read's response: the clock it was read with and its result (ADR 0006). */
 export type ReadResponse<View> = {
@@ -85,15 +100,27 @@ export type ReadResponse<View> = {
 export type Flow = {
   /**
    * Runs an operation of the person, writes its changes and gives the
-   * answer `answer` makes of its value. A `precondition` is checked once
-   * the records are loaded (so `user-not-set-up` comes first) and before
-   * the operation runs.
+   * answer `answer` makes of its value (with the `ETag` of the record a
+   * write that replaces values wrote). Once the records are loaded (so
+   * `user-not-set-up` comes first) and a write sent again has been
+   * answered, the write's `condition` is checked on them (428, 412), then
+   * a `precondition`, before the operation runs.
    */
   operate<T>(
     c: Context<AppEnv>,
     change: Change<T>,
-    answer: (value: T) => Answer,
-    precondition?: Precondition,
+    answer: (value: T) => Omit<Answer, 'etag'>,
+    checks?: {
+      readonly condition?: {
+        readonly check: WriteCondition;
+        /** The record's etag after the write, for its `ETag`. */
+        readonly etag: (
+          records: Records,
+          versions: RecordVersions,
+        ) => string | undefined;
+      };
+      readonly precondition?: Precondition;
+    },
   ): Promise<Answer>;
   /**
    * Makes the person's settings, the one write that needs no records: it
@@ -106,10 +133,10 @@ export type Flow = {
     settings: SettingsInput,
     answer: (made: { created: boolean; settings: SettingsInput }) => Answer,
   ): Promise<Answer>;
-  /** Reads the records as of now. */
+  /** Reads the records as of now, each with the etag of its version. */
   read<View>(
     c: Context<AppEnv>,
-    read: (records: Records, clock: Clock) => View,
+    read: (records: TaggedRecords, clock: Clock) => View,
   ): Promise<ReadResponse<View>>;
 };
 
@@ -163,6 +190,7 @@ export function createFlow({
       revision: loaded.revision,
       records: loaded.records,
       caughtUpTo: loaded.caughtUpTo,
+      versions: loaded.versions,
     };
     return { current, clock, kept };
   }
@@ -187,7 +215,7 @@ export function createFlow({
         'The Idempotency-Key was used for another request.',
       );
     }
-    return { status: kept.status, body: kept.body };
+    return { status: kept.status, body: kept.body, etag: kept.etag };
   }
 
   /**
@@ -242,7 +270,7 @@ export function createFlow({
     clock: Clock,
     changes: RecordChanges,
     activities: readonly Activity[],
-    answered?: AnsweredWrite,
+    answered?: AnsweringWrite,
   ) {
     const saved = await saveRecords(db, {
       userId,
@@ -252,7 +280,23 @@ export function createFlow({
       caughtUpTo: clock.today,
       ...(answered === undefined ? {} : { answered }),
     });
-    return saved.ok;
+    return saved.ok ? saved : null;
+  }
+
+  /** Refuses a write made from another version of its record (412, 428). */
+  function checkCondition(result: ReturnType<WriteCondition> | undefined) {
+    if (result === 'required') {
+      throw ApiError.of(
+        '/problems/precondition-required',
+        'A write that replaces values needs If-Match (If-None-Match: * for a Goal not written yet).',
+      );
+    }
+    if (result === 'failed') {
+      throw ApiError.of(
+        '/problems/precondition-failed',
+        'The record has changed since it was read.',
+      );
+    }
   }
 
   const conflict = () =>
@@ -263,9 +307,9 @@ export function createFlow({
 
   /**
    * The records brought up to now for a read, the system's changes written
-   * first (nothing when it had nothing to do). Another write in between
-   * came with its own catch-up, so the records are loaded again, once
-   * (#271).
+   * first (nothing when it had nothing to do), with the versions as of
+   * that save. Another write in between came with its own catch-up, so
+   * the records are loaded again, once (#271).
    */
   async function caughtUpForRead(c: Context<AppEnv>) {
     const { db, userId } = c.var;
@@ -273,8 +317,9 @@ export function createFlow({
       const { current, clock } = await load(c);
       const system = caughtUp(current, clock);
       const { changes, activities } = system;
-      if (await save(db, userId, current, clock, changes, activities)) {
-        return { records: system.records, clock };
+      const saved = await save(db, userId, current, clock, changes, activities);
+      if (saved !== null) {
+        return { records: tagRecords(system.records, saved.versions), clock };
       }
     }
     throw conflict();
@@ -284,19 +329,34 @@ export function createFlow({
     async operate<T>(
       c: Context<AppEnv>,
       change: Change<T>,
-      answer: (value: T) => Answer,
-      precondition?: Precondition,
+      answer: (value: T) => Omit<Answer, 'etag'>,
+      { condition, precondition }: Parameters<Flow['operate']>[3] = {},
     ): Promise<Answer> {
       const { db, userId } = c.var;
       const write = writeOf(c);
       const { current, clock, kept } = await load(c, write);
       if (kept !== null) return given(kept, write);
+      // Compared with the versions as saved, before the system's catch-up:
+      // what the person read. A record the write names that is not there
+      // is the operation's to answer (404), before this (RFC 9110 §13.2.1).
+      checkCondition(condition?.check(current.records, current.versions));
       await precondition?.(db, userId);
       const system = caughtUp(current, clock);
       const result = change(system.records, contextOf(clock, 'user'));
       if (!result.ok) throw ApiError.fromDomain(result.error);
       const { changes, activities, value } = result.value;
-      const answered = { write, answer: answer(value as T), at: clock.now };
+      const merged = mergeChanges(system.changes, changes);
+      const after = applyRecordChanges(system.records, changes);
+      // A write that replaced a record's values answers the record's etag
+      // after it, from the versions of its own save (#321).
+      const answered: AnsweringWrite = {
+        write,
+        answer: (versions) => ({
+          ...answer(value as T),
+          etag: condition?.etag(after, versions) ?? null,
+        }),
+        at: clock.now,
+      };
       // The system's changes and the person's go in one batch (#271), with
       // the write's key.
       const saved = await save(
@@ -304,12 +364,13 @@ export function createFlow({
         userId,
         current,
         clock,
-        mergeChanges(system.changes, changes),
+        merged,
         [...system.activities, ...activities],
         answered,
       );
-      if (!saved) return afterConflict(c, write, clock.now);
-      return answered.answer;
+      if (saved?.answer === undefined)
+        return afterConflict(c, write, clock.now);
+      return saved.answer;
     },
     async setUp(c, settings, answer) {
       const { db, userId } = c.var;
@@ -328,12 +389,13 @@ export function createFlow({
       if (!result.ok) throw ApiError.fromDomain(result.error);
       const { changes, created, user: person } = result.value;
       const { displayName, timeZone, weekStartsOn } = person;
-      const answered = {
+      const answerOfSettings = answer({
+        created,
+        settings: { displayName, timeZone, weekStartsOn },
+      });
+      const answered: AnsweringWrite = {
         write,
-        answer: answer({
-          created,
-          settings: { displayName, timeZone, weekStartsOn },
-        }),
+        answer: () => answerOfSettings,
         at,
       };
       const { user } = changes;
@@ -352,7 +414,7 @@ export function createFlow({
         });
         if (!saved.ok) return afterConflict(c, write, at);
       }
-      return answered.answer;
+      return answerOfSettings;
     },
     async read(c, read) {
       const { records, clock } = await caughtUpForRead(c);

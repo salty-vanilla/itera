@@ -6,7 +6,7 @@ import { InterruptSheet } from './interrupt-sheet';
 
 afterEach(cleanup);
 
-type Note = { text: string; minutes?: number; time: string };
+type Note = { text: string; minutes?: number; time: string; etag: string };
 
 // The note being edited is read again (rerender) while the sheet is open: the
 // fields show the note as it is now until they are typed in, and 保存 on a
@@ -40,8 +40,9 @@ describe('InterruptSheet when another device has changed the note (#324)', () =>
       text: '来客',
       minutes: 30,
       time: '10:00',
+      etag: '"1"',
     });
-    reread({ text: '急な電話', minutes: 45, time: '10:00' });
+    reread({ text: '急な電話', minutes: 45, time: '10:00', etag: '"2"' });
     expect(memo().value).toBe('急な電話');
     expect(
       getHours(within(screen.getByRole('dialog')), /かかった時間/).value,
@@ -56,19 +57,27 @@ describe('InterruptSheet when another device has changed the note (#324)', () =>
       text: '来客',
       minutes: 30,
       time: '10:00',
+      etag: '"1"',
     });
     await userEvent.type(memo(), 'の対応');
-    reread({ text: '急な電話', minutes: 30, time: '10:00' });
+    reread({ text: '急な電話', minutes: 30, time: '10:00', etag: '"2"' });
     expect(memo().value).toBe('来客の対応');
     await userEvent.click(save());
-    expect(onSubmit).toHaveBeenCalledWith('来客の対応', 30);
+    // Made from the note as it was when it was typed in (#321): the API
+    // tells that another device has changed it since.
+    expect(onSubmit).toHaveBeenCalledWith('来客の対応', 30, { etag: '"1"' });
   });
 
   it('sends a note typed in, as it did', async () => {
-    const { onSubmit } = setup({ text: '来客', minutes: 30, time: '10:00' });
+    const { onSubmit } = setup({
+      text: '来客',
+      minutes: 30,
+      time: '10:00',
+      etag: '"1"',
+    });
     await userEvent.clear(memo());
     await userEvent.type(memo(), '障害対応');
     await userEvent.click(save());
-    expect(onSubmit).toHaveBeenCalledWith('障害対応', 30);
+    expect(onSubmit).toHaveBeenCalledWith('障害対応', 30, { etag: '"1"' });
   });
 });

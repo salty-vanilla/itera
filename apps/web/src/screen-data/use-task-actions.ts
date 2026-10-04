@@ -8,7 +8,10 @@ import type {
   SuggestionBound,
   TaskId,
 } from '@itera/api-contract';
-import type { TaskAttributeUpdate } from '@itera/api-contract/requests';
+import type {
+  TaskAttributeUpdate,
+  MadeFrom,
+} from '@itera/api-contract/requests';
 import { useOperation } from '@/api/use-operation';
 
 // The person's operations on Tasks, one named function each (ADR 0005 API
@@ -26,7 +29,14 @@ import { useOperation } from '@/api/use-operation';
 export function useTaskActions() {
   const createTask = useOperation('createTask');
   // A field saves as it is left: the next one waits for this one, not lost.
-  const saveTask = useOperation('saveTask', { whileSending: 'wait' });
+  const saveTask = useOperation('saveTask', {
+    whileSending: 'wait',
+    typed: true,
+  });
+  // A choice (an Area, the priority, the time basis) shows the Task as read,
+  // so a choice that did not go through is not kept, and its Toast does not
+  // say what was typed is.
+  const chooseForTask = useOperation('saveTask', { whileSending: 'wait' });
   const adoptSuggestion = useOperation('adoptSuggestion');
   const undoAdoption = useOperation('undoAdoption');
   const adoptEdited = useOperation('adoptEditedSuggestion');
@@ -49,18 +59,29 @@ export function useTaskActions() {
       });
       return outcome.ok ? outcome.value.taskId : undefined;
     },
+    /** `from`: the Task as read when the field was typed in (#321). */
     saveTask: async (
       taskId: TaskId,
       update: TaskAttributeUpdate,
       estimate: number | null | undefined,
+      from: MadeFrom,
     ) =>
       (
-        await saveTask.run({
-          taskId,
-          update,
-          ...(estimate === undefined ? {} : { estimate }),
-        })
+        await saveTask.run(
+          {
+            taskId,
+            update,
+            ...(estimate === undefined ? {} : { estimate }),
+          },
+          from,
+        )
       ).ok,
+    /** A choice on the Task, made from the Task as read now (#321). */
+    chooseForTask: async (
+      taskId: TaskId,
+      update: TaskAttributeUpdate,
+      from: MadeFrom,
+    ) => (await chooseForTask.run({ taskId, update }, from)).ok,
     adoptSuggestion: async (
       taskId: TaskId,
       suggestionId: EstimateSuggestionId,
@@ -96,6 +117,7 @@ export function useTaskActions() {
   const loading = {
     addTask: createTask.loading,
     saveTask: saveTask.loading,
+    chooseForTask: chooseForTask.loading,
     adoptSuggestion: adoptSuggestion.loading,
     undoAdoption: undoAdoption.loading,
     adoptEditedSuggestion: adoptEdited.loading,
@@ -120,6 +142,8 @@ export function useSubtaskActions() {
   const setSubtaskDone = useOperation('setSubtaskDone', {
     whileSending: 'wait',
   });
+  // A failed save puts the field back to the value as read (subtask-list),
+  // so its Toast does not say the typing stays.
   const setSubtaskEstimate = useOperation('setSubtaskEstimate', {
     whileSending: 'wait',
   });
@@ -132,16 +156,19 @@ export function useSubtaskActions() {
           ...(hours === undefined ? {} : { hours }),
         })
       ).ok,
+    /** `from`: the Subtask as read (#321). */
     setSubtaskDone: async (
       taskId: TaskId,
       subtaskId: SubtaskId,
       done: boolean,
-    ) => (await setSubtaskDone.run({ taskId, subtaskId, done })).ok,
+      from: MadeFrom,
+    ) => (await setSubtaskDone.run({ taskId, subtaskId, done }, from)).ok,
     setSubtaskEstimate: async (
       taskId: TaskId,
       subtaskId: SubtaskId,
       hours: number | null,
-    ) => (await setSubtaskEstimate.run({ taskId, subtaskId, hours })).ok,
+      from: MadeFrom,
+    ) => (await setSubtaskEstimate.run({ taskId, subtaskId, hours }, from)).ok,
     loading: { addSubtask: addSubtask.loading },
   };
 }

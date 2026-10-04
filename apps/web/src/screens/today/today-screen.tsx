@@ -861,10 +861,16 @@ function TodayView({ data }: { data: TodayData }) {
               ? {}
               : { minutes: editingNote.minutes }),
             time: formatTime(editingNote.at, data.timeZone),
+            etag: editingNote.etag,
           }}
           loading={actions.loading.editInterrupt}
-          onSubmit={(text, minutes) =>
-            actions.editInterrupt(editingNote.id, text, minutes)
+          onSubmit={(text, minutes, from) =>
+            actions.editInterrupt(
+              editingNote.id,
+              text,
+              minutes,
+              from ?? { etag: editingNote.etag },
+            )
           }
         />
       )}

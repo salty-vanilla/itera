@@ -1,4 +1,5 @@
-import type { Records } from '@itera/application';
+import type { Records, RecordVersions } from '@itera/application';
+import type { Answer } from './idempotency';
 import type { LocalDate } from '@itera/domain';
 
 // The shapes this layer reads and writes are packages/application's:
@@ -16,10 +17,22 @@ export interface LoadedRecords {
    * (#271). `null` before the first save, or for a save that did not keep it.
    */
   readonly caughtUpTo: LocalDate | null;
+  /**
+   * The version of each record with an etag: the revision of the save that
+   * last wrote its values (#321). Empty until the first save.
+   */
+  readonly versions: RecordVersions;
 }
 
 export type SaveResult =
-  | { readonly ok: true; readonly revision: number }
+  | {
+      readonly ok: true;
+      readonly revision: number;
+      /** The versions as of this save: the loaded ones, with what it wrote. */
+      readonly versions: RecordVersions;
+      /** The write's answer, made from those versions, when it had one. */
+      readonly answer?: Answer;
+    }
   /**
    * Another save went in after the records were loaded. Nothing was
    * written; the caller reloads (ADR 0004 「同時の書き込み」).

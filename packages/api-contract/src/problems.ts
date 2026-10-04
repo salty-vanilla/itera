@@ -10,6 +10,8 @@ import type {
   InternalError,
   NotFoundError,
   PayloadTooLargeError,
+  PreconditionFailedError,
+  PreconditionRequiredError,
   RevisionConflictError,
   RuleViolationError,
   UnauthenticatedError,
@@ -30,10 +32,12 @@ export type Problem =
   | ForbiddenOriginError
   | NotFoundError
   | RevisionConflictError
+  | PreconditionFailedError
   | PayloadTooLargeError
   | RuleViolationError
   | UserNotSetUpError
   | IdempotencyKeyReusedError
+  | PreconditionRequiredError
   | InternalError;
 
 /** The identifier of a kind of problem, the one a client decides by. */
@@ -71,6 +75,10 @@ export const PROBLEMS: {
     status: 409,
     title: 'Another write came first',
   },
+  '/problems/precondition-failed': {
+    status: 412,
+    title: 'The record has changed since it was read',
+  },
   '/problems/payload-too-large': {
     status: 413,
     title: 'The body is too large',
@@ -94,6 +102,10 @@ export const PROBLEMS: {
   '/problems/idempotency-key-reused': {
     status: 422,
     title: 'The Idempotency-Key was used for another request',
+  },
+  '/problems/precondition-required': {
+    status: 428,
+    title: 'The write must say which version it was made from',
   },
   '/problems/internal-error': { status: 500, title: 'An unexpected failure' },
 };

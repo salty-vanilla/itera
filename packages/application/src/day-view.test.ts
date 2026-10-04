@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot, fixtureIds } from './fixtures/states';
 import { dayData } from './day-view';
 import type { Records } from './records';
+import { tagged } from './testing';
 
 const ids = fixtureIds();
 
@@ -25,12 +26,12 @@ const removing = (taskId: string) => (s: Sprint) => ({
 describe('dayData (#90)', () => {
   it('is absent for today, which is the Today screen itself', () => {
     const { records, clock } = fixtureSnapshot('today-daytime');
-    expect(dayData(records, clock, clock.today)).toBeUndefined();
+    expect(dayData(tagged(records), clock, clock.today)).toBeUndefined();
   });
 
   it('lists a past day’s choices in the order chosen, with how each ended and its hours', () => {
     const { records, clock } = fixtureSnapshot('today-daytime');
-    const data = dayData(records, clock, day('2026-09-30'));
+    const data = dayData(tagged(records), clock, day('2026-09-30'));
     expect(data?.when).toBe('past');
     expect(data?.within).toMatchObject({
       number: 2,
@@ -60,9 +61,11 @@ describe('dayData (#90)', () => {
       ids.sprint.current,
       removing(ids.task.paper),
     );
-    const titles = dayData(removed, clock, day('2026-09-30'))?.records.map(
-      (r) => r.title,
-    );
+    const titles = dayData(
+      tagged(removed),
+      clock,
+      day('2026-09-30'),
+    )?.records.map((r) => r.title);
     expect(titles).toContain('関連論文を 3本読む');
   });
 
@@ -76,9 +79,11 @@ describe('dayData (#90)', () => {
           : d,
       ),
     }));
-    const titles = dayData(putBack, clock, day('2026-09-30'))?.records.map(
-      (r) => r.title,
-    );
+    const titles = dayData(
+      tagged(putBack),
+      clock,
+      day('2026-09-30'),
+    )?.records.map((r) => r.title);
     expect(titles).toEqual(['英語の多読 30分']);
   });
 
@@ -90,7 +95,7 @@ describe('dayData (#90)', () => {
         a.name === '研究' ? { ...a, name: '博士研究' } : a,
       ),
     };
-    const data = dayData(renamed, clock, day('2026-09-22'));
+    const data = dayData(tagged(renamed), clock, day('2026-09-22'));
     expect(data?.within?.sprint?.state).toBe('closed');
     expect(data?.records.map((r) => r.area?.name)).toEqual(['研究']);
   });
@@ -107,14 +112,14 @@ describe('dayData (#90)', () => {
       ],
     }));
     const on = (date: string) =>
-      dayData(moved, clock, day(date))?.interrupts.map((n) => n.at);
+      dayData(tagged(moved), clock, day(date))?.interrupts.map((n) => n.at);
     expect(on('2026-10-01')).toEqual(['2026-09-30T15:30:00.000Z']);
     expect(on('2026-09-30')).toEqual(['2026-09-30T14:30:00.000Z']);
   });
 
   it('takes a future day’s occurrences from the Sprint being planned, and its deadlines', () => {
     const { records, clock } = fixtureSnapshot('planning-check');
-    const data = dayData(records, clock, day('2026-09-30'));
+    const data = dayData(tagged(records), clock, day('2026-09-30'));
     expect(data?.when).toBe('future');
     expect(data?.within?.sprint?.state).toBe('planning');
     expect(data?.occurrences.map((o) => o.title)).toEqual(['英語の多読 30分']);
@@ -125,7 +130,9 @@ describe('dayData (#90)', () => {
   it('leaves out the occurrences excluded, and those of a Task removed from the Sprint', () => {
     const { records, clock } = fixtureSnapshot('today-daytime');
     const titles = (r: Records) =>
-      dayData(r, clock, day('2026-10-02'))?.occurrences.map((o) => o.title);
+      dayData(tagged(r), clock, day('2026-10-02'))?.occurrences.map(
+        (o) => o.title,
+      );
     expect(titles(records)).toEqual(['英語の多読 30分']);
     const excluded = {
       ...records,
@@ -146,14 +153,14 @@ describe('dayData (#90)', () => {
 
   it('has no Sprint for a day after the one being planned', () => {
     const { records, clock } = fixtureSnapshot('planning-check');
-    const data = dayData(records, clock, day('2026-10-06'));
+    const data = dayData(tagged(records), clock, day('2026-10-06'));
     expect(data?.within).toBeUndefined();
     expect(data?.next).toBeUndefined();
   });
 
   it('points a day before every Sprint to the first one', () => {
     const { records, clock } = fixtureSnapshot('today-daytime');
-    const data = dayData(records, clock, day('2026-09-10'));
+    const data = dayData(tagged(records), clock, day('2026-09-10'));
     expect(data?.within).toBeUndefined();
     expect(data?.next).toMatchObject({ number: 1, start: '2026-09-21' });
     expect(data?.records).toEqual([]);

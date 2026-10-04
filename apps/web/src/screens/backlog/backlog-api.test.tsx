@@ -422,7 +422,8 @@ describe('the Backlog on the API', () => {
         const { store, requests, detail } = await openDetail(field);
         await saveTask({
           client: otherDevice(store),
-          headers: newWrite(),
+          // Another device's write, whatever it read (#321).
+          headers: { ...newWrite(), 'If-Match': '*' },
           path: { taskId: ids.task.bookshelf },
           body: field.theirs,
         });
@@ -472,7 +473,8 @@ describe('the Backlog on the API', () => {
         .records.tasks.find((t) => t.id === ids.task.dataset)!.subtasks[0]!;
       await updateSubtask({
         client: otherDevice(store),
-        headers: newWrite(),
+        // Another device's write, whatever it read (#321).
+        headers: { ...newWrite(), 'If-Match': '*' },
         path: { taskId: ids.task.dataset, subtaskId: subtask.id },
         body: { hours: 3 },
       });
@@ -531,7 +533,8 @@ describe('the Backlog on the API', () => {
       expect(saves(requests)).toHaveLength(0);
       await saveTask({
         client: otherDevice(store),
-        headers: newWrite(),
+        // Another device's write, whatever it read (#321).
+        headers: { ...newWrite(), 'If-Match': '*' },
         path: { taskId: ids.task.bookshelf },
         body: { title: 'スマホで直した題名' },
       });
@@ -591,7 +594,8 @@ describe('the Backlog on the API', () => {
       );
       await renameArea({
         client: otherDevice(store),
-        headers: newWrite(),
+        // Another device's write, whatever it read (#321).
+        headers: { ...newWrite(), 'If-Match': '*' },
         path: { areaId: ids.area.work },
         body: { name: 'スマホで直した名前' },
       });

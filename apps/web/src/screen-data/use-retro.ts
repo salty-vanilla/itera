@@ -1,3 +1,4 @@
+import type { MadeFrom } from '@itera/api-contract/requests';
 import type {
   AreaId,
   CriterionPolicy,
@@ -66,9 +67,11 @@ export function useRetroActions({ sprintId, draftId }: RetroTarget) {
   const unpinFact = useOperation('unpinFact', { whileSending: 'wait' });
   const setReflection = useOperation('setReflection', {
     whileSending: 'wait',
+    typed: true,
   });
   const setImprovement = useOperation('setImprovement', {
     whileSending: 'wait',
+    typed: true,
   });
   const decideCriterion = useOperation('decideCriterion', {
     whileSending: 'wait',
@@ -85,26 +88,35 @@ export function useRetroActions({ sprintId, draftId }: RetroTarget) {
   ) => draftId !== undefined && (await send(draftId)).ok;
 
   const actions = {
-    assessGoal: async (areaId: AreaId, assessment: SelfAssessment | null) =>
-      (await assessGoal.run({ sprintId, areaId, assessment })).ok,
+    /** `from`: the Goal as read (#321). */
+    assessGoal: async (
+      areaId: AreaId,
+      assessment: SelfAssessment | null,
+      from: MadeFrom,
+    ) => (await assessGoal.run({ sprintId, areaId, assessment }, from)).ok,
     /** 振り返りに使う印をつける (`pinned`) / 外す. */
     setPinned: async (pin: RetroPin, pinned: boolean) =>
       (pinned
         ? await pinFact.run({ sprintId, pin })
         : await unpinFact.run({ sprintId, pin })
       ).ok,
-    setReflection: async (text: string) =>
-      (await setReflection.run({ sprintId, text })).ok,
-    setImprovement: async (text: string) =>
-      (await setImprovement.run({ sprintId, text })).ok,
+    /** `from`: the Retro as read when the words were typed (#321). */
+    setReflection: async (text: string, from: MadeFrom) =>
+      (await setReflection.run({ sprintId, text }, from)).ok,
+    setImprovement: async (text: string, from: MadeFrom) =>
+      (await setImprovement.run({ sprintId, text }, from)).ok,
     draftCriterion: async (policy: CriterionPolicy) =>
       (await draftCriterion.run({ sprintId, policy })).ok,
-    setDraftPolicy: (policy: CriterionPolicy) =>
-      onDraft((criterionId) => setDraftPolicy.run({ criterionId, policy })),
+    /** `from`: the draft criterion as read (#321). */
+    setDraftPolicy: (policy: CriterionPolicy, from: MadeFrom) =>
+      onDraft((criterionId) =>
+        setDraftPolicy.run({ criterionId, policy }, from),
+      ),
     dropCriterionDraft: () =>
       onDraft((criterionId) => dropCriterionDraft.run({ criterionId })),
-    decideCriterion: async (decision: RetroDecision) =>
-      (await decideCriterion.run({ sprintId, decision })).ok,
+    /** `from`: the Sprint's use of the criterion as read (#321). */
+    decideCriterion: async (decision: RetroDecision, from: MadeFrom) =>
+      (await decideCriterion.run({ sprintId, decision }, from)).ok,
     recordActual: async (
       sprintTaskId: SprintTaskId,
       hours: number,

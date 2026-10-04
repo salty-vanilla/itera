@@ -62,7 +62,7 @@ async function setup() {
     .values({ id: alice, name: 'Alice', email: 'alice@example.com' });
   await saveRecords(db, {
     userId: alice,
-    loaded: { revision: 0, records: null },
+    loaded: { revision: 0, records: null, versions: new Map() },
     changes: fixture,
     activities: [],
     caughtUpTo: daytime.clock.today,

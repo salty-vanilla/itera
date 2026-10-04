@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from './fixtures/states';
 import { chooseTasks } from './planning-changes';
 import { planningCandidatesOf } from './planning-view';
-import { memoryStore } from './testing';
+import { memoryStore, tagged } from './testing';
 import { beginPlanning } from './retro-changes';
 import { reviewEnded } from './system-changes';
 import { beginRetro } from './today-changes';
@@ -29,7 +29,8 @@ describe('planning the next Sprint mid-week', () => {
 
   it('marks a candidate still unfinished in the running Sprint, and it can be chosen', () => {
     const { store, running, unfinished } = chooseUnfinished();
-    const { records, clock } = store.getSnapshot();
+    const { clock } = store.getSnapshot();
+    const records = tagged(store.getSnapshot().records);
     const sprint = records.sprints.find((s) => s.state === 'planning');
     if (sprint === undefined) throw new Error('no Sprint being planned');
     const candidates = planningCandidatesOf(records, clock, sprint);

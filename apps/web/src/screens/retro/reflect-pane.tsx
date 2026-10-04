@@ -1,3 +1,4 @@
+import type { MadeFrom } from '@itera/api-contract/requests';
 import type { RetroPin } from '@itera/api-contract';
 import { useEffect, useId, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -19,8 +20,9 @@ type ReflectPaneProps = {
   /** A closed Retro: the words as they were written (#90). */
   readOnly?: boolean | undefined;
   onPin: (pin: RetroPin, on: boolean) => void;
-  onReflect: (text: string) => Promise<boolean>;
-  onImprove: (text: string) => Promise<boolean>;
+  /** `from`: the Retro as read when the words were typed (#321). */
+  onReflect: (text: string, from: MadeFrom) => Promise<boolean>;
+  onImprove: (text: string, from: MadeFrom) => Promise<boolean>;
   /** The materials sit here below 1200px; beside the facts above it. */
   showMaterials: boolean;
   className?: string | undefined;
@@ -35,7 +37,9 @@ function ReflectPane({
   showMaterials,
   className,
 }: ReflectPaneProps) {
-  const reflection = useDraftField(data.reflection);
+  const reflection = useDraftField(data.reflection, Object.is, {
+    etag: data.sprint.retro?.etag,
+  });
   return (
     <div
       data-slot="reflect-pane"
@@ -65,7 +69,9 @@ function ReflectPane({
               // never sends what was read when the Retro opened (#324).
               onBlur={() => {
                 if (reflection.leave())
-                  reflection.hold(onReflect(reflection.value));
+                  reflection.hold(
+                    onReflect(reflection.value, reflection.madeFrom),
+                  );
               }}
             />
           </Field>
@@ -127,11 +133,13 @@ function Improvement({
   onImprove,
 }: {
   data: RetroData;
-  onImprove: (text: string) => Promise<boolean>;
+  onImprove: (text: string, from: MadeFrom) => Promise<boolean>;
 }) {
   const saved = data.improvement;
   const [editing, setEditing] = useState(saved === undefined);
-  const field = useDraftField(saved ?? '', sameWords);
+  const field = useDraftField(saved ?? '', sameWords, {
+    etag: data.sprint.retro?.etag,
+  });
   const text = field.value;
   const headingId = useId();
   const editRef = useRef<HTMLButtonElement>(null);
@@ -158,7 +166,7 @@ function Improvement({
     if (!field.leave()) return Promise.resolve(true);
     // A criterion made from it keeps it; the handoff says to drop it first.
     if (next === '' && data.draft !== undefined) return Promise.resolve(false);
-    const result = onImprove(next).then((ok) => {
+    const result = onImprove(next, field.madeFrom).then((ok) => {
       if (sending.current?.result === result) sending.current = undefined;
       return ok;
     });

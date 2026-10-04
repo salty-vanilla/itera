@@ -22,16 +22,21 @@ import {
   type OccurrenceProgress,
   type PlanningValue,
   type Sprint,
-  type SprintGoal,
   type SprintId,
-  type SprintTask,
   type SprintTotals,
   type Task,
   type WeekProgress,
 } from '@itera/domain';
-import type { Clock, Records } from './records';
+import type { Clock } from './records';
 import { nextWeekSprintOf, weekOf, type SprintWeek } from './sprint-choice';
 import { dayInPeriod } from './sprint-day';
+import type {
+  TaggedRecords,
+  TaggedSprint,
+  TaggedSprintGoal,
+  TaggedSprintTask,
+  TaggedTask,
+} from './versions';
 
 export interface RunningArea {
   readonly id: AreaId;
@@ -41,8 +46,8 @@ export interface RunningArea {
 }
 
 export interface RunningTask {
-  readonly sprintTask: SprintTask;
-  readonly task: Task;
+  readonly sprintTask: TaggedSprintTask;
+  readonly task: TaggedTask;
   /** The planning value fixed for this Sprint (the whole week for a recurring Task). */
   readonly value: PlanningValue;
   /** Recurring only: its occurrences done of the week's (F32). */
@@ -62,7 +67,7 @@ export interface RunningTask {
 export interface RunningAreaPlan {
   /** Absent for the Tasks without an Area. */
   readonly area?: RunningArea;
-  readonly goal?: SprintGoal;
+  readonly goal?: TaggedSprintGoal;
   readonly tasks: readonly RunningTask[];
 }
 
@@ -91,7 +96,7 @@ export interface PastDay {
 }
 
 export interface RunningData {
-  readonly sprint: Sprint;
+  readonly sprint: TaggedSprint;
   /** 「Sprint 14」 (F25). */
   readonly number: number;
   /** The current week; the previous or none for one that has ended (#90). */
@@ -148,7 +153,7 @@ function pickTotals({ total, byArea }: SprintTotals): RunningData['totals'] {
  * or the one asked for. `undefined` for a Sprint still being planned.
  */
 export function runningData(
-  records: Records,
+  records: TaggedRecords,
   clock: Clock,
   sprintId?: SprintId,
 ): RunningData | undefined {

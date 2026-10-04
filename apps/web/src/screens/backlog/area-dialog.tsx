@@ -1,4 +1,5 @@
 import type { AreaId } from '@itera/api-contract';
+import type { MadeFrom } from '@itera/api-contract/requests';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { AreaMark } from '@/components/ui/area-indicator';
 import { ReadStatus } from '@/components/read-status';
@@ -189,11 +190,13 @@ function AreaEditor({
                   setRenaming(undefined);
                   focusRow(area.id, 'edit');
                 }}
-                onRename={async (name) => {
-                  if (!(await actions.renameArea(area.id, name))) return;
+                onRename={async (name, from) => {
+                  if (!(await actions.renameArea(area.id, name, from)))
+                    return false;
                   setRenaming(undefined);
                   if (name !== area.name) setStatus(`「${name}」に変えました`);
                   focusRow(area.id, 'edit');
+                  return true;
                 }}
               />
             ) : (
@@ -257,7 +260,8 @@ function EditRow({
   onCancel,
 }: {
   area: EditableArea;
-  onRename: (name: string) => void;
+  /** Whether it went through; `from` is the Area as read when it was typed. */
+  onRename: (name: string, from: MadeFrom) => Promise<boolean>;
   onArchive: () => void;
   onCancel: () => void;
 }) {
@@ -265,7 +269,7 @@ function EditRow({
   // until it is typed in, and 名前を変える on a name nothing was typed in
   // changes nothing, so that the name it opened with never goes over another
   // device's (#324).
-  const nameField = useDraftField(area.name, sameWords);
+  const nameField = useDraftField(area.name, sameWords, { etag: area.etag });
   const name = nameField.value;
   const [error, setError] = useState<string>();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -292,7 +296,9 @@ function EditRow({
             onCancel();
             return;
           }
-          onRename(name.trim());
+          // Held until it is answered: a rename that did not go through
+          // gives the typing back (#321).
+          nameField.hold(onRename(name.trim(), nameField.madeFrom));
         }}
       >
         <Field

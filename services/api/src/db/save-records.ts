@@ -8,7 +8,11 @@ import {
   type SQLiteTable,
 } from 'drizzle-orm/sqlite-core';
 import type { Database } from './database';
-import { keepAnswerStatements, type AnsweredWrite } from './idempotency';
+import {
+  keepAnswerStatements,
+  type Answer,
+  type AnsweringWrite,
+} from './idempotency';
 import {
   addAreaRows,
   addCriterionRows,
@@ -19,6 +23,7 @@ import {
   addUserRows,
   recordTables,
   RowSet,
+  versionedTables,
   type RecordTable,
 } from './record-rows';
 import type { LoadedRecords, SaveResult } from './records';
@@ -39,7 +44,7 @@ type Statement = BatchItem<'sqlite'>;
 export interface SaveRecordsInput {
   readonly userId: UserId;
   /** The records the change was made from, as loadRecords returned them. */
-  readonly loaded: Pick<LoadedRecords, 'revision' | 'records'>;
+  readonly loaded: Pick<LoadedRecords, 'revision' | 'records' | 'versions'>;
   readonly changes: RecordChanges;
   /** Appended in this order. */
   readonly activities: readonly Activity[];
@@ -52,9 +57,10 @@ export interface SaveRecordsInput {
   /**
    * The write this save is for, kept with its answer in the same batch, so
    * the key is there exactly when the write was saved (ADR 0006 冪等キー).
-   * Not kept when nothing is written.
+   * Its answer is made from the versions as of this save. Not kept when
+   * nothing is written.
    */
-  readonly answered?: AnsweredWrite;
+  readonly answered?: AnsweringWrite;
 }
 
 /**
@@ -73,11 +79,30 @@ export async function saveRecords(
 ): Promise<SaveResult> {
   const { userId, loaded } = input;
   const [before, after] = changedRows(input);
-  const rowStatements = diff(db, before, after);
-  if (rowStatements.length === 0 && input.activities.length === 0) {
-    return { ok: true, revision: loaded.revision };
-  }
   const revision = loaded.revision + 1;
+  const { statements: rowStatements, versions } = diff(
+    db,
+    before,
+    after,
+    revision,
+  );
+  if (rowStatements.length === 0 && input.activities.length === 0) {
+    return {
+      ok: true,
+      revision: loaded.revision,
+      versions: loaded.versions,
+      ...answerOf(input.answered, loaded.versions),
+    };
+  }
+  const saved = new Map(loaded.versions);
+  for (const [key, version] of versions) {
+    if (version === null) saved.delete(key);
+    else saved.set(key, version);
+  }
+  const answered =
+    input.answered === undefined
+      ? undefined
+      : { ...input.answered, answer: input.answered.answer(saved) };
   const activityRows = input.activities.map(
     ({ at, actor, kind, ...content }, position) => ({
       userId,
@@ -96,9 +121,9 @@ export async function saveRecords(
       ...chunks(activityRows, rowsPerInsert(activity)).map((rows) =>
         db.insert(activity).values(rows),
       ),
-      ...(input.answered === undefined
+      ...(answered === undefined
         ? []
-        : keepAnswerStatements(db, userId, input.answered)),
+        : keepAnswerStatements(db, userId, answered)),
     ]);
   } catch (error) {
     // Tell a conflict by the revision, not by the error text, which differs
@@ -112,7 +137,20 @@ export async function saveRecords(
     }
     throw error;
   }
-  return { ok: true, revision };
+  return {
+    ok: true,
+    revision,
+    versions: saved,
+    ...(answered === undefined ? {} : { answer: answered.answer }),
+  };
+}
+
+/** The answer of a save that wrote nothing, as of the loaded versions. */
+function answerOf(
+  answered: AnsweringWrite | undefined,
+  versions: LoadedRecords['versions'],
+): { answer?: Answer } {
+  return answered === undefined ? {} : { answer: answered.answer(versions) };
 }
 
 /**
@@ -290,19 +328,39 @@ const holdsUniqueSlot = new Map<RecordTable, (row: Row) => boolean>(
  * gone are deleted first, children before parents, so a row added again
  * under the same unique key (an occurrence generated again) fits. Then rows
  * are updated (changed columns only) and inserted, parents before children.
+ *
+ * A row inserted or whose values change is written with `revision`, the
+ * save's: the version of the record it holds (#321). A row whose `position`
+ * alone changes (a sibling before it removed) keeps its revision: its
+ * record's values are the same. `versions` has the version of each record
+ * with an etag the statements write, `null` for one they delete.
  */
-function diff(db: Database, before: RowSet, after: RowSet): Statement[] {
+function diff(
+  db: Database,
+  before: RowSet,
+  after: RowSet,
+  revision: number,
+): { statements: Statement[]; versions: Map<string, number | null> } {
   const deletes: Statement[] = [];
   const writes: Statement[] = [];
+  const versions = new Map<string, number | null>();
   for (const table of [...recordTables].reverse()) {
     const { key, where } = keyOf(table);
+    const versionKeyOf = versionedTables.get(table);
     const kept = new Set(after.plain(table).map(key));
     for (const row of before.plain(table)) {
-      if (!kept.has(key(row))) deletes.push(db.delete(table).where(where(row)));
+      if (!kept.has(key(row))) {
+        deletes.push(db.delete(table).where(where(row)));
+        if (versionKeyOf !== undefined) versions.set(versionKeyOf(row), null);
+      }
     }
   }
   for (const table of recordTables) {
     const { key, where } = keyOf(table);
+    const versionKeyOf = versionedTables.get(table);
+    const written = (row: Row) => {
+      if (versionKeyOf !== undefined) versions.set(versionKeyOf(row), revision);
+    };
     const old = new Map(before.plain(table).map((row) => [key(row), row]));
     const holds = holdsUniqueSlot.get(table) ?? (() => false);
     const rows = after.plain(table);
@@ -311,13 +369,20 @@ function diff(db: Database, before: RowSet, after: RowSet): Statement[] {
       for (const row of rows.filter((r) => holds(r) === holding)) {
         const previous = old.get(key(row));
         if (previous === undefined) {
-          inserts.push(row);
+          inserts.push({ ...row, revision });
+          written(row);
           continue;
         }
         const changed = changedColumns(previous, row);
-        if (changed !== null) {
-          writes.push(db.update(table).set(changed).where(where(row)));
-        }
+        if (changed === null) continue;
+        const moved = Object.keys(changed).every((c) => c === 'position');
+        if (!moved) written(row);
+        writes.push(
+          db
+            .update(table)
+            .set(moved ? changed : { ...changed, revision })
+            .where(where(row)),
+        );
       }
       for (const chunk of chunks(inserts, rowsPerInsert(table))) {
         const target: SQLiteTable = table;
@@ -325,7 +390,7 @@ function diff(db: Database, before: RowSet, after: RowSet): Statement[] {
       }
     }
   }
-  return [...deletes, ...writes];
+  return { statements: [...deletes, ...writes], versions };
 }
 
 function changedColumns(previous: Row, row: Row): Row | null {

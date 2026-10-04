@@ -1,6 +1,13 @@
-import type { Records } from '@itera/application';
+import { versionKey, type Records } from '@itera/application';
 import type {
   Area,
+  AreaId,
+  InterruptNoteId,
+  PlanningCriterionId,
+  SprintId,
+  SprintTaskId,
+  SubtaskId,
+  TaskId,
   DailySelection,
   DayOfWeek,
   Estimate,
@@ -73,7 +80,35 @@ export const recordTables = [
 ] as const;
 
 export type RecordTable = (typeof recordTables)[number];
-export type RowOf<T extends RecordTable> = T['$inferSelect'];
+/**
+ * A row of the record it holds. The revision that last wrote it is kept
+ * apart (`revision`, written by saveRecords, read by loadRecords), so two
+ * rows of the same record compare equal exactly when its values do.
+ */
+export type RowOf<T extends RecordTable> = Omit<T['$inferSelect'], 'revision'>;
+
+/**
+ * The tables of the records that have an etag (#321), with the key in
+ * `RecordVersions` of the record a row holds.
+ */
+export const versionedTables: ReadonlyMap<
+  RecordTable,
+  (row: Record<string, unknown>) => string
+> = new Map<RecordTable, (row: Record<string, unknown>) => string>([
+  [area, (r) => versionKey.area(r.id as AreaId)],
+  [task, (r) => versionKey.task(r.id as TaskId)],
+  [subtask, (r) => versionKey.subtask(r.id as SubtaskId)],
+  [planningCriterion, (r) => versionKey.criterion(r.id as PlanningCriterionId)],
+  [sprint, (r) => versionKey.sprint(r.id as SprintId)],
+  [
+    sprintGoal,
+    (r) => versionKey.goal(r.sprintId as SprintId, r.areaId as AreaId),
+  ],
+  [criterionUse, (r) => versionKey.criterionUse(r.sprintId as SprintId)],
+  [sprintTask, (r) => versionKey.sprintTask(r.id as SprintTaskId)],
+  [interruptNote, (r) => versionKey.interrupt(r.id as InterruptNoteId)],
+  [retro, (r) => versionKey.retro(r.sprintId as SprintId)],
+]);
 
 /** Rows grouped by table, in the order they were added. */
 export class RowSet {
@@ -410,7 +445,7 @@ export function recordsFromRows(rows: RowSet): Records | null {
   );
   const versions = groupBy(rows.get(recurrenceRuleVersion), (r) => r.ruleId);
   const days = groupBy(rows.get(recurrenceRuleVersionDay), (r) =>
-    versionKey(r.ruleId, r.version),
+    ruleVersionKey(r.ruleId, r.version),
   );
   const goals = groupBy(rows.get(sprintGoal), (r) => r.sprintId);
   const snapshots = groupBy(rows.get(sprintAreaSnapshot), (r) => r.sprintId);
@@ -478,7 +513,7 @@ export function recordsFromRows(rows: RowSet): Records | null {
         version: v.version,
         pattern: patternOf(
           v,
-          (days.get(versionKey(v.ruleId, v.version)) ?? []).map(
+          (days.get(ruleVersionKey(v.ruleId, v.version)) ?? []).map(
             (d) => d.dayOfWeek,
           ),
         ),
@@ -752,7 +787,7 @@ function required<V>(value: V | null, column: string): V {
   return value;
 }
 
-function versionKey(ruleId: string, version: number): string {
+function ruleVersionKey(ruleId: string, version: number): string {
   return `${ruleId}\u0000${version}`;
 }
 

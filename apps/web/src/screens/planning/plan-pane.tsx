@@ -155,6 +155,7 @@ function PlanPane({
                 block.tasks.length > 0 ? summaryOf(block, stage) : undefined
               }
               goal={block.goal?.text}
+              goalEtag={block.goal?.etag}
               week={week}
               // An Area with neither a Goal nor a Task is one line (#161).
               bare={block.tasks.length === 0 && block.goal === undefined}
@@ -162,10 +163,11 @@ function PlanPane({
               onSave={
                 block.area.id === null || stage === 'check'
                   ? undefined
-                  : (text) =>
+                  : (text, from) =>
                       actions.setGoal(
                         block.area.id as NonNullable<typeof block.area.id>,
                         text,
+                        from,
                       )
               }
             >
@@ -351,6 +353,7 @@ function PlannedRow({
           void actions.setGoalLink(
             sprintTask.id,
             linked ? 'unlinked' : 'linked',
+            { etag: sprintTask.etag },
           )
         }
       >

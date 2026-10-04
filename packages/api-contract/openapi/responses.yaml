@@ -24,6 +24,21 @@ RevisionConflict:
   content:
     application/problem+json:
       schema: { $ref: './schemas/common.yaml#/RevisionConflictError' }
+PreconditionFailed:
+  description: >-
+    The record has changed since the write's `If-Match` was read; this
+    one was not made.
+  content:
+    application/problem+json:
+      schema: { $ref: './schemas/common.yaml#/PreconditionFailedError' }
+PreconditionRequired:
+  description: >-
+    A write that replaces a record's values came without `If-Match` (or,
+    for a Goal not written yet, `If-None-Match: *`). Send it again with the
+    etag of the record as read.
+  content:
+    application/problem+json:
+      schema: { $ref: './schemas/common.yaml#/PreconditionRequiredError' }
 PayloadTooLarge:
   description: The body is larger than the API takes.
   content:

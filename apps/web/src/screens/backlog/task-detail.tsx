@@ -6,7 +6,10 @@ import type {
   TaskPriority,
   TimeBasis,
 } from '@itera/api-contract';
-import type { TaskAttributeUpdate } from '@itera/api-contract/requests';
+import type {
+  MadeFrom,
+  TaskAttributeUpdate,
+} from '@itera/api-contract/requests';
 import { Link, useLocation } from '@tanstack/react-router';
 import { Check, ChevronDown, ChevronRight } from 'lucide-react';
 import {
@@ -67,7 +70,7 @@ import {
 import {
   sameWords,
   useDraftField,
-  type DraftField,
+  type VersionedDraftField,
 } from '@/lib/use-draft-field';
 import { LAST_DAY_CLOSED_WORDS } from '@/lib/selection-words';
 import { formatHours } from '@/lib/time-format';
@@ -380,12 +383,18 @@ function TaskDetail({
     setOperations((n) => n + 1);
   }
   // The text fields: what is typed apart from the Task as read, so that a
-  // field not typed in follows another device's change (#324).
-  const fields: { [K in TextKey]: DraftField<Draft[K]> } = {
-    title: useDraftField(task.title, sameWords),
-    description: useDraftField(task.description),
-    due: useDraftField(task.due ?? ''),
-    estimate: useDraftField(hoursText(task.estimate?.hours), sameDuration),
+  // field not typed in follows another device's change (#324). Each saves
+  // from the Task as read when it was typed in (#321).
+  const version = { etag: task.etag };
+  const fields: { [K in TextKey]: VersionedDraftField<Draft[K]> } = {
+    title: useDraftField(task.title, sameWords, version),
+    description: useDraftField(task.description, Object.is, version),
+    due: useDraftField(task.due ?? '', Object.is, version),
+    estimate: useDraftField(
+      hoursText(task.estimate?.hours),
+      sameDuration,
+      version,
+    ),
   };
   const draft: Draft = {
     title: fields.title.value,
@@ -616,12 +625,26 @@ function TaskDetail({
     });
   };
 
+  /** Saves a text field, made from the Task as read when it was typed in. */
   async function record(
     key: FieldKey,
     update: TaskAttributeUpdate,
-    estimate?: number | null,
+    estimate: number | null | undefined,
+    from: MadeFrom,
   ): Promise<boolean> {
-    if (!(await actions.saveTask(task.id, update, estimate))) return false;
+    if (!(await actions.saveTask(task.id, update, estimate, from)))
+      return false;
+    setSaved(key);
+    return true;
+  }
+
+  /** Saves a choice, made from the Task as it is read now (#321). */
+  async function choose(
+    key: FieldKey,
+    update: TaskAttributeUpdate,
+  ): Promise<boolean> {
+    if (!(await actions.chooseForTask(task.id, update, { etag: task.etag })))
+      return false;
     setSaved(key);
     return true;
   }
@@ -636,7 +659,9 @@ function TaskDetail({
       return next;
     });
     if (reading.kind === 'save') {
-      fields[key].hold(record(key, reading.update, reading.estimate));
+      fields[key].hold(
+        record(key, reading.update, reading.estimate, fields[key].madeFrom),
+      );
     } else if (reading.kind === 'same') {
       fields[key].leave();
     }
@@ -795,7 +820,7 @@ function TaskDetail({
                   description="タスクの見積もりとサブタスクの合計は、どちらか一方を計画に使います。"
                   value={task.timeBasis}
                   onValueChange={(timeBasis) =>
-                    record('timeBasis', { timeBasis })
+                    choose('timeBasis', { timeBasis })
                   }
                 >
                   <Radio<TimeBasis>
@@ -1001,11 +1026,11 @@ function TaskDetail({
                   const areaId = e.currentTarget.value;
                   if (areaId === NEW_AREA) {
                     newArea.open((created) =>
-                      record('areaId', { areaId: created }),
+                      choose('areaId', { areaId: created }),
                     );
                     return;
                   }
-                  record('areaId', {
+                  choose('areaId', {
                     areaId: areaId === '' ? null : areaId,
                   });
                 }}
@@ -1044,7 +1069,7 @@ function TaskDetail({
               <Select
                 value={task.priority}
                 onChange={(e) =>
-                  record('priority', {
+                  choose('priority', {
                     priority: e.currentTarget.value as TaskPriority,
                   })
                 }

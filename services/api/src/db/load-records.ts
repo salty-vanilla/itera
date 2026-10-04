@@ -7,7 +7,7 @@ import {
   type KeptAnswer,
   type KeyLookup,
 } from './idempotency';
-import { recordsFromRows, RowSet } from './record-rows';
+import { recordsFromRows, RowSet, versionedTables } from './record-rows';
 import type { LoadedRecords } from './records';
 import {
   actualTime,
@@ -258,7 +258,19 @@ async function loadInBatch(
       revision: revisions[0]?.revision ?? 0,
       records: recordsFromRows(rows),
       caughtUpTo: revisions[0]?.caughtUpTo ?? null,
+      versions: versionsOf(rows),
     },
     kept: keptAnswerOf(keptRows),
   };
+}
+
+/** The version of each record with an etag, from the revision of its row. */
+function versionsOf(rows: RowSet): Map<string, number> {
+  const versions = new Map<string, number>();
+  for (const [table, keyOf] of versionedTables) {
+    for (const row of rows.plain(table)) {
+      versions.set(keyOf(row), row.revision as number);
+    }
+  }
+  return versions;
 }

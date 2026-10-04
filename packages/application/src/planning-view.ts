@@ -28,13 +28,19 @@ import {
   type PlanningValue,
   type RetroImprovement,
   type Sprint,
-  type SprintGoal,
-  type SprintTask,
   type SprintTotals,
   type Task,
 } from '@itera/domain';
 import type { Clock, Records } from './records';
 import { weekOf, type SprintWeek } from './sprint-choice';
+import {
+  taggedIn,
+  type TaggedRecords,
+  type TaggedSprint,
+  type TaggedSprintGoal,
+  type TaggedSprintTask,
+  type TaggedTask,
+} from './versions';
 
 export interface PlanningArea {
   readonly id: AreaId;
@@ -43,8 +49,8 @@ export interface PlanningArea {
 }
 
 export interface PlannedTask {
-  readonly sprintTask: SprintTask;
-  readonly task: Task;
+  readonly sprintTask: TaggedSprintTask;
+  readonly task: TaggedTask;
   /** The planning value now (a draft is valued live, invariant 16). */
   readonly value: PlanningValue;
   /** Recurring: the occurrences included this week. */
@@ -67,18 +73,18 @@ export interface PlannedTask {
 export interface AreaPlan {
   /** Absent for the Tasks without an Area. */
   readonly area?: PlanningArea;
-  readonly goal?: SprintGoal;
+  readonly goal?: TaggedSprintGoal;
   readonly tasks: readonly PlannedTask[];
   /** The Area's total, as `sprintTotals` counts it. */
   readonly total?: SprintTotals['byArea'][number];
 }
 
 export interface CandidateRow {
-  readonly task: Task;
+  readonly task: TaggedTask;
   /** The draft SprintTask when the Task is chosen for this week. */
-  readonly chosen?: SprintTask;
+  readonly chosen?: TaggedSprintTask;
   /** 持ち越し: the previous Sprint's carried-over SprintTask. */
-  readonly carriedFrom?: SprintTask;
+  readonly carriedFrom?: TaggedSprintTask;
   readonly area?: PlanningArea;
   /** The Task's own time (Estimate, suggestion, subtask sum or none). */
   readonly value: PlanningValue;
@@ -93,7 +99,7 @@ export interface CandidateRow {
 }
 
 export interface RecurringCandidate {
-  readonly task: Task;
+  readonly task: TaggedTask;
   readonly occurrences: readonly Occurrence[];
   readonly area?: PlanningArea;
 }
@@ -111,7 +117,7 @@ export interface PlanningCandidates {
 
 /** A Sprint being planned: its plan (整える・確かめる). */
 export interface SprintPlan {
-  readonly sprint: Sprint;
+  readonly sprint: TaggedSprint;
   /** 「Sprint 14」 (F25). */
   readonly number: number;
   /**
@@ -137,7 +143,7 @@ export interface SprintPlan {
   readonly chosenCount: number;
   readonly totals: SprintTotals;
   /** 「何が上振れすると超過するか」. */
-  readonly drivers: readonly CapacityDriver[];
+  readonly drivers: readonly TaggedCapacityDriver[];
   readonly improvement?: RetroImprovement;
   readonly criterion?: {
     readonly active: ActiveCriterion;
@@ -172,7 +178,7 @@ export interface SprintPlan {
 }
 
 /** A Task's Area as Planning shows it. */
-function areaOf(records: Records, task: Task): PlanningArea | undefined {
+function areaOf(records: TaggedRecords, task: Task): PlanningArea | undefined {
   if (task.areaId === undefined) return undefined;
   const area = records.areas.find((a) => a.id === task.areaId);
   return area === undefined
@@ -180,14 +186,22 @@ function areaOf(records: Records, task: Task): PlanningArea | undefined {
     : { id: area.id, name: area.name, color: area.color };
 }
 
+/** A Task that widens the week's total, with the records' etags. */
+type TaggedCapacityDriver = Omit<CapacityDriver, 'sprintTask' | 'task'> & {
+  readonly sprintTask: TaggedSprintTask;
+  readonly task: TaggedTask;
+};
+
 /** The plan of a Sprint being planned (整える・確かめる). */
 export function sprintPlanOf(
-  records: Records,
+  records: TaggedRecords,
   clock: Clock,
-  sprint: Sprint,
+  sprint: TaggedSprint,
   options: { applyCriterion: boolean },
 ): SprintPlan {
   const { tasks } = records;
+  const taskOf = taggedIn(tasks);
+  const sprintTaskOf = taggedIn(sprint.tasks);
   const now = clock.now;
   // An archived Area still shows while a chosen Task is in it.
   const chosenAreas = new Set(
@@ -280,7 +294,11 @@ export function sprintPlanOf(
     plan,
     chosenCount: planned.length,
     totals,
-    drivers: capacityDrivers(sprint, valueOptions),
+    drivers: capacityDrivers(sprint, valueOptions).map((d) => ({
+      ...d,
+      sprintTask: sprintTaskOf(d.sprintTask),
+      task: taskOf(d.task),
+    })),
     ...(improvement === undefined ? {} : { improvement }),
     ...(criterion === undefined || effect === undefined
       ? {}
@@ -316,9 +334,9 @@ export function sprintPlanOf(
 
 /** The Tasks a Sprint being planned can choose, in groups (選ぶ). */
 export function planningCandidatesOf(
-  records: Records,
+  records: TaggedRecords,
   clock: Clock,
-  sprint: Sprint,
+  sprint: TaggedSprint,
 ): PlanningCandidates {
   const { tasks } = records;
   const now = clock.now;
@@ -337,7 +355,9 @@ export function planningCandidatesOf(
   const running = previous?.state === 'active' ? previous : undefined;
   const runningNumber =
     running === undefined ? undefined : sprintNumber(running, records.sprints);
-  const row = (task: Task): CandidateRow => {
+  const tagged = taggedIn(records.tasks);
+  const row = (candidate: Task): CandidateRow => {
+    const task = tagged(candidate);
     const chosen = sprint.tasks.find(
       (t) => t.taskId === task.id && t.outcome === 'draft',
     );
@@ -377,7 +397,11 @@ export function planningCandidatesOf(
     dueSoonUntil: groups.dueSoonUntil,
     recurring: groups.recurring.map((r) => {
       const area = areaOf(records, r.task);
-      return { ...r, ...(area === undefined ? {} : { area }) };
+      return {
+        ...r,
+        task: tagged(r.task),
+        ...(area === undefined ? {} : { area }),
+      };
     }),
     others: groups.others.map(row),
   };

@@ -4,7 +4,11 @@
 // the week is over, the Retro completed. Each step is the contract's request; the
 // records are read back only where an operation needs an ID the answer
 // does not carry.
-import { createIdSource, type OperationName } from '@itera/application';
+import {
+  createIdSource,
+  currentCondition,
+  type OperationName,
+} from '@itera/application';
 import { instant, type Instant } from '@itera/domain';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app';
@@ -61,7 +65,19 @@ async function setup() {
     input: unknown,
     status: number,
   ) => {
-    const { url, init } = httpRequest(name, input);
+    // Made from the records as they are: a write that replaces values
+    // names their version (#321).
+    const loaded = await loadRecords(db, alice);
+    const condition =
+      loaded.records === null
+        ? undefined
+        : currentCondition(
+            name,
+            input as never,
+            loaded.records,
+            loaded.versions,
+          );
+    const { url, init } = httpRequest(name, input, condition);
     const response = await app.request(url, init, testEnv);
     expect(response.status, name).toBe(status);
     return status === 204 ? undefined : ((await response.json()) as T);

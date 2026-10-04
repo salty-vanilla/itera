@@ -1,3 +1,4 @@
+import type { MadeFrom } from '@itera/api-contract/requests';
 import { useRef, useState } from 'react';
 
 type Draft<T> = {
@@ -7,6 +8,11 @@ type Draft<T> = {
   base: T;
   /** The read value when the typing began. */
   from: T;
+  /**
+   * The record as read when the typing began (#321): what its save says it
+   * was made from. `undefined` for a field whose record has no version.
+   */
+  version: MadeFrom | undefined;
   /** Sent for saving: shown only until the read comes back with something else. */
   held: boolean;
   /**
@@ -31,6 +37,13 @@ type DraftField<T> = {
   base: T;
   /** Typed, and not what the person saw when it began; not one already sent. */
   edited: boolean;
+  /**
+   * The record its save is made from (#321): as read when the typing began;
+   * as read now without typing, or once a failed save gave the typing back
+   * (the Toast has told the person, and saving again is their decision on
+   * the record as it now is). `undefined` without `version`.
+   */
+  madeFrom: MadeFrom | undefined;
   /** Typing: the field is the person's from here on, until `drop`. */
   set: (next: T) => void;
   /**
@@ -72,9 +85,31 @@ type DraftField<T> = {
  */
 function useDraftField<T>(
   read: T,
+  equal?: (a: T, b: T) => boolean,
+): DraftField<T>;
+/**
+ * A field for a value of a record with a version (#321): `version.etag` is
+ * the record's etag as read, `undefined` when there is no record yet (a
+ * Goal not written). Its save is made from `madeFrom`.
+ */
+function useDraftField<T>(
+  read: T,
+  equal: (a: T, b: T) => boolean,
+  version: { readonly etag: string | undefined },
+): VersionedDraftField<T>;
+function useDraftField<T>(
+  read: T,
   equal: (a: T, b: T) => boolean = Object.is,
+  version?: { readonly etag: string | undefined },
 ): DraftField<T> {
   const [draft, setDraft] = useState<Draft<T>>();
+  // The record as read now: its etag, or none (a Goal not written yet).
+  const current: MadeFrom | undefined =
+    version === undefined
+      ? undefined
+      : version.etag === undefined
+        ? { none: true }
+        : { etag: version.etag };
   const sent = useRef(0);
   // The read changed after the last save was answered, or caught up with
   // typing a failed save gave back: the draft's job is done. While a save
@@ -89,6 +124,7 @@ function useDraftField<T>(
     value: live === undefined ? read : live.value,
     base: live === undefined ? read : live.held ? live.value : live.base,
     edited: live !== undefined && !live.held && !equal(live.value, live.base),
+    madeFrom: live === undefined || live.given ? current : live.version,
     // From the state the update is applied to, not the one this render saw:
     // an answer may have come in between, and its count is not to be
     // written back.
@@ -100,6 +136,10 @@ function useDraftField<T>(
           // Typing again over a value sent: that is what the person saw.
           base: cur === undefined ? read : cur.held ? cur.value : cur.base,
           from: cur === undefined || cur.held ? read : cur.from,
+          // Typing again over a value given back by a failed save is made
+          // from the record as it now is (`madeFrom`).
+          version:
+            cur === undefined || cur.held || cur.given ? current : cur.version,
           held: false,
           given: false,
           sending: d?.sending ?? 0,
@@ -111,6 +151,7 @@ function useDraftField<T>(
         value: next,
         base: next,
         from: read,
+        version: current,
         held: true,
         given: false,
         sending: d?.sending ?? 0,
@@ -156,8 +197,11 @@ function useDraftField<T>(
   };
 }
 
+/** A field of a record with a version: its save is always made from one. */
+type VersionedDraftField<T> = DraftField<T> & { readonly madeFrom: MadeFrom };
+
 /** Two texts are the same words, whatever spaces are around them. */
 const sameWords = (a: string, b: string) => a.trim() === b.trim();
 
 export { sameWords, useDraftField };
-export type { DraftField };
+export type { DraftField, VersionedDraftField };

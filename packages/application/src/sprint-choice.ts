@@ -12,6 +12,7 @@ import {
   type Sprint,
 } from '@itera/domain';
 import type { Clock, Records } from './records';
+import type { TaggedRecords, TaggedSprint } from './versions';
 
 /**
  * A Sprint's place next to now: the week before, the current week, or the
@@ -26,7 +27,7 @@ export interface SprintRef {
   readonly start: LocalDate;
   readonly end: LocalDate;
   /** Absent for the next week, whose Planning has not started. */
-  readonly sprint?: Sprint;
+  readonly sprint?: TaggedSprint;
   readonly week?: SprintWeek;
 }
 
@@ -97,7 +98,7 @@ export function nextWeekSprintOf(
  * after them: that is where its Planning starts (invariant 11).
  */
 export function sprintRefs(
-  records: Records,
+  records: TaggedRecords,
   clock: Clock,
 ): readonly SprintRef[] {
   const refs: SprintRef[] = records.sprints

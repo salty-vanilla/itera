@@ -207,6 +207,11 @@ export type AreaId = string;
  */
 export type AreaColor = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
+/**
+ * The record's version (ADR 0006 記録ごとの版): a strong entity-tag (RFC 9110 §8.8.3). Output only. A write that replaces the record's values sends it back in `If-Match`; the record has changed since when it no longer matches (412). Opaque: compare it whole, never read what is in the quotes (the API now puts a number there, which may change). The version of the record, not a validator of a read's representation at the same path.
+ */
+export type ETag = string;
+
 export type EditableArea = {
     id: AreaId;
     /**
@@ -215,6 +220,7 @@ export type EditableArea = {
     name: string;
     color: AreaColor;
     archived: boolean;
+    etag: ETag;
 };
 
 /**
@@ -224,6 +230,31 @@ export type NotFoundError = {
     type: '/problems/not-found';
     title: string;
     status: 404;
+    detail: string;
+};
+
+/**
+ * `If-Match` (RFC 9110 §13.1.1): `*`, or one or more entity-tags, each in double quotes, separated by commas. A weak one (`W/"…"`) never matches: the API compares them strongly.
+ */
+export type EntityTagList = string;
+
+/**
+ * The record a write replaces is not the version it was made from (its `If-Match`), or is there when it said there was none (`If-None-Match: *`): it changed on another device since it was read. Nothing was done; read it again (ADR 0006 記録ごとの版).
+ */
+export type PreconditionFailedError = {
+    type: '/problems/precondition-failed';
+    title: string;
+    status: 412;
+    detail: string;
+};
+
+/**
+ * A write that replaces a record's values came without `If-Match` (or, where it can make the record, `If-None-Match: *`) (RFC 6585 §3). Nothing was done.
+ */
+export type PreconditionRequiredError = {
+    type: '/problems/precondition-required';
+    title: string;
+    status: 428;
     detail: string;
 };
 
@@ -287,6 +318,7 @@ export type Subtask = {
     estimate?: number;
     done: boolean;
     doneAt?: Instant;
+    etag: ETag;
 };
 
 export type SuggestionState = 'presented' | 'adopted' | 'rejected' | 'replaced';
@@ -326,6 +358,7 @@ export type Task = {
     createdVia: TaskCreatedVia;
     completedAt?: Instant;
     archivedAt?: Instant;
+    etag: ETag;
 };
 
 /**
@@ -494,6 +527,7 @@ export type SprintGoal = {
     text: string;
     plannedText?: string;
     selfAssessment?: SelfAssessment;
+    etag: ETag;
 };
 
 export type SprintTaskId = string;
@@ -534,6 +568,7 @@ export type SprintTask = {
     outcome: SprintTaskOutcome;
     planSnapshot?: PlanSnapshot;
     carriedFrom?: SprintTaskId;
+    etag: ETag;
 };
 
 export type SprintAreaSnapshotEntry = {
@@ -550,6 +585,7 @@ export type CriterionUse = {
     criterionId: PlanningCriterionId;
     appliedAtConfirm: boolean;
     retroDecision?: RetroDecision;
+    etag: ETag;
 };
 
 export type DailySelectionOrigin = 'manual' | 'recurringToday' | 'midSprint' | 'backlogCompletion';
@@ -590,6 +626,7 @@ export type InterruptNote = {
     at: Instant;
     text: string;
     minutes?: number;
+    etag: ETag;
 };
 
 export type RetroPin = {
@@ -611,6 +648,7 @@ export type Retro = {
     pins: Array<RetroPin>;
     reflection: string;
     improvement?: RetroImprovement;
+    etag: ETag;
 };
 
 /**
@@ -634,6 +672,7 @@ export type Sprint = {
     actualTimes: Array<ActualTime>;
     interrupts: Array<InterruptNote>;
     retro?: Retro;
+    etag: ETag;
 };
 
 /**
@@ -1032,6 +1071,11 @@ export type SprintView = {
     running: RunningData;
 };
 
+/**
+ * `If-None-Match: *` (RFC 9110 §13.1.2): the write was made from no record, and is not to be made over one that is there now.
+ */
+export type AnyEntityTag = '*';
+
 export type CandidateRow = {
     task: Task;
     /**
@@ -1159,6 +1203,7 @@ export type PlanningCriterion = {
     state: CriterionState;
     replacedBy?: PlanningCriterionId;
     createdAt: Instant;
+    etag: ETag;
 };
 
 export type CriterionResult = {
@@ -1253,10 +1298,580 @@ export type RetroData = {
     carryOverTasks: Array<CarryOverTask>;
 };
 
+export type EditableAreaWritable = {
+    id: AreaId;
+    /**
+     * The current name (F5).
+     */
+    name: string;
+    color: AreaColor;
+    archived: boolean;
+};
+
+export type SubtaskWritable = {
+    id: SubtaskId;
+    title: string;
+    /**
+     * Hours.
+     */
+    estimate?: number;
+    done: boolean;
+    doneAt?: Instant;
+};
+
+export type TaskWritable = {
+    id: TaskId;
+    userId: UserId;
+    title: string;
+    description: string;
+    areaId?: AreaId;
+    due?: LocalDate;
+    priority: TaskPriority;
+    lifecycle: TaskLifecycle;
+    timeBasis: TimeBasis;
+    subtasks: Array<SubtaskWritable>;
+    estimate?: Estimate;
+    suggestions: Array<EstimateSuggestion>;
+    /**
+     * Set for a recurring Task. The rule is a record of its own.
+     */
+    recurrenceRuleId?: RecurrenceRuleId;
+    createdAt: Instant;
+    createdVia: TaskCreatedVia;
+    completedAt?: Instant;
+    archivedAt?: Instant;
+};
+
+export type BacklogItemWritable = {
+    task: TaskWritable;
+    /**
+     * The Area's current name (F5).
+     */
+    area?: {
+        name: string;
+        color: AreaColor;
+    };
+    carry?: CarryCount;
+    recurrence?: RecurrenceSummary;
+    /**
+     * The rule's pattern today and its latest version.
+     */
+    rule?: {
+        current: RecurrencePattern;
+        latest: RecurrencePattern;
+    };
+    /**
+     * In this week's Sprint. `confirmed` is false while it is being planned.
+     */
+    thisWeek?: {
+        midSprint: boolean;
+        confirmed: boolean;
+    };
+    /**
+     * In the draft for next week (#90).
+     */
+    nextWeek?: true;
+    /**
+     * In today's 今日やる (#94).
+     */
+    today?: {
+        selectionId: DailySelectionId;
+        resolution: ListedResolution;
+        startedAt?: Instant;
+        recurring: boolean;
+    };
+    closedToday?: ClosedResolution;
+    value: PlanningValue;
+    taskValue: PlanningValue;
+    subtaskValue: PlanningValue;
+    canAddToToday: boolean;
+    canAddToWeek: boolean;
+    /**
+     * The Sprint whose first day 今日へ waits for.
+     */
+    todayOpensOn?: {
+        number: number;
+        start: LocalDate;
+    };
+    canComplete: boolean;
+};
+
+export type BacklogDataWritable = {
+    today: LocalDate;
+    /**
+     * Today is the last day of the active Sprint (the same value as the Today read's lastDay), false when no Sprint is active. What is closed for the day does not come back to 今週の残り the next day.
+     */
+    lastDay: boolean;
+    timeZone: TimeZone;
+    /**
+     * Areas to filter and file under, in the person's order.
+     */
+    areas: Array<{
+        id: AreaId;
+        name: string;
+        color: AreaColor;
+        count: number;
+    }>;
+    sliceCounts: {
+        all: number;
+        dueSoon: number;
+        overdue: number;
+        carriedOver: number;
+        recurring: number;
+        noArea: number;
+    };
+    /**
+     * The Tasks the filter shows, in order.
+     */
+    shown: Array<TaskId>;
+    /**
+     * Every active Task's row, by Task ID.
+     */
+    items: {
+        [key: string]: BacklogItemWritable;
+    };
+};
+
+export type SprintGoalWritable = {
+    areaId: AreaId;
+    text: string;
+    plannedText?: string;
+    selfAssessment?: SelfAssessment;
+};
+
+export type SprintTaskWritable = {
+    id: SprintTaskId;
+    taskId: TaskId;
+    /**
+     * A recurring Task's occurrences in this Sprint. Left out for a Task that does not recur; empty when every occurrence is left out.
+     */
+    occurrenceIds?: Array<OccurrenceId>;
+    origin: SprintTaskOrigin;
+    addedAt: Instant;
+    goalLink: GoalLink;
+    outcome: SprintTaskOutcome;
+    planSnapshot?: PlanSnapshot;
+    carriedFrom?: SprintTaskId;
+};
+
+export type CriterionUseWritable = {
+    criterionId: PlanningCriterionId;
+    appliedAtConfirm: boolean;
+    retroDecision?: RetroDecision;
+};
+
+export type InterruptNoteWritable = {
+    id: InterruptNoteId;
+    at: Instant;
+    text: string;
+    minutes?: number;
+};
+
+export type RetroWritable = {
+    startedAt: Instant;
+    completedAt?: Instant;
+    pins: Array<RetroPin>;
+    reflection: string;
+    improvement?: RetroImprovement;
+};
+
+/**
+ * The aggregate root of its SprintTasks, DailySelections, Retro, ….
+ */
+export type SprintWritable = {
+    id: SprintId;
+    userId: UserId;
+    start: LocalDate;
+    end: LocalDate;
+    state: SprintState;
+    previousSprintId?: SprintId;
+    availableHours?: number;
+    plannedAvailableHours?: number;
+    confirmedAt?: Instant;
+    goals: Array<SprintGoalWritable>;
+    tasks: Array<SprintTaskWritable>;
+    areaSnapshot: Array<SprintAreaSnapshotEntry>;
+    criterionUse?: CriterionUseWritable;
+    dailySelections: Array<DailySelection>;
+    actualTimes: Array<ActualTime>;
+    interrupts: Array<InterruptNoteWritable>;
+    retro?: RetroWritable;
+};
+
+export type TodayRowWritable = {
+    sprintTask: SprintTaskWritable;
+    task: TaskWritable;
+    area?: AreaLabel;
+    occurrence?: Occurrence;
+    value: PlanningValue;
+    streak: number;
+    removedToday?: DailySelectionId;
+    selection: DailySelection;
+    actualHours: number;
+};
+
+export type TodayItemWritable = {
+    sprintTask: SprintTaskWritable;
+    task: TaskWritable;
+    area?: AreaLabel;
+    occurrence?: Occurrence;
+    value: PlanningValue;
+    /**
+     * 連続見送り.
+     */
+    streak: number;
+    removedToday?: DailySelectionId;
+};
+
+export type TodayDataWritable = {
+    sprint: SprintWritable;
+    number: number;
+    today: LocalDate;
+    day: DayOfSprint;
+    lastDay: boolean;
+    timeZone: TimeZone;
+    progress: WeekProgress;
+    remaining: TodayRemaining;
+    goals: Array<{
+        area: AreaLabel;
+        text: string;
+    }>;
+    rows: Array<TodayRowWritable>;
+    closed: Array<TodayRowWritable>;
+    /**
+     * 昨日の続き (F6).
+     */
+    continuation: Array<TodayItemWritable>;
+    rest: Array<TodayItemWritable>;
+    plan: Array<TodayItemWritable>;
+    interrupts: Array<InterruptNoteWritable>;
+    areas: Array<AreaLabel>;
+};
+
+/**
+ * A Sprint a screen can open, or the next week before its Planning.
+ */
+export type SprintRefWritable = {
+    /**
+     * 「Sprint 3」 (F25).
+     */
+    number: number;
+    start: LocalDate;
+    end: LocalDate;
+    /**
+     * Left out for the next week before its Planning.
+     */
+    sprint?: SprintWritable;
+    week?: SprintWeek;
+};
+
+export type DayDataWritable = {
+    date: LocalDate;
+    today: LocalDate;
+    when: 'past' | 'future';
+    timeZone: TimeZone;
+    /**
+     * The Sprint whose period has the day, and the day's place.
+     */
+    within?: {
+        number: number;
+        start: LocalDate;
+        end: LocalDate;
+        sprint?: SprintWritable;
+        week?: SprintWeek;
+        day: DayOfSprint;
+    };
+    /**
+     * With no Sprint for the day, the next one after it.
+     */
+    next?: SprintRefWritable;
+    records: Array<DayRecord>;
+    interrupts: Array<InterruptNoteWritable>;
+    occurrences: Array<{
+        occurrence: Occurrence;
+        title: string;
+        area?: AreaLabel;
+    }>;
+    due: Array<{
+        task: TaskWritable;
+        area?: AreaLabel;
+    }>;
+};
+
+/**
+ * A day (#295 R3), today, past or still to come: today's choices on the running Sprint (`today` is left out when none runs), or another day's records or occurrences.
+ */
+export type DayViewWritable = {
+    kind: 'today';
+    today?: TodayDataWritable;
+} | {
+    kind: 'past' | 'future';
+    day: DayDataWritable;
+};
+
+export type PlannedTaskWritable = {
+    sprintTask: SprintTaskWritable;
+    task: TaskWritable;
+    value: PlanningValue;
+    occurrenceCount?: number;
+    suggestion?: Range;
+    linkAtConfirm: GoalLink;
+    inactive?: 'completed' | 'archived';
+};
+
+export type AreaPlanWritable = {
+    /**
+     * Left out for the Tasks without an Area.
+     */
+    area?: AreaLabel;
+    goal?: SprintGoalWritable;
+    tasks: Array<PlannedTaskWritable>;
+    total?: AreaTotal;
+};
+
+/**
+ * A Task whose range widens the week's total the most.
+ */
+export type CapacityDriverWritable = {
+    sprintTask: SprintTaskWritable;
+    task: TaskWritable;
+    value: EstimatedPlanningValue;
+    fromRange?: Range;
+    spread: number;
+};
+
+/**
+ * A Sprint being planned: its plan (#295 R2). The Tasks it can choose are a resource of their own (SprintCandidates).
+ */
+export type SprintPlanWritable = {
+    sprint: SprintWritable;
+    number: number;
+    week?: SprintWeek;
+    today: LocalDate;
+    timeZone: TimeZone;
+    areas: Array<AreaLabel>;
+    addAreas: Array<AreaLabel>;
+    plan: Array<AreaPlanWritable>;
+    chosenCount: number;
+    totals: SprintTotals;
+    drivers: Array<CapacityDriverWritable>;
+    improvement?: RetroImprovement;
+    criterion?: {
+        active: ActiveCriterion;
+        view: CriterionView;
+        areaName?: string;
+        applied: boolean;
+        effect: CriterionEffect;
+        hasTarget: boolean;
+    };
+    blockers: Array<PlanningBlocker>;
+    /**
+     * The previous Sprint while its Retro is open.
+     */
+    previous?: {
+        number: number;
+        end: LocalDate;
+        state: SprintState;
+    };
+};
+
+export type RunningTaskWritable = {
+    sprintTask: SprintTaskWritable;
+    task: TaskWritable;
+    value: PlanningValue;
+    occurrences?: OccurrenceProgress;
+    carry?: CarryCount;
+    nextWeek?: true;
+};
+
+export type RunningAreaPlanWritable = {
+    area?: SprintAreaLabel;
+    goal?: SprintGoalWritable;
+    tasks: Array<RunningTaskWritable>;
+};
+
+export type RunningDataWritable = {
+    sprint: SprintWritable;
+    number: number;
+    week?: SprintWeek;
+    today: LocalDate;
+    day?: DayOfSprint;
+    plan: Array<RunningAreaPlanWritable>;
+    totals: {
+        total: PlanningTotal;
+        byArea: Array<AreaTotal>;
+    };
+    availableHours: AvailableHours;
+    progress?: WeekProgress;
+    pastDays: Array<PastDay>;
+    criterion?: {
+        policy: CriterionPolicy;
+        areaName?: string;
+        applied: boolean;
+        noEffect: boolean;
+    };
+};
+
+/**
+ * A Sprint (#295 R2): while planned, its plan; once confirmed, how it went.
+ */
+export type SprintViewWritable = {
+    state: 'planning';
+    plan: SprintPlanWritable;
+} | {
+    state: 'active' | 'review' | 'closed';
+    running: RunningDataWritable;
+};
+
+export type CandidateRowWritable = {
+    task: TaskWritable;
+    /**
+     * The draft SprintTask when the Task is chosen for this week.
+     */
+    chosen?: SprintTaskWritable;
+    /**
+     * 持ち越し, the previous Sprint's carried-over SprintTask.
+     */
+    carriedFrom?: SprintTaskWritable;
+    area?: AreaLabel;
+    value: PlanningValue;
+    carry?: CarryCount;
+    /**
+     * In the running Sprint (when planning next week).
+     */
+    running?: {
+        sprint: number;
+    };
+};
+
+export type RecurringCandidateWritable = {
+    task: TaskWritable;
+    occurrences: Array<Occurrence>;
+    area?: AreaLabel;
+};
+
+/**
+ * The Tasks a Sprint being planned can choose, in groups (選ぶ).
+ */
+export type SprintCandidatesWritable = {
+    carriedOver: Array<CandidateRowWritable>;
+    overdue: Array<CandidateRowWritable>;
+    dueSoon: Array<CandidateRowWritable>;
+    dueSoonUntil: LocalDate;
+    recurring: Array<RecurringCandidateWritable>;
+    others: Array<CandidateRowWritable>;
+};
+
+/**
+ * Retro の事実, derived from the Sprint's records.
+ */
+export type RetroFactsWritable = {
+    areas: Array<AreaFacts>;
+    tasks: Array<TaskFact>;
+    completed: Array<TaskFact>;
+    carriedOver: Array<TaskFact>;
+    removed: Array<TaskFact>;
+    midSprint: Array<TaskFact>;
+    occurrences: OccurrenceFacts;
+    deferrals: Array<DailySelection>;
+    pauses: Array<DailySelection>;
+    interrupts: Array<InterruptNoteWritable>;
+    interruptTime: {
+        minutes: number;
+        withoutMinutes: number;
+    };
+    availableHours: AvailableHours;
+    plannedTotal: {
+        atConfirm: PlanningTotal;
+        withAdditions: PlanningTotal;
+    };
+    capacity?: {
+        atConfirm: Capacity;
+        withAdditions: Capacity;
+    };
+    actualHours: number;
+};
+
+export type PlanningCriterionWritable = {
+    id: PlanningCriterionId;
+    userId: UserId;
+    policy: CriterionPolicy;
+    sourceSprintId: SprintId;
+    state: CriterionState;
+    replacedBy?: PlanningCriterionId;
+    createdAt: Instant;
+};
+
+export type RetroCriterionWritable = {
+    criterion: PlanningCriterionWritable;
+    view: CriterionView;
+    areaName?: string;
+};
+
+export type RetroDataWritable = {
+    sprint: SprintWritable;
+    number: number;
+    week?: SprintWeek;
+    today: LocalDate;
+    timeZone: TimeZone;
+    facts: RetroFactsWritable;
+    /**
+     * Every Area by ID, as this Sprint shows it (F5).
+     */
+    sprintAreas: {
+        [key: string]: SprintAreaLabel;
+    };
+    areas: Array<SprintAreaLabel>;
+    /**
+     * The titles of the Tasks the previews and carry-over name, by Task ID.
+     */
+    taskTitles: {
+        [key: string]: string;
+    };
+    /**
+     * The criterion this Sprint had, what it did, and the decision.
+     */
+    used?: {
+        criterion: PlanningCriterionWritable;
+        view: CriterionView;
+        areaName?: string;
+        appliedAtConfirm: boolean;
+        result: CriterionResult;
+        decision?: RetroDecision;
+    };
+    draft?: RetroCriterionWritable;
+    pins: Array<RetroPin>;
+    reflection: string;
+    improvement?: string;
+    blockers: Array<RetroBlocker>;
+    /**
+     * Actual hours added in Review go to this day (F22).
+     */
+    actualDate: LocalDate;
+    occurrences: Array<RetroOccurrence>;
+    carryOver: CarryOverPlaces;
+    carryOverTasks: Array<CarryOverTask>;
+};
+
 /**
  * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
  */
 export type IdempotencyKeyHeader = IdempotencyKey;
+
+/**
+ * The `etag` of the record as read before the write was made (RFC 9110 §13.1.1). When the record has changed since, the write is not made and the answer is 412 `/problems/precondition-failed`; without it, 428 `/problems/precondition-required`. A write sent again with its Idempotency-Key answers what it answered first, before this is compared.
+ */
+export type IfMatchHeader = EntityTagList;
+
+/**
+ * The `etag` of the record as read before the write was made, when there was one (RFC 9110 §13.1.1). One of `If-Match` and `If-None-Match` is required (428 `/problems/precondition-required` without either); 412 `/problems/precondition-failed` when the record has changed since, or is gone.
+ */
+export type OptionalIfMatchHeader = EntityTagList;
+
+/**
+ * `*` when the write was made from no record (RFC 9110 §13.1.2): 412 `/problems/precondition-failed` when one has been made since (on another device), instead of writing over it.
+ */
+export type IfNoneMatchHeader = AnyEntityTag;
 
 export type GetMeData = {
     body?: never;
@@ -1471,6 +2086,10 @@ export type RenameAreaData = {
          * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
+        /**
+         * The `etag` of the record as read before the write was made (RFC 9110 §13.1.1). When the record has changed since, the write is not made and the answer is 412 `/problems/precondition-failed`; without it, 428 `/problems/precondition-required`. A write sent again with its Idempotency-Key answers what it answered first, before this is compared.
+         */
+        'If-Match': EntityTagList;
     };
     path: {
         areaId: AreaId;
@@ -1501,6 +2120,10 @@ export type RenameAreaErrors = {
      */
     409: RevisionConflictError;
     /**
+     * The record has changed since the write's `If-Match` was read; this one was not made.
+     */
+    412: PreconditionFailedError;
+    /**
      * The body is larger than the API takes.
      */
     413: PayloadTooLargeError;
@@ -1508,6 +2131,10 @@ export type RenameAreaErrors = {
      * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
+    /**
+     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
+     */
+    428: PreconditionRequiredError;
     /**
      * An unexpected failure on the server.
      */
@@ -1729,6 +2356,10 @@ export type SaveTaskData = {
          * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
+        /**
+         * The `etag` of the record as read before the write was made (RFC 9110 §13.1.1). When the record has changed since, the write is not made and the answer is 412 `/problems/precondition-failed`; without it, 428 `/problems/precondition-required`. A write sent again with its Idempotency-Key answers what it answered first, before this is compared.
+         */
+        'If-Match': EntityTagList;
     };
     path: {
         taskId: TaskId;
@@ -1759,6 +2390,10 @@ export type SaveTaskErrors = {
      */
     409: RevisionConflictError;
     /**
+     * The record has changed since the write's `If-Match` was read; this one was not made.
+     */
+    412: PreconditionFailedError;
+    /**
      * The body is larger than the API takes.
      */
     413: PayloadTooLargeError;
@@ -1766,6 +2401,10 @@ export type SaveTaskErrors = {
      * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
+    /**
+     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
+     */
+    428: PreconditionRequiredError;
     /**
      * An unexpected failure on the server.
      */
@@ -2238,6 +2877,10 @@ export type UpdateSubtaskData = {
          * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
+        /**
+         * The `etag` of the record as read before the write was made (RFC 9110 §13.1.1). When the record has changed since, the write is not made and the answer is 412 `/problems/precondition-failed`; without it, 428 `/problems/precondition-required`. A write sent again with its Idempotency-Key answers what it answered first, before this is compared.
+         */
+        'If-Match': EntityTagList;
     };
     path: {
         taskId: TaskId;
@@ -2269,6 +2912,10 @@ export type UpdateSubtaskErrors = {
      */
     409: RevisionConflictError;
     /**
+     * The record has changed since the write's `If-Match` was read; this one was not made.
+     */
+    412: PreconditionFailedError;
+    /**
      * The body is larger than the API takes.
      */
     413: PayloadTooLargeError;
@@ -2276,6 +2923,10 @@ export type UpdateSubtaskErrors = {
      * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
+    /**
+     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
+     */
+    428: PreconditionRequiredError;
     /**
      * An unexpected failure on the server.
      */
@@ -2811,6 +3462,10 @@ export type SetAvailableHoursData = {
          * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
+        /**
+         * The `etag` of the record as read before the write was made (RFC 9110 §13.1.1). When the record has changed since, the write is not made and the answer is 412 `/problems/precondition-failed`; without it, 428 `/problems/precondition-required`. A write sent again with its Idempotency-Key answers what it answered first, before this is compared.
+         */
+        'If-Match': EntityTagList;
     };
     path: {
         sprintId: SprintId;
@@ -2841,6 +3496,10 @@ export type SetAvailableHoursErrors = {
      */
     409: RevisionConflictError;
     /**
+     * The record has changed since the write's `If-Match` was read; this one was not made.
+     */
+    412: PreconditionFailedError;
+    /**
      * The body is larger than the API takes.
      */
     413: PayloadTooLargeError;
@@ -2848,6 +3507,10 @@ export type SetAvailableHoursErrors = {
      * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
+    /**
+     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
+     */
+    428: PreconditionRequiredError;
     /**
      * An unexpected failure on the server.
      */
@@ -2939,6 +3602,14 @@ export type UpdateGoalData = {
          * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
+        /**
+         * The `etag` of the record as read before the write was made, when there was one (RFC 9110 §13.1.1). One of `If-Match` and `If-None-Match` is required (428 `/problems/precondition-required` without either); 412 `/problems/precondition-failed` when the record has changed since, or is gone.
+         */
+        'If-Match'?: EntityTagList;
+        /**
+         * `*` when the write was made from no record (RFC 9110 §13.1.2): 412 `/problems/precondition-failed` when one has been made since (on another device), instead of writing over it.
+         */
+        'If-None-Match'?: AnyEntityTag;
     };
     path: {
         sprintId: SprintId;
@@ -2970,6 +3641,10 @@ export type UpdateGoalErrors = {
      */
     409: RevisionConflictError;
     /**
+     * The record has changed since the write's `If-Match` was read; this one was not made.
+     */
+    412: PreconditionFailedError;
+    /**
      * The body is larger than the API takes.
      */
     413: PayloadTooLargeError;
@@ -2977,6 +3652,10 @@ export type UpdateGoalErrors = {
      * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
+    /**
+     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
+     */
+    428: PreconditionRequiredError;
     /**
      * An unexpected failure on the server.
      */
@@ -3203,6 +3882,10 @@ export type SetGoalLinkData = {
          * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
+        /**
+         * The `etag` of the record as read before the write was made (RFC 9110 §13.1.1). When the record has changed since, the write is not made and the answer is 412 `/problems/precondition-failed`; without it, 428 `/problems/precondition-required`. A write sent again with its Idempotency-Key answers what it answered first, before this is compared.
+         */
+        'If-Match': EntityTagList;
     };
     path: {
         sprintId: SprintId;
@@ -3234,6 +3917,10 @@ export type SetGoalLinkErrors = {
      */
     409: RevisionConflictError;
     /**
+     * The record has changed since the write's `If-Match` was read; this one was not made.
+     */
+    412: PreconditionFailedError;
+    /**
      * The body is larger than the API takes.
      */
     413: PayloadTooLargeError;
@@ -3241,6 +3928,10 @@ export type SetGoalLinkErrors = {
      * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
+    /**
+     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
+     */
+    428: PreconditionRequiredError;
     /**
      * An unexpected failure on the server.
      */
@@ -4465,6 +5156,10 @@ export type EditInterruptData = {
          * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
+        /**
+         * The `etag` of the record as read before the write was made (RFC 9110 §13.1.1). When the record has changed since, the write is not made and the answer is 412 `/problems/precondition-failed`; without it, 428 `/problems/precondition-required`. A write sent again with its Idempotency-Key answers what it answered first, before this is compared.
+         */
+        'If-Match': EntityTagList;
     };
     path: {
         sprintId: SprintId;
@@ -4496,6 +5191,10 @@ export type EditInterruptErrors = {
      */
     409: RevisionConflictError;
     /**
+     * The record has changed since the write's `If-Match` was read; this one was not made.
+     */
+    412: PreconditionFailedError;
+    /**
      * The body is larger than the API takes.
      */
     413: PayloadTooLargeError;
@@ -4503,6 +5202,10 @@ export type EditInterruptErrors = {
      * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
+    /**
+     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
+     */
+    428: PreconditionRequiredError;
     /**
      * An unexpected failure on the server.
      */
@@ -4647,6 +5350,10 @@ export type UpdateRetroData = {
          * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
+        /**
+         * The `etag` of the record as read before the write was made (RFC 9110 §13.1.1). When the record has changed since, the write is not made and the answer is 412 `/problems/precondition-failed`; without it, 428 `/problems/precondition-required`. A write sent again with its Idempotency-Key answers what it answered first, before this is compared.
+         */
+        'If-Match': EntityTagList;
     };
     path: {
         sprintId: SprintId;
@@ -4677,6 +5384,10 @@ export type UpdateRetroErrors = {
      */
     409: RevisionConflictError;
     /**
+     * The record has changed since the write's `If-Match` was read; this one was not made.
+     */
+    412: PreconditionFailedError;
+    /**
      * The body is larger than the API takes.
      */
     413: PayloadTooLargeError;
@@ -4684,6 +5395,10 @@ export type UpdateRetroErrors = {
      * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
+    /**
+     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
+     */
+    428: PreconditionRequiredError;
     /**
      * An unexpected failure on the server.
      */
@@ -4960,6 +5675,10 @@ export type DecideCriterionData = {
          * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
+        /**
+         * The `etag` of the record as read before the write was made (RFC 9110 §13.1.1). When the record has changed since, the write is not made and the answer is 412 `/problems/precondition-failed`; without it, 428 `/problems/precondition-required`. A write sent again with its Idempotency-Key answers what it answered first, before this is compared.
+         */
+        'If-Match': EntityTagList;
     };
     path: {
         sprintId: SprintId;
@@ -4990,6 +5709,10 @@ export type DecideCriterionErrors = {
      */
     409: RevisionConflictError;
     /**
+     * The record has changed since the write's `If-Match` was read; this one was not made.
+     */
+    412: PreconditionFailedError;
+    /**
      * The body is larger than the API takes.
      */
     413: PayloadTooLargeError;
@@ -4997,6 +5720,10 @@ export type DecideCriterionErrors = {
      * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
+    /**
+     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
+     */
+    428: PreconditionRequiredError;
     /**
      * An unexpected failure on the server.
      */
@@ -5148,6 +5875,10 @@ export type SetDraftPolicyData = {
          * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
+        /**
+         * The `etag` of the record as read before the write was made (RFC 9110 §13.1.1). When the record has changed since, the write is not made and the answer is 412 `/problems/precondition-failed`; without it, 428 `/problems/precondition-required`. A write sent again with its Idempotency-Key answers what it answered first, before this is compared.
+         */
+        'If-Match': EntityTagList;
     };
     path: {
         criterionId: PlanningCriterionId;
@@ -5178,6 +5909,10 @@ export type SetDraftPolicyErrors = {
      */
     409: RevisionConflictError;
     /**
+     * The record has changed since the write's `If-Match` was read; this one was not made.
+     */
+    412: PreconditionFailedError;
+    /**
      * The body is larger than the API takes.
      */
     413: PayloadTooLargeError;
@@ -5185,6 +5920,10 @@ export type SetDraftPolicyErrors = {
      * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
+    /**
+     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
+     */
+    428: PreconditionRequiredError;
     /**
      * An unexpected failure on the server.
      */

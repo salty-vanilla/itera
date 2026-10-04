@@ -95,6 +95,34 @@ IdempotencyKey:
   pattern: '^"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"(;.*)?$'
   examples: ['"8e03978e-40d5-43e8-bc93-6894a57f9324"']
 
+ETag:
+  description: >-
+    The record's version (ADR 0006 記録ごとの版): a strong entity-tag (RFC
+    9110 §8.8.3). Output only. A write that replaces the record's values
+    sends it back in `If-Match`; the record has changed since when it no
+    longer matches (412). Opaque: compare it whole, never read what is in
+    the quotes (the API now puts a number there, which may change). The
+    version of the record, not a validator of a read's representation at
+    the same path.
+  type: string
+  readOnly: true
+  pattern: '^"[!#-~]*"$'
+  examples: ['"42"']
+EntityTagList:
+  description: >-
+    `If-Match` (RFC 9110 §13.1.1): `*`, or one or more entity-tags, each
+    in double quotes, separated by commas. A weak one (`W/"…"`) never
+    matches: the API compares them strongly.
+  type: string
+  pattern: '^(\*|(W/)?"[!#-~]*"([ \t]*,[ \t]*(W/)?"[!#-~]*")*)$'
+  examples: ['"42"', '*']
+AnyEntityTag:
+  description: >-
+    `If-None-Match: *` (RFC 9110 §13.1.2): the write was made from no
+    record, and is not to be made over one that is there now.
+  type: string
+  enum: ['*']
+
 # Errors (ADR 0006 エラー): Problem Details (RFC 9457), served as
 # `application/problem+json`. `type` is the one identifier a client decides
 # by; it names the kind of problem with a relative URI reference
@@ -181,6 +209,31 @@ RevisionConflictError:
     type: { const: /problems/revision-conflict }
     title: { type: string }
     status: { const: 409 }
+    detail: { type: string }
+PreconditionFailedError:
+  description: >-
+    The record a write replaces is not the version it was made from (its
+    `If-Match`), or is there when it said there was none (`If-None-Match:
+    *`): it changed on another device since it was read. Nothing was done;
+    read it again (ADR 0006 記録ごとの版).
+  type: object
+  required: [type, title, status, detail]
+  properties:
+    type: { const: /problems/precondition-failed }
+    title: { type: string }
+    status: { const: 412 }
+    detail: { type: string }
+PreconditionRequiredError:
+  description: >-
+    A write that replaces a record's values came without `If-Match` (or,
+    where it can make the record, `If-None-Match: *`) (RFC 6585 §3).
+    Nothing was done.
+  type: object
+  required: [type, title, status, detail]
+  properties:
+    type: { const: /problems/precondition-required }
+    title: { type: string }
+    status: { const: 428 }
     detail: { type: string }
 RuleViolationError:
   description: >-

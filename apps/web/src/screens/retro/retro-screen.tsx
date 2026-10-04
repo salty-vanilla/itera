@@ -1,4 +1,5 @@
-import type { SprintItem } from '@itera/api-contract';
+import type { MadeFrom } from '@itera/api-contract/requests';
+import type { AreaId, SprintItem } from '@itera/api-contract';
 import { useNavigate, useRouter, useSearch } from '@tanstack/react-router';
 import { Pin, Rewind, Route } from 'lucide-react';
 import { Icon } from '@/components/ui/icon';
@@ -350,7 +351,15 @@ function RetroView({
                   data={data}
                   readOnly={readOnly}
                   onPin={actions.setPinned}
-                  onAssess={actions.assessGoal}
+                  onAssess={(areaId, assessment) =>
+                    actions.assessGoal(
+                      areaId as AreaId,
+                      assessment,
+                      madeFrom(
+                        data.sprint.goals.find((g) => g.areaId === areaId),
+                      ),
+                    )
+                  }
                   onAddActual={(target, title, anchor) =>
                     setEditing({
                       target,
@@ -380,9 +389,19 @@ function RetroView({
                   readOnly={readOnly}
                   titleOf={data.taskTitleOf}
                   onDraft={actions.draftCriterion}
-                  onDraftPolicy={actions.setDraftPolicy}
+                  onDraftPolicy={(policy) =>
+                    actions.setDraftPolicy(
+                      policy,
+                      madeFrom(data.draft?.criterion),
+                    )
+                  }
                   onDropDraft={actions.dropCriterionDraft}
-                  onDecide={actions.decideCriterion}
+                  onDecide={(decision) =>
+                    actions.decideCriterion(
+                      decision,
+                      madeFrom(data.sprint.criterionUse),
+                    )
+                  }
                   onWriteImprovement={() => setStage('reflect')}
                 />
               )}
@@ -524,3 +543,11 @@ function NotStarted({ sprint, steps }: { sprint: SprintItem; steps: Steps }) {
 }
 
 export { RetroScreen };
+
+/**
+ * A choice is made from the record as it is read now (#321): its etag, or
+ * none when it is not there (the operation then answers that).
+ */
+function madeFrom(record: { readonly etag: string } | undefined): MadeFrom {
+  return record === undefined ? { none: true } : { etag: record.etag };
+}

@@ -1,3 +1,4 @@
+import type { MadeFrom } from '@itera/api-contract/requests';
 import { useRef, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -41,11 +42,16 @@ type InterruptSheetProps = {
   onSubmit: (
     text: string,
     minutes: number | undefined,
+    /** 編集: the note as read when it was first typed in (#321). */
+    from: MadeFrom | undefined,
   ) => boolean | Promise<boolean>;
   /** The save has been sent for a while (useOperation `loading`). */
   loading?: boolean;
-  /** 編集: the note as recorded, and the time it was noted (「10:00」). */
-  editing?: { text: string; minutes?: number; time: string };
+  /**
+   * 編集: the note as recorded, the time it was noted (「10:00」), and its
+   * etag as read (#321).
+   */
+  editing?: { text: string; minutes?: number; time: string; etag: string };
 };
 
 function InterruptSheet({
@@ -66,6 +72,14 @@ function InterruptSheet({
   );
   const text = textField.value;
   const minutes = minutesField.value;
+  // 編集: the note as read when either field was first typed in, which the
+  // save is made from (#321). After a save that did not go through, the
+  // next is made from the note as it then is: the Toast has said why.
+  const typedFrom = useRef<MadeFrom | undefined>(undefined);
+  const typing = () => {
+    if (typedFrom.current === undefined && editing !== undefined)
+      typedFrom.current = { etag: editing.etag };
+  };
   const [errors, setErrors] = useState<{ text?: string; minutes?: string }>({});
   const formRef = useRef<HTMLFormElement>(null);
   const medium = useMediaQuery(MEDIUM_UP, true);
@@ -73,6 +87,7 @@ function InterruptSheet({
     if (!next) {
       textField.drop();
       minutesField.drop();
+      typedFrom.current = undefined;
       setErrors({});
     }
     onOpenChange(next);
@@ -99,7 +114,12 @@ function InterruptSheet({
       change(false);
       return;
     }
-    if (await onSubmit(note, m ?? undefined)) change(false);
+    const from =
+      editing === undefined
+        ? undefined
+        : (typedFrom.current ?? { etag: editing.etag });
+    if (await onSubmit(note, m ?? undefined, from)) change(false);
+    else typedFrom.current = undefined;
   };
   return (
     <Drawer
@@ -130,7 +150,10 @@ function InterruptSheet({
               <TextInput
                 value={text}
                 placeholder="例：障害対応、急な来客"
-                onChange={(e) => textField.set(e.currentTarget.value)}
+                onChange={(e) => {
+                  typing();
+                  textField.set(e.currentTarget.value);
+                }}
               />
             </Field>
             <DurationField
@@ -138,7 +161,10 @@ function InterruptSheet({
               necessity="optional"
               error={errors.minutes}
               value={minutes}
-              onChange={minutesField.set}
+              onChange={(value) => {
+                typing();
+                minutesField.set(value);
+              }}
             />
           </DrawerBody>
           <DrawerFooter>

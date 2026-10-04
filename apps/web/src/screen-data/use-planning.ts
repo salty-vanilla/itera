@@ -1,3 +1,4 @@
+import type { MadeFrom } from '@itera/api-contract/requests';
 import type {
   AreaId,
   AreaPlan as ContractAreaPlan,
@@ -169,7 +170,7 @@ export function usePlanActions(sprintId: SprintId) {
   const excludeAll = useOperation('excludeAllOccurrences', wait);
   const includeAll = useOperation('includeOccurrences', wait);
   const link = useOperation('setGoalLink', wait);
-  const goal = useOperation('setGoal', wait);
+  const goal = useOperation('setGoal', { ...wait, typed: true });
   const once = useOncePerTarget();
   return {
     chooseTasks: async (taskIds: readonly TaskId[]) =>
@@ -197,15 +198,24 @@ export function usePlanActions(sprintId: SprintId) {
           includeAll.run({ sprintId, occurrenceIds: [...occurrenceIds] }),
         )
       )?.ok === true,
-    setGoalLink: async (sprintTaskId: SprintTaskId, goalLink: GoalLink) =>
+    /** `from`: the SprintTask as read (#321). */
+    setGoalLink: async (
+      sprintTaskId: SprintTaskId,
+      goalLink: GoalLink,
+      from: MadeFrom,
+    ) =>
       (
         await once(`link:${sprintTaskId}`, () =>
-          link.run({ sprintId, sprintTaskId, goalLink }),
+          link.run({ sprintId, sprintTaskId, goalLink }, from),
         )
       )?.ok === true,
-    setGoal: async (areaId: AreaId, text: string) =>
-      (await once(`goal:${areaId}`, () => goal.run({ sprintId, areaId, text })))
-        ?.ok === true,
+    /** `from`: the Goal as read when it was typed, or none (#321). */
+    setGoal: async (areaId: AreaId, text: string, from: MadeFrom) =>
+      (
+        await once(`goal:${areaId}`, () =>
+          goal.run({ sprintId, areaId, text }, from),
+        )
+      )?.ok === true,
   };
 }
 
@@ -215,9 +225,12 @@ export function usePlanActions(sprintId: SprintId) {
  * still on its way waits for it, in order (`useOperation` `whileSending`).
  */
 export function useAvailableHoursAction(sprintId: SprintId) {
+  // A failed save puts the field back to the hours as read
+  // (AvailableHoursField), so its Toast does not say the typing stays.
   const set = useOperation('setAvailableHours', { whileSending: 'wait' });
-  return async (hours: number | null) =>
-    (await set.run({ sprintId, hours })).ok;
+  /** `from`: the Sprint as read when the hours were typed (#321). */
+  return async (hours: number | null, from: MadeFrom) =>
+    (await set.run({ sprintId, hours }, from)).ok;
 }
 
 /** 確定: the plan is fixed, with the criterion or without it. */

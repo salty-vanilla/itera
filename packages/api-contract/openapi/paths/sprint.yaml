@@ -109,6 +109,7 @@ sprint:
         required: true
         schema: { $ref: '../schemas/common.yaml#/SprintId' }
       - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+      - $ref: '../parameters.yaml#/IfMatchHeader'
     requestBody:
       required: true
       content:
@@ -125,13 +126,17 @@ sprint:
     responses:
       '204':
         description: Done.
+        headers:
+          ETag: { $ref: '../headers.yaml#/RecordETag' }
       '400': { $ref: '../responses.yaml#/BadRequest' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '412': { $ref: '../responses.yaml#/PreconditionFailed' }
       '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
       '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '428': { $ref: '../responses.yaml#/PreconditionRequired' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
 sprintConfirm:
@@ -186,6 +191,8 @@ sprintGoal:
         required: true
         schema: { $ref: '../schemas/common.yaml#/AreaId' }
       - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+      - $ref: '../parameters.yaml#/OptionalIfMatchHeader'
+      - $ref: '../parameters.yaml#/IfNoneMatchHeader'
     requestBody:
       required: true
       content:
@@ -208,13 +215,17 @@ sprintGoal:
     responses:
       '204':
         description: Done.
+        headers:
+          ETag: { $ref: '../headers.yaml#/RecordETag' }
       '400': { $ref: '../responses.yaml#/BadRequest' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '412': { $ref: '../responses.yaml#/PreconditionFailed' }
       '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
       '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '428': { $ref: '../responses.yaml#/PreconditionRequired' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
 sprintTasks:
@@ -320,6 +331,7 @@ sprintTask:
         required: true
         schema: { $ref: '../schemas/common.yaml#/SprintTaskId' }
       - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+      - $ref: '../parameters.yaml#/IfMatchHeader'
     requestBody:
       required: true
       content:
@@ -333,13 +345,17 @@ sprintTask:
     responses:
       '204':
         description: Done.
+        headers:
+          ETag: { $ref: '../headers.yaml#/RecordETag' }
       '400': { $ref: '../responses.yaml#/BadRequest' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '412': { $ref: '../responses.yaml#/PreconditionFailed' }
       '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
       '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '428': { $ref: '../responses.yaml#/PreconditionRequired' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
   delete:
@@ -975,6 +991,7 @@ interrupt:
         required: true
         schema: { $ref: '../schemas/common.yaml#/InterruptNoteId' }
       - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+      - $ref: '../parameters.yaml#/IfMatchHeader'
     requestBody:
       required: true
       content:
@@ -992,13 +1009,17 @@ interrupt:
     responses:
       '204':
         description: Done.
+        headers:
+          ETag: { $ref: '../headers.yaml#/RecordETag' }
       '400': { $ref: '../responses.yaml#/BadRequest' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '412': { $ref: '../responses.yaml#/PreconditionFailed' }
       '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
       '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '428': { $ref: '../responses.yaml#/PreconditionRequired' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
   delete:
@@ -1032,7 +1053,7 @@ interrupt:
     tags: [Today]
     summary: 元に戻す after 割り込みを消す
     description: >-
-      The client sends back the note as the read gave it, its ID in the path: the same note returns to its place (ADR 0006). Only a note the person deleted from this Sprint comes back: any other ID, whether another person's or nobody's, is refused with the same 404. Refused with 422 if a note with that ID is there again, in this Sprint or in another of the person's, if it was noted later than now or on a day outside the Sprint (in the person's time zone), or if its text is empty.
+      The client sends back the note's values as the read gave them (its time, text and minutes; not its `etag`, which a read adds), its ID in the path: the same note returns to its place (ADR 0006). Only a note the person deleted from this Sprint comes back: any other ID, whether another person's or nobody's, is refused with the same 404. Refused with 422 if a note with that ID is there again, in this Sprint or in another of the person's, if it was noted later than now or on a day outside the Sprint (in the person's time zone), or if its text is empty.
     parameters:
       - name: sprintId
         in: path

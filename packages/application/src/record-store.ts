@@ -8,6 +8,7 @@ import type {
   Result,
 } from '@itera/domain';
 import { createIdSource, type RandomBytes } from './ids';
+import { nextVersions, type RecordVersions } from './versions';
 import {
   applyChanges,
   type Clock,
@@ -78,6 +79,12 @@ export function returning<T>(
 export interface StoreSnapshot {
   readonly records: RecordsWithActivity;
   readonly clock: Clock;
+  /**
+   * The versions of the records (#321): raised by every change the store
+   * runs. Without them (a fixture as it is written), every record is at
+   * version 0.
+   */
+  readonly versions?: RecordVersions;
 }
 
 /**
@@ -110,6 +117,9 @@ export function createMemoryStore(
   { random }: MemoryStoreOptions,
 ): RecordStore {
   let snapshot = initial;
+  // The store's own revision, raised by every change that writes, as the
+  // API raises the person's (ADR 0004 同時の書き込み).
+  let revision = Math.max(0, ...(initial.versions?.values() ?? []));
   const ids = createIdSource(random);
   const listeners = new Set<() => void>();
 
@@ -132,9 +142,17 @@ export function createMemoryStore(
       // Nothing to write (a system check that found nothing): no new
       // snapshot, so the screens are not drawn again.
       if (Object.keys(changes).length > 0 || activities.length > 0) {
+        revision += 1;
+        const records = applyChanges(snapshot.records, changes, activities);
         snapshot = {
           ...snapshot,
-          records: applyChanges(snapshot.records, changes, activities),
+          records,
+          versions: nextVersions(
+            snapshot.versions ?? new Map(),
+            snapshot.records,
+            records,
+            revision,
+          ),
         };
         for (const listener of listeners) listener();
       }

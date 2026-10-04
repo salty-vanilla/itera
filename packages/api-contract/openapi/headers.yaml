@@ -1,0 +1,11 @@
+# Response headers that many operations share.
+
+# The answer of a write that replaced a record's values (ADR 0006 記録ごとの版).
+RecordETag:
+  description: >-
+    The record's etag after this write: what the next write that replaces
+    its values sends in `If-Match`, whether or not the client has read the
+    record again since. Absent when the write removed the record (a Goal
+    written empty). A write sent again with its Idempotency-Key answers the
+    same.
+  schema: { $ref: './schemas/common.yaml#/ETag' }

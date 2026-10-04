@@ -1,3 +1,4 @@
+import type { MadeFrom } from '@itera/api-contract/requests';
 import type {
   AreaId,
   DailySelectionId,
@@ -57,12 +58,13 @@ export function useRunningSprint(sprintId: SprintId): Read<RunningData> {
  * is shown as a Toast (useOperation).
  */
 export function useRunningSprintActions(sprintId: SprintId) {
-  const goal = useOperation('setGoal');
+  const goal = useOperation('setGoal', { typed: true });
   const undoComplete = useOperation('undoCompleteSelection');
   const undoSkip = useOperation('undoSkipSelection');
   return {
-    setGoal: async (areaId: AreaId, text: string) =>
-      (await goal.run({ sprintId, areaId, text })).ok,
+    /** `from`: the Goal as read when it was typed, or none (#321). */
+    setGoal: async (areaId: AreaId, text: string, from: MadeFrom) =>
+      (await goal.run({ sprintId, areaId, text }, from)).ok,
     /** 過去の日の完了を取り消す (#53, F33). */
     undoComplete: async (selectionId: DailySelectionId) =>
       (await undoComplete.run({ sprintId, selectionId })).ok,

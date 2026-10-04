@@ -70,6 +70,7 @@ retro:
         required: true
         schema: { $ref: '../schemas/common.yaml#/SprintId' }
       - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+      - $ref: '../parameters.yaml#/IfMatchHeader'
     requestBody:
       required: true
       content:
@@ -89,13 +90,17 @@ retro:
     responses:
       '204':
         description: Done.
+        headers:
+          ETag: { $ref: '../headers.yaml#/RecordETag' }
       '400': { $ref: '../responses.yaml#/BadRequest' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '412': { $ref: '../responses.yaml#/PreconditionFailed' }
       '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
       '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '428': { $ref: '../responses.yaml#/PreconditionRequired' }
       '500': { $ref: '../responses.yaml#/ServerError' }
 
 retroComplete:
@@ -209,6 +214,7 @@ criterionUse:
         required: true
         schema: { $ref: '../schemas/common.yaml#/SprintId' }
       - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+      - $ref: '../parameters.yaml#/IfMatchHeader'
     requestBody:
       required: true
       content:
@@ -222,11 +228,15 @@ criterionUse:
     responses:
       '204':
         description: Done.
+        headers:
+          ETag: { $ref: '../headers.yaml#/RecordETag' }
       '400': { $ref: '../responses.yaml#/BadRequest' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
       '404': { $ref: '../responses.yaml#/NotFound' }
       '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '412': { $ref: '../responses.yaml#/PreconditionFailed' }
       '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
       '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '428': { $ref: '../responses.yaml#/PreconditionRequired' }
       '500': { $ref: '../responses.yaml#/ServerError' }

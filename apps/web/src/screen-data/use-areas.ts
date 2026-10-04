@@ -1,5 +1,6 @@
 import type { AreaId, EditableArea } from '@itera/api-contract';
 import { listAreasOptions } from '@itera/api-contract/react-query';
+import type { MadeFrom } from '@itera/api-contract/requests';
 import { useQuery } from '@tanstack/react-query';
 import { useApiClient } from '@/api/api-provider';
 import { useRead, type Read } from '@/api/read-state';
@@ -27,7 +28,7 @@ function areasView(data: { view: EditableArea[] }) {
  */
 export function useAreaActions() {
   const create = useOperation('createArea');
-  const rename = useOperation('renameArea');
+  const rename = useOperation('renameArea', { typed: true });
   const archive = useOperation('archiveArea');
   const restore = useOperation('restoreArea');
   const actions = {
@@ -36,8 +37,9 @@ export function useAreaActions() {
       const outcome = await create.run({ name });
       return outcome.ok ? outcome.value.areaId : undefined;
     },
-    renameArea: async (areaId: AreaId, name: string) =>
-      (await rename.run({ areaId, name })).ok,
+    /** `from`: the Area as read when its name was typed (#321). */
+    renameArea: async (areaId: AreaId, name: string, from: MadeFrom) =>
+      (await rename.run({ areaId, name }, from)).ok,
     archiveArea: async (areaId: AreaId) => (await archive.run({ areaId })).ok,
     restoreArea: async (areaId: AreaId) => (await restore.run({ areaId })).ok,
   };

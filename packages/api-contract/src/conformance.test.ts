@@ -6,6 +6,7 @@
 import type {
   BacklogData,
   Clock,
+  ConditionalOperation,
   CurrentSprints,
   DayView,
   EditableArea,
@@ -19,7 +20,12 @@ import type {
 import type { BacklogSlice, User } from '@itera/domain';
 import { describe, expectTypeOf, it } from 'vitest';
 import type * as Gen from './index';
-import type { OperationSurfaces, SurfaceId, SurfaceResponse } from './requests';
+import type {
+  ConditionalName,
+  OperationSurfaces,
+  SurfaceId,
+  SurfaceResponse,
+} from './requests';
 import type { Equal, Plain, WithNull } from './testing';
 
 /** The operations a surface takes. */
@@ -132,6 +138,10 @@ describe('the contract and packages/application', () => {
   it("returns each read's result as the response's view, null for none", () => {
     expectTypeOf<ReadMismatch>().toEqualTypeOf<never>();
     expectTypeOf<ClockMismatch>().toEqualTypeOf<never>();
+  });
+
+  it('names the version on the surfaces of the operations the application checks (#321)', () => {
+    expectTypeOf<ConditionalName>().toEqualTypeOf<ConditionalOperation>();
   });
 
   it("returns the person's settings as the domain's User without its ID", () => {

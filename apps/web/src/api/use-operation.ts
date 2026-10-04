@@ -1,8 +1,12 @@
 import type { Client } from '@itera/api-contract/create-client';
 import * as sdk from '@itera/api-contract/client';
 import {
+  conditionHeaders,
   idempotencyKeyHeaders,
   requestOf,
+  surfaces,
+  type ConditionalName,
+  type MadeFrom,
   type OperationName,
   type PlainInput,
   type PlainOutput,
@@ -32,8 +36,15 @@ export const SEND_AGAIN_DELAYS: readonly number[] = [500, 1000];
 /** The headers of a write: its Idempotency-Key (ADR 0006 冪等キー). */
 export type WriteHeaders = ReturnType<typeof idempotencyKeyHeaders>;
 
-/** One write: its input, and the key it is sent with each time. */
-type Write<Input> = { readonly input: Input; readonly key: string };
+/**
+ * One write: its input, the key it is sent with each time, and, for a write
+ * that replaces a record's values, the record as it was read (#321).
+ */
+type Write<Input> = {
+  readonly input: Input;
+  readonly key: string;
+  readonly from?: MadeFrom;
+};
 
 /**
  * One operation of packages/application, by its name, sent as its request
@@ -60,20 +71,43 @@ type Write<Input> = { readonly input: Input; readonly key: string };
  *   sent again), the Toast has もう一度保存, which sends it once more with the
  *   same key. Without a session there is no Toast: the person is sent to
  *   sign in.
+ * - An operation that replaces a record's values (`ConditionalName`: the
+ *   contract's PATCHes) is run with the record as it was read: `run(input,
+ *   { etag })`, or `{ none: true }` for a Goal not written yet. It is sent
+ *   with `If-Match` (`If-None-Match: *`), after the record's own writes
+ *   from this client have moved it on (`ownVersions`). When the record has
+ *   changed on another device since, it is not made (412): the Toast says
+ *   so, and with `typed` (a field's typing, which the field keeps) says
+ *   that saving again puts the typing over it (ADR 0005 エラーと送信中).
  * - `pending` is true while it is being sent (block the control), and
  *   `loading` once that has lasted `LOADING_DELAY` (show the spinner and
  *   its words: Button `loading`, IconButton `loading`).
  */
 export function useOperation<N extends OperationName>(
   name: N,
-  options: { whileSending?: 'drop' | 'wait' } = {},
+  options: { whileSending?: 'drop' | 'wait'; typed?: boolean } = {},
 ) {
-  return useSend<PlainInput<N>, PlainOutput<N>>(
+  const { run, ...rest } = useSend<PlainInput<N>, PlainOutput<N>>(
     name,
-    (client, input, headers) => sendOperation(client, name, input, headers),
+    (client, input, headers, from) =>
+      sendOperation(client, name, input, headers, from),
     options,
   );
+  return {
+    ...rest,
+    run: run as unknown as (
+      ...args: RunArgs<N>
+    ) => Promise<Outcome<PlainOutput<N>>>,
+  };
 }
+
+/**
+ * `run`'s arguments: the input (none for an operation without one), and
+ * the record as it was read for an operation that replaces its values.
+ */
+type RunArgs<N extends OperationName> = N extends ConditionalName
+  ? [input: PlainInput<N>, from: MadeFrom]
+  : Args<PlainInput<N>>;
 
 /**
  * What `useOperation` does for one write of the contract, for any request
@@ -89,16 +123,20 @@ export function useSend<Input, Output>(
     client: Client,
     input: Input,
     headers: WriteHeaders,
+    from: MadeFrom | undefined,
   ) => Promise<Output>,
-  { whileSending = 'drop' }: { whileSending?: 'drop' | 'wait' } = {},
+  {
+    whileSending = 'drop',
+    typed = false,
+  }: { whileSending?: 'drop' | 'wait'; typed?: boolean } = {},
 ) {
   const client = useApiClient();
   const toast = useToast();
   const closeStaleRetry = useCloseActionToast(SAVE_FAILED_KIND);
   const { mutateAsync, isPending } = useMutation({
     mutationKey: [key],
-    mutationFn: ({ input, key: idempotencyKey }: Write<Input>) =>
-      send(client, input, idempotencyKeyHeaders(idempotencyKey)),
+    mutationFn: ({ input, key: idempotencyKey, from }: Write<Input>) =>
+      send(client, input, idempotencyKeyHeaders(idempotencyKey), from),
     scope: { id: OPERATION_SCOPE },
     retry: (failures, error) =>
       failures < SEND_AGAIN_DELAYS.length && sendsAgain(error),
@@ -126,19 +164,26 @@ export function useSend<Input, Output>(
           closeStaleRetry();
           return { ok: true, value };
         } catch (error) {
-          const failed = saveFailedToast(failureOf(error), () => {
-            void once();
-          });
+          const failed = saveFailedToast(
+            failureOf(error),
+            () => {
+              void once();
+            },
+            { typed },
+          );
           if (failed !== undefined) toast.show(failed);
           return { ok: false };
         }
       };
       return once();
     },
-    [mutateAsync, toast, closeStaleRetry],
+    [mutateAsync, toast, closeStaleRetry, typed],
   );
   const run = useCallback(
-    async (...[input]: Args<Input>): Promise<Outcome<Output>> => {
+    async (...args: Args<Input>): Promise<Outcome<Output>> => {
+      // An operation that replaces values has its record after the input
+      // (`useOperation`'s `run`).
+      const [input, from] = args as unknown as [Input, MadeFrom | undefined];
       if (whileSending === 'drop') {
         if (sending.current) return { ok: false };
         sending.current = true;
@@ -147,6 +192,7 @@ export function useSend<Input, Output>(
         return await attempt({
           input: input as Input,
           key: crypto.randomUUID(),
+          ...(from === undefined ? {} : { from }),
         });
       } finally {
         if (whileSending === 'drop') sending.current = false;
@@ -182,17 +228,98 @@ export async function written(sent: Promise<Sent>): Promise<unknown> {
 
 /**
  * Sends an operation as its request with the generated client's function
- * of the surface.
+ * of the surface; one that replaces a record's values with the version it
+ * was made from (`If-Match`), moved on by this client's own writes to the
+ * record since.
  */
 async function sendOperation<N extends OperationName>(
   client: Client,
   name: N,
   input: PlainInput<N>,
   headers: WriteHeaders,
+  from: MadeFrom | undefined,
 ): Promise<PlainOutput<N>> {
   const { operationId, ...parts } = requestOf(name, input);
   const send = sdk[operationId] as (options: object) => Promise<Sent>;
-  return (await written(
-    send({ ...parts, headers, client, throwOnError: false }),
-  )) as PlainOutput<N>;
+  const resource = resourceOf(operationId, parts);
+  const made =
+    from === undefined ? undefined : ownVersions(client).of(resource, from);
+  const sent = send({
+    ...parts,
+    headers: {
+      ...headers,
+      ...(made === undefined ? {} : conditionHeaders(made)),
+    },
+    client,
+    throwOnError: false,
+  });
+  const data = await written(sent);
+  if (made !== undefined) {
+    // Without an ETag, the write removed the record (a Goal written empty).
+    const etag = (await sent).response?.headers.get('ETag');
+    ownVersions(client).moved(resource, made, etag ?? null);
+  }
+  return data as PlainOutput<N>;
+}
+
+/** The resource a write is on: its method and its path. */
+function resourceOf(
+  operationId: keyof typeof surfaces,
+  parts: { readonly path?: unknown },
+): string {
+  const { method, url } = surfaces[operationId];
+  const values = (parts.path ?? {}) as Record<string, string>;
+  return `${method} ${url.replace(/\{(\w+)\}/g, (_, name: string) => values[name] ?? '')}`;
+}
+
+/**
+ * The versions this client's own writes moved its records on to (#321): a
+ * write that replaced a record's values answers the record's new etag, and
+ * a later write made from the version before it (another field of the same
+ * form, typed before the first was saved) is sent with the new one. Only
+ * this client's own writes move a version here: another device's change
+ * keeps the old one, which the API refuses (412). One per client (the API
+ * and the browser mock each have one).
+ */
+const versionsByClient = new WeakMap<Client, OwnVersions>();
+
+type OwnVersions = {
+  /** What a write made from `from` is sent as, after this client's own writes. */
+  of(resource: string, from: MadeFrom): MadeFrom;
+  /**
+   * A write made from `from` went through, and the record is now at `etag`,
+   * or gone (`null`): the next write is made from none.
+   */
+  moved(resource: string, from: MadeFrom, etag: string | null): void;
+};
+
+function ownVersions(client: Client): OwnVersions {
+  const known = versionsByClient.get(client);
+  if (known !== undefined) return known;
+  const next = new Map<string, MadeFrom>();
+  const keyOf = (resource: string, from: MadeFrom) =>
+    `${resource} ${'etag' in from ? from.etag : '*'}`;
+  const versions: OwnVersions = {
+    of(resource, from) {
+      // Each step is a write of this client's that went through. A record
+      // never comes back to an etag, but it can be gone again (made, removed,
+      // made again), so a step already taken ends the walk.
+      const seen = new Set<string>();
+      let made = from;
+      for (;;) {
+        const key = keyOf(resource, made);
+        const step = next.get(key);
+        if (step === undefined || seen.has(key)) return made;
+        seen.add(key);
+        made = step;
+      }
+    },
+    moved(resource, from, etag) {
+      const to: MadeFrom = etag === null ? { none: true } : { etag };
+      if (keyOf(resource, from) === keyOf(resource, to)) return;
+      next.set(keyOf(resource, from), to);
+    },
+  };
+  versionsByClient.set(client, versions);
+  return versions;
 }

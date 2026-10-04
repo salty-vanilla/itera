@@ -223,6 +223,13 @@ const owner = () =>
 const instantColumn = (name: string) => text(name).$type<Instant>();
 const localDateColumn = (name: string) => text(name).$type<LocalDate>();
 const position = () => integer('position').notNull();
+/**
+ * The user's revision of the save that last wrote the row's values (not
+ * only its `position`): the version of the record the row holds, sent back
+ * as its etag (ADR 0004 「同時の書き込み」, #321). 0 for a row written before
+ * it was kept.
+ */
+const revision = () => integer('revision').notNull().default(0);
 
 /** The domain's `User`: the user's own settings, 1:1 with Better Auth's `user`. */
 export const userSettings = sqliteTable('user_settings', {
@@ -233,6 +240,7 @@ export const userSettings = sqliteTable('user_settings', {
   displayName: text('display_name').notNull(),
   timeZone: text('time_zone').$type<TimeZone>().notNull(),
   weekStartsOn: integer('week_starts_on').$type<DayOfWeek>().notNull(),
+  revision: revision(),
 });
 
 /**
@@ -267,6 +275,7 @@ export const area = sqliteTable(
     color: integer('color').$type<AreaColor>().notNull(),
     order: integer('order').notNull(),
     archived: integer('archived', { mode: 'boolean' }).notNull(),
+    revision: revision(),
   },
   (table) => [index('area_user_id_idx').on(table.userId)],
 );
@@ -300,6 +309,7 @@ export const task = sqliteTable(
     createdVia: text('created_via').$type<TaskCreatedVia>().notNull(),
     completedAt: instantColumn('completed_at'),
     archivedAt: instantColumn('archived_at'),
+    revision: revision(),
   },
   (table) => [index('task_user_id_idx').on(table.userId)],
 );
@@ -317,6 +327,7 @@ export const subtask = sqliteTable(
     estimate: real('estimate'),
     done: integer('done', { mode: 'boolean' }).notNull(),
     doneAt: instantColumn('done_at'),
+    revision: revision(),
   },
   (table) => [index('subtask_task_id_idx').on(table.taskId)],
 );
@@ -335,6 +346,7 @@ export const estimateSuggestion = sqliteTable(
     rationale: text('rationale').notNull(),
     createdAt: instantColumn('created_at').notNull(),
     state: text('state').$type<SuggestionState>().notNull(),
+    revision: revision(),
   },
   (table) => [
     index('estimate_suggestion_task_id_idx').on(table.taskId),
@@ -354,6 +366,7 @@ export const estimateSuggestionUncertainty = sqliteTable(
       .references(() => estimateSuggestion.id, { onDelete: 'cascade' }),
     position: position(),
     text: text('text').notNull(),
+    revision: revision(),
   },
   (table) => [primaryKey({ columns: [table.suggestionId, table.position] })],
 );
@@ -365,6 +378,7 @@ export const recurrenceRule = sqliteTable(
     // The domain's rule has no owner; it is the user whose records hold it.
     userId: owner(),
     taskId: text('task_id').$type<TaskId>().notNull(),
+    revision: revision(),
   },
   (table) => [index('recurrence_rule_user_id_idx').on(table.userId)],
 );
@@ -384,6 +398,7 @@ export const recurrenceRuleVersion = sqliteTable(
     dayOfMonth: integer('day_of_month'),
     effectiveFrom: localDateColumn('effective_from').notNull(),
     effectiveTo: localDateColumn('effective_to'),
+    revision: revision(),
   },
   (table) => [primaryKey({ columns: [table.ruleId, table.version] })],
 );
@@ -395,6 +410,7 @@ export const recurrenceRuleVersionDay = sqliteTable(
     version: integer('version').notNull(),
     position: position(),
     dayOfWeek: integer('day_of_week').$type<DayOfWeek>().notNull(),
+    revision: revision(),
   },
   (table) => [
     primaryKey({ columns: [table.ruleId, table.version, table.position] }),
@@ -421,6 +437,7 @@ export const occurrence = sqliteTable(
     materializedAt: instantColumn('materialized_at').notNull(),
     state: text('state').$type<OccurrenceState>().notNull(),
     stateChangedAt: instantColumn('state_changed_at').notNull(),
+    revision: revision(),
   },
   (table) => [
     index('occurrence_user_id_idx').on(table.userId),
@@ -449,6 +466,7 @@ export const planningCriterion = sqliteTable(
     state: text('state').$type<CriterionState>().notNull(),
     replacedBy: text('replaced_by').$type<PlanningCriterionId>(),
     createdAt: instantColumn('created_at').notNull(),
+    revision: revision(),
   },
   (table) => [
     index('planning_criterion_user_id_idx').on(table.userId),
@@ -471,6 +489,7 @@ export const sprint = sqliteTable(
     availableHours: real('available_hours'),
     plannedAvailableHours: real('planned_available_hours'),
     confirmedAt: instantColumn('confirmed_at'),
+    revision: revision(),
   },
   (table) => [
     // Invariant 11, in part: one Sprint per week start. Overlapping periods
@@ -498,6 +517,7 @@ export const sprintGoal = sqliteTable(
     text: text('text').notNull(),
     plannedText: text('planned_text'),
     selfAssessment: text('self_assessment').$type<SelfAssessment>(),
+    revision: revision(),
   },
   // Invariant 13: one Goal per Sprint and Area.
   (table) => [primaryKey({ columns: [table.sprintId, table.areaId] })],
@@ -511,6 +531,7 @@ export const sprintAreaSnapshot = sqliteTable(
     position: position(),
     name: text('name').notNull(),
     order: integer('order').notNull(),
+    revision: revision(),
   },
   (table) => [primaryKey({ columns: [table.sprintId, table.areaId] })],
 );
@@ -526,6 +547,7 @@ export const criterionUse = sqliteTable('criterion_use', {
     mode: 'boolean',
   }).notNull(),
   retroDecision: text('retro_decision').$type<RetroDecision>(),
+  revision: revision(),
 });
 
 export const sprintTask = sqliteTable(
@@ -560,6 +582,7 @@ export const sprintTask = sqliteTable(
     planSuggestionHi: real('plan_suggestion_hi'),
     planOccurrenceCount: integer('plan_occurrence_count'),
     carriedFrom: text('carried_from').$type<SprintTaskId>(),
+    revision: revision(),
   },
   (table) => [
     index('sprint_task_sprint_id_idx').on(table.sprintId),
@@ -581,6 +604,7 @@ export const sprintTaskOccurrence = sqliteTable(
       .references(() => sprintTask.id, { onDelete: 'cascade' }),
     occurrenceId: text('occurrence_id').$type<OccurrenceId>().notNull(),
     position: position(),
+    revision: revision(),
   },
   (table) => [
     primaryKey({ columns: [table.sprintTaskId, table.occurrenceId] }),
@@ -609,6 +633,7 @@ export const dailySelection = sqliteTable(
       NonNullable<DailySelection['closedBefore']>['resolution']
     >(),
     closedBeforeAt: instantColumn('closed_before_at'),
+    revision: revision(),
   },
   (table) => [
     index('daily_selection_sprint_id_idx').on(table.sprintId),
@@ -641,6 +666,7 @@ export const actualTime = sqliteTable(
     date: localDateColumn('date').notNull(),
     via: text('via').$type<ActualTimeVia>().notNull(),
     recordedAt: instantColumn('recorded_at').notNull(),
+    revision: revision(),
   },
   (table) => [
     primaryKey({ columns: [table.sprintId, table.position] }),
@@ -657,6 +683,7 @@ export const interruptNote = sqliteTable(
     at: instantColumn('at').notNull(),
     text: text('text').notNull(),
     minutes: real('minutes'),
+    revision: revision(),
   },
   (table) => [index('interrupt_note_sprint_id_idx').on(table.sprintId)],
 );
@@ -675,6 +702,7 @@ export const retro = sqliteTable('retro', {
   improvementCriterionId: text(
     'improvement_criterion_id',
   ).$type<PlanningCriterionId>(),
+  revision: revision(),
 });
 
 /** A Retro's `pins`. Without IDs: keyed by position. */
@@ -689,6 +717,7 @@ export const retroPin = sqliteTable(
     kind: text('kind').$type<RetroPin['kind']>().notNull(),
     // NULL for `availableHours`.
     recordId: text('record_id'),
+    revision: revision(),
   },
   (table) => [primaryKey({ columns: [table.sprintId, table.position] })],
 );
@@ -741,6 +770,11 @@ export const idempotencyKey = sqliteTable(
     status: integer('status').notNull(),
     /** The response's JSON as it was sent; NULL without a body (204). */
     body: text('body'),
+    /**
+     * The response's ETag: the record's new etag after a write that
+     * replaced its values (#321). NULL for other writes.
+     */
+    etag: text('etag'),
     createdAt: instantColumn('created_at').notNull(),
   },
   (table) => [

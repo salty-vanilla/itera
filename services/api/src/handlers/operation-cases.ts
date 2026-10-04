@@ -12,6 +12,8 @@ import { httpOf } from '@itera/api-contract/testing';
 import {
   createIdSource,
   type Clock,
+  currentCondition,
+  type Condition,
   type OperationName,
   type Records,
 } from '@itera/application';
@@ -76,7 +78,7 @@ export async function setupFixtureApp(
     .values({ id: userId, name: 'わたし', email: 'me@example.com' });
   await saveRecords(db, {
     userId,
-    loaded: { revision: 0, records: null },
+    loaded: { revision: 0, records: null, versions: new Map() },
     changes: records,
     activities,
     // Brought up to the fixture's day. The app's clock is later, so the
@@ -94,9 +96,23 @@ export async function setupFixtureApp(
       now: () => current,
     }),
   );
-  /** Sends an operation as its request of the contract (requestOf). */
-  const post = (name: OperationName, input: unknown) => {
-    const { url, init } = httpRequest(name, input);
+  /**
+   * Sends an operation as its request of the contract (requestOf), made
+   * from the records as they are saved now: a write that replaces values
+   * names their version (`If-Match`, #321).
+   */
+  const post = async (name: OperationName, input: unknown) => {
+    const loaded = await loadRecords(db, userId);
+    const condition =
+      loaded.records === null
+        ? undefined
+        : currentCondition(
+            name,
+            input as never,
+            loaded.records,
+            loaded.versions,
+          );
+    const { url, init } = httpRequest(name, input, condition);
     return app.request(url, init, testEnv);
   };
   return {
@@ -116,10 +132,14 @@ export async function setupFixtureApp(
       return response;
     },
     get: (path: string) => app.request(`/api${path}`, {}, testEnv),
-    /** The user's records as saved, with their revision. */
+    /** The user's records as saved, with their revision and versions. */
     async saved() {
       const loaded = await loadRecords(db, userId);
-      return { revision: loaded.revision, records: loaded.records! };
+      return {
+        revision: loaded.revision,
+        records: loaded.records!,
+        versions: loaded.versions,
+      };
     },
   };
 }
@@ -171,17 +191,38 @@ function responseOf(name: OperationName, input: unknown) {
 
 /**
  * An operation and its input as an HTTP request of the contract (`httpOf`),
- * from the app's own origin.
+ * from the app's own origin, with the version it was made from.
  */
-export function httpRequest(name: OperationName, input: unknown) {
+export function httpRequest(
+  name: OperationName,
+  input: unknown,
+  condition?: Condition,
+) {
   const { method, url, body } = httpOf(requestOf(name, input as never));
   return {
     url,
     init: {
       method,
-      headers: { 'Content-Type': 'application/json', ...writeHeaders() },
+      headers: {
+        'Content-Type': 'application/json',
+        ...writeHeaders(),
+        ...conditionHeadersOf(condition),
+      },
       ...(body === undefined ? {} : { body }),
     },
+  };
+}
+
+/** The headers that send a condition (#321). */
+export function conditionHeadersOf(
+  condition: Condition | undefined,
+): Record<string, string> {
+  const { ifMatch, ifNoneMatch } = condition ?? {};
+  return {
+    ...(ifMatch === undefined
+      ? {}
+      : { 'If-Match': ifMatch === '*' ? '*' : ifMatch.join(', ') }),
+    ...(ifNoneMatch === undefined ? {} : { 'If-None-Match': ifNoneMatch }),
   };
 }
 

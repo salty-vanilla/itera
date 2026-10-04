@@ -21,7 +21,6 @@ import {
   type RecurrencePattern,
   type RecurrenceSummary,
   type SprintTask,
-  type Task,
   type TaskId,
 } from '@itera/domain';
 import type { Clock, Records } from './records';
@@ -34,9 +33,10 @@ import {
   type ClosedResolution,
   type ListedResolution,
 } from './today-view';
+import { taggedIn, type TaggedRecords, type TaggedTask } from './versions';
 
 export interface BacklogItem {
-  readonly task: Task;
+  readonly task: TaggedTask;
   /** The Area's current name (the Backlog shows current names, F5). */
   readonly area?: { readonly name: string; readonly color: AreaColor };
   /** 持ち越し N回（Sprint M から）(F25, F26). */
@@ -105,8 +105,8 @@ export interface BacklogItem {
 }
 
 export function backlogItem(
-  task: Task,
-  records: Records,
+  task: TaggedTask,
+  records: TaggedRecords,
   clock: Clock,
 ): BacklogItem {
   const area = records.areas.find((a) => a.id === task.areaId);
@@ -270,11 +270,11 @@ export interface BacklogData {
 }
 
 export function backlogData(
-  records: Records,
+  records: TaggedRecords,
   clock: Clock,
   filter: BacklogFilter,
 ): BacklogData {
-  const all = backlogView(records.tasks);
+  const all = backlogView(records.tasks).map(taggedIn(records.tasks));
   const context = {
     user: records.user,
     today: clock.today,

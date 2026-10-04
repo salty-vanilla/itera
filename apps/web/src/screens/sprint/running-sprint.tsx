@@ -1,3 +1,4 @@
+import type { MadeFrom } from '@itera/api-contract/requests';
 import type { TaskId } from '@itera/api-contract';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { Info, Rewind, Route } from 'lucide-react';
@@ -184,6 +185,7 @@ function RunningSprint({
                       : `${count} · ${formatPlanningTotal(total)}`
                 }
                 goal={block.goal?.text}
+                goalEtag={block.goal?.etag}
                 planned={
                   block.goal === undefined
                     ? undefined
@@ -196,10 +198,11 @@ function RunningSprint({
                 onSave={
                   block.area.id === null || !running
                     ? undefined
-                    : (text) =>
+                    : (text, from) =>
                         actions.setGoal(
                           block.area.id as NonNullable<typeof block.area.id>,
                           text,
+                          from,
                         )
                 }
               >
@@ -377,7 +380,9 @@ function Outlook({
 }: {
   data: RunningData;
   /** Absent once the Sprint has ended: the hours are read only. */
-  onHours: ((hours: number | null) => boolean | Promise<boolean>) | undefined;
+  onHours:
+    | ((hours: number | null, from: MadeFrom) => boolean | Promise<boolean>)
+    | undefined;
 }) {
   const ids = useId();
   const { planned, current } = data.availableHours;
@@ -421,6 +426,7 @@ function Outlook({
         ) : (
           <AvailableHoursField
             value={current}
+            etag={data.sprint.etag}
             onChange={onHours}
             label="使える時間"
             description="確定後も変えられます（確定したときの値は残ります）。"
