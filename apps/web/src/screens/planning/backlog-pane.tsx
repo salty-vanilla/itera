@@ -183,7 +183,7 @@ function BacklogPane({
             {candidates.recurring.map(({ task, occurrences }) => (
               <li
                 key={task.id}
-                className="group/row relative flex flex-col gap-1 border-b border-border-soft -mx-2 px-2 py-2"
+                className="group/row relative flex flex-col gap-1 border-b border-border-soft py-2"
                 {...rowKeyHandlers({
                   onEstimate: () => onEstimateTask(task.id),
                 })}
@@ -255,9 +255,11 @@ function BacklogPane({
 }
 
 // The whole row opens the Task and the ring goes round the row, as a Task
-// Row's does (#358). The row's controls sit above the title, at z-1.
+// Row's does (#358). The box reaches 8px past the row on both sides (the
+// pane's padding), so that the ring keeps clear of the controls and the
+// text, which start at the row's edge. The controls sit above it, at z-1.
 const titleButtonClass =
-  'min-w-0 text-left text-task text-ink after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:focus-ring-inset';
+  'min-w-0 text-left text-task text-ink after:absolute after:inset-y-0 after:-inset-x-2 focus-visible:outline-none focus-visible:after:focus-ring-inset';
 
 /** The row's `…`: shown on hover and focus from 768px, as a Task Row's is. */
 function EstimateActions({
@@ -413,7 +415,7 @@ function CandidateItem({
     <li
       data-chosen={chosen || undefined}
       className={cn(
-        'group/row relative -mx-2 flex min-h-row-touch items-center gap-2 border-b border-border-soft px-2 py-1 medium:min-h-row-task',
+        'group/row relative flex min-h-row-touch items-center gap-2 border-b border-border-soft py-1 medium:min-h-row-task',
         chosen && 'bg-here-subtle',
       )}
       {...rowKeyHandlers({ onEstimate })}
