@@ -106,11 +106,11 @@ type CommandResult<T> =
 - **繰り返しの SprintTask**：`occurrenceIds` は Sprint に含めた（外していない）回。Planning で最後の回を外すと、draft の SprintTask はなくなる。Sprint 中に外した回を戻すと、その回だけの SprintTask（origin = midSprint）を新しく作る。
 - **planSnapshot**：計画値に加えて、その時点の Estimate・提示中の提案・timeBasis・回数（繰り返しのとき）を写し取る（Retro の「計画時の Estimate」用）。繰り返しの計画値は 1 回の値 × 回数。 見積もりのないサブタスクの件数は回数倍にしない（毎回同じサブタスクなので）。
 - **Goal**：Planning では空の文で Goal を消せる。確定後は文を変えられるが消せない。確定後に新しく書いた Goal には `plannedText` がない。（F16）
-- **Area のスナップショット**：確定時の、アーカイブしていないすべての Area と、Sprint の Task が使っているアーカイブ済みの Area。F9 で足すのは Sprint が active の間だけで、並び順は末尾。Task の Area を Sprint 中に変えたときは、呼び出し側が `noteAreaInSprint` を呼ぶ。
+- **Area のスナップショット**：確定時の、アーカイブしていないすべての Area と、Sprint の Task が使っているアーカイブ済みの Area（`areasAtConfirm`。確定前の Planning も同じ Area を出す。#349）。F9 で足すのは Sprint が active の間だけで、並び順は末尾。Task の Area を Sprint 中に変えたときは、呼び出し側が `noteAreaInSprint` を呼ぶ。
 - **容量**：`sprintTotals` は draft を今の値（Planning の Check の基準を当てたプレビュー）で、確定後の SprintTask を planSnapshot で数える。`CapacityStatus` は `within`（上限でも収まる）/ `mayExceed`（下限は収まるが上限は超える）/ `exceeds`（下限でも超える）。色や文言は画面が決める。
-- **計画に数える SprintTask**：`isCounted` は Planning と Sprint 中の合計用で、removed と carriedOver を数えない。Retro の「計画時の合計」（#24）は持ち越した SprintTask も数えるので、別の規則にする。
+- **計画に数える SprintTask**：`isCounted` は Planning と Sprint 中の合計用で、removed と carriedOver を数えない。Retro の「計画時の合計」（#24）と確定した Sprint の画面は持ち越した SprintTask も数えるので、別の規則（`isInConfirmedPlan`：planned・done・carriedOver。#349）にする。
 - **確定時の計画基準（F42、#162）**：`confirmSprint` は、`applyCriterion` が true でも、基準が当たった planSnapshot（`criterionApplied`）が 1 件もなければ `appliedAtConfirm: false` にする。CriterionUse は Active な基準があれば必ず作る（不変条件 36）。
-- **確定の前提**：draft の Task が Planning 中に完了・アーカイブされていたら確定しない（外してから確定する）。持ち越し候補（`carryOverCandidates`）は、直前の Sprint の、active で繰り返しでない Task だけ。
+- **確定の前提**：draft の Task が Planning 中に完了・アーカイブされていたら確定しない（外してから確定する）。確定できない理由は `confirmBlockers` がすべて、確かめる順に返し、`checkConfirmSprint` はその最初のものを断る理由にする（#349）。持ち越し候補（`carryOverCandidates`）は、直前の Sprint の、active で繰り返しでない Task だけ。Task を選ぶときにつなぐ持ち越し（`carriedOverFrom`）は、直前の Sprint のその Task の carriedOver の SprintTask（#349）。
 - **Rule の変更（F1・F7）**：Backlog からの変更は `changeRuleForNextSprint` を使う。効き始める日は `nextUnconfirmedSprintStart`（最新の版がそれより後に始まるなら、その日）で、確定済みの Sprint は変わらない。結果の `effectiveFrom` で「次の Sprint から反映」を出す。Planning 中の Sprint があれば（その期間の生成は済んでいるので）、その Rule の回と draft の SprintTask を作り直し、捨てた回は `occurrenceDiscarded` として記録する（呼び出し側は `discarded` の記録を消す）。生成が 0 件だった draft にも、新しい版の回が入る。
 - **次の回の `projectFrom`**：`projectFrom(sprints, today)` で求める。
 - **Sprint から外す・戻す（F13・F14）**：`removeFromSprint` は planned → removed。繰り返しなら、その SprintTask の Pending の回を Excluded にする（完了・スキップ済みはそのまま）。`restoreToSprint` は同じ SprintTask を removed → planned に戻し、繰り返しなら Excluded の回を Pending に戻す。外した Task を `addTaskMidSprint` でもう一度足すことはできない（不変条件 14。戻すときは `restoreToSprint`）。 `occurrences` には、その SprintTask の回を漏れなく渡すのは呼び出し側の責任（渡さなかった回は変わらない）。外した繰り返しの回は `addOccurrenceMidSprint` で足せない（1 つの回は 1 つの SprintTask に属する。戻すときは `restoreToSprint`）。
@@ -134,7 +134,7 @@ type CommandResult<T> =
 - **連続見送り**（`deferralStreak`）：同じ Task の選択を Sprint をまたいで日付順（同じなら選んだ日時、ID の順）に並べ、最後から数える。deferred を数え、unresolved とまだ開いている選択は飛ばし、paused・done・removed・skipped で止める（F4・F8）。
 - **昨日の続き**（`yesterdaysContinuation`）：前日に paused だった Task のうち、今の Sprint で planned で、今日まだ選んでいないもの。週をまたぐ持ち越しも拾う（F6）。繰り返しなら、paused だった回（`occurrenceId`）も返す。
 - **今週の完了**（`weekProgress`）：繰り返しでない Task は 1 件、繰り返しは今週の回ごとに 1 件と数え、完了した数と合わせて返す。今週から外した Task、Planning で外した回、スキップした回は数えない（F32）。
-- **今日の残り**（`todayRemaining`）：その日の開いている選択の件数と、planSnapshot から出した見込み時間（繰り返しは 1 回分）。日次の容量や超過の判定はしない（不変条件 25）。
+- **今日の残り**（`todayRemaining`）：その日の開いている選択の件数と、planSnapshot から出した見込み時間（繰り返しは 1 回分。`occurrenceValue`、#349）。日次の容量や超過の判定はしない（不変条件 25）。
 
 ## Review と Retro で決めた細部（#24）
 
@@ -150,7 +150,7 @@ type CommandResult<T> =
 ## Backlog の画面で決めた細部（#39）
 
 - **Sprint の番号**（`sprintNumber`、F25）：作成順の通し番号（1 から）。新しい Sprint はそれまでのどの Sprint よりも後に始まる（不変条件 11）ので、開始日の順に数えれば作成順になる。保存しない。
-- **持ち越し回数**（`carryOverOf`、F26）：Task の最新の SprintTask から、`carryCount`（carriedFrom の連なり）に、その SprintTask 自身が carriedOver なら 1 を足す。持ち越しから選び直して今の Sprint にある間も回数を保ち、持ち越しを使わずに選び直すと数え直す。Planning 中の Draft は最新とみなさない（F36）ので、実行中の Sprint の週に次の Sprint で選んでも回数は消えず、数え直しは確定したときから効く。`fromSprintId` は連なりの最初の Sprint（「Sprint 13から」）。
+- **持ち越し回数**（`carryOverOf`、F26）：Task の最新の SprintTask から、`carryCount`（carriedFrom の連なり。たどるのは `carriedFromChain` だけ、#349）に、その SprintTask 自身が carriedOver なら 1 を足す。持ち越しから選び直して今の Sprint にある間も回数を保ち、持ち越しを使わずに選び直すと数え直す。Planning 中の Draft は最新とみなさない（F36）ので、実行中の Sprint の週に次の Sprint で選んでも回数は消えず、数え直しは確定したときから効く。`fromSprintId` は連なりの最初の Sprint（「Sprint 13から」）。
 - **切り口**（`inBacklogSlice`）：期限が近い（今日から、今日を含む Sprint の終わりまで。Sprint がなければその週の終わりまで。オーナー決定）/ 期限超過（今日より前）/ 持ち越し（F26 の回数が 1 以上）/ 繰り返し / 領域なし。期限のない Task は期限の切り口に入らない。
 - **採用を元に戻す**（`undoAdoption`、F27）：Task は今の Estimate しか持たないので、採用前の Estimate（`adoptSuggestion` に渡した Task の値、なければ `null`）を呼び出し側が渡す。Estimate がその採用のままで、ほかに提示中の提案がないときだけ戻せる。`estimateChanged` と `suggestionAdoptionUndone` を残す。
 

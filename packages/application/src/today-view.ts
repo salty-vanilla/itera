@@ -3,6 +3,7 @@
 // no daily capacity and never judges going over (invariant 25).
 import {
   deferralStreak,
+  occurrenceValue,
   planningValueOf,
   sprintAreaName,
   sprintNumber,
@@ -360,9 +361,7 @@ function valueOf(
   clock: Clock,
 ): PlanningValue {
   const snapshot = sprintTask.planSnapshot;
-  if (snapshot === undefined) return planningValueOf(task, { now: clock.now });
-  const value = snapshot.value;
-  const share = snapshot.occurrenceCount ?? 1;
-  if (value.base === 'none' || share === 1) return value;
-  return { ...value, lo: value.lo / share, hi: value.hi / share };
+  return snapshot === undefined
+    ? planningValueOf(task, { now: clock.now })
+    : occurrenceValue(snapshot);
 }

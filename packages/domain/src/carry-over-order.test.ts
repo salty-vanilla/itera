@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { carryOverOf } from './backlog';
 import {
+  carriedOverFrom,
   carryOverCandidates,
   confirmSprint,
   selectTask,
@@ -187,5 +188,31 @@ describe('Issue #89: choosing for the next Sprint while this one runs', () => {
       carryCount: 2,
       carryOver: { count: 3, fromSprintId: beforePrevious.id },
     });
+  });
+
+  it('carriedOverFrom: nothing while N runs, its carry-over once N enters Review (F35, #349)', () => {
+    const next = planNext(
+      [beforePrevious, running],
+      '2026-09-30T03:00:00.000Z',
+    );
+    expect(next.previousSprintId).toBe(running.id);
+    expect(
+      carriedOverFrom(next, task.id, [beforePrevious, running, next]),
+    ).toBeUndefined();
+    const { closed } = closeRunning();
+    expect(
+      carriedOverFrom(next, task.id, [beforePrevious, closed, next]),
+    ).toEqual(closed.tasks[0]);
+    expect(closed.tasks[0]).toMatchObject({
+      id: 'st-n',
+      outcome: 'carriedOver',
+    });
+    // Only the previous Sprint's, and only the Task's own.
+    expect(
+      carriedOverFrom(running, task.id, [beforePrevious, running]),
+    ).toEqual(beforePrevious.tasks[0]);
+    expect(
+      carriedOverFrom(next, id('task-other'), [closed, next]),
+    ).toBeUndefined();
   });
 });

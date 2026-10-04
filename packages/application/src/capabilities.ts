@@ -8,6 +8,7 @@
 // is given (positive hours, a note that is not empty) are not checked:
 // they are not known before they are typed.
 import {
+  carriedOverFrom,
   checkAddSubtask,
   checkAddTaskMidSprint,
   checkAddToToday,
@@ -75,7 +76,6 @@ import {
   type Task,
 } from '@itera/domain';
 import { find } from './changes';
-import { carriedFromOf } from './planning-changes';
 import type { Clock, Records } from './records';
 import { draftOf } from './retro-changes';
 import { nextPlanningOf } from './review-changes';
@@ -330,7 +330,7 @@ export function subtaskCapabilities(
 function canAddToSprint(records: Records, sprint: Sprint, task: Task) {
   if (!sprintIn(records, sprint.id, ['planning', 'active']).ok) return false;
   if (sprint.state === 'planning') {
-    const carriedFrom = carriedFromOf(records, sprint, task.id);
+    const carriedFrom = carriedOverFrom(sprint, task.id, records.sprints);
     return can(
       checkSelectTask(sprint, {
         task,

@@ -4,9 +4,12 @@ import { sprintTotals } from './capacity';
 import { presentSuggestion, setEstimate } from './estimate';
 import type { Occurrence } from './occurrence';
 import {
+  areasAtConfirm,
   carryOverCandidates,
   carryOverPlaces,
   carryOverTasks,
+  checkConfirmSprint,
+  confirmBlockers,
   confirmSprint,
   excludeFromPlan,
   includeInPlan,
@@ -22,7 +25,7 @@ import { createRecurrenceRule } from './recurrence';
 import { id } from './shared/ids';
 import { localDate } from './shared/time';
 import type { Sprint, SprintGoal, SprintTask } from './sprint';
-import { archiveTask, updateTask, type Task } from './task';
+import { archiveTask, completeTask, updateTask, type Task } from './task';
 import {
   at,
   ctx,
@@ -740,6 +743,113 @@ describe('confirmSprint', () => {
       confirm(readySprint(), { areas: [research, archivedWork] }),
     );
     expect(confirmed.areaSnapshot.map((e) => e.name)).toEqual(['研究']);
+  });
+});
+
+describe('confirmBlockers (invariants 11 and 12, #349)', () => {
+  const ready = () => withTask(plan().sprint, paperTask());
+  const input = (extra: Partial<Parameters<typeof confirmBlockers>[1]> = {}) =>
+    ({ sprints: [closedPrevious], tasks: [paperTask()], ...extra }) as const;
+
+  it('is empty when confirmSprint takes the records', () => {
+    expect(confirmBlockers(ready(), input())).toEqual([]);
+    expect(checkConfirmSprint(ready(), input())).toEqual({
+      ok: true,
+      value: undefined,
+    });
+  });
+
+  it('invariant 12: the previous Sprint is not closed while its Retro is open', () => {
+    const inReview = { ...closedPrevious, state: 'review' as const };
+    expect(confirmBlockers(ready(), input({ sprints: [inReview] }))).toEqual([
+      { kind: 'previousNotClosed' },
+    ]);
+    expect(
+      checkConfirmSprint(ready(), input({ sprints: [inReview] })),
+    ).toMatchObject({
+      ok: false,
+      error: {
+        code: 'invalidTransition',
+        message: 'Finish the previous Sprint’s Retro before confirming.',
+      },
+    });
+  });
+
+  it('invariant 11: another Sprint is active', () => {
+    const active = sprintFixture('2026-09-14', 'active');
+    expect(
+      confirmBlockers(ready(), input({ sprints: [closedPrevious, active] })),
+    ).toEqual([{ kind: 'anotherActive' }]);
+  });
+
+  it('a chosen Task completed or archived during Planning', () => {
+    const sprint = withTask(ready(), newTask('メール', 'task-mail'), 'st-2');
+    const archived = unwrap(archiveTask(paperTask(), ctx));
+    const completed = unwrap(completeTask(newTask('メール', 'task-mail'), ctx));
+    expect(
+      confirmBlockers(sprint, input({ tasks: [archived, completed] })),
+    ).toEqual([
+      { kind: 'taskInactive', taskId: 'task-paper', lifecycle: 'archived' },
+      { kind: 'taskInactive', taskId: 'task-mail', lifecycle: 'completed' },
+    ]);
+  });
+
+  it('lists every reason in order; checkConfirmSprint reports the first', () => {
+    const missingPrevious = {
+      ...ready(),
+      previousSprintId: id<'Sprint'>('sprint-x'),
+    };
+    const active = sprintFixture('2026-09-14', 'active');
+    const blockers = confirmBlockers(
+      { ...missingPrevious, state: 'active' },
+      input({ sprints: [active], tasks: [] }),
+    );
+    expect(blockers).toEqual([
+      { kind: 'notPlanning', state: 'active' },
+      { kind: 'previousMissing' },
+      { kind: 'anotherActive' },
+      { kind: 'taskMissing', taskId: 'task-paper' },
+    ]);
+    expect(
+      checkConfirmSprint(missingPrevious, input({ sprints: [active] })),
+    ).toMatchObject({ ok: false, error: { code: 'notFound' } });
+  });
+});
+
+describe('areasAtConfirm (invariant 18, #349)', () => {
+  it('the Areas not archived, and an archived one in use, in the person’s order', () => {
+    const archivedWork = { ...work, archived: true };
+    const sprint = withTask(plan().sprint, paperTask());
+    expect(
+      areasAtConfirm(sprint, [paperTask()], [research, work]).map((a) => a.id),
+    ).toEqual([workId, researchId]);
+    expect(
+      areasAtConfirm(sprint, [paperTask()], [research, archivedWork]),
+    ).toEqual([research]);
+    const archivedResearch = { ...research, archived: true };
+    expect(
+      areasAtConfirm(sprint, [paperTask()], [archivedResearch, work]),
+    ).toEqual([work, archivedResearch]);
+  });
+
+  it('is what confirmSprint copies into the SprintAreaSnapshot', () => {
+    const sprint = withTask(plan().sprint, paperTask());
+    const areas = [research, { ...work, archived: true }];
+    const confirmed = unwrap(
+      confirmSprint(
+        sprint,
+        {
+          sprints: [closedPrevious, sprint],
+          tasks: [paperTask()],
+          areas,
+          applyCriterion: false,
+        },
+        ctx,
+      ),
+    );
+    expect(confirmed.areaSnapshot.map((e) => e.areaId)).toEqual(
+      areasAtConfirm(sprint, [paperTask()], areas).map((a) => a.id),
+    );
   });
 });
 

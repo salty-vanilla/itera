@@ -110,4 +110,24 @@ describe('sprintPlanOf', () => {
     expect(data?.criterion).toMatchObject({ hasTarget: false });
     expect(data?.criterion?.active).toBeDefined();
   });
+
+  it('says why 確定 waits while a chosen Task is completed or archived, on its row (#349)', () => {
+    const { records, clock } = fixtureSnapshot('planning-check');
+    const archived: Records = {
+      ...records,
+      tasks: records.tasks.map((t) =>
+        t.id === ids.task.paper ? { ...t, lifecycle: 'archived' as const } : t,
+      ),
+    };
+    const data = planOf({ records: archived, clock }, { applyCriterion: true });
+    expect(data?.blockers).toEqual(['inactiveTasks']);
+    const rows = data?.plan.flatMap((p) => p.tasks) ?? [];
+    expect(
+      rows.filter((r) => r.inactive !== undefined).map((r) => r.task.id),
+    ).toEqual([ids.task.paper]);
+    expect(rows.find((r) => r.task.id === ids.task.paper)?.inactive).toBe(
+      'archived',
+    );
+    expect(data?.previous).toBeUndefined();
+  });
 });

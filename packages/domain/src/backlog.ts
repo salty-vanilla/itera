@@ -1,5 +1,5 @@
 import { recurrenceOf, type RecurrenceRule } from './recurrence';
-import { carryCount } from './retro-facts';
+import { carriedFromChain } from './retro-facts';
 import type { AreaId, SprintId, TaskId } from './shared/ids';
 import type { LocalDate } from './shared/time';
 import { sprintEnd, weekStartOf, type Sprint, type SprintTask } from './sprint';
@@ -89,21 +89,12 @@ export function carryOriginOf(
   sprintTask: SprintTask,
   sprints: readonly Sprint[],
 ): CarryOver | undefined {
-  const count = carryCount(sprintTask, sprints);
-  if (count === 0) return undefined;
-  // Walk back to the first SprintTask of the run.
-  let first: Sprint | undefined;
-  let from = sprintTask.carriedFrom;
-  const seen = new Set<string>();
-  while (from !== undefined && !seen.has(from)) {
-    seen.add(from);
-    const id = from;
-    const sprint = sprints.find((s) => s.tasks.some((t) => t.id === id));
-    if (sprint === undefined) break;
-    first = sprint;
-    from = sprint.tasks.find((t) => t.id === id)?.carriedFrom;
-  }
-  return first === undefined ? undefined : { count, fromSprintId: first.id };
+  const chain = carriedFromChain(sprintTask, sprints);
+  // The first SprintTask of the run.
+  const first = chain.at(-1);
+  return first === undefined
+    ? undefined
+    : { count: chain.length, fromSprintId: first.sprint.id };
 }
 
 /** The Backlog's 切り口 besides すべて (PRD §5 A Browse). */
