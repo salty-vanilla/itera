@@ -1,7 +1,9 @@
 import { Field as FieldPrimitive } from '@base-ui/react/field';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState } from 'react';
+import { cn } from '@/lib/utils';
 import { Checkbox, CheckboxControl } from './checkbox';
+import { FieldErrorContent, fieldErrorStyles } from './field';
 
 /**
  * □ = 選ぶ。Backlog のタスクを今週へ選ぶ、差分の行を反映する、保存ボタンで
@@ -192,11 +194,8 @@ export const InvalidInGroup: Story = {
           />
         ))}
       </div>
-      <p
-        id="invalid-group-error"
-        className="flex items-center gap-1 text-help text-danger"
-      >
-        曜日を 1つ以上選んでください
+      <p id="invalid-group-error" role="alert" className={cn(fieldErrorStyles)}>
+        <FieldErrorContent>曜日を 1つ以上選んでください</FieldErrorContent>
       </p>
     </fieldset>
   ),
