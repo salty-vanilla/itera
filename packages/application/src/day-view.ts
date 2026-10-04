@@ -16,11 +16,11 @@ import {
   interruptCapabilities,
   selectionCapabilities,
   type DailySelectionCapabilities,
+  type InterruptItem,
 } from './capabilities';
 import type { Clock, Records } from './records';
 import { sprintRefs, type SprintRef } from './sprint-choice';
 import { dayInPeriod, selectionActualHours } from './sprint-day';
-import type { InterruptItem } from './today-view';
 import type { TaggedRecords, TaggedTask } from './versions';
 
 export interface DayArea {
@@ -188,7 +188,7 @@ export function dayData(
             .filter((n) => toLocalDate(n.at, records.user.timeZone) === date)
             .map((note) => ({
               ...note,
-              capabilities: interruptCapabilities(sprint, note),
+              capabilities: interruptCapabilities(records, sprint, note),
             }))
         : [],
     occurrences,

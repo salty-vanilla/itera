@@ -26,14 +26,12 @@ import {
   interruptCapabilities,
   selectionCapabilities,
   type DailySelectionCapabilities,
-  type InterruptNoteCapabilities,
-  type WithCapabilities,
+  type InterruptItem,
 } from './capabilities';
 import type { Clock, Records } from './records';
 import { dayInPeriod, isLastDay, selectionActualHours } from './sprint-day';
 import {
   taggedIn,
-  type TaggedInterruptNote,
   type TaggedRecords,
   type TaggedSprint,
   type TaggedSprintTask,
@@ -63,6 +61,11 @@ export interface TodayItem {
    * second one, which the day does not allow (F17, #233).
    */
   readonly removedToday?: DailySelection['id'];
+  /**
+   * What the person can do with the choice `removedToday` names (#322):
+   * 今日へ takes it back with `undoRemoveFromToday`.
+   */
+  readonly removedTodayCapabilities?: DailySelectionCapabilities;
 }
 
 /** A row of 今日やる, or one closed today. */
@@ -73,12 +76,6 @@ export interface TodayRow extends TodayItem {
   /** The actual hours recorded for this day's selection. */
   readonly actualHours: number;
 }
-
-/** An interrupt, with what the person can do with it now (#322). */
-export type InterruptItem = WithCapabilities<
-  TaggedInterruptNote,
-  InterruptNoteCapabilities
->;
 
 export interface TodayData {
   readonly sprint: TaggedSprint;
@@ -282,7 +279,18 @@ export function todayData(
     const chosen = todayOf(i.sprintTask, i.occurrence?.id);
     if (chosen === undefined) return [i];
     return chosen.resolution === 'removed'
-      ? [{ ...i, removedToday: chosen.id }]
+      ? [
+          {
+            ...i,
+            removedToday: chosen.id,
+            removedTodayCapabilities: selectionCapabilities(
+              records,
+              sprint,
+              chosen,
+              today,
+            ),
+          },
+        ]
       : [];
   });
 
@@ -330,7 +338,7 @@ export function todayData(
       .filter((n) => toLocalDate(n.at, records.user.timeZone) === today)
       .map((note) => ({
         ...note,
-        capabilities: interruptCapabilities(sprint, note),
+        capabilities: interruptCapabilities(records, sprint, note),
       })),
     areas,
   };

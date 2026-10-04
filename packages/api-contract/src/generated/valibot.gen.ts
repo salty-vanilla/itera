@@ -796,6 +796,7 @@ export const vTodayRow = v.object({
     value: vPlanningValue,
     streak: v.pipe(v.number(), v.integer()),
     removedToday: v.optional(vDailySelectionId),
+    removedTodayCapabilities: v.optional(vDailySelectionCapabilities),
     selection: vDailySelection,
     capabilities: vDailySelectionCapabilities,
     actualHours: v.number()
@@ -808,7 +809,8 @@ export const vTodayItem = v.object({
     occurrence: v.optional(vOccurrence),
     value: vPlanningValue,
     streak: v.pipe(v.number(), v.integer()),
-    removedToday: v.optional(vDailySelectionId)
+    removedToday: v.optional(vDailySelectionId),
+    removedTodayCapabilities: v.optional(vDailySelectionCapabilities)
 });
 
 /**
@@ -820,7 +822,7 @@ export const vInterruptNoteCapabilities = v.pipe(v.object({
 }), v.readonly());
 
 /**
- * An interrupt as the reads of a day give it: the record, and what the person can do with it. `restoreInterrupt` takes the record without `capabilities`.
+ * An interrupt as the reads of a day give it: the record, and what the person can do with it. The record itself (InterruptNote) stays as it is where no capabilities are given: in the Sprint and in the derived values.
  */
 export const vInterruptItem = v.intersect([vInterruptNote, v.object({
         capabilities: vInterruptNoteCapabilities
@@ -1521,6 +1523,7 @@ export const vTodayRowWritable = v.object({
     value: vPlanningValue,
     streak: v.pipe(v.number(), v.integer()),
     removedToday: v.optional(vDailySelectionId),
+    removedTodayCapabilities: v.optional(vDailySelectionCapabilities),
     selection: vDailySelection,
     capabilities: vDailySelectionCapabilities,
     actualHours: v.number()
@@ -1533,11 +1536,12 @@ export const vTodayItemWritable = v.object({
     occurrence: v.optional(vOccurrence),
     value: vPlanningValue,
     streak: v.pipe(v.number(), v.integer()),
-    removedToday: v.optional(vDailySelectionId)
+    removedToday: v.optional(vDailySelectionId),
+    removedTodayCapabilities: v.optional(vDailySelectionCapabilities)
 });
 
 /**
- * An interrupt as the reads of a day give it: the record, and what the person can do with it. `restoreInterrupt` takes the record without `capabilities`.
+ * An interrupt as the reads of a day give it: the record, and what the person can do with it. The record itself (InterruptNote) stays as it is where no capabilities are given: in the Sprint and in the derived values.
  */
 export const vInterruptItemWritable = v.intersect([vInterruptNoteWritable, v.object({
         capabilities: vInterruptNoteCapabilities

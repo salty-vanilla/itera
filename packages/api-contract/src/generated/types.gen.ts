@@ -772,6 +772,10 @@ export type TodayRow = {
     value: PlanningValue;
     streak: number;
     removedToday?: DailySelectionId;
+    /**
+     * What the person can do with the choice removedToday names (#322): 今日へ takes it back with undoRemoveFromToday. Present with removedToday.
+     */
+    removedTodayCapabilities?: DailySelectionCapabilities;
     selection: DailySelection;
     capabilities: DailySelectionCapabilities;
     actualHours: number;
@@ -788,6 +792,10 @@ export type TodayItem = {
      */
     streak: number;
     removedToday?: DailySelectionId;
+    /**
+     * What the person can do with the choice removedToday names (#322): 今日へ takes it back with undoRemoveFromToday. Present with removedToday.
+     */
+    removedTodayCapabilities?: DailySelectionCapabilities;
 };
 
 /**
@@ -805,7 +813,7 @@ export type InterruptNoteCapabilities = {
 };
 
 /**
- * An interrupt as the reads of a day give it: the record, and what the person can do with it. `restoreInterrupt` takes the record without `capabilities`.
+ * An interrupt as the reads of a day give it: the record, and what the person can do with it. The record itself (InterruptNote) stays as it is where no capabilities are given: in the Sprint and in the derived values.
  */
 export type InterruptItem = InterruptNote & {
     capabilities: InterruptNoteCapabilities;
@@ -1577,6 +1585,10 @@ export type TodayRowWritable = {
     value: PlanningValue;
     streak: number;
     removedToday?: DailySelectionId;
+    /**
+     * What the person can do with the choice removedToday names (#322): 今日へ takes it back with undoRemoveFromToday. Present with removedToday.
+     */
+    removedTodayCapabilities?: DailySelectionCapabilities;
     selection: DailySelection;
     capabilities: DailySelectionCapabilities;
     actualHours: number;
@@ -1593,10 +1605,14 @@ export type TodayItemWritable = {
      */
     streak: number;
     removedToday?: DailySelectionId;
+    /**
+     * What the person can do with the choice removedToday names (#322): 今日へ takes it back with undoRemoveFromToday. Present with removedToday.
+     */
+    removedTodayCapabilities?: DailySelectionCapabilities;
 };
 
 /**
- * An interrupt as the reads of a day give it: the record, and what the person can do with it. `restoreInterrupt` takes the record without `capabilities`.
+ * An interrupt as the reads of a day give it: the record, and what the person can do with it. The record itself (InterruptNote) stays as it is where no capabilities are given: in the Sprint and in the derived values.
  */
 export type InterruptItemWritable = InterruptNoteWritable & {
     capabilities: InterruptNoteCapabilities;

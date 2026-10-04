@@ -26,6 +26,7 @@ import {
   checkRemoveFromToday,
   checkSkipSelection,
   checkStartSelection,
+  checkUndoCompleteFromBacklog,
   checkUndoCompleteSelection,
   checkUndoDeferSelection,
   checkUndoRemoveFromToday,
@@ -38,6 +39,7 @@ import {
   removeFromToday,
   skipSelection,
   startSelection,
+  undoCompleteFromBacklog,
   undoCompleteSelection,
   undoDeferSelection,
   undoRemoveFromToday,
@@ -370,4 +372,44 @@ describe('the checks of the interrupts (F38)', () => {
       false,
     );
   });
+});
+
+describe("the check of the Backlog's undo of a completion (F29, F33, F34)", () => {
+  /** A one-off done selection of `origin` on `date`, or none. */
+  function backlogCase(
+    origin: DailySelection['origin'] | undefined,
+    date: LocalDate,
+    lifecycle: TaskLifecycle = 'completed',
+  ) {
+    const c = caseOf({ resolution: 'done', recurring: false, date, lifecycle });
+    const sprint: Sprint = {
+      ...c.sprint,
+      dailySelections:
+        origin === undefined
+          ? []
+          : c.sprint.dailySelections.map((s) => ({ ...s, origin })),
+    };
+    return { sprint, task: c.task, date };
+  }
+
+  it.each([
+    ['made the choice', 'backlogCompletion', today, 'completed'],
+    ['completed a choice there was', 'manual', yesterday, 'completed'],
+    ['no choice that day', undefined, today, 'completed'],
+    ['before the first day', undefined, localDate('2026-09-27'), 'completed'],
+    ['the Task not completed', 'backlogCompletion', today, 'active'],
+  ] as const)(
+    '%s: says what the command says',
+    (_, origin, date, lifecycle) => {
+      const { sprint, task } = backlogCase(origin, date, lifecycle);
+      for (const s of [
+        sprint,
+        { ...sprint, state: 'review' as const },
+        undefined,
+      ])
+        expect(codeOf(checkUndoCompleteFromBacklog(s, { task, date }))).toBe(
+          codeOf(undoCompleteFromBacklog(s, { task, date }, ctx)),
+        );
+    },
+  );
 });

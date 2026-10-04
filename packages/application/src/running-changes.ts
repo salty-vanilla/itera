@@ -11,6 +11,7 @@ import type {
 } from '@itera/domain';
 import { andThen, find } from './changes';
 import type { Change } from './record-store';
+import { undoRouteOf } from './selection-of';
 import { sprintIn } from './sprint-of';
 import * as task from './task-changes';
 import * as today from './today-changes';
@@ -53,22 +54,12 @@ function undoOnDay(
       'Selection',
     );
     if (!selection.ok) return selection;
-    if (selection.value.date >= ctx.today) return onToday()(records, ctx);
-    if (selection.value.resolution !== resolution) {
-      return {
-        ok: false,
-        error: {
-          code: 'invalidTransition',
-          message: `Cannot undo a ${selection.value.resolution} selection as ${resolution}.`,
-        },
-      };
-    }
+    const route = undoRouteOf(selection.value, resolution, ctx.today);
+    if (!route.ok) return route;
     const undo =
-      resolution === 'skipped'
-        ? today.undoSkip(sprintId, selectionId)
-        : selection.value.origin === 'backlogCompletion'
-          ? backlogUndo(sprint.value, selection.value)
-          : today.undoComplete(sprintId, selectionId);
+      route.value.by === 'backlog'
+        ? backlogUndo(sprint.value, selection.value)
+        : onToday();
     if (undo === undefined) {
       return {
         ok: false,
@@ -78,6 +69,7 @@ function undoOnDay(
         },
       };
     }
+    if (!route.value.pastDay) return undo(records, ctx);
     return andThen(undo, today.beginDay(), 'system')(records, ctx);
   };
 }

@@ -844,25 +844,109 @@ export function undoCompleteFromBacklog(
   ctx: CommandContext,
 ): CommandResult<{ readonly sprint?: Sprint; readonly task: Task }> {
   const { task } = input;
+  const checked = checkUndoCompleteFromBacklog(sprint, input);
+  if (!checked.ok) return checked;
+  const undo = checked.value;
+  switch (undo.kind) {
+    case 'task': {
+      const reopened = undoTaskCompletion(task, ctx);
+      if (!reopened.ok) return reopened;
+      return applied(
+        {
+          ...(sprint === undefined ? {} : { sprint }),
+          task: reopened.value.record,
+        },
+        reopened.value.activities,
+      );
+    }
+    case 'beforeStart':
+      // Completed before the first day (F34): no choice was made; the Task
+      // and the SprintTask go back.
+      return reopenWithSprintTask(undo.sprint, undo.sprintTask, task, ctx);
+    case 'selection': {
+      const undone = undoCompleteSelection(
+        undo.sprint,
+        { selectionId: undo.selection.id, task },
+        ctx,
+      );
+      if (!undone.ok) return undone;
+      const { sprint: next, task: reopened } = undone.value.record;
+      if (reopened === undefined) return err('invalidInput', 'Task missing.');
+      return applied({ sprint: next, task: reopened }, undone.value.activities);
+    }
+    case 'choiceMade': {
+      // The choice the completion made goes with it.
+      const reopened = reopenWithSprintTask(
+        undo.sprint,
+        undo.sprintTask,
+        task,
+        ctx,
+      );
+      if (!reopened.ok) return reopened;
+      const { sprint: planned, task: back } = reopened.value.record;
+      return applied(
+        {
+          sprint: {
+            ...planned,
+            dailySelections: planned.dailySelections.filter(
+              (s) => s.id !== undo.selection.id,
+            ),
+          },
+          task: back,
+        },
+        [
+          ...reopened.value.activities,
+          selectionActivity(
+            'todayBacklogCompletionUndone',
+            undo.sprint,
+            undo.selection,
+            ctx,
+          ),
+        ],
+      );
+    }
+  }
+}
+
+/**
+ * What `undoCompleteFromBacklog` would undo, if it takes the records as
+ * they are now: the Task alone (outside the Sprint), the Task and its
+ * SprintTask before the first day (F34), the day's selection as 完了を取り消す
+ * does, or the choice the completion made (F29).
+ */
+export type BacklogUndo =
+  | { readonly kind: 'task' }
+  | {
+      readonly kind: 'beforeStart';
+      readonly sprint: Sprint;
+      readonly sprintTask: SprintTask;
+    }
+  | {
+      readonly kind: 'selection' | 'choiceMade';
+      readonly sprint: Sprint;
+      readonly sprintTask: SprintTask;
+      readonly selection: DailySelection;
+    };
+
+/** Whether `undoCompleteFromBacklog` takes the records as they are now. */
+export function checkUndoCompleteFromBacklog(
+  sprint: Sprint | undefined,
+  input: UndoCompleteFromBacklogInput,
+): Result<BacklogUndo> {
+  const { task } = input;
   const sprintTask =
     sprint?.state === 'active'
       ? sprint.tasks.find((t) => t.taskId === task.id && t.outcome === 'done')
       : undefined;
   if (sprint === undefined || sprintTask === undefined) {
-    const reopened = undoTaskCompletion(task, ctx);
-    if (!reopened.ok) return reopened;
-    return applied(
-      {
-        ...(sprint === undefined ? {} : { sprint }),
-        task: reopened.value.record,
-      },
-      reopened.value.activities,
-    );
+    const reopenable = checkUndoTaskCompletion(task);
+    return reopenable.ok ? ok({ kind: 'task' }) : reopenable;
   }
   if (input.date < sprint.start) {
-    // Completed before the first day (F34): no choice was made; the Task
-    // and the SprintTask go back.
-    return reopenWithSprintTask(sprint, sprintTask, task, ctx);
+    const reopenable = checkUndoTaskCompletion(task);
+    return reopenable.ok
+      ? ok({ kind: 'beforeStart', sprint, sprintTask })
+      : reopenable;
   }
   const selection = findSelection(sprint, input.date, sprintTask.id, undefined);
   if (selection === undefined || selection.resolution !== 'done') {
@@ -872,35 +956,18 @@ export function undoCompleteFromBacklog(
     );
   }
   if (selection.origin !== 'backlogCompletion') {
-    const undone = undoCompleteSelection(
-      sprint,
-      { selectionId: selection.id, task },
-      ctx,
-    );
-    if (!undone.ok) return undone;
-    const { sprint: next, task: reopened } = undone.value.record;
-    if (reopened === undefined) return err('invalidInput', 'Task missing.');
-    return applied({ sprint: next, task: reopened }, undone.value.activities);
+    const undoable = checkUndoCompleteSelection(sprint, {
+      selectionId: selection.id,
+      task,
+    });
+    return undoable.ok
+      ? ok({ kind: 'selection', sprint, sprintTask, selection })
+      : undoable;
   }
-  // The choice the completion made goes with it.
-  const reopened = reopenWithSprintTask(sprint, sprintTask, task, ctx);
-  if (!reopened.ok) return reopened;
-  const { sprint: planned, task: back } = reopened.value.record;
-  return applied(
-    {
-      sprint: {
-        ...planned,
-        dailySelections: planned.dailySelections.filter(
-          (s) => s.id !== selection.id,
-        ),
-      },
-      task: back,
-    },
-    [
-      ...reopened.value.activities,
-      selectionActivity('todayBacklogCompletionUndone', sprint, selection, ctx),
-    ],
-  );
+  const reopenable = checkUndoTaskCompletion(task);
+  return reopenable.ok
+    ? ok({ kind: 'choiceMade', sprint, sprintTask, selection })
+    : reopenable;
 }
 
 // ---------------------------------------------------------------- records

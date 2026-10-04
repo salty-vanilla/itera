@@ -108,7 +108,7 @@ iOS・Android ───────────────▶ packages/api-cont
 - 記録の種類ごとにスキーマを分ける（`DailySelectionCapabilities`・`InterruptNoteCapabilities`）。持つ項目は記録の種類で決まり、状態では変わらない（押せないものも `false` で返す）。
 - その記録を対象にする操作だけを置く。記録を作る操作（`chooseForDay`・`noteInterrupt`）と、記録を対象にしない操作（`recordActualTime` は SprintTask の日を対象にする）は置かない。
 - 真は「例の値を与えれば通る」、偽は「断られる（422、または記録が見つからなければ 404）」。操作が受け取る値（正の時間、空でない本文）は、入力がないと決まらないので、判定に入れない。押せない理由は返さない。今ある `blockers`（確定、振り返りの完了）はそのまま。
-- 押せない操作を隠すか、押せない状態で出すかは、今の画面のとおり（今の画面は、メニューとボタンの操作を隠す。今日の行の ○ はいつも出し、`canUndoComplete` が真なら完了の取り消し、そうでなければ完了を送る）。どの操作をどこに出すか（メニュー、主なボタン）も画面が決める（例：Web は繰り返しの回に「今日は見送る」を出さず、スキップを出す。#233）。
+- 押せない操作を隠すか、押せない状態で出すかは、今の画面のとおり（今の画面は、メニューとボタンの操作を隠す。今日の行の ○ はいつも出し、`canUndoComplete` が真なら完了の取り消し、そうでなければ完了を送る）。どの操作をどこに出すか（メニュー、主なボタン）も画面が決める（例：Web は繰り返しの回に「今日は見送る」を出さず、スキップを出す。#233）。選択の操作でないもの（「かかった時間を記録」の `recordActualTime`）を、完了・中断の行に出すのも画面の配置で、操作の可否ではない。
 
 `availableActions`（操作の名前の開いた列挙）、HATEOAS のリンク、遷移を問い合わせる別の経路は採らない。生成したクライアントはどの経路を呼ぶかを知っているのでリンクは要らず、問い合わせの経路は一覧で往復が増える（2026-10-04、オーナーへの説明）。真偽値の項目は、生成した型で名前の誤りがコンパイルで見つかる。
 
@@ -120,8 +120,8 @@ iOS・Android ───────────────▶ packages/api-cont
 判定の置き場所：
 
 - サーバーは、domain のコマンドと同じ判定から作る。domain は、コマンドの前提のうち記録の状態で決まる部分を、コマンドとは別に呼べる関数（`check<コマンド>`、例：`checkStartSelection`・`checkCompleteSelection`・`checkEditInterrupt`）として export し、コマンドもまずその関数で判定する。完了・取り消し・スキップの判定は、選択の Task か回の状態まで含む（`checkCompleteTask`・`checkCompleteOccurrence` など、それぞれのコマンドの判定）。
-- `packages/application`（`capabilities.ts`）は、操作が読むのと同じ記録（Sprint、選択、選択の Task か回）でその関数を呼び、読み取りの記録に `capabilities` を足す。application のテストは、fixture のすべての状態で、真の操作が通り偽の操作が断られることを確かめる。
-- 当てた記録（#322）：今日の行と今日閉じた行（`TodayRow`）、過去の日の記録（`DayRecord`）、今日と過去の日の割り込み（`InterruptItem`。`InterruptNote` は `restoreInterrupt` が送り返す記録なので変えず、読み取りの項目を別のスキーマにした）、Backlog の項目の今日の選択（`BacklogItem.today`）。
+- `packages/application`（`capabilities.ts`）は、操作が読むのと同じ記録（実行中の Sprint、選択、選択の Task か回）で、操作が使うのと同じ関数（`sprintIn`、`selection-of.ts` の `subjectOf`・`undoRouteOf`）を通してその関数を呼び、読み取りの記録に `capabilities` を足す。過去の日の Backlog からの完了の取り消しは Backlog の取り消し（F29、F33）なので、`canUndoComplete` も `checkUndoCompleteFromBacklog` から作る。application のテストは、fixture のすべての状態と、操作で作った状態（今週の残りに戻した選択、見送った選択、過去の日の Backlog からの完了、スキップした回）で、真の操作が通り偽の操作が断られること、どの `can…` も真と偽の両方が出ることを確かめる。
+- 当てた記録（#322）：今日の行と今日閉じた行（`TodayRow`）、今週の残りに戻した今日の選択（`TodayItem.removedTodayCapabilities`。選択は `removedToday` の ID でだけ出るので、その隣に置く）、過去の日の記録（`DayRecord`）、今日と過去の日の割り込み（`InterruptItem`。`InterruptNote` は Sprint の記録と派生値にも出て、そこでは可否を計算しないので変えず、読み取りの項目を別のスキーマにした）、Backlog の項目の今日の選択（`BacklogItem.today`）。
 - 残る記録（Backlog の項目の `canAddToToday`・`canAddToWeek`・`canComplete`、Task・領域・提案・Sprint の計画と実行中・振り返り）は #323。`backlog-view.ts` の `canComplete` などは、それまで domain のコマンドとは別の判定のまま。
 
 ### プレビュー

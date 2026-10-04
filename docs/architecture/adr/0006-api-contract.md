@@ -11,7 +11,7 @@
 - 改訂：2026-10-04（エラーを Problem Details（RFC 9457）にする。応答の項目を消して名前を変える壊す変更なので `info.version` を 0.3.0 にする。Issue #319）
 - 改訂：2026-10-04（すべての書き込みに必須のヘッダー `Idempotency-Key` を置き、422 `/problems/idempotency-key-reused` を足す。要求に必須の項目を足す壊す変更なので `info.version` を 0.4.0 にする。409 は「この書き込みはしていない」だけになる。Issue #320）
 - 改訂：2026-10-04（値を置き換える書き込み（PATCH の 10 面）に、記録ごとの版の `If-Match` を置き、412 `/problems/precondition-failed`・428 `/problems/precondition-required` を足す。記録の DTO に出力専用の `etag`、書き込みの応答に `ETag`。要求に必須のヘッダーを足す壊す変更なので `info.version` を 0.5.0 にする。クライアントが送り返す `InterruptNote` に必須の `etag` を足したのも壊す変更（読み取りの note をそのまま `restoreInterrupt` の本文にすると、未知のキーで 400）。Issue #321）
-- 改訂：2026-10-04（今日の選択と割り込みの読み取りに、出力専用の必須の `capabilities`（`can<操作>` の真偽値、ADR 0007「操作の可否」）を足す。`TodayRow`・`DayRecord`・`BacklogItem.today` に `DailySelectionCapabilities`、今日と過去の日の割り込みを `InterruptItem`（`InterruptNote` と `InterruptNoteCapabilities`）にする。応答に必須の項目を足すだけなので `info.version` は 0.5.0 のまま。Issue #322）
+- 改訂：2026-10-04（今日の選択と割り込みの読み取りに、出力専用の必須の `capabilities`（`can<操作>` の真偽値、ADR 0007「操作の可否」）を足す。`TodayRow`・`DayRecord`・`BacklogItem.today` に `DailySelectionCapabilities`、`TodayItem` に省略できる `removedTodayCapabilities`、今日と過去の日の割り込みを `InterruptItem`（`InterruptNote` と `InterruptNoteCapabilities`）にする。応答に必須の項目を足すだけなので `info.version` は 0.5.0 のまま。Issue #322）
 
 ## 背景
 

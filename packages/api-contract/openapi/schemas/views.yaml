@@ -147,8 +147,9 @@ InterruptNoteCapabilities:
 InterruptItem:
   description: >-
     An interrupt as the reads of a day give it: the record, and what the
-    person can do with it. `restoreInterrupt` takes the record without
-    `capabilities`.
+    person can do with it. The record itself (InterruptNote) stays as it
+    is where no capabilities are given: in the Sprint and in the derived
+    values.
   allOf:
     - $ref: './records.yaml#/InterruptNote'
     - type: object
@@ -503,6 +504,12 @@ TodayItem:
       description: 連続見送り.
       type: integer
     removedToday: { $ref: './common.yaml#/DailySelectionId' }
+    removedTodayCapabilities:
+      description: >-
+        What the person can do with the choice removedToday names (#322):
+        今日へ takes it back with undoRemoveFromToday. Present with
+        removedToday.
+      $ref: '#/DailySelectionCapabilities'
 TodayRow:
   type: object
   required:
@@ -515,6 +522,12 @@ TodayRow:
     value: { $ref: './records.yaml#/PlanningValue' }
     streak: { type: integer }
     removedToday: { $ref: './common.yaml#/DailySelectionId' }
+    removedTodayCapabilities:
+      description: >-
+        What the person can do with the choice removedToday names (#322):
+        今日へ takes it back with undoRemoveFromToday. Present with
+        removedToday.
+      $ref: '#/DailySelectionCapabilities'
     selection: { $ref: './records.yaml#/DailySelection' }
     capabilities: { $ref: '#/DailySelectionCapabilities' }
     actualHours: { type: number }

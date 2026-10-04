@@ -15,6 +15,7 @@ import {
   checkRemoveFromToday,
   checkSkipSelection,
   checkStartSelection,
+  checkUndoCompleteFromBacklog,
   checkUndoCompleteSelection,
   checkUndoDeferSelection,
   checkUndoRemoveFromToday,
@@ -22,11 +23,15 @@ import {
   type DailySelection,
   type InterruptNote,
   type LocalDate,
+  type Occurrence,
   type Result,
   type Sprint,
+  type Task,
 } from '@itera/domain';
 import type { Records } from './records';
-import { subjectOf } from './today-changes';
+import { subjectOf, undoRouteOf } from './selection-of';
+import { sprintIn } from './sprint-of';
+import type { TaggedInterruptNote } from './versions';
 
 /** A choice for a day (DailySelection): its operations of Today. */
 export interface DailySelectionCapabilities {
@@ -60,15 +65,28 @@ export interface InterruptNoteCapabilities {
   readonly canDelete: boolean;
 }
 
-/** A record as a read gives it, with what the person can do with it. */
-export type WithCapabilities<T, C> = T & { readonly capabilities: C };
+/** An interrupt as the reads of a day give it, with what can be done with it. */
+export type InterruptItem = TaggedInterruptNote & {
+  readonly capabilities: InterruptNoteCapabilities;
+};
 
 const can = (result: Result<unknown>) => result.ok;
 
+/** What every check of a selection is given. */
+type SelectionInput = {
+  readonly selectionId: DailySelection['id'];
+  readonly today: LocalDate;
+};
+/** And, for a completion, a skip or their undo, its Task or occurrence. */
+type SubjectInput = SelectionInput & {
+  readonly task?: Task;
+  readonly occurrence?: Occurrence;
+};
+
 /**
  * What the person can do with a selection of `sprint` today, as its
- * operations (today-changes.ts) would find it: on the Sprint, the
- * selection, and the selection's Task or occurrence.
+ * operations (today-changes.ts, running-changes.ts) would find it: on the
+ * running Sprint, the selection, and the selection's Task or occurrence.
  */
 export function selectionCapabilities(
   records: Records,
@@ -76,35 +94,59 @@ export function selectionCapabilities(
   selection: DailySelection,
   today: LocalDate,
 ): DailySelectionCapabilities {
-  const input = { selectionId: selection.id, today };
-  // A completion or skip reads the selection's Task or occurrence first;
-  // without it, the operation is not found (404).
+  // Every operation on a selection is on the running Sprint it names.
+  const running = sprintIn(records, sprint.id, ['active']).ok;
+  const input: SelectionInput = { selectionId: selection.id, today };
+  // A completion, a skip or their undo reads the selection's Task or
+  // occurrence first; without it, the operation is not found (404).
   const subject = subjectOf(sprint, selection.id, records);
-  const given = subject.ok ? { ...subject.value, ...input } : undefined;
+  const given: SubjectInput | undefined =
+    running && subject.ok ? { ...subject.value, ...input } : undefined;
+  const on = (check: (on: Sprint, by: SelectionInput) => Result<unknown>) =>
+    running && can(check(sprint, input));
+  // An undo of a past day's completion from the Backlog is the Backlog's
+  // undo on that day (F29, F33).
+  const undo = (
+    resolution: 'done' | 'skipped',
+    check: (on: Sprint, by: SubjectInput) => Result<unknown>,
+  ) => {
+    const route = undoRouteOf(selection, resolution, today);
+    if (given === undefined || !route.ok) return false;
+    if (route.value.by === 'selection') return can(check(sprint, given));
+    return (
+      given.task !== undefined &&
+      can(
+        checkUndoCompleteFromBacklog(sprint, {
+          task: given.task,
+          date: selection.date,
+        }),
+      )
+    );
+  };
   return {
-    canStart: can(checkStartSelection(sprint, input)),
-    canPause: can(checkPauseSelection(sprint, input)),
-    canDefer: can(checkDeferSelection(sprint, input)),
-    canUndoDefer: can(checkUndoDeferSelection(sprint, input)),
-    canRemove: can(checkRemoveFromToday(sprint, input)),
-    canUndoRemove: can(checkUndoRemoveFromToday(sprint, input)),
+    canStart: on(checkStartSelection),
+    canPause: on(checkPauseSelection),
+    canDefer: on(checkDeferSelection),
+    canUndoDefer: on(checkUndoDeferSelection),
+    canRemove: on(checkRemoveFromToday),
+    canUndoRemove: on(checkUndoRemoveFromToday),
     canComplete:
       given !== undefined && can(checkCompleteSelection(sprint, given)),
-    canUndoComplete:
-      given !== undefined && can(checkUndoCompleteSelection(sprint, given)),
+    canUndoComplete: undo('done', checkUndoCompleteSelection),
     canSkip: given !== undefined && can(checkSkipSelection(sprint, given)),
-    canUndoSkip:
-      given !== undefined && can(checkUndoSkipSelection(sprint, given)),
+    canUndoSkip: undo('skipped', checkUndoSkipSelection),
   };
 }
 
 /** What the person can do with an interrupt of `sprint`. */
 export function interruptCapabilities(
+  records: Records,
   sprint: Sprint,
   note: InterruptNote,
 ): InterruptNoteCapabilities {
+  const running = sprintIn(records, sprint.id, ['active']).ok;
   return {
-    canEdit: can(checkEditInterrupt(sprint, note)),
-    canDelete: can(checkDeleteInterrupt(sprint, note)),
+    canEdit: running && can(checkEditInterrupt(sprint, note)),
+    canDelete: running && can(checkDeleteInterrupt(sprint, note)),
   };
 }
