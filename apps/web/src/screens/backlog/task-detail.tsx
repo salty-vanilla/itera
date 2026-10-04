@@ -79,6 +79,7 @@ import { useTaskActions } from '@/screen-data/use-task-actions';
 import { useNewAreaDialog } from './area-dialog';
 import { CarryOverText, RecurrenceText, SprintText } from './backlog-row';
 import { RecurrenceEditor, type RecurrencePending } from './recurrence-editor';
+import { UnsavedTypingLayer } from '@/lib/unsaved-typing';
 import { SubtaskList } from './subtask-list';
 import { useSelectionActions } from './use-selection-actions';
 import { useAddToToday } from './use-add-to-today';
@@ -271,17 +272,20 @@ type Outcome =
  * recurrence rule and the actions take effect at once, each through its
  * domain command. The footer only closes (Issue #95).
  */
-function TaskDetail({
-  item,
-  areas,
-  timeZone,
-  lastDay,
-  onClose,
-  onComplete,
-  focusEstimate,
-  leaveRef,
-  footer,
-}: {
+/**
+ * The detail is a layer over the screen, opened by the search's `task`: its
+ * fields go when it closes, and the screen under it may change while they
+ * wait to be saved (lib/unsaved-typing.tsx, #332).
+ */
+function TaskDetail(props: TaskDetailProps) {
+  return (
+    <UnsavedTypingLayer searchKey="task">
+      <TaskDetailContent {...props} />
+    </UnsavedTypingLayer>
+  );
+}
+
+type TaskDetailProps = {
   item: BacklogItem;
   /** The Areas to choose from, in the person's order. */
   areas: BacklogView['areas'];
@@ -303,7 +307,19 @@ function TaskDetail({
    * that an Estimate typed here shows its effect before closing (#165).
    */
   footer?: ReactNode;
-}) {
+};
+
+function TaskDetailContent({
+  item,
+  areas,
+  timeZone,
+  lastDay,
+  onClose,
+  onComplete,
+  focusEstimate,
+  leaveRef,
+  footer,
+}: TaskDetailProps) {
   const actions = useTaskActions();
   const newArea = useNewAreaDialog();
   const selectionActions = useSelectionActions();
@@ -596,6 +612,8 @@ function TaskDetail({
     opens: boolean;
     subtask: boolean;
     recurrence: boolean;
+    /** The recurrence's choice was sent and not saved (#332). */
+    recurrenceSent: boolean;
     /** A field's typing a failed save left out of the records (#332). */
     typing: boolean;
   }>();
@@ -728,6 +746,7 @@ function TaskDetail({
         opens,
         subtask: subtask !== null,
         recurrence: recurrence !== null,
+        recurrenceSent: recurrencePending.current?.unsaved() ?? false,
         typing: typingUnsaved,
       }),
     );
@@ -1249,7 +1268,7 @@ function TaskDetail({
                 {held.subtask && <span>入力中のサブタスクがあります</span>}
                 {held.recurrence && (
                   <span>
-                    {task.recurrenceRuleId === undefined
+                    {task.recurrenceRuleId === undefined && !held.recurrenceSent
                       ? '「繰り返しにする」をまだ押していません'
                       : '繰り返しの変更がまだ保存されていません'}
                   </span>

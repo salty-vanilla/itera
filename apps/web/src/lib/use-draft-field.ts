@@ -1,6 +1,6 @@
 import type { MadeFrom } from '@itera/api-contract/requests';
 import { useEffect, useRef, useState } from 'react';
-import { useUnsavedTyping } from './unsaved-typing';
+import { useUnsavedTyping, useUnsavedTypingLayers } from './unsaved-typing';
 
 type Draft<T> = {
   /** What is typed. */
@@ -133,6 +133,7 @@ function useDraftField<T>(
   // This field, to the app's count of typing not saved.
   const [self] = useState(() => ({}));
   const unsavedTyping = useUnsavedTyping();
+  const layers = useUnsavedTypingLayers();
   // The read changed after the last save was answered, or caught up with
   // typing a failed save gave back: the draft's job is done. While a save
   // is still on the way, the read is an earlier save's.
@@ -145,9 +146,9 @@ function useDraftField<T>(
   const unsaved = live?.failed === true;
   useEffect(() => {
     if (unsavedTyping === null) return;
-    if (unsaved) unsavedTyping.mark(self);
+    if (unsaved) unsavedTyping.mark(self, layers);
     else unsavedTyping.unmark(self);
-  }, [unsavedTyping, self, unsaved]);
+  }, [unsavedTyping, self, unsaved, layers]);
   useEffect(() => () => unsavedTyping?.unmark(self), [unsavedTyping, self]);
   return {
     value: live === undefined ? read : live.value,
@@ -216,7 +217,10 @@ function useDraftField<T>(
             sending: Math.max(0, d.sending - 1),
             held: givenBack ? false : d.held,
             given: givenBack || d.given,
-            failed: givenBack || d.failed,
+            // The last save went through: the typing is saved, also when
+            // the read does not change for it (the same words as another
+            // device's).
+            failed: givenBack || (d.failed && !(ok === true && d.last === id)),
           };
         });
       });

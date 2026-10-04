@@ -126,6 +126,8 @@ function sameDays(a: readonly DayOfWeek[], b: readonly DayOfWeek[]): boolean {
 /** What the Task detail asks the recurrence before it closes. */
 type RecurrencePending = {
   pending: () => HTMLElement | null;
+  /** The choice a failed save left out of the records is shown (#332). */
+  unsaved: () => boolean;
   drop: () => void;
 };
 
@@ -205,6 +207,7 @@ function RecurrenceEditor({
   };
   useImperativeHandle(pendingRef, () => ({
     pending: pendingOf,
+    unsaved: () => choice.unsaved,
     drop: () => choice.drop(),
   }));
   const [result, setResult] = useState<Result>();

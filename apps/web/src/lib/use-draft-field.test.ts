@@ -126,6 +126,20 @@ describe('useDraftField', () => {
     expect(result.current.saveFailed).toBe(false);
   });
 
+  it('is unsaved from a failed save until the typing is saved, also when the read does not change for it', async () => {
+    const { result, rerender } = setup();
+    act(() => result.current.set('mine'));
+    await act(async () => result.current.hold(Promise.resolve(false)));
+    expect(result.current.unsaved).toBe(true);
+    rerender({ read: 'from another device' });
+    // Typed over to the other device's words and saved: the read does not
+    // change for it.
+    act(() => result.current.set('from another device'));
+    expect(result.current.unsaved).toBe(true);
+    await act(async () => result.current.hold(Promise.resolve(true)));
+    expect(result.current.unsaved).toBe(false);
+  });
+
   it('does not say the save failed once the typing is dropped', async () => {
     const { result } = setup();
     act(() => result.current.set('typed'));

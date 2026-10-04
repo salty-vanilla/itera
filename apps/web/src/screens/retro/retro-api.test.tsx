@@ -256,14 +256,14 @@ describe('Retro on the API', () => {
       return { ...served, router, field, saves: () => (refuse = false) };
     }
 
-    it('asks before the screen changes, and stays on 戻る', async () => {
+    it('asks before the screen changes, and stays on キャンセル', async () => {
       const { router, field } = await failToSave();
       await userEvent.click(screen.getAllByRole('link', { name: '今日' })[0]!);
       const dialog = await screen.findByRole('alertdialog', {
-        name: '保存していない内容があります',
+        name: '保存せずに移りますか？',
       });
       await userEvent.click(
-        within(dialog).getByRole('button', { name: '戻る' }),
+        within(dialog).getByRole('button', { name: 'キャンセル' }),
       );
       await until(() => expect(screen.queryByRole('alertdialog')).toBeNull());
       expect(router.state.location.pathname).toBe('/retro');
@@ -280,6 +280,19 @@ describe('Retro on the API', () => {
         within(dialog).getByRole('button', { name: '保存せずに移る' }),
       );
       await until(() => expect(router.state.location.pathname).toBe('/today'));
+    });
+
+    it('moves on when the words are saved while it asks', async () => {
+      const { router, saves } = await failToSave();
+      saves();
+      // Leaving the field sends the words again, and the link is pressed
+      // before they are saved.
+      await userEvent.click(
+        screen.getByRole('textbox', { name: /気づいたこと/ }),
+      );
+      await userEvent.click(screen.getAllByRole('link', { name: '今日' })[0]!);
+      await until(() => expect(router.state.location.pathname).toBe('/today'));
+      expect(screen.queryByRole('alertdialog')).toBeNull();
     });
 
     it('does not ask once the words are saved', async () => {
