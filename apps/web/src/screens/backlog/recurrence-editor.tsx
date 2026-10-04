@@ -6,9 +6,9 @@ import type {
 } from '@itera/api-contract';
 import type { MadeFrom } from '@itera/api-contract/requests';
 import {
-  useEffect,
   useId,
   useImperativeHandle,
+  useLayoutEffect,
   useRef,
   useState,
   type Ref,
@@ -200,8 +200,12 @@ function RecurrenceEditor({
   const freqRef = useRef<HTMLSelectElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   // 繰り返しにする makes the button go: the focus moves to the frequency.
+  // The focus moves in the commit that takes the button away, not in an
+  // effect after it: an effect runs a task later after a change made once
+  // an operation is answered, and until then the focus is on the page
+  // (#396).
   const hadRule = useRef(owns);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (owns && !hadRule.current) freqRef.current?.focus();
     hadRule.current = owns;
   }, [owns]);
@@ -229,8 +233,9 @@ function RecurrenceEditor({
   const [error, setError] = useState<string>();
   // 繰り返しをやめる makes the button go. Taken off, the editor starts again
   // from the frequency; ended, the heading holds the place, above the rule
-  // and its last day (the choice under it makes a new rule, #323).
-  useEffect(() => {
+  // and its last day (the choice under it makes a new rule, #323). As
+  // above, in the commit that shows the result (#396).
+  useLayoutEffect(() => {
     if (result?.kind === 'removed') freqRef.current?.focus();
     if (result?.kind === 'ended') headingRef.current?.focus();
   }, [result]);

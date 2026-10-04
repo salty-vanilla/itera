@@ -650,8 +650,12 @@ describe('Backlog', () => {
     await userEvent.click(
       within(recurrence).getByRole('button', { name: '繰り返しにする' }),
     );
-    expect(within(recurrence).getByRole('status').textContent).toContain(
-      '次の Sprint から反映',
+    // The answer shows once the operation is answered, and the focus moves
+    // in the same commit (#396).
+    await waitFor(() =>
+      expect(within(recurrence).getByRole('status').textContent).toContain(
+        '次の Sprint から反映',
+      ),
     );
     expect(task(ids.task.bookshelf)?.recurrenceRuleId).toBeDefined();
     // The button goes, so the focus goes to the frequency.
@@ -1269,8 +1273,10 @@ describe('Backlog', () => {
     await userEvent.click(
       within(section).getByRole('button', { name: '繰り返しをやめる' }),
     );
-    expect(within(section).getByRole('status').textContent).toBe(
-      '繰り返しをやめました',
+    await waitFor(() =>
+      expect(within(section).getByRole('status').textContent).toBe(
+        '繰り返しをやめました',
+      ),
     );
     expect(
       within(section).getByText('今の設定：毎週 土 · 10/4 (日) まで'),
@@ -1413,15 +1419,17 @@ describe('Backlog', () => {
       within(section).getByRole('button', { name: '繰り返しにする' }),
     );
     await userEvent.click(
-      within(section).getByRole('button', { name: '繰り返しをやめる' }),
+      await within(section).findByRole('button', { name: '繰り返しをやめる' }),
+    );
+    await waitFor(() =>
+      expect(within(section).getByRole('status').textContent).toBe(
+        '繰り返しをやめました',
+      ),
     );
     expect(task(ids.task.bookshelf)?.recurrenceRuleId).toBeUndefined();
     expect(
       records().rules.filter((r) => r.taskId === ids.task.bookshelf),
     ).toEqual([]);
-    expect(within(section).getByRole('status').textContent).toBe(
-      '繰り返しをやめました',
-    );
     // Back to making one, from the start; nothing is held on close.
     const freq = within(section).getByRole('combobox', { name: '頻度' });
     expect(document.activeElement).toBe(freq);
