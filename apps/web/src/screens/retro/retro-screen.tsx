@@ -1,4 +1,4 @@
-import type { MadeFrom } from '@itera/api-contract/requests';
+import type { MadeFrom } from '@itera/api-contract/sending';
 import type { AreaId, SprintItem } from '@itera/api-contract';
 import { useNavigate, useRouter, useSearch } from '@tanstack/react-router';
 import { Pin, Rewind, Route } from 'lucide-react';

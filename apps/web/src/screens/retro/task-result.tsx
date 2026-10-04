@@ -28,8 +28,8 @@ function TaskResult({
         <span
           className={
             carried
-              ? 'inline-flex items-center gap-1 whitespace-nowrap text-ink-muted'
-              : 'whitespace-nowrap'
+              ? 'inline-flex items-center gap-1 nowrap-phrase text-ink-muted'
+              : 'nowrap-phrase'
           }
         >
           {carried && <Icon icon={semanticIcons.carriedOver} size={iconSize} />}

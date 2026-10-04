@@ -165,13 +165,13 @@ function DayHeader({
           {side !== undefined && (
             <span
               aria-hidden
-              className="ms-2 shrink-0 text-body whitespace-nowrap text-ink-muted"
+              className="ms-2 shrink-0 text-body nowrap-phrase text-ink-muted enlarged:shrink"
             >
               {side}
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex max-w-full flex-wrap items-center gap-2">
           <label htmlFor={inputId} className="text-meta text-ink-muted">
             日付を選ぶ
           </label>
@@ -191,7 +191,7 @@ function DayHeader({
             onBlur={(event) => {
               if (typed.current) commit(event.currentTarget.value, true);
             }}
-            className="w-auto"
+            className="w-auto max-w-full"
           />
         </div>
       </div>

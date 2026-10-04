@@ -1,4 +1,4 @@
-import type { MadeFrom } from '@itera/api-contract/requests';
+import type { MadeFrom } from '@itera/api-contract/sending';
 import type { Capacity, PlanningTotal } from '@itera/api-contract';
 import { Fragment, useId, useState } from 'react';
 import type { Saved } from '@/api/use-operation';
@@ -211,15 +211,15 @@ function Sentences({ items }: { items: readonly string[] }) {
       <Fragment key={item}>
         {i > 0 && ' '}
         {notes.length === 0 ? (
-          <span className="whitespace-nowrap">
+          <span className="nowrap-phrase">
             {item}
             {!last && ' ·'}
           </span>
         ) : (
           <span className="inline-block max-w-full">
-            <span className="whitespace-nowrap">{value}</span>
+            <span className="nowrap-phrase">{value}</span>
             {notes.map((note, j) => (
-              <span key={note} className="whitespace-nowrap">
+              <span key={note} className="nowrap-phrase">
                 {note}
                 {!last && j === notes.length - 1 && ' ·'}
               </span>
@@ -328,7 +328,7 @@ function CapacityStatement({
         // only after 「：」 or at 「·」.
         <span>
           {statement.text.includes('：') && (
-            <span className="whitespace-nowrap">
+            <span className="nowrap-phrase">
               {statement.text.slice(0, statement.text.indexOf('：') + 1)}
             </span>
           )}
@@ -376,16 +376,17 @@ function CapacityIndicator({
             )}
             <CapacityStatement statement={statement} />
           </div>
-          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 text-body">
-            <dt className="whitespace-nowrap text-ink-muted">計画の合計</dt>
-            <dd className="text-right text-num-m text-ink">
+          {/* With enlarged text the values go under their labels (#393). */}
+          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 text-body enlarged:grid-cols-1">
+            <dt className="nowrap-phrase text-ink-muted">計画の合計</dt>
+            <dd className="text-right text-num-m text-ink enlarged:break-keep enlarged:text-left">
               {/* The count left out is its own sentence below. */}
               {formatPlanningSum(total)}
             </dd>
             {capacity !== undefined && !editable && (
               <>
-                <dt className="whitespace-nowrap text-ink-muted">使える時間</dt>
-                <dd className="text-right text-num-m text-ink">
+                <dt className="nowrap-phrase text-ink-muted">使える時間</dt>
+                <dd className="text-right text-num-m text-ink enlarged:break-keep enlarged:text-left">
                   {formatHours(capacity.availableHours)}
                 </dd>
               </>
@@ -443,9 +444,10 @@ function Headline({
 }) {
   // One sentence per line, the numbers in one right-aligned column; the
   // words are quieter than the number, which is `danger` only when even the
-  // lower end is over.
+  // lower end is over. With enlarged text the three parts are one column
+  // (#393).
   return (
-    <p className="grid grid-cols-[auto_auto_minmax(0,1fr)] items-baseline gap-x-2 gap-y-1">
+    <p className="grid grid-cols-[auto_auto_minmax(0,1fr)] items-baseline gap-x-2 gap-y-1 enlarged:grid-cols-[minmax(0,1fr)]">
       {headline.map((part) => (
         <span key={partText(part)} className="contents">
           {part.lead !== undefined && (
@@ -458,7 +460,7 @@ function Headline({
           {part.value !== undefined && (
             <span
               className={cn(
-                'text-right text-num-l',
+                'text-right text-num-l enlarged:text-left',
                 over ? 'text-danger' : 'text-ink',
               )}
             >
@@ -468,7 +470,7 @@ function Headline({
           <span
             className={cn(
               'text-label text-ink-muted',
-              part.value === undefined && 'col-span-2',
+              part.value === undefined && 'col-span-2 enlarged:col-span-1',
             )}
           >
             {part.tail}

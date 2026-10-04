@@ -245,8 +245,8 @@ function RowMetadata({
               // Breaks only after the separator in a narrow row, so that no
               // line starts with it.
               <span>
-                <span className="whitespace-nowrap">作業中 ·</span>{' '}
-                <span className="whitespace-nowrap">
+                <span className="nowrap-phrase">作業中 ·</span>{' '}
+                <span className="nowrap-phrase">
                   {startedSince(selection.startedAt, timeZone)}
                 </span>
               </span>
@@ -258,13 +258,13 @@ function RowMetadata({
           <MetaItem wrap icon={<Pause aria-hidden />}>
             <span>
               {/* Breaks only at the separator in a narrow row. */}
-              <span className="whitespace-nowrap">中断</span>
+              <span className="nowrap-phrase">中断</span>
               {actual !== undefined && (
                 // The value stays with its separator when the line wraps;
                 // the space before it is where the line may break.
                 <>
                   {' '}
-                  <span className="whitespace-nowrap">· {actual}</span>
+                  <span className="nowrap-phrase">· {actual}</span>
                 </>
               )}
             </span>

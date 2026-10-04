@@ -40,12 +40,13 @@ function Select({ size, prefix, className, children, ...props }: SelectProps) {
           <select
             data-slot="select-control"
             className={cn(
-              'h-full w-full min-w-0 cursor-pointer appearance-none bg-transparent text-inherit',
+              'w-full min-w-0 cursor-pointer appearance-none self-stretch bg-transparent text-inherit',
               // Room for the chevron, which does not take pointer events.
               'pr-8 pl-3',
               size === 'sm' && 'medium:pl-2',
               // Room for the mark: 8px, the 20px symbol and 4px (as in a Filter).
-              prefix !== undefined && 'pl-8 medium:pl-8',
+              // The symbol grows with enlarged text (#393).
+              prefix !== undefined && 'pl-8 medium:pl-8 enlarged:pl-12',
               'outline-none disabled:cursor-not-allowed',
             )}
             {...props}

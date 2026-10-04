@@ -33,7 +33,7 @@ function Deadline({
     <span
       data-slot="deadline"
       className={cn(
-        'inline-flex items-center gap-1 whitespace-nowrap',
+        'inline-flex items-center gap-1 nowrap-phrase',
         tone,
         className,
       )}

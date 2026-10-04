@@ -1,4 +1,4 @@
-import type { MadeFrom } from '@itera/api-contract/requests';
+import type { MadeFrom } from '@itera/api-contract/sending';
 import type { RetroPin } from '@itera/api-contract';
 import { useId, useLayoutEffect, useRef, useState } from 'react';
 import type { Saved } from '@/api/use-operation';

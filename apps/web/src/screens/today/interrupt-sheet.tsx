@@ -1,4 +1,4 @@
-import type { MadeFrom } from '@itera/api-contract/requests';
+import type { MadeFrom } from '@itera/api-contract/sending';
 import { useRef, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import {

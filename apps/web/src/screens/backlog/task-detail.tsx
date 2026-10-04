@@ -9,7 +9,7 @@ import type {
 import type {
   MadeFrom,
   TaskAttributeUpdate,
-} from '@itera/api-contract/requests';
+} from '@itera/api-contract/sending';
 import { Link, useLocation } from '@tanstack/react-router';
 import { Check, ChevronDown, ChevronRight } from 'lucide-react';
 import {
@@ -942,7 +942,7 @@ function TaskDetailContent({
           // chooses a field, so a phone does not raise its keyboard (#95).
           tabIndex={-1}
           data-autofocus={focusEstimate === undefined || undefined}
-          className="w-fit rounded-sm focus-visible:focus-ring"
+          className="w-fit max-w-full rounded-sm focus-visible:focus-ring"
         >
           {task.title}
         </DrawerTitle>

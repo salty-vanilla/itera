@@ -10,6 +10,9 @@ import { cn } from '@/lib/utils';
 const buttonVariants = cva(
   [
     'relative inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap select-none',
+    // Enlarged text (#393): a label wider than the screen breaks between
+    // phrases, and the height grows with it.
+    'enlarged:max-w-full enlarged:py-1 enlarged:whitespace-normal',
     'rounded-sm border text-button',
     'transition-colors duration-(--duration-fast) ease-standard',
     'focus-visible:focus-ring',
@@ -55,9 +58,9 @@ const buttonVariants = cva(
       },
       // Compact widths (under 768px) always use the 44px touch size.
       size: {
-        sm: 'h-control-lg px-3 medium:h-control-sm medium:px-2',
-        md: 'h-control-lg px-3 medium:h-control-md',
-        lg: 'h-control-lg px-4',
+        sm: 'min-h-control-lg px-3 medium:min-h-control-sm medium:px-2',
+        md: 'min-h-control-lg px-3 medium:min-h-control-md',
+        lg: 'min-h-control-lg px-4',
       },
       // A toggle that is on inverts, whatever its variant (DESIGN.md
       // Selected, as IconButton's pressed): an ink fill, so the state never

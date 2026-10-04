@@ -205,7 +205,7 @@ describe('Retro — 事実を見る', () => {
       [
         ...paper
           .querySelectorAll('td')[0]!
-          .querySelectorAll('.whitespace-normal > .whitespace-nowrap'),
+          .querySelectorAll('.whitespace-normal > .nowrap-phrase'),
       ].map((e) => e.textContent),
     ).toEqual(['3〜', '5時間']);
     expect(paper.textContent).toContain('4時間30分');

@@ -33,6 +33,7 @@
 - アプリと Storybook が読むのは `apps/web/src/styles/tokens.css`（テーマで変わる生の CSS 変数）と `globals.css`（Tailwind の `@theme`）だけ。実行時・ビルド時に DESIGN.md を読まない。
 - DESIGN.md の YAML と CSS が一致することは `apps/web/src/styles/tokens.test.ts` が CI で確かめる。DESIGN.md を読むのはこのテストだけにする（2026-09-27 オーナー確認）。文書の書式に実行時の依存を持たせず、ずれは CI で止める。
 - DESIGN.md の YAML から CSS を生成する方式は採らない。ビルドが文書に依存し、YAML にない値（elevation・layer・motion）を別の経路で足すことになるため。
+- 文字の大きさと行の高さ（`typography.*`）は、YAML の px を 16 で割った rem で CSS に写す。ルートの font-size はブラウザの設定のままにし、本文の大きさは `body` に置く。ブラウザの文字の大きさの設定で文字だけが大きくなる（WCAG 1.4.4。2026-10-05 オーナー判断、Issue #393）。余白・寸法・ブレークポイントは px のまま写す。`tokens.test.ts` は rem × 16 を YAML の px と照らす。
 
 ### 部品の置き場所
 

@@ -65,7 +65,7 @@ function Estimate({
   className,
 }: EstimateProps) {
   const base =
-    'inline-flex shrink-0 items-center gap-1 text-meta whitespace-nowrap';
+    'inline-flex shrink-0 items-center gap-1 text-meta nowrap-phrase enlarged:shrink';
   if (value.base === 'none') {
     if (enter !== undefined) {
       return (

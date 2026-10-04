@@ -1,6 +1,6 @@
 import type { AreaId, EditableArea } from '@itera/api-contract';
 import { listAreasOptions } from '@itera/api-contract/react-query';
-import type { MadeFrom } from '@itera/api-contract/requests';
+import type { MadeFrom } from '@itera/api-contract/sending';
 import { useQuery } from '@tanstack/react-query';
 import { useApiClient } from '@/api/api-provider';
 import { useRead, type Read } from '@/api/read-state';

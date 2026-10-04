@@ -3,7 +3,7 @@
 - 状態：採用
 - 日付：2026-10-03
 - 関連：PRD §14「クライアントとデータの方式」、ADR 0004、ADR 0005、ADR 0006、Issue #45・#262・#265
-- 改訂：2026-10-04（操作の可否の形を、記録ごとの出力専用の `capabilities`（`can<操作>` の真偽値）に決める。domain のコマンドの前提を `check…` として切り出し、今日の選択と割り込みに当てる。Web の今日の画面と Task の詳細の選択の操作は、3 つ目の例外から外れた。Issue #322。ほかの記録は #323）、2026-10-04（残りの記録（Backlog の Task・提案・サブタスク・領域・Sprint・Goal・SprintTask・計画の候補と回・振り返り・計画基準・過去の日の記録）に `capabilities` を当て、3 つ目の例外から操作の可否を外す。ほかの記録の操作を置く場合、1 つの面が受ける 2 つの操作、入れ子の記録、状態で断らない操作の扱いを決める。Issue #323）
+- 改訂：2026-10-04（操作の可否の形を、記録ごとの出力専用の `capabilities`（`can<操作>` の真偽値）に決める。domain のコマンドの前提を `check…` として切り出し、今日の選択と割り込みに当てる。Web の今日の画面と Task の詳細の選択の操作は、3 つ目の例外から外れた。Issue #322。ほかの記録は #323）、2026-10-04（残りの記録（Backlog の Task・提案・サブタスク・領域・Sprint・Goal・SprintTask・計画の候補と回・振り返り・計画基準・過去の日の記録）に `capabilities` を当て、3 つ目の例外から操作の可否を外す。ほかの記録の操作を置く場合、1 つの面が受ける 2 つの操作、入れ子の記録、状態で断らない操作の扱いを決める。Issue #323）、2026-10-05（振り分けの送る側を `@itera/api-contract/sending` に分け、Web はそれを使う。Issue #356）
 
 ## 背景
 
@@ -49,8 +49,8 @@ Web を契約に移し終えた後（ADR 0005、#272〜#277）の形：
 ```text
 services/api ───────────────▶ packages/application ──▶ packages/domain
 services/api ───────────────▶ packages/api-contract（型と検証）
-apps/web ───────────────────▶ packages/api-contract（生成したクライアントと型、requests の振り分け）
-packages/api-contract/requests ─(型だけ)─▶ packages/application（操作の名前と入力。#295）
+apps/web ───────────────────▶ packages/api-contract（生成したクライアントと型、sending の振り分け）
+packages/api-contract/sending・requests ─(型だけ)─▶ packages/application（操作の名前と入力。#295）
 apps/web のブラウザ内モック ─▶ packages/application ──▶ packages/domain（開発ビルドだけ）
 apps/web のプレビューの例外 ─▶ packages/domain（iOS に着手するまで。ADR 0005）
 iOS・Android ───────────────▶ packages/api-contract/openapi/ から生成したもの
@@ -59,15 +59,15 @@ iOS・Android ───────────────▶ packages/api-cont
 - Web を特別扱いしない。Web も契約だけに依存し、iOS・Android にない近道（`packages/application` の読み取りを直接呼ぶなど）を持たない。最初のクライアントである Web で、契約の欠けとずれを見つけるため。
 - 例外は次の 3 つで、どれも過渡的なもの。終わる時期は例外ごとに決める。
   - ADR 0005「プレビューの例外」：Web のプレビューは `packages/domain` の関数を使う。戻す条件（iOS に着手するとき）も ADR 0005 のとおり。
-  - 操作の名前と入力（#295、2026-10-03）：Web は `packages/application` の操作の名前と入力で操作を呼ぶ（Issue #295 の範囲 3。ADR 0005「操作は名前と入力」）。その名前と入力の型は、`@itera/api-contract/requests`（振り分けの規則、ADR 0006「経路の形」）を通して application から来る。
-    - 境界：依存するのは `packages/api-contract/src/requests.ts` が application の型を import することだけ。実行時の依存はない（ESLint の `@typescript-eslint/no-restricted-imports` の `allowTypeImports` で、型だけの import に限る）。`openapi/` と生成したものは依存しない。画面は `requests` の型を使い、application を import しない（ADR 0005）。テストの道具 `@itera/api-contract/testing` は application と domain を実行時に使うが、本番のコードから import できない（ESLint）。
+  - 操作の名前と入力（#295、2026-10-03）：Web は `packages/application` の操作の名前と入力で操作を呼ぶ（Issue #295 の範囲 3。ADR 0005「操作は名前と入力」）。その名前と入力の型は、`@itera/api-contract/sending`（振り分けの規則の送る側、ADR 0006「経路の形」。サーバーとモックは両方向の `/requests`）を通して application から来る。
+    - 境界：依存するのは `packages/api-contract/src/sending.ts` と `requests.ts` が application の型を import することだけ。実行時の依存はない（ESLint の `@typescript-eslint/no-restricted-imports` の `allowTypeImports` で、型だけの import に限る）。`openapi/` と生成したものは依存しない。画面は `sending` の型を使い、application を import しない（ADR 0005）。テストの道具 `@itera/api-contract/testing` は application と domain を実行時に使うが、本番のコードから import できない（ESLint）。
     - 理由：要求の組み立ての規則を、サーバー・ブラウザ内モック・Web で 1 か所に置くため。名前と入力は application が正本で、契約に写すと二重になる。
     - iOS・Android は影響を受けない。`openapi/` から生成し、操作の名前と入力では呼ばない（面の operationId で呼ぶ）。
     - 戻す条件：iOS に着手するときに、Web も面の operationId と生成した型で呼ぶ形にするか、操作の名前と入力を契約の側に置くかを決める。
   - 値の規則：プレビューの一覧を決めるまで、Web は値の規則（空でない名前、置き換えには新しい計画基準が要る、など）を送る前に検査してよい。下の「クライアントに許す計算」は目標の形で、iOS・Android は初めからこれに従う。戻す条件：プレビューの一覧を決めるとき（iOS に着手するとき）。
     - 操作の可否は、この例外から外れた（#322 で今日の選択と割り込み、#323 で残りの記録）。Web は `capabilities` が真の操作だけを出し、状態の名前から操作の可否を決めない（下の「操作の可否」）。
 - Web の依存は ESLint の `no-restricted-imports` で検査する（ADR 0005）。iOS・Android は言語が違うので、TypeScript の実装には依存できない。
-- 契約は内部より上流に置く。`openapi/` と、そこから生成したものは、`packages/application`・`packages/domain` に依存しない。`packages/api-contract` が `packages/application` を使うのは、テスト（契約と実装が合っているかを確かめる。ADR 0006「契約と実装の一致」）と、上の例外の `requests.ts` の型だけ。
+- 契約は内部より上流に置く。`openapi/` と、そこから生成したものは、`packages/application`・`packages/domain` に依存しない。`packages/api-contract` が `packages/application` を使うのは、テスト（契約と実装が合っているかを確かめる。ADR 0006「契約と実装の一致」）と、上の例外の `sending.ts`・`requests.ts` の型だけ。
 
 ### アプリケーション層の読み取りと API の DTO
 

@@ -117,7 +117,7 @@ function SubtaskList({
               onChange={(e) => setTitle(e.currentTarget.value)}
             />
           </Field>
-          <div className="flex items-start gap-2">
+          <div className="flex items-start gap-2 enlarged:flex-wrap">
             <DurationField
               label="サブタスクの見積もり（任意）"
               hideLabel
