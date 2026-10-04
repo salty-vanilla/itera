@@ -370,7 +370,7 @@ describe('contrast', () => {
     { foreground: ['on-here'], background: ['here'], min: 4.5 },
     { foreground: ['border-strong', 'focus'], background: grounds, min: 3 },
     // DESIGN.md Colors › コントラスト: area-* is 3:1 on canvas only (owner
-    // decision on Issue #365, 2026-10-05). The dark area colors are below 3:1
+    // decision on Issue #365, 2026-10-05). Some dark area colors are below 3:1
     // on the other grounds by design; their white-on-fill text is covered by
     // the on-area rule above.
     { foreground: areas, background: ['canvas'], min: 3 },
