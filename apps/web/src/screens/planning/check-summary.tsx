@@ -82,7 +82,7 @@ function CheckSummary({
             />
           )}
         </div>
-        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-1 text-body">
+        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-1 text-body enlarged:grid-cols-1">
           <dt className="text-ink-muted">計画の合計</dt>
           {/* In the body's size: the answer is above (#243). */}
           <dd className="text-ink enlarged:break-keep">{summary.total}</dd>

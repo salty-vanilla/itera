@@ -12,7 +12,7 @@ const buttonVariants = cva(
     'relative inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap select-none',
     // Enlarged text (#393): a label wider than the screen breaks between
     // phrases, and the height grows with it.
-    'enlarged:max-w-full enlarged:whitespace-normal',
+    'enlarged:max-w-full enlarged:py-1 enlarged:whitespace-normal',
     'rounded-sm border text-button',
     'transition-colors duration-(--duration-fast) ease-standard',
     'focus-visible:focus-ring',

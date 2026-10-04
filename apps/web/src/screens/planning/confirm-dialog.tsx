@@ -65,7 +65,7 @@ function ConfirmDialog({
               </ul>
             )}
           </section>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-body">
+          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-body enlarged:grid-cols-1">
             <dt className="nowrap-phrase text-ink-muted">タスク</dt>
             <dd className="text-ink">
               {summary.taskCount}件

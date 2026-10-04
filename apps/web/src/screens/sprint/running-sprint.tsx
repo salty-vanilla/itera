@@ -417,7 +417,7 @@ function Outlook({
           </p>
         )}
         {onHours === undefined ? (
-          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-body">
+          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-body enlarged:grid-cols-1">
             <dt className="text-ink-muted">終わったときの使える時間</dt>
             <dd className="text-right text-ink">
               {current === undefined ? '未入力' : formatHours(current)}

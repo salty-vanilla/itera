@@ -133,13 +133,13 @@ function PlanPane({
               aria-label={block.area.name}
               className="flex flex-col gap-2"
             >
-              <h2 className="flex items-center gap-2">
+              <h2 className="flex items-center gap-2 enlarged:flex-wrap">
                 <AreaIndicator
                   name={block.area.name}
                   color={block.area.color}
                   variant="heading"
                 />
-                <span className="text-meta text-ink-muted">
+                <span className="text-meta text-ink-muted enlarged:break-keep">
                   {summaryOf(block, stage)}
                 </span>
               </h2>

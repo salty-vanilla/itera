@@ -40,7 +40,7 @@ function Select({ size, prefix, className, children, ...props }: SelectProps) {
           <select
             data-slot="select-control"
             className={cn(
-              'h-full w-full min-w-0 cursor-pointer appearance-none bg-transparent text-inherit',
+              'w-full min-w-0 cursor-pointer appearance-none self-stretch bg-transparent text-inherit',
               // Room for the chevron, which does not take pointer events.
               'pr-8 pl-3',
               size === 'sm' && 'medium:pl-2',

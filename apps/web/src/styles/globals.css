@@ -277,6 +277,15 @@
     );
   }
 
+  /* With enlarged text the bar shows its icons only, 44px (navigation.tsx). */
+  @variant enlarged {
+    :root {
+      --toast-offset-bottom: calc(
+        var(--spacing-target-touch) + env(safe-area-inset-bottom)
+      );
+    }
+  }
+
   /*
    * The root keeps the browser's font size, which rem is relative to: the
    * body text size is set on body (#393).

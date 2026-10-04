@@ -268,14 +268,17 @@ function NavigationTabBar({
               {...linkProps(item, current, onNavigate)}
               className={cn(
                 itemBase,
-                // 44px or more to touch: 8 + 20 + 4 + 16 + 8 = 56px.
-                'flex-col justify-center gap-1 rounded-none py-2 text-meta',
+                // 44px or more to touch: 8 + 20 + 4 + 16 + 8 = 56px; 44px with
+                // the icon only.
+                'flex-col justify-center gap-1 rounded-none py-2 text-meta enlarged:min-h-target-touch',
                 'before:inset-x-3 before:top-0 before:h-1',
               )}
             >
               {item.icon}
-              {/* Enlarged text (#393): the name wraps rather than being cut. */}
-              <span className="max-w-full truncate enlarged:text-center enlarged:whitespace-normal enlarged:wrap-anywhere">
+              {/* With enlarged text the bar shows the icons only and the
+                  name is read out: it would not fit on a line (DESIGN.md
+                  Navigation, #393). */}
+              <span className="max-w-full truncate enlarged:sr-only">
                 {item.label}
               </span>
               {item.count !== undefined && (

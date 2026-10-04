@@ -120,14 +120,21 @@ function GoalBlock({
       )}
     >
       <div className={cn(line && 'flex flex-wrap items-center gap-x-3')}>
-        <Heading id={headingId} className="flex items-center gap-2">
+        {/* With enlarged text the summary goes under the Area's name and
+            breaks only at its spaces and after 「〜」 (#393). */}
+        <Heading
+          id={headingId}
+          className="flex items-center gap-2 enlarged:flex-wrap"
+        >
           <AreaIndicator
             name={area.name}
             color={area.color}
             variant="heading"
           />
           {summary !== undefined && (
-            <span className="text-meta text-ink-muted">{summary}</span>
+            <span className="text-meta text-ink-muted enlarged:break-keep">
+              {summary}
+            </span>
           )}
         </Heading>
         {line && onSave !== undefined && (
