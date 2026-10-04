@@ -337,12 +337,29 @@ describe('Retro on the API', () => {
       ).not.toHaveLength(0);
       expect(before()).toBe(read);
       expect(reflection().value).toContain('PC で書いた文');
+      // The field says it is not saved, also to a screen reader (#332).
+      await until(() =>
+        expect(reflection().getAttribute('aria-invalid')).toBe('true'),
+      );
+      const described = (reflection().getAttribute('aria-describedby') ?? '')
+        .split(' ')
+        .map((id) => document.getElementById(id)?.textContent);
+      expect(described).toContain('まだ保存していません');
       // Left again: saved over the Retro as it now is.
       const sent = patches(requests).length;
       await userEvent.click(reflection());
       await userEvent.tab();
       await until(() => expect(patches(requests)).toHaveLength(sent + 1));
       await until(() => expect(before()).toContain('PC で書いた文'));
+      // Saved: the field is no longer in error, and the Toast is closed.
+      await until(() =>
+        expect(reflection().getAttribute('aria-invalid')).toBeNull(),
+      );
+      await until(() =>
+        expect(
+          screen.queryAllByText('ほかの端末で変わっていました'),
+        ).toHaveLength(0),
+      );
       expect(
         store.getSnapshot().records.sprints.find((s) => s.id === sprintId)
           ?.retro?.improvement?.text,

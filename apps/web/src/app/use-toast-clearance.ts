@@ -1,31 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
-import { useToasts } from '@/components/ui/toast';
+import {
+  scrollClearOfToasts,
+  toastBox,
+  useToasts,
+} from '@/components/ui/toast';
 
 /** A Toast follows the press that caused it within this time. */
 const REACT_MS = 1000;
-/** Room left between the Toast and the row it made way for. */
-const GAP = 8;
-
-/** The nearest ancestor that scrolls vertically. */
-function scrollParent(el: HTMLElement): HTMLElement | null {
-  for (let p = el.parentElement; p !== null; p = p.parentElement) {
-    if (
-      /(auto|scroll)/.test(getComputedStyle(p).overflowY) &&
-      p.scrollHeight > p.clientHeight
-    ) {
-      return p;
-    }
-  }
-  return null;
-}
-
-/** The Toasts' box, or `undefined` while none shows (it has no height). */
-function toastBox(): DOMRect | undefined {
-  const box = document
-    .querySelector('[data-slot="toast-viewport"]')
-    ?.getBoundingClientRect();
-  return box === undefined || box.height === 0 ? undefined : box;
-}
 
 /** Text and controls that reach under the Toasts' columns (not scroll-bound). */
 const CONTENT =
@@ -83,7 +64,8 @@ function makeRoom(main: HTMLElement): DOMRect | undefined {
  *   (`min-h-full`, `mt-auto`) rises by the same amount, as if the screen were
  *   that much shorter;
  * - what the person just pressed or typed in is scrolled up, by the least
- *   that it takes, if a Toast would cover it.
+ *   that it takes, if a Toast would cover it, and then a field whose save
+ *   failed (#332).
  *
  * The Toasts are never moved for this; DESIGN.md fixes where they are. (A
  * bar stuck to the bottom of the screen lifts them instead
@@ -133,7 +115,18 @@ export function useToastClearance(mainRef: RefObject<HTMLElement | null>) {
       last.current !== null && Date.now() - last.current.at < REACT_MS
         ? last.current.target
         : null;
-    if (box === undefined || !fresh || target === null) return;
+    if (box === undefined || !fresh) return;
+
+    // A field whose save failed keeps what was typed and says so (Field
+    // `saveFailed`, #332): it is made clear last, so that it is what shows.
+    // It may come after the Toast, and makes itself clear then.
+    const clearFailed = () => {
+      for (const field of document.querySelectorAll<HTMLElement>(
+        '[data-save-failed]',
+      ))
+        scrollClearOfToasts(field, main.contains(field) ? main : null);
+    };
+    if (target === null) return clearFailed();
 
     const clear = (target: Element) => {
       if (!main.contains(target)) return;
@@ -141,19 +134,11 @@ export function useToastClearance(mainRef: RefObject<HTMLElement | null>) {
         target.closest<HTMLElement>(
           '[data-slot="task-row"], [data-slot="interrupt-row"], [data-slot="task-quick-add"]',
         ) ?? (target as HTMLElement);
-      const rect = el.getBoundingClientRect();
-      const overlaps =
-        rect.left < box.right &&
-        rect.right > box.left &&
-        rect.bottom > box.top &&
-        rect.top < box.bottom;
-      if (!overlaps) return;
-      (scrollParent(el) ?? main).scrollBy({
-        top: rect.bottom - box.top + GAP,
-      });
+      scrollClearOfToasts(el, main);
     };
     if (target.isConnected) {
       clear(target);
+      clearFailed();
       return;
     }
     // What was pressed went away with the operation (a deleted row): the
@@ -163,6 +148,7 @@ export function useToastClearance(mainRef: RefObject<HTMLElement | null>) {
     // then.
     requestAnimationFrame(() => {
       if (document.activeElement !== null) clear(document.activeElement);
+      clearFailed();
     });
   }, [toasts, mainRef]);
 

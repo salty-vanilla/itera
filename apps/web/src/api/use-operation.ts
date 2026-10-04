@@ -12,8 +12,8 @@ import {
   type PlainOutput,
 } from '@itera/api-contract/requests';
 import { useMutation } from '@tanstack/react-query';
-import { useCallback, useRef } from 'react';
-import { useCloseActionToast, useToast } from '@/components/ui/toast';
+import { useCallback, useId, useRef } from 'react';
+import { useCloseStaleToast, useToast } from '@/components/ui/toast';
 import { useDelayed } from '@/lib/use-delayed';
 import { useApiClient } from './api-provider';
 import { failureOf, sendsAgain, WriteFailed } from './failure';
@@ -132,7 +132,10 @@ export function useSend<Input, Output>(
 ) {
   const client = useApiClient();
   const toast = useToast();
-  const closeStaleRetry = useCloseActionToast(SAVE_FAILED_KIND);
+  const closeStale = useCloseStaleToast(SAVE_FAILED_KIND);
+  // This hook's writes: a failure of saving typing is closed by its own
+  // later write that goes through (#332).
+  const self = useId();
   const { mutateAsync, isPending } = useMutation({
     mutationKey: [key],
     mutationFn: ({ input, key: idempotencyKey, from }: Write<Input>) =>
@@ -160,8 +163,10 @@ export function useSend<Input, Output>(
           const value = await mutateAsync(write);
           // A write that went through, after one that may have been saved:
           // the records are read again, and sending that one again could
-          // now mean something else (ADR 0005 エラーと送信中).
-          closeStaleRetry();
+          // now mean something else (ADR 0005 エラーと送信中). After this
+          // hook's own failure to save typing: the typing is saved again
+          // (#332).
+          closeStale(self);
           return { ok: true, value };
         } catch (error) {
           const failed = saveFailedToast(
@@ -171,13 +176,14 @@ export function useSend<Input, Output>(
             },
             { typed },
           );
-          if (failed !== undefined) toast.show(failed);
+          if (failed !== undefined)
+            toast.show(typed ? { ...failed, closedBySaveOf: self } : failed);
           return { ok: false };
         }
       };
       return once();
     },
-    [mutateAsync, toast, closeStaleRetry, typed],
+    [mutateAsync, toast, closeStale, self, typed],
   );
   const run = useCallback(
     async (...args: Args<Input>): Promise<Outcome<Output>> => {

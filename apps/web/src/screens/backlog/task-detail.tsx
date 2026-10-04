@@ -684,9 +684,14 @@ function TaskDetail({
     if (active instanceof HTMLElement && body.contains(active)) {
       flushSync(() => active.blur());
     }
-    const invalid = body.querySelector<HTMLElement>(
-      '[data-detail-field][aria-invalid="true"]',
-    );
+    // A field whose save failed is not one to correct: what it keeps is
+    // what was typed (#332).
+    const invalid =
+      [
+        ...body.querySelectorAll<HTMLElement>(
+          '[data-detail-field][aria-invalid="true"]',
+        ),
+      ].find((field) => field.closest('[data-save-failed]') === null) ?? null;
     if (invalid !== null) {
       // A subtask's Estimate may be in the fold: open it to show the error.
       flushSync(() => {
@@ -805,7 +810,11 @@ function TaskDetail({
       case 'description':
         return (
           <Saved show={saved === 'description'}>
-            <Field label="説明" necessity="optional">
+            <Field
+              label="説明"
+              necessity="optional"
+              saveFailed={fields.description.saveFailed}
+            >
               <Textarea
                 value={draft.description}
                 onChange={(e) => set('description', e.currentTarget.value)}
@@ -1018,7 +1027,12 @@ function TaskDetail({
 
         <div className="flex flex-col gap-4">
           <Saved show={saved === 'title'}>
-            <Field label="タイトル" necessity="required" error={errors.title}>
+            <Field
+              label="タイトル"
+              necessity="required"
+              error={errors.title}
+              saveFailed={fields.title.saveFailed}
+            >
               <TextInput
                 value={draft.title}
                 onChange={(e) => set('title', e.currentTarget.value)}
@@ -1063,7 +1077,12 @@ function TaskDetail({
           </Saved>
           {newArea.dialog}
           <Saved show={saved === 'due'}>
-            <Field label="期限" necessity="optional" error={errors.due}>
+            <Field
+              label="期限"
+              necessity="optional"
+              error={errors.due}
+              saveFailed={fields.due.saveFailed}
+            >
               <TextInput
                 type="date"
                 value={draft.due}
@@ -1097,6 +1116,7 @@ function TaskDetail({
               label="見積もり"
               necessity="optional"
               error={errors.estimate}
+              saveFailed={fields.estimate.saveFailed}
               value={draft.estimate}
               onChange={(value) => set('estimate', value)}
               onCommit={() => commit('estimate')}

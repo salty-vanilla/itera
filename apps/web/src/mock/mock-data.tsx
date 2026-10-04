@@ -75,7 +75,7 @@ function FixtureData({
     <ApiProvider client={data.client} queryClient={data.queryClient}>
       <AuthProvider auth={data.auth}>
         {children}
-        <DevMenu current={fixture} store={data.store} />
+        <DevMenu current={fixture} store={data.store} mock={data.mock} />
       </AuthProvider>
     </ApiProvider>
   );

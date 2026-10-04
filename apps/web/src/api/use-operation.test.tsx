@@ -647,6 +647,49 @@ describe('useOperation for a write that replaces values (#321)', () => {
   });
 });
 
+describe('useOperation for what was typed in a field (#332)', () => {
+  const stale =
+    '書いた内容は、まだ保存していません。保存すると、ほかの端末の変更を上書きします。';
+
+  it('closes its failure once its own later write goes through, and not on another write', async () => {
+    const { store, wrapper } = setUp();
+    const { result } = renderHook(
+      () => ({
+        typed: useOperation('renameArea', { typed: true }),
+        other: useOperation('renameArea'),
+      }),
+      { wrapper },
+    );
+    store.run((records, ctx) =>
+      operations.renameArea({ areaId: ids.area.research, name: '別の端末' })(
+        records,
+        ctx,
+      ),
+    );
+    await act(async () => {
+      await result.current.typed.run(rename('研究室'), asRead);
+    });
+    expect(await screen.findAllByText(stale)).not.toHaveLength(0);
+    // Another operation's write: the field's typing is still not saved.
+    let outcome: unknown;
+    await act(async () => {
+      outcome = await result.current.other.run(rename('研究会'), {
+        etag: '"1"',
+      });
+    });
+    expect(outcome).toMatchObject({ ok: true });
+    expect(screen.getAllByText(stale)).not.toHaveLength(0);
+    // Saved again, over the other device's change.
+    await act(async () => {
+      outcome = await result.current.typed.run(rename('研究室'), {
+        etag: '"2"',
+      });
+    });
+    expect(outcome).toMatchObject({ ok: true });
+    await waitFor(() => expect(screen.queryAllByText(stale)).toHaveLength(0));
+  });
+});
+
 describe('useOperation for a record a write removes (#321)', () => {
   it('makes a Goal, removes it and makes it again, from none each time', async () => {
     const { store, ifMatches, wrapper } = setUp(undefined, 'planning-shape');

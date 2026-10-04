@@ -10,7 +10,9 @@ import {
   FieldErrorContent,
   NecessityWord,
   fieldDescriptionStyles,
+  fieldError,
   fieldErrorStyles,
+  useClearOfToasts,
   type Necessity,
 } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
@@ -53,6 +55,8 @@ type DurationFieldProps = {
   description?: ReactNode | undefined;
   /** Error line under both fields. Set it on leaving or submitting. */
   error?: ReactNode | undefined;
+  /** The last save failed and the fields keep what was typed (Field `saveFailed`). */
+  saveFailed?: boolean | undefined;
   errorClassName?: string | undefined;
   /** For a group named by its row (a subtask's Estimate). */
   hideLabel?: boolean | undefined;
@@ -74,6 +78,7 @@ function DurationField({
   necessity,
   description,
   error,
+  saveFailed,
   errorClassName,
   hideLabel = false,
   value,
@@ -89,7 +94,10 @@ function DurationField({
   const descriptionId = `${id}-description`;
   const errorId = `${id}-error`;
   const minutesRef = useRef<HTMLInputElement>(null);
-  const invalid = error !== undefined && error !== null && error !== false;
+  const { message, failed } = fieldError(error, saveFailed);
+  const invalid = message !== undefined;
+  const groupRef = useRef<HTMLDivElement>(null);
+  useClearOfToasts(groupRef, failed);
   const describedBy =
     [
       description !== undefined ? descriptionId : undefined,
@@ -136,9 +144,11 @@ function DurationField({
 
   return (
     <div
+      ref={groupRef}
       role="group"
       aria-labelledby={labelId}
       data-slot="duration-field"
+      data-save-failed={failed || undefined}
       className={cn('flex flex-col gap-1', className)}
       onBlur={leave}
     >
@@ -187,7 +197,7 @@ function DurationField({
           data-slot="field-error"
           className={cn(fieldErrorStyles, errorClassName)}
         >
-          <FieldErrorContent>{error}</FieldErrorContent>
+          <FieldErrorContent>{message}</FieldErrorContent>
         </p>
       )}
     </div>

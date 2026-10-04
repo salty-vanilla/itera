@@ -38,6 +38,13 @@ type DraftField<T> = {
   /** Typed, and not what the person saw when it began; not one already sent. */
   edited: boolean;
   /**
+   * The last save failed, and what the field shows is not in the records
+   * (the read has been read again since, and is not the typing): the field
+   * shows the Error state (Field `saveFailed`) until it is typed in again,
+   * saved, or dropped (#332).
+   */
+  saveFailed: boolean;
+  /**
    * The record its save is made from (#321): as read when the typing began;
    * as read now without typing, or once a failed save gave the typing back
    * (the Toast has told the person, and saving again is their decision on
@@ -124,6 +131,7 @@ function useDraftField<T>(
     value: live === undefined ? read : live.value,
     base: live === undefined ? read : live.held ? live.value : live.base,
     edited: live !== undefined && !live.held && !equal(live.value, live.base),
+    saveFailed: live !== undefined && live.given && live.sending === 0,
     madeFrom: live === undefined || live.given ? current : live.version,
     // From the state the update is applied to, not the one this render saw:
     // an answer may have come in between, and its count is not to be

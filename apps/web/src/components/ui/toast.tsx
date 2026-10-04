@@ -74,7 +74,16 @@ type ToastOptions = {
   description?: string;
   /** 「元に戻す」 or 「もう一度保存」. Pressing it also closes the Toast. */
   action?: { label: string; onClick: () => void };
+  /**
+   * Who may close it once a later write of theirs goes through
+   * (`useCloseStaleToast`): the failure of saving what was typed in a field,
+   * which the field itself keeps showing (Field `saveFailed`, #332).
+   */
+  closedBySaveOf?: string;
 };
+
+/** What a Toast carries for `useCloseStaleToast`. */
+type ToastData = { closedBySaveOf?: string };
 
 function ToastProvider({ children }: { children: ReactNode }) {
   return (
@@ -123,7 +132,9 @@ function ToastList() {
         data-slot="toast"
         data-tone={tone}
         className={cn(
-          'rounded-md border border-border bg-surface text-ink shadow-overlay',
+          // A container: its own width, not the screen's, decides where the
+          // action goes.
+          '@container rounded-md border border-border bg-surface text-ink shadow-overlay',
           'focus-visible:focus-ring',
           'data-limited:hidden',
           // Fades in from 8px below; only opacity and transform move.
@@ -132,12 +143,23 @@ function ToastList() {
           'data-ending-style:opacity-0 data-ending-style:ease-exit',
         )}
       >
-        <ToastPrimitive.Content className="flex items-start gap-2 py-2 pr-2 pl-4">
+        {/*
+          One row: icon, text, action, close. Narrower than 400px (compact,
+          and medium beside an open Drawer) the action goes on a line of its
+          own under the text, so that it does not stand out over the text
+          nor squeeze it (#332).
+        */}
+        <ToastPrimitive.Content
+          className={cn(
+            'grid grid-cols-[auto_minmax(0,1fr)_auto] items-start py-2 pr-2 pl-4',
+            '@min-[400px]:grid-cols-[auto_minmax(0,1fr)_auto_auto]',
+          )}
+        >
           {toneIcon && (
             // Centered on the first line of the title.
             <span
               className={cn(
-                'mt-4 flex h-5 items-center medium:mt-2',
+                'col-start-1 row-start-1 mt-4 mr-2 flex h-5 items-center medium:mt-2',
                 toneIcon.className,
               )}
             >
@@ -145,7 +167,13 @@ function ToastList() {
             </span>
           )}
           {/* compact buttons are 44px: the first line sits at their middle. */}
-          <div className="flex min-w-0 grow flex-col pt-4 pb-2 medium:pt-2">
+          <div
+            className={cn(
+              'col-start-2 row-start-1 flex min-w-0 flex-col pt-4 medium:pt-2',
+              // The action under it is the room below.
+              toast.actionProps ? 'pb-1 @min-[400px]:pb-2' : 'pb-2',
+            )}
+          >
             {/* A sentence, not a heading of the page. */}
             <ToastPrimitive.Title
               render={<p />}
@@ -158,7 +186,11 @@ function ToastList() {
           {toast.actionProps && (
             <ToastPrimitive.Action
               render={<Button variant="quiet" size="sm" />}
-              className="mt-1"
+              className={cn(
+                // Under the text, its outline in line with the text.
+                'col-start-2 row-start-2 justify-self-start',
+                '@min-[400px]:col-start-3 @min-[400px]:row-start-1 @min-[400px]:mt-1 @min-[400px]:ml-2',
+              )}
             />
           )}
           <ToastPrimitive.Close
@@ -171,7 +203,7 @@ function ToastList() {
                 label="閉じる"
                 icon={<X aria-hidden />}
                 size="sm"
-                className="mt-1"
+                className="col-start-3 row-start-1 mt-1 ml-2 @min-[400px]:col-start-4"
               />
             }
           />
@@ -192,6 +224,7 @@ function useToast() {
         title,
         description,
         action,
+        closedBySaveOf,
       }: ToastOptions) {
         const id: string | undefined =
           kind === undefined ? undefined : `kind:${kind}`;
@@ -206,6 +239,9 @@ function useToast() {
           title,
           description,
           priority: tone === 'danger' ? 'high' : 'low',
+          ...(closedBySaveOf !== undefined && {
+            data: { closedBySaveOf } satisfies ToastData,
+          }),
           // A failure stays until it is closed, so that it is not missed,
           // nor 「もう一度保存」 where it has one (DESIGN.md Toast).
           timeout:
@@ -259,22 +295,78 @@ function useCloseToastsOnLeave(): () => void {
 }
 
 /**
- * Closes the Toast of `kind` when it offers an action, and no other: a
- * failure's 「もう一度保存」 that a later write, which went through, has made
- * stale (#320). The returned function is stable and acts on the Toasts
- * showing when it is called.
+ * Closes the Toast of `kind` that a later write, which went through, has
+ * made stale: one that offers an action (a failure's 「もう一度保存」,
+ * #320), and one that `by` showed for typing in a field (#332), whose field
+ * shows whether its typing is saved. No other. The returned function is
+ * stable and acts on the Toasts showing when it is called.
  */
-function useCloseActionToast(kind: ToastKind): () => void {
-  const manager = ToastPrimitive.useToastManager();
+function useCloseStaleToast(kind: ToastKind): (by?: string) => void {
+  const manager = ToastPrimitive.useToastManager<ToastData>();
   const latest = useRef(manager);
   useEffect(() => {
     latest.current = manager;
   }, [manager]);
-  return useCallback(() => {
-    const id = `kind:${kind}`;
-    const shown = latest.current.toasts.find((toast) => toast.id === id);
-    if (shown?.actionProps !== undefined) latest.current.close(id);
-  }, [kind]);
+  return useCallback(
+    (by) => {
+      const id = `kind:${kind}`;
+      const shown = latest.current.toasts.find((toast) => toast.id === id);
+      if (shown === undefined) return;
+      if (
+        shown.actionProps !== undefined ||
+        (by !== undefined && shown.data?.closedBySaveOf === by)
+      )
+        latest.current.close(id);
+    },
+    [kind],
+  );
+}
+
+/** A Toast leaves this much room to what it was made way for. */
+const TOAST_GAP = 8;
+
+/** The Toasts' box, or `undefined` while none shows (it has no height). */
+function toastBox(): DOMRect | undefined {
+  const box = document
+    .querySelector('[data-slot="toast-viewport"]')
+    ?.getBoundingClientRect();
+  return box === undefined || box.height === 0 ? undefined : box;
+}
+
+/** The nearest ancestor that scrolls vertically. */
+function scrollParent(el: HTMLElement): HTMLElement | null {
+  for (let p = el.parentElement; p !== null; p = p.parentElement) {
+    if (
+      /(auto|scroll)/.test(getComputedStyle(p).overflowY) &&
+      p.scrollHeight > p.clientHeight
+    ) {
+      return p;
+    }
+  }
+  return null;
+}
+
+/**
+ * Scrolls `el` up, by the least it takes, when the Toasts cover it
+ * (DESIGN.md Toast): in its own scroll area, else in `fallback`. The Toasts
+ * are never moved for it.
+ */
+function scrollClearOfToasts(
+  el: HTMLElement,
+  fallback?: HTMLElement | null,
+): void {
+  const box = toastBox();
+  if (box === undefined) return;
+  const rect = el.getBoundingClientRect();
+  const overlaps =
+    rect.left < box.right &&
+    rect.right > box.left &&
+    rect.bottom > box.top &&
+    rect.top < box.bottom;
+  if (!overlaps) return;
+  (scrollParent(el) ?? fallback)?.scrollBy({
+    top: rect.bottom - box.top + TOAST_GAP,
+  });
 }
 
 export {
@@ -282,7 +374,9 @@ export {
   TOAST_LIMIT,
   TOAST_TIMEOUT,
   ToastProvider,
-  useCloseActionToast,
+  scrollClearOfToasts,
+  toastBox,
+  useCloseStaleToast,
   useCloseToastsOnLeave,
   useToast,
   useToasts,

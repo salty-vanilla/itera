@@ -108,3 +108,17 @@ export const WithRetry: Story = {
     </>
   ),
 };
+
+/**
+ * 幅が 400px 未満（compact、Drawer を開いた medium）では、操作を本文の下の
+ * 行に置き、輪郭を本文の頭にそろえる（#332）。
+ */
+export const Narrow: Story = {
+  globals: { viewport: { value: 'compact', isRotated: false } },
+  render: () => (
+    <>
+      <ShowOnMount toasts={[examples.unknown, examples.neutral]} />
+      <Triggers />
+    </>
+  ),
+};
