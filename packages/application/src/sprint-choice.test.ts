@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from './fixtures/states';
 import type { Clock, Records } from './records';
 import { sprintRefs, weekNameOf } from './sprint-choice';
+import { tagged } from './testing';
 
 const names = (records: Records, clock: Clock) =>
-  sprintRefs(records, clock).map((r) => `${r.number}:${r.week ?? '-'}`);
+  sprintRefs(tagged(records), clock).map((r) => `${r.number}:${r.week ?? '-'}`);
 
 describe('week names (#90)', () => {
   it('calls the running Sprint 「今週」 and the next week 「来週」', () => {

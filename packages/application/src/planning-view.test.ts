@@ -4,7 +4,7 @@ import { fixtureSnapshot, fixtureIds } from './fixtures/states';
 import { sprintPlanOf } from './planning-view';
 import type { Clock, Records } from './records';
 import { changed } from './record-store';
-import { memoryStore } from './testing';
+import { memoryStore, tagged } from './testing';
 
 const ids = fixtureIds();
 
@@ -13,10 +13,11 @@ function planOf(
   { records, clock }: { records: Records; clock: Clock },
   options: { applyCriterion: boolean },
 ) {
-  const sprint = records.sprints.find((s) => s.state === 'planning');
+  const read = tagged(records);
+  const sprint = read.sprints.find((s) => s.state === 'planning');
   return sprint === undefined
     ? undefined
-    : sprintPlanOf(records, clock, sprint, options);
+    : sprintPlanOf(read, clock, sprint, options);
 }
 
 describe('sprintPlanOf', () => {

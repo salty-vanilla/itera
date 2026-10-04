@@ -22,6 +22,7 @@ import {
 } from './resource-views';
 import { runningData } from './running-view';
 import { todayData } from './today-view';
+import { tagged } from './testing';
 
 const ids = fixtureIds();
 const viaJson = (value: unknown) =>
@@ -32,25 +33,27 @@ function readsOf(state: (typeof fixtureStateIds)[number]) {
   return {
     sprints: sprintList(records, clock),
     currentSprints: currentSprints(records, clock),
-    areas: areaList(records),
-    today: todayData(records, clock),
-    yesterdayView: dayView(records, clock, addDays(clock.today, -1)),
-    todayView: dayView(records, clock, clock.today),
-    yesterday: dayData(records, clock, addDays(clock.today, -1)),
-    tomorrow: dayData(records, clock, addDays(clock.today, 1)),
+    areas: areaList(tagged(records)),
+    today: todayData(tagged(records), clock),
+    yesterdayView: dayView(tagged(records), clock, addDays(clock.today, -1)),
+    todayView: dayView(tagged(records), clock, clock.today),
+    yesterday: dayData(tagged(records), clock, addDays(clock.today, -1)),
+    tomorrow: dayData(tagged(records), clock, addDays(clock.today, 1)),
     candidates: (() => {
       const planning = records.sprints.find((s) => s.state === 'planning');
       return planning === undefined
         ? undefined
-        : sprintCandidates(records, clock, planning.id);
+        : sprintCandidates(tagged(records), clock, planning.id);
     })(),
-    running: runningData(records, clock),
-    retro: retroData(records, clock),
-    backlogInArea: backlogData(records, clock, { area: ids.area.research }),
+    running: runningData(tagged(records), clock),
+    retro: retroData(tagged(records), clock),
+    backlogInArea: backlogData(tagged(records), clock, {
+      area: ids.area.research,
+    }),
     ...Object.fromEntries(
       SLICES.map((slice) => [
         `backlog-${slice}`,
-        backlogData(records, clock, {
+        backlogData(tagged(records), clock, {
           view: slice === 'all' ? undefined : (slice as BacklogSlice),
         }),
       ]),
@@ -58,17 +61,17 @@ function readsOf(state: (typeof fixtureStateIds)[number]) {
     // Every Sprint, also those the screens open by number (#90).
     ...Object.fromEntries(
       records.sprints.flatMap((s, i) => [
-        [`running-${i + 1}`, runningData(records, clock, s.id)],
-        [`retro-${i + 1}`, retroData(records, clock, s.id)],
+        [`running-${i + 1}`, runningData(tagged(records), clock, s.id)],
+        [`retro-${i + 1}`, retroData(tagged(records), clock, s.id)],
         [
           `sprint-${i + 1}`,
-          sprintView(records, clock, s.id, { applyCriterion: false }),
+          sprintView(tagged(records), clock, s.id, { applyCriterion: false }),
         ],
         [
           `sprint-${i + 1}-with-criterion`,
-          sprintView(records, clock, s.id, { applyCriterion: true }),
+          sprintView(tagged(records), clock, s.id, { applyCriterion: true }),
         ],
-        [`sprint-retro-${i + 1}`, sprintRetro(records, clock, s.id)],
+        [`sprint-retro-${i + 1}`, sprintRetro(tagged(records), clock, s.id)],
       ]),
     ),
   } as Record<string, unknown>;

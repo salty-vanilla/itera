@@ -2,6 +2,7 @@ import { addDays } from '@itera/domain';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot, fixtureStateIds } from './fixtures/states';
 import { currentSprints, sprintCandidates, sprintView } from './resource-views';
+import { tagged } from './testing';
 
 describe.each(fixtureStateIds)('the current Sprints of %s', (state) => {
   const { records, clock } = fixtureSnapshot(state);
@@ -22,8 +23,8 @@ describe.each(fixtureStateIds)('a Sprint of %s', (state) => {
   it.each(records.sprints.map((s) => [s.state, s.id] as const))(
     'offers candidates only while planned, and a plan or a running view by state (%s)',
     (sprintState, sprintId) => {
-      const candidates = sprintCandidates(records, clock, sprintId);
-      const view = sprintView(records, clock, sprintId, {
+      const candidates = sprintCandidates(tagged(records), clock, sprintId);
+      const view = sprintView(tagged(records), clock, sprintId, {
         applyCriterion: false,
       });
       expect(candidates !== undefined).toBe(sprintState === 'planning');
@@ -40,9 +41,9 @@ describe.each(fixtureStateIds)('a Sprint of %s', (state) => {
   it('has no view of a Sprint the person does not have', () => {
     const unknown = records.sprints[0]?.id.replace(/.$/, 'x') ?? 'none';
     const id = unknown as (typeof records.sprints)[number]['id'];
-    expect(sprintCandidates(records, clock, id)).toBeUndefined();
+    expect(sprintCandidates(tagged(records), clock, id)).toBeUndefined();
     expect(
-      sprintView(records, clock, id, { applyCriterion: false }),
+      sprintView(tagged(records), clock, id, { applyCriterion: false }),
     ).toBeUndefined();
   });
 });

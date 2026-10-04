@@ -1,7 +1,7 @@
 // The person's Areas as the Area list shows them: the current name, archived
 // ones too (F5).
 import type { AreaColor, AreaId } from '@itera/domain';
-import type { Records } from './records';
+import type { TaggedRecords } from './versions';
 
 export interface EditableArea {
   readonly id: AreaId;
@@ -9,6 +9,8 @@ export interface EditableArea {
   readonly name: string;
   readonly color: AreaColor;
   readonly archived: boolean;
+  /** The Area's version, for a rename to say it was made from (#321). */
+  readonly etag: string;
 }
 
 /**
@@ -16,7 +18,7 @@ export interface EditableArea {
  * its current name. The choices are the ones not archived.
  */
 export function areaList(
-  records: Pick<Records, 'areas'>,
+  records: Pick<TaggedRecords, 'areas'>,
 ): readonly EditableArea[] {
   return records.areas
     .toSorted((a, b) => a.order - b.order)
@@ -25,5 +27,6 @@ export function areaList(
       name: a.name,
       color: a.color,
       archived: a.archived,
+      etag: a.etag,
     }));
 }

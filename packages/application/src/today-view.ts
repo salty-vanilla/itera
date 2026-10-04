@@ -13,7 +13,6 @@ import {
   type AreaColor,
   type AreaId,
   type DailySelection,
-  type InterruptNote,
   type LocalDate,
   type Occurrence,
   type PlanningValue,
@@ -25,6 +24,14 @@ import {
 } from '@itera/domain';
 import type { Clock, Records } from './records';
 import { dayInPeriod, isLastDay, selectionActualHours } from './sprint-day';
+import {
+  taggedIn,
+  type TaggedInterruptNote,
+  type TaggedRecords,
+  type TaggedSprint,
+  type TaggedSprintTask,
+  type TaggedTask,
+} from './versions';
 
 export interface TodayArea {
   readonly id: AreaId;
@@ -34,8 +41,8 @@ export interface TodayArea {
 
 /** A SprintTask (or one occurrence of it) as Today shows it. */
 export interface TodayItem {
-  readonly sprintTask: SprintTask;
-  readonly task: Task;
+  readonly sprintTask: TaggedSprintTask;
+  readonly task: TaggedTask;
   readonly area?: TodayArea;
   /** Recurring only: the occurrence this row is about. */
   readonly occurrence?: Occurrence;
@@ -59,7 +66,7 @@ export interface TodayRow extends TodayItem {
 }
 
 export interface TodayData {
-  readonly sprint: Sprint;
+  readonly sprint: TaggedSprint;
   /** 「Sprint 14」 (F25). */
   readonly number: number;
   readonly today: LocalDate;
@@ -97,13 +104,15 @@ export interface TodayData {
    */
   readonly plan: readonly TodayItem[];
   /** Today's interrupts, oldest first. */
-  readonly interrupts: readonly InterruptNote[];
+  readonly interrupts: readonly TaggedInterruptNote[];
   /** Areas for the quick add, in the person's order. */
   readonly areas: readonly TodayArea[];
 }
 
 /** The Sprint Today works on: the active one. */
-export function activeSprintOf(records: Records): Sprint | undefined {
+export function activeSprintOf<S extends Sprint>(records: {
+  readonly sprints: readonly S[];
+}): S | undefined {
   return records.sprints.find((s) => s.state === 'active');
 }
 
@@ -134,7 +143,7 @@ export function isClosedResolution(
 }
 
 export function todayData(
-  records: Records,
+  records: TaggedRecords,
   clock: Clock,
 ): TodayData | undefined {
   const sprint = activeSprintOf(records);
@@ -154,7 +163,7 @@ export function todayData(
   };
 
   const item = (
-    sprintTask: SprintTask,
+    sprintTask: TaggedSprintTask,
     occurrenceId?: Occurrence['id'],
   ): TodayItem | undefined => {
     const task = tasks.find((t) => t.id === sprintTask.taskId);
@@ -206,8 +215,9 @@ export function todayData(
     .filter((s) => CLOSED.has(s.resolution) && s.resolution !== 'removed')
     .flatMap(row);
 
+  const sprintTaskOf = taggedIn(sprint.tasks);
   const continuation = yesterdaysContinuation(sprint, sprints, today).flatMap(
-    (c) => item(c.sprintTask, c.occurrenceId) ?? [],
+    (c) => item(sprintTaskOf(c.sprintTask), c.occurrenceId) ?? [],
   );
   const inContinuation = (sprintTask: SprintTask, occurrenceId?: string) =>
     continuation.some(

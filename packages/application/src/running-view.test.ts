@@ -4,6 +4,7 @@ import { fixtureSnapshot, fixtureIds } from './fixtures/states';
 import type { Records } from './records';
 import { retroData } from './retro-view';
 import { runningData } from './running-view';
+import { tagged } from './testing';
 
 const ids = fixtureIds();
 
@@ -18,12 +19,12 @@ const withActive = (
 describe('runningData', () => {
   it('is absent without a running Sprint', () => {
     const { records, clock } = fixtureSnapshot('retro-start');
-    expect(runningData(records, clock)).toBeUndefined();
+    expect(runningData(tagged(records), clock)).toBeUndefined();
   });
 
   it('has no day count before the first day', () => {
     const { records } = fixtureSnapshot('today-interrupt');
-    const data = runningData(records, {
+    const data = runningData(tagged(records), {
       today: '2026-09-27' as LocalDate,
       now: '2026-09-27T12:00:00.000Z' as Instant,
     });
@@ -32,7 +33,7 @@ describe('runningData', () => {
 
   it('has the planned total and the totals per Area only, with no capacity', () => {
     const { records, clock } = fixtureSnapshot('today-interrupt');
-    const data = runningData(records, clock);
+    const data = runningData(tagged(records), clock);
     expect(Object.keys(data?.totals ?? {}).toSorted()).toEqual([
       'byArea',
       'total',
@@ -41,14 +42,14 @@ describe('runningData', () => {
 
   it('leaves out Tasks removed from the Sprint, from the list and the total', () => {
     const { records, clock } = fixtureSnapshot('today-interrupt');
-    const before = runningData(records, clock);
+    const before = runningData(tagged(records), clock);
     const removed = withActive(records, (s) => ({
       ...s,
       tasks: s.tasks.map((t) =>
         t.taskId === ids.task.interview ? { ...t, outcome: 'removed' } : t,
       ),
     }));
-    const data = runningData(removed, clock);
+    const data = runningData(tagged(removed), clock);
     const shown = data?.plan.flatMap((p) => p.tasks.map((t) => t.task.id));
     expect(shown).not.toContain(ids.task.interview);
     expect(data?.totals.total.lo).toBeLessThan(before?.totals.total.lo ?? 0);
@@ -69,7 +70,7 @@ describe('runningData', () => {
         return rest;
       }),
     };
-    const data = runningData(noArea, clock);
+    const data = runningData(tagged(noArea), clock);
     expect(data?.plan.at(-1)?.area).toBeUndefined();
     expect(data?.plan.at(-1)?.tasks.map((t) => t.task.id)).toEqual([
       ids.task.tax,
@@ -79,7 +80,7 @@ describe('runningData', () => {
 
   it('knows whether the criterion had a planned value to act on (#161, F42)', () => {
     const { records, clock } = fixtureSnapshot('today-interrupt');
-    expect(runningData(records, clock)?.criterion).toMatchObject({
+    expect(runningData(tagged(records), clock)?.criterion).toMatchObject({
       applied: true,
       noEffect: false,
     });
@@ -107,7 +108,7 @@ describe('runningData', () => {
             },
       ),
     }));
-    expect(runningData(none, clock)?.criterion).toMatchObject({
+    expect(runningData(tagged(none), clock)?.criterion).toMatchObject({
       applied: true,
       noEffect: true,
     });
@@ -138,10 +139,10 @@ describe('runningData', () => {
           : { criterionUse: { ...s.criterionUse, appliedAtConfirm: false } }),
       }));
     expect(
-      runningData(switchedOff(records, true), clock)?.criterion,
+      runningData(tagged(switchedOff(records, true)), clock)?.criterion,
     ).toMatchObject({ applied: false, noEffect: false });
     expect(
-      runningData(switchedOff(records, false), clock)?.criterion,
+      runningData(tagged(switchedOff(records, false)), clock)?.criterion,
     ).toMatchObject({ applied: false, noEffect: true });
   });
 
@@ -163,7 +164,7 @@ describe('runningData', () => {
             : d,
       ),
     }));
-    const data = runningData(withKinds, {
+    const data = runningData(tagged(withKinds), {
       today: '2026-10-01' as LocalDate,
       now: '2026-10-01T05:00:00.000Z' as Instant,
     });
@@ -183,7 +184,7 @@ describe('runningData', () => {
   it('shows an ended Sprint by id, read only, with its carried-over Tasks (#90)', () => {
     const { records, clock } = fixtureSnapshot('today-daytime');
     const closed = records.sprints.find((s) => s.state === 'closed')!;
-    const data = runningData(records, clock, closed.id);
+    const data = runningData(tagged(records), clock, closed.id);
     expect(data?.sprint.id).toBe(closed.id);
     // Last week: the Sprint Header says so (#168).
     expect(data?.week).toBe('previous');
@@ -194,7 +195,7 @@ describe('runningData', () => {
     );
     expect(outcomes).toContainEqual([ids.task.apiReview, 'carriedOver']);
     // The Retro's planned total, carried-over Tasks included.
-    const facts = retroData(records, clock, closed.id)?.facts;
+    const facts = retroData(tagged(records), clock, closed.id)?.facts;
     expect(data?.totals.total).toEqual(facts?.plannedTotal.withAdditions);
     expect(data?.totals.byArea).toEqual([]);
     // Areas with neither a Goal nor Tasks are left out once ended.
@@ -206,9 +207,11 @@ describe('runningData', () => {
   it('calls the running Sprint 「今週」 and is absent for one being planned', () => {
     const { records, clock } = fixtureSnapshot('planning-pick');
     const planning = records.sprints.find((s) => s.state === 'planning')!;
-    expect(runningData(records, clock, planning.id)).toBeUndefined();
+    expect(runningData(tagged(records), clock, planning.id)).toBeUndefined();
     const running = fixtureSnapshot('today-daytime');
-    expect(runningData(running.records, running.clock)?.week).toBe('current');
+    expect(runningData(tagged(running.records), running.clock)?.week).toBe(
+      'current',
+    );
   });
 });
 
@@ -216,16 +219,16 @@ describe('retroData (#90)', () => {
   it('opens a closed Sprint’s Retro by id', () => {
     const { records, clock } = fixtureSnapshot('today-daytime');
     const closed = records.sprints.find((s) => s.state === 'closed')!;
-    const data = retroData(records, clock, closed.id);
+    const data = retroData(tagged(records), clock, closed.id);
     expect(data?.number).toBe(1);
     expect(data?.improvement).toBe('研究の見積もりは提案の多めの値で計画する');
     // No Sprint in Review: nothing by default.
-    expect(retroData(records, clock)).toBeUndefined();
+    expect(retroData(tagged(records), clock)).toBeUndefined();
   });
 
   it('is absent for a Sprint whose Retro has not started', () => {
     const { records, clock } = fixtureSnapshot('today-daytime');
     const running = records.sprints.find((s) => s.state === 'active')!;
-    expect(retroData(records, clock, running.id)).toBeUndefined();
+    expect(retroData(tagged(records), clock, running.id)).toBeUndefined();
   });
 });

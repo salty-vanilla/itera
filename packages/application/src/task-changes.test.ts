@@ -2,7 +2,7 @@ import { createArea, id, localDate } from '@itera/domain';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot, fixtureIds } from './fixtures/states';
 import { changed } from './record-store';
-import { memoryStore } from './testing';
+import { memoryStore, tagged } from './testing';
 import { backlogData } from './backlog-view';
 import { endRule, saveTask } from './task-changes';
 
@@ -74,7 +74,7 @@ describe('endRule (F41)', () => {
     );
     const on = (today: string) =>
       backlogData(
-        records,
+        tagged(records),
         { ...clock, today: localDate(today) },
         { view: 'recurring' },
       );

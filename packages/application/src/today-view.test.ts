@@ -4,6 +4,7 @@ import { fixtureSnapshot, fixtureIds } from './fixtures/states';
 import type { Records } from './records';
 import { backlogData } from './backlog-view';
 import { todayData } from './today-view';
+import { tagged } from './testing';
 
 const ids = fixtureIds();
 
@@ -15,12 +16,12 @@ const withSprint = (records: Records, change: (s: Sprint) => Sprint) => ({
 describe('todayData', () => {
   it('is absent without an active Sprint', () => {
     const { records, clock } = fixtureSnapshot('retro-start');
-    expect(todayData(records, clock)).toBeUndefined();
+    expect(todayData(tagged(records), clock)).toBeUndefined();
   });
 
   it('lists the Tasks of the week first, then occurrences by date (F18)', () => {
     const { records, clock } = fixtureSnapshot('today-interrupt');
-    const rest = todayData(records, clock)?.rest ?? [];
+    const rest = todayData(tagged(records), clock)?.rest ?? [];
     const kinds = rest.map((r) => r.occurrence?.scheduledDate ?? 'task');
     expect(kinds).toEqual(['task', '2026-10-02', '2026-10-03']);
     // 昨日の続き is not repeated in the rest.
@@ -29,7 +30,7 @@ describe('todayData', () => {
 
   it('keeps 昨日の続き and today’s choices in the plan, which is the week before its first day (#156)', () => {
     const { records, clock } = fixtureSnapshot('today-interrupt');
-    const data = todayData(records, clock);
+    const data = todayData(tagged(records), clock);
     const plan = data?.plan ?? [];
     // The plan is every planned Task and pending occurrence; the rest is the
     // plan less what is chosen today or continued from yesterday.
@@ -50,7 +51,7 @@ describe('todayData', () => {
         t.taskId === ids.task.interview ? { ...t, outcome: 'removed' } : t,
       ),
     }));
-    const data = todayData(removed, clock);
+    const data = todayData(tagged(removed), clock);
     const titles = [...(data?.rows ?? []), ...(data?.rest ?? [])].map(
       (r) => r.task.id,
     );
@@ -74,7 +75,7 @@ describe('todayData', () => {
         return { ...d, resolution: 'removed' as const };
       }),
     }));
-    const data = todayData(putBack, clock);
+    const data = todayData(tagged(putBack), clock);
     expect(data?.closed).toEqual([]);
     expect(data?.rows.some((r) => r.task.id === ids.task.interview)).toBe(
       false,
@@ -103,7 +104,7 @@ describe('todayData', () => {
           : d,
       ),
     }));
-    const rows = todayData(early, clock)?.rows ?? [];
+    const rows = todayData(tagged(early), clock)?.rows ?? [];
     expect(rows.at(-1)?.task.id).toBe(ids.task.apiReview);
   });
 
@@ -121,7 +122,9 @@ describe('todayData', () => {
         ...s.interrupts,
       ],
     }));
-    const texts = todayData(withEarlier, clock)?.interrupts.map((n) => n.text);
+    const texts = todayData(tagged(withEarlier), clock)?.interrupts.map(
+      (n) => n.text,
+    );
     expect(texts).toEqual(['障害の問い合わせに対応', '急ぎのレビュー依頼']);
   });
 });
@@ -137,8 +140,8 @@ describe('lastDay', () => {
     expect(end).toBe('2026-10-04');
     const answers = ['2026-10-01', '2026-10-03', '2026-10-04'].map((day) => ({
       day,
-      today: todayData(records, on(day))?.lastDay,
-      backlog: backlogData(records, on(day), {}).lastDay,
+      today: todayData(tagged(records), on(day))?.lastDay,
+      backlog: backlogData(tagged(records), on(day), {}).lastDay,
     }));
     expect(answers).toEqual([
       { day: '2026-10-01', today: false, backlog: false },
@@ -152,8 +155,8 @@ describe('lastDay', () => {
     expect(planning.records.sprints.some((s) => s.state === 'active')).toBe(
       false,
     );
-    expect(backlogData(planning.records, planning.clock, {}).lastDay).toBe(
-      false,
-    );
+    expect(
+      backlogData(tagged(planning.records), planning.clock, {}).lastDay,
+    ).toBe(false);
   });
 });

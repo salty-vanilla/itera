@@ -34,6 +34,27 @@ export type {
   RecordsWithActivity,
 } from './records';
 
+// The versions of the records and the conditions of the writes that
+// replace their values (#321, ADR 0006 記録ごとの版).
+export {
+  etagOf,
+  tagRecords,
+  versionKey,
+  type RecordVersions,
+  type Tagged,
+  type TaggedCriterion,
+  type TaggedRecords,
+  type TaggedSprint,
+  type TaggedTask,
+} from './versions';
+export {
+  checkCondition,
+  conditionalOperations,
+  isConditional,
+  type Condition,
+  type ConditionalOperation,
+} from './conditions';
+
 // IDs (ADR 0004 ID の形式).
 export {
   createIdSource,

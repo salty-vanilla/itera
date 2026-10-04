@@ -7,7 +7,6 @@ import {
   type AreaColor,
   type AreaId,
   type DailySelection,
-  type InterruptNote,
   type LocalDate,
   type Occurrence,
   type Sprint,
@@ -16,6 +15,11 @@ import {
 import type { Clock, Records } from './records';
 import { sprintRefs, type SprintRef } from './sprint-choice';
 import { dayInPeriod, selectionActualHours } from './sprint-day';
+import type {
+  TaggedInterruptNote,
+  TaggedRecords,
+  TaggedTask,
+} from './versions';
 
 export interface DayArea {
   readonly id: AreaId;
@@ -52,7 +56,7 @@ export interface DayData {
   /** Past: the day's choices and how each ended, in the order chosen. */
   readonly records: readonly DayRecord[];
   /** Past: the day's interrupts, oldest first. */
-  readonly interrupts: readonly InterruptNote[];
+  readonly interrupts: readonly TaggedInterruptNote[];
   /** Future: the occurrences due that day (not those left out in Planning). */
   readonly occurrences: readonly {
     readonly occurrence: Occurrence;
@@ -60,12 +64,15 @@ export interface DayData {
     readonly area?: DayArea;
   }[];
   /** Future: the active Tasks whose deadline is that day. */
-  readonly due: readonly { readonly task: Task; readonly area?: DayArea }[];
+  readonly due: readonly {
+    readonly task: TaggedTask;
+    readonly area?: DayArea;
+  }[];
 }
 
 /** A day other than today; `undefined` for today. */
 export function dayData(
-  records: Records,
+  records: TaggedRecords,
   clock: Clock,
   date: LocalDate,
 ): DayData | undefined {

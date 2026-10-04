@@ -23,6 +23,7 @@ import { retroData, type RetroData } from './retro-view';
 import { runningData, type RunningData } from './running-view';
 import { weekNameOf, type SprintWeek } from './sprint-choice';
 import { todayData, type TodayData } from './today-view';
+import type { TaggedRecords } from './versions';
 
 /** A Sprint as a list or a reference shows it. */
 export interface SprintItem {
@@ -125,7 +126,7 @@ export type SprintView =
     };
 
 export function sprintView(
-  records: Records,
+  records: TaggedRecords,
   clock: Clock,
   sprintId: SprintId,
   options: { applyCriterion: boolean },
@@ -146,7 +147,7 @@ export function sprintView(
  * `undefined` for a Sprint not being planned.
  */
 export function sprintCandidates(
-  records: Records,
+  records: TaggedRecords,
   clock: Clock,
   sprintId: SprintId,
 ): PlanningCandidates | undefined {
@@ -158,7 +159,7 @@ export function sprintCandidates(
 
 /** A Sprint's Retro, once it has started; `undefined` before. */
 export function sprintRetro(
-  records: Records,
+  records: TaggedRecords,
   clock: Clock,
   sprintId: SprintId,
 ): RetroData | undefined {
@@ -175,7 +176,7 @@ export type DayView =
   | { readonly kind: 'past' | 'future'; readonly day: DayData };
 
 export function dayView(
-  records: Records,
+  records: TaggedRecords,
   clock: Clock,
   date: LocalDate,
 ): DayView {
