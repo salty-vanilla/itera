@@ -11,6 +11,7 @@ import {
   type SprintId,
   type SprintState,
 } from '@itera/domain';
+import { sprintCapabilities, type SprintCapabilities } from './capabilities';
 import { dayData, type DayData } from './day-view';
 import {
   planningCandidatesOf,
@@ -35,6 +36,8 @@ export interface SprintItem {
   readonly state: SprintState;
   /** 今週・来週・先週, for the Sprints that have a name (#90). */
   readonly week?: SprintWeek;
+  /** What the person can do with the Sprint now (#323). */
+  readonly capabilities: SprintCapabilities;
 }
 
 function itemOf(sprint: Sprint, records: Records, clock: Clock): SprintItem {
@@ -46,6 +49,7 @@ function itemOf(sprint: Sprint, records: Records, clock: Clock): SprintItem {
     end: sprint.end,
     state: sprint.state,
     ...(week === undefined ? {} : { week }),
+    capabilities: sprintCapabilities(records, sprint, clock),
   };
 }
 

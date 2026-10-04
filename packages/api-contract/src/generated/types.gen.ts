@@ -53,6 +53,24 @@ export type SprintState = 'planning' | 'active' | 'review' | 'closed';
 export type SprintWeek = 'previous' | 'current' | 'next';
 
 /**
+ * What the person can do with a Sprint itself now (#323).
+ */
+export type SprintCapabilities = {
+    /**
+     * setAvailableHours.
+     */
+    canSetAvailableHours: boolean;
+    /**
+     * confirmSprint.
+     */
+    canConfirm: boolean;
+    /**
+     * beginRetro (from the Sprint's last day, F21).
+     */
+    canBeginRetro: boolean;
+};
+
+/**
  * A Sprint as a list or a reference shows it. Its number (「Sprint 14」, F25) is an attribute, not its key: the key is its ID (#295).
  */
 export type SprintItem = {
@@ -62,6 +80,7 @@ export type SprintItem = {
     end: LocalDate;
     state: SprintState;
     week?: SprintWeek;
+    capabilities: SprintCapabilities;
 };
 
 /**
@@ -212,6 +231,24 @@ export type AreaColor = 1 | 2 | 3 | 4 | 5 | 6 | 7;
  */
 export type ETag = string;
 
+/**
+ * What the person can do with an Area now (#323).
+ */
+export type AreaCapabilities = {
+    /**
+     * renameArea.
+     */
+    canRename: boolean;
+    /**
+     * archiveArea.
+     */
+    canArchive: boolean;
+    /**
+     * restoreArea.
+     */
+    canRestore: boolean;
+};
+
 export type EditableArea = {
     id: AreaId;
     /**
@@ -221,6 +258,7 @@ export type EditableArea = {
     color: AreaColor;
     archived: boolean;
     etag: ETag;
+    capabilities: AreaCapabilities;
 };
 
 /**
@@ -476,6 +514,76 @@ export type PlanningValue = EstimatedPlanningValue | {
     computedAt: Instant;
 };
 
+/**
+ * What the person can do with an active Task of the Backlog now (#323), as DailySelectionCapabilities says. The values the operations are given (a title, a pattern, hours) are not checked. canAddToToday and canAddToWeek are operations on the running Sprint that take this Task (ADR 0007 操作の可否): they are named by where the Task goes.
+ */
+export type TaskCapabilities = {
+    /**
+     * saveTask.
+     */
+    canSave: boolean;
+    /**
+     * archiveTask.
+     */
+    canArchive: boolean;
+    /**
+     * completeTask.
+     */
+    canComplete: boolean;
+    /**
+     * setRecurrence.
+     */
+    canSetRecurrence: boolean;
+    /**
+     * endRecurrence.
+     */
+    canEndRecurrence: boolean;
+    /**
+     * addSubtask.
+     */
+    canAddSubtask: boolean;
+    /**
+     * 今日へ: chooseForDay with this Task (`taskId`) on the running Sprint, for today (invariant 26).
+     */
+    canAddToToday: boolean;
+    /**
+     * 今週へ: addToSprint with this Task on the running Sprint (#155).
+     */
+    canAddToWeek: boolean;
+};
+
+/**
+ * What the person can do with a suggestion of an Estimate now (#323).
+ */
+export type EstimateSuggestionCapabilities = {
+    /**
+     * adoptEstimateSuggestion (a bound, or edited hours, F31).
+     */
+    canAdopt: boolean;
+    /**
+     * undoAdoption.
+     */
+    canUndoAdoption: boolean;
+    /**
+     * rejectSuggestion.
+     */
+    canReject: boolean;
+    /**
+     * undoRejection.
+     */
+    canUndoRejection: boolean;
+};
+
+/**
+ * What the person can do with a subtask now (#323).
+ */
+export type SubtaskCapabilities = {
+    /**
+     * updateSubtask.
+     */
+    canUpdate: boolean;
+};
+
 export type BacklogItem = {
     task: Task;
     /**
@@ -519,16 +627,26 @@ export type BacklogItem = {
     value: PlanningValue;
     taskValue: PlanningValue;
     subtaskValue: PlanningValue;
-    canAddToToday: boolean;
-    canAddToWeek: boolean;
     /**
-     * The Sprint whose first day 今日へ waits for.
+     * The Sprint whose first day 今日へ waits for: given while the Task can join it (canAddToWeek) but not today.
      */
     todayOpensOn?: {
         number: number;
         start: LocalDate;
     };
-    canComplete: boolean;
+    capabilities: TaskCapabilities;
+    /**
+     * What the person can do with each of the Task's suggestions, by ID.
+     */
+    suggestionCapabilities: {
+        [key: string]: EstimateSuggestionCapabilities;
+    };
+    /**
+     * What the person can do with each of the Task's subtasks, by ID.
+     */
+    subtaskCapabilities: {
+        [key: string]: SubtaskCapabilities;
+    };
 };
 
 export type BacklogData = {
@@ -842,6 +960,10 @@ export type TodayData = {
     plan: Array<TodayItem>;
     interrupts: Array<InterruptItem>;
     areas: Array<AreaLabel>;
+    /**
+     * What the person can do with the running Sprint now (#323).
+     */
+    sprintCapabilities: SprintCapabilities;
 };
 
 /**
@@ -919,6 +1041,28 @@ export type Range = {
     hi: number;
 };
 
+/**
+ * What the person can do with a Task in a Sprint (SprintTask) now (#323).
+ */
+export type SprintTaskCapabilities = {
+    /**
+     * removeSprintTask: a draft leaves while planned, a mid-Sprint addition is undone while running (F40).
+     */
+    canRemove: boolean;
+    /**
+     * setGoalLink.
+     */
+    canSetGoalLink: boolean;
+    /**
+     * excludeAllOccurrences.
+     */
+    canExcludeAllOccurrences: boolean;
+    /**
+     * recordActualTime for this SprintTask on a day of the Sprint (F22). The day and the hours are not checked.
+     */
+    canRecordActualTime: boolean;
+};
+
 export type PlannedTask = {
     sprintTask: SprintTask;
     task: Task;
@@ -927,6 +1071,7 @@ export type PlannedTask = {
     suggestion?: Range;
     linkAtConfirm: GoalLink;
     inactive?: 'completed' | 'archived';
+    capabilities: SprintTaskCapabilities;
 };
 
 export type AreaTotal = {
@@ -940,6 +1085,20 @@ export type AreaTotal = {
     unestimatedSubtasks: number;
 };
 
+/**
+ * What the person can do with a Sprint's Goal for an Area now (#323), written or not. updateGoal takes two operations: its text and the person's assessment.
+ */
+export type SprintGoalCapabilities = {
+    /**
+     * updateGoal with `text` (while planned or running, F16).
+     */
+    canSet: boolean;
+    /**
+     * updateGoal with `assessment` (in Review, invariant 19).
+     */
+    canAssess: boolean;
+};
+
 export type AreaPlan = {
     /**
      * Left out for the Tasks without an Area.
@@ -948,6 +1107,10 @@ export type AreaPlan = {
     goal?: SprintGoal;
     tasks: Array<PlannedTask>;
     total?: AreaTotal;
+    /**
+     * What the person can do with the Area's Goal now, written or not (#323). All false for the Tasks without an Area.
+     */
+    goalCapabilities: SprintGoalCapabilities;
 };
 
 export type PlanningTotal = {
@@ -1060,6 +1223,7 @@ export type SprintPlan = {
         end: LocalDate;
         state: SprintState;
     };
+    capabilities: SprintCapabilities;
 };
 
 /**
@@ -1084,12 +1248,17 @@ export type RunningTask = {
     occurrences?: OccurrenceProgress;
     carry?: CarryCount;
     nextWeek?: true;
+    capabilities: SprintTaskCapabilities;
 };
 
 export type RunningAreaPlan = {
     area?: SprintAreaLabel;
     goal?: SprintGoal;
     tasks: Array<RunningTask>;
+    /**
+     * What the person can do with the Area's Goal now, written or not (#323). All false for the Tasks without an Area.
+     */
+    goalCapabilities: SprintGoalCapabilities;
 };
 
 export type AvailableHours = {
@@ -1109,6 +1278,7 @@ export type PastDayRecord = {
     } | {
         kind: 'gone';
     };
+    capabilities: DailySelectionCapabilities;
 };
 
 export type PastDay = {
@@ -1136,6 +1306,7 @@ export type RunningData = {
         applied: boolean;
         noEffect: boolean;
     };
+    capabilities: SprintCapabilities;
 };
 
 /**
@@ -1153,6 +1324,16 @@ export type SprintView = {
  * `If-None-Match: *` (RFC 9110 §13.1.2): the write was made from no record, and is not to be made over one that is there now.
  */
 export type AnyEntityTag = '*';
+
+/**
+ * What the person can do with a Task a Sprint being planned can choose (#323): addToSprint, which takes this Task.
+ */
+export type SprintCandidateCapabilities = {
+    /**
+     * addToSprint with this Task.
+     */
+    canAdd: boolean;
+};
 
 export type CandidateRow = {
     task: Task;
@@ -1173,11 +1354,37 @@ export type CandidateRow = {
     running?: {
         sprint: number;
     };
+    capabilities: SprintCandidateCapabilities;
+    /**
+     * What the person can do with `chosen` now (#323). Present with `chosen`.
+     */
+    chosenCapabilities?: SprintTaskCapabilities;
+};
+
+/**
+ * What the person can do with an occurrence while planning (#323).
+ */
+export type OccurrenceCapabilities = {
+    /**
+     * includeOccurrence.
+     */
+    canInclude: boolean;
+    /**
+     * excludeOccurrence.
+     */
+    canExclude: boolean;
+};
+
+/**
+ * An occurrence as Planning offers it: the record, and what the person can do with it (#323).
+ */
+export type OccurrenceItem = Occurrence & {
+    capabilities: OccurrenceCapabilities;
 };
 
 export type RecurringCandidate = {
     task: Task;
-    occurrences: Array<Occurrence>;
+    occurrences: Array<OccurrenceItem>;
     area?: AreaLabel;
 };
 
@@ -1292,10 +1499,34 @@ export type CriterionResult = {
     actualHours: number;
 };
 
+/**
+ * What the person can do with the criterion a Sprint had now (#323).
+ */
+export type CriterionUseCapabilities = {
+    /**
+     * decideCriterion.
+     */
+    canDecide: boolean;
+};
+
 export type RetroCriterion = {
     criterion: PlanningCriterion;
     view: CriterionView;
     areaName?: string;
+};
+
+/**
+ * What the person can do with a draft planning criterion now (#323).
+ */
+export type PlanningCriterionCapabilities = {
+    /**
+     * setDraftPolicy.
+     */
+    canSetDraftPolicy: boolean;
+    /**
+     * dropCriterionDraft.
+     */
+    canDropDraft: boolean;
 };
 
 /**
@@ -1331,6 +1562,36 @@ export type CarryOverTask = {
     place: CarryOverPlace;
 };
 
+/**
+ * What the person can do with a Sprint's Retro now (#323). updateRetro takes two operations: 気づいたこと and 次に試すこと.
+ */
+export type RetroCapabilities = {
+    /**
+     * updateRetro with `reflection`.
+     */
+    canSetReflection: boolean;
+    /**
+     * updateRetro with `improvement`.
+     */
+    canSetImprovement: boolean;
+    /**
+     * completeRetro.
+     */
+    canComplete: boolean;
+    /**
+     * pinFact.
+     */
+    canPinFact: boolean;
+    /**
+     * unpinFact.
+     */
+    canUnpinFact: boolean;
+    /**
+     * draftCriterion from this Retro's improvement, which then names it (invariant 38).
+     */
+    canDraftCriterion: boolean;
+};
+
 export type RetroData = {
     sprint: Sprint;
     number: number;
@@ -1361,8 +1622,14 @@ export type RetroData = {
         appliedAtConfirm: boolean;
         result: CriterionResult;
         decision?: RetroDecision;
+        capabilities: CriterionUseCapabilities;
     };
-    draft?: RetroCriterion;
+    /**
+     * The draft made from this Retro's improvement.
+     */
+    draft?: RetroCriterion & {
+        capabilities: PlanningCriterionCapabilities;
+    };
     pins: Array<RetroPin>;
     reflection: string;
     improvement?: string;
@@ -1374,6 +1641,50 @@ export type RetroData = {
     occurrences: Array<RetroOccurrence>;
     carryOver: CarryOverPlaces;
     carryOverTasks: Array<CarryOverTask>;
+    capabilities: RetroCapabilities;
+    /**
+     * What the person can do with the Sprint's Goals now, by Area ID (#323).
+     */
+    goalCapabilities: {
+        [key: string]: SprintGoalCapabilities;
+    };
+    /**
+     * What the person can do with the Sprint's SprintTasks now, by ID (#323): actual time added in Review (F22).
+     */
+    sprintTaskCapabilities: {
+        [key: string]: SprintTaskCapabilities;
+    };
+};
+
+/**
+ * A Sprint as a list or a reference shows it. Its number (「Sprint 14」, F25) is an attribute, not its key: the key is its ID (#295).
+ */
+export type SprintItemWritable = {
+    id: SprintId;
+    number: number;
+    start: LocalDate;
+    end: LocalDate;
+    state: SprintState;
+    week?: SprintWeek;
+    capabilities: SprintCapabilities;
+};
+
+/**
+ * The Sprints the person has now, by what each is (a week running or in Review while the next is planned), and where the next Planning starts.
+ */
+export type CurrentSprintsWritable = {
+    active?: SprintItemWritable;
+    review?: SprintItemWritable;
+    planning?: SprintItemWritable;
+    /**
+     * The next week not confirmed yet, with its number (F25), its last day and its place next to now (`week`, as a Sprint's): where its Planning starts, before there is a Sprint to open (#274).
+     */
+    next: {
+        start: LocalDate;
+        end: LocalDate;
+        number: number;
+        week?: SprintWeek;
+    };
 };
 
 export type EditableAreaWritable = {
@@ -1384,6 +1695,7 @@ export type EditableAreaWritable = {
     name: string;
     color: AreaColor;
     archived: boolean;
+    capabilities: AreaCapabilities;
 };
 
 export type SubtaskWritable = {
@@ -1463,16 +1775,26 @@ export type BacklogItemWritable = {
     value: PlanningValue;
     taskValue: PlanningValue;
     subtaskValue: PlanningValue;
-    canAddToToday: boolean;
-    canAddToWeek: boolean;
     /**
-     * The Sprint whose first day 今日へ waits for.
+     * The Sprint whose first day 今日へ waits for: given while the Task can join it (canAddToWeek) but not today.
      */
     todayOpensOn?: {
         number: number;
         start: LocalDate;
     };
-    canComplete: boolean;
+    capabilities: TaskCapabilities;
+    /**
+     * What the person can do with each of the Task's suggestions, by ID.
+     */
+    suggestionCapabilities: {
+        [key: string]: EstimateSuggestionCapabilities;
+    };
+    /**
+     * What the person can do with each of the Task's subtasks, by ID.
+     */
+    subtaskCapabilities: {
+        [key: string]: SubtaskCapabilities;
+    };
 };
 
 export type BacklogDataWritable = {
@@ -1641,6 +1963,10 @@ export type TodayDataWritable = {
     plan: Array<TodayItemWritable>;
     interrupts: Array<InterruptItemWritable>;
     areas: Array<AreaLabel>;
+    /**
+     * What the person can do with the running Sprint now (#323).
+     */
+    sprintCapabilities: SprintCapabilities;
 };
 
 /**
@@ -1721,6 +2047,7 @@ export type PlannedTaskWritable = {
     suggestion?: Range;
     linkAtConfirm: GoalLink;
     inactive?: 'completed' | 'archived';
+    capabilities: SprintTaskCapabilities;
 };
 
 export type AreaPlanWritable = {
@@ -1731,6 +2058,10 @@ export type AreaPlanWritable = {
     goal?: SprintGoalWritable;
     tasks: Array<PlannedTaskWritable>;
     total?: AreaTotal;
+    /**
+     * What the person can do with the Area's Goal now, written or not (#323). All false for the Tasks without an Area.
+     */
+    goalCapabilities: SprintGoalCapabilities;
 };
 
 /**
@@ -1777,6 +2108,7 @@ export type SprintPlanWritable = {
         end: LocalDate;
         state: SprintState;
     };
+    capabilities: SprintCapabilities;
 };
 
 export type RunningTaskWritable = {
@@ -1786,12 +2118,37 @@ export type RunningTaskWritable = {
     occurrences?: OccurrenceProgress;
     carry?: CarryCount;
     nextWeek?: true;
+    capabilities: SprintTaskCapabilities;
 };
 
 export type RunningAreaPlanWritable = {
     area?: SprintAreaLabel;
     goal?: SprintGoalWritable;
     tasks: Array<RunningTaskWritable>;
+    /**
+     * What the person can do with the Area's Goal now, written or not (#323). All false for the Tasks without an Area.
+     */
+    goalCapabilities: SprintGoalCapabilities;
+};
+
+export type PastDayRecordWritable = {
+    selection: DailySelection;
+    title: string;
+    recurring: boolean;
+    after: {
+        kind: 'unresolved';
+    } | {
+        kind: 'closed';
+        resolution: ClosedResolution;
+    } | {
+        kind: 'gone';
+    };
+    capabilities: DailySelectionCapabilities;
+};
+
+export type PastDayWritable = {
+    date: LocalDate;
+    records: Array<PastDayRecordWritable>;
 };
 
 export type RunningDataWritable = {
@@ -1807,13 +2164,14 @@ export type RunningDataWritable = {
     };
     availableHours: AvailableHours;
     progress?: WeekProgress;
-    pastDays: Array<PastDay>;
+    pastDays: Array<PastDayWritable>;
     criterion?: {
         policy: CriterionPolicy;
         areaName?: string;
         applied: boolean;
         noEffect: boolean;
     };
+    capabilities: SprintCapabilities;
 };
 
 /**
@@ -1846,11 +2204,23 @@ export type CandidateRowWritable = {
     running?: {
         sprint: number;
     };
+    capabilities: SprintCandidateCapabilities;
+    /**
+     * What the person can do with `chosen` now (#323). Present with `chosen`.
+     */
+    chosenCapabilities?: SprintTaskCapabilities;
+};
+
+/**
+ * An occurrence as Planning offers it: the record, and what the person can do with it (#323).
+ */
+export type OccurrenceItemWritable = Occurrence & {
+    capabilities: OccurrenceCapabilities;
 };
 
 export type RecurringCandidateWritable = {
     task: TaskWritable;
-    occurrences: Array<Occurrence>;
+    occurrences: Array<OccurrenceItemWritable>;
     area?: AreaLabel;
 };
 
@@ -1942,8 +2312,14 @@ export type RetroDataWritable = {
         appliedAtConfirm: boolean;
         result: CriterionResult;
         decision?: RetroDecision;
+        capabilities: CriterionUseCapabilities;
     };
-    draft?: RetroCriterionWritable;
+    /**
+     * The draft made from this Retro's improvement.
+     */
+    draft?: RetroCriterionWritable & {
+        capabilities: PlanningCriterionCapabilities;
+    };
     pins: Array<RetroPin>;
     reflection: string;
     improvement?: string;
@@ -1955,6 +2331,19 @@ export type RetroDataWritable = {
     occurrences: Array<RetroOccurrence>;
     carryOver: CarryOverPlaces;
     carryOverTasks: Array<CarryOverTask>;
+    capabilities: RetroCapabilities;
+    /**
+     * What the person can do with the Sprint's Goals now, by Area ID (#323).
+     */
+    goalCapabilities: {
+        [key: string]: SprintGoalCapabilities;
+    };
+    /**
+     * What the person can do with the Sprint's SprintTasks now, by ID (#323): actual time added in Review (F22).
+     */
+    sprintTaskCapabilities: {
+        [key: string]: SprintTaskCapabilities;
+    };
 };
 
 /**

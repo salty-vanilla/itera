@@ -5,7 +5,6 @@ import { Pin, Rewind, Route } from 'lucide-react';
 import { Icon } from '@/components/ui/icon';
 import { useEffect, useRef, useState } from 'react';
 import type { NotReady, Read } from '@/api/read-state';
-import { useNow } from '@/api/use-me';
 import { ReadStatus } from '@/components/read-status';
 import { Button } from '@/components/ui/button';
 import { Tag } from '@/components/ui/tag';
@@ -442,7 +441,11 @@ function RetroView({
                 <div className="sticky top-8">
                   <Materials
                     data={data}
-                    onPin={readOnly ? undefined : actions.setPinned}
+                    onPin={
+                      data.capabilities.canUnpinFact
+                        ? actions.setPinned
+                        : undefined
+                    }
                   />
                 </div>
               </aside>
@@ -489,14 +492,10 @@ function RetroView({
  * last day, F21) or still being planned.
  */
 function NotStarted({ sprint, steps }: { sprint: SprintItem; steps: Steps }) {
-  // The last day is known once today is: until then there is nothing to start.
-  const now = useNow();
   const { beginRetro, loading } = useBeginRetro(sprint.id);
   const week = weekCall(sprint.week, sprint.number);
-  const lastDay =
-    sprint.state === 'active' &&
-    now.status === 'ready' &&
-    now.today >= sprint.end;
+  // From its last day on (F21), as the read says (#323).
+  const lastDay = sprint.capabilities.canBeginRetro;
   return (
     <div className="flex min-h-full w-full max-w-[calc(var(--spacing-pane-today)+var(--spacing-pane-side)+var(--spacing-12))] flex-col gap-8 px-4 pt-6 pb-16 medium:px-6 medium:pt-8">
       <SprintHeader

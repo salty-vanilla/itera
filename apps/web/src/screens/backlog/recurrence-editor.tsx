@@ -33,10 +33,11 @@ import { useRecurrenceActions } from '@/screen-data/use-task-actions';
 // confirmed Sprint never changes; after saving it the screen says so (「次の
 // Sprint から反映」). A weekly rule may have several days, and needs one
 // before it can be saved. 「繰り返しをやめる」 ends the rule from the next
-// Sprint (F41): until its last day the rule is shown with it and can no
-// longer be changed; after it the Task is one-off and can be made recurring
-// again. A rule that has made no occurrence yet is taken off at once, and
-// the editor is back to making one.
+// Sprint (F41): it comes off the Task, which is shown with it until its
+// last day. The Task is one-off again and can be made recurring from the
+// next Sprint, also before that day (owner decision in #323). A rule that
+// has made no occurrence yet is taken off at once, and the editor is back
+// to making one. What is offered is what the read says can be done (#323).
 
 type Freq = RecurrencePattern['freq'];
 
@@ -135,8 +136,11 @@ function RecurrenceEditor({
   pendingRef?: Ref<() => HTMLElement | null> | undefined;
 }) {
   const actions = useRecurrenceActions();
-  const { task, rule } = item;
+  const { task, rule, capabilities: can } = item;
   const endsOn = item.recurrence?.endsOn;
+  // The Task's own rule, which a change saves to. A rule that ends has come
+  // off the Task (F41): it is shown, but a choice makes a new one.
+  const owns = task.recurrenceRuleId !== undefined;
   // A change starts from the latest version (it may begin next Sprint).
   const latest = rule?.latest;
   // The choice is the latest version as read until it is changed here, so
@@ -158,13 +162,13 @@ function RecurrenceEditor({
   const freqRef = useRef<HTMLSelectElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   // 繰り返しにする makes the button go: the focus moves to the frequency.
-  const hadRule = useRef(rule !== undefined);
+  const hadRule = useRef(owns);
   useEffect(() => {
-    if (rule !== undefined && !hadRule.current) freqRef.current?.focus();
-    hadRule.current = rule !== undefined;
-  }, [rule]);
+    if (owns && !hadRule.current) freqRef.current?.focus();
+    hadRule.current = owns;
+  }, [owns]);
   useImperativeHandle(pendingRef, () => () => {
-    if (rule !== undefined) {
+    if (owns) {
       return freq === 'weekly' && days.length === 0
         ? (daysRef.current?.querySelector<HTMLElement>('[role="checkbox"]') ??
             null)
@@ -212,7 +216,7 @@ function RecurrenceEditor({
   }
 
   // With a rule, a choice is saved as it is made; without one, the button.
-  const saves = rule !== undefined;
+  const saves = owns;
 
   async function end() {
     const outcome = await actions.endRecurrence(task.id);
@@ -281,7 +285,7 @@ function RecurrenceEditor({
           {endsOn !== undefined && ` · ${formatDate(endsOn)} まで`}
         </p>
       )}
-      {endsOn === undefined && (
+      {(can.canSetRecurrence || can.canEndRecurrence) && (
         <>
           <Field label="頻度">
             <Select
@@ -345,7 +349,7 @@ function RecurrenceEditor({
               今週はこの 1件のまま。繰り返しは次の Sprint から始まります。
             </p>
           )}
-          {rule === undefined && (
+          {!owns && can.canSetRecurrence && (
             <div>
               <Button
                 ref={createRef}
@@ -355,7 +359,7 @@ function RecurrenceEditor({
               </Button>
             </div>
           )}
-          {rule !== undefined && (
+          {can.canEndRecurrence && (
             <div>
               <Button onClick={end}>繰り返しをやめる</Button>
             </div>

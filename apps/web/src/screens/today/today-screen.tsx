@@ -322,6 +322,10 @@ function TodayView({ data }: { data: TodayData }) {
           : { ...prev, task: taskId },
     });
   // Closing the detail or opening another Task asks the detail first.
+  // The detail is the Backlog's row: a Task that has left the Backlog has
+  // none. Until the Backlog is read, every Task is taken to have one.
+  const inBacklog = (taskId: TaskId) =>
+    backlog.status !== 'ready' || backlog.item(taskId) !== undefined;
   const openTask = (taskId: TaskId | undefined) =>
     detail.leave(() => showTask(taskId), taskId !== undefined);
   const openItem =
@@ -455,15 +459,11 @@ function TodayView({ data }: { data: TodayData }) {
     return {
       row,
       timeZone: data.timeZone,
-      // A completed Task is no longer in the Backlog's detail.
-      onOpen:
-        row.task.lifecycle === 'active'
-          ? () => openTask(row.task.id)
-          : undefined,
-      onEstimate:
-        row.task.lifecycle === 'active'
-          ? () => openEstimate(row.task.id)
-          : undefined,
+      // A completed Task has left the Backlog: no detail to open.
+      onOpen: inBacklog(row.task.id) ? () => openTask(row.task.id) : undefined,
+      onEstimate: inBacklog(row.task.id)
+        ? () => openEstimate(row.task.id)
+        : undefined,
       onComplete: () => {
         dropClosedToast(selectionId);
         void follow({ selection: selectionId }, () =>
@@ -641,15 +641,17 @@ function TodayView({ data }: { data: TodayData }) {
                 <p className="text-body text-ink">
                   今日はこの Sprint の最終日です。
                 </p>
-                <Button
-                  onClick={async () => {
-                    if (await actions.beginRetro()) {
-                      void navigate({ to: '/retro' });
-                    }
-                  }}
-                >
-                  振り返りを始める
-                </Button>
+                {data.sprintCapabilities.canBeginRetro && (
+                  <Button
+                    onClick={async () => {
+                      if (await actions.beginRetro()) {
+                        void navigate({ to: '/retro' });
+                      }
+                    }}
+                  >
+                    振り返りを始める
+                  </Button>
+                )}
               </div>
             )}
           </DayHeader>

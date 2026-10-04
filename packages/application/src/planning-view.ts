@@ -31,6 +31,18 @@ import {
   type SprintTotals,
   type Task,
 } from '@itera/domain';
+import {
+  candidateCapabilities,
+  goalCapabilities,
+  occurrenceCapabilities,
+  sprintCapabilities,
+  sprintTaskCapabilities,
+  type OccurrenceCapabilities,
+  type SprintCandidateCapabilities,
+  type SprintCapabilities,
+  type SprintGoalCapabilities,
+  type SprintTaskCapabilities,
+} from './capabilities';
 import type { Clock, Records } from './records';
 import { weekOf, type SprintWeek } from './sprint-choice';
 import {
@@ -68,6 +80,8 @@ export interface PlannedTask {
    * Sprint cannot be confirmed until it leaves the week.
    */
   readonly inactive?: 'completed' | 'archived';
+  /** What the person can do with the SprintTask now (#323). */
+  readonly capabilities: SprintTaskCapabilities;
 }
 
 export interface AreaPlan {
@@ -77,6 +91,11 @@ export interface AreaPlan {
   readonly tasks: readonly PlannedTask[];
   /** The Area's total, as `sprintTotals` counts it. */
   readonly total?: SprintTotals['byArea'][number];
+  /**
+   * What the person can do with the Area's Goal now (#323), written or
+   * not: none for the Tasks without an Area.
+   */
+  readonly goalCapabilities: SprintGoalCapabilities;
 }
 
 export interface CandidateRow {
@@ -96,11 +115,20 @@ export interface CandidateRow {
    * choice is linked to its carry-over (F35).
    */
   readonly running?: { readonly sprint: number };
+  /** What the person can do with the Task in this Sprint now (#323). */
+  readonly capabilities: SprintCandidateCapabilities;
+  /** What the person can do with `chosen` now (#323): given with it. */
+  readonly chosenCapabilities?: SprintTaskCapabilities;
 }
+
+/** An occurrence as Planning offers it, with what can be done with it. */
+export type OccurrenceItem = Occurrence & {
+  readonly capabilities: OccurrenceCapabilities;
+};
 
 export interface RecurringCandidate {
   readonly task: TaggedTask;
-  readonly occurrences: readonly Occurrence[];
+  readonly occurrences: readonly OccurrenceItem[];
   readonly area?: PlanningArea;
 }
 
@@ -175,6 +203,8 @@ export interface SprintPlan {
     readonly end: LocalDate;
     readonly state: Sprint['state'];
   };
+  /** What the person can do with the Sprint now (#323). */
+  readonly capabilities: SprintCapabilities;
 }
 
 /** A Task's Area as Planning shows it. */
@@ -251,6 +281,7 @@ export function sprintPlanOf(
             : { suggestion: { lo: suggestion.lo, hi: suggestion.hi } }),
           linkAtConfirm: goalLinkAtConfirm(sprint, sprintTask, task),
           ...(task.lifecycle === 'active' ? {} : { inactive: task.lifecycle }),
+          capabilities: sprintTaskCapabilities(records, sprint, sprintTask),
         },
       ];
     });
@@ -266,6 +297,7 @@ export function sprintPlanOf(
       ...(goal === undefined ? {} : { goal }),
       tasks: planned.filter((p) => (p.task.areaId ?? null) === areaId),
       ...(total === undefined ? {} : { total }),
+      goalCapabilities: goalCapabilities(records, sprint, area?.id),
     };
   });
 
@@ -329,6 +361,7 @@ export function sprintPlanOf(
             state: previous.state,
           },
         }),
+    capabilities: sprintCapabilities(records, sprint, clock),
   };
 }
 
@@ -387,6 +420,12 @@ export function planningCandidatesOf(
       ...(unfinished === true && runningNumber !== undefined
         ? { running: { sprint: runningNumber } }
         : {}),
+      capabilities: candidateCapabilities(records, sprint, task),
+      ...(chosen === undefined
+        ? {}
+        : {
+            chosenCapabilities: sprintTaskCapabilities(records, sprint, chosen),
+          }),
     };
   };
 
@@ -400,6 +439,10 @@ export function planningCandidatesOf(
       return {
         ...r,
         task: tagged(r.task),
+        occurrences: r.occurrences.map((occurrence) => ({
+          ...occurrence,
+          capabilities: occurrenceCapabilities(records, sprint, occurrence),
+        })),
         ...(area === undefined ? {} : { area }),
       };
     }),

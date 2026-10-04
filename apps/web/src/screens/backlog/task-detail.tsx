@@ -56,7 +56,6 @@ import { formatDate, formatTime } from '@/lib/date-format';
 import {
   boundValue,
   parseLocalDate,
-  presentedSuggestion,
   toLocalDate,
 } from '@/lib/domain-functions';
 import {
@@ -320,7 +319,8 @@ function TaskDetail({
   const onSprintScreen = useLocation({
     select: (l) => l.pathname === '/sprint',
   });
-  const offersWeek = facts.canAddToWeek && !onSprintScreen;
+  const can = facts.capabilities;
+  const offersWeek = can.canAddToWeek && !onSprintScreen;
   // A recurring Task in the week is done per occurrence, in Today (#171).
   const opensOccurrences =
     facts.recurrence !== undefined &&
@@ -422,14 +422,14 @@ function TaskDetail({
   const moreId = useId();
   // Which of the day's operations the section offers: those the read says
   // the person can do with today's choice (#322).
-  const can = facts.today?.capabilities;
+  const choice = facts.today?.capabilities;
   const offers = {
-    start: can?.canStart === true,
-    pause: can?.canPause === true,
+    start: choice?.canStart === true,
+    pause: choice?.canPause === true,
     // 今日は見送る is not for an occurrence: it is skipped instead (#233).
-    defer: can?.canDefer === true && facts.today?.recurring !== true,
-    skip: can?.canSkip === true,
-    remove: can?.canRemove === true,
+    defer: choice?.canDefer === true && facts.today?.recurring !== true,
+    skip: choice?.canSkip === true,
+    remove: choice?.canRemove === true,
   };
   // The section's operations, in their order. Only the state's main one is
   // Secondary, and it comes first; the others are Quiet, so that the detail
@@ -441,7 +441,7 @@ function TaskDetail({
     key: string;
     node: (isMain: boolean) => ReactNode;
   }[] = [
-    facts.canAddToToday && {
+    can.canAddToToday && {
       key: 'today',
       node: (isMain: boolean) => (
         <Button
@@ -547,7 +547,7 @@ function TaskDetail({
         </Button>
       ),
     },
-    facts.canComplete && {
+    can.canComplete && {
       key: 'complete',
       node: (isMain: boolean) => (
         <Button
@@ -562,7 +562,7 @@ function TaskDetail({
     },
   ].filter((operation) => operation !== false);
   const has = (key: string) => dayOperations.some((o) => o.key === key);
-  const main = facts.canAddToToday
+  const main = can.canAddToToday
     ? 'today'
     : offers.start
       ? 'start'
@@ -608,7 +608,14 @@ function TaskDetail({
   useEffect(() => {
     if (focusEstimate !== undefined) estimateRef.current?.focus();
   }, [focusEstimate]);
-  const suggestion = presentedSuggestion(task);
+  // The suggestion on show: the one the person can use now (#323).
+  const suggestion = task.suggestions.find(
+    (s) => item.suggestionCapabilities[s.id]?.canAdopt === true,
+  );
+  const suggestionCan =
+    suggestion === undefined
+      ? undefined
+      : item.suggestionCapabilities[suggestion.id];
   const set = <K extends TextKey>(key: K, value: Draft[K]) => {
     fields[key].set(value);
     if (saved === key) setSaved(undefined);
@@ -811,7 +818,12 @@ function TaskDetail({
       case 'subtasks':
         return (
           <>
-            <SubtaskList task={task} pendingRef={subtaskPending} />
+            <SubtaskList
+              task={task}
+              canAdd={can.canAddSubtask}
+              capabilities={item.subtaskCapabilities}
+              pendingRef={subtaskPending}
+            />
             {task.subtasks.length > 0 && (
               <Saved show={saved === 'timeBasis'}>
                 <RadioGroup<TimeBasis>
@@ -903,12 +915,12 @@ function TaskDetail({
         )}
       </DrawerHeader>
       <DrawerBody ref={bodyRef} className="flex flex-col gap-6">
-        {(facts.canAddToToday ||
+        {(can.canAddToToday ||
           facts.todayOpensOn !== undefined ||
           offersWeek ||
           facts.today !== undefined ||
           facts.closedToday !== undefined ||
-          facts.canComplete ||
+          can.canComplete ||
           opensOccurrences) && (
           <section
             ref={nowRef}
@@ -1107,11 +1119,13 @@ function TaskDetail({
             madeAt={`${formatDate(toLocalDate(suggestion.createdAt, timeZone))} ${formatTime(suggestion.createdAt, timeZone)}`}
             onAdopt={onAdopt}
             onAdoptEdited={onAdoptEdited}
-            onReject={onReject}
+            onReject={suggestionCan?.canReject === true ? onReject : undefined}
           />
         )}
         {outcome !== undefined && (
           <SuggestionOutcome
+            // The undo of what was just done, as a Toast's (F27, F30): it
+            // comes before the read that follows it.
             onUndo={outcome.kind === 'adopted' ? onUndoAdopt : onUndoReject}
           >
             {outcome.text}
@@ -1154,24 +1168,26 @@ function TaskDetail({
           )}
         </div>
 
-        <div className="border-t border-border-soft pt-4">
-          <Button
-            onClick={async () => {
-              if (!(await actions.archiveTask(task.id))) return;
-              onClose();
-              toast.show({
-                kind: 'task-archived',
-                title: `「${task.title}」をアーカイブしました`,
-                action: {
-                  label: '元に戻す',
-                  onClick: () => actions.restoreTask(task.id),
-                },
-              });
-            }}
-          >
-            アーカイブ
-          </Button>
-        </div>
+        {can.canArchive && (
+          <div className="border-t border-border-soft pt-4">
+            <Button
+              onClick={async () => {
+                if (!(await actions.archiveTask(task.id))) return;
+                onClose();
+                toast.show({
+                  kind: 'task-archived',
+                  title: `「${task.title}」をアーカイブしました`,
+                  action: {
+                    label: '元に戻す',
+                    onClick: () => actions.restoreTask(task.id),
+                  },
+                });
+              }}
+            >
+              アーカイブ
+            </Button>
+          </div>
+        )}
         <p role="status" className="sr-only">
           {saved === undefined ? '' : `${fieldNames[saved]}を保存しました`}
         </p>
@@ -1185,7 +1201,7 @@ function TaskDetail({
                 {held.subtask && <span>入力中のサブタスクがあります</span>}
                 {held.recurrence && (
                   <span>
-                    {item.rule === undefined
+                    {task.recurrenceRuleId === undefined
                       ? '「繰り返しにする」をまだ押していません'
                       : '繰り返しの変更がまだ保存されていません'}
                   </span>

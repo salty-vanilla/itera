@@ -66,15 +66,20 @@ export function midSprintAddition(
   task: Task,
   ctx: ChangeContext,
 ) {
-  const criterion = activeCriterion(records.criteria);
   return {
     sprintTaskId: ctx.newId('SprintTask'),
     task,
     areas: records.areas,
-    ...(criterion === undefined
-      ? {}
-      : { criterion: { id: criterion.id, policy: criterion.policy } }),
+    ...additionCriterion(records),
   };
+}
+
+/** The active criterion a mid-Sprint addition passes the domain (F3). */
+export function additionCriterion(records: Records) {
+  const criterion = activeCriterion(records.criteria);
+  return criterion === undefined
+    ? {}
+    : { criterion: { id: criterion.id, policy: criterion.policy } };
 }
 
 /** Quick Add: a Task from its title, optionally in an Area. */

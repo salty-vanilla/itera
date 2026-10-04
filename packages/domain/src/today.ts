@@ -1,4 +1,8 @@
-import { addTaskMidSprint, type AddMidSprintInput } from './mid-sprint';
+import {
+  addTaskMidSprint,
+  checkAddTaskMidSprint,
+  type AddMidSprintInput,
+} from './mid-sprint';
 import {
   checkCompleteOccurrence,
   checkReopenOccurrence,
@@ -111,6 +115,8 @@ export function addToToday(
   input: AddToTodayInput,
   ctx: CommandContext,
 ): CommandResult<Sprint> {
+  const checked = checkAddToToday(sprint, input);
+  if (!checked.ok) return checked;
   const added = addTaskMidSprint(sprint, input, ctx);
   if (!added.ok) return added;
   const withTask = added.value.record;
@@ -130,6 +136,31 @@ export function addToToday(
     ...added.value.activities,
     selectionActivity('todaySelected', withTask, selection.value, ctx),
   ]);
+}
+
+/**
+ * Whether `addToToday` takes the Sprint and the Task as they are now (#323):
+ * the Task can join the running Sprint mid-Sprint, and the day is one of
+ * the Sprint's.
+ */
+export function checkAddToToday(
+  sprint: Sprint,
+  input: Pick<AddToTodayInput, 'task' | 'criterion' | 'date'>,
+): Result<undefined> {
+  const addable = checkAddTaskMidSprint(sprint, input);
+  if (!addable.ok) return addable;
+  return checkDayOfSprint(sprint, input.date);
+}
+
+/** Whether a day's choice can be made on `date`: one of the running Sprint's. */
+function checkDayOfSprint(sprint: Sprint, date: LocalDate): Result<undefined> {
+  if (sprint.state !== 'active') {
+    return err('invalidTransition', 'Today works on the active Sprint.');
+  }
+  if (date < sprint.start || date > sprint.end) {
+    return err('invalidInput', 'The day is outside the Sprint.');
+  }
+  return ok(undefined);
 }
 
 // ---------------------------------------------------------------- the day
@@ -724,36 +755,9 @@ export function completeFromBacklog(
   ctx: CommandContext,
 ): CommandResult<{ readonly sprint: Sprint; readonly task: Task }> {
   const { task } = input;
-  if (isRecurring(task)) {
-    return err(
-      'recurringTaskCannotComplete',
-      'A recurring Task is completed per occurrence, not from the Backlog.',
-    );
-  }
-  const sprintTask =
-    sprint.state === 'active'
-      ? sprint.tasks.find(
-          (t) => t.taskId === task.id && t.outcome === 'planned',
-        )
-      : undefined;
-  // A rule ended this Sprint (F41) leaves the Task one-off, but this
-  // Sprint's occurrences are still done one by one, in Today. The Backlog
-  // is stricter: it offers no completion until the rule's last day
-  // (`recurrenceOf`), which is this Sprint's end.
-  if (
-    sprint.state === 'active' &&
-    sprint.tasks.some(
-      (t) =>
-        t.taskId === task.id &&
-        t.occurrenceIds !== undefined &&
-        t.outcome !== 'removed',
-    )
-  ) {
-    return err(
-      'recurringTaskCannotComplete',
-      'This Sprint has the Task’s occurrences; they are completed one by one.',
-    );
-  }
+  const checked = checkCompleteFromBacklog(sprint, input);
+  if (!checked.ok) return checked;
+  const sprintTask = plannedSprintTaskOf(sprint, task);
   if (sprintTask === undefined) {
     const completed = completeTask(task, ctx);
     if (!completed.ok) return completed;
@@ -818,6 +822,69 @@ export function completeFromBacklog(
       selectionActivity('todayDone', sprint, selection.value, ctx),
     ],
   );
+}
+
+/** The Task's planned SprintTask in the running Sprint, if any. */
+function plannedSprintTaskOf(sprint: Sprint, task: Task) {
+  return sprint.state === 'active'
+    ? sprint.tasks.find((t) => t.taskId === task.id && t.outcome === 'planned')
+    : undefined;
+}
+
+/**
+ * Whether `completeFromBacklog` takes the records as they are now (#323):
+ * a one-off Task that can complete, whose day in the Sprint, if it has
+ * one, can take the completion (invariant 21, F17, F34).
+ */
+export function checkCompleteFromBacklog(
+  sprint: Sprint,
+  input: Pick<CompleteFromBacklogInput, 'task' | 'date'>,
+): Result<undefined> {
+  const { task } = input;
+  if (isRecurring(task)) {
+    return err(
+      'recurringTaskCannotComplete',
+      'A recurring Task is completed per occurrence, not from the Backlog.',
+    );
+  }
+  // A rule ended this Sprint (F41) leaves the Task one-off, but this
+  // Sprint's occurrences are still done one by one, in Today.
+  if (
+    sprint.state === 'active' &&
+    sprint.tasks.some(
+      (t) =>
+        t.taskId === task.id &&
+        t.occurrenceIds !== undefined &&
+        t.outcome !== 'removed',
+    )
+  ) {
+    return err(
+      'recurringTaskCannotComplete',
+      'This Sprint has the Task’s occurrences; they are completed one by one.',
+    );
+  }
+  const sprintTask = plannedSprintTaskOf(sprint, task);
+  if (sprintTask === undefined || input.date < sprint.start) {
+    return checkCompleteTask(task);
+  }
+  const existing = findSelection(sprint, input.date, sprintTask.id, undefined);
+  if (existing !== undefined && canComplete(existing, input.date)) {
+    const completable = checkCompleteSelection(sprint, {
+      selectionId: existing.id,
+      task,
+      today: input.date,
+    });
+    return completable.ok ? ok(undefined) : completable;
+  }
+  if (existing !== undefined) {
+    return err(
+      'invalidTransition',
+      `Today's selection is already ${existing.resolution}.`,
+    );
+  }
+  const day = checkDayOfSprint(sprint, input.date);
+  if (!day.ok) return day;
+  return checkCompleteTask(task);
 }
 
 export interface UndoCompleteFromBacklogInput {
@@ -985,15 +1052,9 @@ export function recordActualTime(
   input: RecordActualTimeInput,
   ctx: CommandContext,
 ): CommandResult<Sprint> {
-  // During the Sprint, and in Review before the Retro completes (F22).
-  if (sprint.state !== 'active' && sprint.state !== 'review') {
-    return err(
-      'invalidTransition',
-      'Actual time is recorded during the Sprint or its Review.',
-    );
-  }
-  const sprintTask = sprint.tasks.find((t) => t.id === input.sprintTaskId);
-  if (sprintTask === undefined) return err('notFound', 'No such SprintTask.');
+  const checked = checkRecordActualTime(sprint, input);
+  if (!checked.ok) return checked;
+  const sprintTask = checked.value;
   if (input.date < sprint.start || input.date > sprint.end) {
     return err('invalidInput', 'The day is outside the Sprint.');
   }
@@ -1006,6 +1067,28 @@ export function recordActualTime(
     return err('invalidInput', 'The occurrence does not match the SprintTask.');
   }
   return appendActual(sprint, { ...input, via: 'later' }, ctx);
+}
+
+/**
+ * Whether `recordActualTime` takes the Sprint and its SprintTask as they
+ * are now (#323): during the Sprint, and in Review before the Retro
+ * completes (F22). The day, the occurrence and the hours it is given are
+ * not checked here.
+ */
+export function checkRecordActualTime(
+  sprint: Sprint,
+  input: Pick<RecordActualTimeInput, 'sprintTaskId'>,
+): Result<SprintTask> {
+  if (sprint.state !== 'active' && sprint.state !== 'review') {
+    return err(
+      'invalidTransition',
+      'Actual time is recorded during the Sprint or its Review.',
+    );
+  }
+  const sprintTask = sprint.tasks.find((t) => t.id === input.sprintTaskId);
+  return sprintTask === undefined
+    ? err('notFound', 'No such SprintTask.')
+    : ok(sprintTask);
 }
 
 export interface NoteInterruptInput {
@@ -1249,12 +1332,8 @@ function newSelection(
   resolution: 'selected' | 'done',
   ctx: CommandContext,
 ): Result<DailySelection> {
-  if (sprint.state !== 'active') {
-    return err('invalidTransition', 'Today works on the active Sprint.');
-  }
-  if (input.date < sprint.start || input.date > sprint.end) {
-    return err('invalidInput', 'The day is outside the Sprint.');
-  }
+  const day = checkDayOfSprint(sprint, input.date);
+  if (!day.ok) return day;
   const sprintTask = sprint.tasks.find((t) => t.id === input.sprintTaskId);
   if (sprintTask === undefined) return err('notFound', 'No such SprintTask.');
   if (sprintTask.outcome !== 'planned') {

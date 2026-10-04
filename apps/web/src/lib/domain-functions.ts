@@ -20,7 +20,7 @@ import {
 } from '@itera/domain';
 import type { Instant, LocalDate, TimeZone } from '@itera/api-contract';
 
-export { boundValue, parseLocalDate, presentedSuggestion } from '@itera/domain';
+export { boundValue, parseLocalDate } from '@itera/domain';
 
 export function addDays(date: LocalDate, days: number) {
   return addDaysOf(date as DomainLocalDate, days);

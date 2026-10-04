@@ -1245,9 +1245,18 @@ describe('Backlog', () => {
     expect(
       within(section).getByText('今の設定：毎週 土 · 10/4 (日) まで'),
     ).toBeTruthy();
-    // An ended rule is not changed again: the inputs and the button go.
-    expect(within(section).queryByRole('combobox')).toBeNull();
-    expect(within(section).queryByRole('button')).toBeNull();
+    // The rule has come off the Task: it is not changed or ended again, and
+    // the Task can be made recurring from the next Sprint (owner decision
+    // in #323).
+    expect(
+      within(section).queryByRole('button', { name: '繰り返しをやめる' }),
+    ).toBeNull();
+    expect(
+      within(section).getByRole('combobox', { name: '頻度' }),
+    ).toBeTruthy();
+    expect(
+      within(section).getByRole('button', { name: '繰り返しにする' }),
+    ).toBeTruthy();
     expect(document.activeElement).toBe(
       within(section).getByRole('heading', { name: '繰り返し' }),
     );

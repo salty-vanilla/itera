@@ -13,6 +13,18 @@ const record = (
   title: '住民税の支払い',
   recurring,
   after,
+  capabilities: {
+    canStart: false,
+    canPause: false,
+    canDefer: false,
+    canUndoDefer: false,
+    canRemove: false,
+    canUndoRemove: false,
+    canComplete: false,
+    canUndoComplete: resolution === 'done',
+    canUndoSkip: resolution === 'skipped',
+    canSkip: false,
+  },
 });
 
 describe('consequence (#209)', () => {

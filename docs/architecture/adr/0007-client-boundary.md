@@ -3,7 +3,7 @@
 - 状態：採用
 - 日付：2026-10-03
 - 関連：PRD §14「クライアントとデータの方式」、ADR 0004、ADR 0005、ADR 0006、Issue #45・#262・#265
-- 改訂：2026-10-04（操作の可否の形を、記録ごとの出力専用の `capabilities`（`can<操作>` の真偽値）に決める。domain のコマンドの前提を `check…` として切り出し、今日の選択と割り込みに当てる。Web の今日の画面と Task の詳細の選択の操作は、3 つ目の例外から外れた。Issue #322。ほかの記録は #323）
+- 改訂：2026-10-04（操作の可否の形を、記録ごとの出力専用の `capabilities`（`can<操作>` の真偽値）に決める。domain のコマンドの前提を `check…` として切り出し、今日の選択と割り込みに当てる。Web の今日の画面と Task の詳細の選択の操作は、3 つ目の例外から外れた。Issue #322。ほかの記録は #323）、2026-10-04（残りの記録（Backlog の Task・提案・サブタスク・領域・Sprint・Goal・SprintTask・計画の候補と回・振り返り・計画基準・過去の日の記録）に `capabilities` を当て、3 つ目の例外から操作の可否を外す。ほかの記録の操作を置く場合、1 つの面が受ける 2 つの操作、入れ子の記録、状態で断らない操作の扱いを決める。Issue #323）
 
 ## 背景
 
@@ -64,9 +64,8 @@ iOS・Android ───────────────▶ packages/api-cont
     - 理由：要求の組み立ての規則を、サーバー・ブラウザ内モック・Web で 1 か所に置くため。名前と入力は application が正本で、契約に写すと二重になる。
     - iOS・Android は影響を受けない。`openapi/` から生成し、操作の名前と入力では呼ばない（面の operationId で呼ぶ）。
     - 戻す条件：iOS に着手するときに、Web も面の operationId と生成した型で呼ぶ形にするか、操作の名前と入力を契約の側に置くかを決める。
-  - 操作の可否と値の規則：プレビューの一覧と操作の可否（下の「操作の可否」）を決めるまで、Web は今のとおり、状態の名前から操作の可否を決め、値の規則（空でない名前など）を送る前に検査してよい。下の「クライアントに許す計算」は目標の形で、iOS・Android は初めからこれに従う。
-    - 操作の可否の形は #322 で決めた（下の「操作の可否」）。今日の選択（今日の画面、過去の日、Task の詳細の「今日と今週」）と割り込みの操作は、この例外から外れた。Web は `capabilities` が真の操作だけを出し、選択の状態の名前から操作の可否を決めない。
-    - 残る記録（Backlog・Task・領域・提案・Sprint の計画と実行中・振り返り）は #323 で `capabilities` に移し、そこでこの例外の操作の可否の部分を閉じる。値の規則の部分は、プレビューの一覧を決めるとき（iOS に着手するとき）に閉じる。
+  - 値の規則：プレビューの一覧を決めるまで、Web は値の規則（空でない名前、置き換えには新しい計画基準が要る、など）を送る前に検査してよい。下の「クライアントに許す計算」は目標の形で、iOS・Android は初めからこれに従う。戻す条件：プレビューの一覧を決めるとき（iOS に着手するとき）。
+    - 操作の可否は、この例外から外れた（#322 で今日の選択と割り込み、#323 で残りの記録）。Web は `capabilities` が真の操作だけを出し、状態の名前から操作の可否を決めない（下の「操作の可否」）。
 - Web の依存は ESLint の `no-restricted-imports` で検査する（ADR 0005）。iOS・Android は言語が違うので、TypeScript の実装には依存できない。
 - 契約は内部より上流に置く。`openapi/` と、そこから生成したものは、`packages/application`・`packages/domain` に依存しない。`packages/api-contract` が `packages/application` を使うのは、テスト（契約と実装が合っているかを確かめる。ADR 0006「契約と実装の一致」）と、上の例外の `requests.ts` の型だけ。
 
@@ -121,8 +120,14 @@ iOS・Android ───────────────▶ packages/api-cont
 
 - サーバーは、domain のコマンドと同じ判定から作る。domain は、コマンドの前提のうち記録の状態で決まる部分を、コマンドとは別に呼べる関数（`check<コマンド>`、例：`checkStartSelection`・`checkCompleteSelection`・`checkEditInterrupt`）として export し、コマンドもまずその関数で判定する。完了・取り消し・スキップの判定は、選択の Task か回の状態まで含む（`checkCompleteTask`・`checkCompleteOccurrence` など、それぞれのコマンドの判定）。
 - `packages/application`（`capabilities.ts`）は、操作が読むのと同じ記録（実行中の Sprint、選択、選択の Task か回）で、操作が使うのと同じ関数（`sprintIn`、`selection-of.ts` の `subjectOf`・`undoRouteOf`）を通してその関数を呼び、読み取りの記録に `capabilities` を足す。過去の日の Backlog からの完了の取り消しは Backlog の取り消し（F29、F33）なので、`canUndoComplete` も `checkUndoCompleteFromBacklog` から作る。application のテストは、fixture のすべての状態と、操作で作った状態（今週の残りに戻した選択、見送った選択、過去の日の Backlog からの完了、スキップした回）で、真の操作が通り偽の操作が断られること、どの `can…` も真と偽の両方が出ることを確かめる。
+- ほかの記録の操作（#323）：この記録を引数に取り、行き先の記録を対象にする操作のうち、読み取りの行から出すものは、この記録の `capabilities` に置く。Backlog の Task の今日へ（今動いている Sprint の今日に `chooseForDay`）・今週へ（同じ Sprint に `addToSprint`）は、Issue #323 の指定のとおり名前を行き先で付ける（`canAddToToday`・`canAddToWeek`）。計画の候補の選ぶ（`addToSprint`）は `SprintCandidateCapabilities.canAdd`。どの operationId のどの使い方かは `description` に書く。
+- 1 つの operationId が 2 つの操作を受けるとき（`updateGoal` の文と自己判定、`updateRetro` の気づいたことと次に試すこと）は、application の操作の名前から記録の名詞を除いて分ける（`canSet`・`canAssess`、`canSetReflection`・`canSetImprovement`）。
+- 入れ子の記録：Task の中の提案とサブタスクは、Task の記録（`Task`）を変えずに、行の隣に ID ごとの対応表で置く（`BacklogItem.suggestionCapabilities`・`subtaskCapabilities`）。行が別のスキーマの記録を名指すときも同じ（`CandidateRow.chosenCapabilities`、`RetroData.goalCapabilities`・`sprintTaskCapabilities`）。記録の配列そのものに置くときは、`InterruptItem` と同じく読み取りの項目を別のスキーマにする（`OccurrenceItem`）。Sprint と Area の組の行（`AreaPlan`・`RunningAreaPlan`）は、Goal を書く前も Goal の `capabilities` を持つ（`goalCapabilities`。領域なしの行はすべて偽）。
+- 状態で断らない操作（`saveTask`・`addSubtask`・`updateSubtask`・`renameArea`）も、記録の種類で項目を決めるので置く。domain の `check…` はいつも `ok` を返し（`checkUpdateTask()` など）、後から前提が足されたときにも判定の置き場所が変わらない。読み取りの記録がいつも同じ状態のもの（Backlog の Task は Active だけなので、`canArchive`・`canSetRecurrence` はいつも真）も同じ。application のテストは、これらを「真と偽の両方が出る」の対象から外す。読み取りに出ない状態でしか真にならない操作（Backlog の `restoreTask`・`undoCompleteTask`）は置かない。直前の操作の元に戻す（Toast、提案の結果の行）は、その操作の結果から出し、記録の状態から決めない。
+- 状態の名前で決めてよいのは、表示だけ（`SprintView` の計画中と確定後の出し分け、終わった Sprint と完了した振り返りを記録として読む表示、状態の語）。Task の詳細を開けるかは、Backlog にその行があるか（Active の Task だけがある）で決め、Task の状態では決めない。
+- 繰り返しをやめた Task（規則の最終日まで Backlog に「〜まで」と出る間）は、規則が Task から外れた単発の Task なので、domain は `setRecurrence` を通し（次の Sprint から新しい規則）、画面は `canSetRecurrence` のとおり「繰り返しにする」を出す（2026-10-04 オーナー判断、#323）。
 - 当てた記録（#322）：今日の行と今日閉じた行（`TodayRow`）、今週の残りに戻した今日の選択（`TodayItem.removedTodayCapabilities`。選択は `removedToday` の ID でだけ出るので、その隣に置く）、過去の日の記録（`DayRecord`）、今日と過去の日の割り込み（`InterruptItem`。`InterruptNote` は Sprint の記録と派生値にも出て、そこでは可否を計算しないので変えず、読み取りの項目を別のスキーマにした）、Backlog の項目の今日の選択（`BacklogItem.today`）。
-- 残る記録（Backlog の項目の `canAddToToday`・`canAddToWeek`・`canComplete`、Task・領域・提案・Sprint の計画と実行中・振り返り）は #323。`backlog-view.ts` の `canComplete` などは、それまで domain のコマンドとは別の判定のまま。
+- 当てた記録（#323）：Backlog の項目の Task（`BacklogItem.capabilities`。`canAddToToday`・`canAddToWeek`・`canComplete` はここに移した壊す変更で、`info.version` を 0.6.0 にした）と提案・サブタスク、領域（`EditableArea`）、Sprint（`SprintItem`・`SprintPlan`・`RunningData`、今日の `TodayData.sprintCapabilities`）、Goal（`AreaPlan`・`RunningAreaPlan` の `goalCapabilities`、`RetroData.goalCapabilities`）、SprintTask（`PlannedTask`・`RunningTask`・`CandidateRow.chosenCapabilities`・`RetroData.sprintTaskCapabilities`）、計画の候補（`CandidateRow`）と回（`OccurrenceItem`）、振り返り（`RetroData`）とその計画基準（`used`・`draft`）、実行中の Sprint の過去の日の記録（`PastDayRecord`）。application のテスト（`record-capabilities.test.ts`）は、#322 と同じく、fixture のすべての状態と操作で作った状態で、真の操作が通り偽の操作が断られることを確かめる。domain の `check…` は `record-checks.test.ts` で、状態遷移の図の状態ごとにコマンドと一致することを確かめる。
 
 ### プレビュー
 
@@ -177,13 +182,12 @@ iOS・Android ───────────────▶ packages/api-cont
 
 - iOS・Android の生成の道具と版、ネイティブの認証の方式（ADR 0006「影響」）。道具は、ADR 0006「互換の規則」の条件（開いた列挙の知らない値と、応答の知らないキーで読み込みを失敗させない。省略と空を分けられる）を満たすものから選ぶ。
 - プレビューの一覧と共通のテストケースの置き場所と、ファイルの形の細部（iOS に着手するとき）。
-- 今日の選択と割り込みのほかの記録の `capabilities`（#323、iOS に着手する前）。
 - 楽観的な更新の方式。判定はサーバーが行い、失敗したとき（409・422）に表示を元に戻して読み直す形なら、この ADR と矛盾しない（409 で自動ではやり直さない。ADR 0004「同時の書き込み」）。記録を作る操作は、ID をサーバーが作るので、クライアントで ID を作る形にはしない。
 - 共通の実装の技術。
 
 ## 影響
 
-- `apps/web`：#272〜#277 で契約に移した後は、近道を持たない。操作の可否は、今日の選択と割り込みを #322 で `capabilities` に移した。残りは #323。
+- `apps/web`：#272〜#277 で契約に移した後は、近道を持たない。操作の可否は、#322 と #323 で `capabilities` に移した。残る例外は値の規則だけ。
 - `services/api`：application の結果と DTO の形が離れたら、写像を置く。
 - `packages/api-contract`：iOS に着手するとき、プレビューの一覧と共通のテストケースを、ここ（または隣）に置く。
 - iOS・Android：`openapi/` から生成したクライアントを使い、プレビューの一覧を実装して、共通のテストケースを CI で回す。

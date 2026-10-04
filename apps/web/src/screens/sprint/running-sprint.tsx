@@ -94,9 +94,18 @@ function RunningSprint({
     !running || search.task === undefined || backlog.status !== 'ready'
       ? undefined
       : backlog.item(search.task);
+  // The detail is the Backlog's row: a Task that has left the Backlog has
+  // none. Until the Backlog is read, every Task is taken to have one.
+  const inBacklog = (taskId: TaskId) =>
+    backlog.status !== 'ready' || backlog.item(taskId) !== undefined;
 
   const outlook = (
-    <Outlook data={data} onHours={running ? setAvailableHours : undefined} />
+    <Outlook
+      data={data}
+      onHours={
+        data.capabilities.canSetAvailableHours ? setAvailableHours : undefined
+      }
+    />
   );
 
   return (
@@ -196,7 +205,7 @@ function RunningSprint({
                 bare={block.tasks.length === 0 && block.goal === undefined}
                 week={week}
                 onSave={
-                  block.area.id === null || !running
+                  block.area.id === null || !block.goalCapabilities.canSet
                     ? undefined
                     : (text, from) =>
                         actions.setGoal(
@@ -215,10 +224,11 @@ function RunningSprint({
                           week={weekNameOnly(data.week)}
                           ended={!running}
                           hasGoal={block.goal !== undefined}
-                          // A completed or archived Task has no detail to
-                          // open (as in Today).
+                          // A Sprint that has ended is a record: its rows
+                          // open nothing. A completed or archived Task has
+                          // left the Backlog: no detail to open (as in Today).
                           onOpen={
-                            running && t.task.lifecycle === 'active'
+                            running && inBacklog(t.task.id)
                               ? () => openTask(t.task.id)
                               : undefined
                           }
@@ -235,7 +245,7 @@ function RunningSprint({
             <PastDays
               days={data.pastDays}
               onUndo={(r) =>
-                r.selection.resolution === 'skipped'
+                r.capabilities.canUndoSkip
                   ? actions.undoSkip(r.selection.id)
                   : actions.undoComplete(r.selection.id)
               }

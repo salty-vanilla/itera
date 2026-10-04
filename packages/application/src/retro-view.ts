@@ -26,6 +26,18 @@ import {
   type SprintTaskId,
   type TaskId,
 } from '@itera/domain';
+import {
+  criterionCapabilities,
+  criterionUseCapabilities,
+  goalCapabilities,
+  retroCapabilities,
+  sprintTaskCapabilitiesOf,
+  type CriterionUseCapabilities,
+  type PlanningCriterionCapabilities,
+  type RetroCapabilities,
+  type SprintGoalCapabilities,
+  type SprintTaskCapabilities,
+} from './capabilities';
 import type { Clock, Records } from './records';
 import { weekOf, type SprintWeek } from './sprint-choice';
 import {
@@ -105,9 +117,14 @@ export interface RetroData {
     readonly appliedAtConfirm: boolean;
     readonly result: CriterionResult;
     readonly decision?: RetroDecision;
+    /** What the person can do with the criterion's use now (#323). */
+    readonly capabilities: CriterionUseCapabilities;
   };
   /** The draft made from this Retro's improvement (基準にもする). */
-  readonly draft?: RetroCriterion;
+  readonly draft?: RetroCriterion & {
+    /** What the person can do with the draft now (#323). */
+    readonly capabilities: PlanningCriterionCapabilities;
+  };
   readonly pins: readonly RetroPin[];
   readonly reflection: string;
   readonly improvement?: string;
@@ -120,6 +137,17 @@ export interface RetroData {
   readonly carryOver: CarryOverPlaces;
   /** The carried-over Tasks and their places, for 引き継ぐ (#169). */
   readonly carryOverTasks: readonly CarryOverTask[];
+  /** What the person can do with the Retro now (#323). */
+  readonly capabilities: RetroCapabilities;
+  /** What the person can do with the Sprint's Goals now, by Area (#323). */
+  readonly goalCapabilities: Readonly<Record<AreaId, SprintGoalCapabilities>>;
+  /**
+   * What the person can do with the Sprint's SprintTasks now, by ID
+   * (#323): actual time added in Review (F22).
+   */
+  readonly sprintTaskCapabilities: Readonly<
+    Record<SprintTaskId, SprintTaskCapabilities>
+  >;
 }
 
 /**
@@ -216,9 +244,17 @@ export function retroData(
             appliedAtConfirm: use.appliedAtConfirm,
             result: criterionResult(facts),
             ...(decision === undefined ? {} : { decision }),
+            capabilities: criterionUseCapabilities(records, sprint),
           },
         }),
-    ...(draftView === undefined ? {} : { draft: draftView }),
+    ...(draftView === undefined || draft === undefined
+      ? {}
+      : {
+          draft: {
+            ...draftView,
+            capabilities: criterionCapabilities(records, draft),
+          },
+        }),
     pins: retro.pins,
     reflection: retro.reflection,
     ...(retro.improvement === undefined
@@ -248,5 +284,13 @@ export function retroData(
     })),
     carryOver: carryOverPlaces(sprint, following, tasks),
     carryOverTasks: carried,
+    capabilities: retroCapabilities(records, sprint),
+    goalCapabilities: Object.fromEntries(
+      sprint.goals.map((g) => [
+        g.areaId,
+        goalCapabilities(records, sprint, g.areaId),
+      ]),
+    ),
+    sprintTaskCapabilities: sprintTaskCapabilitiesOf(records, sprint),
   };
 }

@@ -343,9 +343,12 @@ describe('Sprint — the rows (#160)', () => {
 
   it('opens no detail for a completed Task or an ended Sprint', async () => {
     await renderAt('/sprint?fixture=today-daytime');
-    // 住民税の支払い and API 設計のレビュー are done this week.
+    // 住民税の支払い and API 設計のレビュー are done this week: once the
+    // Backlog is read, they have no row there to open (#323).
     for (const title of ['住民税の支払い', 'API 設計のレビュー']) {
-      expect(screen.queryByRole('button', { name: title })).toBeNull();
+      await waitFor(() =>
+        expect(screen.queryByRole('button', { name: title })).toBeNull(),
+      );
       expect(screen.getAllByText(title).length).toBeGreaterThan(0);
     }
     cleanup();

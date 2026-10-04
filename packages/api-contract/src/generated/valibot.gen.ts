@@ -68,6 +68,15 @@ export const vSprintWeek = v.picklist([
 ]);
 
 /**
+ * What the person can do with a Sprint itself now (#323).
+ */
+export const vSprintCapabilities = v.pipe(v.object({
+    canSetAvailableHours: v.boolean(),
+    canConfirm: v.boolean(),
+    canBeginRetro: v.boolean()
+}), v.readonly());
+
+/**
  * A Sprint as a list or a reference shows it. Its number (「Sprint 14」, F25) is an attribute, not its key: the key is its ID (#295).
  */
 export const vSprintItem = v.object({
@@ -76,7 +85,8 @@ export const vSprintItem = v.object({
     start: vLocalDate,
     end: vLocalDate,
     state: vSprintState,
-    week: v.optional(vSprintWeek)
+    week: v.optional(vSprintWeek),
+    capabilities: vSprintCapabilities
 });
 
 /**
@@ -224,12 +234,22 @@ export const vAreaColor = v.picklist([
  */
 export const vETag = v.pipe(v.pipe(v.string(), v.regex(/^"[!#-~]*"$/)), v.readonly());
 
+/**
+ * What the person can do with an Area now (#323).
+ */
+export const vAreaCapabilities = v.pipe(v.object({
+    canRename: v.boolean(),
+    canArchive: v.boolean(),
+    canRestore: v.boolean()
+}), v.readonly());
+
 export const vEditableArea = v.object({
     id: vAreaId,
     name: v.string(),
     color: vAreaColor,
     archived: v.boolean(),
-    etag: vETag
+    etag: vETag,
+    capabilities: vAreaCapabilities
 });
 
 /**
@@ -492,6 +512,37 @@ export const vPlanningValue = v.union([
     })
 ]);
 
+/**
+ * What the person can do with an active Task of the Backlog now (#323), as DailySelectionCapabilities says. The values the operations are given (a title, a pattern, hours) are not checked. canAddToToday and canAddToWeek are operations on the running Sprint that take this Task (ADR 0007 操作の可否): they are named by where the Task goes.
+ */
+export const vTaskCapabilities = v.pipe(v.object({
+    canSave: v.boolean(),
+    canArchive: v.boolean(),
+    canComplete: v.boolean(),
+    canSetRecurrence: v.boolean(),
+    canEndRecurrence: v.boolean(),
+    canAddSubtask: v.boolean(),
+    canAddToToday: v.boolean(),
+    canAddToWeek: v.boolean()
+}), v.readonly());
+
+/**
+ * What the person can do with a suggestion of an Estimate now (#323).
+ */
+export const vEstimateSuggestionCapabilities = v.pipe(v.object({
+    canAdopt: v.boolean(),
+    canUndoAdoption: v.boolean(),
+    canReject: v.boolean(),
+    canUndoRejection: v.boolean()
+}), v.readonly());
+
+/**
+ * What the person can do with a subtask now (#323).
+ */
+export const vSubtaskCapabilities = v.pipe(v.object({
+    canUpdate: v.boolean()
+}), v.readonly());
+
 export const vBacklogItem = v.object({
     task: vTask,
     area: v.optional(v.object({
@@ -520,13 +571,13 @@ export const vBacklogItem = v.object({
     value: vPlanningValue,
     taskValue: vPlanningValue,
     subtaskValue: vPlanningValue,
-    canAddToToday: v.boolean(),
-    canAddToWeek: v.boolean(),
     todayOpensOn: v.optional(v.object({
         number: v.pipe(v.number(), v.integer()),
         start: vLocalDate
     })),
-    canComplete: v.boolean()
+    capabilities: vTaskCapabilities,
+    suggestionCapabilities: v.record(v.string(), vEstimateSuggestionCapabilities),
+    subtaskCapabilities: v.record(v.string(), vSubtaskCapabilities)
 });
 
 export const vBacklogData = v.object({
@@ -847,7 +898,8 @@ export const vTodayData = v.object({
     rest: v.array(vTodayItem),
     plan: v.array(vTodayItem),
     interrupts: v.array(vInterruptItem),
-    areas: v.array(vAreaLabel)
+    areas: v.array(vAreaLabel),
+    sprintCapabilities: vSprintCapabilities
 });
 
 /**
@@ -913,6 +965,16 @@ export const vRange = v.object({
     hi: v.number()
 });
 
+/**
+ * What the person can do with a Task in a Sprint (SprintTask) now (#323).
+ */
+export const vSprintTaskCapabilities = v.pipe(v.object({
+    canRemove: v.boolean(),
+    canSetGoalLink: v.boolean(),
+    canExcludeAllOccurrences: v.boolean(),
+    canRecordActualTime: v.boolean()
+}), v.readonly());
+
 export const vPlannedTask = v.object({
     sprintTask: vSprintTask,
     task: vTask,
@@ -920,7 +982,8 @@ export const vPlannedTask = v.object({
     occurrenceCount: v.optional(v.pipe(v.number(), v.integer())),
     suggestion: v.optional(vRange),
     linkAtConfirm: vGoalLink,
-    inactive: v.optional(v.picklist(['completed', 'archived']))
+    inactive: v.optional(v.picklist(['completed', 'archived'])),
+    capabilities: vSprintTaskCapabilities
 });
 
 export const vAreaTotal = v.object({
@@ -931,11 +994,20 @@ export const vAreaTotal = v.object({
     unestimatedSubtasks: v.pipe(v.number(), v.integer())
 });
 
+/**
+ * What the person can do with a Sprint's Goal for an Area now (#323), written or not. updateGoal takes two operations: its text and the person's assessment.
+ */
+export const vSprintGoalCapabilities = v.pipe(v.object({
+    canSet: v.boolean(),
+    canAssess: v.boolean()
+}), v.readonly());
+
 export const vAreaPlan = v.object({
     area: v.optional(vAreaLabel),
     goal: v.optional(vSprintGoal),
     tasks: v.array(vPlannedTask),
-    total: v.optional(vAreaTotal)
+    total: v.optional(vAreaTotal),
+    goalCapabilities: vSprintGoalCapabilities
 });
 
 export const vPlanningTotal = v.object({
@@ -1048,7 +1120,8 @@ export const vSprintPlan = v.object({
         number: v.pipe(v.number(), v.integer()),
         end: vLocalDate,
         state: vSprintState
-    }))
+    })),
+    capabilities: vSprintCapabilities
 });
 
 /**
@@ -1072,13 +1145,15 @@ export const vRunningTask = v.object({
     value: vPlanningValue,
     occurrences: v.optional(vOccurrenceProgress),
     carry: v.optional(vCarryCount),
-    nextWeek: v.optional(v.literal(true))
+    nextWeek: v.optional(v.literal(true)),
+    capabilities: vSprintTaskCapabilities
 });
 
 export const vRunningAreaPlan = v.object({
     area: v.optional(vSprintAreaLabel),
     goal: v.optional(vSprintGoal),
-    tasks: v.array(vRunningTask)
+    tasks: v.array(vRunningTask),
+    goalCapabilities: vSprintGoalCapabilities
 });
 
 export const vAvailableHours = v.object({
@@ -1101,7 +1176,8 @@ export const vPastDayRecord = v.object({
         v.object({
             kind: v.literal('gone')
         })
-    ])
+    ]),
+    capabilities: vDailySelectionCapabilities
 });
 
 export const vPastDay = v.object({
@@ -1128,7 +1204,8 @@ export const vRunningData = v.object({
         areaName: v.optional(v.string()),
         applied: v.boolean(),
         noEffect: v.boolean()
-    }))
+    })),
+    capabilities: vSprintCapabilities
 });
 
 /**
@@ -1151,6 +1228,13 @@ export const vSprintView = v.union([v.object({
  */
 export const vAnyEntityTag = v.picklist(['*']);
 
+/**
+ * What the person can do with a Task a Sprint being planned can choose (#323): addToSprint, which takes this Task.
+ */
+export const vSprintCandidateCapabilities = v.pipe(v.object({
+    canAdd: v.boolean()
+}), v.readonly());
+
 export const vCandidateRow = v.object({
     task: vTask,
     chosen: v.optional(vSprintTask),
@@ -1160,12 +1244,29 @@ export const vCandidateRow = v.object({
     carry: v.optional(vCarryCount),
     running: v.optional(v.object({
         sprint: v.pipe(v.number(), v.integer())
-    }))
+    })),
+    capabilities: vSprintCandidateCapabilities,
+    chosenCapabilities: v.optional(vSprintTaskCapabilities)
 });
+
+/**
+ * What the person can do with an occurrence while planning (#323).
+ */
+export const vOccurrenceCapabilities = v.pipe(v.object({
+    canInclude: v.boolean(),
+    canExclude: v.boolean()
+}), v.readonly());
+
+/**
+ * An occurrence as Planning offers it: the record, and what the person can do with it (#323).
+ */
+export const vOccurrenceItem = v.intersect([vOccurrence, v.object({
+        capabilities: vOccurrenceCapabilities
+    })]);
 
 export const vRecurringCandidate = v.object({
     task: vTask,
-    occurrences: v.array(vOccurrence),
+    occurrences: v.array(vOccurrenceItem),
     area: v.optional(vAreaLabel)
 });
 
@@ -1285,11 +1386,26 @@ export const vCriterionResult = v.object({
     actualHours: v.number()
 });
 
+/**
+ * What the person can do with the criterion a Sprint had now (#323).
+ */
+export const vCriterionUseCapabilities = v.pipe(v.object({
+    canDecide: v.boolean()
+}), v.readonly());
+
 export const vRetroCriterion = v.object({
     criterion: vPlanningCriterion,
     view: vCriterionView,
     areaName: v.optional(v.string())
 });
+
+/**
+ * What the person can do with a draft planning criterion now (#323).
+ */
+export const vPlanningCriterionCapabilities = v.pipe(v.object({
+    canSetDraftPolicy: v.boolean(),
+    canDropDraft: v.boolean()
+}), v.readonly());
 
 /**
  * `decisionMissing`: 続ける / 終える / 置き換える is not chosen (invariant 36). `continueWithDraft`: 続ける keeps the active criterion, so the draft must go (invariant 35).
@@ -1329,6 +1445,18 @@ export const vCarryOverTask = v.object({
     place: vCarryOverPlace
 });
 
+/**
+ * What the person can do with a Sprint's Retro now (#323). updateRetro takes two operations: 気づいたこと and 次に試すこと.
+ */
+export const vRetroCapabilities = v.pipe(v.object({
+    canSetReflection: v.boolean(),
+    canSetImprovement: v.boolean(),
+    canComplete: v.boolean(),
+    canPinFact: v.boolean(),
+    canUnpinFact: v.boolean(),
+    canDraftCriterion: v.boolean()
+}), v.readonly());
+
 export const vRetroData = v.object({
     sprint: vSprint,
     number: v.pipe(v.number(), v.integer()),
@@ -1345,9 +1473,12 @@ export const vRetroData = v.object({
         areaName: v.optional(v.string()),
         appliedAtConfirm: v.boolean(),
         result: vCriterionResult,
-        decision: v.optional(vRetroDecision)
+        decision: v.optional(vRetroDecision),
+        capabilities: vCriterionUseCapabilities
     })),
-    draft: v.optional(vRetroCriterion),
+    draft: v.optional(v.intersect([vRetroCriterion, v.object({
+            capabilities: vPlanningCriterionCapabilities
+        })])),
     pins: v.array(vRetroPin),
     reflection: v.string(),
     improvement: v.optional(v.string()),
@@ -1355,14 +1486,46 @@ export const vRetroData = v.object({
     actualDate: vLocalDate,
     occurrences: v.array(vRetroOccurrence),
     carryOver: vCarryOverPlaces,
-    carryOverTasks: v.array(vCarryOverTask)
+    carryOverTasks: v.array(vCarryOverTask),
+    capabilities: vRetroCapabilities,
+    goalCapabilities: v.record(v.string(), vSprintGoalCapabilities),
+    sprintTaskCapabilities: v.record(v.string(), vSprintTaskCapabilities)
+});
+
+/**
+ * A Sprint as a list or a reference shows it. Its number (「Sprint 14」, F25) is an attribute, not its key: the key is its ID (#295).
+ */
+export const vSprintItemWritable = v.object({
+    id: vSprintId,
+    number: v.pipe(v.number(), v.integer()),
+    start: vLocalDate,
+    end: vLocalDate,
+    state: vSprintState,
+    week: v.optional(vSprintWeek),
+    capabilities: vSprintCapabilities
+});
+
+/**
+ * The Sprints the person has now, by what each is (a week running or in Review while the next is planned), and where the next Planning starts.
+ */
+export const vCurrentSprintsWritable = v.object({
+    active: v.optional(vSprintItemWritable),
+    review: v.optional(vSprintItemWritable),
+    planning: v.optional(vSprintItemWritable),
+    next: v.object({
+        start: vLocalDate,
+        end: vLocalDate,
+        number: v.pipe(v.number(), v.integer()),
+        week: v.optional(vSprintWeek)
+    })
 });
 
 export const vEditableAreaWritable = v.object({
     id: vAreaId,
     name: v.string(),
     color: vAreaColor,
-    archived: v.boolean()
+    archived: v.boolean(),
+    capabilities: vAreaCapabilities
 });
 
 export const vSubtaskWritable = v.object({
@@ -1421,13 +1584,13 @@ export const vBacklogItemWritable = v.object({
     value: vPlanningValue,
     taskValue: vPlanningValue,
     subtaskValue: vPlanningValue,
-    canAddToToday: v.boolean(),
-    canAddToWeek: v.boolean(),
     todayOpensOn: v.optional(v.object({
         number: v.pipe(v.number(), v.integer()),
         start: vLocalDate
     })),
-    canComplete: v.boolean()
+    capabilities: vTaskCapabilities,
+    suggestionCapabilities: v.record(v.string(), vEstimateSuggestionCapabilities),
+    subtaskCapabilities: v.record(v.string(), vSubtaskCapabilities)
 });
 
 export const vBacklogDataWritable = v.object({
@@ -1566,7 +1729,8 @@ export const vTodayDataWritable = v.object({
     rest: v.array(vTodayItemWritable),
     plan: v.array(vTodayItemWritable),
     interrupts: v.array(vInterruptItemWritable),
-    areas: v.array(vAreaLabel)
+    areas: v.array(vAreaLabel),
+    sprintCapabilities: vSprintCapabilities
 });
 
 /**
@@ -1634,14 +1798,16 @@ export const vPlannedTaskWritable = v.object({
     occurrenceCount: v.optional(v.pipe(v.number(), v.integer())),
     suggestion: v.optional(vRange),
     linkAtConfirm: vGoalLink,
-    inactive: v.optional(v.picklist(['completed', 'archived']))
+    inactive: v.optional(v.picklist(['completed', 'archived'])),
+    capabilities: vSprintTaskCapabilities
 });
 
 export const vAreaPlanWritable = v.object({
     area: v.optional(vAreaLabel),
     goal: v.optional(vSprintGoalWritable),
     tasks: v.array(vPlannedTaskWritable),
-    total: v.optional(vAreaTotal)
+    total: v.optional(vAreaTotal),
+    goalCapabilities: vSprintGoalCapabilities
 });
 
 /**
@@ -1684,7 +1850,8 @@ export const vSprintPlanWritable = v.object({
         number: v.pipe(v.number(), v.integer()),
         end: vLocalDate,
         state: vSprintState
-    }))
+    })),
+    capabilities: vSprintCapabilities
 });
 
 export const vRunningTaskWritable = v.object({
@@ -1693,13 +1860,39 @@ export const vRunningTaskWritable = v.object({
     value: vPlanningValue,
     occurrences: v.optional(vOccurrenceProgress),
     carry: v.optional(vCarryCount),
-    nextWeek: v.optional(v.literal(true))
+    nextWeek: v.optional(v.literal(true)),
+    capabilities: vSprintTaskCapabilities
 });
 
 export const vRunningAreaPlanWritable = v.object({
     area: v.optional(vSprintAreaLabel),
     goal: v.optional(vSprintGoalWritable),
-    tasks: v.array(vRunningTaskWritable)
+    tasks: v.array(vRunningTaskWritable),
+    goalCapabilities: vSprintGoalCapabilities
+});
+
+export const vPastDayRecordWritable = v.object({
+    selection: vDailySelection,
+    title: v.string(),
+    recurring: v.boolean(),
+    after: v.union([
+        v.object({
+            kind: v.literal('unresolved')
+        }),
+        v.object({
+            kind: v.literal('closed'),
+            resolution: vClosedResolution
+        }),
+        v.object({
+            kind: v.literal('gone')
+        })
+    ]),
+    capabilities: vDailySelectionCapabilities
+});
+
+export const vPastDayWritable = v.object({
+    date: vLocalDate,
+    records: v.array(vPastDayRecordWritable)
 });
 
 export const vRunningDataWritable = v.object({
@@ -1715,13 +1908,14 @@ export const vRunningDataWritable = v.object({
     }),
     availableHours: vAvailableHours,
     progress: v.optional(vWeekProgress),
-    pastDays: v.array(vPastDay),
+    pastDays: v.array(vPastDayWritable),
     criterion: v.optional(v.object({
         policy: vCriterionPolicy,
         areaName: v.optional(v.string()),
         applied: v.boolean(),
         noEffect: v.boolean()
-    }))
+    })),
+    capabilities: vSprintCapabilities
 });
 
 /**
@@ -1748,12 +1942,21 @@ export const vCandidateRowWritable = v.object({
     carry: v.optional(vCarryCount),
     running: v.optional(v.object({
         sprint: v.pipe(v.number(), v.integer())
-    }))
+    })),
+    capabilities: vSprintCandidateCapabilities,
+    chosenCapabilities: v.optional(vSprintTaskCapabilities)
 });
+
+/**
+ * An occurrence as Planning offers it: the record, and what the person can do with it (#323).
+ */
+export const vOccurrenceItemWritable = v.intersect([vOccurrence, v.object({
+        capabilities: vOccurrenceCapabilities
+    })]);
 
 export const vRecurringCandidateWritable = v.object({
     task: vTaskWritable,
-    occurrences: v.array(vOccurrence),
+    occurrences: v.array(vOccurrenceItemWritable),
     area: v.optional(vAreaLabel)
 });
 
@@ -1831,9 +2034,12 @@ export const vRetroDataWritable = v.object({
         areaName: v.optional(v.string()),
         appliedAtConfirm: v.boolean(),
         result: vCriterionResult,
-        decision: v.optional(vRetroDecision)
+        decision: v.optional(vRetroDecision),
+        capabilities: vCriterionUseCapabilities
     })),
-    draft: v.optional(vRetroCriterionWritable),
+    draft: v.optional(v.intersect([vRetroCriterionWritable, v.object({
+            capabilities: vPlanningCriterionCapabilities
+        })])),
     pins: v.array(vRetroPin),
     reflection: v.string(),
     improvement: v.optional(v.string()),
@@ -1841,7 +2047,10 @@ export const vRetroDataWritable = v.object({
     actualDate: vLocalDate,
     occurrences: v.array(vRetroOccurrence),
     carryOver: vCarryOverPlaces,
-    carryOverTasks: v.array(vCarryOverTask)
+    carryOverTasks: v.array(vCarryOverTask),
+    capabilities: vRetroCapabilities,
+    goalCapabilities: v.record(v.string(), vSprintGoalCapabilities),
+    sprintTaskCapabilities: v.record(v.string(), vSprintTaskCapabilities)
 });
 
 /**

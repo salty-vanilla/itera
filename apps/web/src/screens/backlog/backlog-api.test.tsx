@@ -650,6 +650,7 @@ describe('what the Backlog’s read says the person can do with today’s choice
   type Item = {
     task: { title: string };
     today?: { capabilities: Record<string, boolean> };
+    capabilities: Record<string, boolean>;
   };
 
   /** The mock over `backlog-detail`, with the Backlog's read changed. */
@@ -724,8 +725,46 @@ describe('what the Backlog’s read says the person can do with today’s choice
           canPause: true,
         };
     });
-    // 完了にする is the Task's own (`canComplete` of the item, #323); while
-    // the choice is being worked on it is the main one, first (#242).
+    // 完了にする is the Task's own (`capabilities.canComplete` of the item,
+    // #323); while the choice is being worked on it is the main one, first
+    // (#242).
     expect(await offered()).toEqual(['完了にする', '今日は中断する']);
+  });
+
+  /** The items of a Backlog row's 「…」 menu. */
+  async function menuOf(title: string) {
+    renderBacklog();
+    await userEvent.click(
+      within(await list()).getByRole('button', {
+        name: `その他の操作：${title}`,
+      }),
+    );
+    const menu = await screen.findByRole('menu');
+    return within(menu)
+      .queryAllByRole('menuitem')
+      .map((m) => m.textContent);
+  }
+
+  it('offers a Task’s operations as its read says, and ignores a `can…` it does not know (#323)', async () => {
+    const title = '本棚を整理する';
+    serveChanged(() => {});
+    const before = await menuOf(title);
+    expect(before).toEqual(
+      expect.arrayContaining(['今日へ', '今週へ', '完了にする', 'アーカイブ']),
+    );
+    cleanup();
+    vi.unstubAllGlobals();
+    serveChanged((item) => {
+      item.capabilities.canSomethingNew = true;
+    });
+    expect(await menuOf(title)).toEqual(before);
+    cleanup();
+    vi.unstubAllGlobals();
+    serveChanged((item) => {
+      item.capabilities = Object.fromEntries(
+        Object.keys(item.capabilities).map((name) => [name, false]),
+      );
+    });
+    expect(await menuOf(title)).toEqual([]);
   });
 });

@@ -33,7 +33,8 @@ type EstimateSuggestionProps = {
    * through, when it has been sent.
    */
   onAdoptEdited: (hours: number) => boolean | Promise<boolean>;
-  onReject: () => void;
+  /** 使わない: absent when the suggestion cannot be put aside now. */
+  onReject?: (() => void) | undefined;
   /**
    * Focuses the first 採用 button when it appears, e.g. when the suggestion
    * comes back by 元に戻す, so that focus is not lost.
@@ -204,9 +205,11 @@ function EstimateSuggestion({
             >
               直して使う
             </Button>
-            <Button size="sm" variant="quiet" onClick={onReject}>
-              使わない
-            </Button>
+            {onReject && (
+              <Button size="sm" variant="quiet" onClick={onReject}>
+                使わない
+              </Button>
+            )}
           </div>
         </div>
       )}

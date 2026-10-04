@@ -16,7 +16,7 @@ import {
   type CommandResult,
 } from './shared/command';
 import type { AreaId, SprintTaskId } from './shared/ids';
-import { err, type Result } from './shared/result';
+import { err, ok, type Result } from './shared/result';
 import type { Sprint, SprintTask } from './sprint';
 import { isRecurring, type Task } from './task';
 
@@ -50,22 +50,7 @@ export function addTaskMidSprint(
   ctx: CommandContext,
 ): CommandResult<Sprint> {
   const { task } = input;
-  if (sprint.state !== 'active') {
-    return err(
-      'invalidTransition',
-      'Mid-Sprint additions need an active Sprint.',
-    );
-  }
-  if (isRecurring(task)) {
-    return err('invalidInput', 'Add a recurring Task through an occurrence.');
-  }
-  if (task.lifecycle !== 'active') {
-    return err('invalidTransition', `Cannot add a ${task.lifecycle} Task.`);
-  }
-  if (sprint.tasks.some((t) => t.taskId === task.id)) {
-    return err('invalidInput', 'The Task is already in this Sprint.');
-  }
-  const criterion = criterionForAddition(sprint, input.criterion);
+  const criterion = checkAddTaskMidSprint(sprint, input);
   if (!criterion.ok) return criterion;
 
   const base: SprintTask = {
@@ -89,6 +74,34 @@ export function addTaskMidSprint(
   );
 }
 
+/**
+ * Whether `addTaskMidSprint` takes the Sprint and the Task as they are now
+ * (#323): the Sprint runs, and the Task is one-off, active and not in it
+ * yet (invariant 14). Returns the criterion to apply (F3).
+ */
+export function checkAddTaskMidSprint(
+  sprint: Sprint,
+  input: Pick<AddMidSprintInput, 'task' | 'criterion'>,
+): Result<ActiveCriterion | undefined> {
+  const { task } = input;
+  if (sprint.state !== 'active') {
+    return err(
+      'invalidTransition',
+      'Mid-Sprint additions need an active Sprint.',
+    );
+  }
+  if (isRecurring(task)) {
+    return err('invalidInput', 'Add a recurring Task through an occurrence.');
+  }
+  if (task.lifecycle !== 'active') {
+    return err('invalidTransition', `Cannot add a ${task.lifecycle} Task.`);
+  }
+  if (sprint.tasks.some((t) => t.taskId === task.id)) {
+    return err('invalidInput', 'The Task is already in this Sprint.');
+  }
+  return criterionForAddition(sprint, input.criterion);
+}
+
 export interface UndoAddMidSprintInput {
   readonly sprintTaskId: SprintTaskId;
 }
@@ -107,6 +120,33 @@ export function undoAddTaskMidSprint(
   input: UndoAddMidSprintInput,
   ctx: CommandContext,
 ): CommandResult<Sprint> {
+  const checked = checkUndoAddTaskMidSprint(sprint, input);
+  if (!checked.ok) return checked;
+  const target = checked.value;
+  return applied(
+    { ...sprint, tasks: sprint.tasks.filter((t) => t.id !== target.id) },
+    [
+      {
+        kind: 'sprintTaskAddUndone',
+        at: ctx.now,
+        actor: ctx.actor,
+        sprintId: sprint.id,
+        sprintTaskId: target.id,
+        taskId: target.taskId,
+      },
+    ],
+  );
+}
+
+/**
+ * Whether `undoAddTaskMidSprint` takes the Sprint and its SprintTask as
+ * they are now (#323): a planned mid-Sprint addition of a one-off Task that
+ * no day has chosen (F40).
+ */
+export function checkUndoAddTaskMidSprint(
+  sprint: Sprint,
+  input: UndoAddMidSprintInput,
+): Result<SprintTask> {
   if (sprint.state !== 'active') {
     return err(
       'invalidTransition',
@@ -133,19 +173,7 @@ export function undoAddTaskMidSprint(
       'A SprintTask chosen for a day stays in the Sprint.',
     );
   }
-  return applied(
-    { ...sprint, tasks: sprint.tasks.filter((t) => t.id !== target.id) },
-    [
-      {
-        kind: 'sprintTaskAddUndone',
-        at: ctx.now,
-        actor: ctx.actor,
-        sprintId: sprint.id,
-        sprintTaskId: target.id,
-        taskId: target.taskId,
-      },
-    ],
-  );
+  return ok(target);
 }
 
 /**

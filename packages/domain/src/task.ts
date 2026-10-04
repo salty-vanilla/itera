@@ -117,6 +117,8 @@ export function updateTask(
   update: TaskAttributeUpdate,
   ctx: CommandContext,
 ): CommandResult<Task> {
+  const checked = checkUpdateTask();
+  if (!checked.ok) return checked;
   const changes: TaskAttributeChange[] = [];
   let next: Task = task;
 
@@ -178,6 +180,15 @@ export function updateTask(
       changes,
     },
   ]);
+}
+
+/**
+ * Whether `updateTask` takes the Task as it is now (#323): a Task in any
+ * state, a completed or archived one too. The values it is given (a title
+ * that is not empty) are not checked here.
+ */
+export function checkUpdateTask(): Result<undefined> {
+  return ok(undefined);
 }
 
 /**
@@ -246,12 +257,18 @@ export function archiveTask(
   task: Task,
   ctx: CommandContext,
 ): CommandResult<Task> {
-  if (task.lifecycle === 'archived') {
-    return err('invalidTransition', 'Task is already archived.');
-  }
+  const checked = checkArchiveTask(task);
+  if (!checked.ok) return checked;
   return applied({ ...task, lifecycle: 'archived', archivedAt: ctx.now }, [
     { kind: 'taskArchived', at: ctx.now, actor: ctx.actor, taskId: task.id },
   ]);
+}
+
+/** Whether `archiveTask` takes the Task as it is now (#323). */
+export function checkArchiveTask(task: Task): Result<undefined> {
+  return task.lifecycle === 'archived'
+    ? err('invalidTransition', 'Task is already archived.')
+    : ok(undefined);
 }
 
 /** Archived → Active. */
@@ -259,13 +276,19 @@ export function restoreTask(
   task: Task,
   ctx: CommandContext,
 ): CommandResult<Task> {
-  if (task.lifecycle !== 'archived') {
-    return err('invalidTransition', 'Task is not archived.');
-  }
+  const checked = checkRestoreTask(task);
+  if (!checked.ok) return checked;
   const rest = omit(task, 'archivedAt', 'completedAt');
   return applied({ ...rest, lifecycle: 'active' }, [
     { kind: 'taskRestored', at: ctx.now, actor: ctx.actor, taskId: task.id },
   ]);
+}
+
+/** Whether `restoreTask` takes the Task as it is now (#323). */
+export function checkRestoreTask(task: Task): Result<undefined> {
+  return task.lifecycle === 'archived'
+    ? ok(undefined)
+    : err('invalidTransition', 'Task is not archived.');
 }
 
 export interface AddSubtaskInput {
@@ -279,6 +302,8 @@ export function addSubtask(
   input: AddSubtaskInput,
   ctx: CommandContext,
 ): CommandResult<Task> {
+  const checked = checkAddSubtask();
+  if (!checked.ok) return checked;
   const title = input.title.trim();
   if (title === '') return err('invalidInput', 'Subtask title is empty.');
   if (task.subtasks.some((s) => s.id === input.id)) {
@@ -359,11 +384,34 @@ export function setSubtaskDone(
   });
 }
 
+/**
+ * Whether `addSubtask` takes the Task as it is now (#323): a Task in any
+ * state. The title and hours it is given are not checked here.
+ */
+export function checkAddSubtask(): Result<undefined> {
+  return ok(undefined);
+}
+
+/**
+ * Whether `setSubtaskDone` and `setSubtaskEstimate` take the subtask as it
+ * is now (#323): any subtask the Task has. The hours are not checked here.
+ */
+export function checkUpdateSubtask(
+  task: Task,
+  subtaskId: SubtaskId,
+): Result<undefined> {
+  return task.subtasks.some((s) => s.id === subtaskId)
+    ? ok(undefined)
+    : err('notFound', `Subtask ${subtaskId} not found.`);
+}
+
 function mapSubtask(
   task: Task,
   subtaskId: SubtaskId,
   f: (s: Subtask) => readonly [Subtask, Parameters<typeof applied>[1]],
 ): CommandResult<Task> {
+  const checked = checkUpdateSubtask(task, subtaskId);
+  if (!checked.ok) return checked;
   const index = task.subtasks.findIndex((s) => s.id === subtaskId);
   const current = task.subtasks[index];
   if (current === undefined) {

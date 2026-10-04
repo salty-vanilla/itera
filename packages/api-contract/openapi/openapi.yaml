@@ -1,7 +1,7 @@
 openapi: 3.1.1
 info:
   title: Itera API
-  version: 0.5.0
+  version: 0.6.0
   summary: The contract between Itera's clients and its API (ADR 0006).
   description: >-
     Spec-first: this file and the files it refers to are the source of

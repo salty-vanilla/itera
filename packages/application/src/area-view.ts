@@ -1,6 +1,7 @@
 // The person's Areas as the Area list shows them: the current name, archived
 // ones too (F5).
 import type { AreaColor, AreaId } from '@itera/domain';
+import { areaCapabilities, type AreaCapabilities } from './capabilities';
 import type { TaggedRecords } from './versions';
 
 export interface EditableArea {
@@ -11,6 +12,8 @@ export interface EditableArea {
   readonly archived: boolean;
   /** The Area's version, for a rename to say it was made from (#321). */
   readonly etag: string;
+  /** What the person can do with the Area now (#323). */
+  readonly capabilities: AreaCapabilities;
 }
 
 /**
@@ -28,5 +31,6 @@ export function areaList(
       color: a.color,
       archived: a.archived,
       etag: a.etag,
+      capabilities: areaCapabilities(a),
     }));
 }

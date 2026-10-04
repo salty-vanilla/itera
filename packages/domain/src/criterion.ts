@@ -15,7 +15,7 @@ import type {
   TaskId,
   UserId,
 } from './shared/ids';
-import { err } from './shared/result';
+import { err, ok, type Result } from './shared/result';
 import type { Instant } from './shared/time';
 import type { Task } from './task';
 
@@ -51,9 +51,8 @@ export function setDraftPolicy(
   policy: CriterionPolicy,
   ctx: CommandContext,
 ): CommandResult<PlanningCriterion> {
-  if (criterion.state !== 'draft') {
-    return err('invalidTransition', 'Only a draft criterion can be edited.');
-  }
+  const checked = checkSetDraftPolicy(criterion);
+  if (!checked.ok) return checked;
   return applied({ ...criterion, policy }, [
     {
       kind: 'criterionDraftChanged',
@@ -62,6 +61,15 @@ export function setDraftPolicy(
       criterionId: criterion.id,
     },
   ]);
+}
+
+/** Whether `setDraftPolicy` takes the criterion as it is now (#323). */
+export function checkSetDraftPolicy(
+  criterion: PlanningCriterion,
+): Result<undefined> {
+  return criterion.state === 'draft'
+    ? ok(undefined)
+    : err('invalidTransition', 'Only a draft criterion can be edited.');
 }
 
 export interface CriterionPreviewRow {

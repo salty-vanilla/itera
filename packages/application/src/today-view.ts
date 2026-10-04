@@ -25,8 +25,10 @@ import {
 import {
   interruptCapabilities,
   selectionCapabilities,
+  sprintCapabilities,
   type DailySelectionCapabilities,
   type InterruptItem,
+  type SprintCapabilities,
 } from './capabilities';
 import type { Clock, Records } from './records';
 import { dayInPeriod, isLastDay, selectionActualHours } from './sprint-day';
@@ -119,6 +121,8 @@ export interface TodayData {
   readonly interrupts: readonly InterruptItem[];
   /** Areas for the quick add, in the person's order. */
   readonly areas: readonly TodayArea[];
+  /** What the person can do with the running Sprint now (#323). */
+  readonly sprintCapabilities: SprintCapabilities;
 }
 
 /** The Sprint Today works on: the active one. */
@@ -325,6 +329,7 @@ export function todayData(
     today,
     day: dayInPeriod(sprint, today),
     lastDay: isLastDay(sprint, today),
+    sprintCapabilities: sprintCapabilities(records, sprint, clock),
     timeZone: records.user.timeZone,
     progress: weekProgress(sprint, occurrences),
     remaining: todayRemaining(sprint, today),
