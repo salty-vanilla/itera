@@ -31,7 +31,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { createMock } from '@/mock/mock-api';
 import { dayRead } from '@/test/day-read';
 import { findHours } from '@/test/duration';
-import { comeBack, otherDevice, until } from '@/test/other-device';
+import { comeBack, newWrite, otherDevice, until } from '@/test/other-device';
 import { problemResponse } from '@/test/problem';
 
 type CreateAppRouter = typeof import('@/app/router').createAppRouter;
@@ -465,6 +465,7 @@ describe('Today on the API', () => {
       const { note, sprintId } = await openEdit(store);
       await editInterrupt({
         client: otherDevice(store),
+        headers: newWrite(),
         path: { sprintId, interruptNoteId: note.id },
         body: { text: 'スマホで直したメモ', minutes: 20 },
       });
@@ -491,6 +492,7 @@ describe('Today on the API', () => {
       const { note, sprintId } = await openEdit(store);
       await deleteInterrupt({
         client: otherDevice(store),
+        headers: newWrite(),
         path: { sprintId, interruptNoteId: note.id },
       });
       comeBack();

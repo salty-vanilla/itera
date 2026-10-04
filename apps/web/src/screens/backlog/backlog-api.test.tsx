@@ -35,7 +35,7 @@ import {
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { createMock } from '@/mock/mock-api';
 import { getHours } from '@/test/duration';
-import { comeBack, otherDevice, until } from '@/test/other-device';
+import { comeBack, newWrite, otherDevice, until } from '@/test/other-device';
 import { problemResponse } from '@/test/problem';
 
 type CreateAppRouter = typeof import('@/app/router').createAppRouter;
@@ -422,6 +422,7 @@ describe('the Backlog on the API', () => {
         const { store, requests, detail } = await openDetail(field);
         await saveTask({
           client: otherDevice(store),
+          headers: newWrite(),
           path: { taskId: ids.task.bookshelf },
           body: field.theirs,
         });
@@ -471,6 +472,7 @@ describe('the Backlog on the API', () => {
         .records.tasks.find((t) => t.id === ids.task.dataset)!.subtasks[0]!;
       await updateSubtask({
         client: otherDevice(store),
+        headers: newWrite(),
         path: { taskId: ids.task.dataset, subtaskId: subtask.id },
         body: { hours: 3 },
       });
@@ -529,6 +531,7 @@ describe('the Backlog on the API', () => {
       expect(saves(requests)).toHaveLength(0);
       await saveTask({
         client: otherDevice(store),
+        headers: newWrite(),
         path: { taskId: ids.task.bookshelf },
         body: { title: 'スマホで直した題名' },
       });
@@ -554,6 +557,7 @@ describe('the Backlog on the API', () => {
         within(days()).getByRole('checkbox', { name });
       await setRecurrence({
         client: otherDevice(store),
+        headers: newWrite(),
         path: { taskId: ids.task.cleaning },
         body: { pattern: { freq: 'weekly', daysOfWeek: [1, 3, 5] } },
       });
@@ -587,6 +591,7 @@ describe('the Backlog on the API', () => {
       );
       await renameArea({
         client: otherDevice(store),
+        headers: newWrite(),
         path: { areaId: ids.area.work },
         body: { name: 'スマホで直した名前' },
       });
