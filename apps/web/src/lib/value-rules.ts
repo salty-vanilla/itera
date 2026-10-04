@@ -71,6 +71,14 @@ export function readGoalText(text: string): string {
 }
 
 /**
+ * Taking away the Goal of a Sprint that is confirmed: refused (`removable`
+ * is false then). `setGoalText` in `planning.ts`.
+ */
+export function goalIsFixed(text: string, removable: boolean): boolean {
+  return !removable && isBlank(text);
+}
+
+/**
  * The text of 次に試すこと. Empty is it taken away (`''`). `setImprovement`
  * in `review.ts`.
  */
@@ -104,6 +112,10 @@ export function positiveMinutes(
     ? minutes
     : null;
 }
+
+// A time that may be 0 (使える時間, `setAvailableHours` in `planning.ts`) is
+// not a rule written here: `readMinutes` in `duration-text.ts` reads a time
+// of at least 0, and the screen asks nothing more of it.
 
 /**
  * A weekly rule that has no weekday yet. `validatePattern` in

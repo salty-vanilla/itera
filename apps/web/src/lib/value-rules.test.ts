@@ -2,22 +2,31 @@ import {
   addSubtask,
   createArea,
   createTask,
+  editInterrupt,
   id,
   instant,
   isPositiveHours,
+  localDate,
+  noteInterrupt,
   renameArea,
+  setGoalText,
+  setImprovement,
   setUpUser,
   timeZone,
   validatePattern,
   type AreaId,
   type CommandContext,
+  type InterruptNoteId,
   type RecurrencePattern,
+  type RetroImprovement,
+  type Sprint,
   type SubtaskId,
   type TaskId,
   type UserId,
 } from '@itera/domain';
 import { describe, expect, it } from 'vitest';
 import {
+  goalIsFixed,
   improvementHoldsCriterion,
   isBlank,
   positiveMinutes,
@@ -42,6 +51,36 @@ const ctx: CommandContext = {
   actor: 'user',
 };
 const userId = id<'User'>('u') as UserId;
+const zone = timeZone('Asia/Tokyo');
+const noteId = id<'InterruptNote'>('n') as InterruptNoteId;
+
+/** A Sprint of the week of `ctx.now`, with only what a rule here looks at. */
+const sprintOf = (parts: Partial<Sprint>): Sprint => ({
+  id: id<'Sprint'>('s'),
+  userId,
+  start: localDate('2026-10-05'),
+  end: localDate('2026-10-11'),
+  state: 'planning',
+  goals: [],
+  tasks: [],
+  areaSnapshot: [],
+  dailySelections: [],
+  actualTimes: [],
+  interrupts: [],
+  ...parts,
+});
+
+/** A Sprint in its Retro, with the 次に試すこと it has. */
+const retroOf = (improvement: RetroImprovement): Sprint =>
+  sprintOf({
+    state: 'review',
+    retro: {
+      startedAt: ctx.now,
+      pins: [],
+      reflection: '',
+      improvement,
+    },
+  });
 
 /** Empty, only spaces (also full-width and a tab), and spaces around. */
 const TEXTS = [
@@ -103,22 +142,31 @@ describe('the texts that must not be empty', () => {
     expect(readAreaName(text)).toBe(
       made.ok ? made.value.record.name : undefined,
     );
-    // renameArea judges the new name the same way.
-    if (made.ok) {
-      const kept = createArea({ ...input, name: 'old' }, ctx);
-      if (!kept.ok) throw new Error('the Area is made');
-      const renamed = renameArea(kept.value.record, text, ctx);
-      expect(readAreaName(text)).toBe(
-        renamed.ok ? renamed.value.record.name : undefined,
-      );
-    }
+  });
+
+  it.each(TEXTS)('an Area name %j is read as renameArea keeps it', (text) => {
+    const kept = createArea(
+      {
+        id: id<'Area'>('a') as AreaId,
+        userId,
+        name: 'old',
+        color: 1,
+        order: 0,
+      },
+      ctx,
+    );
+    if (!kept.ok) throw new Error('the Area is made');
+    const renamed = renameArea(kept.value.record, text, ctx);
+    expect(readAreaName(text)).toBe(
+      renamed.ok ? renamed.value.record.name : undefined,
+    );
   });
 
   it.each(TEXTS)('a display name %j is read as setUpUser keeps it', (text) => {
     const set = setUpUser(null, {
       id: userId,
       displayName: text,
-      timeZone: timeZone('Asia/Tokyo'),
+      timeZone: zone,
       weekStartsOn: 1,
     });
     expect(readDisplayName(text)).toBe(
@@ -126,32 +174,89 @@ describe('the texts that must not be empty', () => {
     );
   });
 
-  // `noteInterrupt` and `editInterrupt` need a running Sprint; their test is
-  // in `packages/domain`. The same line is `input.text.trim()` and `''`.
-  it('an interrupt note is the text without the spaces around it, not empty', () => {
-    expect(readInterruptText('  電話  ')).toBe('電話');
-    expect(readInterruptText('')).toBeUndefined();
-    expect(readInterruptText(' \t ')).toBeUndefined();
-  });
+  it.each(TEXTS)(
+    'an interrupt note %j is read as noteInterrupt keeps it',
+    (text) => {
+      const noted = noteInterrupt(
+        sprintOf({ state: 'active' }),
+        { id: noteId, text, timeZone: zone },
+        ctx,
+      );
+      expect(readInterruptText(text)).toBe(
+        noted.ok ? noted.value.record.interrupts[0]?.text : undefined,
+      );
+    },
+  );
+
+  it.each(TEXTS)(
+    'an interrupt note %j is read as editInterrupt keeps it',
+    (text) => {
+      const edited = editInterrupt(
+        sprintOf({
+          state: 'active',
+          interrupts: [{ id: noteId, at: ctx.now, text: 'old' }],
+        }),
+        { id: noteId, text },
+        ctx,
+      );
+      expect(readInterruptText(text)).toBe(
+        edited.ok ? edited.value.record.interrupts[0]?.text : undefined,
+      );
+    },
+  );
 });
 
 describe('the texts that may be empty', () => {
-  it('a Goal and 次に試すこと are kept without the spaces around them', () => {
-    expect(readGoalText('  論文を 3章まで  ')).toBe('論文を 3章まで');
-    expect(readImprovementText('　 1本ずつ 　')).toBe('1本ずつ');
+  const areaId = id<'Area'>('a') as AreaId;
+
+  it.each(TEXTS)('a Goal %j is read as setGoalText keeps it', (text) => {
+    const set = setGoalText(
+      sprintOf({ state: 'planning' }),
+      { areaId, text },
+      ctx,
+    );
+    if (!set.ok) throw new Error('a Goal is set while planning');
+    expect(readGoalText(text)).toBe(set.value.record.goals[0]?.text ?? '');
   });
 
-  it('empty is the empty text, which takes the Goal or 次に試すこと away', () => {
-    expect(readGoalText('   ')).toBe('');
-    expect(readImprovementText('')).toBe('');
-  });
+  it.each(TEXTS)(
+    'a Goal %j is fixed once confirmed as setGoalText says',
+    (text) => {
+      const set = setGoalText(
+        sprintOf({ state: 'active', goals: [{ areaId, text: 'old' }] }),
+        { areaId, text },
+        ctx,
+      );
+      // The screen asks `removable` (false once confirmed) from the record.
+      expect(goalIsFixed(text, false)).toBe(!set.ok);
+      expect(goalIsFixed(text, true)).toBe(false);
+    },
+  );
 
-  it('taking away 次に試すこと that a criterion was made from is held back', () => {
-    expect(improvementHoldsCriterion('  ', true)).toBe(true);
-    expect(improvementHoldsCriterion('', true)).toBe(true);
-    expect(improvementHoldsCriterion('1本ずつ', true)).toBe(false);
-    expect(improvementHoldsCriterion('', false)).toBe(false);
-  });
+  it.each(TEXTS)(
+    '次に試すこと %j is read as setImprovement keeps it',
+    (text) => {
+      const set = setImprovement(retroOf({ text: 'old' }), { text }, ctx);
+      if (!set.ok) throw new Error('it is set in a Retro');
+      expect(readImprovementText(text)).toBe(
+        set.value.record.retro?.improvement?.text ?? '',
+      );
+    },
+  );
+
+  it.each(TEXTS)(
+    '次に試すこと %j is held while a criterion was made from it',
+    (text) => {
+      const set = setImprovement(
+        retroOf({ text: 'old', criterionId: id<'PlanningCriterion'>('c') }),
+        { text },
+        ctx,
+      );
+      // Only taking it away is refused: what is not empty is another text.
+      expect(improvementHoldsCriterion(text, true)).toBe(!set.ok);
+      expect(improvementHoldsCriterion(text, false)).toBe(false);
+    },
+  );
 });
 
 describe('spaces', () => {

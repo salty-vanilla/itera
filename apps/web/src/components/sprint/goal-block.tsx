@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Textarea } from '@/components/ui/textarea';
 import { useDraftField } from '@/lib/use-draft-field';
-import { isBlank, readGoalText, sameWords } from '@/lib/value-rules';
+import { goalIsFixed, readGoalText, sameWords } from '@/lib/value-rules';
 import { cn } from '@/lib/utils';
 import { weekText } from '@/lib/week-text';
 
@@ -159,7 +159,7 @@ function GoalBlock({
               close(false);
               return;
             }
-            if (!removable && isBlank(text)) {
+            if (goalIsFixed(text, removable)) {
               setError(
                 '確定した後の目標は消せません。文を書いて保存してください',
               );
