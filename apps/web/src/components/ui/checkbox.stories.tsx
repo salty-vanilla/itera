@@ -173,3 +173,31 @@ export const WithError: Story = {
     error: '反映する行を 1つ以上選んでください',
   },
 };
+
+/**
+ * 並んだ Checkbox に 1 つだけエラーを出すときは、文をグループの下に置き、
+ * 各 Checkbox は `invalid` で輪郭だけを danger にして、文は aria-describedby で結ぶ。
+ */
+export const InvalidInGroup: Story = {
+  render: () => (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="text-label text-ink">曜日</legend>
+      <div className="flex flex-wrap gap-x-4 gap-y-2">
+        {['月', '火', '水'].map((day) => (
+          <Checkbox
+            key={day}
+            label={day}
+            invalid
+            aria-describedby="invalid-group-error"
+          />
+        ))}
+      </div>
+      <p
+        id="invalid-group-error"
+        className="flex items-center gap-1 text-help text-danger"
+      >
+        曜日を 1つ以上選んでください
+      </p>
+    </fieldset>
+  ),
+};

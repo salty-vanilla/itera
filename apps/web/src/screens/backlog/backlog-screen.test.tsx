@@ -741,6 +741,7 @@ describe('Backlog', () => {
     for (const box of within(section).getAllByRole('checkbox')) {
       expect(box.getAttribute('aria-describedby')).toBe(alert.id);
       expect(box.getAttribute('aria-invalid')).toBe('true');
+      expect(box.hasAttribute('data-invalid')).toBe(true);
     }
     expect(document.activeElement).toBe(
       within(section).getByRole('checkbox', { name: '日' }),

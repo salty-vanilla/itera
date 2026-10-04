@@ -365,7 +365,7 @@ function RecurrenceEditor({
                     label={WEEKDAY_NAMES[d]}
                     checked={days.includes(d)}
                     aria-describedby={error ? daysErrorId : undefined}
-                    aria-invalid={error ? true : undefined}
+                    invalid={error !== undefined}
                     onCheckedChange={(checked) => onDay(d, checked)}
                   />
                 ))}

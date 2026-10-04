@@ -92,6 +92,12 @@ type CheckboxProps = CheckboxControlProps & {
   description?: ReactNode | undefined;
   /** Error under the label. Setting it marks the checkbox invalid. */
   error?: ReactNode | undefined;
+  /**
+   * Marks the checkbox invalid without a message of its own, for a group of
+   * checkboxes whose one error sits under the group (the weekdays of a
+   * recurrence). Tie the group's error to each with `aria-describedby`.
+   */
+  invalid?: boolean | undefined;
 };
 
 /** A checkbox with its label, and optionally support text and an error. */
@@ -99,11 +105,13 @@ function Checkbox({
   label,
   description,
   error,
+  invalid: invalidGroup = false,
   disabled,
   name,
   ...props
 }: CheckboxProps) {
-  const invalid = error !== undefined && error !== null && error !== false;
+  const hasError = error !== undefined && error !== null && error !== false;
+  const invalid = hasError || invalidGroup;
   return (
     <FieldPrimitive.Root
       data-slot="checkbox-field"
@@ -121,7 +129,9 @@ function Checkbox({
           {description}
         </FieldDescription>
       )}
-      {invalid && <FieldError className="col-start-2 mt-1">{error}</FieldError>}
+      {hasError && (
+        <FieldError className="col-start-2 mt-1">{error}</FieldError>
+      )}
     </FieldPrimitive.Root>
   );
 }
