@@ -293,6 +293,8 @@ export function ruleEndsOn(rule: RecurrenceRule): LocalDate | undefined {
  * Sprints after it; until its last day the Backlog still shows it recurring.
  * The commands guard less: `completeFromBacklog` refuses while the running
  * Sprint holds the occurrences, and nothing else waits for the last day.
+ * The Task's own rule comes first, also when it begins after an ended one
+ * (#323); this week's occurrences of that one are `endingRuleOf`'s (#338).
  */
 export function recurrenceOf(
   task: Task,
@@ -302,8 +304,22 @@ export function recurrenceOf(
   if (task.recurrenceRuleId !== undefined) {
     return rules.find((r) => r.id === task.recurrenceRuleId);
   }
+  return endingRuleOf(task, rules, today);
+}
+
+/**
+ * A rule the Task has ended (F41) whose last day has not passed: off the
+ * Task, but its occurrences still come up until that day. The Task may have
+ * a rule of its own again by then (#323), which begins after it.
+ */
+export function endingRuleOf(
+  task: Task,
+  rules: readonly RecurrenceRule[],
+  today: LocalDate,
+): RecurrenceRule | undefined {
   return rules.find((r) => {
-    const endsOn = r.taskId === task.id ? ruleEndsOn(r) : undefined;
+    if (r.taskId !== task.id || r.id === task.recurrenceRuleId) return false;
+    const endsOn = ruleEndsOn(r);
     return endsOn !== undefined && today <= endsOn;
   });
 }
@@ -515,5 +531,35 @@ export function recurrenceSummary(
       : {}),
     ...(next === undefined ? {} : { next }),
     ...(endsOn === undefined ? {} : { endsOn }),
+  };
+}
+
+/**
+ * The values for the Backlog row of a Task made recurring again before the
+ * rule it ended has had its last day (F41, #323, #338). It is one row
+ * (invariant 34), shown as one rule changed is: the occurrences still to
+ * come by the rule that ends, then the new rule from the day it begins as a
+ * change (「毎週 土 · 次は 10/3 (土) · 変更：10/5 (月) から 毎週 月」). The
+ * same pattern again is no change: the Task goes on as it was, with no last
+ * day. A change the rule that ends had still to come is not shown: ending
+ * drops the versions not in effect by its last day (F41), so it can only be
+ * one from a next Sprint confirmed before this week is over, for that day.
+ */
+export function renewedRecurrenceSummary(
+  ending: RecurrenceRule,
+  rule: RecurrenceRule,
+  occurrences: readonly Occurrence[],
+  options: NextOccurrenceOptions,
+): RecurrenceSummary {
+  const before = recurrenceSummary(ending, occurrences, options);
+  const after = recurrenceSummary(rule, occurrences, options);
+  const begins = rule.versions[0]?.effectiveFrom;
+  const next = before.next ?? after.next;
+  return {
+    pattern: before.pattern,
+    ...(begins === undefined || samePattern(before.pattern, after.pattern)
+      ? {}
+      : { upcoming: { pattern: after.pattern, effectiveFrom: begins } }),
+    ...(next === undefined ? {} : { next }),
   };
 }

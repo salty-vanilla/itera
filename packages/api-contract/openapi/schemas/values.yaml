@@ -18,7 +18,9 @@ RecurrenceSummary:
   properties:
     pattern: { $ref: './records.yaml#/RecurrencePattern' }
     upcoming:
-      description: A change of pattern from a later day.
+      description: >-
+        A change of pattern from a later day: a new version, or the Task's
+        new rule after the one it ended (#338).
       type: object
       required: [pattern, effectiveFrom]
       properties:

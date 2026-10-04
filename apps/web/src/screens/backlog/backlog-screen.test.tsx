@@ -1308,6 +1308,64 @@ describe('Backlog', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
+  it('Recurrence (#338): made recurring again before the last day, this week and the new rule both show', async () => {
+    await renderAt(
+      `/backlog?fixture=backlog-recurrence&view=recurring&task=${ids.task.cleaning}`,
+    );
+    const detail = await screen.findByRole('dialog');
+    const section = within(detail).getByRole('region', { name: '繰り返し' });
+    await userEvent.click(
+      within(section).getByRole('button', { name: '繰り返しをやめる' }),
+    );
+    await userEvent.click(
+      await within(section).findByRole('checkbox', { name: '月' }),
+    );
+    await userEvent.click(
+      within(section).getByRole('button', { name: '繰り返しにする' }),
+    );
+    // The rule that ends is today's until its last day, the new one a
+    // change from the next Sprint, as a rule changed is shown.
+    expect(await within(section).findByText('今の設定：毎週 土')).toBeTruthy();
+    expect(within(section).getByText('次の Sprint から：毎週 月')).toBeTruthy();
+    expect(
+      within(list()).getByText('部屋の掃除').closest('li')?.textContent,
+    ).toContain('毎週 土 · 次は 10/3 (土) · 変更：10/5 (月) から 毎週 月');
+    // It goes on: no last day.
+    expect(
+      within(list()).getByText('部屋の掃除').closest('li')?.textContent,
+    ).not.toContain('まで');
+  });
+
+  it('Recurrence (#338): 次の Sprint から shows for a change from the next Sprint', async () => {
+    await renderAt(
+      `/backlog?fixture=backlog-recurrence&view=recurring&task=${ids.task.cleaning}`,
+    );
+    const detail = await screen.findByRole('dialog');
+    // 毎週 土 now, 毎週 日 from 10/5.
+    expect(within(detail).getByText('今の設定：毎週 土')).toBeTruthy();
+    expect(within(detail).getByText('次の Sprint から：毎週 日')).toBeTruthy();
+  });
+
+  it('Recurrence (#338): 次の Sprint から does not show for a rule with no change to come', async () => {
+    await renderAt(
+      `/backlog?fixture=backlog-capture&task=${ids.task.bookshelf}`,
+    );
+    const detail = await screen.findByRole('dialog');
+    await userEvent.click(
+      within(detail).getByRole('button', { name: '詳しく' }),
+    );
+    const section = within(detail).getByRole('region', { name: '繰り返し' });
+    await userEvent.selectOptions(
+      within(section).getByRole('combobox', { name: '頻度' }),
+      'daily',
+    );
+    await userEvent.click(
+      within(section).getByRole('button', { name: '繰り返しにする' }),
+    );
+    expect(await within(section).findByText('今の設定：毎日')).toBeTruthy();
+    expect(within(section).queryByText(/次の Sprint から：/)).toBeNull();
+  });
+
   it('Recurrence (F41): a rule that has made no occurrence is taken off; the Task is one-off again', async () => {
     await renderAt(
       `/backlog?fixture=backlog-capture&task=${ids.task.bookshelf}`,

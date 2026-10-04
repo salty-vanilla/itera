@@ -3,12 +3,14 @@
 import {
   backlogView,
   carryOverOf,
+  endingRuleOf,
   inBacklogSlice,
   isCounted,
   planningValueOf,
   projectFrom,
   recurrenceOf,
   recurrenceSummary,
+  renewedRecurrenceSummary,
   sprintNumber,
   versionOn,
   type AreaColor,
@@ -20,6 +22,8 @@ import {
   type LocalDate,
   type PlanningValue,
   type RecurrencePattern,
+  type RecurrenceRule,
+  type RecurrenceRuleVersion,
   type RecurrenceSummary,
   type SprintTask,
   type SubtaskId,
@@ -58,7 +62,8 @@ export interface BacklogItem {
    * The rule's pattern today and its latest version, for the editor, and
    * the etag of the rule (#330): a change to the Task's own rule is made
    * from it. A rule that has come off the Task (F41) is shown, but a
-   * change makes a new one, from none.
+   * change makes a new one, from none. Until its last day the pattern
+   * today is that rule's, also once the Task has a new one (#338).
    */
   readonly rule?: {
     readonly current: RecurrencePattern;
@@ -126,6 +131,39 @@ export interface BacklogItem {
   >;
 }
 
+/**
+ * The row's recurrence and the detail's rule. A Task made recurring again
+ * before the rule it ended has had its last day repeats by that one this
+ * week, and by its own from the day it begins, as one rule changed (#338).
+ */
+function recurrenceOfItem(
+  rule: RecurrenceRule,
+  latest: RecurrenceRuleVersion,
+  ending: RecurrenceRule | undefined,
+  records: TaggedRecords,
+  clock: Clock,
+): Pick<BacklogItem, 'recurrence' | 'rule'> {
+  const options = {
+    today: clock.today,
+    projectFrom: projectFrom(records.sprints, clock.today),
+  };
+  const recurrence =
+    ending === undefined
+      ? recurrenceSummary(rule, records.occurrences, options)
+      : renewedRecurrenceSummary(ending, rule, records.occurrences, options);
+  return {
+    recurrence,
+    rule: {
+      current:
+        ending === undefined
+          ? (versionOn(rule, clock.today) ?? latest).pattern
+          : recurrence.pattern,
+      latest: latest.pattern,
+      etag: taggedIn(records.rules)(rule).etag,
+    },
+  };
+}
+
 export function backlogItem(
   task: TaggedTask,
   records: TaggedRecords,
@@ -134,8 +172,13 @@ export function backlogItem(
   const area = records.areas.find((a) => a.id === task.areaId);
   const carry = carryOverOf(task.id, records.sprints);
   const carryFrom = records.sprints.find((s) => s.id === carry?.fromSprintId);
-  // An ended rule is shown until its last day (F41).
+  // An ended rule is shown until its last day (F41), also once the Task has
+  // a rule of its own again, which begins after it (#338).
   const rule = recurrenceOf(task, records.rules, clock.today);
+  const ending =
+    task.recurrenceRuleId === undefined
+      ? undefined
+      : endingRuleOf(task, records.rules, clock.today);
   // 「今週」: the active one, or, before one is confirmed, the one being
   // planned (Scenario A step 3); a draft for next week is 「来週」 (#90).
   const week = thisWeekSprintOf(records, clock);
@@ -185,17 +228,7 @@ export function backlogItem(
         }),
     ...(rule === undefined || latest === undefined
       ? {}
-      : {
-          recurrence: recurrenceSummary(rule, records.occurrences, {
-            today: clock.today,
-            projectFrom: projectFrom(records.sprints, clock.today),
-          }),
-          rule: {
-            current: (versionOn(rule, clock.today) ?? latest).pattern,
-            latest: latest.pattern,
-            etag: taggedIn(records.rules)(rule).etag,
-          },
-        }),
+      : recurrenceOfItem(rule, latest, ending, records, clock)),
     ...(inWeek === undefined
       ? {}
       : {
