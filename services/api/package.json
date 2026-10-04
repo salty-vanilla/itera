@@ -8,6 +8,7 @@
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "typecheck": "wrangler types --env-interface CloudflareBindings --check && tsc -p tsconfig.json",
     "db:generate": "drizzle-kit generate",
+    "db:check": "node ../../tooling/checks/migrations.mjs",
     "db:migrate:local": "wrangler d1 migrations apply DB --local"
   },
   "dependencies": {

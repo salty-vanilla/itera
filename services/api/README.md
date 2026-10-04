@@ -97,6 +97,7 @@ DB・認証・アプリの origin・現在時刻は `createApp` に注入する�
 | --- | --- |
 | `pnpm --filter @itera/api cf-typegen` | `wrangler.jsonc` から `worker-configuration.d.ts`（binding と実行時の型）を生成する。設定を変えたら実行する |
 | `pnpm --filter @itera/api db:generate` | `src/db/schema.ts` から SQL のマイグレーションを `migrations/` に生成する |
+| `pnpm --filter @itera/api db:check` | `src/db/schema.ts` に対して、生成し忘れたマイグレーションがないかを確かめる（`pnpm check` から呼ぶ。`migrations/` は書き換えない） |
 | `pnpm --filter @itera/api db:migrate:local` | `migrations/` をローカルの D1 に適用する |
 | `pnpm --filter @itera/api typecheck` | 生成した型が設定と一致するかを確かめ、型検査する |
 
