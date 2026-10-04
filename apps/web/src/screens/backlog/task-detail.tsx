@@ -3,7 +3,6 @@ import type {
   Estimate as EstimateRecord,
   EstimateSuggestionId,
   SuggestionBound,
-  Task,
   TaskPriority,
   TimeBasis,
 } from '@itera/api-contract';
@@ -62,9 +61,14 @@ import {
   EMPTY_DURATION,
   hoursText,
   readMinutes,
-  sameMinutes,
+  sameDuration,
   type DurationText,
 } from '@/lib/duration-text';
+import {
+  sameWords,
+  useDraftField,
+  type DraftField,
+} from '@/lib/use-draft-field';
 import { LAST_DAY_CLOSED_WORDS } from '@/lib/selection-words';
 import { formatHours } from '@/lib/time-format';
 import { startedText } from '@/lib/today-words';
@@ -106,15 +110,6 @@ const fieldNames: Record<FieldKey, string> = {
   timeBasis: '計画の時間',
 };
 
-function draftOf(task: Task): Draft {
-  return {
-    title: task.title,
-    description: task.description,
-    due: task.due ?? '',
-    estimate: hoursText(task.estimate?.hours),
-  };
-}
-
 type Reading =
   | { kind: 'error'; message: string }
   | { kind: 'same' }
@@ -122,25 +117,30 @@ type Reading =
 
 const same: Reading = { kind: 'same' };
 
-/** What leaving a text field records: nothing, a change, or why not. */
-function readField(key: TextKey, draft: Draft, task: Task): Reading {
+/**
+ * What leaving a text field records: nothing, a change, or why not. `base`
+ * is what the fields showed when they were typed in: a value is compared
+ * with it, not with the Task as read since, so that a field left as it was
+ * does not write over what another device saved (#324).
+ */
+function readField(key: TextKey, draft: Draft, base: Draft): Reading {
   switch (key) {
     case 'title': {
       const title = draft.title.trim();
       if (title === '') {
         return { kind: 'error', message: 'タイトルを入力してください' };
       }
-      return title === task.title ? same : { kind: 'save', update: { title } };
+      return title === base.title.trim()
+        ? same
+        : { kind: 'save', update: { title } };
     }
     case 'description':
-      return draft.description === task.description
+      return draft.description === base.description
         ? same
         : { kind: 'save', update: { description: draft.description } };
     case 'due': {
       if (draft.due === '') {
-        return task.due === undefined
-          ? same
-          : { kind: 'save', update: { due: null } };
+        return base.due === '' ? same : { kind: 'save', update: { due: null } };
       }
       const parsed = parseLocalDate(draft.due);
       if (!parsed.ok) {
@@ -149,7 +149,7 @@ function readField(key: TextKey, draft: Draft, task: Task): Reading {
           message: '日付を入力してください（例：2026-10-05）',
         };
       }
-      return parsed.value === task.due
+      return parsed.value === base.due
         ? same
         : { kind: 'save', update: { due: parsed.value } };
     }
@@ -158,7 +158,7 @@ function readField(key: TextKey, draft: Draft, task: Task): Reading {
       if (minutes === null || minutes === 0) {
         return { kind: 'error', message: DURATION_ERROR };
       }
-      return sameMinutes(minutes, task.estimate?.hours)
+      return minutes === readMinutes(base.estimate)
         ? same
         : {
             kind: 'save',
@@ -379,7 +379,26 @@ function TaskDetail({
     focusFrom.current = sectionKey;
     setOperations((n) => n + 1);
   }
-  const [draft, setDraft] = useState(() => draftOf(task));
+  // The text fields: what is typed apart from the Task as read, so that a
+  // field not typed in follows another device's change (#324).
+  const fields: { [K in TextKey]: DraftField<Draft[K]> } = {
+    title: useDraftField(task.title, sameWords),
+    description: useDraftField(task.description),
+    due: useDraftField(task.due ?? ''),
+    estimate: useDraftField(hoursText(task.estimate?.hours), sameDuration),
+  };
+  const draft: Draft = {
+    title: fields.title.value,
+    description: fields.description.value,
+    due: fields.due.value,
+    estimate: fields.estimate.value,
+  };
+  const base: Draft = {
+    title: fields.title.base,
+    description: fields.description.base,
+    due: fields.due.base,
+    estimate: fields.estimate.base,
+  };
   const [errors, setErrors] = useState<Partial<Record<TextKey, string>>>({});
   // The field saved last, marked 保存しました until it is edited again.
   const [saved, setSaved] = useState<FieldKey>();
@@ -583,13 +602,13 @@ function TaskDetail({
   }, [focusEstimate]);
   const suggestion = presentedSuggestion(task);
   const set = <K extends TextKey>(key: K, value: Draft[K]) => {
-    setDraft((d) => ({ ...d, [key]: value }));
+    fields[key].set(value);
     if (saved === key) setSaved(undefined);
   };
   // The suggestion's operations put a saved value in the field: whatever
   // was wrong with the text before is gone with it.
   const replaceEstimate = (value: DurationText) => {
-    set('estimate', value);
+    fields.estimate.put(value);
     setErrors((e) => {
       const next = { ...e };
       delete next.estimate;
@@ -609,7 +628,7 @@ function TaskDetail({
 
   /** Leaving a text field: saves it when it changed and can be saved. */
   function commit(key: TextKey) {
-    const reading = readField(key, draft, task);
+    const reading = readField(key, draft, base);
     setErrors((e) => {
       const next = { ...e };
       if (reading.kind === 'error') next[key] = reading.message;
@@ -617,7 +636,9 @@ function TaskDetail({
       return next;
     });
     if (reading.kind === 'save') {
-      record(key, reading.update, reading.estimate);
+      fields[key].hold(record(key, reading.update, reading.estimate));
+    } else if (reading.kind === 'same') {
+      fields[key].leave();
     }
   }
 

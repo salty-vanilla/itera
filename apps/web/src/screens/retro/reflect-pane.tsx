@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Tag } from '@/components/ui/tag';
 import { Textarea } from '@/components/ui/textarea';
+import { sameWords, useDraftField } from '@/lib/use-draft-field';
 import { cn } from '@/lib/utils';
 import type { RetroData } from '@/screen-data/retro-view';
 import { Materials } from './materials';
@@ -34,7 +35,7 @@ function ReflectPane({
   showMaterials,
   className,
 }: ReflectPaneProps) {
-  const [reflection, setReflection] = useState(data.reflection);
+  const reflection = useDraftField(data.reflection);
   return (
     <div
       data-slot="reflect-pane"
@@ -58,10 +59,13 @@ function ReflectPane({
           >
             <Textarea
               text="body-l"
-              value={reflection}
-              onChange={(e) => setReflection(e.currentTarget.value)}
+              value={reflection.value}
+              onChange={(e) => reflection.set(e.currentTarget.value)}
+              // Saved only when it was typed in: a field left as it was
+              // never sends what was read when the Retro opened (#324).
               onBlur={() => {
-                if (reflection !== data.reflection) onReflect(reflection);
+                if (reflection.leave())
+                  reflection.hold(onReflect(reflection.value));
               }}
             />
           </Field>
@@ -127,7 +131,8 @@ function Improvement({
 }) {
   const saved = data.improvement;
   const [editing, setEditing] = useState(saved === undefined);
-  const [text, setText] = useState(saved ?? '');
+  const field = useDraftField(saved ?? '', sameWords);
+  const text = field.value;
   const headingId = useId();
   const editRef = useRef<HTMLButtonElement>(null);
   const backToEdit = useRef(false);
@@ -145,15 +150,20 @@ function Improvement({
   >(undefined);
   const save = (): Promise<boolean> => {
     const next = text.trim();
-    if (next === (saved ?? '')) return Promise.resolve(true);
+    // The save of these words is on its way (leaving the field, then 確定):
+    // its answer is this one's, whatever the field's base has become.
+    if (sending.current?.text === next) return sending.current.result;
+    // Compared with what the field showed when it was typed in, not with
+    // what was read since: the other device's words are not written over.
+    if (!field.leave()) return Promise.resolve(true);
     // A criterion made from it keeps it; the handoff says to drop it first.
     if (next === '' && data.draft !== undefined) return Promise.resolve(false);
-    if (sending.current?.text === next) return sending.current.result;
     const result = onImprove(next).then((ok) => {
       if (sending.current?.result === result) sending.current = undefined;
       return ok;
     });
     sending.current = { text: next, result };
+    field.hold(result);
     return result;
   };
 
@@ -204,7 +214,7 @@ function Improvement({
               text="body-l"
               value={text}
               placeholder="例：論文は 1本ずつタスクに分ける"
-              onChange={(e) => setText(e.currentTarget.value)}
+              onChange={(e) => field.set(e.currentTarget.value)}
               // Kept as it is typed; 確定 only ends the editing.
               onBlur={() => void save()}
             />
