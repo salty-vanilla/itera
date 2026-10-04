@@ -14,6 +14,7 @@
 - 改訂：2026-10-04（今日の選択と割り込みの読み取りに、出力専用の必須の `capabilities`（`can<操作>` の真偽値、ADR 0007「操作の可否」）を足す。`TodayRow`・`DayRecord`・`BacklogItem.today` に `DailySelectionCapabilities`、`TodayItem` に省略できる `removedTodayCapabilities`、今日と過去の日の割り込みを `InterruptItem`（`InterruptNote` と `InterruptNoteCapabilities`）にする。応答に必須の項目を足すだけなので `info.version` は 0.5.0 のまま。Issue #322）
 - 改訂：2026-10-04（残りの記録の読み取りに、出力専用の必須の `capabilities` を足す（ADR 0007「操作の可否」）。`BacklogItem` の `canAddToToday`・`canAddToWeek`・`canComplete` を `TaskCapabilities` に移す。応答から項目を消す壊す変更なので `info.version` を 0.6.0 にする。`RecurringCandidate.occurrences` は `OccurrenceItem`（`Occurrence` と `OccurrenceCapabilities`）にする。Issue #323）
 - 改訂：2026-10-04（Task の繰り返しの規則を置く `PUT /tasks/{taskId}/recurrence`（`setRecurrence`）も、規則の版で条件つきにする。規則があれば `If-Match`、なければ `If-None-Match: *`。`BacklogItem.rule` に出力専用の必須の `etag`、応答に `ETag`。`endRecurrence`（DELETE）は対象にしない。要求に条件を足す壊す変更なので `info.version` を 0.7.0 にする。Issue #330）
+- 改訂：2026-10-05（振り分けの規則を、送る側の `sending.ts`（`@itera/api-contract/sending`。Valibot とスキーマを import しない。Web が使う）と、読む側も持つ `requests.ts` に分ける。Web の本番ビルドに Valibot を入れないため。Issue #356）
 
 ## 背景
 
@@ -101,7 +102,10 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 - 作る：`POST /<集まり>` → 201（作った ID。何も返さないものは本文なし）。属性を変える：`PATCH`（省いた項目は変えない）。子の資源を置く・置き換える（冪等）：`PUT`。消す・外す（冪等）：`DELETE`（本文は持たない。RFC 9110 で意味が決まっていない）。状態の遷移：`POST …/<動詞>`。取り消し：`POST …/undo-<元の動作>`（domain の取り消しは元の動作ごとに別のコマンドで、条件も違う。逆の動詞にすると何を取り消すかが読めない）。値を返すなら 200、返さないなら 204。変わった後の読み取りは返さない（下の「操作の応答に読み取りを含めない」）。
 - 操作は `packages/application` の `operations` の名前と入力で表す（ADR 0005）。判定は `packages/domain` だけが行う。面（1 つのメソッドと 1 つの経路）ごとに operationId が 1 つで、1 つの操作だけを受ける面は操作の名前をそのまま operationId にする。いくつかの操作を受ける面は新しい名前にし、要求が運ぶもの（本文のどの項目があるか、query の件数）で操作を選ぶ（W1 の Sprint の状態での選び分けは application の操作の中）。別の操作の項目を一緒に送ると 400（本文は `oneOf` の `strictObject`）。
 - 経路の子（SprintTask・選択・割り込み・目標など）が経路の Sprint にないときは 404。Sprint の状態に合わない操作は 422 `/problems/invalid-transition`。
-- 振り分けの規則は `packages/api-contract/src/requests.ts`（`@itera/api-contract/requests`）の 1 か所に、両方向を並べて置く。`requestOf(名前, 入力)` が操作の要求（面と path・query・本文）を作り（Web）、`readRequest` が受け取った要求を面のスキーマで path・query・本文の順に確かめてから、面の `operation` で操作と入力を作る（サーバーとブラウザ内モック。確かめ方とエラーの返し方だけをそれぞれが渡す。サーバーは暦の上の日付も確かめる）。query の文字列を宣言した型に変える `queryInput` も同じ場所に置き、読み取りと書き込みで使う。`requests.ts` は application に型だけで依存する。
+- 振り分けの規則は `packages/api-contract/src/` の 2 つのモジュールに、両方向を並べて置く（#356 で分けた。それまでは `requests.ts` の 1 か所）。
+  - 送る側の `sending.ts`（`@itera/api-contract/sending`）：面ごとのメソッド・経路・通ったときのステータス（`routes`）と、`requestOf(名前, 入力)`（操作の要求、つまり面と path・query・本文を作る。Web）。契約の型だけを使い、Valibot とスキーマを import しない（Web の本番ビルドに Valibot を入れないため。ADR 0005「本番ビルド」）。
+  - 読む側も持つ `requests.ts`（`@itera/api-contract/requests`）：`routes` に面のスキーマと `operation` を足した `surfaces`。`readRequest` が受け取った要求を面のスキーマで path・query・本文の順に確かめてから、面の `operation` で操作と入力を作る（サーバーとブラウザ内モック。確かめ方とエラーの返し方だけをそれぞれが渡す。サーバーは暦の上の日付も確かめる）。query の文字列を宣言した型に変える `queryInput` も置き、読み取りと書き込みで使う。`sending.ts` のものをすべて export し直すので、サーバーとモックは `/requests` だけを使う。
+  - どちらも application に型だけで依存する。
 
 #### 書き込みの面（55 面で 60 操作）
 
@@ -144,7 +148,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 - 回（Occurrence）の含める・外すは Sprint の下に置く。回そのものは Task の繰り返しの規則が作る記録だが、Sprint に含めるかは Sprint の計画の決定で（不変条件 33）、含め直すと新しい SprintTask を作ることがある（domain の `includeInPlan`）。そのため SprintTask の下ではなく、Sprint の「含めた回」の集まりにする。1 つの SprintTask の回をすべて外す操作は、その SprintTask の動作（`exclude-occurrences`）。
 - 振り返りの印は、domain の `togglePin` を `pinFact`・`unpinFact` に分けた。付いている印を付ける・付いていない印を外すときは何も変えない。`{pin}` は印の付いた記録の ID（SprintTask・選択・回・割り込み、Goal は Area の ID）か `available-hours` で、記録の種類は TypeID の接頭辞から決まる。
-- 割り込みを戻す `restoreInterrupt` は ID を残すので、その ID を path に置く `PUT`（下の「消した記録を戻す操作の照合」）。割り込みの編集（`PATCH`）は本文と分を置き換えるので、`minutes` を必須にし、分がないことは `null` で表す（domain の入力では省略。`requests.ts` が変える）。
+- 割り込みを戻す `restoreInterrupt` は ID を残すので、その ID を path に置く `PUT`（下の「消した記録を戻す操作の照合」）。割り込みの編集（`PATCH`）は本文と分を置き換えるので、`minutes` を必須にし、分がないことは `null` で表す（domain の入力では省略。`sending.ts` と `requests.ts` が変える）。
 
 #### 読み取り（8 面）
 
@@ -227,7 +231,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 書き込みの結果が分からない失敗（通信の失敗、5xx）を、同じ要求として安全に送り直せるようにする（2026-10-04 オーナー決定。#295 で別に分けた 4 つの 1 つ）。RFC 9110 §9.2.2 は、要求が冪等だと知る手段か部分的な失敗から戻る手段がない限り、冪等でないメソッドの要求を自動で送り直すべきでない（SHOULD NOT）とする。冪等キーがその手段になる。
 
 - ヘッダー：すべての書き込み（POST・PUT・PATCH・DELETE。`PUT /me/settings` を含む）に、必須の `Idempotency-Key` を置く（`openapi/parameters.yaml`）。読み取り（GET）には置かない（追いつきの書き込みは時計と記録だけで決まる。ADR 0004「操作と読み取りの処理」）。Better Auth の経路は対象外。すべての書き込みにあり、どの読み取りにもないことは `requests.test.ts` が生成した型で確かめる。
-- 名前・書式・エラーのステータスは、IETF httpapi WG の draft「The Idempotency-Key HTTP Header Field」（draft-ietf-httpapi-idempotency-key-header-07、2025-10-15。WG Document のまま失効していて、RFC ではない）に合わせる。値は Structured Field の String（RFC 9651）で、UUID を二重引用符で囲む（`"8e03978e-40d5-43e8-bc93-6894a57f9324"`）。受け付けるのは UUID だけ（Google AIP-155 と同じ）。16 進の大文字と小文字は同じキーとして扱い、サーバーは小文字にそろえる。後ろに付いたパラメータ（`;a=1`）は読み飛ばす（RFC 9651 §2.3 は、知らないパラメータを誤りにしないよう勧める。形は確かめない）。パラメータの部品の名前は `IdempotencyKeyHeader`、値のスキーマは `IdempotencyKey`（同じ名前にすると、まとめたときに生成物に番号付きの別名ができる）。作る・読む関数は `@itera/api-contract/requests` の `idempotencyKeyHeaders`・`readIdempotencyKey`（サーバーとクライアントが使う）。Web は `run` ごとに `crypto.randomUUID()` で作る（ADR 0005「エラーと送信中」）。
+- 名前・書式・エラーのステータスは、IETF httpapi WG の draft「The Idempotency-Key HTTP Header Field」（draft-ietf-httpapi-idempotency-key-header-07、2025-10-15。WG Document のまま失効していて、RFC ではない）に合わせる。値は Structured Field の String（RFC 9651）で、UUID を二重引用符で囲む（`"8e03978e-40d5-43e8-bc93-6894a57f9324"`）。受け付けるのは UUID だけ（Google AIP-155 と同じ）。16 進の大文字と小文字は同じキーとして扱い、サーバーは小文字にそろえる。後ろに付いたパラメータ（`;a=1`）は読み飛ばす（RFC 9651 §2.3 は、知らないパラメータを誤りにしないよう勧める。形は確かめない）。パラメータの部品の名前は `IdempotencyKeyHeader`、値のスキーマは `IdempotencyKey`（同じ名前にすると、まとめたときに生成物に番号付きの別名ができる）。作る関数は `@itera/api-contract/sending` の `idempotencyKeyHeaders`（クライアントとテスト）、読む関数は `@itera/api-contract/requests` の `readIdempotencyKey`（サーバー）。Web は `run` ごとに `crypto.randomUUID()` で作る（ADR 0005「エラーと送信中」）。
 - 誤り：キーがない、書式が違う → 400 `/problems/validation-failed`（`errors` の場所は `header: Idempotency-Key`）。同じキーを別の要求に使った → 422 `/problems/idempotency-key-reused`。どちらも何もしない。要求が同じかは、メソッド・経路・query・本文を届いたままつないだ SHA-256（指紋）で比べる。クライアントは同じ要求を同じバイト列で送り直すので、JSON の並べ方の違いは別の要求とみなす。
 - 同じキーと同じ要求：24 時間の内なら、最初の応答（ステータスと本文）を、操作を実行せずに返す（Stripe、AIP-155、Zalando 規則 230 と同じ）。処理は ADR 0004「操作と読み取りの処理」の 4・7 と「同時の書き込み」。
 - 保存するのは、書き込みを確定した結果（2xx）だけ。400・404・422 など何も書かなかった失敗は保存しないので、同じキーで送り直すともう一度実行する（Stripe と同じ）。
@@ -272,7 +276,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
   - ほかの PUT・DELETE（回を含める・外す、印、まとめて外す）：結果が 1 つに決まる置く・外す。
 - 条件を求めない面に `If-Match` が付いていても、書式を確かめるだけで比べない（状態の遷移は domain が今の状態で判定する）。
 - 冪等キーの指紋（上の「冪等キー」）は `If-Match` を含まない。同じキー・同じ本文で `If-Match` だけ違う送り直しは、1 回目の応答を返す（自分の書き込みの送り直しを 412 にしないため）。
-- **比べ方**：`If-Match` は `*` か、entity-tag の一覧（`EntityTagList`）。強い比較で、弱い entity-tag（`W/"…"`）はどれとも合わない。`If-None-Match` は `*` だけを受ける（`AnyEntityTag`）。書式が違えば 400 `/problems/validation-failed`（`errors` の場所は `header`）。読むのは `@itera/api-contract/requests` の `readCondition`、送るのは `conditionHeaders`（`MadeFrom`：`{ etag }` か `{ none: true }`）。どの操作が条件を要るか、記録のどこを比べるかは `packages/application` の `checkCondition`（`conditions.ts`。API とブラウザ内モックが使う）。面が `If-Match` を持つ操作の型（`ConditionalName`）と application の `ConditionalOperation` が同じことを型のテストで、PATCH の面だけが `If-Match` を持つことを `requests.test.ts` で確かめる。
+- **比べ方**：`If-Match` は `*` か、entity-tag の一覧（`EntityTagList`）。強い比較で、弱い entity-tag（`W/"…"`）はどれとも合わない。`If-None-Match` は `*` だけを受ける（`AnyEntityTag`）。書式が違えば 400 `/problems/validation-failed`（`errors` の場所は `header`）。読むのは `@itera/api-contract/requests` の `readCondition`、送るのは `@itera/api-contract/sending` の `conditionHeaders`（`MadeFrom`：`{ etag }` か `{ none: true }`）。どの操作が条件を要るか、記録のどこを比べるかは `packages/application` の `checkCondition`（`conditions.ts`。API とブラウザ内モックが使う）。面が `If-Match` を持つ操作の型（`ConditionalName`）と application の `ConditionalOperation` が同じことを型のテストで、PATCH の面だけが `If-Match` を持つことを `requests.test.ts` で確かめる。
 - **順序**：RFC 9110 §13.2.1 のとおり、条件を除いた要求の応答が本文を処理する前に 2xx・412 以外になるなら、条件より先に答える。400（形と書式）・401・403・413 → 冪等キーの照合（#320。自分の書き込みの送り直しは 412 にせず 1 回目の応答を返す）→ 404（要求が指す記録がない。`checkCondition` は対象のない操作を通し、操作が答える）→ 428・412 → domain の 422。比べる版は、追いつき（ADR 0004 #271）の前の、読み込んだ版（利用者が読んだもの）。412 でも 428 でも何も書かない。
 - **応答の `ETag`**：値を置き換える書き込みが通ったら、記録のその後の etag を `ETag` ヘッダーで返す（`headers.yaml` の `RecordETag`。記録を消した書き込み、目標を空にしたときは返さない）。同じキーで送り直した要求にも同じ値を返す（冪等キーの記録に置く。ADR 0004「記録のテーブル」）。クライアントは、同じ記録への次の書き込みを、読み直しを待たずにこの値で送れる（同じ形の 2 つの欄を続けて保存するとき、自分の 1 回目で 2 回目が 412 にならないように。ADR 0005「エラーと送信中」）。
 - ブラウザ内モックも同じに振る舞う（ストアが保存のたびに版を進め、`checkCondition` で比べ、`ETag` を返す。ADR 0005「ブラウザ内モック」）。
@@ -284,11 +288,12 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 - `pnpm contract:generate` が、Redocly で `openapi/` を 1 ファイルにまとめ（一時ディレクトリ）、Hey API で `packages/api-contract/src/generated/` に生成する。生成物はコミットする。分けたファイルのまま Hey API に渡すと、別ファイルの path と応答の参照から中身のない型（`CreateArea = unknown` など）が出るため、まとめてから渡す。
 - `pnpm contract:check`（`pnpm check` の中）は、仕様を lint し、一時ディレクトリに生成し直して、コミットした生成物とファイルの一覧と中身が同じかを確かめる。違えば失敗する（CI でも同じ）。
 - 出力：`@hey-api/typescript`（型）、`valibot`（定義・要求・応答のスキーマ）、`@hey-api/client-fetch` と `@hey-api/sdk`（fetch のクライアント）、`@tanstack/react-query`（Query と Mutation の options）。生成の入口ファイルは作らず、次の 3 つの入口で出し分ける。
-  - `@itera/api-contract`：型と Valibot のスキーマだけ。`services/api` はこれだけを使う。
+  - `@itera/api-contract`：型と Valibot のスキーマだけ。`services/api` はこれだけを使う。Web の本番のコードは型だけを import する（値を import するとスキーマと Valibot が本番ビルドに入る。ADR 0005「本番ビルド」）。
   - `@itera/api-contract/client`：fetch のクライアント（Web）。関数は契約の operation と読み取りだけにする（一覧のテストが、関数の export を operation として数える）。
   - `@itera/api-contract/create-client`：別のクライアントを作る `createClient`・`createConfig`。Web はデータの出どころ（API、ブラウザ内モック）ごとにクライアントを作る（#272、ADR 0005「Web のクライアントとブラウザ内モック」）。
   - `@itera/api-contract/react-query`：TanStack Query の options（Web）。React に依存する。
-  - `@itera/api-contract/requests`：操作と面の振り分け（上の「経路の形」、#295）と `queryInput`。生成物ではなく手で書く。サーバー・ブラウザ内モック・Web が使う。
+  - `@itera/api-contract/sending`：操作と面の振り分けの送る側（上の「経路の形」、#295・#356）。`routes`・`requestOf`、書き込みのヘッダーを作る `idempotencyKeyHeaders`・`conditionHeaders`。Valibot とスキーマを import しない。生成物ではなく手で書く。Web が使う。
+  - `@itera/api-contract/requests`：操作と面の振り分けの両方向（`/sending` のものに、要求を読む `surfaces`・`readRequest`・`readIdempotencyKey`・`readCondition` と `queryInput` を足す）。Valibot とスキーマを使う。生成物ではなく手で書く。サーバー・ブラウザ内モックが使う。
   - `@itera/api-contract/problems`：エラーの本文（種類ごとのステータスと `title`、domain の拒否との対応、`errors` の場所の作り方。上の「エラー」、#319）。生成物ではなく手で書く。サーバー・ブラウザ内モック・Web（`failureOf` の型、テストの応答）が使う。domain には依存しない（ADR 0007）。domain の拒否の `code` は、表のキーとして契約が自分で名前を持ち、サーバーとモックが `DomainError` の `code` で引く。domain に `code` が増えると、引く側が型の検査で失敗する。
   - `@itera/api-contract/testing`：テストの道具（操作ごとの入力の例 `OPERATION_EXAMPLES` など）。テストだけが使う。
   - `services/api` から `client`・`create-client`・`react-query` の import を ESLint の `no-restricted-imports` で止める。API が React に依存しない。
@@ -305,7 +310,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 - 一覧：生成したクライアントの operation が、`surfaces` の面、読み取りの 8 個（`getMe` を含む）、設定を作る `setSettings`（`settingsSurface`）に一致し、`operations` のすべての名前が面のどれかに行く。`@itera/application` の関数の export のうち、読み取りでも操作の道具でもないものがあれば失敗する（読み取りを足したら契約にも足す）。
 - 往復（`src/requests.test.ts`）：操作ごとの入力の例（`OPERATION_EXAMPLES`。省略できる項目の有無を含む）を `requestOf` で要求にし、面のスキーマで検証して `operation` に通すと、同じ操作と入力に戻る。面のメソッドと経路が、生成したクライアントの関数が送るものと同じ。面のスキーマのすべての項目を、どれかの操作の要求が使う。すべての経路と query の名前が kebab-case。
-- 型：各操作の入力と要求は `requests.ts` の中で生成した型に対して型検査する。出力と応答（1 つの操作だけの面は同じ型、いくつかの操作の面は各出力が応答に合い、合わせて応答の項目になる）、各読み取りの結果と応答の `view`（`undefined` は `null`）と `clock` が、型として同じ（片方への代入ができるだけでなく、余分な・欠けたキーもない）。比べる前に、両方から brand（ID・日付）と `readonly` を外す。`pnpm typecheck` で確かめる。このテストは、今は application の結果から DTO への写像が恒等であることを確かめるもので、application の形が契約の正本であることを示すものではない（契約の正本は `openapi/`）。内部の変更で型が合わなくなったら、意図した契約の変更でない限り、契約は直さずに `services/api` に写像を置く（ADR 0007「アプリケーション層の読み取りと API の DTO」）。
+- 型：各操作の入力と要求は `sending.ts` の中で（受け取った要求から作る操作の入力は `requests.ts` の中で）生成した型に対して型検査する。出力と応答（1 つの操作だけの面は同じ型、いくつかの操作の面は各出力が応答に合い、合わせて応答の項目になる）、各読み取りの結果と応答の `view`（`undefined` は `null`）と `clock` が、型として同じ（片方への代入ができるだけでなく、余分な・欠けたキーもない）。比べる前に、両方から brand（ID・日付）と `readonly` を外す。`pnpm typecheck` で確かめる。このテストは、今は application の結果から DTO への写像が恒等であることを確かめるもので、application の形が契約の正本であることを示すものではない（契約の正本は `openapi/`）。内部の変更で型が合わなくなったら、意図した契約の変更でない限り、契約は直さずに `services/api` に写像を置く（ADR 0007「アプリケーション層の読み取りと API の DTO」）。
 - fixture：PRD §12 の 12 状態で、すべての読み取り（Backlog の絞り込みごと、すべての Sprint の番号と次の週、昨日と明日）の結果を JSON にして `{ clock, view }` で包み、生成した応答のスキーマで検証する。
 - エラー：`problems.ts` が作る本文が、種類ごとに契約のスキーマを通る（`src/problems.test.ts`）。生成した型で、すべての operation のエラーの応答が `unknown` でなく Problem の型になる（`src/generated.test.ts`。Hey API 0.99.0 は `application/problem+json` の応答も `application/json` と同じく読む）。サーバーのテストは、エラーの応答の `Content-Type`・本文の `status`・そのステータスのスキーマを確かめる（`services/api/src/test-problems.ts`）。
 - ID：各種類の ID のスキーマが、`parseId` と同じものを受け付ける。型のテストは ID を文字列として比べるので、各操作の入力のどこがどの種類の ID を取るかは別に確かめる：application の入力の型から求めた種類の表（`pnpm typecheck` で型と照合）に沿って、例の入力の ID を別の種類の ID に替えると、その要求を面のスキーマが断る（`src/id-kinds.test.ts`）。
@@ -388,6 +393,6 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 ## 影響
 
 - `services/api`（#266）は、`@itera/api-contract` のスキーマで入力を検証し、この ADR の割り当てでエラーを返す。書き込みは `@itera/api-contract/requests` の面をすべて登録し（#295）、読み取りは `reads.ts` の登録表に足す。契約のすべての面と読み取り（`getMe` のほか）が登録されていることはテストで確かめる（#270 で全部の領域がそろい、未実装の一覧はなくなった）。
-- `apps/web`（#272）は、`@itera/api-contract/client` と `/react-query` を使い、`@tanstack/react-query` 5.104.1 を入れる。操作は `useOperation('<名前>')` で、`@itera/api-contract/requests` を通して送る（#295）。
+- `apps/web`（#272）は、`@itera/api-contract/client` と `/react-query` を使い、`@tanstack/react-query` 5.104.1 を入れる。操作は `useOperation('<名前>')` で、`@itera/api-contract/sending` を通して送る（#295。#356 で `/requests` から分けた）。
 - iOS・Android は、`openapi/` を 1 ファイルにまとめたもの（`redocly bundle`）から生成できる。セッションの Cookie と書き込みの Origin の検査（ADR 0004）は、Origin を送らないネイティブのクライアントでは 403 になるので、ネイティブの認証の方式は iOS に着手するときに決める。
 - 契約を変えるときは、`openapi/` を直し、`pnpm contract:generate` を実行して、生成物と一緒にコミットする。

@@ -1,4 +1,4 @@
-import type { MadeFrom } from '@itera/api-contract/requests';
+import type { MadeFrom } from '@itera/api-contract/sending';
 import { Info } from 'lucide-react';
 import { useId } from 'react';
 import type { Saved } from '@/api/use-operation';

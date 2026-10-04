@@ -3,7 +3,7 @@
 // (one that may have been saved reads again first, and is sent again with
 // its Idempotency-Key first, #320), no session goes to sign in, and a second
 // press while sending sends nothing.
-import type { MadeFrom } from '@itera/api-contract/requests';
+import type { MadeFrom } from '@itera/api-contract/sending';
 import {
   createClient,
   createConfig,

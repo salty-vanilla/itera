@@ -1,6 +1,8 @@
 // The production build holds neither the browser mock nor the fixture
-// (ADR 0005 本番ビルドの fixture, #272). Run after `vite build`: fails when
-// the output names the mock's header or a fixture state.
+// (ADR 0005 本番ビルドの fixture, #272), nor Valibot, which only the mock
+// uses to check requests (ADR 0005 本番ビルド, #356). Run after `vite
+// build`: fails when the output names the mock's header, a fixture state or
+// Valibot.
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,13 +11,14 @@ const dist = fileURLToPath(new URL('../dist', import.meta.url));
 
 // The mock's answers carry this header (src/mock/mock-api.ts); the fixture
 // states are named by these IDs (packages/application's fixtures, the dev
-// menu).
+// menu); every Valibot schema names its library (`vendor`, Standard Schema).
 const MARKERS = [
   'x-itera-browser-mock',
   'today-daytime',
   'planning-pick',
   'retro-before-complete',
   'backlog-recurrence',
+  'valibot',
 ];
 
 const files = (await readdir(dist, { recursive: true })).filter((f) =>
@@ -30,8 +33,10 @@ for (const file of files) {
     if (text.includes(marker)) found.push(`${file}: ${marker}`);
 }
 if (found.length > 0) {
-  console.error('The production build holds the mock or the fixture:');
+  console.error('The production build holds the mock, the fixture or Valibot:');
   for (const line of found) console.error(`  ${line}`);
   process.exit(1);
 }
-console.log(`No mock or fixture in ${files.length} files of the build.`);
+console.log(
+  `No mock, fixture or Valibot in ${files.length} files of the build.`,
+);

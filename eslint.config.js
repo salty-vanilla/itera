@@ -423,8 +423,8 @@ export default defineConfig(
   },
   {
     // packages/api-contract depends on packages/application by its types
-    // only: the operations' names and inputs that requests.ts carries
-    // (ADR 0006 経路の形, ADR 0007 依存の向き). Its runtime stays the
+    // only: the operations' names and inputs that sending.ts and requests.ts
+    // carry (ADR 0006 経路の形, ADR 0007 依存の向き). Its runtime stays the
     // contract's: the generated code and Valibot. testing.ts and the tests
     // run the application (examples, IDs).
     files: ['packages/api-contract/src/**/*.ts'],

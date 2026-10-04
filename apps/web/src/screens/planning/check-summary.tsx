@@ -1,4 +1,4 @@
-import type { MadeFrom } from '@itera/api-contract/requests';
+import type { MadeFrom } from '@itera/api-contract/sending';
 import type { TaskId } from '@itera/api-contract';
 import { Link } from '@tanstack/react-router';
 import { Info } from 'lucide-react';
