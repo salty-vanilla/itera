@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
+import { sameWords, useDraftField } from '@/lib/use-draft-field';
 import {
   useAreaActions,
   useAreas,
@@ -260,7 +261,12 @@ function EditRow({
   onArchive: () => void;
   onCancel: () => void;
 }) {
-  const [name, setName] = useState(area.name);
+  // Typed apart from the Area as read: the form shows the name as it is now
+  // until it is typed in, and 名前を変える on a name nothing was typed in
+  // changes nothing, so that the name it opened with never goes over another
+  // device's (#324).
+  const nameField = useDraftField(area.name, sameWords);
+  const name = nameField.value;
   const [error, setError] = useState<string>();
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(
@@ -282,6 +288,10 @@ function EditRow({
             inputRef.current?.focus();
             return;
           }
+          if (!nameField.edited) {
+            onCancel();
+            return;
+          }
           onRename(name.trim());
         }}
       >
@@ -299,7 +309,7 @@ function EditRow({
             value={name}
             enterKeyHint="done"
             prefix={<AreaMark name={name || area.name} color={area.color} />}
-            onChange={(e) => setName(e.currentTarget.value)}
+            onChange={(e) => nameField.set(e.currentTarget.value)}
             onKeyDown={(e) => {
               // Esc goes back to the row rather than closing the Dialog.
               // While converting Japanese input it only closes the IME.

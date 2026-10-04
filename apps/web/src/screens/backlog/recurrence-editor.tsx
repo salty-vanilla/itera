@@ -22,6 +22,7 @@ import {
   WEEK_ORDER,
   WEEKDAY_NAMES,
 } from '@/lib/recurrence-text';
+import { useDraftField } from '@/lib/use-draft-field';
 import { useRecurrenceActions } from '@/screen-data/use-task-actions';
 
 // 繰り返し (PRD §6 Recurrence, F1, F7, F12, F15, F41). Like the other fields
@@ -81,12 +82,43 @@ function resultText(result: Result): string {
 }
 
 /** The choice the editor starts from: the latest version, or none yet. */
-function choiceOf(latest: RecurrencePattern | undefined) {
+type Choice = {
+  freq: Freq;
+  days: readonly DayOfWeek[];
+  dayOfMonth: number;
+};
+
+/** The weekdays and the day of the month the rule had last, for a switch back. */
+type Kept = Pick<Choice, 'days' | 'dayOfMonth'>;
+
+const NOTHING_KEPT: Kept = { days: [], dayOfMonth: 1 };
+
+/** What is kept once the rule is `latest`: its own, else what was kept. */
+function keptOf(latest: RecurrencePattern | undefined, before: Kept): Kept {
   return {
-    freq: latest?.freq ?? 'weekly',
-    days: latest?.freq === 'weekly' ? latest.daysOfWeek : [],
-    dayOfMonth: latest?.freq === 'monthly' ? latest.dayOfMonth : 1,
-  } satisfies { freq: Freq; days: readonly DayOfWeek[]; dayOfMonth: number };
+    days: latest?.freq === 'weekly' ? latest.daysOfWeek : before.days,
+    dayOfMonth:
+      latest?.freq === 'monthly' ? latest.dayOfMonth : before.dayOfMonth,
+  };
+}
+
+function choiceOf(
+  latest: RecurrencePattern | undefined,
+  kept: Kept = NOTHING_KEPT,
+): Choice {
+  return { freq: latest?.freq ?? 'weekly', ...keptOf(latest, kept) };
+}
+
+/** The same choice: the frequency, and the weekdays or the day it takes. */
+function sameChoice(a: Choice, b: Choice): boolean {
+  if (a.freq !== b.freq) return false;
+  if (a.freq === 'monthly') return a.dayOfMonth === b.dayOfMonth;
+  if (a.freq === 'weekly') return sameDays(a.days, b.days);
+  return true;
+}
+
+function sameDays(a: readonly DayOfWeek[], b: readonly DayOfWeek[]): boolean {
+  return a.length === b.length && a.every((d) => b.includes(d));
 }
 
 function RecurrenceEditor({
@@ -107,13 +139,20 @@ function RecurrenceEditor({
   const endsOn = item.recurrence?.endsOn;
   // A change starts from the latest version (it may begin next Sprint).
   const latest = rule?.latest;
-  const [freq, setFreq] = useState<Freq>(() => choiceOf(latest).freq);
-  const [days, setDays] = useState<readonly DayOfWeek[]>(
-    () => choiceOf(latest).days,
-  );
-  const [dayOfMonth, setDayOfMonth] = useState(
-    () => choiceOf(latest).dayOfMonth,
-  );
+  // The choice is the latest version as read until it is changed here, so
+  // that a choice made on another device shows, and a change saves the
+  // choice as it is now with the one thing changed (#324).
+  // The days and the day of the month it had last stay for a switch back
+  // (「Back to weekly with the days it had」, #171).
+  const [kept, setKept] = useState(() => keptOf(latest, NOTHING_KEPT));
+  const nextKept = keptOf(latest, kept);
+  if (
+    !sameDays(nextKept.days, kept.days) ||
+    nextKept.dayOfMonth !== kept.dayOfMonth
+  )
+    setKept(nextKept);
+  const choice = useDraftField(choiceOf(latest, kept), sameChoice);
+  const { freq, days, dayOfMonth } = choice.value;
   const daysRef = useRef<HTMLFieldSetElement>(null);
   const createRef = useRef<HTMLButtonElement>(null);
   const freqRef = useRef<HTMLSelectElement>(null);
@@ -153,22 +192,23 @@ function RecurrenceEditor({
     next: Freq,
     nextDays: readonly DayOfWeek[],
     nextDayOfMonth: number,
-  ) {
+  ): Promise<boolean> {
     if (next === 'weekly' && nextDays.length === 0) {
       setError('曜日を 1つ以上選んでください');
-      return;
+      return false;
     }
     setError(undefined);
     const outcome = await actions.setRecurrence(
       task.id,
       patternOf(next, nextDays, nextDayOfMonth),
     );
-    if (!outcome.ok) return;
+    if (!outcome.ok) return false;
     setResult(
       outcome.effectiveFrom === undefined
         ? { kind: 'unchanged' }
         : { kind: 'applied', effectiveFrom: outcome.effectiveFrom },
     );
+    return true;
   }
 
   // With a rule, a choice is saved as it is made; without one, the button.
@@ -180,10 +220,7 @@ function RecurrenceEditor({
     setError(undefined);
     if (outcome.removed === true) {
       // Back to making a rule, from the choice it starts from.
-      const base = choiceOf(undefined);
-      setFreq(base.freq);
-      setDays(base.days);
-      setDayOfMonth(base.dayOfMonth);
+      choice.put(choiceOf(undefined));
       setResult({ kind: 'removed' });
     } else {
       setResult({ kind: 'ended' });
@@ -191,24 +228,24 @@ function RecurrenceEditor({
   }
 
   function onFreq(next: Freq) {
-    setFreq(next);
+    choice.set({ freq: next, days, dayOfMonth });
     setError(undefined);
     // A weekly choice has no day yet: nothing to save, nothing to blame.
     if (saves && !(next === 'weekly' && days.length === 0)) {
-      save(next, days, dayOfMonth);
+      choice.hold(save(next, days, dayOfMonth));
     }
   }
 
   function onDay(day: DayOfWeek, checked: boolean) {
     const next = checked ? [...days, day] : days.filter((x) => x !== day);
-    setDays(next);
-    if (saves) save('weekly', next, dayOfMonth);
+    choice.set({ freq, days: next, dayOfMonth });
+    if (saves) choice.hold(save('weekly', next, dayOfMonth));
     else setError(undefined);
   }
 
   function onDayOfMonth(next: number) {
-    setDayOfMonth(next);
-    if (saves) save('monthly', days, next);
+    choice.set({ freq, days, dayOfMonth: next });
+    if (saves) choice.hold(save('monthly', days, next));
   }
 
   return (
@@ -312,7 +349,7 @@ function RecurrenceEditor({
             <div>
               <Button
                 ref={createRef}
-                onClick={() => save(freq, days, dayOfMonth)}
+                onClick={() => choice.hold(save(freq, days, dayOfMonth))}
               >
                 繰り返しにする
               </Button>

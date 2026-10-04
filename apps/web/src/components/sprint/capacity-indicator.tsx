@@ -7,9 +7,10 @@ import {
   DURATION_ZERO_ERROR,
   hoursText,
   readMinutes,
-  sameMinutes,
+  sameDuration,
   type DurationText,
 } from '@/lib/duration-text';
+import { useDraftField } from '@/lib/use-draft-field';
 import {
   formatHours,
   formatLeftOut,
@@ -448,8 +449,8 @@ function Headline({
 
 /**
  * The available hours, saved on leaving the fields or Enter. It follows a
- * value changed elsewhere and goes back to the saved value when saving
- * fails. Also used on the running Sprint's screen (#51).
+ * value changed elsewhere (except while it is being typed in) and goes back
+ * to the saved value when saving fails. Also used on the running Sprint's screen (#51).
  */
 function AvailableHoursField({
   value,
@@ -463,15 +464,9 @@ function AvailableHoursField({
   label?: string;
   description?: string;
 }) {
-  const saved = hoursText(value);
-  const [text, setText] = useState(saved);
+  const field = useDraftField(hoursText(value), sameDuration);
+  const text = field.value;
   const [error, setError] = useState<string>();
-  const [last, setLast] = useState(value);
-  // Follow a value changed elsewhere (another fixture state, 元に戻す).
-  if (value !== last) {
-    setLast(value);
-    setText(saved);
-  }
   function commit(typed: DurationText) {
     const minutes = readMinutes(typed);
     if (minutes === null) {
@@ -479,11 +474,16 @@ function AvailableHoursField({
       return;
     }
     setError(undefined);
-    if (sameMinutes(minutes, value)) return;
-    void Promise.resolve(
+    // Compared with what the field showed when it was typed in, not with
+    // the value as read since: a field left as it was saves nothing (#324).
+    if (!field.leave()) return;
+    const saving = Promise.resolve(
       onChange(minutes === undefined ? null : minutes / 60),
-    ).then((done) => {
-      if (!done) setText(saved);
+    );
+    field.hold(saving);
+    // A save that fails goes back to the value as read.
+    void saving.then((done) => {
+      if (!done) field.drop();
     });
   }
   return (
@@ -492,7 +492,7 @@ function AvailableHoursField({
       description={description}
       error={error}
       value={text}
-      onChange={setText}
+      onChange={field.set}
       onCommit={commit}
     />
   );

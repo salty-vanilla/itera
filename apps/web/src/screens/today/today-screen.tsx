@@ -271,9 +271,12 @@ function TodayView({ data }: { data: TodayData }) {
   const backlog = useBacklog({});
   const [editing, setEditing] = useState<Editing | undefined>(undefined);
   const [interrupting, setInterrupting] = useState(false);
-  const [editingNote, setEditingNote] = useState<InterruptNote | undefined>(
-    undefined,
-  );
+  // The note being edited is the one as read now: the sheet shows another
+  // device's change to it, and a note that is gone closes the sheet (#324).
+  const [editingNoteId, setEditingNoteId] = useState<InterruptNote['id']>();
+  const editingNote = data.interrupts.find((n) => n.id === editingNoteId);
+  if (editingNoteId !== undefined && editingNote === undefined)
+    setEditingNoteId(undefined);
   const toast = useToast();
   const [quickArea, setQuickArea] = useState('');
   const newArea = useNewAreaDialog();
@@ -759,7 +762,7 @@ function TodayView({ data }: { data: TodayData }) {
                     <InterruptRow
                       note={n}
                       time={formatTime(n.at, data.timeZone)}
-                      onEdit={() => setEditingNote(n)}
+                      onEdit={() => setEditingNoteId(n.id)}
                       onDelete={() => deleteInterrupt(n)}
                     />
                   </li>
@@ -850,7 +853,7 @@ function TodayView({ data }: { data: TodayData }) {
           key={editingNote.id}
           open
           onOpenChange={(open) => {
-            if (!open) setEditingNote(undefined);
+            if (!open) setEditingNoteId(undefined);
           }}
           editing={{
             text: editingNote.text,

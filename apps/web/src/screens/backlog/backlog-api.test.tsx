@@ -26,8 +26,16 @@ import {
   it,
   vi,
 } from 'vitest';
+import {
+  renameArea,
+  saveTask,
+  setRecurrence,
+  updateSubtask,
+} from '@itera/api-contract/client';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { createMock } from '@/mock/mock-api';
+import { getHours } from '@/test/duration';
+import { comeBack, otherDevice, until } from '@/test/other-device';
 import { problemResponse } from '@/test/problem';
 
 type CreateAppRouter = typeof import('@/app/router').createAppRouter;
@@ -238,6 +246,51 @@ describe('the Backlog on the API', () => {
     expect(screen.queryByText('保存できませんでした')).toBeNull();
   });
 
+  it('keeps a weekday ticked while an earlier save is read again and a later one is still sent', async () => {
+    const { store } = serve(
+      (request) =>
+        request.method === 'GET'
+          ? undefined
+          : new Promise<undefined>((resolve) => setTimeout(resolve, 150)).then(
+              () => undefined,
+            ),
+      'backlog-recurrence',
+    );
+    const router = renderBacklog();
+    await list();
+    await router.navigate({
+      to: '/backlog',
+      search: { task: ids.task.cleaning },
+    });
+    const detail = await screen.findByRole('dialog', { name: '部屋の掃除' });
+    const days = within(
+      within(detail).getByRole('region', { name: '繰り返し' }),
+    ).getByRole('group', { name: '曜日' });
+    const tick = (name: string) => within(days).getByRole('checkbox', { name });
+    const wanted = ['火', '水', '木'].filter(
+      (name) => tick(name).getAttribute('aria-checked') !== 'true',
+    );
+    expect(wanted).toHaveLength(3);
+    await userEvent.click(tick(wanted[0]!));
+    await userEvent.click(tick(wanted[1]!));
+    // The first is saved and read again; the second is still on its way.
+    await new Promise((resolve) => setTimeout(resolve, 230));
+    expect(tick(wanted[1]!).getAttribute('aria-checked')).toBe('true');
+    await userEvent.click(tick(wanted[2]!));
+    await until(() => {
+      const rule = store
+        .getSnapshot()
+        .records.rules.find((r) => r.taskId === ids.task.cleaning);
+      const latest = rule?.versions.at(-1)?.pattern;
+      expect(latest && 'daysOfWeek' in latest ? latest.daysOfWeek : []).toEqual(
+        expect.arrayContaining([2, 3, 4]),
+      );
+    });
+    for (const name of wanted) {
+      expect(tick(name).getAttribute('aria-checked')).toBe('true');
+    }
+  });
+
   it('saves both weekdays ticked while the first is sent', async () => {
     const { store } = serve(slow(150), 'backlog-recurrence');
     const router = renderBacklog();
@@ -267,5 +320,319 @@ describe('the Backlog on the API', () => {
       );
     });
     expect(screen.queryByText('保存できませんでした')).toBeNull();
+  });
+
+  // A field left as it was saves nothing: the other device's value is not
+  // written over by the one the field was opened with (#324).
+  describe('when another device has saved what the detail shows (#324)', () => {
+    type TextField = {
+      name: string;
+      /** The field, found again each time: the detail may draw it anew. */
+      find: (detail: HTMLElement) => HTMLInputElement | HTMLTextAreaElement;
+      theirs: Parameters<typeof saveTask>[0]['body'];
+      /** What the Task record holds once the other device has saved. */
+      theirsRecord: object;
+      shown: string;
+      typed: string;
+      /** What it holds once what was typed is saved. */
+      typedRecord: object;
+      /** The value a person's typing makes (the estimate is in two fields). */
+      type: (field: HTMLElement, text: string) => Promise<void>;
+    };
+    const fields: TextField[] = [
+      {
+        name: 'タイトル',
+        find: (detail) =>
+          within(detail).getByRole('textbox', { name: /タイトル/ }),
+        theirs: { title: 'スマホで直した題名' },
+        theirsRecord: { title: 'スマホで直した題名' },
+        shown: 'スマホで直した題名',
+        typed: 'PC で直した題名',
+        typedRecord: { title: 'PC で直した題名' },
+        type: async (field, text) => {
+          await userEvent.clear(field);
+          await userEvent.type(field, text);
+        },
+      },
+      {
+        name: '説明',
+        find: (detail) => within(detail).getByRole('textbox', { name: /説明/ }),
+        theirs: { description: 'スマホで書いた説明' },
+        theirsRecord: { description: 'スマホで書いた説明' },
+        shown: 'スマホで書いた説明',
+        typed: 'PC で書いた説明',
+        typedRecord: { description: 'PC で書いた説明' },
+        type: async (field, text) => {
+          await userEvent.clear(field);
+          await userEvent.type(field, text);
+        },
+      },
+      {
+        name: '期限',
+        find: (detail) => within(detail).getByLabelText(/期限/),
+        theirs: { due: '2026-10-20' },
+        theirsRecord: { due: '2026-10-20' },
+        shown: '2026-10-20',
+        typed: '2026-10-25',
+        typedRecord: { due: '2026-10-25' },
+        type: async (field, text) => {
+          await userEvent.clear(field);
+          await userEvent.type(field, text);
+        },
+      },
+      {
+        name: '見積もり',
+        find: (detail) => getHours(within(detail), /^見積もり(?!：)/),
+        theirs: { estimate: 3 },
+        theirsRecord: { estimate: { hours: 3 } },
+        shown: '3',
+        typed: '5',
+        typedRecord: { estimate: { hours: 5 } },
+        type: async (field, text) => {
+          await userEvent.clear(field);
+          await userEvent.type(field, text);
+        },
+      },
+    ];
+
+    async function openDetail(field: TextField) {
+      const served = serve(undefined, 'backlog-capture');
+      renderBacklog();
+      const rows = await list();
+      await userEvent.click(
+        within(rows).getByRole('button', { name: '本棚を整理する' }),
+      );
+      const detail = await screen.findByRole('dialog', {
+        name: '本棚を整理する',
+      });
+      // The description is folded until it has a value.
+      if (field.name === '説明') {
+        await userEvent.click(
+          within(detail).getByRole('button', { name: '詳しく' }),
+        );
+      }
+      return { ...served, detail };
+    }
+    const saves = (requests: string[]) =>
+      requests.filter((r) => r.startsWith('PATCH /api/tasks/'));
+
+    it.each(fields)(
+      "sends nothing on leaving $name unedited, and shows the other device's value",
+      async (field) => {
+        const { store, requests, detail } = await openDetail(field);
+        await saveTask({
+          client: otherDevice(store),
+          path: { taskId: ids.task.bookshelf },
+          body: field.theirs,
+        });
+        comeBack();
+        await until(() => expect(field.find(detail).value).toBe(field.shown));
+        const before = saves(requests).length;
+        await userEvent.click(field.find(detail));
+        await userEvent.tab();
+        expect(saves(requests)).toHaveLength(before);
+        expect(field.find(detail).value).toBe(field.shown);
+        // The record is still the other device's.
+        expect(
+          store
+            .getSnapshot()
+            .records.tasks.find((t) => t.id === ids.task.bookshelf),
+        ).toMatchObject(field.theirsRecord);
+      },
+    );
+
+    it.each(fields)('saves $name typed in, as it did', async (field) => {
+      const { store, requests, detail } = await openDetail(field);
+      await field.type(field.find(detail), field.typed);
+      await userEvent.tab();
+      // The estimate is saved on leaving 分, after 時間.
+      if (field.name === '見積もり') await userEvent.tab();
+      await until(() => expect(saves(requests)).toHaveLength(1));
+      expect(
+        store
+          .getSnapshot()
+          .records.tasks.find((t) => t.id === ids.task.bookshelf),
+      ).toMatchObject(field.typedRecord);
+    });
+
+    it("sends nothing on leaving a Subtask's Estimate unedited, and shows the other device's value", async () => {
+      const { store, requests } = serve(undefined, 'backlog-detail');
+      const router = renderBacklog();
+      await list();
+      await router.navigate({
+        to: '/backlog',
+        search: { task: ids.task.dataset },
+      });
+      const detail = await screen.findByRole('dialog');
+      const field = () =>
+        getHours(within(detail), /^見積もり：欠損値を確認する/);
+      const subtask = store
+        .getSnapshot()
+        .records.tasks.find((t) => t.id === ids.task.dataset)!.subtasks[0]!;
+      await updateSubtask({
+        client: otherDevice(store),
+        path: { taskId: ids.task.dataset, subtaskId: subtask.id },
+        body: { hours: 3 },
+      });
+      comeBack();
+      await until(() => expect(field().value).toBe('3'));
+      const before = saves(requests).length;
+      await userEvent.click(field());
+      await userEvent.tab();
+      expect(saves(requests)).toHaveLength(before);
+      expect(
+        requests.filter(
+          (r) => r.includes('/subtasks/') && r.startsWith('PATCH'),
+        ),
+      ).toHaveLength(0);
+      expect(field().value).toBe('3');
+    });
+
+    it("saves a Subtask's Estimate typed in, as it did", async () => {
+      const { store, requests } = serve(undefined, 'backlog-detail');
+      const router = renderBacklog();
+      await list();
+      await router.navigate({
+        to: '/backlog',
+        search: { task: ids.task.dataset },
+      });
+      const detail = await screen.findByRole('dialog');
+      const field = getHours(within(detail), /^見積もり：欠損値を確認する/);
+      await userEvent.clear(field);
+      await userEvent.type(field, '4');
+      // Left from 分, after 時間.
+      await userEvent.tab();
+      await userEvent.tab();
+      await until(() =>
+        expect(
+          store
+            .getSnapshot()
+            .records.tasks.find((t) => t.id === ids.task.dataset)!.subtasks[0]!
+            .estimate,
+        ).toBe(4),
+      );
+      expect(
+        requests.filter(
+          (r) => r.includes('/subtasks/') && r.startsWith('PATCH'),
+        ),
+      ).toHaveLength(1);
+    });
+
+    it('follows the other device again after a title typed and typed back with spaces around it', async () => {
+      const { store, requests, detail } = await openDetail(fields[0]!);
+      const title = () =>
+        within(detail).getByRole('textbox', {
+          name: /タイトル/,
+        }) as HTMLInputElement;
+      await userEvent.type(title(), ' ');
+      await userEvent.tab();
+      expect(saves(requests)).toHaveLength(0);
+      await saveTask({
+        client: otherDevice(store),
+        path: { taskId: ids.task.bookshelf },
+        body: { title: 'スマホで直した題名' },
+      });
+      comeBack();
+      // Not an edit: the field goes on following what is read.
+      await until(() => expect(title().value).toBe('スマホで直した題名'));
+    });
+
+    it('shows a recurrence another device has set, and changes one thing of it', async () => {
+      const { store } = serve(undefined, 'backlog-recurrence');
+      const router = renderBacklog();
+      await list();
+      await router.navigate({
+        to: '/backlog',
+        search: { task: ids.task.cleaning },
+      });
+      const detail = await screen.findByRole('dialog', { name: '部屋の掃除' });
+      const days = () =>
+        within(
+          within(detail).getByRole('region', { name: '繰り返し' }),
+        ).getByRole('group', { name: '曜日' });
+      const tick = (name: string) =>
+        within(days()).getByRole('checkbox', { name });
+      await setRecurrence({
+        client: otherDevice(store),
+        path: { taskId: ids.task.cleaning },
+        body: { pattern: { freq: 'weekly', daysOfWeek: [1, 3, 5] } },
+      });
+      comeBack();
+      await until(() => {
+        expect(tick('月').getAttribute('aria-checked')).toBe('true');
+        expect(tick('金').getAttribute('aria-checked')).toBe('true');
+      });
+      await userEvent.click(tick('火'));
+      await until(() => {
+        const rule = store
+          .getSnapshot()
+          .records.rules.find((r) => r.taskId === ids.task.cleaning);
+        const latest = rule?.versions.at(-1)?.pattern;
+        // The other device's days are kept; one is added.
+        expect(latest).toMatchObject({ freq: 'weekly' });
+        expect(
+          latest && 'daysOfWeek' in latest ? [...latest.daysOfWeek].sort() : [],
+        ).toEqual([1, 2, 3, 5]);
+      });
+    });
+
+    it("sends nothing on 名前を変える for an Area's name unedited, and shows the other device's name", async () => {
+      const { store, requests } = serve(undefined, 'backlog-capture');
+      renderBacklog();
+      await list();
+      await userEvent.click(screen.getByRole('button', { name: '領域を編集' }));
+      const dialog = await screen.findByRole('dialog', { name: '領域を編集' });
+      await userEvent.click(
+        within(dialog).getByRole('button', { name: '「仕事」を編集' }),
+      );
+      await renameArea({
+        client: otherDevice(store),
+        path: { areaId: ids.area.work },
+        body: { name: 'スマホで直した名前' },
+      });
+      comeBack();
+      const field = () =>
+        within(dialog).getByRole('textbox', {
+          name: /の名前/,
+        }) as HTMLInputElement;
+      await until(() => expect(field().value).toBe('スマホで直した名前'));
+      const before = requests.filter((r) => r.startsWith('PATCH')).length;
+      await userEvent.click(
+        within(dialog).getByRole('button', { name: '名前を変える' }),
+      );
+      expect(requests.filter((r) => r.startsWith('PATCH'))).toHaveLength(
+        before,
+      );
+      expect(
+        store.getSnapshot().records.areas.find((a) => a.id === ids.area.work)
+          ?.name,
+      ).toBe('スマホで直した名前');
+    });
+
+    it('renames an Area when its name is typed in, as it did', async () => {
+      const { store } = serve(undefined, 'backlog-capture');
+      renderBacklog();
+      await list();
+      await userEvent.click(screen.getByRole('button', { name: '領域を編集' }));
+      const dialog = await screen.findByRole('dialog', { name: '領域を編集' });
+      await userEvent.click(
+        within(dialog).getByRole('button', { name: '「仕事」を編集' }),
+      );
+      const field = within(dialog).getByRole('textbox', { name: /の名前/ });
+      // The row takes the focus and selects the name a moment after it
+      // opens: typing before that would be typed over.
+      await until(() => expect(document.activeElement).toBe(field));
+      await userEvent.clear(field);
+      await userEvent.type(field, '勤務');
+      await userEvent.click(
+        within(dialog).getByRole('button', { name: '名前を変える' }),
+      );
+      await until(() =>
+        expect(
+          store.getSnapshot().records.areas.find((a) => a.id === ids.area.work)
+            ?.name,
+        ).toBe('勤務'),
+      );
+    });
   });
 });
