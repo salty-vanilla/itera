@@ -173,9 +173,6 @@ export type TaskAttributeUpdate = PlainInput<'saveTask'>['update'];
 /** The operationId of a surface: a write of the contract. */
 export type SurfaceId = keyof Datas;
 
-/** A surface's request, as generated (`<OperationId>Data`). */
-export type SurfaceData<S extends SurfaceId> = Datas[S];
-
 /**
  * The request's parts of a surface, as the generated client takes them.
  * The Idempotency-Key is not a part of the operation: the sender adds it

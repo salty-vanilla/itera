@@ -25,7 +25,7 @@ import {
   routes,
   type Plain,
   type Route,
-  type SurfaceData,
+  type RequestParts,
   type SurfaceId,
 } from './sending';
 
@@ -41,9 +41,9 @@ export type Call = {
 
 /** A surface's request after its schemas have checked it. */
 type Checked<S extends SurfaceId> = {
-  readonly path: NonNullable<SurfaceData<S>['path']>;
-  readonly query: NonNullable<SurfaceData<S>['query']>;
-  readonly body: NonNullable<SurfaceData<S>['body']>;
+  readonly [K in 'path' | 'query' | 'body']-?: NonNullable<
+    RequestParts<S>[K & keyof RequestParts<S>]
+  >;
 };
 
 /** A surface's route with the contract's schemas and its operations. */
