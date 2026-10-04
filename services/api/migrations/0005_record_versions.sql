@@ -4,6 +4,7 @@ ALTER TABLE `criterion_use` ADD `revision` integer DEFAULT 0 NOT NULL;--> statem
 ALTER TABLE `daily_selection` ADD `revision` integer DEFAULT 0 NOT NULL;--> statement-breakpoint
 ALTER TABLE `estimate_suggestion` ADD `revision` integer DEFAULT 0 NOT NULL;--> statement-breakpoint
 ALTER TABLE `estimate_suggestion_uncertainty` ADD `revision` integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE `idempotency_key` ADD `etag` text;--> statement-breakpoint
 ALTER TABLE `interrupt_note` ADD `revision` integer DEFAULT 0 NOT NULL;--> statement-breakpoint
 ALTER TABLE `occurrence` ADD `revision` integer DEFAULT 0 NOT NULL;--> statement-breakpoint
 ALTER TABLE `planning_criterion` ADD `revision` integer DEFAULT 0 NOT NULL;--> statement-breakpoint

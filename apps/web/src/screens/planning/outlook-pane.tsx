@@ -1,3 +1,4 @@
+import type { MadeFrom } from '@itera/api-contract/requests';
 import { Info } from 'lucide-react';
 import { useId } from 'react';
 import { Divider } from '@/components/ui/divider';
@@ -28,7 +29,8 @@ type OutlookPaneProps = {
   sheet?: boolean | undefined;
   /** Absent: no field for the available hours (確かめる has its own). */
   onAvailableHours?:
-    ((hours: number | null) => boolean | Promise<boolean>) | undefined;
+    | ((hours: number | null, from: MadeFrom) => boolean | Promise<boolean>)
+    | undefined;
   className?: string | undefined;
 };
 
@@ -100,6 +102,7 @@ function OutlookPane({
         areas={areas}
         breakdownOnly={check}
         onAvailableHoursChange={onAvailableHours}
+        sprintEtag={data.sprint.etag}
       />
     </div>
   );

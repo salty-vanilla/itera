@@ -1,4 +1,5 @@
 import type { Records, RecordVersions } from '@itera/application';
+import type { Answer } from './idempotency';
 import type { LocalDate } from '@itera/domain';
 
 // The shapes this layer reads and writes are packages/application's:
@@ -29,6 +30,8 @@ export type SaveResult =
       readonly revision: number;
       /** The versions as of this save: the loaded ones, with what it wrote. */
       readonly versions: RecordVersions;
+      /** The write's answer, made from those versions, when it had one. */
+      readonly answer?: Answer;
     }
   /**
    * Another save went in after the records were loaded. Nothing was

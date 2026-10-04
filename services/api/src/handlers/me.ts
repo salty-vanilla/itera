@@ -42,10 +42,11 @@ export async function getMe(c: Context<AppEnv>, flow: Flow) {
  */
 export async function putSettings(c: Context<AppEnv>, flow: Flow) {
   const body = validate(settingsSurface.body, await jsonBody(c.req), 'body');
-  const answer = await flow.setUp(c, body, ({ created, settings }) =>
-    created
+  const answer = await flow.setUp(c, body, ({ created, settings }) => ({
+    ...(created
       ? answerOf(settingsSurface.status.created, settings)
-      : answerOf(settingsSurface.status.written, undefined),
-  );
+      : answerOf(settingsSurface.status.written, undefined)),
+    etag: null,
+  }));
   return answerResponse(c, answer);
 }

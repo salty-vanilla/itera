@@ -8,7 +8,11 @@ import {
   type SQLiteTable,
 } from 'drizzle-orm/sqlite-core';
 import type { Database } from './database';
-import { keepAnswerStatements, type AnsweredWrite } from './idempotency';
+import {
+  keepAnswerStatements,
+  type Answer,
+  type AnsweringWrite,
+} from './idempotency';
 import {
   addAreaRows,
   addCriterionRows,
@@ -53,9 +57,10 @@ export interface SaveRecordsInput {
   /**
    * The write this save is for, kept with its answer in the same batch, so
    * the key is there exactly when the write was saved (ADR 0006 冪等キー).
-   * Not kept when nothing is written.
+   * Its answer is made from the versions as of this save. Not kept when
+   * nothing is written.
    */
-  readonly answered?: AnsweredWrite;
+  readonly answered?: AnsweringWrite;
 }
 
 /**
@@ -82,8 +87,22 @@ export async function saveRecords(
     revision,
   );
   if (rowStatements.length === 0 && input.activities.length === 0) {
-    return { ok: true, revision: loaded.revision, versions: loaded.versions };
+    return {
+      ok: true,
+      revision: loaded.revision,
+      versions: loaded.versions,
+      ...answerOf(input.answered, loaded.versions),
+    };
   }
+  const saved = new Map(loaded.versions);
+  for (const [key, version] of versions) {
+    if (version === null) saved.delete(key);
+    else saved.set(key, version);
+  }
+  const answered =
+    input.answered === undefined
+      ? undefined
+      : { ...input.answered, answer: input.answered.answer(saved) };
   const activityRows = input.activities.map(
     ({ at, actor, kind, ...content }, position) => ({
       userId,
@@ -102,9 +121,9 @@ export async function saveRecords(
       ...chunks(activityRows, rowsPerInsert(activity)).map((rows) =>
         db.insert(activity).values(rows),
       ),
-      ...(input.answered === undefined
+      ...(answered === undefined
         ? []
-        : keepAnswerStatements(db, userId, input.answered)),
+        : keepAnswerStatements(db, userId, answered)),
     ]);
   } catch (error) {
     // Tell a conflict by the revision, not by the error text, which differs
@@ -118,12 +137,20 @@ export async function saveRecords(
     }
     throw error;
   }
-  const saved = new Map(loaded.versions);
-  for (const [key, version] of versions) {
-    if (version === null) saved.delete(key);
-    else saved.set(key, version);
-  }
-  return { ok: true, revision, versions: saved };
+  return {
+    ok: true,
+    revision,
+    versions: saved,
+    ...(answered === undefined ? {} : { answer: answered.answer }),
+  };
+}
+
+/** The answer of a save that wrote nothing, as of the loaded versions. */
+function answerOf(
+  answered: AnsweringWrite | undefined,
+  versions: LoadedRecords['versions'],
+): { answer?: Answer } {
+  return answered === undefined ? {} : { answer: answered.answer(versions) };
 }
 
 /**

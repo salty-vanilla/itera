@@ -770,6 +770,11 @@ export const idempotencyKey = sqliteTable(
     status: integer('status').notNull(),
     /** The response's JSON as it was sent; NULL without a body (204). */
     body: text('body'),
+    /**
+     * The response's ETag: the record's new etag after a write that
+     * replaced its values (#321). NULL for other writes.
+     */
+    etag: text('etag'),
     createdAt: instantColumn('created_at').notNull(),
   },
   (table) => [

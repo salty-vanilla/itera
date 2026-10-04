@@ -6,7 +6,12 @@ import {
   type ReceivedRequest,
   type Surface,
 } from '@itera/api-contract/requests';
-import { checkCondition, operations, type Change } from '@itera/application';
+import {
+  checkCondition,
+  currentCondition,
+  operations,
+  type Change,
+} from '@itera/application';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import type { AppEnv } from '../env';
@@ -54,21 +59,26 @@ export function operationRoutes(flow: Flow, guards: Guards) {
             Record<string, (input: unknown) => Precondition>
           >
         )[name]?.(input);
-        // Made with nothing to return (the Retro, 201) has no body either.
         const condition = conditionOf(c);
+        // Made with nothing to return (the Retro, 201) has no body either.
         const answer = await flow.operate(
           c,
           operation(input),
           (value) => answerOf(surface.status, value),
           {
-            condition: (records, versions) =>
-              checkCondition(
-                name,
-                input as never,
-                records,
-                versions,
-                condition,
-              ),
+            condition: {
+              check: (records, versions) =>
+                checkCondition(
+                  name,
+                  input as never,
+                  records,
+                  versions,
+                  condition,
+                ),
+              etag: (records, versions) =>
+                currentCondition(name, input as never, records, versions)
+                  ?.ifMatch?.[0],
+            },
             ...(precondition === undefined ? {} : { precondition }),
           },
         );

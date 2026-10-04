@@ -1,3 +1,4 @@
+import type { MadeFrom } from '@itera/api-contract/requests';
 import type { TaskId } from '@itera/api-contract';
 import { Link } from '@tanstack/react-router';
 import { Info } from 'lucide-react';
@@ -33,7 +34,10 @@ import { planSummary } from './plan-summary';
 type CheckSummaryProps = {
   data: PlanningData;
   onApplyCriterion: (applied: boolean) => void;
-  onAvailableHours: (hours: number | null) => boolean | Promise<boolean>;
+  onAvailableHours: (
+    hours: number | null,
+    from: MadeFrom,
+  ) => boolean | Promise<boolean>;
   /** A Task without a value: its detail, at its Estimate. */
   onEstimateTask: (taskId: TaskId) => void;
   /** A Task with subtasks left out: its detail, where they are. */
@@ -96,6 +100,7 @@ function CheckSummary({
         <div className="max-w-pane-side">
           <AvailableHoursField
             value={data.totals.capacity?.availableHours}
+            etag={data.sprint.etag}
             onChange={onAvailableHours}
           />
         </div>

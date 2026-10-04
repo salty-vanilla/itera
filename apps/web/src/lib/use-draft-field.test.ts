@@ -214,3 +214,47 @@ describe('useDraftField when an answer comes in before the typing is drawn', () 
     expect(result.current.value).toBe('one two, from the read');
   });
 });
+
+describe('useDraftField of a record with a version (#321)', () => {
+  function versioned(etag: string | undefined) {
+    return renderHook(
+      ({ read, etag }) => useDraftField(read, Object.is, { etag }),
+      { initialProps: { read: 'saved', etag } },
+    );
+  }
+
+  it('is made from the record as read now while nothing is typed', () => {
+    const { result, rerender } = versioned('"1"');
+    expect(result.current.madeFrom).toEqual({ etag: '"1"' });
+    rerender({ read: 'from another device', etag: '"2"' });
+    expect(result.current.madeFrom).toEqual({ etag: '"2"' });
+  });
+
+  it('is made from the record as read when typing began, when the read changes after', () => {
+    const { result, rerender } = versioned('"1"');
+    act(() => result.current.set('typed'));
+    rerender({ read: 'from another device', etag: '"2"' });
+    expect(result.current.madeFrom).toEqual({ etag: '"1"' });
+  });
+
+  it('is made from the record as it then is once a failed save gave the typing back', async () => {
+    const { result, rerender } = versioned('"1"');
+    act(() => result.current.set('typed'));
+    await act(async () => {
+      result.current.hold(Promise.resolve(false));
+      await Promise.resolve();
+    });
+    // The failure read the records again: another device's version.
+    rerender({ read: 'from another device', etag: '"2"' });
+    expect(result.current.value).toBe('typed');
+    expect(result.current.madeFrom).toEqual({ etag: '"2"' });
+    act(() => result.current.set('typed more'));
+    expect(result.current.madeFrom).toEqual({ etag: '"2"' });
+  });
+
+  it('is made from no record when there is none yet (a Goal not written)', () => {
+    const { result } = versioned(undefined);
+    act(() => result.current.set('typed'));
+    expect(result.current.madeFrom).toEqual({ none: true });
+  });
+});

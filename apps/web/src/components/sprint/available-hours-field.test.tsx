@@ -12,10 +12,13 @@ afterEach(cleanup);
 function setup(value: number | undefined) {
   const onChange = vi.fn(() => true);
   const view = render(
-    <AvailableHoursField value={value} onChange={onChange} />,
+    <AvailableHoursField value={value} etag='"1"' onChange={onChange} />,
   );
+  // Another device's save: the Sprint has another version (#321).
   const reread = (next: number | undefined) =>
-    view.rerender(<AvailableHoursField value={next} onChange={onChange} />);
+    view.rerender(
+      <AvailableHoursField value={next} etag='"2"' onChange={onChange} />,
+    );
   return { onChange, reread };
 }
 
@@ -41,7 +44,7 @@ describe('AvailableHoursField when another device has changed the value (#324)',
     expect(hours().value).toBe('8');
     await userEvent.tab();
     await userEvent.tab();
-    expect(onChange).toHaveBeenCalledWith(8);
+    expect(onChange).toHaveBeenCalledWith(8, { etag: '"1"' });
   });
 
   it('saves a value typed in, as it did', async () => {
@@ -50,7 +53,7 @@ describe('AvailableHoursField when another device has changed the value (#324)',
     await userEvent.type(hours(), '8');
     await userEvent.tab();
     await userEvent.tab();
-    expect(onChange).toHaveBeenCalledWith(8);
+    expect(onChange).toHaveBeenCalledWith(8, { etag: '"1"' });
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });

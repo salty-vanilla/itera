@@ -13,9 +13,12 @@ import type { ProblemType } from '@itera/api-contract/problems';
  *   (409). A write that was made answers what it saved instead, by its
  *   Idempotency-Key (ADR 0006 冪等キー). On the records as they now are it
  *   may mean something else, so it is not sent again.
+ * - `stale`: the record it replaces has changed since it was read, on
+ *   another device (412, ADR 0006 記録ごとの版). It was not made; the
+ *   person decides on the record as it now is.
  * - `refused`: the request or the records' state does not allow it (400,
- *   403, 404, 413, 422), or its Idempotency-Key was used for another request
- *   (422). Sending it again gives the same answer. Among
+ *   403, 404, 413, 422, 428), or its Idempotency-Key was used for another
+ *   request (422). Sending it again gives the same answer. Among
  *   them `user-not-set-up`: the person has no settings yet (the first
  *   settings screen takes their place, #279).
  * - `failed`: anything else, which may have been saved: the server failed
@@ -26,6 +29,7 @@ import type { ProblemType } from '@itera/api-contract/problems';
 export type Failure =
   | { readonly kind: 'unauthenticated' }
   | { readonly kind: 'revisionConflict' }
+  | { readonly kind: 'stale' }
   | { readonly kind: 'refused'; readonly type: ProblemType }
   | { readonly kind: 'failed' };
 
@@ -40,6 +44,8 @@ const REFUSED: ReadonlySet<string> = new Set<ProblemType>([
   '/problems/user-not-set-up',
   // The key was used for another request: nothing was done (ADR 0006 冪等キー).
   '/problems/idempotency-key-reused',
+  // A write that replaces values came without its version (#321).
+  '/problems/precondition-required',
 ]);
 
 /**
@@ -74,6 +80,7 @@ export function failureOf(thrown: unknown): Failure {
   if (type === '/problems/unauthenticated') return { kind: 'unauthenticated' };
   if (type === '/problems/revision-conflict')
     return { kind: 'revisionConflict' };
+  if (type === '/problems/precondition-failed') return { kind: 'stale' };
   if (typeof type === 'string' && REFUSED.has(type))
     return { kind: 'refused', type: type as ProblemType };
   return { kind: 'failed' };

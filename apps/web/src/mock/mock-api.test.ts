@@ -187,7 +187,8 @@ describe('the mock', () => {
   it('answers 204 for an operation that returns nothing', async () => {
     const { client } = mockOf('backlog-capture');
     const { response, error } = await sdk.renameArea({
-      headers: write(),
+      // Another device's write, whatever it read (#321).
+      headers: { ...write(), 'If-Match': '*' },
       client,
       path: { areaId: ids.area.research },
       body: { name: '研究室' },
@@ -202,7 +203,8 @@ describe('the mock', () => {
     await sdk.getMe({ client });
     const before = store.getSnapshot();
     const { error, response } = await sdk.renameArea({
-      headers: write(),
+      // Another device's write, whatever it read (#321).
+      headers: { ...write(), 'If-Match': '*' },
       client,
       path: { areaId: ids.area.research },
       body: { name: '' },
@@ -414,5 +416,57 @@ describe('a person who has not made their settings', () => {
     });
     expect(zone.response?.status).toBe(422);
     expect((await sdk.getMe({ client })).data?.settings).toBeNull();
+  });
+});
+
+describe('the version a write that replaces values was made from (#321)', () => {
+  const rename = (name: string) => ({
+    path: { areaId: ids.area.research },
+    body: { name },
+  });
+
+  it('is in the reads, and the answer gives the version after the write', async () => {
+    const { client } = mockOf('backlog-capture');
+    const { data } = await sdk.listAreas({ client });
+    const read = data?.view.find((a) => a.id === ids.area.research)?.etag;
+    expect(read).toBe('"0"');
+    const { response } = await sdk.renameArea({
+      client,
+      headers: { ...write(), 'If-Match': read! },
+      ...rename('研究室'),
+    });
+    expect(response?.status).toBe(204);
+    const etag = response?.headers.get('ETag');
+    const after = await sdk.listAreas({ client });
+    expect(after.data?.view.find((a) => a.id === ids.area.research)?.etag).toBe(
+      etag,
+    );
+    expect(etag).not.toBe(read);
+  });
+
+  it('answers 412 to an older version and 428 to none, as the API does, and changes nothing', async () => {
+    const { client, store } = mockOf('backlog-capture');
+    await sdk.renameArea({
+      client,
+      headers: { ...write(), 'If-Match': '"0"' },
+      ...rename('別の端末'),
+    });
+    const before = store.getSnapshot().records;
+    const stale = await sdk.renameArea({
+      client,
+      headers: { ...write(), 'If-Match': '"0"' },
+      ...rename('古い表示から'),
+    });
+    expect(stale.response?.status).toBe(412);
+    expect(stale.error).toMatchObject({
+      type: '/problems/precondition-failed',
+    });
+    const none = await sdk.renameArea({
+      client,
+      headers: write() as never,
+      ...rename('条件なし'),
+    });
+    expect(none.response?.status).toBe(428);
+    expect(store.getSnapshot().records).toEqual(before);
   });
 });

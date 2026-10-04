@@ -1,3 +1,4 @@
+import type { MadeFrom } from '@itera/api-contract/requests';
 import type { Capacity, PlanningTotal } from '@itera/api-contract';
 import { Fragment, useId, useState } from 'react';
 import { AreaIndicator, type AreaColor } from '@/components/ui/area-indicator';
@@ -46,9 +47,15 @@ type CapacityIndicatorProps = {
   /** Absent while no available hours are entered (unknown). */
   capacity?: Capacity | undefined;
   areas: readonly AreaSegment[];
-  /** Saves the available hours; `null` clears them. Returns success. */
+  /**
+   * Saves the available hours; `null` clears them. Returns success. `from`
+   * is the Sprint as read when they were typed (#321).
+   */
   onAvailableHoursChange?:
-    ((hours: number | null) => boolean | Promise<boolean>) | undefined;
+    | ((hours: number | null, from: MadeFrom) => boolean | Promise<boolean>)
+    | undefined;
+  /** The Sprint's etag as read, for the available hours' save (#321). */
+  sprintEtag?: string | undefined;
   /** Read-only after confirm. */
   readOnly?: boolean | undefined;
   /** Its own 「時間の見通し」 heading. Off under a title that says it (#166). */
@@ -312,6 +319,7 @@ function CapacityIndicator({
   capacity,
   areas,
   onAvailableHoursChange,
+  sprintEtag,
   readOnly = false,
   titled = true,
   className,
@@ -366,12 +374,15 @@ function CapacityIndicator({
           )}
           {/* Right under the total, so that it shows in the first screen
               (#165). */}
-          {editable && onAvailableHoursChange !== undefined && (
-            <AvailableHoursField
-              value={capacity?.availableHours}
-              onChange={onAvailableHoursChange}
-            />
-          )}
+          {editable &&
+            onAvailableHoursChange !== undefined &&
+            sprintEtag !== undefined && (
+              <AvailableHoursField
+                value={capacity?.availableHours}
+                etag={sprintEtag}
+                onChange={onAvailableHoursChange}
+              />
+            )}
         </div>
       )}
 
@@ -454,17 +465,26 @@ function Headline({
  */
 function AvailableHoursField({
   value,
+  etag,
   onChange,
   label = '使える時間',
   description,
 }: {
   value: number | undefined;
-  /** Saves the hours; returns success, when it is done. */
-  onChange: (hours: number | null) => boolean | Promise<boolean>;
+  /** The Sprint's etag as read (#321). */
+  etag: string;
+  /**
+   * Saves the hours; returns success, when it is done. `from` is the Sprint
+   * as read when they were typed.
+   */
+  onChange: (
+    hours: number | null,
+    from: MadeFrom,
+  ) => boolean | Promise<boolean>;
   label?: string;
   description?: string;
 }) {
-  const field = useDraftField(hoursText(value), sameDuration);
+  const field = useDraftField(hoursText(value), sameDuration, { etag });
   const text = field.value;
   const [error, setError] = useState<string>();
   function commit(typed: DurationText) {
@@ -478,7 +498,7 @@ function AvailableHoursField({
     // the value as read since: a field left as it was saves nothing (#324).
     if (!field.leave()) return;
     const saving = Promise.resolve(
-      onChange(minutes === undefined ? null : minutes / 60),
+      onChange(minutes === undefined ? null : minutes / 60, field.madeFrom),
     );
     field.hold(saving);
     // A save that fails goes back to the value as read.

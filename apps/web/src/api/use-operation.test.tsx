@@ -3,12 +3,13 @@
 // (one that may have been saved reads again first, and is sent again with
 // its Idempotency-Key first, #320), no session goes to sign in, and a second
 // press while sending sends nothing.
+import type { MadeFrom } from '@itera/api-contract/requests';
 import {
   createClient,
   createConfig,
   type Client,
 } from '@itera/api-contract/create-client';
-import { createMemoryStore } from '@itera/application';
+import { createMemoryStore, operations } from '@itera/application';
 import { fixtureIds, fixtureSnapshot } from '@itera/application/fixtures';
 import {
   act,
@@ -53,11 +54,15 @@ function setUp(answer?: Answer) {
   const requests: string[] = [];
   /** The Idempotency-Key of each write sent, in order. */
   const keys: (string | null)[] = [];
+  /** The If-Match of each write sent, in order (#321). */
+  const ifMatches: (string | null)[] = [];
   const fetch: typeof globalThis.fetch = async (input, init) => {
     const request = new Request(input, init);
     requests.push(`${request.method} ${new URL(request.url).pathname}`);
-    if (request.method !== 'GET')
+    if (request.method !== 'GET') {
       keys.push(request.headers.get('Idempotency-Key'));
+      ifMatches.push(request.headers.get('If-Match'));
+    }
     return answer?.(request) ?? mock(request);
   };
   const client: Client = createClient(
@@ -72,7 +77,7 @@ function setUp(answer?: Answer) {
       </ApiProvider>
     );
   }
-  return { store, requests, keys, onUnauthenticated, wrapper };
+  return { store, requests, keys, ifMatches, onUnauthenticated, wrapper };
 }
 
 function answerWith(type: PlainProblemType) {
@@ -89,6 +94,8 @@ function useRenameAndOverview() {
 }
 
 const rename = (name: string) => ({ areaId: ids.area.research, name });
+/** The Area as the fixture has it: never saved, at version 0 (#321). */
+const asRead: MadeFrom = { etag: '"0"' };
 
 describe('useOperation', () => {
   it('gives back the outcome and reads the reads again before it resolves', async () => {
@@ -98,7 +105,7 @@ describe('useOperation', () => {
     requests.length = 0;
     let outcome: unknown;
     await act(async () => {
-      outcome = await result.current.rename.run(rename('研究室'));
+      outcome = await result.current.rename.run(rename('研究室'), asRead);
     });
     expect(outcome).toMatchObject({ ok: true });
     expect(requests).toEqual([
@@ -113,7 +120,7 @@ describe('useOperation', () => {
     const { result } = renderHook(useRenameAndOverview, { wrapper });
     let outcome: unknown;
     await act(async () => {
-      outcome = await result.current.rename.run(rename(''));
+      outcome = await result.current.rename.run(rename(''), asRead);
     });
     expect(outcome).toEqual({ ok: false });
     expect(await screen.findAllByText('保存できませんでした')).not.toHaveLength(
@@ -128,7 +135,7 @@ describe('useOperation', () => {
     );
     const { result } = renderHook(useRenameAndOverview, { wrapper });
     await act(async () => {
-      await result.current.rename.run(rename('研究室'));
+      await result.current.rename.run(rename('研究室'), asRead);
     });
     expect(onUnauthenticated).toHaveBeenCalled();
     expect(screen.queryAllByText('保存できませんでした')).toHaveLength(0);
@@ -150,8 +157,8 @@ describe('useOperation', () => {
     let first: Promise<unknown> = Promise.resolve();
     let second: unknown;
     await act(async () => {
-      first = result.current.rename.run(rename('研究室'));
-      second = await result.current.rename.run(rename('研究会'));
+      first = result.current.rename.run(rename('研究室'), asRead);
+      second = await result.current.rename.run(rename('研究会'), asRead);
     });
     expect(second).toEqual({ ok: false });
     await waitFor(() => expect(result.current.rename.pending).toBe(true));
@@ -185,8 +192,8 @@ describe('operations that overlap', () => {
     let outcomes: unknown[] = [];
     await act(async () => {
       outcomes = await Promise.all([
-        result.current.run(rename('研究室')),
-        result.current.run(rename('研究会')),
+        result.current.run(rename('研究室'), asRead),
+        result.current.run(rename('研究会'), asRead),
       ]);
     });
     expect(outcomes).toMatchObject([{ ok: true }, { ok: true }]);
@@ -212,7 +219,7 @@ describe('operations that overlap', () => {
     let both: Promise<unknown> = Promise.resolve();
     await act(async () => {
       both = Promise.all([
-        result.current.rename.run(rename('研究室')),
+        result.current.rename.run(rename('研究室'), asRead),
         result.current.archive.run({ areaId: ids.area.research }),
       ]);
       await new Promise((resolve) => setTimeout(resolve, 30));
@@ -296,7 +303,7 @@ async function failWith(answer: Answer) {
   requests.length = 0;
   let outcome: unknown;
   await act(async () => {
-    outcome = await result.current.rename.run(rename('研究室'));
+    outcome = await result.current.rename.run(rename('研究室'), asRead);
   });
   return { outcome, requests, keys };
 }
@@ -416,14 +423,14 @@ describe('a failed operation', () => {
     const { result } = renderHook(useRenameAndOverview, { wrapper });
     await waitFor(() => expect(result.current.overview.data).toBeDefined());
     await act(async () => {
-      await result.current.rename.run(rename('研究室'));
+      await result.current.rename.run(rename('研究室'), asRead);
     });
     await expectMayHaveBeenSaved();
     down = false;
     requests.length = 0;
     let outcome: unknown;
     await act(async () => {
-      outcome = await result.current.rename.run(rename('研究会'));
+      outcome = await result.current.rename.run(rename('研究会'), asRead);
     });
     expect(outcome).toMatchObject({ ok: true });
     await waitFor(() =>
@@ -444,14 +451,14 @@ describe('a failed operation', () => {
     );
     const { result } = renderHook(useRenameAndOverview, { wrapper });
     await act(async () => {
-      await result.current.rename.run(rename('研究室'));
+      await result.current.rename.run(rename('研究室'), asRead);
     });
     expect(await screen.findAllByText('保存できませんでした')).not.toHaveLength(
       0,
     );
     refuse = false;
     await act(async () => {
-      await result.current.rename.run(rename('研究会'));
+      await result.current.rename.run(rename('研究会'), asRead);
     });
     expect(screen.getAllByText('保存できませんでした')).not.toHaveLength(0);
   });
@@ -460,8 +467,8 @@ describe('a failed operation', () => {
     const { keys, wrapper } = setUp();
     const { result } = renderHook(useRenameAndOverview, { wrapper });
     await act(async () => {
-      await result.current.rename.run(rename('研究室'));
-      await result.current.rename.run(rename('研究会'));
+      await result.current.rename.run(rename('研究室'), asRead);
+      await result.current.rename.run(rename('研究会'), asRead);
     });
     expect(keys).toHaveLength(2);
     expect(keys[0]).toMatch(/^"[0-9a-f-]{36}"$/);
@@ -480,7 +487,7 @@ describe('a failed operation', () => {
     try {
       let outcome: unknown;
       await act(async () => {
-        outcome = await result.current.rename.run(rename('研究室'));
+        outcome = await result.current.rename.run(rename('研究室'), asRead);
       });
       expect(outcome).toEqual({ ok: false });
       expect(requests.filter((r) => r === patch)).toHaveLength(3);
@@ -510,7 +517,7 @@ describe('reading again after an operation', () => {
       const sending = SEND_AGAIN_DELAYS.reduce((sum, ms) => sum + ms, 0);
       await act(async () => {
         void result.current.rename
-          .run(rename('研究室'))
+          .run(rename('研究室'), asRead)
           .then((o) => (outcome = o));
         await vi.advanceTimersByTimeAsync(sending + 10);
       });
@@ -552,7 +559,7 @@ describe('the loading state', () => {
     try {
       let running: Promise<unknown> = Promise.resolve();
       await act(async () => {
-        running = result.current.rename.run(rename('研究室'));
+        running = result.current.rename.run(rename('研究室'), asRead);
       });
       // TanStack Query tells the observers on a 0ms timer.
       await act(async () => {
@@ -570,5 +577,66 @@ describe('the loading state', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('useOperation for a write that replaces values (#321)', () => {
+  it('sends the version it was made from, moved on by its own writes before it', async () => {
+    const { ifMatches, wrapper } = setUp();
+    const { result } = renderHook(useRenameAndOverview, { wrapper });
+    await act(async () => {
+      await result.current.rename.run(rename('研究室'), asRead);
+    });
+    // Made from the same read, after the first: the API's answer moved it on.
+    let outcome: unknown;
+    await act(async () => {
+      outcome = await result.current.rename.run(rename('研究会'), asRead);
+    });
+    expect(outcome).toMatchObject({ ok: true });
+    expect(ifMatches[0]).toBe('"0"');
+    expect(ifMatches[1]).not.toBe('"0"');
+    expect(ifMatches[1]).toMatch(/^"\d+"$/);
+  });
+
+  it('says that another device changed the record, and changes nothing', async () => {
+    const { store, wrapper } = setUp();
+    const { result } = renderHook(
+      () => ({
+        rename: useOperation('renameArea'),
+        typed: useOperation('renameArea', { typed: true }),
+      }),
+      { wrapper },
+    );
+    // Another device renames it first: version 0 is old now.
+    store.run((records, ctx) =>
+      operations.renameArea({ areaId: ids.area.research, name: '別の端末' })(
+        records,
+        ctx,
+      ),
+    );
+    const before = store.getSnapshot().records;
+    let outcome: unknown;
+    await act(async () => {
+      outcome = await result.current.rename.run(rename('研究室'), asRead);
+    });
+    expect(outcome).toEqual({ ok: false });
+    expect(store.getSnapshot().records).toEqual(before);
+    expect(
+      await screen.findAllByText('ほかの端末で変わっていました'),
+    ).not.toHaveLength(0);
+    expect(
+      screen.getAllByText('最新の記録を見て、もう一度試してください。'),
+    ).not.toHaveLength(0);
+    // What was typed in a field stays there: its Toast says so.
+    await act(async () => {
+      await result.current.typed.run(rename('研究室'), asRead);
+    });
+    expect(
+      await screen.findAllByText(
+        '書いた内容は残っています。もう一度保存すると、この内容になります。',
+      ),
+    ).not.toHaveLength(0);
+    // No もう一度保存: sending it again would be refused again.
+    expect(screen.queryByRole('button', { name: 'もう一度保存' })).toBeNull();
   });
 });

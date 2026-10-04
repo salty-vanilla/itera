@@ -1,3 +1,4 @@
+import type { MadeFrom } from '@itera/api-contract/requests';
 import type {
   AreaId,
   DailySelectionId,
@@ -78,7 +79,7 @@ export function useTodayActions() {
   const undoSkipSelection = useOperation('undoSkipSelection');
   const recordActualTime = useOperation('recordActualTime');
   const noteInterrupt = useOperation('noteInterrupt');
-  const editInterrupt = useOperation('editInterrupt');
+  const editInterrupt = useOperation('editInterrupt', { typed: true });
   const deleteInterrupt = useOperation('deleteInterrupt');
   const restoreInterrupt = useOperation('restoreInterrupt');
   const createTaskForToday = useOperation('createTaskForToday');
@@ -169,15 +170,24 @@ export function useTodayActions() {
       );
       return outcome.ok ? outcome.value.interruptNoteId : undefined;
     },
-    editInterrupt: (id: InterruptNoteId, text: string, minutes?: number) =>
+    /** `from`: the note as read when it was edited (#321). */
+    editInterrupt: (
+      id: InterruptNoteId,
+      text: string,
+      minutes: number | undefined,
+      from: MadeFrom,
+    ) =>
       wentThrough(
         on(({ sprintId }) =>
-          editInterrupt.run({
-            sprintId,
-            interruptNoteId: id,
-            text,
-            ...minutesOf(minutes),
-          }),
+          editInterrupt.run(
+            {
+              sprintId,
+              interruptNoteId: id,
+              text,
+              ...minutesOf(minutes),
+            },
+            from,
+          ),
         ),
       ),
     deleteInterrupt: (id: InterruptNoteId) =>

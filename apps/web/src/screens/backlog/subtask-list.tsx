@@ -125,7 +125,9 @@ function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
   const actions = useSubtaskActions();
   // Typed apart from the Subtask as read: left as it was, the field follows
   // another device's change and saves nothing (#324).
-  const field = useDraftField(hoursText(subtask.estimate), sameDuration);
+  const field = useDraftField(hoursText(subtask.estimate), sameDuration, {
+    etag: subtask.etag,
+  });
   const hours = field.value;
   const [error, setError] = useState<string>();
 
@@ -138,7 +140,12 @@ function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
     setError(undefined);
     // Compared with what the field showed when it was typed in, to the minute.
     if (!field.leave()) return;
-    const saving = actions.setSubtaskEstimate(task.id, subtask.id, parsed);
+    const saving = actions.setSubtaskEstimate(
+      task.id,
+      subtask.id,
+      parsed,
+      field.madeFrom,
+    );
     field.hold(saving);
     // A save that fails goes back to the value as read.
     void saving.then((ok) => {
@@ -153,7 +160,9 @@ function SubtaskRow({ task, subtask }: { task: Task; subtask: Subtask }) {
           checked={subtask.done}
           aria-label={`完了：${subtask.title}`}
           onCheckedChange={(done) =>
-            actions.setSubtaskDone(task.id, subtask.id, done)
+            actions.setSubtaskDone(task.id, subtask.id, done, {
+              etag: subtask.etag,
+            })
           }
         />
       </span>

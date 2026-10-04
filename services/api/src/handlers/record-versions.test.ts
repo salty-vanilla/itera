@@ -93,6 +93,54 @@ describe('a write that replaces values (#321)', () => {
     expect(records.tasks.find((t) => t.id === paper)?.title).toBe('論文を書く');
   });
 
+  it('answers the record’s new etag, which the next write sends without reading again', async () => {
+    const app = await setupFixtureApp('today-daytime');
+    const read = await etagOfTask(app, paper);
+    // Two fields of one form: the title is saved, then the description,
+    // made from the same read.
+    const title = await send(app, 'saveTask', rename('題名'), {
+      'If-Match': read,
+    });
+    const etag = title.headers.get('ETag');
+    expect(etag).toBe(await etagOfTask(app, paper));
+    const description = await send(
+      app,
+      'saveTask',
+      { taskId: paper, update: { description: '説明' } },
+      { 'If-Match': etag! },
+    );
+    expect(description.status).toBe(204);
+    expect(description.headers.get('ETag')).toBe(await etagOfTask(app, paper));
+  });
+
+  it('answers the same ETag to a write sent again', async () => {
+    const app = await setupFixtureApp('today-daytime');
+    const read = await etagOfTask(app, paper);
+    const key = crypto.randomUUID();
+    const first = await send(
+      app,
+      'saveTask',
+      rename('再送'),
+      { 'If-Match': read },
+      key,
+    );
+    const again = await send(
+      app,
+      'saveTask',
+      rename('再送'),
+      { 'If-Match': read },
+      key,
+    );
+    expect(again.headers.get('ETag')).toBe(first.headers.get('ETag'));
+    expect(first.headers.get('ETag')).toMatch(/^"\d+"$/);
+  });
+
+  it('answers no ETag to a write that does not replace values', async () => {
+    const app = await setupFixtureApp('backlog-capture');
+    const response = await send(app, 'completeTask', { taskId: paper });
+    expect(response.headers.get('ETag')).toBeNull();
+  });
+
   it('answers 412 to an older etag and writes nothing', async () => {
     const app = await setupFixtureApp('today-daytime');
     const read = await etagOfTask(app, paper);

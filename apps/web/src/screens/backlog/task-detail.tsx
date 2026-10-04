@@ -6,7 +6,10 @@ import type {
   TaskPriority,
   TimeBasis,
 } from '@itera/api-contract';
-import type { TaskAttributeUpdate } from '@itera/api-contract/requests';
+import type {
+  MadeFrom,
+  TaskAttributeUpdate,
+} from '@itera/api-contract/requests';
 import { Link, useLocation } from '@tanstack/react-router';
 import { Check, ChevronDown, ChevronRight } from 'lucide-react';
 import {
@@ -67,7 +70,7 @@ import {
 import {
   sameWords,
   useDraftField,
-  type DraftField,
+  type VersionedDraftField,
 } from '@/lib/use-draft-field';
 import { LAST_DAY_CLOSED_WORDS } from '@/lib/selection-words';
 import { formatHours } from '@/lib/time-format';
@@ -380,12 +383,18 @@ function TaskDetail({
     setOperations((n) => n + 1);
   }
   // The text fields: what is typed apart from the Task as read, so that a
-  // field not typed in follows another device's change (#324).
-  const fields: { [K in TextKey]: DraftField<Draft[K]> } = {
-    title: useDraftField(task.title, sameWords),
-    description: useDraftField(task.description),
-    due: useDraftField(task.due ?? ''),
-    estimate: useDraftField(hoursText(task.estimate?.hours), sameDuration),
+  // field not typed in follows another device's change (#324). Each saves
+  // from the Task as read when it was typed in (#321).
+  const version = { etag: task.etag };
+  const fields: { [K in TextKey]: VersionedDraftField<Draft[K]> } = {
+    title: useDraftField(task.title, sameWords, version),
+    description: useDraftField(task.description, Object.is, version),
+    due: useDraftField(task.due ?? '', Object.is, version),
+    estimate: useDraftField(
+      hoursText(task.estimate?.hours),
+      sameDuration,
+      version,
+    ),
   };
   const draft: Draft = {
     title: fields.title.value,
@@ -616,12 +625,18 @@ function TaskDetail({
     });
   };
 
+  /**
+   * Saves a field. `from` is the Task as read when the field was typed in;
+   * a choice (a select, a radio) is made from the Task as it is read now.
+   */
   async function record(
     key: FieldKey,
     update: TaskAttributeUpdate,
     estimate?: number | null,
+    from: MadeFrom = { etag: task.etag },
   ): Promise<boolean> {
-    if (!(await actions.saveTask(task.id, update, estimate))) return false;
+    if (!(await actions.saveTask(task.id, update, estimate, from)))
+      return false;
     setSaved(key);
     return true;
   }
@@ -636,7 +651,9 @@ function TaskDetail({
       return next;
     });
     if (reading.kind === 'save') {
-      fields[key].hold(record(key, reading.update, reading.estimate));
+      fields[key].hold(
+        record(key, reading.update, reading.estimate, fields[key].madeFrom),
+      );
     } else if (reading.kind === 'same') {
       fields[key].leave();
     }

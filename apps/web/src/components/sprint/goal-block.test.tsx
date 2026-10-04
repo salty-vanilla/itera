@@ -15,9 +15,17 @@ function setup(goal: string | undefined) {
     week: '今週',
     onSave,
   };
-  const view = render(<GoalBlock {...props} goal={goal} />);
+  // The Goal's etag: "1" as opened, "2" once another device has saved it
+  // (#321); none without a Goal.
+  const etagOf = (text: string | undefined, version: string) =>
+    text === undefined ? undefined : version;
+  const view = render(
+    <GoalBlock {...props} goal={goal} goalEtag={etagOf(goal, '"1"')} />,
+  );
   const reread = (next: string | undefined) =>
-    view.rerender(<GoalBlock {...props} goal={next} />);
+    view.rerender(
+      <GoalBlock {...props} goal={next} goalEtag={etagOf(next, '"2"')} />,
+    );
   return { onSave, reread };
 }
 
@@ -58,7 +66,20 @@ describe('GoalBlock when another device has written the Goal (#324)', () => {
     reread('スマホで直した目標');
     expect(field().value).toBe('先行研究を押さえるの続き');
     await userEvent.click(screen.getByRole('button', { name: '保存' }));
-    expect(onSave).toHaveBeenCalledWith('先行研究を押さえるの続き');
+    // Made from the Goal as it was typed in: the API tells it has changed.
+    expect(onSave).toHaveBeenCalledWith('先行研究を押さえるの続き', {
+      etag: '"1"',
+    });
+  });
+
+  it('makes a Goal from none in an Area without one (#321)', async () => {
+    const { onSave } = setup(undefined);
+    await userEvent.click(
+      screen.getByRole('button', { name: '目標を書く：研究' }),
+    );
+    await userEvent.type(field(), '発表を終える');
+    await userEvent.click(screen.getByRole('button', { name: '保存' }));
+    expect(onSave).toHaveBeenCalledWith('発表を終える', { none: true });
   });
 
   it('saves a Goal typed in, as it did', async () => {
@@ -69,6 +90,6 @@ describe('GoalBlock when another device has written the Goal (#324)', () => {
     await userEvent.clear(field());
     await userEvent.type(field(), '先行研究を終える');
     await userEvent.click(screen.getByRole('button', { name: '保存' }));
-    expect(onSave).toHaveBeenCalledWith('先行研究を終える');
+    expect(onSave).toHaveBeenCalledWith('先行研究を終える', { etag: '"1"' });
   });
 });

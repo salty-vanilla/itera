@@ -90,6 +90,8 @@ area:
     responses:
       '204':
         description: Done.
+        headers:
+          ETag: { $ref: '../headers.yaml#/RecordETag' }
       '400': { $ref: '../responses.yaml#/BadRequest' }
       '401': { $ref: '../responses.yaml#/Unauthenticated' }
       '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }

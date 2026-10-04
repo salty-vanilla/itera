@@ -1,3 +1,4 @@
+import type { RecordVersions } from '@itera/application';
 import { instant, type Instant, type UserId } from '@itera/domain';
 import { and, eq, gt, lte, sql } from 'drizzle-orm';
 import type { Database } from './database';
@@ -26,6 +27,11 @@ export type Answer = {
   readonly status: 200 | 201 | 204;
   /** `null` when it has no body. */
   readonly body: string | null;
+  /**
+   * The `ETag` of a write that replaced a record's values: the record's
+   * etag after it (#321, ADR 0006 記録ごとの版). `null` for other writes.
+   */
+  readonly etag: string | null;
 };
 
 /** The answer kept for a key, with the fingerprint of its write. */
@@ -54,6 +60,7 @@ export function keptAnswerQuery(
       fingerprint: idempotencyKey.fingerprint,
       status: idempotencyKey.status,
       body: idempotencyKey.body,
+      etag: idempotencyKey.etag,
     })
     .from(idempotencyKey)
     .where(
@@ -69,7 +76,12 @@ export function keptAnswerQuery(
 
 /** The kept answer among the rows `keptAnswerQuery` selected. */
 export function keptAnswerOf(
-  rows: readonly { fingerprint: string; status: number; body: string | null }[],
+  rows: readonly {
+    fingerprint: string;
+    status: number;
+    body: string | null;
+    etag: string | null;
+  }[],
 ): KeptAnswer | null {
   const [row] = rows;
   if (row === undefined) return null;
@@ -90,6 +102,14 @@ export type AnsweredWrite = {
   readonly write: IdempotentWrite;
   readonly answer: Answer;
   readonly at: Instant;
+};
+
+/**
+ * A write to keep with its save, whose answer is made once the versions of
+ * the save are known (the `ETag` of the record it replaced, #321).
+ */
+export type AnsweringWrite = Omit<AnsweredWrite, 'answer'> & {
+  readonly answer: (versions: RecordVersions) => Answer;
 };
 
 /**
@@ -119,6 +139,7 @@ export function keepAnswerStatements(
       fingerprint: write.fingerprint,
       status: answer.status,
       body: answer.body,
+      etag: answer.etag,
       createdAt: at,
     }),
   ] as const;

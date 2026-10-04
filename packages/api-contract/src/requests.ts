@@ -1030,8 +1030,13 @@ const requests: {
       body: { text, minutes: minutes ?? null },
     }),
   deleteInterrupt: (path) => to('deleteInterrupt', { path }),
-  restoreInterrupt: ({ sprintId, note: { id, ...body } }) =>
-    to('restoreInterrupt', { path: { sprintId, interruptNoteId: id }, body }),
+  // The note as it was read, without what a read adds (its `etag`, #321):
+  // the body takes the note's own values only.
+  restoreInterrupt: ({ sprintId, note: { id, at, text, minutes } }) =>
+    to('restoreInterrupt', {
+      path: { sprintId, interruptNoteId: id },
+      body: { at, text, ...(minutes === undefined ? {} : { minutes }) },
+    }),
 
   // --------------------------------------------------------------- Retro
   beginRetro: (path) => to('beginRetro', { path }),
@@ -1109,6 +1114,18 @@ export function readIdempotencyKey(value: string | null | undefined): string {
 }
 
 // ------------------------------------------------------ the record's version
+
+/**
+ * The operations whose surface takes `If-Match` (the PATCHes): each
+ * replaces a record's values and names the version it was made from.
+ */
+export type ConditionalName = {
+  [N in OperationName]: 'If-Match' extends keyof NonNullable<
+    Datas[OperationSurfaces[N]]['headers']
+  >
+    ? N
+    : never;
+}[OperationName];
 
 /**
  * What a write that replaces a record's values was made from (ADR 0006

@@ -258,7 +258,8 @@ describe('Retro on the API', () => {
       const sprintId = reviewedId(store);
       await updateRetro({
         client: otherDevice(store),
-        headers: newWrite(),
+        // Another device's write, whatever it read (#321).
+        headers: { ...newWrite(), 'If-Match': '*' },
         path: { sprintId },
         body: { reflection: 'スマホで書いた文' },
       });
@@ -292,7 +293,8 @@ describe('Retro on the API', () => {
       const field = improvement;
       await updateRetro({
         client: otherDevice(store),
-        headers: newWrite(),
+        // Another device's write, whatever it read (#321).
+        headers: { ...newWrite(), 'If-Match': '*' },
         path: { sprintId: reviewedId(store) },
         body: { improvement: 'スマホで書いた試すこと' },
       });
@@ -303,6 +305,48 @@ describe('Retro on the API', () => {
       await userEvent.tab();
       expect(patches(requests)).toHaveLength(before);
       expect(field().value).toBe('スマホで書いた試すこと');
+    });
+
+    it('keeps 気づいたこと typed while another device saved the Retro, says so, and saves it the next time (#321)', async () => {
+      const { store, requests } = serve(undefined, 'retro-reflect');
+      renderRetro('/retro?stage=reflect');
+      await waitForRead();
+      const sprintId = reviewedId(store);
+      const before = () =>
+        store.getSnapshot().records.sprints.find((s) => s.id === sprintId)
+          ?.retro?.reflection;
+      const read = before();
+      await userEvent.type(reflection(), 'PC で書いた文');
+      // Another device saves the Retro (次に試すこと, the same record) while
+      // the words are being typed here.
+      await updateRetro({
+        client: otherDevice(store),
+        headers: { ...newWrite(), 'If-Match': '*' },
+        path: { sprintId },
+        body: { improvement: 'スマホで書いた試すこと' },
+      });
+      await userEvent.tab();
+      // Not saved: the field keeps the words, and the Toast says why.
+      expect(
+        await screen.findAllByText('ほかの端末で変わっていました'),
+      ).not.toHaveLength(0);
+      expect(
+        screen.getAllByText(
+          '書いた内容は残っています。もう一度保存すると、この内容になります。',
+        ),
+      ).not.toHaveLength(0);
+      expect(before()).toBe(read);
+      expect(reflection().value).toContain('PC で書いた文');
+      // Left again: saved over the Retro as it now is.
+      const sent = patches(requests).length;
+      await userEvent.click(reflection());
+      await userEvent.tab();
+      await until(() => expect(patches(requests)).toHaveLength(sent + 1));
+      await until(() => expect(before()).toContain('PC で書いた文'));
+      expect(
+        store.getSnapshot().records.sprints.find((s) => s.id === sprintId)
+          ?.retro?.improvement?.text,
+      ).toBe('スマホで書いた試すこと');
     });
 
     it('saves 次に試すこと typed in, as it did', async () => {

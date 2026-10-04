@@ -4,7 +4,9 @@
 //
 // The same steps as the API (ADR 0004 操作と読み取りの処理), less what has
 // no meaning here: the Origin is the app's own, and there is no version to
-// conflict. The person is signed in until they sign out in the mock's auth
+// conflict. A record's version is kept as the API keeps it (the store
+// raises it with each change), so a write from an older read is refused
+// with 412 here too (#321). The person is signed in until they sign out in the mock's auth
 // (mock-auth.ts); then every request is refused with 401, as the API does
 // without a session (#278). The API's check that a restored interrupt is one
 // the person deleted (preconditions.ts, #315) is not made: the mock keeps no
@@ -36,17 +38,21 @@ import {
 } from '@itera/api-contract/problems';
 import {
   queryInput,
+  readCondition,
   readRequest,
   RequestError,
   settingsSurface,
   surfaces,
   type Call,
+  type ReceivedCondition,
   type Surface,
 } from '@itera/api-contract/requests';
 import {
   areaList,
   backlogData,
   catchUp as systemCatchUp,
+  checkCondition,
+  currentCondition,
   currentSprints,
   dayView,
   operations,
@@ -58,8 +64,10 @@ import {
   type BacklogFilter,
   type Change,
   type Clock,
+  tagRecords,
   type RecordStore,
   type Records,
+  type TaggedRecords,
 } from '@itera/application';
 import {
   parseLocalDate,
@@ -78,7 +86,7 @@ type Parts = {
   readonly path: Readonly<Record<string, string>>;
   readonly query: Readonly<Record<string, unknown>>;
 };
-type Read = (records: Records, clock: Clock, parts: Parts) => unknown;
+type Read = (records: TaggedRecords, clock: Clock, parts: Parts) => unknown;
 
 /** What a read of a Sprint the person does not have answers: 404. */
 const NOT_FOUND = Symbol('not found');
@@ -299,8 +307,12 @@ async function answer(
     const parts = partsOf(read.read, read.values, url.searchParams);
     if (!parts.ok) return parts.response;
     catchUp(store);
-    const { records, clock } = store.getSnapshot();
-    const result = read.read.read(records, clock, parts.value);
+    const { records, clock, versions = new Map() } = store.getSnapshot();
+    const result = read.read.read(
+      tagRecords(records, versions),
+      clock,
+      parts.value,
+    );
     return result === NOT_FOUND
       ? failure('/problems/not-found', `Not found: ${path}`)
       : view(clock, result);
@@ -310,13 +322,45 @@ async function answer(
     const call = await operationOf(surface, values, url.searchParams, request);
     if (!call.ok) return call.response;
     const { name, input } = call.value;
+    const condition = conditionOf(request);
+    if (!condition.ok) return condition.response;
+    // Compared with the versions before the catch-up, as the API does.
+    const { records, versions = new Map() } = store.getSnapshot();
+    const met = checkCondition(
+      name,
+      input as never,
+      records,
+      versions,
+      condition.value,
+    );
+    if (met === 'required')
+      return failure(
+        '/problems/precondition-required',
+        'A write that replaces values needs If-Match.',
+      );
+    if (met === 'failed')
+      return failure(
+        '/problems/precondition-failed',
+        'The record has changed since it was read.',
+      );
     const run = operations[name] as (input: unknown) => Change<unknown>;
     catchUp(store);
     const result = store.run(run(input));
     if (!result.ok) return domainFailure(result.error);
-    return result.value === undefined
-      ? new Response(null, { status: surface.status })
-      : json(surface.status, result.value);
+    // The record's etag after a write that replaced its values (#321).
+    const after = store.getSnapshot();
+    const etag = currentCondition(
+      name,
+      input as never,
+      after.records,
+      after.versions ?? new Map(),
+    )?.ifMatch?.[0];
+    const response =
+      result.value === undefined
+        ? new Response(null, { status: surface.status })
+        : json(surface.status, result.value);
+    if (etag !== undefined) response.headers.set('ETag', etag);
+    return response;
   }
   return failure(
     '/problems/not-found',
@@ -464,6 +508,23 @@ async function operationOf(
         ok: false,
         response: invalidAt(error.issue),
       };
+    throw error;
+  }
+}
+
+/** The version a write says it was made from, as the API reads it. */
+function conditionOf(request: Request): Checked<ReceivedCondition | undefined> {
+  try {
+    return {
+      ok: true,
+      value: readCondition({
+        ifMatch: request.headers.get('If-Match'),
+        ifNoneMatch: request.headers.get('If-None-Match'),
+      }),
+    };
+  } catch (error) {
+    if (error instanceof RequestError)
+      return { ok: false, response: invalidAt(error.issue) };
     throw error;
   }
 }

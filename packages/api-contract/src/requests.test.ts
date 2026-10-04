@@ -261,6 +261,17 @@ describe('the version a write was made from (#321)', () => {
     expect(none).toEqual(['updateGoal']);
   });
 
+  it('leaves out what a read adds when a note read is given back (restoreInterrupt)', () => {
+    const [example] = OPERATION_EXAMPLES.restoreInterrupt;
+    const { note } = example!;
+    const request = requestOf('restoreInterrupt', {
+      ...example!,
+      note: { ...note, etag: '"3"' } as typeof note,
+    } as PlainInput<'restoreInterrupt'>);
+    expect(request.body).not.toHaveProperty('etag');
+    expect(v.is(contract.vRestoreInterruptBody, request.body)).toBe(true);
+  });
+
   it('is sent as If-Match with the etag, or as If-None-Match: *', () => {
     expect(conditionHeaders({ etag: '"42"' })).toEqual({ 'If-Match': '"42"' });
     expect(conditionHeaders({ none: true })).toEqual({ 'If-None-Match': '*' });

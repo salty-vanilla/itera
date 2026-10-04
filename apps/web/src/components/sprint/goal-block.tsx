@@ -1,3 +1,4 @@
+import type { MadeFrom } from '@itera/api-contract/requests';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { AreaIndicator, type AreaColor } from '@/components/ui/area-indicator';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,11 @@ type GoalBlockProps = {
   /** 「3件 · 8〜10時間」 */
   summary?: string | undefined;
   goal?: string | undefined;
+  /**
+   * The Goal's etag as read, absent without a Goal: what its save is made
+   * from (#321).
+   */
+  goalEtag?: string | undefined;
   /** 「今週」「来週」, or 「Sprint N」: the week the Goal is for (#90). */
   week: string;
   /**
@@ -35,7 +41,8 @@ type GoalBlockProps = {
    * Saves the text; an empty text removes the Goal. Returns success, when it
    * is done: the form stays open until then, and when it did not go through.
    */
-  onSave?: ((text: string) => boolean | Promise<boolean>) | undefined;
+  onSave?:
+    ((text: string, from: MadeFrom) => boolean | Promise<boolean>) | undefined;
   /**
    * After confirm a Goal can be reworded but not removed (F16): an empty
    * text is then refused in the form.
@@ -55,6 +62,7 @@ function GoalBlock({
   area,
   summary,
   goal,
+  goalEtag,
   week,
   bare = false,
   level = 2,
@@ -70,7 +78,7 @@ function GoalBlock({
   // the Goal as it is now, and 保存 compares with what the form showed when
   // it was typed in, so that a form left as it was never writes the Goal it
   // opened with over another device's (#324).
-  const field = useDraftField(goal ?? '', sameWords);
+  const field = useDraftField(goal ?? '', sameWords, { etag: goalEtag });
   const text = field.value;
   const [error, setError] = useState<string | undefined>(undefined);
   const headingId = useId();
@@ -160,7 +168,13 @@ function GoalBlock({
               );
               return;
             }
-            if (await onSave?.(text.trim())) close(true);
+            if (onSave === undefined) return;
+            // Held until it is answered: a save that did not go through
+            // gives the typing back, and the next is made from the Goal as
+            // it then is (#321).
+            const saving = Promise.resolve(onSave(text.trim(), field.madeFrom));
+            field.hold(saving);
+            if (await saving) close(true);
           }}
         >
           <Field

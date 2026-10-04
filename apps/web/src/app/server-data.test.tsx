@@ -1,7 +1,7 @@
 // With the API as the data source (the production build, `--mode api`):
 // no fixture, a request without a session goes to sign in, and a screen not
 // yet moved to the contract says so (#272).
-import { backlogData } from '@itera/application';
+import { backlogData, tagRecords } from '@itera/application';
 import { fixtureSnapshot } from '@itera/application/fixtures';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
@@ -62,7 +62,7 @@ function renderAt(url: string) {
 }
 
 const { records, clock } = fixtureSnapshot('today-daytime');
-const backlog = backlogData(records, clock, {});
+const backlog = backlogData(tagRecords(records, new Map()), clock, {});
 const overview = JSON.parse(
   JSON.stringify({ clock, view: backlog }),
 ) as unknown;
