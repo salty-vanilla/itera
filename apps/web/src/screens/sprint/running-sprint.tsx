@@ -3,6 +3,7 @@ import type { TaskId } from '@itera/api-contract';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { Info, Rewind, Route } from 'lucide-react';
 import { useId } from 'react';
+import type { Saved } from '@/api/use-operation';
 import { buttonVariants } from '@/components/ui/button';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Progress } from '@/components/ui/progress';
@@ -388,7 +389,7 @@ function Outlook({
   data: RunningData;
   /** Absent once the Sprint has ended: the hours are read only. */
   onHours:
-    | ((hours: number | null, from: MadeFrom) => boolean | Promise<boolean>)
+    | ((hours: number | null, from: MadeFrom) => Saved | Promise<Saved>)
     | undefined;
 }) {
   const ids = useId();

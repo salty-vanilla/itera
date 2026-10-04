@@ -1,6 +1,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { savedOver } from '@/test/saved';
 import { GoalBlock } from './goal-block';
 
 afterEach(cleanup);
@@ -9,7 +10,7 @@ afterEach(cleanup);
 // form shows the Goal as it is now until it is typed in, and 保存 on a form
 // nothing was typed in saves nothing (#324).
 function setup(goal: string | undefined) {
-  const onSave = vi.fn(() => true);
+  const onSave = vi.fn(() => savedOver('"1"', '"saved"'));
   const props = {
     area: { name: '研究', color: 2 as const },
     week: '今週',

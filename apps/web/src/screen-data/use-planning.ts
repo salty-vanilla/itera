@@ -20,7 +20,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useCallback, useRef } from 'react';
 import { useApiClient } from '@/api/api-provider';
 import { useRead2, type Read } from '@/api/read-state';
-import { useOperation } from '@/api/use-operation';
+import { savedOf, useOperation, type Saved } from '@/api/use-operation';
 import { NO_AREA, type SprintArea } from './screen-area';
 
 export type { CandidateRow, PlannedTask };
@@ -210,12 +210,16 @@ export function usePlanActions(sprintId: SprintId) {
         )
       )?.ok === true,
     /** `from`: the Goal as read when it was typed, or none (#321). */
-    setGoal: async (areaId: AreaId, text: string, from: MadeFrom) =>
-      (
-        await once(`goal:${areaId}`, () =>
+    setGoal: async (
+      areaId: AreaId,
+      text: string,
+      from: MadeFrom,
+    ): Promise<Saved> =>
+      savedOf(
+        (await once(`goal:${areaId}`, () =>
           goal.run({ sprintId, areaId, text }, from),
-        )
-      )?.ok === true,
+        )) ?? { ok: false },
+      ),
   };
 }
 
@@ -229,8 +233,8 @@ export function useAvailableHoursAction(sprintId: SprintId) {
   // (AvailableHoursField), so its Toast does not say the typing stays.
   const set = useOperation('setAvailableHours', { whileSending: 'wait' });
   /** `from`: the Sprint as read when the hours were typed (#321). */
-  return async (hours: number | null, from: MadeFrom) =>
-    (await set.run({ sprintId, hours }, from)).ok;
+  return async (hours: number | null, from: MadeFrom): Promise<Saved> =>
+    savedOf(await set.run({ sprintId, hours }, from));
 }
 
 /** 確定: the plan is fixed, with the criterion or without it. */

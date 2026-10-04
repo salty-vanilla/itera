@@ -4,7 +4,7 @@ import type { MadeFrom } from '@itera/api-contract/requests';
 import { useQuery } from '@tanstack/react-query';
 import { useApiClient } from '@/api/api-provider';
 import { useRead, type Read } from '@/api/read-state';
-import { useOperation } from '@/api/use-operation';
+import { savedOf, useOperation, type Saved } from '@/api/use-operation';
 
 export type { EditableArea };
 
@@ -38,8 +38,11 @@ export function useAreaActions() {
       return outcome.ok ? outcome.value.areaId : undefined;
     },
     /** `from`: the Area as read when its name was typed (#321). */
-    renameArea: async (areaId: AreaId, name: string, from: MadeFrom) =>
-      (await rename.run({ areaId, name }, from)).ok,
+    renameArea: async (
+      areaId: AreaId,
+      name: string,
+      from: MadeFrom,
+    ): Promise<Saved> => savedOf(await rename.run({ areaId, name }, from)),
     archiveArea: async (areaId: AreaId) => (await archive.run({ areaId })).ok,
     restoreArea: async (areaId: AreaId) => (await restore.run({ areaId })).ok,
   };

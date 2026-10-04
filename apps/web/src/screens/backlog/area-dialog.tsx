@@ -1,6 +1,7 @@
 import type { AreaId } from '@itera/api-contract';
 import type { MadeFrom } from '@itera/api-contract/requests';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
+import type { Saved } from '@/api/use-operation';
 import { AreaMark } from '@/components/ui/area-indicator';
 import { ReadStatus } from '@/components/read-status';
 import { Button } from '@/components/ui/button';
@@ -201,12 +202,12 @@ function AreaEditor({
                   focusRow(area.id, 'edit');
                 }}
                 onRename={async (name, from) => {
-                  if (!(await actions.renameArea(area.id, name, from)))
-                    return false;
+                  const saved = await actions.renameArea(area.id, name, from);
+                  if (!saved.ok) return saved;
                   setRenaming(undefined);
                   if (name !== area.name) setStatus(`「${name}」に変えました`);
                   focusRow(area.id, 'edit');
-                  return true;
+                  return saved;
                 }}
               />
             ) : (
@@ -273,7 +274,7 @@ function EditRow({
 }: {
   area: EditableArea;
   /** Whether it went through; `from` is the Area as read when it was typed. */
-  onRename: (name: string, from: MadeFrom) => Promise<boolean>;
+  onRename: (name: string, from: MadeFrom) => Promise<Saved>;
   /** Absent when the Area cannot be archived now (#323). */
   onArchive?: (() => void) | undefined;
   onCancel: () => void;

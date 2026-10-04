@@ -3,6 +3,7 @@ import type { TaskId } from '@itera/api-contract';
 import { Link } from '@tanstack/react-router';
 import { Info } from 'lucide-react';
 import { useId } from 'react';
+import type { Saved } from '@/api/use-operation';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -36,7 +37,7 @@ type CheckSummaryProps = {
   onApplyCriterion: (applied: boolean) => void;
   /** Absent when the hours cannot be changed now (#323). */
   onAvailableHours:
-    | ((hours: number | null, from: MadeFrom) => boolean | Promise<boolean>)
+    | ((hours: number | null, from: MadeFrom) => Saved | Promise<Saved>)
     | undefined;
   /** A Task without a value: its detail, at its Estimate. */
   onEstimateTask: (taskId: TaskId) => void;

@@ -1,5 +1,6 @@
 import type { MadeFrom } from '@itera/api-contract/requests';
 import { useEffect, useRef, useState } from 'react';
+import type { Saved } from '@/api/use-operation';
 import { useUnsavedTyping, useUnsavedTypingLayers } from './unsaved-typing';
 
 type Draft<T> = {
@@ -14,7 +15,10 @@ type Draft<T> = {
    * was made from. `undefined` for a field whose record has no version.
    */
   version: MadeFrom | undefined;
-  /** Sent for saving: shown only until the read comes back with something else. */
+  /**
+   * Sent for saving: shown only until the read has the last save (by the
+   * record's version, else by the value changing from `from`).
+   */
   held: boolean;
   /**
    * The last save failed and gave the typing back. Such a save may have
@@ -31,6 +35,16 @@ type Draft<T> = {
   sending: number;
   /** The save sent last. */
   last: number;
+  /**
+   * The versions the last save that went through wrote (`Written`, by
+   * `keyOf`), #343: the read has the save once its record is at `now`, or
+   * at one not in `over` (changed again since, here or on another device);
+   * a read at one in `over` was made before it. `undefined` for a field
+   * without a version, or a value `put` in by an operation: the value
+   * changing from `from` says so instead.
+   */
+  written:
+    { readonly over: ReadonlySet<string>; readonly now: string } | undefined;
 };
 
 type DraftField<T> = {
@@ -72,8 +86,8 @@ type DraftField<T> = {
   put: (next: T) => void;
   /**
    * The typing is being saved: it stays shown until the read comes back
-   * with a value other than the one read when typing began. A save that
-   * ends `false` gives the field back to the person, typing kept.
+   * with a value other than the one read when it was sent. A save that ends
+   * `false` gives the field back to the person, typing kept.
    */
   hold: (saving?: boolean | void | Promise<boolean | void>) => void;
   /** Back to the value as read now. */
@@ -101,6 +115,12 @@ type DraftField<T> = {
  * (the read has not caught up) until the read changes, once every save sent
  * has been answered: the read that follows an earlier save does not take
  * what was typed after it.
+ *
+ * A field of a record with a version (the third argument) knows the read
+ * that has its last save by the record's version, which the save gives
+ * back (`Saved`): a read that comes after the save is answered and was made
+ * before it (an earlier save's read tried again, #343) does not take the
+ * value sent. Only a field without a version goes by the read changing.
  */
 function useDraftField<T>(
   read: T,
@@ -109,7 +129,8 @@ function useDraftField<T>(
 /**
  * A field for a value of a record with a version (#321): `version.etag` is
  * the record's etag as read, `undefined` when there is no record yet (a
- * Goal not written). Its save is made from `madeFrom`.
+ * Goal not written). Its save is made from `madeFrom`, and gives back the
+ * versions it went through to `hold` (`Saved`).
  */
 function useDraftField<T>(
   read: T,
@@ -120,7 +141,7 @@ function useDraftField<T>(
   read: T,
   equal: (a: T, b: T) => boolean = Object.is,
   version?: { readonly etag: string | undefined },
-): DraftField<T> {
+): DraftField<T> | VersionedDraftField<T> {
   const [draft, setDraft] = useState<Draft<T>>();
   // The record as read now: its etag, or none (a Goal not written yet).
   const current: MadeFrom | undefined =
@@ -134,13 +155,20 @@ function useDraftField<T>(
   const [self] = useState(() => ({}));
   const unsavedTyping = useUnsavedTyping();
   const layers = useUnsavedTypingLayers();
-  // The read changed after the last save was answered, or caught up with
-  // typing a failed save gave back: the draft's job is done. While a save
-  // is still on the way, the read is an earlier save's.
+  // The read has the last save (its record's version is the one the save
+  // left it at, or one after: not one it was at before), or, without a
+  // version, changed since the save was sent.
+  const hasSave = ({ written, from }: Draft<T>) =>
+    written === undefined || current === undefined
+      ? !equal(from, read)
+      : keyOf(current) === written.now || !written.over.has(keyOf(current));
+  // The read has the last save once every save is answered, or caught up
+  // with typing a failed save gave back: the draft's job is done. While a
+  // save is still on the way, the read is an earlier save's.
   const done = (d: Draft<T> | undefined) =>
     d !== undefined &&
     d.sending === 0 &&
-    ((d.held && !equal(d.from, read)) || (d.given && equal(d.value, read)));
+    ((d.held && hasSave(d)) || (d.given && equal(d.value, read)));
   if (done(draft)) setDraft(undefined);
   const live = done(draft) ? undefined : draft;
   const unsaved = live?.failed === true;
@@ -177,6 +205,7 @@ function useDraftField<T>(
           failed: cur?.failed ?? false,
           sending: d?.sending ?? 0,
           last: d?.last ?? 0,
+          written: d?.written,
         };
       }),
     put: (next) =>
@@ -190,8 +219,12 @@ function useDraftField<T>(
         failed: false,
         sending: d?.sending ?? 0,
         last: d?.last ?? 0,
+        // Not a save of this field's: shown until the read changes.
+        written: undefined,
       })),
-    hold: (saving) => {
+    hold: (
+      saving?: boolean | void | Saved | Promise<boolean | void | Saved>,
+    ) => {
       const id = ++sent.current;
       // The read as it is when the save is sent: what the read is to change
       // from before the typing is given up.
@@ -206,7 +239,10 @@ function useDraftField<T>(
             last: id,
           },
       );
-      void Promise.resolve(saving).then((ok) => {
+      void Promise.resolve(saving).then((answer) => {
+        const ok = typeof answer === 'object' ? answer.ok : answer;
+        const written =
+          typeof answer === 'object' && answer.ok ? answer.written : undefined;
         // Only the last save gives the typing back: an earlier one that
         // failed is carried by the last, which has the whole value.
         setDraft((d) => {
@@ -221,6 +257,13 @@ function useDraftField<T>(
             // the read does not change for it (the same words as another
             // device's).
             failed: givenBack || (d.failed && !(ok === true && d.last === id)),
+            written:
+              ok === true && d.last === id
+                ? written && {
+                    over: new Set(written.over.map(keyOf)),
+                    now: keyOf(written.now),
+                  }
+                : d.written,
           };
         });
       });
@@ -240,8 +283,23 @@ function useDraftField<T>(
   };
 }
 
-/** A field of a record with a version: its save is always made from one. */
-type VersionedDraftField<T> = DraftField<T> & { readonly madeFrom: MadeFrom };
+/**
+ * A field of a record with a version: its save is always made from one,
+ * and gives back the versions it went through (#343).
+ */
+type VersionedDraftField<T> = Omit<DraftField<T>, 'madeFrom' | 'hold'> & {
+  readonly madeFrom: MadeFrom;
+  /**
+   * The typing is being saved: it stays shown until the read has the save
+   * (its record at the version the save left it at, or one after). A save
+   * that did not go through gives the field back to the person, typing
+   * kept.
+   */
+  readonly hold: (saving: Saved | Promise<Saved>) => void;
+};
+
+/** A version as `Draft` keeps it: its etag, or `*` for no record. */
+const keyOf = (version: MadeFrom) => ('etag' in version ? version.etag : '*');
 
 /** Two texts are the same words, whatever spaces are around them. */
 const sameWords = (a: string, b: string) => a.trim() === b.trim();

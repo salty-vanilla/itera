@@ -15,7 +15,13 @@ const meta = {
   args: {
     total,
     areas,
-    hoursField: { etag: '"1"', save: () => true },
+    hoursField: {
+      etag: '"1"',
+      save: () => ({
+        ok: true,
+        written: { over: [{ etag: '"1"' }], now: { etag: '"2"' } },
+      }),
+    },
   },
   decorators: [(Story) => <div className="max-w-pane-side">{Story()}</div>],
 } satisfies Meta<typeof CapacityIndicator>;

@@ -1,6 +1,7 @@
 import type { MadeFrom } from '@itera/api-contract/requests';
 import type { Capacity, PlanningTotal } from '@itera/api-contract';
 import { Fragment, useId, useState } from 'react';
+import type { Saved } from '@/api/use-operation';
 import { AreaIndicator, type AreaColor } from '@/components/ui/area-indicator';
 import { DurationField } from '@/components/ui/duration-field';
 import { semanticIcons } from '@/components/ui/icon';
@@ -42,7 +43,7 @@ type AvailableHoursEdit = {
   readonly save: (
     hours: number | null,
     from: MadeFrom,
-  ) => boolean | Promise<boolean>;
+  ) => Saved | Promise<Saved>;
 };
 
 type CapacityIndicatorProps = {
@@ -480,10 +481,7 @@ function AvailableHoursField({
    * Saves the hours; returns success, when it is done. `from` is the Sprint
    * as read when they were typed.
    */
-  onChange: (
-    hours: number | null,
-    from: MadeFrom,
-  ) => boolean | Promise<boolean>;
+  onChange: (hours: number | null, from: MadeFrom) => Saved | Promise<Saved>;
   label?: string;
   description?: string;
 }) {
@@ -505,8 +503,8 @@ function AvailableHoursField({
     );
     field.hold(saving);
     // A save that fails goes back to the value as read.
-    void saving.then((done) => {
-      if (!done) field.drop();
+    void saving.then(({ ok }) => {
+      if (!ok) field.drop();
     });
   }
   return (

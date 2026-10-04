@@ -25,6 +25,7 @@ import {
   type Ref,
 } from 'react';
 import { flushSync } from 'react-dom';
+import type { Saved } from '@/api/use-operation';
 import { Button } from '@/components/ui/button';
 import {
   DrawerBody,
@@ -671,11 +672,10 @@ function TaskDetailContent({
     update: TaskAttributeUpdate,
     estimate: number | null | undefined,
     from: MadeFrom,
-  ): Promise<boolean> {
-    if (!(await actions.saveTask(task.id, update, estimate, from)))
-      return false;
-    setSaved(key);
-    return true;
+  ): Promise<Saved> {
+    const saved = await actions.saveTask(task.id, update, estimate, from);
+    if (saved.ok) setSaved(key);
+    return saved;
   }
 
   /** Saves a choice, made from the Task as it is read now (#321). */
