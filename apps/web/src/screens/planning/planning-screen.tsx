@@ -68,7 +68,7 @@ import { PlanPane, type Stage } from './plan-pane';
 //   the same one line (a Bottom Sheet). 確かめる opens with its summary (#93).
 
 /** How long the row just added flashes; the same as `added-flash` in the CSS. */
-const ADDED_MS = 2500;
+export const ADDED_MS = 2500;
 
 /** Scrolls `main` so that the added row shows, keeping the Quick Add in view. */
 function revealAdded(taskId: TaskId) {

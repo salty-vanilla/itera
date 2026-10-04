@@ -1,6 +1,22 @@
-import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
+import {
+  MutationCache,
+  notifyManager,
+  QueryCache,
+  QueryClient,
+} from '@tanstack/react-query';
 import { failureOf } from './failure';
 import { readAgain } from './reads';
+
+// For every QueryClient of the page, whether made here or not: TanStack
+// Query tells the components of an answer through one `notifyManager`. They
+// are told in the task the answer came in, not in a later one (its default,
+// a `setTimeout`). An operation resolves once they are told (`readAgain`,
+// #341), and with the default it would resolve a task later: the screen
+// tests that look right after the person's action (userEvent) count on it
+// not doing so. Before this goes back to the default, or when TanStack Query
+// changes how it tells them, those tests are to wait for what they look for
+// (ADR 0005).
+notifyManager.setScheduler(queueMicrotask);
 
 export interface QueryClientOptions {
   /** A request had no session (401): send the person to sign in (#278). */

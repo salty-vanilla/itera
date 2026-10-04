@@ -387,8 +387,8 @@ function TaskDetailContent({
   }
   // After an operation of the section the button pressed is gone: the
   // focus goes to 今日を開く, else to the first button left, else the title.
-  // The operation is done before its records are on screen, so the focus
-  // waits for the section to change from what it was when it was pressed.
+  // The focus waits for the section to change from what it was when it was
+  // pressed.
   const [operations, setOperations] = useState(0);
   const focusFrom = useRef<string>(undefined);
   async function runNow(run: () => Promise<boolean>) {

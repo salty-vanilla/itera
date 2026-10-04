@@ -1,5 +1,6 @@
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import {
+  act,
   cleanup,
   render,
   screen,
@@ -9,6 +10,7 @@ import {
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppRouter } from '@/app/router';
+import { ADDED_MS } from './planning-screen';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { StoreSnapshot } from '@/mock/memory-store';
 import { findHours, getHours, getMinutes } from '@/test/duration';
@@ -17,7 +19,10 @@ import { fixtureIds } from '@itera/application/fixtures';
 
 const ids = fixtureIds();
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 beforeEach(() => {
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
 });
@@ -300,6 +305,8 @@ describe('Planning — 選ぶ', () => {
       }),
       '研究',
     );
+    // The flash's clock moves when told; the rest as it goes.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     await userEvent.type(
       within(backlogPane()).getByRole('textbox', {
         name: '今週のタスクを追加',
@@ -321,9 +328,8 @@ describe('Planning — 選ぶ', () => {
       .closest<HTMLElement>('[data-slot="task-row"]')!;
     expect(row.className).toContain('added-flash');
     // Once: the mark goes after a moment, and the row stays.
-    await waitFor(() => expect(row.className).not.toContain('added-flash'), {
-      timeout: 4000,
-    });
+    await act(() => vi.advanceTimersByTimeAsync(ADDED_MS));
+    expect(row.className).not.toContain('added-flash');
     expect(within(research).getByText('発表資料を見直す')).toBeTruthy();
   });
 

@@ -28,7 +28,7 @@ import { useTaskDetailLeave } from './use-task-detail-leave';
 // parameters, so a state opens from its URL (ADR 0005).
 
 /** How long the row just added flashes; the same as `added-flash` in the CSS. */
-const ADDED_MS = 2500;
+export const ADDED_MS = 2500;
 
 export const slices: readonly { value: BacklogSlice | 'all'; label: string }[] =
   [

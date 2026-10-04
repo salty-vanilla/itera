@@ -14,7 +14,11 @@
 // would have to follow every derived value, and a missing entry would show
 // old records without failing. Only the reads on screen are fetched again;
 // the others are marked stale and fetched when next shown.
-import type { Query, QueryClient } from '@tanstack/react-query';
+import {
+  notifyManager,
+  type Query,
+  type QueryClient,
+} from '@tanstack/react-query';
 
 /** The operationIds of the contract's reads. */
 export const READS: ReadonlySet<string> = new Set([
@@ -54,6 +58,12 @@ export function invalidateReads(queryClient: QueryClient): Promise<void> {
  * network. Not after the retries, so that what follows an operation (its
  * outcome, the failure's Toast) is not held by a read that keeps failing or
  * by a device that went offline. A read that failed goes on as usual.
+ *
+ * The screen has the answers by then. TanStack Query tells the components
+ * of an answer after it keeps it (`notifyManager`), and what follows an
+ * operation could come in between: a field that holds a value sent until
+ * the read changes would take an earlier save's read for its own (#341).
+ * So it resolves once the components are told, queued after them.
  */
 export function readAgain(queryClient: QueryClient): Promise<void> {
   void invalidateReads(queryClient);
@@ -67,10 +77,16 @@ export function readAgain(queryClient: QueryClient): Promise<void> {
       );
   if (!onFirstTry()) return Promise.resolve();
   return new Promise((resolve) => {
-    const unsubscribe = cache.subscribe(() => {
+    const unsubscribe = cache.subscribe((event) => {
+      // `updated` comes after every observer of the query is told (an
+      // observer's own `observerResultsUpdated` comes before the others);
+      // `removed`, when the reads are cleared (signing in or out).
+      if (event.type !== 'updated' && event.type !== 'removed') return;
       if (onFirstTry()) return;
       unsubscribe();
-      resolve();
+      // Called in the batch of the answer, whose news to the components is
+      // queued already.
+      notifyManager.schedule(resolve);
     });
   });
 }
