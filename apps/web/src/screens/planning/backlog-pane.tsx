@@ -212,16 +212,25 @@ function BacklogPane({
                   aria-label={`${weekText(week, 'に入れる日')}：${task.title}`}
                   className="flex flex-wrap gap-x-4 gap-y-1"
                 >
-                  {occurrences.map((o) => (
-                    <Checkbox
-                      key={o.id}
-                      label={formatDate(o.scheduledDate)}
-                      checked={o.state === 'pending'}
-                      onCheckedChange={(checked) =>
-                        void actions.setOccurrenceIncluded(o.id, checked)
-                      }
-                    />
-                  ))}
+                  {occurrences.map((o) => {
+                    const included = o.state === 'pending';
+                    return (
+                      <Checkbox
+                        key={o.id}
+                        label={formatDate(o.scheduledDate)}
+                        checked={included}
+                        // Each way only while the read says it can go (#323).
+                        disabled={
+                          included
+                            ? !o.capabilities.canExclude
+                            : !o.capabilities.canInclude
+                        }
+                        onCheckedChange={(checked) =>
+                          void actions.setOccurrenceIncluded(o.id, checked)
+                        }
+                      />
+                    );
+                  })}
                 </div>
               </li>
             ))}
@@ -301,6 +310,10 @@ function Group({
   if (rows.length === 0) return null;
   const chosen = rows.filter((r) => r.chosen !== undefined);
   const all = chosen.length === rows.length;
+  // What the box can do (#323): choose the rows that can join, or take out
+  // the chosen ones that can leave.
+  const addable = rows.filter((r) => r.capabilities.canAdd);
+  const removable = chosen.filter((r) => r.chosenCapabilities?.canRemove);
   return (
     <section aria-label={title} className="flex flex-col gap-1">
       <div className="flex items-center gap-2">
@@ -309,10 +322,9 @@ function Group({
             aria-label={`${title}をすべて${weekText(week, 'に入れる')}`}
             checked={all}
             indeterminate={chosen.length > 0 && !all}
+            disabled={all ? removable.length === 0 : addable.length === 0}
             onCheckedChange={(checked) =>
-              checked
-                ? void choose(rows.filter((r) => r.chosen === undefined))
-                : void unchoose(chosen)
+              checked ? void choose(addable) : void unchoose(removable)
             }
           />
         </span>
@@ -370,6 +382,10 @@ function CandidateItem({
 }) {
   const { task, area, carry, running, value } = row;
   const chosen = row.chosen !== undefined;
+  // Each way only while the read says it can go (#323).
+  const toggles = chosen
+    ? row.chosenCapabilities?.canRemove === true
+    : row.capabilities.canAdd;
   const showEstimate = !slim && value.base !== 'none';
   const meta: ReactNode[] = [];
   if (!slim) {
@@ -404,6 +420,7 @@ function CandidateItem({
         <CheckboxControl
           aria-label={`${weekText(week, 'に入れる')}：${task.title}`}
           checked={chosen}
+          disabled={!toggles}
           onCheckedChange={onToggle}
         />
       </span>

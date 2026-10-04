@@ -4,7 +4,7 @@ import {
   type CommandResult,
 } from './shared/command';
 import type { RecurrenceRuleId, TaskId } from './shared/ids';
-import { err } from './shared/result';
+import { err, ok, type Result } from './shared/result';
 import {
   addDays,
   dayOfWeek,
@@ -90,14 +90,10 @@ export interface CreateRecurrenceRuleInput {
 }
 
 /**
- * Makes an active, non-recurring Task recurring. Creates version 1; no
- * occurrences are generated here (invariant 32).
+ * Whether `createRecurrenceRule` takes the Task as it is now (#323): an
+ * active Task without a rule. The pattern is not checked here.
  */
-export function createRecurrenceRule(
-  task: Task,
-  input: CreateRecurrenceRuleInput,
-  ctx: CommandContext,
-): CommandResult<{ readonly task: Task; readonly rule: RecurrenceRule }> {
+export function checkCreateRecurrenceRule(task: Task): Result<undefined> {
   if (task.recurrenceRuleId !== undefined) {
     return err('invalidInput', 'The Task already has a recurrence rule.');
   }
@@ -107,6 +103,20 @@ export function createRecurrenceRule(
       `Cannot make a ${task.lifecycle} Task recurring.`,
     );
   }
+  return ok(undefined);
+}
+
+/**
+ * Makes an active, non-recurring Task recurring. Creates version 1; no
+ * occurrences are generated here (invariant 32).
+ */
+export function createRecurrenceRule(
+  task: Task,
+  input: CreateRecurrenceRuleInput,
+  ctx: CommandContext,
+): CommandResult<{ readonly task: Task; readonly rule: RecurrenceRule }> {
+  const checked = checkCreateRecurrenceRule(task);
+  if (!checked.ok) return checked;
   const problem = validatePattern(input.pattern);
   if (problem !== null) return err('invalidInput', problem);
 

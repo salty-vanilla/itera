@@ -169,23 +169,33 @@ function AreaEditor({
               <ArchivedLine
                 key={area.id}
                 area={area}
-                onUndo={async () => {
-                  if (!(await actions.restoreArea(area.id))) return;
-                  setArchived((ids) => ids.filter((id) => id !== area.id));
-                  setStatus(`「${area.name}」を元に戻しました`);
-                  focusRow(area.id, 'edit');
-                }}
+                onUndo={
+                  !area.capabilities.canRestore
+                    ? undefined
+                    : async () => {
+                        if (!(await actions.restoreArea(area.id))) return;
+                        setArchived((ids) =>
+                          ids.filter((id) => id !== area.id),
+                        );
+                        setStatus(`「${area.name}」を元に戻しました`);
+                        focusRow(area.id, 'edit');
+                      }
+                }
               />
             ) : renaming === area.id ? (
               <EditRow
                 key={area.id}
                 area={area}
-                onArchive={async () => {
-                  setRenaming(undefined);
-                  if (!(await actions.archiveArea(area.id))) return;
-                  setArchived((ids) => [...ids, area.id]);
-                  focusRow(area.id, 'undo');
-                }}
+                onArchive={
+                  !area.capabilities.canArchive
+                    ? undefined
+                    : async () => {
+                        setRenaming(undefined);
+                        if (!(await actions.archiveArea(area.id))) return;
+                        setArchived((ids) => [...ids, area.id]);
+                        focusRow(area.id, 'undo');
+                      }
+                }
                 onCancel={() => {
                   setRenaming(undefined);
                   focusRow(area.id, 'edit');
@@ -209,16 +219,18 @@ function AreaEditor({
                 <span className="min-w-0 flex-1 text-body text-ink wrap-anywhere [word-break:auto-phrase]">
                   {area.name}
                 </span>
-                <Button
-                  size="sm"
-                  variant="quiet"
-                  data-action="edit"
-                  // The visible word comes in the name (WCAG 2.5.3).
-                  aria-label={`「${area.name}」を編集`}
-                  onClick={() => setRenaming(area.id)}
-                >
-                  編集
-                </Button>
+                {area.capabilities.canRename && (
+                  <Button
+                    size="sm"
+                    variant="quiet"
+                    data-action="edit"
+                    // The visible word comes in the name (WCAG 2.5.3).
+                    aria-label={`「${area.name}」を編集`}
+                    onClick={() => setRenaming(area.id)}
+                  >
+                    編集
+                  </Button>
+                )}
               </li>
             ),
           )}
@@ -262,7 +274,8 @@ function EditRow({
   area: EditableArea;
   /** Whether it went through; `from` is the Area as read when it was typed. */
   onRename: (name: string, from: MadeFrom) => Promise<boolean>;
-  onArchive: () => void;
+  /** Absent when the Area cannot be archived now (#323). */
+  onArchive?: (() => void) | undefined;
   onCancel: () => void;
 }) {
   // Typed apart from the Area as read: the form shows the name as it is now
@@ -331,9 +344,11 @@ function EditRow({
             stay right under the field and アーカイブ goes below them. */}
         <div className="flex flex-wrap-reverse items-center gap-2">
           {/* No confirmation: the line left in its place has 元に戻す. */}
-          <Button size="sm" type="button" onClick={onArchive}>
-            アーカイブ
-          </Button>
+          {onArchive && (
+            <Button size="sm" type="button" onClick={onArchive}>
+              アーカイブ
+            </Button>
+          )}
           {/* Together at the right. */}
           <span className="ml-auto flex gap-2">
             <Button size="sm" variant="quiet" type="button" onClick={onCancel}>
@@ -355,7 +370,8 @@ function ArchivedLine({
   onUndo,
 }: {
   area: EditableArea;
-  onUndo: () => void;
+  /** Absent when the Area cannot be restored now (#323). */
+  onUndo?: (() => void) | undefined;
 }) {
   const textId = useId();
   return (
@@ -371,15 +387,17 @@ function ArchivedLine({
         >
           「{area.name}」をアーカイブしました。タスクと過去の記録には残ります。
         </span>
-        <Button
-          size="sm"
-          variant="quiet"
-          data-action="undo"
-          aria-describedby={textId}
-          onClick={onUndo}
-        >
-          元に戻す
-        </Button>
+        {onUndo && (
+          <Button
+            size="sm"
+            variant="quiet"
+            data-action="undo"
+            aria-describedby={textId}
+            onClick={onUndo}
+          >
+            元に戻す
+          </Button>
+        )}
       </div>
     </li>
   );

@@ -2,6 +2,7 @@ import { generateOccurrences, type Occurrence } from './occurrence';
 import { addedActivity, recurringDraft } from './planning';
 import {
   changeRecurrenceRule,
+  checkCreateRecurrenceRule,
   createRecurrenceRule,
   endRecurrenceRule,
   latestVersion,
@@ -21,7 +22,7 @@ import type {
   SprintTaskId,
 } from './shared/ids';
 import { omit } from './shared/record';
-import { err } from './shared/result';
+import { err, ok, type Result } from './shared/result';
 import type { LocalDate } from './shared/time';
 import { nextUnconfirmedSprintStart, type Sprint } from './sprint';
 import type { Task } from './task';
@@ -107,15 +108,8 @@ export function changeRuleForNextSprint(
   ctx: CommandContext,
 ): CommandResult<RuleChangeApplied> {
   const { rule, task } = input;
-  if (rule.taskId !== task.id || task.recurrenceRuleId !== rule.id) {
-    return err('invalidInput', 'The rule does not belong to the Task.');
-  }
-  if (task.lifecycle !== 'active') {
-    return err(
-      'invalidTransition',
-      `Cannot change the rule of a ${task.lifecycle} Task.`,
-    );
-  }
+  const checked = checkChangeRuleForNextSprint(input);
+  if (!checked.ok) return checked;
   // A rule whose latest version starts later (created for a future
   // Sprint) is replaced from that day instead.
   const next = nextUnconfirmedSprintStart(
@@ -146,6 +140,38 @@ export function changeRuleForNextSprint(
     ...changed.value.activities,
     ...rebuilt.value.activities,
   ]);
+}
+
+/**
+ * Whether `createRuleForNextSprint` takes the Task as it is now (#323): an
+ * active Task without a rule. The pattern is not checked here.
+ */
+export function checkCreateRuleForNextSprint(task: Task): Result<undefined> {
+  return checkCreateRecurrenceRule(task);
+}
+
+/**
+ * Whether `changeRuleForNextSprint` takes the Task and its rule as they are
+ * now (#323): an active Task whose rule has not ended. The pattern is not
+ * checked here.
+ */
+export function checkChangeRuleForNextSprint(
+  input: Pick<ChangeRuleForNextSprintInput, 'task' | 'rule'>,
+): Result<undefined> {
+  const { rule, task } = input;
+  if (rule.taskId !== task.id || task.recurrenceRuleId !== rule.id) {
+    return err('invalidInput', 'The rule does not belong to the Task.');
+  }
+  if (task.lifecycle !== 'active') {
+    return err(
+      'invalidTransition',
+      `Cannot change the rule of a ${task.lifecycle} Task.`,
+    );
+  }
+  if (ruleEndsOn(rule) !== undefined) {
+    return err('invalidTransition', 'The rule has ended.');
+  }
+  return ok(undefined);
 }
 
 export interface EndRuleForNextSprintInput {
@@ -189,18 +215,8 @@ export function endRuleForNextSprint(
   ctx: CommandContext,
 ): CommandResult<RuleEnded> {
   const { rule, task } = input;
-  if (rule.taskId !== task.id || task.recurrenceRuleId !== rule.id) {
-    return err('invalidInput', 'The rule does not belong to the Task.');
-  }
-  if (task.lifecycle !== 'active') {
-    return err(
-      'invalidTransition',
-      `Cannot end the rule of a ${task.lifecycle} Task.`,
-    );
-  }
-  if (ruleEndsOn(rule) !== undefined) {
-    return err('invalidTransition', 'The rule has already ended.');
-  }
+  const checked = checkEndRuleForNextSprint(input);
+  if (!checked.ok) return checked;
   const endFrom = nextUnconfirmedSprintStart(
     input.sprints,
     input.user,
@@ -252,6 +268,29 @@ export function endRuleForNextSprint(
     },
     [...ended.value.activities, ...after],
   );
+}
+
+/**
+ * Whether `endRuleForNextSprint` takes the Task and its rule as they are
+ * now (#323): an active Task whose rule has not ended.
+ */
+export function checkEndRuleForNextSprint(
+  input: Pick<EndRuleForNextSprintInput, 'task' | 'rule'>,
+): Result<undefined> {
+  const { rule, task } = input;
+  if (rule.taskId !== task.id || task.recurrenceRuleId !== rule.id) {
+    return err('invalidInput', 'The rule does not belong to the Task.');
+  }
+  if (task.lifecycle !== 'active') {
+    return err(
+      'invalidTransition',
+      `Cannot end the rule of a ${task.lifecycle} Task.`,
+    );
+  }
+  if (ruleEndsOn(rule) !== undefined) {
+    return err('invalidTransition', 'The rule has already ended.');
+  }
+  return ok(undefined);
 }
 
 /**

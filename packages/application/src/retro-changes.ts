@@ -108,7 +108,7 @@ export const draft =
  * A draft criterion the operation names, with the Sprint in Review whose
  * improvement it came from: only that Retro changes it (#295).
  */
-function draftOf(
+export function draftOf(
   records: Records,
   criterionId: PlanningCriterionId,
 ): Result<{ sprint: Sprint; criterion: PlanningCriterion }> {

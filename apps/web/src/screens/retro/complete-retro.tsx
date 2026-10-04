@@ -68,7 +68,8 @@ function CompleteRetro({
   // neither takes the first one's focus away nor closes the Dialog under it.
   const sending = useRef(false);
   const reasonId = useId();
-  const blocked = data.blockers.length > 0;
+  // Open when the read says so (#323); the blockers say why not.
+  const blocked = !data.capabilities.canComplete;
   return (
     <div
       data-slot="complete-retro"

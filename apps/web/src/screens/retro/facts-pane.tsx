@@ -88,15 +88,26 @@ function FactsPane({
 }: FactsPaneProps) {
   const { facts, used } = data;
   const pinned = (pin: RetroPin) => data.pins.some((p) => samePin(p, pin));
+  // Each way only while the read says it can go (#323).
   const toggle = (pin: RetroPin, subject: string) =>
-    readOnly ? null : (
+    (
+      pinned(pin)
+        ? data.capabilities.canUnpinFact
+        : data.capabilities.canPinFact
+    ) ? (
       <PinToggle
         pinned={pinned(pin)}
         subject={subject}
         onToggle={() => onPin(pin, !pinned(pin))}
       />
-    );
-  const onAddActual = readOnly ? undefined : addActual;
+    ) : null;
+  // The column of かかった時間を記録 is there while any SprintTask can take
+  // actual time; each button, while its own can (#323).
+  const onAddActual = Object.values(data.sprintTaskCapabilities).some(
+    (c) => c.canRecordActualTime,
+  )
+    ? addActual
+    : undefined;
   // compact is not a smaller table: each Task is stacked (owner decision
   // in #57), so nothing needs scrolling sideways.
   const compact = !useMediaQuery(MEDIUM_UP, true);
@@ -366,7 +377,7 @@ function FactsPane({
           area={area}
           compact={compact}
           toggle={toggle}
-          onAssess={readOnly ? undefined : onAssess}
+          onAssess={onAssess}
           onAddActual={onAddActual}
         />
       ))}
@@ -392,18 +403,20 @@ function FactsPane({
                         {/* Per occurrence (#56): the time goes to its day.
                             Only where none is entered (#241), before the
                             pin, so that the pins keep one column. */}
-                        {onAddActual !== undefined && actualHours === 0 && (
-                          <AddActualButton
-                            subject={subject}
-                            onClick={(anchor) =>
-                              onAddActual(
-                                target,
-                                `${title} · ${formatDate(o.scheduledDate)} の分`,
-                                anchor,
-                              )
-                            }
-                          />
-                        )}
+                        {onAddActual !== undefined &&
+                          recordsActual(data, target.sprintTaskId) &&
+                          actualHours === 0 && (
+                            <AddActualButton
+                              subject={subject}
+                              onClick={(anchor) =>
+                                onAddActual(
+                                  target,
+                                  `${title} · ${formatDate(o.scheduledDate)} の分`,
+                                  anchor,
+                                )
+                              }
+                            />
+                          )}
                         {toggle({ kind: 'occurrence', id: o.id }, subject)}
                       </span>
                     }
@@ -533,8 +546,8 @@ type AreaFactsProps = {
   /** Under 768px: Tasks stacked rather than in a table. */
   compact: boolean;
   toggle: (pin: RetroPin, subject: string) => ReactNode;
-  /** Absent in a closed Retro: the judgement is read only. */
-  onAssess: FactsPaneProps['onAssess'] | undefined;
+  /** The judgement, where the read says the Goal can take it (#323). */
+  onAssess: FactsPaneProps['onAssess'];
   onAddActual: AddActual | undefined;
 };
 
@@ -549,6 +562,11 @@ function AreaFacts({
   const headingId = useId();
   const shown = data.areaOf(area.areaId);
   const { goal, areaId } = area;
+  // Read only where the Goal cannot be judged now (a closed Retro).
+  const assess =
+    areaId !== null && data.goalCapabilities[areaId]?.canAssess === true
+      ? onAssess
+      : undefined;
   return (
     <section
       aria-labelledby={headingId}
@@ -577,7 +595,7 @@ function AreaFacts({
             <p className="max-w-measure-read text-goal text-ink">{goal.text}</p>
             {toggle({ kind: 'goal', id: areaId }, `${shown.name}の目標`)}
           </div>
-          {onAssess === undefined ? (
+          {assess === undefined ? (
             goal.selfAssessment === undefined && (
               <p className="text-meta text-ink-muted">自分の評価：まだ</p>
             )
@@ -585,7 +603,7 @@ function AreaFacts({
             <RadioGroup<SelfAssessment | null>
               legend="この目標を自分でどう見ますか"
               value={goal.selfAssessment ?? null}
-              onValueChange={(value) => onAssess(areaId, value)}
+              onValueChange={(value) => assess(areaId, value)}
               className="flex flex-col gap-2"
             >
               <div className="flex flex-wrap gap-x-6 gap-y-2">
@@ -773,6 +791,7 @@ function TaskTable({
                       actualDate={data.actualDate}
                       toggle={toggle}
                       onAddActual={onAddActual}
+                      canRecord={recordsActual(data, t.sprintTaskId)}
                     />
                   </div>
                 </td>
@@ -866,6 +885,7 @@ function TaskList({
                     actualDate={data.actualDate}
                     toggle={toggle}
                     onAddActual={onAddActual}
+                    canRecord={recordsActual(data, t.sprintTaskId)}
                   />
                 </div>
               )}
@@ -886,18 +906,21 @@ function TaskActions({
   actualDate,
   toggle,
   onAddActual,
+  canRecord,
 }: {
   fact: TaskFact;
   /** The day a Task's actual time goes to (RetroData.actualDate). */
   actualDate: RetroData['actualDate'];
   toggle: AreaFactsProps['toggle'];
   onAddActual: AddActual;
+  /** `recordActualTime` for its SprintTask, as the read says (#323). */
+  canRecord: boolean;
 }) {
   return (
     <>
       {/* A recurring Task's time goes to one occurrence (繰り返しの回). Only
           where none is entered: the row's exception (#241). */}
-      {!fact.recurring && fact.actualHours === 0 && (
+      {!fact.recurring && fact.actualHours === 0 && canRecord && (
         <AddActualButton
           subject={fact.title}
           onClick={(anchor) =>
@@ -980,3 +1003,10 @@ function FactRow({
 }
 
 export { FactsPane };
+
+/** Whether the SprintTask can take actual time now, as the read says (#323). */
+function recordsActual(data: RetroData, sprintTaskId: string): boolean {
+  return (
+    data.sprintTaskCapabilities[sprintTaskId]?.canRecordActualTime === true
+  );
+}

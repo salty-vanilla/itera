@@ -4,7 +4,7 @@ import {
   type CommandResult,
 } from './shared/command';
 import type { AreaId, UserId } from './shared/ids';
-import { err } from './shared/result';
+import { err, ok, type Result } from './shared/result';
 
 /** The seven Area colors (`area-1` … `area-7` tokens in DESIGN.md). */
 export type AreaColor = 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -55,6 +55,8 @@ export function renameArea(
   newName: string,
   ctx: CommandContext,
 ): CommandResult<Area> {
+  const checked = checkRenameArea();
+  if (!checked.ok) return checked;
   const name = newName.trim();
   if (name === '') return err('invalidInput', 'Area name is empty.');
   if (name === area.name) return applied(area, []);
@@ -74,9 +76,8 @@ export function archiveArea(
   area: Area,
   ctx: CommandContext,
 ): CommandResult<Area> {
-  if (area.archived) {
-    return err('invalidTransition', 'Area is already archived.');
-  }
+  const checked = checkArchiveArea(area);
+  if (!checked.ok) return checked;
   return applied({ ...area, archived: true }, [
     { kind: 'areaArchived', at: ctx.now, actor: ctx.actor, areaId: area.id },
   ]);
@@ -86,8 +87,31 @@ export function restoreArea(
   area: Area,
   ctx: CommandContext,
 ): CommandResult<Area> {
-  if (!area.archived) return err('invalidTransition', 'Area is not archived.');
+  const checked = checkRestoreArea(area);
+  if (!checked.ok) return checked;
   return applied({ ...area, archived: false }, [
     { kind: 'areaRestored', at: ctx.now, actor: ctx.actor, areaId: area.id },
   ]);
+}
+
+/**
+ * Whether `renameArea` takes the Area as it is now (#323): any Area, an
+ * archived one too. The name it is given is not checked here.
+ */
+export function checkRenameArea(): Result<undefined> {
+  return ok(undefined);
+}
+
+/** Whether `archiveArea` takes the Area as it is now (#323). */
+export function checkArchiveArea(area: Area): Result<undefined> {
+  return area.archived
+    ? err('invalidTransition', 'Area is already archived.')
+    : ok(undefined);
+}
+
+/** Whether `restoreArea` takes the Area as it is now (#323). */
+export function checkRestoreArea(area: Area): Result<undefined> {
+  return area.archived
+    ? ok(undefined)
+    : err('invalidTransition', 'Area is not archived.');
 }

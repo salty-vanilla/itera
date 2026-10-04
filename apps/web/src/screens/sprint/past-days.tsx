@@ -97,14 +97,17 @@ function PastDays({ days, onUndo }: PastDaysProps) {
                     </span>
                   </span>
                   {/* Quiet, as a list read back rather than worked in
-                      (#160): the icon of Today's way back, always shown. */}
-                  <IconButton
-                    size="sm"
-                    className="ms-auto"
-                    label={`取り消す（${word(r)}）：${formatDate(r.selection.date)} ${r.title}`}
-                    icon={<Undo2 />}
-                    onClick={() => setAsking(r)}
-                  />
+                      (#160): the icon of Today's way back, shown while the
+                      read says it can be undone (#323). */}
+                  {undoes(r) && (
+                    <IconButton
+                      size="sm"
+                      className="ms-auto"
+                      label={`取り消す（${word(r)}）：${formatDate(r.selection.date)} ${r.title}`}
+                      icon={<Undo2 />}
+                      onClick={() => setAsking(r)}
+                    />
+                  )}
                 </li>
               );
             })}
@@ -142,6 +145,11 @@ function PastDays({ days, onUndo }: PastDaysProps) {
       </Dialog>
     </section>
   );
+}
+
+/** Whether the record's completion or skip can be undone now (#323). */
+function undoes(r: PastDayRecord): boolean {
+  return r.capabilities.canUndoComplete || r.capabilities.canUndoSkip;
 }
 
 /** What undoing leaves, in words (F33, F17, F29). */

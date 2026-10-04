@@ -33,7 +33,7 @@ import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { useStuckBar } from '@/lib/use-stuck-bar';
 import { cn } from '@/lib/utils';
 import { weekCall, weekText, weekLabel } from '@/lib/week-text';
-import { useBacklog } from '@/screen-data/use-backlog';
+import { hasDetail, useBacklog } from '@/screen-data/use-backlog';
 import {
   useAvailableHoursAction,
   useConfirmSprint,
@@ -187,7 +187,11 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
       check={stage === 'check'}
       sheet={sheet}
       // 確かめる takes the hours in its summary only: one field (#93).
-      onAvailableHours={stage === 'check' ? undefined : setAvailableHours}
+      onAvailableHours={
+        stage === 'check' || !data.capabilities.canSetAvailableHours
+          ? undefined
+          : setAvailableHours
+      }
     />
   );
 
@@ -223,7 +227,9 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
     return () => window.clearTimeout(timer);
   }, [addedTaskId, sideBySide]);
 
-  const blocked = data.blockers.length > 0;
+  // 確定 is open when the read says so (#323); the blockers say why not.
+  const blocked = !data.capabilities.canConfirm;
+  const inBacklog = (taskId: TaskId) => hasDetail(backlog, taskId);
   const reasonId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
@@ -430,7 +436,11 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
                   onApplyCriterion={(applied) =>
                     setSearch({ criterion: applied ? undefined : 'off' })
                   }
-                  onAvailableHours={setAvailableHours}
+                  onAvailableHours={
+                    data.capabilities.canSetAvailableHours
+                      ? setAvailableHours
+                      : undefined
+                  }
                   onEstimateTask={openEstimate}
                   onOpenTask={openTask}
                 />
@@ -439,6 +449,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
             addedTaskId={addedTaskId}
             onOpenTask={openTask}
             onEstimateTask={openEstimate}
+            inBacklog={inBacklog}
           />
         </div>
         <aside

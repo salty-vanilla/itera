@@ -80,7 +80,11 @@ function Where({ data }: { data: DayData }) {
 }
 
 function Past({ data }: { data: DayData }) {
-  const running = data.within?.sprint?.state === 'active';
+  // Where an undo is: shown while a record of the day can be undone, as
+  // the read says (#323).
+  const undoable = data.records.some(
+    (r) => r.capabilities.canUndoComplete || r.capabilities.canUndoSkip,
+  );
   return (
     <>
       <section aria-labelledby="day-records" className="flex flex-col gap-2">
@@ -117,7 +121,7 @@ function Past({ data }: { data: DayData }) {
             ))}
           </ul>
         )}
-        {running && data.records.length > 0 && (
+        {undoable && (
           <p className="text-help text-ink-muted [text-wrap:pretty] [word-break:auto-phrase]">
             完了・スキップの取り消しは、Sprint の画面の
             <span className="whitespace-nowrap">「日ごとの記録」から。</span>

@@ -93,19 +93,26 @@ type Transition = {
   readonly kind: Extract<Activity['kind'], `occurrence${string}`>;
 };
 
-/** Planning で外す: pending → excluded. Kept as a record (invariant 33). */
-export const excludeOccurrence = transition({
+const EXCLUDE: Transition = {
   from: ['pending'],
   to: 'excluded',
   kind: 'occurrenceExcluded',
-});
-
-/** Planning で戻す / Sprint 中に追加: excluded → pending. */
-export const includeOccurrence = transition({
+};
+const INCLUDE: Transition = {
   from: ['excluded'],
   to: 'pending',
   kind: 'occurrenceIncluded',
-});
+};
+
+/** Planning で外す: pending → excluded. Kept as a record (invariant 33). */
+export const excludeOccurrence = transition(EXCLUDE);
+/** Whether `excludeOccurrence` takes the occurrence as it is now (#323). */
+export const checkExcludeOccurrence = check(EXCLUDE);
+
+/** Planning で戻す / Sprint 中に追加: excluded → pending. */
+export const includeOccurrence = transition(INCLUDE);
+/** Whether `includeOccurrence` takes the occurrence as it is now (#323). */
+export const checkIncludeOccurrence = check(INCLUDE);
 
 const COMPLETE: Transition = {
   from: ['pending'],

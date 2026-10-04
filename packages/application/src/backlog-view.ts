@@ -15,17 +15,25 @@ import {
   type AreaId,
   type BacklogSlice,
   type DailySelectionId,
+  type EstimateSuggestionId,
   type Instant,
   type LocalDate,
   type PlanningValue,
   type RecurrencePattern,
   type RecurrenceSummary,
   type SprintTask,
+  type SubtaskId,
   type TaskId,
 } from '@itera/domain';
 import {
   selectionCapabilities,
+  subtaskCapabilities,
+  suggestionCapabilities,
+  taskCapabilities,
   type DailySelectionCapabilities,
+  type EstimateSuggestionCapabilities,
+  type SubtaskCapabilities,
+  type TaskCapabilities,
 } from './capabilities';
 import type { Clock, Records } from './records';
 import { nextWeekSprintOf, thisWeekSprintOf } from './sprint-choice';
@@ -91,23 +99,25 @@ export interface BacklogItem {
   readonly taskValue: PlanningValue;
   /** The subtask sum, for choosing it as the time basis in the detail. */
   readonly subtaskValue: PlanningValue;
-  /** 今日へ: only for a Task outside the active Sprint (invariant 26). */
-  readonly canAddToToday: boolean;
-  /**
-   * 今週へ (#155): a one-off Task outside the active Sprint, without a day.
-   * Also before the Sprint starts, since no day is chosen.
-   */
-  readonly canAddToWeek: boolean;
   /**
    * 今日へ waits for the Sprint's first day (#59): the Sprint is confirmed
-   * but has not started, so there is no day to choose on yet.
+   * but has not started, so there is no day to choose on yet. Given while
+   * the Task can join the Sprint (今週へ) but not today.
    */
   readonly todayOpensOn?: {
     readonly number: number;
     readonly start: LocalDate;
   };
-  /** A recurring Task is completed per occurrence, in Today. */
-  readonly canComplete: boolean;
+  /** What the person can do with the Task now (#323). */
+  readonly capabilities: TaskCapabilities;
+  /** What the person can do with each of its suggestions, by ID (#323). */
+  readonly suggestionCapabilities: Readonly<
+    Record<EstimateSuggestionId, EstimateSuggestionCapabilities>
+  >;
+  /** What the person can do with each of its subtasks, by ID (#323). */
+  readonly subtaskCapabilities: Readonly<
+    Record<SubtaskId, SubtaskCapabilities>
+  >;
 }
 
 export function backlogItem(
@@ -131,11 +141,7 @@ export function backlogItem(
   );
   const active = activeSprint(records);
   const latest = rule?.versions.at(-1);
-  const canChoose =
-    active !== undefined &&
-    rule === undefined &&
-    !active.tasks.some((t) => t.taskId === task.id);
-  const beforeStart = active !== undefined && clock.today < active.start;
+  const capabilities = taskCapabilities(records, task, clock);
   // Today's selections of this Task (of its occurrences, if recurring).
   const todays =
     active?.dailySelections.filter(
@@ -226,9 +232,10 @@ export function backlogItem(
       { ...task, timeBasis: 'subtasks' },
       { now: clock.now },
     ),
-    canAddToToday: canChoose && !beforeStart,
-    canAddToWeek: canChoose,
-    ...(canChoose && beforeStart && active !== undefined
+    ...(active !== undefined &&
+    capabilities.canAddToWeek &&
+    !capabilities.canAddToToday &&
+    clock.today < active.start
       ? {
           todayOpensOn: {
             number: sprintNumber(active, records.sprints),
@@ -236,7 +243,9 @@ export function backlogItem(
           },
         }
       : {}),
-    canComplete: rule === undefined,
+    capabilities,
+    suggestionCapabilities: suggestionCapabilities(task),
+    subtaskCapabilities: subtaskCapabilities(task),
   };
 }
 

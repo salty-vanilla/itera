@@ -14,6 +14,11 @@ const sprint = (
     start: `2026-01-${day}`,
     end: `2026-01-${day}`,
     state,
+    capabilities: {
+      canSetAvailableHours: false,
+      canConfirm: false,
+      canBeginRetro: false,
+    },
     ...(week === undefined ? {} : { week }),
   };
 };

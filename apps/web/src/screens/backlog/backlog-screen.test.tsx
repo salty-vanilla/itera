@@ -1245,9 +1245,18 @@ describe('Backlog', () => {
     expect(
       within(section).getByText('今の設定：毎週 土 · 10/4 (日) まで'),
     ).toBeTruthy();
-    // An ended rule is not changed again: the inputs and the button go.
-    expect(within(section).queryByRole('combobox')).toBeNull();
-    expect(within(section).queryByRole('button')).toBeNull();
+    // The rule has come off the Task: it is not changed or ended again, and
+    // the Task can be made recurring from the next Sprint (owner decision
+    // in #323).
+    expect(
+      within(section).queryByRole('button', { name: '繰り返しをやめる' }),
+    ).toBeNull();
+    expect(
+      within(section).getByRole('combobox', { name: '頻度' }),
+    ).toBeTruthy();
+    expect(
+      within(section).getByRole('button', { name: '繰り返しにする' }),
+    ).toBeTruthy();
     expect(document.activeElement).toBe(
       within(section).getByRole('heading', { name: '繰り返し' }),
     );
@@ -1266,6 +1275,37 @@ describe('Backlog', () => {
     expect(
       within(list()).getByText('部屋の掃除').closest('li')?.textContent,
     ).toContain('毎週 土 · 次は 10/3 (土) · 10/4 (日) まで');
+  });
+
+  it('Recurrence (F41): after 繰り返しをやめる, the choice starts as a Task without a rule, and closing asks nothing (#323)', async () => {
+    await renderAt(
+      `/backlog?fixture=backlog-recurrence&view=recurring&task=${ids.task.cleaning}`,
+    );
+    let detail = await screen.findByRole('dialog');
+    let section = within(detail).getByRole('region', { name: '繰り返し' });
+    await userEvent.click(
+      within(section).getByRole('button', { name: '繰り返しをやめる' }),
+    );
+    await within(section).findByRole('button', { name: '繰り返しにする' });
+    // Not the rule that ends: no weekday is chosen yet.
+    expect(
+      within(section)
+        .getAllByRole('checkbox')
+        .filter((box) => box.getAttribute('aria-checked') === 'true'),
+    ).toEqual([]);
+    await userEvent.click(footerClose(detail));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    // Opened again and closed untouched: nothing held.
+    await userEvent.click(
+      within(list()).getByRole('button', { name: '部屋の掃除' }),
+    );
+    detail = await screen.findByRole('dialog');
+    section = within(detail).getByRole('region', { name: '繰り返し' });
+    expect(
+      within(section).getByRole('button', { name: '繰り返しにする' }),
+    ).toBeTruthy();
+    await userEvent.click(footerClose(detail));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
   it('Recurrence (F41): a rule that has made no occurrence is taken off; the Task is one-off again', async () => {

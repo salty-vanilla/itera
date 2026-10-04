@@ -197,7 +197,16 @@ function BacklogRow({
   useEffect(() => {
     if (focusControl) circleRef.current?.focus();
   }, [focusControl]);
-  const { task, area, carry, recurrence, thisWeek, nextWeek, value } = item;
+  const {
+    task,
+    area,
+    carry,
+    recurrence,
+    thisWeek,
+    nextWeek,
+    value,
+    capabilities,
+  } = item;
   const hasMeta =
     area !== undefined ||
     task.due !== undefined ||
@@ -220,18 +229,21 @@ function BacklogRow({
           : undefined
       }
       onOpen={onOpen}
-      keys={{ onEstimate, onArchive }}
+      keys={{
+        onEstimate: capabilities.canSave ? onEstimate : undefined,
+        onArchive: capabilities.canArchive ? onArchive : undefined,
+      }}
       // Always shown, not only on hover and focus: the ○ is the one control
       // in view, and 今日へ is not found behind the pointer (Issue #164).
       actionsVisible
       control={
-        item.canComplete ? (
+        capabilities.canComplete ? (
           <CompletionCircle
             ref={circleRef}
             title={task.title}
             onToggle={onComplete}
           />
-        ) : (
+        ) : recurrence !== undefined ? (
           // A recurring Task is done per occurrence, in Today: the ↻ stands
           // where the ○ would, and keeps the titles aligned (Issue #171).
           <span
@@ -241,6 +253,13 @@ function BacklogRow({
             <RecurrenceIcon aria-hidden />
             <span className="sr-only">1回ずつ完了</span>
           </span>
+        ) : (
+          // Nothing to complete here now: the place of the ○ stays, so the
+          // titles stay aligned.
+          <span
+            aria-hidden
+            className="size-target-touch medium:size-target-min"
+          />
         )
       }
       metadata={
@@ -284,7 +303,7 @@ function BacklogRow({
             }
           />
           <MenuContent align="end">
-            {item.canAddToToday && (
+            {capabilities.canAddToToday && (
               <MenuItem onClick={onToday}>
                 <Sun aria-hidden />
                 今日へ
@@ -297,25 +316,29 @@ function BacklogRow({
                 今日へ · {formatDate(item.todayOpensOn.start)} から
               </MenuItem>
             )}
-            {item.canAddToWeek && (
+            {capabilities.canAddToWeek && (
               <MenuItem onClick={onWeek}>
                 <Route aria-hidden />
                 今週へ
               </MenuItem>
             )}
-            {item.canComplete && (
+            {capabilities.canComplete && (
               <MenuItem onClick={onComplete}>
                 <CircleCheck aria-hidden />
                 完了にする
               </MenuItem>
             )}
-            <EstimateMenuItem onSelect={onEstimate} />
-            <MenuSeparator />
-            {/* Not `danger`: it can be undone (Issue #164). */}
-            <MenuItem onClick={onArchive}>
-              <Archive aria-hidden />
-              アーカイブ
-            </MenuItem>
+            {capabilities.canSave && <EstimateMenuItem onSelect={onEstimate} />}
+            {capabilities.canArchive && (
+              <>
+                <MenuSeparator />
+                {/* Not `danger`: it can be undone (Issue #164). */}
+                <MenuItem onClick={onArchive}>
+                  <Archive aria-hidden />
+                  アーカイブ
+                </MenuItem>
+              </>
+            )}
           </MenuContent>
         </Menu>
       }

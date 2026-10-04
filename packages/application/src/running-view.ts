@@ -24,10 +24,19 @@ import {
   type Sprint,
   type SprintId,
   type SprintTotals,
-  type Task,
   type WeekProgress,
 } from '@itera/domain';
-import type { Clock } from './records';
+import {
+  goalCapabilities,
+  selectionCapabilities,
+  sprintCapabilities,
+  sprintTaskCapabilities,
+  type DailySelectionCapabilities,
+  type SprintCapabilities,
+  type SprintGoalCapabilities,
+  type SprintTaskCapabilities,
+} from './capabilities';
+import type { Clock, Records } from './records';
 import { nextWeekSprintOf, weekOf, type SprintWeek } from './sprint-choice';
 import { dayInPeriod } from './sprint-day';
 import type {
@@ -62,6 +71,8 @@ export interface RunningTask {
    * week runs. Only the running Sprint says it (#150).
    */
   readonly nextWeek?: true;
+  /** What the person can do with the SprintTask now (#323). */
+  readonly capabilities: SprintTaskCapabilities;
 }
 
 export interface RunningAreaPlan {
@@ -69,6 +80,11 @@ export interface RunningAreaPlan {
   readonly area?: RunningArea;
   readonly goal?: TaggedSprintGoal;
   readonly tasks: readonly RunningTask[];
+  /**
+   * What the person can do with the Area's Goal now (#323), written or
+   * not: none for the Tasks without an Area.
+   */
+  readonly goalCapabilities: SprintGoalCapabilities;
 }
 
 /** A past day's completion or skip, which can be undone (#53). */
@@ -88,6 +104,8 @@ export interface PastDayRecord {
         readonly resolution: 'paused' | 'deferred' | 'removed';
       }
     | { readonly kind: 'gone' };
+  /** What the person can do with the selection now (#323): its undo. */
+  readonly capabilities: DailySelectionCapabilities;
 }
 
 export interface PastDay {
@@ -137,6 +155,8 @@ export interface RunningData {
      */
     readonly noEffect: boolean;
   };
+  /** What the person can do with the Sprint now (#323). */
+  readonly capabilities: SprintCapabilities;
 }
 
 /**
@@ -206,6 +226,7 @@ export function runningData(
                   fromSprint: sprintNumber(from, records.sprints),
                 },
               }),
+          capabilities: sprintTaskCapabilities(records, sprint, sprintTask),
         },
       ];
     });
@@ -236,11 +257,17 @@ export function runningData(
           area: areaOf(areaId),
           ...(goal === undefined ? {} : { goal }),
           tasks: inArea,
+          goalCapabilities: goalCapabilities(records, sprint, areaId),
         },
       ];
     }),
     ...(counted.some((t) => t.task.areaId === undefined)
-      ? [{ tasks: counted.filter((t) => t.task.areaId === undefined) }]
+      ? [
+          {
+            tasks: counted.filter((t) => t.task.areaId === undefined),
+            goalCapabilities: goalCapabilities(records, sprint, undefined),
+          },
+        ]
       : []),
   ];
 
@@ -273,7 +300,7 @@ export function runningData(
     plan,
     ...(ended ? {} : { progress: weekProgress(sprint, records.occurrences) }),
     // Undoing a past day is for the running Sprint only (F33).
-    pastDays: ended ? [] : pastDaysOf(sprint, tasks, clock.today),
+    pastDays: ended ? [] : pastDaysOf(records, sprint, clock.today),
     totals,
     availableHours: {
       ...(sprint.plannedAvailableHours === undefined
@@ -298,14 +325,16 @@ export function runningData(
             }),
           },
         }),
+    capabilities: sprintCapabilities(records, sprint, clock),
   };
 }
 
 function pastDaysOf(
+  all: Records,
   sprint: Sprint,
-  tasks: readonly Task[],
   today: LocalDate,
 ): readonly PastDay[] {
+  const { tasks } = all;
   const records = sprint.dailySelections
     .filter(
       (s) =>
@@ -335,6 +364,12 @@ function pastDaysOf(
                         resolution: selection.closedBefore.resolution,
                       }
                     : { kind: 'unresolved' as const },
+              capabilities: selectionCapabilities(
+                all,
+                sprint,
+                selection,
+                today,
+              ),
             },
           ];
     });

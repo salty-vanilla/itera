@@ -128,7 +128,12 @@ function HandoffPane({
               </span>
             )
           }
-          disabled={improvement === undefined}
+          // Each way only while the read says it can go (#323).
+          disabled={
+            draft === undefined
+              ? !data.capabilities.canDraftCriterion
+              : !draft.capabilities.canDropDraft
+          }
           checked={draft !== undefined}
           onCheckedChange={(checked) =>
             checked ? onDraft(initial) : onDropDraft()
@@ -143,6 +148,7 @@ function HandoffPane({
               samePolicy(draft.criterion.policy, used.criterion.policy)
             }
             titleOf={titleOf}
+            disabled={!draft.capabilities.canSetDraftPolicy}
             onChange={onDraftPolicy}
           />
         )}
@@ -161,6 +167,7 @@ function HandoffPane({
             legend="次の Sprint でどうしますか"
             necessity="required"
             value={used.decision ?? null}
+            disabled={!used.capabilities.canDecide}
             onValueChange={(value) => {
               if (value !== null) onDecide(value);
             }}
@@ -342,6 +349,7 @@ function DraftCriterion({
   areas,
   sameAsUsed,
   titleOf,
+  disabled,
   onChange,
 }: {
   draft: RetroCriterion;
@@ -349,6 +357,8 @@ function DraftCriterion({
   /** Still the same setting as this Sprint's criterion. */
   sameAsUsed: boolean;
   titleOf: (taskId: string) => string;
+  /** The setting cannot be changed now (#323): the selects are disabled. */
+  disabled: boolean;
   onChange: (policy: CriterionPolicy) => Promise<boolean>;
 }) {
   const { policy } = draft.criterion;
@@ -372,6 +382,7 @@ function DraftCriterion({
       <div className="flex flex-wrap gap-4">
         <Field label="領域">
           <Select
+            disabled={disabled}
             value={scopeValue}
             onChange={(e) => {
               const value = e.currentTarget.value;
@@ -394,6 +405,7 @@ function DraftCriterion({
         </Field>
         <Field label="見積もりがないとき、提案のどの値で計画するか">
           <Select
+            disabled={disabled}
             value={policy.rangePolicy}
             onChange={(e) =>
               onChange({

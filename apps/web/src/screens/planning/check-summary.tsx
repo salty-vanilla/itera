@@ -34,10 +34,10 @@ import { planSummary } from './plan-summary';
 type CheckSummaryProps = {
   data: PlanningData;
   onApplyCriterion: (applied: boolean) => void;
-  onAvailableHours: (
-    hours: number | null,
-    from: MadeFrom,
-  ) => boolean | Promise<boolean>;
+  /** Absent when the hours cannot be changed now (#323). */
+  onAvailableHours:
+    | ((hours: number | null, from: MadeFrom) => boolean | Promise<boolean>)
+    | undefined;
   /** A Task without a value: its detail, at its Estimate. */
   onEstimateTask: (taskId: TaskId) => void;
   /** A Task with subtasks left out: its detail, where they are. */
@@ -97,13 +97,15 @@ function CheckSummary({
           </dd>
         </dl>
         {/* The one field for the hours in 確かめる; the right pane has none. */}
-        <div className="max-w-pane-side">
-          <AvailableHoursField
-            value={data.totals.capacity?.availableHours}
-            etag={data.sprint.etag}
-            onChange={onAvailableHours}
-          />
-        </div>
+        {onAvailableHours !== undefined && (
+          <div className="max-w-pane-side">
+            <AvailableHoursField
+              value={data.totals.capacity?.availableHours}
+              etag={data.sprint.etag}
+              onChange={onAvailableHours}
+            />
+          </div>
+        )}
       </div>
 
       <Drivers data={data} />

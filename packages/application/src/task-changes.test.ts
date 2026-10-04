@@ -1,9 +1,10 @@
-import { createArea, id, localDate } from '@itera/domain';
+import { createArea, id, instant, localDate } from '@itera/domain';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot, fixtureIds } from './fixtures/states';
 import { changed } from './record-store';
 import { memoryStore, tagged } from './testing';
 import { backlogData } from './backlog-view';
+import { catchUp } from './system-changes';
 import { endRule, saveTask } from './task-changes';
 
 const ids = fixtureIds();
@@ -81,13 +82,25 @@ describe('endRule (F41)', () => {
     const lastDay = on('2026-10-04');
     expect(lastDay.items[taskId]).toMatchObject({
       recurrence: { endsOn: '2026-10-04' },
-      canComplete: false,
-      canAddToToday: false,
+      capabilities: { canComplete: false, canAddToToday: false },
     });
     expect(lastDay.shown).toContain(taskId);
-    const after = on('2026-10-05');
+    // The next day, after the system's catch-up: the Sprint is in Review.
+    const next = memoryStore({
+      records,
+      clock: {
+        today: localDate('2026-10-05'),
+        now: instant('2026-10-05T00:00:00.000Z'),
+      },
+    });
+    expect(next.run(catchUp(clock.today), { actor: 'system' }).ok).toBe(true);
+    const after = backlogData(
+      tagged(next.getSnapshot().records),
+      next.getSnapshot().clock,
+      { view: 'recurring' },
+    );
     expect(after.items[taskId]).not.toHaveProperty('recurrence');
-    expect(after.items[taskId]?.canComplete).toBe(true);
+    expect(after.items[taskId]?.capabilities.canComplete).toBe(true);
     expect(after.shown).not.toContain(taskId);
   });
 });
