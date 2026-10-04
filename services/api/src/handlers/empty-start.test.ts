@@ -1,11 +1,11 @@
 // A new person's first week (#279), through the app with a clock that
 // moves: no records at all, then the settings, an Area and a Task, Sprint 1
 // planned and confirmed, the Task chosen for today and completed, and, when
-// the week is over, the Retro completed. A second week follows (#369): one
-// Task done and one deferred today, the Retro's facts, and the next Planning
-// carrying the deferred one over. Each step is the contract's request; the
-// records are read back only where an operation needs an ID the answer
-// does not carry.
+// the week is over, the Retro completed. Another first week (#369) has two
+// Tasks, one done and one deferred today, the Retro's facts, and the next
+// Planning carrying the deferred one over. Each step is the contract's
+// request; the records are read back only where an operation needs an ID
+// the answer does not carry.
 import {
   createIdSource,
   currentCondition,
@@ -319,7 +319,11 @@ describe('a new person’s first week', () => {
       {
         task: { id: deferredTask },
         carriedFrom: { id: sprintTaskOf(deferredTask), outcome: 'carriedOver' },
-        chosen: { taskId: deferredTask, outcome: 'draft' },
+        chosen: {
+          taskId: deferredTask,
+          outcome: 'draft',
+          carriedFrom: sprintTaskOf(deferredTask),
+        },
       },
     ]);
 
