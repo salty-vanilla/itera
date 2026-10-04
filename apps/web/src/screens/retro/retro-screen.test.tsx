@@ -205,7 +205,7 @@ describe('Retro — 事実を見る', () => {
       [
         ...paper
           .querySelectorAll('td')[0]!
-          .querySelectorAll('.whitespace-normal > .whitespace-nowrap'),
+          .querySelectorAll('.whitespace-normal > .nowrap-phrase'),
       ].map((e) => e.textContent),
     ).toEqual(['3〜', '5時間']);
     expect(paper.textContent).toContain('4時間30分');
@@ -390,7 +390,12 @@ describe('Retro — 振り返る', () => {
     await userEvent.click(
       screen.getByRole('button', { name: '次に試すことを確定' }),
     );
-    expect(screen.getByText('論文は 1本ずつ').className).toContain('text-goal');
+    // The field gives way to the confirmed text once it is saved.
+    await waitFor(() =>
+      expect(screen.getByText('論文は 1本ずつ').className).toContain(
+        'text-goal',
+      ),
+    );
     await waitFor(() =>
       expect(document.activeElement?.textContent).toBe('編集'),
     );

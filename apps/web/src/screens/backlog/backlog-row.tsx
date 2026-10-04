@@ -1,5 +1,5 @@
 import type { BacklogItem, LocalDate } from '@itera/api-contract';
-import { Fragment, useEffect, useRef } from 'react';
+import { Fragment, useLayoutEffect, useRef } from 'react';
 import { Archive, CircleCheck, Ellipsis, Route, Sun } from 'lucide-react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { IconButton } from '@/components/ui/icon-button';
@@ -39,11 +39,11 @@ export function CarryOverText({
     >
       {count >= 3 ? (
         <span>
-          <span className="whitespace-nowrap">
+          <span className="nowrap-phrase">
             持ち越し {count}回（Sprint {fromSprint}から）
           </span>
           {' · '}
-          <span className="whitespace-nowrap">小さく分けてみる</span>
+          <span className="nowrap-phrase">小さく分けてみる</span>
         </span>
       ) : (
         <>
@@ -90,7 +90,7 @@ export function RecurrenceText({
               {phrases.map((phrase, j) => (
                 <Fragment key={phrase}>
                   {j > 0 && ' '}
-                  <span className="whitespace-nowrap">
+                  <span className="nowrap-phrase">
                     {phrase}
                     {j === phrases.length - 1 && i < parts.length - 1 && ' ·'}
                   </span>
@@ -194,7 +194,7 @@ function BacklogRow({
   focusControl = false,
 }: BacklogRowProps) {
   const circleRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (focusControl) circleRef.current?.focus();
   }, [focusControl]);
   const {

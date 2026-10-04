@@ -74,7 +74,8 @@ function SprintSummary({ items, className }: SprintSummaryProps) {
                 onClick={item.onSelect}
                 aria-label={item.selectLabel}
                 // 44px to press on compact (accessibility.md); the words keep their size.
-                className="relative flex items-baseline gap-1 rounded-xs text-link underline after:absolute after:-inset-[calc((var(--spacing-target-touch)-2rem)/2)] medium:after:hidden focus-visible:focus-ring"
+                // 2rem is num-l's line; enlarged text needs no more room (#393).
+                className="relative flex items-baseline gap-1 rounded-xs text-link underline after:absolute after:-inset-[calc(max(0px,var(--spacing-target-touch)-2rem)/2)] medium:after:hidden focus-visible:focus-ring"
               >
                 <Value item={item} />
               </button>
@@ -94,7 +95,7 @@ function Value({ item }: { item: SprintSummaryItem }) {
     <>
       <span
         className={cn(
-          'whitespace-nowrap',
+          'nowrap-phrase',
           item.quiet === true ? 'text-num-m' : 'text-num-l',
         )}
       >

@@ -156,9 +156,7 @@ describe('Planning — the stuck Capacity line (#152)', () => {
     await renderAt('/sprint?fixture=planning-shape&stage=shape');
     const line = screen.getByRole('button', { name: /時間の見通しを開く/ });
     expect(
-      [...line.querySelectorAll('.whitespace-nowrap')].map(
-        (e) => e.textContent,
-      ),
+      [...line.querySelectorAll('.nowrap-phrase')].map((e) => e.textContent),
     ).toEqual(['計画の合計', '15時間15分〜17時間15分 ·', '使える時間は未入力']);
   });
 
@@ -334,7 +332,8 @@ describe('Planning — 選ぶ', () => {
     );
     await userEvent.type(field, '発表資料を見直す');
     await userEvent.click(add);
-    expect(field).toHaveProperty('value', '');
+    // Emptied once the Task is added.
+    await waitFor(() => expect(field).toHaveProperty('value', ''));
     expect(document.activeElement).toBe(field);
     const task = lastSnapshot().records.tasks.find(
       (t) => t.title === '発表資料を見直す',
@@ -448,11 +447,13 @@ describe('Planning — 整える', () => {
     expect(draft().goals.find((g) => g.areaId === ids.area.study)?.text).toBe(
       '英語を毎日読む状態にする',
     );
+    // The form gives way to the Goal once it is saved.
+    const edit = await within(study).findByRole('button', {
+      name: '目標を編集：学習',
+    });
     expect(within(study).getByText('英語を毎日読む状態にする')).toBeTruthy();
 
-    await userEvent.click(
-      within(study).getByRole('button', { name: '目標を編集：学習' }),
-    );
+    await userEvent.click(edit);
     await userEvent.clear(within(study).getByRole('textbox', { name: /目標/ }));
     await userEvent.click(within(study).getByRole('button', { name: '保存' }));
     expect(draft().goals.some((g) => g.areaId === ids.area.study)).toBe(false);
@@ -783,9 +784,7 @@ describe('Planning — 確かめる', () => {
     // It may break between the name and the value, and after 「·」, never
     // inside a value or before 「·」 (#239).
     expect(
-      [...line().querySelectorAll('.whitespace-nowrap')].map(
-        (e) => e.textContent,
-      ),
+      [...line().querySelectorAll('.nowrap-phrase')].map((e) => e.textContent),
     ).toEqual([
       '少なく済んでも',
       '1時間15分超える ·',

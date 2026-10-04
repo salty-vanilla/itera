@@ -563,7 +563,7 @@ function CapacitySummary({
           {pieces.map((piece, j) => (
             <Fragment key={piece}>
               {j > 0 && ' '}
-              <span className="whitespace-nowrap">
+              <span className="nowrap-phrase">
                 {piece}
                 {j === pieces.length - 1 && i < sentences.length - 1 && ' ·'}
               </span>

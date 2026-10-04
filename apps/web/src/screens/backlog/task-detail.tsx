@@ -17,6 +17,7 @@ import {
   useEffect,
   useId,
   useImperativeHandle,
+  useLayoutEffect,
   useRef,
   useState,
   type FormEvent,
@@ -359,7 +360,7 @@ function TaskDetailContent({
   const [pauseError, setPauseError] = useState<string>();
   const pauseButtonRef = useRef<HTMLButtonElement>(null);
   const pauseInputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (pausing) pauseInputRef.current?.focus();
   }, [pausing]);
   function closePause() {
@@ -593,7 +594,7 @@ function TaskDetailContent({
   // What the section offers now: it changes once an operation of it has
   // taken effect (the button pressed is gone).
   const sectionKey = `${dayOperations.map((o) => o.key).join()}${facts.today === undefined ? '' : '+open'}`;
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (focusFrom.current === undefined || focusFrom.current === sectionKey)
       return;
     focusFrom.current = undefined;
@@ -639,7 +640,7 @@ function TaskDetailContent({
   const foldRef = useRef<HTMLDivElement>(null);
   const estimateRef = useRef<HTMLInputElement>(null);
   // Opening, the Drawer finds it by `data-autofocus`; already open, this.
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (focusEstimate !== undefined) estimateRef.current?.focus();
   }, [focusEstimate]);
   // The suggestion on show (at most one is presented); what can be done
@@ -941,7 +942,7 @@ function TaskDetailContent({
           // chooses a field, so a phone does not raise its keyboard (#95).
           tabIndex={-1}
           data-autofocus={focusEstimate === undefined || undefined}
-          className="w-fit rounded-sm focus-visible:focus-ring"
+          className="w-fit max-w-full rounded-sm focus-visible:focus-ring"
         >
           {task.title}
         </DrawerTitle>

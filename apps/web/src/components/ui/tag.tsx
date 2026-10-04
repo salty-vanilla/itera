@@ -15,7 +15,7 @@ import { Icon, semanticIcons } from './icon';
 const tagVariants = cva(
   // A label the person typed can be long: it is cut at 12em and the full text
   // is in the title (accessibility.md: nothing is lost at 320px).
-  'inline-flex h-5 max-w-[12em] shrink-0 items-center gap-1 rounded-full border px-2 text-meta whitespace-nowrap',
+  'inline-flex min-h-5 max-w-[12em] shrink-0 items-center gap-1 rounded-full border px-2 text-meta whitespace-nowrap',
   {
     variants: {
       tone: {

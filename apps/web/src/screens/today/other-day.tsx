@@ -17,7 +17,7 @@ import { formatHours } from '@/lib/time-format';
 // - A day no Sprint has: the Sprint that has it, or the next to start.
 
 // After the sentence's space, a link moves to the next line whole.
-const link = 'whitespace-nowrap text-link underline focus-visible:focus-ring';
+const link = 'nowrap-phrase text-link underline focus-visible:focus-ring';
 const Repeat = semanticIcons.recurrence;
 
 /** The line above the date: where the day is in its Sprint. */
@@ -124,7 +124,7 @@ function Past({ data }: { data: DayData }) {
         {undoable && (
           <p className="text-help text-ink-muted [text-wrap:pretty] [word-break:auto-phrase]">
             完了・スキップの取り消しは、Sprint の画面の
-            <span className="whitespace-nowrap">「日ごとの記録」から。</span>
+            <span className="nowrap-phrase">「日ごとの記録」から。</span>
           </p>
         )}
       </section>

@@ -72,7 +72,9 @@ function DividerLabel({ children, level, className }: DividerLabelProps) {
       data-slot="divider-label"
       className={cn('flex items-center gap-2 pt-2', className)}
     >
-      <Label className="shrink-0 text-label text-ink-muted">{children}</Label>
+      <Label className="shrink-0 text-label text-ink-muted enlarged:shrink">
+        {children}
+      </Label>
       <div aria-hidden className="h-(--stroke-hairline) grow bg-border" />
     </div>
   );

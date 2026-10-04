@@ -30,6 +30,11 @@ type TaskRowProps = {
    * (Today, #241).
    */
   estimateFromMedium?: boolean;
+  /**
+   * The control is as wide as a word (「今日へ」): with enlarged text it goes
+   * under the title, which keeps the row's width (#393).
+   */
+  wideControl?: boolean;
   /** The `…` Menu or other row actions. */
   actions?: ReactNode;
   /**
@@ -78,6 +83,7 @@ function revealRow(event: FocusEvent<HTMLButtonElement>) {
 function TaskRow({
   title,
   control,
+  wideControl = false,
   metadata,
   estimate,
   estimateFromMedium = false,
@@ -104,6 +110,9 @@ function TaskRow({
       {...rowKeyHandlers(keys)}
       className={cn(
         'group/row relative flex min-h-row-touch items-center gap-2 border-b border-border-soft px-2 py-2 medium:min-h-row-task medium:px-3',
+        // Enlarged text (#393): the Estimate takes a line of its own under
+        // the title, which would otherwise have no width left.
+        'enlarged:flex-wrap',
         'transition-colors duration-(--duration-fast) ease-standard',
         onOpen && 'hover:bg-surface-hover',
         current && 'bg-here-subtle hover:bg-here-subtle',
@@ -113,7 +122,13 @@ function TaskRow({
       )}
     >
       {control !== undefined && (
-        <div data-row-control className="relative z-1 flex">
+        <div
+          data-row-control
+          className={cn(
+            'relative z-1 flex',
+            wideControl && 'enlarged:order-last enlarged:basis-full',
+          )}
+        >
           {control}
         </div>
       )}
@@ -143,7 +158,7 @@ function TaskRow({
       {estimate !== undefined && (
         <div
           className={cn(
-            'flex shrink-0',
+            'flex shrink-0 enlarged:order-last enlarged:basis-full enlarged:justify-end',
             estimateFromMedium && 'hidden medium:flex',
           )}
         >

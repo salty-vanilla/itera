@@ -123,7 +123,7 @@ function SprintHeader({
                     }
                     onClick={(event) => onStage?.(stage.id, event)}
                     className={cn(
-                      'group/stage inline-flex min-h-target-touch items-center gap-1 rounded-sm px-0 text-body whitespace-nowrap text-ink-muted medium:min-h-target-min medium:gap-2 medium:px-1',
+                      'group/stage inline-flex min-h-target-touch items-center gap-1 rounded-sm px-0 text-body nowrap-phrase text-ink-muted medium:min-h-target-min medium:gap-2 medium:px-1',
                       'hover:text-ink focus-visible:focus-ring',
                       open && 'font-bold text-ink',
                     )}
@@ -131,7 +131,7 @@ function SprintHeader({
                     <span
                       aria-hidden
                       className={cn(
-                        'grid size-icon-m place-items-center rounded-full border border-border-strong bg-surface text-meta',
+                        'grid size-[max(var(--spacing-icon-m),1lh)] place-items-center rounded-full border border-border-strong bg-surface text-meta',
                         current && 'border-ink bg-here text-on-here',
                       )}
                     >

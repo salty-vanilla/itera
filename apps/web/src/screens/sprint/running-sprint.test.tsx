@@ -201,7 +201,7 @@ describe('Sprint — running (#51)', () => {
       plannedText: '先行研究を押さえる',
     });
     expect(
-      screen.getByText('確定したとき：「先行研究を押さえる」'),
+      await screen.findByText('確定したとき：「先行研究を押さえる」'),
     ).toBeTruthy();
   });
 
@@ -234,7 +234,7 @@ describe('Sprint — running (#51)', () => {
     const goal = goalOf(ids.area.study);
     expect(goal?.text).toBe('多読を毎回続ける');
     expect(goal?.plannedText).toBeUndefined();
-    expect(screen.getByText(/確定した後に書いた目標です/)).toBeTruthy();
+    expect(await screen.findByText(/確定した後に書いた目標です/)).toBeTruthy();
   });
 
   it('changes the available hours and keeps the planned hours (invariant 18)', async () => {

@@ -9,9 +9,7 @@ import { Sentences } from './capacity-indicator';
 afterEach(cleanup);
 
 const pieces = (container: HTMLElement) =>
-  [...container.querySelectorAll('.whitespace-nowrap')].map(
-    (e) => e.textContent,
-  );
+  [...container.querySelectorAll('.nowrap-phrase')].map((e) => e.textContent);
 
 describe('Sentences (#239, #357)', () => {
   it('keeps a plain sentence whole, with the 「·」 at its end', () => {

@@ -1,6 +1,6 @@
 import type { MadeFrom } from '@itera/api-contract/sending';
 import type { RetroPin } from '@itera/api-contract';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
 import type { Saved } from '@/api/use-operation';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
@@ -154,7 +154,7 @@ function Improvement({
   const headingId = useId();
   const editRef = useRef<HTMLButtonElement>(null);
   const backToEdit = useRef(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!editing && backToEdit.current) {
       backToEdit.current = false;
       editRef.current?.focus();

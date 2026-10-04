@@ -86,7 +86,7 @@ function PastDays({ days, onUndo }: PastDaysProps) {
                   key={r.selection.id}
                   className="flex min-h-row-touch flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-border-soft py-1 text-body text-ink medium:min-h-row-task"
                 >
-                  <span className="inline-flex min-w-0 grow basis-[12rem] items-center gap-2">
+                  <span className="inline-flex min-w-0 grow basis-[10.5rem] items-center gap-2">
                     <Icon
                       aria-hidden
                       className="size-icon-s shrink-0 text-ink-muted [stroke-width:var(--icon-stroke-s)]"

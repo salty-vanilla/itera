@@ -65,26 +65,24 @@ function ConfirmDialog({
               </ul>
             )}
           </section>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-body">
-            <dt className="whitespace-nowrap text-ink-muted">タスク</dt>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-body enlarged:grid-cols-1">
+            <dt className="nowrap-phrase text-ink-muted">タスク</dt>
             <dd className="text-ink">
               {summary.taskCount}件
               {summary.unlinked > 0 && (
                 // Kept whole: the count stays with its words.
-                <span className="whitespace-nowrap">
+                <span className="nowrap-phrase">
                   （うち目標に入っていない {summary.unlinked}件）
                 </span>
               )}
             </dd>
-            <dt className="whitespace-nowrap text-ink-muted">計画の合計</dt>
+            <dt className="nowrap-phrase text-ink-muted">計画の合計</dt>
             <dd className="text-num-m text-ink">{summary.total}</dd>
-            <dt className="whitespace-nowrap text-ink-muted">使える時間</dt>
+            <dt className="nowrap-phrase text-ink-muted">使える時間</dt>
             <dd className="text-ink">{summary.available ?? '未入力'}</dd>
             {summary.criterion !== undefined && (
               <>
-                <dt className="whitespace-nowrap text-ink-muted">
-                  計画のルール
-                </dt>
+                <dt className="nowrap-phrase text-ink-muted">計画のルール</dt>
                 <dd className="text-ink">{summary.criterion}</dd>
               </>
             )}

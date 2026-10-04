@@ -53,6 +53,7 @@ function WeekRow({ item, onOpen, onEstimate, onChoose }: WeekRowProps) {
       estimateFromMedium
       // 今日やる has the `…`; the values line up with it.
       reserveActions
+      wideControl
     />
   );
 }
