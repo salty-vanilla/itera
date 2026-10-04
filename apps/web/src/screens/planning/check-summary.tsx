@@ -85,13 +85,13 @@ function CheckSummary({
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-1 text-body">
           <dt className="text-ink-muted">計画の合計</dt>
           {/* In the body's size: the answer is above (#243). */}
-          <dd className="text-ink">{summary.total}</dd>
+          <dd className="text-ink enlarged:break-keep">{summary.total}</dd>
           <dt className="text-ink-muted">タスク</dt>
           <dd className="text-ink">
             {summary.taskCount}件
             {summary.unlinked > 0 && (
               // Kept whole: the count stays with its words.
-              <span className="whitespace-nowrap">
+              <span className="nowrap-phrase">
                 （うち目標に入っていない {summary.unlinked}件）
               </span>
             )}
@@ -240,7 +240,7 @@ function Drivers({ data }: { data: PlanningData }) {
           <li key={d.sprintTask.id}>
             {`「${d.task.title}」は `}
             {/* A time is never broken inside (#239). */}
-            <span className="whitespace-nowrap">
+            <span className="nowrap-phrase">
               {formatRange(d.value.lo, d.value.hi)}
             </span>
             の幅があります。

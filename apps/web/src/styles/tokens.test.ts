@@ -94,10 +94,20 @@ describe('colors', () => {
   });
 });
 
+// DESIGN.md writes sizes in px; the CSS has them in rem over 16px (#393).
+function remAsPx(value: string | undefined): string | undefined {
+  const rem = /^([\d.]+)rem$/.exec(value ?? '');
+  return rem ? `${Number(rem[1]) * 16}px` : value;
+}
+
 describe('typography', () => {
   it.each(Object.entries(tokens.typography))('%s', (name, token) => {
-    expect(theme.get(`--text-${name}`)).toBe(token.fontSize);
-    expect(theme.get(`--text-${name}--line-height`)).toBe(token.lineHeight);
+    expect(theme.get(`--text-${name}`)).toMatch(/rem$/);
+    expect(remAsPx(theme.get(`--text-${name}`))).toBe(token.fontSize);
+    expect(theme.get(`--text-${name}--line-height`)).toMatch(/rem$/);
+    expect(remAsPx(theme.get(`--text-${name}--line-height`))).toBe(
+      token.lineHeight,
+    );
     expect(theme.get(`--text-${name}--font-weight`)).toBe(
       String(token.fontWeight),
     );

@@ -150,7 +150,7 @@ function FactsPane({
           <li key="atConfirm">
             <span className="text-ink-muted">
               確定したときの計画{' '}
-              <span className="whitespace-nowrap">
+              <span className="nowrap-phrase">
                 {formatPlanningSum(atConfirm)}：
               </span>
             </span>
@@ -271,7 +271,7 @@ function FactsPane({
                 <span className="text-ink-muted">{hoursName}は未入力</span>
               ) : (
                 <>
-                  <span className="whitespace-nowrap text-ink-muted">
+                  <span className="nowrap-phrase text-ink-muted">
                     {hoursName}{' '}
                     {formatHours(facts.capacity.withAdditions.availableHours)}：
                   </span>
@@ -430,7 +430,7 @@ function FactsPane({
                       // value whole: never 「実績」 and 「30分」 apart (#241).
                       <span className="text-ink-muted">
                         {'\u00a0· '}
-                        <span className="whitespace-nowrap">
+                        <span className="nowrap-phrase">
                           実績 {formatHours(actualHours)}
                         </span>
                       </span>
@@ -519,14 +519,14 @@ function FactsPane({
                 key={n.id}
                 action={toggle({ kind: 'interrupt', id: n.id }, n.text)}
               >
-                <span className="whitespace-nowrap text-ink-muted">
+                <span className="nowrap-phrase text-ink-muted">
                   {formatDateTime(n.at, data.timeZone)}
                 </span>{' '}
                 {n.text}
                 {n.minutes !== undefined && (
                   <span className="text-ink-muted">
                     {'\u00a0· '}
-                    <span className="whitespace-nowrap">
+                    <span className="nowrap-phrase">
                       {formatHours(n.minutes / 60)}
                     </span>
                   </span>
@@ -686,19 +686,21 @@ function TaskTable({
   onAddActual,
 }: TaskFactsProps) {
   const cell = 'border-b border-border-soft px-2 py-2 align-top';
-  const num = cn(cell, 'text-right whitespace-nowrap');
+  const num = cn(cell, 'text-right nowrap-phrase');
   // A closed Retro has nothing to do on a row: no column for it.
   const actions = onAddActual !== undefined;
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[55rem] table-fixed border-collapse text-body">
+      <table className="w-full min-w-[48.125rem] table-fixed border-collapse text-body">
         <colgroup>
           <col className="xl:w-[32%]" />
-          <col className="w-[7rem] xl:w-[11%]" />
-          <col className="w-[9rem] xl:w-[11%]" />
-          <col className="w-[7rem] wide:w-[10rem] xl:w-[11%]" />
-          <col className="w-[13rem] wide:w-[18rem] xl:w-[20%]" />
-          {actions && <col className="w-[9rem] wide:w-[13rem] xl:w-[15%]" />}
+          <col className="w-[6.125rem] xl:w-[11%]" />
+          <col className="w-[7.875rem] xl:w-[11%]" />
+          <col className="w-[6.125rem] wide:w-[8.75rem] xl:w-[11%]" />
+          <col className="w-[11.375rem] wide:w-[15.75rem] xl:w-[20%]" />
+          {actions && (
+            <col className="w-[7.875rem] wide:w-[11.375rem] xl:w-[15%]" />
+          )}
         </colgroup>
         <caption className="pb-2 text-left text-subheading text-ink">
           {caption}
@@ -784,7 +786,7 @@ function TaskTable({
                 <DaysNote fact={t} />
               </td>
               {actions && (
-                <td className={cn(cell, 'whitespace-nowrap')}>
+                <td className={cn(cell, 'nowrap-phrase')}>
                   <div className="flex flex-col items-end gap-1 wide:flex-row wide:justify-end">
                     <TaskActions
                       fact={t}
@@ -814,9 +816,9 @@ function RangeCell({ text }: { text: string }) {
   if (at === -1) return text;
   return (
     <span className="whitespace-normal">
-      <span className="whitespace-nowrap">{text.slice(0, at + 1)}</span>
+      <span className="nowrap-phrase">{text.slice(0, at + 1)}</span>
       <wbr />
-      <span className="whitespace-nowrap">{text.slice(at + 1)}</span>
+      <span className="nowrap-phrase">{text.slice(at + 1)}</span>
     </span>
   );
 }
@@ -969,7 +971,7 @@ function DifferenceNote({ fact }: { fact: TaskFact }) {
   if (parts === undefined) return null;
   return (
     <span className="block text-meta whitespace-normal text-ink-muted">
-      {parts.against} <span className="whitespace-nowrap">{parts.amount}</span>
+      {parts.against} <span className="nowrap-phrase">{parts.amount}</span>
     </span>
   );
 }
@@ -994,10 +996,10 @@ function FactRow({
     // The actions go under the words when both do not fit (a narrow screen
     // with two actions), rather than squeezing the words.
     <li className="flex min-h-row-touch flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-border-soft py-1 text-body text-ink medium:min-h-row-task">
-      <span className="min-w-0 grow basis-[12rem] [word-break:auto-phrase]">
+      <span className="min-w-0 grow basis-[10.5rem] [word-break:auto-phrase]">
         {children}
       </span>
-      <span className="ms-auto shrink-0">{action}</span>
+      <span className="ms-auto max-w-full shrink-0">{action}</span>
     </li>
   );
 }

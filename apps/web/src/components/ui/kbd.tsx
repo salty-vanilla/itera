@@ -10,7 +10,7 @@ function Kbd({ className, ...props }: ComponentProps<'kbd'>) {
     <kbd
       data-slot="kbd"
       className={cn(
-        'inline-flex h-5 min-w-5 items-center justify-center rounded-xs border px-1 text-code whitespace-nowrap select-none',
+        'inline-flex min-h-5 min-w-5 items-center justify-center rounded-xs border px-1 text-code whitespace-nowrap select-none',
         'border-[color-mix(in_srgb,currentColor_40%,transparent)]',
         className,
       )}

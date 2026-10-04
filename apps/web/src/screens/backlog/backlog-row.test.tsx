@@ -15,7 +15,7 @@ describe('CarryOverText (#205)', () => {
     expect(container.textContent).toBe(
       '持ち越し 3回（Sprint 1から） · 小さく分けてみる',
     );
-    const parts = [...container.querySelectorAll('.whitespace-nowrap')].map(
+    const parts = [...container.querySelectorAll('.nowrap-phrase')].map(
       (e) => e.textContent,
     );
     expect(parts).toEqual(['持ち越し 3回（Sprint 1から）', '小さく分けてみる']);

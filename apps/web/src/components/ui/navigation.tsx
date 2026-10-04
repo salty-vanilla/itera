@@ -274,7 +274,10 @@ function NavigationTabBar({
               )}
             >
               {item.icon}
-              <span className="max-w-full truncate">{item.label}</span>
+              {/* Enlarged text (#393): the name wraps rather than being cut. */}
+              <span className="max-w-full truncate enlarged:text-center enlarged:whitespace-normal enlarged:wrap-anywhere">
+                {item.label}
+              </span>
               {item.count !== undefined && (
                 <Count value={item.count} className="sr-only" />
               )}

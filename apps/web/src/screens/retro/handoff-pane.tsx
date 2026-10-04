@@ -436,10 +436,10 @@ function DraftCriterion({
               <li key={row.taskId}>
                 {titleOf(row.taskId)}：
                 {/* Each value whole on a line (#239). */}
-                <span className="whitespace-nowrap">
+                <span className="nowrap-phrase">
                   見積もりの提案 {formatRange(row.from.lo, row.from.hi)}
                 </span>{' '}
-                <span className="whitespace-nowrap">
+                <span className="nowrap-phrase">
                   → 計画 {formatHours(row.to)}
                 </span>
               </li>

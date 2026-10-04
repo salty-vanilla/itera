@@ -120,12 +120,12 @@ function PlanPane({
       {summary}
       {/*
         From 1920px (bp-xl) the Area blocks sit in 1 to 3 columns, as many as
-        fit: a column is at least 26rem and at least a third of the row (less
+        fit: a column is at least 22.75rem and at least a third of the row (less
         1px, so that three fit exactly). The blocks stop at three columns of
         pane-sprint. Under 1920px they are one column, as before (DESIGN.md
         Layout, Issue #81). --plan-gap is the space between the columns and rows.
       */}
-      <div className="flex flex-col gap-(--plan-gap) [--plan-gap:var(--spacing-8)] xl:grid xl:max-w-[calc(var(--spacing-pane-sprint)*3+var(--plan-gap)*2)] xl:grid-cols-[repeat(auto-fill,minmax(max(26rem,calc((100%-var(--plan-gap)*2)/3-1px)),1fr))] xl:items-start">
+      <div className="flex flex-col gap-(--plan-gap) [--plan-gap:var(--spacing-8)] xl:grid xl:max-w-[calc(var(--spacing-pane-sprint)*3+var(--plan-gap)*2)] xl:grid-cols-[repeat(auto-fill,minmax(max(22.75rem,calc((100%-var(--plan-gap)*2)/3-1px)),1fr))] xl:items-start">
         {blocks.map((block) =>
           stage === 'pick' ? (
             <section
@@ -435,7 +435,7 @@ function PlannedRow({
             }
           />
           {source !== undefined && (
-            <span className="text-meta whitespace-nowrap text-ink-muted">
+            <span className="text-meta nowrap-phrase text-ink-muted">
               {source}
             </span>
           )}

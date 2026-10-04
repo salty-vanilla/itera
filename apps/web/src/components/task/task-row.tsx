@@ -104,6 +104,9 @@ function TaskRow({
       {...rowKeyHandlers(keys)}
       className={cn(
         'group/row relative flex min-h-row-touch items-center gap-2 border-b border-border-soft px-2 py-2 medium:min-h-row-task medium:px-3',
+        // Enlarged text (#393): the Estimate takes a line of its own under
+        // the title, which would otherwise have no width left.
+        'enlarged:flex-wrap',
         'transition-colors duration-(--duration-fast) ease-standard',
         onOpen && 'hover:bg-surface-hover',
         current && 'bg-here-subtle hover:bg-here-subtle',
@@ -143,7 +146,7 @@ function TaskRow({
       {estimate !== undefined && (
         <div
           className={cn(
-            'flex shrink-0',
+            'flex shrink-0 enlarged:order-last enlarged:basis-full enlarged:justify-end',
             estimateFromMedium && 'hidden medium:flex',
           )}
         >

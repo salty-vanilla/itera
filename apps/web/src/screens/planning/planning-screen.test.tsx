@@ -122,9 +122,7 @@ describe('Planning — the stuck Capacity line (#152)', () => {
     await renderAt('/sprint?fixture=planning-shape&stage=shape');
     const line = screen.getByRole('button', { name: /時間の見通しを開く/ });
     expect(
-      [...line.querySelectorAll('.whitespace-nowrap')].map(
-        (e) => e.textContent,
-      ),
+      [...line.querySelectorAll('.nowrap-phrase')].map((e) => e.textContent),
     ).toEqual(['計画の合計', '15時間15分〜17時間15分 ·', '使える時間は未入力']);
   });
 
@@ -749,9 +747,7 @@ describe('Planning — 確かめる', () => {
     // It may break between the name and the value, and after 「·」, never
     // inside a value or before 「·」 (#239).
     expect(
-      [...line().querySelectorAll('.whitespace-nowrap')].map(
-        (e) => e.textContent,
-      ),
+      [...line().querySelectorAll('.nowrap-phrase')].map((e) => e.textContent),
     ).toEqual([
       '少なく済んでも',
       '1時間15分超える ·',

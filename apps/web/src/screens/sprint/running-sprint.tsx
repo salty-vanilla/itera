@@ -400,13 +400,13 @@ function Outlook({
           <div className="flex flex-wrap justify-between gap-x-6">
             <dt className="text-ink-muted">計画の合計</dt>
             {/* In the body's size: 今週の完了 is the answer here (#243). */}
-            <dd className="ml-auto text-right whitespace-nowrap text-ink">
+            <dd className="ml-auto text-right nowrap-phrase text-ink">
               {formatPlanningSum(data.totals.total)}
             </dd>
           </div>
           <div className="flex flex-wrap justify-between gap-x-6">
             <dt className="text-ink-muted">確定したときの使える時間</dt>
-            <dd className="ml-auto text-right whitespace-nowrap text-ink">
+            <dd className="ml-auto text-right nowrap-phrase text-ink">
               {planned === undefined ? '未入力' : formatHours(planned)}
             </dd>
           </div>
@@ -450,7 +450,7 @@ function Outlook({
               data.criterion.policy,
               data.criterion.areaName,
             )}
-            <span className="whitespace-nowrap"> · 対象なし</span>
+            <span className="nowrap-phrase"> · 対象なし</span>
           </span>
         </p>
       )}

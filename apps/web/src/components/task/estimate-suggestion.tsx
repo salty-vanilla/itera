@@ -186,7 +186,8 @@ function EstimateSuggestion({
               <div
                 role="group"
                 aria-labelledby={valuesLabelId}
-                className="flex"
+                // With enlarged text the values go onto more lines (#393).
+                className="flex enlarged:flex-wrap"
               >
                 {bounds.map((bound, index) => (
                   <Button

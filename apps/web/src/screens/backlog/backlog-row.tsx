@@ -39,11 +39,11 @@ export function CarryOverText({
     >
       {count >= 3 ? (
         <span>
-          <span className="whitespace-nowrap">
+          <span className="nowrap-phrase">
             持ち越し {count}回（Sprint {fromSprint}から）
           </span>
           {' · '}
-          <span className="whitespace-nowrap">小さく分けてみる</span>
+          <span className="nowrap-phrase">小さく分けてみる</span>
         </span>
       ) : (
         <>
@@ -90,7 +90,7 @@ export function RecurrenceText({
               {phrases.map((phrase, j) => (
                 <Fragment key={phrase}>
                   {j > 0 && ' '}
-                  <span className="whitespace-nowrap">
+                  <span className="nowrap-phrase">
                     {phrase}
                     {j === phrases.length - 1 && i < parts.length - 1 && ' ·'}
                   </span>
