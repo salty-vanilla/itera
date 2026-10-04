@@ -98,14 +98,15 @@ IdempotencyKey:
 ETag:
   description: >-
     The record's version (ADR 0006 記録ごとの版): a strong entity-tag (RFC
-    9110 §8.8.3), the number of the person's save that last changed the
-    record's own values, in double quotes. Output only. A write that
-    replaces the record's values sends it back in `If-Match`; the record
-    has changed since when it no longer matches (412). Opaque: compare it,
-    never read the number.
+    9110 §8.8.3). Output only. A write that replaces the record's values
+    sends it back in `If-Match`; the record has changed since when it no
+    longer matches (412). Opaque: compare it whole, never read what is in
+    the quotes (the API now puts a number there, which may change). The
+    version of the record, not a validator of a read's representation at
+    the same path.
   type: string
   readOnly: true
-  pattern: '^"[0-9]+"$'
+  pattern: '^"[!#-~]*"$'
   examples: ['"42"']
 EntityTagList:
   description: >-

@@ -10,7 +10,11 @@ import {
   type Client,
 } from '@itera/api-contract/create-client';
 import { createMemoryStore, operations } from '@itera/application';
-import { fixtureIds, fixtureSnapshot } from '@itera/application/fixtures';
+import {
+  fixtureIds,
+  fixtureSnapshot,
+  type FixtureStateId,
+} from '@itera/application/fixtures';
 import {
   act,
   cleanup,
@@ -46,8 +50,8 @@ type Answer = (request: Request) => Response | Promise<Response> | undefined;
  * The mock over a fixture state, with `answer` in front of it: what it
  * returns is the answer, `undefined` passes the request to the mock.
  */
-function setUp(answer?: Answer) {
-  const store = createMemoryStore(fixtureSnapshot('backlog-capture'), {
+function setUp(answer?: Answer, state: FixtureStateId = 'backlog-capture') {
+  const store = createMemoryStore(fixtureSnapshot(state), {
     random: (bytes) => crypto.getRandomValues(bytes),
   });
   const mock = createMock(store).fetch;
@@ -625,7 +629,9 @@ describe('useOperation for a write that replaces values (#321)', () => {
       await screen.findAllByText('ほかの端末で変わっていました'),
     ).not.toHaveLength(0);
     expect(
-      screen.getAllByText('最新の記録を見て、もう一度試してください。'),
+      screen.getAllByText(
+        '保存していません。最新の記録を見て、もう一度試してください。',
+      ),
     ).not.toHaveLength(0);
     // What was typed in a field stays there: its Toast says so.
     await act(async () => {
@@ -633,10 +639,46 @@ describe('useOperation for a write that replaces values (#321)', () => {
     });
     expect(
       await screen.findAllByText(
-        '書いた内容は残っています。もう一度保存すると、この内容になります。',
+        '書いた内容は、まだ保存していません。保存すると、ほかの端末の変更を上書きします。',
       ),
     ).not.toHaveLength(0);
     // No もう一度保存: sending it again would be refused again.
     expect(screen.queryByRole('button', { name: 'もう一度保存' })).toBeNull();
+  });
+});
+
+describe('useOperation for a record a write removes (#321)', () => {
+  it('makes a Goal, removes it and makes it again, from none each time', async () => {
+    const { store, ifMatches, wrapper } = setUp(undefined, 'planning-shape');
+    const { records } = store.getSnapshot();
+    const sprint = records.sprints.find((s) => s.state === 'planning')!;
+    const area = records.areas.find(
+      (a) => !a.archived && !sprint.goals.some((g) => g.areaId === a.id),
+    )!;
+    const { result } = renderHook(() => useOperation('setGoal'), { wrapper });
+    const goal = (text: string) => ({
+      sprintId: sprint.id,
+      areaId: area.id,
+      text,
+    });
+    const none: MadeFrom = { none: true };
+    const outcomes: unknown[] = [];
+    // Each made from the Goal as read when the screen showed none, as a
+    // form opened before the reads come back sends.
+    for (const text of ['発表を終える', '', '論文を出す']) {
+      await act(async () => {
+        outcomes.push(await result.current.run(goal(text), none));
+      });
+    }
+    expect(outcomes).toMatchObject([{ ok: true }, { ok: true }, { ok: true }]);
+    // Made, then removed from its etag, then made from none again.
+    expect(ifMatches[1]).toMatch(/^"\d+"$/);
+    expect(ifMatches[2]).toBeNull();
+    const after = store
+      .getSnapshot()
+      .records.sprints.find((s) => s.id === sprint.id);
+    expect(after?.goals.find((g) => g.areaId === area.id)?.text).toBe(
+      '論文を出す',
+    );
   });
 });

@@ -121,7 +121,9 @@ function goalTarget(
   areaId: OperationInput<'setGoal'>['areaId'],
 ): Target | undefined {
   const sprint = sprintOf(records, sprintId);
-  if (sprint === undefined) return undefined;
+  // An Area the person does not have: the operation answers (404).
+  if (sprint === undefined || !records.areas.some((a) => a.id === areaId))
+    return undefined;
   return {
     key: versionKey.goal(sprintId, areaId),
     exists: sprint.goals.some((g) => g.areaId === areaId),
@@ -148,9 +150,6 @@ export type ConditionalOperation =
   | 'setImprovement'
   | 'decideCriterion'
   | 'setDraftPolicy';
-
-export const conditionalOperations: readonly ConditionalOperation[] =
-  Object.keys(conditionTargets) as ConditionalOperation[];
 
 export function isConditional(
   name: OperationName,
@@ -207,4 +206,24 @@ export function currentCondition<N extends OperationName>(
   return target.exists
     ? { ifMatch: [etagOf(versionOf(versions, target.key))] }
     : { ifNoneMatch: '*' };
+}
+
+/**
+ * The record's etag after a write that replaced its values, for the
+ * write's `ETag` (ADR 0006 記録ごとの版): `undefined` for an operation that
+ * replaces none, or when the write removed the record (a Goal written
+ * empty).
+ */
+export function etagAfter<N extends OperationName>(
+  name: N,
+  input: OperationInput<N>,
+  records: Records,
+  versions: RecordVersions,
+): string | undefined {
+  if (!isConditional(name)) return undefined;
+  const targetOf = conditionTargets[name] as TargetOf<ConditionalOperation>;
+  const target = targetOf(input as never, records);
+  return target?.exists === true
+    ? etagOf(versionOf(versions, target.key))
+    : undefined;
 }

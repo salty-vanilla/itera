@@ -37,8 +37,10 @@ const NOT_READS = new Set([
   // The versions of the records and the conditions of writes (#321).
   'etagOf',
   'tagRecords',
+  'nextVersions',
   'checkCondition',
   'currentCondition',
+  'etagAfter',
   'isConditional',
 ]);
 

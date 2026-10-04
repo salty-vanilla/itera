@@ -8,7 +8,7 @@ import {
 } from '@itera/api-contract/requests';
 import {
   checkCondition,
-  currentCondition,
+  etagAfter,
   operations,
   type Change,
 } from '@itera/application';
@@ -76,8 +76,7 @@ export function operationRoutes(flow: Flow, guards: Guards) {
                   condition,
                 ),
               etag: (records, versions) =>
-                currentCondition(name, input as never, records, versions)
-                  ?.ifMatch?.[0],
+                etagAfter(name, input as never, records, versions),
             },
             ...(precondition === undefined ? {} : { precondition }),
           },

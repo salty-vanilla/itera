@@ -208,7 +208,7 @@ export type AreaId = string;
 export type AreaColor = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 /**
- * The record's version (ADR 0006 記録ごとの版): a strong entity-tag (RFC 9110 §8.8.3), the number of the person's save that last changed the record's own values, in double quotes. Output only. A write that replaces the record's values sends it back in `If-Match`; the record has changed since when it no longer matches (412). Opaque: compare it, never read the number.
+ * The record's version (ADR 0006 記録ごとの版): a strong entity-tag (RFC 9110 §8.8.3). Output only. A write that replaces the record's values sends it back in `If-Match`; the record has changed since when it no longer matches (412). Opaque: compare it whole, never read what is in the quotes (the API now puts a number there, which may change). The version of the record, not a validator of a read's representation at the same path.
  */
 export type ETag = string;
 
@@ -2132,7 +2132,7 @@ export type RenameAreaErrors = {
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
-     * A write that replaces a record's values came without `If-Match`.
+     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
      */
     428: PreconditionRequiredError;
     /**
@@ -2402,7 +2402,7 @@ export type SaveTaskErrors = {
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
-     * A write that replaces a record's values came without `If-Match`.
+     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
      */
     428: PreconditionRequiredError;
     /**
@@ -2924,7 +2924,7 @@ export type UpdateSubtaskErrors = {
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
-     * A write that replaces a record's values came without `If-Match`.
+     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
      */
     428: PreconditionRequiredError;
     /**
@@ -3508,7 +3508,7 @@ export type SetAvailableHoursErrors = {
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
-     * A write that replaces a record's values came without `If-Match`.
+     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
      */
     428: PreconditionRequiredError;
     /**
@@ -3653,7 +3653,7 @@ export type UpdateGoalErrors = {
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
-     * A write that replaces a record's values came without `If-Match`.
+     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
      */
     428: PreconditionRequiredError;
     /**
@@ -3929,7 +3929,7 @@ export type SetGoalLinkErrors = {
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
-     * A write that replaces a record's values came without `If-Match`.
+     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
      */
     428: PreconditionRequiredError;
     /**
@@ -5203,7 +5203,7 @@ export type EditInterruptErrors = {
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
-     * A write that replaces a record's values came without `If-Match`.
+     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
      */
     428: PreconditionRequiredError;
     /**
@@ -5396,7 +5396,7 @@ export type UpdateRetroErrors = {
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
-     * A write that replaces a record's values came without `If-Match`.
+     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
      */
     428: PreconditionRequiredError;
     /**
@@ -5721,7 +5721,7 @@ export type DecideCriterionErrors = {
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
-     * A write that replaces a record's values came without `If-Match`.
+     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
      */
     428: PreconditionRequiredError;
     /**
@@ -5921,7 +5921,7 @@ export type SetDraftPolicyErrors = {
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
-     * A write that replaces a record's values came without `If-Match`.
+     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
      */
     428: PreconditionRequiredError;
     /**

@@ -101,8 +101,11 @@ function OutlookPane({
         capacity={totals.capacity}
         areas={areas}
         breakdownOnly={check}
-        onAvailableHoursChange={onAvailableHours}
-        sprintEtag={data.sprint.etag}
+        hoursField={
+          onAvailableHours === undefined
+            ? undefined
+            : { etag: data.sprint.etag, save: onAvailableHours }
+        }
       />
     </div>
   );

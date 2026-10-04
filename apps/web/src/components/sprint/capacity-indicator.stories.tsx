@@ -15,7 +15,7 @@ const meta = {
   args: {
     total,
     areas,
-    onAvailableHoursChange: () => true,
+    hoursField: { etag: '"1"', save: () => true },
   },
   decorators: [(Story) => <div className="max-w-pane-side">{Story()}</div>],
 } satisfies Meta<typeof CapacityIndicator>;

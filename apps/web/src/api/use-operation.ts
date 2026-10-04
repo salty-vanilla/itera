@@ -254,9 +254,10 @@ async function sendOperation<N extends OperationName>(
     throwOnError: false,
   });
   const data = await written(sent);
-  const etag = (await sent).response?.headers.get('ETag');
-  if (made !== undefined && etag != null) {
-    ownVersions(client).moved(resource, made, etag);
+  if (made !== undefined) {
+    // Without an ETag, the write removed the record (a Goal written empty).
+    const etag = (await sent).response?.headers.get('ETag');
+    ownVersions(client).moved(resource, made, etag ?? null);
   }
   return data as PlainOutput<N>;
 }
@@ -285,30 +286,38 @@ const versionsByClient = new WeakMap<Client, OwnVersions>();
 type OwnVersions = {
   /** What a write made from `from` is sent as, after this client's own writes. */
   of(resource: string, from: MadeFrom): MadeFrom;
-  /** A write made from `from` went through, and the record is now at `etag`. */
-  moved(resource: string, from: MadeFrom, etag: string): void;
+  /**
+   * A write made from `from` went through, and the record is now at `etag`,
+   * or gone (`null`): the next write is made from none.
+   */
+  moved(resource: string, from: MadeFrom, etag: string | null): void;
 };
 
 function ownVersions(client: Client): OwnVersions {
   const known = versionsByClient.get(client);
   if (known !== undefined) return known;
-  const next = new Map<string, string>();
+  const next = new Map<string, MadeFrom>();
   const keyOf = (resource: string, from: MadeFrom) =>
     `${resource} ${'etag' in from ? from.etag : '*'}`;
   const versions: OwnVersions = {
     of(resource, from) {
+      // Each step is a write of this client's that went through. A record
+      // never comes back to an etag, but it can be gone again (made, removed,
+      // made again), so a step already taken ends the walk.
+      const seen = new Set<string>();
       let made = from;
-      // Each step is a write of this client's that went through; a record
-      // never comes back to an etag, so the steps end.
-      for (let step = next.get(keyOf(resource, made)); step !== undefined;) {
-        made = { etag: step };
-        step = next.get(keyOf(resource, made));
+      for (;;) {
+        const key = keyOf(resource, made);
+        const step = next.get(key);
+        if (step === undefined || seen.has(key)) return made;
+        seen.add(key);
+        made = step;
       }
-      return made;
     },
     moved(resource, from, etag) {
-      if ('etag' in from && from.etag === etag) return;
-      next.set(keyOf(resource, from), etag);
+      const to: MadeFrom = etag === null ? { none: true } : { etag };
+      if (keyOf(resource, from) === keyOf(resource, to)) return;
+      next.set(keyOf(resource, from), to);
     },
   };
   versionsByClient.set(client, versions);

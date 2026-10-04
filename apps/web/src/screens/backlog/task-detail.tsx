@@ -625,17 +625,25 @@ function TaskDetail({
     });
   };
 
-  /**
-   * Saves a field. `from` is the Task as read when the field was typed in;
-   * a choice (a select, a radio) is made from the Task as it is read now.
-   */
+  /** Saves a text field, made from the Task as read when it was typed in. */
   async function record(
     key: FieldKey,
     update: TaskAttributeUpdate,
-    estimate?: number | null,
-    from: MadeFrom = { etag: task.etag },
+    estimate: number | null | undefined,
+    from: MadeFrom,
   ): Promise<boolean> {
     if (!(await actions.saveTask(task.id, update, estimate, from)))
+      return false;
+    setSaved(key);
+    return true;
+  }
+
+  /** Saves a choice, made from the Task as it is read now (#321). */
+  async function choose(
+    key: FieldKey,
+    update: TaskAttributeUpdate,
+  ): Promise<boolean> {
+    if (!(await actions.chooseForTask(task.id, update, { etag: task.etag })))
       return false;
     setSaved(key);
     return true;
@@ -812,7 +820,7 @@ function TaskDetail({
                   description="タスクの見積もりとサブタスクの合計は、どちらか一方を計画に使います。"
                   value={task.timeBasis}
                   onValueChange={(timeBasis) =>
-                    record('timeBasis', { timeBasis })
+                    choose('timeBasis', { timeBasis })
                   }
                 >
                   <Radio<TimeBasis>
@@ -1018,11 +1026,11 @@ function TaskDetail({
                   const areaId = e.currentTarget.value;
                   if (areaId === NEW_AREA) {
                     newArea.open((created) =>
-                      record('areaId', { areaId: created }),
+                      choose('areaId', { areaId: created }),
                     );
                     return;
                   }
-                  record('areaId', {
+                  choose('areaId', {
                     areaId: areaId === '' ? null : areaId,
                   });
                 }}
@@ -1061,7 +1069,7 @@ function TaskDetail({
               <Select
                 value={task.priority}
                 onChange={(e) =>
-                  record('priority', {
+                  choose('priority', {
                     priority: e.currentTarget.value as TaskPriority,
                   })
                 }

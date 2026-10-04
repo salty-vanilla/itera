@@ -332,7 +332,7 @@ describe('Retro on the API', () => {
       ).not.toHaveLength(0);
       expect(
         screen.getAllByText(
-          '書いた内容は残っています。もう一度保存すると、この内容になります。',
+          '書いた内容は、まだ保存していません。保存すると、ほかの端末の変更を上書きします。',
         ),
       ).not.toHaveLength(0);
       expect(before()).toBe(read);

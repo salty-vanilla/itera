@@ -10,7 +10,7 @@
 - 改訂：2026-10-04（利用者の設定を作る `PUT /me/settings`。契約の operation を足すだけなので `info.version` は 0.2.0 のまま。Issue #279）
 - 改訂：2026-10-04（エラーを Problem Details（RFC 9457）にする。応答の項目を消して名前を変える壊す変更なので `info.version` を 0.3.0 にする。Issue #319）
 - 改訂：2026-10-04（すべての書き込みに必須のヘッダー `Idempotency-Key` を置き、422 `/problems/idempotency-key-reused` を足す。要求に必須の項目を足す壊す変更なので `info.version` を 0.4.0 にする。409 は「この書き込みはしていない」だけになる。Issue #320）
-- 改訂：2026-10-04（値を置き換える書き込み（PATCH の 10 面）に、記録ごとの版の `If-Match` を置き、412 `/problems/precondition-failed`・428 `/problems/precondition-required` を足す。記録の DTO に出力専用の `etag`、書き込みの応答に `ETag`。要求に必須のヘッダーを足す壊す変更なので `info.version` を 0.5.0 にする。Issue #321）
+- 改訂：2026-10-04（値を置き換える書き込み（PATCH の 10 面）に、記録ごとの版の `If-Match` を置き、412 `/problems/precondition-failed`・428 `/problems/precondition-required` を足す。記録の DTO に出力専用の `etag`、書き込みの応答に `ETag`。要求に必須のヘッダーを足す壊す変更なので `info.version` を 0.5.0 にする。クライアントが送り返す `InterruptNote` に必須の `etag` を足したのも壊す変更（読み取りの note をそのまま `restoreInterrupt` の本文にすると、未知のキーで 400）。Issue #321）
 
 ## 背景
 
@@ -171,7 +171,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 ### 消した記録を戻す操作の照合
 
-消した割り込みを戻す `restoreInterrupt` は、ID を残す。クライアントは、消す前の読み取りで得た note（ID・時刻・本文・分）をそのまま送り（ID は `PUT /sprints/{sprintId}/interrupts/{interruptNoteId}` の path に、ほかは本文に）、domain の `restoreInterrupt` が「同じ ID の note がない（利用者のほかの Sprint の note も含めて）」「今より後に記録されたものでない」「Sprint の期間の日に記録されたものである（利用者のタイムゾーンの日付で）」「本文が空でない」を確かめて、時刻の順の位置に戻す（F38）。ほかの Sprint の note の ID と時間帯は、domain の入力として `packages/application` が記録から渡す（#269）。
+消した割り込みを戻す `restoreInterrupt` は、ID を残す。クライアントは、消す前の読み取りで得た note の値（ID・時刻・本文・分。読み取りが足す `etag` は送らない。#321）を送り（ID は `PUT /sprints/{sprintId}/interrupts/{interruptNoteId}` の path に、ほかは本文に）、domain の `restoreInterrupt` が「同じ ID の note がない（利用者のほかの Sprint の note も含めて）」「今より後に記録されたものでない」「Sprint の期間の日に記録されたものである（利用者のタイムゾーンの日付で）」「本文が空でない」を確かめて、時刻の順の位置に戻す（F38）。ほかの Sprint の note の ID と時間帯は、domain の入力として `packages/application` が記録から渡す（#269）。
 
 - 戻せるのは、利用者がその Sprint から消した割り込みだけにする（#315）。サーバーは保存の前に、利用者自身の Activity にその Sprint からその ID を消した記録（`interruptDeleted`）があるかを確かめ（ADR 0004「Activity を読む 1 つの例外」）、なければ domain に渡さず 404 `/problems/not-found` で断る。ほかの利用者の割り込みの ID と、誰も持たない ID は、利用者自身の Activity にないという点で同じなので、状態・`type`・本文（ID を含めない固定の文）が同じ応答になる。ID は全体の主キーなので、この確かめがないと、ほかの利用者の ID は保存の主キーの衝突（500）になり、ID がほかの利用者にあるかどうかが応答で分かった。消していない割り込みや、別の Sprint から消した割り込みを戻す操作も、同じ 404 になる。ブラウザ内モック（ADR 0005）は Activity を残さないので、この確かめをしない（消していない割り込みも戻す。画面は消した直後にしか戻さないので、見える違いはない）。
 - 内容で照合する案（サーバーが消した note の内容を覚えておき、本文と時刻で探す）は採らない。Activity の `interruptDeleted` は ID しか持たず、内容を別に保つには domain の記録か Activity の項目を変える必要があるため（ドメインモデルの正本の変更。別の Issue で決める）。内容は今までどおりクライアントが送った値で、domain が値の規則だけを確かめる。ID は TypeID で、接頭辞と書式を契約で確かめる。
@@ -241,7 +241,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 - 利用者ごとの版をクライアントが送る形は採らない：ほかの端末の無関係な書き込みでも、日付が変わった後の最初の読み取りの追いつき（ADR 0004）でも版が上がるので、別の端末で開いただけで次の書き込みが 409 になる。記録の行ごとの版なら、断られるのは同じ行の値が変わったときだけになる（同じ行の別の項目、たとえば振り返りの「気づいたこと」と「次に試すこと」は同じ行なので断られる）。
 - **版**：記録の行の `revision`（ADR 0004「記録のテーブル」）。その行の値を最後に書いた保存の利用者ごとの版。利用者ごとの版は上がるだけなので、消して作り直した行でも前の版と重ならない。位置（`position`）だけが変わった行は版を上げない（前の行を外したときに、後ろの行が 412 にならないように）。
-- **etag**：値を置き換える書き込みが対象にする記録の DTO（`Task`・`Subtask`・`Sprint`・`SprintGoal`・`SprintTask`・`InterruptNote`・`Retro`・`CriterionUse`・`PlanningCriterion`、領域の一覧の `EditableArea`）に、出力専用の必須の `etag` を置く（AIP-154 の形）。値は強い entity-tag（RFC 9110 §8.8.3）で、版の番号を二重引用符で囲む（`"42"`）。クライアントは中身を読まず、比べるだけにする。記録がどの読み取りに出ても同じ `etag` を持つ（派生値の中の記録、`CapacityDriver` と `RetroFacts.interrupts` も）。マイグレーションの前に書いた行は版 0（`"0"`）。
+- **etag**：値を置き換える書き込みが対象にする記録の DTO（`Task`・`Subtask`・`Sprint`・`SprintGoal`・`SprintTask`・`InterruptNote`・`Retro`・`CriterionUse`・`PlanningCriterion`、領域の一覧の `EditableArea`）に、出力専用の必須の `etag` を置く（AIP-154 の形）。値は強い entity-tag（RFC 9110 §8.8.3）。今は版の番号を二重引用符で囲む（`"42"`）が、契約は entity-tag の形（`^"[!#-~]*"$`）としか決めず、クライアントは中身を読まず、まるごと比べるだけにする（表し方を後で変えても壊す変更にしないため。#321 の Contract のレビュー）。これは記録の版で、同じ経路の読み取り（`GET /sprints/{sprintId}` など）の表現の validator ではない（読み取りの表現は入れ子と派生値を含み、この etag が同じでも変わる）。読み取りの `If-None-Match`（304）を入れるときは、別の validator にするか経路を分ける。Google AIP-154 は項目の意味（出力専用、送り返す、食い違えば ABORTED）を借り、HTTP の振る舞い（`If-Match`、412・428）は RFC 9110 と RFC 6585 に従う。記録がどの読み取りに出ても同じ `etag` を持つ（派生値の中の記録、`CapacityDriver` と `RetroFacts.interrupts` も）。マイグレーションの前に書いた行は版 0（`"0"`）。
 - **対象の面**：値を置き換える PATCH の面のすべて（10 面）。`If-Match`（`IfMatchHeader`、必須）を置く。
 
 | 面 | operationId | 受ける操作 | 版を比べる記録 |
@@ -264,6 +264,8 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
   - `setSettings`（`PUT /me/settings`）：設定を作る面で、今の画面は最初の設定でしか送らない。戻す条件：表示名を後から変える画面ができたとき。
   - `restoreInterrupt`（`PUT`）：消した行の版は残らないので比べられない。下の「既知の制約」はそのまま残る。
   - ほかの PUT・DELETE（回を含める・外す、印、まとめて外す）：結果が 1 つに決まる置く・外す。
+- 条件を求めない面に `If-Match` が付いていても、書式を確かめるだけで比べない（状態の遷移は domain が今の状態で判定する）。
+- 冪等キーの指紋（上の「冪等キー」）は `If-Match` を含まない。同じキー・同じ本文で `If-Match` だけ違う送り直しは、1 回目の応答を返す（自分の書き込みの送り直しを 412 にしないため）。
 - **比べ方**：`If-Match` は `*` か、entity-tag の一覧（`EntityTagList`）。強い比較で、弱い entity-tag（`W/"…"`）はどれとも合わない。`If-None-Match` は `*` だけを受ける（`AnyEntityTag`）。書式が違えば 400 `/problems/validation-failed`（`errors` の場所は `header`）。読むのは `@itera/api-contract/requests` の `readCondition`、送るのは `conditionHeaders`（`MadeFrom`：`{ etag }` か `{ none: true }`）。どの操作が条件を要るか、記録のどこを比べるかは `packages/application` の `checkCondition`（`conditions.ts`。API とブラウザ内モックが使う）。面が `If-Match` を持つ操作の型（`ConditionalName`）と application の `ConditionalOperation` が同じことを型のテストで、PATCH の面だけが `If-Match` を持つことを `requests.test.ts` で確かめる。
 - **順序**：RFC 9110 §13.2.1 のとおり、条件を除いた要求の応答が本文を処理する前に 2xx・412 以外になるなら、条件より先に答える。400（形と書式）・401・403・413 → 冪等キーの照合（#320。自分の書き込みの送り直しは 412 にせず 1 回目の応答を返す）→ 404（要求が指す記録がない。`checkCondition` は対象のない操作を通し、操作が答える）→ 428・412 → domain の 422。比べる版は、追いつき（ADR 0004 #271）の前の、読み込んだ版（利用者が読んだもの）。412 でも 428 でも何も書かない。
 - **応答の `ETag`**：値を置き換える書き込みが通ったら、記録のその後の etag を `ETag` ヘッダーで返す（`headers.yaml` の `RecordETag`。記録を消した書き込み、目標を空にしたときは返さない）。同じキーで送り直した要求にも同じ値を返す（冪等キーの記録に置く。ADR 0004「記録のテーブル」）。クライアントは、同じ記録への次の書き込みを、読み直しを待たずにこの値で送れる（同じ形の 2 つの欄を続けて保存するとき、自分の 1 回目で 2 回目が 412 にならないように。ADR 0005「エラーと送信中」）。

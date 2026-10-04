@@ -55,7 +55,7 @@ describe('versions of the records (#321)', () => {
     expect(after.sprints).toEqual(before.sprints);
   });
 
-  it('keeps a Task’s version when another record changes (a renamed Area, a day started)', () => {
+  it('keeps a Task’s version when another record changes (a renamed Area)', () => {
     const store = memoryStore(fixtureSnapshot('today-daytime'));
     const before = etags(store).tasks;
     store.run(operations.renameArea({ areaId: research, name: '研究室' }));

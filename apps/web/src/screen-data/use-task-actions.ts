@@ -33,6 +33,10 @@ export function useTaskActions() {
     whileSending: 'wait',
     typed: true,
   });
+  // A choice (an Area, the priority, the time basis) shows the Task as read,
+  // so a choice that did not go through is not kept, and its Toast does not
+  // say what was typed is.
+  const chooseForTask = useOperation('saveTask', { whileSending: 'wait' });
   const adoptSuggestion = useOperation('adoptSuggestion');
   const undoAdoption = useOperation('undoAdoption');
   const adoptEdited = useOperation('adoptEditedSuggestion');
@@ -72,6 +76,12 @@ export function useTaskActions() {
           from,
         )
       ).ok,
+    /** A choice on the Task, made from the Task as read now (#321). */
+    chooseForTask: async (
+      taskId: TaskId,
+      update: TaskAttributeUpdate,
+      from: MadeFrom,
+    ) => (await chooseForTask.run({ taskId, update }, from)).ok,
     adoptSuggestion: async (
       taskId: TaskId,
       suggestionId: EstimateSuggestionId,
@@ -107,6 +117,7 @@ export function useTaskActions() {
   const loading = {
     addTask: createTask.loading,
     saveTask: saveTask.loading,
+    chooseForTask: chooseForTask.loading,
     adoptSuggestion: adoptSuggestion.loading,
     undoAdoption: undoAdoption.loading,
     adoptEditedSuggestion: adoptEdited.loading,

@@ -40,24 +40,27 @@ export const SAVE_UNKNOWN: ToastOptions = {
 
 /**
  * Not saved: the record had changed on another device since it was read
- * (412, #321). Said by its reason (content.md 保存の失敗): the reads are
- * read again, and the person decides on the record as it now is.
+ * (412, #321). Said by its reason (content.md 保存の失敗), with what was not
+ * done: the reads are read again, and the person decides on the record as
+ * it now is.
  */
 export const SAVE_STALE: ToastOptions = {
   kind: SAVE_FAILED_KIND,
   tone: 'danger',
   title: 'ほかの端末で変わっていました',
-  description: '最新の記録を見て、もう一度試してください。',
+  description: '保存していません。最新の記録を見て、もう一度試してください。',
 };
 
 /**
- * `SAVE_STALE` for what the person typed in a field: the field keeps it
- * (useDraftField), and saving it again puts it over the record as it now is.
+ * `SAVE_STALE` for what the person typed in a field, which the field keeps
+ * (useDraftField) while it is on the screen: saving it again puts it over
+ * the other device's change. It does not say the typing stays, which is not
+ * so once the field is gone (another screen).
  */
 export const SAVE_STALE_TYPED: ToastOptions = {
   ...SAVE_STALE,
   description:
-    '書いた内容は残っています。もう一度保存すると、この内容になります。',
+    '書いた内容は、まだ保存していません。保存すると、ほかの端末の変更を上書きします。',
 };
 
 /** The action of `SAVE_UNKNOWN`: the same write sent again, with its key. */

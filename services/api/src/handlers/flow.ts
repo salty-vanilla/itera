@@ -288,7 +288,7 @@ export function createFlow({
     if (result === 'required') {
       throw ApiError.of(
         '/problems/precondition-required',
-        'A write that replaces values needs If-Match.',
+        'A write that replaces values needs If-Match (If-None-Match: * for a Goal not written yet).',
       );
     }
     if (result === 'failed') {

@@ -220,9 +220,9 @@ export const vAreaColor = v.picklist([
 ]);
 
 /**
- * The record's version (ADR 0006 記録ごとの版): a strong entity-tag (RFC 9110 §8.8.3), the number of the person's save that last changed the record's own values, in double quotes. Output only. A write that replaces the record's values sends it back in `If-Match`; the record has changed since when it no longer matches (412). Opaque: compare it, never read the number.
+ * The record's version (ADR 0006 記録ごとの版): a strong entity-tag (RFC 9110 §8.8.3). Output only. A write that replaces the record's values sends it back in `If-Match`; the record has changed since when it no longer matches (412). Opaque: compare it whole, never read what is in the quotes (the API now puts a number there, which may change). The version of the record, not a validator of a read's representation at the same path.
  */
-export const vETag = v.pipe(v.pipe(v.string(), v.regex(/^"[0-9]+"$/)), v.readonly());
+export const vETag = v.pipe(v.pipe(v.string(), v.regex(/^"[!#-~]*"$/)), v.readonly());
 
 export const vEditableArea = v.object({
     id: vAreaId,

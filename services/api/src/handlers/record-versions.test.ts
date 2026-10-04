@@ -199,6 +199,7 @@ describe('a write that replaces values (#321)', () => {
   it('keeps the etag through writes to other records and the next day’s catch-up', async () => {
     const app = await setupFixtureApp('today-daytime');
     const read = await etagOfTask(app, paper);
+    const cleaningRead = await etagOfTask(app, cleaning);
     const { records } = await app.saved();
     const sprint = activeOf(records);
     const cleaningTask = sprint.tasks.find((t) => t.taskId === cleaning)!;
@@ -215,6 +216,9 @@ describe('a write that replaces values (#321)', () => {
       ).status,
     ).toBe(204);
     expect(await etagOfTask(app, paper)).toBe(read);
+    // Nor the Task of the choice itself (a recurring Task: its row is not
+    // written when its choice for today is completed).
+    expect(await etagOfTask(app, cleaning)).toBe(cleaningRead);
     // The next morning: the system starts the day (#271).
     app.at(instant('2026-10-04T00:30:00.000Z'));
     expect((await app.get('/me')).status).toBe(200);

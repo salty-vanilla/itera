@@ -3,10 +3,11 @@
 // does over the person's records in D1.
 //
 // The same steps as the API (ADR 0004 操作と読み取りの処理), less what has
-// no meaning here: the Origin is the app's own, and there is no version to
-// conflict. A record's version is kept as the API keeps it (the store
-// raises it with each change), so a write from an older read is refused
-// with 412 here too (#321). The person is signed in until they sign out in the mock's auth
+// no meaning here: the Origin is the app's own, and the person's revision
+// never conflicts (409: the store runs one change at a time). Each record's
+// version is kept as the API keeps it (the store raises it with each
+// change), so a write from an older read is refused with 412 here too
+// (#321). The person is signed in until they sign out in the mock's auth
 // (mock-auth.ts); then every request is refused with 401, as the API does
 // without a session (#278). The API's check that a restored interrupt is one
 // the person deleted (preconditions.ts, #315) is not made: the mock keeps no
@@ -52,7 +53,7 @@ import {
   backlogData,
   catchUp as systemCatchUp,
   checkCondition,
-  currentCondition,
+  etagAfter,
   currentSprints,
   dayView,
   operations,
@@ -336,7 +337,7 @@ async function answer(
     if (met === 'required')
       return failure(
         '/problems/precondition-required',
-        'A write that replaces values needs If-Match.',
+        'A write that replaces values needs If-Match (If-None-Match: * for a Goal not written yet).',
       );
     if (met === 'failed')
       return failure(
@@ -349,12 +350,12 @@ async function answer(
     if (!result.ok) return domainFailure(result.error);
     // The record's etag after a write that replaced its values (#321).
     const after = store.getSnapshot();
-    const etag = currentCondition(
+    const etag = etagAfter(
       name,
       input as never,
       after.records,
       after.versions ?? new Map(),
-    )?.ifMatch?.[0];
+    );
     const response =
       result.value === undefined
         ? new Response(null, { status: surface.status })

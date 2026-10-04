@@ -38,6 +38,7 @@ export type {
 // replace their values (#321, ADR 0006 記録ごとの版).
 export {
   etagOf,
+  nextVersions,
   tagRecords,
   versionKey,
   type RecordVersions,
@@ -49,8 +50,8 @@ export {
 } from './versions';
 export {
   checkCondition,
-  conditionalOperations,
   currentCondition,
+  etagAfter,
   isConditional,
   type Condition,
   type ConditionalOperation,

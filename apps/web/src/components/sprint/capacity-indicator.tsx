@@ -36,6 +36,15 @@ type AreaSegment = {
   hi: number;
 };
 
+/** What the available hours' field saves, and from which Sprint (#321). */
+type AvailableHoursEdit = {
+  readonly etag: string;
+  readonly save: (
+    hours: number | null,
+    from: MadeFrom,
+  ) => boolean | Promise<boolean>;
+};
+
 type CapacityIndicatorProps = {
   total: PlanningTotal;
   /**
@@ -48,14 +57,11 @@ type CapacityIndicatorProps = {
   capacity?: Capacity | undefined;
   areas: readonly AreaSegment[];
   /**
-   * Saves the available hours; `null` clears them. Returns success. `from`
-   * is the Sprint as read when they were typed (#321).
+   * The available hours' field: the Sprint's etag as read, and the save
+   * (`null` clears them; returns success; `from` is the Sprint as read when
+   * they were typed, #321). Absent: no field.
    */
-  onAvailableHoursChange?:
-    | ((hours: number | null, from: MadeFrom) => boolean | Promise<boolean>)
-    | undefined;
-  /** The Sprint's etag as read, for the available hours' save (#321). */
-  sprintEtag?: string | undefined;
+  hoursField?: AvailableHoursEdit | undefined;
   /** Read-only after confirm. */
   readOnly?: boolean | undefined;
   /** Its own 「時間の見通し」 heading. Off under a title that says it (#166). */
@@ -318,15 +324,14 @@ function CapacityIndicator({
   breakdownOnly = false,
   capacity,
   areas,
-  onAvailableHoursChange,
-  sprintEtag,
+  hoursField,
   readOnly = false,
   titled = true,
   className,
 }: CapacityIndicatorProps) {
   const statement = capacityStatement(capacity, total);
   const leftOut = formatLeftOut(total);
-  const editable = !readOnly && onAvailableHoursChange !== undefined;
+  const editable = !readOnly && hoursField !== undefined;
   const headingId = useId();
   return (
     <section
@@ -374,15 +379,13 @@ function CapacityIndicator({
           )}
           {/* Right under the total, so that it shows in the first screen
               (#165). */}
-          {editable &&
-            onAvailableHoursChange !== undefined &&
-            sprintEtag !== undefined && (
-              <AvailableHoursField
-                value={capacity?.availableHours}
-                etag={sprintEtag}
-                onChange={onAvailableHoursChange}
-              />
-            )}
+          {editable && hoursField !== undefined && (
+            <AvailableHoursField
+              value={capacity?.availableHours}
+              etag={hoursField.etag}
+              onChange={hoursField.save}
+            />
+          )}
         </div>
       )}
 
@@ -595,4 +598,4 @@ export {
   Headline,
   Sentences,
 };
-export type { AreaSegment, CapacityIndicatorProps };
+export type { AreaSegment, AvailableHoursEdit, CapacityIndicatorProps };
