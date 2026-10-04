@@ -163,6 +163,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 | `getSprintRetro` | `/api/sprints/{sprintId}/retro` | `sprintRetro` | 振り返りの前は `null`、ない Sprint は 404 |
 | `getDay` | `/api/days/{date}` | `dayView`（`today`・`past`・`future` で判別） | — |
 
+- 経路・path と query のスキーマ・呼ぶ application の関数・ない Sprint の 404 は、API とブラウザ内モックが同じ表から使う（`requests.ts` の `readSurfaces` と application の `reads`。`getMe` の応答は `meResponse`。#350、ADR 0005「ブラウザ内モック」）。
 - 応答は `{ clock, view }`。`clock` は、サーバーがその応答のために決めた「今日」と現在時刻（ADR 0005「時計」）。`view` は、今は application の関数の結果そのもので（写像は恒等。ADR 0007）、結果がない（`undefined`）ときは `null`（TanStack Query は `undefined` をデータにできない）。
 - query の数と真偽（`number`・`apply-criterion`）は、通信の上では文字列。サーバーは宣言した型に変えてから、生成したスキーマで検証する（`queryInput`。同じ名前を繰り返した値は、配列の項目なら全部、それ以外は検証で 400）。
 - **利用者**：`GET /api/me`（`getMe`）は、サインインしている利用者の ID と設定（表示名・タイムゾーン・週の始まり。domain の `User` から ID を除いたもの）を返す。設定をまだ作っていなければ `settings` は `null` で、日付が変わったときの処理（#271）を走らせずに答える（設定がない間もこの読み取りだけは答え、クライアントは設定を作る画面を出す。#279、#266）。設定があれば、処理を走らせてから、`clock` と今の Sprint の参照（`sprints`：実行中・Review 中・計画中のそれぞれと、次に計画を始める週）も返す（R1）。次に計画を始める週（`next`）は、開始日・終了日・番号と、その週の名前（`week`。Sprint の `week` と同じ。省略可）を持つ。Sprint がまだない週を画面が開くのに要る（#274）。`end` は必須で足した（下の「壊さない変更」の、応答に必須の項目を足す規則）。

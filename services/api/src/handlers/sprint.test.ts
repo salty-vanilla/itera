@@ -920,14 +920,18 @@ describe('the Sprint reads', () => {
       ).toBe(20);
     });
 
-    it('answers 404 for a Sprint the person does not have', async () => {
-      const { response, json } = await readOn(
-        'today-morning',
-        () => `/sprints/${missing('Sprint')}`,
-      );
-      expect(response.status).toBe(404);
-      expect(json).toMatchObject({ type: '/problems/not-found' });
-    });
+    // The browser mock answers the same (mock-api.test.ts, #350).
+    it.each(['', '/candidates', '/retro'])(
+      'answers 404 for a Sprint the person does not have (/sprints/{sprintId}%s)',
+      async (rest) => {
+        const { response, json } = await readOn(
+          'today-morning',
+          () => `/sprints/${missing('Sprint')}${rest}`,
+        );
+        expect(response.status).toBe(404);
+        expect(json).toMatchObject({ type: '/problems/not-found' });
+      },
+    );
 
     it.each([
       ['an ID of another kind', () => `/sprints/${ids.task.paper}`],

@@ -159,15 +159,23 @@ describe('the mock', () => {
     expect(none.data?.view).toEqual([]);
   });
 
-  it('answers 404 for a Sprint the person does not have', async () => {
-    const { client } = mockOf('retro-reflect');
-    const { response, error } = await sdk.getSprint({
-      client,
-      path: { sprintId: 'sprint_01h455vb4pex5vsknk084sn02q' },
-    });
-    expect(response?.status).toBe(404);
-    expect(error).toMatchObject({ type: '/problems/not-found' });
-  });
+  // The API answers the same (services/api sprint.test.ts, #350).
+  it.each([
+    ['getSprint', sdk.getSprint],
+    ['listSprintCandidates', sdk.listSprintCandidates],
+    ['getSprintRetro', sdk.getSprintRetro],
+  ] as const)(
+    'answers 404 to %s of a Sprint the person does not have',
+    async (_, read) => {
+      const { client } = mockOf('retro-reflect');
+      const { response, error } = await read({
+        client,
+        path: { sprintId: 'sprint_01h455vb4pex5vsknk084sn02q' },
+      });
+      expect(response?.status).toBe(404);
+      expect(error).toMatchObject({ type: '/problems/not-found' });
+    },
+  );
 
   it('runs an operation and returns what it made, a TypeID, with 201', async () => {
     const { client, store } = mockOf('backlog-capture');

@@ -9,13 +9,23 @@
 //   app, from sending.ts). `surfaces[id].operation` reads a checked request
 //   back into the operation and its input (services/api and the browser
 //   mock).
+// - A read surface (`readSurfaces`) is a read's path and the schemas of its
+//   path and query; `readOf` reads a received request into the read of
+//   packages/application it names and its input (#350). Whether the Sprint
+//   it names is the person's (404) is the read's own (`runRead`).
 //
 // This module checks requests with the contract's Valibot schemas, so the
 // web app's production code takes sending.ts's entry instead
 // (`@itera/api-contract/sending`), which this one gives again with the way
 // back. requests.test.ts holds the two ways to each other and to the
 // contract.
-import type { OperationInput, OperationName } from '@itera/application';
+import type {
+  OperationInput,
+  OperationName,
+  ReadCall,
+  ReadInput,
+  ReadName,
+} from '@itera/application';
 import * as v from 'valibot';
 import * as c from './index';
 import { issueAt, type RequestPart } from './problems';
@@ -397,18 +407,159 @@ export async function readRequest(
   received: ReceivedRequest,
   check: CheckPart,
 ): Promise<Call> {
-  const parts: Record<string, unknown> = {};
-  if (surface.path !== undefined)
-    parts.path = check(surface.path, received.path, 'path');
-  if (surface.query !== undefined)
-    parts.query = check(
-      surface.query,
-      queryInput(surface.query, received.query),
-      'query',
-    );
+  const parts = checkedParts(surface, received, check);
   if (surface.body !== undefined)
     parts.body = check(surface.body, await received.body(), 'body');
   return surface.operation(parts as Parameters<Surface['operation']>[0]);
+}
+
+/** The path's values, then the query (`queryInput`), checked by `check`. */
+function checkedParts(
+  schemas: {
+    readonly path?: v.GenericSchema;
+    readonly query?: v.GenericSchema;
+  },
+  received: Omit<ReceivedRequest, 'body'>,
+  check: CheckPart,
+): Record<string, unknown> {
+  const parts: Record<string, unknown> = {};
+  if (schemas.path !== undefined)
+    parts.path = check(schemas.path, received.path, 'path');
+  if (schemas.query !== undefined)
+    parts.query = check(
+      schemas.query,
+      queryInput(schemas.query, received.query),
+      'query',
+    );
+  return parts;
+}
+
+// ------------------------------------------------------------ the reads
+
+/** Each read's request, as generated (`<OperationId>Data`), but `getMe`'s. */
+type ReadDatas = {
+  listAreas: c.ListAreasData;
+  getBacklog: c.GetBacklogData;
+  listSprints: c.ListSprintsData;
+  getSprint: c.GetSprintData;
+  listSprintCandidates: c.ListSprintCandidatesData;
+  getSprintRetro: c.GetSprintRetroData;
+  getDay: c.GetDayData;
+};
+
+/**
+ * The operationId of a read of the person's records: every read of the
+ * contract but `getMe` (the person and their settings, `meResponse`).
+ */
+export type ReadId = keyof ReadDatas;
+
+/** A read's request after its schemas have checked it. */
+type CheckedRead<R extends ReadId> = {
+  readonly [K in 'path' | 'query']-?: NonNullable<ReadDatas[R][K]>;
+};
+
+/** A read of the contract: its path, the schemas of its parts, its read. */
+export interface ReadSurface<R extends ReadId = ReadId> {
+  /** The path under `/api`, `{name}` for a path value. */
+  readonly url: ReadDatas[R]['url'];
+  /** The contract's schemas (`v<OperationId>Path`, `v<OperationId>Query`). */
+  readonly path?: v.GenericSchema;
+  readonly query?: v.GenericSchema;
+  /** The read of packages/application the checked request names. */
+  read(request: CheckedRead<R>): ReadCall;
+}
+
+/** A read and its input from a request's plain values, as `call`. */
+function readCall<N extends ReadName>(
+  name: N,
+  input: Plain<ReadInput<N>>,
+): ReadCall {
+  return { name, input } as unknown as ReadCall;
+}
+
+/**
+ * Each read of the person's records by its operationId (ADR 0006 経路の形):
+ * the API routes them and the browser mock answers them from here.
+ */
+export const readSurfaces: { readonly [R in ReadId]: ReadSurface<R> } = {
+  listAreas: {
+    url: '/areas',
+    read: () => readCall('listAreas', undefined),
+  },
+  getBacklog: {
+    url: '/backlog',
+    query: c.vGetBacklogQuery,
+    read: ({ query }) => readCall('getBacklog', query),
+  },
+  listSprints: {
+    url: '/sprints',
+    query: c.vListSprintsQuery,
+    read: ({ query }) => readCall('listSprints', query),
+  },
+  getSprint: {
+    url: '/sprints/{sprintId}',
+    path: c.vGetSprintPath,
+    query: c.vGetSprintQuery,
+    read: ({ path, query }) =>
+      readCall('getSprint', {
+        sprintId: path.sprintId,
+        applyCriterion: query['apply-criterion'] ?? false,
+      }),
+  },
+  listSprintCandidates: {
+    url: '/sprints/{sprintId}/candidates',
+    path: c.vListSprintCandidatesPath,
+    read: ({ path }) => readCall('listSprintCandidates', path),
+  },
+  getSprintRetro: {
+    url: '/sprints/{sprintId}/retro',
+    path: c.vGetSprintRetroPath,
+    read: ({ path }) => readCall('getSprintRetro', path),
+  },
+  getDay: {
+    url: '/days/{date}',
+    path: c.vGetDayPath,
+    read: ({ path }) => readCall('getDay', path),
+  },
+};
+
+/**
+ * The read a received request names, the same steps for the server and
+ * the browser mock: the path's values and the query checked in that order
+ * with the read's schemas by `check`, then the read and its input.
+ */
+export function readOf(
+  surface: ReadSurface,
+  received: Omit<ReceivedRequest, 'body'>,
+  check: CheckPart,
+): ReadCall {
+  const parts = checkedParts(surface, received, check);
+  return surface.read(parts as Parameters<ReadSurface['read']>[0]);
+}
+
+/**
+ * `GET /me`'s answer (ADR 0006「利用者」), for the server and the browser
+ * mock alike. Before the person has made their settings it is their ID and
+ * `settings: null`, and `now` is not called: the records are not read or
+ * brought up to now. After, `now` reads them after the catch-up, and the
+ * answer has the clock and the Sprints the person has now (#295 R1).
+ */
+export async function meResponse(
+  userId: string,
+  settings: c.UserSettings | null,
+  now: () => Promise<{
+    readonly clock: c.Clock;
+    readonly view: c.CurrentSprints | null;
+  }>,
+): Promise<c.GetMeResponse> {
+  if (settings === null) return { userId, settings };
+  const { clock, view } = await now();
+  return {
+    userId,
+    settings,
+    clock,
+    ...(view === null ? {} : { sprints: view }),
+  };
 }
 
 type SelectionSurface =
