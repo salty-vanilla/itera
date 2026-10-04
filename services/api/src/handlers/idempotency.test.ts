@@ -36,11 +36,12 @@ function send(
   key: string,
   name: OperationName,
   input: unknown,
+  condition: Record<string, string> = {},
 ) {
   const { url, init } = httpRequest(name, input);
   return app.request(url, {
     ...init,
-    headers: { ...init.headers, ...writeHeaders(key) },
+    headers: { ...init.headers, ...writeHeaders(key), ...condition },
   });
 }
 
@@ -78,6 +79,8 @@ type Case = {
   readonly state: Parameters<typeof setupFixtureApp>[0];
   readonly prepare?: readonly Step[];
   readonly body: (records: Records) => unknown;
+  /** The version the write was made from (#321, #330), sent each time. */
+  readonly condition?: Record<string, string>;
 };
 
 const cases: readonly Case[] = [
@@ -116,6 +119,8 @@ const cases: readonly Case[] = [
       taskId: bookshelf,
       pattern: { freq: 'weekly', daysOfWeek: [3] },
     }),
+    // The Task has no rule: the write makes one (#330).
+    condition: { 'If-None-Match': '*' },
   },
   {
     kind: 'a DELETE',
@@ -134,13 +139,17 @@ describe('a write sent again with its Idempotency-Key', () => {
       const input = c.body(before.records);
       const key = crypto.randomUUID();
 
-      const first = await answer(await send(app, key, c.name, input));
+      const first = await answer(
+        await send(app, key, c.name, input, c.condition),
+      );
       expect(first.status).toBeLessThan(300);
       const made = await state(app);
       expect(made.revision).toBe(before.revision + 1);
       expect(made.activities.length).toBeGreaterThan(before.activities.length);
 
-      const again = await answer(await send(app, key, c.name, input));
+      const again = await answer(
+        await send(app, key, c.name, input, c.condition),
+      );
       expect(again).toEqual(first);
       expect(await state(app)).toEqual(made);
     },

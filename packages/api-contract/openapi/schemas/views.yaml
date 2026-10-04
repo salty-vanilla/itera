@@ -378,10 +378,18 @@ BacklogItem:
     rule:
       description: The rule's pattern today and its latest version.
       type: object
-      required: [current, latest]
+      required: [current, latest, etag]
       properties:
         current: { $ref: './records.yaml#/RecurrencePattern' }
         latest: { $ref: './records.yaml#/RecurrencePattern' }
+        etag:
+          description: >-
+            The version of the whole rule, its versions and their days
+            (#330): what `setRecurrence` sends in `If-Match` when the rule
+            is the Task's (`task.recurrenceRuleId`). A rule that has come
+            off the Task (ended, F41) is not: a rule set then is made from
+            none.
+          $ref: './common.yaml#/ETag'
     thisWeek:
       description: >-
         In this week's Sprint. `confirmed` is false while it is being

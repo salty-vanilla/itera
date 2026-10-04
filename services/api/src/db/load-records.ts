@@ -7,7 +7,12 @@ import {
   type KeptAnswer,
   type KeyLookup,
 } from './idempotency';
-import { recordsFromRows, RowSet, versionedTables } from './record-rows';
+import {
+  recordsFromRows,
+  RowSet,
+  versionedParts,
+  versionedTables,
+} from './record-rows';
 import type { LoadedRecords } from './records';
 import {
   actualTime,
@@ -264,12 +269,26 @@ async function loadInBatch(
   };
 }
 
-/** The version of each record with an etag, from the revision of its row. */
+/**
+ * The version of each record with an etag, from the revision of its row,
+ * or the highest of its row's and its parts' (a rule's, #330).
+ */
 function versionsOf(rows: RowSet): Map<string, number> {
   const versions = new Map<string, number>();
   for (const [table, keyOf] of versionedTables) {
     for (const row of rows.plain(table)) {
       versions.set(keyOf(row), row.revision as number);
+    }
+  }
+  for (const [table, { table: rootTable, root }] of versionedParts) {
+    const keyOf = versionedTables.get(rootTable);
+    if (keyOf === undefined) throw new Error('A part of no versioned record.');
+    for (const row of rows.plain(table)) {
+      const key = keyOf(root(row));
+      versions.set(
+        key,
+        Math.max(versions.get(key) ?? 0, row.revision as number),
+      );
     }
   }
   return versions;

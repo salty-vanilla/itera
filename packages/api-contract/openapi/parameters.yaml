@@ -32,9 +32,9 @@ IfMatchHeader:
     Idempotency-Key answers what it answered first, before this is
     compared.
   schema: { $ref: './schemas/common.yaml#/EntityTagList' }
-# A write that makes the record when there is none (a Goal) has one of the
-# two: `If-Match` when it was made from a record, `If-None-Match: *` when
-# it was made from none.
+# A write that makes the record when there is none (a Goal, a Task's rule)
+# has one of the two: `If-Match` when it was made from a record,
+# `If-None-Match: *` when it was made from none.
 OptionalIfMatchHeader:
   name: If-Match
   in: header

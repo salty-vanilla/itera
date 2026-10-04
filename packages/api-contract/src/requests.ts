@@ -1116,7 +1116,8 @@ export function readIdempotencyKey(value: string | null | undefined): string {
 // ------------------------------------------------------ the record's version
 
 /**
- * The operations whose surface takes `If-Match` (the PATCHes): each
+ * The operations whose surface takes `If-Match` (the PATCHes, and the PUT
+ * of a Task's rule, #330): each
  * replaces a record's values and names the version it was made from.
  */
 export type ConditionalName = {
@@ -1130,7 +1131,8 @@ export type ConditionalName = {
 /**
  * What a write that replaces a record's values was made from (ADR 0006
  * 記録ごとの版, #321): the record's `etag` as read, or no record (a Goal not
- * written yet), which the write must not be made over.
+ * written yet, a Task without a rule, #330), which the write must not be
+ * made over.
  */
 export type MadeFrom = { readonly etag: string } | { readonly none: true };
 

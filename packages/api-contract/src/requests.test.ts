@@ -227,15 +227,18 @@ describe('the version a write was made from (#321)', () => {
     }));
   };
 
-  it('is a header of every PATCH, the writes that replace values, and of no other request', () => {
+  it('is a header of every PATCH and of the PUT of a rule, the writes that replace values, and of no other request', () => {
     const named = datas().filter(({ body }) =>
       /\n {8}'If-Match'\??: EntityTagList;/.test(body),
     );
-    const patches = Object.entries(surfaces)
-      .filter(([, surface]) => surface.method === 'PATCH')
+    // A Task's rule is put whole: its PUT replaces the rule's values (#330).
+    const replacing = Object.entries(surfaces)
+      .filter(
+        ([id, surface]) => surface.method === 'PATCH' || id === 'setRecurrence',
+      )
       .map(([id]) => id);
-    expect(named.map(({ id }) => id).toSorted()).toEqual(patches.toSorted());
-    // An operation goes to a PATCH exactly when packages/application
+    expect(named.map(({ id }) => id).toSorted()).toEqual(replacing.toSorted());
+    // An operation goes to one of them exactly when packages/application
     // checks its condition.
     for (const [name, inputs] of Object.entries(OPERATION_EXAMPLES)) {
       for (const input of inputs) {
@@ -243,22 +246,22 @@ describe('the version a write was made from (#321)', () => {
           name as OperationName,
           input as PlainInput<OperationName>,
         );
-        expect(patches.includes(operationId), name).toBe(
+        expect(replacing.includes(operationId), name).toBe(
           isConditional(name as OperationName),
         );
       }
     }
   });
 
-  it('is required but on a Goal, which is made from none with If-None-Match', () => {
+  it('is required but on a Goal and a rule, which are made from none with If-None-Match', () => {
     const optional = datas()
       .filter(({ body }) => /\n {8}'If-Match'\?: EntityTagList;/.test(body))
       .map(({ id }) => id);
     const none = datas()
       .filter(({ body }) => /\n {8}'If-None-Match'\?: AnyEntityTag;/.test(body))
       .map(({ id }) => id);
-    expect(optional).toEqual(['updateGoal']);
-    expect(none).toEqual(['updateGoal']);
+    expect(optional.toSorted()).toEqual(['setRecurrence', 'updateGoal']);
+    expect(none.toSorted()).toEqual(['setRecurrence', 'updateGoal']);
   });
 
   it('leaves out what a read adds when a note read is given back (restoreInterrupt)', () => {

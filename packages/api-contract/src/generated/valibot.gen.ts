@@ -300,6 +300,11 @@ export const vTaskPriority = v.picklist([
  */
 export const vTimeBasis = v.picklist(['task', 'subtasks']);
 
+/**
+ * `If-None-Match: *` (RFC 9110 §13.1.2): the write was made from no record, and is not to be made over one that is there now.
+ */
+export const vAnyEntityTag = v.picklist(['*']);
+
 export const vRecurrencePattern = v.union([
     v.object({
         freq: v.literal('daily')
@@ -553,7 +558,8 @@ export const vBacklogItem = v.object({
     recurrence: v.optional(vRecurrenceSummary),
     rule: v.optional(v.object({
         current: vRecurrencePattern,
-        latest: vRecurrencePattern
+        latest: vRecurrencePattern,
+        etag: vETag
     })),
     thisWeek: v.optional(v.object({
         midSprint: v.boolean(),
@@ -1222,11 +1228,6 @@ export const vSprintView = v.union([v.object({
         ]),
         running: vRunningData
     })]);
-
-/**
- * `If-None-Match: *` (RFC 9110 §13.1.2): the write was made from no record, and is not to be made over one that is there now.
- */
-export const vAnyEntityTag = v.picklist(['*']);
 
 /**
  * What the person can do with a Task a Sprint being planned can choose (#323): addToSprint, which takes this Task. Read as DailySelectionCapabilities says.
@@ -2273,7 +2274,9 @@ export const vSetRecurrenceBody = v.strictObject({
 });
 
 export const vSetRecurrenceHeaders = v.object({
-    'Idempotency-Key': vIdempotencyKey
+    'Idempotency-Key': vIdempotencyKey,
+    'If-Match': v.optional(vEntityTagList),
+    'If-None-Match': v.optional(vAnyEntityTag)
 });
 
 export const vSetRecurrencePath = v.object({

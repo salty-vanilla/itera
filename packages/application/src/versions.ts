@@ -12,6 +12,8 @@ import type {
   InterruptNoteId,
   PlanningCriterion,
   PlanningCriterionId,
+  RecurrenceRule,
+  RecurrenceRuleId,
   Retro,
   Sprint,
   SprintGoal,
@@ -43,6 +45,7 @@ export const versionKey = {
   task: (id: TaskId) => id,
   subtask: (id: SubtaskId) => id,
   criterion: (id: PlanningCriterionId) => id,
+  rule: (id: RecurrenceRuleId) => id,
   sprint: (id: SprintId) => id,
   sprintTask: (id: SprintTaskId) => id,
   interrupt: (id: InterruptNoteId) => id,
@@ -84,6 +87,11 @@ export type TaggedSprint = Tagged<
   }
 >;
 export type TaggedCriterion = Tagged<PlanningCriterion>;
+/**
+ * A rule with the etag of the whole of it (#330): its versions and their
+ * days are parts of it, and a change to any of them moves its version.
+ */
+export type TaggedRule = Tagged<RecurrenceRule>;
 
 /**
  * The records reads take: those with an etag carry it. Operations take the
@@ -95,6 +103,7 @@ export interface TaggedRecords extends Records {
   readonly tasks: readonly TaggedTask[];
   readonly sprints: readonly TaggedSprint[];
   readonly criteria: readonly TaggedCriterion[];
+  readonly rules: readonly TaggedRule[];
 }
 
 /** The records with the etag of each record's version. */
@@ -114,6 +123,7 @@ export function tagRecords(
       subtasks: t.subtasks.map((s) => tag(s, versionKey.subtask(s.id))),
     })),
     criteria: records.criteria.map((c) => tag(c, versionKey.criterion(c.id))),
+    rules: records.rules.map((r) => tag(r, versionKey.rule(r.id))),
     sprints: records.sprints.map((s) => {
       const { retro, criterionUse, ...rest } = s;
       return {
@@ -153,7 +163,9 @@ export function taggedIn<T extends { readonly id: string }>(
  * The versions after a save at `revision` that turned `before` into
  * `after`: each record whose own values changed (not the parts it holds,
  * which have versions of their own, nor its place among its siblings) is
- * at `revision`, and those gone are dropped. What the memory store keeps,
+ * at `revision`, and those gone are dropped. A rule's versions have no
+ * version of their own: a change to them is the rule's (#330). What the
+ * memory store keeps,
  * as the API keeps it in a column of each row (ADR 0004 同時の書き込み).
  */
 export function nextVersions(
@@ -187,6 +199,8 @@ function ownValues(records: Records): Map<string, unknown> {
     for (const s of task.subtasks) values.set(versionKey.subtask(s.id), s);
   }
   for (const c of records.criteria) values.set(versionKey.criterion(c.id), c);
+  // A rule with its versions: one version for the whole of it (#330).
+  for (const r of records.rules) values.set(versionKey.rule(r.id), r);
   for (const sprint of records.sprints) {
     values.set(versionKey.sprint(sprint.id), without(sprint, SPRINT_PARTS));
     for (const g of sprint.goals) {

@@ -45,6 +45,7 @@ export {
   type Tagged,
   type TaggedCriterion,
   type TaggedRecords,
+  type TaggedRule,
   type TaggedSprint,
   type TaggedTask,
 } from './versions';

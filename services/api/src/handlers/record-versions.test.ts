@@ -372,6 +372,149 @@ describe('a Goal, which a write makes when there is none (#321)', () => {
   });
 });
 
+describe('a Task’s rule, which a write puts whole (#330)', () => {
+  async function setup() {
+    const app = await setupFixtureApp('backlog-recurrence');
+    await app.get('/me');
+    return app;
+  }
+
+  /** The Backlog's row of a Task: its rule and the etag of that. */
+  async function itemOf(app: FixtureApp, taskId: string) {
+    const response = await app.get('/backlog');
+    expect(response.status).toBe(200);
+    const { view } = v.parse(
+      contract.vGetBacklogResponse,
+      await response.json(),
+    );
+    return view.items[taskId]!;
+  }
+
+  const sunday = { freq: 'weekly', daysOfWeek: [0] } as const;
+  const saturdayAndSunday = { freq: 'weekly', daysOfWeek: [6, 0] } as const;
+
+  it('is changed with the rule’s etag, and answers the new one the read then gives', async () => {
+    const app = await setup();
+    const etag = (await itemOf(app, cleaning)).rule!.etag;
+    expect(etag).toMatch(/^"\d+"$/);
+    const response = await send(
+      app,
+      'setRecurrence',
+      { taskId: cleaning, pattern: saturdayAndSunday },
+      { 'If-Match': etag },
+    );
+    expect(response.status).toBe(200);
+    const after = (await itemOf(app, cleaning)).rule!;
+    expect(after.etag).not.toBe(etag);
+    expect(response.headers.get('ETag')).toBe(after.etag);
+    // A day taken off the same version (its row deleted) moves it again.
+    const again = await send(
+      app,
+      'setRecurrence',
+      { taskId: cleaning, pattern: sunday },
+      { 'If-Match': after.etag },
+    );
+    expect(again.status).toBe(200);
+    expect((await itemOf(app, cleaning)).rule!.etag).not.toBe(after.etag);
+  });
+
+  it('answers 412 to an older etag, and 428 to no condition, writing nothing', async () => {
+    const app = await setup();
+    const etag = (await itemOf(app, cleaning)).rule!.etag;
+    expect(
+      (
+        await send(
+          app,
+          'setRecurrence',
+          { taskId: cleaning, pattern: saturdayAndSunday },
+          { 'If-Match': etag },
+        )
+      ).status,
+    ).toBe(200);
+    const before = await state(app);
+    const stale = await send(
+      app,
+      'setRecurrence',
+      { taskId: cleaning, pattern: { freq: 'daily' } },
+      { 'If-Match': etag },
+    );
+    expect(await problemIn(stale)).toMatchObject({
+      status: 412,
+      type: '/problems/precondition-failed',
+    });
+    const none = await send(app, 'setRecurrence', {
+      taskId: cleaning,
+      pattern: { freq: 'daily' },
+    });
+    expect(await problemIn(none)).toMatchObject({
+      status: 428,
+      type: '/problems/precondition-required',
+    });
+    const made = await send(
+      app,
+      'setRecurrence',
+      { taskId: cleaning, pattern: { freq: 'daily' } },
+      { 'If-None-Match': '*' },
+    );
+    expect((await problemIn(made)).status).toBe(412);
+    expect(await state(app)).toEqual(before);
+  });
+
+  it('is made with If-None-Match: * for a Task without one, and not made twice over', async () => {
+    const app = await setup();
+    expect((await itemOf(app, paper)).rule).toBeUndefined();
+    const none = { 'If-None-Match': '*' };
+    const made = await send(
+      app,
+      'setRecurrence',
+      { taskId: paper, pattern: { freq: 'daily' } },
+      none,
+    );
+    expect(made.status).toBe(200);
+    expect(made.headers.get('ETag')).toBe(
+      (await itemOf(app, paper)).rule!.etag,
+    );
+    const before = await state(app);
+    const again = await send(
+      app,
+      'setRecurrence',
+      { taskId: paper, pattern: { freq: 'weekdays' } },
+      none,
+    );
+    expect(await problemIn(again)).toMatchObject({
+      status: 412,
+      type: '/problems/precondition-failed',
+    });
+    expect(await state(app)).toEqual(before);
+  });
+
+  it('is ended without a condition; then a rule set is a new one, made from none', async () => {
+    const app = await setup();
+    const etag = (await itemOf(app, cleaning)).rule!.etag;
+    expect(
+      (await send(app, 'endRecurrence', { taskId: cleaning })).status,
+    ).toBe(200);
+    // Shown until its last day, but no longer the Task's (F41).
+    const ended = await itemOf(app, cleaning);
+    expect(ended.rule).toBeDefined();
+    expect(ended.task.recurrenceRuleId).toBeUndefined();
+    const over = await send(
+      app,
+      'setRecurrence',
+      { taskId: cleaning, pattern: { freq: 'daily' } },
+      { 'If-Match': etag },
+    );
+    expect((await problemIn(over)).status).toBe(412);
+    const made = await send(
+      app,
+      'setRecurrence',
+      { taskId: cleaning, pattern: { freq: 'daily' } },
+      { 'If-None-Match': '*' },
+    );
+    expect(made.status).toBe(200);
+  });
+});
+
 describe('the condition the tests send', () => {
   it('is the one a client sends from the records as they are', async () => {
     const app = await setupFixtureApp('today-daytime');

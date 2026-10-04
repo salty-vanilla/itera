@@ -26,16 +26,17 @@ RevisionConflict:
       schema: { $ref: './schemas/common.yaml#/RevisionConflictError' }
 PreconditionFailed:
   description: >-
-    The record has changed since the write's `If-Match` was read; this
-    one was not made.
+    The record has changed since the write's `If-Match` was read, or one
+    has been made since a write sent `If-None-Match: *`; this one was not
+    made.
   content:
     application/problem+json:
       schema: { $ref: './schemas/common.yaml#/PreconditionFailedError' }
 PreconditionRequired:
   description: >-
     A write that replaces a record's values came without `If-Match` (or,
-    for a Goal not written yet, `If-None-Match: *`). Send it again with the
-    etag of the record as read.
+    for a record not made yet, a Goal or a Task's rule, `If-None-Match:
+    *`). Send it again with the etag of the record as read.
   content:
     application/problem+json:
       schema: { $ref: './schemas/common.yaml#/PreconditionRequiredError' }

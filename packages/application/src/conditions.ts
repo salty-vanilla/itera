@@ -18,14 +18,18 @@ export type Condition = {
   readonly ifNoneMatch?: '*';
 };
 
-/** The record a conditional write replaces, and whether there is one now. */
-type Target = { readonly key: string; readonly exists: boolean };
+/**
+ * The record a conditional write replaces, or that there is none now (a
+ * Goal not written, a Task without a rule): the write makes it.
+ */
+type Target =
+  { readonly key: string; readonly exists: true } | { readonly exists: false };
 
 /**
  * The record each operation that replaces values is on, from its input:
  * `undefined` when what it names is not there (the operation itself answers
- * that it is not found). Only a Goal can be missing while its Sprint is
- * there: writing one makes it.
+ * that it is not found). Only a Goal and a rule can be missing while what
+ * holds them is there: writing one makes it.
  */
 type TargetOf<N extends OperationName> = (
   input: OperationInput<N>,
@@ -102,7 +106,26 @@ const conditionTargets: {
     records.criteria.some((c) => c.id === criterionId)
       ? { key: versionKey.criterion(criterionId), exists: true }
       : undefined,
+  setRecurrence: ({ taskId }, records) => ruleTarget(records, taskId),
 };
+
+/**
+ * The rule of a Task, as `setRecurrence` finds it (#330): the Task's own,
+ * or none (a Task without a rule, or whose rule has come off it, F41),
+ * which writing makes.
+ */
+function ruleTarget(
+  records: Records,
+  taskId: OperationInput<'setRecurrence'>['taskId'],
+): Target | undefined {
+  const task = records.tasks.find((t) => t.id === taskId);
+  if (task === undefined) return undefined;
+  const ruleId = task.recurrenceRuleId;
+  if (ruleId === undefined) return { exists: false };
+  return records.rules.some((r) => r.id === ruleId)
+    ? { key: versionKey.rule(ruleId), exists: true }
+    : undefined;
+}
 
 function subtaskTarget(
   records: Records,
@@ -124,17 +147,17 @@ function goalTarget(
   // An Area the person does not have: the operation answers (404).
   if (sprint === undefined || !records.areas.some((a) => a.id === areaId))
     return undefined;
-  return {
-    key: versionKey.goal(sprintId, areaId),
-    exists: sprint.goals.some((g) => g.areaId === areaId),
-  };
+  return sprint.goals.some((g) => g.areaId === areaId)
+    ? { key: versionKey.goal(sprintId, areaId), exists: true }
+    : { exists: false };
 }
 
 /**
  * The operations that replace a record's values (the contract's PATCH
- * surfaces): a write of one names the version it was made from. State
- * transitions are not among them: the domain decides those from the
- * record's state now, so another change to the record does not matter.
+ * surfaces, and the PUT of a Task's rule, #330): a write of one names the
+ * version it was made from. State transitions are not among them: the
+ * domain decides those from the record's state now, so another change to
+ * the record does not matter.
  */
 export type ConditionalOperation =
   | 'renameArea'
@@ -149,7 +172,8 @@ export type ConditionalOperation =
   | 'setReflection'
   | 'setImprovement'
   | 'decideCriterion'
-  | 'setDraftPolicy';
+  | 'setDraftPolicy'
+  | 'setRecurrence';
 
 export function isConditional(
   name: OperationName,
@@ -189,7 +213,8 @@ export function checkCondition<N extends OperationName>(
 
 /**
  * The condition a write sends when it is made from the records as they
- * are: the record's etag, or that there is none (a Goal not written yet).
+ * are: the record's etag, or that there is none (a Goal not written yet,
+ * a Task without a rule).
  * `undefined` for an operation that needs none, or that names a record
  * that is not there. For tests and the browser mock's fixture checks.
  */
