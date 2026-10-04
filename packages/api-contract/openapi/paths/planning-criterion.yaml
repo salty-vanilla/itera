@@ -10,6 +10,8 @@ planningCriteria:
     summary: '基準にもする: draft a criterion'
     description: >-
       From the improvement of the Sprint in Review (`sourceSprintId`).
+    parameters:
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     requestBody:
       required: true
       content:
@@ -51,6 +53,7 @@ planningCriterion:
         in: path
         required: true
         schema: { $ref: '../schemas/common.yaml#/PlanningCriterionId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     requestBody:
       required: true
       content:
@@ -82,6 +85,7 @@ planningCriterion:
         in: path
         required: true
         schema: { $ref: '../schemas/common.yaml#/PlanningCriterionId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     responses:
       '204':
         description: Done.

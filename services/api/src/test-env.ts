@@ -1,3 +1,4 @@
+import { idempotencyKeyHeaders } from '@itera/api-contract/requests';
 import { instant } from '@itera/domain';
 import type { Dependencies } from './dependencies';
 
@@ -14,6 +15,16 @@ export const testEnv: CloudflareBindings = {
 
 // The app's own origin in tests: a write from it passes the Origin check.
 export const testOrigin = new URL(testEnv.BETTER_AUTH_URL).origin;
+
+/**
+ * The headers of a write from the app's own origin, named by an
+ * Idempotency-Key: a new one unless `key` is given (ADR 0006 冪等キー).
+ */
+export function writeHeaders(
+  key: string = crypto.randomUUID(),
+): Record<string, string> {
+  return { Origin: testOrigin, ...idempotencyKeyHeaders(key) };
+}
 
 // The fixed current time of tests: 09:30 on 2026-10-03 in Tokyo.
 export const testNow = instant('2026-10-03T00:30:00.000Z');

@@ -34,6 +34,8 @@ areas:
     summary: Make an Area
     description: >-
       Last in the order, in the next color (the operation decides both).
+    parameters:
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     requestBody:
       required: true
       content:
@@ -73,6 +75,7 @@ area:
         in: path
         required: true
         schema: { $ref: '../schemas/common.yaml#/AreaId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     requestBody:
       required: true
       content:
@@ -105,6 +108,7 @@ areaArchive:
         in: path
         required: true
         schema: { $ref: '../schemas/common.yaml#/AreaId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     responses:
       '204':
         description: Done.
@@ -127,6 +131,7 @@ areaRestore:
         in: path
         required: true
         schema: { $ref: '../schemas/common.yaml#/AreaId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     responses:
       '204':
         description: Done.

@@ -10,12 +10,13 @@ Itera の API の契約（ADR 0006）。OpenAPI の仕様（`openapi/`）が正�
 | `openapi/paths/` | 資源ごとの経路とメソッド（`area`・`task`・`sprint`・`retro`・`planning-criterion`・`me`）と、複数の記録にまたがる読むだけの資源（`reads.yaml`：Backlog と日）。経路の形は ADR 0006「経路の形」 |
 | `openapi/schemas/` | ID・日付・時計・エラー（`common`）、domain の記録（`records`）、domain の派生値（`values`）、読み取りの結果（`views`） |
 | `openapi/responses.yaml` | エラーの応答（`application/problem+json`。ADR 0006「エラー」） |
+| `openapi/parameters.yaml` | 多くの operation が共有するパラメータ。すべての書き込みの `Idempotency-Key`（ADR 0006「冪等キー」） |
 | `src/generated/` | Hey API の生成物（手で直さない） |
 | `src/index.ts` | `@itera/api-contract`：型と Valibot のスキーマ。`services/api` はこれだけを使う |
 | `src/client.ts` | `@itera/api-contract/client`：fetch のクライアント（Web）。関数は契約の operation と読み取りだけ |
 | `src/create-client.ts` | `@itera/api-contract/create-client`：別のクライアントを作る `createClient`・`createConfig`（Web がデータの出どころごとに作る） |
 | `src/react-query.ts` | `@itera/api-contract/react-query`：TanStack Query の options（Web。React に依存する） |
-| `src/requests.ts` | `@itera/api-contract/requests`：`packages/application` の操作と HTTP の面（メソッドと経路）の対応を両方向に（`requestOf`・`surfaces`）。操作ではない書き込み、利用者の設定を作る `PUT /me/settings` は `settingsSurface`。query の型の変換（`queryInput`）。サーバー・ブラウザ内モック・Web が使う |
+| `src/requests.ts` | `@itera/api-contract/requests`：`packages/application` の操作と HTTP の面（メソッドと経路）の対応を両方向に（`requestOf`・`surfaces`）。操作ではない書き込み、利用者の設定を作る `PUT /me/settings` は `settingsSurface`。query の型の変換（`queryInput`）。書き込みの `Idempotency-Key` を作る・読む関数（`idempotencyKeyHeaders`・`readIdempotencyKey`）。サーバー・ブラウザ内モック・Web が使う |
 | `src/problems.ts` | `@itera/api-contract/problems`：エラーの本文（Problem Details）。種類ごとのステータスと `title`、本文を作る `problemOf`・`validationProblem`、400 の `errors` の場所（`issueAt`・`valibotIssues`）。手で書く。サーバー・ブラウザ内モック・Web が使う。種類を足したら `openapi/schemas/common.yaml` と一緒に直す |
 | `src/testing.ts` | `@itera/api-contract/testing`：テストの道具（操作ごとの入力の例など） |
 

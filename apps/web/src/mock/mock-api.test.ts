@@ -5,6 +5,7 @@ import * as contract from '@itera/api-contract';
 import { PROBLEM_CONTENT_TYPE } from '@itera/api-contract/problems';
 import { getDayOptions, getMeOptions } from '@itera/api-contract/react-query';
 import {
+  idempotencyKeyHeaders,
   requestOf,
   surfaces,
   type OperationRequest,
@@ -29,6 +30,9 @@ import { describe, expect, it } from 'vitest';
 import { READS } from '@/api/reads';
 import { fixtureSettingsMade } from './fixture-states';
 import { createMock, MOCK_HEADER, MOCK_READS } from './mock-api';
+
+/** A write's Idempotency-Key, which the mock does not check (ADR 0005). */
+const write = () => idempotencyKeyHeaders(crypto.randomUUID());
 
 const ids = fixtureIds();
 
@@ -168,6 +172,7 @@ describe('the mock', () => {
   it('runs an operation and returns what it made, a TypeID, with 201', async () => {
     const { client, store } = mockOf('backlog-capture');
     const { data: made, response } = await sdk.createArea({
+      headers: write(),
       client,
       body: { name: '健康' },
     });
@@ -182,6 +187,7 @@ describe('the mock', () => {
   it('answers 204 for an operation that returns nothing', async () => {
     const { client } = mockOf('backlog-capture');
     const { response, error } = await sdk.renameArea({
+      headers: write(),
       client,
       path: { areaId: ids.area.research },
       body: { name: '研究室' },
@@ -196,6 +202,7 @@ describe('the mock', () => {
     await sdk.getMe({ client });
     const before = store.getSnapshot();
     const { error, response } = await sdk.renameArea({
+      headers: write(),
       client,
       path: { areaId: ids.area.research },
       body: { name: '' },
@@ -215,6 +222,7 @@ describe('the mock', () => {
       crypto.getRandomValues(bytes),
     ).newId('area', store.getSnapshot().clock.now);
     const { error, response } = await sdk.archiveArea({
+      headers: write(),
       client,
       path: { areaId },
     });
@@ -257,6 +265,7 @@ describe('the mock', () => {
   it('answers a request out of the contract with 400', async () => {
     const { client } = mockOf('backlog-capture');
     const unknownKey = await sdk.createArea({
+      headers: write(),
       client,
       body: { name: '健康', color: 'area-1' } as { name: string },
     });
@@ -330,8 +339,8 @@ describe('a person who has not made their settings', () => {
       sdk.listAreas({ client }),
       sdk.getBacklog({ client }),
       sdk.listSprints({ client }),
-      sdk.createArea({ client, body: { name: '仕事' } }),
-      sdk.beginPlanning({ client }),
+      sdk.createArea({ headers: write(), client, body: { name: '仕事' } }),
+      sdk.beginPlanning({ headers: write(), client }),
     ]) {
       const { error, response } = await request;
       expect(response?.status).toBe(422);
@@ -341,7 +350,11 @@ describe('a person who has not made their settings', () => {
 
   it('makes them with PUT /me/settings (201), then the reads and operations answer', async () => {
     const { client, store } = mockOf('before-settings');
-    const made = await sdk.setSettings({ client, body: settings });
+    const made = await sdk.setSettings({
+      headers: write(),
+      client,
+      body: settings,
+    });
     expect(made.response?.status).toBe(201);
     expect(made.data).toEqual(settings);
     expect(store.getSnapshot().records.user).toMatchObject(settings);
@@ -352,15 +365,21 @@ describe('a person who has not made their settings', () => {
       clock: store.getSnapshot().clock,
     });
     expect(
-      (await sdk.createArea({ client, body: { name: '仕事' } })).response
-        ?.status,
+      (
+        await sdk.createArea({
+          headers: write(),
+          client,
+          body: { name: '仕事' },
+        })
+      ).response?.status,
     ).toBe(201);
   });
 
   it('writes the display name again (204), and keeps the time zone and the first day', async () => {
     const { client, store } = mockOf('before-settings');
-    await sdk.setSettings({ client, body: settings });
+    await sdk.setSettings({ headers: write(), client, body: settings });
     const again = await sdk.setSettings({
+      headers: write(),
       client,
       body: { ...settings, displayName: 'あなた' },
     });
@@ -370,7 +389,11 @@ describe('a person who has not made their settings', () => {
       { ...settings, timeZone: 'UTC' },
       { ...settings, weekStartsOn: 1 } as const,
     ]) {
-      const refused = await sdk.setSettings({ client, body: other });
+      const refused = await sdk.setSettings({
+        headers: write(),
+        client,
+        body: other,
+      });
       expect(refused.response?.status).toBe(422);
       expect(refused.error).toMatchObject({ type: '/problems/invalid-input' });
     }
@@ -379,11 +402,13 @@ describe('a person who has not made their settings', () => {
   it('refuses what the contract does not take, and a time zone that does not exist', async () => {
     const { client } = mockOf('before-settings');
     const bad = await sdk.setSettings({
+      headers: write(),
       client,
       body: { ...settings, weekStartsOn: 9 } as never,
     });
     expect(bad.response?.status).toBe(400);
     const zone = await sdk.setSettings({
+      headers: write(),
       client,
       body: { ...settings, timeZone: 'Mars/Olympus' },
     });

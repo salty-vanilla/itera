@@ -6,7 +6,7 @@ import {
   type PlainProblemType,
 } from '@itera/api-contract/problems';
 import { describe, expect, it } from 'vitest';
-import { failureOf } from './failure';
+import { failureOf, sendsAgain, WriteFailed } from './failure';
 
 describe('failureOf', () => {
   it('reads the types the contract names', () => {
@@ -54,5 +54,36 @@ describe('failureOf', () => {
     expect(failureOf({})).toEqual({ kind: 'failed' });
     expect(failureOf(null)).toEqual({ kind: 'failed' });
     expect(failureOf({ type: 42 })).toEqual({ kind: 'failed' });
+  });
+});
+
+describe('a write that failed', () => {
+  it('is read by what it carries', () => {
+    expect(
+      failureOf(
+        new WriteFailed(problemOf('/problems/revision-conflict', ''), 409),
+      ),
+    ).toEqual({ kind: 'revisionConflict' });
+    expect(
+      failureOf(
+        new WriteFailed(problemOf('/problems/idempotency-key-reused', ''), 422),
+      ),
+    ).toEqual({ kind: 'refused', type: '/problems/idempotency-key-reused' });
+  });
+
+  it('is sent again with its key with no answer or a server failure only (ADR 0006 冪等キー)', () => {
+    const write = (error: unknown, status: number | undefined) =>
+      sendsAgain(new WriteFailed(error, status));
+    expect(write(new TypeError('Failed to fetch'), undefined)).toBe(true);
+    expect(write(problemOf('/problems/internal-error', ''), 500)).toBe(true);
+    expect(write('<html>Bad Gateway</html>', 502)).toBe(true);
+    // The API answered: the same again, or another meaning now.
+    expect(write(problemOf('/problems/revision-conflict', ''), 409)).toBe(
+      false,
+    );
+    expect(write(problemOf('/problems/not-found', ''), 404)).toBe(false);
+    expect(write({ type: '/problems/something-new' }, 418)).toBe(false);
+    // A read's failure is not a write's.
+    expect(sendsAgain(new TypeError('Failed to fetch'))).toBe(false);
   });
 });

@@ -9,6 +9,12 @@ type Draft<T> = {
   from: T;
   /** Sent for saving: shown only until the read comes back with something else. */
   held: boolean;
+  /**
+   * The last save failed and gave the typing back. Such a save may have
+   * been made after all, or be sent again (もう一度保存, #320): once the
+   * read comes back with what is typed, the typing is saved.
+   */
+  given: boolean;
   /** Saves sent and not answered yet: an earlier one's read is not the last's. */
   sending: number;
   /** The save sent last. */
@@ -70,10 +76,13 @@ function useDraftField<T>(
 ): DraftField<T> {
   const [draft, setDraft] = useState<Draft<T>>();
   const sent = useRef(0);
-  // The read changed after the last save was answered: the draft's job is
-  // done. While a save is still on the way, the read is an earlier save's.
+  // The read changed after the last save was answered, or caught up with
+  // typing a failed save gave back: the draft's job is done. While a save
+  // is still on the way, the read is an earlier save's.
   const done = (d: Draft<T> | undefined) =>
-    d?.held === true && d.sending === 0 && !equal(d.from, read);
+    d !== undefined &&
+    d.sending === 0 &&
+    ((d.held && !equal(d.from, read)) || (d.given && equal(d.value, read)));
   if (done(draft)) setDraft(undefined);
   const live = done(draft) ? undefined : draft;
   return {
@@ -92,6 +101,7 @@ function useDraftField<T>(
           base: cur === undefined ? read : cur.held ? cur.value : cur.base,
           from: cur === undefined || cur.held ? read : cur.from,
           held: false,
+          given: false,
           sending: d?.sending ?? 0,
           last: d?.last ?? 0,
         };
@@ -102,6 +112,7 @@ function useDraftField<T>(
         base: next,
         from: read,
         held: true,
+        given: false,
         sending: d?.sending ?? 0,
         last: d?.last ?? 0,
       })),
@@ -114,6 +125,7 @@ function useDraftField<T>(
           d && {
             ...d,
             held: true,
+            given: false,
             from: read,
             sending: d.sending + 1,
             last: id,
@@ -122,14 +134,16 @@ function useDraftField<T>(
       void Promise.resolve(saving).then((ok) => {
         // Only the last save gives the typing back: an earlier one that
         // failed is carried by the last, which has the whole value.
-        setDraft(
-          (d) =>
-            d && {
-              ...d,
-              sending: Math.max(0, d.sending - 1),
-              held: ok === false && d.last === id ? false : d.held,
-            },
-        );
+        setDraft((d) => {
+          if (d === undefined) return d;
+          const givenBack = ok === false && d.last === id;
+          return {
+            ...d,
+            sending: Math.max(0, d.sending - 1),
+            held: givenBack ? false : d.held,
+            given: givenBack || d.given,
+          };
+        });
       });
     },
     drop: () => setDraft(undefined),

@@ -31,13 +31,15 @@ PayloadTooLarge:
       schema: { $ref: './schemas/common.yaml#/PayloadTooLargeError' }
 RuleViolation:
   description: >-
-    The domain refused the operation, or the person has no settings yet.
+    The domain refused the operation, the person has no settings yet, or
+    the Idempotency-Key was used for another request.
   content:
     application/problem+json:
       schema:
         oneOf:
           - { $ref: './schemas/common.yaml#/RuleViolationError' }
           - { $ref: './schemas/common.yaml#/UserNotSetUpError' }
+          - { $ref: './schemas/common.yaml#/IdempotencyKeyReusedError' }
 UserNotSetUp:
   description: The person has no settings yet.
   content:

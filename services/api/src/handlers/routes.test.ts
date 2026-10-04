@@ -21,7 +21,13 @@ import { loadRecords } from '../db/load-records';
 import { createMemoryDatabase } from '../db/memory-database';
 import { saveRecords } from '../db/save-records';
 import { activity, user as authUser } from '../db/schema';
-import { testDependencies, testEnv, testNow, testOrigin } from '../test-env';
+import {
+  testDependencies,
+  testEnv,
+  testNow,
+  testOrigin,
+  writeHeaders,
+} from '../test-env';
 import { problemIn } from '../test-problems';
 import { httpRequest } from './operation-cases';
 import { maxBodyBytes } from './body';
@@ -103,7 +109,7 @@ type App = Awaited<ReturnType<typeof setup>>['app'];
 function post(
   app: App,
   body: unknown,
-  headers: Record<string, string> = { Origin: testOrigin },
+  headers: Record<string, string> = writeHeaders(),
 ) {
   return app.request(
     '/api/areas',
@@ -248,7 +254,7 @@ describe('an operation', () => {
         `/api${path}`,
         {
           method,
-          headers: { 'Content-Type': 'application/json', Origin: testOrigin },
+          headers: { 'Content-Type': 'application/json', ...writeHeaders() },
           ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         },
         testEnv,
@@ -289,7 +295,7 @@ describe('an operation', () => {
       '/api/tasks',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Origin: testOrigin },
+        headers: { 'Content-Type': 'application/json', ...writeHeaders() },
         body: JSON.stringify({ title: 1 }),
       },
       testEnv,

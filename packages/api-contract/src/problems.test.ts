@@ -24,6 +24,7 @@ const schemaOf: { readonly [T in ProblemType]: v.GenericSchema } = {
   '/problems/invalid-transition': contract.vRuleViolationError,
   '/problems/recurring-task-cannot-complete': contract.vRuleViolationError,
   '/problems/user-not-set-up': contract.vUserNotSetUpError,
+  '/problems/idempotency-key-reused': contract.vIdempotencyKeyReusedError,
   '/problems/internal-error': contract.vInternalError,
 };
 

@@ -105,7 +105,7 @@ export const vUnauthenticatedError = v.object({
 });
 
 /**
- * Another write came first (ADR 0004 同時の書き込み), and this one was not made; read the records again. Not retried automatically. (When the database's answer to a write that was made is lost, it also comes back as this; reading again shows what was saved.)
+ * Another write came first (ADR 0004 同時の書き込み), and this one was not made; read the records again. Not sent again automatically: on the records as they now are, the write may mean something else. (A write whose answer was lost after it was saved answers what it saved, by its Idempotency-Key, not this.)
  */
 export const vRevisionConflictError = v.object({
     type: v.literal('/problems/revision-conflict'),
@@ -123,6 +123,11 @@ export const vInternalError = v.object({
     status: v.literal(500),
     detail: v.string()
 });
+
+/**
+ * The key of a write (ADR 0006 冪等キー): a UUID as a Structured Field String (RFC 9651 §3.3.3), so in double quotes. Lowercase or uppercase hex; the API compares them as lowercase. Parameters after it (RFC 9651 §2.3) are ignored.
+ */
+export const vIdempotencyKey = v.pipe(v.string(), v.regex(/^"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"(;.*)?$/));
 
 /**
  * One place in the request that does not match the contract, located by exactly one of `pointer` (in the body), `parameter` (a path or query parameter) or `header`.
@@ -184,6 +189,16 @@ export const vRuleViolationError = v.object({
  */
 export const vUserNotSetUpError = v.object({
     type: v.literal('/problems/user-not-set-up'),
+    title: v.string(),
+    status: v.literal(422),
+    detail: v.string()
+});
+
+/**
+ * The Idempotency-Key was used before, within its 24 hours, for another request (method, path, query or body). Nothing was done.
+ */
+export const vIdempotencyKeyReusedError = v.object({
+    type: v.literal('/problems/idempotency-key-reused'),
     title: v.string(),
     status: v.literal(422),
     detail: v.string()
@@ -1263,6 +1278,11 @@ export const vRetroData = v.object({
 });
 
 /**
+ * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+ */
+export const vIdempotencyKeyHeader = vIdempotencyKey;
+
+/**
  * The person.
  */
 export const vGetMeResponse = v.object({
@@ -1276,6 +1296,10 @@ export const vSetSettingsBody = v.strictObject({
     displayName: v.string(),
     timeZone: vTimeZone,
     weekStartsOn: vDayOfWeek
+});
+
+export const vSetSettingsHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
 });
 
 export const vSetSettingsResponse = v.union([vUserSettings, v.void()]);
@@ -1292,6 +1316,10 @@ export const vCreateAreaBody = v.strictObject({
     name: v.string()
 });
 
+export const vCreateAreaHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 /**
  * Made. The IDs of what the operation made.
  */
@@ -1303,6 +1331,10 @@ export const vRenameAreaBody = v.strictObject({
     name: v.string()
 });
 
+export const vRenameAreaHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vRenameAreaPath = v.object({
     areaId: vAreaId
 });
@@ -1312,6 +1344,10 @@ export const vRenameAreaPath = v.object({
  */
 export const vRenameAreaResponse = v.void();
 
+export const vArchiveAreaHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vArchiveAreaPath = v.object({
     areaId: vAreaId
 });
@@ -1320,6 +1356,10 @@ export const vArchiveAreaPath = v.object({
  * Done.
  */
 export const vArchiveAreaResponse = v.void();
+
+export const vRestoreAreaHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
 
 export const vRestoreAreaPath = v.object({
     areaId: vAreaId
@@ -1333,6 +1373,10 @@ export const vRestoreAreaResponse = v.void();
 export const vCreateTaskBody = v.strictObject({
     title: v.string(),
     areaId: v.optional(vAreaId)
+});
+
+export const vCreateTaskHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
 });
 
 /**
@@ -1352,6 +1396,10 @@ export const vSaveTaskBody = v.strictObject({
     estimate: v.nullish(v.number())
 });
 
+export const vSaveTaskHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vSaveTaskPath = v.object({
     taskId: vTaskId
 });
@@ -1360,6 +1408,10 @@ export const vSaveTaskPath = v.object({
  * Done.
  */
 export const vSaveTaskResponse = v.void();
+
+export const vArchiveTaskHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
 
 export const vArchiveTaskPath = v.object({
     taskId: vTaskId
@@ -1370,6 +1422,10 @@ export const vArchiveTaskPath = v.object({
  */
 export const vArchiveTaskResponse = v.void();
 
+export const vRestoreTaskHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vRestoreTaskPath = v.object({
     taskId: vTaskId
 });
@@ -1378,6 +1434,10 @@ export const vRestoreTaskPath = v.object({
  * Done.
  */
 export const vRestoreTaskResponse = v.void();
+
+export const vCompleteTaskHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
 
 export const vCompleteTaskPath = v.object({
     taskId: vTaskId
@@ -1388,6 +1448,10 @@ export const vCompleteTaskPath = v.object({
  */
 export const vCompleteTaskResponse = v.void();
 
+export const vUndoCompleteTaskHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vUndoCompleteTaskPath = v.object({
     taskId: vTaskId
 });
@@ -1396,6 +1460,10 @@ export const vUndoCompleteTaskPath = v.object({
  * Done.
  */
 export const vUndoCompleteTaskResponse = v.void();
+
+export const vEndRecurrenceHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
 
 export const vEndRecurrencePath = v.object({
     taskId: vTaskId
@@ -1412,6 +1480,10 @@ export const vSetRecurrenceBody = v.strictObject({
     pattern: vRecurrencePattern
 });
 
+export const vSetRecurrenceHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vSetRecurrencePath = v.object({
     taskId: vTaskId
 });
@@ -1426,6 +1498,10 @@ export const vSetRecurrenceResponse = v.object({
 export const vAddSubtaskBody = v.strictObject({
     title: v.string(),
     hours: v.optional(v.number())
+});
+
+export const vAddSubtaskHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
 });
 
 export const vAddSubtaskPath = v.object({
@@ -1445,6 +1521,10 @@ export const vUpdateSubtaskBody = v.union([v.strictObject({
         hours: v.nullable(v.number())
     })]);
 
+export const vUpdateSubtaskHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vUpdateSubtaskPath = v.object({
     taskId: vTaskId,
     subtaskId: vSubtaskId
@@ -1461,6 +1541,10 @@ export const vAdoptEstimateSuggestionBody = v.union([v.strictObject({
         hours: v.number()
     })]);
 
+export const vAdoptEstimateSuggestionHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vAdoptEstimateSuggestionPath = v.object({
     taskId: vTaskId,
     suggestionId: vEstimateSuggestionId
@@ -1475,6 +1559,10 @@ export const vUndoAdoptionBody = v.strictObject({
     previous: v.nullable(vEstimate)
 });
 
+export const vUndoAdoptionHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vUndoAdoptionPath = v.object({
     taskId: vTaskId,
     suggestionId: vEstimateSuggestionId
@@ -1485,6 +1573,10 @@ export const vUndoAdoptionPath = v.object({
  */
 export const vUndoAdoptionResponse = v.void();
 
+export const vRejectSuggestionHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vRejectSuggestionPath = v.object({
     taskId: vTaskId,
     suggestionId: vEstimateSuggestionId
@@ -1494,6 +1586,10 @@ export const vRejectSuggestionPath = v.object({
  * Done.
  */
 export const vRejectSuggestionResponse = v.void();
+
+export const vUndoRejectionHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
 
 export const vUndoRejectionPath = v.object({
     taskId: vTaskId,
@@ -1542,6 +1638,10 @@ export const vListSprintsResponse = v.object({
     view: v.array(vSprintItem)
 });
 
+export const vBeginPlanningHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 /**
  * Made. The IDs of what the operation made.
  */
@@ -1569,6 +1669,10 @@ export const vSetAvailableHoursBody = v.strictObject({
     availableHours: v.nullable(v.number())
 });
 
+export const vSetAvailableHoursHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vSetAvailableHoursPath = v.object({
     sprintId: vSprintId
 });
@@ -1580,6 +1684,10 @@ export const vSetAvailableHoursResponse = v.void();
 
 export const vConfirmSprintBody = v.strictObject({
     applyCriterion: v.boolean()
+});
+
+export const vConfirmSprintHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
 });
 
 export const vConfirmSprintPath = v.object({
@@ -1597,6 +1705,10 @@ export const vUpdateGoalBody = v.union([v.strictObject({
         assessment: v.nullable(vSelfAssessment)
     })]);
 
+export const vUpdateGoalHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vUpdateGoalPath = v.object({
     sprintId: vSprintId,
     areaId: vAreaId
@@ -1606,6 +1718,10 @@ export const vUpdateGoalPath = v.object({
  * Done.
  */
 export const vUpdateGoalResponse = v.void();
+
+export const vRemoveSprintTasksHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
 
 export const vRemoveSprintTasksPath = v.object({
     sprintId: vSprintId
@@ -1627,6 +1743,10 @@ export const vAddToSprintBody = v.union([v.strictObject({
         areaId: v.optional(vAreaId)
     })]);
 
+export const vAddToSprintHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vAddToSprintPath = v.object({
     sprintId: vSprintId
 });
@@ -1637,6 +1757,10 @@ export const vAddToSprintPath = v.object({
 export const vAddToSprintResponse = v.object({
     sprintTaskIds: v.array(vSprintTaskId),
     taskId: v.optional(vTaskId)
+});
+
+export const vRemoveSprintTaskHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
 });
 
 export const vRemoveSprintTaskPath = v.object({
@@ -1653,6 +1777,10 @@ export const vSetGoalLinkBody = v.strictObject({
     goalLink: vGoalLink
 });
 
+export const vSetGoalLinkHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vSetGoalLinkPath = v.object({
     sprintId: vSprintId,
     sprintTaskId: vSprintTaskId
@@ -1662,6 +1790,10 @@ export const vSetGoalLinkPath = v.object({
  * Done.
  */
 export const vSetGoalLinkResponse = v.void();
+
+export const vExcludeAllOccurrencesHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
 
 export const vExcludeAllOccurrencesPath = v.object({
     sprintId: vSprintId,
@@ -1677,6 +1809,10 @@ export const vIncludeOccurrencesBody = v.strictObject({
     occurrenceIds: v.array(vOccurrenceId)
 });
 
+export const vIncludeOccurrencesHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vIncludeOccurrencesPath = v.object({
     sprintId: vSprintId
 });
@@ -1685,6 +1821,10 @@ export const vIncludeOccurrencesPath = v.object({
  * Done.
  */
 export const vIncludeOccurrencesResponse = v.void();
+
+export const vExcludeOccurrenceHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
 
 export const vExcludeOccurrencePath = v.object({
     sprintId: vSprintId,
@@ -1695,6 +1835,10 @@ export const vExcludeOccurrencePath = v.object({
  * Done.
  */
 export const vExcludeOccurrenceResponse = v.void();
+
+export const vIncludeOccurrenceHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
 
 export const vIncludeOccurrencePath = v.object({
     sprintId: vSprintId,
@@ -1735,6 +1879,10 @@ export const vChooseForDayBody = v.union([
     })
 ]);
 
+export const vChooseForDayHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vChooseForDayPath = v.object({
     sprintId: vSprintId
 });
@@ -1746,6 +1894,10 @@ export const vChooseForDayResponse = v.object({
     selectionId: vDailySelectionId,
     sprintTaskId: v.optional(vSprintTaskId),
     taskId: v.optional(vTaskId)
+});
+
+export const vStartSelectionHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
 });
 
 export const vStartSelectionPath = v.object({
@@ -1762,6 +1914,10 @@ export const vPauseSelectionBody = v.strictObject({
     hours: v.optional(v.number())
 });
 
+export const vPauseSelectionHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vPauseSelectionPath = v.object({
     sprintId: vSprintId,
     selectionId: vDailySelectionId
@@ -1771,6 +1927,10 @@ export const vPauseSelectionPath = v.object({
  * Done.
  */
 export const vPauseSelectionResponse = v.void();
+
+export const vDeferSelectionHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
 
 export const vDeferSelectionPath = v.object({
     sprintId: vSprintId,
@@ -1782,6 +1942,10 @@ export const vDeferSelectionPath = v.object({
  */
 export const vDeferSelectionResponse = v.void();
 
+export const vUndoDeferSelectionHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vUndoDeferSelectionPath = v.object({
     sprintId: vSprintId,
     selectionId: vDailySelectionId
@@ -1791,6 +1955,10 @@ export const vUndoDeferSelectionPath = v.object({
  * Done.
  */
 export const vUndoDeferSelectionResponse = v.void();
+
+export const vRemoveFromTodayHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
 
 export const vRemoveFromTodayPath = v.object({
     sprintId: vSprintId,
@@ -1802,6 +1970,10 @@ export const vRemoveFromTodayPath = v.object({
  */
 export const vRemoveFromTodayResponse = v.void();
 
+export const vUndoRemoveFromTodayHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vUndoRemoveFromTodayPath = v.object({
     sprintId: vSprintId,
     selectionId: vDailySelectionId
@@ -1811,6 +1983,10 @@ export const vUndoRemoveFromTodayPath = v.object({
  * Done.
  */
 export const vUndoRemoveFromTodayResponse = v.void();
+
+export const vCompleteSelectionHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
 
 export const vCompleteSelectionPath = v.object({
     sprintId: vSprintId,
@@ -1822,6 +1998,10 @@ export const vCompleteSelectionPath = v.object({
  */
 export const vCompleteSelectionResponse = v.void();
 
+export const vUndoCompleteSelectionHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vUndoCompleteSelectionPath = v.object({
     sprintId: vSprintId,
     selectionId: vDailySelectionId
@@ -1832,6 +2012,10 @@ export const vUndoCompleteSelectionPath = v.object({
  */
 export const vUndoCompleteSelectionResponse = v.void();
 
+export const vSkipSelectionHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vSkipSelectionPath = v.object({
     sprintId: vSprintId,
     selectionId: vDailySelectionId
@@ -1841,6 +2025,10 @@ export const vSkipSelectionPath = v.object({
  * Done.
  */
 export const vSkipSelectionResponse = v.void();
+
+export const vUndoSkipSelectionHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
 
 export const vUndoSkipSelectionPath = v.object({
     sprintId: vSprintId,
@@ -1859,6 +2047,10 @@ export const vRecordActualTimeBody = v.strictObject({
     occurrenceId: v.optional(vOccurrenceId)
 });
 
+export const vRecordActualTimeHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vRecordActualTimePath = v.object({
     sprintId: vSprintId
 });
@@ -1873,6 +2065,10 @@ export const vNoteInterruptBody = v.strictObject({
     minutes: v.optional(v.number())
 });
 
+export const vNoteInterruptHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vNoteInterruptPath = v.object({
     sprintId: vSprintId
 });
@@ -1882,6 +2078,10 @@ export const vNoteInterruptPath = v.object({
  */
 export const vNoteInterruptResponse = v.object({
     interruptNoteId: vInterruptNoteId
+});
+
+export const vDeleteInterruptHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
 });
 
 export const vDeleteInterruptPath = v.object({
@@ -1899,6 +2099,10 @@ export const vEditInterruptBody = v.strictObject({
     minutes: v.nullable(v.number())
 });
 
+export const vEditInterruptHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vEditInterruptPath = v.object({
     sprintId: vSprintId,
     interruptNoteId: vInterruptNoteId
@@ -1913,6 +2117,10 @@ export const vRestoreInterruptBody = v.strictObject({
     at: vInstant,
     text: v.string(),
     minutes: v.optional(v.number())
+});
+
+export const vRestoreInterruptHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
 });
 
 export const vRestoreInterruptPath = v.object({
@@ -1943,6 +2151,10 @@ export const vUpdateRetroBody = v.union([v.strictObject({
         improvement: v.string()
     })]);
 
+export const vUpdateRetroHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vUpdateRetroPath = v.object({
     sprintId: vSprintId
 });
@@ -1952,8 +2164,16 @@ export const vUpdateRetroPath = v.object({
  */
 export const vUpdateRetroResponse = v.void();
 
+export const vBeginRetroHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vBeginRetroPath = v.object({
     sprintId: vSprintId
+});
+
+export const vCompleteRetroHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
 });
 
 export const vCompleteRetroPath = v.object({
@@ -1964,6 +2184,10 @@ export const vCompleteRetroPath = v.object({
  * Done.
  */
 export const vCompleteRetroResponse = v.void();
+
+export const vUnpinFactHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
 
 export const vUnpinFactPath = v.object({
     sprintId: vSprintId,
@@ -1981,6 +2205,10 @@ export const vUnpinFactPath = v.object({
  * Done.
  */
 export const vUnpinFactResponse = v.void();
+
+export const vPinFactHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
 
 export const vPinFactPath = v.object({
     sprintId: vSprintId,
@@ -2003,6 +2231,10 @@ export const vDecideCriterionBody = v.strictObject({
     retroDecision: vRetroDecision
 });
 
+export const vDecideCriterionHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 export const vDecideCriterionPath = v.object({
     sprintId: vSprintId
 });
@@ -2017,11 +2249,19 @@ export const vDraftCriterionBody = v.strictObject({
     policy: vCriterionPolicy
 });
 
+export const vDraftCriterionHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
+});
+
 /**
  * Made. The IDs of what the operation made.
  */
 export const vDraftCriterionResponse = v.object({
     criterionId: vPlanningCriterionId
+});
+
+export const vDropCriterionDraftHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
 });
 
 export const vDropCriterionDraftPath = v.object({
@@ -2035,6 +2275,10 @@ export const vDropCriterionDraftResponse = v.void();
 
 export const vSetDraftPolicyBody = v.strictObject({
     policy: vCriterionPolicy
+});
+
+export const vSetDraftPolicyHeaders = v.object({
+    'Idempotency-Key': vIdempotencyKey
 });
 
 export const vSetDraftPolicyPath = v.object({

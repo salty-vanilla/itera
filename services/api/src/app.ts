@@ -9,6 +9,7 @@ import { ApiError, errorResponse, loggedError } from './errors';
 import { createFlow, type Guards } from './handlers/flow';
 import { getMe, putSettings } from './handlers/me';
 import { limitBody } from './handlers/body';
+import { readWrite } from './handlers/idempotency';
 import { operationRoutes } from './handlers/operations';
 import { readRoutesApp } from './handlers/reads';
 import { requireSameOrigin } from './handlers/same-origin';
@@ -76,6 +77,7 @@ export function createApp(dependencies: Dependencies) {
     guards.user,
     guards.origin,
     limitBody,
+    readWrite,
     (c) => putSettings(c, flow),
   );
   app.route('/api', readRoutesApp(flow, guards));

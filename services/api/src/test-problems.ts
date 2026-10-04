@@ -16,7 +16,11 @@ const schemas: Readonly<Record<number, v.GenericSchema>> = {
   404: contract.vNotFoundError,
   409: contract.vRevisionConflictError,
   413: contract.vPayloadTooLargeError,
-  422: v.union([contract.vRuleViolationError, contract.vUserNotSetUpError]),
+  422: v.union([
+    contract.vRuleViolationError,
+    contract.vUserNotSetUpError,
+    contract.vIdempotencyKeyReusedError,
+  ]),
   500: contract.vInternalError,
 };
 

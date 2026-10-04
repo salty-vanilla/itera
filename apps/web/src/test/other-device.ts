@@ -1,4 +1,5 @@
 import { createClient, createConfig } from '@itera/api-contract/create-client';
+import { idempotencyKeyHeaders } from '@itera/api-contract/requests';
 import type { RecordStore } from '@itera/application';
 import { waitFor } from '@testing-library/react';
 import { apiBaseUrl } from '@/api/create-api';
@@ -17,6 +18,12 @@ export function otherDevice(store: RecordStore) {
     }),
   );
 }
+
+/**
+ * The headers of another device's write: a new Idempotency-Key (ADR 0006
+ * 冪等キー), which every write carries. The mock does not check it.
+ */
+export const newWrite = () => idempotencyKeyHeaders(crypto.randomUUID());
 
 /**
  * The person comes back to the screen: the tab is visible again, and what

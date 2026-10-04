@@ -6,6 +6,7 @@
 import type * as v from 'valibot';
 import type {
   ForbiddenOriginError,
+  IdempotencyKeyReusedError,
   InternalError,
   NotFoundError,
   PayloadTooLargeError,
@@ -32,6 +33,7 @@ export type Problem =
   | PayloadTooLargeError
   | RuleViolationError
   | UserNotSetUpError
+  | IdempotencyKeyReusedError
   | InternalError;
 
 /** The identifier of a kind of problem, the one a client decides by. */
@@ -88,6 +90,10 @@ export const PROBLEMS: {
   '/problems/user-not-set-up': {
     status: 422,
     title: 'The person has no settings yet',
+  },
+  '/problems/idempotency-key-reused': {
+    status: 422,
+    title: 'The Idempotency-Key was used for another request',
   },
   '/problems/internal-error': { status: 500, title: 'An unexpected failure' },
 };

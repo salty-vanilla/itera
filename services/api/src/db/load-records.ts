@@ -1,6 +1,12 @@
 import type { UserId } from '@itera/domain';
 import { eq, inArray } from 'drizzle-orm';
 import type { Database } from './database';
+import {
+  keptAnswerOf,
+  keptAnswerQuery,
+  type KeptAnswer,
+  type KeyLookup,
+} from './idempotency';
 import { recordsFromRows, RowSet } from './record-rows';
 import type { LoadedRecords } from './records';
 import {
@@ -40,6 +46,27 @@ export async function loadRecords(
   db: Database,
   userId: UserId,
 ): Promise<LoadedRecords> {
+  return (await loadInBatch(db, userId, undefined)).loaded;
+}
+
+/**
+ * The records as `loadRecords` reads them, and the answer kept for the
+ * write's Idempotency-Key, in the same batch: the two are of the same
+ * moment (ADR 0006 冪等キー).
+ */
+export async function loadRecordsForWrite(
+  db: Database,
+  userId: UserId,
+  lookup: KeyLookup,
+): Promise<{ loaded: LoadedRecords; kept: KeptAnswer | null }> {
+  return loadInBatch(db, userId, lookup);
+}
+
+async function loadInBatch(
+  db: Database,
+  userId: UserId,
+  lookup: KeyLookup | undefined,
+): Promise<{ loaded: LoadedRecords; kept: KeptAnswer | null }> {
   const ownTasks = db
     .select({ id: task.id })
     .from(task)
@@ -85,6 +112,7 @@ export async function loadRecords(
     interruptRows,
     retroRows,
     pinRows,
+    keptRows,
   ] = await db.batch([
     db
       .select({
@@ -198,6 +226,7 @@ export async function loadRecords(
       .from(retroPin)
       .where(inArray(retroPin.sprintId, ownSprints))
       .orderBy(retroPin.sprintId, retroPin.position),
+    keptAnswerQuery(db, userId, lookup),
   ]);
 
   const rows = new RowSet();
@@ -225,8 +254,11 @@ export async function loadRecords(
   rows.add(retroPin, ...pinRows);
 
   return {
-    revision: revisions[0]?.revision ?? 0,
-    records: recordsFromRows(rows),
-    caughtUpTo: revisions[0]?.caughtUpTo ?? null,
+    loaded: {
+      revision: revisions[0]?.revision ?? 0,
+      records: recordsFromRows(rows),
+      caughtUpTo: revisions[0]?.caughtUpTo ?? null,
+    },
+    kept: keptAnswerOf(keptRows),
   };
 }

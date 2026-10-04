@@ -29,7 +29,7 @@ import {
 import { updateRetro } from '@itera/api-contract/client';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { createMock } from '@/mock/mock-api';
-import { comeBack, otherDevice, until } from '@/test/other-device';
+import { comeBack, newWrite, otherDevice, until } from '@/test/other-device';
 import { waitForRead } from '@/test/read-ready';
 import { problemResponse } from '@/test/problem';
 
@@ -258,6 +258,7 @@ describe('Retro on the API', () => {
       const sprintId = reviewedId(store);
       await updateRetro({
         client: otherDevice(store),
+        headers: newWrite(),
         path: { sprintId },
         body: { reflection: 'スマホで書いた文' },
       });
@@ -291,6 +292,7 @@ describe('Retro on the API', () => {
       const field = improvement;
       await updateRetro({
         client: otherDevice(store),
+        headers: newWrite(),
         path: { sprintId: reviewedId(store) },
         body: { improvement: 'スマホで書いた試すこと' },
       });

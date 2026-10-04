@@ -10,7 +10,10 @@ import * as sdk from './client';
 import { createClient, createConfig } from './create-client';
 import * as contract from './index';
 import {
+  IDEMPOTENCY_KEY_HEADER,
+  idempotencyKeyHeaders,
   queryInput,
+  readIdempotencyKey,
   RequestError,
   requestOf,
   settingsSurface,
@@ -109,10 +112,11 @@ describe('the surfaces', () => {
       const send = (sdk as unknown as Record<string, (o: object) => unknown>)[
         operationId
       ]!;
-      await send({ client, ...parts });
+      await send({ client, ...parts, headers: idempotencyKeyHeaders(KEY) });
       const expected = new URL(httpOf(request!).url, 'http://itera.test');
       const actual = new URL(sent!.url);
       expect(sent?.method).toBe(surface.method);
+      expect(sent?.headers.get(IDEMPOTENCY_KEY_HEADER)).toBe(`"${KEY}"`);
       expect(actual.pathname).toBe(expected.pathname);
       expect(actual.searchParams.toString()).toBe(
         expected.searchParams.toString(),
@@ -156,6 +160,56 @@ describe('the surfaces', () => {
   });
 });
 
+const KEY = '8e03978e-40d5-43e8-bc93-6894a57f9324';
+
+describe('the idempotency key', () => {
+  it('is a required header of every write and of no read (ADR 0006 冪等キー)', () => {
+    const types = readFileSync(
+      new URL('generated/types.gen.ts', import.meta.url),
+      'utf8',
+    );
+    const datas = [
+      ...types.matchAll(/export type (\w+)Data = \{([\s\S]*?)\n\};/g),
+    ];
+    const keyed = datas
+      .filter(([, , body]) =>
+        /\n {8}'Idempotency-Key': IdempotencyKey;/.test(body!),
+      )
+      .map(([, name]) => name!.charAt(0).toLowerCase() + name!.slice(1));
+    expect(datas.length).toBeGreaterThan(60);
+    expect(keyed.toSorted()).toEqual(
+      [...Object.keys(surfaces), 'setSettings'].toSorted(),
+    );
+  });
+
+  it('is read back from the header as the UUID, in lowercase', () => {
+    const header = idempotencyKeyHeaders(KEY)[IDEMPOTENCY_KEY_HEADER];
+    expect(readIdempotencyKey(header)).toBe(KEY);
+    expect(readIdempotencyKey(`"${KEY.toUpperCase()}"`)).toBe(KEY);
+    // Parameters say nothing this API knows (RFC 9651 §2.3).
+    expect(readIdempotencyKey(`"${KEY}";a=1`)).toBe(KEY);
+  });
+
+  it.each([
+    ['no header', null, 'required for every write.'],
+    ['a bare UUID', KEY, 'not a UUID'],
+    ['not a UUID', '"key-1"', 'not a UUID'],
+    ['something after it but a parameter', `"${KEY}"x`, 'not a UUID'],
+  ])('refuses %s with 400 at the header', (_, value, detail) => {
+    let error: unknown;
+    try {
+      readIdempotencyKey(value);
+    } catch (thrown) {
+      error = thrown;
+    }
+    expect(error).toBeInstanceOf(RequestError);
+    expect((error as RequestError).issue).toEqual({
+      header: 'Idempotency-Key',
+      detail: expect.stringContaining(detail) as string,
+    });
+  });
+});
+
 describe('the settings surface', () => {
   it('is the method and path the generated client sends, with the contract’s body', async () => {
     let sent: globalThis.Request | undefined;
@@ -173,7 +227,11 @@ describe('the settings surface', () => {
       timeZone: 'Asia/Tokyo',
       weekStartsOn: 1,
     } as const;
-    await sdk.setSettings({ client, body });
+    await sdk.setSettings({
+      client,
+      body,
+      headers: idempotencyKeyHeaders(KEY),
+    });
     expect(sent?.method).toBe(settingsSurface.method);
     expect(new URL(sent!.url).pathname).toBe(`/api${settingsSurface.url}`);
     expect(await sent!.json()).toEqual(body);

@@ -31,7 +31,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { createMock } from '@/mock/mock-api';
 import { dayRead } from '@/test/day-read';
 import { findHours } from '@/test/duration';
-import { comeBack, otherDevice, until } from '@/test/other-device';
+import { comeBack, newWrite, otherDevice, until } from '@/test/other-device';
 import { problemResponse } from '@/test/problem';
 
 type CreateAppRouter = typeof import('@/app/router').createAppRouter;
@@ -295,7 +295,7 @@ describe('Today on the API', () => {
     ).toBeNull();
   });
 
-  it('reads the day again after a version conflict, and tells it', async () => {
+  it('reads the day again after a version conflict, and tells it was not saved', async () => {
     const { requests } = serve((request) =>
       request.method === 'POST' ? conflict() : undefined,
     );
@@ -305,9 +305,9 @@ describe('Today on the API', () => {
       requests.filter((r) => r === 'GET /api/days/2026-10-01').length;
     const before = reads();
     await userEvent.click(choose('関連論文を 3本読む'));
-    expect(
-      await screen.findAllByText('保存できたかわかりませんでした'),
-    ).not.toHaveLength(0);
+    expect(await screen.findAllByText('保存できませんでした')).not.toHaveLength(
+      0,
+    );
     await waitFor(() => expect(reads()).toBeGreaterThan(before));
   });
 
@@ -465,6 +465,7 @@ describe('Today on the API', () => {
       const { note, sprintId } = await openEdit(store);
       await editInterrupt({
         client: otherDevice(store),
+        headers: newWrite(),
         path: { sprintId, interruptNoteId: note.id },
         body: { text: 'スマホで直したメモ', minutes: 20 },
       });
@@ -491,6 +492,7 @@ describe('Today on the API', () => {
       const { note, sprintId } = await openEdit(store);
       await deleteInterrupt({
         client: otherDevice(store),
+        headers: newWrite(),
         path: { sprintId, interruptNoteId: note.id },
       });
       comeBack();

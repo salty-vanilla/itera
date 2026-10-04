@@ -11,6 +11,7 @@ import type { AppEnv } from '../env';
 import { ApiError } from '../errors';
 import { jsonBody, limitBody } from './body';
 import type { Flow, Guards, Precondition } from './flow';
+import { answerOf, answerResponse, readWrite } from './idempotency';
 import { preconditions } from './preconditions';
 import { validate } from './validate';
 
@@ -21,10 +22,11 @@ export const honoPath = (url: string) => url.replace(/\{(\w+)\}/g, ':$1');
  * Each write surface of the contract (`surfaces` of
  * `@itera/api-contract/requests`; registry.test.ts holds every one routed
  * at its method and path): the guards (authentication, the Origin
- * check) run first, then the size limit and the contract's validation of
- * the path, the query and the body. The surface names the operation of
- * packages/application, which runs on the person's records. It answers the
- * surface's status: 201 with what it made, 200 with what it decided, or 204.
+ * check) run first, then the size limit, the Idempotency-Key and the
+ * contract's validation of the path, the query and the body. The surface
+ * names the operation of packages/application, which runs on the person's
+ * records. It answers the surface's status: 201 with what it made, 200 with
+ * what it decided, or 204; the same write sent again answers the same.
  */
 export function operationRoutes(flow: Flow, guards: Guards) {
   const routes = new Hono<AppEnv>();
@@ -35,6 +37,7 @@ export function operationRoutes(flow: Flow, guards: Guards) {
       guards.user,
       guards.origin,
       limitBody,
+      readWrite,
       async (c) => {
         const { name, input } = await operationOf(surface, {
           path: c.req.param(),
@@ -49,11 +52,14 @@ export function operationRoutes(flow: Flow, guards: Guards) {
             Record<string, (input: unknown) => Precondition>
           >
         )[name]?.(input);
-        const value = await flow.operate(c, operation(input), precondition);
         // Made with nothing to return (the Retro, 201) has no body either.
-        return value === undefined
-          ? c.body(null, surface.status)
-          : c.json(value, surface.status);
+        const answer = await flow.operate(
+          c,
+          operation(input),
+          (value) => answerOf(surface.status, value),
+          precondition,
+        );
+        return answerResponse(c, answer);
       },
     );
   }

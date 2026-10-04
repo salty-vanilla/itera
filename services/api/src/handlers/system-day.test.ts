@@ -21,7 +21,7 @@ import { loadRecords } from '../db/load-records';
 import { createMemoryDatabase } from '../db/memory-database';
 import { saveRecords } from '../db/save-records';
 import { activity, user as authUser } from '../db/schema';
-import { testDependencies, testEnv, testOrigin } from '../test-env';
+import { testDependencies, testEnv, writeHeaders } from '../test-env';
 
 const daytime = fixtureSnapshot('today-daytime');
 const { user, areas, tasks, rules, occurrences, sprints, criteria } =
@@ -110,7 +110,7 @@ async function setup() {
       '/api/areas',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Origin: testOrigin },
+        headers: { 'Content-Type': 'application/json', ...writeHeaders() },
         body: JSON.stringify({ name: '趣味' }),
       },
       testEnv,

@@ -72,7 +72,7 @@ type ToastOptions = {
   title: string;
   /** An optional second sentence, e.g. 「入力内容は残っています。」. */
   description?: string;
-  /** 「元に戻す」 or 「再試行」. Pressing it also closes the Toast. */
+  /** 「元に戻す」 or 「もう一度保存」. Pressing it also closes the Toast. */
   action?: { label: string; onClick: () => void };
 };
 
@@ -206,8 +206,8 @@ function useToast() {
           title,
           description,
           priority: tone === 'danger' ? 'high' : 'low',
-          // A failure stays until it is closed, so that 「再試行」 does not
-          // disappear with it (DESIGN.md common states › Error).
+          // A failure stays until it is closed, so that it is not missed,
+          // nor 「もう一度保存」 where it has one (DESIGN.md Toast).
           timeout:
             tone === 'danger'
               ? 0
@@ -240,7 +240,8 @@ function useToasts() {
 
 /**
  * Closes the Toasts of the screen that was left (#170). A failure (danger)
- * stays: its 「再試行」 is not to be lost, and it is closed by the person.
+ * stays: it is not to be missed, nor its 「もう一度保存」, and it is closed
+ * by the person.
  * The returned function is stable and acts on the Toasts showing when it is
  * called.
  */
@@ -257,11 +258,31 @@ function useCloseToastsOnLeave(): () => void {
   }, []);
 }
 
+/**
+ * Closes the Toast of `kind` when it offers an action, and no other: a
+ * failure's 「もう一度保存」 that a later write, which went through, has made
+ * stale (#320). The returned function is stable and acts on the Toasts
+ * showing when it is called.
+ */
+function useCloseActionToast(kind: ToastKind): () => void {
+  const manager = ToastPrimitive.useToastManager();
+  const latest = useRef(manager);
+  useEffect(() => {
+    latest.current = manager;
+  }, [manager]);
+  return useCallback(() => {
+    const id = `kind:${kind}`;
+    const shown = latest.current.toasts.find((toast) => toast.id === id);
+    if (shown?.actionProps !== undefined) latest.current.close(id);
+  }, [kind]);
+}
+
 export {
   TOAST_ACTION_TIMEOUT,
   TOAST_LIMIT,
   TOAST_TIMEOUT,
   ToastProvider,
+  useCloseActionToast,
   useCloseToastsOnLeave,
   useToast,
   useToasts,

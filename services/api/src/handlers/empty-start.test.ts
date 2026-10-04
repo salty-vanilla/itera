@@ -12,7 +12,7 @@ import type { Authenticator } from '../auth/authenticator';
 import { loadRecords } from '../db/load-records';
 import { createMemoryDatabase } from '../db/memory-database';
 import { user as authUser } from '../db/schema';
-import { testDependencies, testEnv, testOrigin } from '../test-env';
+import { testDependencies, testEnv, writeHeaders } from '../test-env';
 import { httpRequest } from './operation-cases';
 
 /** A JSON answer, read where the test needs a value of it. */
@@ -94,7 +94,7 @@ describe('a new person’s first week', () => {
       '/api/me/settings',
       {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Origin: testOrigin },
+        headers: { 'Content-Type': 'application/json', ...writeHeaders() },
         body: JSON.stringify(settings),
       },
       testEnv,

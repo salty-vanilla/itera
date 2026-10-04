@@ -93,7 +93,7 @@ export type UnauthenticatedError = {
 };
 
 /**
- * Another write came first (ADR 0004 同時の書き込み), and this one was not made; read the records again. Not retried automatically. (When the database's answer to a write that was made is lost, it also comes back as this; reading again shows what was saved.)
+ * Another write came first (ADR 0004 同時の書き込み), and this one was not made; read the records again. Not sent again automatically: on the records as they now are, the write may mean something else. (A write whose answer was lost after it was saved answers what it saved, by its Idempotency-Key, not this.)
  */
 export type RevisionConflictError = {
     type: '/problems/revision-conflict';
@@ -111,6 +111,11 @@ export type InternalError = {
     status: 500;
     detail: string;
 };
+
+/**
+ * The key of a write (ADR 0006 冪等キー): a UUID as a Structured Field String (RFC 9651 §3.3.3), so in double quotes. Lowercase or uppercase hex; the API compares them as lowercase. Parameters after it (RFC 9651 §2.3) are ignored.
+ */
+export type IdempotencyKey = string;
 
 /**
  * One place in the request that does not match the contract, located by exactly one of `pointer` (in the body), `parameter` (a path or query parameter) or `header`.
@@ -180,6 +185,16 @@ export type RuleViolationError = {
  */
 export type UserNotSetUpError = {
     type: '/problems/user-not-set-up';
+    title: string;
+    status: 422;
+    detail: string;
+};
+
+/**
+ * The Idempotency-Key was used before, within its 24 hours, for another request (method, path, query or body). Nothing was done.
+ */
+export type IdempotencyKeyReusedError = {
+    type: '/problems/idempotency-key-reused';
     title: string;
     status: 422;
     detail: string;
@@ -1238,6 +1253,11 @@ export type RetroData = {
     carryOverTasks: Array<CarryOverTask>;
 };
 
+/**
+ * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+ */
+export type IdempotencyKeyHeader = IdempotencyKey;
+
 export type GetMeData = {
     body?: never;
     path?: never;
@@ -1282,6 +1302,12 @@ export type SetSettingsData = {
         timeZone: TimeZone;
         weekStartsOn: DayOfWeek;
     };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path?: never;
     query?: never;
     url: '/me/settings';
@@ -1309,9 +1335,9 @@ export type SetSettingsErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -1377,6 +1403,12 @@ export type CreateAreaData = {
     body: {
         name: string;
     };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path?: never;
     query?: never;
     url: '/areas';
@@ -1408,9 +1440,9 @@ export type CreateAreaErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -1433,6 +1465,12 @@ export type CreateAreaResponse = CreateAreaResponses[keyof CreateAreaResponses];
 export type RenameAreaData = {
     body: {
         name: string;
+    };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
     };
     path: {
         areaId: AreaId;
@@ -1467,9 +1505,9 @@ export type RenameAreaErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -1489,6 +1527,12 @@ export type RenameAreaResponse = RenameAreaResponses[keyof RenameAreaResponses];
 
 export type ArchiveAreaData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         areaId: AreaId;
     };
@@ -1522,9 +1566,9 @@ export type ArchiveAreaErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -1544,6 +1588,12 @@ export type ArchiveAreaResponse = ArchiveAreaResponses[keyof ArchiveAreaResponse
 
 export type RestoreAreaData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         areaId: AreaId;
     };
@@ -1577,9 +1627,9 @@ export type RestoreAreaErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -1601,6 +1651,12 @@ export type CreateTaskData = {
     body: {
         title: string;
         areaId?: AreaId;
+    };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
     };
     path?: never;
     query?: never;
@@ -1633,9 +1689,9 @@ export type CreateTaskErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -1667,6 +1723,12 @@ export type SaveTaskData = {
          * Hours. `null` clears the Estimate.
          */
         estimate?: number | null;
+    };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
     };
     path: {
         taskId: TaskId;
@@ -1701,9 +1763,9 @@ export type SaveTaskErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -1723,6 +1785,12 @@ export type SaveTaskResponse = SaveTaskResponses[keyof SaveTaskResponses];
 
 export type ArchiveTaskData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         taskId: TaskId;
     };
@@ -1756,9 +1824,9 @@ export type ArchiveTaskErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -1778,6 +1846,12 @@ export type ArchiveTaskResponse = ArchiveTaskResponses[keyof ArchiveTaskResponse
 
 export type RestoreTaskData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         taskId: TaskId;
     };
@@ -1811,9 +1885,9 @@ export type RestoreTaskErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -1833,6 +1907,12 @@ export type RestoreTaskResponse = RestoreTaskResponses[keyof RestoreTaskResponse
 
 export type CompleteTaskData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         taskId: TaskId;
     };
@@ -1866,9 +1946,9 @@ export type CompleteTaskErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -1888,6 +1968,12 @@ export type CompleteTaskResponse = CompleteTaskResponses[keyof CompleteTaskRespo
 
 export type UndoCompleteTaskData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         taskId: TaskId;
     };
@@ -1921,9 +2007,9 @@ export type UndoCompleteTaskErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -1943,6 +2029,12 @@ export type UndoCompleteTaskResponse = UndoCompleteTaskResponses[keyof UndoCompl
 
 export type EndRecurrenceData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         taskId: TaskId;
     };
@@ -1976,9 +2068,9 @@ export type EndRecurrenceErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -2004,6 +2096,12 @@ export type EndRecurrenceResponse = EndRecurrenceResponses[keyof EndRecurrenceRe
 export type SetRecurrenceData = {
     body: {
         pattern: RecurrencePattern;
+    };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
     };
     path: {
         taskId: TaskId;
@@ -2038,9 +2136,9 @@ export type SetRecurrenceErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -2067,6 +2165,12 @@ export type AddSubtaskData = {
     body: {
         title: string;
         hours?: number;
+    };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
     };
     path: {
         taskId: TaskId;
@@ -2101,9 +2205,9 @@ export type AddSubtaskErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -2128,6 +2232,12 @@ export type UpdateSubtaskData = {
         done: boolean;
     } | {
         hours: number | null;
+    };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
     };
     path: {
         taskId: TaskId;
@@ -2163,9 +2273,9 @@ export type UpdateSubtaskErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -2188,6 +2298,12 @@ export type AdoptEstimateSuggestionData = {
         bound: SuggestionBound;
     } | {
         hours: number;
+    };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
     };
     path: {
         taskId: TaskId;
@@ -2223,9 +2339,9 @@ export type AdoptEstimateSuggestionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -2246,6 +2362,12 @@ export type AdoptEstimateSuggestionResponse = AdoptEstimateSuggestionResponses[k
 export type UndoAdoptionData = {
     body: {
         previous: Estimate | null;
+    };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
     };
     path: {
         taskId: TaskId;
@@ -2281,9 +2403,9 @@ export type UndoAdoptionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -2303,6 +2425,12 @@ export type UndoAdoptionResponse = UndoAdoptionResponses[keyof UndoAdoptionRespo
 
 export type RejectSuggestionData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         taskId: TaskId;
         suggestionId: EstimateSuggestionId;
@@ -2337,9 +2465,9 @@ export type RejectSuggestionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -2359,6 +2487,12 @@ export type RejectSuggestionResponse = RejectSuggestionResponses[keyof RejectSug
 
 export type UndoRejectionData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         taskId: TaskId;
         suggestionId: EstimateSuggestionId;
@@ -2393,9 +2527,9 @@ export type UndoRejectionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -2554,12 +2688,22 @@ export type ListSprintsResponse = ListSprintsResponses[keyof ListSprintsResponse
 
 export type BeginPlanningData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path?: never;
     query?: never;
     url: '/sprints';
 };
 
 export type BeginPlanningErrors = {
+    /**
+     * The request does not match the contract.
+     */
+    400: ValidationError;
     /**
      * No valid session.
      */
@@ -2581,9 +2725,9 @@ export type BeginPlanningErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -2662,6 +2806,12 @@ export type SetAvailableHoursData = {
     body: {
         availableHours: number | null;
     };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         sprintId: SprintId;
     };
@@ -2695,9 +2845,9 @@ export type SetAvailableHoursErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -2718,6 +2868,12 @@ export type SetAvailableHoursResponse = SetAvailableHoursResponses[keyof SetAvai
 export type ConfirmSprintData = {
     body: {
         applyCriterion: boolean;
+    };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
     };
     path: {
         sprintId: SprintId;
@@ -2752,9 +2908,9 @@ export type ConfirmSprintErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -2777,6 +2933,12 @@ export type UpdateGoalData = {
         text: string;
     } | {
         assessment: SelfAssessment | null;
+    };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
     };
     path: {
         sprintId: SprintId;
@@ -2812,9 +2974,9 @@ export type UpdateGoalErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -2834,6 +2996,12 @@ export type UpdateGoalResponse = UpdateGoalResponses[keyof UpdateGoalResponses];
 
 export type RemoveSprintTasksData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         sprintId: SprintId;
     };
@@ -2869,9 +3037,9 @@ export type RemoveSprintTasksErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -2895,6 +3063,12 @@ export type AddToSprintData = {
     } | {
         title: string;
         areaId?: AreaId;
+    };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
     };
     path: {
         sprintId: SprintId;
@@ -2929,9 +3103,9 @@ export type AddToSprintErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -2960,6 +3134,12 @@ export type AddToSprintResponse = AddToSprintResponses[keyof AddToSprintResponse
 
 export type RemoveSprintTaskData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         sprintId: SprintId;
         sprintTaskId: SprintTaskId;
@@ -2994,9 +3174,9 @@ export type RemoveSprintTaskErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -3017,6 +3197,12 @@ export type RemoveSprintTaskResponse = RemoveSprintTaskResponses[keyof RemoveSpr
 export type SetGoalLinkData = {
     body: {
         goalLink: GoalLink;
+    };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
     };
     path: {
         sprintId: SprintId;
@@ -3052,9 +3238,9 @@ export type SetGoalLinkErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -3074,6 +3260,12 @@ export type SetGoalLinkResponse = SetGoalLinkResponses[keyof SetGoalLinkResponse
 
 export type ExcludeAllOccurrencesData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         sprintId: SprintId;
         sprintTaskId: SprintTaskId;
@@ -3108,9 +3300,9 @@ export type ExcludeAllOccurrencesErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -3131,6 +3323,12 @@ export type ExcludeAllOccurrencesResponse = ExcludeAllOccurrencesResponses[keyof
 export type IncludeOccurrencesData = {
     body: {
         occurrenceIds: Array<OccurrenceId>;
+    };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
     };
     path: {
         sprintId: SprintId;
@@ -3165,9 +3363,9 @@ export type IncludeOccurrencesErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -3187,6 +3385,12 @@ export type IncludeOccurrencesResponse = IncludeOccurrencesResponses[keyof Inclu
 
 export type ExcludeOccurrenceData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         sprintId: SprintId;
         occurrenceId: OccurrenceId;
@@ -3221,9 +3425,9 @@ export type ExcludeOccurrenceErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -3243,6 +3447,12 @@ export type ExcludeOccurrenceResponse = ExcludeOccurrenceResponses[keyof Exclude
 
 export type IncludeOccurrenceData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         sprintId: SprintId;
         occurrenceId: OccurrenceId;
@@ -3277,9 +3487,9 @@ export type IncludeOccurrenceErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -3360,6 +3570,12 @@ export type ChooseForDayData = {
         title: string;
         areaId?: AreaId;
     };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         sprintId: SprintId;
     };
@@ -3393,9 +3609,9 @@ export type ChooseForDayErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -3425,6 +3641,12 @@ export type ChooseForDayResponse = ChooseForDayResponses[keyof ChooseForDayRespo
 
 export type StartSelectionData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         sprintId: SprintId;
         selectionId: DailySelectionId;
@@ -3459,9 +3681,9 @@ export type StartSelectionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -3482,6 +3704,12 @@ export type StartSelectionResponse = StartSelectionResponses[keyof StartSelectio
 export type PauseSelectionData = {
     body: {
         hours?: number;
+    };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
     };
     path: {
         sprintId: SprintId;
@@ -3517,9 +3745,9 @@ export type PauseSelectionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -3539,6 +3767,12 @@ export type PauseSelectionResponse = PauseSelectionResponses[keyof PauseSelectio
 
 export type DeferSelectionData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         sprintId: SprintId;
         selectionId: DailySelectionId;
@@ -3573,9 +3807,9 @@ export type DeferSelectionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -3595,6 +3829,12 @@ export type DeferSelectionResponse = DeferSelectionResponses[keyof DeferSelectio
 
 export type UndoDeferSelectionData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         sprintId: SprintId;
         selectionId: DailySelectionId;
@@ -3629,9 +3869,9 @@ export type UndoDeferSelectionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -3651,6 +3891,12 @@ export type UndoDeferSelectionResponse = UndoDeferSelectionResponses[keyof UndoD
 
 export type RemoveFromTodayData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         sprintId: SprintId;
         selectionId: DailySelectionId;
@@ -3685,9 +3931,9 @@ export type RemoveFromTodayErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -3707,6 +3953,12 @@ export type RemoveFromTodayResponse = RemoveFromTodayResponses[keyof RemoveFromT
 
 export type UndoRemoveFromTodayData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         sprintId: SprintId;
         selectionId: DailySelectionId;
@@ -3741,9 +3993,9 @@ export type UndoRemoveFromTodayErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -3763,6 +4015,12 @@ export type UndoRemoveFromTodayResponse = UndoRemoveFromTodayResponses[keyof Und
 
 export type CompleteSelectionData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         sprintId: SprintId;
         selectionId: DailySelectionId;
@@ -3797,9 +4055,9 @@ export type CompleteSelectionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -3819,6 +4077,12 @@ export type CompleteSelectionResponse = CompleteSelectionResponses[keyof Complet
 
 export type UndoCompleteSelectionData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         sprintId: SprintId;
         selectionId: DailySelectionId;
@@ -3853,9 +4117,9 @@ export type UndoCompleteSelectionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -3875,6 +4139,12 @@ export type UndoCompleteSelectionResponse = UndoCompleteSelectionResponses[keyof
 
 export type SkipSelectionData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         sprintId: SprintId;
         selectionId: DailySelectionId;
@@ -3909,9 +4179,9 @@ export type SkipSelectionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -3931,6 +4201,12 @@ export type SkipSelectionResponse = SkipSelectionResponses[keyof SkipSelectionRe
 
 export type UndoSkipSelectionData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         sprintId: SprintId;
         selectionId: DailySelectionId;
@@ -3965,9 +4241,9 @@ export type UndoSkipSelectionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -3991,6 +4267,12 @@ export type RecordActualTimeData = {
         date: LocalDate;
         hours: number;
         occurrenceId?: OccurrenceId;
+    };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
     };
     path: {
         sprintId: SprintId;
@@ -4025,9 +4307,9 @@ export type RecordActualTimeErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -4049,6 +4331,12 @@ export type NoteInterruptData = {
     body: {
         text: string;
         minutes?: number;
+    };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
     };
     path: {
         sprintId: SprintId;
@@ -4083,9 +4371,9 @@ export type NoteInterruptErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -4107,6 +4395,12 @@ export type NoteInterruptResponse = NoteInterruptResponses[keyof NoteInterruptRe
 
 export type DeleteInterruptData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         sprintId: SprintId;
         interruptNoteId: InterruptNoteId;
@@ -4141,9 +4435,9 @@ export type DeleteInterruptErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -4165,6 +4459,12 @@ export type EditInterruptData = {
     body: {
         text: string;
         minutes: number | null;
+    };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
     };
     path: {
         sprintId: SprintId;
@@ -4200,9 +4500,9 @@ export type EditInterruptErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -4225,6 +4525,12 @@ export type RestoreInterruptData = {
         at: Instant;
         text: string;
         minutes?: number;
+    };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
     };
     path: {
         sprintId: SprintId;
@@ -4260,9 +4566,9 @@ export type RestoreInterruptErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -4336,6 +4642,12 @@ export type UpdateRetroData = {
     } | {
         improvement: string;
     };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         sprintId: SprintId;
     };
@@ -4369,9 +4681,9 @@ export type UpdateRetroErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -4391,6 +4703,12 @@ export type UpdateRetroResponse = UpdateRetroResponses[keyof UpdateRetroResponse
 
 export type BeginRetroData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         sprintId: SprintId;
     };
@@ -4424,9 +4742,9 @@ export type BeginRetroErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -4444,6 +4762,12 @@ export type BeginRetroResponses = {
 
 export type CompleteRetroData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         sprintId: SprintId;
     };
@@ -4477,9 +4801,9 @@ export type CompleteRetroErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -4499,6 +4823,12 @@ export type CompleteRetroResponse = CompleteRetroResponses[keyof CompleteRetroRe
 
 export type UnpinFactData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         sprintId: SprintId;
         /**
@@ -4536,9 +4866,9 @@ export type UnpinFactErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -4558,6 +4888,12 @@ export type UnpinFactResponse = UnpinFactResponses[keyof UnpinFactResponses];
 
 export type PinFactData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         sprintId: SprintId;
         /**
@@ -4595,9 +4931,9 @@ export type PinFactErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -4618,6 +4954,12 @@ export type PinFactResponse = PinFactResponses[keyof PinFactResponses];
 export type DecideCriterionData = {
     body: {
         retroDecision: RetroDecision;
+    };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
     };
     path: {
         sprintId: SprintId;
@@ -4652,9 +4994,9 @@ export type DecideCriterionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -4676,6 +5018,12 @@ export type DraftCriterionData = {
     body: {
         sourceSprintId: SprintId;
         policy: CriterionPolicy;
+    };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
     };
     path?: never;
     query?: never;
@@ -4708,9 +5056,9 @@ export type DraftCriterionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -4732,6 +5080,12 @@ export type DraftCriterionResponse = DraftCriterionResponses[keyof DraftCriterio
 
 export type DropCriterionDraftData = {
     body?: never;
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
+    };
     path: {
         criterionId: PlanningCriterionId;
     };
@@ -4765,9 +5119,9 @@ export type DropCriterionDraftErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
@@ -4788,6 +5142,12 @@ export type DropCriterionDraftResponse = DropCriterionDraftResponses[keyof DropC
 export type SetDraftPolicyData = {
     body: {
         policy: CriterionPolicy;
+    };
+    headers: {
+        /**
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         */
+        'Idempotency-Key': IdempotencyKey;
     };
     path: {
         criterionId: PlanningCriterionId;
@@ -4822,9 +5182,9 @@ export type SetDraftPolicyErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, or the person has no settings yet.
+     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
-    422: RuleViolationError | UserNotSetUpError;
+    422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
      * An unexpected failure on the server.
      */
