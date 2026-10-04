@@ -21,7 +21,7 @@ export function useAddToToday() {
   const navigate = useNavigate();
   return async (taskId: TaskId, title: string): Promise<boolean> => {
     // With no Sprint running there is no today to put it in (useOnRunningDay).
-    const added = await once(taskId, () =>
+    const added = await once(`add:${taskId}`, () =>
       on((day) => addToToday.run({ ...day, taskId })),
     );
     if (!added?.ok) return false;

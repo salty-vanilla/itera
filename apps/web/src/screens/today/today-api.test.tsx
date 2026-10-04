@@ -26,7 +26,11 @@ import {
   it,
   vi,
 } from 'vitest';
-import { deleteInterrupt, editInterrupt } from '@itera/api-contract/client';
+import {
+  completeTask,
+  deleteInterrupt,
+  editInterrupt,
+} from '@itera/api-contract/client';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { createMock } from '@/mock/mock-api';
 import { dayRead } from '@/test/day-read';
@@ -438,6 +442,42 @@ describe('Today on the API', () => {
         document.activeElement?.closest('[data-selection]')?.textContent,
       ).toContain('実験データの前処理'),
     );
+  });
+
+  it('takes back two completions from the Backlog pressed one after another (#354)', async () => {
+    const saves = held(writes);
+    const { store, requests } = serve(saves.answer);
+    const titles = ['API 設計のレビュー', '実験データの前処理'];
+    const taskId = (title: string) =>
+      store.getSnapshot().records.tasks.find((t) => t.title === title)!.id;
+    for (const title of titles) {
+      await completeTask({
+        client: otherDevice(store),
+        headers: newWrite(),
+        path: { taskId: taskId(title) },
+      });
+    }
+    renderToday();
+    await dayRead();
+    const undo = (title: string) =>
+      screen.getByRole('button', { name: `完了を取り消す：${title}` });
+    await userEvent.click(undo(titles[0]!));
+    await until(() => expect(saves.waiting).toBe(1));
+    await userEvent.click(undo(titles[1]!));
+    await userEvent.click(undo(titles[0]!));
+    saves.release();
+    await until(() =>
+      expect(
+        store
+          .getSnapshot()
+          .records.tasks.filter((t) => titles.includes(t.title))
+          .map((t) => t.lifecycle),
+      ).toEqual(['active', 'active']),
+    );
+    expect(requests.filter((r) => r.endsWith('/undo-complete'))).toHaveLength(
+      2,
+    );
+    expect(screen.queryByText('保存できませんでした')).toBeNull();
   });
 
   it('adds a Task for today with the Area chosen, and keeps what was typed when it is refused', async () => {

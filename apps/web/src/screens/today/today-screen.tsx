@@ -488,7 +488,7 @@ function TodayView({ data }: { data: TodayData }) {
         // the choice it made for today goes away with it.
         if (row.selection.origin === 'backlogCompletion') {
           void follow({ rest: row.sprintTask.id }, () =>
-            taskActions.undoCompleteTask(row.task.id),
+            actions.undoCompleteTask(row.task.id),
           );
           return;
         }
