@@ -5,7 +5,6 @@ import { Info, Rewind, Route } from 'lucide-react';
 import { useId } from 'react';
 import type { Saved } from '@/api/use-operation';
 import { buttonVariants } from '@/components/ui/button';
-import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Progress } from '@/components/ui/progress';
 import { Tag } from '@/components/ui/tag';
 import { AvailableHoursField } from '@/components/sprint/capacity-indicator';
@@ -44,6 +43,7 @@ import {
 import { useTaskActions } from '@/screen-data/use-task-actions';
 import { CarryOverText } from '../backlog/backlog-row';
 import { TaskDetail } from '../backlog/task-detail';
+import { TaskDetailDrawer } from '../backlog/task-detail-drawer';
 import { useTaskDetailLeave } from '../backlog/use-task-detail-leave';
 import { PastDays } from './past-days';
 
@@ -91,10 +91,6 @@ function RunningSprint({
   const detail = useTaskDetailLeave();
   const openTask = (taskId: TaskId | undefined) =>
     detail.leave(() => showTask(taskId), taskId !== undefined);
-  const openItem =
-    !running || search.task === undefined || backlog.status !== 'ready'
-      ? undefined
-      : backlog.item(search.task);
   const inBacklog = (taskId: TaskId) => hasDetail(backlog, taskId);
 
   const outlook = (
@@ -256,31 +252,27 @@ function RunningSprint({
         </aside>
       </div>
 
-      <Drawer
-        open={openItem !== undefined}
-        onOpenChange={(next) => {
-          if (!next) openTask(undefined);
-        }}
-      >
-        <DrawerContent>
-          {backlog.status === 'ready' && openItem !== undefined && (
-            <TaskDetail
-              key={openItem.task.id}
-              item={openItem}
-              areas={backlog.areas}
-              timeZone={backlog.timeZone}
-              lastDay={backlog.lastDay}
-              onClose={() => showTask(undefined)}
-              onComplete={async () => {
-                if (await taskActions.completeTask(openItem.task.id)) {
-                  showTask(undefined);
-                }
-              }}
-              leaveRef={detail.ref}
-            />
-          )}
-        </DrawerContent>
-      </Drawer>
+      <TaskDetailDrawer
+        taskId={running ? search.task : undefined}
+        backlog={backlog}
+        onDismiss={() => openTask(undefined)}
+        render={(item, ready) => (
+          <TaskDetail
+            key={item.task.id}
+            item={item}
+            areas={ready.areas}
+            timeZone={ready.timeZone}
+            lastDay={ready.lastDay}
+            onClose={() => showTask(undefined)}
+            onComplete={async () => {
+              if (await taskActions.completeTask(item.task.id)) {
+                showTask(undefined);
+              }
+            }}
+            leaveRef={detail.ref}
+          />
+        )}
+      />
     </div>
   );
 }
