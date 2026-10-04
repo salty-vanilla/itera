@@ -1,7 +1,9 @@
 import { Field as FieldPrimitive } from '@base-ui/react/field';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState } from 'react';
+import { cn } from '@/lib/utils';
 import { Checkbox, CheckboxControl } from './checkbox';
+import { FieldErrorContent, fieldErrorStyles } from './field';
 
 /**
  * □ = 選ぶ。Backlog のタスクを今週へ選ぶ、差分の行を反映する、保存ボタンで
@@ -172,4 +174,29 @@ export const WithError: Story = {
     label: '差分を反映する',
     error: '反映する行を 1つ以上選んでください',
   },
+};
+
+/**
+ * 並んだ Checkbox に 1 つだけエラーを出すときは、文をグループの下に置き、
+ * 各 Checkbox は `invalid` で輪郭だけを danger にして、文は aria-describedby で結ぶ。
+ */
+export const InvalidInGroup: Story = {
+  render: () => (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="text-label text-ink">曜日</legend>
+      <div className="flex flex-wrap gap-x-4 gap-y-2">
+        {['月', '火', '水'].map((day) => (
+          <Checkbox
+            key={day}
+            label={day}
+            invalid
+            aria-describedby="invalid-group-error"
+          />
+        ))}
+      </div>
+      <p id="invalid-group-error" role="alert" className={cn(fieldErrorStyles)}>
+        <FieldErrorContent>曜日を 1つ以上選んでください</FieldErrorContent>
+      </p>
+    </fieldset>
+  ),
 };

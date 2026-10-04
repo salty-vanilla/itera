@@ -727,9 +727,25 @@ describe('Backlog', () => {
     await userEvent.click(
       within(section).getByRole('checkbox', { name: '日' }),
     );
+    // The error is an alert tied to the weekdays; the focus stays on the one
+    // taken off (#360).
+    const alert = within(section).getByRole('alert');
+    expect(alert.textContent).toBe('曜日を 1つ以上選んでください');
+    expect(alert.querySelector('svg')).not.toBeNull();
     expect(
-      within(section).getByText('曜日を 1つ以上選んでください'),
-    ).toBeTruthy();
+      within(section)
+        .getByRole('group', { name: '曜日' })
+        .getAttribute('aria-describedby'),
+    ).toBe(alert.id);
+    expect(within(section).getAllByRole('checkbox')).toHaveLength(7);
+    for (const box of within(section).getAllByRole('checkbox')) {
+      expect(box.getAttribute('aria-describedby')).toBe(alert.id);
+      expect(box.getAttribute('aria-invalid')).toBe('true');
+      expect(box.hasAttribute('data-invalid')).toBe(true);
+    }
+    expect(document.activeElement).toBe(
+      within(section).getByRole('checkbox', { name: '日' }),
+    );
     expect(latest()).toEqual({ freq: 'weekly', daysOfWeek: [0] });
     // The choice has no day: closing asks first.
     await userEvent.click(footerClose(detail));
@@ -753,13 +769,21 @@ describe('Backlog', () => {
     await userEvent.click(
       within(section).getByRole('button', { name: '繰り返しにする' }),
     );
-    expect(
-      within(section).getByText('曜日を 1つ以上選んでください'),
-    ).toBeTruthy();
+    const alert = within(section).getByRole('alert');
+    expect(alert.textContent).toBe('曜日を 1つ以上選んでください');
+    // The press moves the focus to the first weekday, which reads the error.
+    const first = within(section).getAllByRole('checkbox')[0];
+    expect(document.activeElement).toBe(first);
+    expect(first?.getAttribute('aria-describedby')).toBe(alert.id);
     expect(task(ids.task.bookshelf)?.recurrenceRuleId).toBeUndefined();
     await userEvent.click(
       within(section).getByRole('checkbox', { name: '月' }),
     );
+    // Ticking a day takes the error away.
+    expect(within(section).queryByRole('alert')).toBeNull();
+    expect(
+      within(section).getAllByRole('checkbox')[0]?.getAttribute('aria-invalid'),
+    ).toBeNull();
     // Ticking a day saves nothing yet while there is no rule.
     expect(task(ids.task.bookshelf)?.recurrenceRuleId).toBeUndefined();
     await userEvent.click(
