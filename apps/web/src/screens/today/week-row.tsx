@@ -53,9 +53,7 @@ function WeekRow({ item, onOpen, onEstimate, onChoose }: WeekRowProps) {
       estimateFromMedium
       // 今日やる has the `…`; the values line up with it.
       reserveActions
-      // With enlarged text 「今日へ」 goes under the title, which keeps the
-      // row's width (#393).
-      className="enlarged:[&>[data-row-control]]:order-last enlarged:[&>[data-row-control]]:basis-full"
+      wideControl
     />
   );
 }

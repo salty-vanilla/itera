@@ -30,6 +30,11 @@ type TaskRowProps = {
    * (Today, #241).
    */
   estimateFromMedium?: boolean;
+  /**
+   * The control is as wide as a word (「今日へ」): with enlarged text it goes
+   * under the title, which keeps the row's width (#393).
+   */
+  wideControl?: boolean;
   /** The `…` Menu or other row actions. */
   actions?: ReactNode;
   /**
@@ -78,6 +83,7 @@ function revealRow(event: FocusEvent<HTMLButtonElement>) {
 function TaskRow({
   title,
   control,
+  wideControl = false,
   metadata,
   estimate,
   estimateFromMedium = false,
@@ -116,7 +122,13 @@ function TaskRow({
       )}
     >
       {control !== undefined && (
-        <div data-row-control className="relative z-1 flex">
+        <div
+          data-row-control
+          className={cn(
+            'relative z-1 flex',
+            wideControl && 'enlarged:order-last enlarged:basis-full',
+          )}
+        >
           {control}
         </div>
       )}

@@ -129,9 +129,10 @@ function CheckSummary({
             {summary.unestimated.map((planned) => (
               <li
                 key={planned.sprintTask.id}
-                className="flex min-h-control-md items-center justify-between gap-3 border-b border-border-soft py-1"
+                // With enlarged text the button goes under the title (#393).
+                className="flex min-h-control-md items-center justify-between gap-3 border-b border-border-soft py-1 enlarged:flex-wrap"
               >
-                <span className="min-w-0 text-body text-ink">
+                <span className="min-w-0 text-body text-ink enlarged:basis-full">
                   {planned.task.title}
                 </span>
                 <Button

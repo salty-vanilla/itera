@@ -376,16 +376,17 @@ function CapacityIndicator({
             )}
             <CapacityStatement statement={statement} />
           </div>
-          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 text-body">
+          {/* With enlarged text the values go under their labels (#393). */}
+          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 text-body enlarged:grid-cols-1">
             <dt className="nowrap-phrase text-ink-muted">計画の合計</dt>
-            <dd className="text-right text-num-m text-ink">
+            <dd className="text-right text-num-m text-ink enlarged:break-keep enlarged:text-left">
               {/* The count left out is its own sentence below. */}
               {formatPlanningSum(total)}
             </dd>
             {capacity !== undefined && !editable && (
               <>
                 <dt className="nowrap-phrase text-ink-muted">使える時間</dt>
-                <dd className="text-right text-num-m text-ink">
+                <dd className="text-right text-num-m text-ink enlarged:break-keep enlarged:text-left">
                   {formatHours(capacity.availableHours)}
                 </dd>
               </>
