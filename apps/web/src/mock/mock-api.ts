@@ -233,6 +233,12 @@ function writeOf(method: string, path: string) {
 export interface Mock {
   /** A `fetch` for the contract's client (`createClient({ fetch })`). */
   readonly fetch: typeof fetch;
+  /**
+   * Development only (DevMenu): every write fails with `type` from now on,
+   * without changing a record, until it is set back to `undefined`. For
+   * looking at the screens of a failed save (#332).
+   */
+  failWrites(type: PlainProblemType | undefined): void;
 }
 
 /** The mock over a store: what answers the client, and what it changes. */
@@ -251,13 +257,19 @@ export function createMock(
   } = {},
 ): Mock {
   const settings = { made: settingsMade };
+  let failing: PlainProblemType | undefined;
   return {
+    failWrites: (type) => {
+      failing = type;
+    },
     fetch: async (input, init) => {
       const request = new Request(input, init);
       try {
-        const response = isSignedIn()
-          ? await answer(store, request, settings)
-          : failure('/problems/unauthenticated', 'No session.');
+        const response = !isSignedIn()
+          ? failure('/problems/unauthenticated', 'No session.')
+          : failing !== undefined && request.method !== 'GET'
+            ? failure(failing, 'Made to fail (DevMenu).')
+            : await answer(store, request, settings);
         response.headers.set(MOCK_HEADER, '1');
         return response;
       } catch (error) {

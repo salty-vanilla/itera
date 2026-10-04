@@ -1,5 +1,6 @@
 import { useNavigate } from '@tanstack/react-router';
-import { useSyncExternalStore } from 'react';
+import type { PlainProblemType } from '@itera/api-contract/problems';
+import { useState, useSyncExternalStore } from 'react';
 import { FlaskConical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,19 +21,35 @@ import {
 import { formatDate, formatTime } from '@/lib/date-format';
 import { screens } from '@/app/screens';
 import type { RecordStore } from './memory-store';
+import type { Mock } from './mock-api';
 
 // Development only, with the browser mock (mock-data.tsx).
 // Switches the fixture state (PRD §12) and opens its screen. The same state
-// opens from the URL: `?fixture=<id>`.
+// opens from the URL: `?fixture=<id>`. It can also make every write fail,
+// to look at the screens of a failed save (#332).
+
+/** The failures a write can be made to end in, by what the screen says. */
+const writeFailures = [
+  { value: 'none', label: '失敗させない' },
+  { value: '/problems/precondition-failed', label: 'ほかの端末で変わっていた' },
+  { value: '/problems/invalid-input', label: '保存できない' },
+  { value: '/problems/internal-error', label: '保存できたかわからない' },
+] as const satisfies readonly {
+  value: PlainProblemType | 'none';
+  label: string;
+}[];
 
 function DevMenu({
   current,
   store,
+  mock,
 }: {
   current: FixtureStateId;
   store: RecordStore;
+  mock: Mock;
 }) {
   const navigate = useNavigate();
+  const [failing, setFailing] = useState<PlainProblemType | 'none'>('none');
   const { records, clock } = useSyncExternalStore(
     store.subscribe,
     store.getSnapshot,
@@ -85,6 +102,25 @@ function DevMenu({
                   ))}
               </MenuGroup>
             ))}
+          </MenuRadioGroup>
+          <MenuSeparator />
+          <MenuRadioGroup
+            value={failing}
+            onValueChange={(value: unknown) => {
+              const next = writeFailures.find((f) => f.value === value);
+              if (next === undefined) return;
+              setFailing(next.value);
+              mock.failWrites(next.value === 'none' ? undefined : next.value);
+            }}
+          >
+            <MenuGroup>
+              <MenuGroupLabel>書き込み</MenuGroupLabel>
+              {writeFailures.map((f) => (
+                <MenuRadioItem key={f.value} value={f.value}>
+                  {f.label}
+                </MenuRadioItem>
+              ))}
+            </MenuGroup>
           </MenuRadioGroup>
         </MenuContent>
       </Menu>

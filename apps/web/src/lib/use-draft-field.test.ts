@@ -98,6 +98,56 @@ describe('useDraftField', () => {
     expect(result.current.edited).toBe(true);
   });
 
+  it('says the save failed while the typing it gave back is not in the records (#332)', async () => {
+    const { result, rerender } = setup();
+    act(() => result.current.set('typed'));
+    expect(result.current.saveFailed).toBe(false);
+    await act(async () => result.current.hold(Promise.resolve(false)));
+    expect(result.current.saveFailed).toBe(true);
+    rerender({ read: 'from another device' });
+    expect(result.current.saveFailed).toBe(true);
+    // Saved again: the read comes back with the typing.
+    rerender({ read: 'typed' });
+    expect(result.current.saveFailed).toBe(false);
+  });
+
+  it('no longer says the save failed once it is typed in again, or sent again', async () => {
+    const { result } = setup();
+    act(() => result.current.set('typed'));
+    await act(async () => result.current.hold(Promise.resolve(false)));
+    act(() => result.current.set('typed more'));
+    expect(result.current.saveFailed).toBe(false);
+    await act(async () => result.current.hold(Promise.resolve(false)));
+    expect(result.current.saveFailed).toBe(true);
+    let answer: (ok: boolean) => void = () => {};
+    act(() => result.current.hold(new Promise<boolean>((r) => (answer = r))));
+    expect(result.current.saveFailed).toBe(false);
+    await act(async () => answer(true));
+    expect(result.current.saveFailed).toBe(false);
+  });
+
+  it('is unsaved from a failed save until the typing is saved, also when the read does not change for it', async () => {
+    const { result, rerender } = setup();
+    act(() => result.current.set('mine'));
+    await act(async () => result.current.hold(Promise.resolve(false)));
+    expect(result.current.unsaved).toBe(true);
+    rerender({ read: 'from another device' });
+    // Typed over to the other device's words and saved: the read does not
+    // change for it.
+    act(() => result.current.set('from another device'));
+    expect(result.current.unsaved).toBe(true);
+    await act(async () => result.current.hold(Promise.resolve(true)));
+    expect(result.current.unsaved).toBe(false);
+  });
+
+  it('does not say the save failed once the typing is dropped', async () => {
+    const { result } = setup();
+    act(() => result.current.set('typed'));
+    await act(async () => result.current.hold(Promise.resolve(false)));
+    act(() => result.current.drop());
+    expect(result.current.saveFailed).toBe(false);
+  });
+
   it('shows a value put in by an operation until the read changes, without an edit', () => {
     const { result, rerender } = setup();
     act(() => result.current.put('adopted'));

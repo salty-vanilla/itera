@@ -186,6 +186,7 @@ function GoalBlock({
                 : '「〜な状態にする」「〜を終える」の形がおすすめです。確定した後は文を変えられますが、消せません'
             }
             error={error}
+            saveFailed={field.saveFailed}
           >
             <Textarea
               text="body-l"

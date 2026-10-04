@@ -44,6 +44,20 @@ export const WithError: Story = {
   },
 };
 
+/**
+ * 書いた内容を残す欄の保存が通らなかった（useDraftField の saveFailed）。欄は
+ * Error になり「まだ保存していません」と言う。理由は Toast が言う。入力の
+ * エラー（error）があるときは、そちらを出す。
+ */
+export const SaveFailed: Story = {
+  args: {
+    label: '気づいたこと',
+    description: undefined,
+    saveFailed: true,
+    children: <Textarea defaultValue="割り込みがあった日は午後が崩れた" />,
+  },
+};
+
 type Values = { title: string; estimate: string; area: string };
 type Errors = Partial<Record<keyof Values, string | undefined>>;
 

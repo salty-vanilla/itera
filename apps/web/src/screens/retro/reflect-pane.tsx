@@ -60,6 +60,7 @@ function ReflectPane({
             label="気づいたこと"
             necessity="optional"
             description="うまくいったこと、気になったこと。記録を見て思ったことを、そのまま書きます。"
+            saveFailed={reflection.saveFailed}
           >
             <Textarea
               text="body-l"
@@ -220,6 +221,7 @@ function Improvement({
                 ? '次の Sprint を計画するときに表示されます。'
                 : '計画のルールの元にしています。消すときは、先に「引き継ぐ」で「計画のルールにもする」をオフにしてください。'
             }
+            saveFailed={field.saveFailed}
           >
             <Textarea
               text="body-l"

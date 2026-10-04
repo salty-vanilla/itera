@@ -322,6 +322,7 @@ function EditRow({
             </span>
           }
           error={error}
+          saveFailed={nameField.saveFailed}
         >
           <TextInput
             ref={inputRef}

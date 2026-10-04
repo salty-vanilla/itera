@@ -237,6 +237,84 @@ describe('Retro on the API', () => {
     expect((field as HTMLTextAreaElement).value).toContain('あとで足した言葉');
   });
 
+  describe('leaving with words a failed save left out (#332)', () => {
+    async function failToSave() {
+      let refuse = true;
+      const served = serve(
+        (request) =>
+          request.method === 'PATCH' && refuse ? refused() : undefined,
+        'retro-reflect',
+      );
+      const router = renderRetro('/retro?stage=reflect');
+      await waitForRead();
+      const field = screen.getByRole('textbox', { name: /気づいたこと/ });
+      await userEvent.type(field, 'あとで足した言葉');
+      await userEvent.tab();
+      expect(
+        await screen.findAllByText('保存できませんでした'),
+      ).not.toHaveLength(0);
+      return { ...served, router, field, saves: () => (refuse = false) };
+    }
+
+    it('asks before the screen changes, and stays on キャンセル', async () => {
+      const { router, field } = await failToSave();
+      await userEvent.click(screen.getAllByRole('link', { name: '今日' })[0]!);
+      const dialog = await screen.findByRole('alertdialog', {
+        name: '保存せずに移りますか？',
+      });
+      await userEvent.click(
+        within(dialog).getByRole('button', { name: 'キャンセル' }),
+      );
+      await until(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+      expect(router.state.location.pathname).toBe('/retro');
+      expect((field as HTMLTextAreaElement).value).toContain(
+        'あとで足した言葉',
+      );
+    });
+
+    it('moves on with 保存せずに移る', async () => {
+      const { router } = await failToSave();
+      await userEvent.click(screen.getAllByRole('link', { name: '今日' })[0]!);
+      const dialog = await screen.findByRole('alertdialog');
+      await userEvent.click(
+        within(dialog).getByRole('button', { name: '保存せずに移る' }),
+      );
+      await until(() => expect(router.state.location.pathname).toBe('/today'));
+    });
+
+    it('moves on when the words are saved while it asks', async () => {
+      const { router, saves } = await failToSave();
+      saves();
+      // Leaving the field sends the words again, and the link is pressed
+      // before they are saved.
+      await userEvent.click(
+        screen.getByRole('textbox', { name: /気づいたこと/ }),
+      );
+      await userEvent.click(screen.getAllByRole('link', { name: '今日' })[0]!);
+      await until(() => expect(router.state.location.pathname).toBe('/today'));
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
+    it('does not ask once the words are saved', async () => {
+      const { router, saves } = await failToSave();
+      saves();
+      await userEvent.click(
+        screen.getByRole('textbox', { name: /気づいたこと/ }),
+      );
+      await userEvent.tab();
+      await until(() =>
+        expect(
+          screen
+            .getByRole('textbox', { name: /気づいたこと/ })
+            .getAttribute('aria-invalid'),
+        ).toBeNull(),
+      );
+      await userEvent.click(screen.getAllByRole('link', { name: '今日' })[0]!);
+      await until(() => expect(router.state.location.pathname).toBe('/today'));
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+  });
+
   describe('when another device has written the words (#324)', () => {
     // Looked up each time: the screen may draw the field anew when it reads.
     const reflection = () =>
@@ -337,12 +415,29 @@ describe('Retro on the API', () => {
       ).not.toHaveLength(0);
       expect(before()).toBe(read);
       expect(reflection().value).toContain('PC で書いた文');
+      // The field says it is not saved, also to a screen reader (#332).
+      await until(() =>
+        expect(reflection().getAttribute('aria-invalid')).toBe('true'),
+      );
+      const described = (reflection().getAttribute('aria-describedby') ?? '')
+        .split(' ')
+        .map((id) => document.getElementById(id)?.textContent);
+      expect(described).toContain('まだ保存していません');
       // Left again: saved over the Retro as it now is.
       const sent = patches(requests).length;
       await userEvent.click(reflection());
       await userEvent.tab();
       await until(() => expect(patches(requests)).toHaveLength(sent + 1));
       await until(() => expect(before()).toContain('PC で書いた文'));
+      // Saved: the field is no longer in error, and the Toast is closed.
+      await until(() =>
+        expect(reflection().getAttribute('aria-invalid')).toBeNull(),
+      );
+      await until(() =>
+        expect(
+          screen.queryAllByText('ほかの端末で変わっていました'),
+        ).toHaveLength(0),
+      );
       expect(
         store.getSnapshot().records.sprints.find((s) => s.id === sprintId)
           ?.retro?.improvement?.text,

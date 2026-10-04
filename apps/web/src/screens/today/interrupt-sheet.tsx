@@ -118,7 +118,12 @@ function InterruptSheet({
       editing === undefined
         ? undefined
         : (typedFrom.current ?? { etag: editing.etag });
-    if (await onSubmit(note, m ?? undefined, from)) change(false);
+    const saving = Promise.resolve(onSubmit(note, m ?? undefined, from));
+    // Held until it is answered: a save that did not go through gives the
+    // typing back, and the fields say it is not saved (#332).
+    if (textField.edited) textField.hold(saving);
+    if (minutesField.edited) minutesField.hold(saving);
+    if (await saving) change(false);
     else typedFrom.current = undefined;
   };
   return (
@@ -146,7 +151,12 @@ function InterruptSheet({
             </DrawerDescription>
           </DrawerHeader>
           <DrawerBody className="flex flex-col gap-4">
-            <Field label="メモ" necessity="required" error={errors.text}>
+            <Field
+              label="メモ"
+              necessity="required"
+              error={errors.text}
+              saveFailed={textField.saveFailed}
+            >
               <TextInput
                 value={text}
                 placeholder="例：障害対応、急な来客"
@@ -160,6 +170,7 @@ function InterruptSheet({
               label="かかった時間"
               necessity="optional"
               error={errors.minutes}
+              saveFailed={minutesField.saveFailed}
               value={minutes}
               onChange={(value) => {
                 typing();
