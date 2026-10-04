@@ -161,7 +161,7 @@ fixture の段階（#38〜#42）では、画面が `RecordStore` と `Change` �
 
 - モックは `import.meta.env.DEV` が真で `--mode api` でないときだけ `import()` する（`apps/web/src/app/data-source.ts`。条件はここに 1 つだけ書き、ルーターなどはその結果を使う）。本番ビルドではこの分岐が消え、モックと fixture のチャンクが出力に入らない。条件をほかのモジュールの定数にして参照すると、Vite（Rolldown）は分岐を消さずチャンクが残る（2026-10-03 に確かめた。下の検査が捕まえる）ので、条件は `import()` の隣に直接書く。
 - Valibot も本番ビルドに入れない（2026-10-05 オーナー決定、Issue #356）。要求をスキーマで読む・確かめるのはサーバーとモックで、Web は要求を送るだけで、応答も実行時に検証しない（上の「エラーと送信中」）。そこで本番のコードは、契約の入口のうち Valibot とスキーマを import しない `@itera/api-contract/sending`（操作の要求、面のメソッドと経路、書き込みのヘッダー。ADR 0006「経路の形」）を使い、要求を読む側も持つ `@itera/api-contract/requests` はモックとそのテストだけが使う。`@itera/api-contract`（型とスキーマ）からは型だけを import する（型だけの import は出力に残らない。値を import するとスキーマと Valibot が入る）。
-  - 分ける前の 2026-10-05 の入口のチャンクは 1,027.00 kB（gzip 309.91 kB）、分けた後は 1,009.44 kB（gzip 305.65 kB）。
+  - 2026-10-05 の入口のチャンクは、分ける前が 1,028.32 kB（gzip 310.42 kB）、分けた後が 1,010.76 kB（gzip 306.15 kB）。
 - `pnpm build`（`apps/web` の `vite build && node scripts/check-build.mjs`）が、出力にモックの応答のヘッダー名、fixture の状態の ID、Valibot（どのスキーマも持つ Standard Schema の `vendor` の値 `valibot`）がないことを確かめる。あれば失敗する（CI と CD も同じコマンド）。
 - 移行の途中、まだ移していない画面は、本番ビルドと `--mode api` では開発者向けの短い表示（`NotOnContract`）を出した（2026-10-03 オーナー決定、Issue #272 のコメント）。#277 で、`NotOnContract` と `NotOnContractError` を消した。
 
