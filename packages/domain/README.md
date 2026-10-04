@@ -125,9 +125,9 @@ type CommandResult<T> =
 - **ほかの日の回（F18）**：繰り返しの回は、同じ Sprint のほかの日にも選べる。
 - **Today が触れる範囲**：Today のコマンドは active な Sprint の、planned の SprintTask の選択だけに働く（完了の取り消しは、単発なら done、繰り返しなら planned）。Sprint から外した SprintTask の開いた選択はそのまま残るが、Today のコマンドも「今日の残り」も扱わず、日付が変わると未処理になる。Sprint に戻せば（F13）また使える。
 - **当日の繰り返し**：`startDay`（actor = system だけ）で作る。Today を開いたとき・日付が変わったときに呼び、繰り返しても変わらない。前の日に開いたままの選択（selected / started）を unresolved にし（不変条件 24）、その日の Pending の回で、planned の SprintTask に含まれるものを `recurringToday` の選択にする。「昨日の続き」も含め、ほかは自動で選ばない（不変条件 22）。
-- **完了**：単発の Task は Task = completed と SprintTask = done を同時に変える。繰り返しは Occurrence = done だけで、SprintTask は planned のまま（束ねた SprintTask の締めは #24）。取り消すと元に戻り、記録した実績は残る（追記のみ）。 F17 で閉じた後に完了した選択は `closedBefore` に閉じた状態を覚えておき、取り消すとその状態に戻す。
+- **完了**：単発の Task は Task = completed と SprintTask = done を同時に変える。繰り返しは Occurrence = done だけで、SprintTask は planned のまま（束ねた SprintTask の締めは #24）。取り消すと元に戻り、記録した実績は残る（追記のみ）。開始してから完了した選択は started に戻り、開始時刻を残す（#353）。F17 で閉じた後に完了した選択は `closedBefore` に閉じた状態を覚えておき、取り消すとその状態に戻す。
 - **スキップの取り消し（F19）**：`undoSkipSelection` で、選択を selected に、回を pending に戻す。
-- **取り消しの日付**：完了・スキップの取り消しに日付の制限はない。前の日の選択を取り消すと selected に戻り、次の `startDay` で unresolved になる。過去の日の取り消しを画面に出すかは `apps/web` で決める。
+- **取り消しの日付**：完了・スキップの取り消しに日付の制限はない。前の日の選択を取り消すと selected（開始していれば started）に戻り、次の `startDay` で unresolved になる。過去の日の取り消しを画面に出すかは `apps/web` で決める。
 - **Backlog からの完了**：今の Sprint で planned なら、Task・SprintTask・その日の選択（`backlogCompletion`、done）を同時に作る（不変条件 27）。その日にすでに選択があれば（開いていても、F17 でその日に閉じたものでも）、それを完了にする（2 件目は作らない）。その場合 origin は元のままで、Backlog から完了したことは Activity の並び（`taskCompleted` に続く `todayDone`）から分かる。繰り返しの Task は Backlog から完了にしない（`recurringTaskCannotComplete`）。Sprint の開始日より前（確定済み）なら、選ぶ日がないので選択は作らず、Task と SprintTask だけを完了にする（F34）。
 - **実績**：`pauseSelection` / `completeSelection` の `actualHours` か、後から `recordActualTime`（active な Sprint の期間内の日で、繰り返しなら SprintTask の回を指定）。どれも任意（不変条件 28）。
 - **#24 への引き継ぎ**：`startDay` は active な Sprint にだけ働く。Review に入るときに開いたままの選択（最終日など）を Unresolved にする処理は #24 の Review への移行で行う。

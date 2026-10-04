@@ -398,10 +398,14 @@ function reopenClosed(
   kind: 'todayDeferUndone' | 'todayRemoveUndone',
   ctx: CommandContext,
 ): CommandResult<Sprint> {
-  // Back to how it was before it was closed: started keeps its time.
+  // Back to how it was before it was closed: a deferral after starting goes
+  // back to started with its time; a removal only closes a selected one.
   const reopened: DailySelection = {
     ...omit(selection, 'resolvedAt'),
-    resolution: selection.startedAt === undefined ? 'selected' : 'started',
+    resolution:
+      selection.resolution === 'deferred' && selection.startedAt !== undefined
+        ? 'started'
+        : 'selected',
   };
   return applied(replaceSelection(sprint, reopened), [
     selectionActivity(kind, sprint, reopened, ctx),
@@ -537,9 +541,10 @@ export function checkCompleteSelection(
 }
 
 /**
- * 完了を取り消す: done → selected (or, for a selection completed after
- * being closed the same day, back to that paused / deferred / removed:
- * F17), and the Task / SprintTask / occurrence return to where they were.
+ * 完了を取り消す: done → selected, or started with its time if it had been
+ * started (#353), or, for a selection completed after being closed the
+ * same day, back to that paused / deferred / removed (F17); and the Task /
+ * SprintTask / occurrence return to where they were.
  * Recorded actual time stays (append-only).
  */
 export function undoCompleteSelection(
@@ -570,11 +575,16 @@ export function undoCompleteSelection(
     activities.push(...reopened.value.activities);
     change = reopened.value.record;
   }
-  // Back to where it was: selected, or — for a selection closed earlier
-  // that day and completed later (F17) — the way it had been closed.
+  // Back to where it was: selected, started (keeping its time), or — for a
+  // selection closed earlier that day and completed later (F17) — the way it
+  // had been closed.
   const reselected: DailySelection =
     selection.closedBefore === undefined
-      ? { ...omit(selection, 'resolvedAt'), resolution: 'selected' }
+      ? {
+          ...omit(selection, 'resolvedAt'),
+          resolution:
+            selection.startedAt === undefined ? 'selected' : 'started',
+        }
       : {
           ...omit(selection, 'closedBefore'),
           resolution: selection.closedBefore.resolution,
@@ -915,7 +925,8 @@ export interface UndoCompleteFromBacklogInput {
  *   backlogCompletion), the Task reopens, the SprintTask is planned again
  *   and that selection is removed, as it did not exist before;
  * - if it completed a selection that was already there, that selection
- *   goes back as 完了を取り消す does (selected, or how it was closed: F17).
+ *   goes back as 完了を取り消す does (selected, started, or how it was
+ *   closed: F17).
  * The Activity keeps both the completion and its undo.
  */
 export function undoCompleteFromBacklog(
