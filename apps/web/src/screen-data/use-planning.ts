@@ -17,9 +17,9 @@ import {
   listSprintCandidatesOptions,
 } from '@itera/api-contract/react-query';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { useCallback, useRef } from 'react';
 import { useApiClient } from '@/api/api-provider';
 import { useRead2, type Read } from '@/api/read-state';
+import { useOncePerTarget } from '@/api/use-once-per-target';
 import { savedOf, useOperation, type Saved } from '@/api/use-operation';
 import { NO_AREA, type SprintArea } from './screen-area';
 
@@ -77,30 +77,6 @@ export function usePlanning(
     listSprintCandidatesOptions({ client, path: { sprintId } }),
   );
   return useRead2(plan, candidates, planningView);
-}
-
-/**
- * For the operations of rows the person picks one after another: a second
- * press on the *same* target while it is on its way is dropped (a double
- * click would send the same change twice and fail), and one on another
- * target is sent after it, in order (`useOperation` `whileSending: 'wait'`),
- * not thrown away. `key` names the target. Gives back `undefined` for one
- * that was dropped.
- */
-function useOncePerTarget() {
-  const onTheWay = useRef(new Set<string>());
-  return useCallback(
-    async <T>(key: string, send: () => Promise<T>): Promise<T | undefined> => {
-      if (onTheWay.current.has(key)) return undefined;
-      onTheWay.current.add(key);
-      try {
-        return await send();
-      } finally {
-        onTheWay.current.delete(key);
-      }
-    },
-    [],
-  );
 }
 
 /**

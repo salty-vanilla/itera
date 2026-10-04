@@ -294,22 +294,37 @@ function TodayView({ data }: { data: TodayData }) {
   // drawn; `askFocus` looks again when the target was set after the records.
   const focusNext = useRef<FocusTarget | undefined>(undefined);
   const [focusAsked, askFocus] = useReducer((asked: number) => asked + 1, 0);
-  // Sends an operation that moves a row, and has the focus follow it. The
-  // focus is asked for before the send, not after: the screen draws the new
-  // records as they come, which can be before the send's promise resolves.
-  // An operation that did not go through changes nothing: the request there
-  // was before it stands (a second press while the first is being sent is
-  // answered at once, and must not take the first one's focus away).
-  const follow = async (
-    target: FocusTarget,
-    send: () => Promise<boolean>,
-  ): Promise<boolean> => {
-    const before = focusNext.current;
-    focusNext.current = target;
-    const ok = await send();
-    if (!ok && focusNext.current === target) focusNext.current = before;
-    return ok;
+  // The operations that move a row and are still being sent. The rows'
+  // operations are sent one after another (useTodayActions): one pressed on
+  // another row while the first is on its way waits for it, and the focus
+  // goes where the last one pressed sends it, once all are through (#354).
+  const moving = useRef(0);
+  // Sends an operation that moves a row, and has the focus follow it to
+  // `targetOf` its result. The target is asked for once every operation
+  // pressed has been sent, not as each one's records are drawn: the row of
+  // one sent before the last would take the focus first, and the screen draws
+  // the new records as they come, which can be before the send's promise
+  // resolves. An operation that did not go through changes nothing: the
+  // request there was before it stands (a repeat on the same row while it is
+  // being sent is answered at once, and must not take its focus away).
+  const followTo = async <T,>(
+    send: () => Promise<T>,
+    targetOf: (sent: T) => FocusTarget | undefined,
+  ): Promise<T> => {
+    moving.current += 1;
+    let sent: T;
+    try {
+      sent = await send();
+    } finally {
+      moving.current -= 1;
+    }
+    const target = targetOf(sent);
+    if (target !== undefined) focusNext.current = target;
+    if (moving.current === 0) askFocus();
+    return sent;
   };
+  const follow = (target: FocusTarget, send: () => Promise<boolean>) =>
+    followTo(send, (ok) => (ok ? target : undefined));
 
   const detail = useTaskDetailLeave();
   const showTask = (taskId: TaskId | undefined) =>
@@ -338,7 +353,8 @@ function TodayView({ data }: { data: TodayData }) {
 
   useEffect(() => {
     const next = focusNext.current;
-    if (next === undefined) return;
+    // Asked again once the last operation pressed is through (`followTo`).
+    if (next === undefined || moving.current > 0) return;
     const selector =
       'selection' in next
         ? `[data-selection="${next.selection}"] :is([data-slot="completion-circle"], [data-action="undo-skip"])`
@@ -472,7 +488,7 @@ function TodayView({ data }: { data: TodayData }) {
         // the choice it made for today goes away with it.
         if (row.selection.origin === 'backlogCompletion') {
           void follow({ rest: row.sprintTask.id }, () =>
-            taskActions.undoCompleteTask(row.task.id),
+            actions.undoCompleteTask(row.task.id),
           );
           return;
         }
@@ -537,13 +553,10 @@ function TodayView({ data }: { data: TodayData }) {
       return;
     }
     // The choice made comes back with its ID: that is the row to focus.
-    const chosen = await actions.chooseForToday(
-      item.sprintTask.id,
-      item.occurrence?.id,
+    await followTo(
+      () => actions.chooseForToday(item.sprintTask.id, item.occurrence?.id),
+      (chosen) => (chosen === undefined ? undefined : { selection: chosen }),
     );
-    if (chosen === undefined) return;
-    focusNext.current = { selection: chosen };
-    askFocus();
   };
 
   const remaining = data.remaining;

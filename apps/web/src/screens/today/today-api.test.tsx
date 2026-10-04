@@ -26,7 +26,11 @@ import {
   it,
   vi,
 } from 'vitest';
-import { deleteInterrupt, editInterrupt } from '@itera/api-contract/client';
+import {
+  completeTask,
+  deleteInterrupt,
+  editInterrupt,
+} from '@itera/api-contract/client';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { createMock } from '@/mock/mock-api';
 import { dayRead } from '@/test/day-read';
@@ -337,6 +341,143 @@ describe('Today on the API', () => {
       name: '完了にする：関連論文を 3本読む',
     });
     await waitFor(() => expect(document.activeElement).toBe(circle));
+  });
+
+  it('sends 今日へ pressed on two rows one after another, and the focus goes to the last (#354)', async () => {
+    const saves = held(writes);
+    const { requests } = serve(saves.answer);
+    renderToday();
+    await dayRead();
+    const rest = (title: string) =>
+      within(region('今週の残り')).getByRole('button', {
+        name: `今日へ：${title}`,
+      });
+    // The second row while the first is on its way, and the first again.
+    await userEvent.click(rest('API 設計のレビュー'));
+    await until(() => expect(saves.waiting).toBe(1));
+    await userEvent.click(rest('実験データの前処理'));
+    await userEvent.click(rest('API 設計のレビュー'));
+    saves.release();
+    const today = await screen.findByRole('region', { name: '今日やる' });
+    const last = await within(today).findByRole('button', {
+      name: '完了にする：実験データの前処理',
+    });
+    expect(
+      within(today).getByRole('button', {
+        name: '完了にする：API 設計のレビュー',
+      }),
+    ).toBeTruthy();
+    expect(
+      requests.filter((r) => r.endsWith('/daily-selections')),
+    ).toHaveLength(2);
+    expect(screen.queryByText('保存できませんでした')).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(last));
+  });
+
+  it('puts the focus where the last one pressed sends it, though an earlier one comes back after its row is drawn (#354)', async () => {
+    let holding = false;
+    const saves = held((request) => holding && writes(request));
+    serve(saves.answer);
+    renderToday();
+    await dayRead();
+    const rest = (title: string) =>
+      within(region('今週の残り')).getByRole('button', {
+        name: `今日へ：${title}`,
+      });
+    await userEvent.click(rest('API 設計のレビュー'));
+    const circle = await screen.findByRole('button', {
+      name: '完了にする：API 設計のレビュー',
+    });
+    holding = true;
+    // 今日へ on one row, whose new row is known only once it is back, then
+    // 完了 on another while the first is on its way.
+    await userEvent.click(rest('実験データの前処理'));
+    await until(() => expect(saves.waiting).toBe(1));
+    await userEvent.click(circle);
+    saves.release();
+    await screen.findByRole('button', {
+      name: '完了にする：実験データの前処理',
+    });
+    await waitFor(() =>
+      expect(
+        document.activeElement?.closest('[data-selection]')?.textContent,
+      ).toContain('API 設計のレビュー'),
+    );
+  });
+
+  it('completes two rows pressed one after another, and sends a repeat on one row once (#354)', async () => {
+    let holding = false;
+    const saves = held((request) => holding && writes(request));
+    const { store, requests } = serve(saves.answer);
+    renderToday();
+    await dayRead();
+    for (const title of ['API 設計のレビュー', '実験データの前処理']) {
+      await userEvent.click(
+        within(region('今週の残り')).getByRole('button', {
+          name: `今日へ：${title}`,
+        }),
+      );
+      await screen.findByRole('button', { name: `完了にする：${title}` });
+    }
+    holding = true;
+    const circle = (title: string) =>
+      screen.getByRole('button', { name: `完了にする：${title}` });
+    await userEvent.click(circle('API 設計のレビュー'));
+    await until(() => expect(saves.waiting).toBe(1));
+    await userEvent.click(circle('実験データの前処理'));
+    await userEvent.click(circle('API 設計のレビュー'));
+    saves.release();
+    const resolutions = () =>
+      store
+        .getSnapshot()
+        .records.sprints.find((s) => s.state === 'active')!
+        .dailySelections.filter((s) => s.date === '2026-10-01')
+        .map((s) => s.resolution);
+    await until(() => expect(resolutions()).toEqual(['done', 'done']));
+    expect(requests.filter((r) => r.endsWith('/complete'))).toHaveLength(2);
+    expect(screen.queryByText('保存できませんでした')).toBeNull();
+    // The focus follows the last one pressed.
+    await waitFor(() =>
+      expect(
+        document.activeElement?.closest('[data-selection]')?.textContent,
+      ).toContain('実験データの前処理'),
+    );
+  });
+
+  it('takes back two completions from the Backlog pressed one after another (#354)', async () => {
+    const saves = held(writes);
+    const { store, requests } = serve(saves.answer);
+    const titles = ['API 設計のレビュー', '実験データの前処理'];
+    const taskId = (title: string) =>
+      store.getSnapshot().records.tasks.find((t) => t.title === title)!.id;
+    for (const title of titles) {
+      await completeTask({
+        client: otherDevice(store),
+        headers: newWrite(),
+        path: { taskId: taskId(title) },
+      });
+    }
+    renderToday();
+    await dayRead();
+    const undo = (title: string) =>
+      screen.getByRole('button', { name: `完了を取り消す：${title}` });
+    await userEvent.click(undo(titles[0]!));
+    await until(() => expect(saves.waiting).toBe(1));
+    await userEvent.click(undo(titles[1]!));
+    await userEvent.click(undo(titles[0]!));
+    saves.release();
+    await until(() =>
+      expect(
+        store
+          .getSnapshot()
+          .records.tasks.filter((t) => titles.includes(t.title))
+          .map((t) => t.lifecycle),
+      ).toEqual(['active', 'active']),
+    );
+    expect(requests.filter((r) => r.endsWith('/undo-complete'))).toHaveLength(
+      2,
+    );
+    expect(screen.queryByText('保存できませんでした')).toBeNull();
   });
 
   it('adds a Task for today with the Area chosen, and keeps what was typed when it is refused', async () => {

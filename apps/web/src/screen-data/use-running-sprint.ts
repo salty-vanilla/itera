@@ -13,6 +13,7 @@ import { getSprintOptions } from '@itera/api-contract/react-query';
 import { useQuery } from '@tanstack/react-query';
 import { useApiClient } from '@/api/api-provider';
 import { useRead, type Read } from '@/api/read-state';
+import { useOncePerTarget } from '@/api/use-once-per-target';
 import { savedOf, useOperation, type Saved } from '@/api/use-operation';
 import { NO_AREA, type SprintArea } from './screen-area';
 
@@ -59,8 +60,12 @@ export function useRunningSprint(sprintId: SprintId): Read<RunningData> {
  */
 export function useRunningSprintActions(sprintId: SprintId) {
   const goal = useOperation('setGoal', { typed: true });
-  const undoComplete = useOperation('undoCompleteSelection');
-  const undoSkip = useOperation('undoSkipSelection');
+  // The rows' 取り消す: one on another row while the first is on its way is
+  // sent after it; a repeat on the same row is dropped (ADR 0005, #354).
+  const wait = { whileSending: 'wait' } as const;
+  const undoComplete = useOperation('undoCompleteSelection', wait);
+  const undoSkip = useOperation('undoSkipSelection', wait);
+  const once = useOncePerTarget();
   return {
     /** `from`: the Goal as read when it was typed, or none (#321). */
     setGoal: async (
@@ -71,9 +76,17 @@ export function useRunningSprintActions(sprintId: SprintId) {
       savedOf(await goal.run({ sprintId, areaId, text }, from)),
     /** 過去の日の完了を取り消す (#53, F33). */
     undoComplete: async (selectionId: DailySelectionId) =>
-      (await undoComplete.run({ sprintId, selectionId })).ok,
+      (
+        await once(`undoComplete:${selectionId}`, () =>
+          undoComplete.run({ sprintId, selectionId }),
+        )
+      )?.ok === true,
     /** 過去の日のスキップを取り消す (#53, F33). */
     undoSkip: async (selectionId: DailySelectionId) =>
-      (await undoSkip.run({ sprintId, selectionId })).ok,
+      (
+        await once(`undoSkip:${selectionId}`, () =>
+          undoSkip.run({ sprintId, selectionId }),
+        )
+      )?.ok === true,
   };
 }
