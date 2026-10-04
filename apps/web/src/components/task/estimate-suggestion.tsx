@@ -122,7 +122,7 @@ function EstimateSuggestion({
       </p>
       {/* Free text with times in it: broken between phrases, so that
           「1〜2時間」 is not broken inside (#239). */}
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-body [text-wrap:pretty] [word-break:auto-phrase]">
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-body [text-wrap:pretty] [word-break:auto-phrase] enlarged:grid-cols-1">
         <dt className="text-label text-ink-muted">根拠</dt>
         <dd className="text-ink">
           {suggestion.rationale === ''
@@ -186,7 +186,8 @@ function EstimateSuggestion({
               <div
                 role="group"
                 aria-labelledby={valuesLabelId}
-                className="flex"
+                // With enlarged text the values go onto more lines (#393).
+                className="flex enlarged:flex-wrap enlarged:gap-1"
               >
                 {bounds.map((bound, index) => (
                   <Button
@@ -195,8 +196,10 @@ function EstimateSuggestion({
                     size="sm"
                     className={cn(
                       'focus-visible:z-1',
-                      index > 0 && '-ms-px rounded-s-none',
-                      index < bounds.length - 1 && 'rounded-e-none',
+                      index > 0 &&
+                        '-ms-px rounded-s-none enlarged:ms-0 enlarged:rounded-s-sm',
+                      index < bounds.length - 1 &&
+                        'rounded-e-none enlarged:rounded-e-sm',
                     )}
                     aria-label={`${BOUND_WORDS[bound]}の ${formatHours(boundValue(suggestion, bound))}を使う`}
                     onClick={() => onAdopt(bound)}

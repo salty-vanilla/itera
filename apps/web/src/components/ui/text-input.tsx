@@ -36,9 +36,9 @@ const controlBoxStyles = [
 const controlSizeVariants = cva('', {
   variants: {
     size: {
-      sm: 'h-control-lg px-3 text-body-l medium:h-control-sm medium:px-2 medium:text-body',
-      md: 'h-control-lg px-3 text-body-l medium:h-control-md medium:text-body',
-      lg: 'h-control-lg px-3 text-body-l medium:text-body',
+      sm: 'min-h-control-lg px-3 text-body-l medium:min-h-control-sm medium:px-2 medium:text-body',
+      md: 'min-h-control-lg px-3 text-body-l medium:min-h-control-md medium:text-body',
+      lg: 'min-h-control-lg px-3 text-body-l medium:text-body',
     },
   },
   defaultVariants: { size: 'md' },

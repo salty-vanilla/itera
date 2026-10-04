@@ -69,7 +69,7 @@ const words: Record<
     description: (
       <>
         途中のタスクは今週の残りに戻り、明日
-        <span className="whitespace-nowrap">「昨日の続き」</span>
+        <span className="nowrap-phrase">「昨日の続き」</span>
         に出ます。
       </>
     ),

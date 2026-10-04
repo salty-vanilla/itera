@@ -942,7 +942,7 @@ function TaskDetailContent({
           // chooses a field, so a phone does not raise its keyboard (#95).
           tabIndex={-1}
           data-autofocus={focusEstimate === undefined || undefined}
-          className="w-fit rounded-sm focus-visible:focus-ring"
+          className="w-fit max-w-full rounded-sm focus-visible:focus-ring"
         >
           {task.title}
         </DrawerTitle>

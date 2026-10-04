@@ -28,20 +28,18 @@ const BLOCKER_WORDS: Readonly<Record<RetroBlocker, ReactNode>> = {
   decisionMissing: (
     <>
       上の「今回の計画のルール」で、
-      <span className="whitespace-nowrap">
-        続ける・終える・置き換えるのどれか
-      </span>
+      <span className="nowrap-phrase">続ける・終える・置き換えるのどれか</span>
       を選ぶと完了できます。
     </>
   ),
   continueWithDraft: (
     <>
       新しいルールにするなら、
-      <span className="whitespace-nowrap">「今回の計画のルール」で</span>
-      <span className="whitespace-nowrap">「置き換える」を</span>
-      <span className="whitespace-nowrap">選んでください。</span>
-      <span className="whitespace-nowrap">今回のルールを続けるなら、</span>
-      <span className="whitespace-nowrap">「計画のルールにもする」</span>
+      <span className="nowrap-phrase">「今回の計画のルール」で</span>
+      <span className="nowrap-phrase">「置き換える」を</span>
+      <span className="nowrap-phrase">選んでください。</span>
+      <span className="nowrap-phrase">今回のルールを続けるなら、</span>
+      <span className="nowrap-phrase">「計画のルールにもする」</span>
       をオフにしてください。
     </>
   ),
@@ -186,9 +184,7 @@ function CompleteDialog({
                     <li key={line.text}>
                       {line.text}
                       {line.decision !== undefined && (
-                        <span className="whitespace-nowrap">
-                          {line.decision}
-                        </span>
+                        <span className="nowrap-phrase">{line.decision}</span>
                       )}
                     </li>
                   ))}

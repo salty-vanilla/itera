@@ -53,7 +53,7 @@ function Filter({
       aria-pressed={pressed}
       onClick={() => onPressedChange?.(!pressed)}
       className={cn(
-        'group relative inline-flex h-control-sm shrink-0 items-center gap-1 rounded-full border border-border bg-canvas px-3 text-body whitespace-nowrap text-ink select-none',
+        'group relative inline-flex min-h-control-sm shrink-0 items-center gap-1 rounded-full border border-border bg-canvas px-3 text-body whitespace-nowrap text-ink select-none',
         'transition-colors duration-(--duration-fast) ease-standard',
         'focus-visible:focus-ring',
         // Under 768px the Pill keeps its 28px look and takes 44px to touch.

@@ -158,7 +158,7 @@ function BeforeStart({ data }: { data: TodayData }) {
         <Link
           to="/sprint"
           search={{ sprint: data.number }}
-          className="whitespace-nowrap text-link underline focus-visible:focus-ring"
+          className="nowrap-phrase text-link underline focus-visible:focus-ring"
         >
           Sprint {data.number} を開く
         </Link>
@@ -220,7 +220,7 @@ function NoActiveSprint({
 }) {
   const { review: reviewSprint, planning: planningSprint } = sprints;
   // After the sentence's space, the link moves to the next line whole.
-  const link = 'whitespace-nowrap text-link underline focus-visible:focus-ring';
+  const link = 'nowrap-phrase text-link underline focus-visible:focus-ring';
   return (
     <DayFrame date={today} today={today}>
       <p className="text-body text-ink-muted">
@@ -605,18 +605,20 @@ function TodayView({ data }: { data: TodayData }) {
             />
             {/* 「割り込みを記録」 on the right, reached without scrolling at
               every width (#100); it stays there with no 今日の残り line. */}
-            <div className="flex items-center justify-end gap-4">
+            <div className="flex items-center justify-end gap-4 enlarged:flex-wrap">
               {/* Nothing chosen yet (no done and no closed row): the empty 今日やる already says so. */}
               {(data.rows.length > 0 || data.closed.length > 0) && (
                 // Two lines if need be under 768px: the button stays on the right.
-                <p className="min-w-0 flex-1 text-body text-ink-muted">
+                // With enlarged text the line is the row's width and the
+                // button goes under it (#393).
+                <p className="min-w-0 flex-1 text-body text-ink-muted enlarged:basis-full">
                   {remaining.count === 0 ? (
                     '今日の残りはありません'
                   ) : (
                     // Broken between the parts (and before 「（ほかに見積もり
                     // なし 1件）」), not in the range or the note.
                     <>
-                      <span className="inline-block">
+                      <span className="inline-block enlarged:break-keep">
                         今日の残り {remaining.count}件 ·
                       </span>{' '}
                       {formatPlanningTotal({
@@ -625,7 +627,10 @@ function TodayView({ data }: { data: TodayData }) {
                       })
                         .split(/(?=（)/)
                         .map((part, i) => (
-                          <span key={i} className="inline-block">
+                          <span
+                            key={i}
+                            className="inline-block enlarged:break-keep"
+                          >
                             {part}
                           </span>
                         ))}
