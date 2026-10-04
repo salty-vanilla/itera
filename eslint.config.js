@@ -161,8 +161,8 @@ export default defineConfig(
       // Generated from the contract (ADR 0006); checked by contract:check.
       'packages/api-contract/src/generated/**',
       'services/api/.wrangler/**',
-      'playwright-report/**',
-      'test-results/**',
+      '**/playwright-report/**',
+      '**/test-results/**',
     ],
   },
   js.configs.recommended,
@@ -171,6 +171,11 @@ export default defineConfig(
     // Repository tooling, hooks, skill scripts and root config files run on
     // Node.
     files: ['tooling/**', '.claude/**', '.agents/**', '*.{js,mjs,ts}'],
+    languageOptions: { globals: globals.node },
+  },
+  {
+    // services/api's E2E tests drive a browser from Node (Issue #370).
+    files: ['services/api/e2e/**/*.ts', 'services/api/playwright.config.ts'],
     languageOptions: { globals: globals.node },
   },
   {

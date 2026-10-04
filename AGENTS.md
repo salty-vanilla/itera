@@ -31,7 +31,7 @@ MVP は Web のみ。PC を基準にし、スマートフォンは DESIGN.md の
 
 `packages/domain`・`apps/web`・`services/api` で作業するときは、ファイルを作る前に `.claude/rules/domain.md` / `.claude/rules/web-ui.md` / `.claude/rules/api.md` を読む。
 
-技術スタックの候補：Vite、React 19、Tailwind 4、shadcn（base-ui）、TanStack Query、Valibot、Hono、Drizzle、OpenAPI + Hey API、vitest、Playwright。導入するときに ADR で決め、バージョンを固定する。まだ入っていないものを、入っている前提で使わない。導入済みの Web 側の依存（Vite、React、Tailwind、shadcn / base-ui、lucide-react、Storybook）は ADR 0003、ルーター（TanStack Router）と fixture・記録のストアの置き場所は ADR 0005。API 側（Hono + Cloudflare Workers、D1 + Drizzle、Better Auth、wrangler）の方式と版は ADR 0004。API の契約（OpenAPI、Hey API、Valibot、TanStack Query の生成）は ADR 0006（`packages/api-contract`）。
+技術スタックの候補：Vite、React 19、Tailwind 4、shadcn（base-ui）、TanStack Query、Valibot、Hono、Drizzle、OpenAPI + Hey API、vitest、Playwright。導入するときに ADR で決め、バージョンを固定する。まだ入っていないものを、入っている前提で使わない。導入済みの Web 側の依存（Vite、React、Tailwind、shadcn / base-ui、lucide-react、Storybook）は ADR 0003、ルーター（TanStack Router）と fixture・記録のストアの置き場所は ADR 0005。API 側（Hono + Cloudflare Workers、D1 + Drizzle、Better Auth、wrangler）の方式と版は ADR 0004。API の契約（OpenAPI、Hey API、Valibot、TanStack Query の生成）は ADR 0006（`packages/api-contract`）。E2E テスト（`@playwright/test`）と Agent 用の `pnpm agent:playwright` の関係は ADR 0008。
 
 ### 未決事項の扱い
 
@@ -65,6 +65,8 @@ PRD §14「クライアントとデータの方式」に従う。規則の正本
 - `pnpm build`（`apps/web` の本番ビルド。CD が Worker の静的アセットに載せるものと同じ）
 - `pnpm design:lint`（DESIGN.md のトークンを公式の linter で検査）
 - `pnpm agent:check`（Skill の整合性）
+
+ブラウザから Worker（Web の配信・API・ローカルの D1）までを通す E2E テストは `pnpm e2e` で、`pnpm check` には入れていない（CI は別の job。ADR 0008）。
 
 コミット時には lefthook がステージした内容を Prettier / ESLint で検査する。パッケージを足すときの約束（`vitest.config.ts` と `typecheck` script を置く、ESLint の設定はルートにだけ書く）とツールの版の決定は `docs/architecture/adr/0001-monorepo-foundation.md`。
 
