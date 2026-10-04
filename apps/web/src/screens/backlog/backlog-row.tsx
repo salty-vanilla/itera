@@ -1,5 +1,5 @@
 import type { BacklogItem, LocalDate } from '@itera/api-contract';
-import { Fragment, useEffect, useRef } from 'react';
+import { Fragment, useLayoutEffect, useRef } from 'react';
 import { Archive, CircleCheck, Ellipsis, Route, Sun } from 'lucide-react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { IconButton } from '@/components/ui/icon-button';
@@ -194,7 +194,7 @@ function BacklogRow({
   focusControl = false,
 }: BacklogRowProps) {
   const circleRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (focusControl) circleRef.current?.focus();
   }, [focusControl]);
   const {

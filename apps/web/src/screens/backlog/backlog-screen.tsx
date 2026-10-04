@@ -1,7 +1,15 @@
 import type { AreaId, BacklogSlice, TaskId } from '@itera/api-contract';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { Pencil } from 'lucide-react';
-import { Fragment, useEffect, useId, useRef, useState, type Ref } from 'react';
+import {
+  Fragment,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type Ref,
+} from 'react';
 import { Button } from '@/components/ui/button';
 import { ReadStatus } from '@/components/read-status';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
@@ -413,7 +421,7 @@ function CompletedLine({
 }) {
   const textId = useId();
   const localRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => localRef.current?.focus(), []);
+  useLayoutEffect(() => localRef.current?.focus(), []);
   return (
     <li data-slot="completed-line">
       <div

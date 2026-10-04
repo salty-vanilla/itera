@@ -1,5 +1,5 @@
 import type { BacklogItem, TaskId } from '@itera/api-contract';
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import type { Read } from '@/api/read-state';
 import { ReadStatus } from '@/components/read-status';
 import {
@@ -50,7 +50,7 @@ function TaskDetailDrawer({
   const contentRef = useRef<HTMLDivElement>(null);
   const waiting = open && backlog.status !== 'ready';
   const waited = useRef(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (waiting) {
       waited.current = true;
       return;

@@ -778,7 +778,8 @@ describe('Today — adding and interrupts', () => {
     expect(lastSnapshot().records.tasks).toHaveLength(before);
     await userEvent.type(field, '請求書を送る');
     await userEvent.click(add);
-    expect(field).toHaveProperty('value', '');
+    // Emptied once the Task is added.
+    await waitFor(() => expect(field).toHaveProperty('value', ''));
     expect(document.activeElement).toBe(field);
     const task = lastSnapshot().records.tasks.find(
       (t) => t.title === '請求書を送る',
@@ -845,10 +846,13 @@ describe('Today — adding and interrupts', () => {
         minutes: 15,
       });
       expect(sprint().dailySelections).toEqual(before);
-      expect(within(region('割り込み')).getByText('来客対応')).toBeTruthy();
-      const toast = screen
-        .getByText('割り込みを記録しました')
-        .closest<HTMLElement>('[data-slot="toast"]')!;
+      // The sheet closes, and the Toast shows, once the note is recorded.
+      const toast = (
+        await screen.findByText('割り込みを記録しました')
+      ).closest<HTMLElement>('[data-slot="toast"]')!;
+      await waitFor(() =>
+        expect(within(region('割り込み')).getByText('来客対応')).toBeTruthy(),
+      );
       await userEvent.click(
         within(toast).getByRole('button', { name: '見る' }),
       );
@@ -898,9 +902,12 @@ describe('Today — editing and deleting interrupts (F38)', () => {
       text: '障害の問い合わせと報告',
       minutes: 60,
     });
-    expect(
-      within(region('割り込み')).getByText('障害の問い合わせと報告'),
-    ).toBeTruthy();
+    // The sheet closes once the note is saved.
+    await waitFor(() =>
+      expect(
+        within(region('割り込み')).getByText('障害の問い合わせと報告'),
+      ).toBeTruthy(),
+    );
     expect(lastSnapshot().records.activities.at(-1)).toMatchObject({
       kind: 'interruptEdited',
     });

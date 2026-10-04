@@ -127,15 +127,31 @@ function AreaEditor({
       ? read.areas.filter((a) => !a.archived || archived.includes(a.id))
       : [];
 
-  /** After a row changes, the focus goes to a control of that row. */
+  /**
+   * After a row changes, the focus goes to a control of that row. The row
+   * is drawn with the operation's answer, which can come a while after the
+   * request: the request waits for the control to be drawn, then for Base
+   * UI (`afterFocusSettles`).
+   */
+  const [focusAsk, setFocusAsk] = useState<{
+    areaId: AreaId;
+    action: 'edit' | 'undo';
+  }>();
   const focusRow = (areaId: AreaId, action: 'edit' | 'undo') =>
-    afterFocusSettles(() =>
-      listRef.current
-        ?.querySelector<HTMLElement>(
-          `[data-area="${areaId}"] [data-action="${action}"]`,
-        )
-        ?.focus(),
-    );
+    setFocusAsk({ areaId, action });
+  useEffect(() => {
+    if (focusAsk === undefined) return undefined;
+    const control = () =>
+      listRef.current?.querySelector<HTMLElement>(
+        `[data-area="${focusAsk.areaId}"] [data-action="${focusAsk.action}"]`,
+      );
+    // Not drawn yet: the read that brings it asks again.
+    if (control() == null) return undefined;
+    return afterFocusSettles(() => {
+      setFocusAsk(undefined);
+      control()?.focus();
+    });
+  }, [focusAsk, read]);
 
   async function add(event: FormEvent) {
     event.preventDefault();

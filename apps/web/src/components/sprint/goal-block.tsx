@@ -1,5 +1,11 @@
 import type { MadeFrom } from '@itera/api-contract/requests';
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import {
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import type { Saved } from '@/api/use-operation';
 import { AreaIndicator, type AreaColor } from '@/components/ui/area-indicator';
 import { Button } from '@/components/ui/button';
@@ -96,7 +102,7 @@ function GoalBlock({
   const backToOpen = useRef<{ goal: string | undefined; saved: boolean }>(
     undefined,
   );
-  useEffect(() => {
+  useLayoutEffect(() => {
     const back = backToOpen.current;
     if (editing || back === undefined) return;
     openRef.current?.focus();

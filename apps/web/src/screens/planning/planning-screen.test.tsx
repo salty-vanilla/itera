@@ -334,7 +334,8 @@ describe('Planning — 選ぶ', () => {
     );
     await userEvent.type(field, '発表資料を見直す');
     await userEvent.click(add);
-    expect(field).toHaveProperty('value', '');
+    // Emptied once the Task is added.
+    await waitFor(() => expect(field).toHaveProperty('value', ''));
     expect(document.activeElement).toBe(field);
     const task = lastSnapshot().records.tasks.find(
       (t) => t.title === '発表資料を見直す',
@@ -448,11 +449,13 @@ describe('Planning — 整える', () => {
     expect(draft().goals.find((g) => g.areaId === ids.area.study)?.text).toBe(
       '英語を毎日読む状態にする',
     );
+    // The form gives way to the Goal once it is saved.
+    const edit = await within(study).findByRole('button', {
+      name: '目標を編集：学習',
+    });
     expect(within(study).getByText('英語を毎日読む状態にする')).toBeTruthy();
 
-    await userEvent.click(
-      within(study).getByRole('button', { name: '目標を編集：学習' }),
-    );
+    await userEvent.click(edit);
     await userEvent.clear(within(study).getByRole('textbox', { name: /目標/ }));
     await userEvent.click(within(study).getByRole('button', { name: '保存' }));
     expect(draft().goals.some((g) => g.areaId === ids.area.study)).toBe(false);
