@@ -3,7 +3,7 @@
 - 状態：採用
 - 日付：2026-09-27
 - 関連：Issue #38、後続 Issue #39〜#42
-- 改訂：2026-09-27（API への移行と状態の置き場所を追記）、2026-09-28（クライアントとデータの方式を追記）、2026-09-30（Sprint を番号で、日を日付で開く検索パラメータ、Issue #90）、2026-10-03（アプリケーション層、プレビューの例外、#45 の分け方、システムの記録、時計、本番ビルドの fixture。Issue #262）、2026-10-03（プレビューの共通のテストケースを仕様ケースと生成ケースに分ける。読み取りの結果と DTO の関係。ADR 0007）、2026-10-03（Web のクライアントとブラウザ内モック。Issue #272）、2026-10-03（何日も開かなかったときのシステムの記録。Issue #271）、2026-10-03（Backlog・Task の詳細・領域を契約に移す。Issue #273）、2026-10-03（サインインと設定。Issue #278）、2026-10-04（最初の設定と空の状態。Issue #279）、2026-10-04（`RecordStore` と `Change` の片づけ、import の境界の最終の形。Issue #277）、2026-10-04（失敗を Problem Details の `type` で分ける。Issue #319）、2026-10-04（書き込みを冪等キーで送り直し、409 を「保存できませんでした」に、保存できたか分からない失敗の Toast に「もう一度保存」。Issue #320）、2026-10-04（値を置き換える書き込みに記録の版を付け、412 を「ほかの端末で変わっていました」で知らせる。編集できる欄が版を覚える。Issue #321）、2026-10-04（操作の可否を読み取りの `capabilities` から出す。プレビューの例外のモジュールから `presentedSuggestion` を外す。Issue #322・#323）、2026-10-04（繰り返しの編集が規則の版を送る。Issue #330）、2026-10-04（編集できる欄が保存の終わりを記録の版で判断する。Issue #343）
+- 改訂：2026-09-27（API への移行と状態の置き場所を追記）、2026-09-28（クライアントとデータの方式を追記）、2026-09-30（Sprint を番号で、日を日付で開く検索パラメータ、Issue #90）、2026-10-03（アプリケーション層、プレビューの例外、#45 の分け方、システムの記録、時計、本番ビルドの fixture。Issue #262）、2026-10-03（プレビューの共通のテストケースを仕様ケースと生成ケースに分ける。読み取りの結果と DTO の関係。ADR 0007）、2026-10-03（Web のクライアントとブラウザ内モック。Issue #272）、2026-10-03（何日も開かなかったときのシステムの記録。Issue #271）、2026-10-03（Backlog・Task の詳細・領域を契約に移す。Issue #273）、2026-10-03（サインインと設定。Issue #278）、2026-10-04（最初の設定と空の状態。Issue #279）、2026-10-04（`RecordStore` と `Change` の片づけ、import の境界の最終の形。Issue #277）、2026-10-04（失敗を Problem Details の `type` で分ける。Issue #319）、2026-10-04（書き込みを冪等キーで送り直し、409 を「保存できませんでした」に、保存できたか分からない失敗の Toast に「もう一度保存」。Issue #320）、2026-10-04（値を置き換える書き込みに記録の版を付け、412 を「ほかの端末で変わっていました」で知らせる。編集できる欄が版を覚える。Issue #321）、2026-10-04（操作の可否を読み取りの `capabilities` から出す。プレビューの例外のモジュールから `presentedSuggestion` を外す。Issue #322・#323）、2026-10-04（繰り返しの編集が規則の版を送る。Issue #330）、2026-10-04（編集できる欄が保存の終わりを記録の版で判断する。Issue #343）、2026-10-05（本番のコードは要求を送る側の入口 `@itera/api-contract/sending` だけを使い、本番ビルドから Valibot を外して検査に足す。Issue #356）
 
 ## 背景
 
@@ -85,7 +85,7 @@ fixture の段階（#38〜#42）では、画面が `RecordStore` と `Change` �
   - 画面のフックは、#273〜#276 で契約に移すまで、このパッケージを `RecordStore` 経由で使う（上の「`packages/application` を import してよいのはモックだけ」の検査は、画面を移し終えてから入れる）。
 - **プレビューの例外（D2、2026-10-02 オーナー決定）**：プレビューは、当面 `apps/web` が `packages/domain` の関数をそのまま使って計算する。Web での実装し直しと、共通のテストケース（PRD §14、#45 の範囲 2）は、iOS に着手するときに行う。
   - 2026-10-03 の時点で画面が使う値の関数は、`boundValue`・`presentedSuggestion` と日付の関数（`parseLocalDate`・`toLocalDate`・`addDays`・`dayOfWeek`）だけ。
-  - `apps/web` のうち `packages/domain` を import してよいのは、この例外をまとめた 1 つのモジュールとブラウザ内モックだけ。`packages/application` を import してよいのはモックだけ。型だけの import も同じ（画面は契約の型を使う）。操作の名前と入力の型は `@itera/api-contract/requests` から取る（元は application の型。ADR 0007「依存の向き」の例外、#295）。ESLint の `no-restricted-imports` で検査する。
+  - `apps/web` のうち `packages/domain` を import してよいのは、この例外をまとめた 1 つのモジュールとブラウザ内モックだけ。`packages/application` を import してよいのはモックだけ。型だけの import も同じ（画面は契約の型を使う）。操作の名前と入力の型は `@itera/api-contract/sending` から取る（元は application の型。ADR 0007「依存の向き」の例外、#295）。ESLint の `no-restricted-imports` で検査する。
   - 戻す条件：iOS に着手するとき。
 - **#45 の分け方**：#45 の範囲を、#264（アプリケーション層）、#265（契約）、#272・#273・#274・#275・#276・#277（画面を契約に移す）に分けた。範囲 2 のプレビューの一覧と共通のテストケースは、上の例外のとおり iOS に回す。
 - **システムの記録**：`useSystemDay` の処理（終了日を過ぎた Sprint を Review にする、その日の始まり）は、サーバーが操作と読み取りの前に、その時点まで進める（ADR 0004「操作と読み取りの処理」、#271）。クライアントの operation にしない。
@@ -106,7 +106,7 @@ fixture の段階（#38〜#42）では、画面が `RecordStore` と `Change` �
 | --- | --- | --- | --- |
 | 取得結果のキャッシュ | `@tanstack/react-query` | 5.104.1 | `apps/web` の dependencies。ADR 0006 と同じ版 |
 | 契約のクライアント | `@itera/api-contract`（`/client`・`/create-client`・`/react-query`） | workspace | `apps/web` の dependencies |
-| モックの入力の検証 | `valibot` | 1.5.0 | `apps/web` の devDependencies（モックだけが使い、本番ビルドに入らない）。ADR 0006 と同じ版 |
+| モックの入力の検証 | `valibot` | 1.5.0 | `apps/web` の devDependencies（モックだけが使い、本番ビルドに入らない。下の「本番ビルド」の検査で確かめる、#356）。ADR 0006 と同じ版 |
 
 使い方は 2026-10-03 に Context7 で TanStack Query v5（`QueryCache`・`MutationCache` の全体のコールバック、`invalidateQueries`）と Vite（`server.proxy`、`--mode`）の文書を確かめた。
 
@@ -145,8 +145,8 @@ fixture の段階（#38〜#42）では、画面が `RecordStore` と `Change` �
   - 分け方は `use-operation.test.tsx` の「a failed operation」が、`type`・ステータスごとに Toast と読み直しの有無で確かめる。
 - 未認証（401）は、読み取りでも操作でも、サインインの画面へ送る（`apps/web/src/auth/sign-in.ts`。`/sign-in?redirect=<元の画面>`、履歴は置き換える）。Toast は出さない。画面と戻り先の扱いは下の「サインインと設定」（#278）。
 - 読み取りは、サーバーと通信の失敗（500 など）と版の衝突のときだけ 1 回まで取り直す。受け付けられない要求と未認証は取り直さない。操作は、上の冪等キーでの送り直しだけをする。
-- 値を置き換える操作（契約の PATCH と規則の PUT。`@itera/api-contract/requests` の `ConditionalName`）は、`run(<入力>, <読んだ記録>)` と、記録をどの版から変えるか（`MadeFrom`：読み取りの `etag`、まだない目標と規則のない Task は `{ none: true }`）を渡さないと型の検査で失敗する（ADR 0006「記録ごとの版」、#321）。`useOperation` が `If-Match`（`If-None-Match: *`）を付ける。通ったら応答の `ETag` を、その資源（経路）の「自分の書き込みで進んだ版」として覚え（`ownVersions`。クライアントごと）、同じ版から作った次の書き込みは進んだ版で送る。`ETag` のない成功は記録を消した書き込み（目標を空にした）で、その後は「記録なし」（`If-None-Match: *`）から作る（目標を作って消してまた作るとき、自分の書き込みで 412 にならないように）。規則は外す書き込みが同じ経路の DELETE（`endRecurrence`。条件を送らない）なので、DELETE が通ったらその資源の覚えた版をすべて捨て、次の「記録なし」からの書き込みは `If-None-Match: *` で送る（規則を作ってやめてまた作るとき、#330。資源の鍵をメソッドを含まない経路にしたのは、PUT と DELETE が同じ資源の版を分けるため）。同じ形の 2 つの欄を続けて保存するとき、1 つ目の保存の読み直しを待たずに 2 つ目を送るので、そうしないと 2 つ目が自分の書き込みで 412 になる。ほかの端末の変更では進めない（それを 412 で知るため）。送り直し（冪等キー）は同じ版で送る。
-- 操作は `useOperation('<操作の名前>')` と `run(<入力>)`（`apps/web/src/api/use-operation.ts`）で呼ぶ。名前と入力は `packages/application` の操作のもので、HTTP のメソッドと経路への載せ方は `@itera/api-contract/requests` が決める（ADR 0006「経路の形」、#295。2026-10-03 改訂。それまでは生成した mutation の options を渡していた）。送信中は同じ操作を重ねて送らない（押し直しは送らずに失敗として返す。自動の送り直しの間も送信中）。`pending`（送信中。操作を受け付けない）と `loading`（送信中が 300ms 続いた。DESIGN.md の Spinner のとおり、Button・IconButton の `loading` でスピナーと文言を出す）を返す。送信中の見た目は DESIGN.md Components › Button・IconButton と docs/design/foundations.md の Loading に従い、各画面の Issue で付ける。
+- 値を置き換える操作（契約の PATCH と規則の PUT。`@itera/api-contract/sending` の `ConditionalName`）は、`run(<入力>, <読んだ記録>)` と、記録をどの版から変えるか（`MadeFrom`：読み取りの `etag`、まだない目標と規則のない Task は `{ none: true }`）を渡さないと型の検査で失敗する（ADR 0006「記録ごとの版」、#321）。`useOperation` が `If-Match`（`If-None-Match: *`）を付ける。通ったら応答の `ETag` を、その資源（経路）の「自分の書き込みで進んだ版」として覚え（`ownVersions`。クライアントごと）、同じ版から作った次の書き込みは進んだ版で送る。`ETag` のない成功は記録を消した書き込み（目標を空にした）で、その後は「記録なし」（`If-None-Match: *`）から作る（目標を作って消してまた作るとき、自分の書き込みで 412 にならないように）。規則は外す書き込みが同じ経路の DELETE（`endRecurrence`。条件を送らない）なので、DELETE が通ったらその資源の覚えた版をすべて捨て、次の「記録なし」からの書き込みは `If-None-Match: *` で送る（規則を作ってやめてまた作るとき、#330。資源の鍵をメソッドを含まない経路にしたのは、PUT と DELETE が同じ資源の版を分けるため）。同じ形の 2 つの欄を続けて保存するとき、1 つ目の保存の読み直しを待たずに 2 つ目を送るので、そうしないと 2 つ目が自分の書き込みで 412 になる。ほかの端末の変更では進めない（それを 412 で知るため）。送り直し（冪等キー）は同じ版で送る。
+- 操作は `useOperation('<操作の名前>')` と `run(<入力>)`（`apps/web/src/api/use-operation.ts`）で呼ぶ。名前と入力は `packages/application` の操作のもので、HTTP のメソッドと経路への載せ方は `@itera/api-contract/sending` が決める（ADR 0006「経路の形」、#295。2026-10-03 改訂。それまでは生成した mutation の options を渡していた。2026-10-05 に `/requests` から送る側を分けた、#356）。送信中は同じ操作を重ねて送らない（押し直しは送らずに失敗として返す。自動の送り直しの間も送信中）。`pending`（送信中。操作を受け付けない）と `loading`（送信中が 300ms 続いた。DESIGN.md の Spinner のとおり、Button・IconButton の `loading` でスピナーと文言を出す）を返す。送信中の見た目は DESIGN.md Components › Button・IconButton と docs/design/foundations.md の Loading に従い、各画面の Issue で付ける。
 
 #### ブラウザ内モック
 
@@ -160,7 +160,9 @@ fixture の段階（#38〜#42）では、画面が `RecordStore` と `Change` �
 #### 本番ビルド
 
 - モックは `import.meta.env.DEV` が真で `--mode api` でないときだけ `import()` する（`apps/web/src/app/data-source.ts`。条件はここに 1 つだけ書き、ルーターなどはその結果を使う）。本番ビルドではこの分岐が消え、モックと fixture のチャンクが出力に入らない。条件をほかのモジュールの定数にして参照すると、Vite（Rolldown）は分岐を消さずチャンクが残る（2026-10-03 に確かめた。下の検査が捕まえる）ので、条件は `import()` の隣に直接書く。
-- `pnpm build`（`apps/web` の `vite build && node scripts/check-build.mjs`）が、出力にモックの応答のヘッダー名と fixture の状態の ID がないことを確かめる。あれば失敗する（CI と CD も同じコマンド）。
+- Valibot も本番ビルドに入れない（2026-10-05 オーナー決定、Issue #356）。要求をスキーマで読む・確かめるのはサーバーとモックで、Web は要求を送るだけで、応答も実行時に検証しない（上の「エラーと送信中」）。そこで本番のコードは、契約の入口のうち Valibot とスキーマを import しない `@itera/api-contract/sending`（操作の要求、面のメソッドと経路、書き込みのヘッダー。ADR 0006「経路の形」）を使い、要求を読む側も持つ `@itera/api-contract/requests` はモックとそのテストだけが使う。`@itera/api-contract`（型とスキーマ）からは型だけを import する（型だけの import は出力に残らない。値を import するとスキーマと Valibot が入る）。
+  - 分ける前の 2026-10-05 の入口のチャンクは 1,027.00 kB（gzip 309.91 kB）、分けた後は 1,009.44 kB（gzip 305.65 kB）。
+- `pnpm build`（`apps/web` の `vite build && node scripts/check-build.mjs`）が、出力にモックの応答のヘッダー名、fixture の状態の ID、Valibot（どのスキーマも持つ Standard Schema の `vendor` の値 `valibot`）がないことを確かめる。あれば失敗する（CI と CD も同じコマンド）。
 - 移行の途中、まだ移していない画面は、本番ビルドと `--mode api` では開発者向けの短い表示（`NotOnContract`）を出した（2026-10-03 オーナー決定、Issue #272 のコメント）。#277 で、`NotOnContract` と `NotOnContractError` を消した。
 
 #### import の境界

@@ -1,5 +1,5 @@
 import * as sdk from '@itera/api-contract/client';
-import type { SettingsBody } from '@itera/api-contract/requests';
+import type { SettingsBody } from '@itera/api-contract/sending';
 import { useSend, written } from './use-operation';
 
 /**

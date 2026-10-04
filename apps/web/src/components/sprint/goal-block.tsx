@@ -1,4 +1,4 @@
-import type { MadeFrom } from '@itera/api-contract/requests';
+import type { MadeFrom } from '@itera/api-contract/sending';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import type { Saved } from '@/api/use-operation';
 import { AreaIndicator, type AreaColor } from '@/components/ui/area-indicator';

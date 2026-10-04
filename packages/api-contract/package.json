@@ -10,6 +10,7 @@
     "./problems": "./src/problems.ts",
     "./react-query": "./src/react-query.ts",
     "./requests": "./src/requests.ts",
+    "./sending": "./src/sending.ts",
     "./testing": "./src/testing.ts"
   },
   "scripts": {

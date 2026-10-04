@@ -11,7 +11,7 @@ import type {
 import type {
   TaskAttributeUpdate,
   MadeFrom,
-} from '@itera/api-contract/requests';
+} from '@itera/api-contract/sending';
 import { savedOf, useOperation, type Saved } from '@/api/use-operation';
 
 // The person's operations on Tasks, one named function each (ADR 0005 API

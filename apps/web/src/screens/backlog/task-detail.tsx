@@ -9,7 +9,7 @@ import type {
 import type {
   MadeFrom,
   TaskAttributeUpdate,
-} from '@itera/api-contract/requests';
+} from '@itera/api-contract/sending';
 import { Link, useLocation } from '@tanstack/react-router';
 import { Check, ChevronDown, ChevronRight } from 'lucide-react';
 import {

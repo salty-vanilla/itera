@@ -1,5 +1,5 @@
 import type { AreaId } from '@itera/api-contract';
-import type { MadeFrom } from '@itera/api-contract/requests';
+import type { MadeFrom } from '@itera/api-contract/sending';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import type { Saved } from '@/api/use-operation';
 import { AreaMark } from '@/components/ui/area-indicator';

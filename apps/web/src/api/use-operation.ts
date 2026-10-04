@@ -4,13 +4,13 @@ import {
   conditionHeaders,
   idempotencyKeyHeaders,
   requestOf,
-  surfaces,
+  routes,
   type ConditionalName,
   type MadeFrom,
   type OperationName,
   type PlainInput,
   type PlainOutput,
-} from '@itera/api-contract/requests';
+} from '@itera/api-contract/sending';
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useId, useRef } from 'react';
 import { useCloseStaleToast, useToast } from '@/components/ui/toast';
@@ -329,7 +329,7 @@ async function sendOperation<N extends OperationName>(
     throwOnError: false,
   });
   const data = (await written(sent)) as PlainOutput<N>;
-  if (surfaces[operationId].method === 'DELETE') {
+  if (routes[operationId].method === 'DELETE') {
     ownVersions(client).removed(resource);
   }
   if (over === undefined || made === undefined) return { data };
@@ -345,10 +345,10 @@ async function sendOperation<N extends OperationName>(
  * of a Task's rule and its DELETE, #330) share its versions.
  */
 function resourceOf(
-  operationId: keyof typeof surfaces,
+  operationId: keyof typeof routes,
   parts: { readonly path?: unknown },
 ): string {
-  const { url } = surfaces[operationId];
+  const { url } = routes[operationId];
   const values = (parts.path ?? {}) as Record<string, string>;
   return url.replace(/\{(\w+)\}/g, (_, name: string) => values[name] ?? '');
 }

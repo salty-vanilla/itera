@@ -4,7 +4,7 @@ import type {
   LocalDate,
   RecurrencePattern,
 } from '@itera/api-contract';
-import type { MadeFrom } from '@itera/api-contract/requests';
+import type { MadeFrom } from '@itera/api-contract/sending';
 import {
   useId,
   useImperativeHandle,

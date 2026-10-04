@@ -1,5 +1,5 @@
 import { createClient, createConfig } from '@itera/api-contract/create-client';
-import { idempotencyKeyHeaders } from '@itera/api-contract/requests';
+import { idempotencyKeyHeaders } from '@itera/api-contract/sending';
 import type { RecordStore } from '@itera/application';
 import { waitFor } from '@testing-library/react';
 import { apiBaseUrl } from '@/api/create-api';
