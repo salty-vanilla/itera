@@ -2,8 +2,8 @@
 
 - 状態：採用
 - 日付：2026-09-27
-- 関連：Issue #25、後続 Issue #26、#30、#32、#121、#262、#263
-- 改訂：2026-09-30（認証を WorkOS AuthKit から Better Auth に変更。Issue #121）、2026-10-03（デプロイの方式、API の経路を `/api` の下に、登録を許可の一覧で絞る。Issue #32）、2026-10-03（記録のテーブル、操作と読み取りの処理、ID の形式、同時の書き込み、CSRF、Web と API の配信、使い始めの間のスキーマの変更。Issue #262）、2026-10-03（記録のテーブルの列・制約・index、読み込みと書き込み、版の確かめ方。Issue #263）、2026-10-03（Web の配信の実装とキャッシュ。Issue #280）、2026-10-03（操作と読み取りの処理の実装、Better Auth の ID、依存に Origin と時計。Issue #266）、2026-10-03（日付が変わったときの処理、追いついた日、読み取りの衝突のやり直し。Issue #271）、2026-10-04（書き込みの冪等キー。記録のテーブル、操作と読み取りの処理、同時の書き込みの既知の限界をなくす。Issue #320）、2026-10-04（記録の行ごとの版。記録のテーブルの `revision` 列と冪等キーの `etag` 列、操作と読み取りの処理の条件の確かめと `ETag`、同時の書き込み。Issue #321）、2026-10-04（繰り返しの規則の版を、規則・版・曜日の行の全体にする。Issue #330）、2026-10-05（スキーマとマイグレーションの食い違いの検査。Issue #366）
+- 関連：Issue #25、後続 Issue #26、#30、#32、#121、#262、#263、#368
+- 改訂：2026-09-30（認証を WorkOS AuthKit から Better Auth に変更。Issue #121）、2026-10-03（デプロイの方式、API の経路を `/api` の下に、登録を許可の一覧で絞る。Issue #32）、2026-10-03（記録のテーブル、操作と読み取りの処理、ID の形式、同時の書き込み、CSRF、Web と API の配信、使い始めの間のスキーマの変更。Issue #262）、2026-10-03（記録のテーブルの列・制約・index、読み込みと書き込み、版の確かめ方。Issue #263）、2026-10-03（Web の配信の実装とキャッシュ。Issue #280）、2026-10-03（操作と読み取りの処理の実装、Better Auth の ID、依存に Origin と時計。Issue #266）、2026-10-03（日付が変わったときの処理、追いついた日、読み取りの衝突のやり直し。Issue #271）、2026-10-04（書き込みの冪等キー。記録のテーブル、操作と読み取りの処理、同時の書き込みの既知の限界をなくす。Issue #320）、2026-10-04（記録の行ごとの版。記録のテーブルの `revision` 列と冪等キーの `etag` 列、操作と読み取りの処理の条件の確かめと `ETag`、同時の書き込み。Issue #321）、2026-10-04（繰り返しの規則の版を、規則・版・曜日の行の全体にする。Issue #330）、2026-10-05（スキーマとマイグレーションの食い違いの検査。Issue #366）、2026-10-05（依存の脆弱性の確かめ方と audit の記録。Issue #368）
 
 ## 背景
 
@@ -73,9 +73,34 @@ Better Auth の文書（Context7 と better-auth.com）と、固定した 1.7.6 
 
 - `better-auth` 1.7.6：影響する範囲は、1 件を除いてすべて 1.7.6 より前で修正済み。残る GHSA-fmh4-wcc4-5jm3（組織の招待を未検証のアカウントが受けられる。1.6.14 以降は設定で回避する）は `organization` プラグインのもので、使っていないので影響しない。
 - `@better-auth/passkey` 1.7.6：GHSA-4vcf-q4xf-f48m（他人のパスキーを削除できる）は 1.4.0 で修正済み。
-- `pnpm audit --prod` は、`better-auth` の任意の peer である drizzle-kit が使う esbuild（0.24.2 以下、開発サーバーの問題）を 1 件報告する。drizzle-kit は開発時だけ使い、Worker のバンドルには入らない。
+- `pnpm audit --prod` の記録は、2026-10-05 に確かめ直した（下の「依存の脆弱性の確かめ方」）。2026-09-30 の時点では esbuild の 1 件だけを書いた。braces（GHSA-vfj7-8cjw-p6xm）は 2026-10-02 に GitHub が審査済みのアドバイザリにしたもので、2026-09-30 の記録より後。
 
 脆弱性への対応は自分で負う（Issue #121）。プラグインは最小にし、版は完全一致で固定する。更新するときは、アドバイザリと変更履歴を確かめてから版を上げ、テスト（スキーマの照合を含む）を通す。
+
+### 依存の脆弱性の確かめ方（2026-10-05、Issue #368）
+
+版を完全一致で固定しているので、修正は版を上げるまで入らない。新しいアドバイザリに気づく仕組みと、今の指摘の扱いを次のとおり決めた。
+
+**気づく仕組み**
+
+- GitHub の Dependabot のアラートとセキュリティ更新を、リポジトリの設定で有効にした（2026-10-05）。アラートは `pnpm-lock.yaml` に対して出る。セキュリティ更新の PR は main 向けに届く。
+- `.github/dependabot.yml` は置かない。GitHub の文書によると、このファイルは任意で、なくても設定でセキュリティ更新を有効にしていれば PR は作られる。ファイルで足せるのはバージョン更新と PR の調整で、アラートは設定画面で決まりファイルには書かない。セキュリティ以外の版の更新を自動の PR に任せない方針（版の固定と ADR の版の表を人が更新する）は、ファイルがなければそのまま保たれる。
+- CI に `pnpm audit` は足さない。PR ごとに回すと、関係のない PR が新しいアドバイザリで落ちる。
+- Dependabot の PR も、ほかの版上げと同じく、アドバイザリと変更履歴を確かめ、ADR の版の表が変わるなら直し、CI を通してからマージする。
+- アラートの scope は `runtime` と表示されるが、開発時だけ使う依存（`devDependencies` の先）も含む。配信物に入るかどうかは、経路と配信物で確かめる。
+
+**今の指摘（2026-10-05）**
+
+`pnpm audit --prod` は braces と esbuild の 2 件、`pnpm audit`（開発時の依存を含む）は 15 件（undici 10、js-yaml 3、braces 1、esbuild 1）を報告する。Dependabot の開いているアラートも同じ 15 件（`tooling/agents/pnpm-lock.yaml` の braces は開発専用で自動で却下された）。配信物は `apps/web/dist` と、`wrangler deploy --dry-run` で作った Worker のバンドル。どちらにも下の表の依存は入っていない（`braces`・`micromatch`・`fast-glob`・`esbuild`・`undici`・`js-yaml`・`miniflare` の名前で、出力のファイルを検索して確かめた）。
+
+| 指摘 | 経路 | 影響 | 扱い |
+| --- | --- | --- | --- |
+| braces（GHSA-vfj7-8cjw-p6xm、high、3.0.3 以下、修正版なし） | apps/web > shadcn > fast-glob > micromatch > braces（shadcn の ts-morph 経由もある） | 深く入れ子にしたパターンを braces に渡すと、Node のプロセスがスタックを使い果たして落ちる（DoS）。`shadcn` は CLI で、build が読むのは `shadcn/tailwind.css`（CSS だけ）。動くのは開発者の端末の CLI だけで、配信する Worker では動かない | **受け入れる**。修正版が出れば Dependabot の PR が届く。`shadcn` を apps/web の dependencies に置く理由は ADR 0003 |
+| esbuild（GHSA-67mh-4wv8-2f99、moderate、0.24.2 以下。修正は 0.25.0） | services/api の devDependencies の drizzle-kit > @esbuild-kit/esm-loader > @esbuild-kit/core-utils > esbuild 0.18.20（`better-auth` の任意の peer 経由でも入る） | 問題は esbuild の開発サーバー（`--serve`）。drizzle-kit は設定ファイルを読む loader として esbuild を使うだけで、Itera が使うのは `drizzle-kit generate`（`db:generate` とスキーマの照合）だけ。開発サーバーは起動しない | **受け入れる**。drizzle-kit が新しい esbuild に移れば解消する |
+| undici（10 件、high 2・moderate 5・low 3、7.29.0 以下。修正は 7.29.1） | services/api の devDependencies の wrangler > miniflare > undici | 配信物には入らない。ただし CD（`deploy.yml`）は wrangler に Cloudflare の API トークンを渡して動かす。TLS の検証を回避できる指摘（high）が含まれ、wrangler のどの通信に当たるかは確かめていない | **未対応**。wrangler の更新（miniflare の undici が 7.29.1 以上になる版）で解消する。この Issue の範囲外 |
+| js-yaml（3 件、high、4.2.0。修正は 4.3.2） | packages/api-contract の devDependencies の @hey-api/openapi-ts > @hey-api/json-schema-ref-parser > js-yaml | 細工した YAML で CPU を使い切る（DoS）。OpenAPI から型を作るときに手元で動き、入力は Itera の OpenAPI の文書だけ | **未対応**。@hey-api/openapi-ts の更新で解消する。この Issue の範囲外 |
+
+次の確かめ直しの目安は、Dependabot の PR か新しいアラートが届いたときと、依存の版を上げたとき。
 
 ### 導入した依存と版（Issue #26、#121）
 
@@ -337,7 +362,7 @@ Issue #121 は「Better Auth は原子的な処理に `batch()` を使う」を�
 ## 既知の制約
 
 - D1 は対話型のトランザクションを持たない（上の「トランザクション」）。Better Auth 自身の複数行の書き込みも原子的ではない（確認事項の 2）。
-- 脆弱性への対応を自分で負う。版を固定しているので、修正は版を上げるまで入らない。
+- 脆弱性への対応を自分で負う。版を固定しているので、修正は版を上げるまで入らない。気づく仕組みは Dependabot のアラートとセキュリティ更新で、CI の audit はない。修正版のない braces は、配信物に入らないので受け入れている（「依存の脆弱性の確かめ方」）。
 - Google との実際の往復（同意画面からコールバックまで）は、Google の OAuth クライアントを作るまで確かめていない。テストで確かめたのは、Google への遷移先（client ID とリダイレクト URI）の組み立てと、Google のトークンのエンドポイントを差し替えたうえでのコールバックの処理まで。
 - Google の ID トークン（氏名・メールなどを含む、Google が署名した本人確認）は暗号化されずにアカウントの行に残る（1.7.6 の `encryptOAuthTokens` の対象外）。Google の API を呼ぶ資格ではなく、Itera の ID トークンでのサインイン（`/sign-in/social` に `idToken` を渡す）も発行から 1 時間までしか受け付けない。
 - パスキーは本人確認（PIN・生体認証）を必須にしない。プラグインの中で `userVerification: "preferred"` に固定されている（1.7.6）。
