@@ -183,7 +183,7 @@ function BacklogPane({
             {candidates.recurring.map(({ task, occurrences }) => (
               <li
                 key={task.id}
-                className="group/row relative flex flex-col gap-1 border-b border-border-soft py-2"
+                className="group/row relative flex flex-col gap-1 border-b border-border-soft -mx-2 px-2 py-2"
                 {...rowKeyHandlers({
                   onEstimate: () => onEstimateTask(task.id),
                 })}
@@ -413,7 +413,7 @@ function CandidateItem({
     <li
       data-chosen={chosen || undefined}
       className={cn(
-        'group/row relative flex min-h-row-touch items-center gap-2 border-b border-border-soft py-1 medium:min-h-row-task',
+        'group/row relative -mx-2 flex min-h-row-touch items-center gap-2 border-b border-border-soft px-2 py-1 medium:min-h-row-task',
         chosen && 'bg-here-subtle',
       )}
       {...rowKeyHandlers({ onEstimate })}
