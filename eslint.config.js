@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import js from '@eslint/js';
 import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
@@ -132,6 +133,13 @@ const WEB_NOT_SCREENS = [
   'apps/web/src/mock/**',
 ];
 
+// Skills taken from upstream stay byte for byte and are not linted; the
+// skills authored in this repository (localSkills in
+// tooling/agents/sources.json) are.
+const localSkills = JSON.parse(
+  readFileSync(new URL('tooling/agents/sources.json', import.meta.url), 'utf8'),
+).localSkills.map((skill) => `!${skill.destination}`);
+
 // Keep ESLint configuration in this one file. ESLint 10 looks up the nearest
 // eslint.config.* per directory, so a nested config would replace this one
 // for its subtree instead of extending it. Add package rules here with `files`.
@@ -146,7 +154,8 @@ export default defineConfig(
       '.direnv/**',
       '.playwright/**',
       '.playwright-cli/**',
-      '.agents/skills/**',
+      '.agents/skills/*',
+      ...localSkills,
       'apps/web/storybook-static/**',
       'services/api/worker-configuration.d.ts',
       // Generated from the contract (ADR 0006); checked by contract:check.
@@ -159,8 +168,9 @@ export default defineConfig(
   js.configs.recommended,
   tseslint.configs.recommended,
   {
-    // Repository tooling, hooks and root config files run on Node.
-    files: ['tooling/**', '.claude/**', '*.{js,mjs,ts}'],
+    // Repository tooling, hooks, skill scripts and root config files run on
+    // Node.
+    files: ['tooling/**', '.claude/**', '.agents/**', '*.{js,mjs,ts}'],
     languageOptions: { globals: globals.node },
   },
   {
