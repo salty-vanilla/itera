@@ -335,6 +335,21 @@ describe('a Goal, which a write makes when there is none (#321)', () => {
     );
   });
 
+  it('answers 404 for an Area the person does not have, before 428, and makes no Goal', async () => {
+    const { app, goal } = await setup();
+    const before = await state(app);
+    const area = createIdSource((bytes) => crypto.getRandomValues(bytes)).newId(
+      'Area',
+      instant('2026-10-03T00:00:00.000Z'),
+    );
+    const response = await send(app, 'setGoal', { ...goal, areaId: area });
+    expect(await problemIn(response)).toMatchObject({
+      status: 404,
+      type: '/problems/not-found',
+    });
+    expect(await state(app)).toEqual(before);
+  });
+
   it('is written over with the etag the Sprint read gives it', async () => {
     const { app, goal } = await setup();
     await send(app, 'setGoal', goal, { 'If-None-Match': '*' });

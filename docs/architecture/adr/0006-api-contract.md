@@ -257,7 +257,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 | `PATCH /sprints/{sprintId}/criterion-use` | `decideCriterion` | 同名 | CriterionUse |
 | `PATCH /planning-criteria/{criterionId}` | `setDraftPolicy` | 同名 | PlanningCriterion |
 
-- **目標**：`updateGoal` は目標がないとき目標を作る（domain の `setGoalText`）。ない記録に etag はないので、`If-Match` は必須にせず、目標があれば `If-Match`、なければ `If-None-Match: *`（RFC 9110 §13.1.2。ないと思って作る要求が、ほかの端末が先に作った目標を上書きしない）を送る。どちらもなければ 428（2026-10-04 司令塔の判断）。`OptionalIfMatchHeader` と `IfNoneMatchHeader`。
+- **目標**：`updateGoal` は目標がないとき目標を作る（domain の `setGoalText`）。ない記録に etag はないので、`If-Match` は必須にせず、目標があれば `If-Match`、なければ `If-None-Match: *`（RFC 9110 §13.1.2。ないと思って作る要求が、ほかの端末が先に作った目標を上書きしない）を送る。どちらもなければ 428（2026-10-04 司令塔の判断）。利用者の持たない領域の目標は、条件を比べずに 404（`setGoal` が領域を確かめる。#321 で足した。それまでは domain が領域を確かめず、持たない領域の目標の行ができた）。`OptionalIfMatchHeader` と `IfNoneMatchHeader`。
 - **対象にしないもの**と戻す条件（2026-10-04 司令塔の判断。オーナーの確認を待つ）：
   - 状態の遷移（`POST …/<動詞>`）と取り消し（`undo-…`）：domain が記録の今の状態で判定するので、同じ記録の無関係な項目が変わっただけでは断らない。戻す条件：遷移の結果が状態以外の項目に左右される操作ができたとき。`undoAdoption` も取り消しの遷移で、提案の状態で domain が守る。
   - `setRecurrence`（`PUT /tasks/{taskId}/recurrence`）：繰り返しの値は版の行と曜日の行にあり、規則の行そのものは変わらない。規則がないときは作る。規則の集約の etag（版と曜日の行の最大）と `If-None-Match: *` の形で、後続の Issue にする（司令塔が起票する）。それまでは、2 つの端末で繰り返しを書き換えると、後に保存した方が残る。

@@ -54,9 +54,13 @@ function onSprint(
 
 /** Goal の文を書く・変える: while planned, or after confirm (F16). */
 export const setGoal = (sprintId: SprintId, areaId: AreaId, text: string) =>
-  onSprint(sprintId, ['planning', 'active'], (sprint, ctx) =>
-    setGoalText(sprint, { areaId, text }, ctx),
-  );
+  onSprint(sprintId, ['planning', 'active'], (sprint, ctx, records) => {
+    // A Goal is for one of the person's Areas: another ID is not found
+    // (404), not a Goal for an Area no one has (#321).
+    const area = find(records.areas, areaId, 'Area');
+    if (!area.ok) return area;
+    return setGoalText(sprint, { areaId, text }, ctx);
+  });
 
 /** 使える時間: while planned, or after confirm (the planned hours stay). */
 export const setHours = (sprintId: SprintId, hours: number | null) =>
