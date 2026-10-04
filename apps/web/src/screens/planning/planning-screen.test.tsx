@@ -127,6 +127,18 @@ describe('Planning — the stuck Capacity line (#152)', () => {
       ),
     ).toEqual(['計画の合計', '15時間15分〜17時間15分 ·', '使える時間は未入力']);
   });
+
+  it('lets 時間の見通しを開く drop under the total only where its widest piece and the mark do not fit a line (#357)', async () => {
+    await renderAt('/sprint?fixture=planning-shape&stage=shape');
+    // jsdom has no layout; the 320px and 390px measures are in the PR.
+    // Without the wrap the mark (shrink-0) runs 9px past the edge of main at
+    // 320px; the total starts from zero width (basis-0), so that the mark
+    // drops only when the total's narrowest width does not leave room for it,
+    // not when the total merely runs to two lines (390px).
+    const line = screen.getByRole('button', { name: /時間の見通しを開く/ });
+    expect(line.className).toContain('flex-wrap');
+    expect(line.firstElementChild?.className).toContain('basis-0');
+  });
 });
 
 describe('Planning — Backlog のタイトル (#158)', () => {
