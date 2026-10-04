@@ -16,7 +16,7 @@ import { getSprintRetroOptions } from '@itera/api-contract/react-query';
 import { useQuery } from '@tanstack/react-query';
 import { useApiClient } from '@/api/api-provider';
 import { useRead, type Read } from '@/api/read-state';
-import { useOperation } from '@/api/use-operation';
+import { savedOf, useOperation, type Saved } from '@/api/use-operation';
 import { retroScreenData, type RetroData } from './retro-view';
 
 /**
@@ -101,10 +101,10 @@ export function useRetroActions({ sprintId, draftId }: RetroTarget) {
         : await unpinFact.run({ sprintId, pin })
       ).ok,
     /** `from`: the Retro as read when the words were typed (#321). */
-    setReflection: async (text: string, from: MadeFrom) =>
-      (await setReflection.run({ sprintId, text }, from)).ok,
-    setImprovement: async (text: string, from: MadeFrom) =>
-      (await setImprovement.run({ sprintId, text }, from)).ok,
+    setReflection: async (text: string, from: MadeFrom): Promise<Saved> =>
+      savedOf(await setReflection.run({ sprintId, text }, from)),
+    setImprovement: async (text: string, from: MadeFrom): Promise<Saved> =>
+      savedOf(await setImprovement.run({ sprintId, text }, from)),
     draftCriterion: async (policy: CriterionPolicy) =>
       (await draftCriterion.run({ sprintId, policy })).ok,
     /** `from`: the draft criterion as read (#321). */

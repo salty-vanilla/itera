@@ -1,5 +1,6 @@
 import type { MadeFrom } from '@itera/api-contract/requests';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import type { Saved } from '@/api/use-operation';
 import { AreaIndicator, type AreaColor } from '@/components/ui/area-indicator';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
@@ -38,11 +39,12 @@ type GoalBlockProps = {
   /** The heading level; the screen's h1 is followed by h2 by default. */
   level?: 2 | 3 | undefined;
   /**
-   * Saves the text; an empty text removes the Goal. Returns success, when it
-   * is done: the form stays open until then, and when it did not go through.
+   * Saves the text; an empty text removes the Goal. Returns whether it went
+   * through (`Saved`), when it is done: the form stays open until then, and
+   * when it did not go through.
    */
   onSave?:
-    ((text: string, from: MadeFrom) => boolean | Promise<boolean>) | undefined;
+    ((text: string, from: MadeFrom) => Saved | Promise<Saved>) | undefined;
   /**
    * After confirm a Goal can be reworded but not removed (F16): an empty
    * text is then refused in the form.
@@ -174,7 +176,7 @@ function GoalBlock({
             // it then is (#321).
             const saving = Promise.resolve(onSave(text.trim(), field.madeFrom));
             field.hold(saving);
-            if (await saving) close(true);
+            if ((await saving).ok) close(true);
           }}
         >
           <Field

@@ -1,5 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import type { Saved } from '@/api/use-operation';
+import { savedOver } from '@/test/saved';
 import { sameWords, useDraftField } from './use-draft-field';
 
 function setup(initial = 'saved') {
@@ -291,7 +293,7 @@ describe('useDraftField of a record with a version (#321)', () => {
     const { result, rerender } = versioned('"1"');
     act(() => result.current.set('typed'));
     await act(async () => {
-      result.current.hold(Promise.resolve(false));
+      result.current.hold(Promise.resolve({ ok: false }));
       await Promise.resolve();
     });
     // The failure read the records again: another device's version.
@@ -306,5 +308,155 @@ describe('useDraftField of a record with a version (#321)', () => {
     const { result } = versioned(undefined);
     act(() => result.current.set('typed'));
     expect(result.current.madeFrom).toEqual({ none: true });
+  });
+});
+
+describe('useDraftField of a record with a version, when a read after the save was made before it (#343)', () => {
+  function versioned() {
+    return renderHook(
+      ({ read, etag }) => useDraftField(read, Object.is, { etag }),
+      { initialProps: { read: 'saved', etag: '"1"' as string | undefined } },
+    );
+  }
+  /** A save the test answers. */
+  function sent() {
+    let answer: (saved: Saved) => void = () => {};
+    const saving = new Promise<Saved>((resolve) => (answer = resolve));
+    return { saving, answer };
+  }
+
+  it('keeps the latest value when the read after the last save failed, and an earlier save is read', async () => {
+    const { result, rerender } = versioned();
+    const first = sent();
+    act(() => result.current.set('one'));
+    act(() => result.current.hold(first.saving));
+    // Saved, and its read failed the first time: the read is as it was.
+    await act(async () => first.answer(savedOver('"1"', '"2"')));
+    const second = sent();
+    act(() => result.current.set('one two'));
+    act(() => result.current.hold(second.saving));
+    // The first save's read, tried again, comes while the second is sent.
+    rerender({ read: 'one', etag: '"2"' });
+    // Saved over the first, and its read failed the first time.
+    await act(async () =>
+      second.answer({
+        ok: true,
+        written: {
+          over: [{ etag: '"1"' }, { etag: '"2"' }],
+          now: { etag: '"3"' },
+        },
+      }),
+    );
+    expect(result.current.value).toBe('one two');
+    expect(result.current.edited).toBe(false);
+    // What is chosen next is made over what is shown, not the first save.
+    act(() => result.current.set('one two three'));
+    expect(result.current.base).toBe('one two');
+    act(() => {
+      result.current.leave();
+    });
+    rerender({ read: 'one two', etag: '"3"' });
+    expect(result.current.value).toBe('one two three');
+  });
+
+  it("keeps the latest value when an earlier save's read, waiting to be tried again, comes after the last save is answered", async () => {
+    const { result, rerender } = versioned();
+    const first = sent();
+    act(() => result.current.set('one'));
+    act(() => result.current.hold(first.saving));
+    // Saved, and its read failed the first time: tried again later.
+    await act(async () => first.answer(savedOver('"1"', '"2"')));
+    const second = sent();
+    act(() => result.current.set('one two'));
+    act(() => result.current.hold(second.saving));
+    // Answered without waiting for a read: one is waiting to be tried again.
+    await act(async () =>
+      second.answer({
+        ok: true,
+        written: {
+          over: [{ etag: '"1"' }, { etag: '"2"' }],
+          now: { etag: '"3"' },
+        },
+      }),
+    );
+    // The read tried again was made before the second save.
+    rerender({ read: 'one', etag: '"2"' });
+    expect(result.current.value).toBe('one two');
+    expect(result.current.edited).toBe(false);
+    // The read that has the second save: followed from here on.
+    rerender({ read: 'one two', etag: '"3"' });
+    rerender({ read: 'from another device', etag: '"4"' });
+    expect(result.current.value).toBe('from another device');
+  });
+
+  it('keeps the value sent when the read comes back to a version shown before the save (another query of the record, kept from before)', async () => {
+    const { result, rerender } = versioned();
+    // Shown earlier, then read again at a later version.
+    rerender({ read: 'older', etag: '"0"' });
+    rerender({ read: 'saved', etag: '"1"' });
+    act(() => result.current.set('typed'));
+    await act(async () =>
+      result.current.hold(Promise.resolve(savedOver('"1"', '"2"'))),
+    );
+    // The other query's answer, kept from before, is shown while it is
+    // read again.
+    rerender({ read: 'older', etag: '"0"' });
+    expect(result.current.value).toBe('typed');
+    rerender({ read: 'typed', etag: '"2"' });
+    rerender({ read: 'from another device', etag: '"3"' });
+    expect(result.current.value).toBe('from another device');
+  });
+
+  it('follows the read once it has the save, also when its value is the one read before', async () => {
+    const { result, rerender } = versioned();
+    act(() => result.current.set('typed'));
+    await act(async () =>
+      result.current.hold(Promise.resolve(savedOver('"1"', '"2"'))),
+    );
+    // Another device put the words back after the save.
+    rerender({ read: 'saved', etag: '"3"' });
+    expect(result.current.value).toBe('saved');
+  });
+
+  it('follows the read when the save changed nothing (the record stays at its version)', async () => {
+    const { result, rerender } = versioned();
+    act(() => result.current.set('saved '));
+    await act(async () =>
+      result.current.hold(Promise.resolve(savedOver('"1"', '"1"'))),
+    );
+    rerender({ read: 'saved', etag: '"1"' });
+    expect(result.current.value).toBe('saved');
+  });
+
+  it('follows the read once a Goal written empty is gone (no record)', async () => {
+    const { result, rerender } = versioned();
+    act(() => result.current.set(''));
+    await act(async () =>
+      result.current.hold(
+        Promise.resolve({
+          ok: true,
+          written: { over: [{ etag: '"1"' }], now: { none: true } },
+        }),
+      ),
+    );
+    rerender({ read: 'saved', etag: '"1"' });
+    expect(result.current.value).toBe('');
+    rerender({ read: '', etag: undefined });
+    expect(result.current.value).toBe('');
+    expect(result.current.edited).toBe(false);
+  });
+
+  it('shows a value put in by an operation until the read changes, also after a save', async () => {
+    const { result, rerender } = versioned();
+    act(() => result.current.set('typed'));
+    await act(async () =>
+      result.current.hold(Promise.resolve(savedOver('"1"', '"2"'))),
+    );
+    rerender({ read: 'typed', etag: '"2"' });
+    act(() => result.current.put('adopted'));
+    expect(result.current.value).toBe('adopted');
+    rerender({ read: 'adopted', etag: '"3"' });
+    rerender({ read: 'other', etag: '"4"' });
+    expect(result.current.value).toBe('other');
   });
 });

@@ -1,6 +1,7 @@
 import type { MadeFrom } from '@itera/api-contract/requests';
 import type { RetroPin } from '@itera/api-contract';
 import { useEffect, useId, useRef, useState } from 'react';
+import type { Saved } from '@/api/use-operation';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Tag } from '@/components/ui/tag';
@@ -21,8 +22,8 @@ type ReflectPaneProps = {
   readOnly?: boolean | undefined;
   onPin: (pin: RetroPin, on: boolean) => void;
   /** `from`: the Retro as read when the words were typed (#321). */
-  onReflect: (text: string, from: MadeFrom) => Promise<boolean>;
-  onImprove: (text: string, from: MadeFrom) => Promise<boolean>;
+  onReflect: (text: string, from: MadeFrom) => Promise<Saved>;
+  onImprove: (text: string, from: MadeFrom) => Promise<Saved>;
   /** The materials sit here below 1200px; beside the facts above it. */
   showMaterials: boolean;
   className?: string | undefined;
@@ -136,7 +137,7 @@ function Improvement({
   onImprove,
 }: {
   data: RetroData;
-  onImprove: (text: string, from: MadeFrom) => Promise<boolean>;
+  onImprove: (text: string, from: MadeFrom) => Promise<Saved>;
 }) {
   const saved = data.improvement;
   const [editing, setEditing] = useState(saved === undefined);
@@ -156,27 +157,28 @@ function Improvement({
 
   // The save of the words being sent: leaving the field and pressing 確定
   // come one after the other, and the second is the first's, not another.
-  const sending = useRef<
-    { text: string; result: Promise<boolean> } | undefined
-  >(undefined);
+  const sending = useRef<{ text: string; result: Promise<Saved> } | undefined>(
+    undefined,
+  );
   const save = (): Promise<boolean> => {
     const next = text.trim();
     // The save of these words is on its way (leaving the field, then 確定):
     // its answer is this one's, whatever the field's base has become.
-    if (sending.current?.text === next) return sending.current.result;
+    if (sending.current?.text === next)
+      return sending.current.result.then(({ ok }) => ok);
     // Compared with what the field showed when it was typed in, not with
     // what was read since: the other device's words are not written over.
     if (!field.leave()) return Promise.resolve(true);
     if (!data.capabilities.canUpdate) return Promise.resolve(false);
     // A criterion made from it keeps it; the handoff says to drop it first.
     if (next === '' && data.draft !== undefined) return Promise.resolve(false);
-    const result = onImprove(next, field.madeFrom).then((ok) => {
+    const result = onImprove(next, field.madeFrom).then((saved) => {
       if (sending.current?.result === result) sending.current = undefined;
-      return ok;
+      return saved;
     });
     sending.current = { text: next, result };
     field.hold(result);
-    return result;
+    return result.then(({ ok }) => ok);
   };
 
   return (

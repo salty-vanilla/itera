@@ -10,6 +10,7 @@ import {
 } from '@itera/application/fixtures';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import {
+  act,
   cleanup,
   render,
   screen,
@@ -38,9 +39,14 @@ import { getHours } from '@/test/duration';
 import { held, writes } from '@/test/held';
 import { comeBack, newWrite, otherDevice, until } from '@/test/other-device';
 import { problemResponse } from '@/test/problem';
+import { heldQueryTimers } from '@/test/query-timers';
 
 type CreateAppRouter = typeof import('@/app/router').createAppRouter;
 let createAppRouter: CreateAppRouter;
+
+// Before any QueryClient: a read that failed is tried again when a test
+// lets it (#343).
+const queryTimers = heldQueryTimers();
 
 beforeAll(async () => {
   // Read when the modules load: the app's modules are loaded after it.
@@ -52,6 +58,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  queryTimers.reset();
   vi.unstubAllGlobals();
 });
 
@@ -326,6 +333,82 @@ describe('the Backlog on the API', () => {
     }
   });
 
+  it("keeps a weekday ticked when the read after its save failed, and an earlier save's read, tried again, comes in (#343)", async () => {
+    const saves = held(writes);
+    // The Backlog's reads fail as many times as this says: the screen's
+    // and the navigation's count.
+    let failing = 0;
+    const { store, requests } = serve((request) => {
+      if (
+        request.method === 'GET' &&
+        new URL(request.url).pathname === '/api/backlog' &&
+        failing > 0
+      ) {
+        failing -= 1;
+        return failed();
+      }
+      return saves.answer(request);
+    }, 'backlog-recurrence');
+    const router = renderBacklog();
+    await list();
+    await router.navigate({
+      to: '/backlog',
+      search: { task: ids.task.cleaning },
+    });
+    const detail = await screen.findByRole('dialog', { name: '部屋の掃除' });
+    const days = within(
+      within(detail).getByRole('region', { name: '繰り返し' }),
+    ).getByRole('group', { name: '曜日' });
+    const tick = (name: string) => within(days).getByRole('checkbox', { name });
+    const wanted = ['火', '水', '木'].filter(
+      (name) => tick(name).getAttribute('aria-checked') !== 'true',
+    );
+    expect(wanted).toHaveLength(3);
+    const latest = () => {
+      const rule = store
+        .getSnapshot()
+        .records.rules.find((r) => r.taskId === ids.task.cleaning);
+      const pattern = rule?.versions.at(-1)?.pattern;
+      return pattern && 'daysOfWeek' in pattern ? pattern.daysOfWeek : [];
+    };
+    const backlogReads = () =>
+      requests.filter((r) => r === 'GET /api/backlog').length;
+    queryTimers.hold();
+    // The first is saved; the reads after it fail, to be tried again.
+    failing = 2;
+    await userEvent.click(tick(wanted[0]!));
+    await until(() => expect(saves.waiting).toBe(1));
+    saves.next();
+    await until(() => expect(queryTimers.waiting).toBe(2));
+    expect(latest()).toHaveLength(2);
+    // The second is on its way when the first's read is tried again.
+    await userEvent.click(tick(wanted[1]!));
+    await until(() => expect(saves.waiting).toBe(1));
+    const before = backlogReads();
+    queryTimers.fire();
+    await until(() => expect(backlogReads()).toBe(before + 2));
+    // The second is saved; the reads after it fail, to be tried again.
+    failing = 2;
+    saves.next();
+    await until(() => expect(latest()).toHaveLength(3));
+    await until(() => expect(queryTimers.waiting).toBe(2));
+    await act(async () => {});
+    // The first's read is on the screen: not the second's.
+    expect(tick(wanted[1]!).getAttribute('aria-checked')).toBe('true');
+    // Chosen next over what is shown, with the second in it.
+    await userEvent.click(tick(wanted[2]!));
+    saves.release();
+    queryTimers.release();
+    await until(() =>
+      expect(latest()).toEqual(expect.arrayContaining([2, 3, 4])),
+    );
+    for (const name of wanted) {
+      await until(() =>
+        expect(tick(name).getAttribute('aria-checked')).toBe('true'),
+      );
+    }
+  });
+
   it('saves both weekdays ticked while the first is sent', async () => {
     const saves = held(writes);
     const { store } = serve(saves.answer, 'backlog-recurrence');
@@ -560,6 +643,41 @@ describe('the Backlog on the API', () => {
           (r) => r.includes('/subtasks/') && r.startsWith('PATCH'),
         ),
       ).toHaveLength(1);
+    });
+
+    it("puts a Subtask's Estimate back to the value as read when its save is refused (#343)", async () => {
+      const { store } = serve(
+        (request) =>
+          request.method === 'PATCH' &&
+          new URL(request.url).pathname.includes('/subtasks/')
+            ? refused()
+            : undefined,
+        'backlog-detail',
+      );
+      const router = renderBacklog();
+      await list();
+      await router.navigate({
+        to: '/backlog',
+        search: { task: ids.task.dataset },
+      });
+      const detail = await screen.findByRole('dialog');
+      const field = () =>
+        getHours(within(detail), /^見積もり：欠損値を確認する/);
+      const before = field().value;
+      await userEvent.clear(field());
+      await userEvent.type(field(), '4');
+      await userEvent.tab();
+      await userEvent.tab();
+      expect(
+        await screen.findAllByText('保存できませんでした'),
+      ).not.toHaveLength(0);
+      await until(() => expect(field().value).toBe(before));
+      expect(
+        store
+          .getSnapshot()
+          .records.tasks.find((t) => t.id === ids.task.dataset)!.subtasks[0]!
+          .estimate,
+      ).not.toBe(4);
     });
 
     it('follows the other device again after a title typed and typed back with spaces around it', async () => {

@@ -12,6 +12,7 @@ import {
   useState,
   type Ref,
 } from 'react';
+import type { Saved } from '@/api/use-operation';
 import { Button } from '@/components/ui/button';
 import { Check } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -178,10 +179,12 @@ function RecurrenceEditor({
     setKept(nextKept);
   // Without a rule of its own (none, or one that ends, F41), a choice
   // starts where a Task without a rule starts: a new rule is made from it,
-  // not the one that ends carried on.
+  // not the one that ends carried on. The rule's version tells the field
+  // the read that has its save (#343).
   const choice = useDraftField(
     owns ? choiceOf(latest, kept) : choiceOf(undefined),
     sameChoice,
+    { etag: 'etag' in madeFrom ? madeFrom.etag : undefined },
   );
   const { freq, days, dayOfMonth } = choice.value;
   const daysRef = useRef<HTMLFieldSetElement>(null);
@@ -230,24 +233,24 @@ function RecurrenceEditor({
     next: Freq,
     nextDays: readonly DayOfWeek[],
     nextDayOfMonth: number,
-  ): Promise<boolean> {
+  ): Promise<Saved> {
     if (next === 'weekly' && nextDays.length === 0) {
       setError('曜日を 1つ以上選んでください');
-      return false;
+      return { ok: false };
     }
     setError(undefined);
-    const outcome = await actions.setRecurrence(
+    const { effectiveFrom, ...saved } = await actions.setRecurrence(
       task.id,
       patternOf(next, nextDays, nextDayOfMonth),
       madeFrom,
     );
-    if (!outcome.ok) return false;
+    if (!saved.ok) return saved;
     setResult(
-      outcome.effectiveFrom === undefined
+      effectiveFrom === undefined
         ? { kind: 'unchanged' }
-        : { kind: 'applied', effectiveFrom: outcome.effectiveFrom },
+        : { kind: 'applied', effectiveFrom },
     );
-    return true;
+    return saved;
   }
 
   // With a rule, a choice is saved as it is made; without one, the button.

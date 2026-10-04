@@ -19,9 +19,44 @@ import { useApiClient } from './api-provider';
 import { failureOf, sendsAgain, WriteFailed } from './failure';
 import { SAVE_FAILED_KIND, saveFailedToast } from './save-failed';
 
-/** What running an operation gives back: its value, or that it did not go through. */
+/**
+ * What running an operation gives back: its value, or that it did not go
+ * through. An operation that replaces a record's values (`ConditionalName`)
+ * also gives back the versions it moved the record through (`written`).
+ */
 export type Outcome<T> =
-  { readonly ok: true; readonly value: T } | { readonly ok: false };
+  | { readonly ok: true; readonly value: T; readonly written?: Written }
+  | { readonly ok: false };
+
+/**
+ * The versions of a record that a write replacing its values went through
+ * (#343): the record was at one of `over` before it (the version it was made
+ * from, then those this client's own writes had moved it to, `ownVersions`),
+ * and is at `now` after it (the same as the last of `over` when the write
+ * changed none of its values). Versions are compared whole, never read
+ * (ADR 0006 記録ごとの版): a read whose record is at one of `over` and not at
+ * `now` was made before the write.
+ */
+export type Written = {
+  readonly over: readonly MadeFrom[];
+  readonly now: MadeFrom;
+};
+
+/**
+ * What a field's save gives back to the field (useDraftField `hold`):
+ * whether it went through and, as it replaced the record's values, the
+ * versions it went through, so that the field knows the read that has it
+ * (#343).
+ */
+export type Saved =
+  { readonly ok: true; readonly written: Written } | { readonly ok: false };
+
+/** A field's save, from the outcome of an operation that replaces values. */
+export function savedOf(
+  outcome: { readonly ok: true; readonly written: Written } | { ok: false },
+): Saved {
+  return outcome.ok ? { ok: true, written: outcome.written } : { ok: false };
+}
 
 /** The mutation scope every operation shares: they run one after another. */
 const OPERATION_SCOPE = 'operations';
@@ -89,19 +124,48 @@ export function useOperation<N extends OperationName>(
   name: N,
   options: { whileSending?: 'drop' | 'wait'; typed?: boolean } = {},
 ) {
-  const { run, ...rest } = useSend<PlainInput<N>, PlainOutput<N>>(
+  const { run, ...rest } = useSend<PlainInput<N>, Answer<PlainOutput<N>>>(
     name,
     (client, input, headers, from) =>
       sendOperation(client, name, input, headers, from),
     options,
   );
+  const runOperation = useCallback(
+    async (...args: Args<PlainInput<N>>): Promise<Outcome<PlainOutput<N>>> => {
+      const outcome = await run(...args);
+      if (!outcome.ok) return outcome;
+      const { data, written } = outcome.value;
+      return {
+        ok: true,
+        value: data,
+        ...(written === undefined ? {} : { written }),
+      };
+    },
+    [run],
+  );
   return {
     ...rest,
-    run: run as unknown as (
+    run: runOperation as unknown as (
       ...args: RunArgs<N>
-    ) => Promise<Outcome<PlainOutput<N>>>,
+    ) => Promise<RunOutcome<N>>,
   };
 }
+
+/**
+ * `run`'s outcome: one that replaces a record's values gives back the
+ * versions it went through (`written`).
+ */
+type RunOutcome<N extends OperationName> = N extends ConditionalName
+  ? | {
+        readonly ok: true;
+        readonly value: PlainOutput<N>;
+        readonly written: Written;
+      }
+    | { readonly ok: false }
+  : Outcome<PlainOutput<N>>;
+
+/** What `sendOperation` gives back: the data, and the versions it wrote. */
+type Answer<T> = { readonly data: T; readonly written?: Written };
 
 /**
  * `run`'s arguments: the input (none for an operation without one), and
@@ -248,12 +312,13 @@ async function sendOperation<N extends OperationName>(
   input: PlainInput<N>,
   headers: WriteHeaders,
   from: MadeFrom | undefined,
-): Promise<PlainOutput<N>> {
+): Promise<Answer<PlainOutput<N>>> {
   const { operationId, ...parts } = requestOf(name, input);
   const send = sdk[operationId] as (options: object) => Promise<Sent>;
   const resource = resourceOf(operationId, parts);
-  const made =
-    from === undefined ? undefined : ownVersions(client).of(resource, from);
+  const over =
+    from === undefined ? undefined : ownVersions(client).walk(resource, from);
+  const made = over?.at(-1);
   const sent = send({
     ...parts,
     headers: {
@@ -263,16 +328,16 @@ async function sendOperation<N extends OperationName>(
     client,
     throwOnError: false,
   });
-  const data = await written(sent);
-  if (made !== undefined) {
-    // Without an ETag, the write removed the record (a Goal written empty).
-    const etag = (await sent).response?.headers.get('ETag');
-    ownVersions(client).moved(resource, made, etag ?? null);
-  }
+  const data = (await written(sent)) as PlainOutput<N>;
   if (surfaces[operationId].method === 'DELETE') {
     ownVersions(client).removed(resource);
   }
-  return data as PlainOutput<N>;
+  if (over === undefined || made === undefined) return { data };
+  // Without an ETag, the write removed the record (a Goal written empty).
+  const etag = (await sent).response?.headers.get('ETag');
+  ownVersions(client).moved(resource, made, etag ?? null);
+  const now: MadeFrom = etag == null ? { none: true } : { etag };
+  return { data, written: { over, now } };
 }
 
 /**
@@ -300,8 +365,11 @@ function resourceOf(
 const versionsByClient = new WeakMap<Client, OwnVersions>();
 
 type OwnVersions = {
-  /** What a write made from `from` is sent as, after this client's own writes. */
-  of(resource: string, from: MadeFrom): MadeFrom;
+  /**
+   * The versions from `from` through this client's own writes: the last is
+   * what a write made from `from` is sent as.
+   */
+  walk(resource: string, from: MadeFrom): readonly [MadeFrom, ...MadeFrom[]];
   /**
    * A write made from `from` went through, and the record is now at `etag`,
    * or gone (`null`): the next write is made from none.
@@ -322,18 +390,18 @@ function ownVersions(client: Client): OwnVersions {
   const keyOf = (resource: string, from: MadeFrom) =>
     `${resource} ${'etag' in from ? from.etag : '*'}`;
   const versions: OwnVersions = {
-    of(resource, from) {
+    walk(resource, from) {
       // Each step is a write of this client's that went through. A record
       // never comes back to an etag, but it can be gone again (made, removed,
       // made again), so a step already taken ends the walk.
       const seen = new Set<string>();
-      let made = from;
+      const steps: [MadeFrom, ...MadeFrom[]] = [from];
       for (;;) {
-        const key = keyOf(resource, made);
+        const key = keyOf(resource, steps.at(-1)!);
         const step = next.get(key);
-        if (step === undefined || seen.has(key)) return made;
+        if (step === undefined || seen.has(key)) return steps;
         seen.add(key);
-        made = step;
+        steps.push(step);
       }
     },
     moved(resource, from, etag) {

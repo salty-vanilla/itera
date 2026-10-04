@@ -9,6 +9,7 @@ import {
   createConfig,
   type Client,
 } from '@itera/api-contract/create-client';
+import { listAreas } from '@itera/api-contract/client';
 import { createMemoryStore, operations } from '@itera/application';
 import {
   fixtureIds,
@@ -33,6 +34,7 @@ import { createQueryClient } from './query-client';
 import { SEND_AGAIN_DELAYS, useOperation } from './use-operation';
 import { useMe } from './use-me';
 import { held, writes } from '@/test/held';
+import { otherDevice } from '@/test/other-device';
 import { problemResponse } from '@/test/problem';
 import {
   PROBLEM_CONTENT_TYPE,
@@ -598,6 +600,33 @@ describe('useOperation for a write that replaces values (#321)', () => {
     expect(ifMatches[0]).toBe('"0"');
     expect(ifMatches[1]).not.toBe('"0"');
     expect(ifMatches[1]).toMatch(/^"\d+"$/);
+  });
+
+  it('gives back the versions it went through: those it was made over, and the one the read then has (#343)', async () => {
+    const { store, ifMatches, wrapper } = setUp();
+    const { result } = renderHook(useRenameAndOverview, { wrapper });
+    let first: unknown;
+    await act(async () => {
+      first = await result.current.rename.run(rename('研究室'), asRead);
+    });
+    // Made from the same read, after the first: over the first's version too.
+    let second: unknown;
+    await act(async () => {
+      second = await result.current.rename.run(rename('研究会'), asRead);
+    });
+    const moved = { etag: ifMatches[1]! };
+    expect(first).toMatchObject({
+      ok: true,
+      written: { over: [asRead], now: moved },
+    });
+    // The Area as the reads now give it.
+    const { data } = await listAreas({ client: otherDevice(store) });
+    const read = data?.view.find((a) => a.id === ids.area.research);
+    expect(read?.etag).toMatch(/^"\d+"$/);
+    expect(second).toMatchObject({
+      ok: true,
+      written: { over: [asRead, moved], now: { etag: read?.etag } },
+    });
   });
 
   it('says that another device changed the record, and changes nothing', async () => {

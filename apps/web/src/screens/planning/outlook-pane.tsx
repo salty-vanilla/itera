@@ -1,6 +1,7 @@
 import type { MadeFrom } from '@itera/api-contract/requests';
 import { Info } from 'lucide-react';
 import { useId } from 'react';
+import type { Saved } from '@/api/use-operation';
 import { Divider } from '@/components/ui/divider';
 import { CapacityIndicator } from '@/components/sprint/capacity-indicator';
 import { criterionName } from '@/lib/criterion-text';
@@ -29,7 +30,7 @@ type OutlookPaneProps = {
   sheet?: boolean | undefined;
   /** Absent: no field for the available hours (確かめる has its own). */
   onAvailableHours?:
-    | ((hours: number | null, from: MadeFrom) => boolean | Promise<boolean>)
+    | ((hours: number | null, from: MadeFrom) => Saved | Promise<Saved>)
     | undefined;
   className?: string | undefined;
 };

@@ -13,7 +13,7 @@ import { getSprintOptions } from '@itera/api-contract/react-query';
 import { useQuery } from '@tanstack/react-query';
 import { useApiClient } from '@/api/api-provider';
 import { useRead, type Read } from '@/api/read-state';
-import { useOperation } from '@/api/use-operation';
+import { savedOf, useOperation, type Saved } from '@/api/use-operation';
 import { NO_AREA, type SprintArea } from './screen-area';
 
 export type { PastDayRecord, RunningTask };
@@ -63,8 +63,12 @@ export function useRunningSprintActions(sprintId: SprintId) {
   const undoSkip = useOperation('undoSkipSelection');
   return {
     /** `from`: the Goal as read when it was typed, or none (#321). */
-    setGoal: async (areaId: AreaId, text: string, from: MadeFrom) =>
-      (await goal.run({ sprintId, areaId, text }, from)).ok,
+    setGoal: async (
+      areaId: AreaId,
+      text: string,
+      from: MadeFrom,
+    ): Promise<Saved> =>
+      savedOf(await goal.run({ sprintId, areaId, text }, from)),
     /** 過去の日の完了を取り消す (#53, F33). */
     undoComplete: async (selectionId: DailySelectionId) =>
       (await undoComplete.run({ sprintId, selectionId })).ok,

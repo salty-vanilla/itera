@@ -12,7 +12,7 @@ import type {
   TaskAttributeUpdate,
   MadeFrom,
 } from '@itera/api-contract/requests';
-import { useOperation } from '@/api/use-operation';
+import { savedOf, useOperation, type Saved } from '@/api/use-operation';
 
 // The person's operations on Tasks, one named function each (ADR 0005 API
 // への移行: the contract's operations). Each gives back whether it went
@@ -65,8 +65,8 @@ export function useTaskActions() {
       update: TaskAttributeUpdate,
       estimate: number | null | undefined,
       from: MadeFrom,
-    ) =>
-      (
+    ): Promise<Saved> =>
+      savedOf(
         await saveTask.run(
           {
             taskId,
@@ -74,8 +74,8 @@ export function useTaskActions() {
             ...(estimate === undefined ? {} : { estimate }),
           },
           from,
-        )
-      ).ok,
+        ),
+      ),
     /** A choice on the Task, made from the Task as read now (#321). */
     chooseForTask: async (
       taskId: TaskId,
@@ -168,7 +168,8 @@ export function useSubtaskActions() {
       subtaskId: SubtaskId,
       hours: number | null,
       from: MadeFrom,
-    ) => (await setSubtaskEstimate.run({ taskId, subtaskId, hours }, from)).ok,
+    ): Promise<Saved> =>
+      savedOf(await setSubtaskEstimate.run({ taskId, subtaskId, hours }, from)),
     loading: { addSubtask: addSubtask.loading },
   };
 }
@@ -194,9 +195,11 @@ export function useRecurrenceActions() {
       pattern: RecurrencePattern,
       /** The Task's rule as read, or none: a new rule is made (#330). */
       from: MadeFrom,
-    ): Promise<{ ok: boolean; effectiveFrom?: LocalDate }> => {
+    ): Promise<Saved & { effectiveFrom?: LocalDate }> => {
       const outcome = await setRecurrence.run({ taskId, pattern }, from);
-      return outcome.ok ? { ok: true, ...outcome.value } : { ok: false };
+      return outcome.ok
+        ? { ...savedOf(outcome), ...outcome.value }
+        : { ok: false };
     },
     /**
      * 繰り返しをやめる (F41). `removed` when the rule had made no

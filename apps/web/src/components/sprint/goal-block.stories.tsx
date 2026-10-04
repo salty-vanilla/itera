@@ -9,7 +9,10 @@ const meta = {
     week: '今週',
     area: { name: '研究', color: 2 },
     summary: '2件 · 7時間30分',
-    onSave: () => true,
+    onSave: () => ({
+      ok: true,
+      written: { over: [{ none: true }], now: { etag: '"1"' } },
+    }),
   },
 } satisfies Meta<typeof GoalBlock>;
 

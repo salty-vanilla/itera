@@ -2,6 +2,7 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getHours } from '@/test/duration';
+import { savedOver } from '@/test/saved';
 import { AvailableHoursField } from './capacity-indicator';
 
 afterEach(cleanup);
@@ -10,7 +11,7 @@ afterEach(cleanup);
 // as it is now until it is typed in, and leaving it unedited saves nothing
 // (#324).
 function setup(value: number | undefined) {
-  const onChange = vi.fn(() => true);
+  const onChange = vi.fn(() => savedOver('"1"', '"saved"'));
   const view = render(
     <AvailableHoursField value={value} etag='"1"' onChange={onChange} />,
   );
