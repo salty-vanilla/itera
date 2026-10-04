@@ -3,8 +3,8 @@ import { useNavigate, useRouter } from '@tanstack/react-router';
 import {
   createContext,
   useContext,
-  useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type MouseEvent,
@@ -113,7 +113,7 @@ function DayHeader({
 
   // A heading made anew takes the focus its predecessor had (DayFocus). One
   // that stays keeps it where it is: the control pressed is still there.
-  useEffect(() => {
+  useLayoutEffect(() => {
     const control = focusAfter?.peek();
     if (control === undefined) return;
     header.current

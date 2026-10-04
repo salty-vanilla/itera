@@ -11,11 +11,10 @@ import { readAgain } from './reads';
 // Query tells the components of an answer through one `notifyManager`. They
 // are told in the task the answer came in, not in a later one (its default,
 // a `setTimeout`). An operation resolves once they are told (`readAgain`,
-// #341), and with the default it would resolve a task later: the screen
-// tests that look right after the person's action (userEvent) count on it
-// not doing so. Before this goes back to the default, or when TanStack Query
-// changes how it tells them, those tests are to wait for what they look for
-// (ADR 0005).
+// #341), and with the default it would resolve a task later, and with it
+// what the screen does with the answer (a Toast, the focus). The screen
+// tests do not count on it: they wait for what they look for, and pass with
+// the default too (ADR 0005, #401; `ITERA_LATE_RENDER` in vitest.config.ts).
 notifyManager.setScheduler(queueMicrotask);
 
 export interface QueryClientOptions {

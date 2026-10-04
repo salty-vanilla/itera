@@ -3,7 +3,7 @@ import type { AreaId, SprintItem } from '@itera/api-contract';
 import { useNavigate, useRouter, useSearch } from '@tanstack/react-router';
 import { Pin, Rewind, Route } from 'lucide-react';
 import { Icon } from '@/components/ui/icon';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { NotReady, Read } from '@/api/read-state';
 import { ReadStatus } from '@/components/read-status';
 import { Button } from '@/components/ui/button';
@@ -210,7 +210,7 @@ function RetroView({
     undefined,
   );
   const recorded = useRef(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const closed = closedEditing.current;
     if (editing !== undefined || closed === undefined) return;
     if (closed.recorded && closed.anchor.isConnected) return;
@@ -226,7 +226,7 @@ function RetroView({
   // waits for the button to be there. It is brought to the middle: at the
   // foot, the Toast would cover it on a narrow screen (#168).
   const focusBegin = useRef(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!focusBegin.current || !readOnly) return;
     const next = document.querySelector<HTMLElement>(
       'nav[aria-label="次の段階"] [data-slot="begin-planning"]',

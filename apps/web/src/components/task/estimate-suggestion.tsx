@@ -2,7 +2,7 @@ import type {
   EstimateSuggestion as Suggestion,
   SuggestionBound,
 } from '@itera/api-contract';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { DurationField } from '@/components/ui/duration-field';
 import { BOUND_WORDS } from '@/lib/criterion-text';
@@ -73,10 +73,10 @@ function EstimateSuggestion({
   const valuesLabelId = useId();
   // Where focus goes when the inline field closes by キャンセル.
   const backToEdit = useRef(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (autoFocus) firstRef.current?.focus();
   }, [autoFocus]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!editing && backToEdit.current) {
       backToEdit.current = false;
       editRef.current?.focus();
@@ -248,7 +248,7 @@ function SuggestionOutcome({
 }) {
   // The button that was pressed (採用, 却下) is gone; focus goes to 元に戻す.
   const undoRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => undoRef.current?.focus(), []);
+  useLayoutEffect(() => undoRef.current?.focus(), []);
   return (
     <p
       role="status"
