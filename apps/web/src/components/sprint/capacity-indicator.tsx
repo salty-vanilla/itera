@@ -545,15 +545,20 @@ function CapacityBar({
       : capacity.status;
   return (
     <div aria-hidden data-slot="capacity-bar" className="relative pb-2">
-      <div className="flex h-2 w-full overflow-hidden bg-border-soft">
+      <div
+        data-slot="capacity-bar-track"
+        className="flex h-2 w-full overflow-hidden bg-border-soft"
+      >
         {areas.map((a) => (
           <div key={a.key} className="flex h-full" style={{ width: pct(a.hi) }}>
             <div
+              data-slot="capacity-bar-segment"
               className={cn('h-full', areaFill[a.color])}
               style={{ width: a.hi === 0 ? '0%' : `${(a.lo / a.hi) * 100}%` }}
             />
             {a.hi > a.lo && (
               <div
+                data-slot="capacity-bar-open"
                 className={cn(
                   // The range still open: a dashed hairline (the dashes of a
                   // value not decided yet), not a fill.
@@ -569,6 +574,7 @@ function CapacityBar({
       </div>
       {capacity !== undefined && (
         <div
+          data-slot="capacity-bar-marker"
           className="absolute -top-1 h-4 w-(--stroke-strong) bg-ink"
           style={{ left: `calc(${pct(available)} - 1px)` }}
         />

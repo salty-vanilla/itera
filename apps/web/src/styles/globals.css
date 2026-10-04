@@ -396,6 +396,29 @@
     [data-slot='notice'] {
       border: var(--stroke-hairline) solid CanvasText;
     }
+    /*
+     * The Capacity bar: each Area's segment keeps its colour, as the Area line
+     * symbol does, and the dashes of the range still open keep theirs on a
+     * Canvas fill. The available-hours marker is CanvasText, and the track
+     * gets an outline (an outline takes no room, as for Progress). The 2px
+     * gaps and the over line (solid or dashed) are drawn by Canvas and the
+     * border, which forced colors keep. `!important` because the `bg-*`
+     * utilities (a later layer) would otherwise win over a base rule.
+     */
+    [data-slot='capacity-bar-track'] {
+      outline: var(--stroke-hairline) solid CanvasText;
+    }
+    [data-slot='capacity-bar-segment'] {
+      forced-color-adjust: none;
+    }
+    [data-slot='capacity-bar-open'] {
+      forced-color-adjust: none;
+      background-color: Canvas !important;
+    }
+    [data-slot='capacity-bar-marker'] {
+      forced-color-adjust: none;
+      background-color: CanvasText !important;
+    }
   }
 
   /*
