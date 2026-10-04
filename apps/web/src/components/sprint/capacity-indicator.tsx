@@ -1,5 +1,7 @@
-import type { Capacity, PlanningTotal } from '@itera/domain';
+import type { MadeFrom } from '@itera/api-contract/requests';
+import type { Capacity, PlanningTotal } from '@itera/api-contract';
 import { Fragment, useId, useState } from 'react';
+import type { Saved } from '@/api/use-operation';
 import { AreaIndicator, type AreaColor } from '@/components/ui/area-indicator';
 import { DurationField } from '@/components/ui/duration-field';
 import { semanticIcons } from '@/components/ui/icon';
@@ -7,9 +9,10 @@ import {
   DURATION_ZERO_ERROR,
   hoursText,
   readMinutes,
-  sameMinutes,
+  sameDuration,
   type DurationText,
 } from '@/lib/duration-text';
+import { useDraftField } from '@/lib/use-draft-field';
 import {
   formatHours,
   formatLeftOut,
@@ -34,6 +37,15 @@ type AreaSegment = {
   hi: number;
 };
 
+/** What the available hours' field saves, and from which Sprint (#321). */
+type AvailableHoursEdit = {
+  readonly etag: string;
+  readonly save: (
+    hours: number | null,
+    from: MadeFrom,
+  ) => Saved | Promise<Saved>;
+};
+
 type CapacityIndicatorProps = {
   total: PlanningTotal;
   /**
@@ -45,8 +57,12 @@ type CapacityIndicatorProps = {
   /** Absent while no available hours are entered (unknown). */
   capacity?: Capacity | undefined;
   areas: readonly AreaSegment[];
-  /** Saves the available hours; `null` clears them. Returns success. */
-  onAvailableHoursChange?: ((hours: number | null) => boolean) | undefined;
+  /**
+   * The available hours' field: the Sprint's etag as read, and the save
+   * (`null` clears them; returns success; `from` is the Sprint as read when
+   * they were typed, #321). Absent: no field.
+   */
+  hoursField?: AvailableHoursEdit | undefined;
   /** Read-only after confirm. */
   readOnly?: boolean | undefined;
   /** Its own 「時間の見通し」 heading. Off under a title that says it (#166). */
@@ -309,14 +325,14 @@ function CapacityIndicator({
   breakdownOnly = false,
   capacity,
   areas,
-  onAvailableHoursChange,
+  hoursField,
   readOnly = false,
   titled = true,
   className,
 }: CapacityIndicatorProps) {
   const statement = capacityStatement(capacity, total);
   const leftOut = formatLeftOut(total);
-  const editable = !readOnly && onAvailableHoursChange !== undefined;
+  const editable = !readOnly && hoursField !== undefined;
   const headingId = useId();
   return (
     <section
@@ -364,10 +380,11 @@ function CapacityIndicator({
           )}
           {/* Right under the total, so that it shows in the first screen
               (#165). */}
-          {editable && onAvailableHoursChange !== undefined && (
+          {editable && hoursField !== undefined && (
             <AvailableHoursField
               value={capacity?.availableHours}
-              onChange={onAvailableHoursChange}
+              etag={hoursField.etag}
+              onChange={hoursField.save}
             />
           )}
         </div>
@@ -447,29 +464,30 @@ function Headline({
 
 /**
  * The available hours, saved on leaving the fields or Enter. It follows a
- * value changed elsewhere and goes back to the saved value when saving
- * fails. Also used on the running Sprint's screen (#51).
+ * value changed elsewhere (except while it is being typed in) and goes back
+ * to the saved value when saving fails. Also used on the running Sprint's screen (#51).
  */
 function AvailableHoursField({
   value,
+  etag,
   onChange,
   label = '使える時間',
   description,
 }: {
   value: number | undefined;
-  onChange: (hours: number | null) => boolean;
+  /** The Sprint's etag as read (#321). */
+  etag: string;
+  /**
+   * Saves the hours; returns success, when it is done. `from` is the Sprint
+   * as read when they were typed.
+   */
+  onChange: (hours: number | null, from: MadeFrom) => Saved | Promise<Saved>;
   label?: string;
   description?: string;
 }) {
-  const saved = hoursText(value);
-  const [text, setText] = useState(saved);
+  const field = useDraftField(hoursText(value), sameDuration, { etag });
+  const text = field.value;
   const [error, setError] = useState<string>();
-  const [last, setLast] = useState(value);
-  // Follow a value changed elsewhere (another fixture state, 元に戻す).
-  if (value !== last) {
-    setLast(value);
-    setText(saved);
-  }
   function commit(typed: DurationText) {
     const minutes = readMinutes(typed);
     if (minutes === null) {
@@ -477,8 +495,17 @@ function AvailableHoursField({
       return;
     }
     setError(undefined);
-    if (sameMinutes(minutes, value)) return;
-    if (!onChange(minutes === undefined ? null : minutes / 60)) setText(saved);
+    // Compared with what the field showed when it was typed in, not with
+    // the value as read since: a field left as it was saves nothing (#324).
+    if (!field.leave()) return;
+    const saving = Promise.resolve(
+      onChange(minutes === undefined ? null : minutes / 60, field.madeFrom),
+    );
+    field.hold(saving);
+    // A save that fails goes back to the value as read.
+    void saving.then(({ ok }) => {
+      if (!ok) field.drop();
+    });
   }
   return (
     <DurationField
@@ -486,7 +513,7 @@ function AvailableHoursField({
       description={description}
       error={error}
       value={text}
-      onChange={setText}
+      onChange={field.set}
       onCommit={commit}
     />
   );
@@ -569,4 +596,4 @@ export {
   Headline,
   Sentences,
 };
-export type { AreaSegment, CapacityIndicatorProps };
+export type { AreaSegment, AvailableHoursEdit, CapacityIndicatorProps };

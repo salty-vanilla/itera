@@ -8,6 +8,16 @@
   // every uploaded version at its own URL.
   "workers_dev": true,
   "preview_urls": false,
+  // The Web app is served from the same Worker, so the cookie and CORS
+  // assumptions of ADR 0004 stay as they are. Build it first
+  // (`pnpm --filter @itera/web build`): wrangler fails when the directory is
+  // missing. Paths that match no file get index.html (the router renders the
+  // screen or "not found"), and only /api/* reaches the Worker code.
+  "assets": {
+    "directory": "../../apps/web/dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"],
+  },
   "observability": {
     "enabled": true,
     "traces": { "enabled": true },

@@ -6,7 +6,7 @@ import {
 } from './shared/command';
 import type { EstimateSuggestionId } from './shared/ids';
 import { omit } from './shared/record';
-import { err } from './shared/result';
+import { err, ok, type Result } from './shared/result';
 import type { Instant } from './shared/time';
 import { isPositiveHours, type Task } from './task';
 
@@ -47,9 +47,9 @@ export interface EstimateSuggestion {
 }
 
 /** The suggestion currently on show, if any. At most one is presented. */
-export function presentedSuggestion(
-  task: Task,
-): EstimateSuggestion | undefined {
+export function presentedSuggestion<
+  S extends { readonly state: SuggestionState },
+>(task: { readonly suggestions: readonly S[] }): S | undefined {
   return task.suggestions.find((s) => s.state === 'presented');
 }
 
@@ -156,16 +156,9 @@ export function adoptSuggestion(
   bound: SuggestionBound,
   ctx: CommandContext,
 ): CommandResult<Task> {
-  const suggestion = task.suggestions.find((s) => s.id === suggestionId);
-  if (suggestion === undefined) {
-    return err('notFound', `Suggestion ${suggestionId} not found.`);
-  }
-  if (suggestion.state !== 'presented') {
-    return err(
-      'invalidTransition',
-      `Cannot adopt a ${suggestion.state} suggestion.`,
-    );
-  }
+  const checked = checkAdoptSuggestion(task, suggestionId);
+  if (!checked.ok) return checked;
+  const suggestion = checked.value;
   const hours = boundValue(suggestion, bound);
   const estimate: Estimate = {
     hours,
@@ -203,16 +196,8 @@ export function adoptEditedSuggestion(
   ctx: CommandContext,
 ): CommandResult<Task> {
   const { suggestionId, hours } = input;
-  const suggestion = task.suggestions.find((s) => s.id === suggestionId);
-  if (suggestion === undefined) {
-    return err('notFound', `Suggestion ${suggestionId} not found.`);
-  }
-  if (suggestion.state !== 'presented') {
-    return err(
-      'invalidTransition',
-      `Cannot adopt a ${suggestion.state} suggestion.`,
-    );
-  }
+  const checked = checkAdoptSuggestion(task, suggestionId);
+  if (!checked.ok) return checked;
   if (!isPositiveHours(hours)) {
     return err('invalidInput', 'Estimate must be positive hours.');
   }
@@ -260,21 +245,8 @@ export function undoAdoption(
   ctx: CommandContext,
 ): CommandResult<Task> {
   const { suggestionId, previous } = input;
-  const suggestion = task.suggestions.find((s) => s.id === suggestionId);
-  if (suggestion === undefined) {
-    return err('notFound', `Suggestion ${suggestionId} not found.`);
-  }
-  const source = task.estimate?.source;
-  if (
-    suggestion.state !== 'adopted' ||
-    (source?.kind !== 'adopted' && source?.kind !== 'edited') ||
-    source.suggestionId !== suggestionId
-  ) {
-    return err('invalidTransition', 'The Estimate is no longer this adoption.');
-  }
-  if (presentedSuggestion(task) !== undefined) {
-    return err('invalidTransition', 'Another suggestion is on show.');
-  }
+  const checked = checkUndoAdoption(task, suggestionId);
+  if (!checked.ok) return checked;
   if (previous !== null && !isPositiveHours(previous.hours)) {
     return err('invalidInput', 'Estimate must be positive hours.');
   }
@@ -309,16 +281,8 @@ export function rejectSuggestion(
   suggestionId: EstimateSuggestionId,
   ctx: CommandContext,
 ): CommandResult<Task> {
-  const suggestion = task.suggestions.find((s) => s.id === suggestionId);
-  if (suggestion === undefined) {
-    return err('notFound', `Suggestion ${suggestionId} not found.`);
-  }
-  if (suggestion.state !== 'presented') {
-    return err(
-      'invalidTransition',
-      `Cannot reject a ${suggestion.state} suggestion.`,
-    );
-  }
+  const checked = checkRejectSuggestion(task, suggestionId);
+  if (!checked.ok) return checked;
   const suggestions = task.suggestions.map((s) =>
     s.id === suggestionId ? { ...s, state: 'rejected' as const } : s,
   );
@@ -343,19 +307,8 @@ export function undoRejection(
   suggestionId: EstimateSuggestionId,
   ctx: CommandContext,
 ): CommandResult<Task> {
-  const suggestion = task.suggestions.find((s) => s.id === suggestionId);
-  if (suggestion === undefined) {
-    return err('notFound', `Suggestion ${suggestionId} not found.`);
-  }
-  if (suggestion.state !== 'rejected') {
-    return err(
-      'invalidTransition',
-      `Cannot undo the rejection of a ${suggestion.state} suggestion.`,
-    );
-  }
-  if (presentedSuggestion(task) !== undefined) {
-    return err('invalidTransition', 'Another suggestion is on show.');
-  }
+  const checked = checkUndoRejection(task, suggestionId);
+  if (!checked.ok) return checked;
   const suggestions = task.suggestions.map((s) =>
     s.id === suggestionId ? { ...s, state: 'presented' as const } : s,
   );
@@ -368,4 +321,97 @@ export function undoRejection(
       suggestionId,
     },
   ]);
+}
+
+/** The suggestion with this ID, or `notFound`. */
+function suggestionOf(
+  task: Task,
+  suggestionId: EstimateSuggestionId,
+): Result<EstimateSuggestion> {
+  const suggestion = task.suggestions.find((s) => s.id === suggestionId);
+  return suggestion === undefined
+    ? err('notFound', `Suggestion ${suggestionId} not found.`)
+    : ok(suggestion);
+}
+
+/**
+ * Whether `adoptSuggestion` and `adoptEditedSuggestion` take the
+ * suggestion as it is now (#323): one on show. The hours of an edited
+ * adoption are not checked here.
+ */
+export function checkAdoptSuggestion(
+  task: Task,
+  suggestionId: EstimateSuggestionId,
+): Result<EstimateSuggestion> {
+  const suggestion = suggestionOf(task, suggestionId);
+  if (!suggestion.ok) return suggestion;
+  if (suggestion.value.state !== 'presented') {
+    return err(
+      'invalidTransition',
+      `Cannot adopt a ${suggestion.value.state} suggestion.`,
+    );
+  }
+  return suggestion;
+}
+
+/**
+ * Whether `undoAdoption` takes the suggestion as it is now (#323): the
+ * Estimate is still its adoption and no other suggestion is on show. The
+ * previous Estimate it is given is not checked here.
+ */
+export function checkUndoAdoption(
+  task: Task,
+  suggestionId: EstimateSuggestionId,
+): Result<undefined> {
+  const suggestion = suggestionOf(task, suggestionId);
+  if (!suggestion.ok) return suggestion;
+  const source = task.estimate?.source;
+  if (
+    suggestion.value.state !== 'adopted' ||
+    (source?.kind !== 'adopted' && source?.kind !== 'edited') ||
+    source.suggestionId !== suggestionId
+  ) {
+    return err('invalidTransition', 'The Estimate is no longer this adoption.');
+  }
+  if (presentedSuggestion(task) !== undefined) {
+    return err('invalidTransition', 'Another suggestion is on show.');
+  }
+  return ok(undefined);
+}
+
+/** Whether `rejectSuggestion` takes the suggestion as it is now (#323). */
+export function checkRejectSuggestion(
+  task: Task,
+  suggestionId: EstimateSuggestionId,
+): Result<undefined> {
+  const suggestion = suggestionOf(task, suggestionId);
+  if (!suggestion.ok) return suggestion;
+  return suggestion.value.state === 'presented'
+    ? ok(undefined)
+    : err(
+        'invalidTransition',
+        `Cannot reject a ${suggestion.value.state} suggestion.`,
+      );
+}
+
+/**
+ * Whether `undoRejection` takes the suggestion as it is now (#323): a
+ * rejected one, while no other suggestion is on show.
+ */
+export function checkUndoRejection(
+  task: Task,
+  suggestionId: EstimateSuggestionId,
+): Result<undefined> {
+  const suggestion = suggestionOf(task, suggestionId);
+  if (!suggestion.ok) return suggestion;
+  if (suggestion.value.state !== 'rejected') {
+    return err(
+      'invalidTransition',
+      `Cannot undo the rejection of a ${suggestion.value.state} suggestion.`,
+    );
+  }
+  if (presentedSuggestion(task) !== undefined) {
+    return err('invalidTransition', 'Another suggestion is on show.');
+  }
+  return ok(undefined);
 }

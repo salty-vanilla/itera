@@ -2,8 +2,8 @@
 
 - 状態：採用
 - 日付：2026-09-27
-- 関連：Issue #25、後続 Issue #26、#30、#121
-- 改訂：2026-09-30（認証を WorkOS AuthKit から Better Auth に変更。Issue #121）、2026-10-03（デプロイの方式、API の経路を `/api` の下に、登録を許可の一覧で絞る。Issue #32）
+- 関連：Issue #25、後続 Issue #26、#30、#32、#121、#262、#263
+- 改訂：2026-09-30（認証を WorkOS AuthKit から Better Auth に変更。Issue #121）、2026-10-03（デプロイの方式、API の経路を `/api` の下に、登録を許可の一覧で絞る。Issue #32）、2026-10-03（記録のテーブル、操作と読み取りの処理、ID の形式、同時の書き込み、CSRF、Web と API の配信、使い始めの間のスキーマの変更。Issue #262）、2026-10-03（記録のテーブルの列・制約・index、読み込みと書き込み、版の確かめ方。Issue #263）、2026-10-03（Web の配信の実装とキャッシュ。Issue #280）、2026-10-03（操作と読み取りの処理の実装、Better Auth の ID、依存に Origin と時計。Issue #266）、2026-10-03（日付が変わったときの処理、追いついた日、読み取りの衝突のやり直し。Issue #271）、2026-10-04（書き込みの冪等キー。記録のテーブル、操作と読み取りの処理、同時の書き込みの既知の限界をなくす。Issue #320）、2026-10-04（記録の行ごとの版。記録のテーブルの `revision` 列と冪等キーの `etag` 列、操作と読み取りの処理の条件の確かめと `ETag`、同時の書き込み。Issue #321）、2026-10-04（繰り返しの規則の版を、規則・版・曜日の行の全体にする。Issue #330）
 
 ## 背景
 
@@ -43,8 +43,8 @@ Better Auth が自分で書き込む行（利用者・アカウント・セッ�
 - Google の OAuth クライアントの承認済みリダイレクト URI は `<BETTER_AUTH_URL>/api/auth/callback/google`。
 - セッションは D1 の行と、署名した Cookie（`better-auth.session_token`、https では `__Secure-` 付き。HttpOnly、SameSite=Lax）で持つ。有効期間は Better Auth の既定（7 日。1 日を過ぎると `/api/auth/get-session` が延長し、Cookie を送り直す）。Cookie キャッシュは使わないので、サインアウトやセッションの削除はすぐに効く。
 - **セッションを延長するのは `/api/auth/get-session` だけ**。`requireAuth` を通る API の経路はセッションを読むだけで延長しない（Cookie を送り直せないため。期限切れの行は Better Auth が削除する）。そのためクライアントは、起動時など定期的に `/api/auth/get-session` を呼ぶ。呼ばないと、最後の延長から 7 日で API が 401 を返す。
-- Cookie を使うので、**Web と API は同じ origin で配信する**。CORS と、`BETTER_AUTH_URL` 以外の信頼する origin は設定しない。Web のログイン画面とログインの流れは別の Issue で作る。
-- 利用者の識別子は Better Auth の利用者 ID（`user.id`、Better Auth が生成するランダムな文字列）。
+- Cookie を使うので、**Web と API は同じ origin で配信する**。CORS と、`BETTER_AUTH_URL` 以外の信頼する origin は設定しない。Web のログイン画面とログインの流れは #278 で作った（ADR 0005「サインインと設定」）。
+- 利用者の識別子は Better Auth の利用者 ID（`user.id`）。形は TypeID（`user_…`。下の「ID の形式」、#266）。
 - **登録できる人を許可の一覧で絞る**（2026-10-03 オーナー決定、Issue #32）。Better Auth の `databaseHooks.user.create.before` で、利用者を作る前にメールアドレスを `SIGN_UP_ALLOWED_EMAILS`（カンマ区切り。前後の空白と大文字・小文字は無視する）と照らし、一覧にないか、Google が確認済みとしていない（`emailVerified` が true でない）なら `APIError`（403、code `SIGN_UP_NOT_ALLOWED`）を投げて作らない。未確認のメールアドレスは主張にすぎず、許可の根拠にしない。Google のコールバックは、サインインの開始で渡した `errorCallbackURL`（渡さなければ `/api/auth/error` の Better Auth のページ）へ、この code を `error` に、英語の説明を `error_description` に付けて戻す。クライアントが頼るのは `error` の code だけにする。Better Auth が利用者を作る経路（`internalAdapter` の `createUser`・`createOAuthUser`）はすべてこの hook を通るので、Better Auth の別の作り方を足しても一覧が効く。アプリが `user` テーブルへ直接書き込む経路は作らない（hook を迂回するため）。照らすのは作るときだけで、すでにある利用者は一覧から外してもサインインできる（外したら利用者を消すかは、PRD §14 の削除の方式と一緒に決める）。一覧は wrangler の secret で渡し、リポジトリに書かない。空なら、ほかの設定値と同じく認証を使うリクエストを 500 で失敗させる。Google の同意画面のテストユーザー（オーナーだけ）と二重にする。一般公開（PRD §14）を決めるまでの備え。
 - Google から受け取ったアクセストークンとリフレッシュトークンは、`account.encryptOAuthTokens` で `BETTER_AUTH_SECRET` から作る鍵で暗号化して保存する。Itera は Google の API を呼ばないが、Better Auth がアカウントの行に保存するため。
 - 設定値（`BETTER_AUTH_SECRET`・`BETTER_AUTH_URL`・`GOOGLE_CLIENT_ID`・`GOOGLE_CLIENT_SECRET`・`SIGN_UP_ALLOWED_EMAILS`）は環境変数と wrangler の secret で渡し、リポジトリに書かない。どれかが空、または `BETTER_AUTH_SECRET` が 32 文字未満なら、認証を使うリクエストは 500 で失敗する（下の確認事項の 5）。
@@ -87,6 +87,7 @@ Better Auth の文書（Context7 と better-auth.com）と、固定した 1.7.6 
 | テストの DB | @libsql/client（devDependencies） | 0.18.0 | Better Auth の実装を、マイグレーションを適用したメモリ DB で確かめる（Issue #121） |
 | 実行・開発 | wrangler（devDependencies） | 4.141.0 | ローカルの実行（workerd とローカルの D1）、型の生成、D1 のマイグレーションの適用 |
 | 型 | TypeScript・Vitest | 6.0.3 / 5.0.2 | ADR 0001 と同じ版 |
+| 入力の検証 | valibot | 1.5.0 | 契約（ADR 0006）から生成したスキーマで、要求を検証する。`@itera/api-contract` と同じ版（Issue #266） |
 
 `services/api` の構成：
 
@@ -101,7 +102,7 @@ Better Auth の文書（Context7 と better-auth.com）と、固定した 1.7.6 
 
 2026-09-27、オーナーが「DB・認証など実装の選択肢がある依存は、ハンドラーや middleware に直接書かず、構成時（合成ルート）に注入する」と決めた。以後 `services/api` に足す依存（メール送信、外部 API など）も同じ扱いにする。ルールは `.claude/rules/api.md`。
 
-- `createApp(dependencies)` が依存を 1 つの引数で受け取る。Workers の env はリクエストの中でしか得られないので、依存は env から実装を作る関数（`Dependencies`：`database`・`authenticator`）にする。`authenticator` は、そのリクエストの DB（`database` で作ったもの）も受け取る。本番の構成（D1、Better Auth）は `src/default-dependencies.ts` にあり、それを選ぶのは `src/index.ts` だけ。
+- `createApp(dependencies)` が依存を 1 つの引数で受け取る。Workers の env はリクエストの中でしか得られないので、依存は env から実装を作る関数（`Dependencies`：`database`・`authenticator`・`appOrigin`）にする。現在時刻（`now`）も注入し、テストで日時を固定する（#266）。`appOrigin` は書き込みの Origin の検査に使う origin で、本番は `BETTER_AUTH_URL` の origin（ハンドラーが `BETTER_AUTH_*` を直接読まないため）。`authenticator` は、そのリクエストの DB（`database` で作ったもの）も受け取る。本番の構成（D1、Better Auth）は `src/default-dependencies.ts` にあり、それを選ぶのは `src/index.ts` だけ。
 - DB：ハンドラーは `c.var.db`（型は `Database`）だけを使う。`Database` は Drizzle の非同期の SQLite の型に `batch()` を加えたもので、D1・libSQL・sqlite-proxy のどれでも満たせる（`src/db/database.test.ts` で型を確かめる）。同期の API の better-sqlite3 は満たさない。`drizzle-orm/d1` を使うのは既定の構成だけ。
 - 認証：`Authenticator` は、リクエストのヘッダー（セッションの Cookie）から利用者を返すか、有効なセッションがなければ `null` を返す（サーバー側の失敗は例外）。あわせて、認証サービス自身の経路（`/api/auth/*`）の応答を受け持つ。`requireAuth` は `Authenticator` だけを使い、401 の応答と `c.var.userId` の設定を受け持つ。Bearer トークンは受け付けないので、401 に `WWW-Authenticate: Bearer` は付けない。Better Auth の実装は `src/auth/better-auth.ts` の 1 実装。
 - テストでは、DB に sqlite-proxy の Drizzle（実行した SQL を記録し、行を返さない）を、認証に仮の `Authenticator` を渡す。Better Auth の実装は、libSQL のメモリ DB に `migrations/` を適用したもの（`src/db/memory-database.ts`）を渡し、アプリ越しに確かめる。セッションは Better Auth の内部の adapter で作り、署名した Cookie を付けて送る（あり・なし・期限切れ・別の鍵の署名・サインアウト後）。Google での登録は、Google のトークンのエンドポイントへの `fetch` をテストの中で差し替えて、サインインの開始からコールバック、`/api/me` までを通す。許可の一覧にないメールアドレスでは、同じ流れで利用者・アカウント・セッションが作られないことを確かめる。
@@ -110,14 +111,14 @@ Better Auth の文書（Context7 と better-auth.com）と、固定した 1.7.6 
 
 ### API の経路（Issue #32、2026-10-03）
 
-API の経路はすべて `/api` の下に置く（`/api/health`、`/api/me`、`/api/auth/*`）。旧い経路（`/health`・`/me`）は残さず、404 を返す。同じ Worker で Web を配信するとき（#280）、`/api/*` だけを API に回し、ほかを画面にするため（#262）。
+API の経路はすべて `/api` の下に置く（`/api/health`、`/api/me`、`/api/auth/*`）。旧い経路（`/health`・`/me`）は残さない（API としては応答せず、Web を配信するようになってからは画面の `index.html` が返る）。同じ Worker で Web を配信するとき（#280）、`/api/*` だけを API に回し、ほかを画面にするため（#262）。
 
 ### デプロイ（Issue #32、2026-10-03）
 
 2026-09-27、オーナーが次のとおり決めた（Issue #32）。
 
 1. **資源の管理は wrangler で行い、Terraform は使わない**。Worker・D1 の binding・`compatibility_date`・observability・公開の設定（`workers_dev`・`preview_urls`・`routes`）は `wrangler.jsonc`、D1 のスキーマは `migrations/` で Git 管理する。資源は Worker 1 つ・D1 1 つで、Terraform の state を管理する手間のほうが大きい。wrangler で管理できない設定（下の「手で行う設定」）は手順書にする。環境が増える・Access や WAF のルールが増える・複数人で運用する、のどれかになったら見直す。
-2. **CD は GitHub Actions で行う**（`.github/workflows/deploy.yml`）。main への push（と main を指定した手動実行）で、`pnpm check`（`check.yml` を `workflow_call` で呼ぶ）が通ったときだけ、D1 のマイグレーション（`wrangler d1 migrations apply DB --remote`）→ Worker のデプロイ（`wrangler deploy`）の順に実行する。production の GitHub Environment の承認を挟む。
+2. **CD は GitHub Actions で行う**（`.github/workflows/deploy.yml`）。main への push（と main を指定した手動実行）で、`pnpm check`（`check.yml` を `workflow_call` で呼ぶ）が通ったときだけ、Web のビルド（#280）→ D1 のマイグレーション（`wrangler d1 migrations apply DB --remote`）→ Worker のデプロイ（`wrangler deploy`）の順に実行する。production の GitHub Environment の承認を挟む。
    - 既存の CI と同じ流れで、検査に通ったものだけをデプロイし、マイグレーションとデプロイの順序を保証できる。actions の commit SHA 固定（ADR 0001）と、lockfile の wrangler（`services/api` の固定版）を使う方針に合う。サードパーティの action（`cloudflare/wrangler-action`）は使わず、`pnpm --filter @itera/api exec wrangler` を直接実行する。
    - Cloudflare の Workers Builds は見送る。2026-10-03 に文書で確かめたところ、Workers Builds は接続した Git の push ごとに Cloudflare の環境でビルドとデプロイのコマンドを実行する仕組みで、GitHub の CI の結果や Environment の承認を待つ機能は書かれていない。見送る理由（CI と別の場所でビルドされ、検査に通ったものだけを出す保証がしにくい）は崩れていない。
 
@@ -152,6 +153,164 @@ wrangler で管理できない設定は、[デプロイの手順書](../../opera
 | リポジトリ（PR） | `wrangler.jsonc` の `database_id` を作った D1 の ID に差し替える（ID は秘密ではない）。独自ドメインなら `routes` と `workers_dev: false` |
 
 公開後の確認（`/api/health`、Google でのサインイン、パスキーの追加とサインイン、`/api/me`、許可の一覧にないアカウント、`cf-connecting-ip` によるレート制限）は手順書の「公開後の確認」で行い、結果を Issue #32 に残す。
+
+### 記録のテーブル（2026-10-03）
+
+オーナーの決定（2026-10-02・03）：記録をまるごと 1 件の JSON にする案と、集約の中身を JSON の列に置く案は採らない。どちらも、どの記録が変わったかを DB が知らず、PC とスマホから同じ集約を書いたときに集約ごと上書きされて片方の変更が消える。SQL で中身を確かめることもできない。
+
+- `packages/domain` の記録を、種類ごとのテーブルに置く。集約の中身も子テーブルに分ける。
+  - Sprint：SprintGoal、SprintTask、SprintAreaSnapshot、CriterionUse、DailySelection、ActualTime、InterruptNote、Retro と RetroPin。
+  - Task：Subtask、EstimateSuggestion。
+  - RecurrenceRule：版。
+- 値オブジェクト（Estimate、PlanSnapshot と PlanningValue、CriterionPolicy、RecurrencePattern など）は、持ち主の行の列に展開する。union は判別の列（`kind`・`base` など）と、種類ごとの列で表す。
+- 利用者の設定（domain の `User`：表示名・タイムゾーン・週の始まり）は、Better Auth の `user` とは別のテーブルに置き、Better Auth の利用者 ID で 1 対 1 に結ぶ。Better Auth のテーブルに列を足さない。
+- Activity は追記だけの履歴で、種類（75 種）ごとに項目が違う。共通の項目（利用者、追記の順、日時、actor、kind）を列にし、種類ごとの内容を JSON の列に置く。Activity は判定に読み返さない履歴なので、内容の列では検索しない。例外は 1 つだけ：利用者がその割り込みを消したかの確認（下の「Activity を読む 1 つの例外」）。
+- 列・制約・index は #263 で次のとおり決めた（`services/api/src/db/schema.ts`）。
+
+#### 列（#263）
+
+- テーブルは記録の種類ごとに 1 つ（`area`、`task`、`recurrence_rule`、`occurrence`、`planning_criterion`、`sprint`）と、集約の中身ごとに 1 つ（`subtask`、`estimate_suggestion`、`recurrence_rule_version`、`sprint_goal`、`sprint_task`、`sprint_area_snapshot`、`criterion_use`、`daily_selection`、`actual_time`、`interrupt_note`、`retro`、`retro_pin`）。利用者の設定は `user_settings`。
+- 値の配列も子テーブルにする：提案の `uncertainties` は `estimate_suggestion_uncertainty`、毎週の繰り返しの曜日は `recurrence_rule_version_day`、SprintTask の `occurrenceIds` は結びつきのテーブル `sprint_task_occurrence`。`occurrenceIds` は「ない」と「空」が違う（繰り返しの Task の回をすべて外した SprintTask は空）ので、`sprint_task.has_occurrences` で区別する。
+- 順序に意味がある配列は `position`（0 から）で保つ。ID のない中身（ActualTime、RetroPin、uncertainties、曜日）は、持ち主と `position` を主キーにする。追記だけの ActualTime はこれで足りる。RetroPin は外すと後ろの行の `position` が変わり、その行が書き直される。
+- 値オブジェクトと union は持ち主の行の列に展開する（Estimate とその source、PlanSnapshot と PlanningValue、CriterionPolicy、RecurrencePattern、`closedBefore`、Retro の improvement）。判別の列（`estimate_source_kind`、`plan_value_base`、`scope_kind`、`freq` など）と、その種類にだけある列を置き、ほかの種類では NULL。省略できる属性は NULL にし、読み込むときはキーを持たない形に戻す。
+- RecurrenceRule と Occurrence は、domain の型では利用者を持たないが、行には `user_id` を置く（利用者ごとに読み、利用者とともに消すため）。
+- 書き込みの冪等キー（ADR 0006「冪等キー」、#320）は `idempotency_key` に置く。記録ではないので domain の型と `Records` には入れない。列は、利用者とキー（2 つで主キー）、要求の指紋（メソッド・経路・query・本文の SHA-256 を 16 進で）、応答のステータスと本文（送った JSON の文字列のまま。本文のない 204 は NULL）、作った日時（`Instant`）。利用者とともに消える（`ON DELETE CASCADE`）。期限切れの行を利用者ごとに消すため、（利用者、作った日時）に index を置く（マイグレーション 0004）。
+- 記録のテーブルのすべての行に `revision`（整数、既定 0）を置く。その行の値を最後に書いた保存の利用者ごとの版で、値を置き換える書き込みの条件（ADR 0006「記録ごとの版」、#321）に使う。繰り返しの規則の行は、自分の値が変わらなくても、版と曜日の行を足す・変える・消す保存で上がる（規則の版は全体の版。#330）。マイグレーション 0005 の前に書いた行は 0。冪等キーの行には、書き込みの応答の `ETag`（値を置き換える書き込みの、記録のその後の etag。ほかの書き込みは NULL）を `etag` に置く（マイグレーション 0005）。
+- 日付と日時は domain の文字列のまま（`LocalDate`、`Instant`）、時間（h）は `real` で置く。
+- 状態名などの値の範囲は CHECK にしない。domain の型と、書き込む前の domain のコマンドで守る。
+
+#### 外部キー（#263）
+
+- 記録の種類ごとのテーブルと `user_settings`・`record_revision`・`activity`・`idempotency_key` は、Better Auth の `user.id` を指し、利用者とともに消える（`ON DELETE CASCADE`）。
+- 集約の中身は持ち主（Task、RecurrenceRule とその版、Sprint、Retro）を指し、持ち主とともに消える。Sprint の中で SprintTask を指す DailySelection と ActualTime も外部キーを持つ（消えずに残る参照を DB で止める）。
+- 集約をまたぐ参照（Task の Area・RecurrenceRule、Occurrence の Task・RecurrenceRule、SprintTask の Task・Occurrence・`carriedFrom`、Goal・スナップショットの Area、CriterionUse や Retro の計画基準など）には外部キーを置かない。domain は Occurrence・計画基準・RecurrenceRule を消すことがあり（`RecordChanges.deleted`）、過去の記録からの参照がどう残るかは domain が決める。Task と RecurrenceRule は互いを指すので、外部キーにすると書く順序が決まらない。
+
+#### 一意制約と index（#263）
+
+DB で守る不変条件：
+
+| 不変条件 | 制約 |
+| --- | --- |
+| 11 Active の Sprint は同時に 1 つ | `sprint`：`state = 'active'` の行に、利用者ごとの部分一意 index |
+| 11 Sprint の期間は重ならない（一部） | `sprint`：利用者と `start` の一意 index。始まりの違う期間の重なり（週の始まりを変えたとき）は domain に任せる |
+| 13 SprintGoal は Sprint × Area に 0..1 | `sprint_goal` の主キー（Sprint、Area） |
+| 14 非繰り返しの Task は、同じ Sprint に SprintTask を 1 件まで | `sprint_task`：`has_occurrences = 0` の行に、（Sprint、Task）の部分一意 index。繰り返しの Task は週の途中に回を足すと SprintTask が増えるので対象外 |
+| 21 DailySelection は日付 × SprintTask（繰り返しは × Occurrence）に 0..1 | `daily_selection`：（SprintTask、日付）の一意 index（`occurrence_id` が NULL の行）と、（SprintTask、Occurrence、日付）の一意 index |
+| 35 Active な計画基準は最大 1 つ | `planning_criterion`：`state = 'active'` の行に、利用者ごとの部分一意 index |
+| 36・38 CriterionUse・Retro・RetroImprovement は Sprint に 0..1 | `criterion_use`・`retro` の主キーが Sprint。improvement は `retro` の列 |
+| 提示中の提案は Task に 1 つまで（packages/domain README、#20） | `estimate_suggestion`：`state = 'presented'` の行に、Task ごとの部分一意 index |
+| 回は Rule と日付に 1 つ（`generateOccurrences` は回のある日を飛ばす） | `occurrence`：（Rule、予定日）の一意 index |
+
+DB で守らない不変条件：上の表にないもの。状態の遷移、時刻の前後、記録をまたぐ判定で、domain のコマンドが守る。
+
+index：利用者ごとに読むための `user_id`、子テーブルの持ち主の列（主キーの先頭にないもの）、ActualTime の SprintTask。Activity は（利用者、版、`position`）を主キーにし、ほかの index は 1 つだけ（`kind = 'interruptDeleted'` の行の、割り込みの ID の式への部分 index。下の「Activity を読む 1 つの例外」）。
+
+#### 読み込みと書き込み（#263）
+
+- 読み込み（`loadRecords`）：利用者 ID を受け取り、利用者の版（と、#271 から追いついた日）と、Activity を除く記録を 1 回の `batch()`（23 の SELECT）で読む。etag を持つ記録（ADR 0006「記録ごとの版」）の行の `revision` を、記録ごとの版の表（`packages/application` の `RecordVersions`。鍵は `versionKey`）にして一緒に返す（#321）。繰り返しの規則の版は、規則・版・曜日の行の `revision` の最大（#330）。子テーブルは持ち主のテーブルを利用者で絞った副問い合わせで選ぶ。記録の種類ごとの配列は ID の順（TypeID では作った順）、集約の中身は `position` の順。最初の保存の前は版 0、記録なし。
+- 書き込み（`saveRecords`）：変えた・足した記録、消す記録の ID、追記する Activity、読み込んだときの記録と版を受け取る。変えた記録を読み込んだときの記録と行の単位で比べ、消えた行を DELETE、変わった行を変わった列だけ UPDATE、新しい行を INSERT する。INSERT する行と値の変わった行には、この保存の版を `revision` に書く。`position` だけが変わった行（前の行を外して後ろが詰まったとき）は版を変えない（その記録の値は変わっていないので、値を置き換える書き込みを 412 にしない。#321）。自分の版を持たない部分の行（繰り返しの規則の版と曜日。`record-rows.ts` の `versionedParts`）を足す・変える・消すときは、持ち主の行（規則）の `revision` もこの保存の版にする（曜日を減らすと行が消えるだけなので、#330）。保存の後の記録ごとの版を返す。これと Activity の INSERT を 1 つの `batch()` で送る。何も変わらず Activity もなければ、何も書かない。
+  - 順序：DELETE を先に、子から親の順で行う（同じ一意キーで作り直す行、たとえば作り直した回が入れるように）。続いて UPDATE と INSERT を親から子の順で行う。部分一意 index の枠（Active な計画基準・Sprint、提示中の提案）は、同じテーブルの中で、枠を離れる行を先に、枠に入る行を後に書く（SQLite は一意制約を、`batch()` の終わりではなく行を書くたびに確かめる）。部分一意 index はすべて `save-records.ts` の一覧（UPDATE で枠に入りうるものと、作ったときに列が決まるもの）に載せ、載っていないものがあればテストで失敗させる。
+  - 同じ記録が変更と削除の両方にあるときは削除が勝ち、同じ変更で作って消した記録は何も書かない（`apps/web` の `applyChanges` と同じ）。
+  - D1 の 1 文あたりのバインド変数の上限（100）に収まるよう、INSERT は列の数に合わせて行を分ける。
+  - 利用者の記録でないもの（ほかの利用者の `userId` を持つ記録、読み込んでいない記録の削除）は、呼び出し側の誤りとして例外にする。読み込んでいない ID の記録は INSERT になり、ほかの利用者の行と主キーがぶつかって失敗するので、上書きはできない。
+  - 最初の保存には利用者の設定（`User`）を含める。
+- Activity は（保存で上げた版、その保存の中の順）で並べる。共通の項目のほかは JSON の `content` に置く。
+- 型は `packages/application` の `Records`・`RecordChanges`（#266 でそろえた）。`Records` は Activity を含まない（追記するだけで読み返さないため。例外は下の「Activity を読む 1 つの例外」）。
+
+#### Activity を読む 1 つの例外（#315、2026-10-04）
+
+消した割り込みを戻す `restoreInterrupt`（ADR 0006「消した記録を戻す操作の照合」）は、利用者が実際にその割り込みを消したことを、保存の前に確かめる。消した事実を持つのは Activity の `interruptDeleted`（Sprint の ID と割り込みの ID）だけなので、ここだけ Activity を判定に読む。
+
+- 理由：割り込みの ID は全体の主キーで、クライアントが ID を決めて送る（戻す操作が ID を残すため）。確かめがないと、ほかの利用者の ID は保存の主キーの衝突（500）になり、その ID がほかの利用者にあるかどうかが応答の違いで分かる。消した記録を別のテーブルに持つ案は、domain の記録（`Records`）と `RecordChanges` に消した割り込みを足すことになり、Activity が同じ事実をすでに持つので採らない。
+- 境界：読むのは `src/db/deleted-interrupts.ts` の 1 つの問い合わせだけ（利用者の行、`kind = 'interruptDeleted'`、割り込みと Sprint の ID の一致、`limit 1`）。Activity を `select` する場所がほかに増えたら失敗する検査を置いた（`src/db/activity-reads.test.ts`）。ほかの判定にログを読ませたくなったら、この節を直す決定として扱う。
+- 索引：Activity の `content` は JSON で、問い合わせが主キー（利用者、版、`position`）の順では引けない。`kind = 'interruptDeleted'` の行だけに、`content ->> '$.interruptId'` への部分 index（`activity_interrupt_deleted_idx`、マイグレーション 0003）を置く。問い合わせの `kind` は定数で書き、式は index と同じ形にして、index が使われることを `EXPLAIN QUERY PLAN` でテストする（ローカルの D1、wrangler 4.141.0 でも、マイグレーション 0003 が通り、同じ index が使われることを確かめた。2026-10-04）。式の `->>` は、drizzle-kit 0.31.11 が `json_extract(…, '…')` の引数のカンマで式を分けて壊れた SQL を出すので選んだ（SQLite 3.38 以降。D1 と libSQL で動く）。
+- Activity は追記だけなので、消した記録は後から消えない。確かめと保存の間に結果が変わらないので、版の確かめには入れず、記録を読み込んだあとに 1 回問い合わせる。
+- 使い始めの間の作り直し（上の「使い始めの間のスキーマの変更」）で `activity` を記録を移さずに作り直すと、それより前に消した割り込みは戻せなくなる（404。500 にはならない）。
+- 戻す条件：domain が消した割り込みを `Records` に持つ（たとえば消した note の内容を含めて）ようになったら、この問い合わせをやめて記録からの照合にし、index も消す。
+
+### 操作と読み取りの処理（2026-10-03）
+
+操作（書き込み）は次の順に処理する。読み取りは 1・3・4・5 の後に派生値を計算して返す。
+
+1. 認証（`requireAuth`）。
+2. 書き込みのリクエストの Origin を確かめる（下の「書き込みの API の CSRF への備え」）。書き込みは続けて、本文の大きさを確かめてから、冪等キー（`Idempotency-Key`）を読み、要求の指紋を作る（ADR 0006「冪等キー」、#320。`src/handlers/idempotency.ts` の `readWrite`）。
+3. 入力を契約（OpenAPI、ADR 0006）のスキーマで検証する。
+4. 利用者の記録を読み込む。書き込みは、同じ `batch()` でそのキーの記録も読み（記録とキーを同じ時点で見る）、24 時間の内に保存した応答があれば、ここで操作を実行せずにそれを返す（指紋が違えば 422 `/problems/idempotency-key-reused`）。値を置き換える書き込みは、続けて `If-Match`（目標と繰り返しの規則では `If-None-Match`。#330）を、読み込んだ記録の版と比べる（ADR 0006「記録ごとの版」、#321）。対象の記録がなければ比べずに操作に任せ（404）、ヘッダーがなければ 428、合わなければ 412 で、操作を実行せずに断る。比べるのは追いつきの前の、保存してある版。この後に、記録の外の DB の確認が要る操作だけ、その確認をする（`src/handlers/preconditions.ts`。今は `restoreInterrupt` だけ。下の「Activity を読む 1 つの例外」）。
+5. 日付が変わったときのシステムの処理（Sprint の終了、その日の始まり）を、その時点まで進める（#271）。
+6. アプリケーション層（ADR 0005）の操作を実行する。判定は `packages/domain` のコマンドが行う。
+7. 変わった行だけを 1 つの `batch()` で書く。同じ `batch()` の中で、利用者ごとの版を確かめて上げ（下の「同時の書き込み」）、最後に、期限を過ぎた利用者のキーの行を消してから、この書き込みのキーと応答を INSERT する。記録の書き込みとキーの記録は、どちらも書かれるか、どちらも書かれない。書く行も Activity もなければ、キーも残さない（ADR 0006「冪等キー」）。
+8. 操作の結果（作った記録の ID、操作が返す値）を返す。キーの記録に保存したものと同じステータスと本文（`answerResponse`）。値を置き換える書き込みは、記録のその後の etag を `ETag` ヘッダーで返す（7 の保存の版から作り、キーの記録にも置く。#321）。
+
+- 実装（#266）：`services/api/src/handlers/`。1・2 は経路ごとの middleware（`requireAuth`・`requireSameOrigin`）、3 は経路（`validate.ts`。契約の Valibot のスキーマに加えて、日付と日時が暦の上で実在するかを domain の関数で確かめる。query の数と真偽を宣言した型に変えるのは `@itera/api-contract/requests` の `queryInput`）、4〜8 は `flow.ts` の 1 か所にある。書き込みは、`@itera/api-contract/requests` の面（メソッドと経路）をすべて登録し、`readRequest` が選んだ `packages/application` の操作を実行する（ADR 0006「経路の形」、#295）。読み取りは `reads.ts` に、経路・パラメータのスキーマ・application の読み取りの関数を足す。契約のすべての面と読み取りが登録されていることをテストで確かめる（`registry.test.ts`）。
+- 4 の後、利用者の設定（タイムゾーン）がなければ「今日」が決まらないので、422 `/problems/user-not-set-up` で断る（ADR 0006「エラー」）。`GET /api/me` だけは設定を読んで `null` を返し、設定を作る `PUT /api/me/settings`（#279）は 4 の代わりに設定の行だけを読んで、最初の保存（版 0 → 1）でそれを書く（`flow.setUp`。ADR 0006「利用者」）。
+- 5 の変更は、操作のときは操作の変更と同じ `batch()` で書き（追いつきが先、操作が後。Activity も同じ版に入る）、読み取りのときは派生値を計算する前に書く（#271 の範囲 2）。テストでは追いつきを差し替えて、この書き方を確かめる（`createFlow` の `catchUp`）。
+- 5 の中身（#271）：`packages/application` の `catchUp`。前の保存のときに追いついた日（`record_revision.caught_up_to`）から今日まで、実行中の Sprint の日を 1 日ずつ始め、終了日を過ぎた Sprint を Review にする。日ごとに進める理由と、毎日開いた場合との違いは ADR 0005「システムの記録」。何もすることがなければ変更も Activity もなく、何も書かない。追いつきで作る記録と Activity の日時は、処理した時点の現在時刻（注入した時計）。
+- 追いついた日：保存はいつも追いつきの後なので、保存するたびに、その時点の利用者のタイムゾーンでの「今日」を `record_revision.caught_up_to` に書く（版を上げる文と同じ文）。前の日には戻さない（0 時をまたいで、時計の少し遅い要求の保存が後から入っても、すでにある後の日を残す。前の日を進め直すと、F13・F19 で Pending に戻った過去の日の回に選択ができうるため）。何も書かなかった読み取りでは進まないが、その間に記録は変わっていないので、次の追いつきが同じ日をもう一度進めても何も変わらない。列は NULL を許し、#271 より前の保存の行では NULL（今日だけを進める）。
+- 読み取りの衝突のやり直し：追いつきの書き込みが版の衝突になったら、記録を読み直して追いつきを 1 回だけやり直す。間に入った書き込みは、それ自身の追いつきと一緒に保存されているので、読み直した記録ではたいてい何もすることがない。2 回目も衝突なら 409 `/problems/revision-conflict` を返す（ADR 0006）。操作は今までどおりやり直さない（下の「同時の書き込み」）。そのため、新しい日の最初の読み取りと操作が同時に来ると、追いつきの書き込みとぶつかった操作がまれに 409 になる。
+- 追いつきは時計と記録だけで決まり、要求の入力に左右されない。GET の読み取りでも書くので（GET は Origin を確かめない）、CSRF の備えはこの前提に立つ。システムの変更が domain に断られたら、利用者の誤りではないので 500 にする。
+- 予期しない例外は 500 `/problems/internal-error` にし、Workers Logs に経路・例外の種類・文言・スタックを残す。要求の本文と記録は出さない。Drizzle の失敗した問い合わせの文言にはパラメータ（利用者の文字列）が入るので、その文言は出さず、原因（DB 自身の文言）だけを出す。Better Auth 自身のログ（セッションを読む途中の DB の失敗など）も、`logger` で同じように伏せる（引数は例外の種類と原因だけ）。
+- 4 では、その利用者の記録を、Activity を除いてすべて読む。派生値（持ち越し回数、連続見送り、Retro の事実）は過去の Sprint をたどるので、操作ごとに読む範囲を切り出すと、範囲を決める規則が `packages/domain` の外に増えるため。1 回の `batch()`（テーブルの数の SELECT）で読む。Workers Logs で読み込みの時間を見て、目安（p95 で 100ms）を超えたら、読む範囲の切り出しを検討する。
+
+### ID の形式（2026-10-03）
+
+オーナーの決定：記録の ID は TypeID（仕様 v0.3）にする。接頭辞に記録の種類を、後ろに UUIDv7 を base32 にした 26 文字を置く（例：`task_01h2xcejqtf2nbrexx3vqjhp41`）。
+
+- 接頭辞は domain の ID の種類を snake_case にしたもの（`user`、`area`、`task`、`subtask`、`estimate_suggestion`、`recurrence_rule`、`occurrence`、`sprint`、`sprint_task`、`daily_selection`、`interrupt_note`、`planning_criterion`）。
+- UUIDv7 は作った時刻の順に並ぶので、domain が同時刻の記録を ID の順で並べる規則（packages/domain README）を満たす。
+- ID は `packages/domain` の外で作る（domain は時計と乱数に依存しない）。作る関数は API とブラウザ内モックで共有する（#264）。外から来た ID は、接頭辞と形式を検証してから使う（契約のスキーマ、#265）。
+- Better Auth が作る ID（利用者・セッション・アカウントなど）も TypeID にそろえる。domain の利用者 ID は Better Auth の利用者 ID と同じ値（`user_…`）。
+  - 実装（#266）：Better Auth 1.7.6 の `advanced.database.generateId` に、モデルの名前（`user`・`session`・`account`・`verification`・`passkey`・`rateLimit`）を受けて TypeID を返す関数を渡す（Context7 と 1.7.6 のコードで確認。adapter の INSERT と、Better Auth が自分で作る利用者・セッションの ID の両方がこれを通る）。接頭辞はモデルの名前を snake_case にしたもの。時刻は注入した `now` を使う。#266 より前に作った行（#32 の確認で作った利用者など）の ID は TypeID ではない。移す SQL は書かず（下の「使い始めの間のスキーマの変更」）、その利用者を消して登録し直す（オーナーの手作業）。TypeID でない利用者 ID のセッションは、`Authenticator` が利用者 ID を確かめた段階でサーバー側の失敗（500）にし、Workers Logs に残す。
+- D1 には文字列のまま置く。
+- 作る関数と確かめる関数は `packages/application` の `ids.ts`（#264）。ライブラリは使わずに仕様を実装した。仕様は小さく（接頭辞の規則と、128 ビットを 26 文字にする base32）、作る時刻を引数で渡せること（fixture は見本データの日時から毎回同じ ID を作り、メモリ上のストアは fixture の時計の時刻で作る）と、同じミリ秒の中でも作った順に並ぶこと（RFC 9562 §6.2 の、乱数の部分を前の ID から数え上げる方法）が要るため。乱数は引数で受け取り、Workers とブラウザでは `crypto.getRandomValues` を渡す。仕様のリポジトリの `valid.json`・`invalid.json` の例をテストで通す。
+- 外から来た ID は、接頭辞が記録の種類と一致し、UUID が v7（version 7、variant `10`）のときだけ受け付ける（`parseId`）。
+
+### 同時の書き込み（2026-10-03）
+
+PC とスマホから同じ利用者の記録を書く。後から来た書き込みが、古い記録をもとにほかの書き込みを上書きしないように、利用者ごとの版（revision）で楽観的に排他する。
+
+- 読み込んだときの版を、書き込みの `batch()` の中で確かめて上げる。ほかの書き込みが先に入っていたら `batch()` 全体を取り消し、409 を返す。`batch()` は 1 つのトランザクションで、途中の文が失敗すると全体が取り消される（上の「トランザクション」）。
+- 版は利用者ごとの行（`record_revision`）に置き、`CHECK (revision >= 1)` を付ける。行がなければ版 0。
+- 版の確かめ方（#263）：`batch()` の最初の文を `INSERT INTO record_revision (user_id, revision) VALUES (?, 読み込んだ版 + 1) ON CONFLICT (user_id) DO UPDATE SET revision = CASE WHEN revision = 読み込んだ版 THEN 読み込んだ版 + 1 ELSE 0 END` にする（#271 で、同じ文が `caught_up_to` に追いついた日も書く）。ほかの書き込みが先に版を上げていれば 0 を書こうとして CHECK に反し、`batch()` 全体が取り消される。最初の保存（版 0）が同時に 2 つ来たときは、後の方が先の行とぶつかり、同じく 0 になって失敗する。SQLite は INSERT の値を衝突より先に CHECK で確かめるので、INSERT の値は CHECK を満たす値（読み込んだ版 + 1）にする。読み込んだ版が 1 以上なのに行がない場合（行は利用者を消すときにしか消えない）はそのまま入る。
+- `batch()` が失敗したら版を読み直し、読み込んだ版と違えば「版の衝突」を返す。同じなら衝突ではないので、失敗をそのまま投げる。エラーの文言は D1 と libSQL で違うので、文言では見分けない。
+- 書き込みが版の衝突になったら、冪等キーの記録を読み直す（#320、ADR 0006「冪等キー」）。あれば、この書き込みはすでに保存されているので、保存した応答を返す（この要求の `batch()` が確定した後に D1 の応答が失われた場合か、同じキーの要求が先に保存した場合）。なければ 409 を返す。これで 409 は「この書き込みはしていない」だけになる。
+  - #320 より前の既知の限界（なくした）：`batch()` が確定したあとに D1 の応答が失われると、読み直した版が進んでいるので「版の衝突」と返っていた（実際には保存されている）。
+  - キーのない書き込み（読み取りの前の追いつき。上の「操作と読み取りの処理」の「読み取りの衝突のやり直し」）は、今までどおり版だけで決める。
+- 既知の限界：1 回の `batch()` の文の数に上限は設けていない（Workers Paid の 1 起動あたり 1000 クエリに `batch()` の中の文がどう数えられるかは文書で確かめられていない）。1 つの操作で書く行は多くても数十の見込みで、超えそうになったら見直す。
+- ローカルの D1（`wrangler dev`、wrangler 4.141.0）で確かめた（2026-10-03）：同じ版から始めた 2 つの書き込みは、後の方が衝突になり、その中の Task と Activity は 1 行も書かれなかった。同じ版から同時に送った 2 つの書き込みも、片方だけが通った。
+- 利用者ごとの版は 1 つの要求の読み込みと書き込みの間を守るもので、クライアントが古い表示から書いたことは分からない。値を置き換える書き込みは、記録の行ごとの版（`revision`）でも条件つきにする（ADR 0006「記録ごとの版」、#321）。利用者ごとの版の確かめはそのまま残す。ローカルの D1（wrangler 4.141.0）で、マイグレーション 0005 が通り、既にある行の `revision` が 0 になり、冪等キーのテーブルに `etag` 列ができることを確かめた（2026-10-04）。
+- クライアントは 409 を受けたら記録を読み直し、操作が通らなかったことを知らせる。自動ではやり直さない（読み直した記録では、その操作の意味が変わっていることがあるため）。通信の失敗と 5xx は、同じキーで送り直してよい（ADR 0005「エラーと送信中」）。
+- 確かめ（#320）：アプリ越しのテスト（`src/handlers/idempotency.test.ts`、libSQL のメモリ DB、注入した時計）で、同じキーの再送が同じ応答を返して記録と Activity を 1 回分だけ変えること（作る・追記する・PUT・DELETE）、本文を変えた再送が 422 で何も書かないこと、キーのない書き込みが 400 になること、`batch()` を確定させてから失敗を返す DB で応答が確定した結果（201）になること、同じキーの 2 つの要求を同時に読み込ませると記録が 1 回分だけ変わり 2 つの応答が同じになること、ほかの書き込みが先に入れば 409 になること、24 時間を過ぎたキーが新しい要求になり古い行が消えることを確かめた。ローカルの D1（wrangler 4.141.0）でも、マイグレーション 0004 が通り、期限切れの行の DELETE とキーの INSERT が動き、キーの検索が主キーの index を使い、利用者を消すとキーの行も消えることを確かめた（2026-10-04）。
+
+### 書き込みの API の CSRF への備え（2026-10-03）
+
+「影響」で後回しにしていた点を決める。セッションの Cookie は SameSite=Lax だが、それだけに頼らず、`/api/*` の GET・HEAD 以外のリクエストは、`Origin` ヘッダーが `BETTER_AUTH_URL` の origin と一致しなければ 403 にする。Better Auth 自身の経路（`/api/auth/*`）は Better Auth の検査に任せる。
+
+実装（#266）：契約の経路（`/api/me`・読み取り・書き込み。#295 からは書き込みが資源の経路の POST・PUT・PATCH・DELETE）に、認証の後で `requireSameOrigin` を置く。GET・HEAD 以外のすべてのメソッドを書き込みとして確かめる。origin は注入した `appOrigin`。`Origin` ヘッダーのない書き込みも 403 にする（ブラウザは POST に必ず付ける）。ポートが違えば別の origin として断る。
+
+### Web と API の配信（2026-10-03）
+
+- `apps/web` のビルドを、API と同じ Worker の静的アセット（Workers Static Assets）として配信する。同じ origin なので、Cookie と CORS の前提（上の「認証の構成」）を変えない。
+- `assets.not_found_handling` を `single-page-application` にし、`assets.run_worker_first` を `["/api/*"]` にする（2026-10-03 に Cloudflare の文書で確認）。
+- API の経路はすべて `/api` の下に置く（`/api/health`、`/api/me`、`/api/auth/*`、契約の operation）。画面の経路（`/today` など）と重ならない。
+- ローカルの開発では、Vite の開発サーバーが `/api` を `wrangler dev` に中継する（ブラウザから見て同じ origin）。
+
+実装（Issue #280、2026-10-03）：
+
+- `wrangler.jsonc` の `assets` は `directory: "../../apps/web/dist"`（Vite の既定の出力先）、上の 2 つの設定。`binding` は置かない（Worker のコードはアセットを取りに行かない）。`dist` がないと `wrangler dev` と `wrangler deploy` は失敗する。型の検査（`wrangler types --check`）は `dist` がなくても通るので、`pnpm check` の中で型の検査がビルドより前に動いても通る。
+- CD は、`wrangler` を実行する前に `pnpm build`（ルートの script。`apps/web` の `vite build`）を実行する（ビルドの失敗でマイグレーションの前に止まる。ビルドには Cloudflare のトークンを渡さない）。`pnpm check` も `pnpm build` を含むので、ビルドが壊れる変更は PR の CI で止まる。
+- キャッシュ：すべてのアセット（`index.html` もハッシュ付きのファイルも）に Workers Static Assets の既定を使い、`_headers` は置かない。既定は `Cache-Control: public, max-age=0, must-revalidate` と `ETag`（`Authorization` と `Range` のないリクエストに付く。2026-10-03 に Cloudflare の文書で確認）。ブラウザは保存しても毎回 `If-None-Match` で確かめ、変わっていなければ 304 で本文は再取得しない。古い版が返ることはない。
+- `/assets/*` に `immutable` を付けない（2026-10-03 の判断）。`not_found_handling` が `single-page-application` なので、存在しない `/assets/<名前>` にも `index.html`（200）が返る（`wrangler dev` 4.141.0 で確認。`env.ASSETS.fetch()` にも同じ設定がかかる）。ここに `immutable` を付けると、版のずれ（段階デプロイで複数の版が同時に配信されるとき）や、ロールバック（古い版を出し直し、古いハッシュの URL がまた使われるとき）で、HTML が JS・CSS の URL に長く固定され、ブラウザのキャッシュを消すまで画面が起動しない。見つからない場合を 404 にするには、Worker が内容の種類から推す判定（アセットの応答が HTML なら 404）が要り、その判定を持ち込むより、既定の再検証を使う。
+  - 代わりに払うもの：ハッシュ付きのファイルも、読み込みのたびに再検証の往復（304）が 1 回ずつ増える。ファイルは 1 つの JS と 1 つの CSS で、利用者はオーナー 1 人のうちは小さい。
+  - 見直す条件：読み込みが遅いと分かったら、`/assets/*` を Worker が先に受け（`run_worker_first` に足す）、見つからない場合を 404 にして `Cache-Control` を自分で付ける方式を検討する（`ASSETS` の binding が要り、アセットの取得ごとに Worker が動く。`wrangler.jsonc` の binding なので specialist のレビューの対象）。
+- 検査：`services/api/src/app.test.ts` が、アプリの経路がすべて `/api` の下にあることを確かめる（`/api` の外の経路は Worker に届かない）。
+
+### 使い始めの間のスキーマの変更（2026-10-02）
+
+オーナーの決定：利用者がオーナー 1 人で、記録が消えてもよい間は、スキーマを変えるときに既存の記録を移さなくてよい。
+
+- マイグレーションは今までどおり drizzle-kit で生成して wrangler で適用する。記録を移す SQL は書かず、テーブルを作り直してよい。
+- 作り直す前に、戻す必要が出たときのために D1 の Time Travel の時点を控える。
+- 終わる条件：オーナー以外が使い始めるとき、またはオーナーが残したい記録ができたと決めたとき。以後は記録を保つマイグレーションにする。
 
 ## 認証の改訂（2026-09-30、Issue #121）
 
@@ -190,7 +349,7 @@ Issue #121 は「Better Auth は原子的な処理に `batch()` を使う」を�
 
 - `services/api` は Workers 向けに作り、wrangler が束ねてデプロイする。ADR 0001 の「Node で直接動かして出力する `services/api`」という前提は、この ADR で置き換わる。
 - #32（デプロイ）で、認証の設定を Better Auth と Google の OAuth クライアントに合わせた（上の「デプロイ」）。デプロイ先の API に `cf-connecting-ip` が届くこと（届かないとレート制限が全員で 1 つになる）と、`BETTER_AUTH_URL` が https であること（Cookie が Secure になる）は、手順書の「公開後の確認」で確かめる。
-- 決めていないもの：API の契約（エンドポイント、OpenAPI）、ドメインのテーブル設計、Web のログイン画面とログインの流れ、データの同期・削除・エクスポート、一般公開の範囲。Better Auth の Origin の検査は `/api/auth/*` にだけかかるので、書き込みを伴う API を足すときに、CSRF への備え（Origin の検査など）を決める。
+- 決めていないもの：API の契約（エンドポイント、OpenAPI。ADR 0006 で決める、#265）、Web のログイン画面とログインの流れ（#278）、データの同期・削除・エクスポート、一般公開の範囲。書き込みを伴う API の CSRF への備えは、上の「書き込みの API の CSRF への備え」で決めた（2026-10-03）。
 - Cloudflare の料金・上限・機能の区分は、2026-09-27 に下の一次資料で確認した。Better Auth の挙動は 2026-09-30 に 1.7.6 で確認した。変わった場合はこの ADR を見直す。
 
 ## 参照

@@ -1,4 +1,4 @@
-import type { LocalDate } from '@itera/domain';
+import type { DayData } from '@itera/api-contract';
 import { Link } from '@tanstack/react-router';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { semanticIcons } from '@/components/ui/icon';
@@ -7,9 +7,6 @@ import { MetaItem, TaskMetadata } from '@/components/task/task-metadata';
 import { formatDate, formatTime } from '@/lib/date-format';
 import { SELECTION_WORDS } from '@/lib/selection-words';
 import { formatHours } from '@/lib/time-format';
-import type { DayData } from '@/store/day-view';
-import { useDay } from '@/store/use-today';
-import { DayFrame } from './day-frame';
 
 // A day other than today on the Today screen (#90), read only.
 // - Past: what was chosen that day and how each ended, and the interrupts.
@@ -23,19 +20,21 @@ import { DayFrame } from './day-frame';
 const link = 'whitespace-nowrap text-link underline focus-visible:focus-ring';
 const Repeat = semanticIcons.recurrence;
 
-function OtherDay({ date }: { date: LocalDate }) {
-  const data = useDay(date);
-  if (data === undefined) return null;
+/** The line above the date: where the day is in its Sprint. */
+function otherDayMeta({ within }: DayData) {
+  return within === undefined
+    ? undefined
+    : `Sprint ${within.number} · ${within.day.index}日目 / ${within.day.count}日`;
+}
+
+/**
+ * What the day has, under the frame the screen gives it (`DayFrame`, which
+ * it shares with the wait for the day, so that the heading stays).
+ */
+function OtherDay({ data }: { data: DayData }) {
   const { within } = data;
   return (
-    <DayFrame
-      date={date}
-      meta={
-        within === undefined
-          ? undefined
-          : `Sprint ${within.number} · ${within.day.index}日目 / ${within.day.count}日`
-      }
-    >
+    <>
       <Where data={data} />
       {data.when === 'future' ? (
         <Future data={data} />
@@ -43,7 +42,7 @@ function OtherDay({ date }: { date: LocalDate }) {
         // With no Sprint, nothing could be chosen that day.
         within?.sprint !== undefined && <Past data={data} />
       )}
-    </DayFrame>
+    </>
   );
 }
 
@@ -81,7 +80,11 @@ function Where({ data }: { data: DayData }) {
 }
 
 function Past({ data }: { data: DayData }) {
-  const running = data.within?.sprint?.state === 'active';
+  // Where an undo is: shown while a record of the day can be undone, as
+  // the read says (#323).
+  const undoable = data.records.some(
+    (r) => r.capabilities.canUndoComplete || r.capabilities.canUndoSkip,
+  );
   return (
     <>
       <section aria-labelledby="day-records" className="flex flex-col gap-2">
@@ -118,7 +121,7 @@ function Past({ data }: { data: DayData }) {
             ))}
           </ul>
         )}
-        {running && data.records.length > 0 && (
+        {undoable && (
           <p className="text-help text-ink-muted [text-wrap:pretty] [word-break:auto-phrase]">
             完了・スキップの取り消しは、Sprint の画面の
             <span className="whitespace-nowrap">「日ごとの記録」から。</span>
@@ -227,4 +230,4 @@ function Future({ data }: { data: DayData }) {
   );
 }
 
-export { OtherDay };
+export { OtherDay, otherDayMeta };

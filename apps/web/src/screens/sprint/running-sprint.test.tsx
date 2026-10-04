@@ -10,8 +10,13 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import type { StoreSnapshot } from '@/store/record-store';
+import type { StoreSnapshot } from '@/mock/memory-store';
+import { dayRead } from '@/test/day-read';
 import { getHours } from '@/test/duration';
+import { waitForSprintScreen } from '@/test/sprint-ready';
+import { fixtureIds } from '@itera/application/fixtures';
+
+const ids = fixtureIds();
 
 // For a Sprint whose criterion changed no planned value (#161).
 let criterionHadNoTarget = false;
@@ -55,8 +60,8 @@ function withoutCriterionTarget(initial: StoreSnapshot): StoreSnapshot {
     },
   };
 }
-vi.mock('@/store/record-store', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/store/record-store')>();
+vi.mock('@/mock/memory-store', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/mock/memory-store')>();
   return {
     ...actual,
     createMemoryStore: (
@@ -88,6 +93,8 @@ async function renderAt(url: string) {
     </TooltipProvider>,
   );
   await screen.findByRole('heading', { level: 1 });
+  // The Sprint is there once its records are read (the mock answers).
+  if (url.startsWith('/sprint')) await waitForSprintScreen();
   return router;
 }
 
@@ -169,6 +176,7 @@ describe('Sprint — running (#51)', () => {
     }
     cleanup();
     await renderAt('/today?fixture=today-interrupt');
+    await dayRead();
     expect(screen.getByText('4 / 10件').className).toContain('text-num-s');
   });
 
@@ -188,7 +196,7 @@ describe('Sprint — running (#51)', () => {
     await userEvent.clear(field);
     await userEvent.type(field, '先行研究を 2本押さえる');
     await userEvent.click(screen.getByRole('button', { name: '保存' }));
-    expect(goalOf('area-research')).toMatchObject({
+    expect(goalOf(ids.area.research)).toMatchObject({
       text: '先行研究を 2本押さえる',
       plannedText: '先行研究を押さえる',
     });
@@ -205,7 +213,7 @@ describe('Sprint — running (#51)', () => {
     await userEvent.clear(screen.getByRole('textbox', { name: /目標/ }));
     await userEvent.click(screen.getByRole('button', { name: '保存' }));
     expect(screen.getByText(/確定した後の目標は消せません/)).toBeTruthy();
-    expect(goalOf('area-research')?.text).toBe('先行研究を押さえる');
+    expect(goalOf(ids.area.research)?.text).toBe('先行研究を押さえる');
     await waitFor(() =>
       expect(document.activeElement).toBe(
         screen.getByRole('textbox', { name: /目標/ }),
@@ -223,7 +231,7 @@ describe('Sprint — running (#51)', () => {
       '多読を毎回続ける',
     );
     await userEvent.click(screen.getByRole('button', { name: '保存' }));
-    const goal = goalOf('area-study');
+    const goal = goalOf(ids.area.study);
     expect(goal?.text).toBe('多読を毎回続ける');
     expect(goal?.plannedText).toBeUndefined();
     expect(screen.getByText(/確定した後に書いた目標です/)).toBeTruthy();
@@ -253,7 +261,7 @@ describe('Sprint — running (#51)', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: '保存' }));
     expect(screen.queryByText(/消せません/)).toBeNull();
-    expect(goalOf('area-study')).toBeUndefined();
+    expect(goalOf(ids.area.study)).toBeUndefined();
     expect(
       screen.getByRole('button', { name: '目標を書く：学習' }),
     ).toBeTruthy();
@@ -321,7 +329,7 @@ describe('Sprint — the rows (#160)', () => {
       within(detail).getByRole('textbox', { name: /タイトル/ }),
     ).toHaveProperty('value', '英語の多読 30分');
     expect(router.state.location.search).toMatchObject({
-      task: 'task-reading',
+      task: ids.task.reading,
     });
     // 閉じる in the footer (the header's × has the same name).
     await userEvent.click(
@@ -335,9 +343,12 @@ describe('Sprint — the rows (#160)', () => {
 
   it('opens no detail for a completed Task or an ended Sprint', async () => {
     await renderAt('/sprint?fixture=today-daytime');
-    // 住民税の支払い and API 設計のレビュー are done this week.
+    // 住民税の支払い and API 設計のレビュー are done this week: once the
+    // Backlog is read, they have no row there to open (#323).
     for (const title of ['住民税の支払い', 'API 設計のレビュー']) {
-      expect(screen.queryByRole('button', { name: title })).toBeNull();
+      await waitFor(() =>
+        expect(screen.queryByRole('button', { name: title })).toBeNull(),
+      );
       expect(screen.getAllByText(title).length).toBeGreaterThan(0);
     }
     cleanup();
@@ -375,7 +386,7 @@ describe('Sprint — 日ごとの記録 (#53)', () => {
       within(dialog).getByRole('button', { name: '完了を取り消す' }),
     );
     const s = running();
-    const st = s.tasks.find((t) => t.taskId === 'task-tax');
+    const st = s.tasks.find((t) => t.taskId === ids.task.tax);
     expect(
       s.dailySelections.find(
         (d) => d.sprintTaskId === st?.id && d.date === '2026-09-29',
@@ -406,6 +417,8 @@ describe('Sprint — 日ごとの記録 (#53)', () => {
       within(dialog).getByRole('button', { name: 'キャンセル' }),
     );
     const s = running();
-    expect(s.tasks.find((t) => t.taskId === 'task-tax')?.outcome).toBe('done');
+    expect(s.tasks.find((t) => t.taskId === ids.task.tax)?.outcome).toBe(
+      'done',
+    );
   });
 });

@@ -10,11 +10,48 @@ pnpm --filter @itera/api db:migrate:local                    # ローカルの D
 pnpm --filter @itera/api dev                                  # http://localhost:8787
 ```
 
+### 本番と同じ形で確かめる（Web を同じ Worker から配信する）
+
+`wrangler.jsonc` の `assets` が `apps/web/dist`（Web のビルドの出力）を指す。ビルドしてから `wrangler dev` を起動すると、Web と API が 1 つの origin から返る。`dist` がないと wrangler は起動しない。
+
+```sh
+pnpm build                      # apps/web/dist を作る
+pnpm --filter @itera/api dev    # .dev.vars の BETTER_AUTH_URL は http://localhost:8787 のままでよい
+```
+
+| 開くもの | 返るもの |
+| --- | --- |
+| `/`、`/today?date=2026-10-01`、`/sprint?sprint=3`（直接開く・再読み込み） | `index.html`（200）。画面のルーターが開く |
+| 存在しない画面のパス（`/nothing`） | `index.html`（200）。画面が「ページが見つかりません」を出す |
+| `/api/health` | `{"status":"ok"}` |
+| 存在しない `/api/xxx` | API の 404（`/problems/not-found`）。画面にはならない |
+| `/assets/<ハッシュ付きのファイル>` | 200、`Cache-Control: public, max-age=0, must-revalidate` と `ETag`（`If-None-Match` を付けると 304） |
+| 存在しない `/assets/<名前>` | `index.html`（200）。同じ既定の `Cache-Control`（固定されない） |
+
+すべてのアセットが Workers の既定の `Cache-Control: public, max-age=0, must-revalidate`（毎回 `ETag` で確かめる）。長く固定する設定（`immutable`）は意図して付けていない（ADR 0004「Web と API の配信」）。コードを変えたら、`dist` を作り直す。
+
+### Vite の開発サーバーから使う（画面を直しながら API につなぐ）
+
+Web の開発サーバーを `--mode api` で起動すると、ブラウザ内モックの代わりにこの API を使う。開発サーバーが `/api` を `wrangler dev` に中継するので、ブラウザから見て 1 つの origin になる（ADR 0004「Web と API の配信」、ADR 0005「Web のクライアントとブラウザ内モック」）。
+
+```sh
+pnpm --filter @itera/api dev            # http://localhost:8787（dist が要る。先に pnpm build）
+pnpm --filter @itera/web dev:api        # http://localhost:5173 。/api を 8787 に中継する
+```
+
+- `.dev.vars` の `BETTER_AUTH_URL` は、**開発サーバーの origin**（既定 `http://localhost:5173`）にする。中継は Host と Origin を書き換えないので、Better Auth と書き込みの Origin の確認は開発サーバーの origin を見る。Google の OAuth クライアントの承認済みリダイレクト URI も `http://localhost:5173/api/auth/callback/google` にする。
+- `wrangler dev` を別のポートで動かすときは、`ITERA_API_ORIGIN=http://localhost:<port>` を付けて開発サーバーを起動する。開発サーバーのポートを変えたら、`BETTER_AUTH_URL` もそれに合わせる。
+- この動かし方には fixture がない。開発用メニューと `?fixture=` は、モックを使う既定の `pnpm --filter @itera/web dev` だけで動く。
+
 API の経路はすべて `/api` の下にある。同じ origin のほかの経路は Web の配信に使う（ADR 0004）。
 
 - `GET /api/health`：認証なし。ローカルの D1 に問い合わせて `{"status":"ok"}` を返す。
-- `GET /api/me`：セッションの Cookie から利用者を得て、`{"userId": "<Better Auth の利用者 ID>"}` を返す。Cookie がない・署名が合わない・期限切れ・サインアウト済みは 401。
+- `GET /api/me`：セッションの Cookie から利用者を得て、`{"userId": "user_…", "settings": {…} | null}` を返す（契約の `getMe`）。Cookie がない・署名が合わない・期限切れ・サインアウト済みは 401。
+- `PUT /api/me/settings`：利用者の設定（表示名・タイムゾーン・週の始まり）を作る（契約の `setSettings`）。設定がなければ作って 201、あれば表示名だけを書き直して 204。タイムゾーンと週の始まりを変える値は 422 `/problems/invalid-input`。設定がない間、ほかの経路は 422 `/problems/user-not-set-up`。
+- 契約（`packages/api-contract`、ADR 0006）の読み取り（`GET /api/sprints/{sprintId}` など）と操作（資源の経路と HTTP のメソッド。`PATCH /api/areas/{areaId}` など。操作との対応は `@itera/api-contract/requests`）。読み取りは `src/handlers/reads.ts` の登録表に、操作は契約の面（`@itera/api-contract/requests`）ごとに登録してある。契約にない経路は 404。
 - `/api/auth/*`：Better Auth の経路（Google でのサインインとコールバック、パスキー、サインアウト、セッション）。
+
+契約の経路は、認証 → 書き込みの Origin の確認 → 入力の検証 → 記録の読み込み → 日付が変わったときの処理（#271）→ 操作の実行 → 版を確かめた書き込み、の順に通る（ADR 0004「操作と読み取りの処理」）。エラーは Problem Details（RFC 9457、`application/problem+json`。ADR 0006「エラー」）。書き込みは `Origin` が `BETTER_AUTH_URL` の origin でないと 403、本文が 64 KiB を超えると 413、利用者の設定がまだないと 422 `/problems/user-not-set-up`。
 
 ## 認証の設定
 
@@ -38,16 +75,20 @@ API の経路はすべて `/api` の下にある。同じ origin のほかの経
 
 ## 構成
 
-DB と認証は `createApp` に注入する（ADR 0004「依存の組み立て方」、`.claude/rules/api.md`）。
+DB・認証・アプリの origin・現在時刻は `createApp` に注入する（ADR 0004「依存の組み立て方」、`.claude/rules/api.md`）。ハンドラーが `drizzle-orm/d1`・Better Auth・D1 と認証の binding を直接使わないことは ESLint で検査する。
 
 | ファイル | 役割 |
 | --- | --- |
 | `src/index.ts` | 本番の構成（`default-dependencies.ts`）で `createApp` を呼ぶ |
-| `src/dependencies.ts` | 注入する依存の型（`database`・`authenticator`） |
-| `src/default-dependencies.ts` | 本番の構成：D1 と Better Auth |
-| `src/app.ts` | ルート。`c.var.db` と、注入された `Authenticator`（`requireAuth` と `/api/auth/*`）だけを使う |
+| `src/dependencies.ts` | 注入する依存の型（`database`・`authenticator`・`appOrigin`・`now`） |
+| `src/default-dependencies.ts` | 本番の構成：D1、Better Auth、`BETTER_AUTH_URL` の origin、システムの時計 |
+| `src/app.ts` | ルート。`c.var.db` と、注入された依存（`requireAuth` と `/api/auth/*` の `Authenticator` など）だけを使う |
+| `src/handlers/` | 契約の経路の土台：流れ（`flow.ts`）、検証（`validate.ts`）、エラー（`errors.ts`）、Origin の確認、operation と読み取りの登録表（`operations.ts`・`reads.ts`）、`/api/me` |
 | `src/db/database.ts` | ハンドラーが使う DB の型（D1・libSQL・sqlite-proxy で満たせる） |
-| `src/db/schema.ts` | テーブルの定義（今は Better Auth のテーブルだけ） |
+| `src/db/schema.ts` | テーブルの定義（Better Auth のテーブルと、Itera の記録のテーブル。ADR 0004「記録のテーブル」） |
+| `src/db/user-settings.ts` | 利用者の設定だけを読む（`/api/me`） |
+| `src/db/load-records.ts`・`save-records.ts` | 利用者の記録（Activity を除く）と版を 1 回の `batch()` で読む。変わった行と Activity を、版を確かめて 1 回の `batch()` で書く |
+| `src/db/record-rows.ts` | `packages/domain` の記録とテーブルの行の対応（両方向） |
 | `src/auth/` | `Authenticator` の型、`requireAuth`、Better Auth の実装 |
 
 ## よく使うコマンド
@@ -63,4 +104,4 @@ wrangler はこのパッケージの固定版を使う（`pnpm --filter @itera/a
 
 ## デプロイ
 
-main への push で、GitHub Actions（`.github/workflows/deploy.yml`）が `pnpm check` → D1 のマイグレーション（`--remote`）→ `wrangler deploy` の順に実行する。production の Environment の承認を待ってから動く。Cloudflare・Google・GitHub の設定と公開後の確認は [`docs/operations/deploy.md`](../../docs/operations/deploy.md)。コードのデプロイとマイグレーションは CD だけで行う。secret の登録・版の戻し・本番の D1 の読み取りは手元の wrangler で行う（手順書の「設定を変えるとき」）。
+main への push で、GitHub Actions（`.github/workflows/deploy.yml`）が `pnpm check` → Web のビルド → D1 のマイグレーション（`--remote`）→ `wrangler deploy`（ビルドした Web も同じ Worker の静的アセットとして上がる）の順に実行する。production の Environment の承認を待ってから動く。Cloudflare・Google・GitHub の設定と公開後の確認は [`docs/operations/deploy.md`](../../docs/operations/deploy.md)。コードのデプロイとマイグレーションは CD だけで行う。secret の登録・版の戻し・本番の D1 の読み取りは手元の wrangler で行う（手順書の「設定を変えるとき」）。

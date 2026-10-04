@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { CapacityStatement } from '@/components/sprint/capacity-indicator';
-import type { PlanningData } from '@/store/planning-view';
+import type { PlanningData } from '@/screen-data/use-planning';
 import { planSummary } from './plan-summary';
 
 // 確定 (docs/design/patterns.md Sprint Planning › 確定). A Dialog (md) with
@@ -26,6 +26,8 @@ type ConfirmDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
+  /** The confirm has been sent for a while (useOperation `loading`). */
+  loading: boolean;
 };
 
 function ConfirmDialog({
@@ -33,6 +35,7 @@ function ConfirmDialog({
   open,
   onOpenChange,
   onConfirm,
+  loading,
 }: ConfirmDialogProps) {
   const { number } = data;
   const summary = planSummary(data);
@@ -101,7 +104,12 @@ function ConfirmDialog({
         </DialogBody>
         <DialogFooter>
           <DialogClose render={<Button />}>戻って調整</DialogClose>
-          <Button variant="primary" onClick={onConfirm}>
+          <Button
+            variant="primary"
+            loading={loading}
+            loadingLabel="確定中…"
+            onClick={onConfirm}
+          >
             Sprint {number} を確定
           </Button>
         </DialogFooter>

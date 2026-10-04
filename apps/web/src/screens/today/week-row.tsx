@@ -2,7 +2,7 @@ import { ArrowUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TaskMetadata } from '@/components/task/task-metadata';
 import { TaskRow } from '@/components/task/task-row';
-import type { TodayItem } from '@/store/today-view';
+import type { TodayItem } from '@itera/api-contract';
 import { ItemMetadata, PlannedValue } from './today-row';
 
 // A row of 昨日の続き or 今週の残り. It is chosen with 「今日へ」, always

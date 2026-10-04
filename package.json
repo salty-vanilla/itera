@@ -22,10 +22,13 @@
     "lint": "node tooling/checks/names.mjs && eslint . --max-warnings 0",
     "typecheck": "tsc -p tsconfig.json && pnpm -r --if-present typecheck",
     "test": "vitest run",
+    "build": "pnpm --filter @itera/web build",
     "copy:list": "node tooling/copy/list.mjs",
     "copy:lint": "node tooling/copy/lint.mjs",
-    "check": "pnpm agent:check && pnpm design:lint && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm copy:lint",
-    "design:lint": "designmd lint DESIGN.md"
+    "check": "pnpm agent:check && pnpm design:lint && pnpm contract:check && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm copy:lint",
+    "design:lint": "designmd lint DESIGN.md",
+    "contract:generate": "pnpm --filter @itera/api-contract generate",
+    "contract:check": "pnpm --filter @itera/api-contract lint:spec && pnpm --filter @itera/api-contract check:generated"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

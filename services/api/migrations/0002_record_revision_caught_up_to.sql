@@ -1,0 +1,1 @@
+ALTER TABLE `record_revision` ADD `caught_up_to` text;

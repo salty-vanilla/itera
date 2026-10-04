@@ -1,7 +1,9 @@
-import type { TaskId } from '@itera/domain';
+import type { MadeFrom } from '@itera/api-contract/requests';
+import type { TaskId } from '@itera/api-contract';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { Info, Rewind, Route } from 'lucide-react';
 import { useId } from 'react';
+import type { Saved } from '@/api/use-operation';
 import { buttonVariants } from '@/components/ui/button';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Progress } from '@/components/ui/progress';
@@ -28,13 +30,18 @@ import { cn } from '@/lib/utils';
 import {
   weekCall,
   weekNameOnly,
+  weekLabel,
   weekText,
   type WeekName,
 } from '@/lib/week-text';
-import type { RunningData, RunningTask } from '@/store/running-view';
-import { useBacklog } from '@/store/use-backlog';
-import { useRunningSprintActions } from '@/store/use-running-sprint';
-import { useTaskActions } from '@/store/use-task-actions';
+import { useAvailableHoursAction } from '@/screen-data/use-planning';
+import { hasDetail, useBacklog } from '@/screen-data/use-backlog';
+import {
+  useRunningSprintActions,
+  type RunningData,
+  type RunningTask,
+} from '@/screen-data/use-running-sprint';
+import { useTaskActions } from '@/screen-data/use-task-actions';
 import { CarryOverText } from '../backlog/backlog-row';
 import { TaskDetail } from '../backlog/task-detail';
 import { useTaskDetailLeave } from '../backlog/use-task-detail-leave';
@@ -59,7 +66,8 @@ function RunningSprint({
   /** The previous and next Sprints (#90). */
   steps?: SprintHeaderProps['steps'];
 }) {
-  const actions = useRunningSprintActions();
+  const actions = useRunningSprintActions(data.sprint.id);
+  const setAvailableHours = useAvailableHoursAction(data.sprint.id);
   const period = formatDateRange(data.sprint.start, data.sprint.end);
   const byArea = data.totals.byArea;
   const { state } = data.sprint;
@@ -84,14 +92,17 @@ function RunningSprint({
   const openTask = (taskId: TaskId | undefined) =>
     detail.leave(() => showTask(taskId), taskId !== undefined);
   const openItem =
-    !running || search.task === undefined
+    !running || search.task === undefined || backlog.status !== 'ready'
       ? undefined
       : backlog.item(search.task);
+  const inBacklog = (taskId: TaskId) => hasDetail(backlog, taskId);
 
   const outlook = (
     <Outlook
       data={data}
-      onHours={running ? actions.setAvailableHours : undefined}
+      onHours={
+        data.capabilities.canSetAvailableHours ? setAvailableHours : undefined
+      }
     />
   );
 
@@ -112,7 +123,7 @@ function RunningSprint({
           )
         }
         title={`Sprint ${data.number}`}
-        week={data.week}
+        week={weekLabel(data.week)}
         period={
           data.day === undefined
             ? period
@@ -181,6 +192,7 @@ function RunningSprint({
                       : `${count} · ${formatPlanningTotal(total)}`
                 }
                 goal={block.goal?.text}
+                goalEtag={block.goal?.etag}
                 planned={
                   block.goal === undefined
                     ? undefined
@@ -191,12 +203,13 @@ function RunningSprint({
                 bare={block.tasks.length === 0 && block.goal === undefined}
                 week={week}
                 onSave={
-                  block.area.id === null || !running
+                  block.area.id === null || !block.goalCapabilities.canSet
                     ? undefined
-                    : (text) =>
+                    : (text, from) =>
                         actions.setGoal(
                           block.area.id as NonNullable<typeof block.area.id>,
                           text,
+                          from,
                         )
                 }
               >
@@ -209,10 +222,11 @@ function RunningSprint({
                           week={weekNameOnly(data.week)}
                           ended={!running}
                           hasGoal={block.goal !== undefined}
-                          // A completed or archived Task has no detail to
-                          // open (as in Today).
+                          // A Sprint that has ended is a record: its rows
+                          // open nothing. A completed or archived Task has
+                          // left the Backlog: no detail to open (as in Today).
                           onOpen={
-                            running && t.task.lifecycle === 'active'
+                            running && inBacklog(t.task.id)
                               ? () => openTask(t.task.id)
                               : undefined
                           }
@@ -228,7 +242,11 @@ function RunningSprint({
           {running && (
             <PastDays
               days={data.pastDays}
-              onUndo={(r) => actions.undoPastDay(r.selection.id)}
+              onUndo={(r) =>
+                r.capabilities.canUndoSkip
+                  ? actions.undoSkip(r.selection.id)
+                  : actions.undoComplete(r.selection.id)
+              }
             />
           )}
         </div>
@@ -245,15 +263,16 @@ function RunningSprint({
         }}
       >
         <DrawerContent>
-          {openItem !== undefined && (
+          {backlog.status === 'ready' && openItem !== undefined && (
             <TaskDetail
               key={openItem.task.id}
               item={openItem}
               areas={backlog.areas}
               timeZone={backlog.timeZone}
+              lastDay={backlog.lastDay}
               onClose={() => showTask(undefined)}
-              onComplete={() => {
-                if (taskActions.completeTask(openItem.task.id)) {
+              onComplete={async () => {
+                if (await taskActions.completeTask(openItem.task.id)) {
                   showTask(undefined);
                 }
               }}
@@ -369,7 +388,9 @@ function Outlook({
 }: {
   data: RunningData;
   /** Absent once the Sprint has ended: the hours are read only. */
-  onHours: ((hours: number | null) => boolean) | undefined;
+  onHours:
+    | ((hours: number | null, from: MadeFrom) => Saved | Promise<Saved>)
+    | undefined;
 }) {
   const ids = useId();
   const { planned, current } = data.availableHours;
@@ -413,6 +434,7 @@ function Outlook({
         ) : (
           <AvailableHoursField
             value={current}
+            etag={data.sprint.etag}
             onChange={onHours}
             label="使える時間"
             description="確定後も変えられます（確定したときの値は残ります）。"

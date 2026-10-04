@@ -1,15 +1,19 @@
-import {
-  id,
-  type AreaId,
-  type DailySelectionId,
-  type InterruptNote,
-  type LocalDate,
-  type OccurrenceId,
-  type TaskId,
-} from '@itera/domain';
+import type {
+  AreaId,
+  CurrentSprints,
+  DailySelectionId,
+  InterruptNote,
+  LocalDate,
+  OccurrenceId,
+  TaskId,
+  TodayData,
+  TodayRow as TodayRowData,
+} from '@itera/api-contract';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
+import { useNow, type Now } from '@/api/use-me';
 import { AreaIndicator } from '@/components/ui/area-indicator';
+import { ReadStatus } from '@/components/read-status';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Progress } from '@/components/ui/progress';
@@ -19,24 +23,28 @@ import { TaskMetadata } from '@/components/task/task-metadata';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
 import { TaskRow } from '@/components/task/task-row';
 import { formatDate, formatTime } from '@/lib/date-format';
+import { LAST_DAY_CLOSED_WORDS } from '@/lib/selection-words';
 import { formatPlanningTotal } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { useStuckBar } from '@/lib/use-stuck-bar';
 import { cn } from '@/lib/utils';
-import type { TodayData, TodayRow as TodayRowData } from '@/store/today-view';
-import { useAppOverview } from '@/store/use-app-overview';
-import { useBacklog } from '@/store/use-backlog';
-import { useTaskActions } from '@/store/use-task-actions';
-import { useToday, useTodayActions } from '@/store/use-today';
+import { hasDetail, useBacklog } from '@/screen-data/use-backlog';
+import { useTaskActions } from '@/screen-data/use-task-actions';
+import { useDay, useTodayActions } from '@/screen-data/use-today';
 import { useNewAreaDialog } from '../backlog/area-dialog';
 import { TaskDetail } from '../backlog/task-detail';
 import { useTaskDetailLeave } from '../backlog/use-task-detail-leave';
-import { DayFocusScope, DayHeader, dateSearchOf } from './day-header';
+import {
+  DayFocusScope,
+  DayHeader,
+  dateSearchOf,
+  useDayFocus,
+} from './day-header';
 import { DayColumns, DayFrame } from './day-frame';
 import { ActualTime, type ActualTimeMode } from './actual-time';
 import { InterruptRow } from './interrupt-row';
 import { InterruptSheet } from './interrupt-sheet';
-import { OtherDay } from './other-day';
+import { OtherDay, otherDayMeta } from './other-day';
 import { ItemMetadata, PlannedValue, TodayRow } from './today-row';
 import { WeekRow } from './week-row';
 
@@ -64,34 +72,74 @@ export function validateTodaySearch(
 ): TodaySearch {
   return {
     ...dateSearchOf(search),
-    ...(typeof search.task === 'string'
-      ? { task: id<'Task'>(search.task) }
-      : {}),
+    ...(typeof search.task === 'string' ? { task: search.task } : {}),
   };
 }
 
-// Any day opens by `?date=` (#90); today is the screen without it, and a
-// date that is today opens today as well.
+// Any day opens by `?date=` (#90); today is the screen without it. Today's
+// date is the server's (`getMe`, ADR 0005 時計): the day is asked for with
+// it, and the server says whether the day it answers is today's, a past
+// day or one still to come.
 function TodayScreen() {
   const { date } = useSearch({ from: '/today' });
-  const { today } = useAppOverview();
+  const now = useNow();
   return (
     <DayFocusScope>
-      {date !== undefined && date !== today ? (
-        <OtherDay date={date} />
+      {now.status === 'ready' ? (
+        <Day date={date ?? now.today} now={now} />
       ) : (
-        <ThisDay />
+        // The heading is the date, which is not known yet: it comes with the
+        // day, in the place the day's own heading takes (day-header.tsx).
+        <DayColumns className="pb-16" busy={now.status === 'pending'}>
+          {now.status === 'failed' && (
+            <h1 className="text-display-m text-ink">今日</h1>
+          )}
+          <ReadStatus label="この日の記録" read={now} />
+        </DayColumns>
       )}
     </DayFocusScope>
   );
 }
 
-function ThisDay() {
-  const data = useToday();
-  // The day itself is started by the app (useSystemDay, #54).
-  if (data === undefined) return <NoActiveSprint />;
-  if (data.today < data.sprint.start) return <BeforeStart data={data} />;
-  return <TodayView data={data} />;
+/**
+ * The day asked for. Until it is read the screen has its heading, the date
+ * asked for, and the words that it is being read (or could not be).
+ */
+function Day({ date, now }: { date: LocalDate; now: Now }) {
+  const day = useDay(date);
+  // The heading's control that opened this day keeps the focus until the
+  // day is there, which may make the heading anew (day-header.tsx).
+  const focusAfter = useDayFocus();
+  useEffect(() => {
+    if (day.status === 'ready') focusAfter?.clear();
+  }, [date, day.status, focusAfter]);
+  if (day.status === 'ready' && day.kind === 'today') {
+    // The day itself is started by the server (ADR 0004).
+    if (day.data === undefined) {
+      return <NoActiveSprint today={now.today} sprints={now.sprints} />;
+    }
+    if (day.data.today < day.data.sprint.start) {
+      return <BeforeStart data={day.data} />;
+    }
+    return <TodayView data={day.data} />;
+  }
+  // Another day, and the wait for any day, in one frame: the heading is not
+  // made anew when the day arrives, so what holds the focus stays.
+  const other = day.status === 'ready' ? day.data : undefined;
+  return (
+    <DayFrame
+      date={other?.date ?? date}
+      today={other?.today ?? now.today}
+      meta={other && otherDayMeta(other)}
+      busy={day.status === 'pending'}
+    >
+      {day.status === 'ready' ? (
+        <OtherDay data={day.data} />
+      ) : (
+        <ReadStatus label="この日の記録" read={day} />
+      )}
+    </DayFrame>
+  );
 }
 
 /**
@@ -103,7 +151,7 @@ function ThisDay() {
  */
 function BeforeStart({ data }: { data: TodayData }) {
   return (
-    <DayFrame date={data.today}>
+    <DayFrame date={data.today} today={data.today}>
       <p className="text-body text-ink-muted">
         Sprint {data.number} は {formatDate(data.sprint.start)} から始まります。
         {/* One step to the Sprint (#90). */}{' '}
@@ -163,12 +211,18 @@ function BeforeStart({ data }: { data: TodayData }) {
 }
 
 /** Today without an active Sprint: the date, and where the week is. */
-function NoActiveSprint() {
-  const { today, reviewSprint, planningSprint } = useAppOverview();
+function NoActiveSprint({
+  today,
+  sprints,
+}: {
+  today: LocalDate;
+  sprints: CurrentSprints;
+}) {
+  const { review: reviewSprint, planning: planningSprint } = sprints;
   // After the sentence's space, the link moves to the next line whole.
   const link = 'whitespace-nowrap text-link underline focus-visible:focus-ring';
   return (
-    <DayFrame date={today}>
+    <DayFrame date={today} today={today}>
       <p className="text-body text-ink-muted">
         {/* A week in Retro comes first, even when the next is being planned.
             It is not 「今週」：that is the next one to start (#90). */}
@@ -194,6 +248,14 @@ function NoActiveSprint() {
   );
 }
 
+/** Where the focus goes once the records have changed. */
+type FocusTarget =
+  | { selection: DailySelectionId }
+  | {
+      rest: TodayRowData['sprintTask']['id'];
+      occurrence?: OccurrenceId | undefined;
+    };
+
 type Editing = {
   selectionId: DailySelectionId;
   mode: ActualTimeMode;
@@ -209,9 +271,12 @@ function TodayView({ data }: { data: TodayData }) {
   const backlog = useBacklog({});
   const [editing, setEditing] = useState<Editing | undefined>(undefined);
   const [interrupting, setInterrupting] = useState(false);
-  const [editingNote, setEditingNote] = useState<InterruptNote | undefined>(
-    undefined,
-  );
+  // The note being edited is the one as read now: the sheet shows another
+  // device's change to it, and a note that is gone closes the sheet (#324).
+  const [editingNoteId, setEditingNoteId] = useState<InterruptNote['id']>();
+  const editingNote = data.interrupts.find((n) => n.id === editingNoteId);
+  if (editingNoteId !== undefined && editingNote === undefined)
+    setEditingNoteId(undefined);
   const toast = useToast();
   const [quickArea, setQuickArea] = useState('');
   const newArea = useNewAreaDialog();
@@ -225,16 +290,26 @@ function TodayView({ data }: { data: TodayData }) {
   const triggers = useRef(new Map<DailySelectionId, HTMLButtonElement>());
   // Where the focus goes once the records have changed: the row that
   // moved (its ○, or 「取り消す」 once skipped), the row just chosen, or the
-  // Task's 「今日へ」 when its row left today.
-  const focusNext = useRef<
-    | { selection: DailySelectionId }
-    | { chosenAfter: ReadonlySet<DailySelectionId> }
-    | {
-        rest: TodayRowData['sprintTask']['id'];
-        occurrence?: OccurrenceId | undefined;
-      }
-    | undefined
-  >(undefined);
+  // Task's 「今日へ」 when its row left today. It waits until the row is
+  // drawn; `askFocus` looks again when the target was set after the records.
+  const focusNext = useRef<FocusTarget | undefined>(undefined);
+  const [focusAsked, askFocus] = useReducer((asked: number) => asked + 1, 0);
+  // Sends an operation that moves a row, and has the focus follow it. The
+  // focus is asked for before the send, not after: the screen draws the new
+  // records as they come, which can be before the send's promise resolves.
+  // An operation that did not go through changes nothing: the request there
+  // was before it stands (a second press while the first is being sent is
+  // answered at once, and must not take the first one's focus away).
+  const follow = async (
+    target: FocusTarget,
+    send: () => Promise<boolean>,
+  ): Promise<boolean> => {
+    const before = focusNext.current;
+    focusNext.current = target;
+    const ok = await send();
+    if (!ok && focusNext.current === target) focusNext.current = before;
+    return ok;
+  };
 
   const detail = useTaskDetailLeave();
   const showTask = (taskId: TaskId | undefined) =>
@@ -247,10 +322,13 @@ function TodayView({ data }: { data: TodayData }) {
           : { ...prev, task: taskId },
     });
   // Closing the detail or opening another Task asks the detail first.
+  const inBacklog = (taskId: TaskId) => hasDetail(backlog, taskId);
   const openTask = (taskId: TaskId | undefined) =>
     detail.leave(() => showTask(taskId), taskId !== undefined);
   const openItem =
-    search.task === undefined ? undefined : backlog.item(search.task);
+    search.task === undefined || backlog.status !== 'ready'
+      ? undefined
+      : backlog.item(search.task);
   const estimateFocus = useEstimateFocus(search.task);
   const openEstimate = (taskId: TaskId) =>
     detail.leave(() => {
@@ -258,43 +336,34 @@ function TodayView({ data }: { data: TodayData }) {
       showTask(taskId);
     }, true);
 
-  const moved = (selectionId: DailySelectionId, done: boolean) => {
-    if (done) focusNext.current = { selection: selectionId };
-  };
   useEffect(() => {
     const next = focusNext.current;
     if (next === undefined) return;
-    focusNext.current = undefined;
-    let selector: string | undefined;
-    if ('selection' in next) {
-      selector = `[data-selection="${next.selection}"] :is([data-slot="completion-circle"], [data-action="undo-skip"])`;
-    } else if ('rest' in next) {
-      selector = `[data-item="${next.rest}"]${
-        next.occurrence === undefined
-          ? ''
-          : `[data-occurrence="${next.occurrence}"]`
-      } [data-action="choose"]`;
-    } else {
-      const added = data.rows.find(
-        (r) => !next.chosenAfter.has(r.selection.id),
-      );
-      if (added !== undefined) {
-        selector = `[data-selection="${added.selection.id}"] [data-slot="completion-circle"]`;
-      }
-    }
-    if (selector === undefined) return;
+    const selector =
+      'selection' in next
+        ? `[data-selection="${next.selection}"] :is([data-slot="completion-circle"], [data-action="undo-skip"])`
+        : `[data-item="${next.rest}"]${
+            next.occurrence === undefined
+              ? ''
+              : `[data-occurrence="${next.occurrence}"]`
+          } [data-action="choose"]`;
     // After a Menu or surface has closed and returned its focus.
-    requestAnimationFrame(() =>
-      document.querySelector<HTMLElement>(selector)?.focus(),
-    );
-  }, [data]);
+    const frame = requestAnimationFrame(() => {
+      const element = document.querySelector<HTMLElement>(selector);
+      // Not drawn yet: the records that bring it ask again.
+      if (element === null) return;
+      if (focusNext.current === next) focusNext.current = undefined;
+      element.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [data, focusAsked]);
   // 消す: at once, with 「元に戻す」 in a Toast rather than a Dialog, since
   // it can be undone (DESIGN.md Toast, F38). The focus goes to the next
   // note's `…`, or to 「割り込みを記録」 when none is left.
-  const deleteInterrupt = (note: InterruptNote) => {
+  const deleteInterrupt = async (note: InterruptNote) => {
     const index = data.interrupts.findIndex((n) => n.id === note.id);
     const next = data.interrupts[index + 1] ?? data.interrupts[index - 1];
-    if (!actions.deleteInterrupt(note.id)) return;
+    if (!(await actions.deleteInterrupt(note.id))) return;
     toast.show({
       kind: 'interrupt-deleted',
       title: `割り込み「${note.text}」を消しました`,
@@ -315,8 +384,9 @@ function TodayView({ data }: { data: TodayData }) {
   };
   // 記録する: the list is below the fold, so the Toast says it went through
   // and 「見る」 takes the focus to the new note (#157).
-  const noteInterrupt = (text: string, minutes: number | undefined) => {
-    if (!actions.noteInterrupt(text, minutes)) return false;
+  const noteInterrupt = async (text: string, minutes: number | undefined) => {
+    const noted = await actions.noteInterrupt(text, minutes);
+    if (noted === undefined) return false;
     toast.show({
       kind: 'interrupt-noted',
       title: '割り込みを記録しました',
@@ -325,7 +395,7 @@ function TodayView({ data }: { data: TodayData }) {
         onClick: () =>
           document
             .querySelector<HTMLElement>(
-              '[data-interrupt]:last-child [data-action="interrupt-actions"]',
+              `[data-interrupt="${noted}"] [data-action="interrupt-actions"]`,
             )
             ?.focus(),
       },
@@ -341,20 +411,20 @@ function TodayView({ data }: { data: TodayData }) {
   const closedToast = useRef<{ selection: DailySelectionId; toast: string }>(
     undefined,
   );
-  const closed = (
+  const closed = async (
     row: TodayRowData,
     result: string,
-    done: boolean,
+    send: () => Promise<boolean>,
     backToWeek = false,
   ) => {
     const selectionId = row.selection.id;
+    const done = await follow(
+      backToWeek
+        ? { rest: row.sprintTask.id, occurrence: row.occurrence?.id }
+        : { selection: selectionId },
+      send,
+    );
     if (!done) return;
-    if (backToWeek) {
-      focusNext.current = {
-        rest: row.sprintTask.id,
-        occurrence: row.occurrence?.id,
-      };
-    } else moved(selectionId, done);
     const shown = toast.show({
       kind: 'today-closed',
       title: `「${row.task.title}」${result}`,
@@ -362,7 +432,11 @@ function TodayView({ data }: { data: TodayData }) {
         label: '元に戻す',
         onClick: () => {
           closedToast.current = undefined;
-          moved(selectionId, actions.undoClose(selectionId));
+          void follow({ selection: selectionId }, () =>
+            backToWeek
+              ? actions.undoRemove(selectionId)
+              : actions.undoDefer(selectionId),
+          );
         },
       },
     });
@@ -382,44 +456,53 @@ function TodayView({ data }: { data: TodayData }) {
     return {
       row,
       timeZone: data.timeZone,
-      // A completed Task is no longer in the Backlog's detail.
-      onOpen:
-        row.task.lifecycle === 'active'
-          ? () => openTask(row.task.id)
-          : undefined,
-      onEstimate:
-        row.task.lifecycle === 'active'
-          ? () => openEstimate(row.task.id)
-          : undefined,
+      // A completed Task has left the Backlog: no detail to open.
+      onOpen: inBacklog(row.task.id) ? () => openTask(row.task.id) : undefined,
+      onEstimate: inBacklog(row.task.id)
+        ? () => openEstimate(row.task.id)
+        : undefined,
       onComplete: () => {
         dropClosedToast(selectionId);
-        moved(selectionId, actions.complete(selectionId));
+        void follow({ selection: selectionId }, () =>
+          actions.complete(selectionId),
+        );
       },
       onUndoComplete: () => {
         // Completed from the Backlog: undone as the Backlog does (F29), so
         // the choice it made for today goes away with it.
         if (row.selection.origin === 'backlogCompletion') {
-          if (taskActions.undoCompleteTask(row.task.id)) {
-            focusNext.current = { rest: row.sprintTask.id };
-          }
+          void follow({ rest: row.sprintTask.id }, () =>
+            taskActions.undoCompleteTask(row.task.id),
+          );
           return;
         }
-        moved(selectionId, actions.undoComplete(selectionId));
+        void follow({ selection: selectionId }, () =>
+          actions.undoComplete(selectionId),
+        );
       },
-      onStart: () => actions.start(selectionId),
-      onDefer: () => closed(row, 'を見送りました', actions.defer(selectionId)),
+      onStart: () => void actions.start(selectionId),
+      onDefer: () =>
+        void closed(row, 'を見送りました', () => actions.defer(selectionId)),
       onRemove: () =>
-        closed(
+        void closed(
           row,
           'を今週の残りに戻しました',
-          actions.removeFromToday(selectionId),
+          () => actions.removeFromToday(selectionId),
           true,
         ),
-      onSkip: () => moved(selectionId, actions.skip(selectionId)),
-      onUndoSkip: () => moved(selectionId, actions.undoSkip(selectionId)),
+      onSkip: () =>
+        void follow({ selection: selectionId }, () =>
+          actions.skip(selectionId),
+        ),
+      onUndoSkip: () =>
+        void follow({ selection: selectionId }, () =>
+          actions.undoSkip(selectionId),
+        ),
       onUndoClose: () => {
         dropClosedToast(selectionId);
-        moved(selectionId, actions.undoClose(selectionId));
+        void follow({ selection: selectionId }, () =>
+          actions.undoDefer(selectionId),
+        );
       },
       onPause: () =>
         setEditing({
@@ -441,17 +524,26 @@ function TodayView({ data }: { data: TodayData }) {
   };
 
   // 今日へ: the new row in 今日やる takes the focus.
-  const choose = (item: TodayData['rest'][number]) => {
-    // Put back today: the same choice comes back (F37), its row where it was.
-    if (item.removedToday !== undefined) {
-      dropClosedToast(item.removedToday);
-      moved(item.removedToday, actions.undoClose(item.removedToday));
+  const choose = async (item: TodayData['rest'][number]) => {
+    // Put back today: the same choice comes back (F37), its row where it
+    // was, when the read says it can (#322).
+    const removed = item.removedToday;
+    if (
+      removed !== undefined &&
+      item.removedTodayCapabilities?.canUndoRemove === true
+    ) {
+      dropClosedToast(removed);
+      void follow({ selection: removed }, () => actions.undoRemove(removed));
       return;
     }
-    const before = new Set(data.rows.map((r) => r.selection.id));
-    if (actions.chooseForToday(item.sprintTask.id, item.occurrence?.id)) {
-      focusNext.current = { chosenAfter: before };
-    }
+    // The choice made comes back with its ID: that is the row to focus.
+    const chosen = await actions.chooseForToday(
+      item.sprintTask.id,
+      item.occurrence?.id,
+    );
+    if (chosen === undefined) return;
+    focusNext.current = { selection: chosen };
+    askFocus();
   };
 
   const remaining = data.remaining;
@@ -492,6 +584,7 @@ function TodayView({ data }: { data: TodayData }) {
         <div className="flex flex-col gap-8 pb-[var(--toast-above-room,0px)]">
           <DayHeader
             date={data.today}
+            today={data.today}
             meta={`Sprint ${data.number} · ${data.day.index}日目 / ${data.day.count}日`}
           >
             <Progress
@@ -545,13 +638,17 @@ function TodayView({ data }: { data: TodayData }) {
                 <p className="text-body text-ink">
                   今日はこの Sprint の最終日です。
                 </p>
-                <Button
-                  onClick={() => {
-                    if (actions.beginRetro()) void navigate({ to: '/retro' });
-                  }}
-                >
-                  振り返りを始める
-                </Button>
+                {data.sprintCapabilities.canBeginRetro && (
+                  <Button
+                    onClick={async () => {
+                      if (await actions.beginRetro()) {
+                        void navigate({ to: '/retro' });
+                      }
+                    }}
+                  >
+                    振り返りを始める
+                  </Button>
+                )}
               </div>
             )}
           </DayHeader>
@@ -585,8 +682,10 @@ function TodayView({ data }: { data: TodayData }) {
               <h2 id="today-closed" className="text-subheading text-ink-muted">
                 今日はもうやらない
               </h2>
-              <p className="text-help text-ink-muted">
-                明日から、今週の残りに戻ります。
+              <p className="text-help text-ink-muted [text-wrap:pretty] [word-break:auto-phrase]">
+                {data.lastDay
+                  ? LAST_DAY_CLOSED_WORDS.section
+                  : '明日から、今週の残りに戻ります。'}
               </p>
               <ul className="flex flex-col border-t border-border-soft">
                 {data.closed.map((row) => (
@@ -666,7 +765,7 @@ function TodayView({ data }: { data: TodayData }) {
                     <InterruptRow
                       note={n}
                       time={formatTime(n.at, data.timeZone)}
-                      onEdit={() => setEditingNote(n)}
+                      onEdit={() => setEditingNoteId(n.id)}
                       onDelete={() => deleteInterrupt(n)}
                     />
                   </li>
@@ -691,6 +790,7 @@ function TodayView({ data }: { data: TodayData }) {
         >
           <TaskQuickAdd
             label="今日やるタスクを追加"
+            loading={actions.loading.addToToday}
             onAdd={(title) =>
               actions.addToToday(
                 title,
@@ -720,15 +820,26 @@ function TodayView({ data }: { data: TodayData }) {
             if (!open) setEditing(undefined);
           }}
           anchor={editing.anchor}
+          description={
+            editing.mode === 'pause' && data.lastDay
+              ? LAST_DAY_CLOSED_WORDS.section
+              : undefined
+          }
+          loading={
+            editing.mode === 'pause'
+              ? actions.loading.pause
+              : actions.loading.recordActual
+          }
           onSubmit={(hours) => {
             const selectionId = editing.selectionId;
             if (editing.mode === 'pause') {
-              const ok = actions.pause(selectionId, hours);
-              moved(selectionId, ok);
-              return ok;
+              return follow({ selection: selectionId }, () =>
+                actions.pause(selectionId, hours),
+              );
             }
             return (
-              hours !== undefined && actions.recordActual(selectionId, hours)
+              hours !== undefined &&
+              actions.recordActual(editingRow.selection, hours)
             );
           }}
         />
@@ -737,6 +848,7 @@ function TodayView({ data }: { data: TodayData }) {
       <InterruptSheet
         open={interrupting}
         onOpenChange={setInterrupting}
+        loading={actions.loading.noteInterrupt}
         onSubmit={noteInterrupt}
       />
       {editingNote !== undefined && (
@@ -744,7 +856,7 @@ function TodayView({ data }: { data: TodayData }) {
           key={editingNote.id}
           open
           onOpenChange={(open) => {
-            if (!open) setEditingNote(undefined);
+            if (!open) setEditingNoteId(undefined);
           }}
           editing={{
             text: editingNote.text,
@@ -752,9 +864,16 @@ function TodayView({ data }: { data: TodayData }) {
               ? {}
               : { minutes: editingNote.minutes }),
             time: formatTime(editingNote.at, data.timeZone),
+            etag: editingNote.etag,
           }}
-          onSubmit={(text, minutes) =>
-            actions.editInterrupt(editingNote.id, text, minutes)
+          loading={actions.loading.editInterrupt}
+          onSubmit={(text, minutes, from) =>
+            actions.editInterrupt(
+              editingNote.id,
+              text,
+              minutes,
+              from ?? { etag: editingNote.etag },
+            )
           }
         />
       )}
@@ -766,15 +885,16 @@ function TodayView({ data }: { data: TodayData }) {
         }}
       >
         <DrawerContent>
-          {openItem !== undefined && (
+          {backlog.status === 'ready' && openItem !== undefined && (
             <TaskDetail
               key={openItem.task.id}
               item={openItem}
               areas={backlog.areas}
               timeZone={backlog.timeZone}
+              lastDay={backlog.lastDay}
               onClose={() => showTask(undefined)}
-              onComplete={() => {
-                if (taskActions.completeTask(openItem.task.id)) {
+              onComplete={async () => {
+                if (await taskActions.completeTask(openItem.task.id)) {
                   showTask(undefined);
                 }
               }}

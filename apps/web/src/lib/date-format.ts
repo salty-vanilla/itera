@@ -1,13 +1,8 @@
 // Dates and times as text (docs/design/content.md 日付と時刻):
 // 「9/28 (月)」, headings 「9月29日（火）」, ranges 「9/28 (月)〜10/4 (日)」,
 // times in 24 hours 「14:02」, a day with its time 「9/30 (水) 14:02」.
-import {
-  dayOfWeek,
-  type Instant,
-  type LocalDate,
-  toLocalDate,
-  type TimeZone,
-} from '@itera/domain';
+import type { Instant, LocalDate, TimeZone } from '@itera/api-contract';
+import { dayOfWeek, toLocalDate } from './domain-functions';
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'] as const;
 
@@ -20,6 +15,15 @@ function parts(date: LocalDate) {
 export function formatDate(date: LocalDate): string {
   const { month, day, weekday } = parts(date);
   return `${month}/${day} (${weekday})`;
+}
+
+/**
+ * 「9/28 (月)」: the day an instant falls on in this device's time zone,
+ * for what is about the device rather than the records (a passkey added).
+ */
+export function formatDeviceDate(at: string): string {
+  const date = new Date(at);
+  return `${date.getMonth() + 1}/${date.getDate()} (${WEEKDAYS[date.getDay()]})`;
 }
 
 /** 「9/28」, where the weekday would only add width. */

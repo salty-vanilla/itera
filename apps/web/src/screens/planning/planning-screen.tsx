@@ -1,4 +1,4 @@
-import { id, type AreaId, type TaskId } from '@itera/domain';
+import type { AreaId, TaskId } from '@itera/api-contract';
 import {
   Link,
   useNavigate,
@@ -32,11 +32,15 @@ import { formatPlanningSum } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { useStuckBar } from '@/lib/use-stuck-bar';
 import { cn } from '@/lib/utils';
-import { weekCall, weekText } from '@/lib/week-text';
-import type { PlanningData } from '@/store/planning-view';
-import { useBacklog } from '@/store/use-backlog';
-import { usePlanningActions } from '@/store/use-planning';
-import { useTaskActions } from '@/store/use-task-actions';
+import { weekCall, weekText, weekLabel } from '@/lib/week-text';
+import { hasDetail, useBacklog } from '@/screen-data/use-backlog';
+import {
+  useAvailableHoursAction,
+  useConfirmSprint,
+  usePickActions,
+  type PlanningData,
+} from '@/screen-data/use-planning';
+import { useTaskActions } from '@/screen-data/use-task-actions';
 import { TaskDetail } from '../backlog/task-detail';
 import { useTaskDetailLeave } from '../backlog/use-task-detail-leave';
 import { BacklogPane } from './backlog-pane';
@@ -64,7 +68,7 @@ import { PlanPane, type Stage } from './plan-pane';
 //   the same one line (a Bottom Sheet). 確かめる opens with its summary (#93).
 
 /** How long the row just added flashes; the same as `added-flash` in the CSS. */
-const ADDED_MS = 2500;
+export const ADDED_MS = 2500;
 
 /** Scrolls `main` so that the added row shows, keeping the Quick Add in view. */
 function revealAdded(taskId: TaskId) {
@@ -115,9 +119,7 @@ export function validateSprintSearch(
     ...sprintSearchOf(search),
     ...(stage === undefined ? {} : { stage }),
     ...(search.criterion === 'off' ? { criterion: 'off' as const } : {}),
-    ...(typeof search.task === 'string'
-      ? { task: id<'Task'>(search.task) }
-      : {}),
+    ...(typeof search.task === 'string' ? { task: search.task } : {}),
   };
 }
 
@@ -132,7 +134,10 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
   const navigate = useNavigate({ from: '/sprint' });
   const router = useRouter();
   const toast = useToast();
-  const actions = usePlanningActions();
+  const sprintId = data.sprint.id;
+  const picking = usePickActions(sprintId);
+  const setAvailableHours = useAvailableHoursAction(sprintId);
+  const confirmation = useConfirmSprint(sprintId);
   const taskActions = useTaskActions();
   const backlog = useBacklog({});
   const stage = search.stage ?? 'pick';
@@ -165,7 +170,9 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
       setSearch({ task: taskId });
     }, true);
   const openItem =
-    search.task === undefined ? undefined : backlog.item(search.task);
+    search.task === undefined || backlog.status !== 'ready'
+      ? undefined
+      : backlog.item(search.task);
   const estimateFocus = useEstimateFocus(search.task);
   const openEstimate = (taskId: TaskId) =>
     detail.leave(() => {
@@ -181,13 +188,16 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
       sheet={sheet}
       // 確かめる takes the hours in its summary only: one field (#93).
       onAvailableHours={
-        stage === 'check' ? undefined : actions.setAvailableHours
+        stage === 'check' || !data.capabilities.canSetAvailableHours
+          ? undefined
+          : setAvailableHours
       }
     />
   );
 
-  const confirm = () => {
-    if (!actions.confirmSprint(data.criterion?.applied ?? false)) return;
+  const confirm = async () => {
+    if (!(await confirmation.confirmSprint(data.criterion?.applied ?? false)))
+      return;
     setConfirming(false);
     toast.show({
       kind: 'sprint-confirmed',
@@ -197,8 +207,8 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
     setSearch({ stage: undefined, criterion: undefined });
   };
 
-  const addTask = (title: string, areaId: AreaId | undefined) => {
-    const created = actions.addAndChoose(title, areaId);
+  const addTask = async (title: string, areaId: AreaId | undefined) => {
+    const created = await picking.addAndChoose(title, areaId);
     if (created === undefined) return false;
     setAddedTaskId(created);
     toast.show({
@@ -217,7 +227,9 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
     return () => window.clearTimeout(timer);
   }, [addedTaskId, sideBySide]);
 
-  const blocked = data.blockers.length > 0;
+  // 確定 is open when the read says so (#323); the blockers say why not.
+  const blocked = !data.capabilities.canConfirm;
+  const inBacklog = (taskId: TaskId) => hasDetail(backlog, taskId);
   const reasonId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
@@ -284,7 +296,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
         <SprintHeader
           status={<Tag tone="draft">計画中 · 未確定</Tag>}
           title={`Sprint ${data.number}`}
-          week={data.week}
+          week={weekLabel(data.week)}
           period={formatDateRange(data.sprint.start, data.sprint.end)}
           steps={steps}
           stages={STAGES.map((s) => ({
@@ -292,7 +304,14 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
             label: s.label,
             href: router.buildLocation({
               to: '/sprint',
-              search: (prev) => ({ ...prev, stage: s.id }),
+              // As `setSearch` above: `prev` is every screen's search, whose
+              // Task is the contract's string (#273), not this screen's.
+              search: (prev) =>
+                Object.fromEntries(
+                  Object.entries({ ...prev, stage: s.id }).filter(
+                    ([, v]) => v !== undefined,
+                  ),
+                ),
             }).href,
           }))}
           currentStage={stage}
@@ -396,6 +415,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
         <BacklogPane
           data={data}
           slim={stage !== 'pick'}
+          actions={picking}
           onAdd={addTask}
           onOpenTask={openTask}
           onEstimateTask={openEstimate}
@@ -416,7 +436,11 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
                   onApplyCriterion={(applied) =>
                     setSearch({ criterion: applied ? undefined : 'off' })
                   }
-                  onAvailableHours={actions.setAvailableHours}
+                  onAvailableHours={
+                    data.capabilities.canSetAvailableHours
+                      ? setAvailableHours
+                      : undefined
+                  }
                   onEstimateTask={openEstimate}
                   onOpenTask={openTask}
                 />
@@ -425,6 +449,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
             addedTaskId={addedTaskId}
             onOpenTask={openTask}
             onEstimateTask={openEstimate}
+            inBacklog={inBacklog}
           />
         </div>
         <aside
@@ -455,15 +480,16 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
         }}
       >
         <DrawerContent>
-          {openItem !== undefined && (
+          {backlog.status === 'ready' && openItem !== undefined && (
             <TaskDetail
               key={openItem.task.id}
               item={openItem}
               areas={backlog.areas}
               timeZone={backlog.timeZone}
+              lastDay={backlog.lastDay}
               onClose={() => setSearch({ task: undefined })}
-              onComplete={() => {
-                if (taskActions.completeTask(openItem.task.id)) {
+              onComplete={async () => {
+                if (await taskActions.completeTask(openItem.task.id)) {
                   setSearch({ task: undefined });
                 }
               }}
@@ -493,6 +519,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
         open={confirming}
         onOpenChange={setConfirming}
         onConfirm={confirm}
+        loading={confirmation.loading}
       />
     </div>
   );

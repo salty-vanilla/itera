@@ -1,0 +1,515 @@
+# Task. The paths of a resource and its methods (ADR 0006 経路の形):
+# nouns of the domain, a state change a verb after the resource. A write
+# is one operation of packages/application or, where a path takes several,
+# the one its body names (@itera/api-contract/requests).
+
+tasks:
+  post:
+    operationId: createTask
+    tags: [Task]
+    summary: 'Quick Add: make a Task in the Backlog'
+    parameters:
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [title]
+            properties:
+              title: { type: string }
+              areaId: { $ref: '../schemas/common.yaml#/AreaId' }
+    responses:
+      '201':
+        description: Made. The IDs of what the operation made.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [taskId]
+              properties:
+                taskId: { $ref: '../schemas/common.yaml#/TaskId' }
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+task:
+  patch:
+    operationId: saveTask
+    tags: [Task]
+    summary: "Save a Task's detail"
+    description: >-
+      The attributes and the Estimate, saved together: a property left out stays, `null` clears an optional one.
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+      - $ref: '../parameters.yaml#/IfMatchHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            properties:
+              title: { type: string }
+              description: { type: string }
+              areaId:
+                oneOf:
+                  - { $ref: '../schemas/common.yaml#/AreaId' }
+                  - type: 'null'
+              due:
+                oneOf:
+                  - { $ref: '../schemas/common.yaml#/LocalDate' }
+                  - type: 'null'
+              priority: { $ref: '../schemas/records.yaml#/TaskPriority' }
+              timeBasis: { $ref: '../schemas/records.yaml#/TimeBasis' }
+              estimate:
+                description: Hours. `null` clears the Estimate.
+                oneOf:
+                  - { type: number }
+                  - type: 'null'
+    responses:
+      '204':
+        description: Done.
+        headers:
+          ETag: { $ref: '../headers.yaml#/RecordETag' }
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '412': { $ref: '../responses.yaml#/PreconditionFailed' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '428': { $ref: '../responses.yaml#/PreconditionRequired' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+taskArchive:
+  post:
+    operationId: archiveTask
+    tags: [Task]
+    summary: Archive a Task
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+taskRestore:
+  post:
+    operationId: restoreTask
+    tags: [Task]
+    summary: Bring an archived Task back
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+taskComplete:
+  post:
+    operationId: completeTask
+    tags: [Task]
+    summary: 完了にする in the Backlog
+    description: >-
+      With today's selection when the Task is in the running Sprint.
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+taskUndoComplete:
+  post:
+    operationId: undoCompleteTask
+    tags: [Task]
+    summary: Take back 完了にする in the Backlog
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+taskRecurrence:
+  put:
+    operationId: setRecurrence
+    tags: [Task]
+    summary: "Set or change a Task's recurrence"
+    description: >-
+      The rule is a record of the Task of its own, one at most. A change to
+      the Task's rule is made from the rule's `etag` (`BacklogItem.rule`,
+      `If-Match`); a rule for a Task without one, from none
+      (`If-None-Match: *`). A rule that has come off the Task (ended, F41)
+      is not the Task's: a rule set then is a new one, made from none.
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+      - $ref: '../parameters.yaml#/OptionalIfMatchHeader'
+      - $ref: '../parameters.yaml#/IfNoneMatchHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [pattern]
+            properties:
+              pattern: { $ref: '../schemas/records.yaml#/RecurrencePattern' }
+    responses:
+      '200':
+        description: Done. What the operation decided.
+        headers:
+          ETag: { $ref: '../headers.yaml#/RecordETag' }
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                effectiveFrom:
+                  description: >-
+                    The day the change takes effect (the next Sprint not
+                    confirmed yet, F1, F7, F15). Left out when the pattern
+                    was already the rule's.
+                  $ref: '../schemas/common.yaml#/LocalDate'
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '412': { $ref: '../responses.yaml#/PreconditionFailed' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '428': { $ref: '../responses.yaml#/PreconditionRequired' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+  delete:
+    operationId: endRecurrence
+    tags: [Task]
+    summary: "End a Task's recurrence"
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    responses:
+      '200':
+        description: Done. What the operation decided.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [removed]
+              properties:
+                removed:
+                  description: >-
+                    The rule had no occurrence yet and was deleted (F41):
+                    the Task is one-off again. Otherwise it ends before the
+                    next Sprint not confirmed yet.
+                  type: boolean
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+subtasks:
+  post:
+    operationId: addSubtask
+    tags: [Task]
+    summary: Add a Subtask
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [title]
+            properties:
+              title: { type: string }
+              hours: { type: number }
+    responses:
+      '201':
+        description: Made. The IDs of what the operation made.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subtaskId]
+              properties:
+                subtaskId: { $ref: '../schemas/common.yaml#/SubtaskId' }
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+subtask:
+  patch:
+    operationId: updateSubtask
+    tags: [Task]
+    summary: Check a Subtask, or set its hours
+    description: >-
+      One change a request: `done` (setSubtaskDone, a check with no rule) or `hours`, `null` to clear them (setSubtaskEstimate).
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
+      - name: subtaskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SubtaskId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+      - $ref: '../parameters.yaml#/IfMatchHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - type: object
+                additionalProperties: false
+                required: [done]
+                properties:
+                  done: { type: boolean }
+              - type: object
+                additionalProperties: false
+                required: [hours]
+                properties:
+                  hours:
+                    oneOf:
+                      - { type: number }
+                      - type: 'null'
+    responses:
+      '204':
+        description: Done.
+        headers:
+          ETag: { $ref: '../headers.yaml#/RecordETag' }
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '412': { $ref: '../responses.yaml#/PreconditionFailed' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '428': { $ref: '../responses.yaml#/PreconditionRequired' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+suggestionAdopt:
+  post:
+    operationId: adoptEstimateSuggestion
+    tags: [Task]
+    summary: 採用 an estimate suggestion
+    description: >-
+      At one of its bounds (`bound`, adoptSuggestion), or with the hours edited (`hours`, 直して使う, adoptEditedSuggestion, F31).
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
+      - name: suggestionId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/EstimateSuggestionId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - type: object
+                additionalProperties: false
+                required: [bound]
+                properties:
+                  bound: { $ref: '../schemas/records.yaml#/SuggestionBound' }
+              - type: object
+                additionalProperties: false
+                required: [hours]
+                properties:
+                  hours: { type: number }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+suggestionUndoAdopt:
+  post:
+    operationId: undoAdoption
+    tags: [Task]
+    summary: Take back 採用
+    description: >-
+      The Task keeps only its current Estimate, so the client sends the one it had before (`null` for none), from the read it made before adopting.
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
+      - name: suggestionId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/EstimateSuggestionId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [previous]
+            properties:
+              previous:
+                oneOf:
+                  - { $ref: '../schemas/records.yaml#/Estimate' }
+                  - type: 'null'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+suggestionReject:
+  post:
+    operationId: rejectSuggestion
+    tags: [Task]
+    summary: Reject an estimate suggestion
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
+      - name: suggestionId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/EstimateSuggestionId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+suggestionUndoReject:
+  post:
+    operationId: undoRejection
+    tags: [Task]
+    summary: Take back a rejection
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/TaskId' }
+      - name: suggestionId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/EstimateSuggestionId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }

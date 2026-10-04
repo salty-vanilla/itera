@@ -1,13 +1,18 @@
-import type { SprintId } from '@itera/domain';
+import type { SprintId } from '@itera/api-contract';
 import { Link, useSearch } from '@tanstack/react-router';
 import type { SprintHeaderProps } from '@/components/sprint/sprint-header';
 import { SprintHeader } from '@/components/sprint/sprint-header';
 import { formatDate, formatDateRange } from '@/lib/date-format';
-import { weekCall, weekText } from '@/lib/week-text';
-import type { SprintChoice } from '@/store/sprint-choice';
-import { usePlanning } from '@/store/use-planning';
-import { useRunningSprint } from '@/store/use-running-sprint';
-import { useSprintChoice } from '@/store/use-sprint-choice';
+import { weekCall, weekText, weekLabel } from '@/lib/week-text';
+import { ReadStatus } from '@/components/read-status';
+import type { NotReady } from '@/api/read-state';
+import { usePlanning } from '@/screen-data/use-planning';
+import { useRunningSprint } from '@/screen-data/use-running-sprint';
+import {
+  useSprintChoice,
+  type SprintChoice,
+  type SprintRef,
+} from '@/screen-data/use-sprint-choice';
 import { PlanningScreen } from './planning/planning-screen';
 import { RunningSprint } from './sprint/running-sprint';
 import { BeginPlanning } from './begin-planning';
@@ -21,26 +26,99 @@ import { useSprintSteps } from './sprint-steps';
 // (#51; read only once it has ended).
 function SprintScreen() {
   const search = useSearch({ from: '/sprint' });
-  const choice = useSprintChoice('sprint', search.sprint);
+  const choice = useSprintChoice(search.sprint);
+  if (choice.status !== 'ready') return <Reading read={choice} />;
+  return <Chosen choice={choice} />;
+}
+
+/**
+ * In place of the Sprints while the person's Sprints are being read, or
+ * could not be: no Sprint is known to name yet.
+ */
+function Reading({ read }: { read: NotReady }) {
+  return (
+    <div className="flex min-h-full flex-col gap-4 px-4 pt-10 pb-4 medium:px-6">
+      <h1 className="text-display-m text-ink">Sprint</h1>
+      <ReadStatus label="計画" read={read} />
+    </div>
+  );
+}
+
+/**
+ * In place of one Sprint's plan while it is being read, or could not be. The
+ * Sprint is known, so its header stays as it will be (name, week, period and
+ * the ‹ › the person may have just pressed) and the plan comes under it; the
+ * heading for the screen is read out only, as the plan's own comes with it.
+ */
+function ReadingSprint({
+  current,
+  steps,
+  read,
+}: {
+  current: SprintRef;
+  steps: Steps;
+  read: NotReady;
+}) {
+  return (
+    <div className="flex min-h-full w-full max-w-[calc(var(--spacing-pane-sprint)+var(--spacing-pane-side)+var(--spacing-12))] flex-col gap-8 px-4 pt-6 pb-16 medium:px-6 medium:pt-8">
+      <h1 className="sr-only">Sprint {current.number}</h1>
+      <SprintHeader
+        title={`Sprint ${current.number}`}
+        week={weekLabel(current.week)}
+        period={formatDateRange(current.start, current.end)}
+        steps={steps}
+      />
+      <ReadStatus label="計画" read={read} />
+    </div>
+  );
+}
+
+function Chosen({ choice }: { choice: SprintChoice }) {
   const steps = useSprintSteps('/sprint', choice);
   const sprint = choice.current.sprint;
   if (sprint === undefined) return <NextSprint choice={choice} steps={steps} />;
-  if (sprint.state === 'planning') return <Planning steps={steps} />;
-  return <Confirmed sprintId={sprint.id} steps={steps} />;
+  // Keyed by the Sprint: another one does not start from this one's records.
+  if (sprint.state === 'planning')
+    return (
+      <Planning
+        key={sprint.id}
+        sprintId={sprint.id}
+        current={choice.current}
+        steps={steps}
+      />
+    );
+  return (
+    <Confirmed
+      key={sprint.id}
+      sprintId={sprint.id}
+      current={choice.current}
+      steps={steps}
+    />
+  );
 }
 
 type Steps = SprintHeaderProps['steps'];
 
-function Planning({ steps }: { steps: Steps }) {
+interface SprintProps {
+  readonly sprintId: SprintId;
+  readonly current: SprintRef;
+  readonly steps: Steps;
+}
+
+function Planning({ sprintId, current, steps }: SprintProps) {
   const search = useSearch({ from: '/sprint' });
-  const planning = usePlanning({ applyCriterion: search.criterion !== 'off' });
-  if (planning === undefined) return null;
+  const planning = usePlanning(sprintId, {
+    applyCriterion: search.criterion !== 'off',
+  });
+  if (planning.status !== 'ready')
+    return <ReadingSprint current={current} steps={steps} read={planning} />;
   return <PlanningScreen data={planning} steps={steps} />;
 }
 
-function Confirmed({ sprintId, steps }: { sprintId: SprintId; steps: Steps }) {
+function Confirmed({ sprintId, current, steps }: SprintProps) {
   const data = useRunningSprint(sprintId);
-  if (data === undefined) return null;
+  if (data.status !== 'ready')
+    return <ReadingSprint current={current} steps={steps} read={data} />;
   return <RunningSprint data={data} steps={steps} />;
 }
 
@@ -61,7 +139,7 @@ function NextSprint({ choice, steps }: { choice: SprintChoice; steps: Steps }) {
     <div className="flex min-h-full w-full max-w-[calc(var(--spacing-pane-sprint)+var(--spacing-pane-side)+var(--spacing-12))] flex-col gap-8 px-4 pt-6 pb-16 medium:px-6 medium:pt-8">
       <SprintHeader
         title={`Sprint ${current.number}`}
-        week={current.week}
+        week={weekLabel(current.week)}
         period={formatDateRange(current.start, current.end)}
         steps={steps}
         actions={<BeginPlanning />}

@@ -1,4 +1,10 @@
-import type { DayOfWeek, LocalDate, RecurrencePattern } from '@itera/domain';
+import type {
+  BacklogItem,
+  DayOfWeek,
+  LocalDate,
+  RecurrencePattern,
+} from '@itera/api-contract';
+import type { MadeFrom } from '@itera/api-contract/requests';
 import {
   useEffect,
   useImperativeHandle,
@@ -6,6 +12,7 @@ import {
   useState,
   type Ref,
 } from 'react';
+import type { Saved } from '@/api/use-operation';
 import { Button } from '@/components/ui/button';
 import { Check } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -17,8 +24,8 @@ import {
   WEEK_ORDER,
   WEEKDAY_NAMES,
 } from '@/lib/recurrence-text';
-import type { BacklogItem } from '@/store/backlog-view';
-import { useTaskActions } from '@/store/use-task-actions';
+import { useDraftField } from '@/lib/use-draft-field';
+import { useRecurrenceActions } from '@/screen-data/use-task-actions';
 
 // 繰り返し (PRD §6 Recurrence, F1, F7, F12, F15, F41). Like the other fields
 // of the Task detail, a change to a rule that exists is saved when it is
@@ -28,10 +35,13 @@ import { useTaskActions } from '@/store/use-task-actions';
 // confirmed Sprint never changes; after saving it the screen says so (「次の
 // Sprint から反映」). A weekly rule may have several days, and needs one
 // before it can be saved. 「繰り返しをやめる」 ends the rule from the next
-// Sprint (F41): until its last day the rule is shown with it and can no
-// longer be changed; after it the Task is one-off and can be made recurring
-// again. A rule that has made no occurrence yet is taken off at once, and
-// the editor is back to making one.
+// Sprint (F41): it comes off the Task, which is shown with it until its
+// last day. The Task is one-off again and can be made recurring from the
+// next Sprint, also before that day (owner decision in #323): the rule that
+// ends is then 今の設定 until its last day, and the new one is shown as a
+// change (#338). A rule that
+// has made no occurrence yet is taken off at once, and the editor is back
+// to making one. What is offered is what the read says can be done (#323).
 
 type Freq = RecurrencePattern['freq'];
 
@@ -52,7 +62,7 @@ function patternOf(
     case 'weekdays':
       return { freq };
     case 'weekly':
-      return { freq, daysOfWeek: days };
+      return { freq, daysOfWeek: [...days] };
     case 'monthly':
       return { freq, dayOfMonth };
   }
@@ -77,13 +87,52 @@ function resultText(result: Result): string {
 }
 
 /** The choice the editor starts from: the latest version, or none yet. */
-function choiceOf(latest: RecurrencePattern | undefined) {
+type Choice = {
+  freq: Freq;
+  days: readonly DayOfWeek[];
+  dayOfMonth: number;
+};
+
+/** The weekdays and the day of the month the rule had last, for a switch back. */
+type Kept = Pick<Choice, 'days' | 'dayOfMonth'>;
+
+const NOTHING_KEPT: Kept = { days: [], dayOfMonth: 1 };
+
+/** What is kept once the rule is `latest`: its own, else what was kept. */
+function keptOf(latest: RecurrencePattern | undefined, before: Kept): Kept {
   return {
-    freq: latest?.freq ?? 'weekly',
-    days: latest?.freq === 'weekly' ? latest.daysOfWeek : [],
-    dayOfMonth: latest?.freq === 'monthly' ? latest.dayOfMonth : 1,
-  } satisfies { freq: Freq; days: readonly DayOfWeek[]; dayOfMonth: number };
+    days: latest?.freq === 'weekly' ? latest.daysOfWeek : before.days,
+    dayOfMonth:
+      latest?.freq === 'monthly' ? latest.dayOfMonth : before.dayOfMonth,
+  };
 }
+
+function choiceOf(
+  latest: RecurrencePattern | undefined,
+  kept: Kept = NOTHING_KEPT,
+): Choice {
+  return { freq: latest?.freq ?? 'weekly', ...keptOf(latest, kept) };
+}
+
+/** The same choice: the frequency, and the weekdays or the day it takes. */
+function sameChoice(a: Choice, b: Choice): boolean {
+  if (a.freq !== b.freq) return false;
+  if (a.freq === 'monthly') return a.dayOfMonth === b.dayOfMonth;
+  if (a.freq === 'weekly') return sameDays(a.days, b.days);
+  return true;
+}
+
+function sameDays(a: readonly DayOfWeek[], b: readonly DayOfWeek[]): boolean {
+  return a.length === b.length && a.every((d) => b.includes(d));
+}
+
+/** What the Task detail asks the recurrence before it closes. */
+type RecurrencePending = {
+  pending: () => HTMLElement | null;
+  /** The choice a failed save left out of the records is shown (#332). */
+  unsaved: () => boolean;
+  drop: () => void;
+};
 
 function RecurrenceEditor({
   item,
@@ -94,38 +143,68 @@ function RecurrenceEditor({
    * For the Task detail's close (Issue #95): what a choice not saved yet is
    * held by, or null. Without a rule: the button that makes it recurring,
    * once the choice is not the starting one. With one: the first weekday
-   * while a weekly choice has no day (it cannot be saved).
+   * while a weekly choice has no day (it cannot be saved), or the frequency
+   * while a choice a failed save left out is shown (#332). `drop` lets go
+   * of that choice (保存せずに閉じる).
    */
-  pendingRef?: Ref<() => HTMLElement | null> | undefined;
+  pendingRef?: Ref<RecurrencePending> | undefined;
 }) {
-  const actions = useTaskActions();
-  const { task, rule } = item;
+  const actions = useRecurrenceActions();
+  const { task, rule, capabilities: can } = item;
   const endsOn = item.recurrence?.endsOn;
+  // A change from the next Sprint, as the read says (#338): also the new
+  // rule of a Task made recurring again before the one it ended is over.
+  const upcoming = item.recurrence?.upcoming;
+  // The Task's own rule, which a change saves to. A rule that ends has come
+  // off the Task (F41): it is shown, but a choice makes a new one.
+  const owns = task.recurrenceRuleId !== undefined;
+  // A change is made from the Task's rule as read now, or from none, which
+  // makes a rule: one made on another device first is not written over
+  // (#330).
+  const madeFrom: MadeFrom =
+    owns && rule !== undefined ? { etag: rule.etag } : { none: true };
   // A change starts from the latest version (it may begin next Sprint).
   const latest = rule?.latest;
-  const [freq, setFreq] = useState<Freq>(() => choiceOf(latest).freq);
-  const [days, setDays] = useState<readonly DayOfWeek[]>(
-    () => choiceOf(latest).days,
+  // The choice is the latest version as read until it is changed here, so
+  // that a choice made on another device shows, and a change saves the
+  // choice as it is now with the one thing changed (#324).
+  // The days and the day of the month it had last stay for a switch back
+  // (「Back to weekly with the days it had」, #171).
+  const [kept, setKept] = useState(() => keptOf(latest, NOTHING_KEPT));
+  const nextKept = keptOf(latest, kept);
+  if (
+    !sameDays(nextKept.days, kept.days) ||
+    nextKept.dayOfMonth !== kept.dayOfMonth
+  )
+    setKept(nextKept);
+  // Without a rule of its own (none, or one that ends, F41), a choice
+  // starts where a Task without a rule starts: a new rule is made from it,
+  // not the one that ends carried on. The rule's version tells the field
+  // the read that has its save (#343).
+  const choice = useDraftField(
+    owns ? choiceOf(latest, kept) : choiceOf(undefined),
+    sameChoice,
+    { etag: 'etag' in madeFrom ? madeFrom.etag : undefined },
   );
-  const [dayOfMonth, setDayOfMonth] = useState(
-    () => choiceOf(latest).dayOfMonth,
-  );
+  const { freq, days, dayOfMonth } = choice.value;
   const daysRef = useRef<HTMLFieldSetElement>(null);
   const createRef = useRef<HTMLButtonElement>(null);
   const freqRef = useRef<HTMLSelectElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   // 繰り返しにする makes the button go: the focus moves to the frequency.
-  const hadRule = useRef(rule !== undefined);
+  const hadRule = useRef(owns);
   useEffect(() => {
-    if (rule !== undefined && !hadRule.current) freqRef.current?.focus();
-    hadRule.current = rule !== undefined;
-  }, [rule]);
-  useImperativeHandle(pendingRef, () => () => {
-    if (rule !== undefined) {
-      return freq === 'weekly' && days.length === 0
-        ? (daysRef.current?.querySelector<HTMLElement>('[role="checkbox"]') ??
-            null)
-        : null;
+    if (owns && !hadRule.current) freqRef.current?.focus();
+    hadRule.current = owns;
+  }, [owns]);
+  const pendingOf = (): HTMLElement | null => {
+    if (owns) {
+      if (freq === 'weekly' && days.length === 0)
+        return (
+          daysRef.current?.querySelector<HTMLElement>('[role="checkbox"]') ??
+          null
+        );
+      return choice.unsaved ? freqRef.current : null;
     }
     const base = choiceOf(undefined);
     const changed =
@@ -133,53 +212,57 @@ function RecurrenceEditor({
       (freq === 'weekly' && days.length > 0) ||
       (freq === 'monthly' && dayOfMonth !== base.dayOfMonth);
     return changed ? createRef.current : null;
-  });
+  };
+  useImperativeHandle(pendingRef, () => ({
+    pending: pendingOf,
+    unsaved: () => choice.unsaved,
+    drop: () => choice.drop(),
+  }));
   const [result, setResult] = useState<Result>();
   const [error, setError] = useState<string>();
   // 繰り返しをやめる makes the button go. Taken off, the editor starts again
-  // from the frequency; ended, the inputs go too and the heading holds the
-  // place.
+  // from the frequency; ended, the heading holds the place, above the rule
+  // and its last day (the choice under it makes a new rule, #323).
   useEffect(() => {
     if (result?.kind === 'removed') freqRef.current?.focus();
     if (result?.kind === 'ended') headingRef.current?.focus();
   }, [result]);
 
   /** Saves the choice as it now stands, when it is complete. */
-  function save(
+  async function save(
     next: Freq,
     nextDays: readonly DayOfWeek[],
     nextDayOfMonth: number,
-  ) {
+  ): Promise<Saved> {
     if (next === 'weekly' && nextDays.length === 0) {
       setError('曜日を 1つ以上選んでください');
-      return;
+      return { ok: false };
     }
     setError(undefined);
-    const outcome = actions.setRecurrence(
+    const { effectiveFrom, ...saved } = await actions.setRecurrence(
       task.id,
       patternOf(next, nextDays, nextDayOfMonth),
+      madeFrom,
     );
-    if (!outcome.ok) return;
+    if (!saved.ok) return saved;
     setResult(
-      outcome.effectiveFrom === undefined
+      effectiveFrom === undefined
         ? { kind: 'unchanged' }
-        : { kind: 'applied', effectiveFrom: outcome.effectiveFrom },
+        : { kind: 'applied', effectiveFrom },
     );
+    return saved;
   }
 
   // With a rule, a choice is saved as it is made; without one, the button.
-  const saves = rule !== undefined;
+  const saves = owns;
 
-  function end() {
-    const outcome = actions.endRecurrence(task.id);
+  async function end() {
+    const outcome = await actions.endRecurrence(task.id);
     if (!outcome.ok) return;
     setError(undefined);
     if (outcome.removed === true) {
       // Back to making a rule, from the choice it starts from.
-      const base = choiceOf(undefined);
-      setFreq(base.freq);
-      setDays(base.days);
-      setDayOfMonth(base.dayOfMonth);
+      choice.put(choiceOf(undefined));
       setResult({ kind: 'removed' });
     } else {
       setResult({ kind: 'ended' });
@@ -187,24 +270,24 @@ function RecurrenceEditor({
   }
 
   function onFreq(next: Freq) {
-    setFreq(next);
+    choice.set({ freq: next, days, dayOfMonth });
     setError(undefined);
     // A weekly choice has no day yet: nothing to save, nothing to blame.
     if (saves && !(next === 'weekly' && days.length === 0)) {
-      save(next, days, dayOfMonth);
+      choice.hold(save(next, days, dayOfMonth));
     }
   }
 
   function onDay(day: DayOfWeek, checked: boolean) {
     const next = checked ? [...days, day] : days.filter((x) => x !== day);
-    setDays(next);
-    if (saves) save('weekly', next, dayOfMonth);
+    choice.set({ freq, days: next, dayOfMonth });
+    if (saves) choice.hold(save('weekly', next, dayOfMonth));
     else setError(undefined);
   }
 
   function onDayOfMonth(next: number) {
-    setDayOfMonth(next);
-    if (saves) save('monthly', days, next);
+    choice.set({ freq, days, dayOfMonth: next });
+    if (saves) choice.hold(save('monthly', days, next));
   }
 
   return (
@@ -240,7 +323,7 @@ function RecurrenceEditor({
           {endsOn !== undefined && ` · ${formatDate(endsOn)} まで`}
         </p>
       )}
-      {endsOn === undefined && (
+      {(can.canSetRecurrence || can.canEndRecurrence) && (
         <>
           <Field label="頻度">
             <Select
@@ -291,9 +374,9 @@ function RecurrenceEditor({
           {/* Below the inputs, so that it may grow without moving the one
               being pressed, and whole: the line under the title cuts a long
               rule. */}
-          {rule !== undefined && rule.latest !== rule.current && (
+          {owns && upcoming !== undefined && (
             <p className="text-body text-ink">
-              次の Sprint から：{formatPattern(rule.latest)}
+              次の Sprint から：{formatPattern(upcoming.pattern)}
             </p>
           )}
           {/* A one-off in the running Sprint stays so this week (F1). While
@@ -304,17 +387,17 @@ function RecurrenceEditor({
               今週はこの 1件のまま。繰り返しは次の Sprint から始まります。
             </p>
           )}
-          {rule === undefined && (
+          {!owns && can.canSetRecurrence && (
             <div>
               <Button
                 ref={createRef}
-                onClick={() => save(freq, days, dayOfMonth)}
+                onClick={() => choice.hold(save(freq, days, dayOfMonth))}
               >
                 繰り返しにする
               </Button>
             </div>
           )}
-          {rule !== undefined && (
+          {can.canEndRecurrence && (
             <div>
               <Button onClick={end}>繰り返しをやめる</Button>
             </div>
@@ -325,4 +408,5 @@ function RecurrenceEditor({
   );
 }
 
+export type { RecurrencePending };
 export { RecurrenceEditor };

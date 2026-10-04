@@ -1,6 +1,7 @@
 import type { PlanningCriterion } from './criterion';
 import { missOccurrence, type Occurrence } from './occurrence';
 import type { CriterionPolicy } from './planning-value';
+import { factOccurrenceIds, factSprintTasks } from './retro-facts';
 import type { Activity } from './shared/activity';
 import {
   applied,
@@ -14,7 +15,7 @@ import type {
   TaskId,
 } from './shared/ids';
 import { omit } from './shared/record';
-import { err, type Result } from './shared/result';
+import { err, ok, type Result } from './shared/result';
 import type { LocalDate } from './shared/time';
 import type {
   DailySelection,
@@ -23,6 +24,7 @@ import type {
   RetroPin,
   SelfAssessment,
   Sprint,
+  SprintGoal,
   SprintTask,
 } from './sprint';
 
@@ -68,29 +70,9 @@ export function enterReview(
   /** The next Sprint with its drafts linked, when `input.next` was given. */
   readonly next?: Sprint;
 }> {
-  if (sprint.state !== 'active') {
-    return err('invalidTransition', `Cannot review a ${sprint.state} Sprint.`);
-  }
+  const checked = checkEnterReview(sprint, input, ctx.actor);
+  if (!checked.ok) return checked;
   const { next } = input;
-  if (
-    next !== undefined &&
-    (next.state !== 'planning' || next.previousSprintId !== sprint.id)
-  ) {
-    return err('invalidInput', 'The next Sprint is not in Planning after it.');
-  }
-  // The system acts after the end date; the person may start on the last day.
-  const tooEarly =
-    ctx.actor === 'system'
-      ? input.today <= sprint.end
-      : input.today < sprint.end;
-  if (tooEarly) {
-    return err(
-      'invalidTransition',
-      ctx.actor === 'system'
-        ? 'The Sprint has not ended yet.'
-        : 'Retro can start from the last day of the Sprint.',
-    );
-  }
 
   const activities: Activity[] = [];
   const planned = sprint.tasks.filter((t) => t.outcome === 'planned');
@@ -187,6 +169,40 @@ export function enterReview(
   );
 }
 
+/**
+ * Whether `enterReview` by `actor` takes the Sprint as it is now (#323):
+ * it runs, and it has ended for the system, or reached its last day for
+ * the person (F21).
+ */
+export function checkEnterReview(
+  sprint: Sprint,
+  input: Pick<EnterReviewInput, 'today' | 'next'>,
+  actor: CommandContext['actor'],
+): Result<undefined> {
+  if (sprint.state !== 'active') {
+    return err('invalidTransition', `Cannot review a ${sprint.state} Sprint.`);
+  }
+  const { next } = input;
+  if (
+    next !== undefined &&
+    (next.state !== 'planning' || next.previousSprintId !== sprint.id)
+  ) {
+    return err('invalidInput', 'The next Sprint is not in Planning after it.');
+  }
+  // The system acts after the end date; the person may start on the last day.
+  const tooEarly =
+    actor === 'system' ? input.today <= sprint.end : input.today < sprint.end;
+  if (tooEarly) {
+    return err(
+      'invalidTransition',
+      actor === 'system'
+        ? 'The Sprint has not ended yet.'
+        : 'Retro can start from the last day of the Sprint.',
+    );
+  }
+  return ok(undefined);
+}
+
 // ---------------------------------------------------------------- Retro
 
 function inRetro(sprint: Sprint): Result<Retro> {
@@ -195,6 +211,44 @@ function inRetro(sprint: Sprint): Result<Retro> {
   }
   return { ok: true, value: sprint.retro };
 }
+
+/**
+ * Whether `assessGoal` takes the Sprint's Goal for the Area as it is now
+ * (#323): in Review, and the Sprint has a Goal for it.
+ */
+export function checkAssessGoal(
+  sprint: Sprint,
+  input: { readonly areaId: AreaId },
+): Result<SprintGoal> {
+  const retro = inRetro(sprint);
+  if (!retro.ok) return retro;
+  const goal = sprint.goals.find((g) => g.areaId === input.areaId);
+  return goal === undefined
+    ? err('notFound', 'No Goal for the Area.')
+    : ok(goal);
+}
+
+/**
+ * Whether `pinFact` takes the Sprint as it is now (#323): in Review. The
+ * fact it is given must be one of the Sprint's; that is not checked here.
+ */
+export const checkPinFact = (sprint: Sprint): Result<Retro> => inRetro(sprint);
+
+/** Whether `unpinFact` takes the Sprint as it is now (#323): in Review. */
+export const checkUnpinFact = (sprint: Sprint): Result<Retro> =>
+  inRetro(sprint);
+
+/** Whether `setReflection` takes the Sprint as it is now (#323): in Review. */
+export const checkSetReflection = (sprint: Sprint): Result<Retro> =>
+  inRetro(sprint);
+
+/**
+ * Whether `setImprovement` takes the Sprint as it is now (#323): in Review.
+ * An empty text while a criterion is made from it is refused; that depends
+ * on the text and is not checked here.
+ */
+export const checkSetImprovement = (sprint: Sprint): Result<Retro> =>
+  inRetro(sprint);
 
 /**
  * Goal の自己判定: できた / 一部できた / できなかった / 判断しない, or `null`
@@ -208,13 +262,12 @@ export function assessGoal(
   },
   ctx: CommandContext,
 ): CommandResult<Sprint> {
-  const retro = inRetro(sprint);
-  if (!retro.ok) return retro;
+  const checked = checkAssessGoal(sprint, input);
+  if (!checked.ok) return checked;
   if (ctx.actor !== 'user') {
     return err('invalidInput', 'Only the person judges a Goal.');
   }
-  const goal = sprint.goals.find((g) => g.areaId === input.areaId);
-  if (goal === undefined) return err('notFound', 'No Goal for the Area.');
+  const goal = checked.value;
   if ((goal.selfAssessment ?? null) === input.assessment) {
     return applied(sprint, []);
   }
@@ -240,29 +293,91 @@ export function assessGoal(
   );
 }
 
+/**
+ * The pin as a fact of this Sprint (気になる印 is on the facts the Retro
+ * shows, those of `retroFacts`): a SprintTask, DailySelection or interrupt
+ * of the Sprint, an occurrence it took in, a Goal's Area of the Sprint, or
+ * the available hours (no ID). A pin that does not name its ID, or names
+ * one for the hours, is `invalidInput`; an ID of another Sprint, or of
+ * none, is `notFound`, as for a Goal without an Area (`assessGoal`).
+ */
+function checkPin(sprint: Sprint, pin: RetroPin): Result<RetroPin> {
+  const { id } = pin;
+  if ((pin.kind === 'availableHours') !== (id === undefined)) {
+    return err('invalidInput', 'A pin names its ID, except the hours.');
+  }
+  const found = (() => {
+    switch (pin.kind) {
+      case 'availableHours':
+        return true;
+      case 'sprintTask':
+        return factSprintTasks(sprint).some((t) => t.id === id);
+      case 'dailySelection':
+        return sprint.dailySelections.some((s) => s.id === id);
+      case 'occurrence':
+        return [...factOccurrenceIds(sprint)].some((o) => o === id);
+      case 'interrupt':
+        return sprint.interrupts.some((n) => n.id === id);
+      case 'goal':
+        return sprint.goals.some((g) => g.areaId === id);
+    }
+  })();
+  return found
+    ? { ok: true, value: pin }
+    : err('notFound', 'The pin names no fact of this Sprint.');
+}
+
 function samePin(a: RetroPin, b: RetroPin): boolean {
   return a.kind === b.kind && a.id === b.id;
 }
 
-/** 気になる印をつける / 外す. */
-export function togglePin(
+/**
+ * 気になる印をつける. Only a fact of this Sprint can be pinned (`notFound`
+ * otherwise; `checkPin`). Pinning a fact already pinned changes
+ * nothing, so the same request gives the same result however often it is
+ * sent (#295).
+ */
+export function pinFact(
   sprint: Sprint,
   input: { readonly pin: RetroPin },
   ctx: CommandContext,
 ): CommandResult<Sprint> {
-  const retro = inRetro(sprint);
+  return setPinned(sprint, input.pin, true, ctx);
+}
+
+/** 気になる印を外す. Unpinning a fact not pinned changes nothing. */
+export function unpinFact(
+  sprint: Sprint,
+  input: { readonly pin: RetroPin },
+  ctx: CommandContext,
+): CommandResult<Sprint> {
+  return setPinned(sprint, input.pin, false, ctx);
+}
+
+function setPinned(
+  sprint: Sprint,
+  pin: RetroPin,
+  on: boolean,
+  ctx: CommandContext,
+): CommandResult<Sprint> {
+  const retro = on ? checkPinFact(sprint) : checkUnpinFact(sprint);
   if (!retro.ok) return retro;
-  const pinned = retro.value.pins.some((p) => samePin(p, input.pin));
-  const pins = pinned
-    ? retro.value.pins.filter((p) => !samePin(p, input.pin))
-    : [...retro.value.pins, input.pin];
+  const pinned = retro.value.pins.some((p) => samePin(p, pin));
+  if (pinned === on) return applied(sprint, []);
+  if (on) {
+    const checked = checkPin(sprint, pin);
+    if (!checked.ok) return checked;
+  }
+  const pins = on
+    ? [...retro.value.pins, pin]
+    : retro.value.pins.filter((p) => !samePin(p, pin));
   return applied({ ...sprint, retro: { ...retro.value, pins } }, [
     {
-      kind: pinned ? 'retroUnpinned' : 'retroPinned',
+      kind: on ? 'retroPinned' : 'retroUnpinned',
       at: ctx.now,
       actor: ctx.actor,
       sprintId: sprint.id,
-      pin: input.pin,
+      pin,
     },
   ]);
 }
@@ -273,7 +388,7 @@ export function setReflection(
   input: { readonly text: string },
   ctx: CommandContext,
 ): CommandResult<Sprint> {
-  const retro = inRetro(sprint);
+  const retro = checkSetReflection(sprint);
   if (!retro.ok) return retro;
   if (retro.value.reflection === input.text) return applied(sprint, []);
   return applied(
@@ -299,7 +414,7 @@ export function setImprovement(
   input: { readonly text: string },
   ctx: CommandContext,
 ): CommandResult<Sprint> {
-  const retro = inRetro(sprint);
+  const retro = checkSetImprovement(sprint);
   if (!retro.ok) return retro;
   const text = input.text.trim();
   const current = retro.value.improvement;
@@ -339,15 +454,9 @@ export function draftCriterion(
   readonly sprint: Sprint;
   readonly criterion: PlanningCriterion;
 }> {
-  const retro = inRetro(sprint);
-  if (!retro.ok) return retro;
-  const improvement = retro.value.improvement;
-  if (improvement === undefined) {
-    return err('invalidInput', 'Write the improvement first.');
-  }
-  if (improvement.criterionId !== undefined) {
-    return err('invalidInput', 'A criterion was already made from it.');
-  }
+  const checked = checkDraftCriterion(sprint);
+  if (!checked.ok) return checked;
+  const { retro, improvement } = checked.value;
   const criterion: PlanningCriterion = {
     id: input.criterionId,
     userId: sprint.userId,
@@ -361,7 +470,7 @@ export function draftCriterion(
       sprint: {
         ...sprint,
         retro: {
-          ...retro.value,
+          ...retro,
           improvement: { ...improvement, criterionId: criterion.id },
         },
       },
@@ -379,6 +488,26 @@ export function draftCriterion(
 }
 
 /**
+ * Whether `draftCriterion` takes the Sprint as it is now (#323): in Review,
+ * with an improvement written and no criterion made from it yet.
+ */
+export function checkDraftCriterion(sprint: Sprint): Result<{
+  readonly retro: Retro;
+  readonly improvement: NonNullable<Retro['improvement']>;
+}> {
+  const retro = inRetro(sprint);
+  if (!retro.ok) return retro;
+  const improvement = retro.value.improvement;
+  if (improvement === undefined) {
+    return err('invalidInput', 'Write the improvement first.');
+  }
+  if (improvement.criterionId !== undefined) {
+    return err('invalidInput', 'A criterion was already made from it.');
+  }
+  return ok({ retro: retro.value, improvement });
+}
+
+/**
  * 基準にしない: the draft is thrown away (Draft → [*]); delete its record.
  * A replace decision that relied on it is cleared.
  */
@@ -389,20 +518,16 @@ export function dropCriterionDraft(
   readonly sprint: Sprint;
   readonly dropped: PlanningCriterionId;
 }> {
-  const retro = inRetro(sprint);
-  if (!retro.ok) return retro;
-  const improvement = retro.value.improvement;
-  const criterionId = improvement?.criterionId;
-  if (improvement === undefined || criterionId === undefined) {
-    return err('notFound', 'No draft criterion.');
-  }
+  const checked = checkDropCriterionDraft(sprint);
+  if (!checked.ok) return checked;
+  const { retro, improvement, criterionId } = checked.value;
   const use = sprint.criterionUse;
   return applied(
     {
       sprint: {
         ...sprint,
         retro: {
-          ...retro.value,
+          ...retro,
           improvement: omit(improvement, 'criterionId'),
         },
         ...(use?.retroDecision === 'replace'
@@ -423,6 +548,25 @@ export function dropCriterionDraft(
 }
 
 /**
+ * Whether `dropCriterionDraft` takes the Sprint as it is now (#323): in
+ * Review, with a criterion made from its improvement.
+ */
+export function checkDropCriterionDraft(sprint: Sprint): Result<{
+  readonly retro: Retro;
+  readonly improvement: NonNullable<Retro['improvement']>;
+  readonly criterionId: PlanningCriterionId;
+}> {
+  const retro = inRetro(sprint);
+  if (!retro.ok) return retro;
+  const improvement = retro.value.improvement;
+  const criterionId = improvement?.criterionId;
+  if (improvement === undefined || criterionId === undefined) {
+    return err('notFound', 'No draft criterion.');
+  }
+  return ok({ retro: retro.value, improvement, criterionId });
+}
+
+/**
  * 続ける / 終える / 置き換える for the criterion this Sprint had, whether or
  * not it was applied (invariant 36). No reason is asked. Replacing needs a
  * draft made from this Retro's improvement.
@@ -432,19 +576,16 @@ export function decideCriterion(
   input: { readonly decision: RetroDecision },
   ctx: CommandContext,
 ): CommandResult<Sprint> {
-  const retro = inRetro(sprint);
-  if (!retro.ok) return retro;
+  const checked = checkDecideCriterion(sprint);
+  if (!checked.ok) return checked;
+  const { retro, use } = checked.value;
   if (ctx.actor !== 'user') {
     return err('invalidInput', 'Only the person decides on the criterion.');
-  }
-  const use = sprint.criterionUse;
-  if (use === undefined) {
-    return err('invalidInput', 'This Sprint had no criterion.');
   }
   if (use.retroDecision === input.decision) return applied(sprint, []);
   if (
     input.decision === 'replace' &&
-    retro.value.improvement?.criterionId === undefined
+    retro.improvement?.criterionId === undefined
   ) {
     return err('invalidInput', 'Make the replacing criterion first.');
   }
@@ -461,6 +602,25 @@ export function decideCriterion(
       },
     ],
   );
+}
+
+/**
+ * Whether `decideCriterion` takes the Sprint as it is now (#323): in
+ * Review, with a criterion this Sprint had. Replacing needs a draft made
+ * from the improvement; that depends on the decision and is not checked
+ * here.
+ */
+export function checkDecideCriterion(sprint: Sprint): Result<{
+  readonly retro: Retro;
+  readonly use: NonNullable<Sprint['criterionUse']>;
+}> {
+  const retro = inRetro(sprint);
+  if (!retro.ok) return retro;
+  const use = sprint.criterionUse;
+  if (use === undefined) {
+    return err('invalidInput', 'This Sprint had no criterion.');
+  }
+  return ok({ retro: retro.value, use });
 }
 
 export interface CompleteRetroInput {
@@ -484,6 +644,69 @@ export function completeRetro(
   readonly sprint: Sprint;
   readonly criteria: readonly PlanningCriterion[];
 }> {
+  const checked = checkCompleteRetro(sprint, input);
+  if (!checked.ok) return checked;
+  const { retro, draft, active } = checked.value;
+  const use = sprint.criterionUse;
+
+  const changed: PlanningCriterion[] = [];
+  const activities: Activity[] = [];
+  const move = (
+    c: PlanningCriterion,
+    to: PlanningCriterion['state'],
+    extra: Partial<PlanningCriterion> = {},
+  ) => {
+    changed.push({ ...c, ...extra, state: to });
+    activities.push({
+      kind: 'criterionStateChanged',
+      at: ctx.now,
+      actor: ctx.actor,
+      criterionId: c.id,
+      from: c.state,
+      to,
+    });
+  };
+
+  const decision = use?.retroDecision;
+  if (active !== undefined && decision === 'end') move(active, 'ended');
+  if (active !== undefined && decision === 'replace' && draft !== undefined) {
+    move(active, 'replaced', { replacedBy: draft.id });
+  }
+  if (draft !== undefined) move(draft, 'active');
+
+  activities.push({
+    kind: 'retroCompleted',
+    at: ctx.now,
+    actor: ctx.actor,
+    sprintId: sprint.id,
+  });
+  return applied(
+    {
+      sprint: {
+        ...sprint,
+        state: 'closed',
+        retro: { ...retro, completedAt: ctx.now },
+      },
+      criteria: changed,
+    },
+    activities,
+  );
+}
+
+/**
+ * Whether `completeRetro` takes the records as they are now (#323): in
+ * Review, the criterion decided if the Sprint had one (invariant 36), and
+ * no two criteria left active (invariant 35). Returns this Retro's draft
+ * and the active criterion, if any.
+ */
+export function checkCompleteRetro(
+  sprint: Sprint,
+  input: CompleteRetroInput,
+): Result<{
+  readonly retro: Retro;
+  readonly draft?: PlanningCriterion;
+  readonly active?: PlanningCriterion;
+}> {
   const retro = inRetro(sprint);
   if (!retro.ok) return retro;
   const use = sprint.criterionUse;
@@ -505,25 +728,6 @@ export function completeRetro(
   if (use !== undefined && active?.id !== use.criterionId) {
     return err('notFound', 'The Sprint’s criterion is not the active one.');
   }
-
-  const changed: PlanningCriterion[] = [];
-  const activities: Activity[] = [];
-  const move = (
-    c: PlanningCriterion,
-    to: PlanningCriterion['state'],
-    extra: Partial<PlanningCriterion> = {},
-  ) => {
-    changed.push({ ...c, ...extra, state: to });
-    activities.push({
-      kind: 'criterionStateChanged',
-      at: ctx.now,
-      actor: ctx.actor,
-      criterionId: c.id,
-      from: c.state,
-      to,
-    });
-  };
-
   const decision = use?.retroDecision;
   if (decision === 'continue' && draft !== undefined) {
     return err(
@@ -534,29 +738,11 @@ export function completeRetro(
   if (active !== undefined && decision === undefined && draft !== undefined) {
     return err('invalidInput', 'Only one criterion can be active.');
   }
-  if (active !== undefined && decision === 'end') move(active, 'ended');
-  if (active !== undefined && decision === 'replace' && draft !== undefined) {
-    move(active, 'replaced', { replacedBy: draft.id });
-  }
-  if (draft !== undefined) move(draft, 'active');
-
-  activities.push({
-    kind: 'retroCompleted',
-    at: ctx.now,
-    actor: ctx.actor,
-    sprintId: sprint.id,
+  return ok({
+    retro: retro.value,
+    ...(draft === undefined ? {} : { draft }),
+    ...(active === undefined ? {} : { active }),
   });
-  return applied(
-    {
-      sprint: {
-        ...sprint,
-        state: 'closed',
-        retro: { ...retro.value, completedAt: ctx.now },
-      },
-      criteria: changed,
-    },
-    activities,
-  );
 }
 
 /**

@@ -18,7 +18,7 @@ import {
 } from './today';
 import type { ActiveCriterion } from './planning';
 import { id, type AreaId } from './shared/ids';
-import { localDate } from './shared/time';
+import { localDate, timeZone } from './shared/time';
 import { updateTask, type Task } from './task';
 import {
   ctx,
@@ -140,7 +140,12 @@ describe('Scenario B — Sprint 外の Task を「今日へ」', () => {
     const withInterrupt = unwrap(
       noteInterrupt(
         done.sprint,
-        { id: id('int-1'), text: '急な問い合わせ', minutes: 20 },
+        {
+          id: id('int-1'),
+          text: '急な問い合わせ',
+          minutes: 20,
+          timeZone: timeZone('Asia/Tokyo'),
+        },
         ctx,
       ),
     );

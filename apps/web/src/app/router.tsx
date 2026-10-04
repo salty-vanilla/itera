@@ -7,7 +7,6 @@ import {
   retainSearchParams,
   type RouterHistory,
 } from '@tanstack/react-router';
-import { isFixtureStateId, type FixtureStateId } from '@/fixtures/states';
 import {
   BacklogScreen,
   validateBacklogSearch,
@@ -17,23 +16,48 @@ import { validateSprintSearch } from '@/screens/planning/planning-screen';
 import { RetroScreen, validateRetroSearch } from '@/screens/retro/retro-screen';
 import { SprintScreen } from '@/screens/sprint-screen';
 import { TodayScreen, validateTodaySearch } from '@/screens/today/today-screen';
+import { usesMock } from './data-source';
+import { SettingsScreen } from '@/screens/settings/settings-screen';
+import {
+  SignInScreen,
+  validateSignInSearch,
+} from '@/screens/sign-in/sign-in-screen';
 import { RootLayout } from './root-layout';
+import { SIGN_IN_PATH } from '@/auth/sign-in';
 
-// Routes (ADR 0005). One path per screen; the fixture state is a search
-// parameter on the root, kept on every navigation, so that a URL opens the
-// same records and clock. Screen state (a filter, an open detail) is added
-// by each screen as its own search parameters.
+// Routes (ADR 0005). One path per screen. With the browser mock, the
+// fixture state is a search parameter on the root, kept on every
+// navigation, so that a URL opens the same records and clock; the mock
+// checks it against the states (an unknown one opens the default). With the
+// API there is no fixture, and the parameter is dropped. Screen state (a
+// filter, an open detail) is added by each screen as its own search
+// parameters. The sign-in screen stands outside the app's frame; every
+// other screen is in it (root-layout.tsx, #278).
 
 export interface RootSearch {
-  /** The fixture state to open (PRD §12). Absent: the default state. */
-  readonly fixture?: FixtureStateId;
+  /** The fixture state to open (PRD §12), with the mock only. */
+  readonly fixture?: string | undefined;
 }
 
 const rootRoute = createRootRoute({
-  validateSearch: (search: Record<string, unknown>): RootSearch =>
-    isFixtureStateId(search.fixture) ? { fixture: search.fixture } : {},
-  search: { middlewares: [retainSearchParams(['fixture'])] },
+  // `undefined`, not left out, to drop the URL's value (ADR 0005).
+  validateSearch: (search: Record<string, unknown>): RootSearch => ({
+    fixture:
+      usesMock && typeof search.fixture === 'string'
+        ? search.fixture
+        : undefined,
+  }),
+  search: {
+    middlewares: usesMock ? [retainSearchParams(['fixture'])] : [],
+  },
   component: RootLayout,
+});
+
+const signInRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: SIGN_IN_PATH,
+  validateSearch: validateSignInSearch,
+  component: SignInScreen,
 });
 
 const indexRoute = createRoute({
@@ -72,12 +96,20 @@ const retroRoute = createRoute({
   component: RetroScreen,
 });
 
+const settingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'settings',
+  component: SettingsScreen,
+});
+
 const routeTree = rootRoute.addChildren([
+  signInRoute,
   indexRoute,
   todayRoute,
   sprintRoute,
   backlogRoute,
   retroRoute,
+  settingsRoute,
 ]);
 
 /**

@@ -29,6 +29,7 @@ export const RULES = {
   },
   reassurance: { level: '目安', title: '安心させる型' },
   'term-table': { level: '確実', title: '用語表の画面の語に使わない語' },
+  'loading-label': { level: '確実', title: '送信中のボタンの形' },
   'ignore-reason': { level: '確実', title: '理由のない copy-lint-ignore' },
 };
 
@@ -264,13 +265,24 @@ function checkReassurance(text) {
   );
 }
 
-export function lintText(text, rules) {
+// The label of a Button while it is sent: one form, 「〜中…」 with the
+// ellipsis character (content.md の型「送信中のボタン」).
+function checkLoadingLabel(text, name) {
+  if (name !== 'loadingLabel' || /中…$/.test(text)) return [];
+  return [
+    { rule: 'loading-label', word: text, use: '「〜中…」（「保存中…」）' },
+  ];
+}
+
+/** `name` is the attribute or property that holds the copy, if any. */
+export function lintText(text, rules, name) {
   return [
     ...checkBanned(text, rules),
     ...checkQuoted(text, rules),
     ...checkPatterns(text),
     ...checkSentences(text, rules),
     ...checkReassurance(text),
+    ...checkLoadingLabel(text, name),
   ];
 }
 
@@ -310,7 +322,7 @@ export function lintItems(items, rules, readLines) {
         rule: 'ignore-reason',
         word: ignore.rules.join(','),
       });
-    for (const warning of lintText(item.text, rules))
+    for (const warning of lintText(item.text, rules, item.name))
       if (!off.has(warning.rule))
         warnings.push({
           file: item.file,

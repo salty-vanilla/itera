@@ -1,7 +1,9 @@
-import type { TaskId } from '@itera/domain';
+import type { MadeFrom } from '@itera/api-contract/requests';
+import type { TaskId } from '@itera/api-contract';
 import { Link } from '@tanstack/react-router';
 import { Info } from 'lucide-react';
 import { useId } from 'react';
+import type { Saved } from '@/api/use-operation';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -15,7 +17,7 @@ import {
   criterionTargetText,
 } from '@/lib/criterion-text';
 import { formatRange } from '@/lib/time-format';
-import type { PlanningData } from '@/store/planning-view';
+import type { PlanningData } from '@/screen-data/use-planning';
 import { planSummary } from './plan-summary';
 
 // The head of 確かめる (Issue #93, owner decision S4): what the 確定 Dialog
@@ -33,7 +35,10 @@ import { planSummary } from './plan-summary';
 type CheckSummaryProps = {
   data: PlanningData;
   onApplyCriterion: (applied: boolean) => void;
-  onAvailableHours: (hours: number | null) => boolean;
+  /** Absent when the hours cannot be changed now (#323). */
+  onAvailableHours:
+    | ((hours: number | null, from: MadeFrom) => Saved | Promise<Saved>)
+    | undefined;
   /** A Task without a value: its detail, at its Estimate. */
   onEstimateTask: (taskId: TaskId) => void;
   /** A Task with subtasks left out: its detail, where they are. */
@@ -93,12 +98,15 @@ function CheckSummary({
           </dd>
         </dl>
         {/* The one field for the hours in 確かめる; the right pane has none. */}
-        <div className="max-w-pane-side">
-          <AvailableHoursField
-            value={data.totals.capacity?.availableHours}
-            onChange={onAvailableHours}
-          />
-        </div>
+        {onAvailableHours !== undefined && (
+          <div className="max-w-pane-side">
+            <AvailableHoursField
+              value={data.totals.capacity?.availableHours}
+              etag={data.sprint.etag}
+              onChange={onAvailableHours}
+            />
+          </div>
+        )}
       </div>
 
       <Drivers data={data} />

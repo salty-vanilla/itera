@@ -1,0 +1,1089 @@
+# Sprint, and what is in it (its Goals, SprintTasks, included occurrences, today's choices, actual time, interrupts). The paths of a resource and its methods (ADR 0006 経路の形):
+# nouns of the domain, a state change a verb after the resource. A write
+# is one operation of packages/application or, where a path takes several,
+# the one its body names (@itera/api-contract/requests).
+
+sprints:
+  get:
+    operationId: listSprints
+    tags: [Reads]
+    summary: "The person's Sprints, in order"
+    description: >-
+      Each with its number (F25), an attribute: `number` finds the one with it.
+    parameters:
+      - name: number
+        in: query
+        required: false
+        schema: { type: integer, minimum: 1 }
+    responses:
+      '200':
+        description: The read.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clock, view]
+              properties:
+                clock: { $ref: '../schemas/common.yaml#/Clock' }
+                view:
+                  type: array
+                  items: { $ref: '../schemas/views.yaml#/SprintItem' }
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/UserNotSetUp' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+  post:
+    operationId: beginPlanning
+    tags: [Sprint]
+    summary: '計画を始める: make the next Sprint'
+    description: >-
+      For the next week not confirmed yet; the domain decides when it starts.
+    parameters:
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    responses:
+      '201':
+        description: Made. The IDs of what the operation made.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sprintId]
+              properties:
+                sprintId: { $ref: '../schemas/common.yaml#/SprintId' }
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+sprint:
+  get:
+    operationId: getSprint
+    tags: [Reads]
+    summary: A Sprint
+    description: >-
+      While planned, its plan (`apply-criterion` previews the active criterion; nothing is written); once confirmed, how it went.
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - name: apply-criterion
+        in: query
+        required: false
+        description: >-
+          Left out, the criterion is not applied.
+        schema: { type: boolean }
+    responses:
+      '200':
+        description: The read.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clock, view]
+              properties:
+                clock: { $ref: '../schemas/common.yaml#/Clock' }
+                view: { $ref: '../schemas/views.yaml#/SprintView' }
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/UserNotSetUp' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+  patch:
+    operationId: setAvailableHours
+    tags: [Sprint]
+    summary: "Set the week's available hours"
+    description: >-
+      While planned, or after 確定 (the planned hours stay). `null` clears them.
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+      - $ref: '../parameters.yaml#/IfMatchHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [availableHours]
+            properties:
+              availableHours:
+                oneOf:
+                  - { type: number }
+                  - type: 'null'
+    responses:
+      '204':
+        description: Done.
+        headers:
+          ETag: { $ref: '../headers.yaml#/RecordETag' }
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '412': { $ref: '../responses.yaml#/PreconditionFailed' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '428': { $ref: '../responses.yaml#/PreconditionRequired' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+sprintConfirm:
+  post:
+    operationId: confirmSprint
+    tags: [Sprint]
+    summary: '確定: start the Sprint'
+    description: >-
+      The plan is fixed (planSnapshot) with or without the active criterion.
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [applyCriterion]
+            properties:
+              applyCriterion: { type: boolean }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+sprintGoal:
+  patch:
+    operationId: updateGoal
+    tags: [Sprint]
+    summary: "Write an Area's Goal, or assess it"
+    description: >-
+      One change a request: `text` (setGoal, while planned or after 確定, F16) or `assessment`, `null` to clear it (assessGoal, in the Retro).
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - name: areaId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/AreaId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+      - $ref: '../parameters.yaml#/OptionalIfMatchHeader'
+      - $ref: '../parameters.yaml#/IfNoneMatchHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - type: object
+                additionalProperties: false
+                required: [text]
+                properties:
+                  text: { type: string }
+              - type: object
+                additionalProperties: false
+                required: [assessment]
+                properties:
+                  assessment:
+                    oneOf:
+                      - { $ref: '../schemas/records.yaml#/SelfAssessment' }
+                      - type: 'null'
+    responses:
+      '204':
+        description: Done.
+        headers:
+          ETag: { $ref: '../headers.yaml#/RecordETag' }
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '412': { $ref: '../responses.yaml#/PreconditionFailed' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '428': { $ref: '../responses.yaml#/PreconditionRequired' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+sprintTasks:
+  post:
+    operationId: addToSprint
+    tags: [Sprint]
+    summary: Put Tasks in the Sprint
+    description: >-
+      Tasks (`taskIds`, addSprintTasks): drafts while planned, mid-Sprint additions with no day chosen while running (#155). Or a new Task (`title`, createAndChooseTask, while planned only). All or none.
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - type: object
+                additionalProperties: false
+                required: [taskIds]
+                properties:
+                  taskIds:
+                    type: array
+                    items: { $ref: '../schemas/common.yaml#/TaskId' }
+              - type: object
+                additionalProperties: false
+                required: [title]
+                properties:
+                  title: { type: string }
+                  areaId: { $ref: '../schemas/common.yaml#/AreaId' }
+    responses:
+      '201':
+        description: Made. The IDs of what the operation made.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sprintTaskIds]
+              properties:
+                sprintTaskIds:
+                  description: The SprintTasks made, in the order of `taskIds`.
+                  type: array
+                  items: { $ref: '../schemas/common.yaml#/SprintTaskId' }
+                taskId:
+                  description: 'With `title`, the new Task.'
+                  $ref: '../schemas/common.yaml#/TaskId'
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+  delete:
+    operationId: removeSprintTasks
+    tags: [Sprint]
+    summary: Take SprintTasks out of the Sprint, all or none
+    description: >-
+      Drafts while planned, mid-Sprint additions taken back while running (F40).
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - name: ids
+        in: query
+        required: true
+        schema:
+          type: array
+          minItems: 1
+          items: { $ref: '../schemas/common.yaml#/SprintTaskId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+sprintTask:
+  patch:
+    operationId: setGoalLink
+    tags: [Sprint]
+    summary: Link a SprintTask to its Goal or not
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - name: sprintTaskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintTaskId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+      - $ref: '../parameters.yaml#/IfMatchHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [goalLink]
+            properties:
+              goalLink: { $ref: '../schemas/records.yaml#/GoalLink' }
+    responses:
+      '204':
+        description: Done.
+        headers:
+          ETag: { $ref: '../headers.yaml#/RecordETag' }
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '412': { $ref: '../responses.yaml#/PreconditionFailed' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '428': { $ref: '../responses.yaml#/PreconditionRequired' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+  delete:
+    operationId: removeSprintTask
+    tags: [Sprint]
+    summary: Take a SprintTask out of the Sprint
+    description: >-
+      As `DELETE …/sprint-tasks?ids=` with one.
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - name: sprintTaskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintTaskId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+sprintTaskExcludeOccurrences:
+  post:
+    operationId: excludeAllOccurrences
+    tags: [Sprint]
+    summary: "Leave out all of a SprintTask's occurrences"
+    description: >-
+      With the last one the draft leaves the Sprint (invariant 33).
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - name: sprintTaskId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintTaskId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+includedOccurrences:
+  post:
+    operationId: includeOccurrences
+    tags: [Sprint]
+    summary: Include occurrences again, all or none
+    description: >-
+      元に戻す after leaving out all of a SprintTask's occurrences.
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [occurrenceIds]
+            properties:
+              occurrenceIds:
+                type: array
+                items: { $ref: '../schemas/common.yaml#/OccurrenceId' }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+includedOccurrence:
+  put:
+    operationId: includeOccurrence
+    tags: [Sprint]
+    summary: Include an occurrence in the plan
+    description: >-
+      May make a SprintTask for it (invariant 33).
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - name: occurrenceId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/OccurrenceId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+  delete:
+    operationId: excludeOccurrence
+    tags: [Sprint]
+    summary: Leave an occurrence out of the plan
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - name: occurrenceId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/OccurrenceId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+candidates:
+  get:
+    operationId: listSprintCandidates
+    tags: [Reads]
+    summary: The Tasks a Sprint being planned can choose
+    description: >-
+      `null` for a Sprint not being planned.
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+    responses:
+      '200':
+        description: The read.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clock, view]
+              properties:
+                clock: { $ref: '../schemas/common.yaml#/Clock' }
+                view:
+                  oneOf:
+                    - { $ref: '../schemas/views.yaml#/SprintCandidates' }
+                    - type: 'null'
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/UserNotSetUp' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+dailySelections:
+  post:
+    operationId: chooseForDay
+    tags: [Today]
+    summary: Choose for today
+    description: >-
+      For `date`, which must be today (after the system has caught up). A SprintTask (or an occurrence of it) of the running Sprint (`sprintTaskId`, chooseForToday), a Task outside it, put in the Sprint too (`taskId`, 今日へ, addTaskToToday), or a new Task (`title`, createTaskForToday).
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - type: object
+                additionalProperties: false
+                required: [date, sprintTaskId]
+                properties:
+                  date: { $ref: '../schemas/common.yaml#/LocalDate' }
+                  sprintTaskId: { $ref: '../schemas/common.yaml#/SprintTaskId' }
+                  occurrenceId: { $ref: '../schemas/common.yaml#/OccurrenceId' }
+              - type: object
+                additionalProperties: false
+                required: [date, taskId]
+                properties:
+                  date: { $ref: '../schemas/common.yaml#/LocalDate' }
+                  taskId: { $ref: '../schemas/common.yaml#/TaskId' }
+              - type: object
+                additionalProperties: false
+                required: [date, title]
+                properties:
+                  date: { $ref: '../schemas/common.yaml#/LocalDate' }
+                  title: { type: string }
+                  areaId: { $ref: '../schemas/common.yaml#/AreaId' }
+    responses:
+      '201':
+        description: Made. The IDs of what the operation made.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [selectionId]
+              properties:
+                selectionId:
+                  { $ref: '../schemas/common.yaml#/DailySelectionId' }
+                sprintTaskId:
+                  description: 'With `taskId` or `title`, its new SprintTask.'
+                  $ref: '../schemas/common.yaml#/SprintTaskId'
+                taskId:
+                  description: 'With `title`, the new Task.'
+                  $ref: '../schemas/common.yaml#/TaskId'
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+selectionStart:
+  post:
+    operationId: startSelection
+    tags: [Today]
+    summary: Start a choice
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - name: selectionId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/DailySelectionId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+selectionPause:
+  post:
+    operationId: pauseSelection
+    tags: [Today]
+    summary: 今日は中断する
+    description: >-
+      With the actual hours so far, if given.
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - name: selectionId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/DailySelectionId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            properties:
+              hours: { type: number }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+selectionDefer:
+  post:
+    operationId: deferSelection
+    tags: [Today]
+    summary: 今日は見送る
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - name: selectionId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/DailySelectionId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+selectionUndoDefer:
+  post:
+    operationId: undoDeferSelection
+    tags: [Today]
+    summary: Take back 見送り, today only
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - name: selectionId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/DailySelectionId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+selectionRemove:
+  post:
+    operationId: removeFromToday
+    tags: [Today]
+    summary: 今週の残りに戻す
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - name: selectionId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/DailySelectionId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+selectionUndoRemove:
+  post:
+    operationId: undoRemoveFromToday
+    tags: [Today]
+    summary: Take back 今週の残りに戻す, today only
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - name: selectionId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/DailySelectionId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+selectionComplete:
+  post:
+    operationId: completeSelection
+    tags: [Today]
+    summary: Complete a choice
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - name: selectionId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/DailySelectionId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+selectionUndoComplete:
+  post:
+    operationId: undoCompleteSelection
+    tags: [Today]
+    summary: Take back a completion
+    description: >-
+      Today's, or a past day's (#53): then the system closes what that day left open.
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - name: selectionId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/DailySelectionId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+selectionSkip:
+  post:
+    operationId: skipSelection
+    tags: [Today]
+    summary: "Skip a recurring Task's occurrence (F19)"
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - name: selectionId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/DailySelectionId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+selectionUndoSkip:
+  post:
+    operationId: undoSkipSelection
+    tags: [Today]
+    summary: Take back a skip
+    description: >-
+      Today's, or a past day's (#53).
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - name: selectionId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/DailySelectionId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+actualTimes:
+  post:
+    operationId: recordActualTime
+    tags: [Sprint]
+    summary: Record actual hours
+    description: >-
+      Added to what is recorded, while the Sprint runs or in its Review (F22); nothing is returned to refer to it.
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [sprintTaskId, date, hours]
+            properties:
+              sprintTaskId: { $ref: '../schemas/common.yaml#/SprintTaskId' }
+              date: { $ref: '../schemas/common.yaml#/LocalDate' }
+              hours: { type: number }
+              occurrenceId: { $ref: '../schemas/common.yaml#/OccurrenceId' }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+interrupts:
+  post:
+    operationId: noteInterrupt
+    tags: [Today]
+    summary: 割り込みを記録
+    description: >-
+      Nothing in Today changes (invariant 29). Refused with 422 on a day
+      outside the Sprint (in the person's time zone), as a note restored
+      after a delete is.
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [text]
+            properties:
+              text: { type: string }
+              minutes: { type: number }
+    responses:
+      '201':
+        description: Made. The IDs of what the operation made.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [interruptNoteId]
+              properties:
+                interruptNoteId:
+                  { $ref: '../schemas/common.yaml#/InterruptNoteId' }
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+interrupt:
+  patch:
+    operationId: editInterrupt
+    tags: [Today]
+    summary: 割り込みを編集
+    description: >-
+      Its note and minutes, both given: `null` minutes for none. The time stays (F38).
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - name: interruptNoteId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/InterruptNoteId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+      - $ref: '../parameters.yaml#/IfMatchHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [text, minutes]
+            properties:
+              text: { type: string }
+              minutes:
+                oneOf:
+                  - { type: number }
+                  - type: 'null'
+    responses:
+      '204':
+        description: Done.
+        headers:
+          ETag: { $ref: '../headers.yaml#/RecordETag' }
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '412': { $ref: '../responses.yaml#/PreconditionFailed' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '428': { $ref: '../responses.yaml#/PreconditionRequired' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+  delete:
+    operationId: deleteInterrupt
+    tags: [Today]
+    summary: 割り込みを消す (F38)
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - name: interruptNoteId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/InterruptNoteId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+  put:
+    operationId: restoreInterrupt
+    tags: [Today]
+    summary: 元に戻す after 割り込みを消す
+    description: >-
+      The client sends back the note's values as the read gave them (its time, text and minutes; not its `etag`, which a read adds), its ID in the path: the same note returns to its place (ADR 0006). Only a note the person deleted from this Sprint comes back: any other ID, whether another person's or nobody's, is refused with the same 404. Refused with 422 if a note with that ID is there again, in this Sprint or in another of the person's, if it was noted later than now or on a day outside the Sprint (in the person's time zone), or if its text is empty.
+    parameters:
+      - name: sprintId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/SprintId' }
+      - name: interruptNoteId
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/InterruptNoteId' }
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [at, text]
+            properties:
+              at: { $ref: '../schemas/common.yaml#/Instant' }
+              text: { type: string }
+              minutes: { type: number }
+    responses:
+      '204':
+        description: Done.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '404': { $ref: '../responses.yaml#/NotFound' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }

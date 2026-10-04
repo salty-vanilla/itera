@@ -1,4 +1,5 @@
-import type { ScreenId } from '@/fixtures/states';
+/** The four screens. */
+export type ScreenId = 'today' | 'sprint' | 'backlog' | 'retro';
 
 /** The four screens and their paths. The order is the navigation's. */
 export const screens: readonly {

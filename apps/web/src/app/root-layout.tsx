@@ -1,68 +1,57 @@
-import { lazy, Suspense, useState, type ReactNode } from 'react';
-import { Outlet, useSearch } from '@tanstack/react-router';
-import {
-  defaultFixtureState,
-  fixtureSnapshot,
-  isFixtureStateId,
-  type FixtureStateId,
-} from '@/fixtures/states';
+import { Outlet, useLocation } from '@tanstack/react-router';
+import { useState } from 'react';
+import { useMe } from '@/api/use-me';
+import { useSessionRefresh } from '@/auth/use-session-refresh';
+import { FirstSettingsScreen } from '@/screens/first-settings/first-settings-screen';
 import { ToastProvider } from '@/components/ui/toast';
-import { createMemoryStore } from '@/store/record-store';
-import { StoreProvider } from '@/store/store-provider';
-import { useSystemDay } from '@/store/use-system-day';
+import {
+  UnsavedTypingProvider,
+  createUnsavedTyping,
+} from '@/lib/unsaved-typing';
 import { AppShell } from './app-shell';
-
-// The dev menu is left out of production builds: with `import.meta.env.DEV`
-// false the import is dead code and Vite drops the chunk.
-const DevMenu = import.meta.env.DEV
-  ? lazy(() => import('./dev-menu').then((m) => ({ default: m.DevMenu })))
-  : null;
+import { LeaveGuard } from './leave-guard';
+import { MockData } from './data-source';
+import { ServerData } from './server-data';
+import { SIGN_IN_PATH } from '@/auth/sign-in';
 
 /**
- * Opens the fixture state named in the URL. Choosing another state starts
- * a new store from its snapshot; nothing is persisted, so a reload also
- * starts over (#38).
+ * The data source and the Toasts for every screen. The sign-in screen
+ * stands outside the app's frame: no navigation, and no reads that would
+ * need a session (#278). So do the first settings (#279).
  */
 function RootLayout() {
-  // Checked again here: on a path with no route the search is not validated.
-  const search: { fixture?: unknown } = useSearch({ strict: false });
-  const fixture = isFixtureStateId(search.fixture)
-    ? search.fixture
-    : defaultFixtureState;
+  const Data = MockData ?? ServerData;
+  const signingIn = useLocation({
+    select: (location) => location.pathname === SIGN_IN_PATH,
+  });
   return (
-    // Keyed by the state: another state mounts a new store.
-    <FixtureStore key={fixture} fixture={fixture}>
-      <ToastProvider>
-        <SystemDay />
-        <AppShell>
-          <Outlet />
-        </AppShell>
-        {DevMenu !== null && (
-          <Suspense>
-            <DevMenu current={fixture} />
-          </Suspense>
-        )}
-      </ToastProvider>
-    </FixtureStore>
+    <Data>
+      <ToastProvider>{signingIn ? <Outlet /> : <SignedIn />}</ToastProvider>
+    </Data>
   );
 }
 
-/** The system's start of the day, whatever screen is open (#54). */
-function SystemDay() {
-  useSystemDay();
-  return null;
-}
-
-/** Holds one store for the life of a fixture state (state, not a memo). */
-function FixtureStore({
-  fixture,
-  children,
-}: {
-  fixture: FixtureStateId;
-  children: ReactNode;
-}) {
-  const [store] = useState(() => createMemoryStore(fixtureSnapshot(fixture)));
-  return <StoreProvider store={store}>{children}</StoreProvider>;
+/**
+ * The screens of a signed-in person, in the app's frame. A person with no
+ * settings has no 「今日」 and every read would be refused (422
+ * `/problems/user-not-set-up`): they make their settings first, on the screen they
+ * opened, and the screen opens once `/me` answers with them (#279).
+ */
+function SignedIn() {
+  useSessionRefresh();
+  // Typing a failed save left out of the records: asked about before the
+  // screen changes (#332).
+  const [unsaved] = useState(createUnsavedTyping);
+  const settingsMade = useMe().data?.settings !== null;
+  if (!settingsMade) return <FirstSettingsScreen />;
+  return (
+    <UnsavedTypingProvider value={unsaved}>
+      <AppShell>
+        <Outlet />
+      </AppShell>
+      <LeaveGuard unsaved={unsaved} />
+    </UnsavedTypingProvider>
+  );
 }
 
 export { RootLayout };

@@ -1,6 +1,9 @@
-import type { AreaId } from '@itera/domain';
+import type { AreaId } from '@itera/api-contract';
+import type { MadeFrom } from '@itera/api-contract/requests';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
+import type { Saved } from '@/api/use-operation';
 import { AreaMark } from '@/components/ui/area-indicator';
+import { ReadStatus } from '@/components/read-status';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -13,7 +16,12 @@ import {
 } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
-import { useAreaActions, useAreas, type EditableArea } from '@/store/use-areas';
+import { sameWords, useDraftField } from '@/lib/use-draft-field';
+import {
+  useAreaActions,
+  useAreas,
+  type EditableArea,
+} from '@/screen-data/use-areas';
 
 // 領域を編集 (Issue #113, patterns.md Backlog › Browse): the one Dialog to
 // make an Area, rename it and archive it. It opens from the end of the
@@ -104,7 +112,7 @@ function AreaEditor({
   focusNew: boolean;
   onCreated: ((areaId: AreaId) => void) | undefined;
 }) {
-  const areas = useAreas();
+  const read = useAreas();
   const actions = useAreaActions();
   const [renaming, setRenaming] = useState<AreaId>();
   // Archived while the Dialog is open: the line stays with 元に戻す.
@@ -113,7 +121,10 @@ function AreaEditor({
   const [status, setStatus] = useState('');
   const newRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
-  const shown = areas.filter((a) => !a.archived || archived.includes(a.id));
+  const shown =
+    read.status === 'ready'
+      ? read.areas.filter((a) => !a.archived || archived.includes(a.id))
+      : [];
 
   /** After a row changes, the focus goes to a control of that row. */
   const focusRow = (areaId: AreaId, action: 'edit' | 'undo') =>
@@ -125,7 +136,7 @@ function AreaEditor({
         ?.focus(),
     );
 
-  function add(event: FormEvent) {
+  async function add(event: FormEvent) {
     event.preventDefault();
     const name = newName.trim();
     // Nothing typed adds nothing, as in a Quick Add.
@@ -133,9 +144,10 @@ function AreaEditor({
       newRef.current?.focus();
       return;
     }
-    const created = actions.addArea(name);
+    const created = await actions.addArea(name);
     if (created === undefined) return;
-    setNewName('');
+    // What was typed while it was sent is the next Area's.
+    setNewName((typed) => (typed.trim() === name ? '' : typed));
     setStatus(`「${name}」を追加しました`);
     if (onCreated !== undefined) onCreated(created);
     else newRef.current?.focus();
@@ -143,7 +155,9 @@ function AreaEditor({
 
   return (
     <DialogBody className="flex flex-col gap-5">
-      {shown.length === 0 ? (
+      {read.status !== 'ready' ? (
+        <ReadStatus label="領域" read={read} />
+      ) : shown.length === 0 ? (
         <p className="text-body text-ink-muted">領域はまだありません。</p>
       ) : (
         <ul
@@ -156,32 +170,44 @@ function AreaEditor({
               <ArchivedLine
                 key={area.id}
                 area={area}
-                onUndo={() => {
-                  if (!actions.restoreArea(area.id)) return;
-                  setArchived((ids) => ids.filter((id) => id !== area.id));
-                  setStatus(`「${area.name}」を元に戻しました`);
-                  focusRow(area.id, 'edit');
-                }}
+                onUndo={
+                  !area.capabilities.canRestore
+                    ? undefined
+                    : async () => {
+                        if (!(await actions.restoreArea(area.id))) return;
+                        setArchived((ids) =>
+                          ids.filter((id) => id !== area.id),
+                        );
+                        setStatus(`「${area.name}」を元に戻しました`);
+                        focusRow(area.id, 'edit');
+                      }
+                }
               />
             ) : renaming === area.id ? (
               <EditRow
                 key={area.id}
                 area={area}
-                onArchive={() => {
-                  setRenaming(undefined);
-                  if (!actions.archiveArea(area.id)) return;
-                  setArchived((ids) => [...ids, area.id]);
-                  focusRow(area.id, 'undo');
-                }}
+                onArchive={
+                  !area.capabilities.canArchive
+                    ? undefined
+                    : async () => {
+                        setRenaming(undefined);
+                        if (!(await actions.archiveArea(area.id))) return;
+                        setArchived((ids) => [...ids, area.id]);
+                        focusRow(area.id, 'undo');
+                      }
+                }
                 onCancel={() => {
                   setRenaming(undefined);
                   focusRow(area.id, 'edit');
                 }}
-                onRename={(name) => {
-                  if (!actions.renameArea(area.id, name)) return;
+                onRename={async (name, from) => {
+                  const saved = await actions.renameArea(area.id, name, from);
+                  if (!saved.ok) return saved;
                   setRenaming(undefined);
                   if (name !== area.name) setStatus(`「${name}」に変えました`);
                   focusRow(area.id, 'edit');
+                  return saved;
                 }}
               />
             ) : (
@@ -194,16 +220,18 @@ function AreaEditor({
                 <span className="min-w-0 flex-1 text-body text-ink wrap-anywhere [word-break:auto-phrase]">
                   {area.name}
                 </span>
-                <Button
-                  size="sm"
-                  variant="quiet"
-                  data-action="edit"
-                  // The visible word comes in the name (WCAG 2.5.3).
-                  aria-label={`「${area.name}」を編集`}
-                  onClick={() => setRenaming(area.id)}
-                >
-                  編集
-                </Button>
+                {area.capabilities.canRename && (
+                  <Button
+                    size="sm"
+                    variant="quiet"
+                    data-action="edit"
+                    // The visible word comes in the name (WCAG 2.5.3).
+                    aria-label={`「${area.name}」を編集`}
+                    onClick={() => setRenaming(area.id)}
+                  >
+                    編集
+                  </Button>
+                )}
               </li>
             ),
           )}
@@ -219,7 +247,13 @@ function AreaEditor({
             onChange={(e) => setNewName(e.currentTarget.value)}
           />
         </Field>
-        <Button type="submit">追加</Button>
+        <Button
+          type="submit"
+          loading={actions.loading.addArea}
+          loadingLabel="追加中…"
+        >
+          追加
+        </Button>
       </form>
       <p role="status" className="sr-only">
         {status}
@@ -239,11 +273,18 @@ function EditRow({
   onCancel,
 }: {
   area: EditableArea;
-  onRename: (name: string) => void;
-  onArchive: () => void;
+  /** Whether it went through; `from` is the Area as read when it was typed. */
+  onRename: (name: string, from: MadeFrom) => Promise<Saved>;
+  /** Absent when the Area cannot be archived now (#323). */
+  onArchive?: (() => void) | undefined;
   onCancel: () => void;
 }) {
-  const [name, setName] = useState(area.name);
+  // Typed apart from the Area as read: the form shows the name as it is now
+  // until it is typed in, and 名前を変える on a name nothing was typed in
+  // changes nothing, so that the name it opened with never goes over another
+  // device's (#324).
+  const nameField = useDraftField(area.name, sameWords, { etag: area.etag });
+  const name = nameField.value;
   const [error, setError] = useState<string>();
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(
@@ -265,7 +306,13 @@ function EditRow({
             inputRef.current?.focus();
             return;
           }
-          onRename(name.trim());
+          if (!nameField.edited) {
+            onCancel();
+            return;
+          }
+          // Held until it is answered: a rename that did not go through
+          // gives the typing back (#321).
+          nameField.hold(onRename(name.trim(), nameField.madeFrom));
         }}
       >
         <Field
@@ -276,13 +323,14 @@ function EditRow({
             </span>
           }
           error={error}
+          saveFailed={nameField.saveFailed}
         >
           <TextInput
             ref={inputRef}
             value={name}
             enterKeyHint="done"
             prefix={<AreaMark name={name || area.name} color={area.color} />}
-            onChange={(e) => setName(e.currentTarget.value)}
+            onChange={(e) => nameField.set(e.currentTarget.value)}
             onKeyDown={(e) => {
               // Esc goes back to the row rather than closing the Dialog.
               // While converting Japanese input it only closes the IME.
@@ -298,9 +346,11 @@ function EditRow({
             stay right under the field and アーカイブ goes below them. */}
         <div className="flex flex-wrap-reverse items-center gap-2">
           {/* No confirmation: the line left in its place has 元に戻す. */}
-          <Button size="sm" type="button" onClick={onArchive}>
-            アーカイブ
-          </Button>
+          {onArchive && (
+            <Button size="sm" type="button" onClick={onArchive}>
+              アーカイブ
+            </Button>
+          )}
           {/* Together at the right. */}
           <span className="ml-auto flex gap-2">
             <Button size="sm" variant="quiet" type="button" onClick={onCancel}>
@@ -322,7 +372,8 @@ function ArchivedLine({
   onUndo,
 }: {
   area: EditableArea;
-  onUndo: () => void;
+  /** Absent when the Area cannot be restored now (#323). */
+  onUndo?: (() => void) | undefined;
 }) {
   const textId = useId();
   return (
@@ -338,15 +389,17 @@ function ArchivedLine({
         >
           「{area.name}」をアーカイブしました。タスクと過去の記録には残ります。
         </span>
-        <Button
-          size="sm"
-          variant="quiet"
-          data-action="undo"
-          aria-describedby={textId}
-          onClick={onUndo}
-        >
-          元に戻す
-        </Button>
+        {onUndo && (
+          <Button
+            size="sm"
+            variant="quiet"
+            data-action="undo"
+            aria-describedby={textId}
+            onClick={onUndo}
+          >
+            元に戻す
+          </Button>
+        )}
       </div>
     </li>
   );

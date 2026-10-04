@@ -31,7 +31,7 @@ MVP は Web のみ。PC を基準にし、スマートフォンは DESIGN.md の
 
 `packages/domain`・`apps/web`・`services/api` で作業するときは、ファイルを作る前に `.claude/rules/domain.md` / `.claude/rules/web-ui.md` / `.claude/rules/api.md` を読む。
 
-技術スタックの候補：Vite、React 19、Tailwind 4、shadcn（base-ui）、TanStack Query、Valibot、Hono、Drizzle、OpenAPI + Hey API、vitest、Playwright。導入するときに ADR で決め、バージョンを固定する。まだ入っていないものを、入っている前提で使わない。導入済みの Web 側の依存（Vite、React、Tailwind、shadcn / base-ui、lucide-react、Storybook）は ADR 0003、ルーター（TanStack Router）と fixture・記録のストアの置き場所は ADR 0005。API 側（Hono + Cloudflare Workers、D1 + Drizzle、Better Auth、wrangler）の方式と版は ADR 0004。
+技術スタックの候補：Vite、React 19、Tailwind 4、shadcn（base-ui）、TanStack Query、Valibot、Hono、Drizzle、OpenAPI + Hey API、vitest、Playwright。導入するときに ADR で決め、バージョンを固定する。まだ入っていないものを、入っている前提で使わない。導入済みの Web 側の依存（Vite、React、Tailwind、shadcn / base-ui、lucide-react、Storybook）は ADR 0003、ルーター（TanStack Router）と fixture・記録のストアの置き場所は ADR 0005。API 側（Hono + Cloudflare Workers、D1 + Drizzle、Better Auth、wrangler）の方式と版は ADR 0004。API の契約（OpenAPI、Hey API、Valibot、TanStack Query の生成）は ADR 0006（`packages/api-contract`）。
 
 ### 未決事項の扱い
 
@@ -39,7 +39,7 @@ PRD §14 の「Frontend 実装を止めない未決定事項」3 件（＝ドメ
 
 ### クライアントとデータの方式
 
-PRD §14「クライアントとデータの方式」に従う。規則の正本は `packages/domain` で、使うのはサーバー（`services/api`）だけ。クライアント（Web、MVP の後に iOS・Android）は OpenAPI の契約だけに依存し、プレビューだけをそれぞれの言語で計算する。`apps/web` が `packages/domain` を直接使うのは fixture の段階に限り、Issue #45 で契約に移す（ADR 0005）。
+PRD §14「クライアントとデータの方式」に従う。規則の正本は `packages/domain` で、使うのはサーバー（`services/api`）だけ。クライアント（Web、MVP の後に iOS・Android）は OpenAPI の契約だけに依存し、プレビューだけをそれぞれの言語で計算する。`apps/web` は #272〜#277 で契約に移し、その後はプレビューと日付の関数だけを当面 `packages/domain` から使う（ADR 0005 の例外、Issue #262）。操作と派生値は `packages/application` にあり、API とブラウザ内モックが使う。クライアントに許す計算、プレビューの共通のテストケース、共通の実装を検討する条件は ADR 0007。
 
 ## ドメインの扱い
 
@@ -62,6 +62,7 @@ PRD §14「クライアントとデータの方式」に従う。規則の正本
 - `pnpm lint`（ESLint と React ファイル名の kebab-case）
 - `pnpm typecheck`
 - `pnpm test`（Vitest。パッケージごとの `vitest.config.ts` と `tooling` project）
+- `pnpm build`（`apps/web` の本番ビルド。CD が Worker の静的アセットに載せるものと同じ）
 - `pnpm design:lint`（DESIGN.md のトークンを公式の linter で検査）
 - `pnpm agent:check`（Skill の整合性）
 

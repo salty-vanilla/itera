@@ -1,0 +1,123 @@
+import {
+  readCondition,
+  readRequest,
+  RequestError,
+  surfaces,
+  type ReceivedRequest,
+  type Surface,
+} from '@itera/api-contract/requests';
+import {
+  checkCondition,
+  etagAfter,
+  operations,
+  type Change,
+} from '@itera/application';
+import { Hono } from 'hono';
+import type { Context } from 'hono';
+import type { AppEnv } from '../env';
+import { ApiError } from '../errors';
+import { jsonBody, limitBody } from './body';
+import type { Flow, Guards, Precondition } from './flow';
+import { answerOf, answerResponse, readWrite } from './idempotency';
+import { preconditions } from './preconditions';
+import { validate } from './validate';
+
+/** A surface's path in Hono's form: `/areas/{areaId}` becomes `/areas/:areaId`. */
+export const honoPath = (url: string) => url.replace(/\{(\w+)\}/g, ':$1');
+
+/**
+ * Each write surface of the contract (`surfaces` of
+ * `@itera/api-contract/requests`; registry.test.ts holds every one routed
+ * at its method and path): the guards (authentication, the Origin
+ * check) run first, then the size limit, the Idempotency-Key and the
+ * contract's validation of the path, the query and the body. The surface
+ * names the operation of packages/application, which runs on the person's
+ * records. It answers the surface's status: 201 with what it made, 200 with
+ * what it decided, or 204; the same write sent again answers the same.
+ */
+export function operationRoutes(flow: Flow, guards: Guards) {
+  const routes = new Hono<AppEnv>();
+  for (const surface of Object.values(surfaces) as Surface[]) {
+    routes.on(
+      surface.method,
+      honoPath(surface.url),
+      guards.user,
+      guards.origin,
+      limitBody,
+      readWrite,
+      async (c) => {
+        const { name, input } = await operationOf(surface, {
+          path: c.req.param(),
+          query: c.req.queries(),
+          body: () => jsonBody(c.req),
+        });
+        const operation = operations[name] as (
+          input: unknown,
+        ) => Change<unknown>;
+        const precondition = (
+          preconditions as Partial<
+            Record<string, (input: unknown) => Precondition>
+          >
+        )[name]?.(input);
+        const condition = conditionOf(c);
+        // Made with nothing to return (the Retro, 201) has no body either.
+        const answer = await flow.operate(
+          c,
+          operation(input),
+          (value) => answerOf(surface.status, value),
+          {
+            condition: {
+              check: (records, versions) =>
+                checkCondition(
+                  name,
+                  input as never,
+                  records,
+                  versions,
+                  condition,
+                ),
+              etag: (records, versions) =>
+                etagAfter(name, input as never, records, versions),
+            },
+            ...(precondition === undefined ? {} : { precondition }),
+          },
+        );
+        return answerResponse(c, answer);
+      },
+    );
+  }
+  return routes;
+}
+
+/**
+ * The operation a request names (`readRequest`): each part checked with the
+ * contract's schemas and the domain's dates (`validate`), a request no
+ * operation takes refused with 400.
+ */
+async function operationOf(surface: Surface, received: ReceivedRequest) {
+  try {
+    return await readRequest(surface, received, (schema, value, part) =>
+      validate(schema, value, part),
+    );
+  } catch (error) {
+    if (error instanceof RequestError) throw ApiError.invalid(error.issue);
+    throw error;
+  }
+}
+
+/**
+ * The version a write says it was made from (`If-Match`,
+ * `If-None-Match`), 400 when a header is not in the contract's form. Which
+ * writes need one is packages/application's to say (`checkCondition`, ADR
+ * 0006 記録ごとの版).
+ */
+function conditionOf(c: Context<AppEnv>) {
+  try {
+    return readCondition({
+      ifMatch: c.req.header('If-Match'),
+      ifNoneMatch: c.req.header('If-None-Match'),
+    });
+  } catch (error) {
+    if (error instanceof RequestError) throw ApiError.invalid(error.issue);
+    throw error;
+  }
+}

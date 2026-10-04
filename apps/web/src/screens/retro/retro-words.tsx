@@ -4,7 +4,7 @@ import type {
   RetroPin,
   SelfAssessment,
   SprintTaskOutcome,
-} from '@itera/domain';
+} from '@itera/api-contract';
 import {
   Circle,
   CircleCheck,

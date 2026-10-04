@@ -1,9 +1,11 @@
+import type { MadeFrom } from '@itera/api-contract/requests';
 import { Info } from 'lucide-react';
 import { useId } from 'react';
+import type { Saved } from '@/api/use-operation';
 import { Divider } from '@/components/ui/divider';
 import { CapacityIndicator } from '@/components/sprint/capacity-indicator';
 import { criterionName } from '@/lib/criterion-text';
-import type { PlanningData } from '@/store/planning-view';
+import type { PlanningData } from '@/screen-data/use-planning';
 import { cn } from '@/lib/utils';
 
 // 時間の見通し (docs/design/patterns.md Sprint Planning, right pane): the
@@ -27,7 +29,9 @@ type OutlookPaneProps = {
    */
   sheet?: boolean | undefined;
   /** Absent: no field for the available hours (確かめる has its own). */
-  onAvailableHours?: ((hours: number | null) => boolean) | undefined;
+  onAvailableHours?:
+    | ((hours: number | null, from: MadeFrom) => Saved | Promise<Saved>)
+    | undefined;
   className?: string | undefined;
 };
 
@@ -98,7 +102,11 @@ function OutlookPane({
         capacity={totals.capacity}
         areas={areas}
         breakdownOnly={check}
-        onAvailableHoursChange={onAvailableHours}
+        hoursField={
+          onAvailableHours === undefined
+            ? undefined
+            : { etag: data.sprint.etag, save: onAvailableHours }
+        }
       />
     </div>
   );

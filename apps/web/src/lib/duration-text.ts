@@ -55,6 +55,14 @@ export function durationText(minutes: number | undefined): DurationText {
   };
 }
 
+/**
+ * The two fields are the same time to the minute (「90」 in 分 is 「1」 and
+ * 「30」), or neither is a time: typing it back is not an edit.
+ */
+export function sameDuration(a: DurationText, b: DurationText): boolean {
+  return readMinutes(a) === readMinutes(b);
+}
+
 /** `durationText` for a value kept in hours. */
 export function hoursText(hours: number | undefined): DurationText {
   return durationText(hours === undefined ? undefined : hours * 60);

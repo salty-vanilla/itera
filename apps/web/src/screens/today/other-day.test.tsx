@@ -10,6 +10,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { dayRead } from '@/test/day-read';
 
 // A day other than today on the Today screen by `?date=` (#90): past,
 // future and out-of-period days, read only. The heading's arrows and date
@@ -29,7 +30,7 @@ async function renderAt(url: string) {
       <RouterProvider router={router} />
     </TooltipProvider>,
   );
-  await screen.findByRole('heading', { level: 1 });
+  await dayRead();
   return router;
 }
 

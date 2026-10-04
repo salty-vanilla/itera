@@ -15,7 +15,7 @@ import type {
   AreaPlan,
   PlannedTask,
   PlanningData,
-} from '@/store/planning-view';
+} from '@/screen-data/use-planning';
 
 // What the plan comes to, in words: the one source of the 確かめる summary
 // and the 確定 Dialog, so that both say the same (Issue #93, owner decision

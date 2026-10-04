@@ -1,7 +1,7 @@
 import { Info } from 'lucide-react';
 import { criterionBoundText, criterionName } from '@/lib/criterion-text';
 import { formatHours, formatPlanningTotal } from '@/lib/time-format';
-import type { RetroData } from '@/store/retro-view';
+import type { RetroData } from '@/screen-data/retro-view';
 
 // 今回の計画のルールの結果 (patterns.md Retro › 引き継ぐ, #107): its name,
 // whether it was used at confirm, and what came of it. It sits right before

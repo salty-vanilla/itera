@@ -1,4 +1,3 @@
-import { instant, localDate } from '@itera/domain';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Ellipsis } from 'lucide-react';
 import { useState } from 'react';
@@ -10,8 +9,8 @@ import { Estimate } from './estimate';
 import { MetaItem, TaskMetadata } from './task-metadata';
 import { CompletionCircle, TaskRow } from './task-row';
 
-const computedAt = instant('2026-09-29T00:00:00.000Z');
-const today = localDate('2026-09-29');
+const computedAt = '2026-09-29T00:00:00.000Z';
+const today = '2026-09-29';
 const Carry = semanticIcons.carriedOver;
 const Repeat = semanticIcons.recurrence;
 
@@ -49,7 +48,7 @@ function Row({
       metadata={
         <TaskMetadata>
           <AreaIndicator name="研究" color={2} />
-          <Deadline due={localDate('2026-10-01')} today={today} />
+          <Deadline due={'2026-10-01'} today={today} />
           <MetaItem icon={<Carry aria-hidden />}>
             持ち越し 1回（Sprint 13から）
           </MetaItem>
@@ -91,10 +90,10 @@ export const Current: Story = { render: () => <Row current /> };
 export const Deadlines: Story = {
   render: () => (
     <div className="flex flex-col gap-2 text-meta">
-      <Deadline due={localDate('2026-10-05')} today={today} />
-      <Deadline due={localDate('2026-10-01')} today={today} />
+      <Deadline due={'2026-10-05'} today={today} />
+      <Deadline due={'2026-10-01'} today={today} />
       <Deadline due={today} today={today} />
-      <Deadline due={localDate('2026-09-25')} today={today} />
+      <Deadline due={'2026-09-25'} today={today} />
     </div>
   ),
 };

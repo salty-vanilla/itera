@@ -9,18 +9,17 @@ const JAPANESE = /[\u3040-\u30ff\u3400-\u9fff\uff01-\uff60]/;
 export const SOURCE_DIRECTORIES = ['apps/web/src', 'packages/domain/src'];
 
 // Text people never see in the app: fixtures, the Storybook-only token pages,
-// the development menu (left out of production builds) and the test helpers
-// of packages/domain. Tests and stories are excluded by file name.
+// the browser mock with its development menu and fixture states (left out
+// of production builds, ADR 0005) and the test helpers of packages/domain.
+// Tests and stories are excluded by file name.
 const EXCLUDED_DIRECTORIES = new Set([
   'node_modules',
   'fixtures',
   '__tests__',
   'foundations',
+  'mock',
 ]);
-const EXCLUDED_FILES = new Set([
-  'apps/web/src/app/dev-menu.tsx',
-  'packages/domain/src/testing.ts',
-]);
+const EXCLUDED_FILES = new Set(['packages/domain/src/testing.ts']);
 const SOURCE_FILE = /\.tsx?$/;
 // CSS selectors that find an element by its Japanese label
 // (`nav[aria-label="次の段階"]`) are code, not copy.

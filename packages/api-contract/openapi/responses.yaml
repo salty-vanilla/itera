@@ -1,0 +1,68 @@
+# The error responses, one per status (ADR 0006 エラー).
+BadRequest:
+  description: The request does not match the contract.
+  content:
+    application/problem+json:
+      schema: { $ref: './schemas/common.yaml#/ValidationError' }
+Unauthenticated:
+  description: No valid session.
+  content:
+    application/problem+json:
+      schema: { $ref: './schemas/common.yaml#/UnauthenticatedError' }
+ForbiddenOrigin:
+  description: A write whose Origin is not the app's own.
+  content:
+    application/problem+json:
+      schema: { $ref: './schemas/common.yaml#/ForbiddenOriginError' }
+NotFound:
+  description: A record the request names is not among the person's records.
+  content:
+    application/problem+json:
+      schema: { $ref: './schemas/common.yaml#/NotFoundError' }
+RevisionConflict:
+  description: Another write came first; this one was not made.
+  content:
+    application/problem+json:
+      schema: { $ref: './schemas/common.yaml#/RevisionConflictError' }
+PreconditionFailed:
+  description: >-
+    The record has changed since the write's `If-Match` was read, or one
+    has been made since a write sent `If-None-Match: *`; this one was not
+    made.
+  content:
+    application/problem+json:
+      schema: { $ref: './schemas/common.yaml#/PreconditionFailedError' }
+PreconditionRequired:
+  description: >-
+    A write that replaces a record's values came without `If-Match` (or,
+    for a record not made yet, a Goal or a Task's rule, `If-None-Match:
+    *`). Send it again with the etag of the record as read.
+  content:
+    application/problem+json:
+      schema: { $ref: './schemas/common.yaml#/PreconditionRequiredError' }
+PayloadTooLarge:
+  description: The body is larger than the API takes.
+  content:
+    application/problem+json:
+      schema: { $ref: './schemas/common.yaml#/PayloadTooLargeError' }
+RuleViolation:
+  description: >-
+    The domain refused the operation, the person has no settings yet, or
+    the Idempotency-Key was used for another request.
+  content:
+    application/problem+json:
+      schema:
+        oneOf:
+          - { $ref: './schemas/common.yaml#/RuleViolationError' }
+          - { $ref: './schemas/common.yaml#/UserNotSetUpError' }
+          - { $ref: './schemas/common.yaml#/IdempotencyKeyReusedError' }
+UserNotSetUp:
+  description: The person has no settings yet.
+  content:
+    application/problem+json:
+      schema: { $ref: './schemas/common.yaml#/UserNotSetUpError' }
+ServerError:
+  description: An unexpected failure on the server.
+  content:
+    application/problem+json:
+      schema: { $ref: './schemas/common.yaml#/InternalError' }

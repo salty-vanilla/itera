@@ -1,6 +1,8 @@
 import type { Area } from './area';
 import { presentedSuggestion } from './estimate';
 import {
+  checkExcludeOccurrence,
+  checkIncludeOccurrence,
   excludeOccurrence,
   generateOccurrences,
   includeOccurrence,
@@ -28,7 +30,7 @@ import type {
   TaskId,
 } from './shared/ids';
 import { omit } from './shared/record';
-import { err } from './shared/result';
+import { err, ok, type Result } from './shared/result';
 import { dayOfWeek, type LocalDate } from './shared/time';
 import {
   sprintEnd,
@@ -174,6 +176,33 @@ export function selectTask(
   ctx: CommandContext,
 ): CommandResult<Sprint> {
   const { task, carriedFrom } = input;
+  const checked = checkSelectTask(sprint, input);
+  if (!checked.ok) return checked;
+  const sprintTask: SprintTask = {
+    id: input.sprintTaskId,
+    taskId: task.id,
+    origin: 'planning',
+    addedAt: ctx.now,
+    goalLink: 'linked',
+    outcome: 'draft',
+    ...(carriedFrom === undefined ? {} : { carriedFrom: carriedFrom.id }),
+  };
+  return applied({ ...sprint, tasks: [...sprint.tasks, sprintTask] }, [
+    addedActivity(
+      sprint.id,
+      sprintTask,
+      carriedFrom === undefined ? 'planning' : 'carryOver',
+      ctx,
+    ),
+  ]);
+}
+
+/** Whether `selectTask` takes the Sprint and the Task as they are now (#323). */
+export function checkSelectTask(
+  sprint: Sprint,
+  input: Pick<SelectTaskInput, 'task' | 'carriedFrom'>,
+): Result<undefined> {
+  const { task, carriedFrom } = input;
   if (sprint.state !== 'planning') {
     return err('invalidTransition', 'Tasks are selected during Planning.');
   }
@@ -195,23 +224,7 @@ export function selectTask(
   ) {
     return err('invalidInput', 'Not a carried-over SprintTask of this Task.');
   }
-  const sprintTask: SprintTask = {
-    id: input.sprintTaskId,
-    taskId: task.id,
-    origin: 'planning',
-    addedAt: ctx.now,
-    goalLink: 'linked',
-    outcome: 'draft',
-    ...(carriedFrom === undefined ? {} : { carriedFrom: carriedFrom.id }),
-  };
-  return applied({ ...sprint, tasks: [...sprint.tasks, sprintTask] }, [
-    addedActivity(
-      sprint.id,
-      sprintTask,
-      carriedFrom === undefined ? 'planning' : 'carryOver',
-      ctx,
-    ),
-  ]);
+  return ok(undefined);
 }
 
 /** 確定前に外す: a non-recurring draft leaves the Sprint without a trace. */
@@ -220,6 +233,20 @@ export function unselectTask(
   sprintTaskId: SprintTaskId,
   ctx: CommandContext,
 ): CommandResult<Sprint> {
+  const checked = checkUnselectTask(sprint, sprintTaskId);
+  if (!checked.ok) return checked;
+  const target = checked.value;
+  return applied(
+    { ...sprint, tasks: sprint.tasks.filter((t) => t.id !== sprintTaskId) },
+    [unselectedActivity(sprint.id, target, ctx)],
+  );
+}
+
+/** Whether `unselectTask` takes the Sprint and its draft as they are now (#323). */
+export function checkUnselectTask(
+  sprint: Sprint,
+  sprintTaskId: SprintTaskId,
+): Result<SprintTask> {
   if (sprint.state !== 'planning') {
     return err('invalidTransition', 'Only a draft can be unselected.');
   }
@@ -228,10 +255,7 @@ export function unselectTask(
   if (target.occurrenceIds !== undefined) {
     return err('invalidInput', 'Exclude a recurring Task by its occurrences.');
   }
-  return applied(
-    { ...sprint, tasks: sprint.tasks.filter((t) => t.id !== sprintTaskId) },
-    [unselectedActivity(sprint.id, target, ctx)],
-  );
+  return ok(target);
 }
 
 /**
@@ -332,18 +356,9 @@ export function excludeFromPlan(
   occurrence: Occurrence,
   ctx: CommandContext,
 ): CommandResult<{ readonly sprint: Sprint; readonly occurrence: Occurrence }> {
-  if (sprint.state !== 'planning') {
-    return err(
-      'invalidTransition',
-      'Occurrences are excluded during Planning.',
-    );
-  }
-  const owner = sprint.tasks.find((t) =>
-    t.occurrenceIds?.includes(occurrence.id),
-  );
-  if (owner === undefined) {
-    return err('notFound', 'The occurrence is not in this Sprint.');
-  }
+  const checked = checkExcludeFromPlan(sprint, occurrence);
+  if (!checked.ok) return checked;
+  const owner = checked.value;
   const excluded = excludeOccurrence(occurrence, ctx);
   if (!excluded.ok) return excluded;
   const remaining = (owner.occurrenceIds ?? []).filter(
@@ -365,6 +380,30 @@ export function excludeFromPlan(
   );
 }
 
+/**
+ * Whether `excludeFromPlan` takes the Sprint and the occurrence as they
+ * are now (#323). Returns the draft that has the occurrence.
+ */
+export function checkExcludeFromPlan(
+  sprint: Sprint,
+  occurrence: Occurrence,
+): Result<SprintTask> {
+  if (sprint.state !== 'planning') {
+    return err(
+      'invalidTransition',
+      'Occurrences are excluded during Planning.',
+    );
+  }
+  const owner = sprint.tasks.find((t) =>
+    t.occurrenceIds?.includes(occurrence.id),
+  );
+  if (owner === undefined) {
+    return err('notFound', 'The occurrence is not in this Sprint.');
+  }
+  const excludable = checkExcludeOccurrence(occurrence);
+  return excludable.ok ? ok(owner) : excludable;
+}
+
 /** Planning で戻す: an excluded occurrence of this period comes back. */
 export function includeInPlan(
   sprint: Sprint,
@@ -376,19 +415,8 @@ export function includeInPlan(
   ctx: CommandContext,
 ): CommandResult<{ readonly sprint: Sprint; readonly occurrence: Occurrence }> {
   const { occurrence, task } = input;
-  if (sprint.state !== 'planning') {
-    return err(
-      'invalidTransition',
-      'Occurrences are included during Planning.',
-    );
-  }
-  if (
-    occurrence.taskId !== task.id ||
-    occurrence.scheduledDate < sprint.start ||
-    occurrence.scheduledDate > sprint.end
-  ) {
-    return err('invalidInput', 'The occurrence is not in this Sprint period.');
-  }
+  const checked = checkIncludeInPlan(sprint, input);
+  if (!checked.ok) return checked;
   const included = includeOccurrence(occurrence, ctx);
   if (!included.ok) return included;
   const activities: Activity[] = [...included.value.activities];
@@ -419,6 +447,31 @@ export function includeInPlan(
 }
 
 /**
+ * Whether `includeInPlan` takes the Sprint and the occurrence as they are
+ * now (#323).
+ */
+export function checkIncludeInPlan(
+  sprint: Sprint,
+  input: { readonly occurrence: Occurrence; readonly task: Task },
+): Result<undefined> {
+  const { occurrence, task } = input;
+  if (sprint.state !== 'planning') {
+    return err(
+      'invalidTransition',
+      'Occurrences are included during Planning.',
+    );
+  }
+  if (
+    occurrence.taskId !== task.id ||
+    occurrence.scheduledDate < sprint.start ||
+    occurrence.scheduledDate > sprint.end
+  ) {
+    return err('invalidInput', 'The occurrence is not in this Sprint period.');
+  }
+  return checkIncludeOccurrence(occurrence);
+}
+
+/**
  * Sets an Area's Goal text. In Planning an empty text removes the Goal.
  * After confirm the text can still change (the change is kept in Activity
  * and `plannedText` stays as confirmed, invariant 18); a Goal cannot be
@@ -430,9 +483,8 @@ export function setGoalText(
   ctx: CommandContext,
 ): CommandResult<Sprint> {
   const { areaId, text } = input;
-  if (sprint.state !== 'planning' && sprint.state !== 'active') {
-    return err('invalidTransition', `Cannot change a Goal in ${sprint.state}.`);
-  }
+  const checked = checkSetGoalText(sprint);
+  if (!checked.ok) return checked;
   const trimmed = text.trim();
   const current = sprint.goals.find((g) => g.areaId === areaId);
   const from = current?.text ?? null;
@@ -465,6 +517,17 @@ export function setGoalText(
 }
 
 /**
+ * Whether `setGoalText` takes the Sprint as it is now (#323): while it is
+ * planned or runs. The text it is given (an empty one removes a Goal only
+ * while planned) is not checked here.
+ */
+export function checkSetGoalText(sprint: Sprint): Result<undefined> {
+  return sprint.state === 'planning' || sprint.state === 'active'
+    ? ok(undefined)
+    : err('invalidTransition', `Cannot change a Goal in ${sprint.state}.`);
+}
+
+/**
  * Goal に紐づく / 紐づかない (PRD §5 B). In Planning a draft may be linked
  * before its Goal is written (confirm unlinks it if the Area still has no
  * Goal). During the Sprint only a Task whose Area has a Goal can be
@@ -480,20 +543,9 @@ export function setGoalLink(
   ctx: CommandContext,
 ): CommandResult<Sprint> {
   const { task, goalLink } = input;
-  if (sprint.state !== 'planning' && sprint.state !== 'active') {
-    return err('invalidTransition', `Cannot change a link in ${sprint.state}.`);
-  }
-  const target = sprint.tasks.find((t) => t.id === input.sprintTaskId);
-  if (target === undefined) return err('notFound', 'No such SprintTask.');
-  if (target.taskId !== task.id) {
-    return err('invalidInput', 'The Task does not match the SprintTask.');
-  }
-  if (target.outcome === 'removed' || target.outcome === 'carriedOver') {
-    return err(
-      'invalidTransition',
-      `Cannot link a ${target.outcome} SprintTask.`,
-    );
-  }
+  const checked = checkSetGoalLink(sprint, input);
+  if (!checked.ok) return checked;
+  const target = checked.value;
   if (target.goalLink === goalLink) return applied(sprint, []);
   if (
     goalLink === 'linked' &&
@@ -525,6 +577,32 @@ export function setGoalLink(
 }
 
 /**
+ * Whether `setGoalLink` takes the Sprint and its SprintTask as they are now
+ * (#323). Linking during the Sprint also needs a Goal for the Task's Area;
+ * that depends on the link it is given and is not checked here.
+ */
+export function checkSetGoalLink(
+  sprint: Sprint,
+  input: { readonly sprintTaskId: SprintTaskId; readonly task: Task },
+): Result<SprintTask> {
+  if (sprint.state !== 'planning' && sprint.state !== 'active') {
+    return err('invalidTransition', `Cannot change a link in ${sprint.state}.`);
+  }
+  const target = sprint.tasks.find((t) => t.id === input.sprintTaskId);
+  if (target === undefined) return err('notFound', 'No such SprintTask.');
+  if (target.taskId !== input.task.id) {
+    return err('invalidInput', 'The Task does not match the SprintTask.');
+  }
+  if (target.outcome === 'removed' || target.outcome === 'carriedOver') {
+    return err(
+      'invalidTransition',
+      `Cannot link a ${target.outcome} SprintTask.`,
+    );
+  }
+  return ok(target);
+}
+
+/**
  * Sets the hours available for planning (可用時間). After confirm the change
  * is kept in Activity and `plannedAvailableHours` stays (invariant 18).
  */
@@ -534,12 +612,8 @@ export function setAvailableHours(
   ctx: CommandContext,
 ): CommandResult<Sprint> {
   const { hours } = input;
-  if (sprint.state !== 'planning' && sprint.state !== 'active') {
-    return err(
-      'invalidTransition',
-      `Cannot change available hours in ${sprint.state}.`,
-    );
-  }
+  const checked = checkSetAvailableHours(sprint);
+  if (!checked.ok) return checked;
   if (hours !== null && !(Number.isFinite(hours) && hours >= 0)) {
     return err('invalidInput', 'Available hours must be zero or more.');
   }
@@ -559,6 +633,19 @@ export function setAvailableHours(
       to: hours,
     },
   ]);
+}
+
+/**
+ * Whether `setAvailableHours` takes the Sprint as it is now (#323): while
+ * it is planned or runs. The hours are not checked here.
+ */
+export function checkSetAvailableHours(sprint: Sprint): Result<undefined> {
+  return sprint.state === 'planning' || sprint.state === 'active'
+    ? ok(undefined)
+    : err(
+        'invalidTransition',
+        `Cannot change available hours in ${sprint.state}.`,
+      );
 }
 
 export interface ConfirmSprintInput {
@@ -588,25 +675,8 @@ export function confirmSprint(
   input: ConfirmSprintInput,
   ctx: CommandContext,
 ): CommandResult<Sprint> {
-  if (sprint.state !== 'planning') {
-    return err('invalidTransition', 'Only a Sprint in Planning is confirmed.');
-  }
-  if (sprint.previousSprintId !== undefined) {
-    const previous = input.sprints.find(
-      (s) => s.id === sprint.previousSprintId,
-    );
-    if (previous === undefined)
-      return err('notFound', 'Previous Sprint missing.');
-    if (previous.state !== 'closed') {
-      return err(
-        'invalidTransition',
-        'Finish the previous Sprint’s Retro before confirming.',
-      );
-    }
-  }
-  if (input.sprints.some((s) => s.id !== sprint.id && s.state === 'active')) {
-    return err('invalidTransition', 'Another Sprint is active.');
-  }
+  const checked = checkConfirmSprint(sprint, input);
+  if (!checked.ok) return checked;
   if (input.applyCriterion && input.criterion === undefined) {
     return err('invalidInput', 'There is no active criterion to apply.');
   }
@@ -624,13 +694,6 @@ export function confirmSprint(
     const task = input.tasks.find((t) => t.id === sprintTask.taskId);
     if (task === undefined) {
       return err('notFound', `Task ${sprintTask.taskId} missing.`);
-    }
-    // A Task completed or archived during Planning cannot be planned.
-    if (task.lifecycle !== 'active') {
-      return err(
-        'invalidTransition',
-        `Task ${task.id} is ${task.lifecycle}; unselect it before confirming.`,
-      );
     }
     const planSnapshot = planSnapshotOf(task, sprintTask, criterion, ctx);
     if (planSnapshot.value.criterionApplied) criterionActed = true;
@@ -682,6 +745,52 @@ export function confirmSprint(
       ...(criterionUse === undefined ? {} : { criterion: criterionUse }),
     },
   ]);
+}
+
+/**
+ * Whether `confirmSprint` takes the records as they are now (#323): the
+ * Sprint is planned, the previous one is closed (invariant 12), no other is
+ * active (invariant 11), and every chosen Task is still active. Whether to
+ * apply the criterion is the person's choice and is not checked here.
+ */
+export function checkConfirmSprint(
+  sprint: Sprint,
+  input: Pick<ConfirmSprintInput, 'sprints' | 'tasks'>,
+): Result<undefined> {
+  if (sprint.state !== 'planning') {
+    return err('invalidTransition', 'Only a Sprint in Planning is confirmed.');
+  }
+  if (sprint.previousSprintId !== undefined) {
+    const previous = input.sprints.find(
+      (s) => s.id === sprint.previousSprintId,
+    );
+    if (previous === undefined)
+      return err('notFound', 'Previous Sprint missing.');
+    if (previous.state !== 'closed') {
+      return err(
+        'invalidTransition',
+        'Finish the previous Sprint’s Retro before confirming.',
+      );
+    }
+  }
+  if (input.sprints.some((s) => s.id !== sprint.id && s.state === 'active')) {
+    return err('invalidTransition', 'Another Sprint is active.');
+  }
+  for (const sprintTask of sprint.tasks) {
+    if (sprintTask.outcome !== 'draft') continue;
+    const task = input.tasks.find((t) => t.id === sprintTask.taskId);
+    if (task === undefined) {
+      return err('notFound', `Task ${sprintTask.taskId} missing.`);
+    }
+    // A Task completed or archived during Planning cannot be planned.
+    if (task.lifecycle !== 'active') {
+      return err(
+        'invalidTransition',
+        `Task ${task.id} is ${task.lifecycle}; unselect it before confirming.`,
+      );
+    }
+  }
+  return ok(undefined);
 }
 
 /**

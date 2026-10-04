@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import type { AreaId } from '@itera/domain';
+import type { AreaId } from '@itera/api-contract';
 import { useState } from 'react';
 import { AreaSelect } from './area-select';
 import { TaskQuickAdd } from './task-quick-add';
@@ -8,7 +8,7 @@ const meta = {
   title: 'Components/Task Quick Add',
   component: TaskQuickAdd,
   parameters: { layout: 'padded' },
-  args: { label: 'Backlog にタスクを追加', onAdd: () => true },
+  args: { label: 'Backlog にタスクを追加', onAdd: (): boolean => true },
 } satisfies Meta<typeof TaskQuickAdd>;
 
 export default meta;
@@ -52,4 +52,12 @@ export const WithArea: Story = {
       />
     ),
   },
+};
+
+/**
+ * 追加を送っている間。300ms 続いたら、追加ボタンがスピナーと「追加中…」に
+ * なる（幅は変わらない）。入力はそのまま残り、終わったら空になる。
+ */
+export const Loading: Story = {
+  args: { loading: true },
 };

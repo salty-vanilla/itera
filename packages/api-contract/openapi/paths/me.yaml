@@ -1,0 +1,78 @@
+# The signed-in person: who they are, their settings and, once the settings
+# exist, the clock and the Sprints they have now (#295 R1). Before the
+# settings exist it answers without running the catch-up (#271), so that a
+# client knows to make them first; after, it runs it before answering, as
+# the reads do.
+
+me:
+  get:
+    operationId: getMe
+    tags: [Me]
+    summary: The signed-in person and their settings
+    description: >-
+      `settings` is `null` until the person has made them; every other
+      operation and read answers 422 `/problems/user-not-set-up` until then. With the
+      settings, `clock` and `sprints` (the Sprints by what each is now, and
+      where the next Planning starts).
+    responses:
+      '200':
+        description: The person.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, settings]
+              properties:
+                userId: { $ref: '../schemas/common.yaml#/UserId' }
+                settings:
+                  oneOf:
+                    - { $ref: '../schemas/records.yaml#/UserSettings' }
+                    - { type: 'null' }
+                clock: { $ref: '../schemas/common.yaml#/Clock' }
+                sprints: { $ref: '../schemas/views.yaml#/CurrentSprints' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+meSettings:
+  put:
+    operationId: setSettings
+    tags: [Me]
+    summary: Make the person's settings
+    description: >-
+      The first thing a new person does: until it is done every other
+      operation and read (but `getMe`) answers 422 `/problems/user-not-set-up`. The first time makes
+      them (201). After that the display name can be written again, and the
+      same settings again change nothing (204); another time zone or first
+      day of the week is refused with 422 `/problems/invalid-input`. A Sprint's dates
+      follow the week's first day, and 「今日」 the time zone, so how a
+      change should reach Sprints already made is for a later decision.
+    parameters:
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [displayName, timeZone, weekStartsOn]
+            properties:
+              displayName: { type: string }
+              timeZone: { $ref: '../schemas/common.yaml#/TimeZone' }
+              weekStartsOn: { $ref: '../schemas/common.yaml#/DayOfWeek' }
+    responses:
+      '201':
+        description: Made. The settings as they were made (the name is trimmed).
+        content:
+          application/json:
+            schema: { $ref: '../schemas/records.yaml#/UserSettings' }
+      '204':
+        description: Already made; the display name is as sent.
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '403': { $ref: '../responses.yaml#/ForbiddenOrigin' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '413': { $ref: '../responses.yaml#/PayloadTooLarge' }
+      '422': { $ref: '../responses.yaml#/RuleViolation' }
+      '500': { $ref: '../responses.yaml#/ServerError' }

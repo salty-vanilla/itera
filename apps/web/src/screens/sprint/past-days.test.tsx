@@ -1,6 +1,6 @@
 import type { DailySelection } from '@itera/domain';
 import { describe, expect, it } from 'vitest';
-import type { PastDayRecord } from '@/store/running-view';
+import type { PastDayRecord } from '@/screen-data/use-running-sprint';
 import { consequence } from './past-days';
 
 // The undo Dialog's words for each way a day can be left (F17, F29, F33).
@@ -13,6 +13,18 @@ const record = (
   title: '住民税の支払い',
   recurring,
   after,
+  capabilities: {
+    canStart: false,
+    canPause: false,
+    canDefer: false,
+    canUndoDefer: false,
+    canRemove: false,
+    canUndoRemove: false,
+    canComplete: false,
+    canUndoComplete: resolution === 'done',
+    canUndoSkip: resolution === 'skipped',
+    canSkip: false,
+  },
 });
 
 describe('consequence (#209)', () => {

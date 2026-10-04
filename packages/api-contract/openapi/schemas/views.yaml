@@ -1,0 +1,1059 @@
+# The reads of packages/application (*-view.ts, sprint-choice.ts),
+# in the same shape. They carry no screen words: an Area
+# that is absent means 「領域なし」, and a week is previous, current or next.
+
+# ---------------------------------------------------------------- Common
+AreaLabel:
+  description: An Area as a read shows it.
+  type: object
+  required: [id, name, color]
+  properties:
+    id: { $ref: './common.yaml#/AreaId' }
+    name: { type: string }
+    color: { $ref: './records.yaml#/AreaColor' }
+SprintAreaLabel:
+  description: >-
+    An Area as a confirmed Sprint shows it (its name at confirm, F5).
+    `none` for an Area the person no longer has.
+  type: object
+  required: [id, name, color]
+  properties:
+    id: { $ref: './common.yaml#/AreaId' }
+    name: { type: string }
+    color:
+      oneOf:
+        - $ref: './records.yaml#/AreaColor'
+        - const: none
+SprintWeek:
+  description: The week a Sprint is in, seen from today.
+  type: string
+  enum: [previous, current, next]
+SprintRef:
+  description: A Sprint a screen can open, or the next week before its Planning.
+  type: object
+  required: [number, start, end]
+  properties:
+    number:
+      description: 「Sprint 3」 (F25).
+      type: integer
+    start: { $ref: './common.yaml#/LocalDate' }
+    end: { $ref: './common.yaml#/LocalDate' }
+    sprint:
+      description: Left out for the next week before its Planning.
+      $ref: './records.yaml#/Sprint'
+    week: { $ref: '#/SprintWeek' }
+SprintItem:
+  description: >-
+    A Sprint as a list or a reference shows it. Its number (「Sprint 14」,
+    F25) is an attribute, not its key: the key is its ID (#295).
+  type: object
+  required: [id, number, start, end, state, capabilities]
+  properties:
+    id: { $ref: './common.yaml#/SprintId' }
+    number: { type: integer }
+    start: { $ref: './common.yaml#/LocalDate' }
+    end: { $ref: './common.yaml#/LocalDate' }
+    state: { $ref: './records.yaml#/SprintState' }
+    week: { $ref: '#/SprintWeek' }
+    capabilities: { $ref: '#/SprintCapabilities' }
+CurrentSprints:
+  description: >-
+    The Sprints the person has now, by what each is (a week running or in
+    Review while the next is planned), and where the next Planning starts.
+  type: object
+  required: [next]
+  properties:
+    active: { $ref: '#/SprintItem' }
+    review: { $ref: '#/SprintItem' }
+    planning: { $ref: '#/SprintItem' }
+    next:
+      description: >-
+        The next week not confirmed yet, with its number (F25), its last day
+        and its place next to now (`week`, as a Sprint's): where its Planning
+        starts, before there is a Sprint to open (#274).
+      type: object
+      required: [start, end, number]
+      properties:
+        start: { $ref: './common.yaml#/LocalDate' }
+        end: { $ref: './common.yaml#/LocalDate' }
+        number: { type: integer }
+        week: { $ref: '#/SprintWeek' }
+
+EditableArea:
+  type: object
+  required: [id, name, color, archived, etag, capabilities]
+  properties:
+    id: { $ref: './common.yaml#/AreaId' }
+    name:
+      description: The current name (F5).
+      type: string
+    color: { $ref: './records.yaml#/AreaColor' }
+    archived: { type: boolean }
+    etag: { $ref: './common.yaml#/ETag' }
+    capabilities: { $ref: '#/AreaCapabilities' }
+# --------------------------------------------------------------- Backlog
+BacklogSlice:
+  type: string
+  enum: [dueSoon, overdue, carriedOver, recurring, noArea]
+ListedResolution:
+  description: A choice for today that Today lists under 今日やる.
+  type: string
+  enum: [selected, started, done, skipped]
+# ---------------------------------------------------------- Capabilities
+DailySelectionCapabilities:
+  description: >-
+    What the person can do with a choice for a day now (#322, ADR 0007
+    操作の可否). Output only. One `can…` for each operation on the record,
+    named after its operationId without the record's noun; true when the
+    operation goes through with valid values (it is the check the
+    operation makes of the records), false when it is refused (422, or 404).
+    The values an operation is given (positive hours) are not checked, and
+    why one is false is not told. A client offers an operation only when
+    its `can…` is true and never judges the state itself. More may be
+    added, each optional: a client ignores one it does not know.
+  type: object
+  readOnly: true
+  required:
+    - canStart
+    - canPause
+    - canDefer
+    - canUndoDefer
+    - canRemove
+    - canUndoRemove
+    - canComplete
+    - canUndoComplete
+    - canSkip
+    - canUndoSkip
+  properties:
+    canStart: { description: startSelection., type: boolean }
+    canPause: { description: pauseSelection., type: boolean }
+    canDefer: { description: deferSelection., type: boolean }
+    canUndoDefer: { description: undoDeferSelection., type: boolean }
+    canRemove: { description: removeFromToday., type: boolean }
+    canUndoRemove: { description: undoRemoveFromToday., type: boolean }
+    canComplete: { description: completeSelection., type: boolean }
+    canUndoComplete: { description: undoCompleteSelection., type: boolean }
+    canSkip: { description: skipSelection., type: boolean }
+    canUndoSkip: { description: undoSkipSelection., type: boolean }
+InterruptNoteCapabilities:
+  description: >-
+    What the person can do with an interrupt now (#322), as
+    DailySelectionCapabilities says. The text and the minutes an edit is
+    given are not checked.
+  type: object
+  readOnly: true
+  required: [canEdit, canDelete]
+  properties:
+    canEdit: { description: editInterrupt., type: boolean }
+    canDelete: { description: deleteInterrupt., type: boolean }
+InterruptItem:
+  description: >-
+    An interrupt as the reads of a day give it: the record, and what the
+    person can do with it. The record itself (InterruptNote) stays as it
+    is where no capabilities are given: in the Sprint and in the derived
+    values.
+  allOf:
+    - $ref: './records.yaml#/InterruptNote'
+    - type: object
+      required: [capabilities]
+      properties:
+        capabilities: { $ref: '#/InterruptNoteCapabilities' }
+TaskCapabilities:
+  description: >-
+    What the person can do with an active Task of the Backlog now (#323),
+    as DailySelectionCapabilities says. The values the operations are given
+    (a title, a pattern, hours) are not checked. canAddToToday and
+    canAddToWeek are operations on the running Sprint that take this Task
+    (ADR 0007 操作の可否): they are named by where the Task goes.
+  type: object
+  readOnly: true
+  required:
+    - canSave
+    - canArchive
+    - canComplete
+    - canSetRecurrence
+    - canEndRecurrence
+    - canAddSubtask
+    - canAddToToday
+    - canAddToWeek
+  properties:
+    canSave: { description: saveTask., type: boolean }
+    canArchive: { description: archiveTask., type: boolean }
+    canComplete: { description: completeTask., type: boolean }
+    canSetRecurrence: { description: setRecurrence., type: boolean }
+    canEndRecurrence: { description: endRecurrence., type: boolean }
+    canAddSubtask: { description: addSubtask., type: boolean }
+    canAddToToday:
+      description: >-
+        今日へ: chooseForDay with this Task (`taskId`) on the running
+        Sprint, for today (invariant 26).
+      type: boolean
+    canAddToWeek:
+      description: >-
+        今週へ: addToSprint with this Task on the running Sprint (#155).
+      type: boolean
+EstimateSuggestionCapabilities:
+  description: >-
+    What the person can do with a suggestion of an Estimate now (#323),
+    as DailySelectionCapabilities says. The bound or hours an adoption is given are not checked.
+  type: object
+  readOnly: true
+  required: [canAdopt, canUndoAdoption, canReject, canUndoRejection]
+  properties:
+    canAdopt:
+      description: adoptEstimateSuggestion (a bound, or edited hours, F31).
+      type: boolean
+    canUndoAdoption: { description: undoAdoption., type: boolean }
+    canReject: { description: rejectSuggestion., type: boolean }
+    canUndoRejection: { description: undoRejection., type: boolean }
+SubtaskCapabilities:
+  description: What the person can do with a subtask now (#323), as DailySelectionCapabilities says.
+  type: object
+  readOnly: true
+  required: [canUpdate]
+  properties:
+    canUpdate: { description: updateSubtask., type: boolean }
+AreaCapabilities:
+  description: >-
+    What the person can do with an Area now (#323), as DailySelectionCapabilities says. The name a rename
+    is given is not checked.
+  type: object
+  readOnly: true
+  required: [canRename, canArchive, canRestore]
+  properties:
+    canRename: { description: renameArea., type: boolean }
+    canArchive: { description: archiveArea., type: boolean }
+    canRestore: { description: restoreArea., type: boolean }
+SprintCapabilities:
+  description: >-
+    What the person can do with a Sprint itself now (#323), as DailySelectionCapabilities says. The hours
+    and whether to apply the criterion are not checked.
+  type: object
+  readOnly: true
+  required: [canSetAvailableHours, canConfirm, canBeginRetro]
+  properties:
+    canSetAvailableHours: { description: setAvailableHours., type: boolean }
+    canConfirm: { description: confirmSprint., type: boolean }
+    canBeginRetro:
+      description: beginRetro (from the Sprint's last day, F21).
+      type: boolean
+SprintGoalCapabilities:
+  description: >-
+    What the person can do with a Sprint's Goal for an Area now (#323),
+    written or not, as DailySelectionCapabilities says. updateGoal takes two operations whose terms differ:
+    its text and the person's assessment. The text and the assessment are
+    not checked.
+  type: object
+  readOnly: true
+  required: [canSet, canAssess]
+  properties:
+    canSet:
+      description: updateGoal with `text` (while planned or running, F16).
+      type: boolean
+    canAssess:
+      description: updateGoal with `assessment` (in Review, invariant 19).
+      type: boolean
+SprintTaskCapabilities:
+  description: >-
+    What the person can do with a Task in a Sprint (SprintTask) now (#323),
+    as DailySelectionCapabilities says.
+  type: object
+  readOnly: true
+  required:
+    - canRemove
+    - canSetGoalLink
+    - canExcludeAllOccurrences
+    - canRecordActualTime
+  properties:
+    canRemove:
+      description: >-
+        removeSprintTask: a draft leaves while planned, a mid-Sprint addition
+        is undone while running (F40).
+      type: boolean
+    canSetGoalLink: { description: setGoalLink., type: boolean }
+    canExcludeAllOccurrences:
+      description: excludeAllOccurrences.
+      type: boolean
+    canRecordActualTime:
+      description: >-
+        recordActualTime for this SprintTask on a day of the Sprint (F22).
+        The day and the hours are not checked.
+      type: boolean
+SprintCandidateCapabilities:
+  description: >-
+    What the person can do with a Task a Sprint being planned can choose
+    (#323): addToSprint, which takes this Task. Read as
+    DailySelectionCapabilities says.
+  type: object
+  readOnly: true
+  required: [canAdd]
+  properties:
+    canAdd: { description: addToSprint with this Task., type: boolean }
+OccurrenceCapabilities:
+  description: >-
+    What the person can do with an occurrence while planning (#323), as DailySelectionCapabilities says.
+  type: object
+  readOnly: true
+  required: [canInclude, canExclude]
+  properties:
+    canInclude: { description: includeOccurrence., type: boolean }
+    canExclude: { description: excludeOccurrence., type: boolean }
+OccurrenceItem:
+  description: >-
+    An occurrence as Planning offers it: the record, and what the person
+    can do with it (#323).
+  allOf:
+    - $ref: './records.yaml#/Occurrence'
+    - type: object
+      required: [capabilities]
+      properties:
+        capabilities: { $ref: '#/OccurrenceCapabilities' }
+RetroCapabilities:
+  description: >-
+    What the person can do with a Sprint's Retro now (#323), as
+    DailySelectionCapabilities says. The fact a pin is given is not checked.
+  type: object
+  readOnly: true
+  required:
+    - canUpdate
+    - canComplete
+    - canPinFact
+    - canUnpinFact
+    - canDraftCriterion
+  properties:
+    canUpdate:
+      description: >-
+        updateRetro, with `reflection` or `improvement` (the two are taken
+        on the same terms).
+      type: boolean
+    canComplete: { description: completeRetro., type: boolean }
+    canPinFact: { description: pinFact., type: boolean }
+    canUnpinFact: { description: unpinFact., type: boolean }
+    canDraftCriterion:
+      description: >-
+        draftCriterion from this Retro's improvement, which then names it
+        (invariant 38).
+      type: boolean
+CriterionUseCapabilities:
+  description: >-
+    What the person can do with the criterion a Sprint had now (#323), as DailySelectionCapabilities says.
+    The decision is not checked (a replacement needs a draft).
+  type: object
+  readOnly: true
+  required: [canDecide]
+  properties:
+    canDecide: { description: decideCriterion., type: boolean }
+PlanningCriterionCapabilities:
+  description: >-
+    What the person can do with a draft planning criterion now (#323), as DailySelectionCapabilities says.
+    The policy is not checked.
+  type: object
+  readOnly: true
+  required: [canSetDraftPolicy, canDropDraft]
+  properties:
+    canSetDraftPolicy: { description: setDraftPolicy., type: boolean }
+    canDropDraft: { description: dropCriterionDraft., type: boolean }
+
+BacklogItem:
+  type: object
+  required:
+    - task
+    - value
+    - taskValue
+    - subtaskValue
+    - capabilities
+    - suggestionCapabilities
+    - subtaskCapabilities
+  properties:
+    task: { $ref: './records.yaml#/Task' }
+    area:
+      description: The Area's current name (F5).
+      type: object
+      required: [name, color]
+      properties:
+        name: { type: string }
+        color: { $ref: './records.yaml#/AreaColor' }
+    carry: { $ref: './values.yaml#/CarryCount' }
+    recurrence: { $ref: './values.yaml#/RecurrenceSummary' }
+    rule:
+      description: >-
+        The rule's pattern today and its latest version. Until the last day
+        of a rule the Task has ended (F41), the pattern today is that rule's,
+        also once the Task has a rule of its own again (#338).
+      type: object
+      required: [current, latest, etag]
+      properties:
+        current: { $ref: './records.yaml#/RecurrencePattern' }
+        latest: { $ref: './records.yaml#/RecurrencePattern' }
+        etag:
+          description: >-
+            The version of the whole rule, its versions and their days
+            (#330): what `setRecurrence` sends in `If-Match` when the rule
+            is the Task's (`task.recurrenceRuleId`). A rule that has come
+            off the Task (ended, F41) is not: a rule set then is made from
+            none.
+          $ref: './common.yaml#/ETag'
+    thisWeek:
+      description: >-
+        In this week's Sprint. `confirmed` is false while it is being
+        planned.
+      type: object
+      required: [midSprint, confirmed]
+      properties:
+        midSprint: { type: boolean }
+        confirmed: { type: boolean }
+    nextWeek:
+      description: In the draft for next week (#90).
+      const: true
+    today:
+      description: In today's 今日やる (#94).
+      type: object
+      required: [selectionId, resolution, recurring, capabilities]
+      properties:
+        selectionId: { $ref: './common.yaml#/DailySelectionId' }
+        resolution: { $ref: '#/ListedResolution' }
+        startedAt: { $ref: './common.yaml#/Instant' }
+        recurring: { type: boolean }
+        capabilities: { $ref: '#/DailySelectionCapabilities' }
+    closedToday: { $ref: './records.yaml#/ClosedResolution' }
+    value: { $ref: './records.yaml#/PlanningValue' }
+    taskValue: { $ref: './records.yaml#/PlanningValue' }
+    subtaskValue: { $ref: './records.yaml#/PlanningValue' }
+    todayOpensOn:
+      description: >-
+        The Sprint whose first day 今日へ waits for: given while the Task
+        can join it (canAddToWeek) but not today.
+      type: object
+      required: [number, start]
+      properties:
+        number: { type: integer }
+        start: { $ref: './common.yaml#/LocalDate' }
+    capabilities: { $ref: '#/TaskCapabilities' }
+    suggestionCapabilities:
+      description: What the person can do with each of the Task's suggestions, by ID.
+      type: object
+      additionalProperties: { $ref: '#/EstimateSuggestionCapabilities' }
+    subtaskCapabilities:
+      description: What the person can do with each of the Task's subtasks, by ID.
+      type: object
+      additionalProperties: { $ref: '#/SubtaskCapabilities' }
+BacklogData:
+  type: object
+  required: [today, lastDay, timeZone, areas, sliceCounts, shown, items]
+  properties:
+    today: { $ref: './common.yaml#/LocalDate' }
+    lastDay:
+      description: >-
+        Today is the last day of the active Sprint (the same value as the
+        Today read's lastDay), false when no Sprint is active. What is closed
+        for the day does not come back to 今週の残り the next day.
+      type: boolean
+    timeZone: { $ref: './common.yaml#/TimeZone' }
+    areas:
+      description: Areas to filter and file under, in the person's order.
+      type: array
+      items:
+        type: object
+        required: [id, name, color, count]
+        properties:
+          id: { $ref: './common.yaml#/AreaId' }
+          name: { type: string }
+          color: { $ref: './records.yaml#/AreaColor' }
+          count: { type: integer }
+    sliceCounts:
+      type: object
+      required: [all, dueSoon, overdue, carriedOver, recurring, noArea]
+      properties:
+        all: { type: integer }
+        dueSoon: { type: integer }
+        overdue: { type: integer }
+        carriedOver: { type: integer }
+        recurring: { type: integer }
+        noArea: { type: integer }
+    shown:
+      description: The Tasks the filter shows, in order.
+      type: array
+      items: { $ref: './common.yaml#/TaskId' }
+    items:
+      description: Every active Task's row, by Task ID.
+      type: object
+      additionalProperties: { $ref: '#/BacklogItem' }
+
+# -------------------------------------------------------------- Planning
+CandidateRow:
+  type: object
+  required: [task, value, capabilities]
+  properties:
+    task: { $ref: './records.yaml#/Task' }
+    chosen:
+      description: The draft SprintTask when the Task is chosen for this week.
+      $ref: './records.yaml#/SprintTask'
+    carriedFrom:
+      description: 持ち越し, the previous Sprint's carried-over SprintTask.
+      $ref: './records.yaml#/SprintTask'
+    area: { $ref: '#/AreaLabel' }
+    value: { $ref: './records.yaml#/PlanningValue' }
+    carry: { $ref: './values.yaml#/CarryCount' }
+    running:
+      description: In the running Sprint (when planning next week).
+      type: object
+      required: [sprint]
+      properties:
+        sprint: { type: integer }
+    capabilities: { $ref: '#/SprintCandidateCapabilities' }
+    chosenCapabilities:
+      description: >-
+        What the person can do with `chosen` now (#323). Present with
+        `chosen`.
+      $ref: '#/SprintTaskCapabilities'
+RecurringCandidate:
+  type: object
+  required: [task, occurrences]
+  properties:
+    task: { $ref: './records.yaml#/Task' }
+    occurrences:
+      type: array
+      items: { $ref: '#/OccurrenceItem' }
+    area: { $ref: '#/AreaLabel' }
+PlannedTask:
+  type: object
+  required: [sprintTask, task, value, linkAtConfirm, capabilities]
+  properties:
+    sprintTask: { $ref: './records.yaml#/SprintTask' }
+    task: { $ref: './records.yaml#/Task' }
+    value: { $ref: './records.yaml#/PlanningValue' }
+    occurrenceCount: { type: integer }
+    suggestion: { $ref: './values.yaml#/Range' }
+    linkAtConfirm: { $ref: './records.yaml#/GoalLink' }
+    inactive:
+      type: string
+      enum: [completed, archived]
+    capabilities: { $ref: '#/SprintTaskCapabilities' }
+AreaPlan:
+  type: object
+  required: [tasks, goalCapabilities]
+  properties:
+    area:
+      description: Left out for the Tasks without an Area.
+      $ref: '#/AreaLabel'
+    goal: { $ref: './records.yaml#/SprintGoal' }
+    tasks:
+      type: array
+      items: { $ref: '#/PlannedTask' }
+    total: { $ref: './values.yaml#/AreaTotal' }
+    goalCapabilities:
+      description: >-
+        What the person can do with the Area's Goal now, written or not
+        (#323). All false for the Tasks without an Area.
+      $ref: '#/SprintGoalCapabilities'
+PlanningBlocker:
+  description: >-
+    Why 確定 is not possible yet. `previousRetroOpen`: the previous
+    Sprint's Retro is open (invariant 12). `inactiveTasks`: a chosen Task
+    was completed or archived.
+  type: string
+  enum: [previousRetroOpen, inactiveTasks]
+SprintPlan:
+  description: >-
+    A Sprint being planned: its plan (#295 R2). The Tasks it can choose
+    are a resource of their own (SprintCandidates).
+  type: object
+  required:
+    - sprint
+    - number
+    - today
+    - timeZone
+    - areas
+    - addAreas
+    - plan
+    - chosenCount
+    - totals
+    - drivers
+    - blockers
+    - capabilities
+  properties:
+    sprint: { $ref: './records.yaml#/Sprint' }
+    number: { type: integer }
+    week: { $ref: '#/SprintWeek' }
+    today: { $ref: './common.yaml#/LocalDate' }
+    timeZone: { $ref: './common.yaml#/TimeZone' }
+    areas:
+      type: array
+      items: { $ref: '#/AreaLabel' }
+    addAreas:
+      type: array
+      items: { $ref: '#/AreaLabel' }
+    plan:
+      type: array
+      items: { $ref: '#/AreaPlan' }
+    chosenCount: { type: integer }
+    totals: { $ref: './values.yaml#/SprintTotals' }
+    drivers:
+      type: array
+      items: { $ref: './values.yaml#/CapacityDriver' }
+    improvement: { $ref: './records.yaml#/RetroImprovement' }
+    criterion:
+      type: object
+      required: [active, view, applied, effect, hasTarget]
+      properties:
+        active: { $ref: './values.yaml#/ActiveCriterion' }
+        view: { $ref: './values.yaml#/CriterionView' }
+        areaName: { type: string }
+        applied: { type: boolean }
+        effect: { $ref: './values.yaml#/CriterionEffect' }
+        hasTarget: { type: boolean }
+    blockers:
+      type: array
+      items: { $ref: '#/PlanningBlocker' }
+    previous:
+      description: The previous Sprint while its Retro is open.
+      type: object
+      required: [number, end, state]
+      properties:
+        number: { type: integer }
+        end: { $ref: './common.yaml#/LocalDate' }
+        state: { $ref: './records.yaml#/SprintState' }
+    capabilities: { $ref: '#/SprintCapabilities' }
+
+SprintCandidates:
+  description: The Tasks a Sprint being planned can choose, in groups (選ぶ).
+  type: object
+  required: [carriedOver, overdue, dueSoon, dueSoonUntil, recurring, others]
+  properties:
+    carriedOver:
+      type: array
+      items: { $ref: '#/CandidateRow' }
+    overdue:
+      type: array
+      items: { $ref: '#/CandidateRow' }
+    dueSoon:
+      type: array
+      items: { $ref: '#/CandidateRow' }
+    dueSoonUntil: { $ref: './common.yaml#/LocalDate' }
+    recurring:
+      type: array
+      items: { $ref: '#/RecurringCandidate' }
+    others:
+      type: array
+      items: { $ref: '#/CandidateRow' }
+# ------------------------------------------------------- Running Sprint
+RunningTask:
+  type: object
+  required: [sprintTask, task, value, capabilities]
+  properties:
+    sprintTask: { $ref: './records.yaml#/SprintTask' }
+    task: { $ref: './records.yaml#/Task' }
+    value: { $ref: './records.yaml#/PlanningValue' }
+    occurrences: { $ref: './values.yaml#/OccurrenceProgress' }
+    carry: { $ref: './values.yaml#/CarryCount' }
+    nextWeek: { const: true }
+    capabilities: { $ref: '#/SprintTaskCapabilities' }
+RunningAreaPlan:
+  type: object
+  required: [tasks, goalCapabilities]
+  properties:
+    area: { $ref: '#/SprintAreaLabel' }
+    goal: { $ref: './records.yaml#/SprintGoal' }
+    tasks:
+      type: array
+      items: { $ref: '#/RunningTask' }
+    goalCapabilities:
+      description: >-
+        What the person can do with the Area's Goal now, written or not
+        (#323). All false for the Tasks without an Area.
+      $ref: '#/SprintGoalCapabilities'
+PastDayRecord:
+  type: object
+  required: [selection, title, recurring, after, capabilities]
+  properties:
+    selection: { $ref: './records.yaml#/DailySelection' }
+    title: { type: string }
+    recurring: { type: boolean }
+    after:
+      oneOf:
+        - type: object
+          required: [kind]
+          properties:
+            kind: { const: unresolved }
+        - type: object
+          required: [kind, resolution]
+          properties:
+            kind: { const: closed }
+            resolution: { $ref: './records.yaml#/ClosedResolution' }
+        - type: object
+          required: [kind]
+          properties:
+            kind: { const: gone }
+    capabilities: { $ref: '#/DailySelectionCapabilities' }
+PastDay:
+  type: object
+  required: [date, records]
+  properties:
+    date: { $ref: './common.yaml#/LocalDate' }
+    records:
+      type: array
+      items: { $ref: '#/PastDayRecord' }
+RunningData:
+  type: object
+  required:
+    [
+      sprint,
+      number,
+      today,
+      plan,
+      totals,
+      availableHours,
+      pastDays,
+      capabilities,
+    ]
+  properties:
+    sprint: { $ref: './records.yaml#/Sprint' }
+    number: { type: integer }
+    week: { $ref: '#/SprintWeek' }
+    today: { $ref: './common.yaml#/LocalDate' }
+    day: { $ref: './values.yaml#/DayOfSprint' }
+    plan:
+      type: array
+      items: { $ref: '#/RunningAreaPlan' }
+    totals:
+      type: object
+      required: [total, byArea]
+      properties:
+        total: { $ref: './values.yaml#/PlanningTotal' }
+        byArea:
+          type: array
+          items: { $ref: './values.yaml#/AreaTotal' }
+    availableHours: { $ref: './values.yaml#/AvailableHours' }
+    progress: { $ref: './values.yaml#/WeekProgress' }
+    pastDays:
+      type: array
+      items: { $ref: '#/PastDay' }
+    criterion:
+      type: object
+      required: [policy, applied, noEffect]
+      properties:
+        policy: { $ref: './records.yaml#/CriterionPolicy' }
+        areaName: { type: string }
+        applied: { type: boolean }
+        noEffect: { type: boolean }
+    capabilities: { $ref: '#/SprintCapabilities' }
+
+# ----------------------------------------------------------------- Today
+TodayItem:
+  type: object
+  required: [sprintTask, task, value, streak]
+  properties:
+    sprintTask: { $ref: './records.yaml#/SprintTask' }
+    task: { $ref: './records.yaml#/Task' }
+    area: { $ref: '#/AreaLabel' }
+    occurrence: { $ref: './records.yaml#/Occurrence' }
+    value: { $ref: './records.yaml#/PlanningValue' }
+    streak:
+      description: 連続見送り.
+      type: integer
+    removedToday: { $ref: './common.yaml#/DailySelectionId' }
+    removedTodayCapabilities:
+      description: >-
+        What the person can do with the choice removedToday names (#322):
+        今日へ takes it back with undoRemoveFromToday. Present with
+        removedToday.
+      $ref: '#/DailySelectionCapabilities'
+TodayRow:
+  type: object
+  required:
+    [sprintTask, task, value, streak, selection, capabilities, actualHours]
+  properties:
+    sprintTask: { $ref: './records.yaml#/SprintTask' }
+    task: { $ref: './records.yaml#/Task' }
+    area: { $ref: '#/AreaLabel' }
+    occurrence: { $ref: './records.yaml#/Occurrence' }
+    value: { $ref: './records.yaml#/PlanningValue' }
+    streak: { type: integer }
+    removedToday: { $ref: './common.yaml#/DailySelectionId' }
+    removedTodayCapabilities:
+      description: >-
+        What the person can do with the choice removedToday names (#322):
+        今日へ takes it back with undoRemoveFromToday. Present with
+        removedToday.
+      $ref: '#/DailySelectionCapabilities'
+    selection: { $ref: './records.yaml#/DailySelection' }
+    capabilities: { $ref: '#/DailySelectionCapabilities' }
+    actualHours: { type: number }
+TodayData:
+  type: object
+  required:
+    - sprint
+    - number
+    - today
+    - day
+    - lastDay
+    - timeZone
+    - progress
+    - remaining
+    - goals
+    - rows
+    - closed
+    - continuation
+    - rest
+    - plan
+    - interrupts
+    - areas
+    - sprintCapabilities
+  properties:
+    sprint: { $ref: './records.yaml#/Sprint' }
+    number: { type: integer }
+    today: { $ref: './common.yaml#/LocalDate' }
+    day: { $ref: './values.yaml#/DayOfSprint' }
+    lastDay: { type: boolean }
+    timeZone: { $ref: './common.yaml#/TimeZone' }
+    progress: { $ref: './values.yaml#/WeekProgress' }
+    remaining: { $ref: './values.yaml#/TodayRemaining' }
+    goals:
+      type: array
+      items:
+        type: object
+        required: [area, text]
+        properties:
+          area: { $ref: '#/AreaLabel' }
+          text: { type: string }
+    rows:
+      type: array
+      items: { $ref: '#/TodayRow' }
+    closed:
+      type: array
+      items: { $ref: '#/TodayRow' }
+    continuation:
+      description: 昨日の続き (F6).
+      type: array
+      items: { $ref: '#/TodayItem' }
+    rest:
+      type: array
+      items: { $ref: '#/TodayItem' }
+    plan:
+      type: array
+      items: { $ref: '#/TodayItem' }
+    interrupts:
+      type: array
+      items: { $ref: '#/InterruptItem' }
+    areas:
+      type: array
+      items: { $ref: '#/AreaLabel' }
+    sprintCapabilities:
+      description: What the person can do with the running Sprint now (#323).
+      $ref: '#/SprintCapabilities'
+
+# ------------------------------------------------------- A day not today
+DayRecord:
+  type: object
+  required: [selection, title, actualHours, capabilities]
+  properties:
+    selection: { $ref: './records.yaml#/DailySelection' }
+    title: { type: string }
+    area: { $ref: '#/AreaLabel' }
+    occurrence: { $ref: './records.yaml#/Occurrence' }
+    actualHours: { type: number }
+    capabilities: { $ref: '#/DailySelectionCapabilities' }
+DayData:
+  type: object
+  required: [date, today, when, timeZone, records, interrupts, occurrences, due]
+  properties:
+    date: { $ref: './common.yaml#/LocalDate' }
+    today: { $ref: './common.yaml#/LocalDate' }
+    when:
+      type: string
+      enum: [past, future]
+    timeZone: { $ref: './common.yaml#/TimeZone' }
+    within:
+      description: The Sprint whose period has the day, and the day's place.
+      type: object
+      required: [number, start, end, day]
+      properties:
+        number: { type: integer }
+        start: { $ref: './common.yaml#/LocalDate' }
+        end: { $ref: './common.yaml#/LocalDate' }
+        sprint: { $ref: './records.yaml#/Sprint' }
+        week: { $ref: '#/SprintWeek' }
+        day: { $ref: './values.yaml#/DayOfSprint' }
+    next:
+      description: With no Sprint for the day, the next one after it.
+      $ref: '#/SprintRef'
+    records:
+      type: array
+      items: { $ref: '#/DayRecord' }
+    interrupts:
+      type: array
+      items: { $ref: '#/InterruptItem' }
+    occurrences:
+      type: array
+      items:
+        type: object
+        required: [occurrence, title]
+        properties:
+          occurrence: { $ref: './records.yaml#/Occurrence' }
+          title: { type: string }
+          area: { $ref: '#/AreaLabel' }
+    due:
+      type: array
+      items:
+        type: object
+        required: [task]
+        properties:
+          task: { $ref: './records.yaml#/Task' }
+          area: { $ref: '#/AreaLabel' }
+
+# ----------------------------------------------------------------- Retro
+RetroCriterion:
+  type: object
+  required: [criterion, view]
+  properties:
+    criterion: { $ref: './records.yaml#/PlanningCriterion' }
+    view: { $ref: './values.yaml#/CriterionView' }
+    areaName: { type: string }
+ActualTarget:
+  type: object
+  required: [sprintTaskId, date]
+  properties:
+    sprintTaskId: { $ref: './common.yaml#/SprintTaskId' }
+    occurrenceId: { $ref: './common.yaml#/OccurrenceId' }
+    date: { $ref: './common.yaml#/LocalDate' }
+RetroOccurrence:
+  type: object
+  required: [occurrence, title, actualHours, target]
+  properties:
+    occurrence: { $ref: './records.yaml#/Occurrence' }
+    title: { type: string }
+    actualHours: { type: number }
+    target: { $ref: '#/ActualTarget' }
+RetroBlocker:
+  description: >-
+    `decisionMissing`: 続ける / 終える / 置き換える is not chosen (invariant
+    36). `continueWithDraft`: 続ける keeps the active criterion, so the
+    draft must go (invariant 35).
+  type: string
+  enum: [decisionMissing, continueWithDraft]
+RetroData:
+  type: object
+  required:
+    - sprint
+    - number
+    - today
+    - timeZone
+    - facts
+    - sprintAreas
+    - areas
+    - taskTitles
+    - pins
+    - reflection
+    - blockers
+    - actualDate
+    - occurrences
+    - carryOver
+    - carryOverTasks
+    - capabilities
+    - goalCapabilities
+    - sprintTaskCapabilities
+  properties:
+    sprint: { $ref: './records.yaml#/Sprint' }
+    number: { type: integer }
+    week: { $ref: '#/SprintWeek' }
+    today: { $ref: './common.yaml#/LocalDate' }
+    timeZone: { $ref: './common.yaml#/TimeZone' }
+    facts: { $ref: './values.yaml#/RetroFacts' }
+    sprintAreas:
+      description: Every Area by ID, as this Sprint shows it (F5).
+      type: object
+      additionalProperties: { $ref: '#/SprintAreaLabel' }
+    areas:
+      type: array
+      items: { $ref: '#/SprintAreaLabel' }
+    taskTitles:
+      description: The titles of the Tasks the previews and carry-over name, by Task ID.
+      type: object
+      additionalProperties: { type: string }
+    used:
+      description: The criterion this Sprint had, what it did, and the decision.
+      type: object
+      required: [criterion, view, appliedAtConfirm, result, capabilities]
+      properties:
+        criterion: { $ref: './records.yaml#/PlanningCriterion' }
+        view: { $ref: './values.yaml#/CriterionView' }
+        areaName: { type: string }
+        appliedAtConfirm: { type: boolean }
+        result: { $ref: './values.yaml#/CriterionResult' }
+        decision: { $ref: './records.yaml#/RetroDecision' }
+        capabilities: { $ref: '#/CriterionUseCapabilities' }
+    draft:
+      description: The draft made from this Retro's improvement.
+      allOf:
+        - $ref: '#/RetroCriterion'
+        - type: object
+          required: [capabilities]
+          properties:
+            capabilities: { $ref: '#/PlanningCriterionCapabilities' }
+    pins:
+      type: array
+      items: { $ref: './records.yaml#/RetroPin' }
+    reflection: { type: string }
+    improvement: { type: string }
+    blockers:
+      type: array
+      items: { $ref: '#/RetroBlocker' }
+    actualDate:
+      description: Actual hours added in Review go to this day (F22).
+      $ref: './common.yaml#/LocalDate'
+    occurrences:
+      type: array
+      items: { $ref: '#/RetroOccurrence' }
+    carryOver: { $ref: './values.yaml#/CarryOverPlaces' }
+    carryOverTasks:
+      type: array
+      items: { $ref: './values.yaml#/CarryOverTask' }
+    capabilities: { $ref: '#/RetroCapabilities' }
+    goalCapabilities:
+      description: What the person can do with the Sprint's Goals now, by Area ID (#323).
+      type: object
+      additionalProperties: { $ref: '#/SprintGoalCapabilities' }
+    sprintTaskCapabilities:
+      description: >-
+        What the person can do with the Sprint's SprintTasks now, by ID
+        (#323): actual time added in Review (F22).
+      type: object
+      additionalProperties: { $ref: '#/SprintTaskCapabilities' }
+
+# ---------------------------------------------------------------- Sprint
+SprintView:
+  description: >-
+    A Sprint (#295 R2): while planned, its plan; once confirmed, how it went.
+  oneOf:
+    - type: object
+      required: [state, plan]
+      properties:
+        state: { const: planning }
+        plan: { $ref: '#/SprintPlan' }
+    - type: object
+      required: [state, running]
+      properties:
+        state:
+          type: string
+          enum: [active, review, closed]
+        running: { $ref: '#/RunningData' }
+
+# ------------------------------------------------------------------- Day
+DayView:
+  description: >-
+    A day (#295 R3), today, past or still to come: today's choices on the
+    running Sprint (`today` is left out when none runs), or another day's
+    records or occurrences.
+  oneOf:
+    - type: object
+      required: [kind]
+      properties:
+        kind: { const: today }
+        today: { $ref: '#/TodayData' }
+    - type: object
+      required: [kind, day]
+      properties:
+        kind:
+          type: string
+          enum: [past, future]
+        day: { $ref: '#/DayData' }

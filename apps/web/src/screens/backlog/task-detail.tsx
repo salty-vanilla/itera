@@ -1,17 +1,15 @@
-import {
-  boundValue,
-  id,
-  parseLocalDate,
-  presentedSuggestion,
-  toLocalDate,
-  type Estimate as EstimateRecord,
-  type EstimateSuggestionId,
-  type SuggestionBound,
-  type Task,
-  type TaskAttributeUpdate,
-  type TaskPriority,
-  type TimeBasis,
-} from '@itera/domain';
+import type {
+  BacklogItem,
+  Estimate as EstimateRecord,
+  EstimateSuggestionId,
+  SuggestionBound,
+  TaskPriority,
+  TimeBasis,
+} from '@itera/api-contract';
+import type {
+  MadeFrom,
+  TaskAttributeUpdate,
+} from '@itera/api-contract/requests';
 import { Link, useLocation } from '@tanstack/react-router';
 import { Check, ChevronDown, ChevronRight } from 'lucide-react';
 import {
@@ -27,6 +25,7 @@ import {
   type Ref,
 } from 'react';
 import { flushSync } from 'react-dom';
+import type { Saved } from '@/api/use-operation';
 import { Button } from '@/components/ui/button';
 import {
   DrawerBody,
@@ -56,22 +55,34 @@ import {
 } from '@/lib/actual-hours';
 import { formatDate, formatTime } from '@/lib/date-format';
 import {
+  boundValue,
+  parseLocalDate,
+  toLocalDate,
+} from '@/lib/domain-functions';
+import {
   DURATION_ERROR,
   EMPTY_DURATION,
   hoursText,
   readMinutes,
-  sameMinutes,
+  sameDuration,
   type DurationText,
 } from '@/lib/duration-text';
+import {
+  sameWords,
+  useDraftField,
+  type VersionedDraftField,
+} from '@/lib/use-draft-field';
+import { LAST_DAY_CLOSED_WORDS } from '@/lib/selection-words';
 import { formatHours } from '@/lib/time-format';
 import { startedText } from '@/lib/today-words';
-import type { BacklogData, BacklogItem } from '@/store/backlog-view';
-import { useTaskActions } from '@/store/use-task-actions';
-import { useTodayActions } from '@/store/use-today';
+import type { BacklogView } from '@/screen-data/use-backlog';
+import { useTaskActions } from '@/screen-data/use-task-actions';
 import { useNewAreaDialog } from './area-dialog';
 import { CarryOverText, RecurrenceText, SprintText } from './backlog-row';
-import { RecurrenceEditor } from './recurrence-editor';
+import { RecurrenceEditor, type RecurrencePending } from './recurrence-editor';
+import { UnsavedTypingLayer } from '@/lib/unsaved-typing';
 import { SubtaskList } from './subtask-list';
+import { useSelectionActions } from './use-selection-actions';
 import { useAddToToday } from './use-add-to-today';
 import { useAddToWeek } from './use-add-to-week';
 
@@ -103,15 +114,6 @@ const fieldNames: Record<FieldKey, string> = {
   timeBasis: '計画の時間',
 };
 
-function draftOf(task: Task): Draft {
-  return {
-    title: task.title,
-    description: task.description,
-    due: task.due ?? '',
-    estimate: hoursText(task.estimate?.hours),
-  };
-}
-
 type Reading =
   | { kind: 'error'; message: string }
   | { kind: 'same' }
@@ -119,25 +121,30 @@ type Reading =
 
 const same: Reading = { kind: 'same' };
 
-/** What leaving a text field records: nothing, a change, or why not. */
-function readField(key: TextKey, draft: Draft, task: Task): Reading {
+/**
+ * What leaving a text field records: nothing, a change, or why not. `base`
+ * is what the fields showed when they were typed in: a value is compared
+ * with it, not with the Task as read since, so that a field left as it was
+ * does not write over what another device saved (#324).
+ */
+function readField(key: TextKey, draft: Draft, base: Draft): Reading {
   switch (key) {
     case 'title': {
       const title = draft.title.trim();
       if (title === '') {
         return { kind: 'error', message: 'タイトルを入力してください' };
       }
-      return title === task.title ? same : { kind: 'save', update: { title } };
+      return title === base.title.trim()
+        ? same
+        : { kind: 'save', update: { title } };
     }
     case 'description':
-      return draft.description === task.description
+      return draft.description === base.description
         ? same
         : { kind: 'save', update: { description: draft.description } };
     case 'due': {
       if (draft.due === '') {
-        return task.due === undefined
-          ? same
-          : { kind: 'save', update: { due: null } };
+        return base.due === '' ? same : { kind: 'save', update: { due: null } };
       }
       const parsed = parseLocalDate(draft.due);
       if (!parsed.ok) {
@@ -146,7 +153,7 @@ function readField(key: TextKey, draft: Draft, task: Task): Reading {
           message: '日付を入力してください（例：2026-10-05）',
         };
       }
-      return parsed.value === task.due
+      return parsed.value === base.due
         ? same
         : { kind: 'save', update: { due: parsed.value } };
     }
@@ -155,7 +162,7 @@ function readField(key: TextKey, draft: Draft, task: Task): Reading {
       if (minutes === null || minutes === 0) {
         return { kind: 'error', message: DURATION_ERROR };
       }
-      return sameMinutes(minutes, task.estimate?.hours)
+      return minutes === readMinutes(base.estimate)
         ? same
         : {
             kind: 'save',
@@ -209,7 +216,7 @@ function Saved({ show, children }: { show: boolean; children: ReactNode }) {
 /** The line under 今日と今週 for a Task in today's 今日やる. */
 function dayText(
   today: NonNullable<BacklogItem['today']>,
-  timeZone: BacklogData['timeZone'],
+  timeZone: BacklogView['timeZone'],
 ): string {
   switch (today.resolution) {
     case 'started':
@@ -223,22 +230,32 @@ function dayText(
   }
 }
 
-/** The line under 今日と今週 after the Task was closed for the day. */
-const closedText: Record<
-  NonNullable<BacklogItem['closedToday']>,
-  { result: string; rest?: string }
-> = {
-  paused: {
-    result: '今日は中断しました。',
-    rest: '明日から今週の残りに出ます。',
-  },
-  deferred: {
-    result: '今日は見送りました。',
-    rest: '明日から今週の残りに出ます。',
-  },
-  // Back in the week at once: no 「明日から」 (#233).
-  removed: { result: '今週の残りに戻しました。' },
-};
+/**
+ * The line under 今日と今週 after the Task was closed for the day. On the
+ * Sprint's last day (the read's `lastDay`) it does not come back to 今週の
+ * 残り tomorrow (#314).
+ */
+function closedText(
+  closed: NonNullable<BacklogItem['closedToday']>,
+  // A recurring Task's next Sprint takes its own occurrences: there is
+  // nothing to choose, so on the last day the line says no more (#314).
+  after: { lastDay: boolean; recurring: boolean },
+): { result: string; rest?: string } {
+  const rest = !after.lastDay
+    ? '明日から今週の残りに出ます。'
+    : after.recurring
+      ? undefined
+      : LAST_DAY_CLOSED_WORDS.detail;
+  switch (closed) {
+    case 'paused':
+      return { result: '今日は中断しました。', ...(rest && { rest }) };
+    case 'deferred':
+      return { result: '今日は見送りました。', ...(rest && { rest }) };
+    // Back in the week at once: no 「明日から」 (#233).
+    case 'removed':
+      return { result: '今週の残りに戻しました。' };
+  }
+}
 
 type Outcome =
   | {
@@ -256,20 +273,26 @@ type Outcome =
  * recurrence rule and the actions take effect at once, each through its
  * domain command. The footer only closes (Issue #95).
  */
-function TaskDetail({
-  item,
-  areas,
-  timeZone,
-  onClose,
-  onComplete,
-  focusEstimate,
-  leaveRef,
-  footer,
-}: {
+/**
+ * The detail is a layer over the screen, opened by the search's `task`: its
+ * fields go when it closes, and the screen under it may change while they
+ * wait to be saved (lib/unsaved-typing.tsx, #332).
+ */
+function TaskDetail(props: TaskDetailProps) {
+  return (
+    <UnsavedTypingLayer searchKey="task">
+      <TaskDetailContent {...props} />
+    </UnsavedTypingLayer>
+  );
+}
+
+type TaskDetailProps = {
   item: BacklogItem;
   /** The Areas to choose from, in the person's order. */
-  areas: BacklogData['areas'];
-  timeZone: BacklogData['timeZone'];
+  areas: BacklogView['areas'];
+  timeZone: BacklogView['timeZone'];
+  /** The read's `lastDay`: what is closed today does not return tomorrow. */
+  lastDay: BacklogView['lastDay'];
   onClose: () => void;
   /** 完了にする: the screen closes the detail and leaves the undo line. */
   onComplete: () => void;
@@ -285,10 +308,22 @@ function TaskDetail({
    * that an Estimate typed here shows its effect before closing (#165).
    */
   footer?: ReactNode;
-}) {
+};
+
+function TaskDetailContent({
+  item,
+  areas,
+  timeZone,
+  lastDay,
+  onClose,
+  onComplete,
+  focusEstimate,
+  leaveRef,
+  footer,
+}: TaskDetailProps) {
   const actions = useTaskActions();
   const newArea = useNewAreaDialog();
-  const todayActions = useTodayActions();
+  const selectionActions = useSelectionActions();
   const addToToday = useAddToToday();
   const addToWeek = useAddToWeek();
   const { task } = item;
@@ -301,13 +336,21 @@ function TaskDetail({
   const onSprintScreen = useLocation({
     select: (l) => l.pathname === '/sprint',
   });
-  const offersWeek = facts.canAddToWeek && !onSprintScreen;
+  const can = facts.capabilities;
+  const offersWeek = can.canAddToWeek && !onSprintScreen;
   // A recurring Task in the week is done per occurrence, in Today (#171).
   const opensOccurrences =
     facts.recurrence !== undefined &&
     facts.thisWeek?.confirmed === true &&
     facts.today === undefined &&
     !onTodayScreen;
+  const closedLine =
+    facts.closedToday === undefined
+      ? undefined
+      : closedText(facts.closedToday, {
+          lastDay,
+          recurring: facts.recurrence !== undefined,
+        });
   const nowRef = useRef<HTMLElement>(null);
   const openTodayRef = useRef<HTMLAnchorElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -327,7 +370,7 @@ function TaskDetail({
     setPauseError(undefined);
     requestAnimationFrame(() => pauseButtonRef.current?.focus());
   }
-  function submitPause(event: FormEvent) {
+  async function submitPause(event: FormEvent) {
     event.preventDefault();
     if (facts.today === undefined) return;
     const hours = readActualHours(pauseText);
@@ -336,28 +379,52 @@ function TaskDetail({
       pauseInputRef.current?.focus();
       return;
     }
-    if (todayActions.pause(facts.today.selectionId, hours)) {
+    if (await selectionActions.pause(facts.today.selectionId, hours)) {
       setPausing(false);
       setPauseText(EMPTY_DURATION);
       setPauseError(undefined);
-      setOperations((n) => n + 1);
+      sectionDone();
     }
   }
   // After an operation of the section the button pressed is gone: the
   // focus goes to 今日を開く, else to the first button left, else the title.
+  // The focus waits for the section to change from what it was when it was
+  // pressed.
   const [operations, setOperations] = useState(0);
-  useEffect(() => {
-    if (operations === 0) return;
-    (
-      openTodayRef.current ??
-      nowRef.current?.querySelector<HTMLElement>('button:not([disabled])') ??
-      titleRef.current
-    )?.focus();
-  }, [operations]);
-  function runNow(run: () => boolean) {
-    if (run()) setOperations((n) => n + 1);
+  const focusFrom = useRef<string>(undefined);
+  async function runNow(run: () => Promise<boolean>) {
+    if (await run()) sectionDone();
   }
-  const [draft, setDraft] = useState(() => draftOf(task));
+  function sectionDone() {
+    focusFrom.current = sectionKey;
+    setOperations((n) => n + 1);
+  }
+  // The text fields: what is typed apart from the Task as read, so that a
+  // field not typed in follows another device's change (#324). Each saves
+  // from the Task as read when it was typed in (#321).
+  const version = { etag: task.etag };
+  const fields: { [K in TextKey]: VersionedDraftField<Draft[K]> } = {
+    title: useDraftField(task.title, sameWords, version),
+    description: useDraftField(task.description, Object.is, version),
+    due: useDraftField(task.due ?? '', Object.is, version),
+    estimate: useDraftField(
+      hoursText(task.estimate?.hours),
+      sameDuration,
+      version,
+    ),
+  };
+  const draft: Draft = {
+    title: fields.title.value,
+    description: fields.description.value,
+    due: fields.due.value,
+    estimate: fields.estimate.value,
+  };
+  const base: Draft = {
+    title: fields.title.base,
+    description: fields.description.base,
+    due: fields.due.base,
+    estimate: fields.estimate.base,
+  };
   const [errors, setErrors] = useState<Partial<Record<TextKey, string>>>({});
   // The field saved last, marked 保存しました until it is edited again.
   const [saved, setSaved] = useState<FieldKey>();
@@ -370,17 +437,16 @@ function TaskDetail({
   const [openedWith] = useState(() => valuesOf(item));
   const [more, setMore] = useState(false);
   const moreId = useId();
-  // Which of the day's operations the section offers.
-  const resolution = facts.today?.resolution;
+  // Which of the day's operations the section offers: those the read says
+  // the person can do with today's choice (#322).
+  const choice = facts.today?.capabilities;
   const offers = {
-    start: resolution === 'selected',
-    pause: resolution === 'started',
+    start: choice?.canStart === true,
+    pause: choice?.canPause === true,
     // 今日は見送る is not for an occurrence: it is skipped instead (#233).
-    defer:
-      (resolution === 'selected' || resolution === 'started') &&
-      facts.today?.recurring !== true,
-    skip: resolution === 'selected' && facts.today?.recurring === true,
-    remove: resolution === 'selected',
+    defer: choice?.canDefer === true && facts.today?.recurring !== true,
+    skip: choice?.canSkip === true,
+    remove: choice?.canRemove === true,
   };
   // The section's operations, in their order. Only the state's main one is
   // Secondary, and it comes first; the others are Quiet, so that the detail
@@ -392,7 +458,7 @@ function TaskDetail({
     key: string;
     node: (isMain: boolean) => ReactNode;
   }[] = [
-    facts.canAddToToday && {
+    can.canAddToToday && {
       key: 'today',
       node: (isMain: boolean) => (
         <Button
@@ -433,7 +499,7 @@ function TaskDetail({
         <Button
           variant={variant(isMain)}
           onClick={() =>
-            runNow(() => todayActions.start(facts.today!.selectionId))
+            runNow(() => selectionActions.start(facts.today!.selectionId))
           }
         >
           開始
@@ -463,7 +529,7 @@ function TaskDetail({
         <Button
           variant={variant(isMain)}
           onClick={() =>
-            runNow(() => todayActions.defer(facts.today!.selectionId))
+            runNow(() => selectionActions.defer(facts.today!.selectionId))
           }
         >
           今日は見送る
@@ -476,7 +542,7 @@ function TaskDetail({
         <Button
           variant={variant(isMain)}
           onClick={() =>
-            runNow(() => todayActions.skip(facts.today!.selectionId))
+            runNow(() => selectionActions.skip(facts.today!.selectionId))
           }
         >
           今日の回をスキップする
@@ -489,14 +555,16 @@ function TaskDetail({
         <Button
           variant={variant(isMain)}
           onClick={() =>
-            runNow(() => todayActions.removeFromToday(facts.today!.selectionId))
+            runNow(() =>
+              selectionActions.removeFromToday(facts.today!.selectionId),
+            )
           }
         >
           今週の残りに戻す
         </Button>
       ),
     },
-    facts.canComplete && {
+    can.canComplete && {
       key: 'complete',
       node: (isMain: boolean) => (
         <Button
@@ -511,7 +579,7 @@ function TaskDetail({
     },
   ].filter((operation) => operation !== false);
   const has = (key: string) => dayOperations.some((o) => o.key === key);
-  const main = facts.canAddToToday
+  const main = can.canAddToToday
     ? 'today'
     : offers.start
       ? 'start'
@@ -524,6 +592,19 @@ function TaskDetail({
             : dayOperations[0]?.key;
   // The main operation first, in the DOM too, so that Tab reaches it first.
   dayOperations.sort((a, b) => Number(b.key === main) - Number(a.key === main));
+  // What the section offers now: it changes once an operation of it has
+  // taken effect (the button pressed is gone).
+  const sectionKey = `${dayOperations.map((o) => o.key).join()}${facts.today === undefined ? '' : '+open'}`;
+  useEffect(() => {
+    if (focusFrom.current === undefined || focusFrom.current === sectionKey)
+      return;
+    focusFrom.current = undefined;
+    (
+      openTodayRef.current ??
+      nowRef.current?.querySelector<HTMLElement>('button:not([disabled])') ??
+      titleRef.current
+    )?.focus();
+  }, [operations, sectionKey]);
   // What was typed in the subtask and recurrence forms but not added or
   // applied: closing asks first, with the operation it would carry out.
   const [held, setHeld] = useState<{
@@ -532,11 +613,30 @@ function TaskDetail({
     opens: boolean;
     subtask: boolean;
     recurrence: boolean;
+    /** The recurrence's choice was sent and not saved (#332). */
+    recurrenceSent: boolean;
+    /** A field's typing a failed save left out of the records (#332). */
+    typing: boolean;
   }>();
   const noticeId = useId();
+  const typingUnsaved = (Object.keys(fields) as TextKey[]).some(
+    (key) => fields[key].unsaved,
+  );
+  // Saved after all while the notice asks (sent again on leaving the
+  // field), with nothing else to ask about: nothing is lost, and the detail
+  // closes (or opens the other Task) as it was asked to.
+  const resolved =
+    held !== undefined &&
+    held.typing &&
+    !typingUnsaved &&
+    !held.subtask &&
+    !held.recurrence;
+  useEffect(() => {
+    if (resolved) held.then();
+  }, [resolved, held]);
   const backRef = useRef<HTMLButtonElement>(null);
   const subtaskPending = useRef<() => HTMLElement | null>(null);
-  const recurrencePending = useRef<() => HTMLElement | null>(null);
+  const recurrencePending = useRef<RecurrencePending>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const foldRef = useRef<HTMLDivElement>(null);
   const estimateRef = useRef<HTMLInputElement>(null);
@@ -544,15 +644,21 @@ function TaskDetail({
   useEffect(() => {
     if (focusEstimate !== undefined) estimateRef.current?.focus();
   }, [focusEstimate]);
-  const suggestion = presentedSuggestion(task);
+  // The suggestion on show (at most one is presented); what can be done
+  // with it is what the read says (#323).
+  const suggestion = task.suggestions.find((s) => s.state === 'presented');
+  const suggestionCan =
+    suggestion === undefined
+      ? undefined
+      : item.suggestionCapabilities[suggestion.id];
   const set = <K extends TextKey>(key: K, value: Draft[K]) => {
-    setDraft((d) => ({ ...d, [key]: value }));
+    fields[key].set(value);
     if (saved === key) setSaved(undefined);
   };
   // The suggestion's operations put a saved value in the field: whatever
   // was wrong with the text before is gone with it.
   const replaceEstimate = (value: DurationText) => {
-    set('estimate', value);
+    fields.estimate.put(value);
     setErrors((e) => {
       const next = { ...e };
       delete next.estimate;
@@ -560,19 +666,32 @@ function TaskDetail({
     });
   };
 
-  function record(
+  /** Saves a text field, made from the Task as read when it was typed in. */
+  async function record(
     key: FieldKey,
     update: TaskAttributeUpdate,
-    estimate?: number | null,
-  ): boolean {
-    if (!actions.saveTask(task.id, update, estimate)) return false;
+    estimate: number | null | undefined,
+    from: MadeFrom,
+  ): Promise<Saved> {
+    const saved = await actions.saveTask(task.id, update, estimate, from);
+    if (saved.ok) setSaved(key);
+    return saved;
+  }
+
+  /** Saves a choice, made from the Task as it is read now (#321). */
+  async function choose(
+    key: FieldKey,
+    update: TaskAttributeUpdate,
+  ): Promise<boolean> {
+    if (!(await actions.chooseForTask(task.id, update, { etag: task.etag })))
+      return false;
     setSaved(key);
     return true;
   }
 
   /** Leaving a text field: saves it when it changed and can be saved. */
   function commit(key: TextKey) {
-    const reading = readField(key, draft, task);
+    const reading = readField(key, draft, base);
     setErrors((e) => {
       const next = { ...e };
       if (reading.kind === 'error') next[key] = reading.message;
@@ -580,7 +699,11 @@ function TaskDetail({
       return next;
     });
     if (reading.kind === 'save') {
-      record(key, reading.update, reading.estimate);
+      fields[key].hold(
+        record(key, reading.update, reading.estimate, fields[key].madeFrom),
+      );
+    } else if (reading.kind === 'same') {
+      fields[key].leave();
     }
   }
 
@@ -596,9 +719,14 @@ function TaskDetail({
     if (active instanceof HTMLElement && body.contains(active)) {
       flushSync(() => active.blur());
     }
-    const invalid = body.querySelector<HTMLElement>(
-      '[data-detail-field][aria-invalid="true"]',
-    );
+    // A field whose save failed is not one to correct: what it keeps is
+    // what was typed (#332).
+    const invalid =
+      [
+        ...body.querySelectorAll<HTMLElement>(
+          '[data-detail-field][aria-invalid="true"]',
+        ),
+      ].find((field) => field.closest('[data-save-failed]') === null) ?? null;
     if (invalid !== null) {
       // A subtask's Estimate may be in the fold: open it to show the error.
       flushSync(() => {
@@ -609,14 +737,17 @@ function TaskDetail({
       return;
     }
     const subtask = subtaskPending.current?.() ?? null;
-    const recurrence = recurrencePending.current?.() ?? null;
-    if (subtask === null && recurrence === null) return then();
+    const recurrence = recurrencePending.current?.pending() ?? null;
+    if (subtask === null && recurrence === null && !typingUnsaved)
+      return then();
     flushSync(() =>
       setHeld({
         then,
         opens,
         subtask: subtask !== null,
         recurrence: recurrence !== null,
+        recurrenceSent: recurrencePending.current?.unsaved() ?? false,
+        typing: typingUnsaved,
       }),
     );
     backRef.current?.focus();
@@ -625,7 +756,12 @@ function TaskDetail({
 
   /** 戻る: back to what was typed, opening the fold if it is in there. */
   function holdBack() {
-    const target = subtaskPending.current?.() ?? recurrencePending.current?.();
+    const target =
+      bodyRef.current?.querySelector<HTMLElement>(
+        '[data-save-failed] [data-detail-field]',
+      ) ??
+      subtaskPending.current?.() ??
+      recurrencePending.current?.pending();
     flushSync(() => {
       setHeld(undefined);
       if (target && foldRef.current?.contains(target)) setMore(true);
@@ -640,11 +776,11 @@ function TaskDetail({
     }
   };
 
-  function onAdopt(bound: SuggestionBound) {
+  async function onAdopt(bound: SuggestionBound) {
     if (suggestion === undefined) return;
     const previous = task.estimate ?? null;
     const hours = boundValue(suggestion, bound);
-    if (!actions.adoptSuggestion(task.id, suggestion.id, bound)) return;
+    if (!(await actions.adoptSuggestion(task.id, suggestion.id, bound))) return;
     replaceEstimate(hoursText(hours));
     setOutcome({
       kind: 'adopted',
@@ -654,10 +790,10 @@ function TaskDetail({
     });
   }
 
-  function onAdoptEdited(hours: number): boolean {
+  async function onAdoptEdited(hours: number): Promise<boolean> {
     if (suggestion === undefined) return false;
     const previous = task.estimate ?? null;
-    if (!actions.adoptEditedSuggestion(task.id, suggestion.id, hours)) {
+    if (!(await actions.adoptEditedSuggestion(task.id, suggestion.id, hours))) {
       return false;
     }
     replaceEstimate(hoursText(hours));
@@ -670,18 +806,24 @@ function TaskDetail({
     return true;
   }
 
-  function onUndoAdopt() {
+  async function onUndoAdopt() {
     if (outcome?.kind !== 'adopted') return;
-    if (!actions.undoAdoption(task.id, outcome.suggestionId, outcome.previous))
+    if (
+      !(await actions.undoAdoption(
+        task.id,
+        outcome.suggestionId,
+        outcome.previous,
+      ))
+    )
       return;
     replaceEstimate(hoursText(outcome.previous?.hours));
     setOutcome(undefined);
     setSuggestionBack(true);
   }
 
-  function onReject() {
+  async function onReject() {
     if (suggestion === undefined) return;
-    if (!actions.rejectSuggestion(task.id, suggestion.id)) return;
+    if (!(await actions.rejectSuggestion(task.id, suggestion.id))) return;
     setOutcome({
       kind: 'rejected',
       suggestionId: suggestion.id,
@@ -689,9 +831,9 @@ function TaskDetail({
     });
   }
 
-  function onUndoReject() {
+  async function onUndoReject() {
     if (outcome?.kind !== 'rejected') return;
-    if (!actions.undoRejection(task.id, outcome.suggestionId)) return;
+    if (!(await actions.undoRejection(task.id, outcome.suggestionId))) return;
     setOutcome(undefined);
     setSuggestionBack(true);
   }
@@ -711,9 +853,14 @@ function TaskDetail({
       case 'description':
         return (
           <Saved show={saved === 'description'}>
-            <Field label="説明" necessity="optional">
+            <Field
+              label="説明"
+              necessity="optional"
+              saveFailed={fields.description.saveFailed}
+            >
               <Textarea
                 value={draft.description}
+                data-detail-field
                 onChange={(e) => set('description', e.currentTarget.value)}
                 onBlur={() => commit('description')}
               />
@@ -723,7 +870,12 @@ function TaskDetail({
       case 'subtasks':
         return (
           <>
-            <SubtaskList task={task} pendingRef={subtaskPending} />
+            <SubtaskList
+              task={task}
+              canAdd={can.canAddSubtask}
+              capabilities={item.subtaskCapabilities}
+              pendingRef={subtaskPending}
+            />
             {task.subtasks.length > 0 && (
               <Saved show={saved === 'timeBasis'}>
                 <RadioGroup<TimeBasis>
@@ -731,7 +883,7 @@ function TaskDetail({
                   description="タスクの見積もりとサブタスクの合計は、どちらか一方を計画に使います。"
                   value={task.timeBasis}
                   onValueChange={(timeBasis) =>
-                    record('timeBasis', { timeBasis })
+                    choose('timeBasis', { timeBasis })
                   }
                 >
                   <Radio<TimeBasis>
@@ -815,12 +967,12 @@ function TaskDetail({
         )}
       </DrawerHeader>
       <DrawerBody ref={bodyRef} className="flex flex-col gap-6">
-        {(facts.canAddToToday ||
+        {(can.canAddToToday ||
           facts.todayOpensOn !== undefined ||
           offersWeek ||
           facts.today !== undefined ||
           facts.closedToday !== undefined ||
-          facts.canComplete ||
+          can.canComplete ||
           opensOccurrences) && (
           <section
             ref={nowRef}
@@ -835,20 +987,20 @@ function TaskDetail({
                 role="status"
                 className="text-body text-ink [text-wrap:pretty] [word-break:auto-phrase]"
               >
-                {facts.today !== undefined ? (
-                  dayText(facts.today, timeZone)
-                ) : (
-                  <>
-                    {closedText[facts.closedToday!].result}
-                    {closedText[facts.closedToday!].rest !== undefined && (
-                      // The consequence on its own line, so that no line ends
-                      // with a word's last letters.
-                      <span className="block text-help text-ink-muted">
-                        {closedText[facts.closedToday!].rest}
-                      </span>
+                {facts.today !== undefined
+                  ? dayText(facts.today, timeZone)
+                  : closedLine !== undefined && (
+                      <>
+                        {closedLine.result}
+                        {closedLine.rest !== undefined && (
+                          // The consequence on its own line, so that no line ends
+                          // with a word's last letters.
+                          <span className="block text-help text-ink-muted">
+                            {closedLine.rest}
+                          </span>
+                        )}
+                      </>
                     )}
-                  </>
-                )}
               </p>
             )}
             <div className="flex flex-wrap items-center gap-2">
@@ -874,7 +1026,7 @@ function TaskDetail({
                 </Link>
               )}
             </div>
-            {pausing && facts.today?.resolution === 'started' && (
+            {pausing && offers.pause && (
               <form
                 noValidate
                 onSubmit={submitPause}
@@ -919,7 +1071,12 @@ function TaskDetail({
 
         <div className="flex flex-col gap-4">
           <Saved show={saved === 'title'}>
-            <Field label="タイトル" necessity="required" error={errors.title}>
+            <Field
+              label="タイトル"
+              necessity="required"
+              error={errors.title}
+              saveFailed={fields.title.saveFailed}
+            >
               <TextInput
                 value={draft.title}
                 onChange={(e) => set('title', e.currentTarget.value)}
@@ -937,12 +1094,12 @@ function TaskDetail({
                   const areaId = e.currentTarget.value;
                   if (areaId === NEW_AREA) {
                     newArea.open((created) =>
-                      record('areaId', { areaId: created }),
+                      choose('areaId', { areaId: created }),
                     );
                     return;
                   }
-                  record('areaId', {
-                    areaId: areaId === '' ? null : id<'Area'>(areaId),
+                  choose('areaId', {
+                    areaId: areaId === '' ? null : areaId,
                   });
                 }}
               >
@@ -964,7 +1121,12 @@ function TaskDetail({
           </Saved>
           {newArea.dialog}
           <Saved show={saved === 'due'}>
-            <Field label="期限" necessity="optional" error={errors.due}>
+            <Field
+              label="期限"
+              necessity="optional"
+              error={errors.due}
+              saveFailed={fields.due.saveFailed}
+            >
               <TextInput
                 type="date"
                 value={draft.due}
@@ -980,7 +1142,7 @@ function TaskDetail({
               <Select
                 value={task.priority}
                 onChange={(e) =>
-                  record('priority', {
+                  choose('priority', {
                     priority: e.currentTarget.value as TaskPriority,
                   })
                 }
@@ -998,6 +1160,7 @@ function TaskDetail({
               label="見積もり"
               necessity="optional"
               error={errors.estimate}
+              saveFailed={fields.estimate.saveFailed}
               value={draft.estimate}
               onChange={(value) => set('estimate', value)}
               onCommit={() => commit('estimate')}
@@ -1019,11 +1182,14 @@ function TaskDetail({
             madeAt={`${formatDate(toLocalDate(suggestion.createdAt, timeZone))} ${formatTime(suggestion.createdAt, timeZone)}`}
             onAdopt={onAdopt}
             onAdoptEdited={onAdoptEdited}
-            onReject={onReject}
+            canAdopt={suggestionCan?.canAdopt === true}
+            onReject={suggestionCan?.canReject === true ? onReject : undefined}
           />
         )}
         {outcome !== undefined && (
           <SuggestionOutcome
+            // The undo of what was just done, as a Toast's (F27, F30): it
+            // comes before the read that follows it.
             onUndo={outcome.kind === 'adopted' ? onUndoAdopt : onUndoReject}
           >
             {outcome.text}
@@ -1066,38 +1232,43 @@ function TaskDetail({
           )}
         </div>
 
-        <div className="border-t border-border-soft pt-4">
-          <Button
-            onClick={() => {
-              if (!actions.archiveTask(task.id)) return;
-              onClose();
-              toast.show({
-                kind: 'task-archived',
-                title: `「${task.title}」をアーカイブしました`,
-                action: {
-                  label: '元に戻す',
-                  onClick: () => actions.restoreTask(task.id),
-                },
-              });
-            }}
-          >
-            アーカイブ
-          </Button>
-        </div>
+        {can.canArchive && (
+          <div className="border-t border-border-soft pt-4">
+            <Button
+              onClick={async () => {
+                if (!(await actions.archiveTask(task.id))) return;
+                onClose();
+                toast.show({
+                  kind: 'task-archived',
+                  title: `「${task.title}」をアーカイブしました`,
+                  action: {
+                    label: '元に戻す',
+                    onClick: () => actions.restoreTask(task.id),
+                  },
+                });
+              }}
+            >
+              アーカイブ
+            </Button>
+          </div>
+        )}
         <p role="status" className="sr-only">
           {saved === undefined ? '' : `${fieldNames[saved]}を保存しました`}
         </p>
       </DrawerBody>
-      {held !== undefined && (
+      {held !== undefined && !resolved && (
         <div className="shrink-0 border-t border-border-soft px-4 py-3">
           <Notice
             live
             title={
               <span id={noticeId} className="flex flex-col">
+                {held.typing && typingUnsaved && (
+                  <span>保存していない内容があります</span>
+                )}
                 {held.subtask && <span>入力中のサブタスクがあります</span>}
                 {held.recurrence && (
                   <span>
-                    {item.rule === undefined
+                    {task.recurrenceRuleId === undefined && !held.recurrenceSent
                       ? '「繰り返しにする」をまだ押していません'
                       : '繰り返しの変更がまだ保存されていません'}
                   </span>
@@ -1120,6 +1291,10 @@ function TaskDetail({
                   onClick={() => {
                     const { then } = held;
                     setHeld(undefined);
+                    // What a failed save left in the fields goes too.
+                    for (const key of Object.keys(fields) as TextKey[])
+                      fields[key].drop();
+                    recurrencePending.current?.drop();
                     then();
                   }}
                 >

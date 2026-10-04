@@ -1,7 +1,8 @@
 import { Field as FieldPrimitive } from '@base-ui/react/field';
 import { CircleAlert } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import { cn } from '@/lib/utils';
+import { scrollClearOfToasts } from './toast';
 
 // DESIGN.md Components › 入力 and docs/design/accessibility.md › フォーム.
 // A field is built in the order label → support text → control → error. The
@@ -20,6 +21,46 @@ function NecessityWord({ necessity }: { necessity?: Necessity | undefined }) {
       {necessity === 'required' ? '必須' : '任意'}
     </span>
   );
+}
+
+/**
+ * The error of a field whose save failed and that keeps what was typed
+ * (useDraftField `saveFailed`, #332). The Toast says why; the field says
+ * that what it shows is not in the records.
+ */
+const SAVE_FAILED_FIELD = 'まだ保存していません';
+
+/**
+ * The error a field shows: its own (what to enter), else that its save
+ * failed (`failed`). `message` is `undefined` for none.
+ */
+function fieldError(
+  error: ReactNode | undefined,
+  saveFailed: boolean | undefined,
+): { message: ReactNode | undefined; failed: boolean } {
+  if (error !== undefined && error !== null && error !== false)
+    return { message: error, failed: false };
+  return saveFailed === true
+    ? { message: SAVE_FAILED_FIELD, failed: true }
+    : { message: undefined, failed: false };
+}
+
+/**
+ * A field whose save failed is scrolled clear of the Toasts once it shows
+ * so (DESIGN.md Toast): the Toast that says why must not cover it. A Toast
+ * shown after it does the same (app/use-toast-clearance.ts).
+ */
+function useClearOfToasts(
+  ref: RefObject<HTMLElement | null>,
+  saveFailed: boolean,
+) {
+  useEffect(() => {
+    if (!saveFailed) return;
+    const frame = requestAnimationFrame(() => {
+      if (ref.current !== null) scrollClearOfToasts(ref.current);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [ref, saveFailed]);
 }
 
 // Icon and words: an error is never shown by color alone. The message says
@@ -93,6 +134,12 @@ type FieldProps = {
    * (aria-invalid). Set it on blur or submit, not while typing.
    */
   error?: ReactNode | undefined;
+  /**
+   * The last save failed and the field keeps what was typed
+   * (useDraftField `saveFailed`): the field is in error, saying so, unless
+   * `error` says what to enter.
+   */
+  saveFailed?: boolean | undefined;
   /** Classes for the error line, e.g. to let it span a row the field only shares. */
   errorClassName?: string | undefined;
   /**
@@ -117,6 +164,7 @@ function Field({
   necessity,
   description,
   error,
+  saveFailed,
   errorClassName,
   hideLabel = false,
   disabled,
@@ -124,10 +172,15 @@ function Field({
   children,
   className,
 }: FieldProps) {
-  const invalid = error !== undefined && error !== null && error !== false;
+  const { message, failed } = fieldError(error, saveFailed);
+  const invalid = message !== undefined;
+  const ref = useRef<HTMLDivElement>(null);
+  useClearOfToasts(ref, failed);
   return (
     <FieldPrimitive.Root
+      ref={ref}
       data-slot="field"
+      data-save-failed={failed || undefined}
       name={name}
       disabled={disabled}
       invalid={invalid}
@@ -144,7 +197,7 @@ function Field({
         <FieldDescription>{description}</FieldDescription>
       )}
       {children}
-      {invalid && <FieldError className={errorClassName}>{error}</FieldError>}
+      {invalid && <FieldError className={errorClassName}>{message}</FieldError>}
     </FieldPrimitive.Root>
   );
 }
@@ -156,6 +209,8 @@ export {
   FieldErrorContent,
   NecessityWord,
   fieldDescriptionStyles,
+  fieldError,
+  useClearOfToasts,
   fieldErrorStyles,
 };
 export type { FieldProps, Necessity };

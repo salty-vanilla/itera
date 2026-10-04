@@ -3,7 +3,10 @@ import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { fixtureStates } from '@/mock/fixture-states';
+import { dayRead } from '@/test/day-read';
 import { createAppRouter } from './router';
+import { screens } from './screens';
 
 afterEach(cleanup);
 // jsdom has no scrolling; the router restores the scroll position on navigation.
@@ -83,13 +86,55 @@ describe('routes', () => {
     ).toBeTruthy();
   });
 
-  it('shows the four screens in the navigation', async () => {
+  it('shows the four screens in the navigation, then the settings', async () => {
     renderAt('/backlog');
     await screen.findByRole('heading', { level: 1, name: 'Backlog' });
     const [side] = screen.getAllByRole('navigation', { name: 'メイン' });
+    // The count is the overview, read through the contract (#272).
+    await waitFor(() =>
+      expect(
+        Array.from(side!.querySelectorAll('a')).map((a) => a.textContent),
+      ).toEqual(['今日', 'Sprint', 'Backlog11件', '振り返り', '設定']),
+    );
+    // The tab bar keeps its four; the settings are at the top right instead.
+    const [, tabBar] = screen.getAllByRole('navigation', { name: 'メイン' });
+    expect(tabBar!.querySelectorAll('a')).toHaveLength(4);
     expect(
-      Array.from(side!.querySelectorAll('a')).map((a) => a.textContent),
-    ).toEqual(['今日', 'Sprint', 'Backlog11件', '振り返り']);
+      screen
+        .getAllByRole('link', { name: '設定' })
+        .map((link) => link.getAttribute('href')),
+    ).toEqual(['/settings', '/settings']);
+  });
+});
+
+describe('the fixture states (PRD §12)', () => {
+  it.each(fixtureStates)(
+    'opens $id from the URL, as the dev menu does',
+    async (state) => {
+      const path = screens.find((s) => s.id === state.screen)?.path;
+      const query = new URLSearchParams({ fixture: state.id, ...state.search });
+      const router = renderAt(`${path}?${query}`);
+      await screen.findByRole('heading', { level: 1 });
+      expect(router.state.location.pathname).toBe(path);
+      expect(router.state.location.search).toMatchObject({ fixture: state.id });
+    },
+  );
+});
+
+describe('the overview through the contract (#272)', () => {
+  it('shows the count after a Task is added on the Backlog', async () => {
+    renderAt('/backlog?fixture=backlog-capture');
+    const [side] = await screen.findAllByRole('navigation', { name: 'メイン' });
+    const backlog = () =>
+      Array.from(side!.querySelectorAll('a')).find((a) =>
+        a.textContent.startsWith('Backlog'),
+      )?.textContent;
+    await waitFor(() => expect(backlog()).toBe('Backlog12件'));
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Backlog にタスクを追加' }),
+      '請求書を送る{Enter}',
+    );
+    await waitFor(() => expect(backlog()).toBe('Backlog13件'));
   });
 });
 
@@ -178,8 +223,10 @@ describe('keyboard (#154)', () => {
 
   it('keeps the Planning keys after the skip link and after a click on the screen', async () => {
     renderAt('/sprint?fixture=planning-pick&stage=pick');
-    await screen.findByRole('heading', { level: 1 });
-    const field = screen.getByRole('textbox', { name: '今週のタスクを追加' });
+    // The Planning is there once its records are read.
+    const field = await screen.findByRole('textbox', {
+      name: '今週のタスクを追加',
+    });
     await userEvent.tab();
     await userEvent.keyboard('{Enter}n');
     expect(document.activeElement).toBe(field);
@@ -213,7 +260,7 @@ describe('keyboard (#154)', () => {
 
   it('puts the focus on the heading on back and forward, and not on a filter', async () => {
     const router = renderAt('/today?fixture=backlog-capture');
-    await screen.findByRole('heading', { level: 1 });
+    await dayRead();
     await act(() => router.navigate({ to: '/backlog' }));
     const backlog = await screen.findByRole('heading', {
       level: 1,

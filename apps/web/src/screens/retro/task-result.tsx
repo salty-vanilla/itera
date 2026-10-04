@@ -1,7 +1,7 @@
-import type { TaskFact } from '@itera/domain';
+import type { TaskFact } from '@itera/api-contract';
 import { Fragment } from 'react';
 import { Icon, semanticIcons, type IconSize } from '@/components/ui/icon';
-import type { RetroData } from '@/store/retro-view';
+import type { RetroData } from '@/screen-data/retro-view';
 import { resultText } from './task-values';
 
 // How a Task ended, in words (task-values `resultText`). A carry-over has its

@@ -55,11 +55,15 @@ export function parseInstant(value: string): Result<Instant> {
 
 export function parseTimeZone(value: string): Result<TimeZone> {
   try {
-    new Intl.DateTimeFormat('en', { timeZone: value });
+    // The name as Intl spells it: `asia/tokyo` is `Asia/Tokyo`, so the same
+    // zone is stored, and compared, in one spelling.
+    const { timeZone } = new Intl.DateTimeFormat('en', {
+      timeZone: value,
+    }).resolvedOptions();
+    return ok(timeZone as TimeZone);
   } catch {
     return err('invalidInput', `Unknown time zone: ${value}`);
   }
-  return ok(value as TimeZone);
 }
 
 /** For literals in tests and fixtures. Throws on a malformed value. */
@@ -91,6 +95,12 @@ export function addDays(date: LocalDate, days: number): LocalDate {
   const d = toUtcDate(date);
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10) as LocalDate;
+}
+
+/** Days from `from` to `to`: 0 for the same day, negative when `to` is earlier. */
+export function daysBetween(from: LocalDate, to: LocalDate): number {
+  const ms = toUtcDate(to).getTime() - toUtcDate(from).getTime();
+  return Math.round(ms / 86_400_000);
 }
 
 export function dayOfWeek(date: LocalDate): DayOfWeek {

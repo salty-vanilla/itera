@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // The TypeID spec's examples (src/testdata).
+    "resolveJsonModule": true
+  },
+  "include": ["src", "vitest.config.ts"],
+  "exclude": []
+}

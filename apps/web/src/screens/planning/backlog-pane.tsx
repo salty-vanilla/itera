@@ -1,4 +1,4 @@
-import { id, type AreaId, type LocalDate, type TaskId } from '@itera/domain';
+import type { AreaId, LocalDate, TaskId } from '@itera/api-contract';
 import { Ellipsis } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
@@ -22,8 +22,11 @@ import { formatDate, formatMonthDay } from '@/lib/date-format';
 import { rowKeyHandlers } from '@/lib/row-keys';
 import { cn } from '@/lib/utils';
 import { weekCall, weekText } from '@/lib/week-text';
-import type { CandidateRow, PlanningData } from '@/store/planning-view';
-import { usePlanningActions } from '@/store/use-planning';
+import type {
+  CandidateRow,
+  PickActions,
+  PlanningData,
+} from '@/screen-data/use-planning';
 import { useNewAreaDialog } from '../backlog/area-dialog';
 import { CarryOverText } from '../backlog/backlog-row';
 
@@ -41,9 +44,14 @@ import { CarryOverText } from '../backlog/backlog-row';
 
 type BacklogPaneProps = {
   data: PlanningData;
+  /** The operations on what the week chooses (one hook, in the screen). */
+  actions: PickActions;
   slim?: boolean;
-  /** Adds a Task and chooses it for the week. Returns false to keep the text. */
-  onAdd: (title: string, areaId: AreaId | undefined) => boolean;
+  /**
+   * Adds a Task and chooses it for the week. Returns false to keep the text;
+   * the text stays until the add is done.
+   */
+  onAdd: (title: string, areaId: AreaId | undefined) => Promise<boolean>;
   onOpenTask: (taskId: TaskId) => void;
   /** E on a row: the Task's detail, at its Estimate. */
   onEstimateTask: (taskId: TaskId) => void;
@@ -52,13 +60,13 @@ type BacklogPaneProps = {
 
 function BacklogPane({
   data,
+  actions,
   slim = false,
   onAdd,
   onOpenTask,
   onEstimateTask,
   className,
 }: BacklogPaneProps) {
-  const actions = usePlanningActions();
   const toast = useToast();
   const { candidates } = data;
   const week = weekCall(data.week, data.number);
@@ -68,9 +76,10 @@ function BacklogPane({
   // One archived since it was chosen is no longer a choice (#113).
   const quickChoice = chosenArea(quickArea, data.addAreas);
 
-  const choose = (rows: readonly CandidateRow[]) => {
+  const choose = async (rows: readonly CandidateRow[]) => {
     const taskIds = rows.map((r) => r.task.id);
-    if (!actions.chooseTasks(taskIds)) return;
+    const chosen = await actions.chooseTasks(taskIds);
+    if (chosen === undefined) return;
     toast.show({
       kind: 'sprint-pick',
       title:
@@ -79,16 +88,16 @@ function BacklogPane({
           : `${rows.length}件を${weekText(week, 'に入れました')}`,
       action: {
         label: '元に戻す',
-        onClick: () => actions.unchooseByTask(taskIds),
+        onClick: () => void actions.unchooseTasks(chosen),
       },
     });
   };
-  const unchoose = (rows: readonly CandidateRow[]) => {
+  const unchoose = async (rows: readonly CandidateRow[]) => {
     const ids = rows.flatMap((r) =>
       r.chosen === undefined ? [] : [r.chosen.id],
     );
     const taskIds = rows.map((r) => r.task.id);
-    if (!actions.unchooseTasks(ids)) return;
+    if (!(await actions.unchooseTasks(ids))) return;
     toast.show({
       kind: 'sprint-pick',
       title:
@@ -97,7 +106,7 @@ function BacklogPane({
           : `${rows.length}件を${weekText(week, 'から外しました')}`,
       action: {
         label: '元に戻す',
-        onClick: () => actions.chooseTasks(taskIds),
+        onClick: () => void actions.chooseTasks(taskIds),
       },
     });
   };
@@ -111,8 +120,11 @@ function BacklogPane({
       <TaskQuickAdd
         label={weekText(week, 'のタスクを追加')}
         stackArea
+        // The slim pane (208px) has no room for the wider button: it would
+        // leave the Area select too narrow for 「領域なし」.
+        {...(slim ? {} : { loading: actions.loading.addAndChoose })}
         onAdd={(title) =>
-          onAdd(title, quickChoice === '' ? undefined : id<'Area'>(quickChoice))
+          onAdd(title, quickChoice === '' ? undefined : quickChoice)
         }
         area={
           <AreaSelect
@@ -200,16 +212,25 @@ function BacklogPane({
                   aria-label={`${weekText(week, 'に入れる日')}：${task.title}`}
                   className="flex flex-wrap gap-x-4 gap-y-1"
                 >
-                  {occurrences.map((o) => (
-                    <Checkbox
-                      key={o.id}
-                      label={formatDate(o.scheduledDate)}
-                      checked={o.state === 'pending'}
-                      onCheckedChange={(checked) =>
-                        actions.setOccurrenceIncluded(o.id, checked)
-                      }
-                    />
-                  ))}
+                  {occurrences.map((o) => {
+                    const included = o.state === 'pending';
+                    return (
+                      <Checkbox
+                        key={o.id}
+                        label={formatDate(o.scheduledDate)}
+                        checked={included}
+                        // Each way only while the read says it can go (#323).
+                        disabled={
+                          included
+                            ? !o.capabilities.canExclude
+                            : !o.capabilities.canInclude
+                        }
+                        onCheckedChange={(checked) =>
+                          void actions.setOccurrenceIncluded(o.id, checked)
+                        }
+                      />
+                    );
+                  })}
                 </div>
               </li>
             ))}
@@ -278,8 +299,8 @@ function Group({
   until?: LocalDate;
   rows: readonly CandidateRow[];
   slim: boolean;
-  choose: (rows: readonly CandidateRow[]) => void;
-  unchoose: (rows: readonly CandidateRow[]) => void;
+  choose: (rows: readonly CandidateRow[]) => Promise<void>;
+  unchoose: (rows: readonly CandidateRow[]) => Promise<void>;
   onOpenTask: (taskId: TaskId) => void;
   onEstimateTask: (taskId: TaskId) => void;
   today: PlanningData['today'];
@@ -289,6 +310,10 @@ function Group({
   if (rows.length === 0) return null;
   const chosen = rows.filter((r) => r.chosen !== undefined);
   const all = chosen.length === rows.length;
+  // What the box can do (#323): choose the rows that can join, or take out
+  // the chosen ones that can leave.
+  const addable = rows.filter((r) => r.capabilities.canAdd);
+  const removable = chosen.filter((r) => r.chosenCapabilities?.canRemove);
   return (
     <section aria-label={title} className="flex flex-col gap-1">
       <div className="flex items-center gap-2">
@@ -297,10 +322,9 @@ function Group({
             aria-label={`${title}をすべて${weekText(week, 'に入れる')}`}
             checked={all}
             indeterminate={chosen.length > 0 && !all}
+            disabled={all ? removable.length === 0 : addable.length === 0}
             onCheckedChange={(checked) =>
-              checked
-                ? choose(rows.filter((r) => r.chosen === undefined))
-                : unchoose(chosen)
+              checked ? void choose(addable) : void unchoose(removable)
             }
           />
         </span>
@@ -326,7 +350,9 @@ function Group({
             slim={slim}
             today={today}
             week={week}
-            onToggle={(checked) => (checked ? choose([row]) : unchoose([row]))}
+            onToggle={(checked) =>
+              void (checked ? choose([row]) : unchoose([row]))
+            }
             onOpen={() => onOpenTask(row.task.id)}
             onEstimate={() => onEstimateTask(row.task.id)}
           />
@@ -356,6 +382,10 @@ function CandidateItem({
 }) {
   const { task, area, carry, running, value } = row;
   const chosen = row.chosen !== undefined;
+  // Each way only while the read says it can go (#323).
+  const toggles = chosen
+    ? row.chosenCapabilities?.canRemove === true
+    : row.capabilities.canAdd;
   const showEstimate = !slim && value.base !== 'none';
   const meta: ReactNode[] = [];
   if (!slim) {
@@ -390,6 +420,7 @@ function CandidateItem({
         <CheckboxControl
           aria-label={`${weekText(week, 'に入れる')}：${task.title}`}
           checked={chosen}
+          disabled={!toggles}
           onCheckedChange={onToggle}
         />
       </span>

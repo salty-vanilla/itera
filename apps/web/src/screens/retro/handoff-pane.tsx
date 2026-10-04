@@ -4,7 +4,7 @@ import type {
   CriterionPolicy,
   RetroDecision,
   SuggestionBound,
-} from '@itera/domain';
+} from '@itera/api-contract';
 import { Link } from '@tanstack/react-router';
 import { ChevronDown, ChevronRight, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -21,8 +21,8 @@ import {
 } from '@/lib/criterion-text';
 import { formatHours, formatRange } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
-import type { RetroCriterion, RetroData } from '@/store/retro-view';
-import { useNextPlanning } from '@/store/use-retro';
+import type { RetroCriterion, RetroData } from '@/screen-data/retro-view';
+import { useNextPlanning } from '@/screen-data/use-begin-planning';
 import { CARRY_OVER_PLACE_WORDS, DECISION_WORDS } from './retro-words';
 import { UsedCriterion } from './used-criterion';
 
@@ -43,10 +43,10 @@ type HandoffPaneProps = {
   readOnly?: boolean | undefined;
   /** The Task titles, for the preview. */
   titleOf: (taskId: string) => string;
-  onDraft: (policy: CriterionPolicy) => boolean;
-  onDraftPolicy: (policy: CriterionPolicy) => boolean;
-  onDropDraft: () => boolean;
-  onDecide: (decision: RetroDecision) => boolean;
+  onDraft: (policy: CriterionPolicy) => Promise<boolean>;
+  onDraftPolicy: (policy: CriterionPolicy) => Promise<boolean>;
+  onDropDraft: () => Promise<boolean>;
+  onDecide: (decision: RetroDecision) => Promise<boolean>;
   /** Opens 振り返る, where the improvement is written. */
   onWriteImprovement: () => void;
   className?: string | undefined;
@@ -128,7 +128,12 @@ function HandoffPane({
               </span>
             )
           }
-          disabled={improvement === undefined}
+          // Each way only while the read says it can go (#323).
+          disabled={
+            draft === undefined
+              ? !data.capabilities.canDraftCriterion
+              : !draft.capabilities.canDropDraft
+          }
           checked={draft !== undefined}
           onCheckedChange={(checked) =>
             checked ? onDraft(initial) : onDropDraft()
@@ -143,6 +148,7 @@ function HandoffPane({
               samePolicy(draft.criterion.policy, used.criterion.policy)
             }
             titleOf={titleOf}
+            disabled={!draft.capabilities.canSetDraftPolicy}
             onChange={onDraftPolicy}
           />
         )}
@@ -161,6 +167,7 @@ function HandoffPane({
             legend="次の Sprint でどうしますか"
             necessity="required"
             value={used.decision ?? null}
+            disabled={!used.capabilities.canDecide}
             onValueChange={(value) => {
               if (value !== null) onDecide(value);
             }}
@@ -253,7 +260,8 @@ function CarryOverList({
       {tasks.some((t) => t.place === 'candidate') && (
         <p className="text-body text-ink-muted [word-break:auto-phrase]">
           次の Sprint の「選ぶ」で決めます。
-          {next.planning !== undefined ? (
+          {/* Where the next Planning is, once the person's Sprints are read. */}
+          {next?.planning !== undefined ? (
             <Link
               to="/sprint"
               search={{ sprint: next.number }}
@@ -262,7 +270,7 @@ function CarryOverList({
               Sprint {next.number} を開く
             </Link>
           ) : (
-            '振り返りの完了後に始まります。'
+            next !== undefined && '振り返りの完了後に始まります。'
           )}
         </p>
       )}
@@ -341,6 +349,7 @@ function DraftCriterion({
   areas,
   sameAsUsed,
   titleOf,
+  disabled,
   onChange,
 }: {
   draft: RetroCriterion;
@@ -348,7 +357,9 @@ function DraftCriterion({
   /** Still the same setting as this Sprint's criterion. */
   sameAsUsed: boolean;
   titleOf: (taskId: string) => string;
-  onChange: (policy: CriterionPolicy) => boolean;
+  /** The setting cannot be changed now (#323): the selects are disabled. */
+  disabled: boolean;
+  onChange: (policy: CriterionPolicy) => Promise<boolean>;
 }) {
   const { policy } = draft.criterion;
   const scopeValue = policy.scope.kind === 'all' ? '' : policy.scope.areaId;
@@ -371,6 +382,7 @@ function DraftCriterion({
       <div className="flex flex-wrap gap-4">
         <Field label="領域">
           <Select
+            disabled={disabled}
             value={scopeValue}
             onChange={(e) => {
               const value = e.currentTarget.value;
@@ -393,6 +405,7 @@ function DraftCriterion({
         </Field>
         <Field label="見積もりがないとき、提案のどの値で計画するか">
           <Select
+            disabled={disabled}
             value={policy.rangePolicy}
             onChange={(e) =>
               onChange({

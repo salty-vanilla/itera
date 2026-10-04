@@ -1,3 +1,5 @@
+import type { SprintWeek } from '@itera/api-contract';
+
 /** A Sprint's name next to now, for headings and sentences (#90). */
 export type WeekName = '今週' | '来週';
 
@@ -7,15 +9,27 @@ export type WeekName = '今週' | '来週';
  */
 export type WeekLabel = '先週' | WeekName;
 
+const LABELS: Readonly<Record<SprintWeek, WeekLabel>> = {
+  previous: '先週',
+  current: '今週',
+  next: '来週',
+};
+
+/** The name of a Sprint's place next to now, for the Sprint Header. */
+export function weekLabel(week: SprintWeek | undefined): WeekLabel | undefined {
+  return week === undefined ? undefined : LABELS[week];
+}
+
 /** The name a sentence may use: 「先週」 stays in the Sprint Header (#168). */
 export function weekNameOnly(
-  week: WeekLabel | undefined,
+  week: SprintWeek | undefined,
 ): WeekName | undefined {
-  return week === '先週' ? undefined : week;
+  const label = weekLabel(week);
+  return label === '先週' ? undefined : label;
 }
 
 /** 「今週」「来週」, or 「Sprint N」 for a Sprint that is neither (#90). */
-export function weekCall(week: WeekLabel | undefined, number: number): string {
+export function weekCall(week: SprintWeek | undefined, number: number): string {
   const name = weekNameOnly(week);
   return name ?? `Sprint ${number}`;
 }

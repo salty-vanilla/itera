@@ -1,0 +1,150 @@
+openapi: 3.1.1
+info:
+  title: Itera API
+  version: 0.7.0
+  summary: The contract between Itera's clients and its API (ADR 0006).
+  description: >-
+    Spec-first: this file and the files it refers to are the source of
+    truth. The API (services/api) and the clients (apps/web, later iOS and
+    Android) take their types, schemas and clients from it. The rules are
+    packages/domain's and only the server runs them; an operation is a name
+    and its input, carried by a resource's path and an HTTP method (ADR 0005
+    API への移行, ADR 0006 経路の形).
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+  - url: /api
+    description: The same origin as the web app (ADR 0004 Web と API の配信).
+security:
+  - session: []
+tags:
+  - name: Me
+    description: The signed-in person, their settings and the Sprints they have now.
+  - name: Reads
+    description: The reads of the resources.
+  - name: Area
+    description: 領域.
+  - name: Task
+    description: A Task and what it has (Subtasks, its recurrence, estimate suggestions).
+  - name: Sprint
+    description: A Sprint and what is in it (Goals, SprintTasks, occurrences, actual time).
+  - name: Today
+    description: A day's choices and interrupts in the running Sprint.
+  - name: Retro
+    description: A Sprint's Retro.
+  - name: PlanningCriterion
+    description: 計画基準.
+paths:
+  /me:
+    $ref: './paths/me.yaml#/me'
+  /me/settings:
+    $ref: './paths/me.yaml#/meSettings'
+  /areas:
+    $ref: './paths/area.yaml#/areas'
+  /areas/{areaId}:
+    $ref: './paths/area.yaml#/area'
+  /areas/{areaId}/archive:
+    $ref: './paths/area.yaml#/areaArchive'
+  /areas/{areaId}/restore:
+    $ref: './paths/area.yaml#/areaRestore'
+  /tasks:
+    $ref: './paths/task.yaml#/tasks'
+  /tasks/{taskId}:
+    $ref: './paths/task.yaml#/task'
+  /tasks/{taskId}/archive:
+    $ref: './paths/task.yaml#/taskArchive'
+  /tasks/{taskId}/restore:
+    $ref: './paths/task.yaml#/taskRestore'
+  /tasks/{taskId}/complete:
+    $ref: './paths/task.yaml#/taskComplete'
+  /tasks/{taskId}/undo-complete:
+    $ref: './paths/task.yaml#/taskUndoComplete'
+  /tasks/{taskId}/recurrence:
+    $ref: './paths/task.yaml#/taskRecurrence'
+  /tasks/{taskId}/subtasks:
+    $ref: './paths/task.yaml#/subtasks'
+  /tasks/{taskId}/subtasks/{subtaskId}:
+    $ref: './paths/task.yaml#/subtask'
+  /tasks/{taskId}/estimate-suggestions/{suggestionId}/adopt:
+    $ref: './paths/task.yaml#/suggestionAdopt'
+  /tasks/{taskId}/estimate-suggestions/{suggestionId}/undo-adopt:
+    $ref: './paths/task.yaml#/suggestionUndoAdopt'
+  /tasks/{taskId}/estimate-suggestions/{suggestionId}/reject:
+    $ref: './paths/task.yaml#/suggestionReject'
+  /tasks/{taskId}/estimate-suggestions/{suggestionId}/undo-reject:
+    $ref: './paths/task.yaml#/suggestionUndoReject'
+  /backlog:
+    $ref: './paths/reads.yaml#/backlog'
+  /days/{date}:
+    $ref: './paths/reads.yaml#/day'
+  /sprints:
+    $ref: './paths/sprint.yaml#/sprints'
+  /sprints/{sprintId}:
+    $ref: './paths/sprint.yaml#/sprint'
+  /sprints/{sprintId}/confirm:
+    $ref: './paths/sprint.yaml#/sprintConfirm'
+  /sprints/{sprintId}/goals/{areaId}:
+    $ref: './paths/sprint.yaml#/sprintGoal'
+  /sprints/{sprintId}/sprint-tasks:
+    $ref: './paths/sprint.yaml#/sprintTasks'
+  /sprints/{sprintId}/sprint-tasks/{sprintTaskId}:
+    $ref: './paths/sprint.yaml#/sprintTask'
+  /sprints/{sprintId}/sprint-tasks/{sprintTaskId}/exclude-occurrences:
+    $ref: './paths/sprint.yaml#/sprintTaskExcludeOccurrences'
+  /sprints/{sprintId}/included-occurrences:
+    $ref: './paths/sprint.yaml#/includedOccurrences'
+  /sprints/{sprintId}/included-occurrences/{occurrenceId}:
+    $ref: './paths/sprint.yaml#/includedOccurrence'
+  /sprints/{sprintId}/candidates:
+    $ref: './paths/sprint.yaml#/candidates'
+  /sprints/{sprintId}/daily-selections:
+    $ref: './paths/sprint.yaml#/dailySelections'
+  /sprints/{sprintId}/daily-selections/{selectionId}/start:
+    $ref: './paths/sprint.yaml#/selectionStart'
+  /sprints/{sprintId}/daily-selections/{selectionId}/pause:
+    $ref: './paths/sprint.yaml#/selectionPause'
+  /sprints/{sprintId}/daily-selections/{selectionId}/defer:
+    $ref: './paths/sprint.yaml#/selectionDefer'
+  /sprints/{sprintId}/daily-selections/{selectionId}/undo-defer:
+    $ref: './paths/sprint.yaml#/selectionUndoDefer'
+  /sprints/{sprintId}/daily-selections/{selectionId}/remove:
+    $ref: './paths/sprint.yaml#/selectionRemove'
+  /sprints/{sprintId}/daily-selections/{selectionId}/undo-remove:
+    $ref: './paths/sprint.yaml#/selectionUndoRemove'
+  /sprints/{sprintId}/daily-selections/{selectionId}/complete:
+    $ref: './paths/sprint.yaml#/selectionComplete'
+  /sprints/{sprintId}/daily-selections/{selectionId}/undo-complete:
+    $ref: './paths/sprint.yaml#/selectionUndoComplete'
+  /sprints/{sprintId}/daily-selections/{selectionId}/skip:
+    $ref: './paths/sprint.yaml#/selectionSkip'
+  /sprints/{sprintId}/daily-selections/{selectionId}/undo-skip:
+    $ref: './paths/sprint.yaml#/selectionUndoSkip'
+  /sprints/{sprintId}/actual-times:
+    $ref: './paths/sprint.yaml#/actualTimes'
+  /sprints/{sprintId}/interrupts:
+    $ref: './paths/sprint.yaml#/interrupts'
+  /sprints/{sprintId}/interrupts/{interruptNoteId}:
+    $ref: './paths/sprint.yaml#/interrupt'
+  /sprints/{sprintId}/retro:
+    $ref: './paths/retro.yaml#/retro'
+  /sprints/{sprintId}/retro/complete:
+    $ref: './paths/retro.yaml#/retroComplete'
+  /sprints/{sprintId}/retro/pins/{pin}:
+    $ref: './paths/retro.yaml#/retroPin'
+  /sprints/{sprintId}/criterion-use:
+    $ref: './paths/retro.yaml#/criterionUse'
+  /planning-criteria:
+    $ref: './paths/planning-criterion.yaml#/planningCriteria'
+  /planning-criteria/{criterionId}:
+    $ref: './paths/planning-criterion.yaml#/planningCriterion'
+components:
+  securitySchemes:
+    session:
+      description: >-
+        Better Auth's session cookie, set by signing in (/api/auth/*, not in
+        this contract). Over HTTPS its name has the `__Secure-` prefix. A
+        browser sends it by itself; there is no bearer token.
+      type: apiKey
+      in: cookie
+      name: better-auth.session_token

@@ -1,4 +1,4 @@
-import type { TaskFact } from '@itera/domain';
+import type { TaskFact } from '@itera/api-contract';
 import { describe, expect, it } from 'vitest';
 import { differenceText } from './task-values';
 

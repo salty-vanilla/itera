@@ -64,6 +64,14 @@ export const WithError: Story = {
   },
 };
 
+/** 保存が通らず、書いた時間を残している（Field の SaveFailed と同じ）。 */
+export const SaveFailed: Story = {
+  args: {
+    value: { hours: '2', minutes: '30' },
+    saveFailed: true,
+  },
+};
+
 /** 行の中に置くときは見出しを隠し、行の名前をグループの名前にする。 */
 export const HiddenLabel: Story = {
   args: {

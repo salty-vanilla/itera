@@ -1,0 +1,47 @@
+{
+  "name": "@itera/api-contract",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./create-client": "./src/create-client.ts",
+    "./problems": "./src/problems.ts",
+    "./react-query": "./src/react-query.ts",
+    "./requests": "./src/requests.ts",
+    "./testing": "./src/testing.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.test.json",
+    "lint:spec": "REDOCLY_SUPPRESS_UPDATE_NOTICE=true redocly lint openapi/openapi.yaml",
+    "generate": "node scripts/generated.mjs write",
+    "check:generated": "node scripts/generated.mjs check"
+  },
+  "dependencies": {
+    "@itera/application": "workspace:*",
+    "valibot": "1.5.0"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "5.104.1",
+    "react": "19.3.0"
+  },
+  "peerDependenciesMeta": {
+    "@tanstack/react-query": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "0.99.0",
+    "@itera/domain": "workspace:*",
+    "@redocly/cli": "2.57.0",
+    "@tanstack/react-query": "5.104.1",
+    "@types/react": "19.3.0",
+    "react": "19.3.0",
+    "typescript": "6.0.3",
+    "vitest": "5.0.2"
+  }
+}

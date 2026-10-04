@@ -1,4 +1,4 @@
-import type { SuggestionBound, TaskId } from '@itera/domain';
+import type { SuggestionBound, TaskId } from '@itera/api-contract';
 import { Ellipsis, Target, Undo2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { AreaIndicator } from '@/components/ui/area-indicator';
@@ -18,12 +18,12 @@ import { TaskRow } from '@/components/task/task-row';
 import { formatPlanningSum, formatPlanningTotal } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
 import { weekCall, weekText } from '@/lib/week-text';
-import type {
-  AreaPlan,
-  PlannedTask,
-  PlanningData,
-} from '@/store/planning-view';
-import { usePlanningActions } from '@/store/use-planning';
+import {
+  usePlanActions,
+  type AreaPlan,
+  type PlannedTask,
+  type PlanningData,
+} from '@/screen-data/use-planning';
 import { plannedSourceText } from './planned-source';
 
 // The Sprint pane of Planning (Thinking space, at most 680px; from 1920px
@@ -66,6 +66,12 @@ type PlanPaneProps = {
   onOpenTask: (taskId: TaskId) => void;
   /** E on a row: the Task's detail, at its Estimate. */
   onEstimateTask: (taskId: TaskId) => void;
+  /**
+   * Whether the Task has a detail to open: the Backlog has its row (a Task
+   * completed or archived during Planning has none, and cannot be chosen
+   * again).
+   */
+  inBacklog: (taskId: TaskId) => boolean;
   className?: string | undefined;
 };
 
@@ -76,9 +82,10 @@ function PlanPane({
   addedTaskId,
   onOpenTask,
   onEstimateTask,
+  inBacklog,
   className,
 }: PlanPaneProps) {
-  const actions = usePlanningActions();
+  const actions = usePlanActions(data.sprint.id);
   const week = weekCall(data.week, data.number);
   const criterionBound = data.criterion?.active.policy.rangePolicy;
   const withTasks = data.plan.filter((p) => p.tasks.length > 0);
@@ -140,10 +147,12 @@ function PlanPane({
                 block={block}
                 stage={stage}
                 week={week}
+                actions={actions}
                 criterionBound={criterionBound}
                 addedTaskId={addedTaskId}
                 onOpenTask={onOpenTask}
                 onEstimateTask={onEstimateTask}
+                inBacklog={inBacklog}
               />
             </section>
           ) : (
@@ -154,17 +163,21 @@ function PlanPane({
                 block.tasks.length > 0 ? summaryOf(block, stage) : undefined
               }
               goal={block.goal?.text}
+              goalEtag={block.goal?.etag}
               week={week}
               // An Area with neither a Goal nor a Task is one line (#161).
               bare={block.tasks.length === 0 && block.goal === undefined}
               // 確かめる is for reading: no 編集, no 「+ 目標を書く」 (#93).
               onSave={
-                block.area.id === null || stage === 'check'
+                block.area.id === null ||
+                stage === 'check' ||
+                !block.goalCapabilities.canSet
                   ? undefined
-                  : (text) =>
+                  : (text, from) =>
                       actions.setGoal(
                         block.area.id as NonNullable<typeof block.area.id>,
                         text,
+                        from,
                       )
               }
             >
@@ -173,10 +186,12 @@ function PlanPane({
                   block={block}
                   stage={stage}
                   week={week}
+                  actions={actions}
                   criterionBound={criterionBound}
                   addedTaskId={addedTaskId}
                   onOpenTask={onOpenTask}
                   onEstimateTask={onEstimateTask}
+                  inBacklog={inBacklog}
                 />
               )}
             </GoalBlock>
@@ -201,22 +216,28 @@ function summaryOf(block: AreaPlan, stage: Stage): string {
   }`;
 }
 
+type PlanActions = ReturnType<typeof usePlanActions>;
+
 function PlannedList({
   block,
   stage,
   week,
+  actions,
   criterionBound,
   addedTaskId,
   onOpenTask,
   onEstimateTask,
+  inBacklog,
 }: {
   block: AreaPlan;
   stage: Stage;
   week: string;
+  actions: PlanActions;
   criterionBound: SuggestionBound | undefined;
   addedTaskId: TaskId | undefined;
   onOpenTask: (taskId: TaskId) => void;
   onEstimateTask: (taskId: TaskId) => void;
+  inBacklog: (taskId: TaskId) => boolean;
 }) {
   return (
     <ul className="flex flex-col border-t border-border-soft">
@@ -226,11 +247,16 @@ function PlannedList({
             planned={planned}
             stage={stage}
             week={week}
+            actions={actions}
             criterionBound={criterionBound}
             hasGoal={block.goal !== undefined}
             added={planned.task.id === addedTaskId}
             onOpen={() => onOpenTask(planned.task.id)}
-            onEstimate={() => onEstimateTask(planned.task.id)}
+            onEstimate={
+              inBacklog(planned.task.id)
+                ? () => onEstimateTask(planned.task.id)
+                : undefined
+            }
           />
         </li>
       ))}
@@ -242,6 +268,7 @@ function PlannedRow({
   planned,
   stage,
   week,
+  actions,
   criterionBound,
   hasGoal,
   added,
@@ -252,6 +279,8 @@ function PlannedRow({
   stage: Stage;
   /** 「今週」「来週」 (#90). */
   week: string;
+  /** The operations on the plan (one hook, in the pane). */
+  actions: PlanActions;
   /** The value of the suggestion the Sprint's criterion plans with. */
   criterionBound: SuggestionBound | undefined;
   /** The Task's Area has a Goal: only then is the link shown and changed. */
@@ -259,12 +288,19 @@ function PlannedRow({
   /** Just added in the Quick Add: the row flashes for a moment (Issue #92). */
   added: boolean;
   onOpen: () => void;
-  onEstimate: () => void;
+  /** Absent when the Task has no detail to open (see `inBacklog`). */
+  onEstimate: (() => void) | undefined;
 }) {
-  const actions = usePlanningActions();
   const toast = useToast();
-  const { sprintTask, task, value, occurrenceCount, suggestion, inactive } =
-    planned;
+  const {
+    sprintTask,
+    task,
+    value,
+    occurrenceCount,
+    suggestion,
+    inactive,
+    capabilities,
+  } = planned;
   const recurring = occurrenceCount !== undefined;
   const source =
     suggestion === undefined
@@ -275,6 +311,13 @@ function PlannedRow({
   // Area without one is unlinked at confirm, goalLinkAtConfirm), so the row
   // says it, in the words of its menu item, only there (#159).
   const showLink = stage !== 'pick' && hasGoal;
+  // A draft leaves the week by itself; a recurring one, by all of its
+  // occurrences (invariant 33): whichever the read says can be done (#323).
+  const leaves = capabilities.canRemove
+    ? 'remove'
+    : capabilities.canExcludeAllOccurrences
+      ? 'exclude'
+      : undefined;
   const Repeat = semanticIcons.recurrence;
   const Carry = semanticIcons.carriedOver;
   const meta = [
@@ -303,25 +346,26 @@ function PlannedRow({
     showLink && !linked && <MetaItem key="g">目標に入っていない</MetaItem>,
   ].filter(Boolean);
 
-  const unchoose = () => {
+  const unchoose = async () => {
     const occurrenceIds = sprintTask.occurrenceIds ?? [];
-    const done = recurring
-      ? actions.excludeAllOccurrences(sprintTask.id)
-      : actions.unchooseTasks([sprintTask.id]);
+    const done =
+      leaves === 'exclude'
+        ? await actions.excludeAllOccurrences(sprintTask.id)
+        : await actions.unchooseTasks([sprintTask.id]);
     if (!done) return;
     toast.show({
       kind: 'sprint-pick',
       title: `「${task.title}」を${weekText(week, 'から外しました')}`,
-      // A completed or archived Task cannot be chosen again, so there is
-      // nothing to undo.
-      ...(inactive === undefined
+      // A completed or archived Task cannot be chosen again (it has left
+      // the Backlog), so there is nothing to undo.
+      ...(onEstimate !== undefined
         ? {
             action: {
               label: '元に戻す',
               onClick: () =>
-                recurring
+                void (leaves === 'exclude'
                   ? actions.includeOccurrences(occurrenceIds)
-                  : actions.chooseTasks([task.id]),
+                  : actions.chooseTasks([task.id])),
             },
           }
         : {}),
@@ -329,17 +373,23 @@ function PlannedRow({
   };
 
   const menuItems = [
-    <MenuItem key="out" onClick={unchoose}>
-      <Undo2 aria-hidden />
-      {recurring
-        ? weekText(week, `から外す（${occurrenceCount}回すべて）`)
-        : weekText(week, 'から外す')}
-    </MenuItem>,
-    showLink && (
+    leaves !== undefined && (
+      <MenuItem key="out" onClick={() => void unchoose()}>
+        <Undo2 aria-hidden />
+        {recurring
+          ? weekText(week, `から外す（${occurrenceCount}回すべて）`)
+          : weekText(week, 'から外す')}
+      </MenuItem>
+    ),
+    showLink && capabilities.canSetGoalLink && (
       <MenuItem
         key="link"
         onClick={() =>
-          actions.setGoalLink(sprintTask.id, linked ? 'unlinked' : 'linked')
+          void actions.setGoalLink(
+            sprintTask.id,
+            linked ? 'unlinked' : 'linked',
+            { etag: sprintTask.etag },
+          )
         }
       >
         <Target aria-hidden />
@@ -347,7 +397,7 @@ function PlannedRow({
       </MenuItem>
     ),
     // A completed or archived Task has no detail to open (as in Today).
-    inactive === undefined && (
+    onEstimate !== undefined && (
       <EstimateMenuItem key="estimate" onSelect={onEstimate} />
     ),
   ].filter(Boolean);
@@ -362,7 +412,7 @@ function PlannedRow({
         added ? 'animate-[added-flash_2.5s_ease-in-out_forwards]' : undefined
       }
       onOpen={onOpen}
-      keys={inactive === undefined ? { onEstimate } : undefined}
+      keys={onEstimate !== undefined ? { onEstimate } : undefined}
       metadata={
         meta.length > 0 ? <TaskMetadata>{meta}</TaskMetadata> : undefined
       }
@@ -379,7 +429,7 @@ function PlannedRow({
             // 確かめる says the subtasks left out once, in 「見積もりなし」 (#241).
             withoutMissing={stage === 'check'}
             enter={
-              inactive === undefined
+              onEstimate !== undefined
                 ? { title: task.title, onEnter: onEstimate }
                 : undefined
             }

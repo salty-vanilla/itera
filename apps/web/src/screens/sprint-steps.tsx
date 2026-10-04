@@ -1,7 +1,11 @@
 import { useNavigate, useRouter } from '@tanstack/react-router';
 import type { SprintHeaderProps } from '@/components/sprint/sprint-header';
 import { isPlainClick } from '@/lib/plain-click';
-import type { SprintChoice, SprintRef } from '@/store/sprint-choice';
+
+/** What the header's ‹ › need of a Sprint: its number, in the URL. */
+interface StepTarget {
+  readonly number: number;
+}
 
 /**
  * The Sprint Header's ‹ ›: the previous and next Sprint on the same screen,
@@ -10,11 +14,11 @@ import type { SprintChoice, SprintRef } from '@/store/sprint-choice';
  */
 export function useSprintSteps(
   to: '/sprint' | '/retro',
-  choice: SprintChoice,
+  choice: { readonly previous?: StepTarget; readonly next?: StepTarget },
 ): NonNullable<SprintHeaderProps['steps']> {
   const router = useRouter();
   const navigate = useNavigate();
-  const step = (ref: SprintRef | undefined) =>
+  const step = (ref: StepTarget | undefined) =>
     ref && {
       number: ref.number,
       href: router.buildLocation({ to, search: { sprint: ref.number } }).href,

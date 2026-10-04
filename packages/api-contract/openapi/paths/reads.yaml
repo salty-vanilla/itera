@@ -1,0 +1,70 @@
+# The reads of aggregates across records (#295): each is a noun of the
+# domain, read only. The response is `{ clock, view }`: the clock the
+# server read with (ADR 0005 時計) and the view. Before reading, the server
+# brings the records up to now (the end of a Sprint, the start of a day,
+# #271); that write may meet another write. A person without settings yet
+# gets 422 `/problems/user-not-set-up`. The reads of a resource with writes are with them
+# (area.yaml, sprint.yaml, retro.yaml).
+
+backlog:
+  get:
+    operationId: getBacklog
+    tags: [Reads]
+    summary: The Backlog, filtered
+    description: "`backlogData`. Without `view` it shows all; with `area`, that Area's Tasks."
+    parameters:
+      - name: view
+        in: query
+        required: false
+        schema: { $ref: '../schemas/views.yaml#/BacklogSlice' }
+      - name: area
+        in: query
+        required: false
+        schema: { $ref: '../schemas/common.yaml#/AreaId' }
+    responses:
+      '200':
+        description: The Backlog.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clock, view]
+              properties:
+                clock: { $ref: '../schemas/common.yaml#/Clock' }
+                view: { $ref: '../schemas/views.yaml#/BacklogData' }
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/UserNotSetUp' }
+      '500': { $ref: '../responses.yaml#/ServerError' }
+
+day:
+  get:
+    operationId: getDay
+    tags: [Reads]
+    summary: A day, today, past or still to come
+    description: >-
+      Today's choices on the running Sprint, a past day's records, or a
+      future day's occurrences and deadlines (#295 R3), told apart by
+      `kind`.
+    parameters:
+      - name: date
+        in: path
+        required: true
+        schema: { $ref: '../schemas/common.yaml#/LocalDate' }
+    responses:
+      '200':
+        description: The day.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clock, view]
+              properties:
+                clock: { $ref: '../schemas/common.yaml#/Clock' }
+                view: { $ref: '../schemas/views.yaml#/DayView' }
+      '400': { $ref: '../responses.yaml#/BadRequest' }
+      '401': { $ref: '../responses.yaml#/Unauthenticated' }
+      '409': { $ref: '../responses.yaml#/RevisionConflict' }
+      '422': { $ref: '../responses.yaml#/UserNotSetUp' }
+      '500': { $ref: '../responses.yaml#/ServerError' }

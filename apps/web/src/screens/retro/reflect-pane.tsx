@@ -1,11 +1,14 @@
-import type { RetroPin } from '@itera/domain';
+import type { MadeFrom } from '@itera/api-contract/requests';
+import type { RetroPin } from '@itera/api-contract';
 import { useEffect, useId, useRef, useState } from 'react';
+import type { Saved } from '@/api/use-operation';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Tag } from '@/components/ui/tag';
 import { Textarea } from '@/components/ui/textarea';
+import { sameWords, useDraftField } from '@/lib/use-draft-field';
 import { cn } from '@/lib/utils';
-import type { RetroData } from '@/store/retro-view';
+import type { RetroData } from '@/screen-data/retro-view';
 import { Materials } from './materials';
 
 // 振り返る (patterns.md Retro): two inputs only — 「気づいたこと」
@@ -17,9 +20,10 @@ type ReflectPaneProps = {
   data: RetroData;
   /** A closed Retro: the words as they were written (#90). */
   readOnly?: boolean | undefined;
-  onPin: (pin: RetroPin) => void;
-  onReflect: (text: string) => boolean;
-  onImprove: (text: string) => boolean;
+  onPin: (pin: RetroPin, on: boolean) => void;
+  /** `from`: the Retro as read when the words were typed (#321). */
+  onReflect: (text: string, from: MadeFrom) => Promise<Saved>;
+  onImprove: (text: string, from: MadeFrom) => Promise<Saved>;
   /** The materials sit here below 1200px; beside the facts above it. */
   showMaterials: boolean;
   className?: string | undefined;
@@ -34,7 +38,9 @@ function ReflectPane({
   showMaterials,
   className,
 }: ReflectPaneProps) {
-  const [reflection, setReflection] = useState(data.reflection);
+  const reflection = useDraftField(data.reflection, Object.is, {
+    etag: data.sprint.retro?.etag,
+  });
   return (
     <div
       data-slot="reflect-pane"
@@ -43,7 +49,7 @@ function ReflectPane({
       {showMaterials && (
         <Materials
           data={data}
-          onPin={readOnly ? undefined : onPin}
+          onPin={data.capabilities.canUnpinFact ? onPin : undefined}
           className="wide:hidden"
         />
       )}
@@ -55,13 +61,21 @@ function ReflectPane({
             label="気づいたこと"
             necessity="optional"
             description="うまくいったこと、気になったこと。記録を見て思ったことを、そのまま書きます。"
+            saveFailed={reflection.saveFailed}
           >
             <Textarea
               text="body-l"
-              value={reflection}
-              onChange={(e) => setReflection(e.currentTarget.value)}
+              value={reflection.value}
+              onChange={(e) => reflection.set(e.currentTarget.value)}
+              // Saved only when it was typed in: a field left as it was
+              // never sends what was read when the Retro opened (#324).
+              readOnly={!data.capabilities.canUpdate}
               onBlur={() => {
-                if (reflection !== data.reflection) onReflect(reflection);
+                if (!data.capabilities.canUpdate) return;
+                if (reflection.leave())
+                  reflection.hold(
+                    onReflect(reflection.value, reflection.madeFrom),
+                  );
               }}
             />
           </Field>
@@ -123,11 +137,14 @@ function Improvement({
   onImprove,
 }: {
   data: RetroData;
-  onImprove: (text: string) => boolean;
+  onImprove: (text: string, from: MadeFrom) => Promise<Saved>;
 }) {
   const saved = data.improvement;
   const [editing, setEditing] = useState(saved === undefined);
-  const [text, setText] = useState(saved ?? '');
+  const field = useDraftField(saved ?? '', sameWords, {
+    etag: data.sprint.retro?.etag,
+  });
+  const text = field.value;
   const headingId = useId();
   const editRef = useRef<HTMLButtonElement>(null);
   const backToEdit = useRef(false);
@@ -138,12 +155,30 @@ function Improvement({
     }
   }, [editing]);
 
-  const save = () => {
+  // The save of the words being sent: leaving the field and pressing 確定
+  // come one after the other, and the second is the first's, not another.
+  const sending = useRef<{ text: string; result: Promise<Saved> } | undefined>(
+    undefined,
+  );
+  const save = (): Promise<boolean> => {
     const next = text.trim();
-    if (next === (saved ?? '')) return true;
+    // The save of these words is on its way (leaving the field, then 確定):
+    // its answer is this one's, whatever the field's base has become.
+    if (sending.current?.text === next)
+      return sending.current.result.then(({ ok }) => ok);
+    // Compared with what the field showed when it was typed in, not with
+    // what was read since: the other device's words are not written over.
+    if (!field.leave()) return Promise.resolve(true);
+    if (!data.capabilities.canUpdate) return Promise.resolve(false);
     // A criterion made from it keeps it; the handoff says to drop it first.
-    if (next === '' && data.draft !== undefined) return false;
-    return onImprove(next);
+    if (next === '' && data.draft !== undefined) return Promise.resolve(false);
+    const result = onImprove(next, field.madeFrom).then((saved) => {
+      if (sending.current?.result === result) sending.current = undefined;
+      return saved;
+    });
+    sending.current = { text: next, result };
+    field.hold(result);
+    return result.then(({ ok }) => ok);
   };
 
   return (
@@ -172,9 +207,9 @@ function Improvement({
         <form
           noValidate
           className="flex max-w-measure-read flex-col gap-2"
-          onSubmit={(event) => {
+          onSubmit={async (event) => {
             event.preventDefault();
-            if (save() && text.trim() !== '') {
+            if ((await save()) && text.trim() !== '') {
               backToEdit.current = true;
               setEditing(false);
             }
@@ -188,14 +223,16 @@ function Improvement({
                 ? '次の Sprint を計画するときに表示されます。'
                 : '計画のルールの元にしています。消すときは、先に「引き継ぐ」で「計画のルールにもする」をオフにしてください。'
             }
+            saveFailed={field.saveFailed}
           >
             <Textarea
               text="body-l"
               value={text}
               placeholder="例：論文は 1本ずつタスクに分ける"
-              onChange={(e) => setText(e.currentTarget.value)}
+              readOnly={!data.capabilities.canUpdate}
+              onChange={(e) => field.set(e.currentTarget.value)}
               // Kept as it is typed; 確定 only ends the editing.
-              onBlur={save}
+              onBlur={() => void save()}
             />
           </Field>
           <div>

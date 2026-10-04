@@ -21,10 +21,10 @@ import {
   completeRetro,
   decideCriterion,
   enterReview,
+  pinFact,
   previousImprovement,
   setImprovement,
   setReflection,
-  togglePin,
 } from './review';
 import { sprintAreaName } from './sprint';
 import {
@@ -326,11 +326,7 @@ describe('Scenario A — 関連論文を 3 本読む（Planning と確定）', (
     // 14. Retro: 「1 本ずつに分ける」, the criterion continues, Retro complete → Closed.
     const retroAt = at('2026-10-05T01:00:00.000Z');
     sprint = unwrap(
-      togglePin(
-        sprint,
-        { pin: { kind: 'sprintTask', id: 'st-paper' } },
-        retroAt,
-      ),
+      pinFact(sprint, { pin: { kind: 'sprintTask', id: 'st-paper' } }, retroAt),
     );
     sprint = unwrap(
       setReflection(sprint, { text: '3 本まとめてだと手が止まる' }, retroAt),

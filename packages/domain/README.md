@@ -63,6 +63,7 @@ type CommandResult<T> =
 - 成功したときは新しい記録と、追記する Activity を返す。何も変わらない操作は Activity を返さない。
 - 渡された記録は書き換えない。新しいオブジェクトを返す。
 - 複数の記録を同時に変える操作（#22 の確定、#23 の Backlog からの完了など）は、`T` を変えた記録をまとめたオブジェクトにする（例：`CommandResult<{ task: Task; sprintTask: SprintTask; dailySelection: DailySelection }>`）。途中の状態は返さない。
+- 読み取りが「今その記録に何ができるか」（ADR 0007「操作の可否」）を返すコマンドは、前提のうち記録の状態で決まる部分を `check<コマンド>(record, input): Result<…>` として export し、コマンドもまずそれで判定する（#322 で Today の選択と割り込みのコマンド、Backlog からの完了の取り消し（`checkUndoCompleteFromBacklog`。何を戻すかも返す）と、それが使う `checkCompleteTask`・`checkCompleteOccurrence` など。#323 で Task・繰り返し・サブタスク・提案・領域・Sprint の計画と確定・週の途中の追加・実行中・振り返り・計画基準のコマンド）。状態で断らないコマンド（`updateTask`・`addSubtask`・`renameArea`）の `check…` は、いつも `ok` を返す。`check…` は時計も Activity も使わず、入力の値の規則（正の時間、空でない本文）は見ない。同じ記録と入力で、`check…` が `ok: false` ならコマンドも同じ `code` で断り、`ok: true` ならコマンドは値の規則でだけ断る（`today-checks.test.ts`・`record-checks.test.ts`）。
 
 ### 記録と履歴
 
@@ -101,6 +102,7 @@ type CommandResult<T> =
 
 - **集約**：Sprint が根で、SprintGoal・SprintTask・SprintAreaSnapshot・CriterionUse を中に持つ。Occurrence は Task 側の記録で、SprintTask は `occurrenceIds` で参照する。コマンドは Sprint と、変えた Occurrence を一緒に返す。
 - **期間**：1 週（開始日は `User.weekStartsOn`、両端を含む）。新しい Sprint は既存のどの Sprint よりも後に始まり、Planning 中の Sprint は同時に 1 つまで。前の Sprint（`previousSprintId`）は、開始日より前で最後の Sprint。
+- **利用者の設定**：`setUpUser`。最初に作り、作った後は表示名だけ書き直せる。タイムゾーンと週の始まりは変えられない（`invalidInput`）。「今日」はタイムゾーンで、Sprint の開始日は週の始まりで決まるので、すでにある Sprint がある利用者の値を変えると、それらが動くため。変えたときの扱いは決まっておらず、設定を後から変える画面の Issue で決める（暫定の規則。ADR 0006「利用者」）。同じ値をもう一度書いても変わらない。
 - **繰り返しの SprintTask**：`occurrenceIds` は Sprint に含めた（外していない）回。Planning で最後の回を外すと、draft の SprintTask はなくなる。Sprint 中に外した回を戻すと、その回だけの SprintTask（origin = midSprint）を新しく作る。
 - **planSnapshot**：計画値に加えて、その時点の Estimate・提示中の提案・timeBasis・回数（繰り返しのとき）を写し取る（Retro の「計画時の Estimate」用）。繰り返しの計画値は 1 回の値 × 回数。 見積もりのないサブタスクの件数は回数倍にしない（毎回同じサブタスクなので）。
 - **Goal**：Planning では空の文で Goal を消せる。確定後は文を変えられるが消せない。確定後に新しく書いた Goal には `plannedText` がない。（F16）
@@ -137,7 +139,7 @@ type CommandResult<T> =
 ## Review と Retro で決めた細部（#24）
 
 - **Review への移行**（`enterReview`）：本人は最終日から、システムは終了日の翌日から（F21）。planned の単発の SprintTask は carriedOver、繰り返しの SprintTask は done で閉じる（F20）。Sprint に含めた Pending の回は missed、開いた選択は unresolved にする。この 2 つは本人が始めた場合もシステムの記録（actor = system、F23）。`occurrences` には Sprint の回を漏れなく渡すのは呼び出し側の責任（渡さなかった Pending の回は残る）。次の Sprint が Planning 中なら、それを `next` に渡し、戻り値の `next` も保存するのも呼び出し側の責任（渡さないと、先に選んだ Task が持ち越しとしてつながらない）。`next` の Draft のうち、carriedOver にした Task の単発で carriedFrom のないものに carriedFrom を付け、`sprintTaskCarryLinked` をシステムの記録として残す（F35。次の Sprint に入れるのではないので不変条件 20 に当たらない）。Retro はこのとき空で始まる。
-- **Retro**：Sprint の中に 1 つ（`sprint.retro`）。印（`togglePin`）、気になったこと（`setReflection`）、次に 1 つ変えること（`setImprovement`、1 件の自然文。不変条件 38）。自己判定（`assessGoal`）は本人（actor = user）だけが付け、`null` で未判定に戻す（不変条件 19）。同じ値を入れ直しても Activity は残さない。
+- **Retro**：Sprint の中に 1 つ（`sprint.retro`）。印をつける・外す（`pinFact`・`unpinFact`。印をつけられるのは、その Sprint の事実〔SprintTask・DailySelection・Occurrence・割り込み・Goal・使える時間〕だけで、ほかの Sprint の ID や存在しない ID は `notFound`、ID のないものは `invalidInput`。付いている印をつける・付いていない印を外すときは何も変えず、Activity も残さない）、気になったこと（`setReflection`）、次に 1 つ変えること（`setImprovement`、1 件の自然文。不変条件 38）。自己判定（`assessGoal`）は本人（actor = user）だけが付け、`null` で未判定に戻す（不変条件 19）。同じ値を入れ直しても Activity は残さない。
 - **計画基準**：PlanningCriterion は User の記録（`criterion.ts`）。Improvement から `draftCriterion` で 0..1 件の下書きを作り、`dropCriterionDraft` で捨てる（記録は呼び出し側が消す）。この Sprint に CriterionUse があれば、`decideCriterion`（本人だけ）で続ける / 終える / 置き換えるを選ぶまで `completeRetro` はできない（不変条件 36。理由は求めない）。置き換えるには、この Retro の下書きが要る。
 - **Retro の完了**（`completeRetro`）：Review → Closed。続けるなら Active のまま、終えるなら Ended、置き換えるなら Replaced（`replacedBy` = 下書き）にして下書きを Active にする。下書きは、Active が続く場合を除いて Active になる（続けるのに下書きがあると Active が 2 つになるので拒否する。不変条件 35）。変わった基準の記録を返す。
 - **次の Planning の入口**：`previousImprovement` で前の Sprint の Improvement を出す。

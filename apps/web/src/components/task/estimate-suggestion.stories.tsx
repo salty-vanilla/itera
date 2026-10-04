@@ -1,14 +1,13 @@
-import { id, instant } from '@itera/domain';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { EstimateSuggestion, SuggestionOutcome } from './estimate-suggestion';
 
 const suggestion = {
-  id: id<'EstimateSuggestion'>('sug-1'),
+  id: 'sug-1',
   lo: 2,
   hi: 4,
   rationale: '過去の類似タスク 3件（実績 2時間 / 2時間30分 / 4時間）',
   uncertainties: ['調査範囲（対象データの件数が未定）'],
-  createdAt: instant('2026-09-29T03:00:00.000Z'),
+  createdAt: '2026-09-29T03:00:00.000Z',
   state: 'presented' as const,
 };
 

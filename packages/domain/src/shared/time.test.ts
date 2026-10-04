@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   addDays,
   dayOfWeek,
+  daysBetween,
   instant,
   localDate,
   parseInstant,
@@ -23,6 +24,16 @@ describe('LocalDate', () => {
     expect(addDays(localDate('2026-09-28'), 6)).toBe('2026-10-04');
     expect(addDays(localDate('2026-12-31'), 1)).toBe('2027-01-01');
     expect(addDays(localDate('2026-03-01'), -1)).toBe('2026-02-28');
+  });
+
+  it('counts the days between two dates', () => {
+    const from = localDate('2026-09-28');
+    expect(daysBetween(from, from)).toBe(0);
+    expect(daysBetween(from, localDate('2026-10-04'))).toBe(6);
+    expect(daysBetween(localDate('2026-12-31'), localDate('2027-01-01'))).toBe(
+      1,
+    );
+    expect(daysBetween(localDate('2026-10-04'), from)).toBe(-6);
   });
 
   it('knows the day of the week', () => {
@@ -70,6 +81,10 @@ describe('TimeZone', () => {
   it('accepts IANA names and returns an error for unknown ones', () => {
     expect(parseTimeZone('Asia/Tokyo').ok).toBe(true);
     expect(parseTimeZone('UTC').ok).toBe(true);
+    expect(parseTimeZone('asia/tokyo')).toEqual({
+      ok: true,
+      value: 'Asia/Tokyo',
+    });
     expect(parseTimeZone('Mars/Olympus')).toMatchObject({
       ok: false,
       error: { code: 'invalidInput' },

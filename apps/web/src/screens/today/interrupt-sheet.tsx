@@ -1,3 +1,4 @@
+import type { MadeFrom } from '@itera/api-contract/requests';
 import { useRef, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,10 +16,11 @@ import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
 import {
   DURATION_ERROR,
-  EMPTY_DURATION,
   durationText,
   readMinutes,
+  sameDuration,
 } from '@/lib/duration-text';
+import { sameWords, useDraftField } from '@/lib/use-draft-field';
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 
 // 割り込みを記録 (patterns.md Today): a short note and optional minutes,
@@ -33,32 +35,64 @@ import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 type InterruptSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Returns whether it went through; the sheet then closes. */
-  onSubmit: (text: string, minutes: number | undefined) => boolean;
-  /** 編集: the note as recorded, and the time it was noted (「10:00」). */
-  editing?: { text: string; minutes?: number; time: string };
+  /**
+   * Returns whether it went through; the sheet then closes. One that is
+   * sent returns when it is done.
+   */
+  onSubmit: (
+    text: string,
+    minutes: number | undefined,
+    /** 編集: the note as read when it was first typed in (#321). */
+    from: MadeFrom | undefined,
+  ) => boolean | Promise<boolean>;
+  /** The save has been sent for a while (useOperation `loading`). */
+  loading?: boolean;
+  /**
+   * 編集: the note as recorded, the time it was noted (「10:00」), and its
+   * etag as read (#321).
+   */
+  editing?: { text: string; minutes?: number; time: string; etag: string };
 };
 
 function InterruptSheet({
   open,
   onOpenChange,
   onSubmit,
+  loading = false,
   editing,
 }: InterruptSheetProps) {
-  const [text, setText] = useState(editing?.text ?? '');
-  const [minutes, setMinutes] = useState(durationText(editing?.minutes));
+  // Typed apart from the note as read (`editing`): until they are typed in
+  // the fields show the note as it is now, and 保存 on a note nothing was
+  // typed in sends nothing, so that the words it was opened with never go
+  // over another device's (#324).
+  const textField = useDraftField(editing?.text ?? '', sameWords);
+  const minutesField = useDraftField(
+    durationText(editing?.minutes),
+    sameDuration,
+  );
+  const text = textField.value;
+  const minutes = minutesField.value;
+  // 編集: the note as read when either field was first typed in, which the
+  // save is made from (#321). After a save that did not go through, the
+  // next is made from the note as it then is: the Toast has said why.
+  const typedFrom = useRef<MadeFrom | undefined>(undefined);
+  const typing = () => {
+    if (typedFrom.current === undefined && editing !== undefined)
+      typedFrom.current = { etag: editing.etag };
+  };
   const [errors, setErrors] = useState<{ text?: string; minutes?: string }>({});
   const formRef = useRef<HTMLFormElement>(null);
   const medium = useMediaQuery(MEDIUM_UP, true);
   const change = (next: boolean) => {
     if (!next) {
-      setText('');
-      setMinutes(EMPTY_DURATION);
+      textField.drop();
+      minutesField.drop();
+      typedFrom.current = undefined;
       setErrors({});
     }
     onOpenChange(next);
   };
-  const save = (event: FormEvent) => {
+  const save = async (event: FormEvent) => {
     event.preventDefault();
     const note = text.trim();
     const m = readMinutes(minutes);
@@ -76,7 +110,21 @@ function InterruptSheet({
       );
       return;
     }
-    if (onSubmit(note, m ?? undefined)) change(false);
+    if (editing !== undefined && !textField.edited && !minutesField.edited) {
+      change(false);
+      return;
+    }
+    const from =
+      editing === undefined
+        ? undefined
+        : (typedFrom.current ?? { etag: editing.etag });
+    const saving = Promise.resolve(onSubmit(note, m ?? undefined, from));
+    // Held until it is answered: a save that did not go through gives the
+    // typing back, and the fields say it is not saved (#332).
+    if (textField.edited) textField.hold(saving);
+    if (minutesField.edited) minutesField.hold(saving);
+    if (await saving) change(false);
+    else typedFrom.current = undefined;
   };
   return (
     <Drawer
@@ -103,26 +151,38 @@ function InterruptSheet({
             </DrawerDescription>
           </DrawerHeader>
           <DrawerBody className="flex flex-col gap-4">
-            <Field label="メモ" necessity="required" error={errors.text}>
+            <Field
+              label="メモ"
+              necessity="required"
+              error={errors.text}
+              saveFailed={textField.saveFailed}
+            >
               <TextInput
                 value={text}
                 placeholder="例：障害対応、急な来客"
-                onChange={(e) => setText(e.currentTarget.value)}
+                onChange={(e) => {
+                  typing();
+                  textField.set(e.currentTarget.value);
+                }}
               />
             </Field>
             <DurationField
               label="かかった時間"
               necessity="optional"
               error={errors.minutes}
+              saveFailed={minutesField.saveFailed}
               value={minutes}
-              onChange={setMinutes}
+              onChange={(value) => {
+                typing();
+                minutesField.set(value);
+              }}
             />
           </DrawerBody>
           <DrawerFooter>
             <DrawerClose render={<Button variant="quiet" />}>
               キャンセル
             </DrawerClose>
-            <Button type="submit">
+            <Button type="submit" loading={loading} loadingLabel="保存中…">
               {editing === undefined ? '記録する' : '保存'}
             </Button>
           </DrawerFooter>

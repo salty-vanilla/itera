@@ -1,4 +1,4 @@
-import type { RetroPin } from '@itera/domain';
+import type { RetroPin } from '@itera/api-contract';
 import type { ReactNode } from 'react';
 import { semanticIcons } from '@/components/ui/icon';
 import { MetaItem, TaskMetadata } from '@/components/task/task-metadata';
@@ -6,7 +6,7 @@ import { formatDate, formatDateTime } from '@/lib/date-format';
 import { SELECTION_WORDS } from '@/lib/selection-words';
 import { formatHours } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
-import type { RetroData } from '@/store/retro-view';
+import type { RetroData } from '@/screen-data/retro-view';
 import { occurrenceWord, PinToggle } from './retro-words';
 import {
   actualLabel,
@@ -145,7 +145,7 @@ function Materials({
 }: {
   data: RetroData;
   /** Absent in a closed Retro: read only. */
-  onPin: ((pin: RetroPin) => void) | undefined;
+  onPin: ((pin: RetroPin, on: boolean) => void) | undefined;
   headingLevel?: 2 | 3;
   className?: string | undefined;
 }) {
@@ -194,7 +194,7 @@ function Materials({
                   <PinToggle
                     pinned
                     subject={text}
-                    onToggle={() => onPin(pin)}
+                    onToggle={() => onPin(pin, false)}
                   />
                 </span>
               )}

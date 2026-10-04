@@ -1,12 +1,52 @@
+import { settingsSurface } from '@itera/api-contract/requests';
 import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { authBasePath } from './auth/authenticator';
 import { requireAuth } from './auth/require-auth';
 import type { Dependencies } from './dependencies';
 import type { AppEnv } from './env';
+import { ApiError, errorResponse, loggedError } from './errors';
+import { createFlow, type Guards } from './handlers/flow';
+import { getMe, putSettings } from './handlers/me';
+import { limitBody } from './handlers/body';
+import { readWrite } from './handlers/idempotency';
+import { operationRoutes } from './handlers/operations';
+import { readRoutesApp } from './handlers/reads';
+import { requireSameOrigin } from './handlers/same-origin';
 
 export function createApp(dependencies: Dependencies) {
   const app = new Hono<AppEnv>();
+  const flow = createFlow(dependencies);
+
+  // Every failure answers with one of the contract's problems (ADR 0006).
+  // An unexpected one is 500 and goes to Workers Logs, without the
+  // request's body or the records.
+  app.onError((error, c) => {
+    if (error instanceof ApiError) {
+      return errorResponse(c, error.failure);
+    }
+    console.error(
+      JSON.stringify({
+        message: 'Unexpected failure',
+        method: c.req.method,
+        route: c.req.routePath,
+        error: loggedError(error),
+      }),
+    );
+    return errorResponse(c, {
+      type: '/problems/internal-error',
+      detail: 'An unexpected failure.',
+    });
+  });
+
+  // A path no route takes. The Worker runs first only for /api/* (the rest
+  // is the web app's assets), and Better Auth answers its own /api/auth/*.
+  app.notFound((c) =>
+    errorResponse(c, {
+      type: '/problems/not-found',
+      detail: `No ${c.req.method} ${c.req.path} in the API.`,
+    }),
+  );
 
   app.use(async (c, next) => {
     c.set('db', dependencies.database(c.env));
@@ -14,6 +54,7 @@ export function createApp(dependencies: Dependencies) {
   });
 
   // The auth service's own routes: sign-in, callbacks, passkeys, sign-out.
+  // Better Auth checks their Origin itself.
   app.all(`${authBasePath}/*`, (c) =>
     dependencies.authenticator(c.env, c.var.db).handle(c.req.raw),
   );
@@ -24,9 +65,23 @@ export function createApp(dependencies: Dependencies) {
     return c.json({ status: 'ok' });
   });
 
-  app.get('/api/me', requireAuth(dependencies.authenticator), (c) =>
-    c.json({ userId: c.var.userId }),
+  // The contract's routes (ADR 0006): the user first, then the Origin of a
+  // write (ADR 0004 「操作と読み取りの処理」).
+  const guards: Guards = {
+    user: requireAuth(dependencies.authenticator),
+    origin: requireSameOrigin(dependencies.appOrigin),
+  };
+  app.get('/api/me', guards.user, guards.origin, (c) => getMe(c, flow));
+  app.put(
+    `/api${settingsSurface.url}`,
+    guards.user,
+    guards.origin,
+    limitBody,
+    readWrite,
+    (c) => putSettings(c, flow),
   );
+  app.route('/api', readRoutesApp(flow, guards));
+  app.route('/api', operationRoutes(flow, guards));
 
   return app;
 }
