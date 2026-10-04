@@ -293,7 +293,6 @@ const tools = new Set([
   'true',
   'shasum',
   'sha256sum',
-  'date',
   'which',
   'tree',
 ]);
@@ -307,8 +306,34 @@ const allowed = ([name, ...args]) => {
   if (name === 'sort') return !hasArg(args, /^(-[^-]*o|--o|--c)/);
   if (name === 'rg') return !hasArg(args, /^(-[^-]*z|--(pre|search-zip))/);
   if (name === 'tree') return !hasArg(args, /^(-[^-]*o|--o)/);
-  if (name === 'uniq')
-    return args.filter((arg) => !arg.startsWith('-')).length <= 1;
+  if (name === 'uniq') {
+    // `uniq [INPUT [OUTPUT]]` writes to its second operand, and `-` (standard
+    // input) is an operand too, so allow one operand at most.
+    const operands = [];
+    for (let i = 0; i < args.length; i += 1) {
+      if (args[i] === '--') {
+        operands.push(...args.slice(i + 1));
+        break;
+      }
+      if (args[i] === '-' || !args[i].startsWith('-')) operands.push(args[i]);
+      else if (/^-[fsw]$/.test(args[i])) i += 1; // the option's value
+    }
+    return operands.length <= 1;
+  }
+  if (name === 'date') {
+    // An operand (`date 0101`, `-f fmt new_date`) or `-s` sets the clock, so
+    // allow only output formats and display options.
+    for (let i = 0; i < args.length; i += 1) {
+      if (['-d', '-r', '-z'].includes(args[i])) i += 1;
+      else if (
+        !/^(\+|-[jRu]+$|-I|-v[+-]?\d|--(utc|universal|rfc-email|debug|iso-8601)$|--(iso-8601|rfc-3339|date|reference)=)/.test(
+          args[i],
+        )
+      )
+        return false;
+    }
+    return true;
+  }
   if (name === 'jq') return !hasArg(args, /env|input_filename|\$__loc__/i);
   if (name === 'file') return !hasArg(args, /^(-[^-]*C|--c)/);
   if (name === 'sed') {
@@ -328,6 +353,7 @@ const allowed = ([name, ...args]) => {
     const script = args.join(' ');
     return (
       /^(-s )?(agent:check|agent:doctor)$/.test(script) ||
+      /^(-s )?copy:lint( --strict)?$/.test(script) ||
       /^(-s )?agent:shadcn (info|search|docs|view)( [\w@./-]+)*$/.test(
         script,
       ) ||

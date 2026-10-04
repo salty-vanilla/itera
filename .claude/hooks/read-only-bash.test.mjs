@@ -74,6 +74,20 @@ const allow = [
   'git log --oneline -3',
   'git grep -n foo',
   'git grep --exclude-standard foo',
+  'pnpm copy:lint',
+  'pnpm -s copy:lint',
+  'pnpm copy:lint --strict',
+  'uniq AGENTS.md',
+  'uniq -c AGENTS.md',
+  'uniq -f 1 AGENTS.md',
+  'sort a | uniq -c -',
+  'date',
+  'date +%F',
+  'date -u +%Y-%m-%dT%H:%M:%SZ',
+  'date -j -v-1d +%F',
+  'date -r AGENTS.md',
+  'date -d yesterday +%F',
+  'date --iso-8601=seconds',
 ];
 
 const deny = [
@@ -161,6 +175,22 @@ const deny = [
   'ls > out.txt',
   'ls 2> out.txt',
   'ls >',
+  'pnpm copy:list',
+  'pnpm copy:lint --out x',
+  'pnpm -s copy:lint --strict --out x',
+  'uniq - out',
+  'uniq in out',
+  'uniq -c - out',
+  'uniq -c in out',
+  'uniq -f 1 in out',
+  'uniq -- in out',
+  'uniq --skip-fields 1 out',
+  'date 0101',
+  'date -s 2000-01-01',
+  'date --set=2000-01-01',
+  'date --se 2000-01-01',
+  'date -f %Y 2000',
+  'date -ju 0101',
 ];
 
 describe('read-only-bash hook', () => {
