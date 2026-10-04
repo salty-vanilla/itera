@@ -6,12 +6,18 @@ import type { Failure } from './failure';
 // failure's message is for developers, so the screen writes its own words.
 
 /**
+ * The kind of every Toast of a failed operation: the latest takes the place
+ * of the one showing (DESIGN.md Toast).
+ */
+export const SAVE_FAILED_KIND = 'save-failed';
+
+/**
  * Not saved: the request does not match (400), the Origin (403), a record
  * that is not there (404), another write came first (409), the body's size
  * (413), or the domain's rules and the person's settings (422).
  */
 export const SAVE_FAILED: ToastOptions = {
-  kind: 'save-failed',
+  kind: SAVE_FAILED_KIND,
   tone: 'danger',
   title: '保存できませんでした',
   description: '記録は変わっていません。内容を確かめてもう一度試してください。',
@@ -22,10 +28,11 @@ export const SAVE_FAILED: ToastOptions = {
  * client does not know, also after the write was sent again with its key
  * (use-operation.ts). So it does not say the records are as they were: the
  * reads are read again first (query-client.ts), and the person looks at
- * them, or sends it again (its action, `RETRY_LABEL`: もう一度保存).
+ * them, or sends it again (its action, `RETRY_LABEL`: もう一度保存). A later
+ * write that goes through closes it (use-operation.ts).
  */
 export const SAVE_UNKNOWN: ToastOptions = {
-  kind: 'save-failed',
+  kind: SAVE_FAILED_KIND,
   tone: 'danger',
   title: '保存できたかわかりませんでした',
   description: '記録が変わったかもしれません。最新の記録を見てください。',

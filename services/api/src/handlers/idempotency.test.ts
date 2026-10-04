@@ -88,7 +88,7 @@ const cases: readonly Case[] = [
     body: () => ({ name: '家' }),
   },
   {
-    kind: 'a write that appends (actual time, POST, 201)',
+    kind: 'a write that appends (actual time, POST, 204)',
     name: 'recordActualTime',
     state: 'today-morning',
     prepare: [

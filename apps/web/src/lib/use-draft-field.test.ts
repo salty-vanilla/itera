@@ -78,6 +78,26 @@ describe('useDraftField', () => {
     expect(result.current.edited).toBe(true);
   });
 
+  it('follows the read again once it comes back with typing a failed save gave back (sent again, or saved after all: #320)', async () => {
+    const { result, rerender } = setup();
+    act(() => result.current.set('typed'));
+    await act(async () => result.current.hold(Promise.resolve(false)));
+    rerender({ read: 'typed' });
+    expect(result.current.value).toBe('typed');
+    expect(result.current.edited).toBe(false);
+    rerender({ read: 'from another device' });
+    expect(result.current.value).toBe('from another device');
+  });
+
+  it('keeps typing a failed save gave back while the read is something else', async () => {
+    const { result, rerender } = setup();
+    act(() => result.current.set('typed'));
+    await act(async () => result.current.hold(Promise.resolve(false)));
+    rerender({ read: 'from another device' });
+    expect(result.current.value).toBe('typed');
+    expect(result.current.edited).toBe(true);
+  });
+
   it('shows a value put in by an operation until the read changes, without an edit', () => {
     const { result, rerender } = setup();
     act(() => result.current.put('adopted'));

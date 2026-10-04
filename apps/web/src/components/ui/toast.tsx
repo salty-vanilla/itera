@@ -258,11 +258,31 @@ function useCloseToastsOnLeave(): () => void {
   }, []);
 }
 
+/**
+ * Closes the Toast of `kind` when it offers an action, and no other: a
+ * failure's 「もう一度保存」 that a later write, which went through, has made
+ * stale (#320). The returned function is stable and acts on the Toasts
+ * showing when it is called.
+ */
+function useCloseActionToast(kind: ToastKind): () => void {
+  const manager = ToastPrimitive.useToastManager();
+  const latest = useRef(manager);
+  useEffect(() => {
+    latest.current = manager;
+  }, [manager]);
+  return useCallback(() => {
+    const id = `kind:${kind}`;
+    const shown = latest.current.toasts.find((toast) => toast.id === id);
+    if (shown?.actionProps !== undefined) latest.current.close(id);
+  }, [kind]);
+}
+
 export {
   TOAST_ACTION_TIMEOUT,
   TOAST_LIMIT,
   TOAST_TIMEOUT,
   ToastProvider,
+  useCloseActionToast,
   useCloseToastsOnLeave,
   useToast,
   useToasts,

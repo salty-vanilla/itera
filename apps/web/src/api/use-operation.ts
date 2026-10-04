@@ -9,11 +9,11 @@ import {
 } from '@itera/api-contract/requests';
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useRef } from 'react';
-import { useToast } from '@/components/ui/toast';
+import { useCloseActionToast, useToast } from '@/components/ui/toast';
 import { useDelayed } from '@/lib/use-delayed';
 import { useApiClient } from './api-provider';
 import { failureOf, sendsAgain, WriteFailed } from './failure';
-import { saveFailedToast } from './save-failed';
+import { SAVE_FAILED_KIND, saveFailedToast } from './save-failed';
 
 /** What running an operation gives back: its value, or that it did not go through. */
 export type Outcome<T> =
@@ -94,6 +94,7 @@ export function useSend<Input, Output>(
 ) {
   const client = useApiClient();
   const toast = useToast();
+  const closeStaleRetry = useCloseActionToast(SAVE_FAILED_KIND);
   const { mutateAsync, isPending } = useMutation({
     mutationKey: [key],
     mutationFn: ({ input, key: idempotencyKey }: Write<Input>) =>
@@ -118,7 +119,12 @@ export function useSend<Input, Output>(
     (write: Write<Input>): Promise<Outcome<Output>> => {
       const once = async (): Promise<Outcome<Output>> => {
         try {
-          return { ok: true, value: await mutateAsync(write) };
+          const value = await mutateAsync(write);
+          // A write that went through, after one that may have been saved:
+          // the records are read again, and sending that one again could
+          // now mean something else (ADR 0005 エラーと送信中).
+          closeStaleRetry();
+          return { ok: true, value };
         } catch (error) {
           const failed = saveFailedToast(failureOf(error), () => {
             void once();
@@ -129,7 +135,7 @@ export function useSend<Input, Output>(
       };
       return once();
     },
-    [mutateAsync, toast],
+    [mutateAsync, toast, closeStaleRetry],
   );
   const run = useCallback(
     async (...[input]: Args<Input>): Promise<Outcome<Output>> => {

@@ -406,6 +406,56 @@ describe('a failed operation', () => {
     );
   });
 
+  it('closes もう一度保存 once a later write goes through: sending the old one again could now mean something else', async () => {
+    let down = true;
+    const { requests, wrapper } = setUp((request) =>
+      request.method !== 'GET' && down
+        ? Promise.reject(new TypeError('Failed to fetch'))
+        : undefined,
+    );
+    const { result } = renderHook(useRenameAndOverview, { wrapper });
+    await waitFor(() => expect(result.current.overview.data).toBeDefined());
+    await act(async () => {
+      await result.current.rename.run(rename('研究室'));
+    });
+    await expectMayHaveBeenSaved();
+    down = false;
+    requests.length = 0;
+    let outcome: unknown;
+    await act(async () => {
+      outcome = await result.current.rename.run(rename('研究会'));
+    });
+    expect(outcome).toMatchObject({ ok: true });
+    await waitFor(() =>
+      expect(
+        screen.queryAllByText('保存できたかわかりませんでした'),
+      ).toHaveLength(0),
+    );
+    // Only the later write was sent.
+    expect(requests.filter((r) => r === patch)).toHaveLength(1);
+  });
+
+  it('keeps 保存できませんでした after a later write goes through', async () => {
+    let refuse = true;
+    const { wrapper } = setUp((request) =>
+      request.method !== 'GET' && refuse
+        ? problemResponse('/problems/invalid-input')
+        : undefined,
+    );
+    const { result } = renderHook(useRenameAndOverview, { wrapper });
+    await act(async () => {
+      await result.current.rename.run(rename('研究室'));
+    });
+    expect(await screen.findAllByText('保存できませんでした')).not.toHaveLength(
+      0,
+    );
+    refuse = false;
+    await act(async () => {
+      await result.current.rename.run(rename('研究会'));
+    });
+    expect(screen.getAllByText('保存できませんでした')).not.toHaveLength(0);
+  });
+
   it('names each run with a new key', async () => {
     const { keys, wrapper } = setUp();
     const { result } = renderHook(useRenameAndOverview, { wrapper });
