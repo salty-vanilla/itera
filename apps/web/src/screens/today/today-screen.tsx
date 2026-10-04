@@ -528,9 +528,13 @@ function TodayView({ data }: { data: TodayData }) {
 
   // 今日へ: the new row in 今日やる takes the focus.
   const choose = async (item: TodayData['rest'][number]) => {
-    // Put back today: the same choice comes back (F37), its row where it was.
+    // Put back today: the same choice comes back (F37), its row where it
+    // was, when the read says it can (#322).
     const removed = item.removedToday;
-    if (removed !== undefined) {
+    if (
+      removed !== undefined &&
+      item.removedTodayCapabilities?.canUndoRemove === true
+    ) {
       dropClosedToast(removed);
       void follow({ selection: removed }, () => actions.undoRemove(removed));
       return;

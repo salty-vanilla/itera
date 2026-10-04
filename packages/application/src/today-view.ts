@@ -22,11 +22,16 @@ import {
   type TodayRemaining,
   type WeekProgress,
 } from '@itera/domain';
+import {
+  interruptCapabilities,
+  selectionCapabilities,
+  type DailySelectionCapabilities,
+  type InterruptItem,
+} from './capabilities';
 import type { Clock, Records } from './records';
 import { dayInPeriod, isLastDay, selectionActualHours } from './sprint-day';
 import {
   taggedIn,
-  type TaggedInterruptNote,
   type TaggedRecords,
   type TaggedSprint,
   type TaggedSprintTask,
@@ -56,11 +61,18 @@ export interface TodayItem {
    * second one, which the day does not allow (F17, #233).
    */
   readonly removedToday?: DailySelection['id'];
+  /**
+   * What the person can do with the choice `removedToday` names (#322):
+   * 今日へ takes it back with `undoRemoveFromToday`.
+   */
+  readonly removedTodayCapabilities?: DailySelectionCapabilities;
 }
 
 /** A row of 今日やる, or one closed today. */
 export interface TodayRow extends TodayItem {
   readonly selection: DailySelection;
+  /** What the person can do with the selection now (#322). */
+  readonly capabilities: DailySelectionCapabilities;
   /** The actual hours recorded for this day's selection. */
   readonly actualHours: number;
 }
@@ -104,7 +116,7 @@ export interface TodayData {
    */
   readonly plan: readonly TodayItem[];
   /** Today's interrupts, oldest first. */
-  readonly interrupts: readonly TaggedInterruptNote[];
+  readonly interrupts: readonly InterruptItem[];
   /** Areas for the quick add, in the person's order. */
   readonly areas: readonly TodayArea[];
 }
@@ -193,7 +205,13 @@ export function todayData(
     const base = item(sprintTask, selection.occurrenceId);
     if (base === undefined) return [];
     const actualHours = selectionActualHours(sprint, selection);
-    return [{ ...base, selection, actualHours }];
+    const capabilities = selectionCapabilities(
+      records,
+      sprint,
+      selection,
+      today,
+    );
+    return [{ ...base, selection, capabilities, actualHours }];
   };
 
   const todays = sprint.dailySelections
@@ -261,7 +279,18 @@ export function todayData(
     const chosen = todayOf(i.sprintTask, i.occurrence?.id);
     if (chosen === undefined) return [i];
     return chosen.resolution === 'removed'
-      ? [{ ...i, removedToday: chosen.id }]
+      ? [
+          {
+            ...i,
+            removedToday: chosen.id,
+            removedTodayCapabilities: selectionCapabilities(
+              records,
+              sprint,
+              chosen,
+              today,
+            ),
+          },
+        ]
       : [];
   });
 
@@ -305,9 +334,12 @@ export function todayData(
     continuation,
     rest,
     plan,
-    interrupts: sprint.interrupts.filter(
-      (n) => toLocalDate(n.at, records.user.timeZone) === today,
-    ),
+    interrupts: sprint.interrupts
+      .filter((n) => toLocalDate(n.at, records.user.timeZone) === today)
+      .map((note) => ({
+        ...note,
+        capabilities: interruptCapabilities(records, sprint, note),
+      })),
     areas,
   };
 }

@@ -645,3 +645,87 @@ describe('the Backlog on the API', () => {
     });
   });
 });
+
+describe('what the Backlog’s read says the person can do with today’s choice (#322)', () => {
+  type Item = {
+    task: { title: string };
+    today?: { capabilities: Record<string, boolean> };
+  };
+
+  /** The mock over `backlog-detail`, with the Backlog's read changed. */
+  function serveChanged(change: (item: Item) => void) {
+    const store = createMemoryStore(fixtureSnapshot('backlog-detail'), {
+      random: (bytes) => crypto.getRandomValues(bytes),
+    });
+    const mock = createMock(store).fetch;
+    vi.stubGlobal(
+      'fetch',
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request = new Request(input, init);
+        const response = await mock(request);
+        if (
+          request.method !== 'GET' ||
+          new URL(request.url).pathname !== '/api/backlog'
+        )
+          return response;
+        const body = (await response.json()) as {
+          view: { items: Record<string, Item> };
+        };
+        for (const item of Object.values(body.view.items)) change(item);
+        return new Response(JSON.stringify(body), {
+          status: response.status,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      },
+    );
+  }
+
+  /** The buttons of 今日と今週 in the detail of 顧客インタビューの設計. */
+  async function offered() {
+    renderBacklog();
+    await userEvent.click(
+      within(await list()).getByRole('button', {
+        name: '顧客インタビューの設計',
+      }),
+    );
+    const detail = await screen.findByRole('dialog', {
+      name: '顧客インタビューの設計',
+    });
+    return within(within(detail).getByRole('region', { name: '今日と今週' }))
+      .getAllByRole('button')
+      .map((b) => b.textContent);
+  }
+
+  it('offers the same operations when the read has a `can…` it does not know', async () => {
+    serveChanged(() => {});
+    const before = await offered();
+    cleanup();
+    vi.unstubAllGlobals();
+    serveChanged((item) => {
+      if (item.today !== undefined)
+        item.today.capabilities.canSomethingNew = true;
+    });
+    expect(before).toEqual([
+      '開始',
+      '今日は見送る',
+      '今週の残りに戻す',
+      '完了にする',
+    ]);
+    expect(await offered()).toEqual(before);
+  });
+
+  it('offers only what the read says, whatever the state', async () => {
+    serveChanged((item) => {
+      if (item.today !== undefined)
+        item.today.capabilities = {
+          ...Object.fromEntries(
+            Object.keys(item.today.capabilities).map((name) => [name, false]),
+          ),
+          canPause: true,
+        };
+    });
+    // 完了にする is the Task's own (`canComplete` of the item, #323); while
+    // the choice is being worked on it is the main one, first (#242).
+    expect(await offered()).toEqual(['完了にする', '今日は中断する']);
+  });
+});

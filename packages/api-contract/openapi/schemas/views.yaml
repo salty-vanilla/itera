@@ -97,6 +97,66 @@ ListedResolution:
   description: A choice for today that Today lists under 今日やる.
   type: string
   enum: [selected, started, done, skipped]
+# ---------------------------------------------------------- Capabilities
+DailySelectionCapabilities:
+  description: >-
+    What the person can do with a choice for a day now (#322, ADR 0007
+    操作の可否). Output only. One `can…` for each operation on the record,
+    named after its operationId without the record's noun; true when the
+    operation goes through with valid values (it is the check the
+    operation makes of the records), false when it is refused (422, or 404).
+    The values an operation is given (positive hours) are not checked, and
+    why one is false is not told. A client offers an operation only when
+    its `can…` is true and never judges the state itself. More may be
+    added, each optional: a client ignores one it does not know.
+  type: object
+  readOnly: true
+  required:
+    - canStart
+    - canPause
+    - canDefer
+    - canUndoDefer
+    - canRemove
+    - canUndoRemove
+    - canComplete
+    - canUndoComplete
+    - canSkip
+    - canUndoSkip
+  properties:
+    canStart: { description: startSelection., type: boolean }
+    canPause: { description: pauseSelection., type: boolean }
+    canDefer: { description: deferSelection., type: boolean }
+    canUndoDefer: { description: undoDeferSelection., type: boolean }
+    canRemove: { description: removeFromToday., type: boolean }
+    canUndoRemove: { description: undoRemoveFromToday., type: boolean }
+    canComplete: { description: completeSelection., type: boolean }
+    canUndoComplete: { description: undoCompleteSelection., type: boolean }
+    canSkip: { description: skipSelection., type: boolean }
+    canUndoSkip: { description: undoSkipSelection., type: boolean }
+InterruptNoteCapabilities:
+  description: >-
+    What the person can do with an interrupt now (#322), as
+    DailySelectionCapabilities says. The text and the minutes an edit is
+    given are not checked.
+  type: object
+  readOnly: true
+  required: [canEdit, canDelete]
+  properties:
+    canEdit: { description: editInterrupt., type: boolean }
+    canDelete: { description: deleteInterrupt., type: boolean }
+InterruptItem:
+  description: >-
+    An interrupt as the reads of a day give it: the record, and what the
+    person can do with it. The record itself (InterruptNote) stays as it
+    is where no capabilities are given: in the Sprint and in the derived
+    values.
+  allOf:
+    - $ref: './records.yaml#/InterruptNote'
+    - type: object
+      required: [capabilities]
+      properties:
+        capabilities: { $ref: '#/InterruptNoteCapabilities' }
+
 BacklogItem:
   type: object
   required:
@@ -140,12 +200,13 @@ BacklogItem:
     today:
       description: In today's 今日やる (#94).
       type: object
-      required: [selectionId, resolution, recurring]
+      required: [selectionId, resolution, recurring, capabilities]
       properties:
         selectionId: { $ref: './common.yaml#/DailySelectionId' }
         resolution: { $ref: '#/ListedResolution' }
         startedAt: { $ref: './common.yaml#/Instant' }
         recurring: { type: boolean }
+        capabilities: { $ref: '#/DailySelectionCapabilities' }
     closedToday: { $ref: './records.yaml#/ClosedResolution' }
     value: { $ref: './records.yaml#/PlanningValue' }
     taskValue: { $ref: './records.yaml#/PlanningValue' }
@@ -443,9 +504,16 @@ TodayItem:
       description: 連続見送り.
       type: integer
     removedToday: { $ref: './common.yaml#/DailySelectionId' }
+    removedTodayCapabilities:
+      description: >-
+        What the person can do with the choice removedToday names (#322):
+        今日へ takes it back with undoRemoveFromToday. Present with
+        removedToday.
+      $ref: '#/DailySelectionCapabilities'
 TodayRow:
   type: object
-  required: [sprintTask, task, value, streak, selection, actualHours]
+  required:
+    [sprintTask, task, value, streak, selection, capabilities, actualHours]
   properties:
     sprintTask: { $ref: './records.yaml#/SprintTask' }
     task: { $ref: './records.yaml#/Task' }
@@ -454,7 +522,14 @@ TodayRow:
     value: { $ref: './records.yaml#/PlanningValue' }
     streak: { type: integer }
     removedToday: { $ref: './common.yaml#/DailySelectionId' }
+    removedTodayCapabilities:
+      description: >-
+        What the person can do with the choice removedToday names (#322):
+        今日へ takes it back with undoRemoveFromToday. Present with
+        removedToday.
+      $ref: '#/DailySelectionCapabilities'
     selection: { $ref: './records.yaml#/DailySelection' }
+    capabilities: { $ref: '#/DailySelectionCapabilities' }
     actualHours: { type: number }
 TodayData:
   type: object
@@ -510,7 +585,7 @@ TodayData:
       items: { $ref: '#/TodayItem' }
     interrupts:
       type: array
-      items: { $ref: './records.yaml#/InterruptNote' }
+      items: { $ref: '#/InterruptItem' }
     areas:
       type: array
       items: { $ref: '#/AreaLabel' }
@@ -518,13 +593,14 @@ TodayData:
 # ------------------------------------------------------- A day not today
 DayRecord:
   type: object
-  required: [selection, title, actualHours]
+  required: [selection, title, actualHours, capabilities]
   properties:
     selection: { $ref: './records.yaml#/DailySelection' }
     title: { type: string }
     area: { $ref: '#/AreaLabel' }
     occurrence: { $ref: './records.yaml#/Occurrence' }
     actualHours: { type: number }
+    capabilities: { $ref: '#/DailySelectionCapabilities' }
 DayData:
   type: object
   required: [date, today, when, timeZone, records, interrupts, occurrences, due]
@@ -554,7 +630,7 @@ DayData:
       items: { $ref: '#/DayRecord' }
     interrupts:
       type: array
-      items: { $ref: './records.yaml#/InterruptNote' }
+      items: { $ref: '#/InterruptItem' }
     occurrences:
       type: array
       items:

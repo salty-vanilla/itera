@@ -11,6 +11,7 @@
 - 改訂：2026-10-04（エラーを Problem Details（RFC 9457）にする。応答の項目を消して名前を変える壊す変更なので `info.version` を 0.3.0 にする。Issue #319）
 - 改訂：2026-10-04（すべての書き込みに必須のヘッダー `Idempotency-Key` を置き、422 `/problems/idempotency-key-reused` を足す。要求に必須の項目を足す壊す変更なので `info.version` を 0.4.0 にする。409 は「この書き込みはしていない」だけになる。Issue #320）
 - 改訂：2026-10-04（値を置き換える書き込み（PATCH の 10 面）に、記録ごとの版の `If-Match` を置き、412 `/problems/precondition-failed`・428 `/problems/precondition-required` を足す。記録の DTO に出力専用の `etag`、書き込みの応答に `ETag`。要求に必須のヘッダーを足す壊す変更なので `info.version` を 0.5.0 にする。クライアントが送り返す `InterruptNote` に必須の `etag` を足したのも壊す変更（読み取りの note をそのまま `restoreInterrupt` の本文にすると、未知のキーで 400）。Issue #321）
+- 改訂：2026-10-04（今日の選択と割り込みの読み取りに、出力専用の必須の `capabilities`（`can<操作>` の真偽値、ADR 0007「操作の可否」）を足す。`TodayRow`・`DayRecord`・`BacklogItem.today` に `DailySelectionCapabilities`、`TodayItem` に省略できる `removedTodayCapabilities`、今日と過去の日の割り込みを `InterruptItem`（`InterruptNote` と `InterruptNoteCapabilities`）にする。応答に必須の項目を足すだけなので `info.version` は 0.5.0 のまま。Issue #322）
 
 ## 背景
 
@@ -338,8 +339,8 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 列挙は 2 種類に分け、どちらなのかを仕様の `description` に書く。
 
-- **開いた列挙**：値が増えることを前提にする列挙。エラーの `type`（#319 までは `code`）と、操作の可否（ADR 0007「操作の可否」）。値を足すのは壊さない変更。
-  - 受け取る側（すべてのクライアントと、そこで使う生成した型と検証）は、知らない値を受理しなければならない。知らない値で、読み込み（decode）も応答の検証も失敗させない。知らない `type` は一般の失敗として扱い、知らない操作は出さない。知らない HTTP のステータス（#266 で足した 413 のように、後から足すもの）も、一般の失敗として扱う。
+- **開いた列挙**：値が増えることを前提にする列挙。エラーの `type`（#319 までは `code`）。値を足すのは壊さない変更。操作の可否は列挙ではなく、記録ごとの `capabilities` の真偽値の項目にした（ADR 0007「操作の可否」、#322）。`can…` を足すのは、応答に項目を足す変更（下の「壊さない変更」）で、クライアントは知らない `can…` を読み飛ばし、その操作は出さない。
+  - 受け取る側（すべてのクライアントと、そこで使う生成した型と検証）は、知らない値を受理しなければならない。知らない値で、読み込み（decode）も応答の検証も失敗させない。知らない `type` は一般の失敗として扱う。知らない HTTP のステータス（#266 で足した 413 のように、後から足すもの）も、一般の失敗として扱う。
   - iOS・Android の生成した型がこれを満たすこと（知らない値を表す場合を持つか、文字列として受ける）を、生成の道具を選ぶ条件にする。満たさない道具は使わない。
   - 今の仕様は、`type` をエラーごとに `const` で書いている（domain の 3 つの種類の `RuleViolationError` だけ `enum`）。操作の 422 は `RuleViolationError`・`UserNotSetUpError`・`IdempotencyKeyReusedError` の `oneOf`（#266。3 つ目は #320）。エラーの本文の `oneOf` のように、枝が `type` の値だけで分かれ、形がどれも Problem Details（`{ type, title, status, detail }` と種類ごとの拡張）のものは、開いた列挙として扱う。枝を足すのは `type` の値を足すのと同じで、壊さない変更。開いた列挙の仕様での書き方（拡張の印、`anyOf` で文字列を足すなど）は、iOS に着手する前に生成の道具と一緒に決め、そのとき `type` も書き直す。Web が応答を実行時に検証するようにするなら、それより前に決める。
 - **閉じた列挙**：値ごとに意味が違い、知らない値では正しく表示できないもの。状態の名前、union の判別子（`base`・`kind` など）、`SprintWeek` など。値を足すのは壊す変更。判別子が閉じた列挙の union に種類（`oneOf` の枝）を足すのも同じ（エラーの本文の `oneOf` は上の開いた列挙）。

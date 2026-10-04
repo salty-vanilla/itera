@@ -437,6 +437,22 @@ export const vListedResolution = v.picklist([
 ]);
 
 /**
+ * What the person can do with a choice for a day now (#322, ADR 0007 操作の可否). Output only. One `can…` for each operation on the record, named after its operationId without the record's noun; true when the operation goes through with valid values (it is the check the operation makes of the records), false when it is refused (422, or 404). The values an operation is given (positive hours) are not checked, and why one is false is not told. A client offers an operation only when its `can…` is true and never judges the state itself. More may be added, each optional: a client ignores one it does not know.
+ */
+export const vDailySelectionCapabilities = v.pipe(v.object({
+    canStart: v.boolean(),
+    canPause: v.boolean(),
+    canDefer: v.boolean(),
+    canUndoDefer: v.boolean(),
+    canRemove: v.boolean(),
+    canUndoRemove: v.boolean(),
+    canComplete: v.boolean(),
+    canUndoComplete: v.boolean(),
+    canSkip: v.boolean(),
+    canUndoSkip: v.boolean()
+}), v.readonly());
+
+/**
  * How a choice for today was closed without being done.
  */
 export const vClosedResolution = v.picklist([
@@ -497,7 +513,8 @@ export const vBacklogItem = v.object({
         selectionId: vDailySelectionId,
         resolution: vListedResolution,
         startedAt: v.optional(vInstant),
-        recurring: v.boolean()
+        recurring: v.boolean(),
+        capabilities: vDailySelectionCapabilities
     })),
     closedToday: v.optional(vClosedResolution),
     value: vPlanningValue,
@@ -779,7 +796,9 @@ export const vTodayRow = v.object({
     value: vPlanningValue,
     streak: v.pipe(v.number(), v.integer()),
     removedToday: v.optional(vDailySelectionId),
+    removedTodayCapabilities: v.optional(vDailySelectionCapabilities),
     selection: vDailySelection,
+    capabilities: vDailySelectionCapabilities,
     actualHours: v.number()
 });
 
@@ -790,8 +809,24 @@ export const vTodayItem = v.object({
     occurrence: v.optional(vOccurrence),
     value: vPlanningValue,
     streak: v.pipe(v.number(), v.integer()),
-    removedToday: v.optional(vDailySelectionId)
+    removedToday: v.optional(vDailySelectionId),
+    removedTodayCapabilities: v.optional(vDailySelectionCapabilities)
 });
+
+/**
+ * What the person can do with an interrupt now (#322), as DailySelectionCapabilities says. The text and the minutes an edit is given are not checked.
+ */
+export const vInterruptNoteCapabilities = v.pipe(v.object({
+    canEdit: v.boolean(),
+    canDelete: v.boolean()
+}), v.readonly());
+
+/**
+ * An interrupt as the reads of a day give it: the record, and what the person can do with it. The record itself (InterruptNote) stays as it is where no capabilities are given: in the Sprint and in the derived values.
+ */
+export const vInterruptItem = v.intersect([vInterruptNote, v.object({
+        capabilities: vInterruptNoteCapabilities
+    })]);
 
 export const vTodayData = v.object({
     sprint: vSprint,
@@ -811,7 +846,7 @@ export const vTodayData = v.object({
     continuation: v.array(vTodayItem),
     rest: v.array(vTodayItem),
     plan: v.array(vTodayItem),
-    interrupts: v.array(vInterruptNote),
+    interrupts: v.array(vInterruptItem),
     areas: v.array(vAreaLabel)
 });
 
@@ -831,7 +866,8 @@ export const vDayRecord = v.object({
     title: v.string(),
     area: v.optional(vAreaLabel),
     occurrence: v.optional(vOccurrence),
-    actualHours: v.number()
+    actualHours: v.number(),
+    capabilities: vDailySelectionCapabilities
 });
 
 export const vDayData = v.object({
@@ -849,7 +885,7 @@ export const vDayData = v.object({
     })),
     next: v.optional(vSprintRef),
     records: v.array(vDayRecord),
-    interrupts: v.array(vInterruptNote),
+    interrupts: v.array(vInterruptItem),
     occurrences: v.array(v.object({
         occurrence: vOccurrence,
         title: v.string(),
@@ -1378,7 +1414,8 @@ export const vBacklogItemWritable = v.object({
         selectionId: vDailySelectionId,
         resolution: vListedResolution,
         startedAt: v.optional(vInstant),
-        recurring: v.boolean()
+        recurring: v.boolean(),
+        capabilities: vDailySelectionCapabilities
     })),
     closedToday: v.optional(vClosedResolution),
     value: vPlanningValue,
@@ -1486,7 +1523,9 @@ export const vTodayRowWritable = v.object({
     value: vPlanningValue,
     streak: v.pipe(v.number(), v.integer()),
     removedToday: v.optional(vDailySelectionId),
+    removedTodayCapabilities: v.optional(vDailySelectionCapabilities),
     selection: vDailySelection,
+    capabilities: vDailySelectionCapabilities,
     actualHours: v.number()
 });
 
@@ -1497,8 +1536,16 @@ export const vTodayItemWritable = v.object({
     occurrence: v.optional(vOccurrence),
     value: vPlanningValue,
     streak: v.pipe(v.number(), v.integer()),
-    removedToday: v.optional(vDailySelectionId)
+    removedToday: v.optional(vDailySelectionId),
+    removedTodayCapabilities: v.optional(vDailySelectionCapabilities)
 });
+
+/**
+ * An interrupt as the reads of a day give it: the record, and what the person can do with it. The record itself (InterruptNote) stays as it is where no capabilities are given: in the Sprint and in the derived values.
+ */
+export const vInterruptItemWritable = v.intersect([vInterruptNoteWritable, v.object({
+        capabilities: vInterruptNoteCapabilities
+    })]);
 
 export const vTodayDataWritable = v.object({
     sprint: vSprintWritable,
@@ -1518,7 +1565,7 @@ export const vTodayDataWritable = v.object({
     continuation: v.array(vTodayItemWritable),
     rest: v.array(vTodayItemWritable),
     plan: v.array(vTodayItemWritable),
-    interrupts: v.array(vInterruptNoteWritable),
+    interrupts: v.array(vInterruptItemWritable),
     areas: v.array(vAreaLabel)
 });
 
@@ -1531,6 +1578,15 @@ export const vSprintRefWritable = v.object({
     end: vLocalDate,
     sprint: v.optional(vSprintWritable),
     week: v.optional(vSprintWeek)
+});
+
+export const vDayRecordWritable = v.object({
+    selection: vDailySelection,
+    title: v.string(),
+    area: v.optional(vAreaLabel),
+    occurrence: v.optional(vOccurrence),
+    actualHours: v.number(),
+    capabilities: vDailySelectionCapabilities
 });
 
 export const vDayDataWritable = v.object({
@@ -1547,8 +1603,8 @@ export const vDayDataWritable = v.object({
         day: vDayOfSprint
     })),
     next: v.optional(vSprintRefWritable),
-    records: v.array(vDayRecord),
-    interrupts: v.array(vInterruptNoteWritable),
+    records: v.array(vDayRecordWritable),
+    interrupts: v.array(vInterruptItemWritable),
     occurrences: v.array(v.object({
         occurrence: vOccurrence,
         title: v.string(),

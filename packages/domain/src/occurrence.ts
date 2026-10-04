@@ -5,7 +5,7 @@ import {
   type CommandResult,
 } from './shared/command';
 import type { OccurrenceId, RecurrenceRuleId, TaskId } from './shared/ids';
-import { err } from './shared/result';
+import { err, ok, type Result } from './shared/result';
 import type { Instant, LocalDate } from './shared/time';
 import { scheduledDates, type RecurrenceRule } from './recurrence';
 
@@ -107,26 +107,36 @@ export const includeOccurrence = transition({
   kind: 'occurrenceIncluded',
 });
 
-/** 完了: pending → done. */
-export const completeOccurrence = transition({
+const COMPLETE: Transition = {
   from: ['pending'],
   to: 'done',
   kind: 'occurrenceDone',
-});
-
-/** スキップ: pending → skipped. The rule stays as it is (invariant 30). */
-export const skipOccurrence = transition({
+};
+const SKIP: Transition = {
   from: ['pending'],
   to: 'skipped',
   kind: 'occurrenceSkipped',
-});
-
-/** 取り消す: done / skipped → pending. */
-export const reopenOccurrence = transition({
+};
+const REOPEN: Transition = {
   from: ['done', 'skipped'],
   to: 'pending',
   kind: 'occurrenceReopened',
-});
+};
+
+/** 完了: pending → done. */
+export const completeOccurrence = transition(COMPLETE);
+/** Whether `completeOccurrence` takes the occurrence as it is now (#322). */
+export const checkCompleteOccurrence = check(COMPLETE);
+
+/** スキップ: pending → skipped. The rule stays as it is (invariant 30). */
+export const skipOccurrence = transition(SKIP);
+/** Whether `skipOccurrence` takes the occurrence as it is now (#322). */
+export const checkSkipOccurrence = check(SKIP);
+
+/** 取り消す: done / skipped → pending. */
+export const reopenOccurrence = transition(REOPEN);
+/** Whether `reopenOccurrence` takes the occurrence as it is now (#322). */
+export const checkReopenOccurrence = check(REOPEN);
 
 /** Sprint 終了時に未処理: pending → missed. Normally done by the system. */
 export const missOccurrence = transition({
@@ -135,17 +145,25 @@ export const missOccurrence = transition({
   kind: 'occurrenceMissed',
 });
 
+/** The check of a transition's state, which its command makes first. */
+function check(t: Transition) {
+  return (occurrence: Occurrence): Result<undefined> =>
+    t.from.includes(occurrence.state)
+      ? ok(undefined)
+      : err(
+          'invalidTransition',
+          `Cannot go from ${occurrence.state} to ${t.to}.`,
+        );
+}
+
 function transition(t: Transition) {
+  const allowed = check(t);
   return (
     occurrence: Occurrence,
     ctx: CommandContext,
   ): CommandResult<Occurrence> => {
-    if (!t.from.includes(occurrence.state)) {
-      return err(
-        'invalidTransition',
-        `Cannot go from ${occurrence.state} to ${t.to}.`,
-      );
-    }
+    const checked = allowed(occurrence);
+    if (!checked.ok) return checked;
     const next: Occurrence = {
       ...occurrence,
       state: t.to,

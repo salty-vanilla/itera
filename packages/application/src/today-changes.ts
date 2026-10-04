@@ -24,22 +24,19 @@ import {
   type Activity,
   type AreaId,
   type CommandResult,
-  type DailySelection,
   type DailySelectionId,
   type InterruptNote,
   type InterruptNoteId,
   type LocalDate,
-  type Occurrence,
   type OccurrenceId,
   type Result,
   type Sprint,
   type SprintId,
   type SprintTaskId,
-  type Task,
   type TaskId,
   type TodayChange,
 } from '@itera/domain';
-import { find, onToday } from './changes';
+import { onToday } from './changes';
 import {
   changed,
   returning,
@@ -49,6 +46,7 @@ import {
 } from './record-store';
 import type { Records } from './records';
 import { reviewSprint } from './review-changes';
+import { subjectOf } from './selection-of';
 import { onlyToday, sprintIn } from './sprint-of';
 import { midSprintAddition } from './task-changes';
 import { activeSprintOf } from './today-view';
@@ -116,34 +114,6 @@ function onActiveToday(
     if (!sprint.ok) return sprint;
     return onToday(sprint.value.id, command)(records, ctx);
   };
-}
-
-/** The selection, and what a completion or skip needs: its Task or occurrence. */
-function subjectOf(
-  sprint: Sprint,
-  selectionId: DailySelectionId,
-  records: Records,
-): Result<{
-  selection: DailySelection;
-  task?: Task;
-  occurrence?: Occurrence;
-}> {
-  const selection = find(sprint.dailySelections, selectionId, 'Selection');
-  if (!selection.ok) return selection;
-  const { occurrenceId, sprintTaskId } = selection.value;
-  if (occurrenceId !== undefined) {
-    const occurrence = find(records.occurrences, occurrenceId, 'Occurrence');
-    if (!occurrence.ok) return occurrence;
-    return {
-      ok: true,
-      value: { selection: selection.value, occurrence: occurrence.value },
-    };
-  }
-  const sprintTask = find(sprint.tasks, sprintTaskId, 'SprintTask');
-  if (!sprintTask.ok) return sprintTask;
-  const task = find(records.tasks, sprintTask.value.taskId, 'Task');
-  if (!task.ok) return task;
-  return { ok: true, value: { selection: selection.value, task: task.value } };
 }
 
 /**

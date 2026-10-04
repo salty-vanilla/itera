@@ -23,6 +23,10 @@ import {
   type SprintTask,
   type TaskId,
 } from '@itera/domain';
+import {
+  selectionCapabilities,
+  type DailySelectionCapabilities,
+} from './capabilities';
 import type { Clock, Records } from './records';
 import { nextWeekSprintOf, thisWeekSprintOf } from './sprint-choice';
 import { isLastDay } from './sprint-day';
@@ -73,6 +77,8 @@ export interface BacklogItem {
     readonly startedAt?: Instant;
     /** An occurrence of a recurring Task: it can be skipped (F19). */
     readonly recurring: boolean;
+    /** What the person can do with the selection now (#322). */
+    readonly capabilities: DailySelectionCapabilities;
   };
   /**
    * Chosen today and closed for the day (中断, 見送り, 今週の残りに戻した): it
@@ -186,7 +192,9 @@ export function backlogItem(
           },
         }),
     ...(inNextWeek === true ? { nextWeek: true as const } : {}),
-    ...(chosen === undefined || !isListedResolution(chosen.resolution)
+    ...(active === undefined ||
+    chosen === undefined ||
+    !isListedResolution(chosen.resolution)
       ? {}
       : {
           today: {
@@ -196,6 +204,12 @@ export function backlogItem(
               ? {}
               : { startedAt: chosen.startedAt }),
             recurring: chosen.occurrenceId !== undefined,
+            capabilities: selectionCapabilities(
+              records,
+              active,
+              chosen,
+              clock.today,
+            ),
           },
         }),
     ...(chosen !== undefined ||
