@@ -7,7 +7,11 @@ import { Button } from '@/components/ui/button';
 import { DurationField } from '@/components/ui/duration-field';
 import { BOUND_WORDS } from '@/lib/criterion-text';
 import { boundValue } from '@/lib/domain-functions';
-import { DURATION_ERROR, hoursText, readMinutes } from '@/lib/duration-text';
+import {
+  DURATION_ERROR,
+  hoursText,
+  readPositiveMinutes,
+} from '@/lib/duration-text';
 import { formatHours, formatRange } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
 
@@ -80,8 +84,8 @@ function EstimateSuggestion({
   }, [editing]);
 
   async function adoptEdited() {
-    const minutes = readMinutes(hours);
-    if (minutes === undefined || minutes === null || minutes === 0) {
+    const minutes = readPositiveMinutes(hours);
+    if (minutes === undefined || minutes === null) {
       setError(DURATION_ERROR);
       fieldRef.current?.focus();
       return;

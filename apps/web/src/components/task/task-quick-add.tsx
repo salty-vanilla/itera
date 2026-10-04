@@ -5,6 +5,7 @@ import { Field } from '@/components/ui/field';
 import { Kbd } from '@/components/ui/kbd';
 import { TextInput } from '@/components/ui/text-input';
 import { cn } from '@/lib/utils';
+import { readTaskTitle } from '@/lib/value-rules';
 
 // DESIGN.md Components › Task Quick Add. Adds a Task by its title without
 // leaving the screen: a `plus` icon, no visible label (the accessible name
@@ -84,10 +85,10 @@ function TaskQuickAdd({
       onSubmit={async (event) => {
         event.preventDefault();
         inputRef.current?.focus();
-        const added = title.trim();
-        if (added === '' || !(await onAdd(added))) return;
+        const added = readTaskTitle(title);
+        if (added === undefined || !(await onAdd(added))) return;
         // Typing went on while it was sent: that text is the next Task's.
-        setTitle((typed) => (typed.trim() === added ? '' : typed));
+        setTitle((typed) => (readTaskTitle(typed) === added ? '' : typed));
       }}
     >
       {/* Under 768px, and in a narrow pane, the field has the whole first

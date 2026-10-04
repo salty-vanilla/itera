@@ -5,7 +5,8 @@ import { AreaIndicator, type AreaColor } from '@/components/ui/area-indicator';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Textarea } from '@/components/ui/textarea';
-import { sameWords, useDraftField } from '@/lib/use-draft-field';
+import { useDraftField } from '@/lib/use-draft-field';
+import { goalIsFixed, readGoalText, sameWords } from '@/lib/value-rules';
 import { cn } from '@/lib/utils';
 import { weekText } from '@/lib/week-text';
 
@@ -158,7 +159,7 @@ function GoalBlock({
               close(false);
               return;
             }
-            if (!removable && text.trim() === '') {
+            if (goalIsFixed(text, removable)) {
               setError(
                 '確定した後の目標は消せません。文を書いて保存してください',
               );
@@ -174,7 +175,9 @@ function GoalBlock({
             // Held until it is answered: a save that did not go through
             // gives the typing back, and the next is made from the Goal as
             // it then is (#321).
-            const saving = Promise.resolve(onSave(text.trim(), field.madeFrom));
+            const saving = Promise.resolve(
+              onSave(readGoalText(text), field.madeFrom),
+            );
             field.hold(saving);
             if ((await saving).ok) close(true);
           }}

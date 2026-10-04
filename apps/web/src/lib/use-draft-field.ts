@@ -316,8 +316,5 @@ type VersionedDraftField<T> = Omit<DraftField<T>, 'madeFrom' | 'hold'> & {
 /** A version as `Draft` keeps it: its etag, or `*` for no record. */
 const keyOf = (version: MadeFrom) => ('etag' in version ? version.etag : '*');
 
-/** Two texts are the same words, whatever spaces are around them. */
-const sameWords = (a: string, b: string) => a.trim() === b.trim();
-
-export { sameWords, useDraftField };
+export { useDraftField };
 export type { DraftField, VersionedDraftField };
