@@ -185,7 +185,7 @@ export function retroFacts(sprint: Sprint, input: RetroFactsInput): RetroFacts {
         ? undefined
         : sprint.goals.find((g) => g.areaId === areaId);
     const inArea = facts.filter(
-      (f) => f.areaId === areaId && f.outcome !== 'removed',
+      (f) => f.areaId === areaId && isInConfirmedPlan(f),
     );
     const name =
       areaId === null ? undefined : sprintAreaName(sprint, areaId, input.areas);
@@ -325,7 +325,7 @@ export interface CriterionResult {
 export function criterionResult(facts: RetroFacts): CriterionResult {
   const tasks = facts.tasks.filter(
     (f) =>
-      f.outcome !== 'removed' &&
+      isInConfirmedPlan(f) &&
       !f.recurring &&
       f.plan?.value.criterionApplied === true,
   );
