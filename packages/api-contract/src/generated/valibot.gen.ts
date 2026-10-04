@@ -124,7 +124,10 @@ export const vInternalError = v.object({
     detail: v.string()
 });
 
-export const vIdempotencyKey = v.pipe(v.string(), v.regex(/^"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"$/));
+/**
+ * The key of a write (ADR 0006 冪等キー): a UUID as a Structured Field String (RFC 9651 §3.3.3), so in double quotes. Lowercase or uppercase hex; the API compares them as lowercase. Parameters after it (RFC 9651 §2.3) are ignored.
+ */
+export const vIdempotencyKey = v.pipe(v.string(), v.regex(/^"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"(;.*)?$/));
 
 /**
  * One place in the request that does not match the contract, located by exactly one of `pointer` (in the body), `parameter` (a path or query parameter) or `header`.
@@ -1275,9 +1278,9 @@ export const vRetroData = v.object({
 });
 
 /**
- * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+ * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
  */
-export const vIdempotencyKey2 = vIdempotencyKey;
+export const vIdempotencyKeyHeader = vIdempotencyKey;
 
 /**
  * The person.

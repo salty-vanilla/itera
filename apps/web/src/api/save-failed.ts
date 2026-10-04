@@ -22,7 +22,7 @@ export const SAVE_FAILED: ToastOptions = {
  * client does not know, also after the write was sent again with its key
  * (use-operation.ts). So it does not say the records are as they were: the
  * reads are read again first (query-client.ts), and the person looks at
- * them, or sends it again (its action, `RETRY_LABEL`).
+ * them, or sends it again (its action, `RETRY_LABEL`: もう一度保存).
  */
 export const SAVE_UNKNOWN: ToastOptions = {
   kind: 'save-failed',
@@ -32,7 +32,7 @@ export const SAVE_UNKNOWN: ToastOptions = {
 };
 
 /** The action of `SAVE_UNKNOWN`: the same write sent again, with its key. */
-export const RETRY_LABEL = '再試行';
+export const RETRY_LABEL = 'もう一度保存';
 
 /**
  * The Toast for a failed operation; none without a session (sign-in).

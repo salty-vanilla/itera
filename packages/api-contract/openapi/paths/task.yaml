@@ -9,7 +9,7 @@ tasks:
     tags: [Task]
     summary: 'Quick Add: make a Task in the Backlog'
     parameters:
-      - $ref: '../parameters.yaml#/IdempotencyKey'
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     requestBody:
       required: true
       content:
@@ -52,7 +52,7 @@ task:
         in: path
         required: true
         schema: { $ref: '../schemas/common.yaml#/TaskId' }
-      - $ref: '../parameters.yaml#/IdempotencyKey'
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     requestBody:
       required: true
       content:
@@ -100,7 +100,7 @@ taskArchive:
         in: path
         required: true
         schema: { $ref: '../schemas/common.yaml#/TaskId' }
-      - $ref: '../parameters.yaml#/IdempotencyKey'
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     responses:
       '204':
         description: Done.
@@ -123,7 +123,7 @@ taskRestore:
         in: path
         required: true
         schema: { $ref: '../schemas/common.yaml#/TaskId' }
-      - $ref: '../parameters.yaml#/IdempotencyKey'
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     responses:
       '204':
         description: Done.
@@ -148,7 +148,7 @@ taskComplete:
         in: path
         required: true
         schema: { $ref: '../schemas/common.yaml#/TaskId' }
-      - $ref: '../parameters.yaml#/IdempotencyKey'
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     responses:
       '204':
         description: Done.
@@ -171,7 +171,7 @@ taskUndoComplete:
         in: path
         required: true
         schema: { $ref: '../schemas/common.yaml#/TaskId' }
-      - $ref: '../parameters.yaml#/IdempotencyKey'
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     responses:
       '204':
         description: Done.
@@ -196,7 +196,7 @@ taskRecurrence:
         in: path
         required: true
         schema: { $ref: '../schemas/common.yaml#/TaskId' }
-      - $ref: '../parameters.yaml#/IdempotencyKey'
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     requestBody:
       required: true
       content:
@@ -239,7 +239,7 @@ taskRecurrence:
         in: path
         required: true
         schema: { $ref: '../schemas/common.yaml#/TaskId' }
-      - $ref: '../parameters.yaml#/IdempotencyKey'
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     responses:
       '200':
         description: Done. What the operation decided.
@@ -274,7 +274,7 @@ subtasks:
         in: path
         required: true
         schema: { $ref: '../schemas/common.yaml#/TaskId' }
-      - $ref: '../parameters.yaml#/IdempotencyKey'
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     requestBody:
       required: true
       content:
@@ -321,7 +321,7 @@ subtask:
         in: path
         required: true
         schema: { $ref: '../schemas/common.yaml#/SubtaskId' }
-      - $ref: '../parameters.yaml#/IdempotencyKey'
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     requestBody:
       required: true
       content:
@@ -369,7 +369,7 @@ suggestionAdopt:
         in: path
         required: true
         schema: { $ref: '../schemas/common.yaml#/EstimateSuggestionId' }
-      - $ref: '../parameters.yaml#/IdempotencyKey'
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     requestBody:
       required: true
       content:
@@ -414,7 +414,7 @@ suggestionUndoAdopt:
         in: path
         required: true
         schema: { $ref: '../schemas/common.yaml#/EstimateSuggestionId' }
-      - $ref: '../parameters.yaml#/IdempotencyKey'
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     requestBody:
       required: true
       content:
@@ -454,7 +454,7 @@ suggestionReject:
         in: path
         required: true
         schema: { $ref: '../schemas/common.yaml#/EstimateSuggestionId' }
-      - $ref: '../parameters.yaml#/IdempotencyKey'
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     responses:
       '204':
         description: Done.
@@ -481,7 +481,7 @@ suggestionUndoReject:
         in: path
         required: true
         schema: { $ref: '../schemas/common.yaml#/EstimateSuggestionId' }
-      - $ref: '../parameters.yaml#/IdempotencyKey'
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     responses:
       '204':
         description: Done.

@@ -85,6 +85,16 @@ Clock:
     today: { $ref: '#/LocalDate' }
     now: { $ref: '#/Instant' }
 
+IdempotencyKey:
+  description: >-
+    The key of a write (ADR 0006 冪等キー): a UUID as a Structured Field
+    String (RFC 9651 §3.3.3), so in double quotes. Lowercase or uppercase
+    hex; the API compares them as lowercase. Parameters after it
+    (RFC 9651 §2.3) are ignored.
+  type: string
+  pattern: '^"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"(;.*)?$'
+  examples: ['"8e03978e-40d5-43e8-bc93-6894a57f9324"']
+
 # Errors (ADR 0006 エラー): Problem Details (RFC 9457), served as
 # `application/problem+json`. `type` is the one identifier a client decides
 # by; it names the kind of problem with a relative URI reference
@@ -92,13 +102,6 @@ Clock:
 # same for every occurrence of a kind and `detail` describes this one; both
 # are for developers and are not shown to the person. `status` repeats the
 # HTTP status. A client ignores members it does not know (RFC 9457 §3.2).
-# The key of a write (ADR 0006 冪等キー): a UUID as a Structured Field
-# String (RFC 9651 §3.3.3), so in double quotes. Lowercase or uppercase
-# hex; the API compares them as lowercase.
-IdempotencyKey:
-  type: string
-  pattern: '^"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"$'
-  examples: ['"8e03978e-40d5-43e8-bc93-6894a57f9324"']
 ValidationError:
   description: >-
     The request does not match the contract. `errors` says where, one item

@@ -1,7 +1,7 @@
 # Parameters that many operations share.
 
 # Every write carries one (ADR 0006 冪等キー). Reads do not.
-IdempotencyKey:
+IdempotencyKeyHeader:
   name: Idempotency-Key
   in: header
   required: true
@@ -9,7 +9,8 @@ IdempotencyKey:
     Names this write, so that sending it again is safe (the IETF draft
     draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes,
     the same one when the same write is sent again. A Structured Field
-    String (RFC 9651): the UUID in double quotes. Within 24 hours of the
+    String (RFC 9651): the UUID in double quotes; parameters after it are
+    ignored. Within 24 hours of the
     first, the same key with the same request answers what the first one
     answered, without doing it again; with another request (method, path,
     query or body), 422 `/problems/idempotency-key-reused`. Only a write

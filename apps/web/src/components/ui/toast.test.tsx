@@ -331,7 +331,7 @@ describe('Toast with an action (#170)', () => {
     expect(screen.queryByText(/「今日やる」に入れました/)).toBeNull();
   });
 
-  it('closing for a screen change keeps a failure and its 再試行', async () => {
+  it('closing for a screen change keeps a failure and its もう一度保存', async () => {
     function Leave() {
       const leave = useCloseToastsOnLeave();
       return <Button onClick={leave}>移る</Button>;
@@ -343,8 +343,8 @@ describe('Toast with an action (#170)', () => {
         <Trigger
           options={{
             tone: 'danger',
-            title: '保存できませんでした',
-            action: { label: '再試行', onClick: () => {} },
+            title: '保存できたかわかりませんでした',
+            action: { label: 'もう一度保存', onClick: () => {} },
           }}
         />
         <Leave />
@@ -356,7 +356,7 @@ describe('Toast with an action (#170)', () => {
     await user.click(screen.getByRole('button', { name: '移る' }));
     await waitFor(() => expect(screen.queryByText('結果')).toBeNull());
     expect(
-      screen.queryAllByText('保存できませんでした').length,
+      screen.queryAllByText('保存できたかわかりませんでした').length,
     ).toBeGreaterThan(0);
   });
 });

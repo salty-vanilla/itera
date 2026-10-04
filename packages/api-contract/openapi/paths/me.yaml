@@ -48,7 +48,7 @@ meSettings:
       follow the week's first day, and 「今日」 the time zone, so how a
       change should reach Sprints already made is for a later decision.
     parameters:
-      - $ref: '../parameters.yaml#/IdempotencyKey'
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     requestBody:
       required: true
       content:

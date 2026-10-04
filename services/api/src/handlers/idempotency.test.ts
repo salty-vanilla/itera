@@ -187,18 +187,25 @@ describe('a write sent again with its Idempotency-Key', () => {
   it('keeps no key for a write that changed nothing: sent again, it runs again', async () => {
     const app = await prepared(await setupFixtureApp('backlog-capture'));
     const { user } = (await app.saved()).records;
-    const { url, init } = httpRequest('createArea', { name: '家' });
-    const response = await app.request(url.replace('/areas', '/me/settings'), {
-      ...init,
-      method: 'PUT',
-      body: JSON.stringify({
-        displayName: user.displayName,
-        timeZone: user.timeZone,
-        weekStartsOn: user.weekStartsOn,
-      }),
-    });
-    expect(response.status).toBe(204);
+    const before = await state(app);
+    const key = crypto.randomUUID();
+    // The settings as they are: written again, they change nothing (204).
+    const sameSettings = () =>
+      app.request('/api/me/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...writeHeaders(key) },
+        body: JSON.stringify({
+          displayName: user.displayName,
+          timeZone: user.timeZone,
+          weekStartsOn: user.weekStartsOn,
+        }),
+      });
+    expect((await sameSettings()).status).toBe(204);
     expect(await app.db.select().from(idempotencyKey)).toEqual([]);
+    // Run again: still nothing written, and no key.
+    expect((await sameSettings()).status).toBe(204);
+    expect(await app.db.select().from(idempotencyKey)).toEqual([]);
+    expect(await state(app)).toEqual(before);
   });
 });
 
@@ -347,12 +354,14 @@ describe('a write whose save meets another', () => {
 });
 
 describe('a key past its 24 hours', () => {
-  it('is a new write, and its row is gone', async () => {
+  it('is a new write, and its row is gone with the person’s other old keys', async () => {
     const app = await prepared(await setupFixtureApp('backlog-capture'));
     const key = crypto.randomUUID();
     const first = await answer(
       await send(app, key, 'createArea', { name: '家' }),
     );
+    const other = crypto.randomUUID();
+    await send(app, other, 'createArea', { name: '庭' });
     // Within the 24 hours, the same answer.
     app.at(later(KEY_LIFETIME_MS - 1));
     expect(
@@ -374,6 +383,13 @@ describe('a key past its 24 hours', () => {
     expect(rows).toEqual([
       expect.objectContaining({ createdAt: later(KEY_LIFETIME_MS) }),
     ]);
+    // The other key of the same time went with the same write's batch.
+    expect(
+      await app.db
+        .select()
+        .from(idempotencyKey)
+        .where(eq(idempotencyKey.key, other)),
+    ).toEqual([]);
   });
 });
 

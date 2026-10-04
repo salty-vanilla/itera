@@ -112,6 +112,9 @@ export type InternalError = {
     detail: string;
 };
 
+/**
+ * The key of a write (ADR 0006 冪等キー): a UUID as a Structured Field String (RFC 9651 §3.3.3), so in double quotes. Lowercase or uppercase hex; the API compares them as lowercase. Parameters after it (RFC 9651 §2.3) are ignored.
+ */
 export type IdempotencyKey = string;
 
 /**
@@ -1251,9 +1254,9 @@ export type RetroData = {
 };
 
 /**
- * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+ * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
  */
-export type IdempotencyKey2 = IdempotencyKey;
+export type IdempotencyKeyHeader = IdempotencyKey;
 
 export type GetMeData = {
     body?: never;
@@ -1301,7 +1304,7 @@ export type SetSettingsData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -1402,7 +1405,7 @@ export type CreateAreaData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -1465,7 +1468,7 @@ export type RenameAreaData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -1526,7 +1529,7 @@ export type ArchiveAreaData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -1587,7 +1590,7 @@ export type RestoreAreaData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -1651,7 +1654,7 @@ export type CreateTaskData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -1723,7 +1726,7 @@ export type SaveTaskData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -1784,7 +1787,7 @@ export type ArchiveTaskData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -1845,7 +1848,7 @@ export type RestoreTaskData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -1906,7 +1909,7 @@ export type CompleteTaskData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -1967,7 +1970,7 @@ export type UndoCompleteTaskData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -2028,7 +2031,7 @@ export type EndRecurrenceData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -2096,7 +2099,7 @@ export type SetRecurrenceData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -2165,7 +2168,7 @@ export type AddSubtaskData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -2232,7 +2235,7 @@ export type UpdateSubtaskData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -2298,7 +2301,7 @@ export type AdoptEstimateSuggestionData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -2362,7 +2365,7 @@ export type UndoAdoptionData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -2424,7 +2427,7 @@ export type RejectSuggestionData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -2486,7 +2489,7 @@ export type UndoRejectionData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -2687,7 +2690,7 @@ export type BeginPlanningData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -2805,7 +2808,7 @@ export type SetAvailableHoursData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -2868,7 +2871,7 @@ export type ConfirmSprintData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -2933,7 +2936,7 @@ export type UpdateGoalData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -2995,7 +2998,7 @@ export type RemoveSprintTasksData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -3063,7 +3066,7 @@ export type AddToSprintData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -3133,7 +3136,7 @@ export type RemoveSprintTaskData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -3197,7 +3200,7 @@ export type SetGoalLinkData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -3259,7 +3262,7 @@ export type ExcludeAllOccurrencesData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -3323,7 +3326,7 @@ export type IncludeOccurrencesData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -3384,7 +3387,7 @@ export type ExcludeOccurrenceData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -3446,7 +3449,7 @@ export type IncludeOccurrenceData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -3569,7 +3572,7 @@ export type ChooseForDayData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -3640,7 +3643,7 @@ export type StartSelectionData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -3704,7 +3707,7 @@ export type PauseSelectionData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -3766,7 +3769,7 @@ export type DeferSelectionData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -3828,7 +3831,7 @@ export type UndoDeferSelectionData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -3890,7 +3893,7 @@ export type RemoveFromTodayData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -3952,7 +3955,7 @@ export type UndoRemoveFromTodayData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -4014,7 +4017,7 @@ export type CompleteSelectionData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -4076,7 +4079,7 @@ export type UndoCompleteSelectionData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -4138,7 +4141,7 @@ export type SkipSelectionData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -4200,7 +4203,7 @@ export type UndoSkipSelectionData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -4267,7 +4270,7 @@ export type RecordActualTimeData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -4331,7 +4334,7 @@ export type NoteInterruptData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -4394,7 +4397,7 @@ export type DeleteInterruptData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -4459,7 +4462,7 @@ export type EditInterruptData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -4525,7 +4528,7 @@ export type RestoreInterruptData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -4641,7 +4644,7 @@ export type UpdateRetroData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -4702,7 +4705,7 @@ export type BeginRetroData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -4761,7 +4764,7 @@ export type CompleteRetroData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -4822,7 +4825,7 @@ export type UnpinFactData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -4887,7 +4890,7 @@ export type PinFactData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -4954,7 +4957,7 @@ export type DecideCriterionData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -5018,7 +5021,7 @@ export type DraftCriterionData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -5079,7 +5082,7 @@ export type DropCriterionDraftData = {
     body?: never;
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };
@@ -5142,7 +5145,7 @@ export type SetDraftPolicyData = {
     };
     headers: {
         /**
-         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
+         * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
     };

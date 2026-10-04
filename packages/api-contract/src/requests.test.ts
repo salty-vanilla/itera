@@ -186,13 +186,15 @@ describe('the idempotency key', () => {
     const header = idempotencyKeyHeaders(KEY)[IDEMPOTENCY_KEY_HEADER];
     expect(readIdempotencyKey(header)).toBe(KEY);
     expect(readIdempotencyKey(`"${KEY.toUpperCase()}"`)).toBe(KEY);
+    // Parameters say nothing this API knows (RFC 9651 §2.3).
+    expect(readIdempotencyKey(`"${KEY}";a=1`)).toBe(KEY);
   });
 
   it.each([
     ['no header', null, 'required for every write.'],
     ['a bare UUID', KEY, 'not a UUID'],
     ['not a UUID', '"key-1"', 'not a UUID'],
-    ['a parameter after it', `"${KEY}";a=1`, 'not a UUID'],
+    ['something after it but a parameter', `"${KEY}"x`, 'not a UUID'],
   ])('refuses %s with 400 at the header', (_, value, detail) => {
     let error: unknown;
     try {

@@ -57,7 +57,7 @@ type Write<Input> = { readonly input: Input; readonly key: string };
  * - When it did not go through, every read is read again, the danger Toast
  *   says so and `run` gives back `{ ok: false }` (save-failed.ts). When it
  *   may have been saved after all (no answer or a server failure, also when
- *   sent again), the Toast has 再試行, which sends it once more with the
+ *   sent again), the Toast has もう一度保存, which sends it once more with the
  *   same key. Without a session there is no Toast: the person is sent to
  *   sign in.
  * - `pending` is true while it is being sent (block the control), and
@@ -96,18 +96,23 @@ export function useSend<Input, Output>(
   const toast = useToast();
   const { mutateAsync, isPending } = useMutation({
     mutationKey: [key],
-    mutationFn: ({ input, key }: Write<Input>) =>
-      send(client, input, idempotencyKeyHeaders(key)),
+    mutationFn: ({ input, key: idempotencyKey }: Write<Input>) =>
+      send(client, input, idempotencyKeyHeaders(idempotencyKey)),
     scope: { id: OPERATION_SCOPE },
     retry: (failures, error) =>
       failures < SEND_AGAIN_DELAYS.length && sendsAgain(error),
     retryDelay: (failures) => SEND_AGAIN_DELAYS[failures]!,
+    // Sent, and sent again, whether or not the browser says it is online
+    // or the tab has focus: the tries end in the Toast after
+    // SEND_AGAIN_DELAYS, never in a wait without end that would hold every
+    // other operation behind it (one scope).
+    networkMode: 'always',
   });
   // A ref, not `isPending`: a second press can come before the render.
   const sending = useRef(false);
   /**
    * Sends the write; when it did not go through, says so in a Toast, whose
-   * 再試行 sends the same write again.
+   * もう一度保存 sends the same write again.
    */
   const attempt = useCallback(
     (write: Write<Input>): Promise<Outcome<Output>> => {

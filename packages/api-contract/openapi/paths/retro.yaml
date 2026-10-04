@@ -45,7 +45,7 @@ retro:
         in: path
         required: true
         schema: { $ref: '../schemas/common.yaml#/SprintId' }
-      - $ref: '../parameters.yaml#/IdempotencyKey'
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     responses:
       '201':
         description: Made.
@@ -69,7 +69,7 @@ retro:
         in: path
         required: true
         schema: { $ref: '../schemas/common.yaml#/SprintId' }
-      - $ref: '../parameters.yaml#/IdempotencyKey'
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     requestBody:
       required: true
       content:
@@ -108,7 +108,7 @@ retroComplete:
         in: path
         required: true
         schema: { $ref: '../schemas/common.yaml#/SprintId' }
-      - $ref: '../parameters.yaml#/IdempotencyKey'
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     responses:
       '204':
         description: Done.
@@ -146,7 +146,7 @@ retroPin:
             - { $ref: '../schemas/common.yaml#/InterruptNoteId' }
             - { $ref: '../schemas/common.yaml#/AreaId' }
             - { const: available-hours }
-      - $ref: '../parameters.yaml#/IdempotencyKey'
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     responses:
       '204':
         description: Done.
@@ -183,7 +183,7 @@ retroPin:
             - { $ref: '../schemas/common.yaml#/InterruptNoteId' }
             - { $ref: '../schemas/common.yaml#/AreaId' }
             - { const: available-hours }
-      - $ref: '../parameters.yaml#/IdempotencyKey'
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     responses:
       '204':
         description: Done.
@@ -208,7 +208,7 @@ criterionUse:
         in: path
         required: true
         schema: { $ref: '../schemas/common.yaml#/SprintId' }
-      - $ref: '../parameters.yaml#/IdempotencyKey'
+      - $ref: '../parameters.yaml#/IdempotencyKeyHeader'
     requestBody:
       required: true
       content:

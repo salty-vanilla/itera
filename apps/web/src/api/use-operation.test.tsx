@@ -20,6 +20,7 @@ import {
 } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { onlineManager } from '@tanstack/react-query';
 import { ToastProvider } from '@/components/ui/toast';
 import { createMock } from '@/mock/mock-api';
 import { ApiProvider } from './api-provider';
@@ -303,14 +304,14 @@ async function failWith(answer: Answer) {
 const patch = `PATCH /api/areas/${ids.area.research}`;
 
 /**
- * The 再試行 buttons. A danger Toast is hidden from assistive technology
- * until focus is in it (Base UI): its text is announced through the alert
- * region, and F6 takes focus to it.
+ * The もう一度保存 buttons. A danger Toast is hidden from assistive
+ * technology until focus is in it (Base UI): its text is announced through
+ * the alert region, and F6 takes focus to it.
  */
 const retryButtons = () =>
-  screen.getAllByRole('button', { name: '再試行', hidden: true });
+  screen.getAllByRole('button', { name: 'もう一度保存', hidden: true });
 
-/** The Toast of a write that may have been saved, with 再試行. */
+/** The Toast of a write that may have been saved, with もう一度保存. */
 async function expectMayHaveBeenSaved() {
   expect(
     await screen.findAllByText('保存できたかわかりませんでした'),
@@ -382,7 +383,7 @@ describe('a failed operation', () => {
     expect(screen.queryAllByText(/保存でき/)).toHaveLength(0);
   });
 
-  it('sends the same write again with 再試行, with its key', async () => {
+  it('sends the same write again with もう一度保存, with its key', async () => {
     let down = true;
     const { requests, keys } = await failWith((request) =>
       request.method !== 'GET' && down
@@ -406,15 +407,37 @@ describe('a failed operation', () => {
   });
 
   it('names each run with a new key', async () => {
-    const { keys } = await failWith(validationFailed);
-    const { result } = renderHook(useRenameAndOverview, {
-      wrapper: setUp().wrapper,
-    });
+    const { keys, wrapper } = setUp();
+    const { result } = renderHook(useRenameAndOverview, { wrapper });
     await act(async () => {
       await result.current.rename.run(rename('研究室'));
+      await result.current.rename.run(rename('研究会'));
     });
-    expect(keys).toHaveLength(1);
-    expect(keys[0]).not.toBeNull();
+    expect(keys).toHaveLength(2);
+    expect(keys[0]).toMatch(/^"[0-9a-f-]{36}"$/);
+    expect(keys[1]).not.toBe(keys[0]);
+  });
+
+  it('ends its tries in the Toast also when the browser says it is offline', async () => {
+    const { requests, wrapper } = setUp((request) =>
+      request.method !== 'GET'
+        ? Promise.reject(new TypeError('Failed to fetch'))
+        : undefined,
+    );
+    const { result } = renderHook(useRenameAndOverview, { wrapper });
+    await waitFor(() => expect(result.current.overview.data).toBeDefined());
+    onlineManager.setOnline(false);
+    try {
+      let outcome: unknown;
+      await act(async () => {
+        outcome = await result.current.rename.run(rename('研究室'));
+      });
+      expect(outcome).toEqual({ ok: false });
+      expect(requests.filter((r) => r === patch)).toHaveLength(3);
+      await expectMayHaveBeenSaved();
+    } finally {
+      onlineManager.setOnline(true);
+    }
   });
 });
 

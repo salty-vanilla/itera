@@ -1092,8 +1092,9 @@ export function idempotencyKeyHeaders(key: string): {
 /**
  * The key a received write is named by: the UUID of the header, in
  * lowercase, so that a key sent again in another case is the same key.
- * Throws `RequestError` (400) when there is no header or it is not a UUID
- * in a Structured Field String.
+ * Parameters after it are ignored (RFC 9651 §2.3). Throws `RequestError`
+ * (400) when there is no header or it is not a UUID in a Structured Field
+ * String.
  */
 export function readIdempotencyKey(value: string | null | undefined): string {
   const header = IDEMPOTENCY_KEY_HEADER;
@@ -1104,7 +1105,7 @@ export function readIdempotencyKey(value: string | null | undefined): string {
       header,
       detail: 'not a UUID as a Structured Field String ("…").',
     });
-  return value.slice(1, -1).toLowerCase();
+  return value.slice(1, 37).toLowerCase();
 }
 
 // ------------------------------------------------------------ the query
