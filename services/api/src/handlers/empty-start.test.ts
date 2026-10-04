@@ -1,7 +1,9 @@
 // A new person's first week (#279), through the app with a clock that
 // moves: no records at all, then the settings, an Area and a Task, Sprint 1
 // planned and confirmed, the Task chosen for today and completed, and, when
-// the week is over, the Retro completed. Each step is the contract's request; the
+// the week is over, the Retro completed. A second week follows (#369): one
+// Task done and one deferred today, the Retro's facts, and the next Planning
+// carrying the deferred one over. Each step is the contract's request; the
 // records are read back only where an operation needs an ID the answer
 // does not carry.
 import {
@@ -21,6 +23,18 @@ import { httpRequest } from './operation-cases';
 
 /** A JSON answer, read where the test needs a value of it. */
 type Json = Record<string, unknown>;
+
+/** What the Retro answer shows of Tasks, and what a candidate row shows. */
+interface RetroView {
+  facts: {
+    completed: { taskId: string }[];
+    carriedOver: { taskId: string }[];
+    deferrals: { sprintTaskId: string }[];
+  };
+}
+interface CandidateRow {
+  task: { id: string };
+}
 
 const closers: (() => void)[] = [];
 afterEach(() => {
@@ -172,5 +186,160 @@ describe('a new person’s first week', () => {
     await send('completeRetro', { sprintId }, 204);
     const done = (await loadRecords(db, alice)).records!.sprints[0]!;
     expect(done.state).toBe('closed');
+  });
+
+  it('carries the Task deferred today into the next Sprint after the Retro', async () => {
+    const { app, db, alice, get, send, at } = await setup();
+    const made = await app.request(
+      '/api/me/settings',
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...writeHeaders() },
+        body: JSON.stringify({
+          displayName: 'Alice',
+          timeZone: 'Asia/Tokyo',
+          weekStartsOn: 1,
+        }),
+      },
+      testEnv,
+    );
+    expect(made.status).toBe(201);
+
+    const { areaId } = (await send<{ areaId: string }>(
+      'createArea',
+      { name: '仕事' },
+      201,
+    ))!;
+    const addTask = async (title: string) => {
+      const { taskId } = (await send<{ taskId: string }>(
+        'createTask',
+        { title, areaId },
+        201,
+      ))!;
+      await send('saveTask', { taskId, update: {}, estimate: 2 }, 204);
+      return taskId;
+    };
+    const doneTask = await addTask('資料を作る');
+    const deferredTask = await addTask('見積もりを出す');
+
+    // Monday 10/5: both Tasks planned, the Sprint confirmed.
+    const { sprintId } = (await send<{ sprintId: string }>(
+      'beginPlanning',
+      undefined,
+      201,
+    ))!;
+    await send('setAvailableHours', { sprintId, hours: 20 }, 204);
+    await send(
+      'addSprintTasks',
+      { sprintId, taskIds: [doneTask, deferredTask] },
+      201,
+    );
+    await send('confirmSprint', { sprintId, applyCriterion: false }, 204);
+    const sprintTasks = (await loadRecords(db, alice)).records!.sprints[0]!
+      .tasks;
+    const sprintTaskOf = (taskId: string) =>
+      sprintTasks.find((t) => t.taskId === taskId)!.id;
+
+    // Both are chosen for today: one is completed, the other deferred.
+    const choose = async (taskId: string) =>
+      (await send<{ selectionId: string }>(
+        'chooseForToday',
+        {
+          sprintId,
+          date: '2026-10-05',
+          sprintTaskId: sprintTaskOf(taskId),
+        },
+        201,
+      ))!.selectionId;
+    const doneSelection = await choose(doneTask);
+    const deferredSelection = await choose(deferredTask);
+    await send(
+      'completeSelection',
+      { sprintId, selectionId: doneSelection },
+      204,
+    );
+    await send(
+      'deferSelection',
+      { sprintId, selectionId: deferredSelection },
+      204,
+    );
+
+    // The week ends: Sprint 1 is in Review, and its facts say what happened.
+    at('10-12 09:00');
+    const retro = await get<{ view: RetroView }>(`/sprints/${sprintId}/retro`);
+    const { facts } = retro.view;
+    expect(facts.completed.map((t) => t.taskId)).toEqual([doneTask]);
+    expect(facts.carriedOver).toMatchObject([
+      {
+        taskId: deferredTask,
+        outcome: 'carriedOver',
+        deferredDates: ['2026-10-05'],
+      },
+    ]);
+    expect(facts.deferrals).toMatchObject([
+      {
+        sprintTaskId: sprintTaskOf(deferredTask),
+        date: '2026-10-05',
+        resolution: 'deferred',
+      },
+    ]);
+
+    await send('completeRetro', { sprintId }, 204);
+    expect((await loadRecords(db, alice)).records!.sprints[0]!.state).toBe(
+      'closed',
+    );
+
+    // Monday 10/12: Sprint 2 is planned, and the deferred Task is offered as
+    // a carry-over, not chosen until the person chooses it.
+    const next = await get<{ sprints: { next?: { number: number } } }>('/me');
+    expect(next.sprints.next?.number).toBe(2);
+    const { sprintId: nextSprintId } = (await send<{ sprintId: string }>(
+      'beginPlanning',
+      undefined,
+      201,
+    ))!;
+    const candidates = async () =>
+      (
+        await get<{ view: { carriedOver: CandidateRow[] } }>(
+          `/sprints/${nextSprintId}/candidates`,
+        )
+      ).view.carriedOver;
+    expect(await candidates()).toMatchObject([
+      { task: { id: deferredTask }, carry: { count: 1 } },
+    ]);
+    expect((await candidates())[0]).not.toHaveProperty('chosen');
+
+    // Choosing it links the new SprintTask to the one it was carried from.
+    await send(
+      'addSprintTasks',
+      { sprintId: nextSprintId, taskIds: [deferredTask] },
+      201,
+    );
+    expect(await candidates()).toMatchObject([
+      {
+        task: { id: deferredTask },
+        carriedFrom: { id: sprintTaskOf(deferredTask), outcome: 'carriedOver' },
+        chosen: { taskId: deferredTask, outcome: 'draft' },
+      },
+    ]);
+
+    // The next Sprint can be confirmed.
+    await send('setAvailableHours', { sprintId: nextSprintId, hours: 20 }, 204);
+    await send(
+      'confirmSprint',
+      { sprintId: nextSprintId, applyCriterion: false },
+      204,
+    );
+    const second = (await loadRecords(db, alice)).records!.sprints.find(
+      (s) => s.id === nextSprintId,
+    )!;
+    expect(second.state).toBe('active');
+    expect(second.tasks).toMatchObject([
+      {
+        taskId: deferredTask,
+        outcome: 'planned',
+        carriedFrom: sprintTaskOf(deferredTask),
+      },
+    ]);
   });
 });
