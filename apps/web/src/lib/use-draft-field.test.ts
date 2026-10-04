@@ -389,6 +389,24 @@ describe('useDraftField of a record with a version, when a read after the save w
     expect(result.current.value).toBe('from another device');
   });
 
+  it('keeps the value sent when the read comes back to a version shown before the save (another query of the record, kept from before)', async () => {
+    const { result, rerender } = versioned();
+    // Shown earlier, then read again at a later version.
+    rerender({ read: 'older', etag: '"0"' });
+    rerender({ read: 'saved', etag: '"1"' });
+    act(() => result.current.set('typed'));
+    await act(async () =>
+      result.current.hold(Promise.resolve(savedOver('"1"', '"2"'))),
+    );
+    // The other query's answer, kept from before, is shown while it is
+    // read again.
+    rerender({ read: 'older', etag: '"0"' });
+    expect(result.current.value).toBe('typed');
+    rerender({ read: 'typed', etag: '"2"' });
+    rerender({ read: 'from another device', etag: '"3"' });
+    expect(result.current.value).toBe('from another device');
+  });
+
   it('follows the read once it has the save, also when its value is the one read before', async () => {
     const { result, rerender } = versioned();
     act(() => result.current.set('typed'));

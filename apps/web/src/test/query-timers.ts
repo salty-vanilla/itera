@@ -41,6 +41,14 @@ export function heldQueryTimers() {
     get waiting() {
       return queue.size;
     },
+    /**
+     * Drops the ones held without running them, and holds none from now
+     * on: after a test, its reads are not tried again.
+     */
+    reset() {
+      holding = false;
+      queue.clear();
+    },
     /** Runs the ones held, and holds none from now on. */
     release() {
       holding = false;

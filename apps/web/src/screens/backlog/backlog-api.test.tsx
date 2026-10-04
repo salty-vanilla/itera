@@ -58,7 +58,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
-  queryTimers.release();
+  queryTimers.reset();
   vi.unstubAllGlobals();
 });
 
@@ -643,6 +643,41 @@ describe('the Backlog on the API', () => {
           (r) => r.includes('/subtasks/') && r.startsWith('PATCH'),
         ),
       ).toHaveLength(1);
+    });
+
+    it("puts a Subtask's Estimate back to the value as read when its save is refused (#343)", async () => {
+      const { store } = serve(
+        (request) =>
+          request.method === 'PATCH' &&
+          new URL(request.url).pathname.includes('/subtasks/')
+            ? refused()
+            : undefined,
+        'backlog-detail',
+      );
+      const router = renderBacklog();
+      await list();
+      await router.navigate({
+        to: '/backlog',
+        search: { task: ids.task.dataset },
+      });
+      const detail = await screen.findByRole('dialog');
+      const field = () =>
+        getHours(within(detail), /^見積もり：欠損値を確認する/);
+      const before = field().value;
+      await userEvent.clear(field());
+      await userEvent.type(field(), '4');
+      await userEvent.tab();
+      await userEvent.tab();
+      expect(
+        await screen.findAllByText('保存できませんでした'),
+      ).not.toHaveLength(0);
+      await until(() => expect(field().value).toBe(before));
+      expect(
+        store
+          .getSnapshot()
+          .records.tasks.find((t) => t.id === ids.task.dataset)!.subtasks[0]!
+          .estimate,
+      ).not.toBe(4);
     });
 
     it('follows the other device again after a title typed and typed back with spaces around it', async () => {

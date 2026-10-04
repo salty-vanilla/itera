@@ -39,7 +39,8 @@ type Draft<T> = {
    * The versions the last save that went through wrote (`Written`, by
    * `keyOf`), #343: the read has the save once its record is at `now`, or
    * at one not in `over` (changed again since, here or on another device);
-   * a read at one in `over` was made before it. `undefined` for a field
+   * a read at one in `over` was made before it. `over` also has the
+   * versions the field showed before the save was sent. `undefined` for a field
    * without a version, or a value `put` in by an operation: the value
    * changing from `from` says so instead.
    */
@@ -151,6 +152,17 @@ function useDraftField<T>(
         ? { none: true }
         : { etag: version.etag };
   const sent = useRef(0);
+  // The record's versions this field has shown (#343). A read can come back
+  // to one of them after a save, not only to one the save was made over:
+  // another query of the same record, kept from before (the Backlog's other
+  // filter, Planning with the criterion applied or not), is shown at once
+  // while it is read again. None of them has the save: they were shown
+  // before it was sent.
+  const shown = useRef(new Set<string>());
+  const shownNow = current === undefined ? undefined : keyOf(current);
+  useEffect(() => {
+    if (shownNow !== undefined) shown.current.add(shownNow);
+  }, [shownNow]);
   // This field, to the app's count of typing not saved.
   const [self] = useState(() => ({}));
   const unsavedTyping = useUnsavedTyping();
@@ -226,6 +238,9 @@ function useDraftField<T>(
       saving?: boolean | void | Saved | Promise<boolean | void | Saved>,
     ) => {
       const id = ++sent.current;
+      // The versions shown before the save is sent: a read at one of them
+      // does not have it.
+      const before = [...shown.current];
       // The read as it is when the save is sent: what the read is to change
       // from before the typing is given up.
       setDraft(
@@ -260,7 +275,7 @@ function useDraftField<T>(
             written:
               ok === true && d.last === id
                 ? written && {
-                    over: new Set(written.over.map(keyOf)),
+                    over: new Set([...written.over.map(keyOf), ...before]),
                     now: keyOf(written.now),
                   }
                 : d.written,

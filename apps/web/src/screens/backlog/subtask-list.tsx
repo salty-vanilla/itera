@@ -172,7 +172,7 @@ function SubtaskRow({
     );
     field.hold(saving);
     // A save that fails goes back to the value as read.
-    void saving.then((ok) => {
+    void saving.then(({ ok }) => {
       if (!ok) field.drop();
     });
   }
