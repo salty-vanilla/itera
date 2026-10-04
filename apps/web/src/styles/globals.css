@@ -370,7 +370,7 @@
     /* The current screen keeps its bar and the selected tab its underline. */
     [data-slot='navigation-item']::before,
     [data-slot='tabs-tab']::after {
-      background-color: CanvasText;
+      background-color: CanvasText !important;
     }
     /* Area line symbols keep their colour (docs/design/accessibility.md). */
     [data-slot='area-mark'] {
@@ -379,11 +379,16 @@
     /*
      * Lines drawn with a background color disappear when backgrounds become
      * Canvas: Divider, the Progress fill and track, and the Notice surface.
+     * `!important` on the background of the lines and the fill, because the
+     * `bg-*` utilities (a later layer) would otherwise win over a base rule
+     * and keep the token colour (#394). The same goes for the bars above.
      */
     [data-slot='divider'],
-    [data-slot='divider-label'] > [aria-hidden] {
+    [data-slot='divider-label'] > [aria-hidden],
+    [data-slot='menu-separator'],
+    [data-slot='drawer-grip'] {
       forced-color-adjust: none;
-      background-color: CanvasText;
+      background-color: CanvasText !important;
     }
     /* An outline takes no room, so the 2px thin track keeps its inside. */
     [data-slot='progress-track'] {
@@ -391,7 +396,7 @@
     }
     [data-slot='progress-indicator'] {
       forced-color-adjust: none;
-      background-color: CanvasText;
+      background-color: CanvasText !important;
     }
     [data-slot='notice'] {
       border: var(--stroke-hairline) solid CanvasText;

@@ -3,10 +3,8 @@
 // globals.css has a rule for each of them. Computed colours were measured in
 // Chromium with `forcedColors: 'active'` (see the PR).
 import { cleanup, render } from '@testing-library/react';
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
+import { forcedColorsBlock } from '@/test/forced-colors';
 import { CapacityIndicator } from './capacity-indicator';
 
 afterEach(cleanup);
@@ -16,26 +14,6 @@ const areas = [
   { key: 'research', name: '研究', color: 2 as const, lo: 7.5, hi: 7.5 },
 ];
 const total = { lo: 12.5, hi: 14.5, unestimated: 0, unestimatedSubtasks: 0 };
-
-// A path, not `new URL(..., import.meta.url)`: jsdom replaces `URL`, and
-// `readFileSync` refuses its instances.
-const globalsCss = readFileSync(
-  resolve(dirname(fileURLToPath(import.meta.url)), '../../styles/globals.css'),
-  'utf8',
-);
-
-// The body of the `@media (forced-colors: active)` block of the base layer.
-function forcedColorsBlock() {
-  const start = globalsCss.indexOf('@media (forced-colors: active)');
-  let depth = 0;
-  for (let i = globalsCss.indexOf('{', start); i < globalsCss.length; i++) {
-    if (globalsCss[i] === '{') depth++;
-    if (globalsCss[i] === '}' && --depth === 0) {
-      return globalsCss.slice(start, i);
-    }
-  }
-  throw new Error('forced-colors block not closed');
-}
 
 describe('Capacity bar in forced colors (#359)', () => {
   it('has a rule in the forced-colors block for each part drawn by a background', () => {
