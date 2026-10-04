@@ -30,6 +30,7 @@ import {
   WEEKDAY_NAMES,
 } from '@/lib/recurrence-text';
 import { useDraftField } from '@/lib/use-draft-field';
+import { weeklyNeedsADay } from '@/lib/value-rules';
 import { cn } from '@/lib/utils';
 import { useRecurrenceActions } from '@/screen-data/use-task-actions';
 
@@ -209,7 +210,7 @@ function RecurrenceEditor({
     daysRef.current?.querySelector<HTMLElement>('[role="checkbox"]') ?? null;
   const pendingOf = (): HTMLElement | null => {
     if (owns) {
-      if (freq === 'weekly' && days.length === 0) return firstDay();
+      if (weeklyNeedsADay(freq, days)) return firstDay();
       return choice.unsaved ? freqRef.current : null;
     }
     const base = choiceOf(undefined);
@@ -246,7 +247,7 @@ function RecurrenceEditor({
     nextDayOfMonth: number,
     blame = false,
   ): Promise<Saved> {
-    if (next === 'weekly' && nextDays.length === 0) {
+    if (weeklyNeedsADay(next, nextDays)) {
       setError('曜日を 1つ以上選んでください');
       if (blame) firstDay()?.focus();
       return { ok: false };
@@ -286,7 +287,7 @@ function RecurrenceEditor({
     choice.set({ freq: next, days, dayOfMonth });
     setError(undefined);
     // A weekly choice has no day yet: nothing to save, nothing to blame.
-    if (saves && !(next === 'weekly' && days.length === 0)) {
+    if (saves && !weeklyNeedsADay(next, days)) {
       choice.hold(save(next, days, dayOfMonth));
     }
   }

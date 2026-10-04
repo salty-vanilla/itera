@@ -16,7 +16,8 @@ import {
 } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
-import { sameWords, useDraftField } from '@/lib/use-draft-field';
+import { useDraftField } from '@/lib/use-draft-field';
+import { readAreaName, sameWords } from '@/lib/value-rules';
 import {
   useAreaActions,
   useAreas,
@@ -138,16 +139,16 @@ function AreaEditor({
 
   async function add(event: FormEvent) {
     event.preventDefault();
-    const name = newName.trim();
+    const name = readAreaName(newName);
     // Nothing typed adds nothing, as in a Quick Add.
-    if (name === '') {
+    if (name === undefined) {
       newRef.current?.focus();
       return;
     }
     const created = await actions.addArea(name);
     if (created === undefined) return;
     // What was typed while it was sent is the next Area's.
-    setNewName((typed) => (typed.trim() === name ? '' : typed));
+    setNewName((typed) => (readAreaName(typed) === name ? '' : typed));
     setStatus(`「${name}」を追加しました`);
     if (onCreated !== undefined) onCreated(created);
     else newRef.current?.focus();
@@ -301,7 +302,8 @@ function EditRow({
         className="flex flex-col gap-2"
         onSubmit={(event) => {
           event.preventDefault();
-          if (name.trim() === '') {
+          const renamed = readAreaName(name);
+          if (renamed === undefined) {
             setError('名前を入力してください');
             inputRef.current?.focus();
             return;
@@ -312,7 +314,7 @@ function EditRow({
           }
           // Held until it is answered: a rename that did not go through
           // gives the typing back (#321).
-          nameField.hold(onRename(name.trim(), nameField.madeFrom));
+          nameField.hold(onRename(renamed, nameField.madeFrom));
         }}
       >
         <Field

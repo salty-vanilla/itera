@@ -64,14 +64,12 @@ import {
   EMPTY_DURATION,
   hoursText,
   readMinutes,
+  readPositiveMinutes,
   sameDuration,
   type DurationText,
 } from '@/lib/duration-text';
-import {
-  sameWords,
-  useDraftField,
-  type VersionedDraftField,
-} from '@/lib/use-draft-field';
+import { useDraftField, type VersionedDraftField } from '@/lib/use-draft-field';
+import { readTaskTitle, sameWords } from '@/lib/value-rules';
 import { LAST_DAY_CLOSED_WORDS } from '@/lib/selection-words';
 import { formatHours } from '@/lib/time-format';
 import { startedText } from '@/lib/today-words';
@@ -130,11 +128,11 @@ const same: Reading = { kind: 'same' };
 function readField(key: TextKey, draft: Draft, base: Draft): Reading {
   switch (key) {
     case 'title': {
-      const title = draft.title.trim();
-      if (title === '') {
+      const title = readTaskTitle(draft.title);
+      if (title === undefined) {
         return { kind: 'error', message: 'タイトルを入力してください' };
       }
-      return title === base.title.trim()
+      return title === readTaskTitle(base.title)
         ? same
         : { kind: 'save', update: { title } };
     }
@@ -158,8 +156,8 @@ function readField(key: TextKey, draft: Draft, base: Draft): Reading {
         : { kind: 'save', update: { due: parsed.value } };
     }
     case 'estimate': {
-      const minutes = readMinutes(draft.estimate);
-      if (minutes === null || minutes === 0) {
+      const minutes = readPositiveMinutes(draft.estimate);
+      if (minutes === null) {
         return { kind: 'error', message: DURATION_ERROR };
       }
       return minutes === readMinutes(base.estimate)

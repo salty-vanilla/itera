@@ -2,7 +2,8 @@ import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { Saved } from '@/api/use-operation';
 import { savedOver } from '@/test/saved';
-import { sameWords, useDraftField } from './use-draft-field';
+import { useDraftField } from './use-draft-field';
+import { sameWords } from './value-rules';
 
 function setup(initial = 'saved') {
   return renderHook(({ read }) => useDraftField(read), {
