@@ -258,5 +258,5 @@ function CompletionCircle({
   );
 }
 
-export { CompletionCircle, TaskRow, TaskTitleLines };
+export { CompletionCircle, revealRow, TaskRow, TaskTitleLines };
 export type { TaskRowProps };
