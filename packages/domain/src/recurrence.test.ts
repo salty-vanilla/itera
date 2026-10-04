@@ -9,8 +9,11 @@ import {
   changeRecurrenceRule,
   createRecurrenceRule,
   endRecurrenceRule,
+  endingRuleOf,
   nextOccurrence,
+  recurrenceOf,
   recurrenceSummary,
+  renewedRecurrenceSummary,
   scheduledDates,
   versionOn,
   type RecurrencePattern,
@@ -605,6 +608,95 @@ describe('endRecurrenceRule (F41)', () => {
     ).toEqual({
       pattern: { freq: 'weekly', daysOfWeek: [6] },
       endsOn: '2026-10-04',
+    });
+  });
+});
+
+describe('renewedRecurrenceSummary (F41, #338)', () => {
+  // 部屋の掃除 repeats on Saturdays and is ended from 10/5; before that day
+  // it is made recurring again, from the next Sprint (#323).
+  function renewed(pattern: RecurrencePattern) {
+    const { task, rule } = recurring(
+      { freq: 'weekly', daysOfWeek: [6] },
+      '2026-08-03',
+    );
+    const ending = unwrap(
+      endRecurrenceRule(rule, { endFrom: d('2026-10-05') }, ctx),
+    );
+    // Ended, the rule comes off the Task (endRuleForNextSprint does this):
+    // the same Task, one-off again.
+    const oneOff = newTask(task.title, task.id);
+    const again = unwrap(
+      createRecurrenceRule(
+        oneOff,
+        { id: id('rule-2'), pattern, effectiveFrom: d('2026-10-05') },
+        ctx,
+      ),
+    );
+    return { task: again.task, ending, rule: again.rule };
+  }
+  const options = { today: d('2026-10-01'), projectFrom: d('2026-10-05') };
+  // This week's Sprint has made the 10/3 occurrence of the rule that ends.
+  function week(ending: RecurrenceRule): readonly Occurrence[] {
+    return unwrap(
+      generateOccurrences(
+        ending,
+        {
+          start: d('2026-09-28'),
+          end: d('2026-10-04'),
+          existing: [],
+          newOccurrenceId,
+        },
+        ctx,
+      ),
+    );
+  }
+
+  it('the Task’s own rule comes first; the ended one is found until its last day', () => {
+    const { task, ending, rule } = renewed({ freq: 'weekly', daysOfWeek: [1] });
+    const rules = [ending, rule];
+    expect(recurrenceOf(task, rules, d('2026-10-01'))).toBe(rule);
+    expect(endingRuleOf(task, rules, d('2026-10-04'))).toBe(ending);
+    expect(endingRuleOf(task, rules, d('2026-10-05'))).toBeUndefined();
+  });
+
+  it('this week by the rule that ends, then the new rule as a change', () => {
+    const { ending, rule } = renewed({ freq: 'weekly', daysOfWeek: [1] });
+    expect(
+      renewedRecurrenceSummary(ending, rule, week(ending), options),
+    ).toEqual({
+      pattern: { freq: 'weekly', daysOfWeek: [6] },
+      next: { scheduledDate: '2026-10-03', ruleVersion: 1, generated: true },
+      upcoming: {
+        pattern: { freq: 'weekly', daysOfWeek: [1] },
+        effectiveFrom: '2026-10-05',
+      },
+    });
+  });
+
+  it('with this week’s occurrences done, the next is by the new rule', () => {
+    const { ending, rule } = renewed({ freq: 'weekly', daysOfWeek: [1] });
+    expect(
+      renewedRecurrenceSummary(
+        ending,
+        rule,
+        week(ending).map((o) => ({ ...o, state: 'done' as const })),
+        options,
+      ).next,
+    ).toEqual({
+      scheduledDate: '2026-10-05',
+      ruleVersion: 1,
+      generated: false,
+    });
+  });
+
+  it('the same pattern again is no change and has no last day', () => {
+    const { ending, rule } = renewed({ freq: 'weekly', daysOfWeek: [6] });
+    expect(
+      renewedRecurrenceSummary(ending, rule, week(ending), options),
+    ).toEqual({
+      pattern: { freq: 'weekly', daysOfWeek: [6] },
+      next: { scheduledDate: '2026-10-03', ruleVersion: 1, generated: true },
     });
   });
 });

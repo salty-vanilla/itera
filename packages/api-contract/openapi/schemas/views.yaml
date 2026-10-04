@@ -376,7 +376,10 @@ BacklogItem:
     carry: { $ref: './values.yaml#/CarryCount' }
     recurrence: { $ref: './values.yaml#/RecurrenceSummary' }
     rule:
-      description: The rule's pattern today and its latest version.
+      description: >-
+        The rule's pattern today and its latest version. Until the last day
+        of a rule the Task has ended (F41), the pattern today is that rule's,
+        also once the Task has a rule of its own again (#338).
       type: object
       required: [current, latest, etag]
       properties:

@@ -424,7 +424,7 @@ export type NextOccurrence = {
 export type RecurrenceSummary = {
     pattern: RecurrencePattern;
     /**
-     * A change of pattern from a later day.
+     * A change of pattern from a later day: a new version, or the Task's new rule after the one it ended (#338).
      */
     upcoming?: {
         pattern: RecurrencePattern;
@@ -601,7 +601,7 @@ export type BacklogItem = {
     carry?: CarryCount;
     recurrence?: RecurrenceSummary;
     /**
-     * The rule's pattern today and its latest version.
+     * The rule's pattern today and its latest version. Until the last day of a rule the Task has ended (F41), the pattern today is that rule's, also once the Task has a rule of its own again (#338).
      */
     rule?: {
         current: RecurrencePattern;
@@ -1744,7 +1744,7 @@ export type BacklogItemWritable = {
     carry?: CarryCount;
     recurrence?: RecurrenceSummary;
     /**
-     * The rule's pattern today and its latest version.
+     * The rule's pattern today and its latest version. Until the last day of a rule the Task has ended (F41), the pattern today is that rule's, also once the Task has a rule of its own again (#338).
      */
     rule?: {
         current: RecurrencePattern;

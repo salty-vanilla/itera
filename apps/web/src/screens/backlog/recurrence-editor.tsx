@@ -36,7 +36,9 @@ import { useRecurrenceActions } from '@/screen-data/use-task-actions';
 // before it can be saved. 「繰り返しをやめる」 ends the rule from the next
 // Sprint (F41): it comes off the Task, which is shown with it until its
 // last day. The Task is one-off again and can be made recurring from the
-// next Sprint, also before that day (owner decision in #323). A rule that
+// next Sprint, also before that day (owner decision in #323): the rule that
+// ends is then 今の設定 until its last day, and the new one is shown as a
+// change (#338). A rule that
 // has made no occurrence yet is taken off at once, and the editor is back
 // to making one. What is offered is what the read says can be done (#323).
 
@@ -149,6 +151,9 @@ function RecurrenceEditor({
   const actions = useRecurrenceActions();
   const { task, rule, capabilities: can } = item;
   const endsOn = item.recurrence?.endsOn;
+  // A change from the next Sprint, as the read says (#338): also the new
+  // rule of a Task made recurring again before the one it ended is over.
+  const upcoming = item.recurrence?.upcoming;
   // The Task's own rule, which a change saves to. A rule that ends has come
   // off the Task (F41): it is shown, but a choice makes a new one.
   const owns = task.recurrenceRuleId !== undefined;
@@ -366,9 +371,9 @@ function RecurrenceEditor({
           {/* Below the inputs, so that it may grow without moving the one
               being pressed, and whole: the line under the title cuts a long
               rule. */}
-          {owns && rule !== undefined && rule.latest !== rule.current && (
+          {owns && upcoming !== undefined && (
             <p className="text-body text-ink">
-              次の Sprint から：{formatPattern(rule.latest)}
+              次の Sprint から：{formatPattern(upcoming.pattern)}
             </p>
           )}
           {/* A one-off in the running Sprint stays so this week (F1). While

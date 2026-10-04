@@ -5,7 +5,7 @@ import { changed } from './record-store';
 import { memoryStore, tagged } from './testing';
 import { backlogData } from './backlog-view';
 import { catchUp } from './system-changes';
-import { endRule, saveTask } from './task-changes';
+import { endRule, saveTask, setRule } from './task-changes';
 
 const ids = fixtureIds();
 
@@ -102,5 +102,41 @@ describe('endRule (F41)', () => {
     expect(after.items[taskId]).not.toHaveProperty('recurrence');
     expect(after.items[taskId]?.capabilities.canComplete).toBe(true);
     expect(after.shown).not.toContain(taskId);
+  });
+
+  it('#338: made recurring again, the Task shows this week’s occurrence and the new rule as a change', () => {
+    const store = memoryStore(fixtureSnapshot('backlog-recurrence'));
+    const taskId = id<'Task'>(ids.task.cleaning);
+    expect(store.run(endRule(taskId)).ok).toBe(true);
+    const before = backlogData(
+      tagged(store.getSnapshot().records),
+      store.getSnapshot().clock,
+      { view: 'recurring' },
+    ).items[taskId];
+    // 毎週 土 · 次は 10/3 (土) · 10/4 (日) まで
+    const saturdays = before?.recurrence?.pattern;
+    expect(saturdays).toEqual({ freq: 'weekly', daysOfWeek: [6] });
+    const monday = { freq: 'weekly' as const, daysOfWeek: [1 as const] };
+    expect(store.run(setRule(taskId, monday)).ok).toBe(true);
+    const { records, clock } = store.getSnapshot();
+    const item = backlogData(tagged(records), clock, { view: 'recurring' })
+      .items[taskId];
+    expect(item?.recurrence).toEqual({
+      pattern: saturdays,
+      next: before?.recurrence?.next,
+      upcoming: { pattern: monday, effectiveFrom: '2026-10-05' },
+    });
+    expect(item?.rule).toMatchObject({ current: saturdays, latest: monday });
+    // The same pattern again is no change: it goes on, with no last day.
+    expect(store.run(setRule(taskId, saturdays!)).ok).toBe(true);
+    const same = backlogData(
+      tagged(store.getSnapshot().records),
+      store.getSnapshot().clock,
+      { view: 'recurring' },
+    ).items[taskId];
+    expect(same?.recurrence).toEqual({
+      pattern: saturdays,
+      next: before?.recurrence?.next,
+    });
   });
 });
