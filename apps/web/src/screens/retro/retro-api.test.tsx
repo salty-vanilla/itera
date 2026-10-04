@@ -237,6 +237,71 @@ describe('Retro on the API', () => {
     expect((field as HTMLTextAreaElement).value).toContain('あとで足した言葉');
   });
 
+  describe('leaving with words a failed save left out (#332)', () => {
+    async function failToSave() {
+      let refuse = true;
+      const served = serve(
+        (request) =>
+          request.method === 'PATCH' && refuse ? refused() : undefined,
+        'retro-reflect',
+      );
+      const router = renderRetro('/retro?stage=reflect');
+      await waitForRead();
+      const field = screen.getByRole('textbox', { name: /気づいたこと/ });
+      await userEvent.type(field, 'あとで足した言葉');
+      await userEvent.tab();
+      expect(
+        await screen.findAllByText('保存できませんでした'),
+      ).not.toHaveLength(0);
+      return { ...served, router, field, saves: () => (refuse = false) };
+    }
+
+    it('asks before the screen changes, and stays on 戻る', async () => {
+      const { router, field } = await failToSave();
+      await userEvent.click(screen.getAllByRole('link', { name: '今日' })[0]!);
+      const dialog = await screen.findByRole('alertdialog', {
+        name: '保存していない内容があります',
+      });
+      await userEvent.click(
+        within(dialog).getByRole('button', { name: '戻る' }),
+      );
+      await until(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+      expect(router.state.location.pathname).toBe('/retro');
+      expect((field as HTMLTextAreaElement).value).toContain(
+        'あとで足した言葉',
+      );
+    });
+
+    it('moves on with 保存せずに移る', async () => {
+      const { router } = await failToSave();
+      await userEvent.click(screen.getAllByRole('link', { name: '今日' })[0]!);
+      const dialog = await screen.findByRole('alertdialog');
+      await userEvent.click(
+        within(dialog).getByRole('button', { name: '保存せずに移る' }),
+      );
+      await until(() => expect(router.state.location.pathname).toBe('/today'));
+    });
+
+    it('does not ask once the words are saved', async () => {
+      const { router, saves } = await failToSave();
+      saves();
+      await userEvent.click(
+        screen.getByRole('textbox', { name: /気づいたこと/ }),
+      );
+      await userEvent.tab();
+      await until(() =>
+        expect(
+          screen
+            .getByRole('textbox', { name: /気づいたこと/ })
+            .getAttribute('aria-invalid'),
+        ).toBeNull(),
+      );
+      await userEvent.click(screen.getAllByRole('link', { name: '今日' })[0]!);
+      await until(() => expect(router.state.location.pathname).toBe('/today'));
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+  });
+
   describe('when another device has written the words (#324)', () => {
     // Looked up each time: the screen may draw the field anew when it reads.
     const reflection = () =>

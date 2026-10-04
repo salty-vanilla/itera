@@ -596,8 +596,25 @@ function TaskDetail({
     opens: boolean;
     subtask: boolean;
     recurrence: boolean;
+    /** A field's typing a failed save left out of the records (#332). */
+    typing: boolean;
   }>();
   const noticeId = useId();
+  const typingUnsaved = (Object.keys(fields) as TextKey[]).some(
+    (key) => fields[key].unsaved,
+  );
+  // Saved after all while the notice asks (sent again on leaving the
+  // field), with nothing else to ask about: nothing is lost, and the detail
+  // closes (or opens the other Task) as it was asked to.
+  const resolved =
+    held !== undefined &&
+    held.typing &&
+    !typingUnsaved &&
+    !held.subtask &&
+    !held.recurrence;
+  useEffect(() => {
+    if (resolved) held.then();
+  }, [resolved, held]);
   const backRef = useRef<HTMLButtonElement>(null);
   const subtaskPending = useRef<() => HTMLElement | null>(null);
   const recurrencePending = useRef<() => HTMLElement | null>(null);
@@ -703,13 +720,15 @@ function TaskDetail({
     }
     const subtask = subtaskPending.current?.() ?? null;
     const recurrence = recurrencePending.current?.() ?? null;
-    if (subtask === null && recurrence === null) return then();
+    if (subtask === null && recurrence === null && !typingUnsaved)
+      return then();
     flushSync(() =>
       setHeld({
         then,
         opens,
         subtask: subtask !== null,
         recurrence: recurrence !== null,
+        typing: typingUnsaved,
       }),
     );
     backRef.current?.focus();
@@ -718,7 +737,12 @@ function TaskDetail({
 
   /** 戻る: back to what was typed, opening the fold if it is in there. */
   function holdBack() {
-    const target = subtaskPending.current?.() ?? recurrencePending.current?.();
+    const target =
+      bodyRef.current?.querySelector<HTMLElement>(
+        '[data-save-failed] [data-detail-field]',
+      ) ??
+      subtaskPending.current?.() ??
+      recurrencePending.current?.();
     flushSync(() => {
       setHeld(undefined);
       if (target && foldRef.current?.contains(target)) setMore(true);
@@ -817,6 +841,7 @@ function TaskDetail({
             >
               <Textarea
                 value={draft.description}
+                data-detail-field
                 onChange={(e) => set('description', e.currentTarget.value)}
                 onBlur={() => commit('description')}
               />
@@ -1212,12 +1237,15 @@ function TaskDetail({
           {saved === undefined ? '' : `${fieldNames[saved]}を保存しました`}
         </p>
       </DrawerBody>
-      {held !== undefined && (
+      {held !== undefined && !resolved && (
         <div className="shrink-0 border-t border-border-soft px-4 py-3">
           <Notice
             live
             title={
               <span id={noticeId} className="flex flex-col">
+                {held.typing && typingUnsaved && (
+                  <span>保存していない内容があります</span>
+                )}
                 {held.subtask && <span>入力中のサブタスクがあります</span>}
                 {held.recurrence && (
                   <span>
@@ -1244,6 +1272,9 @@ function TaskDetail({
                   onClick={() => {
                     const { then } = held;
                     setHeld(undefined);
+                    // What a failed save left in the fields goes too.
+                    for (const key of Object.keys(fields) as TextKey[])
+                      fields[key].drop();
                     then();
                   }}
                 >

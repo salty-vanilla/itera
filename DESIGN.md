@@ -561,7 +561,7 @@ compact の原則：
 | Selected | リストの選択は `here-subtle` の地＋チェック（`aria-selected`）。Filter のオン（`aria-pressed`）は `here-subtle` の地＋`ink` の 2px の枠＋太字。トグルのオン（`aria-pressed`、IconButton の pressed）は墨の反転（`primary` の塗り＋`on-primary`）。例外：多くの行の 1 つに付ける「振り返りに使う」のピンは、オンをリストの選択と同じ `here-subtle` の地＋チェック（`ink`）にし、墨の塗りを画面の Primary だけに残す（Issue #242） |
 | Disabled | 地 `canvas-subtle`、文字 `ink-disabled`、輪郭 `border`、`cursor: not-allowed`。理由を近くに書く。可能なら無効化しない |
 | Loading | スピナー＋文言、`aria-busy`、幅を変えない。300ms 未満の処理には出さない |
-| Error | `danger` の 2px 相当の輪郭＋アイコン＋文（`aria-invalid`）。入力内容を消さず、もう一度試す手段を示す（保存の失敗にどの操作を付けるかは content.md の「保存の失敗」）。書いた内容を残す欄の保存が通らなかったときも、欄をこの状態にし、文は「まだ保存していません」（読み上げでも分かるよう、欄の説明に結ぶ）。また書く・保存し直して通る・書いた内容を捨てるまで残し、Toast に隠れないよう最小限スクロールして見える位置に寄せる（Issue #332） |
+| Error | `danger` の 2px 相当の輪郭＋アイコン＋文（`aria-invalid`）。入力内容を消さず、もう一度試す手段を示す（保存の失敗にどの操作を付けるかは content.md の「保存の失敗」）。書いた内容を残す欄の保存が通らなかったときも、欄をこの状態にし、文は「まだ保存していません」（読み上げでも分かるよう、欄の説明に結ぶ）。また書く・保存し直して通る・書いた内容を捨てるまで残し、Toast に隠れないよう最小限スクロールして見える位置に寄せる。その内容が保存されるまでに画面を移ろうとしたら、移らずに Dialog で「保存していない内容があります」と「戻る」「保存せずに移る」を出す（Task の詳細を閉じるときは Drawer の Notice。タブを閉じる・再読み込みはブラウザの確認。Issue #332。2026-10-04 司令塔の判断で、オーナーの確認を待つ） |
 | Read-only | 地 `canvas-subtle`、輪郭 `border`。破線にしない |
 | Proposal | 1px 破線 `proposal-border`＋「提案」。Agent の値と下書きだけ |
 
@@ -653,7 +653,7 @@ compact の原則：
 - `scrim`（Blur なし）、面 sm 440 / md 560 / lg 720px、`rounded.lg`、`elevation-modal`。タイトルは問いの形（`heading` 16 / 700）、フッターは `border-soft` の罫の下に右寄せで Secondary → Primary。
 - 初期フォーカスは最も安全な操作（確定では「戻って調整」、振り返りの完了では「戻る」）。ボタンは結果を書く。× 「本当によろしいですか？」、Dialog を重ねる、操作のたびに確認する。
 
-**Drawer** — 文脈を残したまま詳細を編集する側面パネル。desktop は右 400px（左に `border`）、compact は Bottom Sheet（上角 `rounded.xl`、グリップ）。ヘッダー（タイトル＋閉じる、下に `border-soft`）、本文（スクロール）、フッター（キャンセル / 保存）。タスクの詳細は欄を離れたときに欄ごとに保存するので、フッターは「閉じる」だけにする。入力中のサブタスクや保存していない繰り返しの選択があるときは、閉じずにフッターの上に Notice と「戻る」「保存せずに閉じる」（別の行を開くときは「保存せずに開く」）を出す（Dialog は使わない。[patterns.md](docs/design/patterns.md) の Backlog Organize）。非モーダルが既定で、背後を操作させない場合だけ modal（`scrim` あり）。タスクの詳細、計画案の差分、medium 幅の Capacity に使う。Drawer の中に Drawer を開かない。
+**Drawer** — 文脈を残したまま詳細を編集する側面パネル。desktop は右 400px（左に `border`）、compact は Bottom Sheet（上角 `rounded.xl`、グリップ）。ヘッダー（タイトル＋閉じる、下に `border-soft`）、本文（スクロール）、フッター（キャンセル / 保存）。タスクの詳細は欄を離れたときに欄ごとに保存するので、フッターは「閉じる」だけにする。入力中のサブタスクや保存していない繰り返しの選択、保存が通らなかった欄の内容があるときは、閉じずにフッターの上に Notice と「戻る」「保存せずに閉じる」（別の行を開くときは「保存せずに開く」）を出す（Dialog は使わない。[patterns.md](docs/design/patterns.md) の Backlog Organize）。非モーダルが既定で、背後を操作させない場合だけ modal（`scrim` あり）。タスクの詳細、計画案の差分、medium 幅の Capacity に使う。Drawer の中に Drawer を開かない。
 
 **Popover** — その場で 1〜3 項目を編集する浮いた面（Estimate の編集など）。幅 320px、`rounded.md`、`elevation-overlay`、タイトル＋閉じる、本文、フッター（キャンセル / 保存）。開いたらフォーカスを最初の入力へ移し、Esc・外側のクリック・閉じるで閉じる。保存は Secondary（Popover に Primary を置かない）。Popover から Popover を開かない。
 

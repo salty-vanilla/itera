@@ -216,6 +216,43 @@ describe('the Backlog on the API', () => {
     release();
   });
 
+  it('holds the close of a detail whose title a failed save left out, and drops it on 保存せずに閉じる (#332)', async () => {
+    serve((request) => (request.method === 'PATCH' ? refused() : undefined));
+    const router = renderBacklog();
+    const rows = await list();
+    await userEvent.click(
+      within(rows).getByRole('button', { name: '本棚を整理する' }),
+    );
+    const detail = await screen.findByRole('dialog', {
+      name: '本棚を整理する',
+    });
+    const title = within(detail).getByRole('textbox', { name: /タイトル/ });
+    await userEvent.type(title, 'を片づける{Enter}');
+    expect(await screen.findAllByText('保存できませんでした')).not.toHaveLength(
+      0,
+    );
+    await waitFor(() =>
+      expect(title.getAttribute('aria-invalid')).toBe('true'),
+    );
+    await userEvent.click(
+      within(detail).getAllByRole('button', { name: '閉じる' }).at(-1)!,
+    );
+    expect(
+      within(detail).getByText('保存していない内容があります'),
+    ).toBeTruthy();
+    // 戻る: back to the field.
+    await userEvent.click(within(detail).getByRole('button', { name: '戻る' }));
+    expect(document.activeElement).toBe(title);
+    await userEvent.keyboard('{Escape}');
+    await userEvent.click(
+      await within(detail).findByRole('button', { name: '保存せずに閉じる' }),
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    // Dropped: the screen moves on without asking.
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(router.state.location.search).not.toHaveProperty('task');
+  });
+
   it('saves two fields left one after the other while the first is sent', async () => {
     const { store } = serve(slow(150));
     renderBacklog();

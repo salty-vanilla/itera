@@ -1,5 +1,6 @@
 import type { MadeFrom } from '@itera/api-contract/requests';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useUnsavedTyping } from './unsaved-typing';
 
 type Draft<T> = {
   /** What is typed. */
@@ -21,6 +22,11 @@ type Draft<T> = {
    * read comes back with what is typed, the typing is saved.
    */
   given: boolean;
+  /**
+   * A save of this typing failed, and it is not in the records yet: also
+   * while it is typed in again or sent again (#332).
+   */
+  failed: boolean;
   /** Saves sent and not answered yet: an earlier one's read is not the last's. */
   sending: number;
   /** The save sent last. */
@@ -44,6 +50,12 @@ type DraftField<T> = {
    * saved, or dropped (#332).
    */
   saveFailed: boolean;
+  /**
+   * What the field shows is not in the records since a save of it failed,
+   * also while it is typed in again or sent again: leaving the screen would
+   * lose it, and the app asks first (lib/unsaved-typing.tsx, #332).
+   */
+  unsaved: boolean;
   /**
    * The record its save is made from (#321): as read when the typing began;
    * as read now without typing, or once a failed save gave the typing back
@@ -118,6 +130,9 @@ function useDraftField<T>(
         ? { none: true }
         : { etag: version.etag };
   const sent = useRef(0);
+  // This field, to the app's count of typing not saved.
+  const [self] = useState(() => ({}));
+  const unsavedTyping = useUnsavedTyping();
   // The read changed after the last save was answered, or caught up with
   // typing a failed save gave back: the draft's job is done. While a save
   // is still on the way, the read is an earlier save's.
@@ -127,11 +142,19 @@ function useDraftField<T>(
     ((d.held && !equal(d.from, read)) || (d.given && equal(d.value, read)));
   if (done(draft)) setDraft(undefined);
   const live = done(draft) ? undefined : draft;
+  const unsaved = live?.failed === true;
+  useEffect(() => {
+    if (unsavedTyping === null) return;
+    if (unsaved) unsavedTyping.mark(self);
+    else unsavedTyping.unmark(self);
+  }, [unsavedTyping, self, unsaved]);
+  useEffect(() => () => unsavedTyping?.unmark(self), [unsavedTyping, self]);
   return {
     value: live === undefined ? read : live.value,
     base: live === undefined ? read : live.held ? live.value : live.base,
     edited: live !== undefined && !live.held && !equal(live.value, live.base),
     saveFailed: live !== undefined && live.given && live.sending === 0,
+    unsaved,
     madeFrom: live === undefined || live.given ? current : live.version,
     // From the state the update is applied to, not the one this render saw:
     // an answer may have come in between, and its count is not to be
@@ -150,6 +173,7 @@ function useDraftField<T>(
             cur === undefined || cur.held || cur.given ? current : cur.version,
           held: false,
           given: false,
+          failed: cur?.failed ?? false,
           sending: d?.sending ?? 0,
           last: d?.last ?? 0,
         };
@@ -162,6 +186,7 @@ function useDraftField<T>(
         version: current,
         held: true,
         given: false,
+        failed: false,
         sending: d?.sending ?? 0,
         last: d?.last ?? 0,
       })),
@@ -191,11 +216,17 @@ function useDraftField<T>(
             sending: Math.max(0, d.sending - 1),
             held: givenBack ? false : d.held,
             given: givenBack || d.given,
+            failed: givenBack || d.failed,
           };
         });
       });
     },
-    drop: () => setDraft(undefined),
+    // Out of the count at once: the screen may move on in the same event
+    // (保存せずに閉じる).
+    drop: () => {
+      unsavedTyping?.unmark(self);
+      setDraft(undefined);
+    },
     leave: () => {
       const edited =
         live !== undefined && !live.held && !equal(live.value, live.base);
