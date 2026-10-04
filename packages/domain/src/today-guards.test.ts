@@ -389,6 +389,92 @@ describe('F37: a deferral or removal can be undone the same day', () => {
   });
 });
 
+describe('#353: undoing a completion after starting goes back to started (F17, F37)', () => {
+  const today = { ...sel, today: d('2026-09-28') };
+  const startedAt = {
+    now: instant('2026-09-28T01:00:00.000Z'),
+    actor: 'user' as const,
+  };
+  /** Chosen, started at 10:00, completed, and that completion undone. */
+  function undoneAfterStart(): Sprint {
+    const started = unwrap(startSelection(chosen(), sel, startedAt));
+    const done = unwrap(complete(started));
+    return unwrap(
+      undoCompleteSelection(
+        done.sprint,
+        { ...sel, task: done.task as Task },
+        ctx,
+      ),
+    ).sprint;
+  }
+
+  it('Done → Started, keeping the time it was started', () => {
+    const selection = undoneAfterStart().dailySelections[0];
+    expect(selection).toMatchObject({
+      resolution: 'started',
+      startedAt: '2026-09-28T01:00:00.000Z',
+    });
+    expect(selection).not.toHaveProperty('resolvedAt');
+  });
+
+  it('no Removed → Started: a started selection is not removed', () => {
+    expect(removeFromToday(undoneAfterStart(), sel, ctx)).toMatchObject({
+      ok: false,
+      error: { code: 'invalidTransition' },
+    });
+  });
+
+  it('a removal goes back to selected, even of a selection with a start time', () => {
+    // A selection undone to selected before #353 kept its start time.
+    const chose = chosen();
+    const startedBefore: Sprint = {
+      ...chose,
+      dailySelections: chose.dailySelections.map((s) => ({
+        ...s,
+        startedAt: startedAt.now,
+      })),
+    };
+    const removed = unwrap(removeFromToday(startedBefore, sel, ctx));
+    const undone = unwrap(undoRemoveFromToday(removed, today, ctx));
+    expect(undone.dailySelections[0]?.resolution).toBe('selected');
+  });
+
+  it('a deferral of it, undone, is as it was before the deferral (invariant 21)', () => {
+    const before = undoneAfterStart();
+    const deferred = unwrap(deferSelection(before, sel, ctx));
+    const undone = unwrap(undoDeferSelection(deferred, today, ctx));
+    expect(undone.dailySelections).toEqual(before.dailySelections);
+  });
+
+  it('started, deferred, completed: undoing both goes back to started (F17, F37)', () => {
+    const started = unwrap(startSelection(chosen(), sel, startedAt));
+    const deferred = unwrap(deferSelection(started, sel, ctx));
+    const done = unwrap(complete(deferred));
+    const back = unwrap(
+      undoCompleteSelection(
+        done.sprint,
+        { ...sel, task: done.task as Task },
+        ctx,
+      ),
+    );
+    expect(back.sprint.dailySelections[0]?.resolution).toBe('deferred');
+    const undone = unwrap(undoDeferSelection(back.sprint, today, ctx));
+    expect(undone.dailySelections[0]).toMatchObject({
+      resolution: 'started',
+      startedAt: '2026-09-28T01:00:00.000Z',
+    });
+  });
+
+  it('invariant 23: the run is not changed by it', () => {
+    const before = undoneAfterStart();
+    expect(deferralStreak([before], id('task-1'))).toBe(0);
+    const deferred = unwrap(deferSelection(before, sel, ctx));
+    expect(deferralStreak([deferred], id('task-1'))).toBe(1);
+    const undone = unwrap(undoDeferSelection(deferred, today, ctx));
+    expect(deferralStreak([undone], id('task-1'))).toBe(0);
+  });
+});
+
 describe('invariant 27: a failed Backlog completion changes nothing', () => {
   it('a Task already completed, a day outside the Sprint, a recurring Task', () => {
     const sprint = active();
@@ -803,6 +889,23 @@ describe('invariant 27 / F29: undoing a completion from the Backlog', () => {
       'taskCompletionUndone',
       'sprintTaskDoneUndone',
       'todayDoneUndone',
+    ]);
+  });
+
+  it('puts a selection started before back to started, with its time (#353)', () => {
+    const started = unwrap(startSelection(chosen(), sel, ctx));
+    const done = unwrap(
+      completeFromBacklog(
+        started,
+        { task: task1(), date, selectionId: id('sel-b') },
+        ctx,
+      ),
+    );
+    const undone = unwrap(
+      undoCompleteFromBacklog(done.sprint, { task: done.task, date }, ctx),
+    );
+    expect(undone.sprint?.dailySelections).toMatchObject([
+      { id: 'sel-1', resolution: 'started', startedAt: ctx.now },
     ]);
   });
 

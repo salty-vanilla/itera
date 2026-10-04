@@ -45,7 +45,7 @@ import {
   undoRemoveFromToday,
   undoSkipSelection,
 } from './today';
-import { ctx, newTask, sprintFixture } from './testing';
+import { ctx, newTask, sprintFixture, unwrap } from './testing';
 
 const today = localDate('2026-09-30');
 const yesterday = localDate('2026-09-29');
@@ -303,6 +303,39 @@ describe("the selection's state diagram, today (domain model DailySelection)", (
       ),
     );
   });
+
+  it.each([false, true])(
+    'a selection started, completed and that undone takes what a started one takes (#353, recurring: %s)',
+    (recurring) => {
+      const c = caseOf({ resolution: 'started', recurring });
+      const done = unwrap(
+        completeSelection(c.sprint, { ...subject(c), actualHours: 1 }, ctx),
+      );
+      const undone = unwrap(
+        undoCompleteSelection(
+          done.sprint,
+          {
+            selectionId,
+            ...(done.occurrence === undefined
+              ? { task: done.task as Task }
+              : { occurrence: done.occurrence }),
+          },
+          ctx,
+        ),
+      );
+      const after: Case = {
+        ...c,
+        sprint: undone.sprint,
+        task: undone.task ?? c.task,
+        ...(undone.occurrence === undefined
+          ? {}
+          : { occurrence: undone.occurrence }),
+      };
+      expect(after.sprint.dailySelections[0]?.resolution).toBe('started');
+      expect(allowed(after)).toEqual(allowed(c));
+      expect(allowed(after)).toEqual(['pause', 'defer', 'complete']);
+    },
+  );
 
   it('closes nothing of a past day but undoes its completion or skip while the Sprint runs (F17, F33, F37)', () => {
     for (const resolution of ['paused', 'deferred', 'removed'] as const)
