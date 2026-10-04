@@ -942,6 +942,46 @@ describe('the decisions of Today, through the API', () => {
     expect(again.status).toBe(422);
   });
 
+  it('F29: undoing today’s completion from the Backlog takes away the choice it made (#346)', async () => {
+    const app = await setup('today-morning');
+    await app.run('completeTask', { taskId: paper });
+    let { records } = await app.saved();
+    expect(selectionOf(records, paper, today)).toMatchObject({
+      origin: 'backlogCompletion',
+      resolution: 'done',
+    });
+    await app.run('undoCompleteSelection', {
+      ...running(records),
+      selectionId: selectionOf(records, paper, today).id,
+    });
+    ({ records } = await app.saved());
+    expect(selectionsOf(records, paper, today)).toEqual([]);
+    expect(task(records, paper).lifecycle).toBe('active');
+    expect(sprintTaskOf(records, paper).outcome).toBe('planned');
+  });
+
+  it('F29: undoing today’s completion from the Backlog of a choice made before puts it back to selected', async () => {
+    const app = await setup('today-morning');
+    await app.run('chooseForToday', {
+      ...running((await app.saved()).records),
+      date: today,
+      sprintTaskId: sprintTaskOf((await app.saved()).records, paper).id,
+    });
+    await app.run('completeTask', { taskId: paper });
+    let { records } = await app.saved();
+    const chosen = selectionOf(records, paper, today);
+    expect(chosen).toMatchObject({ origin: 'manual', resolution: 'done' });
+    await app.run('undoCompleteSelection', {
+      ...running(records),
+      selectionId: chosen.id,
+    });
+    ({ records } = await app.saved());
+    expect(selectionsOf(records, paper, today)).toEqual([
+      expect.objectContaining({ id: chosen.id, resolution: 'selected' }),
+    ]);
+    expect(task(records, paper).lifecycle).toBe('active');
+  });
+
   it('F37: a choice put back to this week is taken back to selected, and does not make a second one', async () => {
     const app = await setup('today-morning');
     await app.run('chooseForToday', {

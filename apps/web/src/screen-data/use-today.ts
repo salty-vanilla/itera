@@ -10,7 +10,6 @@ import type {
   OccurrenceId,
   SprintId,
   SprintTaskId,
-  TaskId,
   TodayData,
 } from '@itera/api-contract';
 import { getDayOptions } from '@itera/api-contract/react-query';
@@ -84,7 +83,6 @@ export function useTodayActions() {
   const undoCompleteSelection = useOperation('undoCompleteSelection', wait);
   const skipSelection = useOperation('skipSelection', wait);
   const undoSkipSelection = useOperation('undoSkipSelection', wait);
-  const undoCompleteTask = useOperation('undoCompleteTask', wait);
   const recordActualTime = useOperation('recordActualTime');
   const noteInterrupt = useOperation('noteInterrupt');
   const editInterrupt = useOperation('editInterrupt', { typed: true });
@@ -148,18 +146,12 @@ export function useTodayActions() {
       ),
     complete: (selectionId: DailySelectionId) =>
       onSelection('complete', selectionId, completeSelection.run),
+    /**
+     * Takes back a completion; one made from the Backlog, as the Backlog
+     * does (F29, #346): the choice it made for today goes with it.
+     */
     undoComplete: (selectionId: DailySelectionId) =>
       onSelection('undoComplete', selectionId, undoCompleteSelection.run),
-    /**
-     * Takes back a completion made from the Backlog, as the Backlog does
-     * (F29): the choice it made for today goes with it.
-     */
-    undoCompleteTask: async (taskId: TaskId) =>
-      (
-        await once(`undoCompleteTask:${taskId}`, () =>
-          undoCompleteTask.run({ taskId }),
-        )
-      )?.ok === true,
     skip: (selectionId: DailySelectionId) =>
       onSelection('skip', selectionId, skipSelection.run),
     undoSkip: (selectionId: DailySelectionId) =>

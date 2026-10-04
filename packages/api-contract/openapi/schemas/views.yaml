@@ -272,7 +272,9 @@ SprintTaskCapabilities:
       type: boolean
     canSetGoalLink: { description: setGoalLink., type: boolean }
     canExcludeAllOccurrences:
-      description: excludeAllOccurrences.
+      description: >-
+        excludeAllOccurrences: a recurring draft only (a Task that does not
+        repeat has no occurrences, #346).
       type: boolean
     canRecordActualTime:
       description: >-

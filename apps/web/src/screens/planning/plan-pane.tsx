@@ -347,11 +347,13 @@ function PlannedRow({
   ].filter(Boolean);
 
   const unchoose = async () => {
-    const occurrenceIds = sprintTask.occurrenceIds ?? [];
-    const done =
-      leaves === 'exclude'
-        ? await actions.excludeAllOccurrences(sprintTask.id)
-        : await actions.unchooseTasks([sprintTask.id]);
+    // A recurring Task's occurrences, as the read gives them (a Task that
+    // does not repeat has none, #346), come back on 元に戻す.
+    const { occurrenceIds } = sprintTask;
+    const excluding = leaves === 'exclude' && occurrenceIds !== undefined;
+    const done = excluding
+      ? await actions.excludeAllOccurrences(sprintTask.id)
+      : await actions.unchooseTasks([sprintTask.id]);
     if (!done) return;
     toast.show({
       kind: 'sprint-pick',
@@ -363,7 +365,7 @@ function PlannedRow({
             action: {
               label: '元に戻す',
               onClick: () =>
-                void (leaves === 'exclude'
+                void (excluding
                   ? actions.includeOccurrences(occurrenceIds)
                   : actions.chooseTasks([task.id])),
             },

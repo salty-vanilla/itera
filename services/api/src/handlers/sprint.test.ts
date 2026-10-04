@@ -348,6 +348,14 @@ const failures: readonly Failure[] = [
     type: '/problems/not-found',
   },
   {
+    // A Task that does not repeat has no occurrences: it leaves as a whole
+    // (removeSprintTasks), and this changes nothing (#346).
+    name: 'excludeAllOccurrences',
+    body: (r) => ({ ...planned(r), sprintTaskId: sprintTaskOf(r, paper).id }),
+    status: 422,
+    type: '/problems/invalid-input',
+  },
+  {
     name: 'createAndChooseTask',
     body: (r) => ({ ...planned(r), title: '   ' }),
     status: 422,

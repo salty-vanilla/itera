@@ -1063,7 +1063,7 @@ export type SprintTaskCapabilities = {
      */
     canSetGoalLink: boolean;
     /**
-     * excludeAllOccurrences.
+     * excludeAllOccurrences: a recurring draft only (a Task that does not repeat has no occurrences, #346).
      */
     canExcludeAllOccurrences: boolean;
     /**

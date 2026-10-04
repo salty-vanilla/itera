@@ -134,9 +134,21 @@ export function excludeAllOccurrences(
     let sprint = start.value;
     const owner = find(sprint.tasks, sprintTaskId, 'SprintTask');
     if (!owner.ok) return owner;
+    // A Task that does not repeat leaves as a whole (`unchooseTasks`), as
+    // the domain tells the two apart (#346).
+    const { occurrenceIds } = owner.value;
+    if (occurrenceIds === undefined) {
+      return {
+        ok: false,
+        error: {
+          code: 'invalidInput',
+          message: 'Unselect a Task that does not repeat as a whole.',
+        },
+      };
+    }
     const excluded: Occurrence[] = [];
     const activities: Activity[] = [];
-    for (const occurrenceId of owner.value.occurrenceIds ?? []) {
+    for (const occurrenceId of occurrenceIds) {
       const occurrence = find(records.occurrences, occurrenceId, 'Occurrence');
       if (!occurrence.ok) return occurrence;
       const result = excludeFromPlan(sprint, occurrence.value, ctx);

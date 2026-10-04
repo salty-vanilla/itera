@@ -83,6 +83,8 @@ function serve(
 }
 
 const pathOf = (request: Request) => new URL(request.url).pathname;
+/** Which record an undo of a completion names: a choice, or a Task. */
+const undoneBy = (request: string) => request.split('/').at(-3);
 const hangs = () => new Promise<Response>(() => {});
 const refused = () => problemResponse('/problems/invalid-input');
 const conflict = () => problemResponse('/problems/revision-conflict');
@@ -474,10 +476,46 @@ describe('Today on the API', () => {
           .map((t) => t.lifecycle),
       ).toEqual(['active', 'active']),
     );
-    expect(requests.filter((r) => r.endsWith('/undo-complete'))).toHaveLength(
-      2,
-    );
+    expect(
+      requests.filter((r) => r.endsWith('/undo-complete')).map(undoneBy),
+    ).toEqual(['daily-selections', 'daily-selections']);
     expect(screen.queryByText('保存できませんでした')).toBeNull();
+  });
+
+  it('takes back a completion from the Backlog by its choice, and the server takes the choice away (F29, #346)', async () => {
+    const { store, requests } = serve();
+    const title = '実験データの前処理';
+    const taskId = store
+      .getSnapshot()
+      .records.tasks.find((t) => t.title === title)!.id;
+    await completeTask({
+      client: otherDevice(store),
+      headers: newWrite(),
+      path: { taskId },
+    });
+    const sprint = () =>
+      store.getSnapshot().records.sprints.find((s) => s.state === 'active')!;
+    const sprintTaskId = sprint().tasks.find((t) => t.taskId === taskId)!.id;
+    const choice = () =>
+      sprint().dailySelections.find(
+        (s) => s.sprintTaskId === sprintTaskId && s.date === '2026-10-01',
+      );
+    const made = choice()!;
+    expect(made.origin).toBe('backlogCompletion');
+    renderToday();
+    await dayRead();
+    await userEvent.click(
+      screen.getByRole('button', { name: `完了を取り消す：${title}` }),
+    );
+    // The Task is back in the week's rest, with the focus on its 今日へ.
+    const back = await screen.findByRole('button', {
+      name: `今日へ：${title}`,
+    });
+    await waitFor(() => expect(document.activeElement).toBe(back));
+    expect(choice()).toBeUndefined();
+    expect(requests.filter((r) => r.endsWith('/undo-complete'))).toEqual([
+      `POST /api/sprints/${sprint().id}/daily-selections/${made.id}/undo-complete`,
+    ]);
   });
 
   it('adds a Task for today with the Area chosen, and keeps what was typed when it is refused', async () => {

@@ -479,19 +479,16 @@ function TodayView({ data }: { data: TodayData }) {
           actions.complete(selectionId),
         );
       },
-      onUndoComplete: () => {
-        // Completed from the Backlog: undone as the Backlog does (F29), so
-        // the choice it made for today goes away with it.
-        if (row.selection.origin === 'backlogCompletion') {
-          void follow({ rest: row.sprintTask.id }, () =>
-            actions.undoCompleteTask(row.task.id),
-          );
-          return;
-        }
-        void follow({ selection: selectionId }, () =>
-          actions.undoComplete(selectionId),
-        );
-      },
+      onUndoComplete: () =>
+        void follow(
+          // Completed from the Backlog: the server undoes it as the Backlog
+          // does (F29, #346), so the choice it made for today goes away and
+          // the Task is back in the week's rest.
+          row.selection.origin === 'backlogCompletion'
+            ? { rest: row.sprintTask.id }
+            : { selection: selectionId },
+          () => actions.undoComplete(selectionId),
+        ),
       onStart: () => void actions.start(selectionId),
       onDefer: () =>
         void closed(row, 'を見送りました', () => actions.defer(selectionId)),

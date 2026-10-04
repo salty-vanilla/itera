@@ -155,8 +155,8 @@ export function selectionCapabilities(
     running && subject.ok ? { ...subject.value, ...input } : undefined;
   const on = (check: (on: Sprint, by: SelectionInput) => Result<unknown>) =>
     running && can(check(sprint, input));
-  // An undo of a past day's completion from the Backlog is the Backlog's
-  // undo on that day (F29, F33).
+  // An undo of a completion from the Backlog, today's or a past day's, is
+  // the Backlog's undo on that day (F29, F33, #346).
   const undo = (
     resolution: 'done' | 'skipped',
     check: (on: Sprint, by: SubjectInput) => Result<unknown>,
@@ -481,7 +481,9 @@ export function sprintTaskCapabilities(
     canExcludeAllOccurrences:
       planning &&
       sprint.tasks.some((t) => t.id === sprintTask.id) &&
-      (sprintTask.occurrenceIds ?? []).every((occurrenceId) => {
+      // A Task that does not repeat has no occurrences to leave out (#346).
+      sprintTask.occurrenceIds !== undefined &&
+      sprintTask.occurrenceIds.every((occurrenceId) => {
         const occurrence = find(
           records.occurrences,
           occurrenceId,
