@@ -163,7 +163,9 @@ describe('a week that starts on Sunday', () => {
     };
     expect(dueSoonUntil(reviewDay)).toBe('2026-10-10');
     expect(inBacklogSlice(due('2026-10-10'), 'dueSoon', reviewDay)).toBe(true);
-    expect(dueSoonUntil({ ...reviewDay, user })).toBe('2026-10-04');
+    expect(dueSoonUntil({ ...reviewDay, user, sprints: [] })).toBe(
+      '2026-10-04',
+    );
     // Saturday is the last day of a Sunday-start week.
     expect(
       dueSoonUntil({ ...reviewDay, today: d('2026-10-03'), sprints: [] }),
@@ -235,10 +237,22 @@ describe('a week that crosses the year', () => {
       end: '2027-01-10',
       previousSprintId: crossing.id,
     });
-    // A Sunday start on its last day overlaps it.
-    expect(plan('2027-01-03', sunday, [crossing])).toMatchObject({
+    expect(plan('2026-12-28', user, [crossing])).toMatchObject({
       ok: false,
-      error: { code: 'invalidInput' },
+      error: { message: 'The period overlaps or precedes a Sprint.' },
+    });
+
+    const sundayCrossing = sprintFixture('2026-12-27', 'active');
+    expect(
+      unwrap(plan('2027-01-03', sunday, [sundayCrossing])).sprint,
+    ).toMatchObject({
+      start: '2027-01-03',
+      end: '2027-01-09',
+      previousSprintId: sundayCrossing.id,
+    });
+    expect(plan('2026-12-27', sunday, [sundayCrossing])).toMatchObject({
+      ok: false,
+      error: { message: 'The period overlaps or precedes a Sprint.' },
     });
   });
 
@@ -290,6 +304,20 @@ describe('a week that crosses the year', () => {
       sprints: [{ ...crossing, state: 'review' as const }],
     };
     expect(dueSoonUntil(reviewDay)).toBe('2027-01-10');
+
+    // A Sunday-start week that crosses the year ends on 2027-01-02.
+    const sundayHolding = {
+      ...holding,
+      user: sunday,
+      sprints: [sprintFixture('2026-12-27', 'active')],
+    };
+    expect(dueSoonUntil(sundayHolding)).toBe('2027-01-02');
+    expect(inBacklogSlice(due('2027-01-02'), 'dueSoon', sundayHolding)).toBe(
+      true,
+    );
+    expect(inBacklogSlice(due('2027-01-03'), 'dueSoon', sundayHolding)).toBe(
+      false,
+    );
   });
 
   it('F21: Review from 2027-01-03 by the person, from 2027-01-04 by the system', () => {
@@ -300,10 +328,14 @@ describe('a week that crosses the year', () => {
     );
     const review = (today: string, by: CommandContext) =>
       enterReview(sprint, { today: d(today), occurrences }, by);
-    expect(review('2027-01-02', ctx)).toMatchObject({ ok: false });
+    expect(review('2027-01-02', ctx)).toMatchObject({
+      ok: false,
+      error: { code: 'invalidTransition' },
+    });
     expect(review('2027-01-03', ctx)).toMatchObject({ ok: true });
     expect(review('2027-01-03', systemOn('2027-01-03'))).toMatchObject({
       ok: false,
+      error: { code: 'invalidTransition' },
     });
 
     const result = unwrap(review('2027-01-04', systemOn('2027-01-04')));
@@ -321,6 +353,37 @@ describe('a week that crosses the year', () => {
       ['2027-01-01', 'missed'],
       ['2027-01-02', 'missed'],
       ['2027-01-03', 'missed'],
+    ]);
+  });
+
+  it('F21: a Sunday-start week reviews from 2027-01-02 by the person, from 2027-01-03 by the system', () => {
+    const { sprint, occurrences } = activeWeek(
+      '2026-12-27',
+      sunday,
+      sprintFixture('2026-12-20', 'closed'),
+    );
+    const review = (today: string, by: CommandContext) =>
+      enterReview(sprint, { today: d(today), occurrences }, by);
+    expect(review('2027-01-01', ctx)).toMatchObject({
+      ok: false,
+      error: { code: 'invalidTransition' },
+    });
+    expect(review('2027-01-02', ctx)).toMatchObject({ ok: true });
+    expect(review('2027-01-02', systemOn('2027-01-02'))).toMatchObject({
+      ok: false,
+      error: { code: 'invalidTransition' },
+    });
+
+    const result = unwrap(review('2027-01-03', systemOn('2027-01-03')));
+    expect(result.sprint.state).toBe('review');
+    expect(result.occurrences.map((o) => o.scheduledDate)).toEqual([
+      '2026-12-27',
+      '2026-12-28',
+      '2026-12-29',
+      '2026-12-30',
+      '2026-12-31',
+      '2027-01-01',
+      '2027-01-02',
     ]);
   });
 });
