@@ -216,6 +216,43 @@ describe('the Backlog on the API', () => {
     release();
   });
 
+  it('sends 今日へ and 今週へ pressed on rows one after another, each in turn (#354)', async () => {
+    const saves = held(writes);
+    const { store, requests } = serve(saves.answer);
+    renderBacklog();
+    await list();
+    const press = async (title: string, item: '今日へ' | '今週へ') => {
+      await userEvent.click(
+        screen.getByRole('button', { name: `その他の操作：${title}` }),
+      );
+      await userEvent.click(
+        await screen.findByRole('menuitem', { name: item }),
+      );
+    };
+    // Two more rows while the first is on its way.
+    await press('本棚を整理する', '今日へ');
+    await until(() => expect(saves.waiting).toBe(1));
+    await press('歯医者の予約', '今日へ');
+    await press('パスポートの更新', '今週へ');
+    saves.release();
+    const sprint = () =>
+      store.getSnapshot().records.sprints.find((s) => s.state === 'active')!;
+    const taskId = (title: string) =>
+      store.getSnapshot().records.tasks.find((t) => t.title === title)!.id;
+    const sprintTask = (title: string) =>
+      sprint().tasks.find((t) => t.taskId === taskId(title));
+    await until(() => expect(sprintTask('パスポートの更新')).toBeDefined());
+    for (const title of ['本棚を整理する', '歯医者の予約']) {
+      expect(
+        sprint().dailySelections.some(
+          (s) => s.sprintTaskId === sprintTask(title)?.id,
+        ),
+      ).toBe(true);
+    }
+    expect(requests.filter((r) => r.startsWith('POST'))).toHaveLength(3);
+    expect(screen.queryByText('保存できませんでした')).toBeNull();
+  });
+
   it('holds the close of a detail whose title a failed save left out, and drops it on 保存せずに閉じる (#332)', async () => {
     serve((request) => (request.method === 'PATCH' ? refused() : undefined));
     const router = renderBacklog();

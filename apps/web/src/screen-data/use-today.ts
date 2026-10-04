@@ -17,6 +17,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useApiClient } from '@/api/api-provider';
 import { useRead, type Read } from '@/api/read-state';
 import { useOnRunningDay } from '@/api/use-me';
+import { useOncePerTarget } from '@/api/use-once-per-target';
 import { useOperation, type Outcome } from '@/api/use-operation';
 
 /**
@@ -66,17 +67,22 @@ const wentThrough = async (outcome: Promise<Outcome<unknown>>) =>
  */
 export function useTodayActions() {
   const on = useOnRunningDay();
-  const choose = useOperation('chooseForToday');
-  const startSelection = useOperation('startSelection');
-  const deferSelection = useOperation('deferSelection');
-  const removeFromToday = useOperation('removeFromToday');
-  const undoDeferSelection = useOperation('undoDeferSelection');
-  const undoRemoveFromToday = useOperation('undoRemoveFromToday');
-  const pauseSelection = useOperation('pauseSelection');
-  const completeSelection = useOperation('completeSelection');
-  const undoCompleteSelection = useOperation('undoCompleteSelection');
-  const skipSelection = useOperation('skipSelection');
-  const undoSkipSelection = useOperation('undoSkipSelection');
+  // The rows' operations: a press on another row while one is on its way is
+  // sent after it, and only a repeat on the same row is dropped (ADR 0005
+  // 今日を契約に移す, #354).
+  const wait = { whileSending: 'wait' } as const;
+  const once = useOncePerTarget();
+  const choose = useOperation('chooseForToday', wait);
+  const startSelection = useOperation('startSelection', wait);
+  const deferSelection = useOperation('deferSelection', wait);
+  const removeFromToday = useOperation('removeFromToday', wait);
+  const undoDeferSelection = useOperation('undoDeferSelection', wait);
+  const undoRemoveFromToday = useOperation('undoRemoveFromToday', wait);
+  const pauseSelection = useOperation('pauseSelection', wait);
+  const completeSelection = useOperation('completeSelection', wait);
+  const undoCompleteSelection = useOperation('undoCompleteSelection', wait);
+  const skipSelection = useOperation('skipSelection', wait);
+  const undoSkipSelection = useOperation('undoSkipSelection', wait);
   const recordActualTime = useOperation('recordActualTime');
   const noteInterrupt = useOperation('noteInterrupt');
   const editInterrupt = useOperation('editInterrupt', { typed: true });
@@ -85,13 +91,20 @@ export function useTodayActions() {
   const createTaskForToday = useOperation('createTaskForToday');
   const beginRetro = useOperation('beginRetro');
 
-  const onSelection = (
+  // `operation` names the target with the row's choice.
+  const onSelection = async (
+    operation: string,
     selectionId: DailySelectionId,
     send: (input: {
       sprintId: SprintId;
       selectionId: DailySelectionId;
     }) => Promise<Outcome<unknown>>,
-  ) => wentThrough(on(({ sprintId }) => send({ sprintId, selectionId })));
+  ) =>
+    (
+      await once(`${operation}:${selectionId}`, () =>
+        on(({ sprintId }) => send({ sprintId, selectionId })),
+      )
+    )?.ok === true;
 
   const actions = {
     /** The new choice's ID, or `undefined` when it did not go through. */
@@ -99,45 +112,46 @@ export function useTodayActions() {
       sprintTaskId: SprintTaskId,
       occurrenceId?: OccurrenceId,
     ): Promise<DailySelectionId | undefined> => {
-      const outcome = await on((day) =>
-        choose.run({
-          ...day,
-          sprintTaskId,
-          ...(occurrenceId === undefined ? {} : { occurrenceId }),
-        }),
+      const outcome = await once(
+        `choose:${sprintTaskId}:${occurrenceId ?? ''}`,
+        () =>
+          on((day) =>
+            choose.run({
+              ...day,
+              sprintTaskId,
+              ...(occurrenceId === undefined ? {} : { occurrenceId }),
+            }),
+          ),
       );
-      return outcome.ok ? outcome.value.selectionId : undefined;
+      return outcome?.ok ? outcome.value.selectionId : undefined;
     },
     start: (selectionId: DailySelectionId) =>
-      onSelection(selectionId, startSelection.run),
+      onSelection('start', selectionId, startSelection.run),
     defer: (selectionId: DailySelectionId) =>
-      onSelection(selectionId, deferSelection.run),
+      onSelection('defer', selectionId, deferSelection.run),
     removeFromToday: (selectionId: DailySelectionId) =>
-      onSelection(selectionId, removeFromToday.run),
+      onSelection('removeFromToday', selectionId, removeFromToday.run),
     /** Takes back 見送り (F37). */
     undoDefer: (selectionId: DailySelectionId) =>
-      onSelection(selectionId, undoDeferSelection.run),
+      onSelection('undoDefer', selectionId, undoDeferSelection.run),
     /** Takes back 今週の残りに戻す (F37). */
     undoRemove: (selectionId: DailySelectionId) =>
-      onSelection(selectionId, undoRemoveFromToday.run),
+      onSelection('undoRemove', selectionId, undoRemoveFromToday.run),
     pause: (selectionId: DailySelectionId, hours?: number) =>
-      wentThrough(
-        on(({ sprintId }) =>
-          pauseSelection.run({
-            sprintId,
-            selectionId,
-            ...(hours === undefined ? {} : { hours }),
-          }),
-        ),
+      onSelection('pause', selectionId, (input) =>
+        pauseSelection.run({
+          ...input,
+          ...(hours === undefined ? {} : { hours }),
+        }),
       ),
     complete: (selectionId: DailySelectionId) =>
-      onSelection(selectionId, completeSelection.run),
+      onSelection('complete', selectionId, completeSelection.run),
     undoComplete: (selectionId: DailySelectionId) =>
-      onSelection(selectionId, undoCompleteSelection.run),
+      onSelection('undoComplete', selectionId, undoCompleteSelection.run),
     skip: (selectionId: DailySelectionId) =>
-      onSelection(selectionId, skipSelection.run),
+      onSelection('skip', selectionId, skipSelection.run),
     undoSkip: (selectionId: DailySelectionId) =>
-      onSelection(selectionId, undoSkipSelection.run),
+      onSelection('undoSkip', selectionId, undoSkipSelection.run),
     /** The choice's actual hours, on its day. */
     recordActual: (
       selection: {
