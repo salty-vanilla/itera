@@ -23,20 +23,21 @@ describe('the fixture states', () => {
         .insert(authUser)
         .values({ id: records.user.id, name: 'n', email: 'n@example.com' });
 
-      expect(
-        await saveRecords(db, {
-          userId: records.user.id,
-          loaded: { revision: 0, records: null },
-          changes: records,
-          activities,
-          caughtUpTo: clock.today,
-        }),
-      ).toEqual({ ok: true, revision: 1 });
-      // toStrictEqual also fails on a key present as `undefined`.
+      const saved = await saveRecords(db, {
+        userId: records.user.id,
+        loaded: { revision: 0, records: null, versions: new Map() },
+        changes: records,
+        activities,
+        caughtUpTo: clock.today,
+      });
+      expect(saved).toMatchObject({ ok: true, revision: 1 });
+      // toStrictEqual also fails on a key present as `undefined`. Every
+      // record is at the version of the save that wrote it (#321).
       expect(await loadRecords(db, records.user.id)).toStrictEqual({
         revision: 1,
         records,
         caughtUpTo: clock.today,
+        versions: saved.ok ? saved.versions : undefined,
       });
       expect(await db.select().from(activity)).toHaveLength(activities.length);
     },

@@ -539,7 +539,12 @@ function recordsOf(userId: UserId, n: number): Records {
   };
 }
 
-const empty: LoadedRecords = { revision: 0, records: null, caughtUpTo: null };
+const empty: LoadedRecords = {
+  revision: 0,
+  records: null,
+  caughtUpTo: null,
+  versions: new Map(),
+};
 
 /** The day every save in these tests brings the records up to. */
 const caughtUpTo = localDate('2026-10-03');
@@ -589,12 +594,13 @@ describe('loadRecords and saveRecords', () => {
   it('reads back every record as it was written', async () => {
     const db = await memoryDatabase();
     const records = recordsOf(alice, 1);
-    expect(await saveAll(db, records)).toEqual({ ok: true, revision: 1 });
+    expect(await saveAll(db, records)).toMatchObject({ ok: true, revision: 1 });
     // toStrictEqual also fails on a key present as `undefined`.
     expect(await loadRecords(db, alice)).toStrictEqual({
       revision: 1,
       records,
       caughtUpTo,
+      versions: expect.any(Map),
     });
   });
 
@@ -612,16 +618,49 @@ describe('loadRecords and saveRecords', () => {
     };
     const result = await saveRecords(db, {
       userId: alice,
-      loaded: { revision: 3, records },
+      loaded: { revision: 3, records, versions: new Map() },
       changes: { tasks: [changed] },
       activities: [],
       caughtUpTo,
     });
-    expect(result).toEqual({ ok: true, revision: 4 });
+    expect(result).toMatchObject({ ok: true, revision: 4 });
     expect(queries).toEqual([
       'insert into "record_revision" ("user_id", "revision", "caught_up_to") values (?, ?, ?) on conflict ("record_revision"."user_id") do update set "revision" = case when "record_revision"."revision" = ? then ? else 0 end, "caught_up_to" = case when "record_revision"."caught_up_to" > ? then "record_revision"."caught_up_to" else ? end',
-      'update "subtask" set "title" = ? where "subtask"."id" = ?',
+      'update "subtask" set "title" = ?, "revision" = ? where "subtask"."id" = ?',
     ]);
+    // The Subtask is at this save's version; the Task, whose own row did
+    // not change, keeps its own (#321).
+    const versions = result.ok ? result.versions : new Map();
+    expect(versions.get(second.id)).toBe(4);
+    expect(versions.has(task.id)).toBe(false);
+  });
+
+  it('keeps the version of a row whose place alone moved (#321)', async () => {
+    const records = recordsOf(alice, 1);
+    const { db, queries } = createRecordingDatabase();
+    const [, task] = records.tasks as [Task, Task];
+    const [first, second] = task.subtasks as [
+      Task['subtasks'][number],
+      Task['subtasks'][number],
+    ];
+    const loaded = new Map([
+      [first.id, 2],
+      [second.id, 3],
+    ]);
+    const result = await saveRecords(db, {
+      userId: alice,
+      loaded: { revision: 3, records, versions: loaded },
+      changes: { tasks: [{ ...task, subtasks: [second] }] },
+      activities: [],
+      caughtUpTo,
+    });
+    expect(queries.slice(1)).toEqual([
+      'delete from "subtask" where "subtask"."id" = ?',
+      'update "subtask" set "position" = ? where "subtask"."id" = ?',
+    ]);
+    const versions = result.ok ? result.versions : new Map();
+    expect(versions.get(second.id)).toBe(3);
+    expect(versions.has(first.id)).toBe(false);
   });
 
   it('adds, updates and deletes the parts of an aggregate', async () => {
@@ -655,7 +694,7 @@ describe('loadRecords and saveRecords', () => {
       activities: [],
       caughtUpTo,
     });
-    expect(result).toEqual({ ok: true, revision: 2 });
+    expect(result).toMatchObject({ ok: true, revision: 2 });
     const reloaded = await loadRecords(db, alice);
     expect(reloaded.records?.sprints[0]).toStrictEqual(changed);
   });
@@ -687,7 +726,7 @@ describe('loadRecords and saveRecords', () => {
       activities: [],
       caughtUpTo,
     });
-    expect(result).toEqual({ ok: true, revision: 2 });
+    expect(result).toMatchObject({ ok: true, revision: 2 });
     const reloaded = (await loadRecords(db, alice)).records!;
     expect(reloaded.occurrences).toStrictEqual([
       records.occurrences[0],
@@ -744,7 +783,7 @@ describe('loadRecords and saveRecords', () => {
       activities: [],
       caughtUpTo,
     });
-    expect(result).toEqual({ ok: true, revision: 2 });
+    expect(result).toMatchObject({ ok: true, revision: 2 });
     const reloaded = (await loadRecords(db, alice)).records!;
     expect(reloaded.criteria).toStrictEqual(changes.criteria);
     expect(reloaded.tasks[1]).toStrictEqual(changes.tasks[0]);
@@ -772,7 +811,7 @@ describe('loadRecords and saveRecords', () => {
       activities: [],
       caughtUpTo,
     });
-    expect(result).toEqual({ ok: true, revision: 2 });
+    expect(result).toMatchObject({ ok: true, revision: 2 });
   });
 
   it('lists every partial unique index with the order its writes need', () => {
@@ -883,7 +922,7 @@ describe('loadRecords and saveRecords', () => {
       activities: [],
       caughtUpTo,
     });
-    expect(result).toEqual({ ok: true, revision: 2 });
+    expect(result).toMatchObject({ ok: true, revision: 2 });
     expect((await loadRecords(db, alice)).records!.occurrences).toStrictEqual([
       done,
     ]);
@@ -965,12 +1004,12 @@ describe('loadRecords and saveRecords', () => {
     const { db, queries } = createRecordingDatabase();
     const result = await saveRecords(db, {
       userId: alice,
-      loaded: { revision: 3, records },
+      loaded: { revision: 3, records, versions: new Map() },
       changes: { tasks: records.tasks, user: records.user },
       activities: [],
       caughtUpTo,
     });
-    expect(result).toEqual({ ok: true, revision: 3 });
+    expect(result).toMatchObject({ ok: true, revision: 3 });
     expect(queries).toEqual([]);
   });
 
@@ -1027,7 +1066,7 @@ describe('revision', () => {
       activities: [],
       caughtUpTo,
     });
-    expect(fromPc).toEqual({ ok: true, revision: 2 });
+    expect(fromPc).toMatchObject({ ok: true, revision: 2 });
     const before = await dump(db);
     const fromPhone = await saveRecords(db, {
       userId: alice,
@@ -1055,7 +1094,7 @@ describe('revision', () => {
   it('fails two first saves made at the same time', async () => {
     const db = await memoryDatabase();
     const records = recordsOf(alice, 1);
-    expect(await saveAll(db, records)).toEqual({ ok: true, revision: 1 });
+    expect(await saveAll(db, records)).toMatchObject({ ok: true, revision: 1 });
     const before = await dump(db);
     expect(
       await saveRecords(db, {
@@ -1126,11 +1165,13 @@ describe('users', () => {
       revision: 1,
       records: aliceRecords,
       caughtUpTo,
+      versions: expect.any(Map),
     });
     expect(await loadRecords(db, bob)).toStrictEqual({
       revision: 1,
       records: bobRecords,
       caughtUpTo,
+      versions: expect.any(Map),
     });
 
     const loaded = await loadRecords(db, alice);
@@ -1147,6 +1188,7 @@ describe('users', () => {
       revision: 1,
       records: bobRecords,
       caughtUpTo,
+      versions: expect.any(Map),
     });
   });
 
