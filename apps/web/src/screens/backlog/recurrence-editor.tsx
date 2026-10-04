@@ -336,7 +336,7 @@ function RecurrenceEditor({
           {/* Below the inputs, so that it may grow without moving the one
               being pressed, and whole: the line under the title cuts a long
               rule. */}
-          {rule !== undefined && rule.latest !== rule.current && (
+          {owns && rule !== undefined && rule.latest !== rule.current && (
             <p className="text-body text-ink">
               次の Sprint から：{formatPattern(rule.latest)}
             </p>
