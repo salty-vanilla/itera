@@ -76,22 +76,35 @@ function useDraftField<T>(
     d?.held === true && d.sending === 0 && !equal(d.from, read);
   if (done(draft)) setDraft(undefined);
   const live = done(draft) ? undefined : draft;
-  const counts = { sending: live?.sending ?? 0, last: live?.last ?? 0 };
   return {
     value: live === undefined ? read : live.value,
     base: live === undefined ? read : live.held ? live.value : live.base,
     edited: live !== undefined && !live.held && !equal(live.value, live.base),
+    // From the state the update is applied to, not the one this render saw:
+    // an answer may have come in between, and its count is not to be
+    // written back.
     set: (next) =>
-      setDraft({
-        value: next,
-        // Typing again over a value sent: that is what the person saw.
-        base: live === undefined ? read : live.held ? live.value : live.base,
-        from: live === undefined || live.held ? read : live.from,
-        held: false,
-        ...counts,
+      setDraft((d) => {
+        const cur = done(d) ? undefined : d;
+        return {
+          value: next,
+          // Typing again over a value sent: that is what the person saw.
+          base: cur === undefined ? read : cur.held ? cur.value : cur.base,
+          from: cur === undefined || cur.held ? read : cur.from,
+          held: false,
+          sending: d?.sending ?? 0,
+          last: d?.last ?? 0,
+        };
       }),
     put: (next) =>
-      setDraft({ value: next, base: next, from: read, held: true, ...counts }),
+      setDraft((d) => ({
+        value: next,
+        base: next,
+        from: read,
+        held: true,
+        sending: d?.sending ?? 0,
+        last: d?.last ?? 0,
+      })),
     hold: (saving) => {
       const id = ++sent.current;
       // The read as it is when the save is sent: what the read is to change

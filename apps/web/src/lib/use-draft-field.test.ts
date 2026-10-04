@@ -173,3 +173,24 @@ describe('useDraftField with saves that overlap', () => {
     expect(result.current.value).toBe('one two');
   });
 });
+
+describe('useDraftField when an answer comes in before the typing is drawn', () => {
+  it('does not write back the count of saves a render saw, once they are answered', async () => {
+    const { result, rerender } = setup();
+    let answer: (ok: boolean) => void = () => {};
+    act(() => result.current.set('one'));
+    act(() =>
+      result.current.hold(
+        new Promise<boolean>((resolve) => (answer = resolve)),
+      ),
+    );
+    // What the field's handlers saw while the save was on its way.
+    const seen = result.current;
+    await act(async () => answer(true));
+    // An input handled with that older render, after the answer.
+    act(() => seen.put('one two'));
+    rerender({ read: 'one two, from the read' });
+    // Every save was answered: the read is followed again.
+    expect(result.current.value).toBe('one two, from the read');
+  });
+});
