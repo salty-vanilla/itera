@@ -78,7 +78,7 @@ import type { BacklogView } from '@/screen-data/use-backlog';
 import { useTaskActions } from '@/screen-data/use-task-actions';
 import { useNewAreaDialog } from './area-dialog';
 import { CarryOverText, RecurrenceText, SprintText } from './backlog-row';
-import { RecurrenceEditor } from './recurrence-editor';
+import { RecurrenceEditor, type RecurrencePending } from './recurrence-editor';
 import { SubtaskList } from './subtask-list';
 import { useSelectionActions } from './use-selection-actions';
 import { useAddToToday } from './use-add-to-today';
@@ -617,7 +617,7 @@ function TaskDetail({
   }, [resolved, held]);
   const backRef = useRef<HTMLButtonElement>(null);
   const subtaskPending = useRef<() => HTMLElement | null>(null);
-  const recurrencePending = useRef<() => HTMLElement | null>(null);
+  const recurrencePending = useRef<RecurrencePending>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const foldRef = useRef<HTMLDivElement>(null);
   const estimateRef = useRef<HTMLInputElement>(null);
@@ -719,7 +719,7 @@ function TaskDetail({
       return;
     }
     const subtask = subtaskPending.current?.() ?? null;
-    const recurrence = recurrencePending.current?.() ?? null;
+    const recurrence = recurrencePending.current?.pending() ?? null;
     if (subtask === null && recurrence === null && !typingUnsaved)
       return then();
     flushSync(() =>
@@ -742,7 +742,7 @@ function TaskDetail({
         '[data-save-failed] [data-detail-field]',
       ) ??
       subtaskPending.current?.() ??
-      recurrencePending.current?.();
+      recurrencePending.current?.pending();
     flushSync(() => {
       setHeld(undefined);
       if (target && foldRef.current?.contains(target)) setMore(true);
@@ -1275,6 +1275,7 @@ function TaskDetail({
                     // What a failed save left in the fields goes too.
                     for (const key of Object.keys(fields) as TextKey[])
                       fields[key].drop();
+                    recurrencePending.current?.drop();
                     then();
                   }}
                 >

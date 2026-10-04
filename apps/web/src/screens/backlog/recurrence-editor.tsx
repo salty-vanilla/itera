@@ -123,6 +123,12 @@ function sameDays(a: readonly DayOfWeek[], b: readonly DayOfWeek[]): boolean {
   return a.length === b.length && a.every((d) => b.includes(d));
 }
 
+/** What the Task detail asks the recurrence before it closes. */
+type RecurrencePending = {
+  pending: () => HTMLElement | null;
+  drop: () => void;
+};
+
 function RecurrenceEditor({
   item,
   pendingRef,
@@ -132,9 +138,11 @@ function RecurrenceEditor({
    * For the Task detail's close (Issue #95): what a choice not saved yet is
    * held by, or null. Without a rule: the button that makes it recurring,
    * once the choice is not the starting one. With one: the first weekday
-   * while a weekly choice has no day (it cannot be saved).
+   * while a weekly choice has no day (it cannot be saved), or the frequency
+   * while a choice a failed save left out is shown (#332). `drop` lets go
+   * of that choice (保存せずに閉じる).
    */
-  pendingRef?: Ref<() => HTMLElement | null> | undefined;
+  pendingRef?: Ref<RecurrencePending> | undefined;
 }) {
   const actions = useRecurrenceActions();
   const { task, rule, capabilities: can } = item;
@@ -179,12 +187,14 @@ function RecurrenceEditor({
     if (owns && !hadRule.current) freqRef.current?.focus();
     hadRule.current = owns;
   }, [owns]);
-  useImperativeHandle(pendingRef, () => () => {
+  const pendingOf = (): HTMLElement | null => {
     if (owns) {
-      return freq === 'weekly' && days.length === 0
-        ? (daysRef.current?.querySelector<HTMLElement>('[role="checkbox"]') ??
-            null)
-        : null;
+      if (freq === 'weekly' && days.length === 0)
+        return (
+          daysRef.current?.querySelector<HTMLElement>('[role="checkbox"]') ??
+          null
+        );
+      return choice.unsaved ? freqRef.current : null;
     }
     const base = choiceOf(undefined);
     const changed =
@@ -192,7 +202,11 @@ function RecurrenceEditor({
       (freq === 'weekly' && days.length > 0) ||
       (freq === 'monthly' && dayOfMonth !== base.dayOfMonth);
     return changed ? createRef.current : null;
-  });
+  };
+  useImperativeHandle(pendingRef, () => ({
+    pending: pendingOf,
+    drop: () => choice.drop(),
+  }));
   const [result, setResult] = useState<Result>();
   const [error, setError] = useState<string>();
   // 繰り返しをやめる makes the button go. Taken off, the editor starts again
@@ -383,4 +397,5 @@ function RecurrenceEditor({
   );
 }
 
+export type { RecurrencePending };
 export { RecurrenceEditor };
