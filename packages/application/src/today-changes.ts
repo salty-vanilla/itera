@@ -252,7 +252,10 @@ export const complete = (
     );
   });
 
-/** ○ again: back to how it was (selected, or closed as before: F17). */
+/**
+ * ○ again: back to how it was (selected, started with its time, or closed
+ * as before: F17).
+ */
 export const undoComplete = (
   sprintId: SprintId,
   selectionId: DailySelectionId,

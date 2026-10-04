@@ -403,7 +403,7 @@ function reopenClosed(
   const reopened: DailySelection = {
     ...omit(selection, 'resolvedAt'),
     resolution:
-      kind === 'todayDeferUndone' && selection.startedAt !== undefined
+      selection.resolution === 'deferred' && selection.startedAt !== undefined
         ? 'started'
         : 'selected',
   };
