@@ -28,7 +28,7 @@ import { formatPlanningTotal } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { useStuckBar } from '@/lib/use-stuck-bar';
 import { cn } from '@/lib/utils';
-import { useBacklog } from '@/screen-data/use-backlog';
+import { hasDetail, useBacklog } from '@/screen-data/use-backlog';
 import { useTaskActions } from '@/screen-data/use-task-actions';
 import { useDay, useTodayActions } from '@/screen-data/use-today';
 import { useNewAreaDialog } from '../backlog/area-dialog';
@@ -322,10 +322,7 @@ function TodayView({ data }: { data: TodayData }) {
           : { ...prev, task: taskId },
     });
   // Closing the detail or opening another Task asks the detail first.
-  // The detail is the Backlog's row: a Task that has left the Backlog has
-  // none. Until the Backlog is read, every Task is taken to have one.
-  const inBacklog = (taskId: TaskId) =>
-    backlog.status !== 'ready' || backlog.item(taskId) !== undefined;
+  const inBacklog = (taskId: TaskId) => hasDetail(backlog, taskId);
   const openTask = (taskId: TaskId | undefined) =>
     detail.leave(() => showTask(taskId), taskId !== undefined);
   const openItem =

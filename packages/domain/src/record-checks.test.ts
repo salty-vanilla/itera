@@ -5,7 +5,7 @@
 // its SprintTasks, occurrences and Retro from the rule the command keeps
 // (ADR 0007 操作の可否). Against the state diagrams of the domain model
 // (Task, SprintTask, Occurrence, EstimateSuggestion, PlanningCriterion,
-// Sprint) and invariants 11, 12, 14, 26, 35, 36, F21, F22, F40.
+// Sprint) and invariants 11, 12, 14, 26, 33, 35, 36, F21, F22, F40, F41.
 import { describe, expect, it } from 'vitest';
 import {
   archiveArea,
@@ -61,6 +61,10 @@ import {
   setGoalLink,
   setGoalText,
   unselectTask,
+  checkExcludeFromPlan,
+  checkIncludeInPlan,
+  excludeFromPlan,
+  includeInPlan,
 } from './planning';
 import {
   checkCompleteRetro,
@@ -75,6 +79,14 @@ import {
   dropCriterionDraft,
   enterReview,
   setReflection,
+  assessGoal,
+  checkAssessGoal,
+  checkPinFact,
+  checkSetImprovement,
+  checkUnpinFact,
+  pinFact,
+  setImprovement,
+  unpinFact,
 } from './review';
 import { id } from './shared/ids';
 import type { Result } from './shared/result';
@@ -87,9 +99,39 @@ import {
   restoreTask,
   type Task,
   type TaskLifecycle,
+  addSubtask,
+  checkAddSubtask,
+  checkUpdateSubtask,
+  checkUpdateTask,
+  setSubtaskDone,
+  updateTask,
 } from './task';
-import { ctx, newTask, research, sprintFixture, userId } from './testing';
-import { checkCompleteFromBacklog, completeFromBacklog } from './today';
+import {
+  ctx,
+  ids,
+  newTask,
+  research,
+  sprintFixture,
+  user,
+  userId,
+} from './testing';
+import {
+  addToToday,
+  checkAddToToday,
+  checkCompleteFromBacklog,
+  checkRecordActualTime,
+  completeFromBacklog,
+  recordActualTime,
+} from './today';
+import {
+  checkChangeRuleForNextSprint,
+  checkCreateRuleForNextSprint,
+  checkEndRuleForNextSprint,
+  changeRuleForNextSprint,
+  createRuleForNextSprint,
+  endRuleForNextSprint,
+} from './sprint-recurrence';
+import type { RecurrenceRule } from './recurrence';
 
 /**
  * The check and its command agree: both go through, or both are refused
@@ -494,4 +536,210 @@ describe('Retro (invariants 35, 36, 38)', () => {
       );
     },
   );
+});
+
+describe('Task: its attributes and subtasks, whatever its state', () => {
+  it.each(LIFECYCLES)('a %s Task', (lifecycle) => {
+    const task = {
+      ...taskIn(lifecycle),
+      subtasks: [{ id: id<'Subtask'>('sub-1'), title: '下調べ', done: false }],
+    };
+    agree(checkUpdateTask(), updateTask(task, { title: '新しい題' }, ctx));
+    agree(
+      checkAddSubtask(),
+      addSubtask(task, { id: id<'Subtask'>('sub-2'), title: '確かめる' }, ctx),
+    );
+    for (const subtaskId of ['sub-1', 'sub-none'].map((s) => id<'Subtask'>(s)))
+      agree(
+        checkUpdateSubtask(task, subtaskId),
+        setSubtaskDone(task, subtaskId, true, ctx),
+      );
+  });
+});
+
+describe('Recurrence from the next Sprint (F1, F7, F15, F41)', () => {
+  const ruleId = id<'RecurrenceRule'>('rule-1');
+  const rule = (ended: boolean): RecurrenceRule => ({
+    id: ruleId,
+    taskId: id<'Task'>('task-1'),
+    versions: [
+      {
+        version: 1,
+        pattern: { freq: 'weekly', daysOfWeek: [6] },
+        effectiveFrom: localDate('2026-09-21'),
+        ...(ended ? { effectiveTo: localDate('2026-10-04') } : {}),
+      },
+    ],
+  });
+  const context = {
+    user,
+    today: localDate('2026-09-30'),
+    sprints: [sprintFixture('2026-09-28', 'active')],
+    occurrences: [],
+    newOccurrenceId: ids<'Occurrence'>('occ'),
+    newSprintTaskId: ids<'SprintTask'>('st'),
+  };
+  const cases = LIFECYCLES.flatMap((lifecycle) =>
+    (['none', 'running', 'ended'] as const).map((has) => ({ lifecycle, has })),
+  );
+  it.each(cases)('a $lifecycle Task, its rule $has', ({ lifecycle, has }) => {
+    const base = taskIn(lifecycle);
+    const task = has === 'none' ? base : { ...base, recurrenceRuleId: ruleId };
+    agree(
+      checkCreateRuleForNextSprint(task),
+      createRuleForNextSprint(
+        { ...context, task, ruleId, pattern: { freq: 'daily' } },
+        ctx,
+      ),
+    );
+    if (has === 'none') return;
+    const input = { ...context, task, rule: rule(has === 'ended') };
+    agree(
+      checkChangeRuleForNextSprint(input),
+      changeRuleForNextSprint({ ...input, pattern: { freq: 'daily' } }, ctx),
+    );
+    agree(checkEndRuleForNextSprint(input), endRuleForNextSprint(input, ctx));
+  });
+});
+
+describe('Today: 今日へ from outside the Sprint and actual time (invariant 26, F22)', () => {
+  const days = ['2026-09-27', '2026-09-30', '2026-10-05'].map(localDate);
+  const cases = SPRINT_STATES.flatMap((state) =>
+    days.map((date) => ({ state, date })),
+  );
+  it.each(cases)('a $state Sprint, on $date', ({ state, date }) => {
+    const task = newTask();
+    const sprint = sprintFixture('2026-09-28', state);
+    agree(
+      checkAddToToday(sprint, { task, date }),
+      addToToday(
+        sprint,
+        {
+          task,
+          date,
+          sprintTaskId: id<'SprintTask'>('st-1'),
+          selectionId: id<'DailySelection'>('sel-1'),
+          areas: [],
+          via: 'backlogToToday',
+        },
+        ctx,
+      ),
+    );
+    const planned: SprintTask = {
+      id: id<'SprintTask'>('st-1'),
+      taskId: task.id,
+      origin: 'planning',
+      addedAt: ctx.now,
+      goalLink: 'linked',
+      outcome: 'planned',
+    };
+    const withTask = sprintFixture('2026-09-28', state, { tasks: [planned] });
+    for (const sprintTaskId of [planned.id, id<'SprintTask'>('st-none')])
+      agree(
+        checkRecordActualTime(withTask, { sprintTaskId }),
+        recordActualTime(
+          withTask,
+          { sprintTaskId, date: localDate('2026-09-30'), hours: 1 },
+          ctx,
+        ),
+      );
+  });
+});
+
+describe('Planning: occurrences (invariant 33)', () => {
+  const STATES: readonly OccurrenceState[] = ['pending', 'excluded', 'done'];
+  const cases = SPRINT_STATES.flatMap((sprintState) =>
+    STATES.map((state) => ({ sprintState, state })),
+  );
+  it.each(cases)(
+    'a $state occurrence of a $sprintState Sprint',
+    ({ sprintState, state }) => {
+      const task = newTask();
+      const occurrence: Occurrence = {
+        id: id<'Occurrence'>('occ-1'),
+        taskId: task.id,
+        ruleId: id<'RecurrenceRule'>('rule-1'),
+        scheduledDate: localDate('2026-09-30'),
+        ruleVersion: 1,
+        materializedAt: ctx.now,
+        state,
+        stateChangedAt: ctx.now,
+      };
+      const sprint = sprintFixture('2026-09-28', sprintState, {
+        tasks: [
+          {
+            id: id<'SprintTask'>('st-1'),
+            taskId: task.id,
+            origin: 'planning',
+            addedAt: ctx.now,
+            goalLink: 'unlinked',
+            outcome: 'draft',
+            occurrenceIds: [occurrence.id],
+          },
+        ],
+      });
+      agree(
+        checkExcludeFromPlan(sprint, occurrence),
+        excludeFromPlan(sprint, occurrence, ctx),
+      );
+      agree(
+        checkIncludeInPlan(sprint, { occurrence, task }),
+        includeInPlan(
+          sprint,
+          { occurrence, task, sprintTaskId: id<'SprintTask'>('st-2') },
+          ctx,
+        ),
+      );
+    },
+  );
+});
+
+describe('Confirm while another Sprint is active (invariant 11)', () => {
+  it('is refused, the previous one closed', () => {
+    const previous = sprintFixture('2026-09-14', 'closed');
+    const active = sprintFixture('2026-09-21', 'active');
+    const sprint = sprintFixture('2026-09-28', 'planning', {
+      previousSprintId: previous.id,
+    });
+    const input = {
+      sprints: [previous, active, sprint],
+      tasks: [],
+      areas: [],
+      applyCriterion: false,
+    };
+    const checked = checkConfirmSprint(sprint, input);
+    expect(checked.ok).toBe(false);
+    agree(checked, confirmSprint(sprint, input, ctx));
+  });
+});
+
+describe('Retro: Goals, pins and the improvement (invariants 19, 38, 40)', () => {
+  const cases = SPRINT_STATES.flatMap((state) =>
+    [false, true].map((goal) => ({ state, goal })),
+  );
+  it.each(cases)('in $state, a Goal: $goal', ({ state, goal }) => {
+    const sprint = sprintFixture('2026-09-28', state, {
+      goals: goal ? [{ areaId: research.id, text: '目標' }] : [],
+      ...(state === 'review' || state === 'closed'
+        ? {
+            retro: {
+              startedAt: instant('2026-10-05T00:00:00.000Z'),
+              pins: [],
+              reflection: '',
+            },
+          }
+        : {}),
+    });
+    agree(
+      checkAssessGoal(sprint, { areaId: research.id }),
+      assessGoal(sprint, { areaId: research.id, assessment: 'achieved' }, ctx),
+    );
+    const pin = { kind: 'availableHours' as const };
+    agree(checkPinFact(sprint), pinFact(sprint, { pin }, ctx));
+    agree(checkUnpinFact(sprint), unpinFact(sprint, { pin }, ctx));
+    agree(
+      checkSetImprovement(sprint),
+      setImprovement(sprint, { text: '多めに見積もる' }, ctx),
+    );
+  });
 });

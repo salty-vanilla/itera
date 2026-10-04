@@ -362,10 +362,8 @@ function targetsOf(snapshot: StoreSnapshot): Target[] {
     const pin = { kind: 'availableHours' as const };
     targets.push(
       target<RetroCapabilities>('retro', sprintId, retro.capabilities, {
-        canSetReflection: () =>
+        canUpdate: () =>
           operations.setReflection({ sprintId, text: '気づいたこと' }),
-        canSetImprovement: () =>
-          operations.setImprovement({ sprintId, text: '次に試すこと' }),
         canComplete: () => operations.completeRetro({ sprintId }),
         canPinFact: () => operations.pinFact({ sprintId, pin }),
         canUnpinFact: () => operations.unpinFact({ sprintId, pin }),
@@ -508,6 +506,17 @@ function madeStates(): [string, StoreSnapshot][] {
       }),
     ];
   });
+  // A rule ended (F41): until its last day the Task, off it, can be made
+  // recurring again from the next Sprint (owner decision in #323).
+  const ended = made('backlog-recurrence', (records) => {
+    const task = records.tasks.find(
+      (t) =>
+        t.recurrenceRuleId !== undefined &&
+        records.occurrences.some((o) => o.ruleId === t.recurrenceRuleId),
+    );
+    if (task === undefined) throw new Error('No recurring Task.');
+    return [operations.endRecurrence({ taskId: task.id })];
+  });
   // The last day of the running Sprint, after the system's catch-up.
   const today = fixtureSnapshot('today-interrupt');
   const running = today.records.sprints.find((s) => s.state === 'active');
@@ -530,6 +539,7 @@ function madeStates(): [string, StoreSnapshot][] {
     ['backlog-detail, a suggestion rejected', rejected],
     ['backlog-detail, an Area archived', archived],
     ['planning-pick, an occurrence left out', excluded],
+    ['backlog-recurrence, a rule ended', ended],
     ['today-interrupt, on the last day', lastDay.getSnapshot()],
   ];
 }
@@ -564,6 +574,24 @@ describe('capabilities of the other records agree with the operations (#323)', (
         });
       }
     }
+  });
+
+  it('lets a Task whose rule ends be made recurring again (owner decision in #323)', () => {
+    const [, snapshot] = STATES.find(([name]) => name.endsWith('rule ended'))!;
+    const read = tagged(snapshot.records);
+    const offRule = Object.values(
+      backlogData(read, snapshot.clock, {}).items,
+    ).filter(
+      (item) =>
+        item.recurrence?.endsOn !== undefined &&
+        item.task.recurrenceRuleId === undefined,
+    );
+    expect(offRule.length).toBeGreaterThan(0);
+    for (const item of offRule)
+      expect(item.capabilities).toMatchObject({
+        canSetRecurrence: true,
+        canEndRecurrence: false,
+      });
   });
 
   it('covers every kind of record', () => {

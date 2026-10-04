@@ -1277,6 +1277,37 @@ describe('Backlog', () => {
     ).toContain('毎週 土 · 次は 10/3 (土) · 10/4 (日) まで');
   });
 
+  it('Recurrence (F41): after 繰り返しをやめる, the choice starts as a Task without a rule, and closing asks nothing (#323)', async () => {
+    await renderAt(
+      `/backlog?fixture=backlog-recurrence&view=recurring&task=${ids.task.cleaning}`,
+    );
+    let detail = await screen.findByRole('dialog');
+    let section = within(detail).getByRole('region', { name: '繰り返し' });
+    await userEvent.click(
+      within(section).getByRole('button', { name: '繰り返しをやめる' }),
+    );
+    await within(section).findByRole('button', { name: '繰り返しにする' });
+    // Not the rule that ends: no weekday is chosen yet.
+    expect(
+      within(section)
+        .getAllByRole('checkbox')
+        .filter((box) => box.getAttribute('aria-checked') === 'true'),
+    ).toEqual([]);
+    await userEvent.click(footerClose(detail));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    // Opened again and closed untouched: nothing held.
+    await userEvent.click(
+      within(list()).getByRole('button', { name: '部屋の掃除' }),
+    );
+    detail = await screen.findByRole('dialog');
+    section = within(detail).getByRole('region', { name: '繰り返し' });
+    expect(
+      within(section).getByRole('button', { name: '繰り返しにする' }),
+    ).toBeTruthy();
+    await userEvent.click(footerClose(detail));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
   it('Recurrence (F41): a rule that has made no occurrence is taken off; the Task is one-off again', async () => {
     await renderAt(
       `/backlog?fixture=backlog-capture&task=${ids.task.bookshelf}`,

@@ -193,7 +193,9 @@ TaskCapabilities:
         今週へ: addToSprint with this Task on the running Sprint (#155).
       type: boolean
 EstimateSuggestionCapabilities:
-  description: What the person can do with a suggestion of an Estimate now (#323).
+  description: >-
+    What the person can do with a suggestion of an Estimate now (#323),
+    as DailySelectionCapabilities says. The bound or hours an adoption is given are not checked.
   type: object
   readOnly: true
   required: [canAdopt, canUndoAdoption, canReject, canUndoRejection]
@@ -205,14 +207,16 @@ EstimateSuggestionCapabilities:
     canReject: { description: rejectSuggestion., type: boolean }
     canUndoRejection: { description: undoRejection., type: boolean }
 SubtaskCapabilities:
-  description: What the person can do with a subtask now (#323).
+  description: What the person can do with a subtask now (#323), as DailySelectionCapabilities says.
   type: object
   readOnly: true
   required: [canUpdate]
   properties:
     canUpdate: { description: updateSubtask., type: boolean }
 AreaCapabilities:
-  description: What the person can do with an Area now (#323).
+  description: >-
+    What the person can do with an Area now (#323), as DailySelectionCapabilities says. The name a rename
+    is given is not checked.
   type: object
   readOnly: true
   required: [canRename, canArchive, canRestore]
@@ -221,7 +225,9 @@ AreaCapabilities:
     canArchive: { description: archiveArea., type: boolean }
     canRestore: { description: restoreArea., type: boolean }
 SprintCapabilities:
-  description: What the person can do with a Sprint itself now (#323).
+  description: >-
+    What the person can do with a Sprint itself now (#323), as DailySelectionCapabilities says. The hours
+    and whether to apply the criterion are not checked.
   type: object
   readOnly: true
   required: [canSetAvailableHours, canConfirm, canBeginRetro]
@@ -234,8 +240,9 @@ SprintCapabilities:
 SprintGoalCapabilities:
   description: >-
     What the person can do with a Sprint's Goal for an Area now (#323),
-    written or not. updateGoal takes two operations: its text and the
-    person's assessment.
+    written or not, as DailySelectionCapabilities says. updateGoal takes two operations whose terms differ:
+    its text and the person's assessment. The text and the assessment are
+    not checked.
   type: object
   readOnly: true
   required: [canSet, canAssess]
@@ -247,7 +254,9 @@ SprintGoalCapabilities:
       description: updateGoal with `assessment` (in Review, invariant 19).
       type: boolean
 SprintTaskCapabilities:
-  description: What the person can do with a Task in a Sprint (SprintTask) now (#323).
+  description: >-
+    What the person can do with a Task in a Sprint (SprintTask) now (#323),
+    as DailySelectionCapabilities says.
   type: object
   readOnly: true
   required:
@@ -273,14 +282,16 @@ SprintTaskCapabilities:
 SprintCandidateCapabilities:
   description: >-
     What the person can do with a Task a Sprint being planned can choose
-    (#323): addToSprint, which takes this Task.
+    (#323): addToSprint, which takes this Task. Read as
+    DailySelectionCapabilities says.
   type: object
   readOnly: true
   required: [canAdd]
   properties:
     canAdd: { description: addToSprint with this Task., type: boolean }
 OccurrenceCapabilities:
-  description: What the person can do with an occurrence while planning (#323).
+  description: >-
+    What the person can do with an occurrence while planning (#323), as DailySelectionCapabilities says.
   type: object
   readOnly: true
   required: [canInclude, canExclude]
@@ -299,23 +310,21 @@ OccurrenceItem:
         capabilities: { $ref: '#/OccurrenceCapabilities' }
 RetroCapabilities:
   description: >-
-    What the person can do with a Sprint's Retro now (#323). updateRetro
-    takes two operations: 気づいたこと and 次に試すこと.
+    What the person can do with a Sprint's Retro now (#323), as
+    DailySelectionCapabilities says. The fact a pin is given is not checked.
   type: object
   readOnly: true
   required:
-    - canSetReflection
-    - canSetImprovement
+    - canUpdate
     - canComplete
     - canPinFact
     - canUnpinFact
     - canDraftCriterion
   properties:
-    canSetReflection:
-      description: updateRetro with `reflection`.
-      type: boolean
-    canSetImprovement:
-      description: updateRetro with `improvement`.
+    canUpdate:
+      description: >-
+        updateRetro, with `reflection` or `improvement` (the two are taken
+        on the same terms).
       type: boolean
     canComplete: { description: completeRetro., type: boolean }
     canPinFact: { description: pinFact., type: boolean }
@@ -326,14 +335,18 @@ RetroCapabilities:
         (invariant 38).
       type: boolean
 CriterionUseCapabilities:
-  description: What the person can do with the criterion a Sprint had now (#323).
+  description: >-
+    What the person can do with the criterion a Sprint had now (#323), as DailySelectionCapabilities says.
+    The decision is not checked (a replacement needs a draft).
   type: object
   readOnly: true
   required: [canDecide]
   properties:
     canDecide: { description: decideCriterion., type: boolean }
 PlanningCriterionCapabilities:
-  description: What the person can do with a draft planning criterion now (#323).
+  description: >-
+    What the person can do with a draft planning criterion now (#323), as DailySelectionCapabilities says.
+    The policy is not checked.
   type: object
   readOnly: true
   required: [canSetDraftPolicy, canDropDraft]

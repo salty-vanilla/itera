@@ -78,6 +78,7 @@ import { find } from './changes';
 import { carriedFromOf } from './planning-changes';
 import type { Clock, Records } from './records';
 import { draftOf } from './retro-changes';
+import { nextPlanningOf } from './review-changes';
 import { subjectOf, undoRouteOf } from './selection-of';
 import { sprintIn } from './sprint-of';
 import { activeSprint, additionCriterion } from './task-changes';
@@ -379,9 +380,8 @@ export function sprintCapabilities(
   sprint: Sprint,
   clock: Clock,
 ): SprintCapabilities {
-  const next = records.sprints.find(
-    (s) => s.state === 'planning' && s.previousSprintId === sprint.id,
-  );
+  // The Review links the next Sprint's drafts (review-changes.ts).
+  const next = nextPlanningOf(records, sprint);
   return {
     canSetAvailableHours:
       sprintIn(records, sprint.id, ['planning', 'active']).ok &&
@@ -549,10 +549,11 @@ export function occurrenceCapabilities(
 
 /** A Sprint's Retro: what is done to the Retro in its Review. */
 export interface RetroCapabilities {
-  /** `updateRetro` with 気づいたこと (setReflection). */
-  readonly canSetReflection: boolean;
-  /** `updateRetro` with 次に試すこと (setImprovement). */
-  readonly canSetImprovement: boolean;
+  /**
+   * `updateRetro`: 気づいたこと and 次に試すこと, which the Retro takes on the
+   * same terms (one `can…`, ADR 0007 操作の可否).
+   */
+  readonly canUpdate: boolean;
   /** `completeRetro`. */
   readonly canComplete: boolean;
   /** `pinFact`. */
@@ -574,8 +575,7 @@ export function retroCapabilities(
   const on = (check: (sprint: Sprint) => Result<unknown>) =>
     review && can(check(sprint));
   return {
-    canSetReflection: on(checkSetReflection),
-    canSetImprovement: on(checkSetImprovement),
+    canUpdate: on(checkSetReflection) && on(checkSetImprovement),
     canComplete: on((s) =>
       checkCompleteRetro(s, { criteria: records.criteria }),
     ),

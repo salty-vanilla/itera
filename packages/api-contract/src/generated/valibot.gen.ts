@@ -68,7 +68,7 @@ export const vSprintWeek = v.picklist([
 ]);
 
 /**
- * What the person can do with a Sprint itself now (#323).
+ * What the person can do with a Sprint itself now (#323), as DailySelectionCapabilities says. The hours and whether to apply the criterion are not checked.
  */
 export const vSprintCapabilities = v.pipe(v.object({
     canSetAvailableHours: v.boolean(),
@@ -235,7 +235,7 @@ export const vAreaColor = v.picklist([
 export const vETag = v.pipe(v.pipe(v.string(), v.regex(/^"[!#-~]*"$/)), v.readonly());
 
 /**
- * What the person can do with an Area now (#323).
+ * What the person can do with an Area now (#323), as DailySelectionCapabilities says. The name a rename is given is not checked.
  */
 export const vAreaCapabilities = v.pipe(v.object({
     canRename: v.boolean(),
@@ -527,7 +527,7 @@ export const vTaskCapabilities = v.pipe(v.object({
 }), v.readonly());
 
 /**
- * What the person can do with a suggestion of an Estimate now (#323).
+ * What the person can do with a suggestion of an Estimate now (#323), as DailySelectionCapabilities says. The bound or hours an adoption is given are not checked.
  */
 export const vEstimateSuggestionCapabilities = v.pipe(v.object({
     canAdopt: v.boolean(),
@@ -537,7 +537,7 @@ export const vEstimateSuggestionCapabilities = v.pipe(v.object({
 }), v.readonly());
 
 /**
- * What the person can do with a subtask now (#323).
+ * What the person can do with a subtask now (#323), as DailySelectionCapabilities says.
  */
 export const vSubtaskCapabilities = v.pipe(v.object({
     canUpdate: v.boolean()
@@ -966,7 +966,7 @@ export const vRange = v.object({
 });
 
 /**
- * What the person can do with a Task in a Sprint (SprintTask) now (#323).
+ * What the person can do with a Task in a Sprint (SprintTask) now (#323), as DailySelectionCapabilities says.
  */
 export const vSprintTaskCapabilities = v.pipe(v.object({
     canRemove: v.boolean(),
@@ -995,7 +995,7 @@ export const vAreaTotal = v.object({
 });
 
 /**
- * What the person can do with a Sprint's Goal for an Area now (#323), written or not. updateGoal takes two operations: its text and the person's assessment.
+ * What the person can do with a Sprint's Goal for an Area now (#323), written or not, as DailySelectionCapabilities says. updateGoal takes two operations whose terms differ: its text and the person's assessment. The text and the assessment are not checked.
  */
 export const vSprintGoalCapabilities = v.pipe(v.object({
     canSet: v.boolean(),
@@ -1229,7 +1229,7 @@ export const vSprintView = v.union([v.object({
 export const vAnyEntityTag = v.picklist(['*']);
 
 /**
- * What the person can do with a Task a Sprint being planned can choose (#323): addToSprint, which takes this Task.
+ * What the person can do with a Task a Sprint being planned can choose (#323): addToSprint, which takes this Task. Read as DailySelectionCapabilities says.
  */
 export const vSprintCandidateCapabilities = v.pipe(v.object({
     canAdd: v.boolean()
@@ -1250,7 +1250,7 @@ export const vCandidateRow = v.object({
 });
 
 /**
- * What the person can do with an occurrence while planning (#323).
+ * What the person can do with an occurrence while planning (#323), as DailySelectionCapabilities says.
  */
 export const vOccurrenceCapabilities = v.pipe(v.object({
     canInclude: v.boolean(),
@@ -1387,7 +1387,7 @@ export const vCriterionResult = v.object({
 });
 
 /**
- * What the person can do with the criterion a Sprint had now (#323).
+ * What the person can do with the criterion a Sprint had now (#323), as DailySelectionCapabilities says. The decision is not checked (a replacement needs a draft).
  */
 export const vCriterionUseCapabilities = v.pipe(v.object({
     canDecide: v.boolean()
@@ -1400,7 +1400,7 @@ export const vRetroCriterion = v.object({
 });
 
 /**
- * What the person can do with a draft planning criterion now (#323).
+ * What the person can do with a draft planning criterion now (#323), as DailySelectionCapabilities says. The policy is not checked.
  */
 export const vPlanningCriterionCapabilities = v.pipe(v.object({
     canSetDraftPolicy: v.boolean(),
@@ -1446,11 +1446,10 @@ export const vCarryOverTask = v.object({
 });
 
 /**
- * What the person can do with a Sprint's Retro now (#323). updateRetro takes two operations: 気づいたこと and 次に試すこと.
+ * What the person can do with a Sprint's Retro now (#323), as DailySelectionCapabilities says. The fact a pin is given is not checked.
  */
 export const vRetroCapabilities = v.pipe(v.object({
-    canSetReflection: v.boolean(),
-    canSetImprovement: v.boolean(),
+    canUpdate: v.boolean(),
     canComplete: v.boolean(),
     canPinFact: v.boolean(),
     canUnpinFact: v.boolean(),

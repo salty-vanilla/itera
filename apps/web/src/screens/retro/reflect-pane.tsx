@@ -67,9 +67,9 @@ function ReflectPane({
               onChange={(e) => reflection.set(e.currentTarget.value)}
               // Saved only when it was typed in: a field left as it was
               // never sends what was read when the Retro opened (#324).
-              readOnly={!data.capabilities.canSetReflection}
+              readOnly={!data.capabilities.canUpdate}
               onBlur={() => {
-                if (!data.capabilities.canSetReflection) return;
+                if (!data.capabilities.canUpdate) return;
                 if (reflection.leave())
                   reflection.hold(
                     onReflect(reflection.value, reflection.madeFrom),
@@ -166,7 +166,7 @@ function Improvement({
     // Compared with what the field showed when it was typed in, not with
     // what was read since: the other device's words are not written over.
     if (!field.leave()) return Promise.resolve(true);
-    if (!data.capabilities.canSetImprovement) return Promise.resolve(false);
+    if (!data.capabilities.canUpdate) return Promise.resolve(false);
     // A criterion made from it keeps it; the handoff says to drop it first.
     if (next === '' && data.draft !== undefined) return Promise.resolve(false);
     const result = onImprove(next, field.madeFrom).then((ok) => {
@@ -225,6 +225,7 @@ function Improvement({
               text="body-l"
               value={text}
               placeholder="例：論文は 1本ずつタスクに分ける"
+              readOnly={!data.capabilities.canUpdate}
               onChange={(e) => field.set(e.currentTarget.value)}
               // Kept as it is typed; 確定 only ends the editing.
               onBlur={() => void save()}

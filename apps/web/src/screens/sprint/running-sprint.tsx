@@ -34,7 +34,7 @@ import {
   type WeekName,
 } from '@/lib/week-text';
 import { useAvailableHoursAction } from '@/screen-data/use-planning';
-import { useBacklog } from '@/screen-data/use-backlog';
+import { hasDetail, useBacklog } from '@/screen-data/use-backlog';
 import {
   useRunningSprintActions,
   type RunningData,
@@ -94,10 +94,7 @@ function RunningSprint({
     !running || search.task === undefined || backlog.status !== 'ready'
       ? undefined
       : backlog.item(search.task);
-  // The detail is the Backlog's row: a Task that has left the Backlog has
-  // none. Until the Backlog is read, every Task is taken to have one.
-  const inBacklog = (taskId: TaskId) =>
-    backlog.status !== 'ready' || backlog.item(taskId) !== undefined;
+  const inBacklog = (taskId: TaskId) => hasDetail(backlog, taskId);
 
   const outlook = (
     <Outlook

@@ -608,10 +608,9 @@ function TaskDetail({
   useEffect(() => {
     if (focusEstimate !== undefined) estimateRef.current?.focus();
   }, [focusEstimate]);
-  // The suggestion on show: the one the person can use now (#323).
-  const suggestion = task.suggestions.find(
-    (s) => item.suggestionCapabilities[s.id]?.canAdopt === true,
-  );
+  // The suggestion on show (at most one is presented); what can be done
+  // with it is what the read says (#323).
+  const suggestion = task.suggestions.find((s) => s.state === 'presented');
   const suggestionCan =
     suggestion === undefined
       ? undefined
@@ -1119,6 +1118,7 @@ function TaskDetail({
             madeAt={`${formatDate(toLocalDate(suggestion.createdAt, timeZone))} ${formatTime(suggestion.createdAt, timeZone)}`}
             onAdopt={onAdopt}
             onAdoptEdited={onAdoptEdited}
+            canAdopt={suggestionCan?.canAdopt === true}
             onReject={suggestionCan?.canReject === true ? onReject : undefined}
           />
         )}

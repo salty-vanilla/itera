@@ -3,6 +3,7 @@
 // timeline.
 import { enterReview, type Sprint } from '@itera/domain';
 import { changed, type Change } from './record-store';
+import type { Records } from './records';
 
 /**
  * Review に入れる. Tasks the person already chose for the next Sprint are
@@ -12,9 +13,7 @@ import { changed, type Change } from './record-store';
 export const reviewSprint =
   (sprint: Sprint): Change =>
   (records, ctx) => {
-    const next = records.sprints.find(
-      (s) => s.state === 'planning' && s.previousSprintId === sprint.id,
-    );
+    const next = nextPlanningOf(records, sprint);
     return changed(
       enterReview(
         sprint,
@@ -34,3 +33,13 @@ export const reviewSprint =
       }),
     );
   };
+
+/** The next Sprint in Planning after `sprint`, which its Review links (F35). */
+export function nextPlanningOf(
+  records: Pick<Records, 'sprints'>,
+  sprint: Sprint,
+): Sprint | undefined {
+  return records.sprints.find(
+    (s) => s.state === 'planning' && s.previousSprintId === sprint.id,
+  );
+}

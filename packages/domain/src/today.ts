@@ -757,89 +757,95 @@ export function completeFromBacklog(
   const { task } = input;
   const checked = checkCompleteFromBacklog(sprint, input);
   if (!checked.ok) return checked;
-  const sprintTask = plannedSprintTaskOf(sprint, task);
-  if (sprintTask === undefined) {
-    const completed = completeTask(task, ctx);
-    if (!completed.ok) return completed;
-    return applied(
-      { sprint, task: completed.value.record },
-      completed.value.activities,
-    );
+  const completion = checked.value;
+  switch (completion.kind) {
+    case 'task': {
+      const completed = completeTask(task, ctx);
+      if (!completed.ok) return completed;
+      return applied(
+        { sprint, task: completed.value.record },
+        completed.value.activities,
+      );
+    }
+    case 'beforeStart':
+      // Before the first day (confirmed on Sunday evening, say): the Task
+      // and this week's SprintTask are done, but there is no day to record
+      // a choice on (F34).
+      return completeWithSprintTask(sprint, completion.sprintTask, task, ctx);
+    case 'selection': {
+      const done = completeSelection(
+        sprint,
+        { selectionId: completion.selection.id, task, today: input.date },
+        ctx,
+      );
+      if (!done.ok) return done;
+      const { sprint: next, task: completed } = done.value.record;
+      if (completed === undefined) return err('invalidInput', 'Task missing.');
+      return applied({ sprint: next, task: completed }, done.value.activities);
+    }
+    case 'newChoice': {
+      const selection = newSelection(
+        sprint,
+        {
+          selectionId: input.selectionId,
+          date: input.date,
+          sprintTaskId: completion.sprintTask.id,
+        },
+        'backlogCompletion',
+        'done',
+        ctx,
+      );
+      if (!selection.ok) return selection;
+      const effect = completionEffect(
+        sprint,
+        completion.sprintTask,
+        selection.value,
+        { selectionId: selection.value.id, task, today: input.date },
+        ctx,
+      );
+      if (!effect.ok) return effect;
+      const { task: completed } = effect.value.record;
+      if (completed === undefined) return err('invalidInput', 'Task missing.');
+      return applied(
+        {
+          sprint: withSelection(effect.value.record.sprint, selection.value),
+          task: completed,
+        },
+        [
+          ...effect.value.activities,
+          selectionActivity('todayDone', sprint, selection.value, ctx),
+        ],
+      );
+    }
   }
-  if (input.date < sprint.start) {
-    // Before the first day (confirmed on Sunday evening, say): the Task and
-    // this week's SprintTask are done, but there is no day to record a
-    // choice on (F34).
-    return completeWithSprintTask(sprint, sprintTask, task, ctx);
-  }
-  const existing = findSelection(sprint, input.date, sprintTask.id, undefined);
-  if (existing !== undefined && canComplete(existing, input.date)) {
-    const done = completeSelection(
-      sprint,
-      { selectionId: existing.id, task, today: input.date },
-      ctx,
-    );
-    if (!done.ok) return done;
-    const { sprint: next, task: completed } = done.value.record;
-    if (completed === undefined) return err('invalidInput', 'Task missing.');
-    return applied({ sprint: next, task: completed }, done.value.activities);
-  }
-  if (existing !== undefined) {
-    return err(
-      'invalidTransition',
-      `Today's selection is already ${existing.resolution}.`,
-    );
-  }
-  const selection = newSelection(
-    sprint,
-    {
-      selectionId: input.selectionId,
-      date: input.date,
-      sprintTaskId: sprintTask.id,
-    },
-    'backlogCompletion',
-    'done',
-    ctx,
-  );
-  if (!selection.ok) return selection;
-  const effect = completionEffect(
-    sprint,
-    sprintTask,
-    selection.value,
-    { selectionId: selection.value.id, task, today: input.date },
-    ctx,
-  );
-  if (!effect.ok) return effect;
-  const { task: completed } = effect.value.record;
-  if (completed === undefined) return err('invalidInput', 'Task missing.');
-  return applied(
-    {
-      sprint: withSelection(effect.value.record.sprint, selection.value),
-      task: completed,
-    },
-    [
-      ...effect.value.activities,
-      selectionActivity('todayDone', sprint, selection.value, ctx),
-    ],
-  );
 }
 
-/** The Task's planned SprintTask in the running Sprint, if any. */
-function plannedSprintTaskOf(sprint: Sprint, task: Task) {
-  return sprint.state === 'active'
-    ? sprint.tasks.find((t) => t.taskId === task.id && t.outcome === 'planned')
-    : undefined;
-}
+/**
+ * What `completeFromBacklog` would complete, if it takes the records as
+ * they are now: the Task alone (outside the Sprint), the Task and its
+ * SprintTask before the first day (F34), the day's selection as 完了 does
+ * (invariant 21, F17), or a new choice for the day, done (invariant 27).
+ */
+export type BacklogCompletion =
+  | { readonly kind: 'task' }
+  | { readonly kind: 'beforeStart'; readonly sprintTask: SprintTask }
+  | {
+      readonly kind: 'selection';
+      readonly sprintTask: SprintTask;
+      readonly selection: DailySelection;
+    }
+  | { readonly kind: 'newChoice'; readonly sprintTask: SprintTask };
 
 /**
  * Whether `completeFromBacklog` takes the records as they are now (#323):
  * a one-off Task that can complete, whose day in the Sprint, if it has
- * one, can take the completion (invariant 21, F17, F34).
+ * one, can take the completion (invariant 21, F17, F34). Returns what it
+ * completes, which the command follows.
  */
 export function checkCompleteFromBacklog(
   sprint: Sprint,
   input: Pick<CompleteFromBacklogInput, 'task' | 'date'>,
-): Result<undefined> {
+): Result<BacklogCompletion> {
   const { task } = input;
   if (isRecurring(task)) {
     return err(
@@ -863,18 +869,26 @@ export function checkCompleteFromBacklog(
       'This Sprint has the Task’s occurrences; they are completed one by one.',
     );
   }
-  const sprintTask = plannedSprintTaskOf(sprint, task);
-  if (sprintTask === undefined || input.date < sprint.start) {
-    return checkCompleteTask(task);
-  }
+  const completable = checkCompleteTask(task);
+  if (!completable.ok) return completable;
+  const sprintTask =
+    sprint.state === 'active'
+      ? sprint.tasks.find(
+          (t) => t.taskId === task.id && t.outcome === 'planned',
+        )
+      : undefined;
+  if (sprintTask === undefined) return ok({ kind: 'task' });
+  if (input.date < sprint.start) return ok({ kind: 'beforeStart', sprintTask });
   const existing = findSelection(sprint, input.date, sprintTask.id, undefined);
   if (existing !== undefined && canComplete(existing, input.date)) {
-    const completable = checkCompleteSelection(sprint, {
+    const done = checkCompleteSelection(sprint, {
       selectionId: existing.id,
       task,
       today: input.date,
     });
-    return completable.ok ? ok(undefined) : completable;
+    return done.ok
+      ? ok({ kind: 'selection', sprintTask, selection: existing })
+      : done;
   }
   if (existing !== undefined) {
     return err(
@@ -883,8 +897,7 @@ export function checkCompleteFromBacklog(
     );
   }
   const day = checkDayOfSprint(sprint, input.date);
-  if (!day.ok) return day;
-  return checkCompleteTask(task);
+  return day.ok ? ok({ kind: 'newChoice', sprintTask }) : day;
 }
 
 export interface UndoCompleteFromBacklogInput {

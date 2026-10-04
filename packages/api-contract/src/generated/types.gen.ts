@@ -53,7 +53,7 @@ export type SprintState = 'planning' | 'active' | 'review' | 'closed';
 export type SprintWeek = 'previous' | 'current' | 'next';
 
 /**
- * What the person can do with a Sprint itself now (#323).
+ * What the person can do with a Sprint itself now (#323), as DailySelectionCapabilities says. The hours and whether to apply the criterion are not checked.
  */
 export type SprintCapabilities = {
     /**
@@ -232,7 +232,7 @@ export type AreaColor = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type ETag = string;
 
 /**
- * What the person can do with an Area now (#323).
+ * What the person can do with an Area now (#323), as DailySelectionCapabilities says. The name a rename is given is not checked.
  */
 export type AreaCapabilities = {
     /**
@@ -553,7 +553,7 @@ export type TaskCapabilities = {
 };
 
 /**
- * What the person can do with a suggestion of an Estimate now (#323).
+ * What the person can do with a suggestion of an Estimate now (#323), as DailySelectionCapabilities says. The bound or hours an adoption is given are not checked.
  */
 export type EstimateSuggestionCapabilities = {
     /**
@@ -575,7 +575,7 @@ export type EstimateSuggestionCapabilities = {
 };
 
 /**
- * What the person can do with a subtask now (#323).
+ * What the person can do with a subtask now (#323), as DailySelectionCapabilities says.
  */
 export type SubtaskCapabilities = {
     /**
@@ -1042,7 +1042,7 @@ export type Range = {
 };
 
 /**
- * What the person can do with a Task in a Sprint (SprintTask) now (#323).
+ * What the person can do with a Task in a Sprint (SprintTask) now (#323), as DailySelectionCapabilities says.
  */
 export type SprintTaskCapabilities = {
     /**
@@ -1086,7 +1086,7 @@ export type AreaTotal = {
 };
 
 /**
- * What the person can do with a Sprint's Goal for an Area now (#323), written or not. updateGoal takes two operations: its text and the person's assessment.
+ * What the person can do with a Sprint's Goal for an Area now (#323), written or not, as DailySelectionCapabilities says. updateGoal takes two operations whose terms differ: its text and the person's assessment. The text and the assessment are not checked.
  */
 export type SprintGoalCapabilities = {
     /**
@@ -1326,7 +1326,7 @@ export type SprintView = {
 export type AnyEntityTag = '*';
 
 /**
- * What the person can do with a Task a Sprint being planned can choose (#323): addToSprint, which takes this Task.
+ * What the person can do with a Task a Sprint being planned can choose (#323): addToSprint, which takes this Task. Read as DailySelectionCapabilities says.
  */
 export type SprintCandidateCapabilities = {
     /**
@@ -1362,7 +1362,7 @@ export type CandidateRow = {
 };
 
 /**
- * What the person can do with an occurrence while planning (#323).
+ * What the person can do with an occurrence while planning (#323), as DailySelectionCapabilities says.
  */
 export type OccurrenceCapabilities = {
     /**
@@ -1500,7 +1500,7 @@ export type CriterionResult = {
 };
 
 /**
- * What the person can do with the criterion a Sprint had now (#323).
+ * What the person can do with the criterion a Sprint had now (#323), as DailySelectionCapabilities says. The decision is not checked (a replacement needs a draft).
  */
 export type CriterionUseCapabilities = {
     /**
@@ -1516,7 +1516,7 @@ export type RetroCriterion = {
 };
 
 /**
- * What the person can do with a draft planning criterion now (#323).
+ * What the person can do with a draft planning criterion now (#323), as DailySelectionCapabilities says. The policy is not checked.
  */
 export type PlanningCriterionCapabilities = {
     /**
@@ -1563,17 +1563,13 @@ export type CarryOverTask = {
 };
 
 /**
- * What the person can do with a Sprint's Retro now (#323). updateRetro takes two operations: 気づいたこと and 次に試すこと.
+ * What the person can do with a Sprint's Retro now (#323), as DailySelectionCapabilities says. The fact a pin is given is not checked.
  */
 export type RetroCapabilities = {
     /**
-     * updateRetro with `reflection`.
+     * updateRetro, with `reflection` or `improvement` (the two are taken on the same terms).
      */
-    canSetReflection: boolean;
-    /**
-     * updateRetro with `improvement`.
-     */
-    canSetImprovement: boolean;
+    canUpdate: boolean;
     /**
      * completeRetro.
      */

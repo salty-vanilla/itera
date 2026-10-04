@@ -155,7 +155,13 @@ function RecurrenceEditor({
     nextKept.dayOfMonth !== kept.dayOfMonth
   )
     setKept(nextKept);
-  const choice = useDraftField(choiceOf(latest, kept), sameChoice);
+  // Without a rule of its own (none, or one that ends, F41), a choice
+  // starts where a Task without a rule starts: a new rule is made from it,
+  // not the one that ends carried on.
+  const choice = useDraftField(
+    owns ? choiceOf(latest, kept) : choiceOf(undefined),
+    sameChoice,
+  );
   const { freq, days, dayOfMonth } = choice.value;
   const daysRef = useRef<HTMLFieldSetElement>(null);
   const createRef = useRef<HTMLButtonElement>(null);
@@ -184,8 +190,8 @@ function RecurrenceEditor({
   const [result, setResult] = useState<Result>();
   const [error, setError] = useState<string>();
   // 繰り返しをやめる makes the button go. Taken off, the editor starts again
-  // from the frequency; ended, the inputs go too and the heading holds the
-  // place.
+  // from the frequency; ended, the heading holds the place, above the rule
+  // and its last day (the choice under it makes a new rule, #323).
   useEffect(() => {
     if (result?.kind === 'removed') freqRef.current?.focus();
     if (result?.kind === 'ended') headingRef.current?.focus();

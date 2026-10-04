@@ -54,3 +54,12 @@ export function useBacklog(filter: BacklogFilter): Read<BacklogView> {
   });
   return useRead(query, backlogView);
 }
+
+/**
+ * Whether the Task has a detail to open: the detail is the Backlog's row,
+ * which only an active Task has (a completed or archived one has left the
+ * Backlog). Until the Backlog is read, every Task is taken to have one.
+ */
+export function hasDetail(backlog: Read<BacklogView>, taskId: string): boolean {
+  return backlog.status !== 'ready' || backlog.item(taskId) !== undefined;
+}

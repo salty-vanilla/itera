@@ -33,7 +33,7 @@ import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { useStuckBar } from '@/lib/use-stuck-bar';
 import { cn } from '@/lib/utils';
 import { weekCall, weekText, weekLabel } from '@/lib/week-text';
-import { useBacklog } from '@/screen-data/use-backlog';
+import { hasDetail, useBacklog } from '@/screen-data/use-backlog';
 import {
   useAvailableHoursAction,
   useConfirmSprint,
@@ -229,11 +229,7 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
 
   // 確定 is open when the read says so (#323); the blockers say why not.
   const blocked = !data.capabilities.canConfirm;
-  // A Task completed or archived during Planning has left the Backlog: no
-  // detail to open. Until the Backlog is read, every Task is taken to have
-  // one.
-  const inBacklog = (taskId: TaskId) =>
-    backlog.status !== 'ready' || backlog.item(taskId) !== undefined;
+  const inBacklog = (taskId: TaskId) => hasDetail(backlog, taskId);
   const reasonId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
