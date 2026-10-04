@@ -597,7 +597,8 @@ describe('the Backlog on the API', () => {
         within(days()).getByRole('checkbox', { name });
       await setRecurrence({
         client: otherDevice(store),
-        headers: newWrite(),
+        // Another device's write, whatever it read (#330).
+        headers: { ...newWrite(), 'If-Match': '*' },
         path: { taskId: ids.task.cleaning },
         body: { pattern: { freq: 'weekly', daysOfWeek: [1, 3, 5] } },
       });
@@ -618,6 +619,148 @@ describe('the Backlog on the API', () => {
           latest && 'daysOfWeek' in latest ? [...latest.daysOfWeek].sort() : [],
         ).toEqual([1, 2, 3, 5]);
       });
+    });
+
+    it('changes the rule from its etag as read, and each change after from the one before (#330)', async () => {
+      const conditions: (string | null)[] = [];
+      const { store } = serve((request) => {
+        if (request.method === 'PUT' && request.url.endsWith('/recurrence'))
+          conditions.push(request.headers.get('If-Match'));
+        return undefined;
+      }, 'backlog-recurrence');
+      const router = renderBacklog();
+      await list();
+      await router.navigate({
+        to: '/backlog',
+        search: { task: ids.task.cleaning },
+      });
+      const detail = await screen.findByRole('dialog', { name: '部屋の掃除' });
+      const tick = (name: string) =>
+        within(
+          within(
+            within(detail).getByRole('region', { name: '繰り返し' }),
+          ).getByRole('group', { name: '曜日' }),
+        ).getByRole('checkbox', { name });
+      await userEvent.click(tick('月'));
+      await userEvent.click(tick('火'));
+      await until(() => {
+        const latest = store
+          .getSnapshot()
+          .records.rules.find((r) => r.taskId === ids.task.cleaning)
+          ?.versions.at(-1)?.pattern;
+        expect(
+          latest && 'daysOfWeek' in latest ? [...latest.daysOfWeek].sort() : [],
+        ).toEqual([0, 1, 2]);
+      });
+      expect(conditions).toHaveLength(2);
+      expect(conditions[0]).toMatch(/^"\d+"$/);
+      expect(conditions[1]).toMatch(/^"\d+"$/);
+      expect(conditions[1]).not.toBe(conditions[0]);
+    });
+
+    it('makes a rule from none, and says so when another device made one first (#330)', async () => {
+      const conditions: (string | null)[] = [];
+      const { store } = serve((request) => {
+        if (request.method === 'PUT' && request.url.endsWith('/recurrence'))
+          conditions.push(request.headers.get('If-None-Match'));
+        return undefined;
+      }, 'backlog-recurrence');
+      const router = renderBacklog();
+      await list();
+      await router.navigate({
+        to: '/backlog',
+        search: { task: ids.task.paper },
+      });
+      const detail = await screen.findByRole('dialog');
+      // A Task without a rule has 繰り返し under 詳しく.
+      await userEvent.click(
+        within(detail).getByRole('button', { name: /詳しく/ }),
+      );
+      const region = within(detail).getByRole('region', { name: '繰り返し' });
+      await userEvent.selectOptions(
+        within(region).getByRole('combobox'),
+        'daily',
+      );
+      // Another device makes the Task recurring first.
+      await setRecurrence({
+        client: otherDevice(store),
+        headers: { ...newWrite(), 'If-None-Match': '*' },
+        path: { taskId: ids.task.paper },
+        body: { pattern: { freq: 'weekdays' } },
+      });
+      await userEvent.click(
+        within(region).getByRole('button', { name: '繰り返しにする' }),
+      );
+      expect(
+        await screen.findAllByText('ほかの端末で変わっていました'),
+      ).not.toHaveLength(0);
+      expect(conditions).toEqual(['*']);
+      // The other device's rule stays.
+      expect(
+        store
+          .getSnapshot()
+          .records.rules.find((r) => r.taskId === ids.task.paper)
+          ?.versions.at(-1)?.pattern,
+      ).toEqual({ freq: 'weekdays' });
+    });
+
+    it('makes a rule again from none after ending the one it made (#330)', async () => {
+      const sent: { ifMatch: string | null; ifNoneMatch: string | null }[] = [];
+      const { store } = serve((request) => {
+        if (request.method === 'PUT' && request.url.endsWith('/recurrence'))
+          sent.push({
+            ifMatch: request.headers.get('If-Match'),
+            ifNoneMatch: request.headers.get('If-None-Match'),
+          });
+        return undefined;
+      }, 'backlog-recurrence');
+      const router = renderBacklog();
+      await list();
+      await router.navigate({
+        to: '/backlog',
+        search: { task: ids.task.paper },
+      });
+      const detail = await screen.findByRole('dialog');
+      await userEvent.click(
+        within(detail).getByRole('button', { name: /詳しく/ }),
+      );
+      const region = () =>
+        within(detail).getByRole('region', { name: '繰り返し' });
+      const ruleOf = () => {
+        const { records } = store.getSnapshot();
+        const ruleId = records.tasks.find(
+          (t) => t.id === ids.task.paper,
+        )?.recurrenceRuleId;
+        return records.rules.find((r) => r.id === ruleId);
+      };
+      const make = async () => {
+        await userEvent.selectOptions(
+          within(region()).getByRole('combobox'),
+          'daily',
+        );
+        await userEvent.click(
+          within(region()).getByRole('button', { name: '繰り返しにする' }),
+        );
+        await until(() => expect(ruleOf()).toBeDefined());
+      };
+      await make();
+      await userEvent.selectOptions(
+        within(region()).getByRole('combobox'),
+        'weekdays',
+      );
+      await until(() =>
+        expect(ruleOf()?.versions.at(-1)?.pattern).toEqual({
+          freq: 'weekdays',
+        }),
+      );
+      await userEvent.click(
+        within(region()).getByRole('button', { name: '繰り返しをやめる' }),
+      );
+      await until(() => expect(ruleOf()).toBeUndefined());
+      await make();
+      expect(sent).toHaveLength(3);
+      expect(sent[2]).toEqual({ ifMatch: null, ifNoneMatch: '*' });
+      expect(screen.queryByText('ほかの端末で変わっていました')).toBeNull();
     });
 
     it("sends nothing on 名前を変える for an Area's name unedited, and shows the other device's name", async () => {

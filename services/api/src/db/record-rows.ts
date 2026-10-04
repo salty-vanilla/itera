@@ -4,6 +4,7 @@ import type {
   AreaId,
   InterruptNoteId,
   PlanningCriterionId,
+  RecurrenceRuleId,
   SprintId,
   SprintTaskId,
   SubtaskId,
@@ -108,6 +109,34 @@ export const versionedTables: ReadonlyMap<
   [sprintTask, (r) => versionKey.sprintTask(r.id as SprintTaskId)],
   [interruptNote, (r) => versionKey.interrupt(r.id as InterruptNoteId)],
   [retro, (r) => versionKey.retro(r.sprintId as SprintId)],
+  [recurrenceRule, (r) => versionKey.rule(r.id as RecurrenceRuleId)],
+]);
+
+interface VersionedPart {
+  readonly table: RecordTable;
+  readonly root: (row: Record<string, unknown>) => Record<string, unknown>;
+}
+
+/**
+ * The parts of a record with an etag that have no version of their own
+ * (#330): a rule's versions and their days. The record's version is the
+ * whole of it: the highest revision of its row and its parts' rows, and a
+ * save that writes or deletes a part writes the record's row with the
+ * save's revision too (a part deleted leaves no row to say so). `root` is
+ * the primary key of the record's row, in `table`.
+ */
+export const versionedParts: ReadonlyMap<RecordTable, VersionedPart> = new Map<
+  RecordTable,
+  VersionedPart
+>([
+  [
+    recurrenceRuleVersion,
+    { table: recurrenceRule, root: (r) => ({ id: r.ruleId }) },
+  ],
+  [
+    recurrenceRuleVersionDay,
+    { table: recurrenceRule, root: (r) => ({ id: r.ruleId }) },
+  ],
 ]);
 
 /** Rows grouped by table, in the order they were added. */

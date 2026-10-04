@@ -349,7 +349,7 @@ async function answer(
     if (met === 'required')
       return failure(
         '/problems/precondition-required',
-        'A write that replaces values needs If-Match (If-None-Match: * for a Goal not written yet).',
+        'A write that replaces values needs If-Match (If-None-Match: * for a Goal not written yet, or a Task without a rule).',
       );
     if (met === 'failed')
       return failure(

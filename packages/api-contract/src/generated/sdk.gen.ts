@@ -235,7 +235,7 @@ export const endRecurrence = <ThrowOnError extends boolean = false>(options: Opt
 /**
  * Set or change a Task's recurrence
  *
- * The rule is a record of the Task of its own, one at most.
+ * The rule is a record of the Task of its own, one at most. A change to the Task's rule is made from the rule's `etag` (`BacklogItem.rule`, `If-Match`); a rule for a Task without one, from none (`If-None-Match: *`). A rule that has come off the Task (ended, F41) is not the Task's: a rule set then is a new one, made from none.
  */
 export const setRecurrence = <ThrowOnError extends boolean = false>(options: Options<SetRecurrenceData, ThrowOnError>): RequestResult<SetRecurrenceResponses, SetRecurrenceErrors, ThrowOnError> => (options.client ?? client).put<SetRecurrenceResponses, SetRecurrenceErrors, ThrowOnError>({
     security: [{

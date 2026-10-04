@@ -23,6 +23,7 @@ import {
   addUserRows,
   recordTables,
   RowSet,
+  versionedParts,
   versionedTables,
   type RecordTable,
 } from './record-rows';
@@ -332,7 +333,9 @@ const holdsUniqueSlot = new Map<RecordTable, (row: Row) => boolean>(
  * A row inserted or whose values change is written with `revision`, the
  * save's: the version of the record it holds (#321). A row whose `position`
  * alone changes (a sibling before it removed) keeps its revision: its
- * record's values are the same. `versions` has the version of each record
+ * record's values are the same. A row of a part without a version of its
+ * own (`versionedParts`) inserted, changed or deleted writes its record's
+ * row with `revision` too (#330). `versions` has the version of each record
  * with an etag the statements write, `null` for one they delete.
  */
 function diff(
@@ -344,6 +347,16 @@ function diff(
   const deletes: Statement[] = [];
   const writes: Statement[] = [];
   const versions = new Map<string, number | null>();
+  // The records whose parts the statements write, by version key: their
+  // rows are written after, unless the statements write them already.
+  const touched = new Map<string, { table: RecordTable; root: Row }>();
+  const touch = (table: RecordTable, row: Row) => {
+    const part = versionedParts.get(table);
+    const versionKeyOf = part && versionedTables.get(part.table);
+    if (part === undefined || versionKeyOf === undefined) return;
+    const root = part.root(row);
+    touched.set(versionKeyOf(root), { table: part.table, root });
+  };
   for (const table of [...recordTables].reverse()) {
     const { key, where } = keyOf(table);
     const versionKeyOf = versionedTables.get(table);
@@ -352,6 +365,7 @@ function diff(
       if (!kept.has(key(row))) {
         deletes.push(db.delete(table).where(where(row)));
         if (versionKeyOf !== undefined) versions.set(versionKeyOf(row), null);
+        touch(table, row);
       }
     }
   }
@@ -360,6 +374,7 @@ function diff(
     const versionKeyOf = versionedTables.get(table);
     const written = (row: Row) => {
       if (versionKeyOf !== undefined) versions.set(versionKeyOf(row), revision);
+      touch(table, row);
     };
     const old = new Map(before.plain(table).map((row) => [key(row), row]));
     const holds = holdsUniqueSlot.get(table) ?? (() => false);
@@ -389,6 +404,14 @@ function diff(
         writes.push(db.insert(target).values(chunk));
       }
     }
+  }
+  for (const [versionKey, { table, root }] of touched) {
+    // Written or deleted with its parts already.
+    if (versions.has(versionKey)) continue;
+    writes.push(
+      db.update(table).set({ revision }).where(keyOf(table).where(root)),
+    );
+    versions.set(versionKey, revision);
   }
   return { statements: [...deletes, ...writes], versions };
 }

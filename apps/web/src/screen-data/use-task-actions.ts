@@ -175,7 +175,8 @@ export function useSubtaskActions() {
 
 /**
  * A Task's recurrence. A choice in a rule that exists saves as it is made
- * (a second weekday ticked while the first is sent waits for it).
+ * (a second weekday ticked while the first is sent waits for it), from the
+ * rule as read (#330).
  */
 export function useRecurrenceActions() {
   const setRecurrence = useOperation('setRecurrence', {
@@ -191,8 +192,10 @@ export function useRecurrenceActions() {
     setRecurrence: async (
       taskId: TaskId,
       pattern: RecurrencePattern,
+      /** The Task's rule as read, or none: a new rule is made (#330). */
+      from: MadeFrom,
     ): Promise<{ ok: boolean; effectiveFrom?: LocalDate }> => {
-      const outcome = await setRecurrence.run({ taskId, pattern });
+      const outcome = await setRecurrence.run({ taskId, pattern }, from);
       return outcome.ok ? { ok: true, ...outcome.value } : { ok: false };
     },
     /**
