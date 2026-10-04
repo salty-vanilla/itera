@@ -73,7 +73,8 @@ type Write<Input> = {
  *   sign in.
  * - An operation that replaces a record's values (`ConditionalName`: the
  *   contract's PATCHes) is run with the record as it was read: `run(input,
- *   { etag })`, or `{ none: true }` for a Goal not written yet. It is sent
+ *   { etag })`, or `{ none: true }` for a Goal not written yet (a Task
+ *   without a rule). It is sent
  *   with `If-Match` (`If-None-Match: *`), after the record's own writes
  *   from this client have moved it on (`ownVersions`). When the record has
  *   changed on another device since, it is not made (412): the Toast says

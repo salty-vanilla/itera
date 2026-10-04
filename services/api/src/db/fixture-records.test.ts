@@ -6,6 +6,7 @@ import {
   createIdSource,
   nextVersions,
   operations,
+  versionKey,
   type Change,
   type Records,
 } from '@itera/application';
@@ -14,7 +15,7 @@ import {
   fixtureSnapshot,
   fixtureStateIds,
 } from '@itera/application/fixtures';
-import { addDays, id, instant } from '@itera/domain';
+import { addDays, id, instant, type DayOfWeek } from '@itera/domain';
 import { afterEach, describe, expect, it } from 'vitest';
 import { loadRecords } from './load-records';
 import { createMemoryDatabase } from './memory-database';
@@ -62,6 +63,7 @@ describe('the fixture states', () => {
         tasks: [],
         sprints: [],
         criteria: [],
+        rules: [],
       };
       expect(saved.ok && saved.versions).toEqual(
         nextVersions(new Map(), none, records, 1),
@@ -107,6 +109,26 @@ describe('the versions a save writes (#321)', () => {
           )!.id,
           text: '目標',
         }),
+    ],
+    [
+      'a rule made for a Task without one',
+      () =>
+        operations.setRecurrence({
+          taskId: id<'Task'>(ids.task.paper),
+          pattern: { freq: 'daily' },
+        }),
+    ],
+    [
+      'a rule changed from the next Sprint (a version added)',
+      () =>
+        operations.setRecurrence({
+          taskId: id<'Task'>(ids.task.cleaning),
+          pattern: { freq: 'weekly', daysOfWeek: [6, 0] },
+        }),
+    ],
+    [
+      'a rule ended',
+      () => operations.endRecurrence({ taskId: id<'Task'>(ids.task.cleaning) }),
     ],
     ['the next day caught up (the system)', () => catchUp(null)],
   ];
@@ -163,5 +185,62 @@ describe('the versions a save writes (#321)', () => {
     expect((await loadRecords(db, records.user.id)).versions).toEqual(
       saved.versions,
     );
+  });
+
+  it('moves a rule’s version when a day of one of its versions is taken off (#330)', async () => {
+    // The fixture's rule changes to Sundays from the next Sprint. Saturday
+    // added to that version, then taken off: the day's row is deleted, and
+    // no other row of the rule changes but its own.
+    const { records: all, clock } = fixtureSnapshot('backlog-recurrence');
+    const { activities, ...records } = all;
+    const memory = await createMemoryDatabase();
+    close = memory.close;
+    const { db } = memory;
+    await db
+      .insert(authUser)
+      .values({ id: records.user.id, name: 'n', email: 'n@example.com' });
+    await saveRecords(db, {
+      userId: records.user.id,
+      loaded: { revision: 0, records: null, versions: new Map() },
+      changes: records,
+      activities,
+      caughtUpTo: clock.today,
+    });
+    const cleaning = id<'Task'>(ids.task.cleaning);
+    const ruleKey = versionKey.rule(
+      records.tasks.find((t) => t.id === cleaning)!.recurrenceRuleId!,
+    );
+    const run = async (daysOfWeek: DayOfWeek[]) => {
+      const loaded = await loadRecords(db, records.user.id);
+      const before = loaded.records!;
+      const result = operations.setRecurrence({
+        taskId: cleaning,
+        pattern: { freq: 'weekly', daysOfWeek },
+      })(before, {
+        now: clock.now,
+        today: clock.today,
+        actor: 'user',
+        newId: (kind) => fresh.newId(kind, clock.now),
+      });
+      if (!result.ok) throw new Error(result.error.message);
+      const after = applyRecordChanges(before, result.value.changes);
+      const saved = await saveRecords(db, {
+        userId: records.user.id,
+        loaded,
+        changes: result.value.changes,
+        activities: result.value.activities,
+        caughtUpTo: clock.today,
+      });
+      if (!saved.ok) throw new Error('not saved');
+      expect(saved.versions).toEqual(
+        nextVersions(loaded.versions, before, after, saved.revision),
+      );
+      expect(saved.versions.get(ruleKey)).toBe(saved.revision);
+      expect((await loadRecords(db, records.user.id)).versions).toEqual(
+        saved.versions,
+      );
+    };
+    await run([6, 0]);
+    await run([0]);
   });
 });

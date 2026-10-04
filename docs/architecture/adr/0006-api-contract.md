@@ -13,6 +13,7 @@
 - 改訂：2026-10-04（値を置き換える書き込み（PATCH の 10 面）に、記録ごとの版の `If-Match` を置き、412 `/problems/precondition-failed`・428 `/problems/precondition-required` を足す。記録の DTO に出力専用の `etag`、書き込みの応答に `ETag`。要求に必須のヘッダーを足す壊す変更なので `info.version` を 0.5.0 にする。クライアントが送り返す `InterruptNote` に必須の `etag` を足したのも壊す変更（読み取りの note をそのまま `restoreInterrupt` の本文にすると、未知のキーで 400）。Issue #321）
 - 改訂：2026-10-04（今日の選択と割り込みの読み取りに、出力専用の必須の `capabilities`（`can<操作>` の真偽値、ADR 0007「操作の可否」）を足す。`TodayRow`・`DayRecord`・`BacklogItem.today` に `DailySelectionCapabilities`、`TodayItem` に省略できる `removedTodayCapabilities`、今日と過去の日の割り込みを `InterruptItem`（`InterruptNote` と `InterruptNoteCapabilities`）にする。応答に必須の項目を足すだけなので `info.version` は 0.5.0 のまま。Issue #322）
 - 改訂：2026-10-04（残りの記録の読み取りに、出力専用の必須の `capabilities` を足す（ADR 0007「操作の可否」）。`BacklogItem` の `canAddToToday`・`canAddToWeek`・`canComplete` を `TaskCapabilities` に移す。応答から項目を消す壊す変更なので `info.version` を 0.6.0 にする。`RecurringCandidate.occurrences` は `OccurrenceItem`（`Occurrence` と `OccurrenceCapabilities`）にする。Issue #323）
+- 改訂：2026-10-04（Task の繰り返しの規則を置く `PUT /tasks/{taskId}/recurrence`（`setRecurrence`）も、規則の版で条件つきにする。規則があれば `If-Match`、なければ `If-None-Match: *`。`BacklogItem.rule` に出力専用の必須の `etag`、応答に `ETag`。`endRecurrence`（DELETE）は対象にしない。要求に条件を足す壊す変更なので `info.version` を 0.7.0 にする。Issue #330）
 
 ## 背景
 
@@ -197,7 +198,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 | 403 | `/problems/forbidden-origin` | 書き込みの Origin が違う（ADR 0004「書き込みの API の CSRF への備え」） |
 | 404 | `/problems/not-found` | 要求が指す記録が利用者の記録にない（domain の `notFound`）。消した割り込みを戻す操作では、利用者がその Sprint から消していない ID（ほかの利用者の ID、存在しない ID を含む。どれも同じ応答）。契約にない `/api/*` の経路とメソッドも同じ（Better Auth の `/api/auth/*` を除く。#319） |
 | 409 | `/problems/revision-conflict` | ほかの書き込みが先に入り、この書き込みはしていない（ADR 0004「同時の書き込み」）。保存は確定したのに DB の応答が失われたときは、冪等キーの記録から保存した応答を返し、409 にしない（下の「冪等キー」、#320） |
-| 412 | `/problems/precondition-failed` | 値を置き換える書き込みの `If-Match` が、記録の今の版と合わない（ほかの端末が先に変えた）。目標を作る書き込みの `If-None-Match: *` で、目標がもうある。何もしない（下の「記録ごとの版」、#321） |
+| 412 | `/problems/precondition-failed` | 値を置き換える書き込みの `If-Match` が、記録の今の版と合わない（ほかの端末が先に変えた）。目標・繰り返しの規則を作る書き込みの `If-None-Match: *` で、目標・規則がもうある。何もしない（下の「記録ごとの版」、#321） |
 | 413 | `/problems/payload-too-large` | 操作の本文が上限（64 KiB）を超える（#266） |
 | 422 | `/problems/invalid-input`・`/problems/invalid-transition`・`/problems/recurring-task-cannot-complete` | domain が操作を受け付けない（値の規則、状態の遷移、繰り返しの Task の完了）。domain の `code` との対応は `problems.ts` の `DOMAIN_PROBLEMS`（サーバーとブラウザ内モックが使う） |
 | 422 | `/problems/user-not-set-up` | 利用者の設定（タイムゾーン・週の始まり）がまだなく、「今日」が決まらない。`getMe` のほかの操作と読み取りはすべてこれで断る（#266） |
@@ -243,8 +244,9 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 - 利用者ごとの版をクライアントが送る形は採らない：ほかの端末の無関係な書き込みでも、日付が変わった後の最初の読み取りの追いつき（ADR 0004）でも版が上がるので、別の端末で開いただけで次の書き込みが 409 になる。記録の行ごとの版なら、断られるのは同じ行の値が変わったときだけになる（同じ行の別の項目、たとえば振り返りの「気づいたこと」と「次に試すこと」は同じ行なので断られる）。
 - **版**：記録の行の `revision`（ADR 0004「記録のテーブル」）。その行の値を最後に書いた保存の利用者ごとの版。利用者ごとの版は上がるだけなので、消して作り直した行でも前の版と重ならない。位置（`position`）だけが変わった行は版を上げない（前の行を外したときに、後ろの行が 412 にならないように）。
-- **etag**：値を置き換える書き込みが対象にする記録の DTO（`Task`・`Subtask`・`Sprint`・`SprintGoal`・`SprintTask`・`InterruptNote`・`Retro`・`CriterionUse`・`PlanningCriterion`、領域の一覧の `EditableArea`）に、出力専用の必須の `etag` を置く（AIP-154 の形）。値は強い entity-tag（RFC 9110 §8.8.3）。今は版の番号を二重引用符で囲む（`"42"`）が、契約は entity-tag の形（`^"[!#-~]*"$`）としか決めず、クライアントは中身を読まず、まるごと比べるだけにする（表し方を後で変えても壊す変更にしないため。#321 の Contract のレビュー）。これは記録の版で、同じ経路の読み取り（`GET /sprints/{sprintId}` など）の表現の validator ではない（読み取りの表現は入れ子と派生値を含み、この etag が同じでも変わる）。読み取りの `If-None-Match`（304）を入れるときは、別の validator にするか経路を分ける。Google AIP-154 は項目の意味（出力専用、送り返す、食い違えば ABORTED）を借り、HTTP の振る舞い（`If-Match`、412・428）は RFC 9110 と RFC 6585 に従う。記録がどの読み取りに出ても同じ `etag` を持つ（派生値の中の記録、`CapacityDriver` と `RetroFacts.interrupts` も）。マイグレーションの前に書いた行は版 0（`"0"`）。
-- **対象の面**：値を置き換える PATCH の面のすべて（10 面）。`If-Match`（`IfMatchHeader`、必須）を置く。
+  - 繰り返しの規則（#330）は、値が規則の行ではなく、版の行（`recurrence_rule_version`）と曜日の行（`recurrence_rule_version_day`）にある。版と曜日は規則の部分で、自分の版を持たず、規則の版は全体の版にする：規則・版・曜日の行の `revision` の最大。曜日を減らすと行が消えるだけで、残る行の `revision` は変わらない（最大が変わらない）ので、部分の行を足す・変える・消す保存は、規則の行の `revision` もその保存の版にする（`saveRecords`。ADR 0004「記録のテーブル」）。最大を読むのは、規則の行を書くようになる前の行（#321 から #330 まで）にも合うように。ブラウザ内モックは規則を版ごと 1 つの値として比べ（`nextVersions`）、同じ版になる（`fixture-records.test.ts` で確かめる）。
+- **etag**：値を置き換える書き込みが対象にする記録の DTO（`Task`・`Subtask`・`Sprint`・`SprintGoal`・`SprintTask`・`InterruptNote`・`Retro`・`CriterionUse`・`PlanningCriterion`、領域の一覧の `EditableArea`、Backlog の行の規則 `BacklogItem.rule`（#330。規則の DTO はなく、Task の詳細もこの行を使う））に、出力専用の必須の `etag` を置く（AIP-154 の形）。値は強い entity-tag（RFC 9110 §8.8.3）。今は版の番号を二重引用符で囲む（`"42"`）が、契約は entity-tag の形（`^"[!#-~]*"$`）としか決めず、クライアントは中身を読まず、まるごと比べるだけにする（表し方を後で変えても壊す変更にしないため。#321 の Contract のレビュー）。これは記録の版で、同じ経路の読み取り（`GET /sprints/{sprintId}` など）の表現の validator ではない（読み取りの表現は入れ子と派生値を含み、この etag が同じでも変わる）。読み取りの `If-None-Match`（304）を入れるときは、別の validator にするか経路を分ける。Google AIP-154 は項目の意味（出力専用、送り返す、食い違えば ABORTED）を借り、HTTP の振る舞い（`If-Match`、412・428）は RFC 9110 と RFC 6585 に従う。記録がどの読み取りに出ても同じ `etag` を持つ（派生値の中の記録、`CapacityDriver` と `RetroFacts.interrupts` も）。マイグレーションの前に書いた行は版 0（`"0"`）。
+- **対象の面**：値を置き換える PATCH の面のすべて（10 面）と、規則をまるごと置く PUT（`setRecurrence`、#330）。PATCH には `If-Match`（`IfMatchHeader`、必須）を置く。
 
 | 面 | operationId | 受ける操作 | 版を比べる記録 |
 | --- | --- | --- | --- |
@@ -258,11 +260,13 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 | `PATCH /sprints/{sprintId}/retro` | `updateRetro` | `setReflection`・`setImprovement` | Retro（改善も同じ行） |
 | `PATCH /sprints/{sprintId}/criterion-use` | `decideCriterion` | 同名 | CriterionUse |
 | `PATCH /planning-criteria/{criterionId}` | `setDraftPolicy` | 同名 | PlanningCriterion |
+| `PUT /tasks/{taskId}/recurrence` | `setRecurrence` | 同名 | RecurrenceRule（Task の規則。版と曜日を含む全体。下の「繰り返しの規則」） |
 
 - **目標**：`updateGoal` は目標がないとき目標を作る（domain の `setGoalText`）。ない記録に etag はないので、`If-Match` は必須にせず、目標があれば `If-Match`、なければ `If-None-Match: *`（RFC 9110 §13.1.2。ないと思って作る要求が、ほかの端末が先に作った目標を上書きしない）を送る。どちらもなければ 428（2026-10-04 司令塔の判断）。利用者の持たない領域の目標は、条件を比べずに 404（`setGoal` が領域を確かめる。#321 で足した。それまでは domain が領域を確かめず、持たない領域の目標の行ができた）。`OptionalIfMatchHeader` と `IfNoneMatchHeader`。
+- **繰り返しの規則**（#330、2026-10-04）：`setRecurrence` は、Task に規則がなければ作り（domain の `createRuleForNextSprint`）、あれば次の Sprint から変える。目標と同じく、Task の規則（`task.recurrenceRuleId`）があれば `If-Match`（`BacklogItem.rule.etag`）、なければ `If-None-Match: *` を送り、どちらもなければ 428。終わる規則（「繰り返しをやめる」の後、最後の日まで表示する。F41）は Task から外れているので Task の規則ではなく、`BacklogItem.rule` に出ていても、規則を置く書き込みは新しい規則を作る `If-None-Match: *` で送る（その etag の `If-Match` は 412）。Task がなければ条件を比べずに 404、Task が指す規則がなければ 404（操作が答える）。比べるのは Task の規則の版で、Task の行の版ではない（Task の題名を変えても規則の書き込みは 412 にならない）。
 - **対象にしないもの**と戻す条件（2026-10-04 司令塔の判断。オーナーの確認を待つ）：
   - 状態の遷移（`POST …/<動詞>`）と取り消し（`undo-…`）：domain が記録の今の状態で判定するので、同じ記録の無関係な項目が変わっただけでは断らない。戻す条件：遷移の結果が状態以外の項目に左右される操作ができたとき。`undoAdoption` も取り消しの遷移で、提案の状態で domain が守る。
-  - `setRecurrence`（`PUT /tasks/{taskId}/recurrence`）：繰り返しの値は版の行と曜日の行にあり、規則の行そのものは変わらない。規則がないときは作る。規則の集約の etag（版と曜日の行の最大）と `If-None-Match: *` の形で、後続の Issue にする（司令塔が起票する）。それまでは、2 つの端末で繰り返しを書き換えると、後に保存した方が残る。
+  - `endRecurrence`（`DELETE /tasks/{taskId}/recurrence`、#330 で決めた）：規則を次の Sprint の前で終える（回がまだなければ消す。F41）状態の遷移で、結果（終える・消す、終わる日）は回と Sprint の今の状態で domain が決め、規則の値（どの曜日か）に左右されない。ほかの端末が規則を変えた後に古い表示から押しても、「この Task の繰り返しをやめる」という意図は同じに通る。ほかの端末が先に終えていれば、domain が 422 で断る。上の状態の遷移の基準のとおり対象にしない。戻す条件：終え方が規則の値に左右されるようになったとき（たとえば、選んだ版だけを終える操作ができたとき）。
   - `setSettings`（`PUT /me/settings`）：設定を作る面で、今の画面は最初の設定でしか送らない。戻す条件：表示名を後から変える画面ができたとき。
   - `restoreInterrupt`（`PUT`）：消した行の版は残らないので比べられない。下の「既知の制約」はそのまま残る。
   - ほかの PUT・DELETE（回を含める・外す、印、まとめて外す）：結果が 1 つに決まる置く・外す。
@@ -272,7 +276,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 - **順序**：RFC 9110 §13.2.1 のとおり、条件を除いた要求の応答が本文を処理する前に 2xx・412 以外になるなら、条件より先に答える。400（形と書式）・401・403・413 → 冪等キーの照合（#320。自分の書き込みの送り直しは 412 にせず 1 回目の応答を返す）→ 404（要求が指す記録がない。`checkCondition` は対象のない操作を通し、操作が答える）→ 428・412 → domain の 422。比べる版は、追いつき（ADR 0004 #271）の前の、読み込んだ版（利用者が読んだもの）。412 でも 428 でも何も書かない。
 - **応答の `ETag`**：値を置き換える書き込みが通ったら、記録のその後の etag を `ETag` ヘッダーで返す（`headers.yaml` の `RecordETag`。記録を消した書き込み、目標を空にしたときは返さない）。同じキーで送り直した要求にも同じ値を返す（冪等キーの記録に置く。ADR 0004「記録のテーブル」）。クライアントは、同じ記録への次の書き込みを、読み直しを待たずにこの値で送れる（同じ形の 2 つの欄を続けて保存するとき、自分の 1 回目で 2 回目が 412 にならないように。ADR 0005「エラーと送信中」）。
 - ブラウザ内モックも同じに振る舞う（ストアが保存のたびに版を進め、`checkCondition` で比べ、`ETag` を返す。ADR 0005「ブラウザ内モック」）。
-- 確かめ：アプリ越しのテスト（`services/api/src/handlers/record-versions.test.ts`）で、古い `etag` の `saveTask` が 412 で記録を変えないこと、`If-Match` なしが 428、今の `etag` なら通り後の読み取りの `etag` が変わること、別の記録への書き込み（今日の選択の完了）と日付が変わった後の追いつきで Task の `etag` が変わらず後の `saveTask` が通ること、1 回目が保存されていれば同じキーの送り直しが 412 でなく 1 回目の応答（と同じ `ETag`）を返すこと、404 が 412 より先で 412 が 422 より先なこと、目標の `If-None-Match: *` を確かめた。
+- 確かめ：アプリ越しのテスト（`services/api/src/handlers/record-versions.test.ts`）で、古い `etag` の `saveTask` が 412 で記録を変えないこと、`If-Match` なしが 428、今の `etag` なら通り後の読み取りの `etag` が変わること、別の記録への書き込み（今日の選択の完了）と日付が変わった後の追いつきで Task の `etag` が変わらず後の `saveTask` が通ること、1 回目が保存されていれば同じキーの送り直しが 412 でなく 1 回目の応答（と同じ `ETag`）を返すこと、404 が 412 より先で 412 が 422 より先なこと、目標の `If-None-Match: *` を確かめた。規則（#330）は、同じテストで、規則の `etag` の `setRecurrence` が通り応答の `ETag` が後の読み取りの `etag` と同じこと、曜日を減らしても `etag` が変わること、古い `etag` が 412・条件なしが 428・規則があるときの `If-None-Match: *` が 412 で記録を変えないこと、規則のない Task は `If-None-Match: *` で作れて 2 回目は 412 なこと、`endRecurrence` が条件なしで通り、その後は新しい規則を `If-None-Match: *` で作れること（終わる規則の `etag` の `If-Match` は 412）を確かめた。DB の版とブラウザ内モックの版が同じことは `fixture-records.test.ts`（規則を作る・変える・終える、曜日を減らす）。
 - 互換：要求に必須のヘッダーを足す壊す変更（下の「互換の規則」）なので、`info.version` を 0.5.0 にした。デプロイの前に開いたタブの値を置き換える書き込みは 428 になり、読み直しの後の操作から通る（利用者が 1 人の間は足りる）。
 
 ### 生成物
@@ -372,7 +376,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 ### 壊す変更をするとき
 
 - `info.version` の major を上げ、ADR に書く。
-- ただし最初の本番の公開（統合ブランチを main に入れて CD でデプロイするとき）までは、SemVer（§4）の major 0（初期の開発中）として扱い、壊す変更で minor を上げる。最初の本番の公開で 1.0.0 にし、その後は major を上げる（2026-10-03 司令塔の判断、#295）。#295 の経路の変更で 0.2.0、#319 のエラーの形の変更で 0.3.0、#320 の冪等キーで 0.4.0、#321 の記録ごとの版で 0.5.0、#323 の操作の可否（`BacklogItem` の `can…` を `capabilities` に移した）で 0.6.0 にした。
+- ただし最初の本番の公開（統合ブランチを main に入れて CD でデプロイするとき）までは、SemVer（§4）の major 0（初期の開発中）として扱い、壊す変更で minor を上げる。最初の本番の公開で 1.0.0 にし、その後は major を上げる（2026-10-03 司令塔の判断、#295）。#295 の経路の変更で 0.2.0、#319 のエラーの形の変更で 0.3.0、#320 の冪等キーで 0.4.0、#321 の記録ごとの版で 0.5.0、#323 の操作の可否（`BacklogItem` の `can…` を `capabilities` に移した）で 0.6.0、#330 の規則の版で 0.7.0 にした。
 - 版の上げ方（経路、ヘッダー、受け付ける最低の版）と、古いクライアントの扱いは、iOS に着手するまでに決める。それまでは Web だけなので、壊す変更を入れた直後は、開いたままのタブの要求が失敗しうる（400 など）。利用者が 1 人の間は、読み直しで足りる。
 
 ### 決めていないこと（iOS に着手する前に決める）

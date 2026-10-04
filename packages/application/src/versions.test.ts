@@ -164,3 +164,83 @@ describe('the condition of a write that replaces values (#321)', () => {
     expect(goal(withGoal.areaId, { ifMatch: ['"0"'] })).toBe('met');
   });
 });
+
+describe('the version of a rule (#330)', () => {
+  const cleaning = id<'Task'>(ids.task.cleaning);
+  const ruleOf = (store: ReturnType<typeof memoryStore>) => {
+    const rule = etags(store).rules.find((r) => r.taskId === cleaning);
+    if (rule === undefined) throw new Error('No rule of 部屋の掃除.');
+    return rule;
+  };
+  const sunday = { freq: 'weekly', daysOfWeek: [0] } as const;
+  const saturdayAndSunday = { freq: 'weekly', daysOfWeek: [6, 0] } as const;
+
+  it('raises the version of the whole rule when a version changes, the days of one too', () => {
+    const store = memoryStore(fixtureSnapshot('backlog-recurrence'));
+    const before = ruleOf(store).etag;
+    // The fixture's rule changes to Sundays from the next Sprint: a change
+    // before then replaces that version. A day added, then taken off again.
+    expect(
+      store.run(
+        operations.setRecurrence({
+          taskId: cleaning,
+          pattern: saturdayAndSunday,
+        }),
+      ).ok,
+    ).toBe(true);
+    const twoDays = ruleOf(store).etag;
+    expect(twoDays).not.toBe(before);
+    expect(
+      store.run(operations.setRecurrence({ taskId: cleaning, pattern: sunday }))
+        .ok,
+    ).toBe(true);
+    expect(ruleOf(store).etag).not.toBe(twoDays);
+  });
+
+  it('keeps the rule’s version when its Task or another record changes', () => {
+    const store = memoryStore(fixtureSnapshot('backlog-recurrence'));
+    const before = ruleOf(store).etag;
+    store.run(
+      operations.saveTask({ taskId: cleaning, update: { title: '掃除' } }),
+    );
+    store.run(operations.renameArea({ areaId: research, name: '研究室' }));
+    expect(ruleOf(store).etag).toBe(before);
+  });
+
+  it('is the condition of setRecurrence: If-Match with a rule, If-None-Match: * without', () => {
+    const store = memoryStore(fixtureSnapshot('backlog-recurrence'));
+    const { records, versions = new Map() } = store.getSnapshot();
+    const rule = ruleOf(store);
+    const check = (
+      taskId: typeof cleaning,
+      condition?: Parameters<typeof checkCondition>[4],
+    ) =>
+      checkCondition(
+        'setRecurrence',
+        { taskId, pattern: sunday },
+        records,
+        versions,
+        condition,
+      );
+    expect(check(cleaning)).toBe('required');
+    expect(check(cleaning, { ifMatch: [rule.etag] })).toBe('met');
+    expect(check(cleaning, { ifMatch: ['"999"'] })).toBe('failed');
+    expect(check(cleaning, { ifNoneMatch: '*' })).toBe('failed');
+    expect(check(slides)).toBe('required');
+    expect(check(slides, { ifNoneMatch: '*' })).toBe('met');
+    expect(check(slides, { ifMatch: [rule.etag] })).toBe('failed');
+  });
+
+  it('is not asked of endRecurrence, which ends the rule as it is now', () => {
+    const { records } = fixtureSnapshot('backlog-recurrence');
+    expect(
+      checkCondition(
+        'endRecurrence',
+        { taskId: cleaning },
+        records,
+        new Map(),
+        undefined,
+      ),
+    ).toBe('met');
+  });
+});

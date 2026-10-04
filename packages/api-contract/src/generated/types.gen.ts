@@ -305,6 +305,11 @@ export type TaskPriority = 'high' | 'normal' | 'low';
  */
 export type TimeBasis = 'task' | 'subtasks';
 
+/**
+ * `If-None-Match: *` (RFC 9110 §13.1.2): the write was made from no record, and is not to be made over one that is there now.
+ */
+export type AnyEntityTag = '*';
+
 export type RecurrencePattern = {
     freq: 'daily';
 } | {
@@ -601,6 +606,10 @@ export type BacklogItem = {
     rule?: {
         current: RecurrencePattern;
         latest: RecurrencePattern;
+        /**
+         * The version of the whole rule, its versions and their days (#330): what `setRecurrence` sends in `If-Match` when the rule is the Task's (`task.recurrenceRuleId`). A rule that has come off the Task (ended, F41) is not: a rule set then is made from none.
+         */
+        etag: ETag;
     };
     /**
      * In this week's Sprint. `confirmed` is false while it is being planned.
@@ -1319,11 +1328,6 @@ export type SprintView = {
     state: 'active' | 'review' | 'closed';
     running: RunningData;
 };
-
-/**
- * `If-None-Match: *` (RFC 9110 §13.1.2): the write was made from no record, and is not to be made over one that is there now.
- */
-export type AnyEntityTag = '*';
 
 /**
  * What the person can do with a Task a Sprint being planned can choose (#323): addToSprint, which takes this Task. Read as DailySelectionCapabilities says.
@@ -3230,6 +3234,14 @@ export type SetRecurrenceData = {
          * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
          */
         'Idempotency-Key': IdempotencyKey;
+        /**
+         * The `etag` of the record as read before the write was made, when there was one (RFC 9110 §13.1.1). One of `If-Match` and `If-None-Match` is required (428 `/problems/precondition-required` without either); 412 `/problems/precondition-failed` when the record has changed since, or is gone.
+         */
+        'If-Match'?: EntityTagList;
+        /**
+         * `*` when the write was made from no record (RFC 9110 §13.1.2): 412 `/problems/precondition-failed` when one has been made since (on another device), instead of writing over it.
+         */
+        'If-None-Match'?: AnyEntityTag;
     };
     path: {
         taskId: TaskId;
@@ -3260,6 +3272,10 @@ export type SetRecurrenceErrors = {
      */
     409: RevisionConflictError;
     /**
+     * The record has changed since the write's `If-Match` was read; this one was not made.
+     */
+    412: PreconditionFailedError;
+    /**
      * The body is larger than the API takes.
      */
     413: PayloadTooLargeError;
@@ -3267,6 +3283,10 @@ export type SetRecurrenceErrors = {
      * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
+    /**
+     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
+     */
+    428: PreconditionRequiredError;
     /**
      * An unexpected failure on the server.
      */

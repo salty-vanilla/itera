@@ -4,6 +4,7 @@ import type {
   LocalDate,
   RecurrencePattern,
 } from '@itera/api-contract';
+import type { MadeFrom } from '@itera/api-contract/requests';
 import {
   useEffect,
   useImperativeHandle,
@@ -141,6 +142,11 @@ function RecurrenceEditor({
   // The Task's own rule, which a change saves to. A rule that ends has come
   // off the Task (F41): it is shown, but a choice makes a new one.
   const owns = task.recurrenceRuleId !== undefined;
+  // A change is made from the Task's rule as read now, or from none, which
+  // makes a rule: one made on another device first is not written over
+  // (#330).
+  const madeFrom: MadeFrom =
+    owns && rule !== undefined ? { etag: rule.etag } : { none: true };
   // A change starts from the latest version (it may begin next Sprint).
   const latest = rule?.latest;
   // The choice is the latest version as read until it is changed here, so
@@ -211,6 +217,7 @@ function RecurrenceEditor({
     const outcome = await actions.setRecurrence(
       task.id,
       patternOf(next, nextDays, nextDayOfMonth),
+      madeFrom,
     );
     if (!outcome.ok) return false;
     setResult(

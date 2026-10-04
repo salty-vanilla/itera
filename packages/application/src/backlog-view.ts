@@ -54,10 +54,16 @@ export interface BacklogItem {
   /** 持ち越し N回（Sprint M から）(F25, F26). */
   readonly carry?: { readonly count: number; readonly fromSprint: number };
   readonly recurrence?: RecurrenceSummary;
-  /** The rule's pattern today and its latest version, for the editor. */
+  /**
+   * The rule's pattern today and its latest version, for the editor, and
+   * the etag of the rule (#330): a change to the Task's own rule is made
+   * from it. A rule that has come off the Task (F41) is shown, but a
+   * change makes a new one, from none.
+   */
   readonly rule?: {
     readonly current: RecurrencePattern;
     readonly latest: RecurrencePattern;
+    readonly etag: string;
   };
   /**
    * In this week's Sprint: 「今週」, and 「週の途中で追加」 if mid-Sprint.
@@ -187,6 +193,7 @@ export function backlogItem(
           rule: {
             current: (versionOn(rule, clock.today) ?? latest).pattern,
             latest: latest.pattern,
+            etag: taggedIn(records.rules)(rule).etag,
           },
         }),
     ...(inWeek === undefined
