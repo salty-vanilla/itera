@@ -17,7 +17,7 @@ import {
   TaskMetadata,
 } from '@/components/task/task-metadata';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
-import { TaskTitleLines } from '@/components/task/task-row';
+import { revealRow, TaskTitleLines } from '@/components/task/task-row';
 import { formatDate, formatMonthDay } from '@/lib/date-format';
 import { rowKeyHandlers } from '@/lib/row-keys';
 import { cn } from '@/lib/utils';
@@ -183,7 +183,11 @@ function BacklogPane({
             {candidates.recurring.map(({ task, occurrences }) => (
               <li
                 key={task.id}
-                className="group/row relative flex flex-col gap-1 border-b border-border-soft py-2"
+                data-slot="task-row"
+                className={cn(
+                  'group/row relative flex flex-col gap-1 border-b border-border-soft py-2',
+                  rowHoverClass,
+                )}
                 {...rowKeyHandlers({
                   onEstimate: () => onEstimateTask(task.id),
                 })}
@@ -194,6 +198,7 @@ function BacklogPane({
                     data-row-focus
                     className={titleButtonClass}
                     onClick={() => onOpenTask(task.id)}
+                    onFocus={revealRow}
                   >
                     <TaskTitleLines wrap={slim ? 'all' : 'two'}>
                       {task.title}
@@ -260,6 +265,12 @@ function BacklogPane({
 // text, which start at the row's edge. The controls sit above it, at z-1.
 const titleButtonClass =
   'min-w-0 text-left text-task text-ink after:absolute after:inset-y-0 after:-inset-x-2 focus-visible:outline-none focus-visible:after:focus-ring-inset';
+
+// The row's hover, as a Task Row's (DESIGN.md Hover): `surface-hover`, and a
+// chosen row keeps its `here-subtle` (a Task Row's `current` does the same).
+// The `…` below shows on the same hover, so the two go together.
+const rowHoverClass =
+  'transition-colors duration-(--duration-fast) ease-standard hover:bg-surface-hover';
 
 /** The row's `…`: shown on hover and focus from 768px, as a Task Row's is. */
 function EstimateActions({
@@ -413,10 +424,12 @@ function CandidateItem({
   }
   return (
     <li
+      data-slot="task-row"
       data-chosen={chosen || undefined}
       className={cn(
         'group/row relative flex min-h-row-touch items-center gap-2 border-b border-border-soft py-1 medium:min-h-row-task',
-        chosen && 'bg-here-subtle',
+        rowHoverClass,
+        chosen && 'bg-here-subtle hover:bg-here-subtle',
       )}
       {...rowKeyHandlers({ onEstimate })}
     >
@@ -435,6 +448,7 @@ function CandidateItem({
         <button
           type="button"
           onClick={onOpen}
+          onFocus={revealRow}
           data-row-focus
           className={titleButtonClass}
         >

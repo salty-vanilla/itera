@@ -107,6 +107,40 @@ describe('Planning — 優先度 (#97)', () => {
   });
 });
 
+describe('Planning — the Backlog pane rows are Task Rows (#395)', () => {
+  it('gives every row the slot, the hover and the `…` of a Task Row', async () => {
+    await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    const rows = [
+      ...backlogPane().querySelectorAll<HTMLElement>(
+        'li:has([data-row-focus])',
+      ),
+    ];
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row.dataset.slot).toBe('task-row');
+      // A chosen row keeps its `here-subtle` (below).
+      if (row.dataset.chosen === undefined)
+        expect(row.className).toContain('hover:bg-surface-hover');
+      // The `…` shows on the row's hover and focus, as a Task Row's does.
+      const more = row.querySelector('[aria-haspopup="menu"]');
+      if (more !== null)
+        expect(more.parentElement?.className).toContain(
+          'medium:group-hover/row:opacity-100',
+        );
+    }
+  });
+
+  it('keeps a chosen row `here-subtle` under the pointer', async () => {
+    await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    const row = within(backlogPane())
+      .getByText('新メンバーのオンボーディング資料')
+      .closest('li') as HTMLElement;
+    expect(row.className).not.toContain('bg-here-subtle');
+    await userEvent.click(within(row).getByRole('checkbox'));
+    expect(row.className).toContain('bg-here-subtle hover:bg-here-subtle');
+  });
+});
+
 describe('Planning — the stuck Capacity line (#152)', () => {
   it('publishes its height while the screen shows, so that the focus is not under it', async () => {
     const top = () =>
