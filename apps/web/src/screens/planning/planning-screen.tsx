@@ -386,9 +386,13 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
           className="flex min-h-target-touch w-full flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-sm text-left text-body text-ink focus-visible:focus-ring medium:min-h-target-min"
         >
           {/* 確かめる says the numbers once, in its summary (#165). */}
-          {stage !== 'check' && <CapacitySummary data={data} />}
-          {/* At the right end in every stage, with a mark that it opens. Under
-              the numbers where both do not fit a line (320px, #357). */}
+          {stage !== 'check' && (
+            <CapacitySummary data={data} className="grow basis-0" />
+          )}
+          {/* At the right end in every stage, with a mark that it opens. The
+              numbers start from their narrowest, so that it drops under them
+              only where its widest piece and this do not fit a line (320px,
+              #357), not where the numbers merely run to two lines. */}
           <span className="ms-auto flex shrink-0 items-center gap-1 text-meta text-ink-muted">
             時間の見通しを開く
             <ChevronRight
@@ -525,7 +529,13 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
  * 残る · 多くかかれば 45分超える」「少なく済んでも 3時間超える · 多くかかれば 5時間
  * 超える」 (patterns.md compact, owner decision S5 in #93).
  */
-function CapacitySummary({ data }: { data: PlanningData }) {
+function CapacitySummary({
+  data,
+  className,
+}: {
+  data: PlanningData;
+  className?: string;
+}) {
   const capacity = data.totals.capacity;
   // Each sentence is one or more pieces that never break inside; the line
   // wraps only between them, after a 「·」, so a number never leaves its
@@ -545,7 +555,7 @@ function CapacitySummary({ data }: { data: PlanningData }) {
         );
   return (
     <span
-      className={capacity?.status === 'exceeds' ? 'text-danger' : undefined}
+      className={cn(capacity?.status === 'exceeds' && 'text-danger', className)}
     >
       {sentences.map((pieces, i) => (
         <Fragment key={pieces.join(' ')}>
