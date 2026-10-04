@@ -3,7 +3,11 @@
 // 超過するか」). Derived from records, never stored.
 import { isOverdue } from './backlog';
 import type { Occurrence } from './occurrence';
-import { sprintTaskValue, type ActiveCriterion } from './planning';
+import {
+  carriedOverFrom,
+  sprintTaskValue,
+  type ActiveCriterion,
+} from './planning';
 import {
   criterionActsOn,
   type CriterionPolicy,
@@ -66,12 +70,6 @@ export function planningCandidates(
         (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0) ||
         (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
     );
-  const previous = input.sprints.find((s) => s.id === sprint.previousSprintId);
-  const carried = new Set(
-    (previous?.tasks ?? [])
-      .filter((t) => t.outcome === 'carriedOver')
-      .map((t) => t.taskId),
-  );
   const inPeriod = (o: Occurrence) =>
     o.scheduledDate >= sprint.start &&
     o.scheduledDate <= sprint.end &&
@@ -90,8 +88,9 @@ export function planningCandidates(
       if (occurrences.length > 0) recurring.push({ task, occurrences });
       continue;
     }
-    if (carried.has(task.id)) carriedOver.push(task);
-    else if (isOverdue(task, input.today)) overdue.push(task);
+    if (carriedOverFrom(sprint, task.id, input.sprints) !== undefined) {
+      carriedOver.push(task);
+    } else if (isOverdue(task, input.today)) overdue.push(task);
     else if (task.due !== undefined && task.due <= sprint.end)
       dueSoon.push(task);
     else others.push(task);

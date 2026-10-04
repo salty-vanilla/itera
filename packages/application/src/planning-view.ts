@@ -3,7 +3,10 @@
 // is stored. Before confirm, Planning shows the current Area names (F5).
 import {
   activeCriterion,
+  areasAtConfirm,
   capacityDrivers,
+  carriedOverFrom,
+  confirmBlockers,
   criterionEffect,
   goalLinkAtConfirm,
   presentedSuggestion,
@@ -20,6 +23,7 @@ import {
   type AreaColor,
   type AreaId,
   type CapacityDriver,
+  type ConfirmBlocker,
   type CriterionEffect,
   type GoalLink,
   type CriterionView,
@@ -222,6 +226,24 @@ type TaggedCapacityDriver = Omit<CapacityDriver, 'sprintTask' | 'task'> & {
   readonly task: TaggedTask;
 };
 
+/**
+ * `confirmBlockers` as the screen says them. The others (another Sprint
+ * active, a record missing) are not shown: 確定 is refused by
+ * `capabilities.canConfirm` all the same.
+ */
+function blockersOf(
+  blockers: readonly ConfirmBlocker[],
+): SprintPlan['blockers'] {
+  return [
+    ...(blockers.some((b) => b.kind === 'previousNotClosed')
+      ? (['previousRetroOpen'] as const)
+      : []),
+    ...(blockers.some((b) => b.kind === 'taskInactive')
+      ? (['inactiveTasks'] as const)
+      : []),
+  ];
+}
+
 /** The plan of a Sprint being planned (整える・確かめる). */
 export function sprintPlanOf(
   records: TaggedRecords,
@@ -234,16 +256,11 @@ export function sprintPlanOf(
   const sprintTaskOf = taggedIn(sprint.tasks);
   const now = clock.now;
   // An archived Area still shows while a chosen Task is in it.
-  const chosenAreas = new Set(
-    sprint.tasks.flatMap((t) => {
-      const areaId = tasks.find((task) => task.id === t.taskId)?.areaId;
-      return areaId === undefined ? [] : [areaId];
-    }),
-  );
-  const areas: PlanningArea[] = records.areas
-    .filter((a) => !a.archived || chosenAreas.has(a.id))
-    .toSorted((a, b) => a.order - b.order)
-    .map((a) => ({ id: a.id, name: a.name, color: a.color }));
+  const areas: PlanningArea[] = areasAtConfirm(
+    sprint,
+    tasks,
+    records.areas,
+  ).map((a) => ({ id: a.id, name: a.name, color: a.color }));
 
   const active = activeCriterion(records.criteria);
   const criterion =
@@ -255,8 +272,16 @@ export function sprintPlanOf(
     ...(preview === undefined ? {} : { previewCriterion: preview }),
   };
 
-  const previous = records.sprints.find(
-    (s) => s.id === sprint.previousSprintId,
+  const blockers = confirmBlockers(sprint, records);
+  // The previous Sprint while its Retro is open (invariant 12).
+  const previous = blockers.some((b) => b.kind === 'previousNotClosed')
+    ? records.sprints.find((s) => s.id === sprint.previousSprintId)
+    : undefined;
+  // Completed or archived during Planning: the rows that stop 確定.
+  const inactive = new Map(
+    blockers.flatMap((b) =>
+      b.kind === 'taskInactive' ? [[b.taskId, b.lifecycle] as const] : [],
+    ),
   );
 
   // 整える・確かめる
@@ -270,6 +295,7 @@ export function sprintPlanOf(
       const value = sprintTaskValue(task, sprintTask, preview, { now });
       const suggestion =
         value.base === 'suggestion' ? presentedSuggestion(task) : undefined;
+      const lifecycle = inactive.get(task.id);
       return [
         {
           sprintTask,
@@ -280,7 +306,7 @@ export function sprintPlanOf(
             ? {}
             : { suggestion: { lo: suggestion.lo, hi: suggestion.hi } }),
           linkAtConfirm: goalLinkAtConfirm(sprint, sprintTask, task),
-          ...(task.lifecycle === 'active' ? {} : { inactive: task.lifecycle }),
+          ...(lifecycle === undefined ? {} : { inactive: lifecycle }),
           capabilities: sprintTaskCapabilities(records, sprint, sprintTask),
         },
       ];
@@ -344,15 +370,8 @@ export function sprintPlanOf(
             hasTarget: effect.count > 0,
           },
         }),
-    blockers: [
-      ...(previous !== undefined && previous.state !== 'closed'
-        ? (['previousRetroOpen'] as const)
-        : []),
-      ...(planned.some((p) => p.task.lifecycle !== 'active')
-        ? (['inactiveTasks'] as const)
-        : []),
-    ],
-    ...(previous === undefined || previous.state === 'closed'
+    blockers: blockersOf(blockers),
+    ...(previous === undefined
       ? {}
       : {
           previous: {
@@ -394,9 +413,7 @@ export function planningCandidatesOf(
     const chosen = sprint.tasks.find(
       (t) => t.taskId === task.id && t.outcome === 'draft',
     );
-    const carriedFrom = previous?.tasks.find(
-      (t) => t.taskId === task.id && t.outcome === 'carriedOver',
-    );
+    const carriedFrom = carriedOverFrom(sprint, task.id, records.sprints);
     const area = areaOf(records, task);
     const carry = carryOverOf(task.id, records.sprints);
     const carryFrom = records.sprints.find((s) => s.id === carry?.fromSprintId);

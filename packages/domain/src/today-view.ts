@@ -3,6 +3,7 @@ import { addDays, type LocalDate } from './shared/time';
 import type { Occurrence } from './occurrence';
 import {
   isCounted,
+  occurrenceValue,
   type DailySelection,
   type Sprint,
   type SprintTask,
@@ -157,14 +158,14 @@ export function todayRemaining(
     if (sprintTask?.outcome !== 'planned') continue;
     count += 1;
     const snapshot = sprintTask.planSnapshot;
-    const value = snapshot?.value;
+    const value =
+      snapshot === undefined ? undefined : occurrenceValue(snapshot);
     if (value === undefined || value.base === 'none') {
       unestimated += 1;
       continue;
     }
-    const share = snapshot?.occurrenceCount ?? 1;
-    lo += value.lo / share;
-    hi += value.hi / share;
+    lo += value.lo;
+    hi += value.hi;
   }
   return { count, lo, hi, unestimated };
 }

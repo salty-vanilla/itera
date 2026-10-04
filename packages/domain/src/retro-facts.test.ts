@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { setEstimate } from './estimate';
 import type { Occurrence } from './occurrence';
-import { carryCount, criterionResult, retroFacts } from './retro-facts';
+import {
+  carriedFromChain,
+  carryCount,
+  criterionResult,
+  retroFacts,
+} from './retro-facts';
 import { id } from './shared/ids';
 import { localDate } from './shared/time';
 import type { ActualTime, DailySelection, Sprint, SprintTask } from './sprint';
@@ -273,6 +278,44 @@ describe('retroFacts', () => {
     const now = st('a', { id: id('st-3'), carriedFrom: id('st-2') });
     expect(carryCount(now, [s1, s2])).toBe(2);
     expect(carryCount(st('b'), [s1, s2])).toBe(0);
+  });
+
+  it('carriedFromChain: the SprintTasks behind, the nearest first (F26, #349)', () => {
+    const s1 = sprintFixture('2026-09-14', 'closed', {
+      tasks: [st('a', { id: id('st-1'), outcome: 'carriedOver' })],
+    });
+    const s2 = sprintFixture('2026-09-21', 'closed', {
+      tasks: [
+        st('a', {
+          id: id('st-2'),
+          outcome: 'carriedOver',
+          carriedFrom: id('st-1'),
+        }),
+      ],
+    });
+    const now = st('a', { id: id('st-3'), carriedFrom: id('st-2') });
+    expect(
+      carriedFromChain(now, [s1, s2]).map((c) => [
+        c.sprint.id,
+        c.sprintTask.id,
+      ]),
+    ).toEqual([
+      [s2.id, 'st-2'],
+      [s1.id, 'st-1'],
+    ]);
+    // It stops at a SprintTask it cannot find, and at one already met.
+    expect(carriedFromChain(now, [s2])).toHaveLength(1);
+    const looped = sprintFixture('2026-09-14', 'closed', {
+      tasks: [
+        st('a', {
+          id: id('st-1'),
+          outcome: 'carriedOver',
+          carriedFrom: id('st-2'),
+        }),
+      ],
+    });
+    expect(carriedFromChain(now, [looped, s2])).toHaveLength(2);
+    expect(carriedFromChain(st('b'), [s1, s2])).toEqual([]);
   });
 });
 

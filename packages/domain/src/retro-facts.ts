@@ -5,6 +5,7 @@ import { totalPlanningValues, type PlanningTotal } from './planning-value';
 import type { AreaId, OccurrenceId, SprintTaskId, TaskId } from './shared/ids';
 import type { LocalDate } from './shared/time';
 import {
+  isInConfirmedPlan,
   sprintAreaName,
   type DailySelection,
   type InterruptNote,
@@ -215,7 +216,7 @@ export function retroFacts(sprint: Sprint, input: RetroFactsInput): RetroFacts {
   const inSprint = factOccurrenceIds(sprint);
   const occurrences = input.occurrences.filter((o) => inSprint.has(o.id));
 
-  const counted = facts.filter((f) => f.outcome !== 'removed');
+  const counted = facts.filter(isInConfirmedPlan);
   const totalOf = (list: readonly TaskFact[]) =>
     totalPlanningValues(
       list.flatMap((f) => (f.plan === undefined ? [] : [f.plan.value])),
@@ -428,20 +429,34 @@ function longestRun(
   return best;
 }
 
+/**
+ * The carriedFrom chain behind a SprintTask: each SprintTask it continues,
+ * with its Sprint, the nearest first. It stops at a SprintTask not in
+ * `sprints`, or one already met.
+ */
+export function carriedFromChain(
+  sprintTask: SprintTask,
+  sprints: readonly Sprint[],
+): readonly { readonly sprint: Sprint; readonly sprintTask: SprintTask }[] {
+  const chain: { sprint: Sprint; sprintTask: SprintTask }[] = [];
+  let from = sprintTask.carriedFrom;
+  const seen = new Set<SprintTaskId>();
+  while (from !== undefined && !seen.has(from)) {
+    seen.add(from);
+    const id = from;
+    const sprint = sprints.find((s) => s.tasks.some((t) => t.id === id));
+    const previous = sprint?.tasks.find((t) => t.id === id);
+    if (sprint === undefined || previous === undefined) break;
+    chain.push({ sprint, sprintTask: previous });
+    from = previous.carriedFrom;
+  }
+  return chain;
+}
+
 /** 持ち越し回数: the length of the carriedFrom chain behind a SprintTask. */
 export function carryCount(
   sprintTask: SprintTask,
   sprints: readonly Sprint[],
 ): number {
-  let count = 0;
-  let from = sprintTask.carriedFrom;
-  const seen = new Set<SprintTaskId>();
-  while (from !== undefined && !seen.has(from)) {
-    seen.add(from);
-    const previous = sprints.flatMap((s) => s.tasks).find((t) => t.id === from);
-    if (previous === undefined) break;
-    count += 1;
-    from = previous.carriedFrom;
-  }
-  return count;
+  return carriedFromChain(sprintTask, sprints).length;
 }

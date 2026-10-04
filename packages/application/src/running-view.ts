@@ -8,6 +8,7 @@ import {
   carryOriginOf,
   criterionHasTarget,
   isCounted,
+  isInConfirmedPlan,
   occurrenceProgress,
   sprintAreaName,
   sprintNumber,
@@ -203,7 +204,7 @@ export function runningData(
   );
   const counted: RunningTask[] = sprint.tasks
     // Carried over at the end (Review): still part of what was planned.
-    .filter((t) => isCounted(t) || t.outcome === 'carriedOver')
+    .filter(isInConfirmedPlan)
     .flatMap((sprintTask) => {
       const task = tasks.find((t) => t.id === sprintTask.taskId);
       const value = sprintTask.planSnapshot?.value;

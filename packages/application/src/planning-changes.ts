@@ -3,6 +3,7 @@
 // `usePlanningActions` (ADR 0005).
 import {
   activeCriterion,
+  carriedOverFrom,
   confirmSprint,
   createTask,
   excludeFromPlan,
@@ -38,23 +39,6 @@ function inPlanning(records: Records, sprintId: SprintId): Result<Sprint> {
   return sprintIn(records, sprintId, ['planning']);
 }
 
-/**
- * The previous Sprint's carried-over SprintTask of the Task, if any: the
- * Task is chosen as a carry-over (持ち越し).
- */
-export function carriedFromOf(
-  records: Records,
-  sprint: Sprint,
-  taskId: TaskId,
-) {
-  const previous = records.sprints.find(
-    (s) => s.id === sprint.previousSprintId,
-  );
-  return previous?.tasks.find(
-    (t) => t.taskId === taskId && t.outcome === 'carriedOver',
-  );
-}
-
 /** Chooses one Task for the draft, as a carry-over when it is one. */
 function choose(
   sprint: Sprint,
@@ -65,7 +49,7 @@ function choose(
 ) {
   const task = find(records.tasks, taskId, 'Task');
   if (!task.ok) return task;
-  const carriedFrom = carriedFromOf(records, sprint, taskId);
+  const carriedFrom = carriedOverFrom(sprint, taskId, records.sprints);
   return selectTask(
     sprint,
     {
