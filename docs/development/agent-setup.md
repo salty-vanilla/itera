@@ -111,3 +111,5 @@ direnv のシェル hook は対話シェルのプロンプトでしか動かな�
 5. `agent:check`・`agent:doctor` と代表的な操作を確認する。
 
 リポジトリで作った Skill（`issue-harness`、`design-references`、`copy-review`、`ui-copy`）を変えたときも、`sources.json` の該当ファイルのハッシュを更新する。
+
+リポジトリで作った Skill の script は、`pnpm lint`（ESLint）と `pnpm typecheck`（ルートの `tsconfig.json`）の対象にしている。対象は `sources.json` の `localSkills` に合わせる：ESLint はそこから読み、`tsconfig.json` の `include` は Skill ごとに書く（Skill を足したら両方がそろっていることを `tooling/skills/checked-files.test.mjs` が確かめる）。上流由来の Skill はどちらの対象にもしない。Prettier は `.agents/skills/` を丸ごと除いたままにする。テストは `.agents/skills/` に置くと `agent:check` が記録のないファイルとして失敗するので、`tooling/skills/` に置いて script を読み込むか起動する。

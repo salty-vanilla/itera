@@ -10,6 +10,10 @@
     "vitest.config.ts",
     "eslint.config.js",
     "tooling/**/*.mjs",
-    ".claude/hooks/**/*.mjs"
+    ".claude/hooks/**/*.mjs",
+    ".agents/skills/issue-harness/**/*.mjs",
+    ".agents/skills/design-references/**/*.mjs",
+    ".agents/skills/copy-review/**/*.mjs",
+    ".agents/skills/ui-copy/**/*.mjs"
   ]
 }
