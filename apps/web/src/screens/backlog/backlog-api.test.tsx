@@ -667,6 +667,65 @@ describe('the Backlog on the API', () => {
       ).toEqual({ freq: 'weekdays' });
     });
 
+    it('makes a rule again from none after ending the one it made (#330)', async () => {
+      const sent: { ifMatch: string | null; ifNoneMatch: string | null }[] = [];
+      const { store } = serve((request) => {
+        if (request.method === 'PUT' && request.url.endsWith('/recurrence'))
+          sent.push({
+            ifMatch: request.headers.get('If-Match'),
+            ifNoneMatch: request.headers.get('If-None-Match'),
+          });
+        return undefined;
+      }, 'backlog-recurrence');
+      const router = renderBacklog();
+      await list();
+      await router.navigate({
+        to: '/backlog',
+        search: { task: ids.task.paper },
+      });
+      const detail = await screen.findByRole('dialog');
+      await userEvent.click(
+        within(detail).getByRole('button', { name: /詳しく/ }),
+      );
+      const region = () =>
+        within(detail).getByRole('region', { name: '繰り返し' });
+      const ruleOf = () => {
+        const { records } = store.getSnapshot();
+        const ruleId = records.tasks.find(
+          (t) => t.id === ids.task.paper,
+        )?.recurrenceRuleId;
+        return records.rules.find((r) => r.id === ruleId);
+      };
+      const make = async () => {
+        await userEvent.selectOptions(
+          within(region()).getByRole('combobox'),
+          'daily',
+        );
+        await userEvent.click(
+          within(region()).getByRole('button', { name: '繰り返しにする' }),
+        );
+        await until(() => expect(ruleOf()).toBeDefined());
+      };
+      await make();
+      await userEvent.selectOptions(
+        within(region()).getByRole('combobox'),
+        'weekdays',
+      );
+      await until(() =>
+        expect(ruleOf()?.versions.at(-1)?.pattern).toEqual({
+          freq: 'weekdays',
+        }),
+      );
+      await userEvent.click(
+        within(region()).getByRole('button', { name: '繰り返しをやめる' }),
+      );
+      await until(() => expect(ruleOf()).toBeUndefined());
+      await make();
+      expect(sent).toHaveLength(3);
+      expect(sent[2]).toEqual({ ifMatch: null, ifNoneMatch: '*' });
+      expect(screen.queryByText('ほかの端末で変わっていました')).toBeNull();
+    });
+
     it("sends nothing on 名前を変える for an Area's name unedited, and shows the other device's name", async () => {
       const { store, requests } = serve(undefined, 'backlog-capture');
       renderBacklog();

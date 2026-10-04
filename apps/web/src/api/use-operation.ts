@@ -72,11 +72,12 @@ type Write<Input> = {
  *   same key. Without a session there is no Toast: the person is sent to
  *   sign in.
  * - An operation that replaces a record's values (`ConditionalName`: the
- *   contract's PATCHes) is run with the record as it was read: `run(input,
- *   { etag })`, or `{ none: true }` for a Goal not written yet (a Task
- *   without a rule). It is sent
- *   with `If-Match` (`If-None-Match: *`), after the record's own writes
- *   from this client have moved it on (`ownVersions`). When the record has
+ *   contract's PATCHes and the PUT of a Task's rule) is run with the record
+ *   as it was read: `run(input, { etag })`, or `{ none: true }` for a
+ *   record not made yet (a Goal not written, a Task without a rule). It is
+ *   sent with `If-Match` (`If-None-Match: *`), after the record's own
+ *   writes from this client have moved it on (`ownVersions`; a DELETE of
+ *   the resource ends that, #330). When the record has
  *   changed on another device since, it is not made (412): the Toast says
  *   so, and with `typed` (a field's typing, which the field keeps) says
  *   that saving again puts the typing over it (ADR 0005 エラーと送信中).
@@ -231,7 +232,9 @@ export async function written(sent: Promise<Sent>): Promise<unknown> {
  * Sends an operation as its request with the generated client's function
  * of the surface; one that replaces a record's values with the version it
  * was made from (`If-Match`), moved on by this client's own writes to the
- * record since.
+ * record since. A DELETE that went through leaves no record there: a write
+ * made from none after it is sent as made from none (a rule ended and made
+ * again, #330).
  */
 async function sendOperation<N extends OperationName>(
   client: Client,
@@ -260,17 +263,23 @@ async function sendOperation<N extends OperationName>(
     const etag = (await sent).response?.headers.get('ETag');
     ownVersions(client).moved(resource, made, etag ?? null);
   }
+  if (surfaces[operationId].method === 'DELETE') {
+    ownVersions(client).removed(resource);
+  }
   return data as PlainOutput<N>;
 }
 
-/** The resource a write is on: its method and its path. */
+/**
+ * The resource a write is on: its path. The writes of one resource (the PUT
+ * of a Task's rule and its DELETE, #330) share its versions.
+ */
 function resourceOf(
   operationId: keyof typeof surfaces,
   parts: { readonly path?: unknown },
 ): string {
-  const { method, url } = surfaces[operationId];
+  const { url } = surfaces[operationId];
   const values = (parts.path ?? {}) as Record<string, string>;
-  return `${method} ${url.replace(/\{(\w+)\}/g, (_, name: string) => values[name] ?? '')}`;
+  return url.replace(/\{(\w+)\}/g, (_, name: string) => values[name] ?? '');
 }
 
 /**
@@ -292,6 +301,12 @@ type OwnVersions = {
    * or gone (`null`): the next write is made from none.
    */
   moved(resource: string, from: MadeFrom, etag: string | null): void;
+  /**
+   * A write removed the record (a DELETE of the resource): the versions this
+   * client's writes moved it through are over, and a write made from none
+   * is made from none, not from where an earlier one led.
+   */
+  removed(resource: string): void;
 };
 
 function ownVersions(client: Client): OwnVersions {
@@ -319,6 +334,11 @@ function ownVersions(client: Client): OwnVersions {
       const to: MadeFrom = etag === null ? { none: true } : { etag };
       if (keyOf(resource, from) === keyOf(resource, to)) return;
       next.set(keyOf(resource, from), to);
+    },
+    removed(resource) {
+      for (const key of next.keys()) {
+        if (key.startsWith(`${resource} `)) next.delete(key);
+      }
     },
   };
   versionsByClient.set(client, versions);

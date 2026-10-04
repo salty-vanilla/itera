@@ -2613,7 +2613,7 @@ export type RenameAreaErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The record has changed since the write's `If-Match` was read; this one was not made.
+     * The record has changed since the write's `If-Match` was read, or one has been made since a write sent `If-None-Match: *`; this one was not made.
      */
     412: PreconditionFailedError;
     /**
@@ -2625,7 +2625,7 @@ export type RenameAreaErrors = {
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
-     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
+     * A write that replaces a record's values came without `If-Match` (or, for a record not made yet, a Goal or a Task's rule, `If-None-Match: *`). Send it again with the etag of the record as read.
      */
     428: PreconditionRequiredError;
     /**
@@ -2883,7 +2883,7 @@ export type SaveTaskErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The record has changed since the write's `If-Match` was read; this one was not made.
+     * The record has changed since the write's `If-Match` was read, or one has been made since a write sent `If-None-Match: *`; this one was not made.
      */
     412: PreconditionFailedError;
     /**
@@ -2895,7 +2895,7 @@ export type SaveTaskErrors = {
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
-     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
+     * A write that replaces a record's values came without `If-Match` (or, for a record not made yet, a Goal or a Task's rule, `If-None-Match: *`). Send it again with the etag of the record as read.
      */
     428: PreconditionRequiredError;
     /**
@@ -3272,7 +3272,7 @@ export type SetRecurrenceErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The record has changed since the write's `If-Match` was read; this one was not made.
+     * The record has changed since the write's `If-Match` was read, or one has been made since a write sent `If-None-Match: *`; this one was not made.
      */
     412: PreconditionFailedError;
     /**
@@ -3284,7 +3284,7 @@ export type SetRecurrenceErrors = {
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
-     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
+     * A write that replaces a record's values came without `If-Match` (or, for a record not made yet, a Goal or a Task's rule, `If-None-Match: *`). Send it again with the etag of the record as read.
      */
     428: PreconditionRequiredError;
     /**
@@ -3421,7 +3421,7 @@ export type UpdateSubtaskErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The record has changed since the write's `If-Match` was read; this one was not made.
+     * The record has changed since the write's `If-Match` was read, or one has been made since a write sent `If-None-Match: *`; this one was not made.
      */
     412: PreconditionFailedError;
     /**
@@ -3433,7 +3433,7 @@ export type UpdateSubtaskErrors = {
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
-     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
+     * A write that replaces a record's values came without `If-Match` (or, for a record not made yet, a Goal or a Task's rule, `If-None-Match: *`). Send it again with the etag of the record as read.
      */
     428: PreconditionRequiredError;
     /**
@@ -4005,7 +4005,7 @@ export type SetAvailableHoursErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The record has changed since the write's `If-Match` was read; this one was not made.
+     * The record has changed since the write's `If-Match` was read, or one has been made since a write sent `If-None-Match: *`; this one was not made.
      */
     412: PreconditionFailedError;
     /**
@@ -4017,7 +4017,7 @@ export type SetAvailableHoursErrors = {
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
-     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
+     * A write that replaces a record's values came without `If-Match` (or, for a record not made yet, a Goal or a Task's rule, `If-None-Match: *`). Send it again with the etag of the record as read.
      */
     428: PreconditionRequiredError;
     /**
@@ -4150,7 +4150,7 @@ export type UpdateGoalErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The record has changed since the write's `If-Match` was read; this one was not made.
+     * The record has changed since the write's `If-Match` was read, or one has been made since a write sent `If-None-Match: *`; this one was not made.
      */
     412: PreconditionFailedError;
     /**
@@ -4162,7 +4162,7 @@ export type UpdateGoalErrors = {
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
-     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
+     * A write that replaces a record's values came without `If-Match` (or, for a record not made yet, a Goal or a Task's rule, `If-None-Match: *`). Send it again with the etag of the record as read.
      */
     428: PreconditionRequiredError;
     /**
@@ -4426,7 +4426,7 @@ export type SetGoalLinkErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The record has changed since the write's `If-Match` was read; this one was not made.
+     * The record has changed since the write's `If-Match` was read, or one has been made since a write sent `If-None-Match: *`; this one was not made.
      */
     412: PreconditionFailedError;
     /**
@@ -4438,7 +4438,7 @@ export type SetGoalLinkErrors = {
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
-     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
+     * A write that replaces a record's values came without `If-Match` (or, for a record not made yet, a Goal or a Task's rule, `If-None-Match: *`). Send it again with the etag of the record as read.
      */
     428: PreconditionRequiredError;
     /**
@@ -5700,7 +5700,7 @@ export type EditInterruptErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The record has changed since the write's `If-Match` was read; this one was not made.
+     * The record has changed since the write's `If-Match` was read, or one has been made since a write sent `If-None-Match: *`; this one was not made.
      */
     412: PreconditionFailedError;
     /**
@@ -5712,7 +5712,7 @@ export type EditInterruptErrors = {
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
-     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
+     * A write that replaces a record's values came without `If-Match` (or, for a record not made yet, a Goal or a Task's rule, `If-None-Match: *`). Send it again with the etag of the record as read.
      */
     428: PreconditionRequiredError;
     /**
@@ -5893,7 +5893,7 @@ export type UpdateRetroErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The record has changed since the write's `If-Match` was read; this one was not made.
+     * The record has changed since the write's `If-Match` was read, or one has been made since a write sent `If-None-Match: *`; this one was not made.
      */
     412: PreconditionFailedError;
     /**
@@ -5905,7 +5905,7 @@ export type UpdateRetroErrors = {
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
-     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
+     * A write that replaces a record's values came without `If-Match` (or, for a record not made yet, a Goal or a Task's rule, `If-None-Match: *`). Send it again with the etag of the record as read.
      */
     428: PreconditionRequiredError;
     /**
@@ -6218,7 +6218,7 @@ export type DecideCriterionErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The record has changed since the write's `If-Match` was read; this one was not made.
+     * The record has changed since the write's `If-Match` was read, or one has been made since a write sent `If-None-Match: *`; this one was not made.
      */
     412: PreconditionFailedError;
     /**
@@ -6230,7 +6230,7 @@ export type DecideCriterionErrors = {
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
-     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
+     * A write that replaces a record's values came without `If-Match` (or, for a record not made yet, a Goal or a Task's rule, `If-None-Match: *`). Send it again with the etag of the record as read.
      */
     428: PreconditionRequiredError;
     /**
@@ -6418,7 +6418,7 @@ export type SetDraftPolicyErrors = {
      */
     409: RevisionConflictError;
     /**
-     * The record has changed since the write's `If-Match` was read; this one was not made.
+     * The record has changed since the write's `If-Match` was read, or one has been made since a write sent `If-None-Match: *`; this one was not made.
      */
     412: PreconditionFailedError;
     /**
@@ -6430,7 +6430,7 @@ export type SetDraftPolicyErrors = {
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
-     * A write that replaces a record's values came without `If-Match` (or, for a Goal not written yet, `If-None-Match: *`). Send it again with the etag of the record as read.
+     * A write that replaces a record's values came without `If-Match` (or, for a record not made yet, a Goal or a Task's rule, `If-None-Match: *`). Send it again with the etag of the record as read.
      */
     428: PreconditionRequiredError;
     /**
