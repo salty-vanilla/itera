@@ -37,9 +37,12 @@ it('resolves once the components on screen are told the answer', async () => {
       shown = observer.getCurrentResult().data;
     }),
   );
-  await until(() => expect(shown).toBe('before'));
-  saved = 'after';
-  await readAgain(queryClient);
-  expect(shown).toBe('after');
-  unsubscribe();
+  try {
+    await until(() => expect(shown).toBe('before'));
+    saved = 'after';
+    await readAgain(queryClient);
+    expect(shown).toBe('after');
+  } finally {
+    unsubscribe();
+  }
 });

@@ -171,7 +171,7 @@ describe('the Sprint on the API', () => {
   });
 
   it('puts the focus on the heading it ends with, though it is read in two steps', async () => {
-    // The Sprints are read after the rest.
+    // The Sprints are read after the rest, one step at a time.
     const late = held((request) =>
       new URL(request.url).pathname.startsWith('/api/sprints'),
     );
@@ -180,7 +180,12 @@ describe('the Sprint on the API', () => {
     await screen.findByRole('heading', { level: 1, name: 'Backlog' });
     await userEvent.click(screen.getAllByRole('link', { name: 'Sprint' })[0]!);
     await waitFor(() => expect(router.state.location.pathname).toBe('/sprint'));
-    await until(() => expect(late.waiting).toBeGreaterThan(0));
+    // The list first, then the Sprint it names: the step on the way is
+    // drawn before the next is let through.
+    await until(() => expect(late.waiting).toBe(1));
+    late.next();
+    await until(() => expect(late.waiting).toBe(1));
+    await screen.findByRole('heading', { level: 1, name: 'Sprint 2' });
     late.release();
     await waitForSprintScreen();
     // Not the heading of a step that was read on the way.

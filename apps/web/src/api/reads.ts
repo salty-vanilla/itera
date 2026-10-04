@@ -77,8 +77,10 @@ export function readAgain(queryClient: QueryClient): Promise<void> {
       );
   if (!onFirstTry()) return Promise.resolve();
   return new Promise((resolve) => {
-    const unsubscribe = cache.subscribe(() => {
-      if (onFirstTry()) return;
+    const unsubscribe = cache.subscribe((event) => {
+      // `updated` comes after every observer of the query is told (an
+      // observer's own `observerResultsUpdated` comes before the others).
+      if (event.type !== 'updated' || onFirstTry()) return;
       unsubscribe();
       // Called in the batch of the answer, whose news to the components is
       // queued already.

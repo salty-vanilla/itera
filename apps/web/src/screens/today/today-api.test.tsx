@@ -267,6 +267,10 @@ describe('Today on the API', () => {
     await dayRead();
     await userEvent.click(choose('関連論文を 3本読む'));
     await until(() => expect(saves.waiting).toBe(1));
+    // Not drawn while the operation is on its way.
+    expect(
+      screen.queryByRole('button', { name: '完了にする：関連論文を 3本読む' }),
+    ).toBeNull();
     saves.release();
     const circle = await screen.findByRole('button', {
       name: '完了にする：関連論文を 3本読む',
