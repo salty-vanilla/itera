@@ -198,18 +198,37 @@ export function capacityRelationSentences(
 /**
  * Short sentences joined by 「 · 」: the line breaks only between them, so a
  * number never leaves its words, and after the 「·」, so that it never stands
- * alone on a line (#239).
+ * alone on a line (#239). A sentence with a note in 「（）」 (「計画 2時間30分
+ * （サブタスク 1件は見積もりなし）」) stays whole while it fits a line; wider
+ * than the line, it breaks only before the note, so that it never runs past
+ * 320px (#357).
  */
 function Sentences({ items }: { items: readonly string[] }) {
-  return items.map((item, i) => (
-    <Fragment key={item}>
-      {i > 0 && ' '}
-      <span className="whitespace-nowrap">
-        {item}
-        {i < items.length - 1 && ' ·'}
-      </span>
-    </Fragment>
-  ));
+  return items.map((item, i) => {
+    const last = i === items.length - 1;
+    const [value = '', ...notes] = item.split(/(?=（)/);
+    return (
+      <Fragment key={item}>
+        {i > 0 && ' '}
+        {notes.length === 0 ? (
+          <span className="whitespace-nowrap">
+            {item}
+            {!last && ' ·'}
+          </span>
+        ) : (
+          <span className="inline-block max-w-full">
+            <span className="whitespace-nowrap">{value}</span>
+            {notes.map((note, j) => (
+              <span key={note} className="whitespace-nowrap">
+                {note}
+                {!last && j === notes.length - 1 && ' ·'}
+              </span>
+            ))}
+          </span>
+        )}
+      </Fragment>
+    );
+  });
 }
 
 /**

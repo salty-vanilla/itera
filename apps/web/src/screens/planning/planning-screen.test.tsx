@@ -127,6 +127,14 @@ describe('Planning — the stuck Capacity line (#152)', () => {
       ),
     ).toEqual(['計画の合計', '15時間15分〜17時間15分 ·', '使える時間は未入力']);
   });
+
+  it('lets 時間の見通しを開く drop under the total where both do not fit a line (#357)', async () => {
+    await renderAt('/sprint?fixture=planning-shape&stage=shape');
+    // jsdom has no layout; the 320px measure is in the PR. Without the wrap
+    // the mark (shrink-0) runs 9px past the edge of main.
+    const line = screen.getByRole('button', { name: /時間の見通しを開く/ });
+    expect(line.className).toContain('flex-wrap');
+  });
 });
 
 describe('Planning — Backlog のタイトル (#158)', () => {

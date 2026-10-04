@@ -383,11 +383,12 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
               setOutlookOpen(true);
             })
           }
-          className="flex min-h-target-touch w-full items-center justify-between gap-3 rounded-sm text-left text-body text-ink focus-visible:focus-ring medium:min-h-target-min"
+          className="flex min-h-target-touch w-full flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-sm text-left text-body text-ink focus-visible:focus-ring medium:min-h-target-min"
         >
           {/* 確かめる says the numbers once, in its summary (#165). */}
           {stage !== 'check' && <CapacitySummary data={data} />}
-          {/* At the right end in every stage, with a mark that it opens. */}
+          {/* At the right end in every stage, with a mark that it opens. Under
+              the numbers where both do not fit a line (320px, #357). */}
           <span className="ms-auto flex shrink-0 items-center gap-1 text-meta text-ink-muted">
             時間の見通しを開く
             <ChevronRight
