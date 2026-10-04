@@ -32,6 +32,7 @@ import { ApiProvider } from './api-provider';
 import { createQueryClient } from './query-client';
 import { SEND_AGAIN_DELAYS, useOperation } from './use-operation';
 import { useMe } from './use-me';
+import { held, writes } from '@/test/held';
 import { problemResponse } from '@/test/problem';
 import {
   PROBLEM_CONTENT_TYPE,
@@ -178,14 +179,6 @@ describe('useOperation', () => {
 });
 
 describe('operations that overlap', () => {
-  /** An operation's answer waits `ms`, as on a slow network. */
-  const slow = (ms: number) => (request: Request) =>
-    request.method !== 'GET'
-      ? new Promise<Response>((resolve) =>
-          setTimeout(() => resolve(new Response(null, { status: 204 })), ms),
-        )
-      : undefined;
-
   function useRenameWaiting() {
     return useOperation('renameArea', { whileSending: 'wait' });
   }
@@ -212,7 +205,11 @@ describe('operations that overlap', () => {
   });
 
   it('does not send two operations at once, whichever hook sent them', async () => {
-    const { requests, wrapper } = setUp(slow(100));
+    // The operations' answers wait until the test lets them through.
+    const saves = held(writes);
+    const { requests, wrapper } = setUp((request) =>
+      saves.answer(request)?.then(() => new Response(null, { status: 204 })),
+    );
     const { result } = renderHook(
       () => ({
         rename: useOperation('renameArea'),
@@ -226,12 +223,13 @@ describe('operations that overlap', () => {
         result.current.rename.run(rename('研究室'), asRead),
         result.current.archive.run({ areaId: ids.area.research }),
       ]);
-      await new Promise((resolve) => setTimeout(resolve, 30));
-      // The second waits for the first (the API would answer 409 to both).
-      expect(requests.filter((r) => !r.startsWith('GET'))).toEqual([
-        `PATCH /api/areas/${ids.area.research}`,
-      ]);
     });
+    await waitFor(() => expect(saves.waiting).toBe(1));
+    // The second waits for the first (the API would answer 409 to both).
+    expect(requests.filter((r) => !r.startsWith('GET'))).toEqual([
+      `PATCH /api/areas/${ids.area.research}`,
+    ]);
+    saves.release();
     await act(async () => {
       await both;
     });

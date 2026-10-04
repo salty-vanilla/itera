@@ -35,6 +35,7 @@ import {
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { createMock } from '@/mock/mock-api';
 import { getHours } from '@/test/duration';
+import { held, writes } from '@/test/held';
 import { comeBack, newWrite, otherDevice, until } from '@/test/other-device';
 import { problemResponse } from '@/test/problem';
 
@@ -82,14 +83,6 @@ function serve(
 }
 
 const ids = fixtureIds();
-
-/** Every operation's answer comes `ms` late, as on a slow network. */
-const slow = (ms: number) => (request: Request) =>
-  request.method === 'POST'
-    ? new Promise<undefined>((resolve) => setTimeout(resolve, ms)).then(
-        () => undefined,
-      )
-    : undefined;
 
 const refused = () => problemResponse('/problems/invalid-input');
 const conflict = () => problemResponse('/problems/revision-conflict');
@@ -254,7 +247,8 @@ describe('the Backlog on the API', () => {
   });
 
   it('saves two fields left one after the other while the first is sent', async () => {
-    const { store } = serve(slow(150));
+    const saves = held(writes);
+    const { store } = serve(saves.answer);
     renderBacklog();
     const rows = await list();
     await userEvent.click(
@@ -266,11 +260,13 @@ describe('the Backlog on the API', () => {
     const title = within(detail).getByRole('textbox', { name: /タイトル/ });
     await userEvent.clear(title);
     await userEvent.type(title, '本棚を片づける{Enter}');
-    // Left at once, before the title's save is back.
+    await until(() => expect(saves.waiting).toBe(1));
+    // Left before the title's save is back.
     await userEvent.selectOptions(
       within(detail).getByRole('combobox', { name: '優先度' }),
       '高',
     );
+    saves.release();
     await waitFor(() => {
       const saved = store
         .getSnapshot()
@@ -284,15 +280,8 @@ describe('the Backlog on the API', () => {
   });
 
   it('keeps a weekday ticked while an earlier save is read again and a later one is still sent', async () => {
-    const { store } = serve(
-      (request) =>
-        request.method === 'GET'
-          ? undefined
-          : new Promise<undefined>((resolve) => setTimeout(resolve, 150)).then(
-              () => undefined,
-            ),
-      'backlog-recurrence',
-    );
+    const saves = held(writes);
+    const { store, requests } = serve(saves.answer, 'backlog-recurrence');
     const router = renderBacklog();
     await list();
     await router.navigate({
@@ -308,28 +297,38 @@ describe('the Backlog on the API', () => {
       (name) => tick(name).getAttribute('aria-checked') !== 'true',
     );
     expect(wanted).toHaveLength(3);
-    await userEvent.click(tick(wanted[0]!));
-    await userEvent.click(tick(wanted[1]!));
-    // The first is saved and read again; the second is still on its way.
-    await new Promise((resolve) => setTimeout(resolve, 230));
-    expect(tick(wanted[1]!).getAttribute('aria-checked')).toBe('true');
-    await userEvent.click(tick(wanted[2]!));
-    await until(() => {
+    const latest = () => {
       const rule = store
         .getSnapshot()
         .records.rules.find((r) => r.taskId === ids.task.cleaning);
-      const latest = rule?.versions.at(-1)?.pattern;
-      expect(latest && 'daysOfWeek' in latest ? latest.daysOfWeek : []).toEqual(
-        expect.arrayContaining([2, 3, 4]),
-      );
-    });
+      const pattern = rule?.versions.at(-1)?.pattern;
+      return pattern && 'daysOfWeek' in pattern ? pattern.daysOfWeek : [];
+    };
+    const sent = () => requests.filter((r) => !r.startsWith('GET ')).length;
+    await userEvent.click(tick(wanted[0]!));
+    await userEvent.click(tick(wanted[1]!));
+    // The first is on its way; the second waits for it.
+    await until(() => expect(saves.waiting).toBe(1));
+    expect(sent()).toBe(1);
+    saves.next();
+    // The first is saved and read again; the second is on its way.
+    await until(() => expect(sent()).toBe(2));
+    expect(saves.waiting).toBe(1);
+    expect(latest()).toHaveLength(2);
+    expect(tick(wanted[1]!).getAttribute('aria-checked')).toBe('true');
+    await userEvent.click(tick(wanted[2]!));
+    saves.release();
+    await until(() =>
+      expect(latest()).toEqual(expect.arrayContaining([2, 3, 4])),
+    );
     for (const name of wanted) {
       expect(tick(name).getAttribute('aria-checked')).toBe('true');
     }
   });
 
   it('saves both weekdays ticked while the first is sent', async () => {
-    const { store } = serve(slow(150), 'backlog-recurrence');
+    const saves = held(writes);
+    const { store } = serve(saves.answer, 'backlog-recurrence');
     const router = renderBacklog();
     await list();
     await router.navigate({
@@ -345,7 +344,11 @@ describe('the Backlog on the API', () => {
       (name) => tick(name).getAttribute('aria-checked') !== 'true',
     );
     expect(wanted).toHaveLength(2);
-    for (const name of wanted) await userEvent.click(tick(name));
+    await userEvent.click(tick(wanted[0]!));
+    await until(() => expect(saves.waiting).toBe(1));
+    // Ticked before the first is back.
+    await userEvent.click(tick(wanted[1]!));
+    saves.release();
     await waitFor(() => {
       const rule = store
         .getSnapshot()

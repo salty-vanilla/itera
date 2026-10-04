@@ -1,5 +1,6 @@
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import {
+  act,
   cleanup,
   render,
   screen,
@@ -9,6 +10,7 @@ import {
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppRouter } from '@/app/router';
+import { ADDED_MS } from './backlog-screen';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { StoreSnapshot } from '@/mock/memory-store';
 import { findHours, getHours, getMinutes, queryHours } from '@/test/duration';
@@ -16,7 +18,10 @@ import { fixtureIds } from '@itera/application/fixtures';
 
 const ids = fixtureIds();
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 beforeEach(() => {
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
 });
@@ -119,6 +124,8 @@ describe('Backlog', () => {
 
   it('Capture: the new Task is the first row, flashes for a moment, and a Toast says so (#86)', async () => {
     await renderAt('/backlog?fixture=backlog-capture');
+    // The flash's clock moves when told; the rest as it goes.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     await userEvent.type(
       screen.getByRole('textbox', { name: 'Backlog にタスクを追加' }),
       '請求書を送る{Enter}',
@@ -136,9 +143,8 @@ describe('Backlog', () => {
       ),
     ).toBeNull();
     // The flash is over after 2.5 seconds.
-    await waitFor(() => expect(first.hasAttribute('data-added')).toBe(false), {
-      timeout: 4000,
-    });
+    await act(() => vi.advanceTimersByTimeAsync(ADDED_MS));
+    expect(first.hasAttribute('data-added')).toBe(false);
   });
 
   it('Capture: a Task the 切り口 does not show is not in the list, and the Toast says why (#86)', async () => {

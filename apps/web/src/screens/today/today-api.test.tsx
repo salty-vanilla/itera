@@ -31,6 +31,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { createMock } from '@/mock/mock-api';
 import { dayRead } from '@/test/day-read';
 import { findHours } from '@/test/duration';
+import { held, writes } from '@/test/held';
 import { comeBack, newWrite, otherDevice, until } from '@/test/other-device';
 import { problemResponse } from '@/test/problem';
 
@@ -260,16 +261,13 @@ describe('Today on the API', () => {
   });
 
   it('puts the focus on the row it chose, though the screen draws it late', async () => {
-    serve((request) =>
-      request.method === 'POST'
-        ? new Promise<undefined>((resolve) => setTimeout(resolve, 150)).then(
-            () => undefined,
-          )
-        : undefined,
-    );
+    const saves = held(writes);
+    serve(saves.answer);
     renderToday();
     await dayRead();
     await userEvent.click(choose('関連論文を 3本読む'));
+    await until(() => expect(saves.waiting).toBe(1));
+    saves.release();
     const circle = await screen.findByRole('button', {
       name: '完了にする：関連論文を 3本読む',
     });

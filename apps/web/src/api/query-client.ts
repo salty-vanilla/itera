@@ -1,4 +1,9 @@
-import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
+import {
+  MutationCache,
+  notifyManager,
+  QueryCache,
+  QueryClient,
+} from '@tanstack/react-query';
 import { failureOf } from './failure';
 import { readAgain } from './reads';
 
@@ -35,6 +40,11 @@ export interface QueryClientOptions {
 export function createQueryClient({
   onUnauthenticated,
 }: QueryClientOptions): QueryClient {
+  // The components are told of an answer in the task it came in, not in a
+  // later one (TanStack Query's default, a `setTimeout`): what follows an
+  // operation, which waits for them (`readAgain`, #341), is not held back
+  // by a task more.
+  notifyManager.setScheduler(queueMicrotask);
   const queryClient: QueryClient = new QueryClient({
     queryCache: new QueryCache({
       onError: (error) => {

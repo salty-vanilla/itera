@@ -28,6 +28,8 @@ import {
 } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { getHours } from '@/test/duration';
+import { held, writes } from '@/test/held';
+import { until } from '@/test/other-device';
 import { waitForSprintScreen } from '@/test/sprint-ready';
 import { createMock } from '@/mock/mock-api';
 import { problemResponse } from '@/test/problem';
@@ -169,17 +171,17 @@ describe('the Sprint on the API', () => {
   });
 
   it('puts the focus on the heading it ends with, though it is read in two steps', async () => {
-    const late = (request: Request) =>
-      new URL(request.url).pathname.startsWith('/api/sprints')
-        ? new Promise<undefined>((resolve) => setTimeout(resolve, 120)).then(
-            () => undefined,
-          )
-        : undefined;
-    serve('today-daytime', late);
+    // The Sprints are read after the rest.
+    const late = held((request) =>
+      new URL(request.url).pathname.startsWith('/api/sprints'),
+    );
+    serve('today-daytime', late.answer);
     const router = renderSprint('/backlog');
     await screen.findByRole('heading', { level: 1, name: 'Backlog' });
     await userEvent.click(screen.getAllByRole('link', { name: 'Sprint' })[0]!);
     await waitFor(() => expect(router.state.location.pathname).toBe('/sprint'));
+    await until(() => expect(late.waiting).toBeGreaterThan(0));
+    late.release();
     await waitForSprintScreen();
     // Not the heading of a step that was read on the way.
     await waitFor(() =>
@@ -227,13 +229,8 @@ describe('the Sprint on the API', () => {
   });
 
   it('sends Tasks picked one after another, each in turn, and drops only a repeat of one', async () => {
-    const { requests, sprint } = serve('planning-pick', (request) =>
-      request.method === 'POST'
-        ? new Promise<undefined>((resolve) => setTimeout(resolve, 300)).then(
-            () => undefined,
-          )
-        : undefined,
-    );
+    const saves = held(writes);
+    const { requests, sprint } = serve('planning-pick', saves.answer);
     renderSprint();
     const pane = await backlogPane();
     const id = sprint('planning').id;
@@ -244,14 +241,14 @@ describe('the Sprint on the API', () => {
       });
     // Two Tasks while the first is on its way, and the first pressed again.
     await userEvent.click(box(onboarding));
+    await until(() => expect(saves.waiting).toBe(1));
     await userEvent.click(box('顧客インタビューの設計'));
     await userEvent.click(box(onboarding));
-    await waitFor(
-      () =>
-        expect(
-          sprint('planning').tasks.filter((t) => !had.has(t.taskId)),
-        ).toHaveLength(2),
-      { timeout: 4000 },
+    saves.release();
+    await until(() =>
+      expect(
+        sprint('planning').tasks.filter((t) => !had.has(t.taskId)),
+      ).toHaveLength(2),
     );
     expect(
       requests.filter((r) => r === `POST /api/sprints/${id}/sprint-tasks`),
@@ -320,13 +317,8 @@ describe('the Sprint on the API', () => {
   });
 
   it('says 追加中… on the add while it is sent, and keeps the text until then', async () => {
-    const { store } = serve('planning-pick', (request) =>
-      request.method === 'POST'
-        ? new Promise<undefined>((resolve) => setTimeout(resolve, 700)).then(
-            () => undefined,
-          )
-        : undefined,
-    );
+    const saves = held(writes);
+    const { store } = serve('planning-pick', saves.answer);
     renderSprint();
     const pane = await backlogPane();
     const field = within(pane).getByRole('textbox', {
@@ -335,6 +327,7 @@ describe('the Sprint on the API', () => {
     await userEvent.type(field, '請求書を送る{Enter}');
     expect(await within(pane).findByText('追加中…')).toBeTruthy();
     expect(field).toHaveProperty('value', '請求書を送る');
+    saves.release();
     await waitFor(() =>
       expect(
         store
@@ -346,13 +339,8 @@ describe('the Sprint on the API', () => {
   });
 
   it('says 確定中… on the confirm while it is sent, then shows the running Sprint', async () => {
-    const { requests, sprint } = serve('planning-check', (request) =>
-      request.method === 'POST'
-        ? new Promise<undefined>((resolve) => setTimeout(resolve, 700)).then(
-            () => undefined,
-          )
-        : undefined,
-    );
+    const saves = held(writes);
+    const { requests, sprint } = serve('planning-check', saves.answer);
     renderSprint('/sprint?stage=check');
     const id = sprint('planning').id;
     await userEvent.click(
@@ -363,6 +351,7 @@ describe('the Sprint on the API', () => {
       within(dialog).getByRole('button', { name: 'Sprint 2 を確定' }),
     );
     expect(await within(dialog).findByText('確定中…')).toBeTruthy();
+    saves.release();
     expect(await screen.findByText('進行中')).toBeTruthy();
     expect(requests).toContain(`POST /api/sprints/${id}/confirm`);
     expect(sprint('active').id).toBe(id);
