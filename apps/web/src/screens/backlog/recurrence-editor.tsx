@@ -7,6 +7,7 @@ import type {
 import type { MadeFrom } from '@itera/api-contract/requests';
 import {
   useEffect,
+  useId,
   useImperativeHandle,
   useRef,
   useState,
@@ -16,7 +17,11 @@ import type { Saved } from '@/api/use-operation';
 import { Button } from '@/components/ui/button';
 import { Check } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Field } from '@/components/ui/field';
+import {
+  Field,
+  FieldErrorContent,
+  fieldErrorStyles,
+} from '@/components/ui/field';
 import { Select } from '@/components/ui/select';
 import { formatDate } from '@/lib/date-format';
 import {
@@ -25,6 +30,7 @@ import {
   WEEKDAY_NAMES,
 } from '@/lib/recurrence-text';
 import { useDraftField } from '@/lib/use-draft-field';
+import { cn } from '@/lib/utils';
 import { useRecurrenceActions } from '@/screen-data/use-task-actions';
 
 // 繰り返し (PRD §6 Recurrence, F1, F7, F12, F15, F41). Like the other fields
@@ -188,6 +194,7 @@ function RecurrenceEditor({
   );
   const { freq, days, dayOfMonth } = choice.value;
   const daysRef = useRef<HTMLFieldSetElement>(null);
+  const daysErrorId = useId();
   const createRef = useRef<HTMLButtonElement>(null);
   const freqRef = useRef<HTMLSelectElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -197,13 +204,12 @@ function RecurrenceEditor({
     if (owns && !hadRule.current) freqRef.current?.focus();
     hadRule.current = owns;
   }, [owns]);
+  /** The first weekday: where a weekly choice without a day is blamed. */
+  const firstDay = (): HTMLElement | null =>
+    daysRef.current?.querySelector<HTMLElement>('[role="checkbox"]') ?? null;
   const pendingOf = (): HTMLElement | null => {
     if (owns) {
-      if (freq === 'weekly' && days.length === 0)
-        return (
-          daysRef.current?.querySelector<HTMLElement>('[role="checkbox"]') ??
-          null
-        );
+      if (freq === 'weekly' && days.length === 0) return firstDay();
       return choice.unsaved ? freqRef.current : null;
     }
     const base = choiceOf(undefined);
@@ -228,14 +234,21 @@ function RecurrenceEditor({
     if (result?.kind === 'ended') headingRef.current?.focus();
   }, [result]);
 
-  /** Saves the choice as it now stands, when it is complete. */
+  /**
+   * Saves the choice as it now stands, when it is complete. When it is not,
+   * the error is shown; `blame` moves the focus to the first weekday (for
+   * the button, whose press otherwise seems to do nothing: a weekday just
+   * ticked off already has the focus).
+   */
   async function save(
     next: Freq,
     nextDays: readonly DayOfWeek[],
     nextDayOfMonth: number,
+    blame = false,
   ): Promise<Saved> {
     if (next === 'weekly' && nextDays.length === 0) {
       setError('曜日を 1つ以上選んでください');
+      if (blame) firstDay()?.focus();
       return { ok: false };
     }
     setError(undefined);
@@ -339,7 +352,11 @@ function RecurrenceEditor({
             </Select>
           </Field>
           {freq === 'weekly' && (
-            <fieldset ref={daysRef} className="flex flex-col gap-2">
+            <fieldset
+              ref={daysRef}
+              aria-describedby={error ? daysErrorId : undefined}
+              className="flex flex-col gap-2"
+            >
               <legend className="text-label text-ink">曜日</legend>
               <div className="flex flex-wrap gap-x-4 gap-y-2">
                 {WEEK_ORDER.map((d) => (
@@ -347,11 +364,25 @@ function RecurrenceEditor({
                     key={d}
                     label={WEEKDAY_NAMES[d]}
                     checked={days.includes(d)}
+                    aria-describedby={error ? daysErrorId : undefined}
+                    aria-invalid={error ? true : undefined}
                     onCheckedChange={(checked) => onDay(d, checked)}
                   />
                 ))}
               </div>
-              {error && <p className="text-help text-danger">{error}</p>}
+              {/* Icon and words, like the other fields' errors; role="alert"
+                  reads it out when it appears under a focus that stays (the
+                  last weekday taken off). */}
+              {error && (
+                <p
+                  id={daysErrorId}
+                  role="alert"
+                  data-slot="field-error"
+                  className={cn(fieldErrorStyles)}
+                >
+                  <FieldErrorContent>{error}</FieldErrorContent>
+                </p>
+              )}
             </fieldset>
           )}
           {freq === 'monthly' && (
@@ -391,7 +422,7 @@ function RecurrenceEditor({
             <div>
               <Button
                 ref={createRef}
-                onClick={() => choice.hold(save(freq, days, dayOfMonth))}
+                onClick={() => choice.hold(save(freq, days, dayOfMonth, true))}
               >
                 繰り返しにする
               </Button>
