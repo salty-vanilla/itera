@@ -375,7 +375,8 @@ Area（領域）はユーザーが作る。駅の路線記号のように、色�
 
 - 文字のトークン（`ink` `ink-muted` `ink-subtle` `warning` `danger`）は light / dark とも `canvas` `canvas-subtle` `surface` `surface-hover` `here-subtle` の上で 4.5:1 以上。Semantic は各 `*-subtle` の上でも 4.5:1 以上。
 - `on-primary` は `primary` / `primary-hover` / `primary-active` の上で、`on-danger` は `danger` / `danger-hover` / `danger-active` の上で、`on-area` は各 `area-*` の上で、`on-here` は `here` の上で 4.5:1 以上。
-- `border-strong` `focus` `area-*` は上の地で 3:1 以上。
+- `border-strong` `focus` は、文字のトークンと同じ地（`canvas` `canvas-subtle` `surface` `surface-hover` `here-subtle`）の上で 3:1 以上。
+- `area-*` は `canvas` の上で 3:1 以上（light / dark とも）。ほかの地（`surface-hover` `here-subtle` など）の上では 3:1 を求めない。路線記号は必ず名前と併記し、中の白抜きの文字（`on-area`）は上の行のとおり各 `area-*` の上で 4.5:1 以上にする。
 - 実測の例：`ink` は light の `canvas` 上で 17.8:1、`ink-subtle` は light の `canvas-subtle` 上で 5.6:1、`on-area` は `area-1` 上で 5.2:1。
 - `ink-disabled` は無効状態の文字だけに使い、コントラストの要件の対象外とする。
 - 新しい色を足すときは、同じ表を light / dark で埋めてから使う。

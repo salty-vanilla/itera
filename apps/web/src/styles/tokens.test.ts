@@ -369,10 +369,10 @@ describe('contrast', () => {
     { foreground: ['on-area'], background: areas, min: 4.5 },
     { foreground: ['on-here'], background: ['here'], min: 4.5 },
     { foreground: ['border-strong', 'focus'], background: grounds, min: 3 },
-    // DESIGN.md says "上の地" for area-*, and Colors › Area の路線記号 says
-    // "dark の canvas に 3:1". Only canvas is checked: the dark area colors are
-    // below 3:1 on the other grounds, and which reading is right is for the
-    // owner to decide (Issue #365).
+    // DESIGN.md Colors › コントラスト: area-* is 3:1 on canvas only (owner
+    // decision on Issue #365, 2026-10-05). The dark area colors are below 3:1
+    // on the other grounds by design; their white-on-fill text is covered by
+    // the on-area rule above.
     { foreground: areas, background: ['canvas'], min: 3 },
   ];
   const pairs = rules.flatMap(({ foreground, background, min }) =>
