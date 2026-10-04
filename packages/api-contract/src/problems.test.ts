@@ -19,12 +19,14 @@ const schemaOf: { readonly [T in ProblemType]: v.GenericSchema } = {
   '/problems/forbidden-origin': contract.vForbiddenOriginError,
   '/problems/not-found': contract.vNotFoundError,
   '/problems/revision-conflict': contract.vRevisionConflictError,
+  '/problems/precondition-failed': contract.vPreconditionFailedError,
   '/problems/payload-too-large': contract.vPayloadTooLargeError,
   '/problems/invalid-input': contract.vRuleViolationError,
   '/problems/invalid-transition': contract.vRuleViolationError,
   '/problems/recurring-task-cannot-complete': contract.vRuleViolationError,
   '/problems/user-not-set-up': contract.vUserNotSetUpError,
   '/problems/idempotency-key-reused': contract.vIdempotencyKeyReusedError,
+  '/problems/precondition-required': contract.vPreconditionRequiredError,
   '/problems/internal-error': contract.vInternalError,
 };
 

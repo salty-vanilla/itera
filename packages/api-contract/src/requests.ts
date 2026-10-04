@@ -1108,6 +1108,67 @@ export function readIdempotencyKey(value: string | null | undefined): string {
   return value.slice(1, 37).toLowerCase();
 }
 
+// ------------------------------------------------------ the record's version
+
+/**
+ * What a write that replaces a record's values was made from (ADR 0006
+ * 記録ごとの版, #321): the record's `etag` as read, or no record (a Goal not
+ * written yet), which the write must not be made over.
+ */
+export type MadeFrom = { readonly etag: string } | { readonly none: true };
+
+/**
+ * The headers of a write made from `from` (RFC 9110 §13.1.1, §13.1.2):
+ * `If-Match` with the etag, or `If-None-Match: *`.
+ */
+export function conditionHeaders(
+  from: MadeFrom,
+): { readonly 'If-Match': string } | { readonly 'If-None-Match': '*' } {
+  return 'etag' in from ? { 'If-Match': from.etag } : { 'If-None-Match': '*' };
+}
+
+/** A received write's condition, as packages/application checks it. */
+export type ReceivedCondition = {
+  /** The entity-tags of `If-Match`, or `*` for any. */
+  readonly ifMatch?: readonly string[] | '*';
+  readonly ifNoneMatch?: '*';
+};
+
+/**
+ * The condition of a received write, from its `If-Match` and
+ * `If-None-Match` (`undefined` without either). Throws `RequestError` (400)
+ * when one is not in the form the contract takes. Whether the write needs
+ * one is packages/application's to say (`checkCondition`).
+ */
+export function readCondition(headers: {
+  readonly ifMatch: string | null | undefined;
+  readonly ifNoneMatch: string | null | undefined;
+}): ReceivedCondition | undefined {
+  const { ifMatch, ifNoneMatch } = headers;
+  if (ifMatch != null && !v.is(c.vEntityTagList, ifMatch))
+    throw new RequestError({
+      header: 'If-Match',
+      detail: 'not `*` or a list of entity-tags ("…").',
+    });
+  if (ifNoneMatch != null && !v.is(c.vAnyEntityTag, ifNoneMatch))
+    throw new RequestError({
+      header: 'If-None-Match',
+      detail: 'only `*` is taken.',
+    });
+  if (ifMatch == null && ifNoneMatch == null) return undefined;
+  return {
+    ...(ifMatch == null
+      ? {}
+      : {
+          ifMatch:
+            ifMatch === '*'
+              ? '*'
+              : [...ifMatch.matchAll(/(?:W\/)?"[^"]*"/g)].map((m) => m[0]),
+        }),
+    ...(ifNoneMatch == null ? {} : { ifNoneMatch: '*' as const }),
+  };
+}
+
 // ------------------------------------------------------------ the query
 
 type Node = {

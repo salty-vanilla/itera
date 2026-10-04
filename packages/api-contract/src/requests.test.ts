@@ -9,10 +9,13 @@ import { describe, expect, it } from 'vitest';
 import * as sdk from './client';
 import { createClient, createConfig } from './create-client';
 import * as contract from './index';
+import { isConditional } from '@itera/application';
 import {
+  conditionHeaders,
   IDEMPOTENCY_KEY_HEADER,
   idempotencyKeyHeaders,
   queryInput,
+  readCondition,
   readIdempotencyKey,
   RequestError,
   requestOf,
@@ -207,6 +210,88 @@ describe('the idempotency key', () => {
       header: 'Idempotency-Key',
       detail: expect.stringContaining(detail) as string,
     });
+  });
+});
+
+describe('the version a write was made from (#321)', () => {
+  const datas = () => {
+    const types = readFileSync(
+      new URL('generated/types.gen.ts', import.meta.url),
+      'utf8',
+    );
+    return [
+      ...types.matchAll(/export type (\w+)Data = \{([\s\S]*?)\n\};/g),
+    ].map(([, name, body]) => ({
+      id: name!.charAt(0).toLowerCase() + name!.slice(1),
+      body: body!,
+    }));
+  };
+
+  it('is a header of every PATCH, the writes that replace values, and of no other request', () => {
+    const named = datas().filter(({ body }) =>
+      /\n {8}'If-Match'\??: EntityTagList;/.test(body),
+    );
+    const patches = Object.entries(surfaces)
+      .filter(([, surface]) => surface.method === 'PATCH')
+      .map(([id]) => id);
+    expect(named.map(({ id }) => id).toSorted()).toEqual(patches.toSorted());
+    // An operation goes to a PATCH exactly when packages/application
+    // checks its condition.
+    for (const [name, inputs] of Object.entries(OPERATION_EXAMPLES)) {
+      for (const input of inputs) {
+        const { operationId } = requestOf(
+          name as OperationName,
+          input as PlainInput<OperationName>,
+        );
+        expect(patches.includes(operationId), name).toBe(
+          isConditional(name as OperationName),
+        );
+      }
+    }
+  });
+
+  it('is required but on a Goal, which is made from none with If-None-Match', () => {
+    const optional = datas()
+      .filter(({ body }) => /\n {8}'If-Match'\?: EntityTagList;/.test(body))
+      .map(({ id }) => id);
+    const none = datas()
+      .filter(({ body }) => /\n {8}'If-None-Match'\?: AnyEntityTag;/.test(body))
+      .map(({ id }) => id);
+    expect(optional).toEqual(['updateGoal']);
+    expect(none).toEqual(['updateGoal']);
+  });
+
+  it('is sent as If-Match with the etag, or as If-None-Match: *', () => {
+    expect(conditionHeaders({ etag: '"42"' })).toEqual({ 'If-Match': '"42"' });
+    expect(conditionHeaders({ none: true })).toEqual({ 'If-None-Match': '*' });
+  });
+
+  it('is read back as the entity-tags, or any', () => {
+    const read = (ifMatch?: string, ifNoneMatch?: string) =>
+      readCondition({ ifMatch, ifNoneMatch });
+    expect(read()).toBeUndefined();
+    expect(read('"42"')).toEqual({ ifMatch: ['"42"'] });
+    expect(read('"41", W/"42" ,"a,b"')).toEqual({
+      ifMatch: ['"41"', 'W/"42"', '"a,b"'],
+    });
+    expect(read('*')).toEqual({ ifMatch: '*' });
+    expect(read(undefined, '*')).toEqual({ ifNoneMatch: '*' });
+    expect(read('"1"', '*')).toEqual({ ifMatch: ['"1"'], ifNoneMatch: '*' });
+  });
+
+  it.each([
+    ['an unquoted tag', '42', undefined, 'If-Match'],
+    ['an empty If-Match', '', undefined, 'If-Match'],
+    ['a tag in If-None-Match', undefined, '"42"', 'If-None-Match'],
+  ])('refuses %s with 400 at the header', (_, ifMatch, ifNoneMatch, header) => {
+    let error: unknown;
+    try {
+      readCondition({ ifMatch, ifNoneMatch });
+    } catch (thrown) {
+      error = thrown;
+    }
+    expect(error).toBeInstanceOf(RequestError);
+    expect((error as RequestError).issue).toMatchObject({ header });
   });
 });
 

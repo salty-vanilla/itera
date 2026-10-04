@@ -80,7 +80,7 @@ CurrentSprints:
 
 EditableArea:
   type: object
-  required: [id, name, color, archived]
+  required: [id, name, color, archived, etag]
   properties:
     id: { $ref: './common.yaml#/AreaId' }
     name:
@@ -88,6 +88,7 @@ EditableArea:
       type: string
     color: { $ref: './records.yaml#/AreaColor' }
     archived: { type: boolean }
+    etag: { $ref: './common.yaml#/ETag' }
 # --------------------------------------------------------------- Backlog
 BacklogSlice:
   type: string

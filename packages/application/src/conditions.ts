@@ -11,10 +11,12 @@ import { etagOf, versionKey, versionOf, type RecordVersions } from './versions';
  * What a write says it was made from (RFC 9110 §13.1.1, §13.1.2): one of
  * the record's etags it read (`ifMatch`, `'*'` for any), or that it read
  * none (`ifNoneMatch: '*'`, for an operation that makes the record when
- * there is none).
+ * there is none). Both are checked when both are sent.
  */
-export type Condition =
-  { readonly ifMatch: readonly string[] | '*' } | { readonly ifNoneMatch: '*' };
+export type Condition = {
+  readonly ifMatch?: readonly string[] | '*';
+  readonly ifNoneMatch?: '*';
+};
 
 /** The record a conditional write replaces, and whether there is one now. */
 type Target = { readonly key: string; readonly exists: boolean };
@@ -175,10 +177,13 @@ export function checkCondition<N extends OperationName>(
   const targetOf = conditionTargets[name] as TargetOf<ConditionalOperation>;
   const target = targetOf(input as never, records);
   if (target === undefined) return 'met';
-  if (condition === undefined) return 'required';
-  if ('ifNoneMatch' in condition) return target.exists ? 'failed' : 'met';
-  if (!target.exists) return 'failed';
-  if (condition.ifMatch === '*') return 'met';
-  const etag = etagOf(versionOf(versions, target.key));
-  return condition.ifMatch.includes(etag) ? 'met' : 'failed';
+  const { ifMatch, ifNoneMatch } = condition ?? {};
+  if (ifMatch === undefined && ifNoneMatch === undefined) return 'required';
+  if (ifMatch !== undefined) {
+    if (!target.exists) return 'failed';
+    const etag = etagOf(versionOf(versions, target.key));
+    if (ifMatch !== '*' && !ifMatch.includes(etag)) return 'failed';
+  }
+  if (ifNoneMatch !== undefined && target.exists) return 'failed';
+  return 'met';
 }

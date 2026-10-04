@@ -219,11 +219,17 @@ export const vAreaColor = v.picklist([
     7
 ]);
 
+/**
+ * The record's version (ADR 0006 記録ごとの版): a strong entity-tag (RFC 9110 §8.8.3), the number of the person's save that last changed the record's own values, in double quotes. Output only. A write that replaces the record's values sends it back in `If-Match`; the record has changed since when it no longer matches (412). Opaque: compare it, never read the number.
+ */
+export const vETag = v.pipe(v.pipe(v.string(), v.regex(/^"[0-9]+"$/)), v.readonly());
+
 export const vEditableArea = v.object({
     id: vAreaId,
     name: v.string(),
     color: vAreaColor,
-    archived: v.boolean()
+    archived: v.boolean(),
+    etag: vETag
 });
 
 /**
@@ -233,6 +239,31 @@ export const vNotFoundError = v.object({
     type: v.literal('/problems/not-found'),
     title: v.string(),
     status: v.literal(404),
+    detail: v.string()
+});
+
+/**
+ * `If-Match` (RFC 9110 §13.1.1): `*`, or one or more entity-tags, each in double quotes, separated by commas. A weak one (`W/"…"`) never matches: the API compares them strongly.
+ */
+export const vEntityTagList = v.pipe(v.string(), v.regex(/^(\*|(W\/)?"[!#-~]*"([ \t]*,[ \t]*(W\/)?"[!#-~]*")*)$/));
+
+/**
+ * The record a write replaces is not the version it was made from (its `If-Match`), or is there when it said there was none (`If-None-Match: *`): it changed on another device since it was read. Nothing was done; read it again (ADR 0006 記録ごとの版).
+ */
+export const vPreconditionFailedError = v.object({
+    type: v.literal('/problems/precondition-failed'),
+    title: v.string(),
+    status: v.literal(412),
+    detail: v.string()
+});
+
+/**
+ * A write that replaces a record's values came without `If-Match` (or, where it can make the record, `If-None-Match: *`) (RFC 6585 §3). Nothing was done.
+ */
+export const vPreconditionRequiredError = v.object({
+    type: v.literal('/problems/precondition-required'),
+    title: v.string(),
+    status: v.literal(428),
     detail: v.string()
 });
 
@@ -319,7 +350,8 @@ export const vSubtask = v.object({
     title: v.string(),
     estimate: v.optional(v.number()),
     done: v.boolean(),
-    doneAt: v.optional(vInstant)
+    doneAt: v.optional(vInstant),
+    etag: vETag
 });
 
 export const vSuggestionState = v.picklist([
@@ -364,7 +396,8 @@ export const vTask = v.object({
     createdAt: vInstant,
     createdVia: vTaskCreatedVia,
     completedAt: v.optional(vInstant),
-    archivedAt: v.optional(vInstant)
+    archivedAt: v.optional(vInstant),
+    etag: vETag
 });
 
 /**
@@ -512,7 +545,8 @@ export const vSprintGoal = v.object({
     areaId: vAreaId,
     text: v.string(),
     plannedText: v.optional(v.string()),
-    selfAssessment: v.optional(vSelfAssessment)
+    selfAssessment: v.optional(vSelfAssessment),
+    etag: vETag
 });
 
 export const vSprintTaskId = v.pipe(v.string(), v.regex(/^sprint_task_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
@@ -555,7 +589,8 @@ export const vSprintTask = v.object({
     goalLink: vGoalLink,
     outcome: vSprintTaskOutcome,
     planSnapshot: v.optional(vPlanSnapshot),
-    carriedFrom: v.optional(vSprintTaskId)
+    carriedFrom: v.optional(vSprintTaskId),
+    etag: vETag
 });
 
 export const vSprintAreaSnapshotEntry = v.object({
@@ -575,7 +610,8 @@ export const vRetroDecision = v.picklist([
 export const vCriterionUse = v.object({
     criterionId: vPlanningCriterionId,
     appliedAtConfirm: v.boolean(),
-    retroDecision: v.optional(vRetroDecision)
+    retroDecision: v.optional(vRetroDecision),
+    etag: vETag
 });
 
 export const vDailySelectionOrigin = v.picklist([
@@ -633,7 +669,8 @@ export const vInterruptNote = v.object({
     id: vInterruptNoteId,
     at: vInstant,
     text: v.string(),
-    minutes: v.optional(v.number())
+    minutes: v.optional(v.number()),
+    etag: vETag
 });
 
 export const vRetroPin = v.object({
@@ -658,7 +695,8 @@ export const vRetro = v.object({
     completedAt: v.optional(vInstant),
     pins: v.array(vRetroPin),
     reflection: v.string(),
-    improvement: v.optional(vRetroImprovement)
+    improvement: v.optional(vRetroImprovement),
+    etag: vETag
 });
 
 /**
@@ -681,7 +719,8 @@ export const vSprint = v.object({
     dailySelections: v.array(vDailySelection),
     actualTimes: v.array(vActualTime),
     interrupts: v.array(vInterruptNote),
-    retro: v.optional(vRetro)
+    retro: v.optional(vRetro),
+    etag: vETag
 });
 
 /**
@@ -1071,6 +1110,11 @@ export const vSprintView = v.union([v.object({
         running: vRunningData
     })]);
 
+/**
+ * `If-None-Match: *` (RFC 9110 §13.1.2): the write was made from no record, and is not to be made over one that is there now.
+ */
+export const vAnyEntityTag = v.picklist(['*']);
+
 export const vCandidateRow = v.object({
     task: vTask,
     chosen: v.optional(vSprintTask),
@@ -1193,7 +1237,8 @@ export const vPlanningCriterion = v.object({
     sourceSprintId: vSprintId,
     state: vCriterionState,
     replacedBy: v.optional(vPlanningCriterionId),
-    createdAt: vInstant
+    createdAt: vInstant,
+    etag: vETag
 });
 
 export const vCriterionResult = v.object({
@@ -1277,10 +1322,491 @@ export const vRetroData = v.object({
     carryOverTasks: v.array(vCarryOverTask)
 });
 
+export const vEditableAreaWritable = v.object({
+    id: vAreaId,
+    name: v.string(),
+    color: vAreaColor,
+    archived: v.boolean()
+});
+
+export const vSubtaskWritable = v.object({
+    id: vSubtaskId,
+    title: v.string(),
+    estimate: v.optional(v.number()),
+    done: v.boolean(),
+    doneAt: v.optional(vInstant)
+});
+
+export const vTaskWritable = v.object({
+    id: vTaskId,
+    userId: vUserId,
+    title: v.string(),
+    description: v.string(),
+    areaId: v.optional(vAreaId),
+    due: v.optional(vLocalDate),
+    priority: vTaskPriority,
+    lifecycle: vTaskLifecycle,
+    timeBasis: vTimeBasis,
+    subtasks: v.array(vSubtaskWritable),
+    estimate: v.optional(vEstimate),
+    suggestions: v.array(vEstimateSuggestion),
+    recurrenceRuleId: v.optional(vRecurrenceRuleId),
+    createdAt: vInstant,
+    createdVia: vTaskCreatedVia,
+    completedAt: v.optional(vInstant),
+    archivedAt: v.optional(vInstant)
+});
+
+export const vBacklogItemWritable = v.object({
+    task: vTaskWritable,
+    area: v.optional(v.object({
+        name: v.string(),
+        color: vAreaColor
+    })),
+    carry: v.optional(vCarryCount),
+    recurrence: v.optional(vRecurrenceSummary),
+    rule: v.optional(v.object({
+        current: vRecurrencePattern,
+        latest: vRecurrencePattern
+    })),
+    thisWeek: v.optional(v.object({
+        midSprint: v.boolean(),
+        confirmed: v.boolean()
+    })),
+    nextWeek: v.optional(v.literal(true)),
+    today: v.optional(v.object({
+        selectionId: vDailySelectionId,
+        resolution: vListedResolution,
+        startedAt: v.optional(vInstant),
+        recurring: v.boolean()
+    })),
+    closedToday: v.optional(vClosedResolution),
+    value: vPlanningValue,
+    taskValue: vPlanningValue,
+    subtaskValue: vPlanningValue,
+    canAddToToday: v.boolean(),
+    canAddToWeek: v.boolean(),
+    todayOpensOn: v.optional(v.object({
+        number: v.pipe(v.number(), v.integer()),
+        start: vLocalDate
+    })),
+    canComplete: v.boolean()
+});
+
+export const vBacklogDataWritable = v.object({
+    today: vLocalDate,
+    lastDay: v.boolean(),
+    timeZone: vTimeZone,
+    areas: v.array(v.object({
+        id: vAreaId,
+        name: v.string(),
+        color: vAreaColor,
+        count: v.pipe(v.number(), v.integer())
+    })),
+    sliceCounts: v.object({
+        all: v.pipe(v.number(), v.integer()),
+        dueSoon: v.pipe(v.number(), v.integer()),
+        overdue: v.pipe(v.number(), v.integer()),
+        carriedOver: v.pipe(v.number(), v.integer()),
+        recurring: v.pipe(v.number(), v.integer()),
+        noArea: v.pipe(v.number(), v.integer())
+    }),
+    shown: v.array(vTaskId),
+    items: v.record(v.string(), vBacklogItemWritable)
+});
+
+export const vSprintGoalWritable = v.object({
+    areaId: vAreaId,
+    text: v.string(),
+    plannedText: v.optional(v.string()),
+    selfAssessment: v.optional(vSelfAssessment)
+});
+
+export const vSprintTaskWritable = v.object({
+    id: vSprintTaskId,
+    taskId: vTaskId,
+    occurrenceIds: v.optional(v.array(vOccurrenceId)),
+    origin: vSprintTaskOrigin,
+    addedAt: vInstant,
+    goalLink: vGoalLink,
+    outcome: vSprintTaskOutcome,
+    planSnapshot: v.optional(vPlanSnapshot),
+    carriedFrom: v.optional(vSprintTaskId)
+});
+
+export const vCriterionUseWritable = v.object({
+    criterionId: vPlanningCriterionId,
+    appliedAtConfirm: v.boolean(),
+    retroDecision: v.optional(vRetroDecision)
+});
+
+export const vInterruptNoteWritable = v.object({
+    id: vInterruptNoteId,
+    at: vInstant,
+    text: v.string(),
+    minutes: v.optional(v.number())
+});
+
+export const vRetroWritable = v.object({
+    startedAt: vInstant,
+    completedAt: v.optional(vInstant),
+    pins: v.array(vRetroPin),
+    reflection: v.string(),
+    improvement: v.optional(vRetroImprovement)
+});
+
+/**
+ * The aggregate root of its SprintTasks, DailySelections, Retro, ….
+ */
+export const vSprintWritable = v.object({
+    id: vSprintId,
+    userId: vUserId,
+    start: vLocalDate,
+    end: vLocalDate,
+    state: vSprintState,
+    previousSprintId: v.optional(vSprintId),
+    availableHours: v.optional(v.number()),
+    plannedAvailableHours: v.optional(v.number()),
+    confirmedAt: v.optional(vInstant),
+    goals: v.array(vSprintGoalWritable),
+    tasks: v.array(vSprintTaskWritable),
+    areaSnapshot: v.array(vSprintAreaSnapshotEntry),
+    criterionUse: v.optional(vCriterionUseWritable),
+    dailySelections: v.array(vDailySelection),
+    actualTimes: v.array(vActualTime),
+    interrupts: v.array(vInterruptNoteWritable),
+    retro: v.optional(vRetroWritable)
+});
+
+export const vTodayRowWritable = v.object({
+    sprintTask: vSprintTaskWritable,
+    task: vTaskWritable,
+    area: v.optional(vAreaLabel),
+    occurrence: v.optional(vOccurrence),
+    value: vPlanningValue,
+    streak: v.pipe(v.number(), v.integer()),
+    removedToday: v.optional(vDailySelectionId),
+    selection: vDailySelection,
+    actualHours: v.number()
+});
+
+export const vTodayItemWritable = v.object({
+    sprintTask: vSprintTaskWritable,
+    task: vTaskWritable,
+    area: v.optional(vAreaLabel),
+    occurrence: v.optional(vOccurrence),
+    value: vPlanningValue,
+    streak: v.pipe(v.number(), v.integer()),
+    removedToday: v.optional(vDailySelectionId)
+});
+
+export const vTodayDataWritable = v.object({
+    sprint: vSprintWritable,
+    number: v.pipe(v.number(), v.integer()),
+    today: vLocalDate,
+    day: vDayOfSprint,
+    lastDay: v.boolean(),
+    timeZone: vTimeZone,
+    progress: vWeekProgress,
+    remaining: vTodayRemaining,
+    goals: v.array(v.object({
+        area: vAreaLabel,
+        text: v.string()
+    })),
+    rows: v.array(vTodayRowWritable),
+    closed: v.array(vTodayRowWritable),
+    continuation: v.array(vTodayItemWritable),
+    rest: v.array(vTodayItemWritable),
+    plan: v.array(vTodayItemWritable),
+    interrupts: v.array(vInterruptNoteWritable),
+    areas: v.array(vAreaLabel)
+});
+
+/**
+ * A Sprint a screen can open, or the next week before its Planning.
+ */
+export const vSprintRefWritable = v.object({
+    number: v.pipe(v.number(), v.integer()),
+    start: vLocalDate,
+    end: vLocalDate,
+    sprint: v.optional(vSprintWritable),
+    week: v.optional(vSprintWeek)
+});
+
+export const vDayDataWritable = v.object({
+    date: vLocalDate,
+    today: vLocalDate,
+    when: v.picklist(['past', 'future']),
+    timeZone: vTimeZone,
+    within: v.optional(v.object({
+        number: v.pipe(v.number(), v.integer()),
+        start: vLocalDate,
+        end: vLocalDate,
+        sprint: v.optional(vSprintWritable),
+        week: v.optional(vSprintWeek),
+        day: vDayOfSprint
+    })),
+    next: v.optional(vSprintRefWritable),
+    records: v.array(vDayRecord),
+    interrupts: v.array(vInterruptNoteWritable),
+    occurrences: v.array(v.object({
+        occurrence: vOccurrence,
+        title: v.string(),
+        area: v.optional(vAreaLabel)
+    })),
+    due: v.array(v.object({
+        task: vTaskWritable,
+        area: v.optional(vAreaLabel)
+    }))
+});
+
+/**
+ * A day (#295 R3), today, past or still to come: today's choices on the running Sprint (`today` is left out when none runs), or another day's records or occurrences.
+ */
+export const vDayViewWritable = v.union([v.object({
+        kind: v.literal('today'),
+        today: v.optional(vTodayDataWritable)
+    }), v.object({
+        kind: v.picklist(['past', 'future']),
+        day: vDayDataWritable
+    })]);
+
+export const vPlannedTaskWritable = v.object({
+    sprintTask: vSprintTaskWritable,
+    task: vTaskWritable,
+    value: vPlanningValue,
+    occurrenceCount: v.optional(v.pipe(v.number(), v.integer())),
+    suggestion: v.optional(vRange),
+    linkAtConfirm: vGoalLink,
+    inactive: v.optional(v.picklist(['completed', 'archived']))
+});
+
+export const vAreaPlanWritable = v.object({
+    area: v.optional(vAreaLabel),
+    goal: v.optional(vSprintGoalWritable),
+    tasks: v.array(vPlannedTaskWritable),
+    total: v.optional(vAreaTotal)
+});
+
+/**
+ * A Task whose range widens the week's total the most.
+ */
+export const vCapacityDriverWritable = v.object({
+    sprintTask: vSprintTaskWritable,
+    task: vTaskWritable,
+    value: vEstimatedPlanningValue,
+    fromRange: v.optional(vRange),
+    spread: v.number()
+});
+
+/**
+ * A Sprint being planned: its plan (#295 R2). The Tasks it can choose are a resource of their own (SprintCandidates).
+ */
+export const vSprintPlanWritable = v.object({
+    sprint: vSprintWritable,
+    number: v.pipe(v.number(), v.integer()),
+    week: v.optional(vSprintWeek),
+    today: vLocalDate,
+    timeZone: vTimeZone,
+    areas: v.array(vAreaLabel),
+    addAreas: v.array(vAreaLabel),
+    plan: v.array(vAreaPlanWritable),
+    chosenCount: v.pipe(v.number(), v.integer()),
+    totals: vSprintTotals,
+    drivers: v.array(vCapacityDriverWritable),
+    improvement: v.optional(vRetroImprovement),
+    criterion: v.optional(v.object({
+        active: vActiveCriterion,
+        view: vCriterionView,
+        areaName: v.optional(v.string()),
+        applied: v.boolean(),
+        effect: vCriterionEffect,
+        hasTarget: v.boolean()
+    })),
+    blockers: v.array(vPlanningBlocker),
+    previous: v.optional(v.object({
+        number: v.pipe(v.number(), v.integer()),
+        end: vLocalDate,
+        state: vSprintState
+    }))
+});
+
+export const vRunningTaskWritable = v.object({
+    sprintTask: vSprintTaskWritable,
+    task: vTaskWritable,
+    value: vPlanningValue,
+    occurrences: v.optional(vOccurrenceProgress),
+    carry: v.optional(vCarryCount),
+    nextWeek: v.optional(v.literal(true))
+});
+
+export const vRunningAreaPlanWritable = v.object({
+    area: v.optional(vSprintAreaLabel),
+    goal: v.optional(vSprintGoalWritable),
+    tasks: v.array(vRunningTaskWritable)
+});
+
+export const vRunningDataWritable = v.object({
+    sprint: vSprintWritable,
+    number: v.pipe(v.number(), v.integer()),
+    week: v.optional(vSprintWeek),
+    today: vLocalDate,
+    day: v.optional(vDayOfSprint),
+    plan: v.array(vRunningAreaPlanWritable),
+    totals: v.object({
+        total: vPlanningTotal,
+        byArea: v.array(vAreaTotal)
+    }),
+    availableHours: vAvailableHours,
+    progress: v.optional(vWeekProgress),
+    pastDays: v.array(vPastDay),
+    criterion: v.optional(v.object({
+        policy: vCriterionPolicy,
+        areaName: v.optional(v.string()),
+        applied: v.boolean(),
+        noEffect: v.boolean()
+    }))
+});
+
+/**
+ * A Sprint (#295 R2): while planned, its plan; once confirmed, how it went.
+ */
+export const vSprintViewWritable = v.union([v.object({
+        state: v.literal('planning'),
+        plan: vSprintPlanWritable
+    }), v.object({
+        state: v.picklist([
+            'active',
+            'review',
+            'closed'
+        ]),
+        running: vRunningDataWritable
+    })]);
+
+export const vCandidateRowWritable = v.object({
+    task: vTaskWritable,
+    chosen: v.optional(vSprintTaskWritable),
+    carriedFrom: v.optional(vSprintTaskWritable),
+    area: v.optional(vAreaLabel),
+    value: vPlanningValue,
+    carry: v.optional(vCarryCount),
+    running: v.optional(v.object({
+        sprint: v.pipe(v.number(), v.integer())
+    }))
+});
+
+export const vRecurringCandidateWritable = v.object({
+    task: vTaskWritable,
+    occurrences: v.array(vOccurrence),
+    area: v.optional(vAreaLabel)
+});
+
+/**
+ * The Tasks a Sprint being planned can choose, in groups (選ぶ).
+ */
+export const vSprintCandidatesWritable = v.object({
+    carriedOver: v.array(vCandidateRowWritable),
+    overdue: v.array(vCandidateRowWritable),
+    dueSoon: v.array(vCandidateRowWritable),
+    dueSoonUntil: vLocalDate,
+    recurring: v.array(vRecurringCandidateWritable),
+    others: v.array(vCandidateRowWritable)
+});
+
+/**
+ * Retro の事実, derived from the Sprint's records.
+ */
+export const vRetroFactsWritable = v.object({
+    areas: v.array(vAreaFacts),
+    tasks: v.array(vTaskFact),
+    completed: v.array(vTaskFact),
+    carriedOver: v.array(vTaskFact),
+    removed: v.array(vTaskFact),
+    midSprint: v.array(vTaskFact),
+    occurrences: vOccurrenceFacts,
+    deferrals: v.array(vDailySelection),
+    pauses: v.array(vDailySelection),
+    interrupts: v.array(vInterruptNoteWritable),
+    interruptTime: v.object({
+        minutes: v.number(),
+        withoutMinutes: v.pipe(v.number(), v.integer())
+    }),
+    availableHours: vAvailableHours,
+    plannedTotal: v.object({
+        atConfirm: vPlanningTotal,
+        withAdditions: vPlanningTotal
+    }),
+    capacity: v.optional(v.object({
+        atConfirm: vCapacity,
+        withAdditions: vCapacity
+    })),
+    actualHours: v.number()
+});
+
+export const vPlanningCriterionWritable = v.object({
+    id: vPlanningCriterionId,
+    userId: vUserId,
+    policy: vCriterionPolicy,
+    sourceSprintId: vSprintId,
+    state: vCriterionState,
+    replacedBy: v.optional(vPlanningCriterionId),
+    createdAt: vInstant
+});
+
+export const vRetroCriterionWritable = v.object({
+    criterion: vPlanningCriterionWritable,
+    view: vCriterionView,
+    areaName: v.optional(v.string())
+});
+
+export const vRetroDataWritable = v.object({
+    sprint: vSprintWritable,
+    number: v.pipe(v.number(), v.integer()),
+    week: v.optional(vSprintWeek),
+    today: vLocalDate,
+    timeZone: vTimeZone,
+    facts: vRetroFactsWritable,
+    sprintAreas: v.record(v.string(), vSprintAreaLabel),
+    areas: v.array(vSprintAreaLabel),
+    taskTitles: v.record(v.string(), v.string()),
+    used: v.optional(v.object({
+        criterion: vPlanningCriterionWritable,
+        view: vCriterionView,
+        areaName: v.optional(v.string()),
+        appliedAtConfirm: v.boolean(),
+        result: vCriterionResult,
+        decision: v.optional(vRetroDecision)
+    })),
+    draft: v.optional(vRetroCriterionWritable),
+    pins: v.array(vRetroPin),
+    reflection: v.string(),
+    improvement: v.optional(v.string()),
+    blockers: v.array(vRetroBlocker),
+    actualDate: vLocalDate,
+    occurrences: v.array(vRetroOccurrence),
+    carryOver: vCarryOverPlaces,
+    carryOverTasks: v.array(vCarryOverTask)
+});
+
 /**
  * Names this write, so that sending it again is safe (the IETF draft draft-ietf-httpapi-idempotency-key-header-07). A new UUID for each write the person makes, the same one when the same write is sent again. A Structured Field String (RFC 9651): the UUID in double quotes; parameters after it are ignored. Within 24 hours of the first, the same key with the same request answers what the first one answered, without doing it again; with another request (method, path, query or body), 422 `/problems/idempotency-key-reused`. Only a write that was saved is kept: one that was refused, or changed nothing, runs again.
  */
 export const vIdempotencyKeyHeader = vIdempotencyKey;
+
+/**
+ * The `etag` of the record as read before the write was made (RFC 9110 §13.1.1). When the record has changed since, the write is not made and the answer is 412 `/problems/precondition-failed`; without it, 428 `/problems/precondition-required`. A write sent again with its Idempotency-Key answers what it answered first, before this is compared.
+ */
+export const vIfMatchHeader = vEntityTagList;
+
+/**
+ * The `etag` of the record as read before the write was made, when there was one (RFC 9110 §13.1.1). One of `If-Match` and `If-None-Match` is required (428 `/problems/precondition-required` without either); 412 `/problems/precondition-failed` when the record has changed since, or is gone.
+ */
+export const vOptionalIfMatchHeader = vEntityTagList;
+
+/**
+ * `*` when the write was made from no record (RFC 9110 §13.1.2): 412 `/problems/precondition-failed` when one has been made since (on another device), instead of writing over it.
+ */
+export const vIfNoneMatchHeader = vAnyEntityTag;
 
 /**
  * The person.
@@ -1332,7 +1858,8 @@ export const vRenameAreaBody = v.strictObject({
 });
 
 export const vRenameAreaHeaders = v.object({
-    'Idempotency-Key': vIdempotencyKey
+    'Idempotency-Key': vIdempotencyKey,
+    'If-Match': vEntityTagList
 });
 
 export const vRenameAreaPath = v.object({
@@ -1397,7 +1924,8 @@ export const vSaveTaskBody = v.strictObject({
 });
 
 export const vSaveTaskHeaders = v.object({
-    'Idempotency-Key': vIdempotencyKey
+    'Idempotency-Key': vIdempotencyKey,
+    'If-Match': vEntityTagList
 });
 
 export const vSaveTaskPath = v.object({
@@ -1522,7 +2050,8 @@ export const vUpdateSubtaskBody = v.union([v.strictObject({
     })]);
 
 export const vUpdateSubtaskHeaders = v.object({
-    'Idempotency-Key': vIdempotencyKey
+    'Idempotency-Key': vIdempotencyKey,
+    'If-Match': vEntityTagList
 });
 
 export const vUpdateSubtaskPath = v.object({
@@ -1670,7 +2199,8 @@ export const vSetAvailableHoursBody = v.strictObject({
 });
 
 export const vSetAvailableHoursHeaders = v.object({
-    'Idempotency-Key': vIdempotencyKey
+    'Idempotency-Key': vIdempotencyKey,
+    'If-Match': vEntityTagList
 });
 
 export const vSetAvailableHoursPath = v.object({
@@ -1706,7 +2236,9 @@ export const vUpdateGoalBody = v.union([v.strictObject({
     })]);
 
 export const vUpdateGoalHeaders = v.object({
-    'Idempotency-Key': vIdempotencyKey
+    'Idempotency-Key': vIdempotencyKey,
+    'If-Match': v.optional(vEntityTagList),
+    'If-None-Match': v.optional(vAnyEntityTag)
 });
 
 export const vUpdateGoalPath = v.object({
@@ -1778,7 +2310,8 @@ export const vSetGoalLinkBody = v.strictObject({
 });
 
 export const vSetGoalLinkHeaders = v.object({
-    'Idempotency-Key': vIdempotencyKey
+    'Idempotency-Key': vIdempotencyKey,
+    'If-Match': vEntityTagList
 });
 
 export const vSetGoalLinkPath = v.object({
@@ -2100,7 +2633,8 @@ export const vEditInterruptBody = v.strictObject({
 });
 
 export const vEditInterruptHeaders = v.object({
-    'Idempotency-Key': vIdempotencyKey
+    'Idempotency-Key': vIdempotencyKey,
+    'If-Match': vEntityTagList
 });
 
 export const vEditInterruptPath = v.object({
@@ -2152,7 +2686,8 @@ export const vUpdateRetroBody = v.union([v.strictObject({
     })]);
 
 export const vUpdateRetroHeaders = v.object({
-    'Idempotency-Key': vIdempotencyKey
+    'Idempotency-Key': vIdempotencyKey,
+    'If-Match': vEntityTagList
 });
 
 export const vUpdateRetroPath = v.object({
@@ -2232,7 +2767,8 @@ export const vDecideCriterionBody = v.strictObject({
 });
 
 export const vDecideCriterionHeaders = v.object({
-    'Idempotency-Key': vIdempotencyKey
+    'Idempotency-Key': vIdempotencyKey,
+    'If-Match': vEntityTagList
 });
 
 export const vDecideCriterionPath = v.object({
@@ -2278,7 +2814,8 @@ export const vSetDraftPolicyBody = v.strictObject({
 });
 
 export const vSetDraftPolicyHeaders = v.object({
-    'Idempotency-Key': vIdempotencyKey
+    'Idempotency-Key': vIdempotencyKey,
+    'If-Match': vEntityTagList
 });
 
 export const vSetDraftPolicyPath = v.object({

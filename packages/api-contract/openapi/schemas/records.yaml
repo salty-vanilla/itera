@@ -1,5 +1,7 @@
 # The records of packages/domain, in the same shape (ADR 0006 記録の DTO).
 # An optional property is left out when it has no value; it is never null.
+# A record whose values a write replaces (a PATCH) has an output-only
+# `etag`, its version, which that write sends back (ADR 0006 記録ごとの版).
 # Value rules (positive hours, a non-empty title, state transitions) are the
 # domain's: the contract describes the shape only.
 
@@ -41,7 +43,7 @@ SuggestionBound:
   enum: [lo, mid, hi]
 Subtask:
   type: object
-  required: [id, title, done]
+  required: [id, title, done, etag]
   properties:
     id: { $ref: './common.yaml#/SubtaskId' }
     title: { type: string }
@@ -50,6 +52,7 @@ Subtask:
       type: number
     done: { type: boolean }
     doneAt: { $ref: './common.yaml#/Instant' }
+    etag: { $ref: './common.yaml#/ETag' }
 EstimateSource:
   oneOf:
     - type: object
@@ -106,6 +109,7 @@ Task:
     - suggestions
     - createdAt
     - createdVia
+    - etag
   properties:
     id: { $ref: './common.yaml#/TaskId' }
     userId: { $ref: './common.yaml#/UserId' }
@@ -130,6 +134,7 @@ Task:
     createdVia: { $ref: '#/TaskCreatedVia' }
     completedAt: { $ref: './common.yaml#/Instant' }
     archivedAt: { $ref: './common.yaml#/Instant' }
+    etag: { $ref: './common.yaml#/ETag' }
 # ------------------------------------------------------------ Recurrence
 RecurrencePattern:
   oneOf:
@@ -268,7 +273,7 @@ PlanSnapshot:
     occurrenceCount: { type: integer }
 SprintTask:
   type: object
-  required: [id, taskId, origin, addedAt, goalLink, outcome]
+  required: [id, taskId, origin, addedAt, goalLink, outcome, etag]
   properties:
     id: { $ref: './common.yaml#/SprintTaskId' }
     taskId: { $ref: './common.yaml#/TaskId' }
@@ -284,14 +289,16 @@ SprintTask:
     outcome: { $ref: '#/SprintTaskOutcome' }
     planSnapshot: { $ref: '#/PlanSnapshot' }
     carriedFrom: { $ref: './common.yaml#/SprintTaskId' }
+    etag: { $ref: './common.yaml#/ETag' }
 SprintGoal:
   type: object
-  required: [areaId, text]
+  required: [areaId, text, etag]
   properties:
     areaId: { $ref: './common.yaml#/AreaId' }
     text: { type: string }
     plannedText: { type: string }
     selfAssessment: { $ref: '#/SelfAssessment' }
+    etag: { $ref: './common.yaml#/ETag' }
 SprintAreaSnapshotEntry:
   type: object
   required: [areaId, name, order]
@@ -301,11 +308,12 @@ SprintAreaSnapshotEntry:
     order: { type: number }
 CriterionUse:
   type: object
-  required: [criterionId, appliedAtConfirm]
+  required: [criterionId, appliedAtConfirm, etag]
   properties:
     criterionId: { $ref: './common.yaml#/PlanningCriterionId' }
     appliedAtConfirm: { type: boolean }
     retroDecision: { $ref: '#/RetroDecision' }
+    etag: { $ref: './common.yaml#/ETag' }
 DailyResolution:
   type: string
   enum:
@@ -358,12 +366,13 @@ ActualTime:
     recordedAt: { $ref: './common.yaml#/Instant' }
 InterruptNote:
   type: object
-  required: [id, at, text]
+  required: [id, at, text, etag]
   properties:
     id: { $ref: './common.yaml#/InterruptNoteId' }
     at: { $ref: './common.yaml#/Instant' }
     text: { type: string }
     minutes: { type: number }
+    etag: { $ref: './common.yaml#/ETag' }
 RetroPin:
   type: object
   required: [kind]
@@ -388,7 +397,7 @@ RetroImprovement:
     criterionId: { $ref: './common.yaml#/PlanningCriterionId' }
 Retro:
   type: object
-  required: [startedAt, pins, reflection]
+  required: [startedAt, pins, reflection, etag]
   properties:
     startedAt: { $ref: './common.yaml#/Instant' }
     completedAt: { $ref: './common.yaml#/Instant' }
@@ -397,6 +406,7 @@ Retro:
       items: { $ref: '#/RetroPin' }
     reflection: { type: string }
     improvement: { $ref: '#/RetroImprovement' }
+    etag: { $ref: './common.yaml#/ETag' }
 Sprint:
   description: The aggregate root of its SprintTasks, DailySelections, Retro, ….
   type: object
@@ -412,6 +422,7 @@ Sprint:
     - dailySelections
     - actualTimes
     - interrupts
+    - etag
   properties:
     id: { $ref: './common.yaml#/SprintId' }
     userId: { $ref: './common.yaml#/UserId' }
@@ -442,6 +453,7 @@ Sprint:
       type: array
       items: { $ref: '#/InterruptNote' }
     retro: { $ref: '#/Retro' }
+    etag: { $ref: './common.yaml#/ETag' }
 
 # ---------------------------------------------------- PlanningCriterion
 CriterionState:
@@ -449,7 +461,7 @@ CriterionState:
   enum: [draft, active, ended, replaced]
 PlanningCriterion:
   type: object
-  required: [id, userId, policy, sourceSprintId, state, createdAt]
+  required: [id, userId, policy, sourceSprintId, state, createdAt, etag]
   properties:
     id: { $ref: './common.yaml#/PlanningCriterionId' }
     userId: { $ref: './common.yaml#/UserId' }
@@ -458,3 +470,4 @@ PlanningCriterion:
     state: { $ref: '#/CriterionState' }
     replacedBy: { $ref: './common.yaml#/PlanningCriterionId' }
     createdAt: { $ref: './common.yaml#/Instant' }
+    etag: { $ref: './common.yaml#/ETag' }

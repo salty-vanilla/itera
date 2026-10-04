@@ -28,7 +28,13 @@ import {
 } from '@itera/domain';
 import type { Clock, Records } from './records';
 import { weekOf, type SprintWeek } from './sprint-choice';
-import type { TaggedCriterion, TaggedRecords, TaggedSprint } from './versions';
+import {
+  taggedIn,
+  type TaggedCriterion,
+  type TaggedInterruptNote,
+  type TaggedRecords,
+  type TaggedSprint,
+} from './versions';
 
 export interface RetroArea {
   readonly id: AreaId;
@@ -79,7 +85,9 @@ export interface RetroData {
   readonly week?: SprintWeek;
   readonly today: LocalDate;
   readonly timeZone: Records['user']['timeZone'];
-  readonly facts: RetroFacts;
+  readonly facts: Omit<RetroFacts, 'interrupts'> & {
+    readonly interrupts: readonly TaggedInterruptNote[];
+  };
   /** Every Area by ID, its name and color as this Sprint shows them (F5). */
   readonly sprintAreas: Readonly<Record<AreaId, RetroArea>>;
   /** Areas to make a criterion for, in the person's order. */
@@ -188,7 +196,10 @@ export function retroData(
     ...weekOf(sprint, records, clock),
     today: clock.today,
     timeZone: records.user.timeZone,
-    facts,
+    facts: {
+      ...facts,
+      interrupts: facts.interrupts.map(taggedIn(sprint.interrupts)),
+    },
     sprintAreas: Object.fromEntries(allAreas.map((a) => [a.id, areaOf(a.id)])),
     areas: allAreas
       .filter((a) => !a.archived)

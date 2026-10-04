@@ -34,6 +34,11 @@ const NOT_READS = new Set([
   'mergeChanges',
   'createIdSource',
   'parseId',
+  // The versions of the records and the conditions of writes (#321).
+  'etagOf',
+  'tagRecords',
+  'checkCondition',
+  'isConditional',
 ]);
 
 const contract = Object.entries(sdk)

@@ -143,7 +143,7 @@ export interface SprintPlan {
   readonly chosenCount: number;
   readonly totals: SprintTotals;
   /** 「何が上振れすると超過するか」. */
-  readonly drivers: readonly CapacityDriver[];
+  readonly drivers: readonly TaggedCapacityDriver[];
   readonly improvement?: RetroImprovement;
   readonly criterion?: {
     readonly active: ActiveCriterion;
@@ -186,6 +186,12 @@ function areaOf(records: TaggedRecords, task: Task): PlanningArea | undefined {
     : { id: area.id, name: area.name, color: area.color };
 }
 
+/** A Task that widens the week's total, with the records' etags. */
+type TaggedCapacityDriver = Omit<CapacityDriver, 'sprintTask' | 'task'> & {
+  readonly sprintTask: TaggedSprintTask;
+  readonly task: TaggedTask;
+};
+
 /** The plan of a Sprint being planned (整える・確かめる). */
 export function sprintPlanOf(
   records: TaggedRecords,
@@ -194,6 +200,8 @@ export function sprintPlanOf(
   options: { applyCriterion: boolean },
 ): SprintPlan {
   const { tasks } = records;
+  const taskOf = taggedIn(tasks);
+  const sprintTaskOf = taggedIn(sprint.tasks);
   const now = clock.now;
   // An archived Area still shows while a chosen Task is in it.
   const chosenAreas = new Set(
@@ -286,7 +294,11 @@ export function sprintPlanOf(
     plan,
     chosenCount: planned.length,
     totals,
-    drivers: capacityDrivers(sprint, valueOptions),
+    drivers: capacityDrivers(sprint, valueOptions).map((d) => ({
+      ...d,
+      sprintTask: sprintTaskOf(d.sprintTask),
+      task: taskOf(d.task),
+    })),
     ...(improvement === undefined ? {} : { improvement }),
     ...(criterion === undefined || effect === undefined
       ? {}
