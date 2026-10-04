@@ -200,10 +200,9 @@ function RecurrenceEditor({
   const freqRef = useRef<HTMLSelectElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   // 繰り返しにする makes the button go: the focus moves to the frequency.
-  // The focus moves in the commit that takes the button away, not in an
-  // effect after it: an effect runs a task later after a change made once
-  // an operation is answered, and until then the focus is on the page
-  // (#396).
+  // In the commit, not in an effect after it: a change made once an
+  // operation is answered may run its effects a task later, and until then
+  // the focus is on the page (#396).
   const hadRule = useRef(owns);
   useLayoutEffect(() => {
     if (owns && !hadRule.current) freqRef.current?.focus();

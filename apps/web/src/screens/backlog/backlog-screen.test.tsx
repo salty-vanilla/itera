@@ -650,8 +650,8 @@ describe('Backlog', () => {
     await userEvent.click(
       within(recurrence).getByRole('button', { name: '繰り返しにする' }),
     );
-    // The answer shows once the operation is answered, and the focus moves
-    // in the same commit (#396).
+    // The answer shows once the operation is answered; by then the focus
+    // has moved (#396).
     await waitFor(() =>
       expect(within(recurrence).getByRole('status').textContent).toContain(
         '次の Sprint から反映',
