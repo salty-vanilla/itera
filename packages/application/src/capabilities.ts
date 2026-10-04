@@ -78,6 +78,7 @@ import {
 import { find } from './changes';
 import type { Clock, Records } from './records';
 import { draftOf } from './retro-changes';
+import { checkExcludeAllOccurrences } from './planning-changes';
 import { nextPlanningOf } from './review-changes';
 import { subjectOf, undoRouteOf } from './selection-of';
 import { sprintIn } from './sprint-of';
@@ -476,23 +477,9 @@ export function sprintTaskCapabilities(
           task: task.value,
         }),
       ),
-    // Every occurrence it has, each as `excludeFromPlan` takes it
-    // (planning-changes.ts `excludeAllOccurrences`).
     canExcludeAllOccurrences:
       planning &&
-      sprint.tasks.some((t) => t.id === sprintTask.id) &&
-      // A Task that does not repeat has no occurrences to leave out (#346).
-      sprintTask.occurrenceIds !== undefined &&
-      sprintTask.occurrenceIds.every((occurrenceId) => {
-        const occurrence = find(
-          records.occurrences,
-          occurrenceId,
-          'Occurrence',
-        );
-        return (
-          occurrence.ok && can(checkExcludeFromPlan(sprint, occurrence.value))
-        );
-      }),
+      can(checkExcludeAllOccurrences(sprint, sprintTask.id, records)),
     canRecordActualTime:
       sprintIn(records, sprint.id, ['active', 'review']).ok &&
       can(checkRecordActualTime(sprint, { sprintTaskId: sprintTask.id })),

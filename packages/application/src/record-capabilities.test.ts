@@ -603,22 +603,22 @@ describe('capabilities of the other records agree with the operations (#323)', (
   // The domain tells a Task that does not repeat from one with no
   // occurrences left by `occurrenceIds` being there (ADR 0007).
   it('lets only a recurring draft leave by all of its occurrences (#346)', () => {
-    const drafts = all.filter(
-      (t) =>
-        t.kind === 'sprintTask' &&
-        (t.capabilities as SprintTaskCapabilities).canRemove,
-    );
-    expect(drafts.length).toBeGreaterThan(0);
-    for (const t of drafts)
+    const planned = (recurring: boolean) =>
+      all.filter(
+        (t) =>
+          t.kind === 'sprintTask' &&
+          t.recurring === recurring &&
+          t.where.startsWith('sprintTask plan '),
+      );
+    expect(planned(false).length).toBeGreaterThan(0);
+    for (const t of planned(false))
       expect([t.where, t.capabilities]).toEqual([
         t.where,
         expect.objectContaining({ canExcludeAllOccurrences: false }),
       ]);
     expect(
-      all.some(
+      planned(true).some(
         (t) =>
-          t.kind === 'sprintTask' &&
-          t.recurring === true &&
           (t.capabilities as SprintTaskCapabilities).canExcludeAllOccurrences,
       ),
     ).toBe(true);

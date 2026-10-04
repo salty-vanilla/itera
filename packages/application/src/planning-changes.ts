@@ -4,6 +4,7 @@
 import {
   activeCriterion,
   carriedOverFrom,
+  checkExcludeFromPlan,
   confirmSprint,
   createTask,
   excludeFromPlan,
@@ -120,6 +121,41 @@ export const unchooseTasks = (
   );
 
 /**
+ * What `excludeAllOccurrences` leaves out, if it takes the draft as it is
+ * now: every occurrence of a recurring Task, each as `excludeFromPlan`
+ * takes it. A Task that does not repeat has none and leaves as a whole
+ * (`unchooseTasks`), as the domain tells the two apart (#346). The
+ * operation and its capability (capabilities.ts) both read it.
+ */
+export function checkExcludeAllOccurrences(
+  sprint: Sprint,
+  sprintTaskId: SprintTaskId,
+  records: Records,
+): Result<readonly Occurrence[]> {
+  const owner = find(sprint.tasks, sprintTaskId, 'SprintTask');
+  if (!owner.ok) return owner;
+  const { occurrenceIds } = owner.value;
+  if (occurrenceIds === undefined) {
+    return {
+      ok: false,
+      error: {
+        code: 'invalidInput',
+        message: 'Unselect a Task that does not repeat as a whole.',
+      },
+    };
+  }
+  const occurrences: Occurrence[] = [];
+  for (const occurrenceId of occurrenceIds) {
+    const occurrence = find(records.occurrences, occurrenceId, 'Occurrence');
+    if (!occurrence.ok) return occurrence;
+    const excludable = checkExcludeFromPlan(sprint, occurrence.value);
+    if (!excludable.ok) return excludable;
+    occurrences.push(occurrence.value);
+  }
+  return { ok: true, value: occurrences };
+}
+
+/**
  * 今週から外す for a recurring Task: every occurrence it has this week is
  * excluded (invariant 33); with the last one the draft leaves the Sprint.
  * Also the way out for a recurring Task archived during Planning.
@@ -132,26 +168,16 @@ export function excludeAllOccurrences(
     const start = inPlanning(records, sprintId);
     if (!start.ok) return start;
     let sprint = start.value;
-    const owner = find(sprint.tasks, sprintTaskId, 'SprintTask');
-    if (!owner.ok) return owner;
-    // A Task that does not repeat leaves as a whole (`unchooseTasks`), as
-    // the domain tells the two apart (#346).
-    const { occurrenceIds } = owner.value;
-    if (occurrenceIds === undefined) {
-      return {
-        ok: false,
-        error: {
-          code: 'invalidInput',
-          message: 'Unselect a Task that does not repeat as a whole.',
-        },
-      };
-    }
+    const occurrences = checkExcludeAllOccurrences(
+      sprint,
+      sprintTaskId,
+      records,
+    );
+    if (!occurrences.ok) return occurrences;
     const excluded: Occurrence[] = [];
     const activities: Activity[] = [];
-    for (const occurrenceId of occurrenceIds) {
-      const occurrence = find(records.occurrences, occurrenceId, 'Occurrence');
-      if (!occurrence.ok) return occurrence;
-      const result = excludeFromPlan(sprint, occurrence.value, ctx);
+    for (const occurrence of occurrences.value) {
+      const result = excludeFromPlan(sprint, occurrence, ctx);
       if (!result.ok) return result;
       sprint = result.value.record.sprint;
       excluded.push(result.value.record.occurrence);
