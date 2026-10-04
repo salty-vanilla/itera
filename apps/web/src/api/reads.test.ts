@@ -7,8 +7,8 @@ import {
   QueryClient,
   QueryObserver,
 } from '@tanstack/react-query';
+import { waitFor } from '@testing-library/react';
 import { expect, it } from 'vitest';
-import { until } from '@/test/other-device';
 import { READS, readAgain } from './reads';
 
 it('names every read of the contract, and nothing else', () => {
@@ -23,6 +23,8 @@ it('names every read of the contract, and nothing else', () => {
 // What follows an operation sees what the reads answered (#341): a field
 // that holds a value sent until the read changes would otherwise take an
 // earlier save's read for the last one's, and drop what was chosen after it.
+// The components are told in TanStack Query's own way (a later task):
+// nothing here loads query-client.ts, which tells them sooner.
 it('resolves once the components on screen are told the answer', async () => {
   const queryClient = new QueryClient();
   let saved = 'before';
@@ -38,7 +40,7 @@ it('resolves once the components on screen are told the answer', async () => {
     }),
   );
   try {
-    await until(() => expect(shown).toBe('before'));
+    await waitFor(() => expect(shown).toBe('before'));
     saved = 'after';
     await readAgain(queryClient);
     expect(shown).toBe('after');
