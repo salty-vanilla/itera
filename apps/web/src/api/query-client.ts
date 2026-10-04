@@ -13,8 +13,9 @@ import { readAgain } from './reads';
 // a `setTimeout`). An operation resolves once they are told (`readAgain`,
 // #341), and with the default it would resolve a task later, and with it
 // what the screen does with the answer (a Toast, the focus). The screen
-// tests do not count on it: they wait for what they look for, and pass with
-// the default too (ADR 0005, #401; `ITERA_LATE_RENDER` in vitest.config.ts).
+// tests do not count on it: they wait for what they look for, and passed
+// with the default too when #401 tried it (ADR 0005; `ITERA_LATE_RENDER` in
+// vitest.config.ts checks that they wait, not this).
 notifyManager.setScheduler(queueMicrotask);
 
 export interface QueryClientOptions {

@@ -294,7 +294,7 @@ Better Auth（ADR 0004「認証の構成」）の API を使う、Web のサイ�
 ### 操作の後の焦点と、画面のテストの待ち方（2026-10-05、Issue #401）
 
 - 操作の答えの後に焦点や URL を動かす処理は、画面を書き換えるのと同じコミットの中で行う。描画に合わせて焦点を移す effect は `useLayoutEffect` にする（押したボタンが消える・結果が出る描画で移す）。今ある要素へ移すときと URL を変えるときは、ハンドラーの中で行う。`useEffect` はコミットの 1 タスク後に走るので、その間、焦点はページ（`body`）に落ちる（#396）。
-  - 例外：Base UI の popup が焦点を返す・取るのを待つときは、`requestAnimationFrame` で待つ（今日の行の焦点、領域の Dialog の `afterFocusSettles`）。そのときも、移す先が描かれてから待ち始める（領域の Dialog は、頼みを state に置き、行が描かれた後の effect で待つ）。
+  - 例外：Base UI の popup が焦点を返す・取るのを待つときは、`requestAnimationFrame` で待つ（今日の行の焦点、領域の Dialog の `afterFocusSettles`）。そのときも、移す先がまだ描かれていなければ描かれるのを待つ。領域の Dialog は、頼みを state に置き、行が描かれた後の effect で待ち始める。今日の行は、待った後で移す先を探し、なければ記録が変わった次の描画で頼み直す。
 - 画面のテストは、操作の後の焦点・URL・status・表示を、結果の表示を待ってから（`findBy…` / `waitFor`）確かめる。焦点は表示と同じコミットで移るので、表示を待てば焦点の確認は決まる。待ち時間の上限を延ばして通さない。
   - 理由：React は、テストの `act` の外の更新（操作の答えの後の更新）を scheduler で描き、Node では `setImmediate` を待つ。負荷でこれが user-event の最後の `setTimeout(0)` より後になると、操作の直後に確かめるテストが、描かれる前の画面を見てまれに落ちる（#396）。
   - 確かめ方：`ITERA_LATE_RENDER=30 pnpm --filter @itera/web exec vitest run`。`apps/web/src/test/late-render.ts` が `setImmediate` を指定のミリ秒だけ遅らせ、待たないテストを毎回落とす。常の実行（`pnpm test`、CI）には入れない：apps/web のテストをもう 1 回すべて回すことになり、確かめたいのは、操作の後を確かめるテストを足し・直したときだけなので。そのときに実行する。

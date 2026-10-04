@@ -13,7 +13,13 @@
  * timer is the platform's, kept before a test can fake the timers.
  */
 const delay = Number(process.env.ITERA_LATE_RENDER);
+if (!Number.isFinite(delay) || delay < 0) {
+  throw new Error(
+    `ITERA_LATE_RENDER is to be a number of milliseconds, not "${process.env.ITERA_LATE_RENDER}"`,
+  );
+}
 const platformSetTimeout = globalThis.setTimeout;
+const platformClearTimeout = globalThis.clearTimeout;
 
 globalThis.setImmediate = ((
   callback: (...args: unknown[]) => void,
@@ -23,3 +29,6 @@ globalThis.setImmediate = ((
     () => callback(...args),
     delay,
   )) as unknown as typeof setImmediate;
+// What it gives back is a timer of `setTimeout`: cleared as one.
+globalThis.clearImmediate = ((timer: ReturnType<typeof setTimeout>) =>
+  platformClearTimeout(timer)) as unknown as typeof clearImmediate;
