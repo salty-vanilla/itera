@@ -185,7 +185,7 @@ function BacklogPane({
                 key={task.id}
                 data-slot="task-row"
                 className={cn(
-                  'group/row relative flex flex-col gap-1 border-b border-border-soft py-2',
+                  'group/row relative flex flex-col gap-1 border-b border-border-soft px-2 py-2',
                   rowHoverClass,
                 )}
                 {...rowKeyHandlers({
@@ -262,7 +262,8 @@ function BacklogPane({
 // The whole row opens the Task and the ring goes round the row, as a Task
 // Row's does (#358). The box reaches 8px past the row on both sides (the
 // pane's padding), so that the ring keeps clear of the controls and the
-// text, which start at the row's edge. The controls sit above it, at z-1.
+// text, which start at the row's edge (a repeat row is 8px in, so that its
+// hover has room around them). The controls sit above it, at z-1.
 const titleButtonClass =
   'min-w-0 text-left text-task text-ink after:absolute after:inset-y-0 after:-inset-x-2 focus-visible:outline-none focus-visible:after:focus-ring-inset';
 
