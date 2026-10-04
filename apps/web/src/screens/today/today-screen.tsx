@@ -15,7 +15,6 @@ import { useNow, type Now } from '@/api/use-me';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { ReadStatus } from '@/components/read-status';
 import { Button } from '@/components/ui/button';
-import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/toast';
 import { AreaSelect, chosenArea } from '@/components/task/area-select';
@@ -33,6 +32,7 @@ import { useTaskActions } from '@/screen-data/use-task-actions';
 import { useDay, useTodayActions } from '@/screen-data/use-today';
 import { useNewAreaDialog } from '../backlog/area-dialog';
 import { TaskDetail } from '../backlog/task-detail';
+import { TaskDetailDrawer } from '../backlog/task-detail-drawer';
 import { useTaskDetailLeave } from '../backlog/use-task-detail-leave';
 import {
   DayFocusScope,
@@ -340,10 +340,6 @@ function TodayView({ data }: { data: TodayData }) {
   const inBacklog = (taskId: TaskId) => hasDetail(backlog, taskId);
   const openTask = (taskId: TaskId | undefined) =>
     detail.leave(() => showTask(taskId), taskId !== undefined);
-  const openItem =
-    search.task === undefined || backlog.status !== 'ready'
-      ? undefined
-      : backlog.item(search.task);
   const estimateFocus = useEstimateFocus(search.task);
   const openEstimate = (taskId: TaskId) =>
     detail.leave(() => {
@@ -891,32 +887,28 @@ function TodayView({ data }: { data: TodayData }) {
         />
       )}
 
-      <Drawer
-        open={openItem !== undefined}
-        onOpenChange={(next) => {
-          if (!next) openTask(undefined);
-        }}
-      >
-        <DrawerContent>
-          {backlog.status === 'ready' && openItem !== undefined && (
-            <TaskDetail
-              key={openItem.task.id}
-              item={openItem}
-              areas={backlog.areas}
-              timeZone={backlog.timeZone}
-              lastDay={backlog.lastDay}
-              onClose={() => showTask(undefined)}
-              onComplete={async () => {
-                if (await taskActions.completeTask(openItem.task.id)) {
-                  showTask(undefined);
-                }
-              }}
-              focusEstimate={estimateFocus.of(openItem.task.id)}
-              leaveRef={detail.ref}
-            />
-          )}
-        </DrawerContent>
-      </Drawer>
+      <TaskDetailDrawer
+        taskId={search.task}
+        backlog={backlog}
+        onDismiss={() => openTask(undefined)}
+        render={(item, ready) => (
+          <TaskDetail
+            key={item.task.id}
+            item={item}
+            areas={ready.areas}
+            timeZone={ready.timeZone}
+            lastDay={ready.lastDay}
+            onClose={() => showTask(undefined)}
+            onComplete={async () => {
+              if (await taskActions.completeTask(item.task.id)) {
+                showTask(undefined);
+              }
+            }}
+            focusEstimate={estimateFocus.of(item.task.id)}
+            leaveRef={detail.ref}
+          />
+        )}
+      />
     </>
   );
 }

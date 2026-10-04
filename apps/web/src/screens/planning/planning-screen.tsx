@@ -42,6 +42,7 @@ import {
 } from '@/screen-data/use-planning';
 import { useTaskActions } from '@/screen-data/use-task-actions';
 import { TaskDetail } from '../backlog/task-detail';
+import { TaskDetailDrawer } from '../backlog/task-detail-drawer';
 import { useTaskDetailLeave } from '../backlog/use-task-detail-leave';
 import { BacklogPane } from './backlog-pane';
 import { CheckSummary } from './check-summary';
@@ -169,10 +170,6 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
       setOutlookOpen(false);
       setSearch({ task: taskId });
     }, true);
-  const openItem =
-    search.task === undefined || backlog.status !== 'ready'
-      ? undefined
-      : backlog.item(search.task);
   const estimateFocus = useEstimateFocus(search.task);
   const openEstimate = (taskId: TaskId) =>
     detail.leave(() => {
@@ -473,46 +470,42 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
         </DrawerContent>
       </Drawer>
 
-      <Drawer
-        open={openItem !== undefined}
-        onOpenChange={(next) => {
-          if (!next) detail.leave(() => setSearch({ task: undefined }));
-        }}
-      >
-        <DrawerContent>
-          {backlog.status === 'ready' && openItem !== undefined && (
-            <TaskDetail
-              key={openItem.task.id}
-              item={openItem}
-              areas={backlog.areas}
-              timeZone={backlog.timeZone}
-              lastDay={backlog.lastDay}
-              onClose={() => setSearch({ task: undefined })}
-              onComplete={async () => {
-                if (await taskActions.completeTask(openItem.task.id)) {
-                  setSearch({ task: undefined });
-                }
-              }}
-              focusEstimate={estimateFocus.of(openItem.task.id)}
-              leaveRef={detail.ref}
-              footer={
-                // The right pane is under the Drawer: what an Estimate
-                // typed here does to the plan, before closing (#165).
-                <p
-                  role="status"
-                  data-slot="detail-capacity"
-                  className="me-auto min-w-0 text-body text-ink"
-                >
-                  <span className="me-2 text-label text-ink-muted">
-                    時間の見通し
-                  </span>
-                  <CapacitySummary data={data} />
-                </p>
+      <TaskDetailDrawer
+        taskId={search.task}
+        backlog={backlog}
+        onDismiss={() => detail.leave(() => setSearch({ task: undefined }))}
+        render={(item, ready) => (
+          <TaskDetail
+            key={item.task.id}
+            item={item}
+            areas={ready.areas}
+            timeZone={ready.timeZone}
+            lastDay={ready.lastDay}
+            onClose={() => setSearch({ task: undefined })}
+            onComplete={async () => {
+              if (await taskActions.completeTask(item.task.id)) {
+                setSearch({ task: undefined });
               }
-            />
-          )}
-        </DrawerContent>
-      </Drawer>
+            }}
+            focusEstimate={estimateFocus.of(item.task.id)}
+            leaveRef={detail.ref}
+            footer={
+              // The right pane is under the Drawer: what an Estimate
+              // typed here does to the plan, before closing (#165).
+              <p
+                role="status"
+                data-slot="detail-capacity"
+                className="me-auto min-w-0 text-body text-ink"
+              >
+                <span className="me-2 text-label text-ink-muted">
+                  時間の見通し
+                </span>
+                <CapacitySummary data={data} />
+              </p>
+            }
+          />
+        )}
+      />
 
       <ConfirmDialog
         data={data}
