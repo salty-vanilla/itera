@@ -612,7 +612,7 @@ describe('endRecurrenceRule (F41)', () => {
   });
 });
 
-describe('renewedRecurrenceSummary (F41, #338)', () => {
+describe('renewedRecurrenceSummary (F41, invariant 34, #338)', () => {
   // 部屋の掃除 repeats on Saturdays and is ended from 10/5; before that day
   // it is made recurring again, from the next Sprint (#323).
   function renewed(pattern: RecurrencePattern) {

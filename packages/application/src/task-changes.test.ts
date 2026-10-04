@@ -138,5 +138,15 @@ describe('endRule (F41)', () => {
       pattern: saturdays,
       next: before?.recurrence?.next,
     });
+    // Ended again, the new rule has made no occurrence and comes off: the
+    // Task is shown by the rule that ends, until its last day.
+    expect(store.run(endRule(taskId)).ok).toBe(true);
+    const ended = backlogData(
+      tagged(store.getSnapshot().records),
+      store.getSnapshot().clock,
+      { view: 'recurring' },
+    ).items[taskId];
+    expect(ended?.task).not.toHaveProperty('recurrenceRuleId');
+    expect(ended?.recurrence).toEqual(before?.recurrence);
   });
 });

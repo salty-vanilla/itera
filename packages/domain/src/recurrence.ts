@@ -293,6 +293,8 @@ export function ruleEndsOn(rule: RecurrenceRule): LocalDate | undefined {
  * Sprints after it; until its last day the Backlog still shows it recurring.
  * The commands guard less: `completeFromBacklog` refuses while the running
  * Sprint holds the occurrences, and nothing else waits for the last day.
+ * The Task's own rule comes first, also when it begins after an ended one
+ * (#323); this week's occurrences of that one are `endingRuleOf`'s (#338).
  */
 export function recurrenceOf(
   task: Task,
@@ -539,7 +541,9 @@ export function recurrenceSummary(
  * come by the rule that ends, then the new rule from the day it begins as a
  * change (「毎週 土 · 次は 10/3 (土) · 変更：10/5 (月) から 毎週 月」). The
  * same pattern again is no change: the Task goes on as it was, with no last
- * day.
+ * day. A change the rule that ends had still to come is not shown: ending
+ * drops the versions not in effect by its last day (F41), so it can only be
+ * one from a next Sprint confirmed before this week is over, for that day.
  */
 export function renewedRecurrenceSummary(
   ending: RecurrenceRule,
