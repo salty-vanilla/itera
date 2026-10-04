@@ -1,12 +1,14 @@
 import {
+  readCondition,
   readRequest,
   RequestError,
   surfaces,
   type ReceivedRequest,
   type Surface,
 } from '@itera/api-contract/requests';
-import { operations, type Change } from '@itera/application';
+import { checkCondition, operations, type Change } from '@itera/application';
 import { Hono } from 'hono';
+import type { Context } from 'hono';
 import type { AppEnv } from '../env';
 import { ApiError } from '../errors';
 import { jsonBody, limitBody } from './body';
@@ -53,11 +55,22 @@ export function operationRoutes(flow: Flow, guards: Guards) {
           >
         )[name]?.(input);
         // Made with nothing to return (the Retro, 201) has no body either.
+        const condition = conditionOf(c);
         const answer = await flow.operate(
           c,
           operation(input),
           (value) => answerOf(surface.status, value),
-          precondition,
+          {
+            condition: (records, versions) =>
+              checkCondition(
+                name,
+                input as never,
+                records,
+                versions,
+                condition,
+              ),
+            ...(precondition === undefined ? {} : { precondition }),
+          },
         );
         return answerResponse(c, answer);
       },
@@ -76,6 +89,24 @@ async function operationOf(surface: Surface, received: ReceivedRequest) {
     return await readRequest(surface, received, (schema, value, part) =>
       validate(schema, value, part),
     );
+  } catch (error) {
+    if (error instanceof RequestError) throw ApiError.invalid(error.issue);
+    throw error;
+  }
+}
+
+/**
+ * The version a write says it was made from (`If-Match`,
+ * `If-None-Match`), 400 when a header is not in the contract's form. Which
+ * writes need one is packages/application's to say (`checkCondition`, ADR
+ * 0006 記録ごとの版).
+ */
+function conditionOf(c: Context<AppEnv>) {
+  try {
+    return readCondition({
+      ifMatch: c.req.header('If-Match'),
+      ifNoneMatch: c.req.header('If-None-Match'),
+    });
   } catch (error) {
     if (error instanceof RequestError) throw ApiError.invalid(error.issue);
     throw error;

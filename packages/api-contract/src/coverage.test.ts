@@ -38,6 +38,7 @@ const NOT_READS = new Set([
   'etagOf',
   'tagRecords',
   'checkCondition',
+  'currentCondition',
   'isConditional',
 ]);
 

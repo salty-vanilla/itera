@@ -50,6 +50,7 @@ export {
 export {
   checkCondition,
   conditionalOperations,
+  currentCondition,
   isConditional,
   type Condition,
   type ConditionalOperation,

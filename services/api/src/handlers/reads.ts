@@ -23,6 +23,7 @@ import {
   type Clock,
   type EditableArea,
   type Records,
+  type TaggedRecords,
   type SprintItem,
   type SprintView,
 } from '@itera/application';
@@ -60,7 +61,7 @@ export type ReadRoute<View> = {
   readonly query?: v.GenericSchema;
   readonly params?: v.GenericSchema;
   readonly read: (
-    records: Records,
+    records: TaggedRecords,
     clock: Clock,
     input: { readonly query: unknown; readonly params: unknown },
   ) => View;
@@ -77,7 +78,7 @@ export function readRoute<View, Query = undefined, Params = undefined>(route: {
   readonly query?: v.GenericSchema<unknown, Query>;
   readonly params?: v.GenericSchema<unknown, Params>;
   readonly read: (
-    records: Records,
+    records: TaggedRecords,
     clock: Clock,
     input: { readonly query: Query; readonly params: Params },
   ) => View;

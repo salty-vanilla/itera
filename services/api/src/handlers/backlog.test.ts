@@ -8,6 +8,7 @@ import {
   backlogData,
   type BacklogFilter,
   type Records,
+  tagRecords,
 } from '@itera/application';
 import { fixtureIds } from '@itera/application/fixtures';
 import * as v from 'valibot';
@@ -661,7 +662,9 @@ describe('the Backlog reads', () => {
   async function read(path: string) {
     const app = await setup('backlog-capture');
     const response = await app.get(path);
-    const { records } = await app.saved();
+    // Each record with the etag of its version as saved (#321).
+    const saved = await app.saved();
+    const records = tagRecords(saved.records, saved.versions);
     return { response, records, json: await response.json() };
   }
 
@@ -671,8 +674,9 @@ describe('the Backlog reads', () => {
   it('listAreas answers areaList, archived ones too', async () => {
     const app = await setup('backlog-capture');
     await app.post('archiveArea', { areaId: life });
-    const { records } = await app.saved();
     const response = await app.get('/areas');
+    const saved = await app.saved();
+    const records = tagRecords(saved.records, saved.versions);
     expect(response.status).toBe(200);
     const body = v.parse(contract.vListAreasResponse, await response.json());
     expect(body).toEqual({ clock, view: asJson(areaList(records)) });

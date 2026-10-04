@@ -8,6 +8,7 @@ import {
   sprintCandidates,
   sprintRetro,
   type Records,
+  tagRecords,
 } from '@itera/application';
 import { fixtureIds } from '@itera/application/fixtures';
 import { instant, localDate } from '@itera/domain';
@@ -788,7 +789,9 @@ describe('the Retro read', () => {
     // as the read finds them.
     await app.get('/me');
     const response = await app.get(path((await app.saved()).records));
-    const { records } = await app.saved();
+    // Each record with the etag of its version as saved (#321).
+    const saved = await app.saved();
+    const records = tagRecords(saved.records, saved.versions);
     return { app, response, records, json: await response.json() };
   }
 
@@ -880,7 +883,8 @@ describe('the Retro read', () => {
       ).view,
     ).toBeNull();
     await app.run('beginRetro', { sprintId });
-    const { records } = await app.saved();
+    const saved = await app.saved();
+    const records = tagRecords(saved.records, saved.versions);
     const body = v.parse(
       contract.vGetSprintRetroResponse,
       await (await app.get(`/sprints/${sprintId}/retro`)).json(),
@@ -899,7 +903,8 @@ describe('the Retro read', () => {
     ).json()) as {
       sprintId: string;
     };
-    const { records } = await app.saved();
+    const saved = await app.saved();
+    const records = tagRecords(saved.records, saved.versions);
     const view = v.parse(
       contract.vListSprintCandidatesResponse,
       await (await app.get(`/sprints/${planning.sprintId}/candidates`)).json(),

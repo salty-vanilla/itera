@@ -9,6 +9,7 @@ import {
   parseId,
   type OperationName,
   type Records,
+  tagRecords,
 } from '@itera/application';
 import { fixtureIds, fixtureSnapshot } from '@itera/application/fixtures';
 import { addDays, id, instant, localDate } from '@itera/domain';
@@ -1067,7 +1068,7 @@ describe('the decisions of Today, through the API', () => {
     const noted = instant('2026-10-01T01:00:00.000Z');
     await saveRecords(app.db, {
       userId: bob,
-      loaded: { revision: 0, records: null },
+      loaded: { revision: 0, records: null, versions: new Map() },
       changes: {
         user: { ...fixtureSnapshot('today-morning').records.user, id: bob },
         areas: [],
@@ -1206,7 +1207,9 @@ describe('the Today read', () => {
     // as the read finds them.
     await app.get('/me');
     const response = await app.get(path((await app.saved()).records));
-    const { records } = await app.saved();
+    // Each record with the etag of its version as saved (#321).
+    const saved = await app.saved();
+    const records = tagRecords(saved.records, saved.versions);
     return { response, records, json: await response.json() };
   }
 

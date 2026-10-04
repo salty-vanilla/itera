@@ -10,6 +10,7 @@ import {
   sprintList,
   sprintView,
   type Records,
+  tagRecords,
 } from '@itera/application';
 import { fixtureIds } from '@itera/application/fixtures';
 import * as v from 'valibot';
@@ -836,7 +837,9 @@ describe('the Sprint reads', () => {
     // as the read finds them.
     await app.get('/me');
     const response = await app.get(path((await app.saved()).records));
-    const { records } = await app.saved();
+    // Each record with the etag of its version as saved (#321).
+    const saved = await app.saved();
+    const records = tagRecords(saved.records, saved.versions);
     return { response, records, json: await response.json() };
   }
 

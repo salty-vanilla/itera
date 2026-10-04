@@ -187,3 +187,24 @@ export function checkCondition<N extends OperationName>(
   if (ifNoneMatch !== undefined && target.exists) return 'failed';
   return 'met';
 }
+
+/**
+ * The condition a write sends when it is made from the records as they
+ * are: the record's etag, or that there is none (a Goal not written yet).
+ * `undefined` for an operation that needs none, or that names a record
+ * that is not there. For tests and the browser mock's fixture checks.
+ */
+export function currentCondition<N extends OperationName>(
+  name: N,
+  input: OperationInput<N>,
+  records: Records,
+  versions: RecordVersions,
+): Condition | undefined {
+  if (!isConditional(name)) return undefined;
+  const targetOf = conditionTargets[name] as TargetOf<ConditionalOperation>;
+  const target = targetOf(input as never, records);
+  if (target === undefined) return undefined;
+  return target.exists
+    ? { ifMatch: [etagOf(versionOf(versions, target.key))] }
+    : { ifNoneMatch: '*' };
+}
