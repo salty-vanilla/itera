@@ -1,5 +1,8 @@
 import { addTaskMidSprint, type AddMidSprintInput } from './mid-sprint';
 import {
+  checkCompleteOccurrence,
+  checkReopenOccurrence,
+  checkSkipOccurrence,
   completeOccurrence,
   reopenOccurrence,
   skipOccurrence,
@@ -18,7 +21,7 @@ import type {
   SprintTaskId,
 } from './shared/ids';
 import { omit } from './shared/record';
-import { err, type Result } from './shared/result';
+import { err, ok, type Result } from './shared/result';
 import { toLocalDate, type LocalDate, type TimeZone } from './shared/time';
 import type {
   ActualTime,
@@ -31,6 +34,8 @@ import type {
   SprintTask,
 } from './sprint';
 import {
+  checkCompleteTask,
+  checkUndoTaskCompletion,
   completeTask,
   isPositiveHours,
   isRecurring,
@@ -204,20 +209,36 @@ export interface SelectionActionInput {
   readonly selectionId: DailySelectionId;
 }
 
+/**
+ * A selection a command's check found, with its SprintTask. Each of
+ * Today's commands on a selection or an interrupt has a check (`check…`):
+ * what the records must be like for the command to run, apart from the
+ * values it is given (positive hours, a note that is not empty). The
+ * command makes its check first, and the reads say from the same checks
+ * what the person can do with each record (#322, ADR 0007 操作の可否).
+ */
+export interface CheckedSelection {
+  readonly selection: DailySelection;
+  readonly sprintTask: SprintTask;
+}
+
 /** 開始: selected → started. */
 export function startSelection(
   sprint: Sprint,
   input: SelectionActionInput,
   ctx: CommandContext,
 ): CommandResult<Sprint> {
-  return move(
-    sprint,
-    input.selectionId,
-    ['selected'],
-    'started',
-    'todayStarted',
-    ctx,
-  );
+  const checked = checkStartSelection(sprint, input);
+  if (!checked.ok) return checked;
+  return moved(sprint, checked.value.selection, 'started', 'todayStarted', ctx);
+}
+
+/** Whether `startSelection` takes the selection as it is now. */
+export function checkStartSelection(
+  sprint: Sprint,
+  input: SelectionActionInput,
+): Result<CheckedSelection> {
+  return checkMove(sprint, input.selectionId, ['selected'], 'started');
 }
 
 /** 今日は見送る: selected / started → deferred. Counts toward 連続見送り. */
@@ -226,13 +247,27 @@ export function deferSelection(
   input: SelectionActionInput,
   ctx: CommandContext,
 ): CommandResult<Sprint> {
-  return move(
+  const checked = checkDeferSelection(sprint, input);
+  if (!checked.ok) return checked;
+  return moved(
+    sprint,
+    checked.value.selection,
+    'deferred',
+    'todayDeferred',
+    ctx,
+  );
+}
+
+/** Whether `deferSelection` takes the selection as it is now. */
+export function checkDeferSelection(
+  sprint: Sprint,
+  input: SelectionActionInput,
+): Result<CheckedSelection> {
+  return checkMove(
     sprint,
     input.selectionId,
     ['selected', 'started'],
     'deferred',
-    'todayDeferred',
-    ctx,
   );
 }
 
@@ -242,14 +277,17 @@ export function removeFromToday(
   input: SelectionActionInput,
   ctx: CommandContext,
 ): CommandResult<Sprint> {
-  return move(
-    sprint,
-    input.selectionId,
-    ['selected'],
-    'removed',
-    'todayRemoved',
-    ctx,
-  );
+  const checked = checkRemoveFromToday(sprint, input);
+  if (!checked.ok) return checked;
+  return moved(sprint, checked.value.selection, 'removed', 'todayRemoved', ctx);
+}
+
+/** Whether `removeFromToday` takes the selection as it is now. */
+export function checkRemoveFromToday(
+  sprint: Sprint,
+  input: SelectionActionInput,
+): Result<CheckedSelection> {
+  return checkMove(sprint, input.selectionId, ['selected'], 'removed');
 }
 
 export interface UndoCloseInput extends SelectionActionInput {
@@ -268,7 +306,17 @@ export function undoDeferSelection(
   input: UndoCloseInput,
   ctx: CommandContext,
 ): CommandResult<Sprint> {
-  return reopenClosed(sprint, input, 'deferred', 'todayDeferUndone', ctx);
+  const checked = checkUndoDeferSelection(sprint, input);
+  if (!checked.ok) return checked;
+  return reopenClosed(sprint, checked.value, 'todayDeferUndone', ctx);
+}
+
+/** Whether `undoDeferSelection` takes the selection as it is now. */
+export function checkUndoDeferSelection(
+  sprint: Sprint,
+  input: UndoCloseInput,
+): Result<CheckedSelection> {
+  return checkReopenClosed(sprint, input, 'deferred');
 }
 
 /** 外したのを取り消す (F37): removed → selected, the same day only. */
@@ -277,16 +325,24 @@ export function undoRemoveFromToday(
   input: UndoCloseInput,
   ctx: CommandContext,
 ): CommandResult<Sprint> {
-  return reopenClosed(sprint, input, 'removed', 'todayRemoveUndone', ctx);
+  const checked = checkUndoRemoveFromToday(sprint, input);
+  if (!checked.ok) return checked;
+  return reopenClosed(sprint, checked.value, 'todayRemoveUndone', ctx);
 }
 
-function reopenClosed(
+/** Whether `undoRemoveFromToday` takes the selection as it is now. */
+export function checkUndoRemoveFromToday(
+  sprint: Sprint,
+  input: UndoCloseInput,
+): Result<CheckedSelection> {
+  return checkReopenClosed(sprint, input, 'removed');
+}
+
+function checkReopenClosed(
   sprint: Sprint,
   input: UndoCloseInput,
   from: 'deferred' | 'removed',
-  kind: 'todayDeferUndone' | 'todayRemoveUndone',
-  ctx: CommandContext,
-): CommandResult<Sprint> {
+): Result<CheckedSelection> {
   const found = selectionAndTask(sprint, input.selectionId);
   if (!found.ok) return found;
   const { selection } = found.value;
@@ -302,6 +358,15 @@ function reopenClosed(
       `Only today's selection can go back, not one of ${selection.date}.`,
     );
   }
+  return found;
+}
+
+function reopenClosed(
+  sprint: Sprint,
+  { selection }: CheckedSelection,
+  kind: 'todayDeferUndone' | 'todayRemoveUndone',
+  ctx: CommandContext,
+): CommandResult<Sprint> {
   // Back to how it was before it was closed: started keeps its time.
   const reopened: DailySelection = {
     ...omit(selection, 'resolvedAt'),
@@ -326,16 +391,28 @@ export function pauseSelection(
   input: PauseInput,
   ctx: CommandContext,
 ): CommandResult<Sprint> {
-  const moved = move(
+  const checked = checkPauseSelection(sprint, input);
+  if (!checked.ok) return checked;
+  const paused = moved(
     sprint,
-    input.selectionId,
-    ['started'],
+    checked.value.selection,
     'paused',
     'todayPaused',
     ctx,
   );
-  if (!moved.ok || input.actualHours === undefined) return moved;
-  return withActual(moved, input.selectionId, input.actualHours, 'pause', ctx);
+  if (input.actualHours === undefined) return paused;
+  return withActual(paused, input.selectionId, input.actualHours, 'pause', ctx);
+}
+
+/**
+ * Whether `pauseSelection` takes the selection as it is now. The actual
+ * hours are a value it is given (positive), not a state: not checked here.
+ */
+export function checkPauseSelection(
+  sprint: Sprint,
+  input: SelectionActionInput,
+): Result<CheckedSelection> {
+  return checkMove(sprint, input.selectionId, ['started'], 'paused');
 }
 
 export interface CompleteInput extends SelectionActionInput {
@@ -363,15 +440,9 @@ export function completeSelection(
   input: CompleteInput,
   ctx: CommandContext,
 ): CommandResult<TodayChange> {
-  const found = selectionAndTask(sprint, input.selectionId);
-  if (!found.ok) return found;
-  const { selection, sprintTask } = found.value;
-  if (!canComplete(selection, input.today)) {
-    return err(
-      'invalidTransition',
-      `Cannot complete a ${selection.resolution} selection of ${selection.date}.`,
-    );
-  }
+  const checked = checkCompleteSelection(sprint, input);
+  if (!checked.ok) return checked;
+  const { selection, sprintTask } = checked.value;
   const effect = completionEffect(sprint, sprintTask, selection, input, ctx);
   if (!effect.ok) return effect;
   const closedBefore =
@@ -410,6 +481,31 @@ export function completeSelection(
 }
 
 /**
+ * Whether `completeSelection` takes the selection as it is now: the
+ * selection, and its Task (one-off) or occurrence (recurring) as given.
+ * The actual hours are a value, not a state: not checked here.
+ */
+export function checkCompleteSelection(
+  sprint: Sprint,
+  input: Omit<CompleteInput, 'actualHours'>,
+): Result<CheckedSelection> {
+  const found = selectionAndTask(sprint, input.selectionId);
+  if (!found.ok) return found;
+  const { selection, sprintTask } = found.value;
+  if (!canComplete(selection, input.today)) {
+    return err(
+      'invalidTransition',
+      `Cannot complete a ${selection.resolution} selection of ${selection.date}.`,
+    );
+  }
+  const subject = checkSubject(selection, sprintTask, input, {
+    task: checkCompleteTask,
+    occurrence: checkCompleteOccurrence,
+  });
+  return subject.ok ? found : subject;
+}
+
+/**
  * 完了を取り消す: done → selected (or, for a selection completed after
  * being closed the same day, back to that paused / deferred / removed:
  * F17), and the Task / SprintTask / occurrence return to where they were.
@@ -420,20 +516,9 @@ export function undoCompleteSelection(
   input: Omit<CompleteInput, 'actualHours' | 'today'>,
   ctx: CommandContext,
 ): CommandResult<TodayChange> {
-  const found = selectionAndTask(sprint, input.selectionId, [
-    'planned',
-    'done',
-  ]);
-  if (!found.ok) return found;
-  const { selection, sprintTask } = found.value;
-  if (selection.resolution !== 'done') {
-    return err('invalidTransition', 'Only a done selection can be undone.');
-  }
-  // A recurring SprintTask stays planned; a non-recurring one is done.
-  const expected = selection.occurrenceId === undefined ? 'done' : 'planned';
-  if (sprintTask.outcome !== expected) {
-    return err('invalidTransition', `The SprintTask is ${sprintTask.outcome}.`);
-  }
+  const checked = checkUndoCompleteSelection(sprint, input);
+  if (!checked.ok) return checked;
+  const { selection, sprintTask } = checked.value;
   const activities: Activity[] = [];
   let change: TodayChange;
   if (selection.occurrenceId !== undefined) {
@@ -473,12 +558,68 @@ export function undoCompleteSelection(
   );
 }
 
+/** Whether `undoCompleteSelection` takes the selection as it is now. */
+export function checkUndoCompleteSelection(
+  sprint: Sprint,
+  input: Omit<CompleteInput, 'actualHours' | 'today'>,
+): Result<CheckedSelection> {
+  const found = selectionAndTask(sprint, input.selectionId, [
+    'planned',
+    'done',
+  ]);
+  if (!found.ok) return found;
+  const { selection, sprintTask } = found.value;
+  if (selection.resolution !== 'done') {
+    return err('invalidTransition', 'Only a done selection can be undone.');
+  }
+  // A recurring SprintTask stays planned; a non-recurring one is done.
+  const expected = selection.occurrenceId === undefined ? 'done' : 'planned';
+  if (sprintTask.outcome !== expected) {
+    return err('invalidTransition', `The SprintTask is ${sprintTask.outcome}.`);
+  }
+  const subject = checkSubject(selection, sprintTask, input, {
+    task: checkUndoTaskCompletion,
+    occurrence: checkReopenOccurrence,
+  });
+  return subject.ok ? found : subject;
+}
+
 /** 今日はスキップ (recurring only): selected → skipped; the occurrence is skipped. */
 export function skipSelection(
   sprint: Sprint,
   input: SelectionActionInput & { readonly occurrence: Occurrence },
   ctx: CommandContext,
 ): CommandResult<TodayChange> {
+  const checked = checkSkipSelection(sprint, input);
+  if (!checked.ok) return checked;
+  const { selection } = checked.value;
+  const skipped = skipOccurrence(input.occurrence, ctx);
+  if (!skipped.ok) return skipped;
+  const resolved: DailySelection = {
+    ...selection,
+    resolution: 'skipped',
+    resolvedAt: ctx.now,
+  };
+  return applied(
+    {
+      sprint: replaceSelection(sprint, resolved),
+      occurrence: skipped.value.record,
+    },
+    [
+      ...skipped.value.activities,
+      selectionActivity('todaySkipped', sprint, resolved, ctx),
+    ],
+  );
+}
+
+/**
+ * Whether `skipSelection` takes the selection as it is now: an occurrence's
+ * selection, and the occurrence as given.
+ */
+export function checkSkipSelection(
+  sprint: Sprint,
+  input: SelectionActionInput & { readonly occurrence?: Occurrence },
+): Result<CheckedSelection> {
   const found = selectionAndTask(sprint, input.selectionId);
   if (!found.ok) return found;
   const { selection } = found.value;
@@ -499,23 +640,8 @@ export function skipSelection(
     selection.occurrenceId,
   );
   if (!occurrence.ok) return occurrence;
-  const skipped = skipOccurrence(occurrence.value, ctx);
-  if (!skipped.ok) return skipped;
-  const resolved: DailySelection = {
-    ...selection,
-    resolution: 'skipped',
-    resolvedAt: ctx.now,
-  };
-  return applied(
-    {
-      sprint: replaceSelection(sprint, resolved),
-      occurrence: skipped.value.record,
-    },
-    [
-      ...skipped.value.activities,
-      selectionActivity('todaySkipped', sprint, resolved, ctx),
-    ],
-  );
+  const skippable = checkSkipOccurrence(occurrence.value);
+  return skippable.ok ? found : skippable;
 }
 
 /**
@@ -527,6 +653,32 @@ export function undoSkipSelection(
   input: SelectionActionInput & { readonly occurrence: Occurrence },
   ctx: CommandContext,
 ): CommandResult<TodayChange> {
+  const checked = checkUndoSkipSelection(sprint, input);
+  if (!checked.ok) return checked;
+  const { selection } = checked.value;
+  const reopened = reopenOccurrence(input.occurrence, ctx);
+  if (!reopened.ok) return reopened;
+  const reselected: DailySelection = {
+    ...omit(selection, 'resolvedAt'),
+    resolution: 'selected',
+  };
+  return applied(
+    {
+      sprint: replaceSelection(sprint, reselected),
+      occurrence: reopened.value.record,
+    },
+    [
+      ...reopened.value.activities,
+      selectionActivity('todaySkipUndone', sprint, reselected, ctx),
+    ],
+  );
+}
+
+/** Whether `undoSkipSelection` takes the selection as it is now. */
+export function checkUndoSkipSelection(
+  sprint: Sprint,
+  input: SelectionActionInput & { readonly occurrence?: Occurrence },
+): Result<CheckedSelection> {
   const found = selectionAndTask(sprint, input.selectionId);
   if (!found.ok) return found;
   const { selection } = found.value;
@@ -544,22 +696,8 @@ export function undoSkipSelection(
     selection.occurrenceId,
   );
   if (!occurrence.ok) return occurrence;
-  const reopened = reopenOccurrence(occurrence.value, ctx);
-  if (!reopened.ok) return reopened;
-  const reselected: DailySelection = {
-    ...omit(selection, 'resolvedAt'),
-    resolution: 'selected',
-  };
-  return applied(
-    {
-      sprint: replaceSelection(sprint, reselected),
-      occurrence: reopened.value.record,
-    },
-    [
-      ...reopened.value.activities,
-      selectionActivity('todaySkipUndone', sprint, reselected, ctx),
-    ],
-  );
+  const reopenable = checkReopenOccurrence(occurrence.value);
+  return reopenable.ok ? found : reopenable;
 }
 
 // ---------------------------------------------------------------- Backlog
@@ -865,11 +1003,9 @@ export function editInterrupt(
   input: EditInterruptInput,
   ctx: CommandContext,
 ): CommandResult<Sprint> {
-  if (sprint.state !== 'active') {
-    return err('invalidTransition', 'Interrupts are edited during the Sprint.');
-  }
-  const note = sprint.interrupts.find((n) => n.id === input.id);
-  if (note === undefined) return err('notFound', 'No such interrupt.');
+  const found = checkEditInterrupt(sprint, input);
+  if (!found.ok) return found;
+  const note = found.value;
   const text = input.text.trim();
   if (text === '') return err('invalidInput', 'The note is empty.');
   if (input.minutes !== undefined && !isPositiveHours(input.minutes)) {
@@ -899,6 +1035,20 @@ export function editInterrupt(
   );
 }
 
+/**
+ * Whether `editInterrupt` takes the note as it is now. The text and the
+ * minutes are values it is given: not checked here.
+ */
+export function checkEditInterrupt(
+  sprint: Sprint,
+  input: Pick<EditInterruptInput, 'id'>,
+): Result<InterruptNote> {
+  if (sprint.state !== 'active') {
+    return err('invalidTransition', 'Interrupts are edited during the Sprint.');
+  }
+  return interruptOf(sprint, input.id);
+}
+
 export interface DeleteInterruptInput {
   readonly id: InterruptNoteId;
 }
@@ -912,15 +1062,8 @@ export function deleteInterrupt(
   input: DeleteInterruptInput,
   ctx: CommandContext,
 ): CommandResult<Sprint> {
-  if (sprint.state !== 'active') {
-    return err(
-      'invalidTransition',
-      'Interrupts are deleted during the Sprint.',
-    );
-  }
-  if (!sprint.interrupts.some((n) => n.id === input.id)) {
-    return err('notFound', 'No such interrupt.');
-  }
+  const found = checkDeleteInterrupt(sprint, input);
+  if (!found.ok) return found;
   return applied(
     {
       ...sprint,
@@ -936,6 +1079,28 @@ export function deleteInterrupt(
       },
     ],
   );
+}
+
+/** Whether `deleteInterrupt` takes the note as it is now. */
+export function checkDeleteInterrupt(
+  sprint: Sprint,
+  input: DeleteInterruptInput,
+): Result<InterruptNote> {
+  if (sprint.state !== 'active') {
+    return err(
+      'invalidTransition',
+      'Interrupts are deleted during the Sprint.',
+    );
+  }
+  return interruptOf(sprint, input.id);
+}
+
+function interruptOf(
+  sprint: Sprint,
+  id: InterruptNoteId,
+): Result<InterruptNote> {
+  const note = sprint.interrupts.find((n) => n.id === id);
+  return note === undefined ? err('notFound', 'No such interrupt.') : ok(note);
 }
 
 export interface RestoreInterruptInput {
@@ -1091,7 +1256,7 @@ function selectionAndTask(
   sprint: Sprint,
   selectionId: DailySelectionId,
   outcomes: readonly SprintTask['outcome'][] = ['planned'],
-): Result<{ selection: DailySelection; sprintTask: SprintTask }> {
+): Result<CheckedSelection> {
   if (sprint.state !== 'active') {
     return err('invalidTransition', 'Today works on the active Sprint.');
   }
@@ -1196,14 +1361,12 @@ function matchingOccurrence(
   return { ok: true, value: occurrence };
 }
 
-function move(
+function checkMove(
   sprint: Sprint,
   selectionId: DailySelectionId,
   from: readonly DailyResolution[],
   to: DailyResolution,
-  kind: Extract<Activity['kind'], `today${string}`>,
-  ctx: CommandContext,
-): CommandResult<Sprint> {
+): Result<CheckedSelection> {
   const found = selectionAndTask(sprint, selectionId);
   if (!found.ok) return found;
   const { selection } = found.value;
@@ -1213,6 +1376,17 @@ function move(
       `Cannot go from ${selection.resolution} to ${to}.`,
     );
   }
+  return found;
+}
+
+/** A checked selection moved to `to`, with its time. */
+function moved(
+  sprint: Sprint,
+  selection: DailySelection,
+  to: 'started' | 'deferred' | 'removed' | 'paused',
+  kind: Extract<Activity['kind'], `today${string}`>,
+  ctx: CommandContext,
+): CommandResult<Sprint> {
   const next: DailySelection =
     to === 'started'
       ? { ...selection, resolution: to, startedAt: ctx.now }
@@ -1220,6 +1394,32 @@ function move(
   return applied(replaceSelection(sprint, next), [
     selectionActivity(kind, sprint, next, ctx),
   ]);
+}
+
+/**
+ * The Task or occurrence a selection is about, as given: the one the
+ * selection names, in a state the command takes (`checks`).
+ */
+function checkSubject(
+  selection: DailySelection,
+  sprintTask: SprintTask,
+  input: { readonly task?: Task; readonly occurrence?: Occurrence },
+  checks: {
+    readonly task: (task: Task) => Result<undefined>;
+    readonly occurrence: (occurrence: Occurrence) => Result<undefined>;
+  },
+): Result<undefined> {
+  if (selection.occurrenceId !== undefined) {
+    const occurrence = matchingOccurrence(
+      input.occurrence,
+      selection.occurrenceId,
+    );
+    if (!occurrence.ok) return occurrence;
+    return checks.occurrence(occurrence.value);
+  }
+  const task = matchingTask(input.task, sprintTask);
+  if (!task.ok) return task;
+  return checks.task(task.value);
 }
 
 function withActual(

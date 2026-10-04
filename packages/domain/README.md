@@ -63,6 +63,7 @@ type CommandResult<T> =
 - 成功したときは新しい記録と、追記する Activity を返す。何も変わらない操作は Activity を返さない。
 - 渡された記録は書き換えない。新しいオブジェクトを返す。
 - 複数の記録を同時に変える操作（#22 の確定、#23 の Backlog からの完了など）は、`T` を変えた記録をまとめたオブジェクトにする（例：`CommandResult<{ task: Task; sprintTask: SprintTask; dailySelection: DailySelection }>`）。途中の状態は返さない。
+- 読み取りが「今その記録に何ができるか」（ADR 0007「操作の可否」）を返すコマンドは、前提のうち記録の状態で決まる部分を `check<コマンド>(record, input): Result<…>` として export し、コマンドもまずそれで判定する（#322。今は Today の選択と割り込みのコマンドと、それが使う `checkCompleteTask`・`checkCompleteOccurrence` など）。`check…` は時計も Activity も使わず、入力の値の規則（正の時間、空でない本文）は見ない。同じ記録と入力で、`check…` が `ok: false` ならコマンドも同じ `code` で断り、`ok: true` ならコマンドは値の規則でだけ断る（`today-checks.test.ts`）。
 
 ### 記録と履歴
 

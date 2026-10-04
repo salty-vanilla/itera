@@ -1,4 +1,4 @@
-import type { InterruptNote } from '@itera/api-contract';
+import type { InterruptItem } from '@itera/api-contract';
 import { Ellipsis, Pencil, Trash2 } from 'lucide-react';
 import { IconButton } from '@/components/ui/icon-button';
 import {
@@ -13,10 +13,11 @@ import { formatHours } from '@/lib/time-format';
 // A row of today's 割り込み: the time it was noted, the note and the
 // minutes. While the Sprint runs, its `…` edits or deletes it (F38). The
 // `…` is always shown, at every width (docs/design/patterns.md Today), in
-// the column of the Task rows' `…`.
+// the column of the Task rows' `…`. It offers what the read says the
+// person can do with the note (#322).
 
 type InterruptRowProps = {
-  note: InterruptNote;
+  note: InterruptItem;
   /** The time it was noted (「10:00」). */
   time: string;
   onEdit: () => void;
@@ -24,6 +25,7 @@ type InterruptRowProps = {
 };
 
 function InterruptRow({ note, time, onEdit, onDelete }: InterruptRowProps) {
+  const { canEdit, canDelete } = note.capabilities;
   return (
     <div
       data-slot="interrupt-row"
@@ -45,30 +47,36 @@ function InterruptRow({ note, time, onEdit, onDelete }: InterruptRowProps) {
           </span>
         </span>
       </span>
-      <Menu>
-        <MenuTrigger
-          render={
-            <IconButton
-              size="sm"
-              data-action="interrupt-actions"
-              label={`その他の操作：割り込み ${time}「${note.text}」`}
-              icon={<Ellipsis />}
-            />
-          }
-        />
-        <MenuContent align="end">
-          <MenuItem onClick={onEdit}>
-            <Pencil aria-hidden />
-            編集
-          </MenuItem>
-          <MenuSeparator />
-          {/* Not `danger`: it can be undone from the Toast (Issue #197). */}
-          <MenuItem onClick={onDelete}>
-            <Trash2 aria-hidden />
-            消す
-          </MenuItem>
-        </MenuContent>
-      </Menu>
+      {(canEdit || canDelete) && (
+        <Menu>
+          <MenuTrigger
+            render={
+              <IconButton
+                size="sm"
+                data-action="interrupt-actions"
+                label={`その他の操作：割り込み ${time}「${note.text}」`}
+                icon={<Ellipsis />}
+              />
+            }
+          />
+          <MenuContent align="end">
+            {canEdit && (
+              <MenuItem onClick={onEdit}>
+                <Pencil aria-hidden />
+                編集
+              </MenuItem>
+            )}
+            {canEdit && canDelete && <MenuSeparator />}
+            {/* Not `danger`: it can be undone from the Toast (Issue #197). */}
+            {canDelete && (
+              <MenuItem onClick={onDelete}>
+                <Trash2 aria-hidden />
+                消す
+              </MenuItem>
+            )}
+          </MenuContent>
+        </Menu>
+      )}
     </div>
   );
 }

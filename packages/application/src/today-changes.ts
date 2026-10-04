@@ -118,8 +118,12 @@ function onActiveToday(
   };
 }
 
-/** The selection, and what a completion or skip needs: its Task or occurrence. */
-function subjectOf(
+/**
+ * The selection, and what a completion or skip needs: its Task or
+ * occurrence. The capabilities of a selection read them the same way
+ * (capabilities.ts).
+ */
+export function subjectOf(
   sprint: Sprint,
   selectionId: DailySelectionId,
   records: Records,

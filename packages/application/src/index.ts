@@ -89,6 +89,10 @@ export {
   type BacklogItem,
 } from './backlog-view';
 export { type DayArea, type DayData, type DayRecord } from './day-view';
+export {
+  type DailySelectionCapabilities,
+  type InterruptNoteCapabilities,
+} from './capabilities';
 export { areaList, type EditableArea } from './area-view';
 export {
   type AreaPlan,
@@ -116,6 +120,7 @@ export {
 export { type SprintWeek } from './sprint-choice';
 export {
   type ClosedResolution,
+  type InterruptItem,
   type ListedResolution,
   type TodayArea,
   type TodayData,

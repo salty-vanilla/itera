@@ -420,17 +420,16 @@ function TaskDetail({
   const [openedWith] = useState(() => valuesOf(item));
   const [more, setMore] = useState(false);
   const moreId = useId();
-  // Which of the day's operations the section offers.
-  const resolution = facts.today?.resolution;
+  // Which of the day's operations the section offers: those the read says
+  // the person can do with today's choice (#322).
+  const can = facts.today?.capabilities;
   const offers = {
-    start: resolution === 'selected',
-    pause: resolution === 'started',
+    start: can?.canStart === true,
+    pause: can?.canPause === true,
     // 今日は見送る is not for an occurrence: it is skipped instead (#233).
-    defer:
-      (resolution === 'selected' || resolution === 'started') &&
-      facts.today?.recurring !== true,
-    skip: resolution === 'selected' && facts.today?.recurring === true,
-    remove: resolution === 'selected',
+    defer: can?.canDefer === true && facts.today?.recurring !== true,
+    skip: can?.canSkip === true,
+    remove: can?.canRemove === true,
   };
   // The section's operations, in their order. Only the state's main one is
   // Secondary, and it comes first; the others are Quiet, so that the detail
@@ -963,7 +962,7 @@ function TaskDetail({
                 </Link>
               )}
             </div>
-            {pausing && facts.today?.resolution === 'started' && (
+            {pausing && offers.pause && (
               <form
                 noValidate
                 onSubmit={submitPause}

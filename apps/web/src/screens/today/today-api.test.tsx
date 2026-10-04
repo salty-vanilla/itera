@@ -505,3 +505,107 @@ describe('Today on the API', () => {
     });
   });
 });
+
+describe('what the day’s read says the person can do (#322)', () => {
+  type Capabilities = Record<string, boolean>;
+  type TodayView = {
+    rows: { task: { title: string }; capabilities: Capabilities }[];
+    closed: { capabilities: Capabilities }[];
+    interrupts: { capabilities: Capabilities }[];
+  };
+
+  /** The mock over `today-interrupt`, with today's read changed by `change`. */
+  function serveChanged(change: (today: TodayView) => void) {
+    const store = createMemoryStore(fixtureSnapshot('today-interrupt'), {
+      random: (bytes) => crypto.getRandomValues(bytes),
+    });
+    const mock = createMock(store).fetch;
+    vi.stubGlobal(
+      'fetch',
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request = new Request(input, init);
+        const response = await mock(request);
+        if (
+          request.method !== 'GET' ||
+          !pathOf(request).startsWith('/api/days/')
+        )
+          return response;
+        const body = (await response.json()) as {
+          view: { kind: string; today?: TodayView };
+        };
+        if (body.view.today !== undefined) change(body.view.today);
+        return new Response(JSON.stringify(body), {
+          status: response.status,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      },
+    );
+  }
+
+  /** The `…` of a row of 今日やる, and of each interrupt: what they offer. */
+  async function offered() {
+    renderToday();
+    await dayRead();
+    const items = async (button: HTMLElement) => {
+      await userEvent.click(button);
+      const names = (await screen.findAllByRole('menuitem')).map(
+        (i) => i.textContent,
+      );
+      await userEvent.keyboard('{Escape}');
+      return names;
+    };
+    const row = await items(
+      screen.getByRole('button', {
+        name: 'その他の操作：顧客インタビューの設計',
+      }),
+    );
+    const interrupts: (string | null)[][] = [];
+    for (const button of screen.queryAllByRole('button', {
+      name: /^その他の操作：割り込み/,
+    }))
+      interrupts.push(await items(button));
+    return { row, interrupts };
+  }
+
+  it('offers the same operations when the read has a `can…` it does not know', async () => {
+    serveChanged(() => {});
+    const before = await offered();
+    cleanup();
+    vi.unstubAllGlobals();
+    serveChanged((today) => {
+      for (const { capabilities } of [
+        ...today.rows,
+        ...today.closed,
+        ...today.interrupts,
+      ])
+        capabilities.canSomethingNew = true;
+    });
+    const after = await offered();
+    expect(before.row).toContain('開始');
+    expect(before.interrupts.length).toBeGreaterThan(0);
+    expect(after).toEqual(before);
+  });
+
+  it('offers only what the read says, whatever the state', async () => {
+    serveChanged((today) => {
+      for (const row of today.rows)
+        if (row.task.title === '顧客インタビューの設計')
+          row.capabilities = {
+            ...Object.fromEntries(
+              Object.keys(row.capabilities).map((name) => [name, false]),
+            ),
+            canComplete: true,
+          };
+      for (const note of today.interrupts)
+        note.capabilities = { canEdit: false, canDelete: true };
+    });
+    const { row, interrupts } = await offered();
+    // 見積もりを入れる is the row's own (E), not one of the selection's.
+    expect(row).toEqual([
+      '完了にする',
+      expect.stringMatching(/^見積もりを入れる/),
+    ]);
+    expect(interrupts.length).toBeGreaterThan(0);
+    for (const items of interrupts) expect(items).toEqual(['消す']);
+  });
+});

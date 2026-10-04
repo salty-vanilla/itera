@@ -399,6 +399,52 @@ export type DailySelectionId = string;
 export type ListedResolution = 'selected' | 'started' | 'done' | 'skipped';
 
 /**
+ * What the person can do with a choice for a day now (#322, ADR 0007 操作の可否). Output only. One `can…` for each operation on the record, named after its operationId without the record's noun; true when the operation goes through with valid values (it is the check the operation makes of the records), false when it is refused (422, or 404). The values an operation is given (positive hours) are not checked, and why one is false is not told. A client offers an operation only when its `can…` is true and never judges the state itself. More may be added, each optional: a client ignores one it does not know.
+ */
+export type DailySelectionCapabilities = {
+    /**
+     * startSelection.
+     */
+    canStart: boolean;
+    /**
+     * pauseSelection.
+     */
+    canPause: boolean;
+    /**
+     * deferSelection.
+     */
+    canDefer: boolean;
+    /**
+     * undoDeferSelection.
+     */
+    canUndoDefer: boolean;
+    /**
+     * removeFromToday.
+     */
+    canRemove: boolean;
+    /**
+     * undoRemoveFromToday.
+     */
+    canUndoRemove: boolean;
+    /**
+     * completeSelection.
+     */
+    canComplete: boolean;
+    /**
+     * undoCompleteSelection.
+     */
+    canUndoComplete: boolean;
+    /**
+     * skipSelection.
+     */
+    canSkip: boolean;
+    /**
+     * undoSkipSelection.
+     */
+    canUndoSkip: boolean;
+};
+
+/**
  * How a choice for today was closed without being done.
  */
 export type ClosedResolution = 'paused' | 'deferred' | 'removed';
@@ -467,6 +513,7 @@ export type BacklogItem = {
         resolution: ListedResolution;
         startedAt?: Instant;
         recurring: boolean;
+        capabilities: DailySelectionCapabilities;
     };
     closedToday?: ClosedResolution;
     value: PlanningValue;
@@ -726,6 +773,7 @@ export type TodayRow = {
     streak: number;
     removedToday?: DailySelectionId;
     selection: DailySelection;
+    capabilities: DailySelectionCapabilities;
     actualHours: number;
 };
 
@@ -740,6 +788,27 @@ export type TodayItem = {
      */
     streak: number;
     removedToday?: DailySelectionId;
+};
+
+/**
+ * What the person can do with an interrupt now (#322), as DailySelectionCapabilities says. The text and the minutes an edit is given are not checked.
+ */
+export type InterruptNoteCapabilities = {
+    /**
+     * editInterrupt.
+     */
+    canEdit: boolean;
+    /**
+     * deleteInterrupt.
+     */
+    canDelete: boolean;
+};
+
+/**
+ * An interrupt as the reads of a day give it: the record, and what the person can do with it. `restoreInterrupt` takes the record without `capabilities`.
+ */
+export type InterruptItem = InterruptNote & {
+    capabilities: InterruptNoteCapabilities;
 };
 
 export type TodayData = {
@@ -763,7 +832,7 @@ export type TodayData = {
     continuation: Array<TodayItem>;
     rest: Array<TodayItem>;
     plan: Array<TodayItem>;
-    interrupts: Array<InterruptNote>;
+    interrupts: Array<InterruptItem>;
     areas: Array<AreaLabel>;
 };
 
@@ -790,6 +859,7 @@ export type DayRecord = {
     area?: AreaLabel;
     occurrence?: Occurrence;
     actualHours: number;
+    capabilities: DailySelectionCapabilities;
 };
 
 export type DayData = {
@@ -813,7 +883,7 @@ export type DayData = {
      */
     next?: SprintRef;
     records: Array<DayRecord>;
-    interrupts: Array<InterruptNote>;
+    interrupts: Array<InterruptItem>;
     occurrences: Array<{
         occurrence: Occurrence;
         title: string;
@@ -1379,6 +1449,7 @@ export type BacklogItemWritable = {
         resolution: ListedResolution;
         startedAt?: Instant;
         recurring: boolean;
+        capabilities: DailySelectionCapabilities;
     };
     closedToday?: ClosedResolution;
     value: PlanningValue;
@@ -1507,6 +1578,7 @@ export type TodayRowWritable = {
     streak: number;
     removedToday?: DailySelectionId;
     selection: DailySelection;
+    capabilities: DailySelectionCapabilities;
     actualHours: number;
 };
 
@@ -1521,6 +1593,13 @@ export type TodayItemWritable = {
      */
     streak: number;
     removedToday?: DailySelectionId;
+};
+
+/**
+ * An interrupt as the reads of a day give it: the record, and what the person can do with it. `restoreInterrupt` takes the record without `capabilities`.
+ */
+export type InterruptItemWritable = InterruptNoteWritable & {
+    capabilities: InterruptNoteCapabilities;
 };
 
 export type TodayDataWritable = {
@@ -1544,7 +1623,7 @@ export type TodayDataWritable = {
     continuation: Array<TodayItemWritable>;
     rest: Array<TodayItemWritable>;
     plan: Array<TodayItemWritable>;
-    interrupts: Array<InterruptNoteWritable>;
+    interrupts: Array<InterruptItemWritable>;
     areas: Array<AreaLabel>;
 };
 
@@ -1563,6 +1642,15 @@ export type SprintRefWritable = {
      */
     sprint?: SprintWritable;
     week?: SprintWeek;
+};
+
+export type DayRecordWritable = {
+    selection: DailySelection;
+    title: string;
+    area?: AreaLabel;
+    occurrence?: Occurrence;
+    actualHours: number;
+    capabilities: DailySelectionCapabilities;
 };
 
 export type DayDataWritable = {
@@ -1585,8 +1673,8 @@ export type DayDataWritable = {
      * With no Sprint for the day, the next one after it.
      */
     next?: SprintRefWritable;
-    records: Array<DayRecord>;
-    interrupts: Array<InterruptNoteWritable>;
+    records: Array<DayRecordWritable>;
+    interrupts: Array<InterruptItemWritable>;
     occurrences: Array<{
         occurrence: Occurrence;
         title: string;

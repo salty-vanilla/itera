@@ -48,6 +48,9 @@ import type {
 // Issue #233 renamed the day's operations and left 今日は見送る out for an
 // occurrence of a recurring Task, which has 今日の回をスキップする instead.
 // 今週の残りに戻す takes the row out of today (today-view.ts).
+// Which operations there are comes from the read: the row offers one only
+// when its `capabilities` says so (#322, ADR 0007 操作の可否). The state
+// decides only how the row looks.
 
 type TodayRowProps = {
   row: TodayRowData;
@@ -90,51 +93,58 @@ function TodayRow({
   onRecord,
   actionsRef,
 }: TodayRowProps) {
-  const { selection, task, occurrence } = row;
+  const { selection, task, occurrence, capabilities: can } = row;
   const state = selection.resolution;
   const done = state === 'done';
   const skipped = state === 'skipped';
-  const undoable = state === 'deferred';
   const recurring = occurrence !== undefined;
+  // The way back from a slip, beside the row instead of the `…` (F19, F37).
+  const undo = can.canUndoSkip
+    ? { action: 'undo-skip', words: 'スキップ', onClick: onUndoSkip }
+    : can.canUndoDefer
+      ? { action: 'undo-close', words: '見送り', onClick: onUndoClose }
+      : undefined;
 
   const items = [
-    state === 'selected' && (
+    can.canStart && (
       <MenuItem key="start" onClick={onStart}>
         <Play aria-hidden />
         開始
       </MenuItem>
     ),
-    state === 'started' && (
+    can.canPause && (
       <MenuItem key="pause" onClick={onPause}>
         <Pause aria-hidden />
         今日は中断する
       </MenuItem>
     ),
     // The same as ○ (F17 for a paused row), for those who look here first.
-    (state === 'selected' || state === 'started' || state === 'paused') && (
+    can.canComplete && (
       <MenuItem key="complete" onClick={onComplete}>
         <CircleCheck aria-hidden />
         完了にする
       </MenuItem>
     ),
-    (state === 'selected' || state === 'started') && !recurring && (
+    // An occurrence is skipped instead (#233).
+    can.canDefer && !recurring && (
       <MenuItem key="defer" onClick={onDefer}>
         <CalendarX2 aria-hidden />
         今日は見送る
       </MenuItem>
     ),
-    state === 'selected' && recurring && (
+    can.canSkip && (
       <MenuItem key="skip" onClick={onSkip}>
         <SkipForward aria-hidden />
         今日の回をスキップする
       </MenuItem>
     ),
-    state === 'selected' && (
+    can.canRemove && (
       <MenuItem key="remove" onClick={onRemove}>
         <LogOut aria-hidden />
         今週の残りに戻す
       </MenuItem>
     ),
+    // Where the work of the day has ended: done, or paused.
     (done || state === 'paused') && (
       <MenuItem key="record" onClick={onRecord}>
         <Timer aria-hidden />
@@ -170,7 +180,7 @@ function TodayRow({
           <CompletionCircle
             title={task.title}
             done={done}
-            onToggle={done ? onUndoComplete : onComplete}
+            onToggle={can.canUndoComplete ? onUndoComplete : onComplete}
           />
         )
       }
@@ -182,17 +192,17 @@ function TodayRow({
       }
       estimateFromMedium
       reserveActions
-      actionsVisible={skipped || undoable}
+      actionsVisible={undo !== undefined}
       actions={
-        skipped || undoable ? (
+        undo !== undefined ? (
           // The size of the `…`, so the values stay in one column; always
           // shown, as the way back from a slip (F19, F37).
           <IconButton
             size="sm"
-            data-action={skipped ? 'undo-skip' : 'undo-close'}
-            label={`取り消す（${skipped ? 'スキップ' : '見送り'}）：${task.title}`}
+            data-action={undo.action}
+            label={`取り消す（${undo.words}）：${task.title}`}
             icon={<Undo2 />}
-            onClick={skipped ? onUndoSkip : onUndoClose}
+            onClick={undo.onClick}
           />
         ) : items.length > 0 ? (
           <Menu>

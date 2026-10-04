@@ -22,6 +22,13 @@ import {
   type TodayRemaining,
   type WeekProgress,
 } from '@itera/domain';
+import {
+  interruptCapabilities,
+  selectionCapabilities,
+  type DailySelectionCapabilities,
+  type InterruptNoteCapabilities,
+  type WithCapabilities,
+} from './capabilities';
 import type { Clock, Records } from './records';
 import { dayInPeriod, isLastDay, selectionActualHours } from './sprint-day';
 import {
@@ -61,9 +68,17 @@ export interface TodayItem {
 /** A row of 今日やる, or one closed today. */
 export interface TodayRow extends TodayItem {
   readonly selection: DailySelection;
+  /** What the person can do with the selection now (#322). */
+  readonly capabilities: DailySelectionCapabilities;
   /** The actual hours recorded for this day's selection. */
   readonly actualHours: number;
 }
+
+/** An interrupt, with what the person can do with it now (#322). */
+export type InterruptItem = WithCapabilities<
+  TaggedInterruptNote,
+  InterruptNoteCapabilities
+>;
 
 export interface TodayData {
   readonly sprint: TaggedSprint;
@@ -104,7 +119,7 @@ export interface TodayData {
    */
   readonly plan: readonly TodayItem[];
   /** Today's interrupts, oldest first. */
-  readonly interrupts: readonly TaggedInterruptNote[];
+  readonly interrupts: readonly InterruptItem[];
   /** Areas for the quick add, in the person's order. */
   readonly areas: readonly TodayArea[];
 }
@@ -193,7 +208,13 @@ export function todayData(
     const base = item(sprintTask, selection.occurrenceId);
     if (base === undefined) return [];
     const actualHours = selectionActualHours(sprint, selection);
-    return [{ ...base, selection, actualHours }];
+    const capabilities = selectionCapabilities(
+      records,
+      sprint,
+      selection,
+      today,
+    );
+    return [{ ...base, selection, capabilities, actualHours }];
   };
 
   const todays = sprint.dailySelections
@@ -305,9 +326,12 @@ export function todayData(
     continuation,
     rest,
     plan,
-    interrupts: sprint.interrupts.filter(
-      (n) => toLocalDate(n.at, records.user.timeZone) === today,
-    ),
+    interrupts: sprint.interrupts
+      .filter((n) => toLocalDate(n.at, records.user.timeZone) === today)
+      .map((note) => ({
+        ...note,
+        capabilities: interruptCapabilities(sprint, note),
+      })),
     areas,
   };
 }

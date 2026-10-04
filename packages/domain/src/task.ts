@@ -12,7 +12,7 @@ import type {
   UserId,
 } from './shared/ids';
 import { omit, withOptional } from './shared/record';
-import { err } from './shared/result';
+import { err, ok, type Result } from './shared/result';
 import type { Instant, LocalDate } from './shared/time';
 import type { Estimate, EstimateSuggestion } from './estimate';
 
@@ -189,6 +189,15 @@ export function completeTask(
   task: Task,
   ctx: CommandContext,
 ): CommandResult<Task> {
+  const checked = checkCompleteTask(task);
+  if (!checked.ok) return checked;
+  return applied({ ...task, lifecycle: 'completed', completedAt: ctx.now }, [
+    { kind: 'taskCompleted', at: ctx.now, actor: ctx.actor, taskId: task.id },
+  ]);
+}
+
+/** Whether `completeTask` takes the Task as it is now (#322). */
+export function checkCompleteTask(task: Task): Result<undefined> {
   if (isRecurring(task)) {
     return err(
       'recurringTaskCannotComplete',
@@ -201,9 +210,7 @@ export function completeTask(
       `Cannot complete a ${task.lifecycle} Task.`,
     );
   }
-  return applied({ ...task, lifecycle: 'completed', completedAt: ctx.now }, [
-    { kind: 'taskCompleted', at: ctx.now, actor: ctx.actor, taskId: task.id },
-  ]);
+  return ok(undefined);
 }
 
 /** Completed → Active. */
@@ -211,9 +218,8 @@ export function undoTaskCompletion(
   task: Task,
   ctx: CommandContext,
 ): CommandResult<Task> {
-  if (task.lifecycle !== 'completed') {
-    return err('invalidTransition', 'Task is not completed.');
-  }
+  const checked = checkUndoTaskCompletion(task);
+  if (!checked.ok) return checked;
   return applied({ ...omit(task, 'completedAt'), lifecycle: 'active' }, [
     {
       kind: 'taskCompletionUndone',
@@ -222,6 +228,13 @@ export function undoTaskCompletion(
       taskId: task.id,
     },
   ]);
+}
+
+/** Whether `undoTaskCompletion` takes the Task as it is now (#322). */
+export function checkUndoTaskCompletion(task: Task): Result<undefined> {
+  return task.lifecycle === 'completed'
+    ? ok(undefined)
+    : err('invalidTransition', 'Task is not completed.');
 }
 
 /**

@@ -12,14 +12,16 @@ import {
   type Sprint,
   type Task,
 } from '@itera/domain';
+import {
+  interruptCapabilities,
+  selectionCapabilities,
+  type DailySelectionCapabilities,
+} from './capabilities';
 import type { Clock, Records } from './records';
 import { sprintRefs, type SprintRef } from './sprint-choice';
 import { dayInPeriod, selectionActualHours } from './sprint-day';
-import type {
-  TaggedInterruptNote,
-  TaggedRecords,
-  TaggedTask,
-} from './versions';
+import type { InterruptItem } from './today-view';
+import type { TaggedRecords, TaggedTask } from './versions';
 
 export interface DayArea {
   readonly id: AreaId;
@@ -36,6 +38,11 @@ export interface DayRecord {
   readonly occurrence?: Occurrence;
   /** The actual hours recorded for it that day. */
   readonly actualHours: number;
+  /**
+   * What the person can do with it now (#322): undo a completion or a skip
+   * while its Sprint runs (F33).
+   */
+  readonly capabilities: DailySelectionCapabilities;
 }
 
 export interface DayData {
@@ -56,7 +63,7 @@ export interface DayData {
   /** Past: the day's choices and how each ended, in the order chosen. */
   readonly records: readonly DayRecord[];
   /** Past: the day's interrupts, oldest first. */
-  readonly interrupts: readonly TaggedInterruptNote[];
+  readonly interrupts: readonly InterruptItem[];
   /** Future: the occurrences due that day (not those left out in Planning). */
   readonly occurrences: readonly {
     readonly occurrence: Occurrence;
@@ -125,6 +132,12 @@ export function dayData(
                 ...withArea(task),
                 ...(occurrence === undefined ? {} : { occurrence }),
                 actualHours: selectionActualHours(sprint, selection),
+                capabilities: selectionCapabilities(
+                  records,
+                  sprint,
+                  selection,
+                  clock.today,
+                ),
               },
             ];
           });
@@ -169,11 +182,15 @@ export function dayData(
           within: { ...ref, day: dayInPeriod(ref, date) },
         }),
     records: dayRecords,
-    interrupts: past
-      ? (sprint?.interrupts ?? []).filter(
-          (n) => toLocalDate(n.at, records.user.timeZone) === date,
-        )
-      : [],
+    interrupts:
+      past && sprint !== undefined
+        ? sprint.interrupts
+            .filter((n) => toLocalDate(n.at, records.user.timeZone) === date)
+            .map((note) => ({
+              ...note,
+              capabilities: interruptCapabilities(sprint, note),
+            }))
+        : [],
     occurrences,
     due,
   };
