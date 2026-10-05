@@ -199,12 +199,14 @@ sprintGoal:
         application/json:
           schema:
             oneOf:
-              - type: object
+              - title: UpdateGoalText
+                type: object
                 additionalProperties: false
                 required: [text]
                 properties:
                   text: { type: string }
-              - type: object
+              - title: UpdateGoalAssessment
+                type: object
                 additionalProperties: false
                 required: [assessment]
                 properties:
@@ -247,14 +249,16 @@ sprintTasks:
         application/json:
           schema:
             oneOf:
-              - type: object
+              - title: AddTasksToSprint
+                type: object
                 additionalProperties: false
                 required: [taskIds]
                 properties:
                   taskIds:
                     type: array
                     items: { $ref: '../schemas/common.yaml#/TaskId' }
-              - type: object
+              - title: CreateTaskInSprint
+                type: object
                 additionalProperties: false
                 required: [title]
                 properties:
@@ -561,20 +565,23 @@ dailySelections:
         application/json:
           schema:
             oneOf:
-              - type: object
+              - title: ChooseSprintTask
+                type: object
                 additionalProperties: false
                 required: [date, sprintTaskId]
                 properties:
                   date: { $ref: '../schemas/common.yaml#/LocalDate' }
                   sprintTaskId: { $ref: '../schemas/common.yaml#/SprintTaskId' }
                   occurrenceId: { $ref: '../schemas/common.yaml#/OccurrenceId' }
-              - type: object
+              - title: ChooseTask
+                type: object
                 additionalProperties: false
                 required: [date, taskId]
                 properties:
                   date: { $ref: '../schemas/common.yaml#/LocalDate' }
                   taskId: { $ref: '../schemas/common.yaml#/TaskId' }
-              - type: object
+              - title: ChooseNewTask
+                type: object
                 additionalProperties: false
                 required: [date, title]
                 properties:

@@ -55,18 +55,21 @@ Subtask:
     etag: { $ref: './common.yaml#/ETag' }
 EstimateSource:
   oneOf:
-    - type: object
+    - title: ManualEstimateSource
+      type: object
       required: [kind]
       properties:
         kind: { const: manual }
-    - description: 採用 of a suggestion's bound.
+    - title: AdoptedEstimateSource
+      description: 採用 of a suggestion's bound.
       type: object
       required: [kind, suggestionId, bound]
       properties:
         kind: { const: adopted }
         suggestionId: { $ref: './common.yaml#/EstimateSuggestionId' }
         bound: { $ref: '#/SuggestionBound' }
-    - description: 直して使う (F31), the person's own hours from a suggestion.
+    - title: EditedEstimateSource
+      description: 直して使う (F31), the person's own hours from a suggestion.
       type: object
       required: [kind, suggestionId]
       properties:
@@ -138,22 +141,26 @@ Task:
 # ------------------------------------------------------------ Recurrence
 RecurrencePattern:
   oneOf:
-    - type: object
+    - title: DailyPattern
+      type: object
       required: [freq]
       properties:
         freq: { const: daily }
-    - type: object
+    - title: WeekdaysPattern
+      type: object
       required: [freq]
       properties:
         freq: { const: weekdays }
-    - type: object
+    - title: WeeklyPattern
+      type: object
       required: [freq, daysOfWeek]
       properties:
         freq: { const: weekly }
         daysOfWeek:
           type: array
           items: { $ref: './common.yaml#/DayOfWeek' }
-    - type: object
+    - title: MonthlyPattern
+      type: object
       required: [freq, dayOfMonth]
       properties:
         freq: { const: monthly }
@@ -186,11 +193,13 @@ Occurrence:
 CriterionScope:
   description: The Tasks a planning criterion covers.
   oneOf:
-    - type: object
+    - title: AllCriterionScope
+      type: object
       required: [kind]
       properties:
         kind: { const: all }
-    - type: object
+    - title: AreaCriterionScope
+      type: object
       required: [kind, areaId]
       properties:
         kind: { const: area }
@@ -219,7 +228,8 @@ PlanningValue:
     changes this value, not the Task.
   oneOf:
     - $ref: '#/EstimatedPlanningValue'
-    - type: object
+    - title: SubtasksPlanningValue
+      type: object
       required:
         [base, lo, hi, unestimatedSubtasks, criterionApplied, computedAt]
       properties:
@@ -229,7 +239,8 @@ PlanningValue:
         unestimatedSubtasks: { type: integer }
         criterionApplied: { const: false }
         computedAt: { $ref: './common.yaml#/Instant' }
-    - type: object
+    - title: NonePlanningValue
+      type: object
       required: [base, criterionApplied, computedAt]
       properties:
         base: { const: none }

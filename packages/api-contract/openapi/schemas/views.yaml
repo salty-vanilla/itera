@@ -673,16 +673,19 @@ PastDayRecord:
     recurring: { type: boolean }
     after:
       oneOf:
-        - type: object
+        - title: UnresolvedAfter
+          type: object
           required: [kind]
           properties:
             kind: { const: unresolved }
-        - type: object
+        - title: ClosedAfter
+          type: object
           required: [kind, resolution]
           properties:
             kind: { const: closed }
             resolution: { $ref: './records.yaml#/ClosedResolution' }
-        - type: object
+        - title: GoneAfter
+          type: object
           required: [kind]
           properties:
             kind: { const: gone }
@@ -1038,12 +1041,14 @@ SprintView:
   description: >-
     A Sprint (#295 R2): while planned, its plan; once confirmed, how it went.
   oneOf:
-    - type: object
+    - title: PlanningSprintView
+      type: object
       required: [state, plan]
       properties:
         state: { const: planning }
         plan: { $ref: '#/SprintPlan' }
-    - type: object
+    - title: RunningSprintView
+      type: object
       required: [state, running]
       properties:
         state:
@@ -1058,12 +1063,14 @@ DayView:
     running Sprint (`today` is left out when none runs), or another day's
     records or occurrences.
   oneOf:
-    - type: object
+    - title: TodayDayView
+      type: object
       required: [kind]
       properties:
         kind: { const: today }
         today: { $ref: '#/TodayData' }
-    - type: object
+    - title: OtherDayView
+      type: object
       required: [kind, day]
       properties:
         kind:

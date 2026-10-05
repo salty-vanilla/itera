@@ -344,12 +344,14 @@ subtask:
         application/json:
           schema:
             oneOf:
-              - type: object
+              - title: UpdateSubtaskDone
+                type: object
                 additionalProperties: false
                 required: [done]
                 properties:
                   done: { type: boolean }
-              - type: object
+              - title: UpdateSubtaskHours
+                type: object
                 additionalProperties: false
                 required: [hours]
                 properties:
@@ -396,12 +398,14 @@ suggestionAdopt:
         application/json:
           schema:
             oneOf:
-              - type: object
+              - title: AdoptAtBound
+                type: object
                 additionalProperties: false
                 required: [bound]
                 properties:
                   bound: { $ref: '../schemas/records.yaml#/SuggestionBound' }
-              - type: object
+              - title: AdoptEditedHours
+                type: object
                 additionalProperties: false
                 required: [hours]
                 properties:
