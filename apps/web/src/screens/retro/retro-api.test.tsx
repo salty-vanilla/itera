@@ -118,6 +118,9 @@ describe('Retro on the API', () => {
       );
       renderRetro('/retro?stage=handoff');
     };
+    /** Each paragraph of the reason, an empty one as ''. */
+    const linesOf = (reason: HTMLElement) =>
+      [...reason.querySelectorAll('p')].map((p) => p.textContent);
     const reasonOf = async () => {
       const button = await screen.findByRole('button', {
         name: '振り返りを完了',
@@ -136,21 +139,13 @@ describe('Retro on the API', () => {
       expect(
         (button as HTMLButtonElement).disabled || button.ariaDisabled,
       ).toBeTruthy();
-      expect(
-        within(reason)
-          .getAllByText(/./, { selector: 'p' })
-          .map((p) => p.textContent),
-      ).toEqual(['まだ完了できません。']);
+      expect(linesOf(reason)).toEqual(['まだ完了できません。']);
     });
 
     it('shows the reasons it knows, and nothing for the one it does not', async () => {
       waitingFor(['somethingNew', 'decisionMissing']);
       const { reason } = await reasonOf();
-      expect(
-        within(reason)
-          .getAllByText(/./, { selector: 'p' })
-          .map((p) => p.textContent),
-      ).toEqual([
+      expect(linesOf(reason)).toEqual([
         '上の「今回の計画のルール」で、続ける・終える・置き換えるのどれかを選ぶと完了できます。',
       ]);
     });
@@ -158,7 +153,8 @@ describe('Retro on the API', () => {
     it('says nothing of a reason it does not know when the Retro can be completed', async () => {
       waitingFor(['somethingNew'], true);
       const { reason } = await reasonOf();
-      expect(reason.textContent).not.toContain('まだ完了できません');
+      expect(linesOf(reason)).not.toContain('まだ完了できません。');
+      expect(linesOf(reason)).not.toContain('');
     });
   });
 

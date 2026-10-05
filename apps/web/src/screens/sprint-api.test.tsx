@@ -115,6 +115,9 @@ const onboarding = '新メンバーのオンボーディング資料';
 
 describe('the Sprint on the API', () => {
   describe('a reason to wait that the server adds later (#431)', () => {
+    /** Each paragraph of the reason, an empty one as ''. */
+    const linesOf = (reason: HTMLElement) =>
+      [...reason.querySelectorAll('p')].map((p) => p.textContent);
     const waitingFor = async (blockers: string[]) => {
       const { sprint } = serve('planning-pick');
       const id = sprint('planning').id;
@@ -145,20 +148,14 @@ describe('the Sprint on the API', () => {
 
     it('says it cannot confirm yet, in one line, when it knows none of the reasons', async () => {
       const reason = await waitingFor(['somethingNew']);
-      expect(
-        within(reason)
-          .getAllByText(/./, { selector: 'p' })
-          .map((p) => p.textContent),
-      ).toEqual(['まだ確定できません。']);
+      expect(linesOf(reason)).toEqual(['まだ確定できません。']);
     });
 
     it('shows the reason it knows, and nothing for the one it does not', async () => {
       const reason = await waitingFor(['somethingNew', 'inactiveTasks']);
-      expect(
-        within(reason)
-          .getAllByText(/./, { selector: 'p' })
-          .map((p) => p.textContent),
-      ).toEqual(['完了・アーカイブしたタスクを今週から外すと確定できます。']);
+      expect(linesOf(reason)).toEqual([
+        '完了・アーカイブしたタスクを今週から外すと確定できます。',
+      ]);
     });
   });
 

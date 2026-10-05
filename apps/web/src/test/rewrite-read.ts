@@ -15,8 +15,9 @@ export function rewriteRead(
   vi.stubGlobal(
     'fetch',
     async (input: RequestInfo | URL, init?: RequestInit) => {
-      const response = await inner(input, init);
+      // The inner fetch reads the request's body: it gets a copy.
       const request = new Request(input, init);
+      const response = await inner(request.clone());
       if (request.method !== 'GET' || !match(new URL(request.url))) {
         return response;
       }
