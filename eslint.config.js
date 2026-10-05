@@ -133,6 +133,87 @@ const WEB_NOT_SCREENS = [
   'apps/web/src/mock/**',
 ];
 
+// apps/web takes its colors from the tokens (DESIGN.md → tokens.css), so a
+// color written in a .ts / .tsx file is a drift from them (.claude/rules/
+// web-ui.md). Tailwind 4 makes a class out of an arbitrary value even with
+// the default theme removed, so the tokens alone do not stop `bg-[#ff0000]`.
+// `color-mix()` stays: it mixes colors that are already there (Kbd's faded
+// outline), and a hex written inside it is found by the first pattern.
+//
+// A hex of 3 or 4 digits with no letter is also an Issue number in a test's
+// name ("(#332)"), so it counts only where a value stands: at the start of
+// the text or after `[`, `:`, `;` or `=`, and not closing a parenthesis.
+const COLOR_PATTERNS = [
+  {
+    // `#rrggbb` and `#rrggbbaa`; `#rgb` and `#rgba` with a letter in them.
+    regex:
+      '(^|[^\\w&])#([0-9a-fA-F]{6}|[0-9a-fA-F]{8}|(?=[0-9]*[a-fA-F])[0-9a-fA-F]{3,4})(?![\\w-])',
+    message: 'a hex color',
+  },
+  {
+    regex: '(^|[\\[:;=]\\s*)#[0-9]{3,4}(?![\\w)-])',
+    message: 'a hex color',
+  },
+  {
+    regex: '(^|[^\\w-])(rgba?|hsla?|hwb|lab|lch|oklab|oklch)\\(',
+    message: 'a color function',
+  },
+  {
+    regex:
+      '(^|[^\\w-])color\\(\\s*(from|srgb|srgb-linear|display-p3|a98-rgb|prophoto-rgb|rec2020|xyz|xyz-d50|xyz-d65)\\b',
+    message: 'a color function',
+  },
+  {
+    // `text-[color:…]`, `text-(color:--x)` and the arbitrary property
+    // `[color:…]`. `bg-(--ink)` (a variable of a token) is not stopped.
+    regex: '(^|[\\s:])\\[color:|-[\\[(]color:',
+    message: 'a Tailwind arbitrary color',
+  },
+];
+
+/** @param {string} regex @param {string} message */
+function textSyntax(regex, message) {
+  return ['Literal', 'TemplateElement', 'JSXText'].map((type) => ({
+    selector:
+      type === 'TemplateElement'
+        ? `TemplateElement[value.raw=/${regex}/]`
+        : `${type}[value=/${regex}/]`,
+    message,
+  }));
+}
+
+const colorSyntax = COLOR_PATTERNS.flatMap(({ regex, message }) =>
+  textSyntax(
+    regex,
+    `Write ${message} with a token (DESIGN.md Colors, .claude/rules/web-ui.md), not as a value here.`,
+  ),
+);
+
+// An Area is called Area (AGENTS.md ドメインの扱い). "domain" in apps/web
+// is the domain layer: `@itera/domain`, `domain-functions`, "ドメインモデル"
+// and the names below, which wrap its errors. A name with "domain" that is
+// not one of them is stopped, so that an Area does not come back as
+// `Domain`, `domainId` and so on. Add to the list only a name of the layer.
+// In a text only the capital word `Domain` and ドメイン are stopped: a
+// lowercase `domain` is the layer, in a test's name or a path (`@itera/domain`).
+const DOMAIN_LAYER_NAMES =
+  '^(Domain(Error|Instant|LocalDate|TimeZone)|DOMAIN_PROBLEMS|domainFailure|keptByDomain)$';
+const domainSyntax = [
+  {
+    selector: `:matches(Identifier, JSXIdentifier)[name=/[Dd][Oo][Mm][Aa][Ii][Nn]/]:not([name=/${DOMAIN_LAYER_NAMES}/])`,
+    message:
+      'Call an Area an Area (AGENTS.md ドメインの扱い). A name of the domain layer goes in DOMAIN_LAYER_NAMES (eslint.config.js).',
+  },
+  ...textSyntax(
+    '\\bDomain\\b|ドメイン(?!モデル)',
+    'The word for an Area is 領域 (Area in code); not "Domain" or ドメイン (AGENTS.md ドメインの扱い).',
+  ),
+];
+
+// Where a color is itself the subject: the contrast test takes the values
+// of the tokens in and computes their ratios.
+const WEB_COLOR_VALUE_TESTS = ['apps/web/src/foundations/contrast.test.ts'];
+
 // Skills taken from upstream stay byte for byte and are not linted; the
 // skills authored in this repository (localSkills in
 // tooling/agents/sources.json) are.
@@ -298,6 +379,21 @@ export default defineConfig(
         },
       ],
     },
+  },
+  {
+    // No color written as a value, and no "Domain" for an Area, in the code
+    // of apps/web (.claude/rules/web-ui.md, AGENTS.md ドメインの扱い). Both
+    // rules go through `no-restricted-syntax`, which a later block replaces
+    // as a whole: add to the arrays above, not to another block of these files.
+    files: ['apps/web/src/**/*.{ts,tsx}'],
+    ignores: WEB_COLOR_VALUE_TESTS,
+    rules: {
+      'no-restricted-syntax': ['error', ...colorSyntax, ...domainSyntax],
+    },
+  },
+  {
+    files: WEB_COLOR_VALUE_TESTS,
+    rules: { 'no-restricted-syntax': ['error', ...domainSyntax] },
   },
   {
     files: [
