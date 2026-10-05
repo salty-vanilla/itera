@@ -75,13 +75,13 @@ import { LAST_DAY_CLOSED_WORDS } from '@/lib/selection-words';
 import { formatHours } from '@/lib/time-format';
 import { startedText } from '@/lib/today-words';
 import type { BacklogView } from '@/screen-data/use-backlog';
+import { useSelectionActions } from '@/screen-data/use-selection-actions';
 import { useTaskActions } from '@/screen-data/use-task-actions';
 import { useNewAreaDialog } from './area-dialog';
 import { CarryOverText, RecurrenceText, SprintText } from './backlog-row';
 import { RecurrenceEditor, type RecurrencePending } from './recurrence-editor';
 import { UnsavedTypingLayer } from '@/lib/unsaved-typing';
 import { SubtaskList } from './subtask-list';
-import { useSelectionActions } from './use-selection-actions';
 import { useAddToToday } from './use-add-to-today';
 import { useAddToWeek } from './use-add-to-week';
 

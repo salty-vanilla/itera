@@ -253,6 +253,193 @@ describe('the Backlog on the API', () => {
     expect(screen.queryByText('保存できませんでした')).toBeNull();
   });
 
+  it('sends 完了にする pressed on rows one after another, each in turn, and drops a repeat on the same row (#379)', async () => {
+    const saves = held(writes);
+    const { store, requests } = serve(saves.answer);
+    renderBacklog();
+    await list();
+    const complete = async (title: string) => {
+      await userEvent.click(
+        screen.getByRole('button', { name: `その他の操作：${title}` }),
+      );
+      await userEvent.click(
+        await screen.findByRole('menuitem', { name: '完了にする' }),
+      );
+    };
+    await complete('本棚を整理する');
+    await until(() => expect(saves.waiting).toBe(1));
+    // The same row again, then another row, while the first is on its way.
+    await complete('本棚を整理する');
+    await complete('歯医者の予約');
+    saves.release();
+    const completed = (title: string) =>
+      store.getSnapshot().records.tasks.find((t) => t.title === title)
+        ?.completedAt !== undefined;
+    await until(() => {
+      expect(completed('本棚を整理する')).toBe(true);
+      expect(completed('歯医者の予約')).toBe(true);
+    });
+    expect(requests.filter((r) => r.startsWith('POST'))).toHaveLength(2);
+    expect(screen.queryByText('保存できませんでした')).toBeNull();
+    // The line of the one completed last is where its row was.
+    expect(
+      await screen.findByRole('button', { name: '元に戻す' }),
+    ).toBeTruthy();
+  });
+
+  it('sends 完了にする pressed in the detail while the row’s is on its way once (#379)', async () => {
+    const saves = held(writes);
+    const { requests } = serve(saves.answer);
+    renderBacklog();
+    const rows = await list();
+    await userEvent.click(
+      screen.getByRole('button', { name: 'その他の操作：本棚を整理する' }),
+    );
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: '完了にする' }),
+    );
+    await until(() => expect(saves.waiting).toBe(1));
+    await userEvent.click(
+      within(rows).getByRole('button', { name: '本棚を整理する' }),
+    );
+    const detail = await screen.findByRole('dialog', {
+      name: '本棚を整理する',
+    });
+    await userEvent.click(
+      within(detail).getByRole('button', { name: '完了にする' }),
+    );
+    saves.release();
+    await until(() =>
+      expect(
+        screen.queryByRole('dialog', { name: '本棚を整理する' }),
+      ).toBeNull(),
+    );
+    await screen.findByRole('button', { name: '元に戻す' });
+    expect(requests.filter((r) => r.startsWith('POST'))).toHaveLength(1);
+    expect(screen.queryByText('保存できませんでした')).toBeNull();
+  });
+
+  it('leaves the completed line where its row was when the row below it was completed while it was on its way (#379)', async () => {
+    const saves = held(writes);
+    const { store } = serve(saves.answer);
+    renderBacklog();
+    const rows = await list();
+    const titleOf = (id: string) =>
+      store.getSnapshot().records.tasks.find((t) => t.id === id)!.title;
+    const order = Array.from(rows.querySelectorAll('[data-task]')).map((li) =>
+      titleOf(li.getAttribute('data-task')!),
+    );
+    const [upper, lower, next] = order;
+    const complete = async (title: string) => {
+      await userEvent.click(
+        screen.getByRole('button', { name: `その他の操作：${title}` }),
+      );
+      await userEvent.click(
+        await screen.findByRole('menuitem', { name: '完了にする' }),
+      );
+    };
+    // The lower row first, then the one right above it.
+    await complete(lower!);
+    await until(() => expect(saves.waiting).toBe(1));
+    await complete(upper!);
+    saves.release();
+    await until(() => expect(screen.queryByText(upper!)).toBeNull());
+    // Both rows are gone: the line is where the upper one was, above the
+    // row that was under them, not at the end of the list.
+    await until(() => {
+      const undo = screen.getByRole('button', { name: '元に戻す' });
+      const below = within(rows).getByRole('button', { name: next! });
+      expect(undo.compareDocumentPosition(below)).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    });
+  });
+
+  it('sends 今日へ from a row and from the detail of the same Task once (#379)', async () => {
+    const saves = held(writes);
+    const { requests } = serve(saves.answer);
+    renderBacklog();
+    const rows = await list();
+    await userEvent.click(
+      screen.getByRole('button', { name: 'その他の操作：本棚を整理する' }),
+    );
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: '今日へ' }),
+    );
+    await until(() => expect(saves.waiting).toBe(1));
+    await userEvent.click(
+      within(rows).getByRole('button', { name: '本棚を整理する' }),
+    );
+    const detail = await screen.findByRole('dialog', {
+      name: '本棚を整理する',
+    });
+    await userEvent.click(
+      within(detail).getByRole('button', { name: '今日へ' }),
+    );
+    saves.release();
+    await screen.findByText('「本棚を整理する」を「今日やる」に入れました');
+    expect(requests.filter((r) => r.startsWith('POST'))).toHaveLength(1);
+    expect(screen.queryByText('保存できませんでした')).toBeNull();
+  });
+
+  it('sends 開始 in the detail once, however many times it is pressed (#379)', async () => {
+    let holding = false;
+    const saves = held((request) => holding && request.method !== 'GET');
+    const { requests } = serve(saves.answer);
+    renderBacklog();
+    const rows = await list();
+    await userEvent.click(
+      within(rows).getByRole('button', { name: '本棚を整理する' }),
+    );
+    const detail = await screen.findByRole('dialog', {
+      name: '本棚を整理する',
+    });
+    const section = () =>
+      within(within(detail).getByRole('region', { name: '今日と今週' }));
+    // 今日へ makes the choice that 開始 is on.
+    await userEvent.click(section().getByRole('button', { name: '今日へ' }));
+    await until(() =>
+      expect(section().queryByRole('button', { name: '開始' })).not.toBeNull(),
+    );
+    holding = true;
+    await userEvent.dblClick(section().getByRole('button', { name: '開始' }));
+    await until(() => expect(saves.waiting).toBe(1));
+    saves.release();
+    await until(() =>
+      expect(section().queryByRole('button', { name: '開始' })).toBeNull(),
+    );
+    expect(requests.filter((r) => r.endsWith('/start'))).toHaveLength(1);
+    expect(screen.queryByText('保存できませんでした')).toBeNull();
+  });
+
+  it('sends 元に戻す on a completed row once, however many times it is pressed (#379)', async () => {
+    const saves = held((request) => request.url.includes('/undo-complete'));
+    const { store, requests } = serve(saves.answer);
+    renderBacklog();
+    await list();
+    await userEvent.click(
+      screen.getByRole('button', { name: 'その他の操作：本棚を整理する' }),
+    );
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: '完了にする' }),
+    );
+    const undo = await screen.findByRole('button', { name: '元に戻す' });
+    await userEvent.dblClick(undo);
+    await until(() => expect(saves.waiting).toBe(1));
+    saves.release();
+    await until(() =>
+      expect(
+        store
+          .getSnapshot()
+          .records.tasks.find((t) => t.title === '本棚を整理する')?.completedAt,
+      ).toBeUndefined(),
+    );
+    expect(requests.filter((r) => r.includes('/undo-complete'))).toHaveLength(
+      1,
+    );
+    expect(screen.queryByText('保存できませんでした')).toBeNull();
+  });
+
   it('holds the close of a detail whose title a failed save left out, and drops it on 保存せずに閉じる (#332)', async () => {
     serve((request) => (request.method === 'PATCH' ? refused() : undefined));
     const router = renderBacklog();
