@@ -21,6 +21,8 @@ execFileSync(
   { stdio: 'inherit' },
 );
 
+// wrangler warns that the secrets in wrangler.jsonc are missing: it does not
+// count `--var`. The values are bound all the same.
 const worker = spawn(
   wrangler,
   [

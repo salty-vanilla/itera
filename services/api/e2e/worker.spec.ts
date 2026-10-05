@@ -97,8 +97,11 @@ test('a signed-in user writes through the API to D1 and reads it back', async ({
   await page.reload();
   await expect(row).toBeVisible();
 
-  // A deep URL opens its own screen once signed in.
-  await page.goto('/today?date=2026-10-05');
-  await expect(page).toHaveURL(/\/today\?date=2026-10-05$/);
-  await expect(page.getByText('進行中の Sprint はありません。')).toBeVisible();
+  // A deep URL opens its own screen once signed in. The day is never the
+  // run's today, and the new user has no Sprint on it.
+  await page.goto('/today?date=2026-09-01');
+  await expect(page).toHaveURL(/\/today\?date=2026-09-01$/);
+  await expect(
+    page.getByText('この日を含む Sprint はありません。'),
+  ).toBeVisible();
 });

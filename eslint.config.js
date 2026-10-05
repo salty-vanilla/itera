@@ -174,11 +174,6 @@ export default defineConfig(
     languageOptions: { globals: globals.node },
   },
   {
-    // services/api's E2E tests drive a browser from Node (Issue #370).
-    files: ['services/api/e2e/**/*.ts', 'services/api/playwright.config.ts'],
-    languageOptions: { globals: globals.node },
-  },
-  {
     // apps/web: React in the browser. Its build configs run on Node.
     files: ['apps/web/**/*.{ts,tsx}'],
     extends: [reactHooks.configs.flat['recommended-latest']],
@@ -479,9 +474,10 @@ export default defineConfig(
     languageOptions: { globals: globals.node },
   },
   {
-    // services/api: its build and tool configs run on Node. The Worker code
-    // gets its globals from the generated worker-configuration.d.ts.
-    files: ['services/api/*.ts'],
+    // services/api: its build and tool configs and its E2E tests (Issue
+    // #370) run on Node. The Worker code gets its globals from the generated
+    // worker-configuration.d.ts.
+    files: ['services/api/*.ts', 'services/api/e2e/**/*.ts'],
     languageOptions: { globals: globals.node },
   },
   // Applies to *.stories.* and .storybook/main.* only. The cast is for the
