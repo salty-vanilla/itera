@@ -63,6 +63,7 @@
   --elevation-drag: 0 2px 8px #16181a24;
 
   /* Stacking order (Elevation & Depth). Use as z-(--layer-dialog). */
+  --layer-local: 1;
   --layer-sticky: 10;
   --layer-drawer: 30;
   --layer-popover: 40;

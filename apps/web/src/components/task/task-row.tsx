@@ -125,7 +125,7 @@ function TaskRow({
         <div
           data-row-control
           className={cn(
-            'relative z-1 flex',
+            'relative z-(--layer-local) flex',
             wideControl && 'enlarged:order-last enlarged:basis-full',
           )}
         >
@@ -168,7 +168,7 @@ function TaskRow({
       {actions !== undefined && (
         <div
           className={cn(
-            'relative z-1 flex shrink-0',
+            'relative z-(--layer-local) flex shrink-0',
             !actionsVisible && [
               'medium:opacity-0 medium:group-hover/row:opacity-100 medium:group-focus-within/row:opacity-100',
               'medium:has-[[aria-expanded=true]]:opacity-100',

@@ -138,6 +138,10 @@ describe('spacing', () => {
   it.each(Object.entries(tokens.spacing))('%s', (name, value) => {
     expect(theme.get(special[name] ?? `--spacing-${name}`)).toBe(value);
   });
+
+  it('drawer is also the container width for @min-drawer: (Toast)', () => {
+    expect(theme.get('--container-drawer')).toBe(tokens.spacing.drawer);
+  });
 });
 
 describe('Foundations stories', () => {

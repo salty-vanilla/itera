@@ -161,6 +161,8 @@
   --spacing-dialog-md: 560px;
   --spacing-dialog-lg: 720px;
   --container-measure-read: 38em;
+  /* `spacing.drawer`, for container queries (@min-drawer:). */
+  --container-drawer: 400px;
 
   /* Responsive: medium 768px–, wide 1200px–, nav 1440px–, xl 1920px– */
   --breakpoint-medium: 768px;
@@ -273,7 +275,8 @@
    */
   :root {
     --toast-offset-bottom: calc(
-      40px + var(--text-meta--line-height) + env(safe-area-inset-bottom)
+      var(--spacing-2) * 2 + var(--spacing-icon-m) + var(--spacing-1) +
+        var(--text-meta--line-height) + env(safe-area-inset-bottom)
     );
   }
 
