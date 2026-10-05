@@ -714,6 +714,11 @@ RunningData:
     week: { $ref: '#/SprintWeek' }
     today: { $ref: './common.yaml#/LocalDate' }
     day: { $ref: './values.yaml#/DayOfSprint' }
+    opensOn:
+      description: >-
+        Running and before its first day: that day, which Today waits for
+        (#347). Absent from the first day on and once the Sprint has ended.
+      $ref: './common.yaml#/LocalDate'
     plan:
       type: array
       items: { $ref: '#/RunningAreaPlan' }
@@ -807,6 +812,12 @@ TodayData:
     today: { $ref: './common.yaml#/LocalDate' }
     day: { $ref: './values.yaml#/DayOfSprint' }
     lastDay: { type: boolean }
+    opensOn:
+      description: >-
+        Before the Sprint's first day: that day. Choosing for the day,
+        adding and interrupts wait for it (#54, #347). Absent from the first
+        day on.
+      $ref: './common.yaml#/LocalDate'
     timeZone: { $ref: './common.yaml#/TimeZone' }
     progress: { $ref: './values.yaml#/WeekProgress' }
     remaining: { $ref: './values.yaml#/TodayRemaining' }

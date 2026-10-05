@@ -39,7 +39,7 @@ import {
 } from './capabilities';
 import type { Clock, Records } from './records';
 import { nextWeekSprintOf, weekOf, type SprintWeek } from './sprint-choice';
-import { dayInPeriod } from './sprint-day';
+import { dayInPeriod, opensOn } from './sprint-day';
 import type {
   TaggedRecords,
   TaggedSprint,
@@ -123,6 +123,11 @@ export interface RunningData {
   readonly today: LocalDate;
   /** 「2日目 / 7日」, absent before the first day and once it has ended. */
   readonly day?: { readonly index: number; readonly count: number };
+  /**
+   * Running and before its first day, that day (#347): Today has nothing
+   * to open yet (#156). Absent from the first day on and once it has ended.
+   */
+  readonly opensOn?: LocalDate;
   /**
    * Areas with a Goal or chosen Tasks, in the Sprint's order, then the
    * Tasks without an Area.
@@ -290,14 +295,18 @@ export function runningData(
       }
     : pickTotals(sprintTotals(sprint, { tasks, now: clock.now }));
 
+  const firstDay = opensOn(sprint, clock.today);
+
   return {
     sprint,
     number: sprintNumber(sprint, records.sprints),
     ...weekOf(sprint, records, clock),
     today: clock.today,
-    ...(clock.today < sprint.start || ended
+    ...(ended
       ? {}
-      : { day: dayInPeriod(sprint, clock.today) }),
+      : firstDay === undefined
+        ? { day: dayInPeriod(sprint, clock.today) }
+        : { opensOn: firstDay }),
     plan,
     ...(ended ? {} : { progress: weekProgress(sprint, records.occurrences) }),
     // Undoing a past day is for the running Sprint only (F33).

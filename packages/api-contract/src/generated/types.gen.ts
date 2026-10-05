@@ -952,6 +952,10 @@ export type TodayData = {
     today: LocalDate;
     day: DayOfSprint;
     lastDay: boolean;
+    /**
+     * Before the Sprint's first day: that day. Choosing for the day, adding and interrupts wait for it (#54, #347). Absent from the first day on.
+     */
+    opensOn?: LocalDate;
     timeZone: TimeZone;
     progress: WeekProgress;
     remaining: TodayRemaining;
@@ -1301,6 +1305,10 @@ export type RunningData = {
     week?: SprintWeek;
     today: LocalDate;
     day?: DayOfSprint;
+    /**
+     * Running and before its first day: that day, which Today waits for (#347). Absent from the first day on and once the Sprint has ended.
+     */
+    opensOn?: LocalDate;
     plan: Array<RunningAreaPlan>;
     totals: {
         total: PlanningTotal;
@@ -1946,6 +1954,10 @@ export type TodayDataWritable = {
     today: LocalDate;
     day: DayOfSprint;
     lastDay: boolean;
+    /**
+     * Before the Sprint's first day: that day. Choosing for the day, adding and interrupts wait for it (#54, #347). Absent from the first day on.
+     */
+    opensOn?: LocalDate;
     timeZone: TimeZone;
     progress: WeekProgress;
     remaining: TodayRemaining;
@@ -2157,6 +2169,10 @@ export type RunningDataWritable = {
     week?: SprintWeek;
     today: LocalDate;
     day?: DayOfSprint;
+    /**
+     * Running and before its first day: that day, which Today waits for (#347). Absent from the first day on and once the Sprint has ended.
+     */
+    opensOn?: LocalDate;
     plan: Array<RunningAreaPlanWritable>;
     totals: {
         total: PlanningTotal;

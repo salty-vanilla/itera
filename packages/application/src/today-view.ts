@@ -32,7 +32,12 @@ import {
   type SprintCapabilities,
 } from './capabilities';
 import type { Clock, Records } from './records';
-import { dayInPeriod, isLastDay, selectionActualHours } from './sprint-day';
+import {
+  dayInPeriod,
+  isLastDay,
+  opensOn,
+  selectionActualHours,
+} from './sprint-day';
 import {
   taggedIn,
   type TaggedRecords,
@@ -89,6 +94,12 @@ export interface TodayData {
   readonly day: { readonly index: number; readonly count: number };
   /** The last day: 「Retro を始める」 shows (F21). */
   readonly lastDay: boolean;
+  /**
+   * Before the Sprint's first day, that day (#347): the screen shows the
+   * week read only, with nothing to choose or add yet (#54, #156). Absent
+   * from the first day on.
+   */
+  readonly opensOn?: LocalDate;
   readonly timeZone: Records['user']['timeZone'];
   /** 今週の完了 (F32). */
   readonly progress: WeekProgress;
@@ -324,12 +335,15 @@ export function todayData(
       ];
     });
 
+  const firstDay = opensOn(sprint, today);
+
   return {
     sprint,
     number: sprintNumber(sprint, sprints),
     today,
     day: dayInPeriod(sprint, today),
     lastDay: isLastDay(sprint, today),
+    ...(firstDay === undefined ? {} : { opensOn: firstDay }),
     sprintCapabilities: sprintCapabilities(records, sprint, clock),
     timeZone: records.user.timeZone,
     progress: weekProgress(sprint, occurrences),
