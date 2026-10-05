@@ -4,18 +4,13 @@
 // contract's types. Checked by `pnpm typecheck` (tsconfig.test.json); the
 // `it`s only list them.
 import type {
-  BacklogData,
   Clock,
   ConditionalOperation,
   CurrentSprints,
-  DayView,
-  EditableArea,
   OperationName,
   OperationOutput,
-  RetroData,
-  SprintItem,
-  SprintView,
-  sprintCandidates,
+  ReadName,
+  ReadView,
 } from '@itera/application';
 import type { BacklogSlice, User } from '@itera/domain';
 import { describe, expectTypeOf, it } from 'vitest';
@@ -83,22 +78,24 @@ type ResponseKeysMismatch = {
     : S;
 }[SurfaceId];
 
-/** Each read's result in packages/application, and the response's `view`. */
-type ContractReads = {
-  listAreas: [readonly EditableArea[], Gen.ListAreasResponse];
-  getBacklog: [BacklogData, Gen.GetBacklogResponse];
-  listSprints: [readonly SprintItem[], Gen.ListSprintsResponse];
-  getSprint: [SprintView, Gen.GetSprintResponse];
-  listSprintCandidates: [
-    SprintCandidates | undefined,
-    Gen.ListSprintCandidatesResponse,
-  ];
-  getSprintRetro: [RetroData | undefined, Gen.GetSprintRetroResponse];
-  getDay: [DayView, Gen.GetDayResponse];
+/** Each read's response, as generated. */
+type ReadResponses = {
+  listAreas: Gen.ListAreasResponse;
+  getBacklog: Gen.GetBacklogResponse;
+  listSprints: Gen.ListSprintsResponse;
+  getSprint: Gen.GetSprintResponse;
+  listSprintCandidates: Gen.ListSprintCandidatesResponse;
+  getSprintRetro: Gen.GetSprintRetroResponse;
+  getDay: Gen.GetDayResponse;
 };
 
-/** What `sprintCandidates` returns. */
-type SprintCandidates = NonNullable<ReturnType<typeof sprintCandidates>>;
+/**
+ * Each read's result as the API and the browser mock answer it (`reads`,
+ * #350), and the response's `view`.
+ */
+type ContractReads = {
+  [N in ReadName]: [ReadView<N>, ReadResponses[N]];
+};
 
 /** The reads whose result differs from the response's `view`. */
 type ReadMismatch = {

@@ -13,6 +13,8 @@
 //   path and query; `readOf` reads a received request into the read of
 //   packages/application it names and its input (#350). Whether the Sprint
 //   it names is the person's (404) is the read's own (`runRead`).
+// - `meResponse` puts together the answer of `GET /me`, the one read that
+//   is not in `readSurfaces`, for the server and the browser mock alike.
 //
 // This module checks requests with the contract's Valibot schemas, so the
 // web app's production code takes sending.ts's entry instead

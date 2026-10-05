@@ -4,7 +4,13 @@
 // calls and when it answers 404 are written once. `getMe` is not here: the
 // person and their settings are the server's, and the Sprints they have now
 // are `currentSprints` (ADR 0006「利用者」).
-import type { LocalDate, Result, SprintId } from '@itera/domain';
+import {
+  err,
+  ok,
+  type LocalDate,
+  type Result,
+  type SprintId,
+} from '@itera/domain';
 import { areaList } from './area-view';
 import { backlogData, type BacklogFilter } from './backlog-view';
 import type { Clock } from './records';
@@ -15,69 +21,69 @@ import {
   sprintRetro,
   sprintView,
 } from './resource-views';
-import { sprintIn } from './sprint-of';
 import type { TaggedRecords } from './versions';
 
-const ANY_STATE = ['planning', 'active', 'review', 'closed'] as const;
-
-function found<T>(value: T): Result<T> {
-  return { ok: true, value };
+/**
+ * What a read of a Sprint the person does not have answers: `notFound`
+ * (404), as an operation on it does (`sprintIn`, #295).
+ */
+function notFound(sprintId: SprintId): Result<never> {
+  return err('notFound', `Sprint ${sprintId}`);
 }
 
-/**
- * A read of the person's Sprint with this ID: `notFound` (404) when the
- * person has none with it, as an operation on it answers (#295).
- */
+/** A read of the person's Sprint with this ID, or `notFound`. */
 function ofSprint<T>(
   records: TaggedRecords,
   sprintId: SprintId,
-  read: (sprintId: SprintId) => T,
+  read: () => T,
 ): Result<T> {
-  const sprint = sprintIn(records, sprintId, ANY_STATE);
-  return sprint.ok ? found(read(sprint.value.id)) : sprint;
+  return records.sprints.some((s) => s.id === sprintId)
+    ? ok(read())
+    : notFound(sprintId);
 }
 
 /** Each read of the contract but `getMe`, by its operationId. */
 export const reads = {
-  listAreas: (records: TaggedRecords) => found(areaList(records)),
+  listAreas: (records: TaggedRecords) => ok(areaList(records)),
   getBacklog: (records: TaggedRecords, clock: Clock, filter: BacklogFilter) =>
-    found(backlogData(records, clock, filter)),
+    ok(backlogData(records, clock, filter)),
   listSprints: (
     records: TaggedRecords,
     clock: Clock,
     filter: { readonly number?: number },
-  ) => found(sprintList(records, clock, filter)),
+  ) => ok(sprintList(records, clock, filter)),
   getSprint: (
     records: TaggedRecords,
     clock: Clock,
     input: { readonly sprintId: SprintId; readonly applyCriterion: boolean },
-  ) =>
-    ofSprint(records, input.sprintId, (sprintId) =>
-      sprintView(records, clock, sprintId, {
-        applyCriterion: input.applyCriterion,
-      }),
-    ),
+  ) => {
+    // `undefined` only for a Sprint the person does not have.
+    const view = sprintView(records, clock, input.sprintId, {
+      applyCriterion: input.applyCriterion,
+    });
+    return view === undefined ? notFound(input.sprintId) : ok(view);
+  },
   listSprintCandidates: (
     records: TaggedRecords,
     clock: Clock,
     input: { readonly sprintId: SprintId },
   ) =>
-    ofSprint(records, input.sprintId, (sprintId) =>
-      sprintCandidates(records, clock, sprintId),
+    ofSprint(records, input.sprintId, () =>
+      sprintCandidates(records, clock, input.sprintId),
     ),
   getSprintRetro: (
     records: TaggedRecords,
     clock: Clock,
     input: { readonly sprintId: SprintId },
   ) =>
-    ofSprint(records, input.sprintId, (sprintId) =>
-      sprintRetro(records, clock, sprintId),
+    ofSprint(records, input.sprintId, () =>
+      sprintRetro(records, clock, input.sprintId),
     ),
   getDay: (
     records: TaggedRecords,
     clock: Clock,
     input: { readonly date: LocalDate },
-  ) => found(dayView(records, clock, input.date)),
+  ) => ok(dayView(records, clock, input.date)),
 };
 
 export type Reads = typeof reads;
