@@ -11,6 +11,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { ENLARGED } from '@/lib/use-media-query';
 import { dayRead } from '@/test/day-read';
 import type { Clock } from '@/mock/memory-store';
 import type { StoreSnapshot } from '@/mock/memory-store';
@@ -140,6 +141,30 @@ describe('Today — the Toast above the Quick Add (#79)', () => {
     await screen.findByRole('heading', { name: 'Backlog' });
     expect(offset()).toBe('');
     expect(room()).toBe('');
+  });
+
+  it('does not stick the Quick Add with enlarged text, so that it does not cover a low screen (#426)', async () => {
+    vi.stubGlobal(
+      'matchMedia',
+      (query: string) =>
+        ({
+          matches: query === ENLARGED,
+          media: query,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+        }) as unknown as MediaQueryList,
+    );
+    await renderAt('/today?fixture=today-interrupt');
+    const bar = screen
+      .getByRole('textbox', { name: '今日やるタスクを追加' })
+      .closest('[data-slot="task-quick-add"]')!.parentElement!;
+    expect(bar.dataset.stuckBar).toBeUndefined();
+    expect(
+      document.documentElement.style.getPropertyValue('--toast-offset-above'),
+    ).toBe('');
+    expect(
+      document.documentElement.style.getPropertyValue('--stuck-bar-bottom'),
+    ).toBe('');
   });
 });
 

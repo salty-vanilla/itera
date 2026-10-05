@@ -19,7 +19,7 @@ import { AreaSelect, chosenArea } from '@/components/task/area-select';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
 import { ADDED_MS } from '@/lib/motion';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
-import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
+import { ENLARGED, MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 import { useStuckBar } from '@/lib/use-stuck-bar';
 import { cn } from '@/lib/utils';
 import { useBacklog, type BacklogView } from '@/screen-data/use-backlog';
@@ -115,8 +115,15 @@ function LoadedBacklog({ backlog }: { backlog: BacklogView }) {
   const [refocus, setRefocus] = useState<TaskId>();
   const undoRef = useRef<HTMLButtonElement>(null);
   // Under 768px the Quick Add sticks to the bottom: the Toast goes above it.
+  // Not with enlarged text: it would cover half of a low screen, so it is
+  // under the filters at the top, as from 768px (#426).
   const quickAddRef = useRef<HTMLDivElement>(null);
-  useStuckBar(quickAddRef, 'bottom', !useMediaQuery(MEDIUM_UP, true));
+  const enlarged = useMediaQuery(ENLARGED);
+  useStuckBar(
+    quickAddRef,
+    'bottom',
+    !useMediaQuery(MEDIUM_UP, true) && !enlarged,
+  );
   // The Task just added: its row flashes for a moment (ADDED_MS), and a Toast says
   // so (Issue #86). A Task the current 切り口 or Area does not show has no
   // row to mark: the Toast says why it is not in the list.
@@ -281,10 +288,11 @@ function LoadedBacklog({ backlog }: { backlog: BacklogView }) {
       </div>
 
       {/* Quick Add: at the top from 768px; under it, sticky at the bottom
-          above the tab bar (DESIGN.md Responsive › compact). */}
+          above the tab bar (DESIGN.md Responsive › compact). With enlarged
+          text it is at the top too, not stuck (#426). */}
       <div
         ref={quickAddRef}
-        className="mt-[var(--toast-above-room,0px)] sticky bottom-0 z-(--layer-sticky) order-last border-t border-border bg-canvas px-4 py-3 medium:static medium:order-none medium:mt-0 medium:border-t-0 medium:px-6 medium:py-0 medium:pb-4 xl:max-w-pane-rows"
+        className="mt-[var(--toast-above-room,0px)] sticky bottom-0 z-(--layer-sticky) enlarged:static order-last enlarged:order-none enlarged:mt-0 border-t enlarged:border-t-0 enlarged:py-0 enlarged:pb-4 border-border bg-canvas px-4 py-3 medium:static medium:order-none medium:mt-0 medium:border-t-0 medium:px-6 medium:py-0 medium:pb-4 xl:max-w-pane-rows"
       >
         <TaskQuickAdd
           label="Backlog にタスクを追加"

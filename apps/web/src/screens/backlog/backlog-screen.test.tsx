@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppRouter } from '@/app/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ADDED_MS } from '@/lib/motion';
+import { ENLARGED, MEDIUM_UP } from '@/lib/use-media-query';
 import type { StoreSnapshot } from '@/mock/memory-store';
 import { findHours, getHours, getMinutes, queryHours } from '@/test/duration';
 import { fixtureIds } from '@itera/application/fixtures';
@@ -21,6 +22,7 @@ const ids = fixtureIds();
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 beforeEach(() => {
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
@@ -156,6 +158,37 @@ describe('Backlog', () => {
     // The flash is over after 2.5 seconds.
     await act(() => vi.advanceTimersByTimeAsync(ADDED_MS));
     expect(first.hasAttribute('data-added')).toBe(false);
+  });
+
+  it.each([
+    ['sticks to the bottom under 768px', false, true],
+    ['does not stick with enlarged text (#426)', true, false],
+  ])('Capture: the Quick Add %s', async (_name, enlarged, stuck) => {
+    vi.stubGlobal(
+      'matchMedia',
+      (query: string) =>
+        ({
+          matches: query === ENLARGED && enlarged,
+          media: query,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+        }) as unknown as MediaQueryList,
+    );
+    expect(window.matchMedia(MEDIUM_UP).matches).toBe(false);
+    await renderAt('/backlog?fixture=backlog-capture');
+    const field = screen.getByRole('textbox', {
+      name: 'Backlog にタスクを追加',
+    });
+    const bar = field.closest('[data-slot="task-quick-add"]')!.parentElement!;
+    expect(bar.dataset.stuckBar === 'bottom').toBe(stuck);
+    expect(
+      document.documentElement.style.getPropertyValue(
+        '--toast-offset-above',
+      ) !== '',
+    ).toBe(stuck);
+    await userEvent.type(field, '請求書を送る{Enter}');
+    await screen.findByText('「請求書を送る」を追加しました');
+    expect(document.activeElement).toBe(field);
   });
 
   it('Capture: a Task the 切り口 does not show is not in the list, and the Toast says why (#86)', async () => {
