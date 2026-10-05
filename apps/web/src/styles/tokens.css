@@ -85,6 +85,7 @@
   --duration-slow: 240ms;
   --duration-toast: 8000ms;
   --duration-toast-action: 16000ms;
+  --duration-added-flash: 2500ms;
   --tooltip-delay: 400ms;
 }
 

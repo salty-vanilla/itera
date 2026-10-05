@@ -17,6 +17,7 @@ import { Filter, FilterGroup } from '@/components/ui/filter';
 import { useToast } from '@/components/ui/toast';
 import { AreaSelect, chosenArea } from '@/components/task/area-select';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
+import { ADDED_MS } from '@/lib/motion';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 import { useStuckBar } from '@/lib/use-stuck-bar';
@@ -34,9 +35,6 @@ import { useTaskDetailLeave } from './use-task-detail-leave';
 // newest first (Issue #86; never by priority, invariant 5), narrowed by a
 // 切り口 and an Area. The 切り口, the Area and the open Task are search
 // parameters, so a state opens from its URL (ADR 0005).
-
-/** How long the row just added flashes; the same as `added-flash` in the CSS. */
-export const ADDED_MS = 2500;
 
 export const slices: readonly { value: BacklogSlice | 'all'; label: string }[] =
   [

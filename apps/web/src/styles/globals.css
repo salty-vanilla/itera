@@ -174,9 +174,12 @@
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-enter: cubic-bezier(0, 0, 0.2, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
-  --default-transition-duration: 100ms;
+  --default-transition-duration: var(--duration-fast);
   --default-transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
   --animate-spin: spin 1s linear infinite;
+  /* The row just added: once, over `duration-added-flash` (motion.ts). */
+  --animate-added-flash: added-flash var(--duration-added-flash) ease-in-out
+    forwards;
   /* Indeterminate Progress: opacity only, the line does not slide. */
   --animate-progress-pulse: progress-pulse 1.6s ease-in-out infinite;
 
@@ -473,8 +476,8 @@
 
   /*
    * The row just added in the Backlog flashes `here-subtle` and fades out
-   * (docs/design/foundations.md, Issue #86). Once, over the 2.5s the screen
-   * keeps it (backlog-screen.tsx): it holds for the first second, so that the
+   * (docs/design/foundations.md, Issue #86). Once, over `duration-added-flash`
+   * (--animate-added-flash; the screens keep the row as long, motion.ts): it holds for the first second, so that the
    * row can be found, and then fades.
    */
   @keyframes added-flash {

@@ -1,6 +1,7 @@
 import { Toast as ToastPrimitive } from '@base-ui/react/toast';
 import { X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { TOAST_ACTION_TIMEOUT, TOAST_TIMEOUT } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import { Button } from './button';
 import { Icon, semanticIcons } from './icon';
@@ -21,13 +22,6 @@ import { IconButton } from './icon-button';
 // with that ID closes the one showing and takes its place as the newest
 // (DESIGN.md Toast).
 
-/** docs/design/foundations.md `duration-toast`. */
-const TOAST_TIMEOUT = 8000;
-/**
- * `duration-toast-action`: a Toast with an action (元に戻す, 今日を開く) is
- * pressed after it is read, and it takes longer to reach (#170).
- */
-const TOAST_ACTION_TIMEOUT = 16000;
 /** Three at a time at most (Issue #8). Older ones are hidden. */
 const TOAST_LIMIT = 3;
 
@@ -370,9 +364,7 @@ function scrollClearOfToasts(
 }
 
 export {
-  TOAST_ACTION_TIMEOUT,
   TOAST_LIMIT,
-  TOAST_TIMEOUT,
   ToastProvider,
   scrollClearOfToasts,
   toastBox,

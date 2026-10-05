@@ -408,11 +408,9 @@ function PlannedRow({
     <TaskRow
       title={task.title}
       // Flashes `here-subtle` once and fades, as the Backlog does (#86;
-      // 2.5s: ADDED_MS in planning-screen.tsx). These rows have no ground of
+      // `duration-added-flash`, kept by ADDED_MS in motion.ts). These rows have no ground of
       // their own, so the flash shows.
-      className={
-        added ? 'animate-[added-flash_2.5s_ease-in-out_forwards]' : undefined
-      }
+      className={added ? 'animate-added-flash' : undefined}
       onOpen={onOpen}
       keys={onEstimate !== undefined ? { onEstimate } : undefined}
       metadata={
