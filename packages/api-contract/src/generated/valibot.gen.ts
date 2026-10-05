@@ -891,6 +891,7 @@ export const vTodayData = v.object({
     today: vLocalDate,
     day: vDayOfSprint,
     lastDay: v.boolean(),
+    opensOn: v.optional(vLocalDate),
     timeZone: vTimeZone,
     progress: vWeekProgress,
     remaining: vTodayRemaining,
@@ -1197,6 +1198,7 @@ export const vRunningData = v.object({
     week: v.optional(vSprintWeek),
     today: vLocalDate,
     day: v.optional(vDayOfSprint),
+    opensOn: v.optional(vLocalDate),
     plan: v.array(vRunningAreaPlan),
     totals: v.object({
         total: vPlanningTotal,
@@ -1716,6 +1718,7 @@ export const vTodayDataWritable = v.object({
     today: vLocalDate,
     day: vDayOfSprint,
     lastDay: v.boolean(),
+    opensOn: v.optional(vLocalDate),
     timeZone: vTimeZone,
     progress: vWeekProgress,
     remaining: vTodayRemaining,
@@ -1901,6 +1904,7 @@ export const vRunningDataWritable = v.object({
     week: v.optional(vSprintWeek),
     today: vLocalDate,
     day: v.optional(vDayOfSprint),
+    opensOn: v.optional(vLocalDate),
     plan: v.array(vRunningAreaPlanWritable),
     totals: v.object({
         total: vPlanningTotal,

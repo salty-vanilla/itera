@@ -129,8 +129,8 @@ function RunningSprint({
         actions={
           running ? (
             // Before the first day there is nothing to open: Today waits for
-            // it, and the Sprint stays here (#156).
-            data.today < data.sprint.start ? undefined : (
+            // it, and the Sprint stays here (#156). The read says so (#347).
+            data.opensOn !== undefined ? undefined : (
               <Link
                 to="/today"
                 className={cn(buttonVariants({ variant: 'primary' }))}

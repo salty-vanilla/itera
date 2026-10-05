@@ -22,13 +22,19 @@ describe('runningData', () => {
     expect(runningData(tagged(records), clock)).toBeUndefined();
   });
 
-  it('has no day count before the first day', () => {
+  it('has no day count before the first day, and the day Today opens (#347)', () => {
     const { records } = fixtureSnapshot('today-interrupt');
-    const data = runningData(tagged(records), {
-      today: '2026-09-27' as LocalDate,
-      now: '2026-09-27T12:00:00.000Z' as Instant,
-    });
-    expect(data?.day).toBeUndefined();
+    const on = (today: string) =>
+      runningData(tagged(records), {
+        today: today as LocalDate,
+        now: `${today}T12:00:00.000Z` as Instant,
+      });
+    const before = on('2026-09-27');
+    expect(before?.day).toBeUndefined();
+    expect(before?.opensOn).toBe('2026-09-28');
+    const first = on('2026-09-28');
+    expect(first?.day).toEqual({ index: 1, count: 7 });
+    expect(first?.opensOn).toBeUndefined();
   });
 
   it('has the planned total and the totals per Area only, with no capacity', () => {
@@ -189,6 +195,7 @@ describe('runningData', () => {
     // Last week: the Sprint Header says so (#168).
     expect(data?.week).toBe('previous');
     expect(data?.day).toBeUndefined();
+    expect(data?.opensOn).toBeUndefined();
     expect(data?.pastDays).toEqual([]);
     const outcomes = data?.plan.flatMap((p) =>
       p.tasks.map((t) => [t.task.id, t.sprintTask.outcome]),
