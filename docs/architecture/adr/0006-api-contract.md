@@ -399,20 +399,24 @@ oasdiff は npm の依存にできない（npm の `oasdiff` は名前の予約�
 
 上の規則と「壊す変更をするとき」の版の上げ方を、PR ごとに CI が確かめる。見落としの防ぎが specialist:contract のレビューだけだったので、最初の本番の公開（1.0.0）の前に入れた（2026-10-05 オーナー判断）。
 
-- CI の `contract` job（`.github/workflows/check.yml`。PR のときだけ）が、PR の base の契約と、PR を base に合わせた契約（checkout した merge commit）を比べる。base の契約は、`github.event.pull_request.base.sha` を `git fetch --depth=1` で取り、`git archive` で `packages/api-contract/openapi/` と `redocly.yaml` を一時ディレクトリに書き出したもの。両方を head の Redocly で 1 つにまとめ（生成と同じ形）、oasdiff の `breaking`（`--flatten-allof`）で比べる。oasdiff の `<ref>:<path>` の読み込みは使わない（まとめる前の分けたファイルどうしを比べることになる）。
-- 手元では、ルートで `pnpm contract:breaking --base <git ref>`（既定は `origin/main`。統合ブランチ向けの PR では、そのブランチを渡す）。`pnpm check` には入れない（base が要り、初回は oasdiff を落とす）。
+- CI の `contract` job（`.github/workflows/check.yml`。PR のときだけ）が、PR の base の契約と、PR を base に合わせた契約（checkout した merge commit）を比べる。base は merge commit の 1 つ目の親（`HEAD^1`。checkout を `fetch-depth: 2` にして得る）で、PR が合わさった base そのものなので、PR の変更だけが差になる。base の契約は、その commit から `git archive` で `packages/api-contract/openapi/` と `redocly.yaml` を一時ディレクトリに書き出したもの。両方を head の Redocly で 1 つにまとめ（生成と同じ形）、oasdiff の `breaking`（`--flatten-allof`）で比べる。oasdiff の `<ref>:<path>` の読み込みは使わない（まとめる前の分けたファイルどうしを比べることになる）。
+- 手元では、ルートで `pnpm contract:breaking --base <git ref>`（既定は `origin/main`。統合ブランチ向けの PR では、そのブランチを渡す）。比べる相手は `--base` とこのブランチの分かれた点（`git merge-base`）で、base がその後に進んだ分を、このブランチの変更として数えない。`pnpm check` には入れない（base が要り、初回は oasdiff を落とす）。
 - oasdiff の既定の判定と、この ADR の規則の違いは、`scripts/breaking-rules.mjs` が合わせる。
   - 開いた列挙：エラーの応答（4xx・5xx）の本文の `oneOf` に枝を足すことと、エラーの `type` の列挙に値を足すことは、oasdiff では壊す変更（`response-body-one-of-added`・`response-property-enum-value-added`）だが、壊さない変更として数える（上の「列挙」）。ほかの列挙は閉じた列挙として数える。
-  - 項目を消す：要求から項目を消すこと（oasdiff では警告）と、応答から省略できる項目を消すこと（oasdiff では互換）を、壊す変更にする（上の「壊す変更」。oasdiff の `--severity-levels`）。
+  - oasdiff の `--severity-levels` で、次を壊す変更にする（上の「壊す変更」。oasdiff ではどれも警告か互換）。
+    - 要求から項目を消すこと（要求の本文は知らないキーを 400 にする）と、応答から省略できる項目を消すこと。
+    - 応答から省略できるヘッダーを消すこと（Web は応答の `ETag` を次の `If-Match` に使う）。
+    - operation の名前（`operationId`。生成したクライアントの関数と `useOperation` の名前）を変えること。
+    - `deprecated` を付けてから operation を消すこと（この ADR には、消すのを互換にする廃止の手順がない）。
   - oasdiff が仕様だけでは決められない変更（WARN）は、数えずに一覧に出す。レビューで判断する。
 - 壊す変更があれば、`info.version` が base の版から、major が 0 の間は minor、1.0.0 からは major で上がっていることを求める。版が下がること、`MAJOR.MINOR.PATCH` の形でないことも止める。壊す変更が見つからないのに版を上げるのは止めない（形が同じで意味を変える壊す変更があるため）。
-- 見つけないもの（specialist:contract のレビューで判断する）：形が同じで意味や単位を変える変更（#346）、仕様では省略できるがサーバーが条件で求めるヘッダー（#330 の `If-Match`・`If-None-Match`）、送り返す入れ子に項目を足すときの但し書き（上の「壊さない変更」）。
+- 見つけないもの（specialist:contract のレビューで判断する）：形が同じで意味や単位を変える変更（#346）、消した項目や operation の名前を別の意味で使い直すこと、仕様では省略できるがサーバーが条件で求めるヘッダー（#330 の `If-Match`・`If-None-Match`）、送り返す入れ子に項目を足すときの但し書き（上の「壊さない変更」）、要求だけに現れる閉じた列挙に値を足すこと（oasdiff は互換とする。受け取るのはサーバーだけなので、上の「閉じた列挙」の理由が当てはまるかをレビューで判断する）。
 - 過去の契約の変更（#279〜#347 の 11 件）で確かめた：版を上げた #295・#319・#320・#321・#323 は壊す変更あり、上げなかった #279・#338・#347 は壊す変更なしで、規則の判断と合う。#330・#346 は見つからない（上の見つけないもの）。#321・#322・#323・#346 では、`title` のない 2 つの inline の枝の中が変わったのを、枝を足したものとして壊す変更に数えた（#322 は版を上げていないので誤った警告になる）。これが上の「置き場所と書き方」の `title` の理由で、`title` があれば中の変更を比べることを確かめた。
 
 #### 警告から失敗への切り替え
 
 - 今は警告だけ（`--warn-only`）。job は通り、指摘を注釈と job の要約に出す。
-- 切り替える条件：この確かめが入った後、契約（`openapi/`）を変えた PR が 3 件続けて、確かめの結果（壊す変更の有無と版の判定）と specialist:contract のレビューの判断が食い違わないこと。食い違ったら、`breaking-rules.mjs` かこの ADR を直してから数え直す。`title` を付けた #367 の PR は数えない（base に `title` がないので、枝を消して足したものとして警告が出る。一度だけ）。
+- 切り替える条件：この確かめが入った後、契約（`openapi/`）を変えた PR が 3 件続けて、確かめの結果（壊す変更の有無と版の判定）と specialist:contract のレビューの判断が食い違わないこと。食い違ったら、`breaking-rules.mjs` かこの ADR を直してから数え直す。`title` を付けた #367 の PR と、それを含む統合ブランチを main に入れる PR は数えない（base に `title` がないので、枝を消して足したものとして警告が出る）。
 - 遅くとも最初の本番の公開（1.0.0）の前に切り替える。それまでに 3 件に満たなければ、その時点の結果を見てオーナーが決める。
 - 切り替えは、`check.yml` の `--warn-only` を消し、この ADR に改訂を書く。リポジトリには必須のチェックの設定がないので、job が落ちた PR をマージしないこと（CI が通ってからマージする）で効かせる。
 

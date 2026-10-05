@@ -76,6 +76,14 @@ describe('isOpenEnumAddition', () => {
         ),
       ),
     ).toBe(false);
+    expect(
+      isOpenEnumAddition(
+        change(
+          'response-property-enum-value-added',
+          'added the new `x` enum value to the `oneOf[#/components/schemas/ValidationError]/errors/items/type` response property for the response status `400`',
+        ),
+      ),
+    ).toBe(false);
   });
 });
 
@@ -200,5 +208,15 @@ describe('untitledBranches', () => {
         c: { anyOf: [{ type: 'number' }, { type: 'null' }] },
       }),
     ).toEqual([]);
+  });
+
+  it('finds untitled branches under anyOf, of allOf only, or beside a titled one', () => {
+    expect(
+      untitledBranches({
+        a: { anyOf: [object('one'), object('two')] },
+        b: { oneOf: [{ allOf: [{ $ref: '#/X' }] }, object('two')] },
+        c: { oneOf: [{ title: 'One', ...object('one') }, object('two')] },
+      }),
+    ).toEqual(['#/a/anyOf', '#/b/oneOf', '#/c/oneOf']);
   });
 });

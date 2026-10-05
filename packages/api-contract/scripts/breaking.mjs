@@ -6,6 +6,10 @@
 //
 //   node scripts/breaking.mjs [--base <git ref>] [--warn-only]
 //
+// It compares with where this branch left the base (`git merge-base`), so
+// what the base gained since is not taken for a change here. CI passes the
+// first parent of the pull request's merge commit, which is that point.
+//
 // oasdiff is the release binary pinned below, downloaded once into
 // .tools/oasdiff/ and checked against its SHA-256 (ADR 0006 「道具と版」).
 import { execFileSync } from 'node:child_process';
@@ -69,9 +73,7 @@ async function oasdiff() {
   const binary = join(directory, 'oasdiff');
   if (existsSync(binary)) return binary;
   const url = `https://github.com/oasdiff/oasdiff/releases/download/v${OASDIFF.version}/${asset.file}`;
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Could not download ${url}.`);
-  const bytes = Buffer.from(await response.arrayBuffer());
+  const bytes = await download(url);
   const digest = createHash('sha256').update(bytes).digest('hex');
   if (digest !== asset.sha256) {
     throw new Error(`${asset.file} does not match its pinned SHA-256.`);
@@ -83,11 +85,23 @@ async function oasdiff() {
     execFileSync('tar', ['-xzf', asset.file, 'oasdiff'], { cwd: staging });
     await chmod(join(staging, 'oasdiff'), 0o755);
     await rm(join(staging, asset.file));
-    await rename(staging, directory);
+    await rename(staging, directory).catch((error) => {
+      // Another run put it there first.
+      if (!existsSync(binary)) throw error;
+    });
   } finally {
     await rm(staging, { recursive: true, force: true });
   }
   return binary;
+}
+
+/** @param {string} url */
+async function download(url) {
+  for (let attempt = 1; ; attempt += 1) {
+    const response = await fetch(url).catch(() => undefined);
+    if (response?.ok) return Buffer.from(await response.arrayBuffer());
+    if (attempt === 3) throw new Error(`Could not download ${url}.`);
+  }
 }
 
 /** @param {string} packageDir @param {string} output */
@@ -149,8 +163,13 @@ const { values } = parseArgs({
     'warn-only': { type: 'boolean', default: false },
   },
 });
-const base = values.base;
-if (base.startsWith('-')) throw new Error(`Not a git ref: ${base}`);
+if (values.base.startsWith('-')) {
+  throw new Error(`Not a git ref: ${values.base}`);
+}
+const base = execFileSync('git', ['merge-base', values.base, 'HEAD'], {
+  cwd: ROOT,
+  encoding: 'utf8',
+}).trim();
 const warnOnly = values['warn-only'];
 const inActions = process.env['GITHUB_ACTIONS'] === 'true';
 
@@ -211,7 +230,7 @@ try {
     ],
   ];
   const lines = [
-    `The contract compared with ${base}: info.version ${baseSpec.info.version} → ${headSpec.info.version}.`,
+    `The contract compared with ${values.base} at ${base.slice(0, 12)}, where this branch left it: info.version ${baseSpec.info.version} → ${headSpec.info.version}.`,
     ...sections.flatMap(([title, changes]) => [
       '',
       /** @type {string} */ (title),

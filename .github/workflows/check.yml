@@ -72,15 +72,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      # The checkout is the pull request merged into the base branch; its
+      # first parent (HEAD^1) is the base it was merged into, so the two
+      # differ by the pull request's changes only.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # The checkout is the pull request merged into this commit of the base
-      # branch, so the two differ by the pull request's changes only.
-      - name: Fetch the base commit
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          fetch-depth: 2
       # Reads the pnpm version from packageManager in package.json.
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -90,6 +88,4 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # Downloads the pinned oasdiff and checks its SHA-256 first.
       - name: Compare the contract with the base
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: pnpm contract:breaking --base "$BASE_SHA" --warn-only
+        run: pnpm contract:breaking --base HEAD^1 --warn-only

@@ -13,18 +13,28 @@ export const WARN = 2;
 
 /**
  * oasdiff's levels that ADR 0006 「壊す変更」 sets otherwise, as oasdiff's
- * `--severity-levels` file reads them. Removing a property breaks a client
- * from a request (the body refuses keys it does not know with 400) and from
- * a response alike; oasdiff takes the first as a warning and the second as
- * compatible when the property was optional.
+ * `--severity-levels` file reads them. oasdiff takes these as a warning or
+ * as compatible:
+ * - Removing a property from a request (the body refuses keys it does not
+ *   know with 400), or an optional one from a response.
+ * - Removing an optional response header: the Web sends `ETag` back in
+ *   `If-Match`.
+ * - Renaming an operation (its `operationId`, the name of the generated
+ *   function and of `useOperation`), and removing one that was deprecated
+ *   first: the ADR has no deprecation that makes a removal compatible.
  */
 export const LEVELS = [
   'request-property-removed err',
   'response-optional-property-removed err',
+  'optional-response-header-removed err',
+  'api-operation-id-removed err',
+  'api-removed-with-deprecation err',
+  'api-path-removed-with-deprecation err',
 ].join('\n');
 
 const ERROR_STATUS = /for the response status `[45]\d\d`/;
-const TYPE_PROPERTY = /`(?:[^`]*\/)?type` response property/;
+// The error's own `type`, at the top of its body or of one of its branches.
+const TYPE_PROPERTY = /`(?:oneOf\[[^\]`]*\]\/)?type` response property/;
 
 /**
  * Whether oasdiff counts the change as breaking where ADR 0006 「列挙」 does
