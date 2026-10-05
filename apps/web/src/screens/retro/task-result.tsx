@@ -1,7 +1,6 @@
 import type { TaskFact } from '@itera/api-contract';
 import { Fragment } from 'react';
 import { Icon, semanticIcons, type IconSize } from '@/components/ui/icon';
-import type { RetroData } from '@/screen-data/retro-view';
 import { resultText } from './task-values';
 
 // How a Task ended, in words (task-values `resultText`). A carry-over has its
@@ -11,16 +10,14 @@ import { resultText } from './task-values';
 
 function TaskResult({
   fact,
-  data,
   iconSize = 's',
 }: {
   fact: TaskFact;
-  data: RetroData;
   /** `xs` (12px) inside 12px meta text. */
   iconSize?: IconSize;
 }) {
   const carried = !fact.recurring && fact.outcome === 'carriedOver';
-  return resultText(fact, data)
+  return resultText(fact)
     .split(' · ')
     .map((part, i) => (
       <Fragment key={part}>

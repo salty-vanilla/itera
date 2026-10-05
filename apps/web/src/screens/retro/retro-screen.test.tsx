@@ -1158,6 +1158,41 @@ describe('Retro — 事実を見るを読みやすくする (#108)', () => {
     expect(carried.className).not.toContain('danger');
   });
 
+  it('shows a recurring Task by its occurrences, as many as the Sprint had (F20, #348)', async () => {
+    await renderAt('/retro?fixture=retro-start');
+    expect(rowOf('英語の多読').textContent).toContain(
+      '繰り返し：完了 2 · スキップ 1 · 未完了 0',
+    );
+    expect(rowOf('部屋の掃除').textContent).toContain(
+      '繰り返し：完了 1 · スキップ 0 · 未完了 0',
+    );
+    cleanup();
+
+    // One done occurrence of the reading left undone instead.
+    change = (snapshot) => {
+      const sprint = snapshot.records.sprints.find((x) => x.state === 'review');
+      const reading = sprint?.tasks.find((t) => t.taskId === ids.task.reading);
+      const first = reading?.occurrenceIds?.find(
+        (o) =>
+          snapshot.records.occurrences.find((x) => x.id === o)?.state ===
+          'done',
+      );
+      return {
+        ...snapshot,
+        records: {
+          ...snapshot.records,
+          occurrences: snapshot.records.occurrences.map((o) =>
+            o.id === first ? { ...o, state: 'missed' as const } : o,
+          ),
+        },
+      };
+    };
+    await renderAt('/retro?fixture=retro-start');
+    expect(rowOf('英語の多読').textContent).toContain(
+      '繰り返し：完了 1 · スキップ 1 · 未完了 1',
+    );
+  });
+
   it('moves from 持ち越し N件 in the summary to its rows, one by one, and is only text at 0', async () => {
     await renderAt('/retro?fixture=retro-start');
     const jump = screen.getByRole('button', { name: '持ち越し 2件の行へ移る' });

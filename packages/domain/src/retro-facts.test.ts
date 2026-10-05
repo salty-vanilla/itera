@@ -249,6 +249,23 @@ describe('retroFacts', () => {
     expect(all.some((o) => o.id === 'occ-x')).toBe(false);
   });
 
+  it('F20: a recurring Task counts its occurrences by state; others have none', () => {
+    const facts = retroFacts(reviewSprint(), {
+      tasks: tasks(),
+      areas: [],
+      occurrences,
+      sprints: [],
+    });
+    const fact = (taskId: string) =>
+      facts.tasks.find((f) => f.taskId === taskId);
+    expect(fact('task-clean')?.occurrences).toEqual({
+      done: 1,
+      skipped: 1,
+      missed: 1,
+    });
+    expect(fact('task-paper')?.occurrences).toBeUndefined();
+  });
+
   it('invariant 40: derived without changing any record, and without any score', () => {
     const sprint = reviewSprint();
     const before = JSON.stringify({ sprint, occurrences });
@@ -369,6 +386,11 @@ describe('retroFacts — fixes from acceptance (#24)', () => {
     expect(facts.occurrences.done.map((o) => o.id)).toEqual(['occ-1']);
     expect(facts.occurrences.skipped.map((o) => o.id)).toEqual(['occ-2']);
     expect(facts.occurrences.missed).toEqual([]);
+    expect(facts.removed[0]?.occurrences).toEqual({
+      done: 1,
+      skipped: 1,
+      missed: 0,
+    });
   });
 
   it('lists Areas in the Sprint’s order, Tasks without an Area last', () => {

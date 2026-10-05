@@ -1,6 +1,6 @@
 import type { Area } from './area';
 import { capacityOf, type Capacity } from './capacity';
-import type { Occurrence } from './occurrence';
+import { occurrenceStateCounts, type Occurrence } from './occurrence';
 import { totalPlanningValues, type PlanningTotal } from './planning-value';
 import type { AreaId, OccurrenceId, SprintTaskId, TaskId } from './shared/ids';
 import type { LocalDate } from './shared/time';
@@ -45,6 +45,18 @@ export interface TaskFact {
   readonly longestDeferralRun: readonly LocalDate[];
   /** Days it ended with 今日はここまで. */
   readonly pausedDates: readonly LocalDate[];
+  /**
+   * A recurring Task's occurrences in this SprintTask, by state: it is
+   * shown by them, not as done or carried over (F20). Excluded ones are
+   * not counted (F2, F14).
+   */
+  readonly occurrences?: OccurrenceCounts;
+}
+
+export interface OccurrenceCounts {
+  readonly done: number;
+  readonly skipped: number;
+  readonly missed: number;
 }
 
 export interface GoalFact {
@@ -391,7 +403,23 @@ function taskFact(
     deferredDates: selections.filter(isDeferral).map((s) => s.date),
     longestDeferralRun: longestRun(selections),
     pausedDates: selections.filter(isPause).map((s) => s.date),
+    ...(sprintTask.occurrenceIds === undefined
+      ? {}
+      : {
+          occurrences: retroOccurrenceCounts(
+            sprintTask.occurrenceIds,
+            input.occurrences,
+          ),
+        }),
   };
+}
+
+function retroOccurrenceCounts(
+  ids: readonly OccurrenceId[],
+  occurrences: readonly Occurrence[],
+): OccurrenceCounts {
+  const { done, skipped, missed } = occurrenceStateCounts(ids, occurrences);
+  return { done, skipped, missed };
 }
 
 /** Rounds away the binary noise of a subtraction (4.7 − 4.5). */

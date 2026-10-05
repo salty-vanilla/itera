@@ -18,6 +18,7 @@
 - 改訂：2026-10-05（今日の Backlog からの完了で作った選択への `undoCompleteSelection` は、過去の日と同じく `undoCompleteTask` と同じに取り消し、選択を記録ごと消す（F29）。繰り返しでない SprintTask への `excludeAllOccurrences` は、何も外さずに通していたのを 422 で断る（`canExcludeAllOccurrences` も偽）。形が同じで意味を変える壊す変更なので `info.version` を 0.8.0 にする。Issue #346）
 - 改訂：2026-10-05（今日の読み取り `TodayData` と実行中の Sprint の読み取り `RunningData` に、Sprint の開始日より前の間だけその日を返す、省略できる `opensOn` を足す（ADR 0007「操作の可否」）。応答に省略できる項目を足すだけなので `info.version` は 0.8.0 のまま。Issue #347）
 - 改訂：2026-10-05（依存の js-yaml の指摘を直すために `@hey-api/openapi-ts` の版上げを確かめ、新しい安定版がないので 0.99.0 のまま据え置く。Issue #409）
+- 改訂：2026-10-05（計画の読み取り `SprintPlan` に、合計に入らない SprintTask（見積もりのないもの、見積もりのないサブタスクがあるもの）の ID の必須の `notInTotal` を、Retro の事実の `TaskFact` に、繰り返しの Task の回を状態ごとに数えた省略できる `occurrences`（`OccurrenceCounts`：完了・スキップ・未完了）を足す。Web が記録から数え直していた値をサーバーが返す（ADR 0007）。応答に項目を足すだけなので `info.version` は 0.8.0 のまま。Issue #348）
 
 ## 背景
 

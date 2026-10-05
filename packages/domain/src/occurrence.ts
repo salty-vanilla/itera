@@ -17,6 +17,23 @@ export type OccurrenceState =
   'pending' | 'excluded' | 'done' | 'skipped' | 'missed';
 
 /**
+ * How many of the occurrences `ids` names are in each state: the one count
+ * that a recurring SprintTask's progress (`occurrenceProgress`) and its
+ * Retro facts are read from. An ID without a record is not counted.
+ */
+export function occurrenceStateCounts(
+  ids: readonly OccurrenceId[],
+  occurrences: readonly Occurrence[],
+): Readonly<Record<OccurrenceState, number>> {
+  const counts = { pending: 0, excluded: 0, done: 0, skipped: 0, missed: 0 };
+  for (const id of ids) {
+    const occurrence = occurrences.find((o) => o.id === id);
+    if (occurrence !== undefined) counts[occurrence.state] += 1;
+  }
+  return counts;
+}
+
+/**
  * One time a recurring Task comes up. Its date and rule version are fixed
  * when it is generated, so later rule changes never move it (invariant 31).
  * Completion and skipping are recorded here, not on the rule (invariant 30).
