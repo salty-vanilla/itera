@@ -66,6 +66,7 @@ iOS・Android ───────────────▶ packages/api-cont
     - 戻す条件：iOS に着手するときに、Web も面の operationId と生成した型で呼ぶ形にするか、操作の名前と入力を契約の側に置くかを決める。
   - 値の規則：プレビューの一覧を決めるまで、Web は値の規則（空でない名前、置き換えには新しい計画基準が要る、など）を送る前に検査してよい。下の「クライアントに許す計算」は目標の形で、iOS・Android は初めからこれに従う。戻す条件：プレビューの一覧を決めるとき（iOS に着手するとき）。
     - 操作の可否は、この例外から外れた（#322 で今日の選択と割り込み、#323 で残りの記録）。Web は `capabilities` が真の操作だけを出し、状態の名前から操作の可否を決めない（下の「操作の可否」）。
+- パッケージの名前での import は、各パッケージの `package.json` の依存が決める。相対パスでほかのパッケージ（`packages/*`・`services/api`・`apps/web`）に入る import は、pnpm の解決では止まらないので、製品のコードでは ESLint の `no-restricted-imports` が向きを問わず止める（`eslint.config.js` の `relativeToOtherPackagePattern`、Issue #371。テストと `testing.ts` の helper は対象外）。
 - Web の依存は ESLint の `no-restricted-imports` で検査する（ADR 0005）。iOS・Android は言語が違うので、TypeScript の実装には依存できない。
 - 契約は内部より上流に置く。`openapi/` と、そこから生成したものは、`packages/application`・`packages/domain` に依存しない。`packages/api-contract` が `packages/application` を使うのは、テスト（契約と実装が合っているかを確かめる。ADR 0006「契約と実装の一致」）と、上の例外の `sending.ts`・`requests.ts` の型だけ。
 

@@ -330,7 +330,7 @@ Better Auth（ADR 0004「認証の構成」）の API を使う、Web のサイ�
   - `api/`：契約への通信の層。クライアントとキャッシュ（`create-api`・`api-provider`・`query-client`）、読み取りの状態（`Read`・`useRead`）、操作（`useOperation`、同じ対象の重ねた押下を捨てる `useOncePerTarget`。#354）、失敗の扱い（`failure`・`save-failed`）、人と設定の読み取り（`useMe`・`useSettings`）。画面の語と形を知らない。
   - `screen-data/`：画面ごと・資源ごとのフック。契約の答えを画面の形にする読み取り（`use-backlog`・`use-today`・`use-planning`・`use-retro`・`use-running-sprint`・`use-areas`・`use-sprint-choice`・`use-retro-choice`）、画面が名前で呼ぶ操作の関数（`use-task-actions`・`use-begin-planning` と各 `use-*` の `*Actions`）、それらが使う値の変換（`retro-view.ts`・`screen-area.ts`）。`api/` を使い、画面から使われる。
   - 契約の読み取りを画面の形にするフックと、操作ごとの名前つき関数は、1 つの画面だけが使うものも `screen-data/` に置く（契約の形を知る場所を 1 か所にするため）。焦点・選択・Toast など画面の振る舞いのためのフックは、その画面のフォルダに置く（`screens/backlog/use-add-to-today.ts` など。必要なら `screen-data/` のフックを呼ぶ）。
-  - `api/`・`components/`・`lib/`・`auth/`・`foundations/` は、`lib/domain-functions.ts` と `auth/better-auth.ts` も含めて `screen-data/` を import しない。ESLint の `no-restricted-imports` で検査する（違反を足して失敗を確かめた）。逆向き（`screen-data/` から `screens/`）は検査していない。いま import はない。
+  - `api/`・`components/`・`lib/`・`auth/`・`foundations/` は、`lib/domain-functions.ts` と `auth/better-auth.ts` も含めて `screen-data/` を import しない。ESLint の `no-restricted-imports` で検査する（違反を足して失敗を確かめた）。逆向き（`screen-data/` から `screens/`）も、`@/screens/...` と相対パスの両方を同じ規則で検査する（Issue #371。テストと mock・テストの helper は対象外）。
 - 設定の画面のパスキーの一覧は、他の画面と同じ `useRead` と `ReadStatus` で読み込み中と失敗を表す（失敗の見出しは「読み込めませんでした」）。
 
 ### 編集できる欄の状態（2026-10-04、Issue #324）
