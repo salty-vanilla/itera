@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 import { contrast } from '../foundations/contrast';
 import * as motionCode from '../lib/motion';
+import { MEDIUM_UP } from '../lib/use-media-query';
 import {
   tokenShadowNames,
   tokenSpacingNames,
@@ -101,6 +102,12 @@ function remAsPx(value: string | undefined): string | undefined {
   return rem ? `${Number(rem[1]) * 16}px` : value;
 }
 
+// The breakpoints are in em over 16px, as media queries (#433).
+function emAsPx(value: string | undefined): string | undefined {
+  const em = /^([\d.]+)em$/.exec(value ?? '');
+  return em ? `${Number(em[1]) * 16}px` : value;
+}
+
 describe('typography', () => {
   it.each(Object.entries(tokens.typography))('%s', (name, token) => {
     expect(theme.get(`--text-${name}`)).toMatch(/rem$/);
@@ -129,15 +136,26 @@ describe('rounded', () => {
 });
 
 describe('spacing', () => {
-  const special: Record<string, string> = {
-    'measure-read': '--container-measure-read',
-    'bp-medium': '--breakpoint-medium',
-    'bp-wide': '--breakpoint-wide',
-    'bp-nav': '--breakpoint-nav',
-    'bp-xl': '--breakpoint-xl',
-  };
-  it.each(Object.entries(tokens.spacing))('%s', (name, value) => {
-    expect(theme.get(special[name] ?? `--spacing-${name}`)).toBe(value);
+  it.each(
+    Object.entries(tokens.spacing).filter(([name]) => !name.startsWith('bp-')),
+  )('%s', (name, value) => {
+    const variable =
+      name === 'measure-read'
+        ? '--container-measure-read'
+        : `--spacing-${name}`;
+    expect(theme.get(variable)).toBe(value);
+  });
+
+  it.each(
+    Object.entries(tokens.spacing).filter(([name]) => name.startsWith('bp-')),
+  )('%s in em', (name, value) => {
+    const breakpoint = theme.get(`--breakpoint-${name.slice('bp-'.length)}`);
+    expect(breakpoint).toMatch(/em$/);
+    expect(emAsPx(breakpoint)).toBe(value);
+  });
+
+  it('MEDIUM_UP is the medium: variant', () => {
+    expect(MEDIUM_UP).toBe(`(width >= ${theme.get('--breakpoint-medium')})`);
   });
 
   it('drawer is also the container width for @min-drawer: (Toast)', () => {
