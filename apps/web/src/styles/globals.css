@@ -410,6 +410,31 @@
     [data-slot='filter'][aria-pressed='true'] {
       outline: var(--stroke-hairline) solid CanvasText;
     }
+    /*
+     * A toggle that is on (aria-pressed): the ink fill of DESIGN.md Selected
+     * becomes Highlight / HighlightText, and the outline of Filter is kept so
+     * that the state does not rest on the fill's colour alone. `!important`
+     * on the fill and the text, because `bg-primary` and `bg-here-subtle`
+     * (a later layer) would otherwise win over a base rule and the fill
+     * would turn Canvas, as the bars below (#394). `forced-color-adjust:
+     * none`, because Chromium otherwise paints a Canvas backplate behind the
+     * label and HighlightText on it is unreadable. That also stops the UA
+     * from forcing the colours of the border and of the focus ring (drawn
+     * outside, on Canvas, in `--focus`, which is no system colour), so both
+     * are set to CanvasText here (#400).
+     */
+    [data-slot='button'][aria-pressed='true'],
+    [data-slot='icon-button'][aria-pressed='true'] {
+      outline: var(--stroke-hairline) solid CanvasText;
+    }
+    [data-slot='button'][aria-pressed='true']:not([data-disabled]),
+    [data-slot='icon-button'][aria-pressed='true']:not([data-disabled]) {
+      forced-color-adjust: none;
+      background-color: Highlight !important;
+      border-color: CanvasText !important;
+      outline-color: CanvasText !important;
+      color: HighlightText !important;
+    }
     [data-slot='filter'][data-disabled],
     [data-slot='navigation-item'][aria-disabled='true'] {
       border-color: GrayText;
