@@ -23,23 +23,35 @@ function stylesheets(dir = 'src/'): string[] {
   );
 }
 
-const ROOT_SELECTOR = /(^|[\s,>+~(])(html|:root)(?![\w-])/;
+// Whether a selector selects the root element itself: the last compound of
+// one of its parts is html or :root (`html[data-theme='dark']` is, `html
+// body` is not). `&` stands for the rule it is nested in.
+function selectsRoot(selector: string, parentIsRoot: boolean): boolean {
+  return selector.split(',').some((part) => {
+    const subject =
+      part
+        .trim()
+        .split(/[\s>+~]+/)
+        .at(-1) ?? '';
+    return (
+      /^(html|:root)(?![\w-])/.test(subject) ||
+      (parentIsRoot && subject.startsWith('&'))
+    );
+  });
+}
 
-// `font-size` and `font` declarations in rules whose selector, or the selector
-// of a rule they are nested in, is html or :root. At-rules (@layer, @media,
-// @variant …) pass the selector of their parent on.
+// `font-size` and `font` declarations in rules that select the root element.
+// At-rules (@layer, @media, @variant …) pass their parent rule on.
 function rootFontSizes(css: string): string[] {
   const found: string[] = [];
   const stack: boolean[] = [];
   let text = '';
   for (const char of css.replace(/\/\*[\s\S]*?\*\//g, '')) {
     if (char === '{') {
-      const selector = text.slice(text.lastIndexOf(';') + 1).trim();
+      const selector = text.trim();
       const inRoot = stack.at(-1) ?? false;
       stack.push(
-        selector.startsWith('@')
-          ? inRoot
-          : inRoot || ROOT_SELECTOR.test(selector),
+        selector.startsWith('@') ? inRoot : selectsRoot(selector, inRoot),
       );
       text = '';
     } else if (char === '}' || char === ';') {
@@ -62,14 +74,18 @@ describe('the root font size', () => {
       rootFontSizes(`
         html { color: red; font-size: 16px }
         @layer base { :root { font-size: 62.5%; } }
-        @media (width < 20em) { html body { font: 14px/1 sans-serif; } }
-        body { font-size: 1rem; }
+        @media (width < 20em) { body, html { font: 14px/1 sans-serif; } }
+        html { &[data-theme='dark'] { font-size: 18px; } }
+        html body { font-size: 1rem; }
+        :root .x { font-size: 1rem; }
+        html { body { font-size: 1rem; } }
         .html-like { font-size: 2px; }
       `),
     ).toEqual([
       'font-size: 16px',
       'font-size: 62.5%',
       'font: 14px/1 sans-serif',
+      'font-size: 18px',
     ]);
   });
 
