@@ -1,0 +1,10 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    // The tests and their config run on Node, which runs the .ts imports as
+    // they are.
+    "types": ["node"],
+    "allowImportingTsExtensions": true
+  },
+  "include": [".", "../playwright.config.ts"]
+}

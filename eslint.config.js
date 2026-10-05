@@ -161,8 +161,8 @@ export default defineConfig(
       // Generated from the contract (ADR 0006); checked by contract:check.
       'packages/api-contract/src/generated/**',
       'services/api/.wrangler/**',
-      'playwright-report/**',
-      'test-results/**',
+      '**/playwright-report/**',
+      '**/test-results/**',
     ],
   },
   js.configs.recommended,
@@ -474,9 +474,10 @@ export default defineConfig(
     languageOptions: { globals: globals.node },
   },
   {
-    // services/api: its build and tool configs run on Node. The Worker code
-    // gets its globals from the generated worker-configuration.d.ts.
-    files: ['services/api/*.ts'],
+    // services/api: its build and tool configs and its E2E tests (Issue
+    // #370) run on Node. The Worker code gets its globals from the generated
+    // worker-configuration.d.ts.
+    files: ['services/api/*.ts', 'services/api/e2e/**/*.ts'],
     languageOptions: { globals: globals.node },
   },
   // Applies to *.stories.* and .storybook/main.* only. The cast is for the

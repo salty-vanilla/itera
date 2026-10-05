@@ -100,6 +100,7 @@ DB・認証・アプリの origin・現在時刻は `createApp` に注入する�
 | `pnpm --filter @itera/api db:check` | `src/db/schema.ts` に対して、生成し忘れたマイグレーションがないかを確かめる（`pnpm check` から呼ぶ。`migrations/` は書き換えない） |
 | `pnpm --filter @itera/api db:migrate:local` | `migrations/` をローカルの D1 に適用する |
 | `pnpm --filter @itera/api typecheck` | 生成した型が設定と一致するかを確かめ、型検査する |
+| `pnpm --filter @itera/api e2e` | ブラウザから Worker（Web の配信・API・ローカルの D1）までを通す E2E テスト（`e2e/`、ADR 0008）。`apps/web/dist` が要るので、ふだんはルートの `pnpm e2e`（ビルドしてから実行する）を使う。ブラウザは `pnpm --filter @itera/api exec playwright install --only-shell chromium` で入れる |
 
 wrangler はこのパッケージの固定版を使う（`pnpm --filter @itera/api exec wrangler <command>`）。`npx wrangler` は使わない。Better Auth のマイグレーション（CLI の `migrate` やエンドポイント）は使わず、テーブルは drizzle-kit と wrangler で作る。
 

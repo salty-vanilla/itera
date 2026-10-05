@@ -6,10 +6,11 @@
   "scripts": {
     "dev": "wrangler dev",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
-    "typecheck": "wrangler types --env-interface CloudflareBindings --check && tsc -p tsconfig.json",
+    "typecheck": "wrangler types --env-interface CloudflareBindings --check && tsc -p tsconfig.json && tsc -p e2e/tsconfig.json",
     "db:generate": "drizzle-kit generate",
     "db:check": "node ../../tooling/checks/migrations.mjs",
-    "db:migrate:local": "wrangler d1 migrations apply DB --local"
+    "db:migrate:local": "wrangler d1 migrations apply DB --local",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@better-auth/passkey": "1.7.6",
@@ -23,6 +24,7 @@
   },
   "devDependencies": {
     "@libsql/client": "0.18.0",
+    "@playwright/test": "1.63.0",
     "drizzle-kit": "0.31.11",
     "typescript": "6.0.3",
     "vitest": "5.0.2",
