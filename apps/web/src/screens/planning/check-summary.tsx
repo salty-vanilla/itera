@@ -171,7 +171,11 @@ function CheckSummary({
       {data.criterion?.hasTarget === true && (
         <section
           aria-labelledby={`${ids}-criterion`}
-          className="flex flex-col gap-3 rounded-sm bg-canvas-subtle p-4"
+          // With enlarged text on a compact width the card reaches the edges
+          // of the screen (the text inside keeps the page's own edges), so the
+          // Switch's label is 10 characters wide at 320px (#425). The 16px is
+          // the page's padding on compact (planning-screen.tsx).
+          className="flex flex-col gap-3 rounded-sm bg-canvas-subtle p-4 enlarged:max-medium:-mx-4 enlarged:max-medium:rounded-none"
         >
           <div className="flex flex-col gap-1">
             <h3 id={`${ids}-criterion`} className="text-label text-ink-muted">
