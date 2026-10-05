@@ -1004,7 +1004,10 @@ export type TodayData = {
     sprint: Sprint;
     number: number;
     today: LocalDate;
-    day: DayOfSprint;
+    /**
+     * From the Sprint's first day on: today's place in it. Absent before the first day, when opensOn is there instead (#427).
+     */
+    day?: DayOfSprint;
     lastDay: boolean;
     /**
      * Before the Sprint's first day: that day. Choosing for the day, adding and interrupts wait for it (#54, #347). Absent from the first day on.
@@ -1374,6 +1377,9 @@ export type RunningData = {
     number: number;
     week?: SprintWeek;
     today: LocalDate;
+    /**
+     * Running and from its first day on: today's place in it. Absent before the first day, when opensOn is there instead, and once the Sprint has ended.
+     */
     day?: DayOfSprint;
     /**
      * Running and before its first day: that day, which Today waits for (#347). Absent from the first day on and once the Sprint has ended.
@@ -2044,7 +2050,10 @@ export type TodayDataWritable = {
     sprint: SprintWritable;
     number: number;
     today: LocalDate;
-    day: DayOfSprint;
+    /**
+     * From the Sprint's first day on: today's place in it. Absent before the first day, when opensOn is there instead (#427).
+     */
+    day?: DayOfSprint;
     lastDay: boolean;
     /**
      * Before the Sprint's first day: that day. Choosing for the day, adding and interrupts wait for it (#54, #347). Absent from the first day on.
@@ -2273,6 +2282,9 @@ export type RunningDataWritable = {
     number: number;
     week?: SprintWeek;
     today: LocalDate;
+    /**
+     * Running and from its first day on: today's place in it. Absent before the first day, when opensOn is there instead, and once the Sprint has ended.
+     */
     day?: DayOfSprint;
     /**
      * Running and before its first day: that day, which Today waits for (#347). Absent from the first day on and once the Sprint has ended.
