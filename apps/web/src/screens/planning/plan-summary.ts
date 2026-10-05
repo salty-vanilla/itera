@@ -98,13 +98,9 @@ export function planSummary(data: PlanningData): PlanSummary {
     goalless: data.plan.filter(
       (p) => p.area.id !== null && p.goal === undefined && p.tasks.length > 0,
     ),
-    // As `sprintTotals` counts them, so that the list and 「…は合計に含まれて
-    // いません」 agree.
-    unestimated: tasks.filter(
-      (t) =>
-        t.value.base === 'none' ||
-        (t.value.base === 'subtasks' && t.value.unestimatedSubtasks > 0),
-    ),
+    // The server's list, counted as the total is, so that it and 「…は合計に
+    // 含まれていません」 agree (#348).
+    unestimated: tasks.filter((t) => data.leftOut.includes(t.sprintTask.id)),
     ...(leftOut === undefined ? {} : { leftOut }),
     ...(criterion?.hasTarget !== true
       ? {}

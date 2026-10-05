@@ -207,6 +207,19 @@ TaskFact:
     pausedDates:
       type: array
       items: { $ref: './common.yaml#/LocalDate' }
+    occurrences:
+      description: >-
+        A recurring Task's occurrences in this SprintTask, by state (F20).
+        Left out for the others.
+      $ref: '#/OccurrenceCounts'
+OccurrenceCounts:
+  description: Occurrences by state; excluded ones are not counted.
+  type: object
+  required: [done, skipped, missed]
+  properties:
+    done: { type: integer }
+    skipped: { type: integer }
+    missed: { type: integer }
 GoalFact:
   type: object
   required: [text, changedSinceConfirm]

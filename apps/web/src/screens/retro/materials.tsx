@@ -57,7 +57,7 @@ function pinned(pin: RetroPin, data: RetroData): Pinned | undefined {
       if (t === undefined) return undefined;
       // The same words and the carry-over's icon as in the table.
       const carried = !t.recurring && t.outcome === 'carriedOver';
-      const results = resultText(t, data).split(' · ');
+      const results = resultText(t).split(' · ');
       const difference = differenceText(t);
       const values = [
         plannedLabel(t),

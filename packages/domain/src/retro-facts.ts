@@ -45,6 +45,18 @@ export interface TaskFact {
   readonly longestDeferralRun: readonly LocalDate[];
   /** Days it ended with 今日はここまで. */
   readonly pausedDates: readonly LocalDate[];
+  /**
+   * A recurring Task's occurrences in this SprintTask, by state: it is
+   * shown by them, not as done or carried over (F20). Excluded ones are
+   * not counted (F2, F14).
+   */
+  readonly occurrences?: OccurrenceCounts;
+}
+
+export interface OccurrenceCounts {
+  readonly done: number;
+  readonly skipped: number;
+  readonly missed: number;
 }
 
 export interface GoalFact {
@@ -391,6 +403,30 @@ function taskFact(
     deferredDates: selections.filter(isDeferral).map((s) => s.date),
     longestDeferralRun: longestRun(selections),
     pausedDates: selections.filter(isPause).map((s) => s.date),
+    ...(sprintTask.occurrenceIds === undefined
+      ? {}
+      : {
+          occurrences: occurrenceCounts(
+            sprintTask.occurrenceIds,
+            input.occurrences,
+          ),
+        }),
+  };
+}
+
+function occurrenceCounts(
+  ids: readonly OccurrenceId[],
+  occurrences: readonly Occurrence[],
+): OccurrenceCounts {
+  const states = ids.flatMap(
+    (id) => occurrences.find((o) => o.id === id)?.state ?? [],
+  );
+  const count = (state: Occurrence['state']) =>
+    states.filter((s) => s === state).length;
+  return {
+    done: count('done'),
+    skipped: count('skipped'),
+    missed: count('missed'),
   };
 }
 

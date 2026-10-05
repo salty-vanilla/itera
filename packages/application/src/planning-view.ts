@@ -19,6 +19,7 @@ import {
   sprintNumber,
   sprintTaskValue,
   sprintTotals,
+  totalPlanningValues,
   type ActiveCriterion,
   type AreaColor,
   type AreaId,
@@ -32,6 +33,7 @@ import {
   type PlanningValue,
   type RetroImprovement,
   type Sprint,
+  type SprintTaskId,
   type SprintTotals,
   type Task,
 } from '@itera/domain';
@@ -174,6 +176,12 @@ export interface SprintPlan {
   readonly plan: readonly AreaPlan[];
   readonly chosenCount: number;
   readonly totals: SprintTotals;
+  /**
+   * The chosen SprintTasks left out of `totals`, whole (no value) or in
+   * part (subtasks without an Estimate), as it counts them (invariant 8):
+   * the list under 「…は合計に含まれていません」.
+   */
+  readonly leftOut: readonly SprintTaskId[];
   /** 「何が上振れすると超過するか」. */
   readonly drivers: readonly TaggedCapacityDriver[];
   readonly improvement?: RetroImprovement;
@@ -242,6 +250,12 @@ function blockersOf(
       ? (['inactiveTasks'] as const)
       : []),
   ];
+}
+
+/** Whether a total leaves the value out, whole or in part (invariant 8). */
+function leftOutOfTotal(value: PlanningValue): boolean {
+  const total = totalPlanningValues([value]);
+  return total.unestimated + total.unestimatedSubtasks > 0;
 }
 
 /** The plan of a Sprint being planned (整える・確かめる). */
@@ -352,6 +366,9 @@ export function sprintPlanOf(
     plan,
     chosenCount: planned.length,
     totals,
+    leftOut: planned
+      .filter((p) => leftOutOfTotal(p.value))
+      .map((p) => p.sprintTask.id),
     drivers: capacityDrivers(sprint, valueOptions).map((d) => ({
       ...d,
       sprintTask: sprintTaskOf(d.sprintTask),

@@ -1217,6 +1217,10 @@ export type SprintPlan = {
     plan: Array<AreaPlan>;
     chosenCount: number;
     totals: SprintTotals;
+    /**
+     * The chosen SprintTasks left out of `totals`, whole (no value) or in part (subtasks without an Estimate), as it counts them (invariant 8).
+     */
+    leftOut: Array<SprintTaskId>;
     drivers: Array<CapacityDriver>;
     improvement?: RetroImprovement;
     criterion?: {
@@ -1419,6 +1423,15 @@ export type GoalFact = {
     selfAssessment?: SelfAssessment;
 };
 
+/**
+ * Occurrences by state; excluded ones are not counted.
+ */
+export type OccurrenceCounts = {
+    done: number;
+    skipped: number;
+    missed: number;
+};
+
 export type TaskFact = {
     sprintTaskId: SprintTaskId;
     taskId: TaskId;
@@ -1436,6 +1449,10 @@ export type TaskFact = {
     deferredDates: Array<LocalDate>;
     longestDeferralRun: Array<LocalDate>;
     pausedDates: Array<LocalDate>;
+    /**
+     * A recurring Task's occurrences in this SprintTask, by state (F20). Left out for the others.
+     */
+    occurrences?: OccurrenceCounts;
 };
 
 export type AreaFacts = {
@@ -2101,6 +2118,10 @@ export type SprintPlanWritable = {
     plan: Array<AreaPlanWritable>;
     chosenCount: number;
     totals: SprintTotals;
+    /**
+     * The chosen SprintTasks left out of `totals`, whole (no value) or in part (subtasks without an Estimate), as it counts them (invariant 8).
+     */
+    leftOut: Array<SprintTaskId>;
     drivers: Array<CapacityDriverWritable>;
     improvement?: RetroImprovement;
     criterion?: {

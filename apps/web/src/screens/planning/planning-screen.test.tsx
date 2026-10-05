@@ -30,9 +30,25 @@ beforeEach(() => {
 let lastSnapshot: () => StoreSnapshot;
 // For the state a first-time person is in: no planning criterion yet.
 let withoutCriteria = false;
+// API 設計のレビュー without an Estimate or a suggestion: no value at all.
+let reviewUnestimated = false;
 afterEach(() => {
   withoutCriteria = false;
+  reviewUnestimated = false;
 });
+function withReviewUnestimated(
+  records: StoreSnapshot['records'],
+): StoreSnapshot['records'] {
+  return {
+    ...records,
+    tasks: records.tasks.map((t) => {
+      if (t.id !== ids.task.apiReview) return t;
+      const { estimate: _estimate, ...rest } = t;
+      void _estimate;
+      return { ...rest, suggestions: [] };
+    }),
+  };
+}
 vi.mock('@/mock/memory-store', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/mock/memory-store')>();
   return {
@@ -40,11 +56,13 @@ vi.mock('@/mock/memory-store', async (importOriginal) => {
     createMemoryStore: (
       ...[initial]: Parameters<typeof actual.createMemoryStore>
     ) => {
-      const store = actual.createMemoryStore(
-        withoutCriteria
-          ? { ...initial, records: { ...initial.records, criteria: [] } }
-          : initial,
-      );
+      const records = withoutCriteria
+        ? { ...initial.records, criteria: [] }
+        : initial.records;
+      const store = actual.createMemoryStore({
+        ...initial,
+        records: reviewUnestimated ? withReviewUnestimated(records) : records,
+      });
       lastSnapshot = () => store.getSnapshot();
       return store;
     },
@@ -838,6 +856,25 @@ describe('Planning — 確かめる', () => {
     );
     // 「計画値が下限どおりでも、超過 1時間15分です。」 would say it again.
     expect(summary().textContent?.match(/1時間15分/g)).toHaveLength(1);
+  });
+
+  it('lists the Tasks the total leaves out, whole or in part, as many as its sentences say (#348)', async () => {
+    reviewUnestimated = true;
+    await renderAt('/sprint?fixture=planning-check&stage=check');
+    const unestimated = within(summary())
+      .getByRole('heading', { name: '見積もりなし' })
+      .closest('section') as HTMLElement;
+    expect(unestimated.textContent).toContain(
+      '見積もりのないタスク 1件は合計に含まれていません。',
+    );
+    expect(unestimated.textContent).toContain(
+      '見積もりのないサブタスク 1件は合計に含まれていません。',
+    );
+    expect(
+      within(unestimated)
+        .getAllByRole('button', { name: /^見積もる：/ })
+        .map((b) => b.getAttribute('aria-label') ?? b.textContent),
+    ).toEqual(['見積もる：API 設計のレビュー', '見積もる：実験データの前処理']);
   });
 
   it('opens with the summary the 確定 Dialog shows, from the same values (#93)', async () => {

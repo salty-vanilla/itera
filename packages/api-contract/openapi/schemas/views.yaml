@@ -570,6 +570,7 @@ SprintPlan:
     - plan
     - chosenCount
     - totals
+    - leftOut
     - drivers
     - blockers
     - capabilities
@@ -590,6 +591,13 @@ SprintPlan:
       items: { $ref: '#/AreaPlan' }
     chosenCount: { type: integer }
     totals: { $ref: './values.yaml#/SprintTotals' }
+    leftOut:
+      description: >-
+        The chosen SprintTasks left out of `totals`, whole (no value) or in
+        part (subtasks without an Estimate), as it counts them (invariant
+        8).
+      type: array
+      items: { $ref: './common.yaml#/SprintTaskId' }
     drivers:
       type: array
       items: { $ref: './values.yaml#/CapacityDriver' }
