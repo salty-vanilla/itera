@@ -132,7 +132,7 @@ curl -i "<公開 URL>/today?date=2026-10-01"   # 同じ index.html（直接開�
 curl -i "<公開 URL>/sprint?sprint=3"         # 同じ
 ```
 
-- ブラウザで `<公開 URL>/` と `<公開 URL>/today?date=2026-10-01` を開くと、サインインしていないので「サインイン」の画面が開く（`/sign-in`。開いたパスは URL の `redirect` に残る。存在しないパスも同じ）。画面の中身の確認は、サインインした後に行う（下の「Google でサインインし、`/api/me` を確かめる」の 3）。
+- ブラウザで `<公開 URL>/` と `<公開 URL>/today?date=2026-10-01` を開くと、サインインしていないので「サインイン」の画面が開く（`/sign-in`。開いた深いパスは URL の `redirect` に残る。`/` は先に `/today` へ送られる。存在しないパスも同じ）。画面の中身の確認は、サインインした後に行う（下の「Google でサインインし、`/api/me` を確かめる」の 3）。
 - `/` の HTML が参照する `/assets/index-<ハッシュ>.js` を `curl -I` で取ると、200 と `Cache-Control: public, max-age=0, must-revalidate`、`ETag`。その `ETag` を `If-None-Match` に付けて取り直すと 304（`immutable` は付けない。ADR 0004「Web と API の配信」）。
 - 本番ビルドには fixture もブラウザ内モックも入らない（ADR 0005「本番ビルド」。`pnpm build` が出力を検査する）。画面は API のデータで動き、サインインしていなければ API が 401 を返して、サインインの画面へ送られる。
 
@@ -159,7 +159,7 @@ curl -i "<公開 URL>/sprint?sprint=3"         # 同じ
 
 1. 上の 1 をもう一度行う。同意のあと `<公開 URL>/api/me` に戻り、`{"userId":"…","settings":null}` が表示される（200。`settings` は利用者の設定で、まだ作っていなければ `null`。作ってあれば `settings` の中身に加えて、今日を決めた `clock` と、Sprint があれば `sprints` も返る。ADR 0006「読み取り」）。
 2. 開発者ツールの Application → Cookies で、セッションの Cookie が `__Secure-better-auth.session_token` という名前で、HttpOnly・Secure・SameSite=Lax であることを確かめる。
-3. 同じブラウザで Web の画面を確かめる。`<公開 URL>/today?date=2026-10-01` を開く（設定をまだ作っていなければ、先に「最初の設定」の画面が出る）。画面が開き、再読み込みしても同じ画面が開く。存在しないパス（`<公開 URL>/nothing`）は画面の「ページが見つかりません」になる。
+3. 同じブラウザで Web の画面を確かめる。`<公開 URL>/today?date=2026-10-01` を開く（設定をまだ作っていなければ、先に「最初の設定」の画面が出る。ここで作る設定が、そのまま使う設定になる。週の始まりとタイムゾーン（初めはブラウザの値）は、あとから変えられない）。画面が開き、再読み込みしても同じ画面が開く。存在しないパス（`<公開 URL>/nothing`）は画面の「ページが見つかりません」になる。
 
 ### パスキーを追加し、パスキーでサインインする
 
