@@ -26,3 +26,4 @@ Itera の API の契約（ADR 0006）。OpenAPI の仕様（`openapi/`）が正�
 1. `openapi/` を直す。操作は `packages/application` の `operations` の入力・出力に、読み取りはその関数の結果に合わせる。操作を足したら、両方向（`src/sending.ts` の `routes` と `requestOf` の表、`src/requests.ts` の `surfaces`）と、`src/testing.ts` の入力の例にも足す。
 2. ルートで `pnpm contract:generate` を実行し、`src/generated/` の差分も一緒にコミットする。
 3. `pnpm check` を通す。`pnpm contract:check` が仕様の lint と、生成し直した結果との差分を、テストが application との型の一致、操作と面の往復、経路と query の名前の kebab-case と動作（動詞）・資源（名詞）の段、fixture の 12 状態での応答の検証を確かめる。
+4. ルートで `pnpm contract:breaking --base <PR の base のブランチ>` を実行し、壊す変更と `info.version` の上げ方を確かめる（PR では CI の `contract` job が同じことをする。ADR 0006「機械での確かめ」）。壊す変更があれば `info.version` を上げ、ADR 0006 に改訂を書く。inline の object の枝が 2 つ以上ある `oneOf`・`anyOf` には、枝ごとに `title` を付ける（ADR 0006「置き場所と書き方」）。

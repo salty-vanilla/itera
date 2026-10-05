@@ -30,7 +30,8 @@
     "design:lint": "designmd lint DESIGN.md",
     "contract:generate": "pnpm --filter @itera/api-contract generate",
     "migrations:check": "pnpm --filter @itera/api db:check",
-    "contract:check": "pnpm --filter @itera/api-contract lint:spec && pnpm --filter @itera/api-contract check:generated"
+    "contract:check": "pnpm --filter @itera/api-contract lint:spec && pnpm --filter @itera/api-contract check:generated",
+    "contract:breaking": "pnpm --filter @itera/api-contract breaking"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
