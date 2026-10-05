@@ -1,6 +1,6 @@
 import type { OccurrenceId, TaskId } from './shared/ids';
 import { addDays, type LocalDate } from './shared/time';
-import type { Occurrence } from './occurrence';
+import { occurrenceStateCounts, type Occurrence } from './occurrence';
 import {
   isCounted,
   occurrenceValue,
@@ -217,18 +217,10 @@ export function occurrenceProgress(
   occurrences: readonly Occurrence[],
 ): OccurrenceProgress | undefined {
   if (sprintTask.occurrenceIds === undefined) return undefined;
-  let done = 0;
-  let total = 0;
-  let skipped = 0;
-  for (const occurrenceId of sprintTask.occurrenceIds) {
-    const occurrence = occurrences.find((o) => o.id === occurrenceId);
-    if (occurrence === undefined || occurrence.state === 'excluded') continue;
-    if (occurrence.state === 'skipped') {
-      skipped += 1;
-      continue;
-    }
-    total += 1;
-    if (occurrence.state === 'done') done += 1;
-  }
-  return { done, total, skipped };
+  const counts = occurrenceStateCounts(sprintTask.occurrenceIds, occurrences);
+  return {
+    done: counts.done,
+    total: counts.pending + counts.done + counts.missed,
+    skipped: counts.skipped,
+  };
 }

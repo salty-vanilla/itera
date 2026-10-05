@@ -7,7 +7,6 @@ import {
   formatUnestimatedSubtasks,
   UNESTIMATED,
 } from '@/lib/time-format';
-import type { RetroData } from '@/screen-data/retro-view';
 import { OUTCOME_WORDS } from './retro-words';
 
 // A Task's values in words, shared by the table and the stacked list of 事実を見る
@@ -78,13 +77,11 @@ export function estimateOf(t: TaskFact): {
   return { kind: 'none', text: UNESTIMATED };
 }
 
-export function resultText(t: TaskFact, data: RetroData): string {
-  if (!t.recurring) return OUTCOME_WORDS[t.outcome];
+export function resultText(t: TaskFact): string {
   // A recurring Task is shown by its occurrences, not done / carried (F20).
-  const { done, skipped, missed } = data.facts.occurrences;
-  const count = (list: readonly { taskId: string }[]) =>
-    list.filter((o) => o.taskId === t.taskId).length;
-  return `繰り返し：完了 ${count(done)} · スキップ ${count(skipped)} · 未完了 ${count(missed)}`;
+  if (t.occurrences === undefined) return OUTCOME_WORDS[t.outcome];
+  const { done, skipped, missed } = t.occurrences;
+  return `繰り返し：完了 ${done} · スキップ ${skipped} · 未完了 ${missed}`;
 }
 
 /** 「計画 5時間（ルール）」: the planning value with what it came from. */

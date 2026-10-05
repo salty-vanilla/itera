@@ -1,5 +1,6 @@
 import { Tooltip as TooltipPrimitive } from '@base-ui/react/tooltip';
 import { createContext, useContext, useId } from 'react';
+import { TOOLTIP_DELAY } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 
 // DESIGN.md Components › Tooltip. A short label for icon-only controls and
@@ -10,8 +11,6 @@ import { cn } from '@/lib/utils';
 // pointer leave, blur and Esc, and stays open while the pointer is on it
 // (WCAG 1.4.13). The popup has role="tooltip" and describes its trigger
 // (docs/design/accessibility.md).
-
-const TOOLTIP_DELAY = 400;
 
 const TooltipIdContext = createContext<string | undefined>(undefined);
 

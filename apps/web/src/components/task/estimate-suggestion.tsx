@@ -195,7 +195,7 @@ function EstimateSuggestion({
                     ref={index === 0 ? firstRef : undefined}
                     size="sm"
                     className={cn(
-                      'focus-visible:z-1',
+                      'focus-visible:z-(--layer-local)',
                       index > 0 &&
                         '-ms-px rounded-s-none enlarged:ms-0 enlarged:rounded-s-sm',
                       index < bounds.length - 1 &&

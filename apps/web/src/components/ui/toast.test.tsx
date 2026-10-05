@@ -9,10 +9,9 @@ import {
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { TOAST_ACTION_TIMEOUT, TOAST_TIMEOUT } from '@/lib/motion';
 import { Button } from './button';
 import {
-  TOAST_ACTION_TIMEOUT,
-  TOAST_TIMEOUT,
   ToastProvider,
   useCloseToastsOnLeave,
   useToast,

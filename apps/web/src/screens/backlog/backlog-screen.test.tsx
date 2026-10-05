@@ -10,8 +10,8 @@ import {
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppRouter } from '@/app/router';
-import { ADDED_MS } from './backlog-screen';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { ADDED_MS } from '@/lib/motion';
 import type { StoreSnapshot } from '@/mock/memory-store';
 import { findHours, getHours, getMinutes, queryHours } from '@/test/duration';
 import { fixtureIds } from '@itera/application/fixtures';

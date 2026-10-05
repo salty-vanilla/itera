@@ -782,7 +782,7 @@ function TaskTable({
                 <DifferenceNote fact={t} />
               </td>
               <td className={cn(cell, 'xl:ps-8')}>
-                <TaskResult fact={t} data={data} />
+                <TaskResult fact={t} />
                 <DaysNote fact={t} />
               </td>
               {actions && (
@@ -876,7 +876,7 @@ function TaskList({
                 <Sentences items={values} />
               </p>
               <p className="text-meta text-ink-muted">
-                <TaskResult fact={t} data={data} iconSize="xs" />
+                <TaskResult fact={t} iconSize="xs" />
                 {days !== undefined && ` · ${days}`}
               </p>
               {onAddActual !== undefined && (
