@@ -12,7 +12,7 @@ export type UserId = string;
 export type TimeZone = string;
 
 /**
- * 0 is Sunday, 6 is Saturday.
+ * Closed enum. 0 is Sunday, 6 is Saturday.
  */
 export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -45,10 +45,13 @@ export type Clock = {
 
 export type SprintId = string;
 
+/**
+ * Closed enum.
+ */
 export type SprintState = 'planning' | 'active' | 'review' | 'closed';
 
 /**
- * The week a Sprint is in, seen from today.
+ * Closed enum. The week a Sprint is in, seen from today.
  */
 export type SprintWeek = 'previous' | 'current' | 'next';
 
@@ -193,6 +196,9 @@ export type PayloadTooLargeError = {
  * The domain refused the operation (packages/domain DomainError): a value its rules do not accept, a transition the record's state does not allow, or completing a recurring Task.
  */
 export type RuleViolationError = {
+    /**
+     * Open enum. A client takes a `type` it does not know as a general failure.
+     */
     type: '/problems/invalid-input' | '/problems/invalid-transition' | '/problems/recurring-task-cannot-complete';
     title: string;
     status: 422;
@@ -222,7 +228,7 @@ export type IdempotencyKeyReusedError = {
 export type AreaId = string;
 
 /**
- * The Area's color, `area-1` to `area-7` (DESIGN.md).
+ * Closed enum. The Area's color, `area-1` to `area-7` (DESIGN.md).
  */
 export type AreaColor = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
@@ -298,15 +304,18 @@ export type PreconditionRequiredError = {
 
 export type TaskId = string;
 
+/**
+ * Closed enum.
+ */
 export type TaskPriority = 'high' | 'normal' | 'low';
 
 /**
- * Whether the Task's time is its own Estimate or its Subtasks' sum.
+ * Closed enum. Whether the Task's time is its own Estimate or its Subtasks' sum.
  */
 export type TimeBasis = 'task' | 'subtasks';
 
 /**
- * `If-None-Match: *` (RFC 9110 §13.1.2): the write was made from no record, and is not to be made over one that is there now.
+ * Closed enum. `If-None-Match: *` (RFC 9110 §13.1.2): the write was made from no record, and is not to be made over one that is there now.
  */
 export type AnyEntityTag = '*';
 
@@ -327,7 +336,7 @@ export type SubtaskId = string;
 export type EstimateSuggestionId = string;
 
 /**
- * Which end of a suggestion's range is used (lo, the middle, hi).
+ * Closed enum. Which end of a suggestion's range is used (lo, the middle, hi).
  */
 export type SuggestionBound = 'lo' | 'mid' | 'hi';
 
@@ -348,8 +357,14 @@ export type Estimate = {
     source: EstimateSource;
 };
 
+/**
+ * Closed enum.
+ */
 export type BacklogSlice = 'dueSoon' | 'overdue' | 'carriedOver' | 'recurring' | 'noArea';
 
+/**
+ * Closed enum.
+ */
 export type TaskLifecycle = 'active' | 'completed' | 'archived';
 
 export type Subtask = {
@@ -364,6 +379,9 @@ export type Subtask = {
     etag: ETag;
 };
 
+/**
+ * Closed enum.
+ */
 export type SuggestionState = 'presented' | 'adopted' | 'rejected' | 'replaced';
 
 export type EstimateSuggestion = {
@@ -378,6 +396,9 @@ export type EstimateSuggestion = {
 
 export type RecurrenceRuleId = string;
 
+/**
+ * Open enum. Where the Task was made; no screen depends on the value.
+ */
 export type TaskCreatedVia = 'backlog' | 'today' | 'agent';
 
 export type Task = {
@@ -437,7 +458,7 @@ export type RecurrenceSummary = {
 export type DailySelectionId = string;
 
 /**
- * A choice for today that Today lists under 今日やる.
+ * Closed enum. A choice for today that Today lists under 今日やる.
  */
 export type ListedResolution = 'selected' | 'started' | 'done' | 'skipped';
 
@@ -488,7 +509,7 @@ export type DailySelectionCapabilities = {
 };
 
 /**
- * How a choice for today was closed without being done.
+ * Closed enum. How a choice for today was closed without being done.
  */
 export type ClosedResolution = 'paused' | 'deferred' | 'removed';
 
@@ -496,6 +517,9 @@ export type ClosedResolution = 'paused' | 'deferred' | 'removed';
  * A planning value from an Estimate or a suggestion.
  */
 export type EstimatedPlanningValue = {
+    /**
+     * Closed enum.
+     */
     base: 'estimate' | 'suggestion';
     lo: number;
     hi: number;
@@ -694,6 +718,9 @@ export type BacklogData = {
     };
 };
 
+/**
+ * Closed enum.
+ */
 export type SelfAssessment = 'achieved' | 'partly' | 'notAchieved' | 'notJudged';
 
 export type SprintGoal = {
@@ -708,10 +735,19 @@ export type SprintTaskId = string;
 
 export type OccurrenceId = string;
 
+/**
+ * Closed enum.
+ */
 export type SprintTaskOrigin = 'planning' | 'midSprint';
 
+/**
+ * Closed enum.
+ */
 export type GoalLink = 'linked' | 'unlinked';
 
+/**
+ * Closed enum.
+ */
 export type SprintTaskOutcome = 'draft' | 'planned' | 'done' | 'removed' | 'carriedOver';
 
 /**
@@ -753,6 +789,9 @@ export type SprintAreaSnapshotEntry = {
 
 export type PlanningCriterionId = string;
 
+/**
+ * Closed enum.
+ */
 export type RetroDecision = 'continue' | 'end' | 'replace';
 
 export type CriterionUse = {
@@ -762,8 +801,14 @@ export type CriterionUse = {
     etag: ETag;
 };
 
+/**
+ * Closed enum.
+ */
 export type DailySelectionOrigin = 'manual' | 'recurringToday' | 'midSprint' | 'backlogCompletion';
 
+/**
+ * Closed enum.
+ */
 export type DailyResolution = 'selected' | 'started' | 'done' | 'paused' | 'deferred' | 'removed' | 'skipped' | 'unresolved';
 
 export type DailySelection = {
@@ -782,6 +827,9 @@ export type DailySelection = {
     };
 };
 
+/**
+ * Open enum. How the actual time was recorded; no screen depends on the value.
+ */
 export type ActualTimeVia = 'completion' | 'pause' | 'later';
 
 export type ActualTime = {
@@ -804,6 +852,9 @@ export type InterruptNote = {
 };
 
 export type RetroPin = {
+    /**
+     * Closed enum.
+     */
     kind: 'sprintTask' | 'dailySelection' | 'occurrence' | 'interrupt' | 'goal' | 'availableHours';
     /**
      * The pinned record's ID (an Area's for a goal).
@@ -878,6 +929,9 @@ export type AreaLabel = {
     color: AreaColor;
 };
 
+/**
+ * Closed enum.
+ */
 export type OccurrenceState = 'pending' | 'excluded' | 'done' | 'skipped' | 'missed';
 
 export type Occurrence = {
@@ -1008,6 +1062,9 @@ export type DayRecord = {
 export type DayData = {
     date: LocalDate;
     today: LocalDate;
+    /**
+     * Closed enum.
+     */
     when: 'past' | 'future';
     timeZone: TimeZone;
     /**
@@ -1045,6 +1102,9 @@ export type DayView = {
     kind: 'today';
     today?: TodayData;
 } | {
+    /**
+     * Closed enum.
+     */
     kind: 'past' | 'future';
     day: DayData;
 };
@@ -1083,6 +1143,9 @@ export type PlannedTask = {
     occurrenceCount?: number;
     suggestion?: Range;
     linkAtConfirm: GoalLink;
+    /**
+     * Closed enum.
+     */
     inactive?: 'completed' | 'archived';
     capabilities: SprintTaskCapabilities;
 };
@@ -1133,6 +1196,9 @@ export type PlanningTotal = {
     unestimatedSubtasks: number;
 };
 
+/**
+ * Closed enum.
+ */
 export type CapacityStatus = 'within' | 'mayExceed' | 'exceeds';
 
 export type Capacity = {
@@ -1199,7 +1265,7 @@ export type CriterionEffect = {
 };
 
 /**
- * Why 確定 is not possible yet. `previousRetroOpen`: the previous Sprint's Retro is open (invariant 12). `inactiveTasks`: a chosen Task was completed or archived.
+ * Open enum. Why 確定 is not possible yet. `previousRetroOpen`: the previous Sprint's Retro is open (invariant 12). `inactiveTasks`: a chosen Task was completed or archived. A client shows the reasons it knows and leaves out the others (`capabilities.canConfirm` says whether it can be done).
  */
 export type PlanningBlocker = 'previousRetroOpen' | 'inactiveTasks';
 
@@ -1337,6 +1403,9 @@ export type SprintView = {
     state: 'planning';
     plan: SprintPlan;
 } | {
+    /**
+     * Closed enum.
+     */
     state: 'active' | 'review' | 'closed';
     running: RunningData;
 };
@@ -1507,6 +1576,9 @@ export type RetroFacts = {
     actualHours: number;
 };
 
+/**
+ * Closed enum.
+ */
 export type CriterionState = 'draft' | 'active' | 'ended' | 'replaced';
 
 export type PlanningCriterion = {
@@ -1559,7 +1631,7 @@ export type PlanningCriterionCapabilities = {
 };
 
 /**
- * `decisionMissing`: 続ける / 終える / 置き換える is not chosen (invariant 36). `continueWithDraft`: 続ける keeps the active criterion, so the draft must go (invariant 35).
+ * Open enum. `decisionMissing`: 続ける / 終える / 置き換える is not chosen (invariant 36). `continueWithDraft`: 続ける keeps the active criterion, so the draft must go (invariant 35). A client shows the reasons it knows and leaves out the others (`capabilities.canComplete` says whether it can be done).
  */
 export type RetroBlocker = 'decisionMissing' | 'continueWithDraft';
 
@@ -1584,6 +1656,9 @@ export type CarryOverPlaces = {
     archived: number;
 };
 
+/**
+ * Closed enum.
+ */
 export type CarryOverPlace = 'inNext' | 'candidate' | 'completed' | 'archived';
 
 export type CarryOverTask = {
@@ -2027,6 +2102,9 @@ export type DayRecordWritable = {
 export type DayDataWritable = {
     date: LocalDate;
     today: LocalDate;
+    /**
+     * Closed enum.
+     */
     when: 'past' | 'future';
     timeZone: TimeZone;
     /**
@@ -2064,6 +2142,9 @@ export type DayViewWritable = {
     kind: 'today';
     today?: TodayDataWritable;
 } | {
+    /**
+     * Closed enum.
+     */
     kind: 'past' | 'future';
     day: DayDataWritable;
 };
@@ -2075,6 +2156,9 @@ export type PlannedTaskWritable = {
     occurrenceCount?: number;
     suggestion?: Range;
     linkAtConfirm: GoalLink;
+    /**
+     * Closed enum.
+     */
     inactive?: 'completed' | 'archived';
     capabilities: SprintTaskCapabilities;
 };
@@ -2218,6 +2302,9 @@ export type SprintViewWritable = {
     state: 'planning';
     plan: SprintPlanWritable;
 } | {
+    /**
+     * Closed enum.
+     */
     state: 'active' | 'review' | 'closed';
     running: RunningDataWritable;
 };
@@ -2480,7 +2567,7 @@ export type SetSettingsErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -2585,7 +2672,7 @@ export type CreateAreaErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -2658,7 +2745,7 @@ export type RenameAreaErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -2723,7 +2810,7 @@ export type ArchiveAreaErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -2784,7 +2871,7 @@ export type RestoreAreaErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -2846,7 +2933,7 @@ export type CreateTaskErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -2928,7 +3015,7 @@ export type SaveTaskErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -2993,7 +3080,7 @@ export type ArchiveTaskErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -3054,7 +3141,7 @@ export type RestoreTaskErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -3115,7 +3202,7 @@ export type CompleteTaskErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -3176,7 +3263,7 @@ export type UndoCompleteTaskErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -3237,7 +3324,7 @@ export type EndRecurrenceErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -3317,7 +3404,7 @@ export type SetRecurrenceErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -3390,7 +3477,7 @@ export type AddSubtaskErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -3466,7 +3553,7 @@ export type UpdateSubtaskErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -3536,7 +3623,7 @@ export type AdoptEstimateSuggestionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -3600,7 +3687,7 @@ export type UndoAdoptionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -3662,7 +3749,7 @@ export type RejectSuggestionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -3724,7 +3811,7 @@ export type UndoRejectionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -3922,7 +4009,7 @@ export type BeginPlanningErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -4050,7 +4137,7 @@ export type SetAvailableHoursErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -4117,7 +4204,7 @@ export type ConfirmSprintErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -4195,7 +4282,7 @@ export type UpdateGoalErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -4262,7 +4349,7 @@ export type RemoveSprintTasksErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -4328,7 +4415,7 @@ export type AddToSprintErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -4399,7 +4486,7 @@ export type RemoveSprintTaskErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -4471,7 +4558,7 @@ export type SetGoalLinkErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -4537,7 +4624,7 @@ export type ExcludeAllOccurrencesErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -4600,7 +4687,7 @@ export type IncludeOccurrencesErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -4662,7 +4749,7 @@ export type ExcludeOccurrenceErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -4724,7 +4811,7 @@ export type IncludeOccurrenceErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -4846,7 +4933,7 @@ export type ChooseForDayErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -4918,7 +5005,7 @@ export type StartSelectionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -4982,7 +5069,7 @@ export type PauseSelectionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -5044,7 +5131,7 @@ export type DeferSelectionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -5106,7 +5193,7 @@ export type UndoDeferSelectionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -5168,7 +5255,7 @@ export type RemoveFromTodayErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -5230,7 +5317,7 @@ export type UndoRemoveFromTodayErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -5292,7 +5379,7 @@ export type CompleteSelectionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -5354,7 +5441,7 @@ export type UndoCompleteSelectionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -5416,7 +5503,7 @@ export type SkipSelectionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -5478,7 +5565,7 @@ export type UndoSkipSelectionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -5544,7 +5631,7 @@ export type RecordActualTimeErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -5608,7 +5695,7 @@ export type NoteInterruptErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -5672,7 +5759,7 @@ export type DeleteInterruptErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -5745,7 +5832,7 @@ export type EditInterruptErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -5815,7 +5902,7 @@ export type RestoreInterruptErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -5938,7 +6025,7 @@ export type UpdateRetroErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -6003,7 +6090,7 @@ export type BeginRetroErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -6062,7 +6149,7 @@ export type CompleteRetroErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -6127,7 +6214,7 @@ export type UnpinFactErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -6192,7 +6279,7 @@ export type PinFactErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -6263,7 +6350,7 @@ export type DecideCriterionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -6329,7 +6416,7 @@ export type DraftCriterionErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -6392,7 +6479,7 @@ export type DropCriterionDraftErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**
@@ -6463,7 +6550,7 @@ export type SetDraftPolicyErrors = {
      */
     413: PayloadTooLargeError;
     /**
-     * The domain refused the operation, the person has no settings yet, or the Idempotency-Key was used for another request.
+     * Open enum. The branches differ by `type` only, so a branch added later is a new `type` value, and a client takes one it does not know as a general failure.
      */
     422: RuleViolationError | UserNotSetUpError | IdempotencyKeyReusedError;
     /**

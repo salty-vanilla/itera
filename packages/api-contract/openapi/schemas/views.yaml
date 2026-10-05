@@ -25,7 +25,7 @@ SprintAreaLabel:
         - $ref: './records.yaml#/AreaColor'
         - const: none
 SprintWeek:
-  description: The week a Sprint is in, seen from today.
+  description: Closed enum. The week a Sprint is in, seen from today.
   type: string
   enum: [previous, current, next]
 SprintRef:
@@ -93,10 +93,11 @@ EditableArea:
     capabilities: { $ref: '#/AreaCapabilities' }
 # --------------------------------------------------------------- Backlog
 BacklogSlice:
+  description: Closed enum.
   type: string
   enum: [dueSoon, overdue, carriedOver, recurring, noArea]
 ListedResolution:
-  description: A choice for today that Today lists under 今日やる.
+  description: Closed enum. A choice for today that Today lists under 今日やる.
   type: string
   enum: [selected, started, done, skipped]
 # ---------------------------------------------------------- Capabilities
@@ -528,6 +529,7 @@ PlannedTask:
     suggestion: { $ref: './values.yaml#/Range' }
     linkAtConfirm: { $ref: './records.yaml#/GoalLink' }
     inactive:
+      description: Closed enum.
       type: string
       enum: [completed, archived]
     capabilities: { $ref: '#/SprintTaskCapabilities' }
@@ -550,9 +552,11 @@ AreaPlan:
       $ref: '#/SprintGoalCapabilities'
 PlanningBlocker:
   description: >-
-    Why 確定 is not possible yet. `previousRetroOpen`: the previous
+    Open enum. Why 確定 is not possible yet. `previousRetroOpen`: the previous
     Sprint's Retro is open (invariant 12). `inactiveTasks`: a chosen Task
-    was completed or archived.
+    was completed or archived. A client shows the reasons it knows and
+    leaves out the others (`capabilities.canConfirm` says whether it can
+    be done).
   type: string
   enum: [previousRetroOpen, inactiveTasks]
 SprintPlan:
@@ -884,6 +888,7 @@ DayData:
     date: { $ref: './common.yaml#/LocalDate' }
     today: { $ref: './common.yaml#/LocalDate' }
     when:
+      description: Closed enum.
       type: string
       enum: [past, future]
     timeZone: { $ref: './common.yaml#/TimeZone' }
@@ -950,9 +955,11 @@ RetroOccurrence:
     target: { $ref: '#/ActualTarget' }
 RetroBlocker:
   description: >-
-    `decisionMissing`: 続ける / 終える / 置き換える is not chosen (invariant
+    Open enum. `decisionMissing`: 続ける / 終える / 置き換える is not chosen (invariant
     36). `continueWithDraft`: 続ける keeps the active criterion, so the
-    draft must go (invariant 35).
+    draft must go (invariant 35). A client shows the reasons it knows and
+    leaves out the others (`capabilities.canComplete` says whether it can
+    be done).
   type: string
   enum: [decisionMissing, continueWithDraft]
 RetroData:
@@ -1060,6 +1067,7 @@ SprintView:
       required: [state, running]
       properties:
         state:
+          description: Closed enum.
           type: string
           enum: [active, review, closed]
         running: { $ref: '#/RunningData' }
@@ -1082,6 +1090,7 @@ DayView:
       required: [kind, day]
       properties:
         kind:
+          description: Closed enum.
           type: string
           enum: [past, future]
         day: { $ref: '#/DayData' }

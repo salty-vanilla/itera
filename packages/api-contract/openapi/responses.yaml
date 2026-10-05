@@ -52,6 +52,10 @@ RuleViolation:
   content:
     application/problem+json:
       schema:
+        description: >-
+          Open enum. The branches differ by `type` only, so a branch added
+          later is a new `type` value, and a client takes one it does not
+          know as a general failure.
         oneOf:
           - { $ref: './schemas/common.yaml#/RuleViolationError' }
           - { $ref: './schemas/common.yaml#/UserNotSetUpError' }
