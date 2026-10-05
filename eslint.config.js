@@ -6,6 +6,23 @@ import globals from 'globals';
 import reactHooks from 'eslint-plugin-react-hooks';
 import storybook from 'eslint-plugin-storybook';
 
+/**
+ * A relative path never leaves a package: another package is imported by its
+ * name (`@itera/...`), and pnpm's resolution does not stop `../../application`
+ * the way it stops a name the package does not depend on (ADR 0007 依存の向き).
+ * It looks at the first segment after the `../`s: the repository's top
+ * directories, or a sibling under packages/. A relative path inside the
+ * package (`../api/...`, `../lib/...`) is not stopped. Put in every block
+ * of product code below that sets `no-restricted-imports` (or the
+ * typescript-eslint one), as a later block replaces an earlier one's options.
+ */
+const relativeToOtherPackagePattern = {
+  regex:
+    '^(\\.\\./)+((packages|services|apps)/|(domain|application|api-contract)(/|$))',
+  message:
+    'Import another package by its name (@itera/...), not by a relative path (ADR 0007 依存の向き).',
+};
+
 // What services/api's production code must not import (ADR 0005, ADR 0006).
 const apiImportPatterns = [
   {
@@ -21,6 +38,7 @@ const apiImportPatterns = [
     message: "The API takes the contract's types and schemas only (ADR 0006).",
   },
   testingImportPattern(),
+  relativeToOtherPackagePattern,
 ];
 
 /**
@@ -121,6 +139,32 @@ const webScreenDataPattern = {
   message:
     'Only the screens import src/screen-data/; api, components, lib, auth and foundations stay below them (ADR 0005 置き場所の規則).',
 };
+
+// src/screen-data/ is under the screens, so it does not import them back
+// (ADR 0005 置き場所の規則), by `@/screens` or by a relative path.
+const webScreensPattern = {
+  regex: '^(@/|(\\.\\./)+)screens(/|$)',
+  message:
+    'src/screen-data/ stays below the screens: it does not import src/screens/ (ADR 0005 置き場所の規則).',
+};
+
+// Only the browser mock builds requests (ADR 0007: the screens use the
+// types of @itera/api-contract/sending).
+const webRequestsPattern = {
+  regex: '^@itera/api-contract/requests$',
+  message:
+    'Only the browser mock (src/mock/) uses @itera/api-contract/requests; the screens use the types of @itera/api-contract/sending (ADR 0007).',
+};
+
+// What every file of apps/web outside the mock and the tests leaves
+// unimported; the blocks below add to it, since a later block replaces the
+// options of an earlier one.
+const webBasePatterns = [
+  webBetterAuthPattern,
+  testingImportPattern(),
+  webRequestsPattern,
+  relativeToOtherPackagePattern,
+];
 const WEB_LAYERS = [
   'apps/web/src/{api,components,lib,auth,foundations}/**/*.{ts,tsx}',
 ];
@@ -275,11 +319,21 @@ export default defineConfig(
       'no-restricted-imports': [
         'error',
         {
-          patterns: [
-            webBetterAuthPattern,
-            testingImportPattern(),
-            webDomainPattern,
-          ],
+          patterns: [...webBasePatterns, webDomainPattern],
+        },
+      ],
+    },
+  },
+  {
+    // src/screen-data/ does not reach up to the screens either. It repeats
+    // the rule above for these files, for the same reason as the next block.
+    files: ['apps/web/src/screen-data/**/*.{ts,tsx}'],
+    ignores: WEB_NOT_SCREENS,
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [...webBasePatterns, webDomainPattern, webScreensPattern],
         },
       ],
     },
@@ -300,8 +354,7 @@ export default defineConfig(
         'error',
         {
           patterns: [
-            webBetterAuthPattern,
-            testingImportPattern(),
+            ...webBasePatterns,
             webDomainPattern,
             webScreenDataPattern,
           ],
@@ -317,11 +370,7 @@ export default defineConfig(
       'no-restricted-imports': [
         'error',
         {
-          patterns: [
-            webBetterAuthPattern,
-            testingImportPattern(),
-            webScreenDataPattern,
-          ],
+          patterns: [...webBasePatterns, webScreenDataPattern],
         },
       ],
     },
@@ -356,6 +405,8 @@ export default defineConfig(
         {
           patterns: [
             testingImportPattern(),
+            webRequestsPattern,
+            relativeToOtherPackagePattern,
             webScreenDataPattern,
             {
               regex: '^@itera/domain(/|$)',
@@ -423,6 +474,7 @@ export default defineConfig(
               regex: '^node:',
               message: 'packages/domain must not depend on Node.',
             },
+            relativeToOtherPackagePattern,
           ],
         },
       ],
@@ -456,6 +508,7 @@ export default defineConfig(
               regex: '^(@/|@itera/web(/|$))',
               message: 'packages/application must not depend on apps/web.',
             },
+            relativeToOtherPackagePattern,
           ],
         },
       ],
@@ -546,6 +599,7 @@ export default defineConfig(
                 'The contract does not depend on packages/domain (ADR 0007 依存の向き).',
             },
             { ...testingImportPattern(), regex: '(^|/)testing$' },
+            relativeToOtherPackagePattern,
           ],
         },
       ],
@@ -559,7 +613,7 @@ export default defineConfig(
     rules: {
       'no-restricted-imports': [
         'error',
-        { patterns: [testingImportPattern()] },
+        { patterns: [testingImportPattern(), relativeToOtherPackagePattern] },
       ],
     },
   },
