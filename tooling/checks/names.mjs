@@ -14,15 +14,15 @@ export function checkReactFileName(path) {
   }
 }
 
-// An Area is called Area (AGENTS.md ドメインの扱い). The one file of apps/web
-// with "domain" in its name is the module of the domain layer's functions;
-// the identifiers and texts are checked by ESLint (eslint.config.js).
+// An Area is called Area (AGENTS.md ドメインの扱い). The one path of
+// apps/web/src with "domain" in a file or directory name is the module of
+// the domain layer's functions; the identifiers and the capital-word texts
+// are checked by ESLint (eslint.config.js).
+const WEB_SRC = 'apps/web/src/';
 export function checkAreaFileName(path) {
-  if (
-    path.startsWith('apps/web/src/') &&
-    /domain/i.test(basename(path)) &&
-    path !== 'apps/web/src/lib/domain-functions.ts'
-  ) {
+  if (!path.startsWith(WEB_SRC)) return;
+  const inSrc = path.slice(WEB_SRC.length);
+  if (/domain/i.test(inSrc) && inSrc !== 'lib/domain-functions.ts') {
     throw new Error(
       `Call an Area an Area, not "domain" (AGENTS.md ドメインの扱い): ${path}`,
     );

@@ -33,6 +33,7 @@ describe('checkAreaFileName', () => {
     'apps/web/src/lib/domains.ts',
     'apps/web/src/components/DomainChip.tsx',
     'apps/web/src/screens/domain-functions.ts',
+    'apps/web/src/screens/domains/list.tsx',
   ])('rejects %s', (path) => {
     expect(() => checkAreaFileName(path)).toThrow(/Area/);
   });

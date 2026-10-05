@@ -14,7 +14,7 @@ Itera は、仕事・研究・学習・生活など複数の領域を並行す�
 | UI v0.1 モック（PDF、ローカルのみ） | 情報構造と主要フローの当たり付け。見た目の細部は決めない |
 
 - **意味・状態・用語・画面の操作の種類**はドメインモデル → PRD の順に従う。**見た目・部品・トークン・レイアウト**は DESIGN.md に従う。
-- 領域の概念は **Area** だけ（コードは `Area`、画面の語は「領域」、色トークンは `area-1`〜`area-7` / `area-none`）。領域の意味で「Domain」という語は使わない（`packages/domain` や「ドメインモデル」のドメインは別の意味）。`apps/web/src` では ESLint（`eslint.config.js` の `domainSyntax`。識別子・文言）と `pnpm lint` のファイル名の検査（`tooling/checks/names.mjs`）が止める。層の意味の名前（`@itera/domain`、`domain-functions`、`DomainError` など）は許可リストにあり、足すのは層の名前だけ。
+- 領域の概念は **Area** だけ（コードは `Area`、画面の語は「領域」、色トークンは `area-1`〜`area-7` / `area-none`）。領域の意味で「Domain」という語は使わない（`packages/domain` や「ドメインモデル」のドメインは別の意味）。`apps/web/src` では ESLint（`eslint.config.js` の `domainSyntax`。識別子と、大文字の `Domain`・「ドメイン」を含む文言）と `pnpm lint` のファイル・ディレクトリ名の検査（`tooling/checks/names.mjs`）が止める。小文字の `domain` の文字列（`@itera/domain`、テスト名）は検査しない。層の意味の識別子（`DomainError` など）は許可リスト `DOMAIN_LAYER_NAMES` にあり、足すのは層の名前だけ。
 - 文書どうしの食い違いを見つけたら、画面やコードで辻褄を合わせない。どの文書を更新するかをユーザーに確認する（PRD §15 の方針を DESIGN.md と `docs/design/` にも当てはめる）。
 
 ## 進め方

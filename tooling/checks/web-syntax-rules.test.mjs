@@ -1,16 +1,24 @@
+import { fileURLToPath } from 'node:url';
 import { ESLint } from 'eslint';
 import { describe, expect, it } from 'vitest';
 
 // The rules in eslint.config.js that stop a color written as a value and
 // "Domain" for an Area in apps/web/src (.claude/rules/web-ui.md, AGENTS.md
 // ドメインの扱い), run on text instead of on the repository's files.
-const eslint = new ESLint({ cwd: process.cwd() });
+const eslint = new ESLint({
+  cwd: fileURLToPath(new URL('../..', import.meta.url)),
+});
 
 async function messages(code, path = 'apps/web/src/components/sample.tsx') {
   const [result] = await eslint.lintText(code, { filePath: path });
-  return (result?.messages ?? []).filter(
-    (m) => m.ruleId === 'no-restricted-syntax',
+  // A syntax error or an ignored file also gives "no message".
+  const unlinted = result?.messages.filter(
+    (m) => m.fatal || /ignored/.test(m.message),
   );
+  if (!result || unlinted?.length) {
+    throw new Error(`not linted: ${path} ${JSON.stringify(unlinted)}`);
+  }
+  return result.messages.filter((m) => m.ruleId === 'no-restricted-syntax');
 }
 
 describe('a color written as a value', () => {
@@ -32,6 +40,11 @@ describe('a color written as a value', () => {
       "const c = 'color-mix(in srgb, #fff 40%, red)';",
     ],
     [
+      'an arbitrary color in parentheses',
+      'const c = <p className="text-(color:--ink)" />;',
+    ],
+    ['an arbitrary property', 'const c = <p className="[color:red] p-1" />;'],
+    [
       'an arbitrary color',
       'const c = <p className="text-[color:var(--ink)]" />;',
     ],
@@ -51,6 +64,11 @@ describe('a color written as a value', () => {
     ],
     ['a token class', 'const c = <p className="text-ink bg-danger-subtle" />;'],
     ['the word color', "const c = 'the color (not the size)';"],
+    ['color(s)', "const c = 'Pick color(s)';"],
+    [
+      'a variable of a token',
+      'const c = <p className="bg-(--ink) z-(--layer-dialog)" />;',
+    ],
     ['a comment', '// #c4161c\nconst c = 1;'],
   ])('lets %s through', async (_name, code) => {
     expect(await messages(code)).toHaveLength(0);
@@ -84,13 +102,13 @@ describe('"Domain" for an Area', () => {
     ['a sentence', 'const a = `Pick a Domain`;'],
     ['JSX text', 'const a = <p>Domain</p>;'],
     ['ドメイン in a label', "const a = 'ドメインを選ぶ';"],
-    ['Domain in the contrast test', 'type Domain = 1;'],
   ])('stops %s', async (_name, code) => {
-    const path =
-      code === 'type Domain = 1;'
-        ? 'apps/web/src/foundations/contrast.test.ts'
-        : undefined;
-    expect(await messages(code, path)).not.toHaveLength(0);
+    expect(await messages(code)).not.toHaveLength(0);
+  });
+
+  it('stops it in the contrast test too', async () => {
+    const path = 'apps/web/src/foundations/contrast.test.ts';
+    expect(await messages('type Domain = 1;', path)).not.toHaveLength(0);
   });
 
   it.each([

@@ -159,12 +159,15 @@ const COLOR_PATTERNS = [
     message: 'a color function',
   },
   {
-    regex: '(^|[^\\w-])color\\(\\s*[a-z-]',
+    regex:
+      '(^|[^\\w-])color\\(\\s*(from|srgb|srgb-linear|display-p3|a98-rgb|prophoto-rgb|rec2020|xyz|xyz-d50|xyz-d65)\\b',
     message: 'a color function',
   },
   {
-    regex: '-\\[color:',
-    message: 'a Tailwind arbitrary color (`text-[color:…]`)',
+    // `text-[color:…]`, `text-(color:--x)` and the arbitrary property
+    // `[color:…]`. `bg-(--ink)` (a variable of a token) is not stopped.
+    regex: '(^|[\\s:])\\[color:|-[\\[(]color:',
+    message: 'a Tailwind arbitrary color',
   },
 ];
 
@@ -191,22 +194,20 @@ const colorSyntax = COLOR_PATTERNS.flatMap(({ regex, message }) =>
 // and the names below, which wrap its errors. A name with "domain" that is
 // not one of them is stopped, so that an Area does not come back as
 // `Domain`, `domainId` and so on. Add to the list only a name of the layer.
+// In a text only the capital word `Domain` and ドメイン are stopped: a
+// lowercase `domain` is the layer, in a test's name or a path (`@itera/domain`).
 const DOMAIN_LAYER_NAMES =
-  '^(Domain(Error(Code)?|Instant|LocalDate|TimeZone)|DOMAIN_PROBLEMS|domainFailure|keptByDomain)$';
+  '^(Domain(Error|Instant|LocalDate|TimeZone)|DOMAIN_PROBLEMS|domainFailure|keptByDomain)$';
 const domainSyntax = [
   {
     selector: `:matches(Identifier, JSXIdentifier)[name=/[Dd][Oo][Mm][Aa][Ii][Nn]/]:not([name=/${DOMAIN_LAYER_NAMES}/])`,
     message:
       'Call an Area an Area (AGENTS.md ドメインの扱い). A name of the domain layer goes in DOMAIN_LAYER_NAMES (eslint.config.js).',
   },
-  ...['Literal', 'TemplateElement', 'JSXText'].map((type) => ({
-    selector:
-      type === 'TemplateElement'
-        ? 'TemplateElement[value.raw=/\\bDomain\\b|ドメイン(?!モデル)/]'
-        : `${type}[value=/\\bDomain\\b|ドメイン(?!モデル)/]`,
-    message:
-      'The word for an Area is 領域 (Area in code); not "Domain" or ドメイン (AGENTS.md ドメインの扱い).',
-  })),
+  ...textSyntax(
+    '\\bDomain\\b|ドメイン(?!モデル)',
+    'The word for an Area is 領域 (Area in code); not "Domain" or ドメイン (AGENTS.md ドメインの扱い).',
+  ),
 ];
 
 // Where a color is itself the subject: the contrast test takes the values
