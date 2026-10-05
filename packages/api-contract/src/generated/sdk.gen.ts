@@ -552,7 +552,7 @@ export const setGoalLink = <ThrowOnError extends boolean = false>(options: Optio
 /**
  * Leave out all of a SprintTask's occurrences
  *
- * With the last one the draft leaves the Sprint (invariant 33).
+ * With the last one the draft leaves the Sprint (invariant 33). A Task that does not repeat has no occurrences: refused (422), as it leaves by removeSprintTasks.
  */
 export const excludeAllOccurrences = <ThrowOnError extends boolean = false>(options: Options<ExcludeAllOccurrencesData, ThrowOnError>): RequestResult<ExcludeAllOccurrencesResponses, ExcludeAllOccurrencesErrors, ThrowOnError> => (options.client ?? client).post<ExcludeAllOccurrencesResponses, ExcludeAllOccurrencesErrors, ThrowOnError>({
     security: [{
@@ -745,7 +745,7 @@ export const completeSelection = <ThrowOnError extends boolean = false>(options:
 /**
  * Take back a completion
  *
- * Today's, or a past day's (#53): then the system closes what that day left open.
+ * Today's, or a past day's (#53): then the system closes what that day left open. A completion that made the day's choice from the Backlog is taken back as undoCompleteTask does, and the choice goes with it (F29, #346).
  */
 export const undoCompleteSelection = <ThrowOnError extends boolean = false>(options: Options<UndoCompleteSelectionData, ThrowOnError>): RequestResult<UndoCompleteSelectionResponses, UndoCompleteSelectionErrors, ThrowOnError> => (options.client ?? client).post<UndoCompleteSelectionResponses, UndoCompleteSelectionErrors, ThrowOnError>({
     security: [{

@@ -2,6 +2,8 @@
 // selection is undone as Today undoes it; a past day's is undone and the
 // system closes what it left open on that day. Since #295 one operation
 // takes both (`…/undo-complete`, `…/undo-skip`), by the selection's date.
+// On either day, a completion that made the choice from the Backlog is
+// undone as the Backlog undoes it (F29, #346).
 // Screens go through `useTodayActions` and `useRunningSprintActions`.
 import type {
   DailySelection,
@@ -35,9 +37,10 @@ export const undoSkipping =
 /**
  * Today's undo for a selection of today. For a past day's: the person's
  * undo, then the system closes what it left open on that past day as
- * unresolved (invariant 24), in one change. A completion that made the
- * day's choice from the Backlog goes with its choice, as the Backlog's undo
- * does (F29). During the Sprint only (the domain acts on the running one).
+ * unresolved (invariant 24), in one change. On either day, a completion
+ * that made the day's choice from the Backlog goes with its choice, as the
+ * Backlog's undo does (F29). During the Sprint only (the domain acts on the
+ * running one).
  */
 function undoOnDay(
   sprintId: SprintId,

@@ -15,6 +15,7 @@
 - 改訂：2026-10-04（残りの記録の読み取りに、出力専用の必須の `capabilities` を足す（ADR 0007「操作の可否」）。`BacklogItem` の `canAddToToday`・`canAddToWeek`・`canComplete` を `TaskCapabilities` に移す。応答から項目を消す壊す変更なので `info.version` を 0.6.0 にする。`RecurringCandidate.occurrences` は `OccurrenceItem`（`Occurrence` と `OccurrenceCapabilities`）にする。Issue #323）
 - 改訂：2026-10-04（Task の繰り返しの規則を置く `PUT /tasks/{taskId}/recurrence`（`setRecurrence`）も、規則の版で条件つきにする。規則があれば `If-Match`、なければ `If-None-Match: *`。`BacklogItem.rule` に出力専用の必須の `etag`、応答に `ETag`。`endRecurrence`（DELETE）は対象にしない。要求に条件を足す壊す変更なので `info.version` を 0.7.0 にする。Issue #330）
 - 改訂：2026-10-05（振り分けの規則を、送る側の `sending.ts`（`@itera/api-contract/sending`。Valibot とスキーマを import しない。Web が使う）と、読む側も持つ `requests.ts` に分ける。Web の本番ビルドに Valibot を入れないため。Issue #356）
+- 改訂：2026-10-05（今日の Backlog からの完了で作った選択への `undoCompleteSelection` は、過去の日と同じく `undoCompleteTask` と同じに取り消し、選択を記録ごと消す（F29）。繰り返しでない SprintTask への `excludeAllOccurrences` は、何も外さずに通していたのを 422 で断る（`canExcludeAllOccurrences` も偽）。形が同じで意味を変える壊す変更なので `info.version` を 0.8.0 にする。Issue #346）
 
 ## 背景
 
@@ -381,7 +382,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 ### 壊す変更をするとき
 
 - `info.version` の major を上げ、ADR に書く。
-- ただし最初の本番の公開（統合ブランチを main に入れて CD でデプロイするとき）までは、SemVer（§4）の major 0（初期の開発中）として扱い、壊す変更で minor を上げる。最初の本番の公開で 1.0.0 にし、その後は major を上げる（2026-10-03 司令塔の判断、#295）。#295 の経路の変更で 0.2.0、#319 のエラーの形の変更で 0.3.0、#320 の冪等キーで 0.4.0、#321 の記録ごとの版で 0.5.0、#323 の操作の可否（`BacklogItem` の `can…` を `capabilities` に移した）で 0.6.0、#330 の規則の版で 0.7.0 にした。
+- ただし最初の本番の公開（統合ブランチを main に入れて CD でデプロイするとき）までは、SemVer（§4）の major 0（初期の開発中）として扱い、壊す変更で minor を上げる。最初の本番の公開で 1.0.0 にし、その後は major を上げる（2026-10-03 司令塔の判断、#295）。#295 の経路の変更で 0.2.0、#319 のエラーの形の変更で 0.3.0、#320 の冪等キーで 0.4.0、#321 の記録ごとの版で 0.5.0、#323 の操作の可否（`BacklogItem` の `can…` を `capabilities` に移した）で 0.6.0、#330 の規則の版で 0.7.0、#346 の完了の取り消しと「すべての回を外す」の意味の変更で 0.8.0 にした。
 - 版の上げ方（経路、ヘッダー、受け付ける最低の版）と、古いクライアントの扱いは、iOS に着手するまでに決める。それまでは Web だけなので、壊す変更を入れた直後は、開いたままのタブの要求が失敗しうる（400 など）。利用者が 1 人の間は、読み直しで足りる。
 
 ### 決めていないこと（iOS に着手する前に決める）

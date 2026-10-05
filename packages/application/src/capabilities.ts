@@ -78,6 +78,7 @@ import {
 import { find } from './changes';
 import type { Clock, Records } from './records';
 import { draftOf } from './retro-changes';
+import { checkExcludeAllOccurrences } from './planning-changes';
 import { nextPlanningOf } from './review-changes';
 import { subjectOf, undoRouteOf } from './selection-of';
 import { sprintIn } from './sprint-of';
@@ -155,8 +156,8 @@ export function selectionCapabilities(
     running && subject.ok ? { ...subject.value, ...input } : undefined;
   const on = (check: (on: Sprint, by: SelectionInput) => Result<unknown>) =>
     running && can(check(sprint, input));
-  // An undo of a past day's completion from the Backlog is the Backlog's
-  // undo on that day (F29, F33).
+  // An undo of a completion from the Backlog, today's or a past day's, is
+  // the Backlog's undo on that day (F29, F33, #346).
   const undo = (
     resolution: 'done' | 'skipped',
     check: (on: Sprint, by: SubjectInput) => Result<unknown>,
@@ -476,21 +477,9 @@ export function sprintTaskCapabilities(
           task: task.value,
         }),
       ),
-    // Every occurrence it has, each as `excludeFromPlan` takes it
-    // (planning-changes.ts `excludeAllOccurrences`).
     canExcludeAllOccurrences:
       planning &&
-      sprint.tasks.some((t) => t.id === sprintTask.id) &&
-      (sprintTask.occurrenceIds ?? []).every((occurrenceId) => {
-        const occurrence = find(
-          records.occurrences,
-          occurrenceId,
-          'Occurrence',
-        );
-        return (
-          occurrence.ok && can(checkExcludeFromPlan(sprint, occurrence.value))
-        );
-      }),
+      can(checkExcludeAllOccurrences(sprint, sprintTask.id, records)),
     canRecordActualTime:
       sprintIn(records, sprint.id, ['active', 'review']).ok &&
       can(checkRecordActualTime(sprint, { sprintTaskId: sprintTask.id })),

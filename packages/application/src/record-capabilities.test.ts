@@ -75,6 +75,8 @@ interface Target {
   readonly where: string;
   readonly kind: string;
   readonly capabilities: object;
+  /** A SprintTask's: whether its Task repeats (it has occurrences). */
+  readonly recurring?: boolean;
   readonly run: (name: string) => Result<unknown>;
 }
 
@@ -205,29 +207,33 @@ function targetsOf(snapshot: StoreSnapshot): Target[] {
     const sprint = records.sprints.find((s) => s.id === sprintId)!;
     const sprintTask = sprint.tasks.find((t) => t.id === sprintTaskId)!;
     const occurrenceId = sprintTask.occurrenceIds?.[0];
-    return target<SprintTaskCapabilities>('sprintTask', where, capabilities, {
-      canRemove: () =>
-        operations.removeSprintTasks({
-          sprintId,
-          sprintTaskIds: [sprintTaskId],
-        }),
-      canSetGoalLink: () =>
-        operations.setGoalLink({
-          sprintId,
-          sprintTaskId,
-          goalLink: 'unlinked',
-        }),
-      canExcludeAllOccurrences: () =>
-        operations.excludeAllOccurrences({ sprintId, sprintTaskId }),
-      canRecordActualTime: () =>
-        operations.recordActualTime({
-          sprintId,
-          sprintTaskId,
-          date: sprint.start,
-          hours: 1,
-          ...(occurrenceId === undefined ? {} : { occurrenceId }),
-        }),
-    });
+    const recurring = sprintTask.occurrenceIds !== undefined;
+    return {
+      recurring,
+      ...target<SprintTaskCapabilities>('sprintTask', where, capabilities, {
+        canRemove: () =>
+          operations.removeSprintTasks({
+            sprintId,
+            sprintTaskIds: [sprintTaskId],
+          }),
+        canSetGoalLink: () =>
+          operations.setGoalLink({
+            sprintId,
+            sprintTaskId,
+            goalLink: 'unlinked',
+          }),
+        canExcludeAllOccurrences: () =>
+          operations.excludeAllOccurrences({ sprintId, sprintTaskId }),
+        canRecordActualTime: () =>
+          operations.recordActualTime({
+            sprintId,
+            sprintTaskId,
+            date: sprint.start,
+            hours: 1,
+            ...(occurrenceId === undefined ? {} : { occurrenceId }),
+          }),
+      }),
+    };
   };
 
   for (const item of sprintList(records, clock))
@@ -592,6 +598,30 @@ describe('capabilities of the other records agree with the operations (#323)', (
         canSetRecurrence: true,
         canEndRecurrence: false,
       });
+  });
+
+  // The domain tells a Task that does not repeat from one with no
+  // occurrences left by `occurrenceIds` being there (ADR 0007).
+  it('lets only a recurring draft leave by all of its occurrences (#346)', () => {
+    const planned = (recurring: boolean) =>
+      all.filter(
+        (t) =>
+          t.kind === 'sprintTask' &&
+          t.recurring === recurring &&
+          t.where.startsWith('sprintTask plan '),
+      );
+    expect(planned(false).length).toBeGreaterThan(0);
+    for (const t of planned(false))
+      expect([t.where, t.capabilities]).toEqual([
+        t.where,
+        expect.objectContaining({ canExcludeAllOccurrences: false }),
+      ]);
+    expect(
+      planned(true).some(
+        (t) =>
+          (t.capabilities as SprintTaskCapabilities).canExcludeAllOccurrences,
+      ),
+    ).toBe(true);
   });
 
   it('covers every kind of record', () => {
