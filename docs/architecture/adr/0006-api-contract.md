@@ -17,6 +17,7 @@
 - 改訂：2026-10-05（振り分けの規則を、送る側の `sending.ts`（`@itera/api-contract/sending`。Valibot とスキーマを import しない。Web が使う）と、読む側も持つ `requests.ts` に分ける。Web の本番ビルドに Valibot を入れないため。Issue #356）
 - 改訂：2026-10-05（今日の Backlog からの完了で作った選択への `undoCompleteSelection` は、過去の日と同じく `undoCompleteTask` と同じに取り消し、選択を記録ごと消す（F29）。繰り返しでない SprintTask への `excludeAllOccurrences` は、何も外さずに通していたのを 422 で断る（`canExcludeAllOccurrences` も偽）。形が同じで意味を変える壊す変更なので `info.version` を 0.8.0 にする。Issue #346）
 - 改訂：2026-10-05（今日の読み取り `TodayData` と実行中の Sprint の読み取り `RunningData` に、Sprint の開始日より前の間だけその日を返す、省略できる `opensOn` を足す（ADR 0007「操作の可否」）。応答に省略できる項目を足すだけなので `info.version` は 0.8.0 のまま。Issue #347）
+- 改訂：2026-10-05（依存の js-yaml の指摘を直すために `@hey-api/openapi-ts` の版上げを確かめ、新しい安定版がないので 0.99.0 のまま据え置く。Issue #409）
 
 ## 背景
 
@@ -305,6 +306,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
   - 境界：Valibot のプラグインの `additionalProperties` の扱いの 1 行だけ。ほかの出力は変えない。
   - 検査：生成した Valibot に `v.object({})`・`v.unknown()` があればテストが失敗し、2 つの表が `v.record` で値を検証していることもテストで確かめる（`src/generated.test.ts`）。版を上げて patch が当たらなくなったときも、ここで止まる。
   - 戻す条件：Hey API が `$ref` の値の表に `v.record` を出すようになったら、版を上げて patch を消す。
+  - 2026-10-05（#409）：依存の js-yaml の指摘を直すために版上げを確かめたが、0.99.0 より新しい安定版はなく、0.99.0 と patch のまま据え置いた。生成物と `info.version` は変わらない。js-yaml の指摘の扱いと確かめ直す時機は ADR 0004「依存の脆弱性の確かめ方」。
 - 生成物は Prettier と ESLint の対象外（`.prettierignore`、`eslint.config.js` の ignores）。正しさは `contract:check` と下のテストで確かめる。
 
 ### 契約と実装の一致

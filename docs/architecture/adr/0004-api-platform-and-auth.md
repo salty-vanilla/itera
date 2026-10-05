@@ -3,7 +3,7 @@
 - 状態：採用
 - 日付：2026-09-27
 - 関連：Issue #25、後続 Issue #26、#30、#32、#121、#262、#263、#368
-- 改訂：2026-09-30（認証を WorkOS AuthKit から Better Auth に変更。Issue #121）、2026-10-03（デプロイの方式、API の経路を `/api` の下に、登録を許可の一覧で絞る。Issue #32）、2026-10-03（記録のテーブル、操作と読み取りの処理、ID の形式、同時の書き込み、CSRF、Web と API の配信、使い始めの間のスキーマの変更。Issue #262）、2026-10-03（記録のテーブルの列・制約・index、読み込みと書き込み、版の確かめ方。Issue #263）、2026-10-03（Web の配信の実装とキャッシュ。Issue #280）、2026-10-03（操作と読み取りの処理の実装、Better Auth の ID、依存に Origin と時計。Issue #266）、2026-10-03（日付が変わったときの処理、追いついた日、読み取りの衝突のやり直し。Issue #271）、2026-10-04（書き込みの冪等キー。記録のテーブル、操作と読み取りの処理、同時の書き込みの既知の限界をなくす。Issue #320）、2026-10-04（記録の行ごとの版。記録のテーブルの `revision` 列と冪等キーの `etag` 列、操作と読み取りの処理の条件の確かめと `ETag`、同時の書き込み。Issue #321）、2026-10-04（繰り返しの規則の版を、規則・版・曜日の行の全体にする。Issue #330）、2026-10-05（スキーマとマイグレーションの食い違いの検査。Issue #366）、2026-10-05（依存の脆弱性の確かめ方と audit の記録。Issue #368）、2026-10-05（読み取りを足す場所を、API とモックが共有する表に。Issue #350）
+- 改訂：2026-09-30（認証を WorkOS AuthKit から Better Auth に変更。Issue #121）、2026-10-03（デプロイの方式、API の経路を `/api` の下に、登録を許可の一覧で絞る。Issue #32）、2026-10-03（記録のテーブル、操作と読み取りの処理、ID の形式、同時の書き込み、CSRF、Web と API の配信、使い始めの間のスキーマの変更。Issue #262）、2026-10-03（記録のテーブルの列・制約・index、読み込みと書き込み、版の確かめ方。Issue #263）、2026-10-03（Web の配信の実装とキャッシュ。Issue #280）、2026-10-03（操作と読み取りの処理の実装、Better Auth の ID、依存に Origin と時計。Issue #266）、2026-10-03（日付が変わったときの処理、追いついた日、読み取りの衝突のやり直し。Issue #271）、2026-10-04（書き込みの冪等キー。記録のテーブル、操作と読み取りの処理、同時の書き込みの既知の限界をなくす。Issue #320）、2026-10-04（記録の行ごとの版。記録のテーブルの `revision` 列と冪等キーの `etag` 列、操作と読み取りの処理の条件の確かめと `ETag`、同時の書き込み。Issue #321）、2026-10-04（繰り返しの規則の版を、規則・版・曜日の行の全体にする。Issue #330）、2026-10-05（スキーマとマイグレーションの食い違いの検査。Issue #366）、2026-10-05（依存の脆弱性の確かめ方と audit の記録。Issue #368）、2026-10-05（読み取りを足す場所を、API とモックが共有する表に。Issue #350）、2026-10-05（wrangler を 4.147.0 に上げて undici の指摘をなくす。js-yaml は修正版がない理由と確かめ直す時機。Issue #409）
 
 ## 背景
 
@@ -91,14 +91,14 @@ Better Auth の文書（Context7 と better-auth.com）と、固定した 1.7.6 
 
 **今の指摘（2026-10-05）**
 
-`pnpm audit --prod` は braces と esbuild の 2 件、`pnpm audit`（開発時の依存を含む）は 15 件（undici 10、js-yaml 3、braces 1、esbuild 1）を報告する。Dependabot の開いているアラートも同じ 15 件（`tooling/agents/pnpm-lock.yaml` の braces は開発専用で自動で却下された）。配信物は `apps/web/dist` と、`wrangler deploy --dry-run` で作った Worker のバンドル。どちらにも下の表の依存は入っていない（`braces`・`micromatch`・`fast-glob`・`esbuild`・`undici`・`js-yaml`・`miniflare` の名前で、出力のファイルを検索して確かめた）。
+`pnpm audit --prod` は braces と esbuild の 2 件、`pnpm audit`（開発時の依存を含む）は 5 件（js-yaml 3、braces 1、esbuild 1）を報告する（#409 で wrangler を上げた後）。#368 の時点では、ほかに undici の 10 件があり、15 件だった。#368 の時点の Dependabot の開いているアラートも同じ 15 件（`tooling/agents/pnpm-lock.yaml` の braces は開発専用で自動で却下された）。アラートは main の `pnpm-lock.yaml` に対して出るので、undici のアラートは wrangler の版上げが main に入るまで開いたまま。配信物は `apps/web/dist` と、`wrangler deploy --dry-run` で作った Worker のバンドル。どちらにも下の表の依存は入っていない（`braces`・`micromatch`・`fast-glob`・`esbuild`・`undici`・`js-yaml`・`miniflare` の名前で、出力のファイルを検索して確かめた。#409 で wrangler 4.147.0 の出力でも確かめ直した）。
 
 | 指摘 | 経路 | 影響 | 扱い |
 | --- | --- | --- | --- |
 | braces（GHSA-vfj7-8cjw-p6xm、high、3.0.3 以下、修正版なし） | apps/web > shadcn > fast-glob > micromatch > braces（shadcn の ts-morph 経由もある） | 深く入れ子にしたパターンを braces に渡すと、Node のプロセスがスタックを使い果たして落ちる（DoS）。`shadcn` は CLI で、build が読むのは `shadcn/tailwind.css`（CSS だけ）。動くのは開発者の端末の CLI だけで、配信する Worker では動かない | **受け入れる**。修正版が出れば Dependabot の PR が届く。`shadcn` を apps/web の dependencies に置く理由は ADR 0003 |
 | esbuild（GHSA-67mh-4wv8-2f99、moderate、0.24.2 以下。修正は 0.25.0） | services/api の devDependencies の drizzle-kit > @esbuild-kit/esm-loader > @esbuild-kit/core-utils > esbuild 0.18.20（`better-auth` の任意の peer 経由でも入る） | 問題は esbuild の開発サーバー（`--serve`）。drizzle-kit は設定ファイルを読む loader として esbuild を使うだけで、Itera が使うのは `drizzle-kit generate`（`db:generate` とスキーマの照合）だけ。開発サーバーは起動しない | **受け入れる**。drizzle-kit が新しい esbuild に移れば解消する |
-| undici（10 件、high 2・moderate 5・low 3、7.29.0 以下。修正は 7.29.1） | services/api の devDependencies の wrangler > miniflare > undici | 配信物には入らない。ただし CD（`deploy.yml`）は wrangler に Cloudflare の API トークンを渡して動かす。TLS の検証を回避できる指摘（high）が含まれ、wrangler のどの通信に当たるかは確かめていない | **未対応**。wrangler の更新（miniflare の undici が 7.29.1 以上になる版）で解消する。この Issue の範囲外 |
-| js-yaml（3 件、high、4.2.0。修正は 4.3.2） | packages/api-contract の devDependencies の @hey-api/openapi-ts > @hey-api/json-schema-ref-parser > js-yaml | 細工した YAML で CPU を使い切る（DoS）。OpenAPI から型を作るときに手元で動き、入力は Itera の OpenAPI の文書だけ | **未対応**。@hey-api/openapi-ts の更新で解消する。この Issue の範囲外 |
+| undici（10 件、high 2・moderate 5・low 3、7.29.0 以下。修正は 7.29.1） | services/api の devDependencies の wrangler > miniflare > undici | 配信物には入らない。ただし CD（`deploy.yml`）は wrangler に Cloudflare の API トークンを渡して動かす。TLS の検証を回避できる指摘（high）が含まれ、wrangler のどの通信に当たるかは確かめていない | **解消した**（#409）。wrangler を 4.141.0 から 4.147.0 に上げ、miniflare（5.20261001.0-alpha）の undici が 7.29.1 になった。miniflare が undici 7.29.1 を使う最初の wrangler は 4.143.1 |
+| js-yaml（3 件、high、4.2.0。修正は 4.3.2） | packages/api-contract の devDependencies の @hey-api/openapi-ts > @hey-api/json-schema-ref-parser > js-yaml | 細工した YAML で CPU を使い切る（DoS）。OpenAPI から型を作るときに手元で動き、入力は Itera の OpenAPI の文書だけ | **未対応（修正版がない）**。@hey-api/openapi-ts の最新の安定版は 0.99.0（2026-06-22）のままで、その依存の @hey-api/json-schema-ref-parser 1.4.4 が js-yaml を 4.2.0 に完全一致で固定している。上流は js-yaml を 5.3.0 に上げた（hey-api/openapi-ts#4381。5.x は 3 件のどれにも当たらない）が、出ているのはプレリリース（`next` の 0.0.0-next-20260930190945）だけで、プレリリースには固定しない（2026-10-05 に確かめた）。0.99.0 より新しい安定版が出たら、上げて確かめ直す（`patches/` の patch の当て直しを含む。ADR 0006） |
 
 次の確かめ直しの目安は、Dependabot の PR か新しいアラートが届いたときと、依存の版を上げたとき。
 
@@ -110,7 +110,7 @@ Better Auth の文書（Context7 と better-auth.com）と、固定した 1.7.6 
 | ORM | drizzle-orm / drizzle-kit | 0.45.3 / 0.31.11 | 上の決定。drizzle-kit は SQL のマイグレーションを生成するだけで、適用は wrangler（`wrangler d1 migrations apply`）が行う |
 | 認証 | better-auth / @better-auth/passkey | 1.7.6 / 1.7.6 | 上の決定（Issue #121） |
 | テストの DB | @libsql/client（devDependencies） | 0.18.0 | Better Auth の実装を、マイグレーションを適用したメモリ DB で確かめる（Issue #121） |
-| 実行・開発 | wrangler（devDependencies） | 4.141.0 | ローカルの実行（workerd とローカルの D1）、型の生成、D1 のマイグレーションの適用 |
+| 実行・開発 | wrangler（devDependencies） | 4.147.0 | ローカルの実行（workerd とローカルの D1）、型の生成、D1 のマイグレーションの適用。4.141.0 から、undici の指摘を直すために上げた（Issue #409） |
 | 型 | TypeScript・Vitest | 6.0.3 / 5.0.2 | ADR 0001 と同じ版 |
 | 入力の検証 | valibot | 1.5.0 | 契約（ADR 0006）から生成したスキーマで、要求を検証する。`@itera/api-contract` と同じ版（Issue #266） |
 
