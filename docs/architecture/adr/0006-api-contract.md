@@ -19,6 +19,7 @@
 - 改訂：2026-10-05（今日の読み取り `TodayData` と実行中の Sprint の読み取り `RunningData` に、Sprint の開始日より前の間だけその日を返す、省略できる `opensOn` を足す（ADR 0007「操作の可否」）。応答に省略できる項目を足すだけなので `info.version` は 0.8.0 のまま。Issue #347）
 - 改訂：2026-10-05（依存の js-yaml の指摘を直すために `@hey-api/openapi-ts` の版上げを確かめ、新しい安定版がないので 0.99.0 のまま据え置く。Issue #409）
 - 改訂：2026-10-05（計画の読み取り `SprintPlan` に、合計に入らない SprintTask（見積もりのないもの、見積もりのないサブタスクがあるもの）の ID の必須の `notInTotal` を、Retro の事実の `TaskFact` に、繰り返しの Task の回を状態ごとに数えた省略できる `occurrences`（`OccurrenceCounts`：完了・スキップ・未完了）を足す。Web が記録から数え直していた値をサーバーが返す（ADR 0007）。応答に項目を足すだけなので `info.version` は 0.8.0 のまま。Issue #348）
+- 改訂：2026-10-05（契約の壊す変更を、PR の base の契約と比べて CI が見つける。比べる道具は oasdiff 1.33.0 で、入手と版の固定の方法を「道具と版」に、規則との合わせ方と警告から失敗への切り替えを「互換の規則」の「機械での確かめ」に書く。oasdiff が `oneOf` の枝を対応づけられるように、inline の object の枝が 2 つ以上ある `oneOf` の枝に `title` を付ける。注釈だけで、通信の形と生成物は変わらないので `info.version` は 0.8.0 のまま。最初は警告だけ。Issue #367）
 
 ## 背景
 
@@ -40,8 +41,11 @@ ADR 0005「API への移行」は、操作を名前と入力で表す契約（Op
 | 検証 | `valibot`（dependencies） | 1.5.0 | AGENTS.md の候補。サーバーの入力の検証と、テストでの応答の検証に使う |
 | 取得結果のキャッシュ | `@tanstack/react-query`（devDependencies・peerDependencies） | 5.104.1 | AGENTS.md の候補。生成した options の型の検査に使う。`apps/web` は #272 で同じ版を入れる |
 | React | `react`・`@types/react`（devDependencies・peerDependencies） | 19.3.0 | TanStack Query の型が求める。`apps/web` と同じ版（ADR 0003） |
+| 契約の比較（壊す変更の検出） | oasdiff（GitHub の release のバイナリ） | 1.33.0 | OpenAPI 3.1 を読み、壊す変更を種類（check の ID）ごとに判定し、判定の水準を変えられる。`info.version` の上げ方も見る。Go の 1 つのバイナリで、実行時の依存がない。版と使い方は 2026-10-05 に Context7 と公式の文書（`docs/BREAKING-CHANGES.md`・`VERSIONING.md`・`OPENAPI-31.md`）で確かめた |
 
 Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足りるが、生成の前に分けたファイルを 1 つにまとめる道具が別に要り、Redocly なら 1 つで済む。
+
+oasdiff は npm の依存にできない（npm の `oasdiff` は名前の予約だけで、中身がない）。npx・pnpm dlx・go install・Docker では入れない。`packages/api-contract/scripts/breaking.mjs` が、版と、プラットフォームごとの release の tar.gz（macOS は universal の `darwin_all`、Linux は `amd64`・`arm64`）の名前と SHA-256（release の `checksums.txt` から写した値）を持つ。初めて使うときに GitHub の release から落とし、SHA-256 が合わなければ止め、`.tools/oasdiff/<版>/<プラットフォーム>/` に置く（`.tools/` は Git 管理外）。PATH にある oasdiff は使わない。比較を外へ送る `--open` は使わない。版を上げるときは、スクリプトの版・ファイル名・SHA-256 とこの表を一緒に直し、「機械での確かめ」の調整がまだ合っているかを、そこに書いた過去の変更で確かめ直す。
 
 ### 置き場所と書き方
 
@@ -57,6 +61,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 - 契約が検証するのは形と書式（型、必須、ID と日付の書式、列挙）だけにする。値の規則（正の時間、空でない題名、状態の遷移）は domain の規則で、422 で返す。規則を契約と domain に二重に持たないため。
 - 要求の本文の最上位は `additionalProperties: false`（Valibot の `strictObject`）。綴りの誤りなどの未知のキーは 400 になる。応答と共有する入れ子（`InterruptNote`・`RetroPin`・`Estimate`・`RecurrencePattern`・`CriterionPolicy`）は未知のキーを許し、Valibot の `object` が出力から落とす。サーバーは、要求の本文ではなく検証の出力だけを application に渡す。応答は未知のキーを許す（クライアントが後から足した項目で壊れないように）。応答の余分な・欠けたキーは、下の型のテストで止める。
 - 一覧（`BacklogData.items`・`RetroData.sprintAreas` など、ID をキーにする表）は `additionalProperties` で書き、`propertyNames` は使わない（Hey API 0.99.0 は `propertyNames` があると値を検証しない `v.object({})` を出す）。値が `$ref` の表も、0.99.0 の Valibot の出力では同じく `v.object({})` になる（Valibot のプラグインが `$ref` の値を読まない）。これは下の「生成物」の patch で直す。
+- `oneOf`・`anyOf` に inline の object の枝が 2 つ以上あるときは、その枝すべてに `title`（PascalCase の名前。例：`DayView` の `TodayDayView`・`OtherDayView`）を付ける。oasdiff は inline の枝を内容か `title` で対応づけるので、`title` がないと、1 つの PR で 2 つの枝の中が変わったときに、枝を消して足したものとして扱い、中の変更を比べない（応答では壊す変更として数える）。`title` は注釈で、通信の形と Hey API 0.99.0 の生成物は変わらない。一度付けた `title` は変えない（変えると、同じく枝を消して足したものとして扱う）。`title` のない枝は `pnpm contract:breaking` が見つける（「互換の規則」の「機械での確かめ」）。
 
 ### 経路の形
 
@@ -390,6 +395,31 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 - ただし最初の本番の公開（統合ブランチを main に入れて CD でデプロイするとき）までは、SemVer（§4）の major 0（初期の開発中）として扱い、壊す変更で minor を上げる。最初の本番の公開で 1.0.0 にし、その後は major を上げる（2026-10-03 司令塔の判断、#295）。#295 の経路の変更で 0.2.0、#319 のエラーの形の変更で 0.3.0、#320 の冪等キーで 0.4.0、#321 の記録ごとの版で 0.5.0、#323 の操作の可否（`BacklogItem` の `can…` を `capabilities` に移した）で 0.6.0、#330 の規則の版で 0.7.0、#346 の完了の取り消しと「すべての回を外す」の意味の変更で 0.8.0 にした。
 - 版の上げ方（経路、ヘッダー、受け付ける最低の版）と、古いクライアントの扱いは、iOS に着手するまでに決める。それまでは Web だけなので、壊す変更を入れた直後は、開いたままのタブの要求が失敗しうる（400 など）。利用者が 1 人の間は、読み直しで足りる。
 
+### 機械での確かめ（Issue #367、2026-10-05）
+
+上の規則と「壊す変更をするとき」の版の上げ方を、PR ごとに CI が確かめる。見落としの防ぎが specialist:contract のレビューだけだったので、最初の本番の公開（1.0.0）の前に入れた（2026-10-05 オーナー判断）。
+
+- CI の `contract` job（`.github/workflows/check.yml`。PR のときだけ）が、PR の base の契約と、PR を base に合わせた契約（checkout した merge commit）を比べる。base は merge commit の 1 つ目の親（`HEAD^1`。checkout を `fetch-depth: 2` にして得る）で、PR が合わさった base そのものなので、PR の変更だけが差になる。base の契約は、その commit から `git archive` で `packages/api-contract/openapi/` と `redocly.yaml` を一時ディレクトリに書き出したもの。両方を head の Redocly で 1 つにまとめ（生成と同じ形）、oasdiff の `breaking`（`--flatten-allof`）で比べる。oasdiff の `<ref>:<path>` の読み込みは使わない（まとめる前の分けたファイルどうしを比べることになる）。
+- 手元では、ルートで `pnpm contract:breaking --base <git ref>`（既定は `origin/main`。統合ブランチ向けの PR では、そのブランチを渡す）。比べる相手は `--base` とこのブランチの分かれた点（`git merge-base`）で、base がその後に進んだ分を、このブランチの変更として数えない。`pnpm check` には入れない（base が要り、初回は oasdiff を落とす）。
+- oasdiff の既定の判定と、この ADR の規則の違いは、`scripts/breaking-rules.mjs` が合わせる。
+  - 開いた列挙：エラーの応答（4xx・5xx）の本文の `oneOf` に枝を足すことと、エラーの `type` の列挙に値を足すことは、oasdiff では壊す変更（`response-body-one-of-added`・`response-property-enum-value-added`）だが、壊さない変更として数える（上の「列挙」）。ほかの列挙は閉じた列挙として数える。
+  - oasdiff の `--severity-levels` で、次を壊す変更にする（上の「壊す変更」。oasdiff ではどれも警告か互換）。
+    - 要求から項目を消すこと（要求の本文は知らないキーを 400 にする）と、応答から省略できる項目を消すこと。
+    - 応答から省略できるヘッダーを消すこと（Web は応答の `ETag` を次の `If-Match` に使う）。
+    - operation の名前（`operationId`。生成したクライアントの関数と `useOperation` の名前）を変えること。
+    - `deprecated` を付けてから operation を消すこと（この ADR には、消すのを互換にする廃止の手順がない）。
+  - oasdiff が仕様だけでは決められない変更（WARN）は、数えずに一覧に出す。レビューで判断する。
+- 壊す変更があれば、`info.version` が base の版から、major が 0 の間は minor、1.0.0 からは major で上がっていることを求める。版が下がること、`MAJOR.MINOR.PATCH` の形でないことも止める。壊す変更が見つからないのに版を上げるのは止めない（形が同じで意味を変える壊す変更があるため）。
+- 見つけないもの（specialist:contract のレビューで判断する）：形が同じで意味や単位を変える変更（#346）、消した項目や operation の名前を別の意味で使い直すこと、仕様では省略できるがサーバーが条件で求めるヘッダー（#330 の `If-Match`・`If-None-Match`）、送り返す入れ子に項目を足すときの但し書き（上の「壊さない変更」）、要求だけに現れる閉じた列挙に値を足すこと（oasdiff は互換とする。受け取るのはサーバーだけなので、上の「閉じた列挙」の理由が当てはまるかをレビューで判断する）。
+- 過去の契約の変更（#279〜#347 の 11 件）で確かめた：版を上げた #295・#319・#320・#321・#323 は壊す変更あり、上げなかった #279・#338・#347 は壊す変更なしで、規則の判断と合う。#330・#346 は見つからない（上の見つけないもの）。#321・#322・#323・#346 では、`title` のない 2 つの inline の枝の中が変わったのを、枝を足したものとして壊す変更に数えた（#322 は版を上げていないので誤った警告になる）。これが上の「置き場所と書き方」の `title` の理由で、`title` があれば中の変更を比べることを確かめた。
+
+#### 警告から失敗への切り替え
+
+- 今は警告だけ（`--warn-only`）。job は通り、指摘を注釈と job の要約に出す。
+- 切り替える条件：この確かめが入った後、契約（`openapi/`）を変えた PR が 3 件続けて、確かめの結果（壊す変更の有無と版の判定）と specialist:contract のレビューの判断が食い違わないこと。食い違ったら、`breaking-rules.mjs` かこの ADR を直してから数え直す。`title` を付けた #367 の PR と、それを含む統合ブランチを main に入れる PR は数えない（base に `title` がないので、枝を消して足したものとして警告が出る）。
+- 遅くとも最初の本番の公開（1.0.0）の前に切り替える。それまでに 3 件に満たなければ、その時点の結果を見てオーナーが決める。
+- 切り替えは、`check.yml` の `--warn-only` を消し、この ADR に改訂を書く。リポジトリには必須のチェックの設定がないので、job が落ちた PR をマージしないこと（CI が通ってからマージする）で効かせる。
+
 ### 決めていないこと（iOS に着手する前に決める）
 
 - 時間（h）の数の表し方（今は JSON の数。分の整数にするかなど）と丸め。後から変えると壊す変更になる。
@@ -402,3 +432,4 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 - `apps/web`（#272）は、`@itera/api-contract/client` と `/react-query` を使い、`@tanstack/react-query` 5.104.1 を入れる。操作は `useOperation('<名前>')` で、`@itera/api-contract/sending` を通して送る（#295。#356 で `/requests` から分けた）。
 - iOS・Android は、`openapi/` を 1 ファイルにまとめたもの（`redocly bundle`）から生成できる。セッションの Cookie と書き込みの Origin の検査（ADR 0004）は、Origin を送らないネイティブのクライアントでは 403 になるので、ネイティブの認証の方式は iOS に着手するときに決める。
 - 契約を変えるときは、`openapi/` を直し、`pnpm contract:generate` を実行して、生成物と一緒にコミットする。
+- 契約を変える PR は、CI の `contract` job が base の契約と比べる（「機械での確かめ」）。壊す変更の指摘が出たら、`info.version` を上げて改訂を書くか、変更を互換にする。

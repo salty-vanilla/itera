@@ -68,6 +68,8 @@ PRD §14「クライアントとデータの方式」に従う。規則の正本
 
 ブラウザから Worker（Web の配信・API・ローカルの D1）までを通す E2E テストは `pnpm e2e` で、`pnpm check` には入れていない（CI は別の job。ADR 0008）。
 
+契約（`packages/api-contract/openapi/`）の壊す変更と `info.version` の上げ方は `pnpm contract:breaking --base <git ref>` で確かめる。`pnpm check` には入れていない（CI は PR のときだけの別の job。ADR 0006「機械での確かめ」）。
+
 コミット時には lefthook がステージした内容を Prettier / ESLint で検査する。パッケージを足すときの約束（`vitest.config.ts` と `typecheck` script を置く、ESLint の設定はルートにだけ書く）とツールの版の決定は `docs/architecture/adr/0001-monorepo-foundation.md`。
 
 ## Agent ツール

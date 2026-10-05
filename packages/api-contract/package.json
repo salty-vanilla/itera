@@ -17,7 +17,8 @@
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.test.json",
     "lint:spec": "REDOCLY_SUPPRESS_UPDATE_NOTICE=true redocly lint openapi/openapi.yaml",
     "generate": "node scripts/generated.mjs write",
-    "check:generated": "node scripts/generated.mjs check"
+    "check:generated": "node scripts/generated.mjs check",
+    "breaking": "node scripts/breaking.mjs"
   },
   "dependencies": {
     "@itera/application": "workspace:*",
