@@ -287,7 +287,7 @@ describe('the Backlog on the API', () => {
     ).toBeTruthy();
   });
 
-  it('sends 完了にする from the detail and from the row of the same Task once (#379)', async () => {
+  it('sends 完了にする pressed in the detail while the row’s is on its way once (#379)', async () => {
     const saves = held(writes);
     const { requests } = serve(saves.answer);
     renderBacklog();
@@ -317,6 +317,42 @@ describe('the Backlog on the API', () => {
     await screen.findByRole('button', { name: '元に戻す' });
     expect(requests.filter((r) => r.startsWith('POST'))).toHaveLength(1);
     expect(screen.queryByText('保存できませんでした')).toBeNull();
+  });
+
+  it('leaves the completed line where its row was when the row below it was completed while it was on its way (#379)', async () => {
+    const saves = held(writes);
+    const { store } = serve(saves.answer);
+    renderBacklog();
+    const rows = await list();
+    const titleOf = (id: string) =>
+      store.getSnapshot().records.tasks.find((t) => t.id === id)!.title;
+    const order = Array.from(rows.querySelectorAll('[data-task]')).map((li) =>
+      titleOf(li.getAttribute('data-task')!),
+    );
+    const [upper, lower, next] = order;
+    const complete = async (title: string) => {
+      await userEvent.click(
+        screen.getByRole('button', { name: `その他の操作：${title}` }),
+      );
+      await userEvent.click(
+        await screen.findByRole('menuitem', { name: '完了にする' }),
+      );
+    };
+    // The lower row first, then the one right above it.
+    await complete(lower!);
+    await until(() => expect(saves.waiting).toBe(1));
+    await complete(upper!);
+    saves.release();
+    await until(() => expect(screen.queryByText(upper!)).toBeNull());
+    // Both rows are gone: the line is where the upper one was, above the
+    // row that was under them, not at the end of the list.
+    await until(() => {
+      const undo = screen.getByRole('button', { name: '元に戻す' });
+      const below = within(rows).getByRole('button', { name: next! });
+      expect(undo.compareDocumentPosition(below)).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    });
   });
 
   it('sends 今日へ from a row and from the detail of the same Task once (#379)', async () => {

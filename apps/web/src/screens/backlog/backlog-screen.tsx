@@ -98,13 +98,18 @@ function LoadedBacklog({ backlog }: { backlog: BacklogView }) {
   const open =
     search.task === undefined ? undefined : backlog.item(search.task);
   // The Task just completed, kept as one line where its row was until the
-  // next operation (patterns.md Backlog › 完了, F29). `before` is the row
-  // it sat above, if any.
+  // next operation (patterns.md Backlog › 完了, F29). `below` is the rows
+  // under it when it was pressed, in order: the line sits above the first
+  // that is still listed, so that it stays where its row was when the row
+  // under it was completed too, while this one was on its way (#379).
   const [completed, setCompleted] = useState<{
     taskId: TaskId;
     title: string;
-    before?: TaskId;
+    below: readonly TaskId[];
   }>();
+  const lineBefore = completed?.below.find((id) =>
+    items.some((i) => i.task.id === id),
+  );
   // The row that came back by 元に戻す takes the focus on its ○, once: the
   // next operation clears it, so a row shown again later does not take it.
   const [refocus, setRefocus] = useState<TaskId>();
@@ -164,17 +169,13 @@ function LoadedBacklog({ backlog }: { backlog: BacklogView }) {
 
   const completeWithUndo = async (taskId: TaskId, title: string) => {
     const index = items.findIndex((i) => i.task.id === taskId);
-    const before = items[index + 1]?.task.id;
+    const below = items.slice(index + 1).map((i) => i.task.id);
     setRefocus(undefined);
     if (!(await actions.completeTask(taskId))) return;
     // From the detail: close it once the Task is done. Closing clears the
     // line of an earlier completion, so the new one is set after it.
     if (search.task === taskId) setSearch({ task: undefined });
-    setCompleted({
-      taskId,
-      title,
-      ...(before === undefined ? {} : { before }),
-    });
+    setCompleted({ taskId, title, below });
   };
 
   const undoCompleted = async () => {
@@ -316,7 +317,7 @@ function LoadedBacklog({ backlog }: { backlog: BacklogView }) {
               const { task } = item;
               return (
                 <Fragment key={task.id}>
-                  {completed?.before === task.id && (
+                  {completed !== undefined && lineBefore === task.id && (
                     <CompletedLine
                       key={completed.taskId}
                       ref={undoRef}
@@ -358,16 +359,14 @@ function LoadedBacklog({ backlog }: { backlog: BacklogView }) {
                 </Fragment>
               );
             })}
-            {completed !== undefined &&
-              (completed.before === undefined ||
-                !items.some((i) => i.task.id === completed.before)) && (
-                <CompletedLine
-                  key={completed.taskId}
-                  ref={undoRef}
-                  title={completed.title}
-                  onUndo={undoCompleted}
-                />
-              )}
+            {completed !== undefined && lineBefore === undefined && (
+              <CompletedLine
+                key={completed.taskId}
+                ref={undoRef}
+                title={completed.title}
+                onUndo={undoCompleted}
+              />
+            )}
           </ul>
         )}
       </section>
