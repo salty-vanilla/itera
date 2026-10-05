@@ -34,6 +34,9 @@ interface WithOpensOn {
   opensOn?: string;
 }
 
+const isRead = (path: string) =>
+  path.startsWith('/api/days/') || /^\/api\/sprints\/[^/]+$/.test(path);
+
 /**
  * The API: the mock over `today-interrupt` on `today` (its Sprint runs
  * 9/28〜10/4), with `opensOn` in the Today and Sprint reads replaced by
@@ -56,11 +59,18 @@ function serve(today: string, opensOn: string | undefined) {
     'fetch',
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const response = await mock(new Request(input, init));
-      if (!response.ok) return response;
+      const path = new URL(
+        input instanceof Request ? input.url : String(input),
+        'http://localhost',
+      ).pathname;
+      if (!response.ok || !isRead(path)) return response;
       const body = (await response.clone().json()) as {
-        view?: { today?: WithOpensOn; running?: WithOpensOn };
+        view?: { kind?: string; today?: WithOpensOn; running?: WithOpensOn };
       };
-      const read = body.view?.today ?? body.view?.running;
+      // Today's data is in the day read's `today`, the confirmed Sprint's
+      // in the Sprint read's `running`; other answers are left alone.
+      const view = body.view;
+      const read = view?.kind === 'today' ? view.today : view?.running;
       if (read === undefined) return response;
       if (opensOn === undefined) delete read.opensOn;
       else read.opensOn = opensOn;
