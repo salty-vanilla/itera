@@ -440,6 +440,107 @@ describe('the Backlog on the API', () => {
     expect(screen.queryByText('保存できませんでした')).toBeNull();
   });
 
+  it('sends アーカイブ pressed on rows one after another, each in turn, and drops a repeat on the same row (#432)', async () => {
+    const saves = held(writes);
+    const { store, requests } = serve(saves.answer);
+    renderBacklog();
+    await list();
+    const archive = async (title: string) => {
+      await userEvent.click(
+        screen.getByRole('button', { name: `その他の操作：${title}` }),
+      );
+      await userEvent.click(
+        await screen.findByRole('menuitem', { name: 'アーカイブ' }),
+      );
+    };
+    await archive('本棚を整理する');
+    await until(() => expect(saves.waiting).toBe(1));
+    // The same row again, then another row, while the first is on its way.
+    await archive('本棚を整理する');
+    await archive('歯医者の予約');
+    saves.release();
+    const archived = (title: string) =>
+      store.getSnapshot().records.tasks.find((t) => t.title === title)
+        ?.archivedAt !== undefined;
+    await until(() => {
+      expect(archived('本棚を整理する')).toBe(true);
+      expect(archived('歯医者の予約')).toBe(true);
+    });
+    expect(requests.filter((r) => r.endsWith('/archive'))).toHaveLength(2);
+    expect(screen.queryByText('保存できませんでした')).toBeNull();
+    // 元に戻す is for the one archived last.
+    expect(
+      await screen.findByText('「歯医者の予約」をアーカイブしました'),
+    ).toBeTruthy();
+  });
+
+  it('moves the focus past a row whose archive is on its way when the row under it is archived (#432)', async () => {
+    const saves = held(writes);
+    const { store } = serve(saves.answer);
+    renderBacklog();
+    const rows = await list();
+    const titleOf = (id: string) =>
+      store.getSnapshot().records.tasks.find((t) => t.id === id)!.title;
+    const ids = Array.from(rows.querySelectorAll('[data-task]')).map((li) =>
+      li.getAttribute('data-task')!,
+    );
+    // The last two rows, and the one above them.
+    const [first, second, third] = ids.slice(-3).map(titleOf);
+    const archive = async (title: string) => {
+      await userEvent.click(
+        screen.getByRole('button', { name: `その他の操作：${title}` }),
+      );
+      await userEvent.click(
+        await screen.findByRole('menuitem', { name: 'アーカイブ' }),
+      );
+    };
+    // The third row is the last: the row to go to is the one above it, and
+    // the second, which is on its way, is not one.
+    await archive(second!);
+    await until(() => expect(saves.waiting).toBe(1));
+    await archive(third!);
+    saves.release();
+    await until(() => {
+      expect(screen.queryByText(second!)).toBeNull();
+      expect(screen.queryByText(third!)).toBeNull();
+    });
+    await until(() =>
+      expect(
+        rows
+          .querySelector(`[data-task="${ids.at(-3)}"] [data-row-focus]`)
+          ?.isSameNode(document.activeElement),
+      ).toBe(true),
+    );
+    expect(screen.getByText(first!)).toBeTruthy();
+  });
+
+  it('sends アーカイブ from a row and from the detail of the same Task once (#432)', async () => {
+    const saves = held(writes);
+    const { requests } = serve(saves.answer);
+    renderBacklog();
+    const rows = await list();
+    await userEvent.click(
+      screen.getByRole('button', { name: 'その他の操作：本棚を整理する' }),
+    );
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: 'アーカイブ' }),
+    );
+    await until(() => expect(saves.waiting).toBe(1));
+    await userEvent.click(
+      within(rows).getByRole('button', { name: '本棚を整理する' }),
+    );
+    const detail = await screen.findByRole('dialog', {
+      name: '本棚を整理する',
+    });
+    await userEvent.click(
+      within(detail).getByRole('button', { name: 'アーカイブ' }),
+    );
+    saves.release();
+    await screen.findByText('「本棚を整理する」をアーカイブしました');
+    expect(requests.filter((r) => r.endsWith('/archive'))).toHaveLength(1);
+    expect(screen.queryByText('保存できませんでした')).toBeNull();
+  });
+
   it('holds the close of a detail whose title a failed save left out, and drops it on 保存せずに閉じる (#332)', async () => {
     serve((request) => (request.method === 'PATCH' ? refused() : undefined));
     const router = renderBacklog();

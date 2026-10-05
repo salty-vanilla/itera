@@ -185,13 +185,25 @@ function LoadedBacklog({ backlog }: { backlog: BacklogView }) {
     setRefocus(completed.taskId);
   };
 
+  // The rows whose archive is on its way: a row archived while another is
+  // sent leaves too, so the focus does not move to it (#432).
+  const archiving = useRef(new Set<TaskId>());
   const archiveWithUndo = async (taskId: TaskId, title: string) => {
     // The row goes: the focus moves to the next row (or the one before it,
     // or the Quick Add) rather than nowhere.
-    const index = items.findIndex((i) => i.task.id === taskId);
-    const next = items[index + 1] ?? items[index - 1];
+    const staying = items.filter(
+      (i) => i.task.id === taskId || !archiving.current.has(i.task.id),
+    );
+    const index = staying.findIndex((i) => i.task.id === taskId);
+    const next = staying[index + 1] ?? staying[index - 1];
     endUndo();
-    if (!(await actions.archiveTask(taskId))) return;
+    // A repeat on a row already on its way is dropped, and leaves the first
+    // one's mark.
+    const first = !archiving.current.has(taskId);
+    if (first) archiving.current.add(taskId);
+    const archived = await actions.archiveTask(taskId);
+    if (first) archiving.current.delete(taskId);
+    if (!archived) return;
     if (search.task === taskId) setSearch({ task: undefined });
     requestAnimationFrame(() =>
       document
