@@ -2,10 +2,11 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    // Not one worker per core (the default): the jsdom tests of apps/web
-    // spend CPU for most of their time, so a run that shares the machine
-    // (other worktrees, a dev server) stretches each test past the 5 s
-    // timeout without finishing sooner. Four is what CI's runner has
+    // Not one worker for each core but one (the default): the jsdom tests of
+    // apps/web spend CPU for most of their time, so a run that shares the
+    // machine (other worktrees, a dev server) stretches each test past its
+    // timeout without finishing sooner. CI's runner has four CPUs. Keep
+    // apps/web/vitest.config.ts the same: Vitest stops when they differ
     // (ADR 0001, #424).
     maxWorkers: 4,
     projects: [

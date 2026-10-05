@@ -11,7 +11,7 @@ export default defineProject({
     name: 'web',
     environment: 'jsdom',
     include: ['src/**/*.test.{ts,tsx}'],
-    // As in the root config (#424), for a run from this package.
+    // The same as the root config (#424), for a run from this package.
     maxWorkers: 4,
     // A screen test takes at most about 1.6 s on a quiet machine and 6.9 s
     // when the machine is loaded far beyond its cores (ADR 0001, #424).
