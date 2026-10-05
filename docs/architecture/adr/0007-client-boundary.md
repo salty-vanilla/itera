@@ -50,7 +50,7 @@ Web を契約に移し終えた後（ADR 0005、#272〜#277）の形：
 services/api ───────────────▶ packages/application ──▶ packages/domain
 services/api ───────────────▶ packages/api-contract（型と検証）
 apps/web ───────────────────▶ packages/api-contract（生成したクライアントと型、sending の振り分け）
-packages/api-contract/sending・requests ─(型だけ)─▶ packages/application（操作の名前と入力。#295）
+packages/api-contract/sending・requests ─(型だけ)─▶ packages/application（操作の名前と入力。#295。requests は読み取りの名前と入力も。#350）
 apps/web のブラウザ内モック ─▶ packages/application ──▶ packages/domain（開発ビルドだけ）
 apps/web のプレビューの例外 ─▶ packages/domain（iOS に着手するまで。ADR 0005）
 iOS・Android ───────────────▶ packages/api-contract/openapi/ から生成したもの

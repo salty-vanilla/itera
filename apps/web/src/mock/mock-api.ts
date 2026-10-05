@@ -24,7 +24,6 @@
 // A date that does not exist (2026-02-30) is refused in a read's path, as
 // the API does; in the operations' requests only the form is checked, which
 // is all the screens can send wrong.
-import * as contract from '@itera/api-contract';
 import {
   DOMAIN_PROBLEMS,
   issueAt,
@@ -38,43 +37,35 @@ import {
   type ValidationIssue,
 } from '@itera/api-contract/problems';
 import {
-  queryInput,
+  meResponse,
   readCondition,
+  readOf,
   readRequest,
+  readSurfaces,
   RequestError,
   settingsSurface,
   surfaces,
   type Call,
+  type CheckPart,
+  type ReadSurface,
   type ReceivedCondition,
   type Surface,
 } from '@itera/api-contract/requests';
 import {
-  areaList,
-  backlogData,
   catchUp as systemCatchUp,
   checkCondition,
   etagAfter,
   currentSprints,
-  dayView,
   operations,
-  sprintCandidates,
-  sprintList,
-  sprintRetro,
+  runRead,
   settingsChange,
-  sprintView,
-  type BacklogFilter,
   type Change,
   type Clock,
+  type ReadCall,
   tagRecords,
   type RecordStore,
-  type Records,
-  type TaggedRecords,
 } from '@itera/application';
-import {
-  parseLocalDate,
-  type DomainError,
-  type LocalDate,
-} from '@itera/domain';
+import { parseLocalDate, type DomainError } from '@itera/domain';
 import * as v from 'valibot';
 
 /**
@@ -83,101 +74,14 @@ import * as v from 'valibot';
  */
 export const MOCK_HEADER = 'x-itera-browser-mock';
 
-type Parts = {
-  readonly path: Readonly<Record<string, string>>;
-  readonly query: Readonly<Record<string, unknown>>;
-};
-type Read = (records: TaggedRecords, clock: Clock, parts: Parts) => unknown;
-
-/** What a read of a Sprint the person does not have answers: 404. */
-const NOT_FOUND = Symbol('not found');
-
-/** The person's Sprint with the path's ID, or `NOT_FOUND`. */
-function sprintOf(records: Records, sprintId: string | undefined) {
-  return records.sprints.find((s) => s.id === sprintId)?.id ?? NOT_FOUND;
-}
-
 /**
- * The reads of the contract's resources by operationId (#295), with their
- * path (`{name}` for a path value) and the schemas of the path and the
- * query (`getMe`, the person's settings, is answered on its own). The
- * query's numbers and booleans come as strings and are turned into their
- * types before the check, as the API does (ADR 0006 経路の形).
+ * The reads the mock answers, by operationId: the API's (`readSurfaces`,
+ * #350) and the person's own (`getMe`).
  */
-const READS: Readonly<
-  Record<
-    string,
-    {
-      readonly url: string;
-      readonly path?: v.GenericSchema;
-      readonly query?: v.GenericSchema;
-      readonly read: Read;
-    }
-  >
-> = {
-  listAreas: {
-    url: '/areas',
-    read: (records) => areaList(records),
-  },
-  getBacklog: {
-    url: '/backlog',
-    query: contract.vGetBacklogQuery,
-    read: (records, clock, { query }) =>
-      backlogData(records, clock, query as BacklogFilter),
-  },
-  listSprints: {
-    url: '/sprints',
-    query: contract.vListSprintsQuery,
-    read: (records, clock, { query }) =>
-      sprintList(
-        records,
-        clock,
-        query.number === undefined ? {} : { number: query.number as number },
-      ),
-  },
-  getSprint: {
-    url: '/sprints/{sprintId}',
-    path: contract.vGetSprintPath,
-    query: contract.vGetSprintQuery,
-    read: (records, clock, { path, query }) => {
-      const sprintId = sprintOf(records, path.sprintId);
-      return sprintId === NOT_FOUND
-        ? NOT_FOUND
-        : (sprintView(records, clock, sprintId, {
-            applyCriterion: query['apply-criterion'] === true,
-          }) ?? NOT_FOUND);
-    },
-  },
-  listSprintCandidates: {
-    url: '/sprints/{sprintId}/candidates',
-    path: contract.vListSprintCandidatesPath,
-    read: (records, clock, { path }) => {
-      const sprintId = sprintOf(records, path.sprintId);
-      return sprintId === NOT_FOUND
-        ? NOT_FOUND
-        : sprintCandidates(records, clock, sprintId);
-    },
-  },
-  getSprintRetro: {
-    url: '/sprints/{sprintId}/retro',
-    path: contract.vGetSprintRetroPath,
-    read: (records, clock, { path }) => {
-      const sprintId = sprintOf(records, path.sprintId);
-      return sprintId === NOT_FOUND
-        ? NOT_FOUND
-        : sprintRetro(records, clock, sprintId);
-    },
-  },
-  getDay: {
-    url: '/days/{date}',
-    path: contract.vGetDayPath,
-    read: (records, clock, { path }) =>
-      dayView(records, clock, path.date as LocalDate),
-  },
-};
-
-/** The reads the mock answers, by operationId. */
-export const MOCK_READS: readonly string[] = [...Object.keys(READS), 'getMe'];
+export const MOCK_READS: readonly string[] = [
+  ...Object.keys(readSurfaces),
+  'getMe',
+];
 
 /** A path's pattern: `/sprints/{sprintId}` matches `/sprints/sprint_…`. */
 function patternOf(url: string) {
@@ -201,16 +105,16 @@ function valuesOf(
   );
 }
 
-const READ_PATTERNS = Object.values(READS).map((read) => ({
-  read,
-  ...patternOf(read.url),
+const READS = Object.values(readSurfaces).map((surface) => ({
+  surface,
+  ...patternOf(surface.url),
 }));
 
-/** The read of a path, with its path's values. */
-function readOf(path: string) {
-  for (const { read, names, pattern } of READ_PATTERNS) {
+/** The read surface of a path, with its path's values. */
+function readAt(path: string) {
+  for (const { surface, names, pattern } of READS) {
     const values = valuesOf({ names, pattern }, path);
-    if (values !== undefined) return { read, values };
+    if (values !== undefined) return { surface, values };
   }
   return undefined;
 }
@@ -291,44 +195,35 @@ async function answer(
 
   if (request.method === settingsSurface.method && path === settingsSurface.url)
     return makeSettings(store, request, settings);
-  if (request.method === 'GET' && path === '/me' && !settings.made)
-    return json(200, {
-      userId: store.getSnapshot().records.user.id,
-      settings: null,
-    });
-  if (!settings.made && (write !== undefined || readOf(path) !== undefined))
+  if (request.method === 'GET' && path === '/me') {
+    // The person and their settings, `null` until they are made; with
+    // them, the clock and the Sprints they have now, after the catch-up,
+    // as the API answers (`meResponse`).
+    const { id, displayName, timeZone, weekStartsOn } =
+      store.getSnapshot().records.user;
+    const made = settings.made ? { displayName, timeZone, weekStartsOn } : null;
+    return json(
+      200,
+      await meResponse(id, made, async () => {
+        catchUp(store);
+        const { records, clock } = store.getSnapshot();
+        return { clock, view: currentSprints(records, clock) };
+      }),
+    );
+  }
+  if (!settings.made && (write !== undefined || readAt(path) !== undefined))
     return failure(
       '/problems/user-not-set-up',
       'The user has no settings yet.',
     );
-  if (request.method === 'GET' && path === '/me') {
-    // The person and their settings; with them, the clock and the Sprints
-    // they have now, after the catch-up, as the API reads them (#295 R1).
-    // The fixture's person has made them.
-    catchUp(store);
-    const { records, clock } = store.getSnapshot();
-    const { id, displayName, timeZone, weekStartsOn } = records.user;
-    return json(200, {
-      userId: id,
-      settings: { displayName, timeZone, weekStartsOn },
-      clock,
-      sprints: currentSprints(records, clock),
-    });
-  }
-  const read = request.method === 'GET' ? readOf(path) : undefined;
+  const read = request.method === 'GET' ? readAt(path) : undefined;
   if (read !== undefined) {
-    const parts = partsOf(read.read, read.values, url.searchParams);
-    if (!parts.ok) return parts.response;
+    const call = readCallOf(read.surface, read.values, url.searchParams);
+    if (!call.ok) return call.response;
     catchUp(store);
     const { records, clock, versions = new Map() } = store.getSnapshot();
-    const result = read.read.read(
-      tagRecords(records, versions),
-      clock,
-      parts.value,
-    );
-    return result === NOT_FOUND
-      ? failure('/problems/not-found', `Not found: ${path}`)
-      : view(clock, result);
+    const result = runRead(call.value, tagRecords(records, versions), clock);
+    return result.ok ? view(clock, result.value) : domainFailure(result.error);
   }
   if (write !== undefined) {
     const { surface, values } = write;
@@ -437,34 +332,37 @@ type Checked<T> =
   | { readonly ok: false; readonly response: Response };
 
 /**
- * A read's path values and query, checked with its schemas; a date that
- * does not exist (2026-02-30) is refused as the API refuses it.
+ * The read a request names (`readOf`, as the API reads it): its path's
+ * values and query checked with the contract's schemas, and a date that
+ * does not exist (2026-02-30) refused in the path, as the API refuses it.
  */
-function partsOf(
-  read: (typeof READS)[string],
+function readCallOf(
+  surface: ReadSurface,
   values: Readonly<Record<string, string>>,
   params: URLSearchParams,
-): Checked<Parts> {
-  let path: Readonly<Record<string, string>> = {};
-  if (read.path !== undefined) {
-    const result = v.safeParse(read.path, values);
-    if (!result.success)
-      return { ok: false, response: invalid('path', result.issues) };
-    path = result.output as Record<string, string>;
-    if (path.date !== undefined && !parseLocalDate(path.date).ok)
-      return {
-        ok: false,
-        response: invalidAt(issueAt('path', ['date'], 'not a day.')),
-      };
+): Checked<ReadCall> {
+  try {
+    const call = readOf(
+      surface,
+      { path: values, query: queryValues(params) },
+      (schema, value, part) => {
+        const output = checkPart(schema, value, part);
+        const { date } = output as { readonly date?: unknown };
+        if (
+          part === 'path' &&
+          typeof date === 'string' &&
+          !parseLocalDate(date).ok
+        )
+          throw new Refused(invalidAt(issueAt('path', ['date'], 'not a day.')));
+        return output;
+      },
+    );
+    return { ok: true, value: call };
+  } catch (error) {
+    if (error instanceof Refused)
+      return { ok: false, response: error.response };
+    throw error;
   }
-  if (read.query === undefined) return { ok: true, value: { path, query: {} } };
-  const query = v.safeParse(
-    read.query,
-    queryInput(read.query, queryValues(params)),
-  );
-  return query.success
-    ? { ok: true, value: { path, query: query.output as Parts['query'] } }
-    : { ok: false, response: invalid('query', query.issues) };
 }
 
 /** Each name of a query with all its values. */
@@ -480,6 +378,13 @@ class Refused extends Error {
     super('refused');
   }
 }
+
+/** A part checked with the contract's schema, or `Refused` (400). */
+const checkPart: CheckPart = (schema, value, part) => {
+  const result = v.safeParse(schema, value);
+  if (!result.success) throw new Refused(invalid(part, result.issues));
+  return result.output;
+};
 
 /**
  * The operation a write names (`readRequest`, as the API reads it): each
@@ -506,11 +411,7 @@ async function operationOf(
           }
         },
       },
-      (schema, value, part) => {
-        const result = v.safeParse(schema, value);
-        if (!result.success) throw new Refused(invalid(part, result.issues));
-        return result.output;
-      },
+      checkPart,
     );
     return { ok: true, value: call };
   } catch (error) {
