@@ -20,7 +20,7 @@
 - 改訂：2026-10-05（依存の js-yaml の指摘を直すために `@hey-api/openapi-ts` の版上げを確かめ、新しい安定版がないので 0.99.0 のまま据え置く。Issue #409）
 - 改訂：2026-10-05（計画の読み取り `SprintPlan` に、合計に入らない SprintTask（見積もりのないもの、見積もりのないサブタスクがあるもの）の ID の必須の `notInTotal` を、Retro の事実の `TaskFact` に、繰り返しの Task の回を状態ごとに数えた省略できる `occurrences`（`OccurrenceCounts`：完了・スキップ・未完了）を足す。Web が記録から数え直していた値をサーバーが返す（ADR 0007）。応答に項目を足すだけなので `info.version` は 0.8.0 のまま。Issue #348）
 - 改訂：2026-10-05（契約の壊す変更を、PR の base の契約と比べて CI が見つける。比べる道具は oasdiff 1.33.0 で、入手と版の固定の方法を「道具と版」に、規則との合わせ方と警告から失敗への切り替えを「互換の規則」の「機械での確かめ」に書く。oasdiff が `oneOf` の枝を対応づけられるように、inline の object の枝が 2 つ以上ある `oneOf` の枝に `title` を付ける。注釈だけで、通信の形と生成物は変わらないので `info.version` は 0.8.0 のまま。最初は警告だけ。Issue #367）
-- 改訂：2026-10-05（列挙の `description` の書き方を決める。開いた列挙・閉じた列挙のどちらかを、`description` の先頭に英語の決まった語 `Open enum.`・`Closed enum.` で書き、`packages/api-contract/src/enum-kinds.test.ts` が書き漏れを検査する。説明だけの変更なので `info.version` は 0.8.0 のまま。Issue #352）
+- 改訂：2026-10-05（列挙の `description` の書き方を決める。開いた列挙・閉じた列挙のどちらかを、`description` の先頭に英語の決まった語 `Open enum.`・`Closed enum.` で書き、`packages/api-contract/src/enum-kinds.test.ts` が書き漏れを検査する。説明だけの変更なので `info.version` は 0.8.0 のまま。`PlanningBlocker`・`RetroBlocker`・`TaskCreatedVia`・`ActualTimeVia` を開いた列挙にするが、これまで分類を決めておらず閉じた列挙から開くのではないことと、今のクライアント（Web）がすでに知らない値を受理することから、壊す変更ではない。Issue #352）
 
 ## 背景
 
@@ -365,7 +365,7 @@ oasdiff は npm の依存にできない（npm の `oasdiff` は名前の予約�
   - 受け取る側（すべてのクライアントと、そこで使う生成した型と検証）は、知らない値を受理しなければならない。知らない値で、読み込み（decode）も応答の検証も失敗させない。知らない `type` は一般の失敗として扱う。知らない HTTP のステータス（#266 で足した 413 のように、後から足すもの）も、一般の失敗として扱う。
   - iOS・Android の生成した型がこれを満たすこと（知らない値を表す場合を持つか、文字列として受ける）を、生成の道具を選ぶ条件にする。満たさない道具は使わない。
   - 今の仕様は、`type` をエラーごとに `const` で書いている（domain の 3 つの種類の `RuleViolationError` だけ `enum`）。操作の 422 は `RuleViolationError`・`UserNotSetUpError`・`IdempotencyKeyReusedError` の `oneOf`（#266。3 つ目は #320）。エラーの本文の `oneOf` のように、枝が `type` の値だけで分かれ、形がどれも Problem Details（`{ type, title, status, detail }` と種類ごとの拡張）のものは、開いた列挙として扱う。枝を足すのは `type` の値を足すのと同じで、壊さない変更。開いた列挙の仕様での書き方（拡張の印、`anyOf` で文字列を足すなど）は、iOS に着手する前に生成の道具と一緒に決め、そのとき `type` も書き直す。Web が応答を実行時に検証するようにするなら、それより前に決める。
-- **閉じた列挙**：値ごとに意味が違い、知らない値では正しく表示できないもの。状態の名前、union の判別子（`base`・`kind` など）、`SprintWeek` など。値を足すのは壊す変更。判別子が閉じた列挙の union に種類（`oneOf` の枝）を足すのも同じ（エラーの本文の `oneOf` は上の開いた列挙）。
+- **閉じた列挙**：値ごとに意味が違い、知らない値では正しく表示できないもの。状態の名前、union の判別子（`base`・`kind` など）、`SprintWeek` など。応答に出る列挙では、値を足すのは壊す変更（要求の側にだけ出る列挙は、下の「要求の側にだけ出る列挙」）。判別子が閉じた列挙の union に種類（`oneOf` の枝）を足すのも同じ（エラーの本文の `oneOf` は上の開いた列挙）。
 - 閉じた列挙でも、知らない値で読み込み全体を失敗させないことが望ましい（その部分を一般の形で出すか、アプリの更新を促す）。ただし、これに頼って閉じた列挙に値を足さない。
 
 - 書き方：`enum` を持つすべてのスキーマ（入れ子の項目も含む）と、エラーの本文の `oneOf` の `description` を、`Closed enum.` か `Open enum.` で始める（周りの `description` が英語なので、語も英語にする。`x-` の拡張は使わない）。`packages/api-contract/src/enum-kinds.test.ts` が、`redocly bundle` した契約を走査して、書き漏れ（と、エラーの `type` が開いた列挙でないこと）を `pnpm test`（`pnpm check`）で失敗にする。
@@ -385,7 +385,7 @@ oasdiff は npm の依存にできない（npm の `oasdiff` は名前の予約�
 
 ### 壊す変更
 
-- 閉じた列挙に値を足す。union に種類を足す。
+- 応答に出る閉じた列挙に値を足す（要求の側にだけ出る列挙は、値を消すのが壊す変更。上の「列挙」）。union に種類を足す。
 - 要求に必須の項目を足す。要求の省略できる項目を必須にする。
 - 要求から項目を消す。要求の本文は未知のキーを 400 にするので、古いクライアントが送る項目を消すと、その要求が失敗する。
 - 応答から項目を消す。応答の必須の項目を省略できるようにする。
@@ -408,7 +408,7 @@ oasdiff は npm の依存にできない（npm の `oasdiff` は名前の予約�
 - CI の `contract` job（`.github/workflows/check.yml`。PR のときだけ）が、PR の base の契約と、PR を base に合わせた契約（checkout した merge commit）を比べる。base は merge commit の 1 つ目の親（`HEAD^1`。checkout を `fetch-depth: 2` にして得る）で、PR が合わさった base そのものなので、PR の変更だけが差になる。base の契約は、その commit から `git archive` で `packages/api-contract/openapi/` と `redocly.yaml` を一時ディレクトリに書き出したもの。両方を head の Redocly で 1 つにまとめ（生成と同じ形）、oasdiff の `breaking`（`--flatten-allof`）で比べる。oasdiff の `<ref>:<path>` の読み込みは使わない（まとめる前の分けたファイルどうしを比べることになる）。
 - 手元では、ルートで `pnpm contract:breaking --base <git ref>`（既定は `origin/main`。統合ブランチ向けの PR では、そのブランチを渡す）。比べる相手は `--base` とこのブランチの分かれた点（`git merge-base`）で、base がその後に進んだ分を、このブランチの変更として数えない。`pnpm check` には入れない（base が要り、初回は oasdiff を落とす）。
 - oasdiff の既定の判定と、この ADR の規則の違いは、`scripts/breaking-rules.mjs` が合わせる。
-  - 開いた列挙：エラーの応答（4xx・5xx）の本文の `oneOf` に枝を足すことと、エラーの `type` の列挙に値を足すことは、oasdiff では壊す変更（`response-body-one-of-added`・`response-property-enum-value-added`）だが、壊さない変更として数える（上の「列挙」）。ほかの列挙は閉じた列挙として数える。
+  - 開いた列挙：エラーの応答（4xx・5xx）の本文の `oneOf` に枝を足すことと、エラーの `type` の列挙に値を足すことは、oasdiff では壊す変更（`response-body-one-of-added`・`response-property-enum-value-added`）だが、壊さない変更として数える（上の「列挙」）。ほかの列挙は、`Open enum.` と書いてあっても閉じた列挙として数える。そのため、`PlanningBlocker`・`RetroBlocker`・`TaskCreatedVia`・`ActualTimeVia` に値を足すと、道具は壊す変更として出す（誤った警告）。壊さない変更であることは、`description` を見てレビューで判断する。警告から失敗に切り替える前に、道具が `description` の `Open enum.` を読むように直す（Issue #352 の後続）。
   - oasdiff の `--severity-levels` で、次を壊す変更にする（上の「壊す変更」。oasdiff ではどれも警告か互換）。
     - 要求から項目を消すこと（要求の本文は知らないキーを 400 にする）と、応答から省略できる項目を消すこと。
     - 応答から省略できるヘッダーを消すこと（Web は応答の `ETag` を次の `If-Match` に使う）。
@@ -416,7 +416,7 @@ oasdiff は npm の依存にできない（npm の `oasdiff` は名前の予約�
     - `deprecated` を付けてから operation を消すこと（この ADR には、消すのを互換にする廃止の手順がない）。
   - oasdiff が仕様だけでは決められない変更（WARN）は、数えずに一覧に出す。レビューで判断する。
 - 壊す変更があれば、`info.version` が base の版から、major が 0 の間は minor、1.0.0 からは major で上がっていることを求める。版が下がること、`MAJOR.MINOR.PATCH` の形でないことも止める。壊す変更が見つからないのに版を上げるのは止めない（形が同じで意味を変える壊す変更があるため）。
-- 見つけないもの（specialist:contract のレビューで判断する）：形が同じで意味や単位を変える変更（#346）、消した項目や operation の名前を別の意味で使い直すこと、仕様では省略できるがサーバーが条件で求めるヘッダー（#330 の `If-Match`・`If-None-Match`）、送り返す入れ子に項目を足すときの但し書き（上の「壊さない変更」）、要求だけに現れる閉じた列挙に値を足すこと（oasdiff は互換とする。受け取るのはサーバーだけなので、上の「閉じた列挙」の理由が当てはまるかをレビューで判断する）。
+- 見つけないもの（specialist:contract のレビューで判断する）：形が同じで意味や単位を変える変更（#346）、消した項目や operation の名前を別の意味で使い直すこと、仕様では省略できるがサーバーが条件で求めるヘッダー（#330 の `If-Match`・`If-None-Match`）、送り返す入れ子に項目を足すときの但し書き（上の「壊さない変更」）。
 - 過去の契約の変更（#279〜#347 の 11 件）で確かめた：版を上げた #295・#319・#320・#321・#323 は壊す変更あり、上げなかった #279・#338・#347 は壊す変更なしで、規則の判断と合う。#330・#346 は見つからない（上の見つけないもの）。#321・#322・#323・#346 では、`title` のない 2 つの inline の枝の中が変わったのを、枝を足したものとして壊す変更に数えた（#322 は版を上げていないので誤った警告になる）。これが上の「置き場所と書き方」の `title` の理由で、`title` があれば中の変更を比べることを確かめた。
 
 #### 警告から失敗への切り替え
