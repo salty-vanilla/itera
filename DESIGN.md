@@ -520,7 +520,7 @@ compact の原則：
 - 影で「押せそう」を表現しない。hover は背景色の変化だけ。
 - `scrim` は半透明の色だけで、背景をぼかさない。
 - 重なり順は `layer-local` 1 / `layer-sticky` 10 / `layer-drawer` 30 / `layer-popover` 40 / `layer-dialog` 50 / `layer-toast` 60 / `layer-tooltip` 70 だけを使う。
-- `layer-local` は 1 つの部品の中だけで使う。行全体を当たり判定にする疑似要素（`after:absolute after:inset-0`）より上に、行の中の操作（□・見積もり・「…」）を出すためで、ほかの面と重なり順を競わない（Issue #362）。
+- `layer-local` は 1 つの部品の中だけで使う。行全体を当たり判定にする疑似要素（`after:absolute after:inset-0`）より上に、行の中の操作（□・見積もり・「…」）を出すときと、くっついて並べたボタン（Estimate の 3 択）の focus の輪を隣の上に出すときの 2 つだけで、ほかの面と重なり順を競わない（Issue #362）。
 
 ## Shapes
 

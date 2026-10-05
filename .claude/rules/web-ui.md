@@ -12,6 +12,8 @@ paths:
   - container query の幅は `--container-*` を足して `@min-drawer:` のように使う（`var()` は条件に書けない）。今は `drawer`（400px。`spacing.drawer` と同じ値）だけ。
   - 値は任意値（`w-[…px]`・`min-h-[…rem]`）で書かず、トークン（`h-icon-m`・`w-control-md`・`translate-x-icon-s`）か、親の構造（`h-full aspect-square`、`size` 属性で決める入力の幅）で表す。`calc()` の中でもトークンの `var()` で組む。任意値が許されるのは次だけで、足すときは理由をここに書く（機械の検出は入れていない。Issue #362）：
     - 文字数で決める幅（em・rem）：Tag の `max-w-[12em]`、Capacity の `min-w-[7em]`、折り返しの基準 `flex-[1_1_12em]`・`basis-[10.5rem]`・`basis-[8.75rem]`、Planning の列の `minmax(max(22.75rem,…))`。文字が大きいとき（#393）に連れて伸びる必要があり、px のトークンでは伸びない。
+    - 行内のアイコンの縦位置（retro-screen.tsx の `align-[-0.2em]`）：文字の大きさに連れて動く em の値。
+    - `var(--x,0px)` の `0px`（変数が未定義のときの値）は寸法ではないので数えない。
     - Retro の事実の表の列幅（`facts-pane.tsx` の `min-w-[48.125rem]` と `col` の `w-[…rem]`）：1 つの表だけの値で、Goal をまたいで列を揃える（DESIGN.md Layout）。rem なのは、文字が大きいとき表も広がるため。
     - テストと Story、Storybook の Foundations（`src/foundations/`）のページ幅は対象外。
   - トークンは `apps/web/src/styles/tokens.css`（生の CSS 変数）と `globals.css`（`@theme`）にある。Tailwind の既定のテーマは消してあるので、DESIGN.md にない値のユーティリティは生成されない。トークンを足すときは DESIGN.md → CSS → `src/lib/utils.ts`（`cn` に教える名前）→ `src/foundations/token-lists.ts`（Storybook の一覧）の順に直す。DESIGN.md と CSS・一覧のずれは `src/styles/tokens.test.ts` が検出する（色・書体・角丸・寸法、`cn` に教える名前、elevation・layer・stroke、docs/design/foundations.md の duration・easing、「コントラスト」の組）。アプリと Storybook の実行時に DESIGN.md を読まない（ADR 0003）。
