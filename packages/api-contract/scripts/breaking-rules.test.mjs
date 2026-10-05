@@ -172,7 +172,11 @@ describe('a value added to an enum, by its description', () => {
       'response-property-enum-value-added',
       `added the new \`x\` enum value to the \`${property}\` response property for the response status \`200\``,
     );
-  const base = { base: '0.8.0', head: '0.8.0', spec };
+  const base = {
+    base: '0.8.0',
+    head: '0.8.0',
+    contracts: { base: spec, head: spec },
+  };
 
   it('takes a value added to an enum that says `Open enum.` as compatible', () => {
     const changes = [
@@ -202,7 +206,13 @@ describe('a value added to an enum, by its description', () => {
     named.components.schemas.Via.description =
       'An Open enum. Where it was made.';
     const changes = [added('view/items/additionalProperties/createdVia')];
-    expect(assess({ ...base, changes, spec: named }).breaking).toEqual(changes);
+    expect(
+      assess({
+        ...base,
+        changes,
+        contracts: { base: spec, head: named },
+      }).breaking,
+    ).toEqual(changes);
   });
 
   it('keeps a change breaking when its path cannot be followed', () => {
@@ -214,14 +224,91 @@ describe('a value added to an enum, by its description', () => {
     expect(assess({ ...base, changes }).breaking).toEqual(changes);
   });
 
-  it('keeps a change breaking without the contract, and in another operation', () => {
+  it('keeps a change breaking without the contracts, and in another operation', () => {
     const one = added('view/items/additionalProperties/createdVia');
-    expect(isOpenEnumAddition(one, spec)).toBe(true);
+    const contracts = { base: spec, head: spec };
+    expect(isOpenEnumAddition(one, contracts)).toBe(true);
     expect(isOpenEnumAddition(one)).toBe(false);
-    expect(isOpenEnumAddition({ ...one, path: '/nowhere' }, spec)).toBe(false);
-    expect(assess({ ...base, changes: [one], spec: {} }).breaking).toEqual([
-      one,
-    ]);
+    expect(isOpenEnumAddition({ ...one, path: '/nowhere' }, contracts)).toBe(
+      false,
+    );
+    expect(
+      assess({ ...base, changes: [one], contracts: { base: {}, head: {} } })
+        .breaking,
+    ).toEqual([one]);
+  });
+
+  it('keeps a value breaking when the enum was closed in the base and is opened with it', () => {
+    const closed = structuredClone(spec);
+    closed.components.schemas.Via.description =
+      'Closed enum. Where it was made.';
+    const changes = [added('view/items/additionalProperties/createdVia')];
+    expect(
+      assess({ ...base, changes, contracts: { base: closed, head: spec } })
+        .breaking,
+    ).toEqual(changes);
+  });
+
+  describe('where a branch of a `oneOf` has moved', () => {
+    // oasdiff writes the branch as `<in the base> -> <in the head>` once its
+    // place in the list differs.
+    /** @param {string} title @param {string} kind */
+    const branch = (title, kind) => ({
+      title,
+      type: 'object',
+      properties: {
+        state: {
+          description: `${kind} enum. A state of ${title}.`,
+          type: 'string',
+          enum: ['a'],
+        },
+      },
+    });
+    /** @param {unknown[]} branches */
+    const day = (branches) => ({
+      paths: {
+        '/backlog': {
+          get: {
+            responses: {
+              200: {
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'object',
+                      properties: { day: { oneOf: branches } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    // A is removed in the head (a compatible change in a response), so B
+    // and C move up. The head's second branch is C, which is open.
+    const contracts = {
+      base: day([
+        branch('A', 'Closed'),
+        branch('B', 'Closed'),
+        branch('C', 'Open'),
+      ]),
+      head: day([branch('B', 'Closed'), branch('C', 'Open')]),
+    };
+
+    it('reads each contract at its own place', () => {
+      const moved = added(
+        'day/oneOf[subschema #3: C -> subschema #2: C]/state',
+      );
+      expect(isOpenEnumAddition(moved, contracts)).toBe(true);
+    });
+
+    it('does not read the base’s number in the head', () => {
+      const closed = added(
+        'day/oneOf[subschema #2: B -> subschema #1: B]/state',
+      );
+      expect(isOpenEnumAddition(closed, contracts)).toBe(false);
+    });
   });
 });
 
