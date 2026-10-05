@@ -87,6 +87,144 @@ describe('isOpenEnumAddition', () => {
   });
 });
 
+describe('a value added to an enum, by its description', () => {
+  // A bundled contract the way oasdiff's property paths walk it: a property,
+  // `items`, `additionalProperties`, a `oneOf` branch by `$ref` or by its
+  // place, and an `allOf` that oasdiff flattens.
+  const spec = {
+    paths: {
+      '/backlog': {
+        get: {
+          responses: {
+            200: {
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      view: { $ref: '#/components/schemas/View' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    components: {
+      schemas: {
+        View: {
+          type: 'object',
+          properties: {
+            // A property named `items`, as the Backlog has.
+            items: {
+              type: 'object',
+              additionalProperties: { $ref: '#/components/schemas/Row' },
+            },
+            day: {
+              oneOf: [
+                { $ref: '#/components/schemas/Today' },
+                {
+                  title: 'Other',
+                  type: 'object',
+                  properties: { via: { $ref: '#/components/schemas/Via' } },
+                },
+              ],
+            },
+          },
+        },
+        Row: {
+          allOf: [
+            {
+              type: 'object',
+              properties: {
+                createdVia: { $ref: '#/components/schemas/Via' },
+                state: { $ref: '#/components/schemas/State' },
+                tags: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/Via' },
+                },
+              },
+            },
+          ],
+        },
+        Today: {
+          type: 'object',
+          properties: { state: { $ref: '#/components/schemas/State' } },
+        },
+        Via: {
+          description: 'Open enum. Where the Task was made.',
+          type: 'string',
+          enum: ['backlog', 'today'],
+        },
+        State: {
+          description: 'Closed enum. Where the Task is in its life.',
+          type: 'string',
+          enum: ['active', 'done'],
+        },
+      },
+    },
+  };
+  /** @param {string} property */
+  const added = (property) =>
+    change(
+      'response-property-enum-value-added',
+      `added the new \`x\` enum value to the \`${property}\` response property for the response status \`200\``,
+    );
+  const base = { base: '0.8.0', head: '0.8.0', spec };
+
+  it('takes a value added to an enum that says `Open enum.` as compatible', () => {
+    const changes = [
+      added('view/items/additionalProperties/createdVia'),
+      added('view/day/oneOf[subschema #2: Other]/via'),
+      added('view/items/additionalProperties/tags/items/'),
+    ];
+    const result = assess({ ...base, changes });
+    expect(result.breaking).toEqual([]);
+    expect(result.open).toEqual(changes);
+    expect(result.problems).toEqual([]);
+  });
+
+  it('keeps a value added to an enum that says `Closed enum.` breaking', () => {
+    const changes = [
+      added('view/items/additionalProperties/state'),
+      added('view/day/oneOf[#/components/schemas/Today]/state'),
+    ];
+    const result = assess({ ...base, changes });
+    expect(result.breaking).toEqual(changes);
+    expect(result.open).toEqual([]);
+    expect(result.problems[0]).toContain('Raise it to 0.9.0');
+  });
+
+  it('does not take the word anywhere but at the start of the description', () => {
+    const named = structuredClone(spec);
+    named.components.schemas.Via.description =
+      'An Open enum. Where it was made.';
+    const changes = [added('view/items/additionalProperties/createdVia')];
+    expect(assess({ ...base, changes, spec: named }).breaking).toEqual(changes);
+  });
+
+  it('keeps a change breaking when its path cannot be followed', () => {
+    const changes = [
+      added('view/nothing/createdVia'),
+      added('view/day/oneOf[subschema #9: Missing]/via'),
+      added('view/items/additionalProperties'),
+    ];
+    expect(assess({ ...base, changes }).breaking).toEqual(changes);
+  });
+
+  it('keeps a change breaking without the contract, and in another operation', () => {
+    const one = added('view/items/additionalProperties/createdVia');
+    expect(isOpenEnumAddition(one, spec)).toBe(true);
+    expect(isOpenEnumAddition(one)).toBe(false);
+    expect(isOpenEnumAddition({ ...one, path: '/nowhere' }, spec)).toBe(false);
+    expect(assess({ ...base, changes: [one], spec: {} }).breaking).toEqual([
+      one,
+    ]);
+  });
+});
+
 describe('allowsBreaking', () => {
   it.each([
     ['0.8.0', '0.9.0', true],

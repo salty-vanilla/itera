@@ -35,15 +35,152 @@ export const LEVELS = [
 const ERROR_STATUS = /for the response status `[45]\d\d`/;
 // The error's own `type`, at the top of its body or of one of its branches.
 const TYPE_PROPERTY = /`(?:oneOf\[[^\]`]*\]\/)?type` response property/;
+// oasdiff names a property by its path from the response body, and the
+// response by its status.
+const ENUM_PROPERTY =
+  /enum value to the `([^`]+)` response property for the response status `([^`]+)`/;
+const OPEN_ENUM = /^Open enum\./;
+
+/** @typedef {Record<string, unknown>} Schema */
+
+/** @param {unknown} value @returns {value is Schema} */
+function isRecord(value) {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * The schema behind a `$ref` into the bundled contract (`#/components/…`),
+ * or the schema itself.
+ * @param {unknown} spec @param {unknown} node
+ * @returns {Schema | undefined}
+ */
+function deref(spec, node) {
+  let current = node;
+  for (let depth = 0; isRecord(current); depth += 1) {
+    const ref = current['$ref'];
+    if (typeof ref !== 'string') return current;
+    if (!ref.startsWith('#/') || depth > 16) return undefined;
+    current = ref
+      .slice(2)
+      .split('/')
+      .map((part) => part.replaceAll('~1', '/').replaceAll('~0', '~'))
+      .reduce(
+        (/** @type {unknown} */ at, key) =>
+          isRecord(at) ? at[key] : undefined,
+        spec,
+      );
+  }
+  return undefined;
+}
+
+/**
+ * The schema and, because oasdiff flattens `allOf`, the schemas it is
+ * made of.
+ * @param {unknown} spec @param {Schema} schema
+ * @returns {Schema[]}
+ */
+function parts(spec, schema) {
+  const allOf = Array.isArray(schema['allOf']) ? schema['allOf'] : [];
+  return [
+    schema,
+    ...allOf.flatMap((member) => {
+      const resolved = deref(spec, member);
+      return resolved ? parts(spec, resolved) : [];
+    }),
+  ];
+}
+
+/** The segments of an oasdiff property path; a `/` inside `[…]` stays. */
+function segments(/** @type {string} */ path) {
+  return path.split(/\/(?![^[]*\])/);
+}
+
+/**
+ * Where one segment of an oasdiff property path leads from `schema`: a
+ * property, `items`, `additionalProperties`, or a branch of a `oneOf` /
+ * `anyOf`, named by its `$ref` (`oneOf[#/components/schemas/X]`) or by its
+ * place in the list (`oneOf[subschema #2: Title]`, counted from 1).
+ * @param {unknown} spec @param {Schema} schema @param {string} segment
+ * @returns {Schema[]}
+ */
+function follow(spec, schema, segment) {
+  const branch = /^(oneOf|anyOf)\[(.*)\]$/.exec(segment);
+  const found = parts(spec, schema).flatMap((part) => {
+    if (branch) {
+      const list = part[/** @type {string} */ (branch[1])];
+      if (!Array.isArray(list)) return [];
+      const place = /^subschema #(\d+)/.exec(branch[2] ?? '');
+      return place
+        ? [list[Number(place[1]) - 1]]
+        : list.filter((b) => isRecord(b) && b['$ref'] === branch[2]);
+    }
+    // oasdiff writes `items` for the keyword and for a property of that
+    // name alike (the Backlog's `items`), so both are followed.
+    const properties = part['properties'];
+    return [
+      ...(isRecord(properties) ? [properties[segment]] : []),
+      ...(segment === 'items' || segment === 'additionalProperties'
+        ? [part[segment]]
+        : []),
+    ];
+  });
+  return found.flatMap((node) => {
+    const schema = deref(spec, node);
+    return schema ? [schema] : [];
+  });
+}
+
+/**
+ * Whether the enum that a change adds a value to says `Open enum.` at the
+ * start of its description (ADR 0006 「列挙」), read in the bundled contract
+ * that has the change. oasdiff names the property by its path, not the
+ * schema it comes from, so the path is followed from the response. A path
+ * that cannot be followed is not open: the change stays breaking.
+ * @param {Change} change @param {unknown} spec
+ */
+function addsToDeclaredOpenEnum(change, spec) {
+  if (change.id !== 'response-property-enum-value-added') return false;
+  const match = ENUM_PROPERTY.exec(change.text);
+  if (!match || !change.operation || !change.path) return false;
+  const operation = isRecord(spec)
+    ? deref(spec, /** @type {Schema} */ (spec['paths'])?.[change.path])?.[
+        change.operation.toLowerCase()
+      ]
+    : undefined;
+  const responses = isRecord(operation) ? operation['responses'] : undefined;
+  const response = isRecord(responses)
+    ? deref(spec, responses[/** @type {string} */ (match[2])])
+    : undefined;
+  const content = response?.['content'];
+  if (!isRecord(content)) return false;
+  let at = Object.values(content).flatMap((media) => {
+    const schema = isRecord(media) ? deref(spec, media['schema']) : undefined;
+    return schema ? [schema] : [];
+  });
+  for (const segment of segments(/** @type {string} */ (match[1]))) {
+    if (segment === '') continue;
+    at = at.flatMap((schema) => follow(spec, schema, segment));
+  }
+  const enums = at.flatMap((schema) =>
+    parts(spec, schema).filter((part) => Array.isArray(part['enum'])),
+  );
+  return (
+    enums.length > 0 &&
+    enums.every((e) => OPEN_ENUM.test(String(e['description'] ?? '')))
+  );
+}
 
 /**
  * Whether oasdiff counts the change as breaking where ADR 0006 「列挙」 does
- * not: the error bodies are an open enum, so a branch added to an error
+ * not: a value added to an enum whose description says `Open enum.`, and
+ * the error bodies, an open enum too, so a branch added to an error
  * response's `oneOf`, or a value added to an error's `type`, does not break
  * a client that reads unknown errors as a general failure.
  * @param {Change} change
+ * @param {unknown} [spec] the bundled contract that has the change
  */
-export function isOpenEnumAddition(change) {
+export function isOpenEnumAddition(change, spec) {
+  if (addsToDeclaredOpenEnum(change, spec)) return true;
   if (!ERROR_STATUS.test(change.text)) return false;
   if (change.id === 'response-body-one-of-added') return true;
   return (
@@ -84,13 +221,17 @@ export function allowsBreaking(base, head) {
  * Sorts oasdiff's changes by ADR 0006 and checks `info.version`.
  * `problems` is what the check fails on (or warns about, while it only
  * warns).
- * @param {{ changes: Change[], base: string, head: string }} input
+ * `spec` is the bundled contract at the head, where an enum says whether
+ * it is open.
+ * @param {{ changes: Change[], base: string, head: string, spec?: unknown }} input
  */
-export function assess({ changes, base, head }) {
+export function assess({ changes, base, head, spec }) {
   const breaking = changes.filter(
-    (c) => c.level >= ERR && !isOpenEnumAddition(c),
+    (c) => c.level >= ERR && !isOpenEnumAddition(c, spec),
   );
-  const open = changes.filter((c) => c.level >= ERR && isOpenEnumAddition(c));
+  const open = changes.filter(
+    (c) => c.level >= ERR && isOpenEnumAddition(c, spec),
+  );
   const potential = changes.filter((c) => c.level === WARN);
   /** @type {string[]} */
   const problems = [];
