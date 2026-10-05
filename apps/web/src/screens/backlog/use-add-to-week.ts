@@ -21,7 +21,7 @@ export function useAddToWeek() {
   return async (taskId: TaskId, title: string): Promise<boolean> => {
     // With no Sprint running there is no week to put it in (useOnRunningDay).
     // The undo is for the Sprint it was added to, whichever runs by then.
-    const added = await once(`add:${taskId}`, () =>
+    const added = await once(`addToWeek:${taskId}`, () =>
       on(async ({ sprintId }) => {
         const sent = await addToWeek.run({ sprintId, taskIds: [taskId] });
         return sent.ok
@@ -37,7 +37,7 @@ export function useAddToWeek() {
       action: {
         label: '元に戻す',
         onClick: () =>
-          once(`undo:${sprintTaskIds.join()}`, () =>
+          once(`undoAddToWeek:${sprintTaskIds.join()}`, () =>
             undoAddToWeek.run({ sprintId, sprintTaskIds }),
           ),
       },
