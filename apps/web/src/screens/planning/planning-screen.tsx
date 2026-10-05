@@ -224,6 +224,12 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
 
   // 確定 is open when the read says so (#323); the blockers say why not.
   const blocked = !data.capabilities.canConfirm;
+  // The reasons this screen knows. PlanningBlocker is an open enum (ADR
+  // 0006): with none of them to show, the button still says why it waits.
+  const previousRetroOpen = data.blockers.includes('previousRetroOpen')
+    ? data.previous
+    : undefined;
+  const inactiveTasks = data.blockers.includes('inactiveTasks');
   const inBacklog = (taskId: TaskId) => hasDetail(backlog, taskId);
   const reasonId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -339,27 +345,29 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
                   id={reasonId}
                   className="flex max-w-measure-read flex-col items-end gap-1 text-right text-help text-ink-muted"
                 >
-                  {data.blockers.includes('previousRetroOpen') &&
-                    data.previous !== undefined && (
-                      <p>
-                        前の Sprint の振り返りを完了すると確定できます。
-                        {data.previous.state === 'active' &&
-                          // F21: its Retro starts on its last day.
-                          `Sprint ${data.previous.number} の振り返りは ${formatDate(data.previous.end)} から始められます。`}
-                        <Link
-                          to="/retro"
-                          search={{ sprint: data.previous.number }}
-                          className="ms-1 text-link underline focus-visible:focus-ring"
-                        >
-                          振り返りを開く
-                        </Link>
-                      </p>
-                    )}
-                  {data.blockers.includes('inactiveTasks') && (
+                  {previousRetroOpen !== undefined && (
+                    <p>
+                      前の Sprint の振り返りを完了すると確定できます。
+                      {previousRetroOpen.state === 'active' &&
+                        // F21: its Retro starts on its last day.
+                        `Sprint ${previousRetroOpen.number} の振り返りは ${formatDate(previousRetroOpen.end)} から始められます。`}
+                      <Link
+                        to="/retro"
+                        search={{ sprint: previousRetroOpen.number }}
+                        className="ms-1 text-link underline focus-visible:focus-ring"
+                      >
+                        振り返りを開く
+                      </Link>
+                    </p>
+                  )}
+                  {inactiveTasks && (
                     <p>
                       完了・アーカイブしたタスクを
                       {weekText(week, 'から外すと確定できます。')}
                     </p>
+                  )}
+                  {previousRetroOpen === undefined && !inactiveTasks && (
+                    <p>まだ確定できません。</p>
                   )}
                 </div>
               )}

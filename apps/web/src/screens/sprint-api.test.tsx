@@ -33,6 +33,7 @@ import { until } from '@/test/other-device';
 import { waitForSprintScreen } from '@/test/sprint-ready';
 import { createMock } from '@/mock/mock-api';
 import { problemResponse } from '@/test/problem';
+import { rewriteRead } from '@/test/rewrite-read';
 
 type CreateAppRouter = typeof import('@/app/router').createAppRouter;
 let createAppRouter: CreateAppRouter;
@@ -113,6 +114,54 @@ const backlogPane = () =>
 const onboarding = '新メンバーのオンボーディング資料';
 
 describe('the Sprint on the API', () => {
+  describe('a reason to wait that the server adds later (#431)', () => {
+    const waitingFor = async (blockers: string[]) => {
+      const { sprint } = serve('planning-pick');
+      const id = sprint('planning').id;
+      rewriteRead(
+        (url) => url.pathname === `/api/sprints/${id}`,
+        (view) => {
+          const plan = view.plan as Record<string, unknown>;
+          return {
+            ...view,
+            plan: {
+              ...plan,
+              blockers,
+              capabilities: {
+                ...(plan.capabilities as Record<string, unknown>),
+                canConfirm: false,
+              },
+            },
+          };
+        },
+      );
+      renderSprint();
+      await backlogPane();
+      const button = await screen.findByRole('button', {
+        name: /^Sprint \d+ を確定$/,
+      });
+      return document.getElementById(button.getAttribute('aria-describedby')!)!;
+    };
+
+    it('says it cannot confirm yet, in one line, when it knows none of the reasons', async () => {
+      const reason = await waitingFor(['somethingNew']);
+      expect(
+        within(reason)
+          .getAllByText(/./, { selector: 'p' })
+          .map((p) => p.textContent),
+      ).toEqual(['まだ確定できません。']);
+    });
+
+    it('shows the reason it knows, and nothing for the one it does not', async () => {
+      const reason = await waitingFor(['somethingNew', 'inactiveTasks']);
+      expect(
+        within(reason)
+          .getAllByText(/./, { selector: 'p' })
+          .map((p) => p.textContent),
+      ).toEqual(['完了・アーカイブしたタスクを今週から外すと確定できます。']);
+    });
+  });
+
   it('reads the Sprints, the plan and the Tasks to choose from', async () => {
     const { requests, sprint } = serve('planning-pick');
     renderSprint();
