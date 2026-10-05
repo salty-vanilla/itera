@@ -10,7 +10,7 @@ export const vUserId = v.pipe(v.string(), v.regex(/^user_[0-7][0-9a-hjkmnp-tv-z]
 export const vTimeZone = v.string();
 
 /**
- * 0 is Sunday, 6 is Saturday.
+ * Closed enum. 0 is Sunday, 6 is Saturday.
  */
 export const vDayOfWeek = v.picklist([
     0,
@@ -51,6 +51,9 @@ export const vClock = v.object({
 
 export const vSprintId = v.pipe(v.string(), v.regex(/^sprint_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
 
+/**
+ * Closed enum.
+ */
 export const vSprintState = v.picklist([
     'planning',
     'active',
@@ -59,7 +62,7 @@ export const vSprintState = v.picklist([
 ]);
 
 /**
- * The week a Sprint is in, seen from today.
+ * Closed enum. The week a Sprint is in, seen from today.
  */
 export const vSprintWeek = v.picklist([
     'previous',
@@ -217,7 +220,7 @@ export const vIdempotencyKeyReusedError = v.object({
 export const vAreaId = v.pipe(v.string(), v.regex(/^area_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
 
 /**
- * The Area's color, `area-1` to `area-7` (DESIGN.md).
+ * Closed enum. The Area's color, `area-1` to `area-7` (DESIGN.md).
  */
 export const vAreaColor = v.picklist([
     1,
@@ -289,6 +292,9 @@ export const vPreconditionRequiredError = v.object({
 
 export const vTaskId = v.pipe(v.string(), v.regex(/^task_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
 
+/**
+ * Closed enum.
+ */
 export const vTaskPriority = v.picklist([
     'high',
     'normal',
@@ -296,12 +302,12 @@ export const vTaskPriority = v.picklist([
 ]);
 
 /**
- * Whether the Task's time is its own Estimate or its Subtasks' sum.
+ * Closed enum. Whether the Task's time is its own Estimate or its Subtasks' sum.
  */
 export const vTimeBasis = v.picklist(['task', 'subtasks']);
 
 /**
- * `If-None-Match: *` (RFC 9110 §13.1.2): the write was made from no record, and is not to be made over one that is there now.
+ * Closed enum. `If-None-Match: *` (RFC 9110 §13.1.2): the write was made from no record, and is not to be made over one that is there now.
  */
 export const vAnyEntityTag = v.picklist(['*']);
 
@@ -327,7 +333,7 @@ export const vSubtaskId = v.pipe(v.string(), v.regex(/^subtask_[0-7][0-9a-hjkmnp
 export const vEstimateSuggestionId = v.pipe(v.string(), v.regex(/^estimate_suggestion_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
 
 /**
- * Which end of a suggestion's range is used (lo, the middle, hi).
+ * Closed enum. Which end of a suggestion's range is used (lo, the middle, hi).
  */
 export const vSuggestionBound = v.picklist([
     'lo',
@@ -356,6 +362,9 @@ export const vEstimate = v.object({
     source: vEstimateSource
 });
 
+/**
+ * Closed enum.
+ */
 export const vBacklogSlice = v.picklist([
     'dueSoon',
     'overdue',
@@ -364,6 +373,9 @@ export const vBacklogSlice = v.picklist([
     'noArea'
 ]);
 
+/**
+ * Closed enum.
+ */
 export const vTaskLifecycle = v.picklist([
     'active',
     'completed',
@@ -379,6 +391,9 @@ export const vSubtask = v.object({
     etag: vETag
 });
 
+/**
+ * Closed enum.
+ */
 export const vSuggestionState = v.picklist([
     'presented',
     'adopted',
@@ -398,6 +413,9 @@ export const vEstimateSuggestion = v.object({
 
 export const vRecurrenceRuleId = v.pipe(v.string(), v.regex(/^recurrence_rule_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
 
+/**
+ * Closed enum.
+ */
 export const vTaskCreatedVia = v.picklist([
     'backlog',
     'today',
@@ -452,7 +470,7 @@ export const vRecurrenceSummary = v.object({
 export const vDailySelectionId = v.pipe(v.string(), v.regex(/^daily_selection_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
 
 /**
- * A choice for today that Today lists under 今日やる.
+ * Closed enum. A choice for today that Today lists under 今日やる.
  */
 export const vListedResolution = v.picklist([
     'selected',
@@ -478,7 +496,7 @@ export const vDailySelectionCapabilities = v.pipe(v.object({
 }), v.readonly());
 
 /**
- * How a choice for today was closed without being done.
+ * Closed enum. How a choice for today was closed without being done.
  */
 export const vClosedResolution = v.picklist([
     'paused',
@@ -608,6 +626,9 @@ export const vBacklogData = v.object({
     items: v.record(v.string(), vBacklogItem)
 });
 
+/**
+ * Closed enum.
+ */
 export const vSelfAssessment = v.picklist([
     'achieved',
     'partly',
@@ -627,10 +648,19 @@ export const vSprintTaskId = v.pipe(v.string(), v.regex(/^sprint_task_[0-7][0-9a
 
 export const vOccurrenceId = v.pipe(v.string(), v.regex(/^occurrence_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
 
+/**
+ * Closed enum.
+ */
 export const vSprintTaskOrigin = v.picklist(['planning', 'midSprint']);
 
+/**
+ * Closed enum.
+ */
 export const vGoalLink = v.picklist(['linked', 'unlinked']);
 
+/**
+ * Closed enum.
+ */
 export const vSprintTaskOutcome = v.picklist([
     'draft',
     'planned',
@@ -675,6 +705,9 @@ export const vSprintAreaSnapshotEntry = v.object({
 
 export const vPlanningCriterionId = v.pipe(v.string(), v.regex(/^planning_criterion_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
 
+/**
+ * Closed enum.
+ */
 export const vRetroDecision = v.picklist([
     'continue',
     'end',
@@ -688,6 +721,9 @@ export const vCriterionUse = v.object({
     etag: vETag
 });
 
+/**
+ * Closed enum.
+ */
 export const vDailySelectionOrigin = v.picklist([
     'manual',
     'recurringToday',
@@ -695,6 +731,9 @@ export const vDailySelectionOrigin = v.picklist([
     'backlogCompletion'
 ]);
 
+/**
+ * Closed enum.
+ */
 export const vDailyResolution = v.picklist([
     'selected',
     'started',
@@ -722,6 +761,9 @@ export const vDailySelection = v.object({
     }))
 });
 
+/**
+ * Closed enum.
+ */
 export const vActualTimeVia = v.picklist([
     'completion',
     'pause',
@@ -826,6 +868,9 @@ export const vAreaLabel = v.object({
     color: vAreaColor
 });
 
+/**
+ * Closed enum.
+ */
 export const vOccurrenceState = v.picklist([
     'pending',
     'excluded',
@@ -1024,6 +1069,9 @@ export const vPlanningTotal = v.object({
     unestimatedSubtasks: v.pipe(v.number(), v.integer())
 });
 
+/**
+ * Closed enum.
+ */
 export const vCapacityStatus = v.picklist([
     'within',
     'mayExceed',
@@ -1094,7 +1142,7 @@ export const vCriterionEffect = v.object({
 });
 
 /**
- * Why 確定 is not possible yet. `previousRetroOpen`: the previous Sprint's Retro is open (invariant 12). `inactiveTasks`: a chosen Task was completed or archived.
+ * Closed enum. Why 確定 is not possible yet. `previousRetroOpen`: the previous Sprint's Retro is open (invariant 12). `inactiveTasks`: a chosen Task was completed or archived.
  */
 export const vPlanningBlocker = v.picklist(['previousRetroOpen', 'inactiveTasks']);
 
@@ -1374,6 +1422,9 @@ export const vRetroFacts = v.object({
     actualHours: v.number()
 });
 
+/**
+ * Closed enum.
+ */
 export const vCriterionState = v.picklist([
     'draft',
     'active',
@@ -1422,7 +1473,7 @@ export const vPlanningCriterionCapabilities = v.pipe(v.object({
 }), v.readonly());
 
 /**
- * `decisionMissing`: 続ける / 終える / 置き換える is not chosen (invariant 36). `continueWithDraft`: 続ける keeps the active criterion, so the draft must go (invariant 35).
+ * Closed enum. `decisionMissing`: 続ける / 終える / 置き換える is not chosen (invariant 36). `continueWithDraft`: 続ける keeps the active criterion, so the draft must go (invariant 35).
  */
 export const vRetroBlocker = v.picklist(['decisionMissing', 'continueWithDraft']);
 
@@ -1447,6 +1498,9 @@ export const vCarryOverPlaces = v.object({
     archived: v.pipe(v.number(), v.integer())
 });
 
+/**
+ * Closed enum.
+ */
 export const vCarryOverPlace = v.picklist([
     'inNext',
     'candidate',

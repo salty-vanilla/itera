@@ -58,6 +58,7 @@ AreaTotal:
     unestimated: { type: integer }
     unestimatedSubtasks: { type: integer }
 CapacityStatus:
+  description: Closed enum.
   type: string
   enum: [within, mayExceed, exceeds]
 Capacity:
@@ -363,6 +364,7 @@ CarryOverPlaces:
     completed: { type: integer }
     archived: { type: integer }
 CarryOverPlace:
+  description: Closed enum.
   type: string
   enum: [inNext, candidate, completed, archived]
 CarryOverTask:

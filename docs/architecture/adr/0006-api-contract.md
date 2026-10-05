@@ -20,6 +20,7 @@
 - 改訂：2026-10-05（依存の js-yaml の指摘を直すために `@hey-api/openapi-ts` の版上げを確かめ、新しい安定版がないので 0.99.0 のまま据え置く。Issue #409）
 - 改訂：2026-10-05（計画の読み取り `SprintPlan` に、合計に入らない SprintTask（見積もりのないもの、見積もりのないサブタスクがあるもの）の ID の必須の `notInTotal` を、Retro の事実の `TaskFact` に、繰り返しの Task の回を状態ごとに数えた省略できる `occurrences`（`OccurrenceCounts`：完了・スキップ・未完了）を足す。Web が記録から数え直していた値をサーバーが返す（ADR 0007）。応答に項目を足すだけなので `info.version` は 0.8.0 のまま。Issue #348）
 - 改訂：2026-10-05（契約の壊す変更を、PR の base の契約と比べて CI が見つける。比べる道具は oasdiff 1.33.0 で、入手と版の固定の方法を「道具と版」に、規則との合わせ方と警告から失敗への切り替えを「互換の規則」の「機械での確かめ」に書く。oasdiff が `oneOf` の枝を対応づけられるように、inline の object の枝が 2 つ以上ある `oneOf` の枝に `title` を付ける。注釈だけで、通信の形と生成物は変わらないので `info.version` は 0.8.0 のまま。最初は警告だけ。Issue #367）
+- 改訂：2026-10-05（列挙の `description` の書き方を決める。開いた列挙・閉じた列挙のどちらかを、`description` の先頭に英語の決まった語 `Open enum.`・`Closed enum.` で書き、`packages/api-contract/src/enum-kinds.test.ts` が書き漏れを検査する。説明だけの変更なので `info.version` は 0.8.0 のまま。Issue #352）
 
 ## 背景
 
@@ -359,6 +360,9 @@ oasdiff は npm の依存にできない（npm の `oasdiff` は名前の予約�
 ### 列挙
 
 列挙は 2 種類に分け、どちらなのかを仕様の `description` に書く。
+
+- 書き方：`enum` を持つすべてのスキーマ（入れ子の項目も含む）と、エラーの本文の `oneOf` の `description` を、`Closed enum.` か `Open enum.` で始める（周りの `description` が英語なので、語も英語にする。`x-` の拡張は使わない）。`packages/api-contract/src/enum-kinds.test.ts` が、`redocly bundle` した契約を走査して、書き漏れ（と、エラーの `type` が開いた列挙でないこと）を `pnpm test`（`pnpm check`）で失敗にする。
+- 分類：開いた列挙は、エラーの `type`（`RuleViolationError.type`）とエラーの本文の `oneOf`（`RuleViolation`）だけ。ほかはすべて閉じた列挙。状態の名前・union の判別子・`SprintWeek` のほか、基準で決まらなかった `PlanningBlocker`・`RetroBlocker`・`CapacityStatus`・`TaskCreatedVia`・`DailySelectionOrigin`・`SprintTaskOrigin`・`ActualTimeVia`・`CarryOverPlace`・要求の側の `BacklogSlice` も閉じた列挙にした。閉じた列挙を開いた列挙に緩めるのは壊さない変更で、逆は壊す変更になるので、迷うものは閉じた列挙から始める。要求の側の列挙は、知らない値を受け取るのがサーバーで、サーバーは 400 にするので閉じた列挙になる。
 
 - **開いた列挙**：値が増えることを前提にする列挙。エラーの `type`（#319 までは `code`）。値を足すのは壊さない変更。操作の可否は列挙ではなく、記録ごとの `capabilities` の真偽値の項目にした（ADR 0007「操作の可否」、#322）。`can…` を足すのは、応答に項目を足す変更（下の「壊さない変更」）で、クライアントは知らない `can…` を読み飛ばし、その操作は出さない。
   - 受け取る側（すべてのクライアントと、そこで使う生成した型と検証）は、知らない値を受理しなければならない。知らない値で、読み込み（decode）も応答の検証も失敗させない。知らない `type` は一般の失敗として扱う。知らない HTTP のステータス（#266 で足した 413 のように、後から足すもの）も、一般の失敗として扱う。
