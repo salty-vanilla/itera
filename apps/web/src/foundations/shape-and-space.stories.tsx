@@ -27,6 +27,7 @@ const elevations = [
 ] as const;
 
 const layers = [
+  'layer-local',
   'layer-sticky',
   'layer-drawer',
   'layer-popover',

@@ -43,8 +43,9 @@ function Textarea({
             data-slot="textarea"
             maxLength={maxLength}
             className={cn(
-              // 88px: DESIGN.md Textarea minimum, about three lines of body.
-              'block min-h-[88px] w-full resize-y rounded-sm border border-border-strong bg-surface px-3 py-2 text-ink',
+              // 88px: DESIGN.md Textarea minimum, about three lines of body, as
+              // two compact controls.
+              'block min-h-[calc(var(--spacing-control-lg)*2)] w-full resize-y rounded-sm border border-border-strong bg-surface px-3 py-2 text-ink',
               'text-body-l',
               text === 'body' && 'medium:text-body',
               'transition-colors duration-(--duration-fast) ease-standard',

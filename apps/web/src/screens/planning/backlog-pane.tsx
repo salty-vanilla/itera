@@ -215,7 +215,7 @@ function BacklogPane({
                 <div
                   role="group"
                   aria-label={`${weekText(week, 'に入れる日')}：${task.title}`}
-                  className="relative z-1 flex flex-wrap gap-x-4 gap-y-1 self-start"
+                  className="relative z-(--layer-local) flex flex-wrap gap-x-4 gap-y-1 self-start"
                 >
                   {occurrences.map((o) => {
                     const included = o.state === 'pending';
@@ -263,7 +263,7 @@ function BacklogPane({
 // Row's does (#358). The box reaches 8px past the row on both sides (the
 // pane's padding), so that the ring keeps clear of the controls and the
 // text, which start at the row's edge (a repeat row is 8px in, so that its
-// hover has room around them). The controls sit above it, at z-1.
+// hover has room around them). The controls sit above it, at `layer-local`.
 const titleButtonClass =
   'min-w-0 text-left text-task text-ink after:absolute after:inset-y-0 after:-inset-x-2 focus-visible:outline-none focus-visible:after:focus-ring-inset';
 
@@ -282,7 +282,7 @@ function EstimateActions({
   onEstimate: () => void;
 }) {
   return (
-    <div className="relative z-1 flex shrink-0 medium:opacity-0 medium:group-focus-within/row:opacity-100 medium:group-hover/row:opacity-100 medium:has-[[aria-expanded=true]]:opacity-100">
+    <div className="relative z-(--layer-local) flex shrink-0 medium:opacity-0 medium:group-focus-within/row:opacity-100 medium:group-hover/row:opacity-100 medium:has-[[aria-expanded=true]]:opacity-100">
       <Menu>
         <MenuTrigger
           render={
@@ -436,7 +436,7 @@ function CandidateItem({
     >
       <span
         data-row-control
-        className="relative z-1 grid size-target-touch shrink-0 place-items-center medium:size-target-min"
+        className="relative z-(--layer-local) grid size-target-touch shrink-0 place-items-center medium:size-target-min"
       >
         <CheckboxControl
           aria-label={`${weekText(week, 'に入れる')}：${task.title}`}

@@ -172,7 +172,8 @@ function DurationField({
           aria-label="時間"
           enterKeyHint="next"
           suffix="時間"
-          className="w-[6.5625rem] shrink-0 medium:w-[5.6875rem]"
+          columns={3}
+          className="shrink-0"
           value={value.hours}
           onChange={(e) => onChange({ ...value, hours: e.currentTarget.value })}
           onKeyDown={enter('hours')}
@@ -183,7 +184,8 @@ function DurationField({
           ref={minutesRef}
           aria-label="分"
           suffix="分"
-          className="w-[4.8125rem] shrink-0 medium:w-[3.9375rem]"
+          columns={2}
+          className="shrink-0"
           value={value.minutes}
           onChange={(e) =>
             onChange({ ...value, minutes: e.currentTarget.value })

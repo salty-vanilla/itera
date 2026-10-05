@@ -56,6 +56,12 @@ type TextInputProps = Omit<
      * unit in the label or the support text as well.
      */
     suffix?: ReactNode | undefined;
+    /**
+     * The width of the text in characters (the input's `size`). The box then
+     * fits it, with its icon and unit, instead of filling the row: for a
+     * short value (a number of hours).
+     */
+    columns?: number | undefined;
     className?: string | undefined;
   };
 
@@ -63,6 +69,7 @@ function TextInput({
   size,
   prefix,
   suffix,
+  columns,
   className,
   type = 'text',
   ...props
@@ -74,6 +81,7 @@ function TextInput({
         controlBoxStyles,
         controlSizeVariants({ size }),
         'group/text-input gap-2',
+        columns !== undefined && 'w-fit',
         'has-[input:read-only]:border-border has-[input:read-only]:bg-canvas-subtle',
         className,
       )}
@@ -98,8 +106,10 @@ function TextInput({
       <InputPrimitive
         data-slot="text-input-control"
         type={type}
+        size={columns}
         className={cn(
           'h-full min-w-0 flex-1 bg-transparent text-inherit',
+          columns !== undefined && 'flex-none',
           // The wrapper draws the focus ring for the whole box.
           'outline-none',
           'placeholder:text-ink-subtle disabled:cursor-not-allowed disabled:placeholder:text-ink-disabled',
