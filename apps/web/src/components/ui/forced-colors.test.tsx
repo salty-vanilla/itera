@@ -193,6 +193,9 @@ describe('A pressed toggle, in forced colors (#400)', () => {
       expect(fill).toContain('color: HighlightText !important');
       // Without it Chromium paints a Canvas backplate behind the label.
       expect(fill).toContain('forced-color-adjust: none');
+      // ...which also leaves the focus ring (`--focus`, no system colour) to
+      // the author, so its colour is set here, over the later layer's ring.
+      expect(fill).toContain('outline-color: CanvasText !important');
     },
   );
 

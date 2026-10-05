@@ -9,7 +9,7 @@ DADS の品質基準（WCAG 2.2 AA）を下限にする。後から足すので�
 - テキスト 4.5:1、24px 以上または 19px 太字は 3:1。操作部品の輪郭・フォーカス・意味のある印は 3:1。light / dark の両方で満たす。
 - 輪郭の 3:1 は、操作部品を見分けるのに要る輪郭に適用する。文字のラベルがあるボタンの補助の輪郭（Quiet Button の `border`、Filter の Pill）は対象外（Issue #251）。
 - **状態を色だけで伝えない**：選択 = 背景＋チェック（Filter は背景＋`ink` の 2px の枠＋太字）、期限切れ = 色＋アイコン＋「2日過ぎ」、Agent 提案 = 破線＋「提案」、Area = 印＋ラベル、エラー = 色＋アイコン＋文。
-- `forced-colors: active` では Area の路線記号と Capacity のセグメントの色を保ち、操作部品の輪郭は `CanvasText` にする。背景色で描く線と塗り（Divider、Menu の区切り、Bottom Sheet のつまみ、Progress の塗りとトラック、Tabs の選択中の下線、Navigation の現在地の棒）と Notice の面の境界も `CanvasText` で描く。押した状態の Button・IconButton（`aria-pressed`）は、墨の反転を `Highlight` の地＋`HighlightText` の文字にし、Filter と同じ細い `CanvasText` の outline を添える（地の色だけに頼らない）。disabled のときは outline だけを残す。背景の規則は部品の `bg-*` に負けないよう `!important` にする。
+- `forced-colors: active` では Area の路線記号と Capacity のセグメントの色を保ち、操作部品の輪郭は `CanvasText` にする。背景色で描く線と塗り（Divider、Menu の区切り、Bottom Sheet のつまみ、Progress の塗りとトラック、Tabs の選択中の下線、Navigation の現在地の棒）と Notice の面の境界も `CanvasText` で描く。押した状態の Button・IconButton（`aria-pressed`）は、押した状態の塗りを `Highlight` の地＋`HighlightText` の文字にし、Filter と同じ細い `CanvasText` の outline を添える（地の色だけに頼らない）。disabled のときは outline だけを残す。背景の規則は部品の `bg-*` に負けないよう `!important` にする。
 
 ## フォーカス
 
