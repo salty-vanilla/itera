@@ -191,6 +191,8 @@ describe('A pressed toggle, in forced colors (#400)', () => {
       const fill = forcedColorsRule(`${on}:not([data-disabled])`);
       expect(fill).toContain('background-color: Highlight !important');
       expect(fill).toContain('color: HighlightText !important');
+      // Without it Chromium paints a Canvas backplate behind the label.
+      expect(fill).toContain('forced-color-adjust: none');
     },
   );
 
