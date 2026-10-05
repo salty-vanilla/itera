@@ -13,6 +13,17 @@ export {
   type Operations,
 } from './operations';
 export { catchUp } from './system-changes';
+
+// The person's reads by name (#350): what each calls, and its 404.
+export {
+  reads,
+  runRead,
+  type ReadCall,
+  type ReadInput,
+  type ReadName,
+  type Reads,
+  type ReadView,
+} from './reads';
 export { settingsChange, type SettingsInput } from './user-changes';
 
 // Running them over the records.
