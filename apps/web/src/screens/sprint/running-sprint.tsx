@@ -442,7 +442,7 @@ function Outlook({
         >
           <Info
             aria-hidden
-            className="mt-0.5 size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
+            className="size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
           />
           <span className="[word-break:auto-phrase]">
             計画のルール
