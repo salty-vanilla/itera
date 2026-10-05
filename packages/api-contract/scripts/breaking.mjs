@@ -207,6 +207,7 @@ try {
     changes: JSON.parse(output || '[]'),
     base: baseSpec.info.version,
     head: headSpec.info.version,
+    contracts: { base: baseSpec, head: headSpec },
   });
   const problems = [
     ...result.problems,
