@@ -145,6 +145,19 @@ describe('opensOn', () => {
     );
     expect(answers).toEqual(['2026-09-28', undefined, undefined]);
   });
+
+  // No 0th or earlier day for a client to show (#427).
+  it('comes with no day before the first day, and with the day from it on', () => {
+    const days = ['2026-09-26', '2026-09-27', '2026-09-28', '2026-10-04'].map(
+      (day) => todayData(tagged(records), on(day))?.day,
+    );
+    expect(days).toEqual([
+      undefined,
+      undefined,
+      { index: 1, count: 7 },
+      { index: 7, count: 7 },
+    ]);
+  });
 });
 
 // Today, the running Sprint and the Backlog's 今日へ ask the same question,

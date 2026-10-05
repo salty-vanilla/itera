@@ -90,8 +90,8 @@ export interface TodayData {
   /** 「Sprint 14」 (F25). */
   readonly number: number;
   readonly today: LocalDate;
-  /** 「2日目 / 7日」. */
-  readonly day: { readonly index: number; readonly count: number };
+  /** 「2日目 / 7日」, absent before the first day (#427). */
+  readonly day?: { readonly index: number; readonly count: number };
   /** The last day: 「Retro を始める」 shows (F21). */
   readonly lastDay: boolean;
   /**
@@ -341,9 +341,10 @@ export function todayData(
     sprint,
     number: sprintNumber(sprint, sprints),
     today,
-    day: dayInPeriod(sprint, today),
+    ...(firstDay === undefined
+      ? { day: dayInPeriod(sprint, today) }
+      : { opensOn: firstDay }),
     lastDay: isLastDay(sprint, today),
-    ...(firstDay === undefined ? {} : { opensOn: firstDay }),
     sprintCapabilities: sprintCapabilities(records, sprint, clock),
     timeZone: records.user.timeZone,
     progress: weekProgress(sprint, occurrences),

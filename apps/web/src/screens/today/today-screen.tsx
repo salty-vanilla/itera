@@ -601,7 +601,11 @@ function TodayView({ data }: { data: TodayData }) {
           <DayHeader
             date={data.today}
             today={data.today}
-            meta={`Sprint ${data.number} · ${data.day.index}日目 / ${data.day.count}日`}
+            meta={
+              data.day === undefined
+                ? `Sprint ${data.number}`
+                : `Sprint ${data.number} · ${data.day.index}日目 / ${data.day.count}日`
+            }
           >
             <Progress
               label="今週の完了"

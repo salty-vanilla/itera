@@ -728,7 +728,12 @@ RunningData:
     number: { type: integer }
     week: { $ref: '#/SprintWeek' }
     today: { $ref: './common.yaml#/LocalDate' }
-    day: { $ref: './values.yaml#/DayOfSprint' }
+    day:
+      description: >-
+        Running and from its first day on: today's place in it. Absent
+        before the first day, when opensOn is there instead, and once the
+        Sprint has ended.
+      $ref: './values.yaml#/DayOfSprint'
     opensOn:
       description: >-
         Running and before its first day: that day, which Today waits for
@@ -807,7 +812,6 @@ TodayData:
     - sprint
     - number
     - today
-    - day
     - lastDay
     - timeZone
     - progress
@@ -825,7 +829,11 @@ TodayData:
     sprint: { $ref: './records.yaml#/Sprint' }
     number: { type: integer }
     today: { $ref: './common.yaml#/LocalDate' }
-    day: { $ref: './values.yaml#/DayOfSprint' }
+    day:
+      description: >-
+        From the Sprint's first day on: today's place in it. Absent before
+        the first day, when opensOn is there instead (#427).
+      $ref: './values.yaml#/DayOfSprint'
     lastDay: { type: boolean }
     opensOn:
       description: >-
