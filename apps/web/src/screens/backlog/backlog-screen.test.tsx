@@ -162,11 +162,7 @@ describe('Backlog', () => {
 
   it.each([
     ['sticks to the bottom under 768px', false, true],
-    [
-      'does not stick with enlarged text, and the field stays in view (#426)',
-      true,
-      false,
-    ],
+    ['does not stick with enlarged text (#426)', true, false],
   ])('Capture: the Quick Add %s', async (_name, enlarged, stuck) => {
     vi.stubGlobal(
       'matchMedia',
@@ -179,8 +175,6 @@ describe('Backlog', () => {
         }) as unknown as MediaQueryList,
     );
     expect(window.matchMedia(MEDIUM_UP).matches).toBe(false);
-    const scrollIntoView = vi.fn();
-    Element.prototype.scrollIntoView = scrollIntoView;
     await renderAt('/backlog?fixture=backlog-capture');
     const field = screen.getByRole('textbox', {
       name: 'Backlog にタスクを追加',
@@ -194,9 +188,6 @@ describe('Backlog', () => {
     ).toBe(stuck);
     await userEvent.type(field, '請求書を送る{Enter}');
     await screen.findByText('「請求書を送る」を追加しました');
-    // The new row is at the top: not scrolled to when that would take the
-    // field (with the focus in it) off the screen.
-    expect(scrollIntoView).toHaveBeenCalledTimes(stuck ? 1 : 0);
     expect(document.activeElement).toBe(field);
   });
 

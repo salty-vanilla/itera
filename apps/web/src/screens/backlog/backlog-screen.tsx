@@ -115,8 +115,8 @@ function LoadedBacklog({ backlog }: { backlog: BacklogView }) {
   const [refocus, setRefocus] = useState<TaskId>();
   const undoRef = useRef<HTMLButtonElement>(null);
   // Under 768px the Quick Add sticks to the bottom: the Toast goes above it.
-  // Not with enlarged text: it would cover half of a low screen, so it is the
-  // last thing in the list instead (#426).
+  // Not with enlarged text: it would cover half of a low screen, so it is
+  // under the filters at the top, as from 768px (#426).
   const quickAddRef = useRef<HTMLDivElement>(null);
   const enlarged = useMediaQuery(ENLARGED);
   useStuckBar(
@@ -141,15 +141,10 @@ function LoadedBacklog({ backlog }: { backlog: BacklogView }) {
         : { description: '今の絞り込みでは、一覧に表示されません。' }),
     });
     // Under 768px the Quick Add is at the bottom and the list may be scrolled.
-    // With enlarged text it is the last thing in the list, and the new row (at
-    // the top) is not scrolled to: the field would go off the screen with the
-    // focus in it, and the Toast says the Task was added (#426).
-    if (!enlarged) {
-      document
-        .querySelector(`[data-task="${justAdded.id}"]`)
-        ?.scrollIntoView?.({ block: 'nearest' });
-    }
-  }, [justAdded, items, toast, enlarged]);
+    document
+      .querySelector(`[data-task="${justAdded.id}"]`)
+      ?.scrollIntoView?.({ block: 'nearest' });
+  }, [justAdded, items, toast]);
   useEffect(() => {
     if (justAdded === undefined) return;
     const timer = window.setTimeout(() => setJustAdded(undefined), ADDED_MS);
@@ -293,11 +288,11 @@ function LoadedBacklog({ backlog }: { backlog: BacklogView }) {
       </div>
 
       {/* Quick Add: at the top from 768px; under it, sticky at the bottom
-          above the tab bar (DESIGN.md Responsive › compact), and with
-          enlarged text the last thing in the list (#426). */}
+          above the tab bar (DESIGN.md Responsive › compact). With enlarged
+          text it is at the top too, not stuck (#426). */}
       <div
         ref={quickAddRef}
-        className="mt-[var(--toast-above-room,0px)] sticky bottom-0 z-(--layer-sticky) enlarged:static order-last border-t border-border bg-canvas px-4 py-3 medium:static medium:order-none medium:mt-0 medium:border-t-0 medium:px-6 medium:py-0 medium:pb-4 xl:max-w-pane-rows"
+        className="mt-[var(--toast-above-room,0px)] sticky bottom-0 z-(--layer-sticky) enlarged:static order-last enlarged:order-none enlarged:mt-0 border-t enlarged:border-t-0 enlarged:py-0 enlarged:pb-4 border-border bg-canvas px-4 py-3 medium:static medium:order-none medium:mt-0 medium:border-t-0 medium:px-6 medium:py-0 medium:pb-4 xl:max-w-pane-rows"
       >
         <TaskQuickAdd
           label="Backlog にタスクを追加"
