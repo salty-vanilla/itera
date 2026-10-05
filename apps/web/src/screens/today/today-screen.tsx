@@ -25,6 +25,7 @@ import { formatDate, formatTime } from '@/lib/date-format';
 import { LAST_DAY_CLOSED_WORDS } from '@/lib/selection-words';
 import { formatPlanningTotal } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
+import { ENLARGED, useMediaQuery } from '@/lib/use-media-query';
 import { useStuckBar } from '@/lib/use-stuck-bar';
 import { cn } from '@/lib/utils';
 import { hasDetail, useBacklog } from '@/screen-data/use-backlog';
@@ -290,9 +291,11 @@ function TodayView({ data }: { data: TodayData }) {
   // One archived since it was chosen is no longer a choice (#113).
   const quickChoice = chosenArea(quickArea, data.areas);
   // The Quick Add sticks to the bottom at every width: the Toast goes above
-  // it, and the Quick Add does not move (DESIGN.md Toast).
+  // it, and the Quick Add does not move (DESIGN.md Toast). Not with enlarged
+  // text: it would cover half of a low screen, so it is the last thing in the
+  // column instead (#426).
   const quickAddRef = useRef<HTMLDivElement>(null);
-  useStuckBar(quickAddRef, 'bottom');
+  useStuckBar(quickAddRef, 'bottom', !useMediaQuery(ENLARGED));
   // The `…` of each row, for the actual time surface to sit by.
   const triggers = useRef(new Map<DailySelectionId, HTMLButtonElement>());
   // Where the focus goes once the records have changed: the row that
@@ -798,11 +801,12 @@ function TodayView({ data }: { data: TodayData }) {
 
         {/* Stuck to the bottom of the screen (above the tab bar under 768px,
             DESIGN.md Layout); last in the column so that it stays at the
-            bottom while scrolling. A Toast shows above it, never over it. */}
+            bottom while scrolling. A Toast shows above it, never over it.
+            With enlarged text it does not stick (#426). */}
         <div
           ref={quickAddRef}
           className={cn(
-            'sticky bottom-0 z-(--layer-sticky) -mx-4 mt-auto border-t border-border bg-canvas px-4 py-3',
+            'sticky bottom-0 z-(--layer-sticky) enlarged:static -mx-4 mt-auto border-t border-border bg-canvas px-4 py-3',
             'medium:-mx-6 medium:px-6 wide:mx-0 wide:px-0',
           )}
         >
