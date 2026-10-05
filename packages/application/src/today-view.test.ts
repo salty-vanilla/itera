@@ -129,6 +129,23 @@ describe('todayData', () => {
   });
 });
 
+// Before the Sprint's first day the read gives that day, and from the first
+// day on it gives none: the screens show the week read only from this value
+// and do not compare dates (#347).
+describe('opensOn', () => {
+  const { records, clock } = fixtureSnapshot('today-interrupt');
+  const start = records.sprints.find((s) => s.state === 'active')?.start;
+  const on = (today: string) => ({ ...clock, today: localDate(today) });
+
+  it('is the first day on the day before it, and absent from that day on', () => {
+    expect(start).toBe('2026-09-28');
+    const answers = ['2026-09-27', '2026-09-28', '2026-10-04'].map(
+      (day) => todayData(tagged(records), on(day))?.opensOn,
+    );
+    expect(answers).toEqual(['2026-09-28', undefined, undefined]);
+  });
+});
+
 // Only the Sprint's end date is its last day, whichever screen asks: Today
 // and the Backlog give the same answer, and no Sprint is not a last day (#314).
 describe('lastDay', () => {

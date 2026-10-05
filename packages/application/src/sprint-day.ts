@@ -31,6 +31,20 @@ export function isLastDay(
   return date === sprint.end;
 }
 
+/**
+ * Before the Sprint's first day, that day: choosing and interrupts wait for
+ * it, as the domain keeps them within the period (`chooseForDay`,
+ * `noteInterrupt`; #54). `undefined` from the first day on. The clients
+ * take this value from the read and do not compare dates themselves (ADR
+ * 0007, #347).
+ */
+export function opensOn(
+  sprint: Pick<Sprint, 'start'>,
+  date: LocalDate,
+): LocalDate | undefined {
+  return date < sprint.start ? sprint.start : undefined;
+}
+
 /** The actual hours recorded for a choice, on its day. */
 export function selectionActualHours(
   sprint: Sprint,

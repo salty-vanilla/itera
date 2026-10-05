@@ -118,8 +118,9 @@ function Day({ date, now }: { date: LocalDate; now: Now }) {
     if (day.data === undefined) {
       return <NoActiveSprint today={now.today} sprints={now.sprints} />;
     }
-    if (day.data.today < day.data.sprint.start) {
-      return <BeforeStart data={day.data} />;
+    // Before the first day the read says so (#347): no date compared here.
+    if (day.data.opensOn !== undefined) {
+      return <BeforeStart data={day.data} opensOn={day.data.opensOn} />;
     }
     return <TodayView data={day.data} />;
   }
@@ -149,11 +150,17 @@ function Day({ date, now }: { date: LocalDate; now: Now }) {
  * within the period (owner decision in #54); the Tasks are what that day's
  * 今週の残り will hold (#156).
  */
-function BeforeStart({ data }: { data: TodayData }) {
+function BeforeStart({
+  data,
+  opensOn,
+}: {
+  data: TodayData;
+  opensOn: LocalDate;
+}) {
   return (
     <DayFrame date={data.today} today={data.today}>
       <p className="text-body text-ink-muted">
-        Sprint {data.number} は {formatDate(data.sprint.start)} から始まります。
+        Sprint {data.number} は {formatDate(opensOn)} から始まります。
         {/* One step to the Sprint (#90). */}{' '}
         <Link
           to="/sprint"
