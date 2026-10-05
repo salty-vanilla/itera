@@ -42,6 +42,7 @@ const motion = [
   ['duration-slow', 'Dialog・Drawer の出入り（最大）'],
   ['duration-toast', 'Toast の表示時間'],
   ['duration-toast-action', '操作付きの Toast の表示時間'],
+  ['duration-added-flash', '追加した直後の行の点滅'],
   ['ease-standard', '既定'],
   ['ease-enter', '出現'],
   ['ease-exit', '退場'],

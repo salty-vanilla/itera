@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 import { contrast } from '../foundations/contrast';
+import * as motionCode from '../lib/motion';
 import {
   tokenShadowNames,
   tokenSpacingNames,
@@ -328,6 +329,32 @@ describe('motion', () => {
 
   it.each([...durations])('%s', (token, value) => {
     expect(light.get(`--${token}`)).toBe(value);
+  });
+
+  // The numbers the code needs (lib/motion.ts) are copies of the variables.
+  const inCode: Record<keyof typeof motionCode, string> = {
+    TOAST_TIMEOUT: '--duration-toast',
+    TOAST_ACTION_TIMEOUT: '--duration-toast-action',
+    TOOLTIP_DELAY: '--tooltip-delay',
+    ADDED_MS: '--duration-added-flash',
+  };
+
+  it('lib/motion.ts has one number for each variable it copies', () => {
+    expect(Object.keys(motionCode).sort()).toEqual(Object.keys(inCode).sort());
+  });
+
+  it.each(Object.entries(inCode))('%s is %s', (name, variable) => {
+    const value = motionCode[name as keyof typeof motionCode];
+    expect(light.get(variable)).toBe(`${value}ms`);
+  });
+
+  it('the CSS takes its durations from the variables', () => {
+    expect(theme.get('--default-transition-duration')).toBe(
+      'var(--duration-fast)',
+    );
+    expect(theme.get('--animate-added-flash')).toMatch(
+      /^added-flash var\(--duration-added-flash\) /,
+    );
   });
 
   it('easings are the ones foundations.md lists', () => {

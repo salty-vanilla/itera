@@ -27,6 +27,7 @@ import {
 } from '@/components/sprint/sprint-header';
 import { formatDate, formatDateRange } from '@/lib/date-format';
 import { isTyping } from '@/lib/row-keys';
+import { ADDED_MS } from '@/lib/motion';
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 import { formatPlanningSum } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
@@ -67,9 +68,6 @@ import { PlanPane, type Stage } from './plan-pane';
 //   numbers, so the line only opens the Drawer (#165).
 // - compact: one column. The Backlog shows in 選ぶ only; the Capacity is
 //   the same one line (a Bottom Sheet). 確かめる opens with its summary (#93).
-
-/** How long the row just added flashes; the same as `added-flash` in the CSS. */
-export const ADDED_MS = 2500;
 
 /** Scrolls `main` so that the added row shows, keeping the Quick Add in view. */
 function revealAdded(taskId: TaskId) {
