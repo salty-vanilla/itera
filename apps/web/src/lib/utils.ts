@@ -4,6 +4,9 @@ import { createCn } from 'cn/config';
 // typography tokens (text-body, text-button …) would be taken for text colors
 // and dropped when merged with text-ink, the elevation names for shadow colors,
 // and the named dimensions (h-control-md …) would not replace each other.
+// The `nowrap-phrase` utility (styles/globals.css) is a white-space class:
+// unknown to the merge, it would be kept next to whitespace-nowrap or
+// whitespace-normal and the CSS order, not the last class, would win.
 // The lists are exported so that styles/tokens.test.ts can compare them with
 // DESIGN.md.
 export const tokenTextNames = [
@@ -64,5 +67,6 @@ export const cn = createCn({
       shadow: tokenShadowNames,
       spacing: tokenSpacingNames,
     },
+    classGroups: { whitespace: ['nowrap-phrase'] },
   },
 });

@@ -62,7 +62,8 @@ type NavigationProps = {
 type SideLayout = 'responsive' | 'sidebar' | 'rail';
 
 // Classes per layout. `responsive` is the rail from 768px and the sidebar
-// from 1440px (the `nav` breakpoint).
+// from 1440px (the `nav` breakpoint). The sidebar's items are 36px, taller
+// when the text is enlarged (#433).
 const side = {
   // The rail has 4px of padding: the 48px left of 64px would not hold
   // 「Backlog」 at 12px (about 49px, more when bold).
@@ -72,12 +73,12 @@ const side = {
     responsive: 'hidden medium:flex w-pane-rail p-1 nav:w-pane-nav nav:p-2',
   },
   item: {
-    sidebar: 'h-control-md justify-start gap-2 px-3 before:left-0',
+    sidebar: 'min-h-control-md justify-start gap-2 px-3 before:left-0',
     // The `here` bar sits in the rail's own 4px of padding, off the name:
     // the bold name fills nearly the whole item.
     rail: 'flex-col justify-center gap-1 py-2 text-meta before:-left-1',
     responsive:
-      'flex-col justify-center gap-1 py-2 text-meta before:-left-1 nav:before:left-0 nav:h-control-md nav:flex-row nav:justify-start nav:gap-2 nav:px-3 nav:py-0 nav:text-body',
+      'flex-col justify-center gap-1 py-2 text-meta before:-left-1 nav:before:left-0 nav:min-h-control-md nav:flex-row nav:justify-start nav:gap-2 nav:px-3 nav:py-0 nav:text-body',
   },
   // In the rail the name is centred under the icon and never cut.
   text: {
