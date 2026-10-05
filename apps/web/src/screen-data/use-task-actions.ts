@@ -23,8 +23,9 @@ import { savedOf, useOperation, type Saved } from '@/api/use-operation';
 // again gives back `false` without sending, except the ones a field saves
 // as it is left (`whileSending: 'wait'`): those are sent in order. So are
 // the ones a row's button sends, which the person presses on one row after
-// another (completing, taking the completion back): sent after the one on
-// its way, and only a repeat on the same Task is dropped (#379).
+// another (completing, taking the completion back, archiving, taking the
+// archive back): sent after the one on its way, and only a repeat on the
+// same Task is dropped (#379, #432).
 //
 // Split by who uses them, so that a small part (a subtask's row) does not
 // make an observer for every operation.
@@ -46,9 +47,9 @@ export function useTaskActions() {
   const adoptEdited = useOperation('adoptEditedSuggestion');
   const rejectSuggestion = useOperation('rejectSuggestion');
   const undoRejection = useOperation('undoRejection');
-  const archiveTask = useOperation('archiveTask');
-  const restoreTask = useOperation('restoreTask');
   const wait = { whileSending: 'wait' } as const;
+  const archiveTask = useOperation('archiveTask', wait);
+  const restoreTask = useOperation('restoreTask', wait);
   const completeTask = useOperation('completeTask', wait);
   const undoCompleteTask = useOperation('undoCompleteTask', wait);
   const once = useOncePerTarget();
@@ -110,9 +111,11 @@ export function useTaskActions() {
     undoRejection: async (taskId: TaskId, suggestionId: EstimateSuggestionId) =>
       (await undoRejection.run({ taskId, suggestionId })).ok,
     archiveTask: async (taskId: TaskId) =>
-      (await archiveTask.run({ taskId })).ok,
+      (await once(`archiveTask:${taskId}`, () => archiveTask.run({ taskId })))
+        ?.ok === true,
     restoreTask: async (taskId: TaskId) =>
-      (await restoreTask.run({ taskId })).ok,
+      (await once(`restoreTask:${taskId}`, () => restoreTask.run({ taskId })))
+        ?.ok === true,
     completeTask: async (taskId: TaskId) =>
       (await once(`completeTask:${taskId}`, () => completeTask.run({ taskId })))
         ?.ok === true,
