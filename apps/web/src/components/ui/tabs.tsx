@@ -6,10 +6,11 @@ import { cn } from '@/lib/utils';
 // 5 tabs. Do not use Tabs to move through the stages of a flow (→ Sprint
 // Header) or to narrow a list (→ Filter).
 //
-// Tabs are 40px with `button` labels. The selected tab is `ink` 700 with a
-// `stroke-strong` underline, never a fill or a Pill; the others are
-// `ink-muted` 400. Counts are `ink-subtle`. Keyboard: ← → move and select,
-// Home / End, roving tabindex (docs/design/accessibility.md).
+// Tabs are 40px with `button` labels, taller when the text is enlarged
+// (#433). The selected tab is `ink` 700 with a `stroke-strong` underline,
+// never a fill or a Pill; the others are `ink-muted` 400. Counts are
+// `ink-subtle`. Keyboard: ← → move and select, Home / End, roving tabindex
+// (docs/design/accessibility.md).
 
 function Tabs({
   className,
@@ -51,7 +52,7 @@ function TabsTab({ className, children, count, ...props }: TabsTabProps) {
     <TabsPrimitive.Tab
       data-slot="tabs-tab"
       className={cn(
-        'group relative inline-flex h-10 shrink-0 items-center gap-1 px-3 text-button font-normal text-ink-muted select-none',
+        'group relative inline-flex min-h-10 shrink-0 items-center gap-1 px-3 text-button font-normal text-ink-muted select-none',
         'transition-colors duration-(--duration-fast) ease-standard',
         'focus-visible:focus-ring-inset',
         'not-data-disabled:hover:bg-surface-hover not-data-disabled:hover:text-ink',

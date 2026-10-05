@@ -164,11 +164,17 @@
   /* `spacing.drawer`, for container queries (@min-drawer:). */
   --container-drawer: 400px;
 
-  /* Responsive: medium 768px–, wide 1200px–, nav 1440px–, xl 1920px– */
-  --breakpoint-medium: 768px;
-  --breakpoint-wide: 1200px;
-  --breakpoint-nav: 1440px;
-  --breakpoint-xl: 1920px;
+  /*
+   * Responsive: medium 768px–, wide 1200px–, nav 1440px–, xl 1920px– at the
+   * default font size. DESIGN.md's px over 16, in em: em in a media query is
+   * the browser's font size setting, so with larger text the layout changes
+   * as with the browser's zoom (#433). All four in the same unit, or Tailwind
+   * sorts the variants wrongly.
+   */
+  --breakpoint-medium: 48em;
+  --breakpoint-wide: 75em;
+  --breakpoint-nav: 90em;
+  --breakpoint-xl: 120em;
 
   /* Motion (docs/design/foundations.md) */
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
