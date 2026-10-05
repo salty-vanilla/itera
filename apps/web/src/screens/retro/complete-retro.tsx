@@ -22,7 +22,11 @@ import { carryOverWords, DECISION_WORDS } from './retro-words';
 // on. The reason it waits is text under the button, which stays where it is
 // whether or not it can be pressed.
 
-/** Why 「振り返りを完了」 waits, and where to choose (docs/design/content.md). */
+/**
+ * Why 「振り返りを完了」 waits, and where to choose (docs/design/content.md).
+ * The reasons this screen knows; the server may send others (RetroBlocker is
+ * an open enum, ADR 0006), which `blockerWords` leaves out.
+ */
 const BLOCKER_WORDS: Readonly<Record<RetroBlocker, ReactNode>> = {
   // The words the screen shows stay whole when the line breaks.
   decisionMissing: (
@@ -44,6 +48,13 @@ const BLOCKER_WORDS: Readonly<Record<RetroBlocker, ReactNode>> = {
     </>
   ),
 };
+
+/** The words for a reason; none for one this screen does not know yet. */
+function blockerWords(blocker: string): ReactNode {
+  return Object.hasOwn(BLOCKER_WORDS, blocker)
+    ? BLOCKER_WORDS[blocker as RetroBlocker]
+    : undefined;
+}
 
 type CompleteRetroProps = {
   data: RetroData;
@@ -68,6 +79,7 @@ function CompleteRetro({
   const reasonId = useId();
   // Open when the read says so (#323); the blockers say why not.
   const blocked = !data.capabilities.canComplete;
+  const reasons = data.blockers.filter((b) => blockerWords(b) !== undefined);
   return (
     <div
       data-slot="complete-retro"
@@ -86,9 +98,12 @@ function CompleteRetro({
         id={reasonId}
         className="flex max-w-measure-read flex-col gap-1 text-help text-balance text-ink-muted [word-break:auto-phrase]"
       >
-        {data.blockers.map((b) => (
-          <p key={b}>{BLOCKER_WORDS[b]}</p>
+        {reasons.map((b) => (
+          <p key={b}>{blockerWords(b)}</p>
         ))}
+        {/* A reason this screen does not know says nothing; the button still
+            has to say why it waits. */}
+        {blocked && reasons.length === 0 && <p>まだ完了できません。</p>}
         {!blocked && data.improvement === undefined && (
           <p>
             次に試すことがないまま完了します。次の Sprint には何も出ません。

@@ -32,6 +32,7 @@ import { createMock } from '@/mock/mock-api';
 import { comeBack, newWrite, otherDevice, until } from '@/test/other-device';
 import { waitForRead } from '@/test/read-ready';
 import { problemResponse } from '@/test/problem';
+import { rewriteRead } from '@/test/rewrite-read';
 
 type CreateAppRouter = typeof import('@/app/router').createAppRouter;
 let createAppRouter: CreateAppRouter;
@@ -101,6 +102,62 @@ const reviewedId = (store: ReturnType<typeof serve>['store']) =>
   store.getSnapshot().records.sprints.find((s) => s.state === 'review')!.id;
 
 describe('Retro on the API', () => {
+  describe('a reason to wait that the server adds later (#431)', () => {
+    const waitingFor = (blockers: string[], canComplete = false) => {
+      serve();
+      rewriteRead(
+        (url) => /^\/api\/sprints\/[^/]+\/retro$/.test(url.pathname),
+        (view) => ({
+          ...view,
+          blockers,
+          capabilities: {
+            ...(view.capabilities as Record<string, unknown>),
+            canComplete,
+          },
+        }),
+      );
+      renderRetro('/retro?stage=handoff');
+    };
+    /** Each paragraph of the reason, an empty one as ''. */
+    const linesOf = (reason: HTMLElement) =>
+      [...reason.querySelectorAll('p')].map((p) => p.textContent);
+    const reasonOf = async () => {
+      const button = await screen.findByRole('button', {
+        name: '振り返りを完了',
+      });
+      return {
+        button,
+        reason: document.getElementById(
+          button.getAttribute('aria-describedby')!,
+        )!,
+      };
+    };
+
+    it('says it cannot complete yet, in one line, when it knows none of the reasons', async () => {
+      waitingFor(['somethingNew', 'constructor']);
+      const { button, reason } = await reasonOf();
+      expect(
+        (button as HTMLButtonElement).disabled || button.ariaDisabled,
+      ).toBeTruthy();
+      expect(linesOf(reason)).toEqual(['まだ完了できません。']);
+    });
+
+    it('shows the reasons it knows, and nothing for the one it does not', async () => {
+      waitingFor(['somethingNew', 'decisionMissing']);
+      const { reason } = await reasonOf();
+      expect(linesOf(reason)).toEqual([
+        '上の「今回の計画のルール」で、続ける・終える・置き換えるのどれかを選ぶと完了できます。',
+      ]);
+    });
+
+    it('says nothing of a reason it does not know when the Retro can be completed', async () => {
+      waitingFor(['somethingNew'], true);
+      const { reason } = await reasonOf();
+      expect(linesOf(reason)).not.toContain('まだ完了できません。');
+      expect(linesOf(reason)).not.toContain('');
+    });
+  });
+
   it('asks for the Sprints, then for the Retro of the one in Review by its ID', async () => {
     const { store, requests } = serve();
     renderRetro();
