@@ -340,7 +340,7 @@ function RetroView({
                   // copy-lint-ignore long-sentence -- 語は 40 字のまま。アイコンの要素を字数に数えている（Issue #241）
                   <p className="text-help text-ink-muted [word-break:auto-phrase]">
                     気になった記録に
-                    <Icon icon={Pin} className="mx-0.5 inline align-[-0.2em]" />
+                    <Icon icon={Pin} className="inline align-[-0.2em]" />
                     「振り返りに使う」を付けると、「振り返る」で材料として並びます。
                   </p>
                 )}
