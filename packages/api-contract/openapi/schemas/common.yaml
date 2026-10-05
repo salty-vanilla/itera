@@ -72,7 +72,7 @@ TimeZone:
   type: string
   examples: [Asia/Tokyo]
 DayOfWeek:
-  description: 0 is Sunday, 6 is Saturday.
+  description: Closed enum. 0 is Sunday, 6 is Saturday.
   type: integer
   enum: [0, 1, 2, 3, 4, 5, 6]
 Clock:
@@ -118,7 +118,7 @@ EntityTagList:
   examples: ['"42"', '*']
 AnyEntityTag:
   description: >-
-    `If-None-Match: *` (RFC 9110 §13.1.2): the write was made from no
+    Closed enum. `If-None-Match: *` (RFC 9110 §13.1.2): the write was made from no
     record, and is not to be made over one that is there now.
   type: string
   enum: ['*']
@@ -244,6 +244,9 @@ RuleViolationError:
   required: [type, title, status, detail]
   properties:
     type:
+      description: >-
+        Open enum. A client takes a `type` it does not know as a general
+        failure.
       type: string
       enum:
         - /problems/invalid-input
