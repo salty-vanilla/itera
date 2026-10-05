@@ -1,6 +1,6 @@
 import type { Area } from './area';
 import { capacityOf, type Capacity } from './capacity';
-import type { Occurrence } from './occurrence';
+import { occurrenceStateCounts, type Occurrence } from './occurrence';
 import { totalPlanningValues, type PlanningTotal } from './planning-value';
 import type { AreaId, OccurrenceId, SprintTaskId, TaskId } from './shared/ids';
 import type { LocalDate } from './shared/time';
@@ -406,7 +406,7 @@ function taskFact(
     ...(sprintTask.occurrenceIds === undefined
       ? {}
       : {
-          occurrences: occurrenceCounts(
+          occurrences: retroOccurrenceCounts(
             sprintTask.occurrenceIds,
             input.occurrences,
           ),
@@ -414,20 +414,12 @@ function taskFact(
   };
 }
 
-function occurrenceCounts(
+function retroOccurrenceCounts(
   ids: readonly OccurrenceId[],
   occurrences: readonly Occurrence[],
 ): OccurrenceCounts {
-  const states = ids.flatMap(
-    (id) => occurrences.find((o) => o.id === id)?.state ?? [],
-  );
-  const count = (state: Occurrence['state']) =>
-    states.filter((s) => s === state).length;
-  return {
-    done: count('done'),
-    skipped: count('skipped'),
-    missed: count('missed'),
-  };
+  const { done, skipped, missed } = occurrenceStateCounts(ids, occurrences);
+  return { done, skipped, missed };
 }
 
 /** Rounds away the binary noise of a subtraction (4.7 − 4.5). */

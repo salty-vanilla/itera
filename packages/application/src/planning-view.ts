@@ -181,7 +181,7 @@ export interface SprintPlan {
    * part (subtasks without an Estimate), as it counts them (invariant 8):
    * the list under 「…は合計に含まれていません」.
    */
-  readonly leftOut: readonly SprintTaskId[];
+  readonly notInTotal: readonly SprintTaskId[];
   /** 「何が上振れすると超過するか」. */
   readonly drivers: readonly TaggedCapacityDriver[];
   readonly improvement?: RetroImprovement;
@@ -253,7 +253,7 @@ function blockersOf(
 }
 
 /** Whether a total leaves the value out, whole or in part (invariant 8). */
-function leftOutOfTotal(value: PlanningValue): boolean {
+function isNotInTotal(value: PlanningValue): boolean {
   const total = totalPlanningValues([value]);
   return total.unestimated + total.unestimatedSubtasks > 0;
 }
@@ -366,8 +366,8 @@ export function sprintPlanOf(
     plan,
     chosenCount: planned.length,
     totals,
-    leftOut: planned
-      .filter((p) => leftOutOfTotal(p.value))
+    notInTotal: planned
+      .filter((p) => isNotInTotal(p.value))
       .map((p) => p.sprintTask.id),
     drivers: capacityDrivers(sprint, valueOptions).map((d) => ({
       ...d,

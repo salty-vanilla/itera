@@ -110,30 +110,30 @@ describe('sprintPlanOf', () => {
       const taskOf = (sprintTaskId: string) =>
         rows.find((r) => r.sprintTask.id === sprintTaskId)?.task.id;
       // A Task with no value, and one with a subtask without an Estimate.
-      expect(data?.leftOut.map(taskOf)).toEqual([
+      expect(data?.notInTotal.map(taskOf)).toEqual([
         ids.task.apiReview,
         ids.task.dataset,
       ]);
-      expect(values(data?.leftOut ?? []).map((v) => v.base)).toEqual([
+      expect(values(data?.notInTotal ?? []).map((v) => v.base)).toEqual([
         'none',
         'subtasks',
       ]);
       // What the total leaves out is all in the list, and only that.
-      const inList = totalPlanningValues(values(data?.leftOut ?? []));
+      const inList = totalPlanningValues(values(data?.notInTotal ?? []));
       expect(inList.unestimated).toBe(data?.totals.total.unestimated);
       expect(inList.unestimatedSubtasks).toBe(
         data?.totals.total.unestimatedSubtasks,
       );
       const rest = totalPlanningValues(
         rows
-          .filter((r) => !(data?.leftOut ?? []).includes(r.sprintTask.id))
+          .filter((r) => !(data?.notInTotal ?? []).includes(r.sprintTask.id))
           .map((r) => r.value),
       );
       expect(rest.unestimated + rest.unestimatedSubtasks).toBe(0);
     }
     // Everything estimated: nothing is listed.
     const pick = fixtureSnapshot('planning-pick');
-    expect(planOf(pick, { applyCriterion: true })?.leftOut).toEqual([]);
+    expect(planOf(pick, { applyCriterion: true })?.notInTotal).toEqual([]);
   });
 
   it('knows whether a chosen Task is one the criterion acts on, with the Switch on or off (#161)', () => {

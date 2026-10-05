@@ -1112,7 +1112,7 @@ export const vSprintPlan = v.object({
     plan: v.array(vAreaPlan),
     chosenCount: v.pipe(v.number(), v.integer()),
     totals: vSprintTotals,
-    leftOut: v.array(vSprintTaskId),
+    notInTotal: v.array(vSprintTaskId),
     drivers: v.array(vCapacityDriver),
     improvement: v.optional(vRetroImprovement),
     criterion: v.optional(v.object({
@@ -1294,7 +1294,7 @@ export const vGoalFact = v.object({
 });
 
 /**
- * Occurrences by state; excluded ones are not counted.
+ * Occurrences by state: done, skipped and missed only. Excluded ones (and pending ones, which become missed when the Sprint ends) are not counted.
  */
 export const vOccurrenceCounts = v.object({
     done: v.pipe(v.number(), v.integer()),
@@ -1849,7 +1849,7 @@ export const vSprintPlanWritable = v.object({
     plan: v.array(vAreaPlanWritable),
     chosenCount: v.pipe(v.number(), v.integer()),
     totals: vSprintTotals,
-    leftOut: v.array(vSprintTaskId),
+    notInTotal: v.array(vSprintTaskId),
     drivers: v.array(vCapacityDriverWritable),
     improvement: v.optional(vRetroImprovement),
     criterion: v.optional(v.object({

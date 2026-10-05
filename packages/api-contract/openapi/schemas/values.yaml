@@ -210,10 +210,13 @@ TaskFact:
     occurrences:
       description: >-
         A recurring Task's occurrences in this SprintTask, by state (F20).
-        Left out for the others.
+        Absent for the others.
       $ref: '#/OccurrenceCounts'
 OccurrenceCounts:
-  description: Occurrences by state; excluded ones are not counted.
+  description: >-
+    Occurrences by state: done, skipped and missed only. Excluded ones
+    (and pending ones, which become missed when the Sprint ends) are not
+    counted.
   type: object
   required: [done, skipped, missed]
   properties:
