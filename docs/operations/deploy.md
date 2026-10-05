@@ -1,6 +1,6 @@
 # services/api のデプロイ
 
-更新：2026-10-03（Issue #32）。方針は [ADR 0004](../architecture/adr/0004-api-platform-and-auth.md) の「デプロイ」。
+更新：2026-10-05（Issue #434。§8 を今の API と本番ビルドに合わせた）。初版：2026-10-03（Issue #32）。方針は [ADR 0004](../architecture/adr/0004-api-platform-and-auth.md) の「デプロイ」。
 
 `services/api` は、main への push で GitHub Actions（`.github/workflows/deploy.yml`）が Cloudflare Workers にデプロイする。この文書は、そのためにオーナーが手で行う設定と、公開後の確認の手順を書く。値（トークン、アカウント ID、client secret、秘密鍵、メールアドレス）はこの文書・リポジトリ・Issue・PR に書かない。
 
@@ -113,12 +113,14 @@ secret はリポジトリの secret ではなく、この Environment の secret
 
 結果は Issue #32 か PR に残す。トークン・アカウント ID・メールアドレス・IP は伏せる。公開 URL は秘密として扱わない（リポジトリが public なので、`wrangler deploy` が Actions のログに出す）。守りは許可の一覧、同意画面のテストユーザー、レート制限で行う。
 
+手元と CI の E2E テスト（`pnpm e2e`。ADR 0008）は、同じ構成の Worker（`apps/web/dist` の静的アセットと API）を `wrangler dev` と仮の値で動かし、次を確かめる：`/api/*` を API が答え画面の HTML にならないこと（存在しない経路は 404、セッションのない `/api/me` は 401。どちらも problem+json）、それ以外のパスを Web の画面が答えること（サインインしていない訪問者は、開いたパスを `redirect` に残してサインインの画面へ送られる）、サインインした利用者の最初の設定と Task の追加が D1 に残ること。ここではそれを、公開した Worker で確かめ直す。E2E が通らないもの（本物の Cloudflare の配信とキャッシュのヘッダー、secret、Google とパスキーのサインイン、RP ID、レート制限）は、下の手作業のまま。
+
 ### API の経路
 
 ```sh
 curl -i <公開 URL>/api/health   # 200 と {"status":"ok"}
-curl -i <公開 URL>/api/me       # 401（セッションなし）
-curl -i <公開 URL>/api/xxx      # 404（text/plain の "404 Not Found"。画面の HTML ではない）
+curl -i <公開 URL>/api/me       # 401（セッションなし。application/problem+json、type は /problems/unauthenticated）
+curl -i <公開 URL>/api/xxx      # 404（application/problem+json、type は /problems/not-found。画面の HTML ではない）
 curl -i <公開 URL>/health       # 200 だが API ではなく、画面の HTML（旧い経路は API として応答しない）
 ```
 
@@ -130,9 +132,9 @@ curl -i "<公開 URL>/today?date=2026-10-01"   # 同じ index.html（直接開�
 curl -i "<公開 URL>/sprint?sprint=3"         # 同じ
 ```
 
-- ブラウザで `<公開 URL>/` と `<公開 URL>/today?date=2026-10-01` を開くと画面が表示され、再読み込みしても同じ画面が開く。存在しないパス（`<公開 URL>/nothing`）は画面の「ページが見つかりません」になる。
+- ブラウザで `<公開 URL>/` と `<公開 URL>/today?date=2026-10-01` を開くと、サインインしていないので「サインイン」の画面が開く（`/sign-in`。開いた深いパスは URL の `redirect` に残る。`/` は先に `/today` へ送られる。存在しないパスも同じ）。画面の中身の確認は、サインインした後に行う（下の「Google でサインインし、`/api/me` を確かめる」の 3）。
 - `/` の HTML が参照する `/assets/index-<ハッシュ>.js` を `curl -I` で取ると、200 と `Cache-Control: public, max-age=0, must-revalidate`、`ETag`。その `ETag` を `If-None-Match` に付けて取り直すと 304（`immutable` は付けない。ADR 0004「Web と API の配信」）。
-- ここで見る画面は、#272 が本番ビルドから fixture を外すまでは fixture のデータで動く（API を使わない）。
+- 本番ビルドには fixture もブラウザ内モックも入らない（ADR 0005「本番ビルド」。`pnpm build` が出力を検査する）。画面は API のデータで動き、サインインしていなければ API が 401 を返して、サインインの画面へ送られる。
 
 ### 登録を絞る（許可の一覧にないアカウント）
 
@@ -155,8 +157,9 @@ curl -i "<公開 URL>/sprint?sprint=3"         # 同じ
 
 ### Google でサインインし、`/api/me` を確かめる
 
-1. 上の 1 をもう一度行う。同意のあと `<公開 URL>/api/me` に戻り、`{"userId":"…"}` が表示される（200）。
+1. 上の 1 をもう一度行う。同意のあと `<公開 URL>/api/me` に戻り、`{"userId":"…","settings":null}` が表示される（200。`settings` は利用者の設定で、まだ作っていなければ `null`。作ってあれば `settings` の中身に加えて、今日を決めた `clock` と、Sprint があれば `sprints` も返る。ADR 0006「読み取り」）。
 2. 開発者ツールの Application → Cookies で、セッションの Cookie が `__Secure-better-auth.session_token` という名前で、HttpOnly・Secure・SameSite=Lax であることを確かめる。
+3. 同じブラウザで Web の画面を確かめる。`<公開 URL>/today?date=2026-10-01` を開く（設定をまだ作っていなければ、先に「最初の設定」の画面が出る。ここで作る設定が、そのまま使う設定になる。週の始まりとタイムゾーンは、あとから変えられない。タイムゾーンはこのブラウザの値になる）。画面が開き、再読み込みしても同じ画面が開く。存在しないパス（`<公開 URL>/nothing`）は画面の「ページが見つかりません」になる。
 
 ### パスキーを追加し、パスキーでサインインする
 
@@ -189,7 +192,7 @@ curl -i "<公開 URL>/sprint?sprint=3"         # 同じ
    (await fetch('/api/me')).status; // 401
    ```
 
-3. パスキーでサインインし、`/api/me` が 200 と同じ利用者 ID を返すことを確かめる。
+3. パスキーでサインインし、`/api/me` が 200 と同じ利用者 ID（`userId`）を返すことを確かめる。
 
    ```js
    const options = await (await fetch('/api/auth/passkey/generate-authenticate-options')).json();
@@ -202,7 +205,7 @@ curl -i "<公開 URL>/sprint?sprint=3"         # 同じ
      headers: { 'Content-Type': 'application/json' },
      body: JSON.stringify({ response: credential.toJSON() }),
    });
-   await (await fetch('/api/me')).json(); // {"userId":"…"}
+   await (await fetch('/api/me')).json(); // userId が同じ
    ```
 
 RP ID（`rp.id`・`rpId`）が公開 URL のホスト名で、登録とサインインが通れば、RP ID と origin は公開 URL と合っている。
