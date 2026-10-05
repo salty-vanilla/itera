@@ -541,6 +541,49 @@ describe('the Backlog on the API', () => {
     expect(screen.queryByText('保存できませんでした')).toBeNull();
   });
 
+  it('sends 元に戻す of an archive pressed while another row’s archive is on its way, and once on a double press (#432)', async () => {
+    let holding = false;
+    const saves = held((request) => holding && request.method !== 'GET');
+    const { store, requests } = serve(saves.answer);
+    renderBacklog();
+    await list();
+    const archive = async (title: string) => {
+      await userEvent.click(
+        screen.getByRole('button', { name: `その他の操作：${title}` }),
+      );
+      await userEvent.click(
+        await screen.findByRole('menuitem', { name: 'アーカイブ' }),
+      );
+    };
+    const archived = (title: string) =>
+      store.getSnapshot().records.tasks.find((t) => t.title === title)
+        ?.archivedAt !== undefined;
+    await archive('本棚を整理する');
+    const undoA = await screen.findByRole('button', { name: '元に戻す' });
+    // The second is on its way, so the first Toast is still showing: its
+    // 元に戻す is pressed.
+    holding = true;
+    await archive('歯医者の予約');
+    await until(() => expect(saves.waiting).toBe(1));
+    await userEvent.dblClick(undoA);
+    // The second archive goes through; the first one's 元に戻す, which was
+    // waiting behind it, is on its way.
+    saves.next();
+    await until(() => expect(saves.waiting).toBe(1));
+    // The second Toast shows once it is done: its 元に戻す, pressed while
+    // the first is on its way, is sent after it, not thrown away.
+    await userEvent.click(
+      await screen.findByRole('button', { name: '元に戻す' }),
+    );
+    saves.release();
+    await until(() => {
+      expect(archived('本棚を整理する')).toBe(false);
+      expect(archived('歯医者の予約')).toBe(false);
+    });
+    expect(requests.filter((r) => r.endsWith('/restore'))).toHaveLength(2);
+    expect(screen.queryByText('保存できませんでした')).toBeNull();
+  });
+
   it('holds the close of a detail whose title a failed save left out, and drops it on 保存せずに閉じる (#332)', async () => {
     serve((request) => (request.method === 'PATCH' ? refused() : undefined));
     const router = renderBacklog();

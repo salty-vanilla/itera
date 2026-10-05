@@ -23,9 +23,9 @@ import { savedOf, useOperation, type Saved } from '@/api/use-operation';
 // again gives back `false` without sending, except the ones a field saves
 // as it is left (`whileSending: 'wait'`): those are sent in order. So are
 // the ones a row's button sends, which the person presses on one row after
-// another (completing, taking the completion back, archiving): sent after
-// the one on its way, and only a repeat on the same Task is dropped (#379,
-// #432).
+// another (completing, taking the completion back, archiving, taking the
+// archive back): sent after the one on its way, and only a repeat on the
+// same Task is dropped (#379, #432).
 //
 // Split by who uses them, so that a small part (a subtask's row) does not
 // make an observer for every operation.
@@ -49,10 +49,7 @@ export function useTaskActions() {
   const undoRejection = useOperation('undoRejection');
   const wait = { whileSending: 'wait' } as const;
   const archiveTask = useOperation('archiveTask', wait);
-  // Not `wait`: the Toast of an archive is one (a later archive takes its
-  // place) and writes are sent one at a time, so a second restore on another
-  // Task cannot be pressed while the first is on its way (#432).
-  const restoreTask = useOperation('restoreTask');
+  const restoreTask = useOperation('restoreTask', wait);
   const completeTask = useOperation('completeTask', wait);
   const undoCompleteTask = useOperation('undoCompleteTask', wait);
   const once = useOncePerTarget();
@@ -117,7 +114,8 @@ export function useTaskActions() {
       (await once(`archiveTask:${taskId}`, () => archiveTask.run({ taskId })))
         ?.ok === true,
     restoreTask: async (taskId: TaskId) =>
-      (await restoreTask.run({ taskId })).ok,
+      (await once(`restoreTask:${taskId}`, () => restoreTask.run({ taskId })))
+        ?.ok === true,
     completeTask: async (taskId: TaskId) =>
       (await once(`completeTask:${taskId}`, () => completeTask.run({ taskId })))
         ?.ok === true,
