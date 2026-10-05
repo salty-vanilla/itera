@@ -37,7 +37,7 @@ TimeBasis:
   type: string
   enum: [task, subtasks]
 TaskCreatedVia:
-  description: Closed enum.
+  description: Open enum. Where the Task was made; no screen depends on the value.
   type: string
   enum: [backlog, today, agent]
 SuggestionBound:
@@ -377,7 +377,7 @@ DailySelection:
         resolution: { $ref: '#/ClosedResolution' }
         at: { $ref: './common.yaml#/Instant' }
 ActualTimeVia:
-  description: Closed enum.
+  description: Open enum. How the actual time was recorded; no screen depends on the value.
   type: string
   enum: [completion, pause, later]
 ActualTime:

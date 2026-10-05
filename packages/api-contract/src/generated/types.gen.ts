@@ -397,7 +397,7 @@ export type EstimateSuggestion = {
 export type RecurrenceRuleId = string;
 
 /**
- * Closed enum.
+ * Open enum. Where the Task was made; no screen depends on the value.
  */
 export type TaskCreatedVia = 'backlog' | 'today' | 'agent';
 
@@ -828,7 +828,7 @@ export type DailySelection = {
 };
 
 /**
- * Closed enum.
+ * Open enum. How the actual time was recorded; no screen depends on the value.
  */
 export type ActualTimeVia = 'completion' | 'pause' | 'later';
 
@@ -1265,7 +1265,7 @@ export type CriterionEffect = {
 };
 
 /**
- * Closed enum. Why 確定 is not possible yet. `previousRetroOpen`: the previous Sprint's Retro is open (invariant 12). `inactiveTasks`: a chosen Task was completed or archived.
+ * Open enum. Why 確定 is not possible yet. `previousRetroOpen`: the previous Sprint's Retro is open (invariant 12). `inactiveTasks`: a chosen Task was completed or archived. A client shows the reasons it knows and leaves out the others (`capabilities.canConfirm` says whether it can be done).
  */
 export type PlanningBlocker = 'previousRetroOpen' | 'inactiveTasks';
 
@@ -1631,7 +1631,7 @@ export type PlanningCriterionCapabilities = {
 };
 
 /**
- * Closed enum. `decisionMissing`: 続ける / 終える / 置き換える is not chosen (invariant 36). `continueWithDraft`: 続ける keeps the active criterion, so the draft must go (invariant 35).
+ * Open enum. `decisionMissing`: 続ける / 終える / 置き換える is not chosen (invariant 36). `continueWithDraft`: 続ける keeps the active criterion, so the draft must go (invariant 35). A client shows the reasons it knows and leaves out the others (`capabilities.canComplete` says whether it can be done).
  */
 export type RetroBlocker = 'decisionMissing' | 'continueWithDraft';
 

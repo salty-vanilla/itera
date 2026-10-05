@@ -361,15 +361,17 @@ oasdiff は npm の依存にできない（npm の `oasdiff` は名前の予約�
 
 列挙は 2 種類に分け、どちらなのかを仕様の `description` に書く。
 
-- 書き方：`enum` を持つすべてのスキーマ（入れ子の項目も含む）と、エラーの本文の `oneOf` の `description` を、`Closed enum.` か `Open enum.` で始める（周りの `description` が英語なので、語も英語にする。`x-` の拡張は使わない）。`packages/api-contract/src/enum-kinds.test.ts` が、`redocly bundle` した契約を走査して、書き漏れ（と、エラーの `type` が開いた列挙でないこと）を `pnpm test`（`pnpm check`）で失敗にする。
-- 分類：開いた列挙は、エラーの `type`（`RuleViolationError.type`）とエラーの本文の `oneOf`（`RuleViolation`）だけ。ほかはすべて閉じた列挙。状態の名前・union の判別子・`SprintWeek` のほか、基準で決まらなかった `PlanningBlocker`・`RetroBlocker`・`CapacityStatus`・`TaskCreatedVia`・`DailySelectionOrigin`・`SprintTaskOrigin`・`ActualTimeVia`・`CarryOverPlace`・要求の側の `BacklogSlice` も閉じた列挙にした。閉じた列挙を開いた列挙に緩めるのは壊さない変更で、逆は壊す変更になるので、迷うものは閉じた列挙から始める。要求の側の列挙は、知らない値を受け取るのがサーバーで、サーバーは 400 にするので閉じた列挙になる。
-
-- **開いた列挙**：値が増えることを前提にする列挙。エラーの `type`（#319 までは `code`）。値を足すのは壊さない変更。操作の可否は列挙ではなく、記録ごとの `capabilities` の真偽値の項目にした（ADR 0007「操作の可否」、#322）。`can…` を足すのは、応答に項目を足す変更（下の「壊さない変更」）で、クライアントは知らない `can…` を読み飛ばし、その操作は出さない。
+- **開いた列挙**：値が増えることを前提にする列挙。エラーの `type`（#319 までは `code`）と、下の「分類」の列挙。値を足すのは壊さない変更。操作の可否は列挙ではなく、記録ごとの `capabilities` の真偽値の項目にした（ADR 0007「操作の可否」、#322）。`can…` を足すのは、応答に項目を足す変更（下の「壊さない変更」）で、クライアントは知らない `can…` を読み飛ばし、その操作は出さない。
   - 受け取る側（すべてのクライアントと、そこで使う生成した型と検証）は、知らない値を受理しなければならない。知らない値で、読み込み（decode）も応答の検証も失敗させない。知らない `type` は一般の失敗として扱う。知らない HTTP のステータス（#266 で足した 413 のように、後から足すもの）も、一般の失敗として扱う。
   - iOS・Android の生成した型がこれを満たすこと（知らない値を表す場合を持つか、文字列として受ける）を、生成の道具を選ぶ条件にする。満たさない道具は使わない。
   - 今の仕様は、`type` をエラーごとに `const` で書いている（domain の 3 つの種類の `RuleViolationError` だけ `enum`）。操作の 422 は `RuleViolationError`・`UserNotSetUpError`・`IdempotencyKeyReusedError` の `oneOf`（#266。3 つ目は #320）。エラーの本文の `oneOf` のように、枝が `type` の値だけで分かれ、形がどれも Problem Details（`{ type, title, status, detail }` と種類ごとの拡張）のものは、開いた列挙として扱う。枝を足すのは `type` の値を足すのと同じで、壊さない変更。開いた列挙の仕様での書き方（拡張の印、`anyOf` で文字列を足すなど）は、iOS に着手する前に生成の道具と一緒に決め、そのとき `type` も書き直す。Web が応答を実行時に検証するようにするなら、それより前に決める。
 - **閉じた列挙**：値ごとに意味が違い、知らない値では正しく表示できないもの。状態の名前、union の判別子（`base`・`kind` など）、`SprintWeek` など。値を足すのは壊す変更。判別子が閉じた列挙の union に種類（`oneOf` の枝）を足すのも同じ（エラーの本文の `oneOf` は上の開いた列挙）。
 - 閉じた列挙でも、知らない値で読み込み全体を失敗させないことが望ましい（その部分を一般の形で出すか、アプリの更新を促す）。ただし、これに頼って閉じた列挙に値を足さない。
+
+- 書き方：`enum` を持つすべてのスキーマ（入れ子の項目も含む）と、エラーの本文の `oneOf` の `description` を、`Closed enum.` か `Open enum.` で始める（周りの `description` が英語なので、語も英語にする。`x-` の拡張は使わない）。`packages/api-contract/src/enum-kinds.test.ts` が、`redocly bundle` した契約を走査して、書き漏れ（と、エラーの `type` が開いた列挙でないこと）を `pnpm test`（`pnpm check`）で失敗にする。
+- 分類：開いた列挙は、エラーの `type`（`RuleViolationError.type`）とエラーの本文の `oneOf`（`RuleViolation`）のほか、画面が値で分岐せず、知らない値を読み飛ばしても操作の可否が変わらない説明・記録の列挙。`PlanningBlocker`・`RetroBlocker`（可否は `capabilities` が決め、Blocker は理由の説明だけ。知らない理由は出さずに通す。domain には今は出していない理由もあり、値が増える）、`TaskCreatedVia`・`ActualTimeVia`（経路の記録で、表示が値に依存しない）。ほかはすべて閉じた列挙（状態の名前、union の判別子、`SprintWeek`、画面が値ごとに分岐する `CapacityStatus`・`DailySelectionOrigin`・`SprintTaskOrigin`・`CarryOverPlace`）。開いた列挙の仕様での書き方を決めるとき（iOS の前）、エラーの `type` と一緒に、これらも書き直す。
+- 要求の側にだけ出る列挙（`BacklogSlice`、`AnyEntityTag`）の「閉じた」は、知らない値を受け取るサーバーが 400 にする、という意味。古いクライアントは新しい値を送らないので、値を足すのは壊さない変更で、値を消すのが壊す変更になる。
+- 向き：応答に出る列挙で、閉じた列挙を開いた列挙に変えるのは壊す変更（受け取る側に、知らない値を受理する義務が新しく生まれ、閉じた列挙として作ったクライアントはそれを満たさない）。開いた列挙を閉じるのは、すでに寛容なクライアントを壊さない。そのため分類は、画面が値で分岐するかで決める。迷うものを閉じた列挙から始めない。
 
 ### 壊さない変更
 

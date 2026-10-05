@@ -414,7 +414,7 @@ export const vEstimateSuggestion = v.object({
 export const vRecurrenceRuleId = v.pipe(v.string(), v.regex(/^recurrence_rule_[0-7][0-9a-hjkmnp-tv-z]{9}[ef][0-9a-hjkmnp-tv-z]{2}[89abrstv][0-9a-hjkmnp-tv-z]{12}$/));
 
 /**
- * Closed enum.
+ * Open enum. Where the Task was made; no screen depends on the value.
  */
 export const vTaskCreatedVia = v.picklist([
     'backlog',
@@ -762,7 +762,7 @@ export const vDailySelection = v.object({
 });
 
 /**
- * Closed enum.
+ * Open enum. How the actual time was recorded; no screen depends on the value.
  */
 export const vActualTimeVia = v.picklist([
     'completion',
@@ -1142,7 +1142,7 @@ export const vCriterionEffect = v.object({
 });
 
 /**
- * Closed enum. Why 確定 is not possible yet. `previousRetroOpen`: the previous Sprint's Retro is open (invariant 12). `inactiveTasks`: a chosen Task was completed or archived.
+ * Open enum. Why 確定 is not possible yet. `previousRetroOpen`: the previous Sprint's Retro is open (invariant 12). `inactiveTasks`: a chosen Task was completed or archived. A client shows the reasons it knows and leaves out the others (`capabilities.canConfirm` says whether it can be done).
  */
 export const vPlanningBlocker = v.picklist(['previousRetroOpen', 'inactiveTasks']);
 
@@ -1473,7 +1473,7 @@ export const vPlanningCriterionCapabilities = v.pipe(v.object({
 }), v.readonly());
 
 /**
- * Closed enum. `decisionMissing`: 続ける / 終える / 置き換える is not chosen (invariant 36). `continueWithDraft`: 続ける keeps the active criterion, so the draft must go (invariant 35).
+ * Open enum. `decisionMissing`: 続ける / 終える / 置き換える is not chosen (invariant 36). `continueWithDraft`: 続ける keeps the active criterion, so the draft must go (invariant 35). A client shows the reasons it knows and leaves out the others (`capabilities.canComplete` says whether it can be done).
  */
 export const vRetroBlocker = v.picklist(['decisionMissing', 'continueWithDraft']);
 
