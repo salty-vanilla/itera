@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot, fixtureIds } from './fixtures/states';
 import type { Records } from './records';
 import { backlogData } from './backlog-view';
+import { runningData } from './running-view';
 import { todayData } from './today-view';
 import { tagged } from './testing';
 
@@ -143,6 +144,41 @@ describe('opensOn', () => {
       (day) => todayData(tagged(records), on(day))?.opensOn,
     );
     expect(answers).toEqual(['2026-09-28', undefined, undefined]);
+  });
+});
+
+// Today, the running Sprint and the Backlog's 今日へ ask the same question,
+// "is it before the first day?", and give the same day (#428).
+describe('opensOn across the reads', () => {
+  const { records, clock } = fixtureSnapshot('today-interrupt');
+  const on = (today: string) => ({ ...clock, today: localDate(today) });
+
+  it('gives one day in Today, the running Sprint and every Backlog row, and none from the first day on', () => {
+    const answers = ['2026-09-27', '2026-09-28', '2026-10-04'].map((day) => {
+      const backlog = backlogData(tagged(records), on(day), {});
+      return {
+        day,
+        today: todayData(tagged(records), on(day))?.opensOn,
+        running: runningData(tagged(records), on(day))?.opensOn,
+        rows: [
+          ...new Set(
+            Object.values(backlog.items).map((i) => i.todayOpensOn?.start),
+          ),
+        ],
+      };
+    });
+    expect(answers.map((a) => [a.today, a.running])).toEqual([
+      ['2026-09-28', '2026-09-28'],
+      [undefined, undefined],
+      [undefined, undefined],
+    ]);
+    // Before the first day some row waits for it, and none does after.
+    expect(answers[0]?.rows).toContain('2026-09-28');
+    expect(
+      answers[0]?.rows.every((d) => d === undefined || d === '2026-09-28'),
+    ).toBe(true);
+    expect(answers[1]?.rows).toEqual([undefined]);
+    expect(answers[2]?.rows).toEqual([undefined]);
   });
 });
 
