@@ -41,6 +41,9 @@ function Switch({
       invalid={invalid}
       className={cn(
         'grid max-w-measure-read grid-cols-[1fr_auto] gap-x-4',
+        // With enlarged text the label would get 4 to 6 characters a line
+        // beside the switch: it takes the full width, the switch goes under it (#425).
+        'enlarged:grid-cols-1',
         className,
       )}
     >
