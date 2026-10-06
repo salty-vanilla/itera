@@ -831,15 +831,16 @@ TodayData:
     today: { $ref: './common.yaml#/LocalDate' }
     day:
       description: >-
-        From the Sprint's first day on: today's place in it. Absent before
-        the first day, when opensOn is there instead (#427).
+        From the Sprint's first day on: today's place in it, always there
+        then. Absent before the first day, when opensOn is there instead:
+        exactly one of day and opensOn is present (#427, #449).
       $ref: './values.yaml#/DayOfSprint'
     lastDay: { type: boolean }
     opensOn:
       description: >-
         Before the Sprint's first day: that day. Choosing for the day,
         adding and interrupts wait for it (#54, #347). Absent from the first
-        day on.
+        day on, when day is there instead.
       $ref: './common.yaml#/LocalDate'
     timeZone: { $ref: './common.yaml#/TimeZone' }
     progress: { $ref: './values.yaml#/WeekProgress' }
