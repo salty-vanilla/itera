@@ -11,14 +11,23 @@ import { controlBoxStyles, controlSizeVariants } from './text-input';
 // with a custom dropdown. Use it inside Field. For 2–5 choices that should
 // all be visible, use RadioGroup.
 
+// Room for the mark before the value: 8px, the mark and 4px (as in a Filter).
+// The mark is an AreaMark, whose side is `--area-mark-size` (globals.css): at
+// least 20px and at least a line of its rem-sized letter (#393). The room
+// follows it, so that the value does not run under the mark at any text size
+// or width (#448). It is 32px at the default size.
+const markRoom =
+  'pl-[calc(var(--spacing-2)+var(--area-mark-size)+var(--spacing-1))]';
+
 type SelectProps = Omit<
   ComponentProps<'select'>,
   'className' | 'size' | 'prefix'
 > &
   VariantProps<typeof controlSizeVariants> & {
     /**
-     * A decorative mark shown inside the box before the value, e.g. the Area
-     * symbol of the chosen Area. It is not read out: the value is.
+     * A decorative mark shown inside the box before the value: the Area
+     * symbol (AreaMark) of the chosen Area, for which the room before the
+     * value is sized. It is not read out: the value is.
      */
     prefix?: ReactNode | undefined;
     className?: string | undefined;
@@ -42,11 +51,10 @@ function Select({ size, prefix, className, children, ...props }: SelectProps) {
             className={cn(
               'w-full min-w-0 cursor-pointer appearance-none self-stretch bg-transparent text-inherit',
               // Room for the chevron, which does not take pointer events.
-              'pr-8 pl-3',
-              size === 'sm' && 'medium:pl-2',
-              // Room for the mark: 8px, the 20px symbol and 4px (as in a Filter).
-              // The symbol grows with enlarged text (#393).
-              prefix !== undefined && 'pl-8 medium:pl-8 enlarged:pl-12',
+              'pr-8',
+              prefix !== undefined
+                ? markRoom
+                : ['pl-3', size === 'sm' && 'medium:pl-2'],
               'outline-none disabled:cursor-not-allowed',
             )}
             {...props}

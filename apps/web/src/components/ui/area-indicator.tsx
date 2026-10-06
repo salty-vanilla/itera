@@ -27,8 +27,8 @@ function AreaMark({ name, color }: { name: string; color: AreaColor }) {
       data-slot="area-mark"
       className={cn(
         // At least a line of its letter, so that enlarged text stays in the
-        // square (#393).
-        'grid size-[max(var(--spacing-area-badge),1lh)] shrink-0 place-items-center rounded-sm text-kicker text-on-area',
+        // square (#393). Select makes room for this width (#448).
+        'grid size-(--area-mark-size) shrink-0 place-items-center rounded-sm text-kicker text-on-area',
         areaBackground[color],
       )}
     >
