@@ -278,6 +278,18 @@
 
 @layer base {
   /*
+   * The side of an Area symbol: 20px, or a line of its 12px letter when the
+   * browser's font size makes that taller (#393). AreaMark is this wide and
+   * a Select makes room for it before its value (#448); both read it here.
+   */
+  :root {
+    --area-mark-size: max(
+      var(--spacing-area-badge),
+      var(--text-kicker--line-height)
+    );
+  }
+
+  /*
    * The compact Toast sits above the bottom tab bar (56px: 8 + 20 + 4 + 16
    * + 8, components/ui/navigation.tsx; the 16 is the name's line, which
    * grows with the browser's font size, #393) and the safe area.

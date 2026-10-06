@@ -19,11 +19,11 @@ describe('Select prefix room (#448)', () => {
         </Select>
       </Field>,
     );
-    // One rule for every width: 8px + the mark (at least 20px and a line of
-    // its rem-sized letter) + 4px. A step on `enlarged:` (a width) is what
+    // One rule for every width: 8px + the mark (--area-mark-size, which
+    // AreaMark is also sized by) + 4px. A step on `enlarged:` (a width) is what
     // let the value run under the mark at 32px text on a wide screen.
     expect(paddingLeft(screen.getByRole('combobox'))).toEqual([
-      'pl-[calc(var(--spacing-2)+max(var(--spacing-area-badge),var(--text-kicker--line-height))+var(--spacing-1))]',
+      'pl-[calc(var(--spacing-2)+var(--area-mark-size)+var(--spacing-1))]',
     ]);
   });
 

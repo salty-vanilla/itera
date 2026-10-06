@@ -12,12 +12,12 @@ import { controlBoxStyles, controlSizeVariants } from './text-input';
 // all be visible, use RadioGroup.
 
 // Room for the mark before the value: 8px, the mark and 4px (as in a Filter).
-// The mark is an AreaMark, at least 20px and at least a line of its 12px
-// letter, which is in rem (#393); the room follows it in the same terms, so
-// that the value does not run under the mark at any text size or width
-// (#448). It is 32px at the default size.
+// The mark is an AreaMark, whose side is `--area-mark-size` (globals.css): at
+// least 20px and at least a line of its rem-sized letter (#393). The room
+// follows it, so that the value does not run under the mark at any text size
+// or width (#448). It is 32px at the default size.
 const markRoom =
-  'pl-[calc(var(--spacing-2)+max(var(--spacing-area-badge),var(--text-kicker--line-height))+var(--spacing-1))]';
+  'pl-[calc(var(--spacing-2)+var(--area-mark-size)+var(--spacing-1))]';
 
 type SelectProps = Omit<
   ComponentProps<'select'>,
@@ -25,8 +25,9 @@ type SelectProps = Omit<
 > &
   VariantProps<typeof controlSizeVariants> & {
     /**
-     * A decorative mark shown inside the box before the value, e.g. the Area
-     * symbol of the chosen Area. It is not read out: the value is.
+     * A decorative mark shown inside the box before the value: the Area
+     * symbol (AreaMark) of the chosen Area, for which the room before the
+     * value is sized. It is not read out: the value is.
      */
     prefix?: ReactNode | undefined;
     className?: string | undefined;
