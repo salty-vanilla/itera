@@ -1005,12 +1005,12 @@ export type TodayData = {
     number: number;
     today: LocalDate;
     /**
-     * From the Sprint's first day on: today's place in it. Absent before the first day, when opensOn is there instead (#427).
+     * From the Sprint's first day on: today's place in it, always there then. Absent before the first day, when opensOn is there instead: exactly one of day and opensOn is present (#427, #449).
      */
     day?: DayOfSprint;
     lastDay: boolean;
     /**
-     * Before the Sprint's first day: that day. Choosing for the day, adding and interrupts wait for it (#54, #347). Absent from the first day on.
+     * Before the Sprint's first day: that day. Choosing for the day, adding and interrupts wait for it (#54, #347). Absent from the first day on, when day is there instead.
      */
     opensOn?: LocalDate;
     timeZone: TimeZone;
@@ -2051,12 +2051,12 @@ export type TodayDataWritable = {
     number: number;
     today: LocalDate;
     /**
-     * From the Sprint's first day on: today's place in it. Absent before the first day, when opensOn is there instead (#427).
+     * From the Sprint's first day on: today's place in it, always there then. Absent before the first day, when opensOn is there instead: exactly one of day and opensOn is present (#427, #449).
      */
     day?: DayOfSprint;
     lastDay: boolean;
     /**
-     * Before the Sprint's first day: that day. Choosing for the day, adding and interrupts wait for it (#54, #347). Absent from the first day on.
+     * Before the Sprint's first day: that day. Choosing for the day, adding and interrupts wait for it (#54, #347). Absent from the first day on, when day is there instead.
      */
     opensOn?: LocalDate;
     timeZone: TimeZone;
