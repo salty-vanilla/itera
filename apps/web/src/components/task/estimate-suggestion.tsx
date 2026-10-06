@@ -2,12 +2,16 @@ import type {
   EstimateSuggestion as Suggestion,
   SuggestionBound,
 } from '@itera/api-contract';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { DurationField } from '@/components/ui/duration-field';
 import { BOUND_WORDS } from '@/lib/criterion-text';
 import { boundValue } from '@/lib/domain-functions';
-import { DURATION_ERROR, hoursText, readMinutes } from '@/lib/duration-text';
+import {
+  DURATION_ERROR,
+  hoursText,
+  readPositiveMinutes,
+} from '@/lib/duration-text';
 import { formatHours, formatRange } from '@/lib/time-format';
 import { cn } from '@/lib/utils';
 
@@ -69,10 +73,10 @@ function EstimateSuggestion({
   const valuesLabelId = useId();
   // Where focus goes when the inline field closes by キャンセル.
   const backToEdit = useRef(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (autoFocus) firstRef.current?.focus();
   }, [autoFocus]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!editing && backToEdit.current) {
       backToEdit.current = false;
       editRef.current?.focus();
@@ -80,8 +84,8 @@ function EstimateSuggestion({
   }, [editing]);
 
   async function adoptEdited() {
-    const minutes = readMinutes(hours);
-    if (minutes === undefined || minutes === null || minutes === 0) {
+    const minutes = readPositiveMinutes(hours);
+    if (minutes === undefined || minutes === null) {
       setError(DURATION_ERROR);
       fieldRef.current?.focus();
       return;
@@ -118,7 +122,7 @@ function EstimateSuggestion({
       </p>
       {/* Free text with times in it: broken between phrases, so that
           「1〜2時間」 is not broken inside (#239). */}
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-body [text-wrap:pretty] [word-break:auto-phrase]">
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-body [text-wrap:pretty] [word-break:auto-phrase] enlarged:grid-cols-1">
         <dt className="text-label text-ink-muted">根拠</dt>
         <dd className="text-ink">
           {suggestion.rationale === ''
@@ -182,7 +186,8 @@ function EstimateSuggestion({
               <div
                 role="group"
                 aria-labelledby={valuesLabelId}
-                className="flex"
+                // With enlarged text the values go onto more lines (#393).
+                className="flex enlarged:flex-wrap enlarged:gap-1"
               >
                 {bounds.map((bound, index) => (
                   <Button
@@ -190,9 +195,11 @@ function EstimateSuggestion({
                     ref={index === 0 ? firstRef : undefined}
                     size="sm"
                     className={cn(
-                      'focus-visible:z-1',
-                      index > 0 && '-ms-px rounded-s-none',
-                      index < bounds.length - 1 && 'rounded-e-none',
+                      'focus-visible:z-(--layer-local)',
+                      index > 0 &&
+                        '-ms-px rounded-s-none enlarged:ms-0 enlarged:rounded-s-sm',
+                      index < bounds.length - 1 &&
+                        'rounded-e-none enlarged:rounded-e-sm',
                     )}
                     aria-label={`${BOUND_WORDS[bound]}の ${formatHours(boundValue(suggestion, bound))}を使う`}
                     onClick={() => onAdopt(bound)}
@@ -244,7 +251,7 @@ function SuggestionOutcome({
 }) {
   // The button that was pressed (採用, 却下) is gone; focus goes to 元に戻す.
   const undoRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => undoRef.current?.focus(), []);
+  useLayoutEffect(() => undoRef.current?.focus(), []);
   return (
     <p
       role="status"

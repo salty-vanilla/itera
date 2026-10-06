@@ -6,6 +6,15 @@
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
 /*
+ * Enlarged text (#393): the screen is less than 20em across. em in a media
+ * query is the browser's font size setting, so at the default 16px this
+ * starts below 320px (the narrowest width supported) and with the text at
+ * 200% below 640px. Only there may a range break after 「〜」, a label part
+ * from its value and a sentence after 「 · 」 (DESIGN.md Typography).
+ */
+@custom-variant enlarged (@media (width < 20em));
+
+/*
  * Tailwind's default theme is cleared so that only DESIGN.md tokens exist as
  * utilities: `bg-blue-500`, `p-7` or `rounded-2xl` produce nothing.
  * Values that do not change with the theme are written here directly; the
@@ -28,77 +37,79 @@
    * Typography tokens. Each sets size, line height, letter spacing and
    * weight. LINE Seed JP has proportional figures (tabular-nums has no
    * effect): columns of numbers are right-aligned instead.
+   * Sizes and line heights are DESIGN.md's px over 16, in rem, so that the
+   * browser's font size setting enlarges the text (WCAG 1.4.4, #393).
    */
-  --text-display-l: 32px;
-  --text-display-l--line-height: 40px;
+  --text-display-l: 2rem;
+  --text-display-l--line-height: 2.5rem;
   --text-display-l--letter-spacing: 0em;
   --text-display-l--font-weight: 700;
-  --text-display-m: 24px;
-  --text-display-m--line-height: 32px;
+  --text-display-m: 1.5rem;
+  --text-display-m--line-height: 2rem;
   --text-display-m--letter-spacing: 0em;
   --text-display-m--font-weight: 700;
-  --text-goal: 18px;
-  --text-goal--line-height: 28px;
+  --text-goal: 1.125rem;
+  --text-goal--line-height: 1.75rem;
   --text-goal--letter-spacing: 0.01em;
   --text-goal--font-weight: 700;
-  --text-reflection: 16px;
-  --text-reflection--line-height: 28px;
+  --text-reflection: 1rem;
+  --text-reflection--line-height: 1.75rem;
   --text-reflection--letter-spacing: 0.02em;
   --text-reflection--font-weight: 400;
-  --text-button: 14px;
-  --text-button--line-height: 20px;
+  --text-button: 0.875rem;
+  --text-button--line-height: 1.25rem;
   --text-button--letter-spacing: 0em;
   --text-button--font-weight: 700;
-  --text-heading: 16px;
-  --text-heading--line-height: 24px;
+  --text-heading: 1rem;
+  --text-heading--line-height: 1.5rem;
   --text-heading--letter-spacing: 0em;
   --text-heading--font-weight: 700;
-  --text-subheading: 14px;
-  --text-subheading--line-height: 20px;
+  --text-subheading: 0.875rem;
+  --text-subheading--line-height: 1.25rem;
   --text-subheading--letter-spacing: 0em;
   --text-subheading--font-weight: 700;
-  --text-body-l: 16px;
-  --text-body-l--line-height: 26px;
+  --text-body-l: 1rem;
+  --text-body-l--line-height: 1.625rem;
   --text-body-l--letter-spacing: 0.02em;
   --text-body-l--font-weight: 400;
-  --text-body: 14px;
-  --text-body--line-height: 22px;
+  --text-body: 0.875rem;
+  --text-body--line-height: 1.375rem;
   --text-body--letter-spacing: 0.01em;
   --text-body--font-weight: 400;
-  --text-task: 14px;
-  --text-task--line-height: 20px;
+  --text-task: 0.875rem;
+  --text-task--line-height: 1.25rem;
   --text-task--letter-spacing: 0em;
   --text-task--font-weight: 400;
-  --text-label: 13px;
-  --text-label--line-height: 20px;
+  --text-label: 0.8125rem;
+  --text-label--line-height: 1.25rem;
   --text-label--letter-spacing: 0em;
   --text-label--font-weight: 700;
-  --text-help: 13px;
-  --text-help--line-height: 20px;
+  --text-help: 0.8125rem;
+  --text-help--line-height: 1.25rem;
   --text-help--letter-spacing: 0em;
   --text-help--font-weight: 400;
-  --text-meta: 12px;
-  --text-meta--line-height: 16px;
+  --text-meta: 0.75rem;
+  --text-meta--line-height: 1rem;
   --text-meta--letter-spacing: 0em;
   --text-meta--font-weight: 400;
-  --text-kicker: 12px;
-  --text-kicker--line-height: 16px;
+  --text-kicker: 0.75rem;
+  --text-kicker--line-height: 1rem;
   --text-kicker--letter-spacing: 0em;
   --text-kicker--font-weight: 700;
-  --text-num-l: 28px;
-  --text-num-l--line-height: 32px;
+  --text-num-l: 1.75rem;
+  --text-num-l--line-height: 2rem;
   --text-num-l--letter-spacing: 0em;
   --text-num-l--font-weight: 700;
-  --text-num-m: 16px;
-  --text-num-m--line-height: 24px;
+  --text-num-m: 1rem;
+  --text-num-m--line-height: 1.5rem;
   --text-num-m--letter-spacing: 0em;
   --text-num-m--font-weight: 700;
-  --text-num-s: 12px;
-  --text-num-s--line-height: 16px;
+  --text-num-s: 0.75rem;
+  --text-num-s--line-height: 1rem;
   --text-num-s--letter-spacing: 0em;
   --text-num-s--font-weight: 700;
-  --text-code: 12px;
-  --text-code--line-height: 16px;
+  --text-code: 0.75rem;
+  --text-code--line-height: 1rem;
   --text-code--letter-spacing: 0em;
   --text-code--font-weight: 400;
 
@@ -150,20 +161,31 @@
   --spacing-dialog-md: 560px;
   --spacing-dialog-lg: 720px;
   --container-measure-read: 38em;
+  /* `spacing.drawer`, for container queries (@min-drawer:). */
+  --container-drawer: 400px;
 
-  /* Responsive: medium 768px–, wide 1200px–, nav 1440px–, xl 1920px– */
-  --breakpoint-medium: 768px;
-  --breakpoint-wide: 1200px;
-  --breakpoint-nav: 1440px;
-  --breakpoint-xl: 1920px;
+  /*
+   * Responsive: medium 768px–, wide 1200px–, nav 1440px–, xl 1920px– at the
+   * default font size. DESIGN.md's px over 16, in em: em in a media query is
+   * the browser's font size setting, so with larger text the layout changes
+   * as with the browser's zoom (#433). All four in the same unit, or Tailwind
+   * sorts the variants wrongly.
+   */
+  --breakpoint-medium: 48em;
+  --breakpoint-wide: 75em;
+  --breakpoint-nav: 90em;
+  --breakpoint-xl: 120em;
 
   /* Motion (docs/design/foundations.md) */
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-enter: cubic-bezier(0, 0, 0.2, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
-  --default-transition-duration: 100ms;
+  --default-transition-duration: var(--duration-fast);
   --default-transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
   --animate-spin: spin 1s linear infinite;
+  /* The row just added: once, over `duration-added-flash` (motion.ts). */
+  --animate-added-flash: added-flash var(--duration-added-flash) ease-in-out
+    forwards;
   /* Indeterminate Progress: opacity only, the line does not slide. */
   --animate-progress-pulse: progress-pulse 1.6s ease-in-out infinite;
 
@@ -234,6 +256,20 @@
   outline-offset: 2px;
 }
 
+/*
+ * A value, or a label with its value, kept on one line (「実績 4時間30分」,
+ * 「2〜4時間」, DESIGN.md Typography). With enlarged text it may break at its
+ * spaces and after 「〜」 (keep-all), never inside a word or a number with
+ * its unit (#393).
+ */
+@utility nowrap-phrase {
+  white-space: nowrap;
+  @variant enlarged {
+    white-space: normal;
+    word-break: keep-all;
+  }
+}
+
 /* Inside lists, tabs and menu items the ring sits inside the item. */
 @utility focus-ring-inset {
   outline: var(--stroke-strong) solid var(--focus);
@@ -242,20 +278,46 @@
 
 @layer base {
   /*
-   * The compact Toast sits above the bottom tab bar (56px: 8 + 20 + 4 + 16
-   * + 8, components/ui/navigation.tsx) and the safe area.
+   * The side of an Area symbol: 20px, or a line of its 12px letter when the
+   * browser's font size makes that taller (#393). AreaMark is this wide and
+   * a Select makes room for it before its value (#448); both read it here.
    */
   :root {
-    --toast-offset-bottom: calc(56px + env(safe-area-inset-bottom));
+    --area-mark-size: max(
+      var(--spacing-area-badge),
+      var(--text-kicker--line-height)
+    );
   }
 
+  /*
+   * The compact Toast sits above the bottom tab bar (56px: 8 + 20 + 4 + 16
+   * + 8, components/ui/navigation.tsx; the 16 is the name's line, which
+   * grows with the browser's font size, #393) and the safe area.
+   */
+  :root {
+    --toast-offset-bottom: calc(
+      var(--spacing-2) * 2 + var(--spacing-icon-m) + var(--spacing-1) +
+        var(--text-meta--line-height) + env(safe-area-inset-bottom)
+    );
+  }
+
+  /* With enlarged text the bar shows its icons only, 44px (navigation.tsx). */
+  @variant enlarged {
+    :root {
+      --toast-offset-bottom: calc(
+        var(--spacing-target-touch) + env(safe-area-inset-bottom)
+      );
+    }
+  }
+
+  /*
+   * The root keeps the browser's font size, which rem is relative to: the
+   * body text size is set on body (#393).
+   */
   html {
     background-color: var(--canvas);
     color: var(--ink);
     font-family: var(--font-sans);
-    font-size: var(--text-body);
-    line-height: var(--text-body--line-height);
-    letter-spacing: var(--text-body--letter-spacing);
     -webkit-font-smoothing: antialiased;
   }
 
@@ -270,6 +332,9 @@
    * supports them (#250).
    */
   body {
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    letter-spacing: var(--text-body--letter-spacing);
     line-break: strict;
     overflow-wrap: break-word;
     word-break: auto-phrase;
@@ -339,6 +404,7 @@
    */
   main h1 {
     width: fit-content;
+    max-width: 100%;
     border-radius: var(--radius-sm);
   }
 
@@ -362,6 +428,31 @@
     [data-slot='filter'][aria-pressed='true'] {
       outline: var(--stroke-hairline) solid CanvasText;
     }
+    /*
+     * A toggle that is on (aria-pressed): the ink fill of DESIGN.md Selected
+     * becomes Highlight / HighlightText, and the outline of Filter is kept so
+     * that the state does not rest on the fill's colour alone. `!important`
+     * on the fill and the text, because `bg-primary` and `bg-here-subtle`
+     * (a later layer) would otherwise win over a base rule and the fill
+     * would turn Canvas, as the bars below (#394). `forced-color-adjust:
+     * none`, because Chromium otherwise paints a Canvas backplate behind the
+     * label and HighlightText on it is unreadable. That also stops the UA
+     * from forcing the colours of the border and of the focus ring (drawn
+     * outside, on Canvas, in `--focus`, which is no system colour), so both
+     * are set to CanvasText here (#400).
+     */
+    [data-slot='button'][aria-pressed='true'],
+    [data-slot='icon-button'][aria-pressed='true'] {
+      outline: var(--stroke-hairline) solid CanvasText;
+    }
+    [data-slot='button'][aria-pressed='true']:not([data-disabled]),
+    [data-slot='icon-button'][aria-pressed='true']:not([data-disabled]) {
+      forced-color-adjust: none;
+      background-color: Highlight !important;
+      border-color: CanvasText !important;
+      outline-color: CanvasText !important;
+      color: HighlightText !important;
+    }
     [data-slot='filter'][data-disabled],
     [data-slot='navigation-item'][aria-disabled='true'] {
       border-color: GrayText;
@@ -370,7 +461,7 @@
     /* The current screen keeps its bar and the selected tab its underline. */
     [data-slot='navigation-item']::before,
     [data-slot='tabs-tab']::after {
-      background-color: CanvasText;
+      background-color: CanvasText !important;
     }
     /* Area line symbols keep their colour (docs/design/accessibility.md). */
     [data-slot='area-mark'] {
@@ -379,11 +470,16 @@
     /*
      * Lines drawn with a background color disappear when backgrounds become
      * Canvas: Divider, the Progress fill and track, and the Notice surface.
+     * `!important` on the background of the lines and the fill, because the
+     * `bg-*` utilities (a later layer) would otherwise win over a base rule
+     * and keep the token colour (#394). The same goes for the bars above.
      */
     [data-slot='divider'],
-    [data-slot='divider-label'] > [aria-hidden] {
+    [data-slot='divider-label'] > [aria-hidden],
+    [data-slot='menu-separator'],
+    [data-slot='drawer-grip'] {
       forced-color-adjust: none;
-      background-color: CanvasText;
+      background-color: CanvasText !important;
     }
     /* An outline takes no room, so the 2px thin track keeps its inside. */
     [data-slot='progress-track'] {
@@ -391,17 +487,40 @@
     }
     [data-slot='progress-indicator'] {
       forced-color-adjust: none;
-      background-color: CanvasText;
+      background-color: CanvasText !important;
     }
     [data-slot='notice'] {
       border: var(--stroke-hairline) solid CanvasText;
+    }
+    /*
+     * The Capacity bar: each Area's segment keeps its colour, as the Area line
+     * symbol does, and the dashes of the range still open keep theirs on a
+     * Canvas fill. The available-hours marker is CanvasText, and the track
+     * gets an outline (an outline takes no room, as for Progress). The 2px
+     * gaps and the over line (solid or dashed) are drawn by Canvas and the
+     * border, which forced colors keep. `!important` because the `bg-*`
+     * utilities (a later layer) would otherwise win over a base rule.
+     */
+    [data-slot='capacity-bar-track'] {
+      outline: var(--stroke-hairline) solid CanvasText;
+    }
+    [data-slot='capacity-bar-segment'] {
+      forced-color-adjust: none;
+    }
+    [data-slot='capacity-bar-open'] {
+      forced-color-adjust: none;
+      background-color: Canvas !important;
+    }
+    [data-slot='capacity-bar-marker'] {
+      forced-color-adjust: none;
+      background-color: CanvasText !important;
     }
   }
 
   /*
    * The row just added in the Backlog flashes `here-subtle` and fades out
-   * (docs/design/foundations.md, Issue #86). Once, over the 2.5s the screen
-   * keeps it (backlog-screen.tsx): it holds for the first second, so that the
+   * (docs/design/foundations.md, Issue #86). Once, over `duration-added-flash`
+   * (--animate-added-flash; the screens keep the row as long, motion.ts): it holds for the first second, so that the
    * row can be found, and then fades.
    */
   @keyframes added-flash {

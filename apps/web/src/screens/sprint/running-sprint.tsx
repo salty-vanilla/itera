@@ -1,11 +1,10 @@
-import type { MadeFrom } from '@itera/api-contract/requests';
+import type { MadeFrom } from '@itera/api-contract/sending';
 import type { TaskId } from '@itera/api-contract';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { Info, Rewind, Route } from 'lucide-react';
 import { useId } from 'react';
 import type { Saved } from '@/api/use-operation';
 import { buttonVariants } from '@/components/ui/button';
-import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Progress } from '@/components/ui/progress';
 import { Tag } from '@/components/ui/tag';
 import { AvailableHoursField } from '@/components/sprint/capacity-indicator';
@@ -44,6 +43,7 @@ import {
 import { useTaskActions } from '@/screen-data/use-task-actions';
 import { CarryOverText } from '../backlog/backlog-row';
 import { TaskDetail } from '../backlog/task-detail';
+import { TaskDetailDrawer } from '../backlog/task-detail-drawer';
 import { useTaskDetailLeave } from '../backlog/use-task-detail-leave';
 import { PastDays } from './past-days';
 
@@ -91,10 +91,6 @@ function RunningSprint({
   const detail = useTaskDetailLeave();
   const openTask = (taskId: TaskId | undefined) =>
     detail.leave(() => showTask(taskId), taskId !== undefined);
-  const openItem =
-    !running || search.task === undefined || backlog.status !== 'ready'
-      ? undefined
-      : backlog.item(search.task);
   const inBacklog = (taskId: TaskId) => hasDetail(backlog, taskId);
 
   const outlook = (
@@ -133,8 +129,8 @@ function RunningSprint({
         actions={
           running ? (
             // Before the first day there is nothing to open: Today waits for
-            // it, and the Sprint stays here (#156).
-            data.today < data.sprint.start ? undefined : (
+            // it, and the Sprint stays here (#156). The read says so (#347).
+            data.opensOn !== undefined ? undefined : (
               <Link
                 to="/today"
                 className={cn(buttonVariants({ variant: 'primary' }))}
@@ -256,31 +252,27 @@ function RunningSprint({
         </aside>
       </div>
 
-      <Drawer
-        open={openItem !== undefined}
-        onOpenChange={(next) => {
-          if (!next) openTask(undefined);
-        }}
-      >
-        <DrawerContent>
-          {backlog.status === 'ready' && openItem !== undefined && (
-            <TaskDetail
-              key={openItem.task.id}
-              item={openItem}
-              areas={backlog.areas}
-              timeZone={backlog.timeZone}
-              lastDay={backlog.lastDay}
-              onClose={() => showTask(undefined)}
-              onComplete={async () => {
-                if (await taskActions.completeTask(openItem.task.id)) {
-                  showTask(undefined);
-                }
-              }}
-              leaveRef={detail.ref}
-            />
-          )}
-        </DrawerContent>
-      </Drawer>
+      <TaskDetailDrawer
+        taskId={running ? search.task : undefined}
+        backlog={backlog}
+        onDismiss={() => openTask(undefined)}
+        render={(item, ready) => (
+          <TaskDetail
+            key={item.task.id}
+            item={item}
+            areas={ready.areas}
+            timeZone={ready.timeZone}
+            lastDay={ready.lastDay}
+            onClose={() => showTask(undefined)}
+            onComplete={async () => {
+              if (await taskActions.completeTask(item.task.id)) {
+                showTask(undefined);
+              }
+            }}
+            leaveRef={detail.ref}
+          />
+        )}
+      />
     </div>
   );
 }
@@ -408,13 +400,13 @@ function Outlook({
           <div className="flex flex-wrap justify-between gap-x-6">
             <dt className="text-ink-muted">計画の合計</dt>
             {/* In the body's size: 今週の完了 is the answer here (#243). */}
-            <dd className="ml-auto text-right whitespace-nowrap text-ink">
+            <dd className="ml-auto text-right nowrap-phrase text-ink">
               {formatPlanningSum(data.totals.total)}
             </dd>
           </div>
           <div className="flex flex-wrap justify-between gap-x-6">
             <dt className="text-ink-muted">確定したときの使える時間</dt>
-            <dd className="ml-auto text-right whitespace-nowrap text-ink">
+            <dd className="ml-auto text-right nowrap-phrase text-ink">
               {planned === undefined ? '未入力' : formatHours(planned)}
             </dd>
           </div>
@@ -425,7 +417,7 @@ function Outlook({
           </p>
         )}
         {onHours === undefined ? (
-          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-body">
+          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-body enlarged:grid-cols-1">
             <dt className="text-ink-muted">終わったときの使える時間</dt>
             <dd className="text-right text-ink">
               {current === undefined ? '未入力' : formatHours(current)}
@@ -450,7 +442,7 @@ function Outlook({
         >
           <Info
             aria-hidden
-            className="mt-0.5 size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
+            className="size-icon-s shrink-0 [stroke-width:var(--icon-stroke-s)]"
           />
           <span className="[word-break:auto-phrase]">
             計画のルール
@@ -458,7 +450,7 @@ function Outlook({
               data.criterion.policy,
               data.criterion.areaName,
             )}
-            <span className="whitespace-nowrap"> · 対象なし</span>
+            <span className="nowrap-phrase"> · 対象なし</span>
           </span>
         </p>
       )}

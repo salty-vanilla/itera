@@ -19,26 +19,29 @@ UserSettings:
 
 # ------------------------------------------------------------------ Area
 AreaColor:
-  description: The Area's color, `area-1` to `area-7` (DESIGN.md).
+  description: Closed enum. The Area's color, `area-1` to `area-7` (DESIGN.md).
   type: integer
   enum: [1, 2, 3, 4, 5, 6, 7]
 
 # ------------------------------------------------------------------ Task
 TaskLifecycle:
+  description: Closed enum.
   type: string
   enum: [active, completed, archived]
 TaskPriority:
+  description: Closed enum.
   type: string
   enum: [high, normal, low]
 TimeBasis:
-  description: Whether the Task's time is its own Estimate or its Subtasks' sum.
+  description: Closed enum. Whether the Task's time is its own Estimate or its Subtasks' sum.
   type: string
   enum: [task, subtasks]
 TaskCreatedVia:
+  description: Open enum. Where the Task was made; no screen depends on the value.
   type: string
   enum: [backlog, today, agent]
 SuggestionBound:
-  description: Which end of a suggestion's range is used (lo, the middle, hi).
+  description: Closed enum. Which end of a suggestion's range is used (lo, the middle, hi).
   type: string
   enum: [lo, mid, hi]
 Subtask:
@@ -55,18 +58,21 @@ Subtask:
     etag: { $ref: './common.yaml#/ETag' }
 EstimateSource:
   oneOf:
-    - type: object
+    - title: ManualEstimateSource
+      type: object
       required: [kind]
       properties:
         kind: { const: manual }
-    - description: 採用 of a suggestion's bound.
+    - title: AdoptedEstimateSource
+      description: 採用 of a suggestion's bound.
       type: object
       required: [kind, suggestionId, bound]
       properties:
         kind: { const: adopted }
         suggestionId: { $ref: './common.yaml#/EstimateSuggestionId' }
         bound: { $ref: '#/SuggestionBound' }
-    - description: 直して使う (F31), the person's own hours from a suggestion.
+    - title: EditedEstimateSource
+      description: 直して使う (F31), the person's own hours from a suggestion.
       type: object
       required: [kind, suggestionId]
       properties:
@@ -80,6 +86,7 @@ Estimate:
     setAt: { $ref: './common.yaml#/Instant' }
     source: { $ref: '#/EstimateSource' }
 SuggestionState:
+  description: Closed enum.
   type: string
   enum: [presented, adopted, rejected, replaced]
 EstimateSuggestion:
@@ -138,27 +145,32 @@ Task:
 # ------------------------------------------------------------ Recurrence
 RecurrencePattern:
   oneOf:
-    - type: object
+    - title: DailyPattern
+      type: object
       required: [freq]
       properties:
         freq: { const: daily }
-    - type: object
+    - title: WeekdaysPattern
+      type: object
       required: [freq]
       properties:
         freq: { const: weekdays }
-    - type: object
+    - title: WeeklyPattern
+      type: object
       required: [freq, daysOfWeek]
       properties:
         freq: { const: weekly }
         daysOfWeek:
           type: array
           items: { $ref: './common.yaml#/DayOfWeek' }
-    - type: object
+    - title: MonthlyPattern
+      type: object
       required: [freq, dayOfMonth]
       properties:
         freq: { const: monthly }
         dayOfMonth: { type: integer }
 OccurrenceState:
+  description: Closed enum.
   type: string
   enum: [pending, excluded, done, skipped, missed]
 Occurrence:
@@ -186,11 +198,13 @@ Occurrence:
 CriterionScope:
   description: The Tasks a planning criterion covers.
   oneOf:
-    - type: object
+    - title: AllCriterionScope
+      type: object
       required: [kind]
       properties:
         kind: { const: all }
-    - type: object
+    - title: AreaCriterionScope
+      type: object
       required: [kind, areaId]
       properties:
         kind: { const: area }
@@ -207,6 +221,7 @@ EstimatedPlanningValue:
   required: [base, lo, hi, criterionApplied, computedAt]
   properties:
     base:
+      description: Closed enum.
       type: string
       enum: [estimate, suggestion]
     lo: { type: number }
@@ -219,7 +234,8 @@ PlanningValue:
     changes this value, not the Task.
   oneOf:
     - $ref: '#/EstimatedPlanningValue'
-    - type: object
+    - title: SubtasksPlanningValue
+      type: object
       required:
         [base, lo, hi, unestimatedSubtasks, criterionApplied, computedAt]
       properties:
@@ -229,7 +245,8 @@ PlanningValue:
         unestimatedSubtasks: { type: integer }
         criterionApplied: { const: false }
         computedAt: { $ref: './common.yaml#/Instant' }
-    - type: object
+    - title: NonePlanningValue
+      type: object
       required: [base, criterionApplied, computedAt]
       properties:
         base: { const: none }
@@ -238,21 +255,27 @@ PlanningValue:
 
 # ---------------------------------------------------------------- Sprint
 SprintState:
+  description: Closed enum.
   type: string
   enum: [planning, active, review, closed]
 SprintTaskOutcome:
+  description: Closed enum.
   type: string
   enum: [draft, planned, done, removed, carriedOver]
 SprintTaskOrigin:
+  description: Closed enum.
   type: string
   enum: [planning, midSprint]
 GoalLink:
+  description: Closed enum.
   type: string
   enum: [linked, unlinked]
 SelfAssessment:
+  description: Closed enum.
   type: string
   enum: [achieved, partly, notAchieved, notJudged]
 RetroDecision:
+  description: Closed enum.
   type: string
   enum: [continue, end, replace]
 PlanSnapshot:
@@ -315,6 +338,7 @@ CriterionUse:
     retroDecision: { $ref: '#/RetroDecision' }
     etag: { $ref: './common.yaml#/ETag' }
 DailyResolution:
+  description: Closed enum.
   type: string
   enum:
     - selected
@@ -326,10 +350,11 @@ DailyResolution:
     - skipped
     - unresolved
 ClosedResolution:
-  description: How a choice for today was closed without being done.
+  description: Closed enum. How a choice for today was closed without being done.
   type: string
   enum: [paused, deferred, removed]
 DailySelectionOrigin:
+  description: Closed enum.
   type: string
   enum: [manual, recurringToday, midSprint, backlogCompletion]
 DailySelection:
@@ -352,6 +377,7 @@ DailySelection:
         resolution: { $ref: '#/ClosedResolution' }
         at: { $ref: './common.yaml#/Instant' }
 ActualTimeVia:
+  description: Open enum. How the actual time was recorded; no screen depends on the value.
   type: string
   enum: [completion, pause, later]
 ActualTime:
@@ -378,6 +404,7 @@ RetroPin:
   required: [kind]
   properties:
     kind:
+      description: Closed enum.
       type: string
       enum:
         - sprintTask
@@ -457,6 +484,7 @@ Sprint:
 
 # ---------------------------------------------------- PlanningCriterion
 CriterionState:
+  description: Closed enum.
   type: string
   enum: [draft, active, ended, replaced]
 PlanningCriterion:

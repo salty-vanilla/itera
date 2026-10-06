@@ -45,7 +45,7 @@ function MetaItem({
       data-slot="meta-item"
       className={cn(
         'inline-flex min-w-0 items-center gap-1',
-        wrap ? 'whitespace-normal' : 'whitespace-nowrap',
+        wrap ? 'whitespace-normal' : 'nowrap-phrase',
         '[&_svg]:size-3 [&_svg]:shrink-0 [&_svg]:[stroke-width:var(--icon-stroke-s)]',
         className,
       )}

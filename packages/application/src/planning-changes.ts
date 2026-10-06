@@ -3,6 +3,8 @@
 // `usePlanningActions` (ADR 0005).
 import {
   activeCriterion,
+  carriedOverFrom,
+  checkExcludeFromPlan,
   confirmSprint,
   createTask,
   excludeFromPlan,
@@ -38,23 +40,6 @@ function inPlanning(records: Records, sprintId: SprintId): Result<Sprint> {
   return sprintIn(records, sprintId, ['planning']);
 }
 
-/**
- * The previous Sprint's carried-over SprintTask of the Task, if any: the
- * Task is chosen as a carry-over (持ち越し).
- */
-export function carriedFromOf(
-  records: Records,
-  sprint: Sprint,
-  taskId: TaskId,
-) {
-  const previous = records.sprints.find(
-    (s) => s.id === sprint.previousSprintId,
-  );
-  return previous?.tasks.find(
-    (t) => t.taskId === taskId && t.outcome === 'carriedOver',
-  );
-}
-
 /** Chooses one Task for the draft, as a carry-over when it is one. */
 function choose(
   sprint: Sprint,
@@ -65,7 +50,7 @@ function choose(
 ) {
   const task = find(records.tasks, taskId, 'Task');
   if (!task.ok) return task;
-  const carriedFrom = carriedFromOf(records, sprint, taskId);
+  const carriedFrom = carriedOverFrom(sprint, taskId, records.sprints);
   return selectTask(
     sprint,
     {
@@ -136,6 +121,41 @@ export const unchooseTasks = (
   );
 
 /**
+ * What `excludeAllOccurrences` leaves out, if it takes the draft as it is
+ * now: every occurrence of a recurring Task, each as `excludeFromPlan`
+ * takes it. A Task that does not repeat has none and leaves as a whole
+ * (`unchooseTasks`), as the domain tells the two apart (#346). The
+ * operation and its capability (capabilities.ts) both read it.
+ */
+export function checkExcludeAllOccurrences(
+  sprint: Sprint,
+  sprintTaskId: SprintTaskId,
+  records: Records,
+): Result<readonly Occurrence[]> {
+  const owner = find(sprint.tasks, sprintTaskId, 'SprintTask');
+  if (!owner.ok) return owner;
+  const { occurrenceIds } = owner.value;
+  if (occurrenceIds === undefined) {
+    return {
+      ok: false,
+      error: {
+        code: 'invalidInput',
+        message: 'Unselect a Task that does not repeat as a whole.',
+      },
+    };
+  }
+  const occurrences: Occurrence[] = [];
+  for (const occurrenceId of occurrenceIds) {
+    const occurrence = find(records.occurrences, occurrenceId, 'Occurrence');
+    if (!occurrence.ok) return occurrence;
+    const excludable = checkExcludeFromPlan(sprint, occurrence.value);
+    if (!excludable.ok) return excludable;
+    occurrences.push(occurrence.value);
+  }
+  return { ok: true, value: occurrences };
+}
+
+/**
  * 今週から外す for a recurring Task: every occurrence it has this week is
  * excluded (invariant 33); with the last one the draft leaves the Sprint.
  * Also the way out for a recurring Task archived during Planning.
@@ -148,14 +168,16 @@ export function excludeAllOccurrences(
     const start = inPlanning(records, sprintId);
     if (!start.ok) return start;
     let sprint = start.value;
-    const owner = find(sprint.tasks, sprintTaskId, 'SprintTask');
-    if (!owner.ok) return owner;
+    const occurrences = checkExcludeAllOccurrences(
+      sprint,
+      sprintTaskId,
+      records,
+    );
+    if (!occurrences.ok) return occurrences;
     const excluded: Occurrence[] = [];
     const activities: Activity[] = [];
-    for (const occurrenceId of owner.value.occurrenceIds ?? []) {
-      const occurrence = find(records.occurrences, occurrenceId, 'Occurrence');
-      if (!occurrence.ok) return occurrence;
-      const result = excludeFromPlan(sprint, occurrence.value, ctx);
+    for (const occurrence of occurrences.value) {
+      const result = excludeFromPlan(sprint, occurrence, ctx);
       if (!result.ok) return result;
       sprint = result.value.record.sprint;
       excluded.push(result.value.record.occurrence);

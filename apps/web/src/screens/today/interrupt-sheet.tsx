@@ -1,4 +1,4 @@
-import type { MadeFrom } from '@itera/api-contract/requests';
+import type { MadeFrom } from '@itera/api-contract/sending';
 import { useRef, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,10 +17,11 @@ import { TextInput } from '@/components/ui/text-input';
 import {
   DURATION_ERROR,
   durationText,
-  readMinutes,
+  readPositiveMinutes,
   sameDuration,
 } from '@/lib/duration-text';
-import { sameWords, useDraftField } from '@/lib/use-draft-field';
+import { useDraftField } from '@/lib/use-draft-field';
+import { readInterruptText, sameWords } from '@/lib/value-rules';
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 
 // 割り込みを記録 (patterns.md Today): a short note and optional minutes,
@@ -94,14 +95,16 @@ function InterruptSheet({
   };
   const save = async (event: FormEvent) => {
     event.preventDefault();
-    const note = text.trim();
-    const m = readMinutes(minutes);
+    const note = readInterruptText(text);
+    const m = readPositiveMinutes(minutes);
     const next = {
-      ...(note === '' ? { text: '何があったかを短く書いてください' } : {}),
-      ...(m === null || m === 0 ? { minutes: DURATION_ERROR } : {}),
+      ...(note === undefined
+        ? { text: '何があったかを短く書いてください' }
+        : {}),
+      ...(m === null ? { minutes: DURATION_ERROR } : {}),
     };
     setErrors(next);
-    if (Object.keys(next).length > 0) {
+    if (note === undefined || m === null) {
       // Focus goes to the first field in error (accessibility.md).
       requestAnimationFrame(() =>
         formRef.current

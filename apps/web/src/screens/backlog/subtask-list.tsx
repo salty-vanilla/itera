@@ -10,10 +10,12 @@ import {
   EMPTY_DURATION,
   hoursText,
   readMinutes,
+  readPositiveMinutes,
   sameDuration,
   type DurationText,
 } from '@/lib/duration-text';
 import { useDraftField } from '@/lib/use-draft-field';
+import { readSubtaskTitle } from '@/lib/value-rules';
 import { useSubtaskActions } from '@/screen-data/use-task-actions';
 
 // Subtasks (PRD §6): add, check off, and give each an Estimate. They take
@@ -21,9 +23,9 @@ import { useSubtaskActions } from '@/screen-data/use-task-actions';
 // the sum (F11), which the time basis choice shows.
 
 function parseHours(text: DurationText): number | null | 'invalid' {
-  const minutes = readMinutes(text);
+  const minutes = readPositiveMinutes(text);
   if (minutes === undefined) return null;
-  return minutes === null || minutes === 0 ? 'invalid' : minutes / 60;
+  return minutes === null ? 'invalid' : minutes / 60;
 }
 
 function SubtaskList({
@@ -50,7 +52,7 @@ function SubtaskList({
   const titleRef = useRef<HTMLInputElement>(null);
   const hoursRef = useRef<HTMLInputElement>(null);
   useImperativeHandle(pendingRef, () => () => {
-    if (title.trim() !== '') return titleRef.current;
+    if (readSubtaskTitle(title) !== undefined) return titleRef.current;
     if (readMinutes(hours) !== undefined) return hoursRef.current;
     return null;
   });
@@ -81,7 +83,8 @@ function SubtaskList({
           onSubmit={async (event) => {
             event.preventDefault();
             const parsed = parseHours(hours);
-            if (title.trim() === '') return;
+            const added = readSubtaskTitle(title);
+            if (added === undefined) return;
             if (parsed === 'invalid') {
               setError(DURATION_ERROR);
               // Focus goes to the field in error (accessibility.md).
@@ -89,7 +92,6 @@ function SubtaskList({
               return;
             }
             setError(undefined);
-            const added = title.trim();
             const sentHours = hours;
             const ok = await actions.addSubtask(
               task.id,
@@ -98,7 +100,9 @@ function SubtaskList({
             );
             // What was typed while it was sent is the next subtask's.
             if (ok) {
-              setTitle((typed) => (typed.trim() === added ? '' : typed));
+              setTitle((typed) =>
+                readSubtaskTitle(typed) === added ? '' : typed,
+              );
               setHours((typed) =>
                 typed === sentHours ? EMPTY_DURATION : typed,
               );
@@ -113,7 +117,7 @@ function SubtaskList({
               onChange={(e) => setTitle(e.currentTarget.value)}
             />
           </Field>
-          <div className="flex items-start gap-2">
+          <div className="flex items-start gap-2 enlarged:flex-wrap">
             <DurationField
               label="サブタスクの見積もり（任意）"
               hideLabel

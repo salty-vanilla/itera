@@ -77,12 +77,14 @@ retro:
         application/json:
           schema:
             oneOf:
-              - type: object
+              - title: UpdateRetroReflection
+                type: object
                 additionalProperties: false
                 required: [reflection]
                 properties:
                   reflection: { type: string }
-              - type: object
+              - title: UpdateRetroImprovement
+                type: object
                 additionalProperties: false
                 required: [improvement]
                 properties:

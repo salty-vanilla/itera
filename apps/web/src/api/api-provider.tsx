@@ -1,6 +1,7 @@
 import type { Client } from '@itera/api-contract/create-client';
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
-import { createContext, use, type ReactNode } from 'react';
+import { createContext, use, useState, type ReactNode } from 'react';
+import { OnTheWayContext } from './use-once-per-target';
 
 const ClientContext = createContext<Client | null>(null);
 
@@ -18,9 +19,13 @@ function ApiProvider({
   queryClient: QueryClient;
   children: ReactNode;
 }) {
+  // Kept for as long as the provider is, shared by `useOncePerTarget`.
+  const [onTheWay] = useState(() => new Set<string>());
   return (
     <QueryClientProvider client={queryClient}>
-      <ClientContext value={client}>{children}</ClientContext>
+      <ClientContext value={client}>
+        <OnTheWayContext value={onTheWay}>{children}</OnTheWayContext>
+      </ClientContext>
     </QueryClientProvider>
   );
 }

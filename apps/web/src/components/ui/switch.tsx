@@ -41,6 +41,10 @@ function Switch({
       invalid={invalid}
       className={cn(
         'grid max-w-measure-read grid-cols-[1fr_auto] gap-x-4',
+        // With enlarged text the label would get 4 to 6 characters a line
+        // beside the switch: it takes the full width, the switch goes under it
+        // and the description under the switch (#425).
+        'enlarged:grid-cols-1',
         className,
       )}
     >
@@ -49,8 +53,8 @@ function Switch({
         <SwitchPrimitive.Root
           data-slot="switch"
           className={cn(
-            // 36×20px: DESIGN.md Switch. The track itself is the control.
-            'peer/switch relative inline-flex h-[20px] w-[36px] shrink-0 cursor-pointer items-center rounded-sm border border-border-strong bg-surface',
+            // 36×20px: DESIGN.md Switch (control-md × icon-m). The track itself is the control.
+            'peer/switch relative inline-flex h-icon-m w-control-md shrink-0 cursor-pointer items-center rounded-sm border border-border-strong bg-surface',
             'transition-colors duration-(--duration-fast) ease-standard',
             'focus-visible:focus-ring',
             // The target reaches 28px (44px on compact widths) beyond the track.
@@ -67,10 +71,13 @@ function Switch({
           <SwitchPrimitive.Thumb
             data-slot="switch-thumb"
             className={cn(
-              // 2px from the inner edge of the track when off, 18px when on.
-              'block size-[14px] translate-x-[2px] rounded-xs bg-border-strong',
+              // 14px: a square as high as the inside of the track (18px), less a
+              // transparent 2px edge on each side. The background stops at the
+              // padding box, and rounded-sm leaves the 2px of rounded.xs inside
+              // it. It moves by icon-s, 16px, to the other end.
+              'block aspect-square h-full shrink-0 rounded-sm border-2 border-transparent bg-border-strong bg-clip-padding',
               'transition-[translate,background-color] duration-(--duration-fast) ease-standard',
-              'data-checked:translate-x-[18px] not-data-disabled:data-checked:bg-on-primary',
+              'data-checked:translate-x-icon-s not-data-disabled:data-checked:bg-on-primary',
               'data-disabled:bg-ink-disabled',
               // Forced colors would paint the thumb as Canvas and hide it; keep it as
               // text color in both states.
@@ -98,7 +105,7 @@ function Switch({
         </span>
       </div>
       {description !== undefined && (
-        <FieldDescription className="col-start-1">
+        <FieldDescription className="col-start-1 enlarged:mt-1">
           {description}
         </FieldDescription>
       )}

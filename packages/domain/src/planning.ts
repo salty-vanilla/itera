@@ -227,6 +227,23 @@ export function checkSelectTask(
   return ok(undefined);
 }
 
+/**
+ * The previous Sprint's carried-over SprintTask of the Task, if any: choosing
+ * the Task for `sprint` continues it (持ち越し, the `carriedFrom` of
+ * `selectTask`). While the previous Sprint still runs nothing is carried
+ * over yet; a draft chosen then is linked when it enters Review (F35).
+ */
+export function carriedOverFrom<S extends Sprint>(
+  sprint: Sprint,
+  taskId: TaskId,
+  sprints: readonly S[],
+): S['tasks'][number] | undefined {
+  const previous = sprints.find((s) => s.id === sprint.previousSprintId);
+  return previous?.tasks.find(
+    (t) => t.taskId === taskId && t.outcome === 'carriedOver',
+  );
+}
+
 /** 確定前に外す: a non-recurring draft leaves the Sprint without a trace. */
 export function unselectTask(
   sprint: Sprint,
@@ -705,16 +722,11 @@ export function confirmSprint(
     });
   }
 
-  const referenced = new Set(
-    sprint.tasks.flatMap((t) => {
-      const areaId = input.tasks.find((task) => task.id === t.taskId)?.areaId;
-      return areaId === undefined ? [] : [areaId];
-    }),
-  );
-  const areaSnapshot: SprintAreaSnapshotEntry[] = input.areas
-    .filter((a) => !a.archived || referenced.has(a.id))
-    .toSorted((a, b) => a.order - b.order)
-    .map((a) => ({ areaId: a.id, name: a.name, order: a.order }));
+  const areaSnapshot: SprintAreaSnapshotEntry[] = areasAtConfirm(
+    sprint,
+    input.tasks,
+    input.areas,
+  ).map((a) => ({ areaId: a.id, name: a.name, order: a.order }));
 
   const criterionUse =
     input.criterion === undefined
@@ -748,49 +760,119 @@ export function confirmSprint(
 }
 
 /**
- * Whether `confirmSprint` takes the records as they are now (#323): the
- * Sprint is planned, the previous one is closed (invariant 12), no other is
- * active (invariant 11), and every chosen Task is still active. Whether to
- * apply the criterion is the person's choice and is not checked here.
+ * The Areas `confirmSprint` copies into the SprintAreaSnapshot (invariant
+ * 18), in the person's order: those not archived, and an archived one while
+ * a chosen Task is in it. Planning shows the same Areas before confirm.
  */
-export function checkConfirmSprint(
+export function areasAtConfirm<A extends Area>(
+  sprint: Sprint,
+  tasks: readonly Task[],
+  areas: readonly A[],
+): A[] {
+  const referenced = new Set(
+    sprint.tasks.flatMap((t) => {
+      const areaId = tasks.find((task) => task.id === t.taskId)?.areaId;
+      return areaId === undefined ? [] : [areaId];
+    }),
+  );
+  return areas
+    .filter((a) => !a.archived || referenced.has(a.id))
+    .toSorted((a, b) => a.order - b.order);
+}
+
+/** One reason `confirmSprint` does not take the records as they are now. */
+export type ConfirmBlocker =
+  | { readonly kind: 'notPlanning'; readonly state: Sprint['state'] }
+  | { readonly kind: 'previousMissing' }
+  /** The previous Sprint is not closed: its Retro is open (invariant 12). */
+  | { readonly kind: 'previousNotClosed' }
+  /** Another Sprint is active (invariant 11). */
+  | { readonly kind: 'anotherActive' }
+  | { readonly kind: 'taskMissing'; readonly taskId: TaskId }
+  /** A chosen Task was completed or archived during Planning. */
+  | {
+      readonly kind: 'taskInactive';
+      readonly taskId: TaskId;
+      readonly lifecycle: Exclude<Task['lifecycle'], 'active'>;
+    };
+
+/**
+ * Why `confirmSprint` does not take the records as they are now, every
+ * reason in the order it checks them; none when it does: the Sprint is
+ * planned, the previous one is closed (invariant 12), no other is active
+ * (invariant 11), and every chosen Task is still active. Whether to apply
+ * the criterion is the person's choice and is not checked here.
+ */
+export function confirmBlockers(
   sprint: Sprint,
   input: Pick<ConfirmSprintInput, 'sprints' | 'tasks'>,
-): Result<undefined> {
+): readonly ConfirmBlocker[] {
+  const blockers: ConfirmBlocker[] = [];
   if (sprint.state !== 'planning') {
-    return err('invalidTransition', 'Only a Sprint in Planning is confirmed.');
+    blockers.push({ kind: 'notPlanning', state: sprint.state });
   }
   if (sprint.previousSprintId !== undefined) {
     const previous = input.sprints.find(
       (s) => s.id === sprint.previousSprintId,
     );
-    if (previous === undefined)
-      return err('notFound', 'Previous Sprint missing.');
-    if (previous.state !== 'closed') {
-      return err(
-        'invalidTransition',
-        'Finish the previous Sprint’s Retro before confirming.',
-      );
+    if (previous === undefined) blockers.push({ kind: 'previousMissing' });
+    else if (previous.state !== 'closed') {
+      blockers.push({ kind: 'previousNotClosed' });
     }
   }
   if (input.sprints.some((s) => s.id !== sprint.id && s.state === 'active')) {
-    return err('invalidTransition', 'Another Sprint is active.');
+    blockers.push({ kind: 'anotherActive' });
   }
   for (const sprintTask of sprint.tasks) {
     if (sprintTask.outcome !== 'draft') continue;
     const task = input.tasks.find((t) => t.id === sprintTask.taskId);
     if (task === undefined) {
-      return err('notFound', `Task ${sprintTask.taskId} missing.`);
-    }
-    // A Task completed or archived during Planning cannot be planned.
-    if (task.lifecycle !== 'active') {
-      return err(
-        'invalidTransition',
-        `Task ${task.id} is ${task.lifecycle}; unselect it before confirming.`,
-      );
+      blockers.push({ kind: 'taskMissing', taskId: sprintTask.taskId });
+    } else if (task.lifecycle !== 'active') {
+      // A Task completed or archived during Planning cannot be planned.
+      blockers.push({
+        kind: 'taskInactive',
+        taskId: task.id,
+        lifecycle: task.lifecycle,
+      });
     }
   }
-  return ok(undefined);
+  return blockers;
+}
+
+/**
+ * Whether `confirmSprint` takes the records as they are now (#323): the
+ * first of `confirmBlockers`, as an error.
+ */
+export function checkConfirmSprint(
+  sprint: Sprint,
+  input: Pick<ConfirmSprintInput, 'sprints' | 'tasks'>,
+): Result<undefined> {
+  const [blocker] = confirmBlockers(sprint, input);
+  if (blocker === undefined) return ok(undefined);
+  switch (blocker.kind) {
+    case 'notPlanning':
+      return err(
+        'invalidTransition',
+        'Only a Sprint in Planning is confirmed.',
+      );
+    case 'previousMissing':
+      return err('notFound', 'Previous Sprint missing.');
+    case 'previousNotClosed':
+      return err(
+        'invalidTransition',
+        'Finish the previous Sprint’s Retro before confirming.',
+      );
+    case 'anotherActive':
+      return err('invalidTransition', 'Another Sprint is active.');
+    case 'taskMissing':
+      return err('notFound', `Task ${blocker.taskId} missing.`);
+    case 'taskInactive':
+      return err(
+        'invalidTransition',
+        `Task ${blocker.taskId} is ${blocker.lifecycle}; unselect it before confirming.`,
+      );
+  }
 }
 
 /**

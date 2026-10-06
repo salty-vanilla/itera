@@ -43,9 +43,9 @@ export function subjectOf(
 }
 
 /**
- * How the undo of a completion or skip goes (#53, F33): today's, as Today
- * undoes it; a past day's the same, except that a completion that made the
- * day's choice from the Backlog is undone as the Backlog undoes it (F29).
+ * How the undo of a completion or skip goes (#53, F33): as Today undoes it,
+ * except that a completion that made the day's choice from the Backlog is
+ * undone as the Backlog undoes it (F29), today's as a past day's (#346).
  * A past day's undo is then followed by the system's start of the day.
  */
 export interface UndoRoute {
@@ -58,9 +58,8 @@ export function undoRouteOf(
   resolution: 'done' | 'skipped',
   today: LocalDate,
 ): Result<UndoRoute> {
-  if (selection.date >= today)
-    return { ok: true, value: { by: 'selection', pastDay: false } };
-  if (selection.resolution !== resolution) {
+  const pastDay = selection.date < today;
+  if (pastDay && selection.resolution !== resolution) {
     return {
       ok: false,
       error: {
@@ -73,10 +72,12 @@ export function undoRouteOf(
     ok: true,
     value: {
       by:
-        resolution === 'done' && selection.origin === 'backlogCompletion'
+        resolution === 'done' &&
+        selection.resolution === 'done' &&
+        selection.origin === 'backlogCompletion'
           ? 'backlog'
           : 'selection',
-      pastDay: true,
+      pastDay,
     },
   };
 }

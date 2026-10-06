@@ -199,12 +199,14 @@ sprintGoal:
         application/json:
           schema:
             oneOf:
-              - type: object
+              - title: UpdateGoalText
+                type: object
                 additionalProperties: false
                 required: [text]
                 properties:
                   text: { type: string }
-              - type: object
+              - title: UpdateGoalAssessment
+                type: object
                 additionalProperties: false
                 required: [assessment]
                 properties:
@@ -247,14 +249,16 @@ sprintTasks:
         application/json:
           schema:
             oneOf:
-              - type: object
+              - title: AddTasksToSprint
+                type: object
                 additionalProperties: false
                 required: [taskIds]
                 properties:
                   taskIds:
                     type: array
                     items: { $ref: '../schemas/common.yaml#/TaskId' }
-              - type: object
+              - title: CreateTaskInSprint
+                type: object
                 additionalProperties: false
                 required: [title]
                 properties:
@@ -392,7 +396,9 @@ sprintTaskExcludeOccurrences:
     tags: [Sprint]
     summary: "Leave out all of a SprintTask's occurrences"
     description: >-
-      With the last one the draft leaves the Sprint (invariant 33).
+      With the last one the draft leaves the Sprint (invariant 33). A Task
+      that does not repeat has no occurrences: refused (422), as it leaves
+      by removeSprintTasks.
     parameters:
       - name: sprintId
         in: path
@@ -559,20 +565,23 @@ dailySelections:
         application/json:
           schema:
             oneOf:
-              - type: object
+              - title: ChooseSprintTask
+                type: object
                 additionalProperties: false
                 required: [date, sprintTaskId]
                 properties:
                   date: { $ref: '../schemas/common.yaml#/LocalDate' }
                   sprintTaskId: { $ref: '../schemas/common.yaml#/SprintTaskId' }
                   occurrenceId: { $ref: '../schemas/common.yaml#/OccurrenceId' }
-              - type: object
+              - title: ChooseTask
+                type: object
                 additionalProperties: false
                 required: [date, taskId]
                 properties:
                   date: { $ref: '../schemas/common.yaml#/LocalDate' }
                   taskId: { $ref: '../schemas/common.yaml#/TaskId' }
-              - type: object
+              - title: ChooseNewTask
+                type: object
                 additionalProperties: false
                 required: [date, title]
                 properties:
@@ -812,6 +821,8 @@ selectionUndoComplete:
     summary: Take back a completion
     description: >-
       Today's, or a past day's (#53): then the system closes what that day left open.
+      A completion that made the day's choice from the Backlog is taken back
+      as undoCompleteTask does, and the choice goes with it (F29, #346).
     parameters:
       - name: sprintId
         in: path

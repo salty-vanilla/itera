@@ -1,7 +1,15 @@
 import type { AreaId, BacklogSlice, TaskId } from '@itera/api-contract';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { Pencil } from 'lucide-react';
-import { Fragment, useEffect, useId, useRef, useState, type Ref } from 'react';
+import {
+  Fragment,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type Ref,
+} from 'react';
 import { Button } from '@/components/ui/button';
 import { ReadStatus } from '@/components/read-status';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
@@ -9,8 +17,9 @@ import { Filter, FilterGroup } from '@/components/ui/filter';
 import { useToast } from '@/components/ui/toast';
 import { AreaSelect, chosenArea } from '@/components/task/area-select';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
+import { ADDED_MS } from '@/lib/motion';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
-import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
+import { ENLARGED, MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 import { useStuckBar } from '@/lib/use-stuck-bar';
 import { cn } from '@/lib/utils';
 import { useBacklog, type BacklogView } from '@/screen-data/use-backlog';
@@ -26,9 +35,6 @@ import { useTaskDetailLeave } from './use-task-detail-leave';
 // newest first (Issue #86; never by priority, invariant 5), narrowed by a
 // 切り口 and an Area. The 切り口, the Area and the open Task are search
 // parameters, so a state opens from its URL (ADR 0005).
-
-/** How long the row just added flashes; the same as `added-flash` in the CSS. */
-export const ADDED_MS = 2500;
 
 export const slices: readonly { value: BacklogSlice | 'all'; label: string }[] =
   [
@@ -92,20 +98,32 @@ function LoadedBacklog({ backlog }: { backlog: BacklogView }) {
   const open =
     search.task === undefined ? undefined : backlog.item(search.task);
   // The Task just completed, kept as one line where its row was until the
-  // next operation (patterns.md Backlog › 完了, F29). `before` is the row
-  // it sat above, if any.
+  // next operation (patterns.md Backlog › 完了, F29). `below` is the rows
+  // under it when it was pressed, in order: the line sits above the first
+  // that is still listed, so that it stays where its row was when the row
+  // under it was completed too, while this one was on its way (#379).
   const [completed, setCompleted] = useState<{
     taskId: TaskId;
     title: string;
-    before?: TaskId;
+    below: readonly TaskId[];
   }>();
+  const lineBefore = completed?.below.find((id) =>
+    items.some((i) => i.task.id === id),
+  );
   // The row that came back by 元に戻す takes the focus on its ○, once: the
   // next operation clears it, so a row shown again later does not take it.
   const [refocus, setRefocus] = useState<TaskId>();
   const undoRef = useRef<HTMLButtonElement>(null);
   // Under 768px the Quick Add sticks to the bottom: the Toast goes above it.
+  // Not with enlarged text: it would cover half of a low screen, so it is
+  // under the filters at the top, as from 768px (#426).
   const quickAddRef = useRef<HTMLDivElement>(null);
-  useStuckBar(quickAddRef, 'bottom', !useMediaQuery(MEDIUM_UP, true));
+  const enlarged = useMediaQuery(ENLARGED);
+  useStuckBar(
+    quickAddRef,
+    'bottom',
+    !useMediaQuery(MEDIUM_UP, true) && !enlarged,
+  );
   // The Task just added: its row flashes for a moment (ADDED_MS), and a Toast says
   // so (Issue #86). A Task the current 切り口 or Area does not show has no
   // row to mark: the Toast says why it is not in the list.
@@ -158,17 +176,13 @@ function LoadedBacklog({ backlog }: { backlog: BacklogView }) {
 
   const completeWithUndo = async (taskId: TaskId, title: string) => {
     const index = items.findIndex((i) => i.task.id === taskId);
-    const before = items[index + 1]?.task.id;
+    const below = items.slice(index + 1).map((i) => i.task.id);
     setRefocus(undefined);
     if (!(await actions.completeTask(taskId))) return;
     // From the detail: close it once the Task is done. Closing clears the
     // line of an earlier completion, so the new one is set after it.
     if (search.task === taskId) setSearch({ task: undefined });
-    setCompleted({
-      taskId,
-      title,
-      ...(before === undefined ? {} : { before }),
-    });
+    setCompleted({ taskId, title, below });
   };
 
   const undoCompleted = async () => {
@@ -178,13 +192,25 @@ function LoadedBacklog({ backlog }: { backlog: BacklogView }) {
     setRefocus(completed.taskId);
   };
 
+  // The rows whose archive is on its way: a row archived while another is
+  // sent leaves too, so the focus does not move to it (#432).
+  const archiving = useRef(new Set<TaskId>());
   const archiveWithUndo = async (taskId: TaskId, title: string) => {
     // The row goes: the focus moves to the next row (or the one before it,
     // or the Quick Add) rather than nowhere.
-    const index = items.findIndex((i) => i.task.id === taskId);
-    const next = items[index + 1] ?? items[index - 1];
+    const staying = items.filter(
+      (i) => i.task.id === taskId || !archiving.current.has(i.task.id),
+    );
+    const index = staying.findIndex((i) => i.task.id === taskId);
+    const next = staying[index + 1] ?? staying[index - 1];
     endUndo();
-    if (!(await actions.archiveTask(taskId))) return;
+    // A repeat on a row already on its way is dropped, and leaves the first
+    // one's mark.
+    const first = !archiving.current.has(taskId);
+    if (first) archiving.current.add(taskId);
+    const archived = await actions.archiveTask(taskId);
+    if (first) archiving.current.delete(taskId);
+    if (!archived) return;
     if (search.task === taskId) setSearch({ task: undefined });
     requestAnimationFrame(() =>
       document
@@ -262,10 +288,11 @@ function LoadedBacklog({ backlog }: { backlog: BacklogView }) {
       </div>
 
       {/* Quick Add: at the top from 768px; under it, sticky at the bottom
-          above the tab bar (DESIGN.md Responsive › compact). */}
+          above the tab bar (DESIGN.md Responsive › compact). With enlarged
+          text it is at the top too, not stuck (#426). */}
       <div
         ref={quickAddRef}
-        className="mt-[var(--toast-above-room,0px)] sticky bottom-0 z-(--layer-sticky) order-last border-t border-border bg-canvas px-4 py-3 medium:static medium:order-none medium:mt-0 medium:border-t-0 medium:px-6 medium:py-0 medium:pb-4 xl:max-w-pane-rows"
+        className="mt-[var(--toast-above-room,0px)] sticky bottom-0 z-(--layer-sticky) enlarged:static order-last enlarged:order-none enlarged:mt-0 border-t enlarged:border-t-0 enlarged:py-0 enlarged:pb-4 border-border bg-canvas px-4 py-3 medium:static medium:order-none medium:mt-0 medium:border-t-0 medium:px-6 medium:py-0 medium:pb-4 xl:max-w-pane-rows"
       >
         <TaskQuickAdd
           label="Backlog にタスクを追加"
@@ -310,7 +337,7 @@ function LoadedBacklog({ backlog }: { backlog: BacklogView }) {
               const { task } = item;
               return (
                 <Fragment key={task.id}>
-                  {completed?.before === task.id && (
+                  {completed !== undefined && lineBefore === task.id && (
                     <CompletedLine
                       key={completed.taskId}
                       ref={undoRef}
@@ -352,16 +379,14 @@ function LoadedBacklog({ backlog }: { backlog: BacklogView }) {
                 </Fragment>
               );
             })}
-            {completed !== undefined &&
-              (completed.before === undefined ||
-                !items.some((i) => i.task.id === completed.before)) && (
-                <CompletedLine
-                  key={completed.taskId}
-                  ref={undoRef}
-                  title={completed.title}
-                  onUndo={undoCompleted}
-                />
-              )}
+            {completed !== undefined && lineBefore === undefined && (
+              <CompletedLine
+                key={completed.taskId}
+                ref={undoRef}
+                title={completed.title}
+                onUndo={undoCompleted}
+              />
+            )}
           </ul>
         )}
       </section>
@@ -413,7 +438,7 @@ function CompletedLine({
 }) {
   const textId = useId();
   const localRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => localRef.current?.focus(), []);
+  useLayoutEffect(() => localRef.current?.focus(), []);
   return (
     <li data-slot="completed-line">
       <div

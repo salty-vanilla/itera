@@ -27,6 +27,7 @@ import {
 } from '@/components/sprint/sprint-header';
 import { formatDate, formatDateRange } from '@/lib/date-format';
 import { isTyping } from '@/lib/row-keys';
+import { ADDED_MS } from '@/lib/motion';
 import { MEDIUM_UP, useMediaQuery } from '@/lib/use-media-query';
 import { formatPlanningSum } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
@@ -42,6 +43,7 @@ import {
 } from '@/screen-data/use-planning';
 import { useTaskActions } from '@/screen-data/use-task-actions';
 import { TaskDetail } from '../backlog/task-detail';
+import { TaskDetailDrawer } from '../backlog/task-detail-drawer';
 import { useTaskDetailLeave } from '../backlog/use-task-detail-leave';
 import { BacklogPane } from './backlog-pane';
 import { CheckSummary } from './check-summary';
@@ -66,9 +68,6 @@ import { PlanPane, type Stage } from './plan-pane';
 //   numbers, so the line only opens the Drawer (#165).
 // - compact: one column. The Backlog shows in 選ぶ only; the Capacity is
 //   the same one line (a Bottom Sheet). 確かめる opens with its summary (#93).
-
-/** How long the row just added flashes; the same as `added-flash` in the CSS. */
-export const ADDED_MS = 2500;
 
 /** Scrolls `main` so that the added row shows, keeping the Quick Add in view. */
 function revealAdded(taskId: TaskId) {
@@ -169,10 +168,6 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
       setOutlookOpen(false);
       setSearch({ task: taskId });
     }, true);
-  const openItem =
-    search.task === undefined || backlog.status !== 'ready'
-      ? undefined
-      : backlog.item(search.task);
   const estimateFocus = useEstimateFocus(search.task);
   const openEstimate = (taskId: TaskId) =>
     detail.leave(() => {
@@ -229,6 +224,12 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
 
   // 確定 is open when the read says so (#323); the blockers say why not.
   const blocked = !data.capabilities.canConfirm;
+  // The reasons this screen knows. PlanningBlocker is an open enum (ADR
+  // 0006): with none of them to show, the button still says why it waits.
+  const previousRetroOpen = data.blockers.includes('previousRetroOpen')
+    ? data.previous
+    : undefined;
+  const inactiveTasks = data.blockers.includes('inactiveTasks');
   const inBacklog = (taskId: TaskId) => hasDetail(backlog, taskId);
   const reasonId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -344,27 +345,29 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
                   id={reasonId}
                   className="flex max-w-measure-read flex-col items-end gap-1 text-right text-help text-ink-muted"
                 >
-                  {data.blockers.includes('previousRetroOpen') &&
-                    data.previous !== undefined && (
-                      <p>
-                        前の Sprint の振り返りを完了すると確定できます。
-                        {data.previous.state === 'active' &&
-                          // F21: its Retro starts on its last day.
-                          `Sprint ${data.previous.number} の振り返りは ${formatDate(data.previous.end)} から始められます。`}
-                        <Link
-                          to="/retro"
-                          search={{ sprint: data.previous.number }}
-                          className="ms-1 text-link underline focus-visible:focus-ring"
-                        >
-                          振り返りを開く
-                        </Link>
-                      </p>
-                    )}
-                  {data.blockers.includes('inactiveTasks') && (
+                  {previousRetroOpen !== undefined && (
+                    <p>
+                      前の Sprint の振り返りを完了すると確定できます。
+                      {previousRetroOpen.state === 'active' &&
+                        // F21: its Retro starts on its last day.
+                        `Sprint ${previousRetroOpen.number} の振り返りは ${formatDate(previousRetroOpen.end)} から始められます。`}
+                      <Link
+                        to="/retro"
+                        search={{ sprint: previousRetroOpen.number }}
+                        className="ms-1 text-link underline focus-visible:focus-ring"
+                      >
+                        振り返りを開く
+                      </Link>
+                    </p>
+                  )}
+                  {inactiveTasks && (
                     <p>
                       完了・アーカイブしたタスクを
                       {weekText(week, 'から外すと確定できます。')}
                     </p>
+                  )}
+                  {previousRetroOpen === undefined && !inactiveTasks && (
+                    <p>まだ確定できません。</p>
                   )}
                 </div>
               )}
@@ -386,11 +389,16 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
               setOutlookOpen(true);
             })
           }
-          className="flex min-h-target-touch w-full items-center justify-between gap-3 rounded-sm text-left text-body text-ink focus-visible:focus-ring medium:min-h-target-min"
+          className="flex min-h-target-touch w-full flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-sm text-left text-body text-ink focus-visible:focus-ring medium:min-h-target-min"
         >
           {/* 確かめる says the numbers once, in its summary (#165). */}
-          {stage !== 'check' && <CapacitySummary data={data} />}
-          {/* At the right end in every stage, with a mark that it opens. */}
+          {stage !== 'check' && (
+            <CapacitySummary data={data} className="grow basis-0" />
+          )}
+          {/* At the right end in every stage, with a mark that it opens. The
+              numbers start from their narrowest, so that it drops under them
+              only where its widest piece and this do not fit a line (320px,
+              #357), not where the numbers merely run to two lines. */}
           <span className="ms-auto flex shrink-0 items-center gap-1 text-meta text-ink-muted">
             時間の見通しを開く
             <ChevronRight
@@ -473,46 +481,42 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
         </DrawerContent>
       </Drawer>
 
-      <Drawer
-        open={openItem !== undefined}
-        onOpenChange={(next) => {
-          if (!next) detail.leave(() => setSearch({ task: undefined }));
-        }}
-      >
-        <DrawerContent>
-          {backlog.status === 'ready' && openItem !== undefined && (
-            <TaskDetail
-              key={openItem.task.id}
-              item={openItem}
-              areas={backlog.areas}
-              timeZone={backlog.timeZone}
-              lastDay={backlog.lastDay}
-              onClose={() => setSearch({ task: undefined })}
-              onComplete={async () => {
-                if (await taskActions.completeTask(openItem.task.id)) {
-                  setSearch({ task: undefined });
-                }
-              }}
-              focusEstimate={estimateFocus.of(openItem.task.id)}
-              leaveRef={detail.ref}
-              footer={
-                // The right pane is under the Drawer: what an Estimate
-                // typed here does to the plan, before closing (#165).
-                <p
-                  role="status"
-                  data-slot="detail-capacity"
-                  className="me-auto min-w-0 text-body text-ink"
-                >
-                  <span className="me-2 text-label text-ink-muted">
-                    時間の見通し
-                  </span>
-                  <CapacitySummary data={data} />
-                </p>
+      <TaskDetailDrawer
+        taskId={search.task}
+        backlog={backlog}
+        onDismiss={() => detail.leave(() => setSearch({ task: undefined }))}
+        render={(item, ready) => (
+          <TaskDetail
+            key={item.task.id}
+            item={item}
+            areas={ready.areas}
+            timeZone={ready.timeZone}
+            lastDay={ready.lastDay}
+            onClose={() => setSearch({ task: undefined })}
+            onComplete={async () => {
+              if (await taskActions.completeTask(item.task.id)) {
+                setSearch({ task: undefined });
               }
-            />
-          )}
-        </DrawerContent>
-      </Drawer>
+            }}
+            focusEstimate={estimateFocus.of(item.task.id)}
+            leaveRef={detail.ref}
+            footer={
+              // The right pane is under the Drawer: what an Estimate
+              // typed here does to the plan, before closing (#165).
+              <p
+                role="status"
+                data-slot="detail-capacity"
+                className="me-auto min-w-0 text-body text-ink"
+              >
+                <span className="me-2 text-label text-ink-muted">
+                  時間の見通し
+                </span>
+                <CapacitySummary data={data} />
+              </p>
+            }
+          />
+        )}
+      />
 
       <ConfirmDialog
         data={data}
@@ -531,7 +535,13 @@ function PlanningScreen({ data, steps }: PlanningScreenProps) {
  * 残る · 多くかかれば 45分超える」「少なく済んでも 3時間超える · 多くかかれば 5時間
  * 超える」 (patterns.md compact, owner decision S5 in #93).
  */
-function CapacitySummary({ data }: { data: PlanningData }) {
+function CapacitySummary({
+  data,
+  className,
+}: {
+  data: PlanningData;
+  className?: string;
+}) {
   const capacity = data.totals.capacity;
   // Each sentence is one or more pieces that never break inside; the line
   // wraps only between them, after a 「·」, so a number never leaves its
@@ -551,7 +561,7 @@ function CapacitySummary({ data }: { data: PlanningData }) {
         );
   return (
     <span
-      className={capacity?.status === 'exceeds' ? 'text-danger' : undefined}
+      className={cn(capacity?.status === 'exceeds' && 'text-danger', className)}
     >
       {sentences.map((pieces, i) => (
         <Fragment key={pieces.join(' ')}>
@@ -559,7 +569,7 @@ function CapacitySummary({ data }: { data: PlanningData }) {
           {pieces.map((piece, j) => (
             <Fragment key={piece}>
               {j > 0 && ' '}
-              <span className="whitespace-nowrap">
+              <span className="nowrap-phrase">
                 {piece}
                 {j === pieces.length - 1 && i < sentences.length - 1 && ' ·'}
               </span>

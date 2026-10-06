@@ -27,6 +27,7 @@ const elevations = [
 ] as const;
 
 const layers = [
+  'layer-local',
   'layer-sticky',
   'layer-drawer',
   'layer-popover',
@@ -41,17 +42,23 @@ const motion = [
   ['duration-slow', 'Dialog・Drawer の出入り（最大）'],
   ['duration-toast', 'Toast の表示時間'],
   ['duration-toast-action', '操作付きの Toast の表示時間'],
+  ['duration-added-flash', '追加した直後の行の点滅'],
   ['ease-standard', '既定'],
   ['ease-enter', '出現'],
   ['ease-exit', '退場'],
 ] as const;
 
+// The widths at the default font size. The CSS has them in em (#433).
 const breakpoints = [
   ['compact', '768px 未満', '1 カラム、下部タブバー、操作は 44px'],
-  ['breakpoint-medium', '768px', '2 ペイン（Backlog / Sprint）'],
-  ['breakpoint-wide', '1200px', 'ナビを 64px の rail にし 3 ペインを保つ'],
-  ['breakpoint-nav', '1440px', 'ナビ 224px ＋ 3 ペイン'],
-  ['breakpoint-xl', '1920px', '3 ペインを保ち、中央のペインを広げる'],
+  ['breakpoint-medium', '768px（48em）', '2 ペイン（Backlog / Sprint）'],
+  [
+    'breakpoint-wide',
+    '1200px（75em）',
+    'ナビを 64px の rail にし 3 ペインを保つ',
+  ],
+  ['breakpoint-nav', '1440px（90em）', 'ナビ 224px ＋ 3 ペイン'],
+  ['breakpoint-xl', '1920px（120em）', '3 ペインを保ち、中央のペインを広げる'],
 ] as const;
 
 function Value({ name }: { name: string }) {
@@ -195,7 +202,7 @@ function ShapeAndSpacePage() {
 
       <TokenSection
         title="ブレークポイント"
-        description="PC 画面を縮小しただけのレイアウトにしない。ツールバーの viewport で各幅を切り替えられる。"
+        description="PC 画面を縮小しただけのレイアウトにしない。幅はブラウザの文字の大きさが既定（16px）のときの値で、文字を大きくすると連れて広がる。ツールバーの viewport で各幅を切り替えられる。"
       >
         <TokenTable columns={['名前', '幅', 'レイアウト']}>
           {breakpoints.map(([name, width, layout]) => (

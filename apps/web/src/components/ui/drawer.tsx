@@ -130,6 +130,7 @@ function DrawerContent({
             // button do the same as swiping down.
             <div
               aria-hidden
+              data-slot="drawer-grip"
               className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-border-strong"
             />
           )}

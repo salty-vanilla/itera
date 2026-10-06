@@ -51,6 +51,15 @@ describe('Checkbox', () => {
     ]);
   });
 
+  it('is invalid without a message of its own, for a group with one error', () => {
+    render(<Checkbox label="月" invalid aria-describedby="group-error" />);
+    const checkbox = screen.getByRole('checkbox', { name: '月' });
+    expect(checkbox.getAttribute('aria-invalid')).toBe('true');
+    expect(checkbox.hasAttribute('data-invalid')).toBe(true);
+    expect(checkbox.getAttribute('aria-describedby')).toBe('group-error');
+    expect(document.querySelector('[data-slot="field-error"]')).toBeNull();
+  });
+
   it('stays unchecked when disabled', async () => {
     render(<Checkbox label="今週に入れる" disabled />);
     const checkbox = screen.getByRole('checkbox', { name: '今週に入れる' });

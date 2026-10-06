@@ -2,6 +2,9 @@
 // (ADR 0006 経路の形, #295): every operation's request goes to its surface
 // and back to the same operation and input; each surface is the method and
 // path the generated client sends; every path and query name is kebab-case.
+// The reads' table has every read of the contract but `getMe`, at its path
+// and with its schemas, the one table the API and the browser mock route
+// them by (#350).
 import type { OperationInput, OperationName } from '@itera/application';
 import { readFileSync } from 'node:fs';
 import * as v from 'valibot';
@@ -9,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 import * as sdk from './client';
 import { createClient, createConfig } from './create-client';
 import * as contract from './index';
-import { isConditional } from '@itera/application';
+import { isConditional, reads } from '@itera/application';
 import {
   conditionHeaders,
   IDEMPOTENCY_KEY_HEADER,
@@ -17,12 +20,15 @@ import {
   queryInput,
   readCondition,
   readIdempotencyKey,
+  readOf,
+  readSurfaces,
   RequestError,
   requestOf,
   settingsSurface,
   surfaces,
   type PlainInput,
   type OperationRequest,
+  type ReadId,
   type Surface,
   type SurfaceId,
 } from './requests';
@@ -337,6 +343,119 @@ describe('the settings surface', () => {
     expect(v.is(settingsSurface.body, body)).toBe(true);
     expect(v.is(settingsSurface.body, { ...body, extra: 1 })).toBe(false);
     expect(settingsSurface.body).toBe(contract.vSetSettingsBody);
+  });
+});
+
+describe('the read surfaces', () => {
+  const SPRINT = 'sprint_01h455vb4pex5vsknk084sn02q';
+  const AREA = 'area_01h455vb4pex5vsknk084sn02q';
+  const DAY = '2026-10-05';
+
+  /** Checks a part as the server and the mock do, throwing for a 400. */
+  const check = (schema: v.GenericSchema, value: unknown) =>
+    v.parse(schema, value);
+
+  it("are the contract's reads but `getMe`, one each, and the application's", () => {
+    const contractReads = Object.entries(sdk)
+      .filter(
+        ([name, value]) => typeof value === 'function' && name !== 'client',
+      )
+      .map(([name]) => name)
+      .filter((name) => !Object.hasOwn(surfaces, name))
+      .filter((name) => name !== 'setSettings' && name !== 'getMe');
+    expect(Object.keys(readSurfaces).toSorted()).toEqual(
+      contractReads.toSorted(),
+    );
+    expect(Object.keys(reads).toSorted()).toEqual(contractReads.toSorted());
+  });
+
+  it.each(Object.keys(readSurfaces) as ReadId[])(
+    '%s is the path the generated client sends, with its schemas',
+    async (id) => {
+      const surface = readSurfaces[id];
+      let sent: globalThis.Request | undefined;
+      const client = createClient(
+        createConfig({
+          baseUrl: 'http://itera.test/api',
+          fetch: async (input, init) => {
+            sent = new globalThis.Request(input, init);
+            return Response.json({});
+          },
+        }),
+      );
+      const send = (sdk as unknown as Record<string, (o: object) => unknown>)[
+        id
+      ]!;
+      await send({ client, path: { sprintId: SPRINT, date: DAY } });
+      expect(sent?.method).toBe('GET');
+      expect(new URL(sent!.url).pathname).toBe(
+        `/api${surface.url.replace('{sprintId}', SPRINT).replace('{date}', DAY)}`,
+      );
+      expect(surface.path).toBe(schemaNamed(`v${capitalized(id)}Path`));
+      expect(surface.query).toBe(schemaNamed(`v${capitalized(id)}Query`));
+    },
+  );
+
+  it('name the read and its input from the checked request', () => {
+    const read = (id: ReadId, path = {}, query = {}) =>
+      readOf(readSurfaces[id], { path, query }, check);
+    expect(read('listAreas')).toEqual({ name: 'listAreas', input: undefined });
+    expect(read('getBacklog', {}, { view: ['dueSoon'], area: [AREA] })).toEqual(
+      { name: 'getBacklog', input: { view: 'dueSoon', area: AREA } },
+    );
+    expect(read('listSprints', {}, { number: ['2'] })).toEqual({
+      name: 'listSprints',
+      input: { number: 2 },
+    });
+    expect(read('getSprint', { sprintId: SPRINT })).toEqual({
+      name: 'getSprint',
+      input: { sprintId: SPRINT, applyCriterion: false },
+    });
+    expect(
+      read('getSprint', { sprintId: SPRINT }, { 'apply-criterion': ['true'] }),
+    ).toEqual({
+      name: 'getSprint',
+      input: { sprintId: SPRINT, applyCriterion: true },
+    });
+    expect(read('listSprintCandidates', { sprintId: SPRINT })).toEqual({
+      name: 'listSprintCandidates',
+      input: { sprintId: SPRINT },
+    });
+    expect(read('getSprintRetro', { sprintId: SPRINT })).toEqual({
+      name: 'getSprintRetro',
+      input: { sprintId: SPRINT },
+    });
+    expect(read('getDay', { date: DAY })).toEqual({
+      name: 'getDay',
+      input: { date: DAY },
+    });
+  });
+
+  it('check the path, then the query, with the schemas', () => {
+    const parts: string[] = [];
+    readOf(
+      readSurfaces.getSprint,
+      { path: { sprintId: SPRINT }, query: {} },
+      (schema, value, part) => {
+        parts.push(part);
+        return check(schema, value);
+      },
+    );
+    expect(parts).toEqual(['path', 'query']);
+    expect(() =>
+      readOf(
+        readSurfaces.getSprint,
+        { path: { sprintId: AREA }, query: {} },
+        check,
+      ),
+    ).toThrow();
+    expect(() =>
+      readOf(
+        readSurfaces.getBacklog,
+        { path: {}, query: { area: [SPRINT] } },
+        check,
+      ),
+    ).toThrow();
   });
 });
 

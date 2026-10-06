@@ -1,6 +1,6 @@
 import {
   DURATION_ERROR,
-  readMinutes,
+  readPositiveMinutes,
   type DurationText,
 } from './duration-text';
 
@@ -19,7 +19,7 @@ export const ACTUAL_HOURS_ERROR = DURATION_ERROR;
  * `null` when they are not a time of at least a minute.
  */
 export function readActualHours(text: DurationText): number | undefined | null {
-  const minutes = readMinutes(text);
+  const minutes = readPositiveMinutes(text);
   if (minutes === undefined) return undefined;
-  return minutes === null || minutes <= 0 ? null : minutes / 60;
+  return minutes === null ? null : minutes / 60;
 }

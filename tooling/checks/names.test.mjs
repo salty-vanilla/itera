@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkReactFileName } from './names.mjs';
+import { checkAreaFileName, checkReactFileName } from './names.mjs';
 
 describe('checkReactFileName', () => {
   it.each([
@@ -17,4 +17,24 @@ describe('checkReactFileName', () => {
       expect(() => checkReactFileName(path)).toThrow(/kebab-case/);
     },
   );
+});
+
+describe('checkAreaFileName', () => {
+  it.each([
+    'apps/web/src/lib/domain-functions.ts',
+    'apps/web/src/screens/backlog/area-dialog.tsx',
+    'packages/domain/src/domain-error.ts',
+  ])('accepts %s', (path) => {
+    expect(() => checkAreaFileName(path)).not.toThrow();
+  });
+
+  it.each([
+    'apps/web/src/screens/backlog/domain-dialog.tsx',
+    'apps/web/src/lib/domains.ts',
+    'apps/web/src/components/DomainChip.tsx',
+    'apps/web/src/screens/domain-functions.ts',
+    'apps/web/src/screens/domains/list.tsx',
+  ])('rejects %s', (path) => {
+    expect(() => checkAreaFileName(path)).toThrow(/Area/);
+  });
 });

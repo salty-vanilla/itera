@@ -24,6 +24,10 @@ const READS = {
 /** The application's exports that are not reads of the person's records. */
 const NOT_READS = new Set([
   'operations',
+  // The reads above by their operationId, and running one (#350):
+  // requests.test.ts holds them to the contract's reads.
+  'reads',
+  'runRead',
   // The system's own records: the server runs them (ADR 0005).
   'catchUp',
   // The person's settings: the server's, with the first write (requests.ts).

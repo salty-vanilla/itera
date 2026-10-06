@@ -5,6 +5,7 @@ import { Field } from '@/components/ui/field';
 import { Kbd } from '@/components/ui/kbd';
 import { TextInput } from '@/components/ui/text-input';
 import { cn } from '@/lib/utils';
+import { readTaskTitle } from '@/lib/value-rules';
 
 // DESIGN.md Components › Task Quick Add. Adds a Task by its title without
 // leaving the screen: a `plus` icon, no visible label (the accessible name
@@ -47,7 +48,10 @@ function TaskQuickAdd({
       hideLabel
       className={cn(
         'min-w-0 flex-1',
-        area !== undefined && 'col-span-2',
+        // With enlarged text the placeholder may be cut: the label shows it
+        // whole (#393).
+        'enlarged:[&_[data-slot=field-label]]:not-sr-only',
+        area !== undefined && 'col-span-2 enlarged:col-span-1',
         area !== undefined && !stackArea && 'medium:col-auto',
       )}
     >
@@ -84,10 +88,10 @@ function TaskQuickAdd({
       onSubmit={async (event) => {
         event.preventDefault();
         inputRef.current?.focus();
-        const added = title.trim();
-        if (added === '' || !(await onAdd(added))) return;
+        const added = readTaskTitle(title);
+        if (added === undefined || !(await onAdd(added))) return;
         // Typing went on while it was sent: that text is the next Task's.
-        setTitle((typed) => (typed.trim() === added ? '' : typed));
+        setTitle((typed) => (readTaskTitle(typed) === added ? '' : typed));
       }}
     >
       {/* Under 768px, and in a narrow pane, the field has the whole first
@@ -96,7 +100,9 @@ function TaskQuickAdd({
           order in the page is the same at every width. */}
       <div
         className={cn(
-          'grid grid-cols-[1fr_auto] items-end gap-2',
+          // With enlarged text the Area Select and the button have a row
+          // each (#393).
+          'grid grid-cols-[1fr_auto] items-end gap-2 enlarged:grid-cols-1',
           !stackArea && 'medium:flex',
         )}
       >

@@ -1,4 +1,4 @@
-import type { MadeFrom } from '@itera/api-contract/requests';
+import type { MadeFrom } from '@itera/api-contract/sending';
 import type { TaskId } from '@itera/api-contract';
 import { Link } from '@tanstack/react-router';
 import { Info } from 'lucide-react';
@@ -82,16 +82,16 @@ function CheckSummary({
             />
           )}
         </div>
-        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-1 text-body">
+        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-1 text-body enlarged:grid-cols-1">
           <dt className="text-ink-muted">計画の合計</dt>
           {/* In the body's size: the answer is above (#243). */}
-          <dd className="text-ink">{summary.total}</dd>
+          <dd className="text-ink enlarged:break-keep">{summary.total}</dd>
           <dt className="text-ink-muted">タスク</dt>
           <dd className="text-ink">
             {summary.taskCount}件
             {summary.unlinked > 0 && (
               // Kept whole: the count stays with its words.
-              <span className="whitespace-nowrap">
+              <span className="nowrap-phrase">
                 （うち目標に入っていない {summary.unlinked}件）
               </span>
             )}
@@ -129,9 +129,10 @@ function CheckSummary({
             {summary.unestimated.map((planned) => (
               <li
                 key={planned.sprintTask.id}
-                className="flex min-h-control-md items-center justify-between gap-3 border-b border-border-soft py-1"
+                // With enlarged text the button goes under the title (#393).
+                className="flex min-h-control-md items-center justify-between gap-3 border-b border-border-soft py-1 enlarged:flex-wrap"
               >
-                <span className="min-w-0 text-body text-ink">
+                <span className="min-w-0 text-body text-ink enlarged:basis-full">
                   {planned.task.title}
                 </span>
                 <Button
@@ -170,7 +171,11 @@ function CheckSummary({
       {data.criterion?.hasTarget === true && (
         <section
           aria-labelledby={`${ids}-criterion`}
-          className="flex flex-col gap-3 rounded-sm bg-canvas-subtle p-4"
+          // With enlarged text on a compact width the card reaches the edges
+          // of the screen (the text inside keeps the page's own edges), so the
+          // Switch's label is 10 characters wide at 320px (#425). The 16px is
+          // the page's padding on compact (planning-screen.tsx).
+          className="flex flex-col gap-3 rounded-sm bg-canvas-subtle p-4 enlarged:max-medium:-mx-4 enlarged:max-medium:rounded-none"
         >
           <div className="flex flex-col gap-1">
             <h3 id={`${ids}-criterion`} className="text-label text-ink-muted">
@@ -240,7 +245,7 @@ function Drivers({ data }: { data: PlanningData }) {
           <li key={d.sprintTask.id}>
             {`「${d.task.title}」は `}
             {/* A time is never broken inside (#239). */}
-            <span className="whitespace-nowrap">
+            <span className="nowrap-phrase">
               {formatRange(d.value.lo, d.value.hi)}
             </span>
             の幅があります。

@@ -1,6 +1,7 @@
 import { Toast as ToastPrimitive } from '@base-ui/react/toast';
 import { X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { TOAST_ACTION_TIMEOUT, TOAST_TIMEOUT } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import { Button } from './button';
 import { Icon, semanticIcons } from './icon';
@@ -21,13 +22,6 @@ import { IconButton } from './icon-button';
 // with that ID closes the one showing and takes its place as the newest
 // (DESIGN.md Toast).
 
-/** docs/design/foundations.md `duration-toast`. */
-const TOAST_TIMEOUT = 8000;
-/**
- * `duration-toast-action`: a Toast with an action (元に戻す, 今日を開く) is
- * pressed after it is read, and it takes longer to reach (#170).
- */
-const TOAST_ACTION_TIMEOUT = 16000;
 /** Three at a time at most (Issue #8). Older ones are hidden. */
 const TOAST_LIMIT = 3;
 
@@ -144,15 +138,15 @@ function ToastList() {
         )}
       >
         {/*
-          One row: icon, text, action, close. Narrower than 400px (compact,
-          and medium beside an open Drawer) the action goes on a line of its
-          own under the text, so that it does not stand out over the text
-          nor squeeze it (#332).
+          One row: icon, text, action, close. Narrower than a Drawer (compact,
+          and medium beside an open Drawer: @min-drawer) the action goes on a
+          line of its own under the text, so that it does not stand out over
+          the text nor squeeze it (#332).
         */}
         <ToastPrimitive.Content
           className={cn(
             'grid grid-cols-[auto_minmax(0,1fr)_auto] items-start py-2 pr-2 pl-4',
-            '@min-[400px]:grid-cols-[auto_minmax(0,1fr)_auto_auto]',
+            '@min-drawer:grid-cols-[auto_minmax(0,1fr)_auto_auto]',
           )}
         >
           {toneIcon && (
@@ -171,7 +165,7 @@ function ToastList() {
             className={cn(
               'col-start-2 row-start-1 flex min-w-0 flex-col pt-4 medium:pt-2',
               // The action under it is the room below.
-              toast.actionProps ? 'pb-1 @min-[400px]:pb-2' : 'pb-2',
+              toast.actionProps ? 'pb-1 @min-drawer:pb-2' : 'pb-2',
             )}
           >
             {/* A sentence, not a heading of the page. */}
@@ -189,7 +183,7 @@ function ToastList() {
               className={cn(
                 // Under the text, its outline in line with the text.
                 'col-start-2 row-start-2 justify-self-start',
-                '@min-[400px]:col-start-3 @min-[400px]:row-start-1 @min-[400px]:mt-1 @min-[400px]:ml-2',
+                '@min-drawer:col-start-3 @min-drawer:row-start-1 @min-drawer:mt-1 @min-drawer:ml-2',
               )}
             />
           )}
@@ -203,7 +197,7 @@ function ToastList() {
                 label="閉じる"
                 icon={<X aria-hidden />}
                 size="sm"
-                className="col-start-3 row-start-1 mt-1 ml-2 @min-[400px]:col-start-4"
+                className="col-start-3 row-start-1 mt-1 ml-2 @min-drawer:col-start-4"
               />
             }
           />
@@ -370,9 +364,7 @@ function scrollClearOfToasts(
 }
 
 export {
-  TOAST_ACTION_TIMEOUT,
   TOAST_LIMIT,
-  TOAST_TIMEOUT,
   ToastProvider,
   scrollClearOfToasts,
   toastBox,

@@ -10,13 +10,15 @@
     "./problems": "./src/problems.ts",
     "./react-query": "./src/react-query.ts",
     "./requests": "./src/requests.ts",
+    "./sending": "./src/sending.ts",
     "./testing": "./src/testing.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.test.json",
     "lint:spec": "REDOCLY_SUPPRESS_UPDATE_NOTICE=true redocly lint openapi/openapi.yaml",
     "generate": "node scripts/generated.mjs write",
-    "check:generated": "node scripts/generated.mjs check"
+    "check:generated": "node scripts/generated.mjs check",
+    "breaking": "node scripts/breaking.mjs"
   },
   "dependencies": {
     "@itera/application": "workspace:*",

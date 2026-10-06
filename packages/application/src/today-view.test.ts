@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot, fixtureIds } from './fixtures/states';
 import type { Records } from './records';
 import { backlogData } from './backlog-view';
+import { runningData } from './running-view';
 import { todayData } from './today-view';
 import { tagged } from './testing';
 
@@ -126,6 +127,71 @@ describe('todayData', () => {
       (n) => n.text,
     );
     expect(texts).toEqual(['障害の問い合わせに対応', '急ぎのレビュー依頼']);
+  });
+});
+
+// Before the Sprint's first day the read gives that day, and from the first
+// day on it gives none: the screens show the week read only from this value
+// and do not compare dates (#347).
+describe('opensOn', () => {
+  const { records, clock } = fixtureSnapshot('today-interrupt');
+  const start = records.sprints.find((s) => s.state === 'active')?.start;
+  const on = (today: string) => ({ ...clock, today: localDate(today) });
+
+  it('is the first day on the day before it, and absent from that day on', () => {
+    expect(start).toBe('2026-09-28');
+    const answers = ['2026-09-27', '2026-09-28', '2026-10-04'].map(
+      (day) => todayData(tagged(records), on(day))?.opensOn,
+    );
+    expect(answers).toEqual(['2026-09-28', undefined, undefined]);
+  });
+
+  // No 0th or earlier day for a client to show (#427).
+  it('comes with no day before the first day, and with the day from it on', () => {
+    const days = ['2026-09-26', '2026-09-27', '2026-09-28', '2026-10-04'].map(
+      (day) => todayData(tagged(records), on(day))?.day,
+    );
+    expect(days).toEqual([
+      undefined,
+      undefined,
+      { index: 1, count: 7 },
+      { index: 7, count: 7 },
+    ]);
+  });
+});
+
+// Today, the running Sprint and the Backlog's 今日へ ask the same question,
+// "is it before the first day?", and give the same day (#428).
+describe('opensOn across the reads', () => {
+  const { records, clock } = fixtureSnapshot('today-interrupt');
+  const on = (today: string) => ({ ...clock, today: localDate(today) });
+
+  it('gives one day in Today, the running Sprint and every Backlog row, and none from the first day on', () => {
+    const answers = ['2026-09-27', '2026-09-28', '2026-10-04'].map((day) => {
+      const backlog = backlogData(tagged(records), on(day), {});
+      return {
+        day,
+        today: todayData(tagged(records), on(day))?.opensOn,
+        running: runningData(tagged(records), on(day))?.opensOn,
+        rows: [
+          ...new Set(
+            Object.values(backlog.items).map((i) => i.todayOpensOn?.start),
+          ),
+        ],
+      };
+    });
+    expect(answers.map((a) => [a.today, a.running])).toEqual([
+      ['2026-09-28', '2026-09-28'],
+      [undefined, undefined],
+      [undefined, undefined],
+    ]);
+    // Before the first day some row waits for it, and none does after.
+    expect(answers[0]?.rows).toContain('2026-09-28');
+    expect(
+      answers[0]?.rows.every((d) => d === undefined || d === '2026-09-28'),
+    ).toBe(true);
+    expect(answers[1]?.rows).toEqual([undefined]);
+    expect(answers[2]?.rows).toEqual([undefined]);
   });
 });
 

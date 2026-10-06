@@ -10,8 +10,8 @@ import {
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppRouter } from '@/app/router';
-import { ADDED_MS } from './planning-screen';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { ADDED_MS } from '@/lib/motion';
 import type { StoreSnapshot } from '@/mock/memory-store';
 import { findHours, getHours, getMinutes } from '@/test/duration';
 import { waitForSprintScreen } from '@/test/sprint-ready';
@@ -30,9 +30,25 @@ beforeEach(() => {
 let lastSnapshot: () => StoreSnapshot;
 // For the state a first-time person is in: no planning criterion yet.
 let withoutCriteria = false;
+// API 設計のレビュー without an Estimate or a suggestion: no value at all.
+let reviewUnestimated = false;
 afterEach(() => {
   withoutCriteria = false;
+  reviewUnestimated = false;
 });
+function withReviewUnestimated(
+  records: StoreSnapshot['records'],
+): StoreSnapshot['records'] {
+  return {
+    ...records,
+    tasks: records.tasks.map((t) => {
+      if (t.id !== ids.task.apiReview) return t;
+      const { estimate: _estimate, ...rest } = t;
+      void _estimate;
+      return { ...rest, suggestions: [] };
+    }),
+  };
+}
 vi.mock('@/mock/memory-store', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/mock/memory-store')>();
   return {
@@ -40,11 +56,13 @@ vi.mock('@/mock/memory-store', async (importOriginal) => {
     createMemoryStore: (
       ...[initial]: Parameters<typeof actual.createMemoryStore>
     ) => {
-      const store = actual.createMemoryStore(
-        withoutCriteria
-          ? { ...initial, records: { ...initial.records, criteria: [] } }
-          : initial,
-      );
+      const records = withoutCriteria
+        ? { ...initial.records, criteria: [] }
+        : initial.records;
+      const store = actual.createMemoryStore({
+        ...initial,
+        records: reviewUnestimated ? withReviewUnestimated(records) : records,
+      });
       lastSnapshot = () => store.getSnapshot();
       return store;
     },
@@ -107,6 +125,40 @@ describe('Planning — 優先度 (#97)', () => {
   });
 });
 
+describe('Planning — the Backlog pane rows are Task Rows (#395)', () => {
+  it('gives every row the slot, the hover and the `…` of a Task Row', async () => {
+    await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    const rows = [
+      ...backlogPane().querySelectorAll<HTMLElement>(
+        'li:has([data-row-focus])',
+      ),
+    ];
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row.dataset.slot).toBe('task-row');
+      // A chosen row keeps its `here-subtle` (below).
+      if (row.dataset.chosen === undefined)
+        expect(row.className).toContain('hover:bg-surface-hover');
+      // The `…` shows on the row's hover and focus, as a Task Row's does.
+      const more = row.querySelector('[aria-haspopup="menu"]');
+      if (more !== null)
+        expect(more.parentElement?.className).toContain(
+          'medium:group-hover/row:opacity-100',
+        );
+    }
+  });
+
+  it('keeps a chosen row `here-subtle` under the pointer', async () => {
+    await renderAt('/sprint?fixture=planning-pick&stage=pick');
+    const row = within(backlogPane())
+      .getByText('新メンバーのオンボーディング資料')
+      .closest('li') as HTMLElement;
+    expect(row.className).not.toContain('bg-here-subtle');
+    await userEvent.click(within(row).getByRole('checkbox'));
+    expect(row.className).toContain('bg-here-subtle hover:bg-here-subtle');
+  });
+});
+
 describe('Planning — the stuck Capacity line (#152)', () => {
   it('publishes its height while the screen shows, so that the focus is not under it', async () => {
     const top = () =>
@@ -122,10 +174,20 @@ describe('Planning — the stuck Capacity line (#152)', () => {
     await renderAt('/sprint?fixture=planning-shape&stage=shape');
     const line = screen.getByRole('button', { name: /時間の見通しを開く/ });
     expect(
-      [...line.querySelectorAll('.whitespace-nowrap')].map(
-        (e) => e.textContent,
-      ),
+      [...line.querySelectorAll('.nowrap-phrase')].map((e) => e.textContent),
     ).toEqual(['計画の合計', '15時間15分〜17時間15分 ·', '使える時間は未入力']);
+  });
+
+  it('lets 時間の見通しを開く drop under the total only where its widest piece and the mark do not fit a line (#357)', async () => {
+    await renderAt('/sprint?fixture=planning-shape&stage=shape');
+    // jsdom has no layout; the 320px and 390px measures are in the PR.
+    // Without the wrap the mark (shrink-0) runs 9px past the edge of main at
+    // 320px; the total starts from zero width (basis-0), so that the mark
+    // drops only when the total's narrowest width does not leave room for it,
+    // not when the total merely runs to two lines (390px).
+    const line = screen.getByRole('button', { name: /時間の見通しを開く/ });
+    expect(line.className).toContain('flex-wrap');
+    expect(line.firstElementChild?.className).toContain('basis-0');
   });
 });
 
@@ -288,7 +350,8 @@ describe('Planning — 選ぶ', () => {
     );
     await userEvent.type(field, '発表資料を見直す');
     await userEvent.click(add);
-    expect(field).toHaveProperty('value', '');
+    // Emptied once the Task is added.
+    await waitFor(() => expect(field).toHaveProperty('value', ''));
     expect(document.activeElement).toBe(field);
     const task = lastSnapshot().records.tasks.find(
       (t) => t.title === '発表資料を見直す',
@@ -402,11 +465,13 @@ describe('Planning — 整える', () => {
     expect(draft().goals.find((g) => g.areaId === ids.area.study)?.text).toBe(
       '英語を毎日読む状態にする',
     );
+    // The form gives way to the Goal once it is saved.
+    const edit = await within(study).findByRole('button', {
+      name: '目標を編集：学習',
+    });
     expect(within(study).getByText('英語を毎日読む状態にする')).toBeTruthy();
 
-    await userEvent.click(
-      within(study).getByRole('button', { name: '目標を編集：学習' }),
-    );
+    await userEvent.click(edit);
     await userEvent.clear(within(study).getByRole('textbox', { name: /目標/ }));
     await userEvent.click(within(study).getByRole('button', { name: '保存' }));
     expect(draft().goals.some((g) => g.areaId === ids.area.study)).toBe(false);
@@ -737,9 +802,7 @@ describe('Planning — 確かめる', () => {
     // It may break between the name and the value, and after 「·」, never
     // inside a value or before 「·」 (#239).
     expect(
-      [...line().querySelectorAll('.whitespace-nowrap')].map(
-        (e) => e.textContent,
-      ),
+      [...line().querySelectorAll('.nowrap-phrase')].map((e) => e.textContent),
     ).toEqual([
       '少なく済んでも',
       '1時間15分超える ·',
@@ -793,6 +856,25 @@ describe('Planning — 確かめる', () => {
     );
     // 「計画値が下限どおりでも、超過 1時間15分です。」 would say it again.
     expect(summary().textContent?.match(/1時間15分/g)).toHaveLength(1);
+  });
+
+  it('lists the Tasks the total leaves out, whole or in part, as many as its sentences say (#348)', async () => {
+    reviewUnestimated = true;
+    await renderAt('/sprint?fixture=planning-check&stage=check');
+    const unestimated = within(summary())
+      .getByRole('heading', { name: '見積もりなし' })
+      .closest('section') as HTMLElement;
+    expect(unestimated.textContent).toContain(
+      '見積もりのないタスク 1件は合計に含まれていません。',
+    );
+    expect(unestimated.textContent).toContain(
+      '見積もりのないサブタスク 1件は合計に含まれていません。',
+    );
+    expect(
+      within(unestimated)
+        .getAllByRole('button', { name: /^見積もる：/ })
+        .map((b) => b.getAttribute('aria-label') ?? b.textContent),
+    ).toEqual(['見積もる：API 設計のレビュー', '見積もる：実験データの前処理']);
   });
 
   it('opens with the summary the 確定 Dialog shows, from the same values (#93)', async () => {

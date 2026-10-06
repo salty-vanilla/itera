@@ -15,7 +15,6 @@ import { useNow, type Now } from '@/api/use-me';
 import { AreaIndicator } from '@/components/ui/area-indicator';
 import { ReadStatus } from '@/components/read-status';
 import { Button } from '@/components/ui/button';
-import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/toast';
 import { AreaSelect, chosenArea } from '@/components/task/area-select';
@@ -26,6 +25,7 @@ import { formatDate, formatTime } from '@/lib/date-format';
 import { LAST_DAY_CLOSED_WORDS } from '@/lib/selection-words';
 import { formatPlanningTotal } from '@/lib/time-format';
 import { useEstimateFocus } from '@/lib/use-estimate-focus';
+import { ENLARGED, useMediaQuery } from '@/lib/use-media-query';
 import { useStuckBar } from '@/lib/use-stuck-bar';
 import { cn } from '@/lib/utils';
 import { hasDetail, useBacklog } from '@/screen-data/use-backlog';
@@ -33,6 +33,7 @@ import { useTaskActions } from '@/screen-data/use-task-actions';
 import { useDay, useTodayActions } from '@/screen-data/use-today';
 import { useNewAreaDialog } from '../backlog/area-dialog';
 import { TaskDetail } from '../backlog/task-detail';
+import { TaskDetailDrawer } from '../backlog/task-detail-drawer';
 import { useTaskDetailLeave } from '../backlog/use-task-detail-leave';
 import {
   DayFocusScope,
@@ -118,8 +119,9 @@ function Day({ date, now }: { date: LocalDate; now: Now }) {
     if (day.data === undefined) {
       return <NoActiveSprint today={now.today} sprints={now.sprints} />;
     }
-    if (day.data.today < day.data.sprint.start) {
-      return <BeforeStart data={day.data} />;
+    // Before the first day the read says so (#347): no date compared here.
+    if (day.data.opensOn !== undefined) {
+      return <BeforeStart data={day.data} opensOn={day.data.opensOn} />;
     }
     return <TodayView data={day.data} />;
   }
@@ -149,16 +151,22 @@ function Day({ date, now }: { date: LocalDate; now: Now }) {
  * within the period (owner decision in #54); the Tasks are what that day's
  * 今週の残り will hold (#156).
  */
-function BeforeStart({ data }: { data: TodayData }) {
+function BeforeStart({
+  data,
+  opensOn,
+}: {
+  data: TodayData;
+  opensOn: LocalDate;
+}) {
   return (
     <DayFrame date={data.today} today={data.today}>
       <p className="text-body text-ink-muted">
-        Sprint {data.number} は {formatDate(data.sprint.start)} から始まります。
+        Sprint {data.number} は {formatDate(opensOn)} から始まります。
         {/* One step to the Sprint (#90). */}{' '}
         <Link
           to="/sprint"
           search={{ sprint: data.number }}
-          className="whitespace-nowrap text-link underline focus-visible:focus-ring"
+          className="nowrap-phrase text-link underline focus-visible:focus-ring"
         >
           Sprint {data.number} を開く
         </Link>
@@ -220,7 +228,7 @@ function NoActiveSprint({
 }) {
   const { review: reviewSprint, planning: planningSprint } = sprints;
   // After the sentence's space, the link moves to the next line whole.
-  const link = 'whitespace-nowrap text-link underline focus-visible:focus-ring';
+  const link = 'nowrap-phrase text-link underline focus-visible:focus-ring';
   return (
     <DayFrame date={today} today={today}>
       <p className="text-body text-ink-muted">
@@ -283,9 +291,11 @@ function TodayView({ data }: { data: TodayData }) {
   // One archived since it was chosen is no longer a choice (#113).
   const quickChoice = chosenArea(quickArea, data.areas);
   // The Quick Add sticks to the bottom at every width: the Toast goes above
-  // it, and the Quick Add does not move (DESIGN.md Toast).
+  // it, and the Quick Add does not move (DESIGN.md Toast). Not with enlarged
+  // text: it would cover half of a low screen, so it is the last thing in the
+  // column instead (#426).
   const quickAddRef = useRef<HTMLDivElement>(null);
-  useStuckBar(quickAddRef, 'bottom');
+  useStuckBar(quickAddRef, 'bottom', !useMediaQuery(ENLARGED));
   // The `…` of each row, for the actual time surface to sit by.
   const triggers = useRef(new Map<DailySelectionId, HTMLButtonElement>());
   // Where the focus goes once the records have changed: the row that
@@ -294,22 +304,37 @@ function TodayView({ data }: { data: TodayData }) {
   // drawn; `askFocus` looks again when the target was set after the records.
   const focusNext = useRef<FocusTarget | undefined>(undefined);
   const [focusAsked, askFocus] = useReducer((asked: number) => asked + 1, 0);
-  // Sends an operation that moves a row, and has the focus follow it. The
-  // focus is asked for before the send, not after: the screen draws the new
-  // records as they come, which can be before the send's promise resolves.
-  // An operation that did not go through changes nothing: the request there
-  // was before it stands (a second press while the first is being sent is
-  // answered at once, and must not take the first one's focus away).
-  const follow = async (
-    target: FocusTarget,
-    send: () => Promise<boolean>,
-  ): Promise<boolean> => {
-    const before = focusNext.current;
-    focusNext.current = target;
-    const ok = await send();
-    if (!ok && focusNext.current === target) focusNext.current = before;
-    return ok;
+  // The operations that move a row and are still being sent. The rows'
+  // operations are sent one after another (useTodayActions): one pressed on
+  // another row while the first is on its way waits for it, and the focus
+  // goes where the last one pressed sends it, once all are through (#354).
+  const moving = useRef(0);
+  // Sends an operation that moves a row, and has the focus follow it to
+  // `targetOf` its result. The target is asked for once every operation
+  // pressed has been sent, not as each one's records are drawn: the row of
+  // one sent before the last would take the focus first, and the screen draws
+  // the new records as they come, which can be before the send's promise
+  // resolves. An operation that did not go through changes nothing: the
+  // request there was before it stands (a repeat on the same row while it is
+  // being sent is answered at once, and must not take its focus away).
+  const followTo = async <T,>(
+    send: () => Promise<T>,
+    targetOf: (sent: T) => FocusTarget | undefined,
+  ): Promise<T> => {
+    moving.current += 1;
+    let sent: T;
+    try {
+      sent = await send();
+    } finally {
+      moving.current -= 1;
+    }
+    const target = targetOf(sent);
+    if (target !== undefined) focusNext.current = target;
+    if (moving.current === 0) askFocus();
+    return sent;
   };
+  const follow = (target: FocusTarget, send: () => Promise<boolean>) =>
+    followTo(send, (ok) => (ok ? target : undefined));
 
   const detail = useTaskDetailLeave();
   const showTask = (taskId: TaskId | undefined) =>
@@ -325,10 +350,6 @@ function TodayView({ data }: { data: TodayData }) {
   const inBacklog = (taskId: TaskId) => hasDetail(backlog, taskId);
   const openTask = (taskId: TaskId | undefined) =>
     detail.leave(() => showTask(taskId), taskId !== undefined);
-  const openItem =
-    search.task === undefined || backlog.status !== 'ready'
-      ? undefined
-      : backlog.item(search.task);
   const estimateFocus = useEstimateFocus(search.task);
   const openEstimate = (taskId: TaskId) =>
     detail.leave(() => {
@@ -338,7 +359,8 @@ function TodayView({ data }: { data: TodayData }) {
 
   useEffect(() => {
     const next = focusNext.current;
-    if (next === undefined) return;
+    // Asked again once the last operation pressed is through (`followTo`).
+    if (next === undefined || moving.current > 0) return;
     const selector =
       'selection' in next
         ? `[data-selection="${next.selection}"] :is([data-slot="completion-circle"], [data-action="undo-skip"])`
@@ -467,19 +489,16 @@ function TodayView({ data }: { data: TodayData }) {
           actions.complete(selectionId),
         );
       },
-      onUndoComplete: () => {
-        // Completed from the Backlog: undone as the Backlog does (F29), so
-        // the choice it made for today goes away with it.
-        if (row.selection.origin === 'backlogCompletion') {
-          void follow({ rest: row.sprintTask.id }, () =>
-            taskActions.undoCompleteTask(row.task.id),
-          );
-          return;
-        }
-        void follow({ selection: selectionId }, () =>
-          actions.undoComplete(selectionId),
-        );
-      },
+      onUndoComplete: () =>
+        void follow(
+          // Completed from the Backlog: the server undoes it as the Backlog
+          // does (F29, #346), so the choice it made for today goes away and
+          // the Task is back in the week's rest.
+          row.selection.origin === 'backlogCompletion'
+            ? { rest: row.sprintTask.id }
+            : { selection: selectionId },
+          () => actions.undoComplete(selectionId),
+        ),
       onStart: () => void actions.start(selectionId),
       onDefer: () =>
         void closed(row, 'を見送りました', () => actions.defer(selectionId)),
@@ -537,13 +556,10 @@ function TodayView({ data }: { data: TodayData }) {
       return;
     }
     // The choice made comes back with its ID: that is the row to focus.
-    const chosen = await actions.chooseForToday(
-      item.sprintTask.id,
-      item.occurrence?.id,
+    await followTo(
+      () => actions.chooseForToday(item.sprintTask.id, item.occurrence?.id),
+      (chosen) => (chosen === undefined ? undefined : { selection: chosen }),
     );
-    if (chosen === undefined) return;
-    focusNext.current = { selection: chosen };
-    askFocus();
   };
 
   const remaining = data.remaining;
@@ -585,7 +601,11 @@ function TodayView({ data }: { data: TodayData }) {
           <DayHeader
             date={data.today}
             today={data.today}
-            meta={`Sprint ${data.number} · ${data.day.index}日目 / ${data.day.count}日`}
+            meta={
+              data.day === undefined
+                ? `Sprint ${data.number}`
+                : `Sprint ${data.number} · ${data.day.index}日目 / ${data.day.count}日`
+            }
           >
             <Progress
               label="今週の完了"
@@ -596,18 +616,20 @@ function TodayView({ data }: { data: TodayData }) {
             />
             {/* 「割り込みを記録」 on the right, reached without scrolling at
               every width (#100); it stays there with no 今日の残り line. */}
-            <div className="flex items-center justify-end gap-4">
+            <div className="flex items-center justify-end gap-4 enlarged:flex-wrap">
               {/* Nothing chosen yet (no done and no closed row): the empty 今日やる already says so. */}
               {(data.rows.length > 0 || data.closed.length > 0) && (
                 // Two lines if need be under 768px: the button stays on the right.
-                <p className="min-w-0 flex-1 text-body text-ink-muted">
+                // With enlarged text the line is the row's width and the
+                // button goes under it (#393).
+                <p className="min-w-0 flex-1 text-body text-ink-muted enlarged:basis-full">
                   {remaining.count === 0 ? (
                     '今日の残りはありません'
                   ) : (
                     // Broken between the parts (and before 「（ほかに見積もり
                     // なし 1件）」), not in the range or the note.
                     <>
-                      <span className="inline-block">
+                      <span className="inline-block enlarged:break-keep">
                         今日の残り {remaining.count}件 ·
                       </span>{' '}
                       {formatPlanningTotal({
@@ -616,7 +638,10 @@ function TodayView({ data }: { data: TodayData }) {
                       })
                         .split(/(?=（)/)
                         .map((part, i) => (
-                          <span key={i} className="inline-block">
+                          <span
+                            key={i}
+                            className="inline-block enlarged:break-keep"
+                          >
                             {part}
                           </span>
                         ))}
@@ -780,11 +805,12 @@ function TodayView({ data }: { data: TodayData }) {
 
         {/* Stuck to the bottom of the screen (above the tab bar under 768px,
             DESIGN.md Layout); last in the column so that it stays at the
-            bottom while scrolling. A Toast shows above it, never over it. */}
+            bottom while scrolling. A Toast shows above it, never over it.
+            With enlarged text it does not stick (#426). */}
         <div
           ref={quickAddRef}
           className={cn(
-            'sticky bottom-0 z-(--layer-sticky) -mx-4 mt-auto border-t border-border bg-canvas px-4 py-3',
+            'sticky bottom-0 z-(--layer-sticky) enlarged:static -mx-4 mt-auto border-t border-border bg-canvas px-4 py-3',
             'medium:-mx-6 medium:px-6 wide:mx-0 wide:px-0',
           )}
         >
@@ -878,32 +904,28 @@ function TodayView({ data }: { data: TodayData }) {
         />
       )}
 
-      <Drawer
-        open={openItem !== undefined}
-        onOpenChange={(next) => {
-          if (!next) openTask(undefined);
-        }}
-      >
-        <DrawerContent>
-          {backlog.status === 'ready' && openItem !== undefined && (
-            <TaskDetail
-              key={openItem.task.id}
-              item={openItem}
-              areas={backlog.areas}
-              timeZone={backlog.timeZone}
-              lastDay={backlog.lastDay}
-              onClose={() => showTask(undefined)}
-              onComplete={async () => {
-                if (await taskActions.completeTask(openItem.task.id)) {
-                  showTask(undefined);
-                }
-              }}
-              focusEstimate={estimateFocus.of(openItem.task.id)}
-              leaveRef={detail.ref}
-            />
-          )}
-        </DrawerContent>
-      </Drawer>
+      <TaskDetailDrawer
+        taskId={search.task}
+        backlog={backlog}
+        onDismiss={() => openTask(undefined)}
+        render={(item, ready) => (
+          <TaskDetail
+            key={item.task.id}
+            item={item}
+            areas={ready.areas}
+            timeZone={ready.timeZone}
+            lastDay={ready.lastDay}
+            onClose={() => showTask(undefined)}
+            onComplete={async () => {
+              if (await taskActions.completeTask(item.task.id)) {
+                showTask(undefined);
+              }
+            }}
+            focusEstimate={estimateFocus.of(item.task.id)}
+            leaveRef={detail.ref}
+          />
+        )}
+      />
     </>
   );
 }

@@ -1,3 +1,4 @@
+import { isBlank } from '@/lib/value-rules';
 import type { RetroData } from '@/screen-data/retro-view';
 import type { RetroStage } from './retro-screen';
 
@@ -16,6 +17,6 @@ export function retroStageOf(
   if (data.improvement !== undefined || data.used?.decision !== undefined) {
     return 'handoff';
   }
-  if (data.reflection.trim() !== '') return 'reflect';
+  if (!isBlank(data.reflection)) return 'reflect';
   return 'facts';
 }

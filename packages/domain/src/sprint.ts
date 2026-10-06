@@ -261,8 +261,7 @@ export function weekStartOf(date: LocalDate, user: User): LocalDate {
 /**
  * SprintTasks that count toward the Sprint's plan now: in Planning and
  * during the Sprint. Removed and carried-over ones do not. Retro's
- * "planned total" (#24) must also count carried-over ones, so it needs its
- * own rule rather than this one.
+ * "planned total" (#24) also counts carried-over ones: `isInConfirmedPlan`.
  */
 export function isCounted(task: SprintTask): boolean {
   return (
@@ -270,6 +269,33 @@ export function isCounted(task: SprintTask): boolean {
     task.outcome === 'planned' ||
     task.outcome === 'done'
   );
+}
+
+/**
+ * SprintTasks that count toward what a confirmed Sprint planned, as Retro's
+ * totals (#24) and the screen of a confirmed Sprint count them: planned,
+ * done, or carried over at the end (Review). Removed ones and drafts do not
+ * (a confirmed Sprint has no drafts).
+ */
+export function isInConfirmedPlan(task: Pick<SprintTask, 'outcome'>): boolean {
+  return (
+    task.outcome === 'planned' ||
+    task.outcome === 'done' ||
+    task.outcome === 'carriedOver'
+  );
+}
+
+/**
+ * The planned value of one occurrence (回ごとの計画値): a recurring
+ * SprintTask's value is one occurrence's times `occurrenceCount`
+ * (`sprintTaskValue`), so it is divided back. Any other value is returned
+ * as it is.
+ */
+export function occurrenceValue(snapshot: PlanSnapshot): PlanningValue {
+  const { value } = snapshot;
+  const share = snapshot.occurrenceCount ?? 1;
+  if (value.base === 'none' || share === 1) return value;
+  return { ...value, lo: value.lo / share, hi: value.hi / share };
 }
 
 /**

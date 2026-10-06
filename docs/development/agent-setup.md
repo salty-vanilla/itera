@@ -14,7 +14,7 @@
 | `.claude/settings.json` | 共有の permission 設定と hook の登録（SessionStart・PostToolUse・Stop） |
 | `.mcp.json` | リポジトリで共有する MCP（下の「MCP」の基準を満たすものだけ） |
 | `.agents/skills/` | Skill の正本。`.claude/skills` はここへのシンボリックリンク |
-| `tooling/agents/` | Agent 用 CLI（Playwright CLI、shadcn）の固定版と専用 lockfile、Skill の出典台帳 `sources.json` |
+| `tooling/agents/` | Agent 用 CLI（Playwright CLI、shadcn）の固定版と専用 lockfile、Skill の出典台帳 `sources.json`。`check.mjs`・`setup.mjs`・`doctor.mjs`・`run.mjs` の回帰テストは `pnpm test` の tooling project（`*.test.mjs`。一時のディレクトリに script を写し、偽の `pnpm`・`curl` などを PATH に置くので、ネットワークも実際のインストールも使わない）。`tooling/with-node.sh`・`lefthook.sh`・`setup.sh` と `tooling/checks/staged.mjs` も同様 |
 | `.tools/agents/` | checkout ごとに生成するバイナリとキャッシュ。Git 管理外 |
 | `~/Library/Caches/itera/ms-playwright`（Linux は `${XDG_CACHE_HOME:-~/.cache}/itera/ms-playwright`） | Agent 用ブラウザ。このリポジトリのすべての checkout で共有する。`PLAYWRIGHT_BROWSERS_PATH`（絶対パス）で置き場を変えられる |
 | `.playwright/cli.config.json` | Agent 用 Chromium の設定。個人の Chrome プロファイルを使わない |
@@ -111,3 +111,5 @@ direnv のシェル hook は対話シェルのプロンプトでしか動かな�
 5. `agent:check`・`agent:doctor` と代表的な操作を確認する。
 
 リポジトリで作った Skill（`issue-harness`、`design-references`、`copy-review`、`ui-copy`）を変えたときも、`sources.json` の該当ファイルのハッシュを更新する。
+
+リポジトリで作った Skill の script は、`pnpm lint`（ESLint）と `pnpm typecheck`（ルートの `tsconfig.json`）の対象にしている。対象は `sources.json` の `localSkills` に合わせる：ESLint はそこから読み、`tsconfig.json` の `include` は Skill ごとに書く（Skill を足したら両方がそろっていることを `tooling/skills/checked-files.test.mjs` が確かめる）。上流由来の Skill はどちらの対象にもしない。Prettier は `.agents/skills/` を丸ごと除いたままにする。テストは `.agents/skills/` に置くと `agent:check` が記録のないファイルとして失敗するので、`tooling/skills/` に置いて script を読み込むか起動する。

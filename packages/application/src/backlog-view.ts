@@ -41,7 +41,7 @@ import {
 } from './capabilities';
 import type { Clock, Records } from './records';
 import { nextWeekSprintOf, thisWeekSprintOf } from './sprint-choice';
-import { isLastDay } from './sprint-day';
+import { isLastDay, opensOn } from './sprint-day';
 import { activeSprint } from './task-changes';
 import {
   isClosedResolution,
@@ -191,6 +191,8 @@ export function backlogItem(
   const active = activeSprint(records);
   const latest = rule?.versions.at(-1);
   const capabilities = taskCapabilities(records, task, clock);
+  const firstDay =
+    active === undefined ? undefined : opensOn(active, clock.today);
   // Today's selections of this Task (of its occurrences, if recurring).
   const todays =
     active?.dailySelections.filter(
@@ -273,13 +275,13 @@ export function backlogItem(
       { now: clock.now },
     ),
     ...(active !== undefined &&
+    firstDay !== undefined &&
     capabilities.canAddToWeek &&
-    !capabilities.canAddToToday &&
-    clock.today < active.start
+    !capabilities.canAddToToday
       ? {
           todayOpensOn: {
             number: sprintNumber(active, records.sprints),
-            start: active.start,
+            start: firstDay,
           },
         }
       : {}),

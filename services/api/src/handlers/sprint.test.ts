@@ -348,6 +348,14 @@ const failures: readonly Failure[] = [
     type: '/problems/not-found',
   },
   {
+    // A Task that does not repeat has no occurrences: it leaves as a whole
+    // (removeSprintTasks), and this changes nothing (#346).
+    name: 'excludeAllOccurrences',
+    body: (r) => ({ ...planned(r), sprintTaskId: sprintTaskOf(r, paper).id }),
+    status: 422,
+    type: '/problems/invalid-input',
+  },
+  {
     name: 'createAndChooseTask',
     body: (r) => ({ ...planned(r), title: '   ' }),
     status: 422,
@@ -920,14 +928,18 @@ describe('the Sprint reads', () => {
       ).toBe(20);
     });
 
-    it('answers 404 for a Sprint the person does not have', async () => {
-      const { response, json } = await readOn(
-        'today-morning',
-        () => `/sprints/${missing('Sprint')}`,
-      );
-      expect(response.status).toBe(404);
-      expect(json).toMatchObject({ type: '/problems/not-found' });
-    });
+    // The browser mock answers the same (mock-api.test.ts, #350).
+    it.each(['', '/candidates', '/retro'])(
+      'answers 404 for a Sprint the person does not have (/sprints/{sprintId}%s)',
+      async (rest) => {
+        const { response, json } = await readOn(
+          'today-morning',
+          () => `/sprints/${missing('Sprint')}${rest}`,
+        );
+        expect(response.status).toBe(404);
+        expect(json).toMatchObject({ type: '/problems/not-found' });
+      },
+    );
 
     it.each([
       ['an ID of another kind', () => `/sprints/${ids.task.paper}`],

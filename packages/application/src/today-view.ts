@@ -3,6 +3,7 @@
 // no daily capacity and never judges going over (invariant 25).
 import {
   deferralStreak,
+  occurrenceValue,
   planningValueOf,
   sprintAreaName,
   sprintNumber,
@@ -31,7 +32,12 @@ import {
   type SprintCapabilities,
 } from './capabilities';
 import type { Clock, Records } from './records';
-import { dayInPeriod, isLastDay, selectionActualHours } from './sprint-day';
+import {
+  dayInPeriod,
+  isLastDay,
+  opensOn,
+  selectionActualHours,
+} from './sprint-day';
 import {
   taggedIn,
   type TaggedRecords,
@@ -84,10 +90,16 @@ export interface TodayData {
   /** 「Sprint 14」 (F25). */
   readonly number: number;
   readonly today: LocalDate;
-  /** 「2日目 / 7日」. */
-  readonly day: { readonly index: number; readonly count: number };
+  /** 「2日目 / 7日」, absent before the first day (#427). */
+  readonly day?: { readonly index: number; readonly count: number };
   /** The last day: 「Retro を始める」 shows (F21). */
   readonly lastDay: boolean;
+  /**
+   * Before the Sprint's first day, that day (#347): the screen shows the
+   * week read only, with nothing to choose or add yet (#54, #156). Absent
+   * from the first day on.
+   */
+  readonly opensOn?: LocalDate;
   readonly timeZone: Records['user']['timeZone'];
   /** 今週の完了 (F32). */
   readonly progress: WeekProgress;
@@ -323,11 +335,15 @@ export function todayData(
       ];
     });
 
+  const firstDay = opensOn(sprint, today);
+
   return {
     sprint,
     number: sprintNumber(sprint, sprints),
     today,
-    day: dayInPeriod(sprint, today),
+    ...(firstDay === undefined
+      ? { day: dayInPeriod(sprint, today) }
+      : { opensOn: firstDay }),
     lastDay: isLastDay(sprint, today),
     sprintCapabilities: sprintCapabilities(records, sprint, clock),
     timeZone: records.user.timeZone,
@@ -360,9 +376,7 @@ function valueOf(
   clock: Clock,
 ): PlanningValue {
   const snapshot = sprintTask.planSnapshot;
-  if (snapshot === undefined) return planningValueOf(task, { now: clock.now });
-  const value = snapshot.value;
-  const share = snapshot.occurrenceCount ?? 1;
-  if (value.base === 'none' || share === 1) return value;
-  return { ...value, lo: value.lo / share, hi: value.hi / share };
+  return snapshot === undefined
+    ? planningValueOf(task, { now: clock.now })
+    : occurrenceValue(snapshot);
 }

@@ -145,6 +145,53 @@ describe('undoing a past day (#53, F33)', () => {
     ).toBe('active');
   });
 
+  it("removes today's choice made by a completion from the Backlog, as the Backlog's undo does (F29, #346)", () => {
+    const store = memoryStore(fixtureSnapshot('today-interrupt'));
+    expect(store.run(task.complete(ids.task.onboarding as never)).ok).toBe(
+      true,
+    );
+    const made = selectionOf(store, ids.task.onboarding, '2026-10-01')!;
+    expect(made.origin).toBe('backlogCompletion');
+    const before = store.getSnapshot().records.activities.length;
+
+    expect(store.run(undoPastDay(made.id)).ok).toBe(true);
+    expect(
+      selectionOf(store, ids.task.onboarding, '2026-10-01'),
+    ).toBeUndefined();
+    expect(
+      store
+        .getSnapshot()
+        .records.tasks.find((t) => t.id === ids.task.onboarding)?.lifecycle,
+    ).toBe('active');
+    expect(
+      active(store).tasks.find((t) => t.taskId === ids.task.onboarding)
+        ?.outcome,
+    ).toBe('planned');
+    // Today's: the person's undo only, and no day is closed.
+    const undone = store.getSnapshot().records.activities.slice(before);
+    expect(undone.at(-1)?.kind).toBe('todayBacklogCompletionUndone');
+    expect(undone.every((a) => a.actor === 'user')).toBe(true);
+  });
+
+  it("puts back today's choice that was there before a completion from the Backlog (F29)", () => {
+    const store = memoryStore(fixtureSnapshot('today-interrupt'));
+    const sprint = active(store);
+    const st = sprint.tasks.find((t) => t.taskId === ids.task.onboarding)!;
+    expect(
+      store.run(today.choose(sprint.id, '2026-10-01' as LocalDate, st.id)).ok,
+    ).toBe(true);
+    expect(store.run(task.complete(ids.task.onboarding as never)).ok).toBe(
+      true,
+    );
+    const chosen = selectionOf(store, ids.task.onboarding, '2026-10-01')!;
+    expect(chosen).toMatchObject({ origin: 'manual', resolution: 'done' });
+
+    expect(store.run(undoPastDay(chosen.id)).ok).toBe(true);
+    expect(selectionOf(store, ids.task.onboarding, '2026-10-01')).toMatchObject(
+      { id: chosen.id, resolution: 'selected' },
+    );
+  });
+
   it("undoes today's completion as Today does: no day is closed", () => {
     const store = memoryStore(fixtureSnapshot('today-interrupt'));
     const todays = selectionOf(store, ids.task.apiReview, '2026-10-01')!;

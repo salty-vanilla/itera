@@ -8,6 +8,7 @@ import { useSignOut } from '@/auth/use-sign-out';
 import { Button } from '@/components/ui/button';
 import { Notice } from '@/components/ui/notice';
 import { Radio, RadioGroup } from '@/components/ui/radio-group';
+import { readDisplayName } from '@/lib/value-rules';
 
 // The first settings (#279, ADR 0006「利用者」). A person with no settings
 // has no 「今日」, so no screen of the app can open: this stands in their
@@ -22,8 +23,7 @@ type FirstDay = 0 | 1;
 
 /** The display name the settings start from: Google's name, else the address's name. */
 export function displayNameOf({ name, email }: Session): string {
-  const trimmed = name.trim();
-  return trimmed === '' ? (email.split('@')[0] ?? email) : trimmed;
+  return readDisplayName(name) ?? email.split('@')[0] ?? email;
 }
 
 /** The time zone of this device, as an IANA name. */

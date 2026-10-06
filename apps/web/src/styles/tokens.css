@@ -63,6 +63,7 @@
   --elevation-drag: 0 2px 8px #16181a24;
 
   /* Stacking order (Elevation & Depth). Use as z-(--layer-dialog). */
+  --layer-local: 1;
   --layer-sticky: 10;
   --layer-drawer: 30;
   --layer-popover: 40;
@@ -84,6 +85,7 @@
   --duration-slow: 240ms;
   --duration-toast: 8000ms;
   --duration-toast-action: 16000ms;
+  --duration-added-flash: 2500ms;
   --tooltip-delay: 400ms;
 }
 

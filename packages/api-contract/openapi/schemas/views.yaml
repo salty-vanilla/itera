@@ -25,7 +25,7 @@ SprintAreaLabel:
         - $ref: './records.yaml#/AreaColor'
         - const: none
 SprintWeek:
-  description: The week a Sprint is in, seen from today.
+  description: Closed enum. The week a Sprint is in, seen from today.
   type: string
   enum: [previous, current, next]
 SprintRef:
@@ -93,10 +93,11 @@ EditableArea:
     capabilities: { $ref: '#/AreaCapabilities' }
 # --------------------------------------------------------------- Backlog
 BacklogSlice:
+  description: Closed enum.
   type: string
   enum: [dueSoon, overdue, carriedOver, recurring, noArea]
 ListedResolution:
-  description: A choice for today that Today lists under 今日やる.
+  description: Closed enum. A choice for today that Today lists under 今日やる.
   type: string
   enum: [selected, started, done, skipped]
 # ---------------------------------------------------------- Capabilities
@@ -272,7 +273,9 @@ SprintTaskCapabilities:
       type: boolean
     canSetGoalLink: { description: setGoalLink., type: boolean }
     canExcludeAllOccurrences:
-      description: excludeAllOccurrences.
+      description: >-
+        excludeAllOccurrences: a recurring draft only (a Task that does not
+        repeat has no occurrences, #346).
       type: boolean
     canRecordActualTime:
       description: >-
@@ -526,6 +529,7 @@ PlannedTask:
     suggestion: { $ref: './values.yaml#/Range' }
     linkAtConfirm: { $ref: './records.yaml#/GoalLink' }
     inactive:
+      description: Closed enum.
       type: string
       enum: [completed, archived]
     capabilities: { $ref: '#/SprintTaskCapabilities' }
@@ -548,9 +552,11 @@ AreaPlan:
       $ref: '#/SprintGoalCapabilities'
 PlanningBlocker:
   description: >-
-    Why 確定 is not possible yet. `previousRetroOpen`: the previous
+    Open enum. Why 確定 is not possible yet. `previousRetroOpen`: the previous
     Sprint's Retro is open (invariant 12). `inactiveTasks`: a chosen Task
-    was completed or archived.
+    was completed or archived. A client shows the reasons it knows and
+    leaves out the others (`capabilities.canConfirm` says whether it can
+    be done).
   type: string
   enum: [previousRetroOpen, inactiveTasks]
 SprintPlan:
@@ -568,6 +574,7 @@ SprintPlan:
     - plan
     - chosenCount
     - totals
+    - notInTotal
     - drivers
     - blockers
     - capabilities
@@ -588,6 +595,13 @@ SprintPlan:
       items: { $ref: '#/AreaPlan' }
     chosenCount: { type: integer }
     totals: { $ref: './values.yaml#/SprintTotals' }
+    notInTotal:
+      description: >-
+        The chosen SprintTasks left out of `totals`, whole (no value) or in
+        part (subtasks without an Estimate), as it counts them (invariant
+        8).
+      type: array
+      items: { $ref: './common.yaml#/SprintTaskId' }
     drivers:
       type: array
       items: { $ref: './values.yaml#/CapacityDriver' }
@@ -671,16 +685,19 @@ PastDayRecord:
     recurring: { type: boolean }
     after:
       oneOf:
-        - type: object
+        - title: UnresolvedAfter
+          type: object
           required: [kind]
           properties:
             kind: { const: unresolved }
-        - type: object
+        - title: ClosedAfter
+          type: object
           required: [kind, resolution]
           properties:
             kind: { const: closed }
             resolution: { $ref: './records.yaml#/ClosedResolution' }
-        - type: object
+        - title: GoneAfter
+          type: object
           required: [kind]
           properties:
             kind: { const: gone }
@@ -711,7 +728,17 @@ RunningData:
     number: { type: integer }
     week: { $ref: '#/SprintWeek' }
     today: { $ref: './common.yaml#/LocalDate' }
-    day: { $ref: './values.yaml#/DayOfSprint' }
+    day:
+      description: >-
+        Running and from its first day on: today's place in it. Absent
+        before the first day, when opensOn is there instead, and once the
+        Sprint has ended.
+      $ref: './values.yaml#/DayOfSprint'
+    opensOn:
+      description: >-
+        Running and before its first day: that day, which Today waits for
+        (#347). Absent from the first day on and once the Sprint has ended.
+      $ref: './common.yaml#/LocalDate'
     plan:
       type: array
       items: { $ref: '#/RunningAreaPlan' }
@@ -785,7 +812,6 @@ TodayData:
     - sprint
     - number
     - today
-    - day
     - lastDay
     - timeZone
     - progress
@@ -803,8 +829,19 @@ TodayData:
     sprint: { $ref: './records.yaml#/Sprint' }
     number: { type: integer }
     today: { $ref: './common.yaml#/LocalDate' }
-    day: { $ref: './values.yaml#/DayOfSprint' }
+    day:
+      description: >-
+        From the Sprint's first day on: today's place in it, always there
+        then. Absent before the first day, when opensOn is there instead:
+        exactly one of day and opensOn is present (#427, #449).
+      $ref: './values.yaml#/DayOfSprint'
     lastDay: { type: boolean }
+    opensOn:
+      description: >-
+        Before the Sprint's first day: that day. Choosing for the day,
+        adding and interrupts wait for it (#54, #347). Absent from the first
+        day on, when day is there instead.
+      $ref: './common.yaml#/LocalDate'
     timeZone: { $ref: './common.yaml#/TimeZone' }
     progress: { $ref: './values.yaml#/WeekProgress' }
     remaining: { $ref: './values.yaml#/TodayRemaining' }
@@ -860,6 +897,7 @@ DayData:
     date: { $ref: './common.yaml#/LocalDate' }
     today: { $ref: './common.yaml#/LocalDate' }
     when:
+      description: Closed enum.
       type: string
       enum: [past, future]
     timeZone: { $ref: './common.yaml#/TimeZone' }
@@ -926,9 +964,11 @@ RetroOccurrence:
     target: { $ref: '#/ActualTarget' }
 RetroBlocker:
   description: >-
-    `decisionMissing`: 続ける / 終える / 置き換える is not chosen (invariant
+    Open enum. `decisionMissing`: 続ける / 終える / 置き換える is not chosen (invariant
     36). `continueWithDraft`: 続ける keeps the active criterion, so the
-    draft must go (invariant 35).
+    draft must go (invariant 35). A client shows the reasons it knows and
+    leaves out the others (`capabilities.canComplete` says whether it can
+    be done).
   type: string
   enum: [decisionMissing, continueWithDraft]
 RetroData:
@@ -1025,15 +1065,18 @@ SprintView:
   description: >-
     A Sprint (#295 R2): while planned, its plan; once confirmed, how it went.
   oneOf:
-    - type: object
+    - title: PlanningSprintView
+      type: object
       required: [state, plan]
       properties:
         state: { const: planning }
         plan: { $ref: '#/SprintPlan' }
-    - type: object
+    - title: RunningSprintView
+      type: object
       required: [state, running]
       properties:
         state:
+          description: Closed enum.
           type: string
           enum: [active, review, closed]
         running: { $ref: '#/RunningData' }
@@ -1045,15 +1088,18 @@ DayView:
     running Sprint (`today` is left out when none runs), or another day's
     records or occurrences.
   oneOf:
-    - type: object
+    - title: TodayDayView
+      type: object
       required: [kind]
       properties:
         kind: { const: today }
         today: { $ref: '#/TodayData' }
-    - type: object
+    - title: OtherDayView
+      type: object
       required: [kind, day]
       properties:
         kind:
+          description: Closed enum.
           type: string
           enum: [past, future]
         day: { $ref: '#/DayData' }

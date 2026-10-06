@@ -1,12 +1,18 @@
-import type { MadeFrom } from '@itera/api-contract/requests';
+import type { MadeFrom } from '@itera/api-contract/sending';
 import type { RetroPin } from '@itera/api-contract';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
 import type { Saved } from '@/api/use-operation';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Tag } from '@/components/ui/tag';
 import { Textarea } from '@/components/ui/textarea';
-import { sameWords, useDraftField } from '@/lib/use-draft-field';
+import { useDraftField } from '@/lib/use-draft-field';
+import {
+  improvementHoldsCriterion,
+  isBlank,
+  readImprovementText,
+  sameWords,
+} from '@/lib/value-rules';
 import { cn } from '@/lib/utils';
 import type { RetroData } from '@/screen-data/retro-view';
 import { Materials } from './materials';
@@ -148,7 +154,7 @@ function Improvement({
   const headingId = useId();
   const editRef = useRef<HTMLButtonElement>(null);
   const backToEdit = useRef(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!editing && backToEdit.current) {
       backToEdit.current = false;
       editRef.current?.focus();
@@ -161,7 +167,7 @@ function Improvement({
     undefined,
   );
   const save = (): Promise<boolean> => {
-    const next = text.trim();
+    const next = readImprovementText(text);
     // The save of these words is on its way (leaving the field, then 確定):
     // its answer is this one's, whatever the field's base has become.
     if (sending.current?.text === next)
@@ -171,7 +177,9 @@ function Improvement({
     if (!field.leave()) return Promise.resolve(true);
     if (!data.capabilities.canUpdate) return Promise.resolve(false);
     // A criterion made from it keeps it; the handoff says to drop it first.
-    if (next === '' && data.draft !== undefined) return Promise.resolve(false);
+    if (improvementHoldsCriterion(next, data.draft !== undefined)) {
+      return Promise.resolve(false);
+    }
     const result = onImprove(next, field.madeFrom).then((saved) => {
       if (sending.current?.result === result) sending.current = undefined;
       return saved;
@@ -209,7 +217,7 @@ function Improvement({
           className="flex max-w-measure-read flex-col gap-2"
           onSubmit={async (event) => {
             event.preventDefault();
-            if ((await save()) && text.trim() !== '') {
+            if ((await save()) && !isBlank(text)) {
               backToEdit.current = true;
               setEditing(false);
             }
@@ -236,7 +244,7 @@ function Improvement({
             />
           </Field>
           <div>
-            <Button type="submit" disabled={text.trim() === ''}>
+            <Button type="submit" disabled={isBlank(text)}>
               次に試すことを確定
             </Button>
           </div>

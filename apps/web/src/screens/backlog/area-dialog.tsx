@@ -1,5 +1,5 @@
 import type { AreaId } from '@itera/api-contract';
-import type { MadeFrom } from '@itera/api-contract/requests';
+import type { MadeFrom } from '@itera/api-contract/sending';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import type { Saved } from '@/api/use-operation';
 import { AreaMark } from '@/components/ui/area-indicator';
@@ -16,7 +16,8 @@ import {
 } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
-import { sameWords, useDraftField } from '@/lib/use-draft-field';
+import { useDraftField } from '@/lib/use-draft-field';
+import { readAreaName, sameWords } from '@/lib/value-rules';
 import {
   useAreaActions,
   useAreas,
@@ -126,28 +127,44 @@ function AreaEditor({
       ? read.areas.filter((a) => !a.archived || archived.includes(a.id))
       : [];
 
-  /** After a row changes, the focus goes to a control of that row. */
+  /**
+   * After a row changes, the focus goes to a control of that row. The row
+   * is drawn with the operation's answer, which can come a while after the
+   * request: the request waits for the control to be drawn, then for Base
+   * UI (`afterFocusSettles`).
+   */
+  const [focusAsk, setFocusAsk] = useState<{
+    areaId: AreaId;
+    action: 'edit' | 'undo';
+  }>();
   const focusRow = (areaId: AreaId, action: 'edit' | 'undo') =>
-    afterFocusSettles(() =>
-      listRef.current
-        ?.querySelector<HTMLElement>(
-          `[data-area="${areaId}"] [data-action="${action}"]`,
-        )
-        ?.focus(),
-    );
+    setFocusAsk({ areaId, action });
+  useEffect(() => {
+    if (focusAsk === undefined) return undefined;
+    const control = () =>
+      listRef.current?.querySelector<HTMLElement>(
+        `[data-area="${focusAsk.areaId}"] [data-action="${focusAsk.action}"]`,
+      );
+    // Not drawn yet: the read that brings it asks again.
+    if (control() == null) return undefined;
+    return afterFocusSettles(() => {
+      setFocusAsk(undefined);
+      control()?.focus();
+    });
+  }, [focusAsk, read]);
 
   async function add(event: FormEvent) {
     event.preventDefault();
-    const name = newName.trim();
+    const name = readAreaName(newName);
     // Nothing typed adds nothing, as in a Quick Add.
-    if (name === '') {
+    if (name === undefined) {
       newRef.current?.focus();
       return;
     }
     const created = await actions.addArea(name);
     if (created === undefined) return;
     // What was typed while it was sent is the next Area's.
-    setNewName((typed) => (typed.trim() === name ? '' : typed));
+    setNewName((typed) => (readAreaName(typed) === name ? '' : typed));
     setStatus(`「${name}」を追加しました`);
     if (onCreated !== undefined) onCreated(created);
     else newRef.current?.focus();
@@ -301,7 +318,8 @@ function EditRow({
         className="flex flex-col gap-2"
         onSubmit={(event) => {
           event.preventDefault();
-          if (name.trim() === '') {
+          const renamed = readAreaName(name);
+          if (renamed === undefined) {
             setError('名前を入力してください');
             inputRef.current?.focus();
             return;
@@ -312,7 +330,7 @@ function EditRow({
           }
           // Held until it is answered: a rename that did not go through
           // gives the typing back (#321).
-          nameField.hold(onRename(name.trim(), nameField.madeFrom));
+          nameField.hold(onRename(renamed, nameField.madeFrom));
         }}
       >
         <Field

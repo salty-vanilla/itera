@@ -14,6 +14,15 @@
 - 改訂：2026-10-04（今日の選択と割り込みの読み取りに、出力専用の必須の `capabilities`（`can<操作>` の真偽値、ADR 0007「操作の可否」）を足す。`TodayRow`・`DayRecord`・`BacklogItem.today` に `DailySelectionCapabilities`、`TodayItem` に省略できる `removedTodayCapabilities`、今日と過去の日の割り込みを `InterruptItem`（`InterruptNote` と `InterruptNoteCapabilities`）にする。応答に必須の項目を足すだけなので `info.version` は 0.5.0 のまま。Issue #322）
 - 改訂：2026-10-04（残りの記録の読み取りに、出力専用の必須の `capabilities` を足す（ADR 0007「操作の可否」）。`BacklogItem` の `canAddToToday`・`canAddToWeek`・`canComplete` を `TaskCapabilities` に移す。応答から項目を消す壊す変更なので `info.version` を 0.6.0 にする。`RecurringCandidate.occurrences` は `OccurrenceItem`（`Occurrence` と `OccurrenceCapabilities`）にする。Issue #323）
 - 改訂：2026-10-04（Task の繰り返しの規則を置く `PUT /tasks/{taskId}/recurrence`（`setRecurrence`）も、規則の版で条件つきにする。規則があれば `If-Match`、なければ `If-None-Match: *`。`BacklogItem.rule` に出力専用の必須の `etag`、応答に `ETag`。`endRecurrence`（DELETE）は対象にしない。要求に条件を足す壊す変更なので `info.version` を 0.7.0 にする。Issue #330）
+- 改訂：2026-10-05（振り分けの規則を、送る側の `sending.ts`（`@itera/api-contract/sending`。Valibot とスキーマを import しない。Web が使う）と、読む側も持つ `requests.ts` に分ける。Web の本番ビルドに Valibot を入れないため。Issue #356）
+- 改訂：2026-10-05（今日の Backlog からの完了で作った選択への `undoCompleteSelection` は、過去の日と同じく `undoCompleteTask` と同じに取り消し、選択を記録ごと消す（F29）。繰り返しでない SprintTask への `excludeAllOccurrences` は、何も外さずに通していたのを 422 で断る（`canExcludeAllOccurrences` も偽）。形が同じで意味を変える壊す変更なので `info.version` を 0.8.0 にする。Issue #346）
+- 改訂：2026-10-05（今日の読み取り `TodayData` と実行中の Sprint の読み取り `RunningData` に、Sprint の開始日より前の間だけその日を返す、省略できる `opensOn` を足す（ADR 0007「操作の可否」）。応答に省略できる項目を足すだけなので `info.version` は 0.8.0 のまま。Issue #347）
+- 改訂：2026-10-05（依存の js-yaml の指摘を直すために `@hey-api/openapi-ts` の版上げを確かめ、新しい安定版がないので 0.99.0 のまま据え置く。Issue #409）
+- 改訂：2026-10-05（計画の読み取り `SprintPlan` に、合計に入らない SprintTask（見積もりのないもの、見積もりのないサブタスクがあるもの）の ID の必須の `notInTotal` を、Retro の事実の `TaskFact` に、繰り返しの Task の回を状態ごとに数えた省略できる `occurrences`（`OccurrenceCounts`：完了・スキップ・未完了）を足す。Web が記録から数え直していた値をサーバーが返す（ADR 0007）。応答に項目を足すだけなので `info.version` は 0.8.0 のまま。Issue #348）
+- 改訂：2026-10-05（契約の壊す変更を、PR の base の契約と比べて CI が見つける。比べる道具は oasdiff 1.33.0 で、入手と版の固定の方法を「道具と版」に、規則との合わせ方と警告から失敗への切り替えを「互換の規則」の「機械での確かめ」に書く。oasdiff が `oneOf` の枝を対応づけられるように、inline の object の枝が 2 つ以上ある `oneOf` の枝に `title` を付ける。注釈だけで、通信の形と生成物は変わらないので `info.version` は 0.8.0 のまま。最初は警告だけ。Issue #367）
+- 改訂：2026-10-05（列挙の `description` の書き方を決める。開いた列挙・閉じた列挙のどちらかを、`description` の先頭に英語の決まった語 `Open enum.`・`Closed enum.` で書き、`packages/api-contract/src/enum-kinds.test.ts` が書き漏れを検査する。説明だけの変更なので `info.version` は 0.8.0 のまま。`PlanningBlocker`・`RetroBlocker`・`TaskCreatedVia`・`ActualTimeVia` を開いた列挙にするが、これまで分類を決めておらず閉じた列挙から開くのではないことと、今のクライアント（Web）がすでに知らない値を受理することから、壊す変更ではない。Issue #352）
+- 改訂：2026-10-05（契約の差分の検査が、応答の列挙に値を足す変更を、まとめた契約の列挙の `description` が base と head の両方で `Open enum.` で始まるときに壊さない変更として数える。これまでは、エラーの `type` とエラーの本文の `oneOf` だけを開いた列挙として知っていて、`PlanningBlocker`・`RetroBlocker`・`TaskCreatedVia`・`ActualTimeVia` に値を足すと誤って壊す変更と判定した。「互換の規則」の「機械での確かめ」を直した。検査の道具だけの変更で、契約は変わらないので `info.version` は 0.8.0 のまま。Issue #430）
+- 改訂：2026-10-06（今日の読み取り `TodayData` の `day`（「N日目 / M日」）を、Sprint の開始日より前は返さない、省略できる項目にする。開始前は `index` が 0 以下になっていた。`opensOn` があるときは `day` がなく、ないときは必ずある（`RunningData` と同じ規則）。応答の必須の項目を省略できるようにする壊す変更なので `info.version` を 0.9.0 にする。Issue #427）
 
 ## 背景
 
@@ -35,8 +44,11 @@ ADR 0005「API への移行」は、操作を名前と入力で表す契約（Op
 | 検証 | `valibot`（dependencies） | 1.5.0 | AGENTS.md の候補。サーバーの入力の検証と、テストでの応答の検証に使う |
 | 取得結果のキャッシュ | `@tanstack/react-query`（devDependencies・peerDependencies） | 5.104.1 | AGENTS.md の候補。生成した options の型の検査に使う。`apps/web` は #272 で同じ版を入れる |
 | React | `react`・`@types/react`（devDependencies・peerDependencies） | 19.3.0 | TanStack Query の型が求める。`apps/web` と同じ版（ADR 0003） |
+| 契約の比較（壊す変更の検出） | oasdiff（GitHub の release のバイナリ） | 1.33.0 | OpenAPI 3.1 を読み、壊す変更を種類（check の ID）ごとに判定し、判定の水準を変えられる。`info.version` の上げ方も見る。Go の 1 つのバイナリで、実行時の依存がない。版と使い方は 2026-10-05 に Context7 と公式の文書（`docs/BREAKING-CHANGES.md`・`VERSIONING.md`・`OPENAPI-31.md`）で確かめた |
 
 Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足りるが、生成の前に分けたファイルを 1 つにまとめる道具が別に要り、Redocly なら 1 つで済む。
+
+oasdiff は npm の依存にできない（npm の `oasdiff` は名前の予約だけで、中身がない）。npx・pnpm dlx・go install・Docker では入れない。`packages/api-contract/scripts/breaking.mjs` が、版と、プラットフォームごとの release の tar.gz（macOS は universal の `darwin_all`、Linux は `amd64`・`arm64`）の名前と SHA-256（release の `checksums.txt` から写した値）を持つ。初めて使うときに GitHub の release から落とし、SHA-256 が合わなければ止め、`.tools/oasdiff/<版>/<プラットフォーム>/` に置く（`.tools/` は Git 管理外）。PATH にある oasdiff は使わない。比較を外へ送る `--open` は使わない。版を上げるときは、スクリプトの版・ファイル名・SHA-256 とこの表を一緒に直し、「機械での確かめ」の調整がまだ合っているかを、そこに書いた過去の変更で確かめ直す。
 
 ### 置き場所と書き方
 
@@ -52,6 +64,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 - 契約が検証するのは形と書式（型、必須、ID と日付の書式、列挙）だけにする。値の規則（正の時間、空でない題名、状態の遷移）は domain の規則で、422 で返す。規則を契約と domain に二重に持たないため。
 - 要求の本文の最上位は `additionalProperties: false`（Valibot の `strictObject`）。綴りの誤りなどの未知のキーは 400 になる。応答と共有する入れ子（`InterruptNote`・`RetroPin`・`Estimate`・`RecurrencePattern`・`CriterionPolicy`）は未知のキーを許し、Valibot の `object` が出力から落とす。サーバーは、要求の本文ではなく検証の出力だけを application に渡す。応答は未知のキーを許す（クライアントが後から足した項目で壊れないように）。応答の余分な・欠けたキーは、下の型のテストで止める。
 - 一覧（`BacklogData.items`・`RetroData.sprintAreas` など、ID をキーにする表）は `additionalProperties` で書き、`propertyNames` は使わない（Hey API 0.99.0 は `propertyNames` があると値を検証しない `v.object({})` を出す）。値が `$ref` の表も、0.99.0 の Valibot の出力では同じく `v.object({})` になる（Valibot のプラグインが `$ref` の値を読まない）。これは下の「生成物」の patch で直す。
+- `oneOf`・`anyOf` に inline の object の枝が 2 つ以上あるときは、その枝すべてに `title`（PascalCase の名前。例：`DayView` の `TodayDayView`・`OtherDayView`）を付ける。oasdiff は inline の枝を内容か `title` で対応づけるので、`title` がないと、1 つの PR で 2 つの枝の中が変わったときに、枝を消して足したものとして扱い、中の変更を比べない（応答では壊す変更として数える）。`title` は注釈で、通信の形と Hey API 0.99.0 の生成物は変わらない。一度付けた `title` は変えない（変えると、同じく枝を消して足したものとして扱う）。`title` のない枝は `pnpm contract:breaking` が見つける（「互換の規則」の「機械での確かめ」）。
 
 ### 経路の形
 
@@ -101,7 +114,10 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 - 作る：`POST /<集まり>` → 201（作った ID。何も返さないものは本文なし）。属性を変える：`PATCH`（省いた項目は変えない）。子の資源を置く・置き換える（冪等）：`PUT`。消す・外す（冪等）：`DELETE`（本文は持たない。RFC 9110 で意味が決まっていない）。状態の遷移：`POST …/<動詞>`。取り消し：`POST …/undo-<元の動作>`（domain の取り消しは元の動作ごとに別のコマンドで、条件も違う。逆の動詞にすると何を取り消すかが読めない）。値を返すなら 200、返さないなら 204。変わった後の読み取りは返さない（下の「操作の応答に読み取りを含めない」）。
 - 操作は `packages/application` の `operations` の名前と入力で表す（ADR 0005）。判定は `packages/domain` だけが行う。面（1 つのメソッドと 1 つの経路）ごとに operationId が 1 つで、1 つの操作だけを受ける面は操作の名前をそのまま operationId にする。いくつかの操作を受ける面は新しい名前にし、要求が運ぶもの（本文のどの項目があるか、query の件数）で操作を選ぶ（W1 の Sprint の状態での選び分けは application の操作の中）。別の操作の項目を一緒に送ると 400（本文は `oneOf` の `strictObject`）。
 - 経路の子（SprintTask・選択・割り込み・目標など）が経路の Sprint にないときは 404。Sprint の状態に合わない操作は 422 `/problems/invalid-transition`。
-- 振り分けの規則は `packages/api-contract/src/requests.ts`（`@itera/api-contract/requests`）の 1 か所に、両方向を並べて置く。`requestOf(名前, 入力)` が操作の要求（面と path・query・本文）を作り（Web）、`readRequest` が受け取った要求を面のスキーマで path・query・本文の順に確かめてから、面の `operation` で操作と入力を作る（サーバーとブラウザ内モック。確かめ方とエラーの返し方だけをそれぞれが渡す。サーバーは暦の上の日付も確かめる）。query の文字列を宣言した型に変える `queryInput` も同じ場所に置き、読み取りと書き込みで使う。`requests.ts` は application に型だけで依存する。
+- 振り分けの規則は `packages/api-contract/src/` の 2 つのモジュールに、両方向を並べて置く（#356 で分けた。それまでは `requests.ts` の 1 か所）。
+  - 送る側の `sending.ts`（`@itera/api-contract/sending`）：面ごとのメソッド・経路・通ったときのステータス（`routes`）と、`requestOf(名前, 入力)`（操作の要求、つまり面と path・query・本文を作る。Web）。契約の型だけを使い、Valibot とスキーマを import しない（Web の本番ビルドに Valibot を入れないため。ADR 0005「本番ビルド」）。
+  - 読む側も持つ `requests.ts`（`@itera/api-contract/requests`）：`routes` に面のスキーマと `operation` を足した `surfaces`。`readRequest` が受け取った要求を面のスキーマで path・query・本文の順に確かめてから、面の `operation` で操作と入力を作る（サーバーとブラウザ内モック。確かめ方とエラーの返し方だけをそれぞれが渡す。サーバーは暦の上の日付も確かめる）。query の文字列を宣言した型に変える `queryInput` も置き、読み取りと書き込みで使う。`sending.ts` のものをすべて export し直すので、サーバーとモックは `/requests` だけを使う。
+  - どちらも application に型だけで依存する。
 
 #### 書き込みの面（55 面で 60 操作）
 
@@ -144,7 +160,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 - 回（Occurrence）の含める・外すは Sprint の下に置く。回そのものは Task の繰り返しの規則が作る記録だが、Sprint に含めるかは Sprint の計画の決定で（不変条件 33）、含め直すと新しい SprintTask を作ることがある（domain の `includeInPlan`）。そのため SprintTask の下ではなく、Sprint の「含めた回」の集まりにする。1 つの SprintTask の回をすべて外す操作は、その SprintTask の動作（`exclude-occurrences`）。
 - 振り返りの印は、domain の `togglePin` を `pinFact`・`unpinFact` に分けた。付いている印を付ける・付いていない印を外すときは何も変えない。`{pin}` は印の付いた記録の ID（SprintTask・選択・回・割り込み、Goal は Area の ID）か `available-hours` で、記録の種類は TypeID の接頭辞から決まる。
-- 割り込みを戻す `restoreInterrupt` は ID を残すので、その ID を path に置く `PUT`（下の「消した記録を戻す操作の照合」）。割り込みの編集（`PATCH`）は本文と分を置き換えるので、`minutes` を必須にし、分がないことは `null` で表す（domain の入力では省略。`requests.ts` が変える）。
+- 割り込みを戻す `restoreInterrupt` は ID を残すので、その ID を path に置く `PUT`（下の「消した記録を戻す操作の照合」）。割り込みの編集（`PATCH`）は本文と分を置き換えるので、`minutes` を必須にし、分がないことは `null` で表す（domain の入力では省略。`sending.ts` と `requests.ts` が変える）。
 
 #### 読み取り（8 面）
 
@@ -159,6 +175,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 | `getSprintRetro` | `/api/sprints/{sprintId}/retro` | `sprintRetro` | 振り返りの前は `null`、ない Sprint は 404 |
 | `getDay` | `/api/days/{date}` | `dayView`（`today`・`past`・`future` で判別） | — |
 
+- 経路・path と query のスキーマ・呼ぶ application の関数・ない Sprint の 404 は、API とブラウザ内モックが同じ表から使う（`requests.ts` の `readSurfaces` と application の `reads`。`getMe` の応答は `meResponse`。#350、ADR 0005「ブラウザ内モック」）。
 - 応答は `{ clock, view }`。`clock` は、サーバーがその応答のために決めた「今日」と現在時刻（ADR 0005「時計」）。`view` は、今は application の関数の結果そのもので（写像は恒等。ADR 0007）、結果がない（`undefined`）ときは `null`（TanStack Query は `undefined` をデータにできない）。
 - query の数と真偽（`number`・`apply-criterion`）は、通信の上では文字列。サーバーは宣言した型に変えてから、生成したスキーマで検証する（`queryInput`。同じ名前を繰り返した値は、配列の項目なら全部、それ以外は検証で 400）。
 - **利用者**：`GET /api/me`（`getMe`）は、サインインしている利用者の ID と設定（表示名・タイムゾーン・週の始まり。domain の `User` から ID を除いたもの）を返す。設定をまだ作っていなければ `settings` は `null` で、日付が変わったときの処理（#271）を走らせずに答える（設定がない間もこの読み取りだけは答え、クライアントは設定を作る画面を出す。#279、#266）。設定があれば、処理を走らせてから、`clock` と今の Sprint の参照（`sprints`：実行中・Review 中・計画中のそれぞれと、次に計画を始める週）も返す（R1）。次に計画を始める週（`next`）は、開始日・終了日・番号と、その週の名前（`week`。Sprint の `week` と同じ。省略可）を持つ。Sprint がまだない週を画面が開くのに要る（#274）。`end` は必須で足した（下の「壊さない変更」の、応答に必須の項目を足す規則）。
@@ -227,7 +244,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 書き込みの結果が分からない失敗（通信の失敗、5xx）を、同じ要求として安全に送り直せるようにする（2026-10-04 オーナー決定。#295 で別に分けた 4 つの 1 つ）。RFC 9110 §9.2.2 は、要求が冪等だと知る手段か部分的な失敗から戻る手段がない限り、冪等でないメソッドの要求を自動で送り直すべきでない（SHOULD NOT）とする。冪等キーがその手段になる。
 
 - ヘッダー：すべての書き込み（POST・PUT・PATCH・DELETE。`PUT /me/settings` を含む）に、必須の `Idempotency-Key` を置く（`openapi/parameters.yaml`）。読み取り（GET）には置かない（追いつきの書き込みは時計と記録だけで決まる。ADR 0004「操作と読み取りの処理」）。Better Auth の経路は対象外。すべての書き込みにあり、どの読み取りにもないことは `requests.test.ts` が生成した型で確かめる。
-- 名前・書式・エラーのステータスは、IETF httpapi WG の draft「The Idempotency-Key HTTP Header Field」（draft-ietf-httpapi-idempotency-key-header-07、2025-10-15。WG Document のまま失効していて、RFC ではない）に合わせる。値は Structured Field の String（RFC 9651）で、UUID を二重引用符で囲む（`"8e03978e-40d5-43e8-bc93-6894a57f9324"`）。受け付けるのは UUID だけ（Google AIP-155 と同じ）。16 進の大文字と小文字は同じキーとして扱い、サーバーは小文字にそろえる。後ろに付いたパラメータ（`;a=1`）は読み飛ばす（RFC 9651 §2.3 は、知らないパラメータを誤りにしないよう勧める。形は確かめない）。パラメータの部品の名前は `IdempotencyKeyHeader`、値のスキーマは `IdempotencyKey`（同じ名前にすると、まとめたときに生成物に番号付きの別名ができる）。作る・読む関数は `@itera/api-contract/requests` の `idempotencyKeyHeaders`・`readIdempotencyKey`（サーバーとクライアントが使う）。Web は `run` ごとに `crypto.randomUUID()` で作る（ADR 0005「エラーと送信中」）。
+- 名前・書式・エラーのステータスは、IETF httpapi WG の draft「The Idempotency-Key HTTP Header Field」（draft-ietf-httpapi-idempotency-key-header-07、2025-10-15。WG Document のまま失効していて、RFC ではない）に合わせる。値は Structured Field の String（RFC 9651）で、UUID を二重引用符で囲む（`"8e03978e-40d5-43e8-bc93-6894a57f9324"`）。受け付けるのは UUID だけ（Google AIP-155 と同じ）。16 進の大文字と小文字は同じキーとして扱い、サーバーは小文字にそろえる。後ろに付いたパラメータ（`;a=1`）は読み飛ばす（RFC 9651 §2.3 は、知らないパラメータを誤りにしないよう勧める。形は確かめない）。パラメータの部品の名前は `IdempotencyKeyHeader`、値のスキーマは `IdempotencyKey`（同じ名前にすると、まとめたときに生成物に番号付きの別名ができる）。作る関数は `@itera/api-contract/sending` の `idempotencyKeyHeaders`（クライアントとテスト）、読む関数は `@itera/api-contract/requests` の `readIdempotencyKey`（サーバー）。Web は `run` ごとに `crypto.randomUUID()` で作る（ADR 0005「エラーと送信中」）。
 - 誤り：キーがない、書式が違う → 400 `/problems/validation-failed`（`errors` の場所は `header: Idempotency-Key`）。同じキーを別の要求に使った → 422 `/problems/idempotency-key-reused`。どちらも何もしない。要求が同じかは、メソッド・経路・query・本文を届いたままつないだ SHA-256（指紋）で比べる。クライアントは同じ要求を同じバイト列で送り直すので、JSON の並べ方の違いは別の要求とみなす。
 - 同じキーと同じ要求：24 時間の内なら、最初の応答（ステータスと本文）を、操作を実行せずに返す（Stripe、AIP-155、Zalando 規則 230 と同じ）。処理は ADR 0004「操作と読み取りの処理」の 4・7 と「同時の書き込み」。
 - 保存するのは、書き込みを確定した結果（2xx）だけ。400・404・422 など何も書かなかった失敗は保存しないので、同じキーで送り直すともう一度実行する（Stripe と同じ）。
@@ -272,7 +289,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
   - ほかの PUT・DELETE（回を含める・外す、印、まとめて外す）：結果が 1 つに決まる置く・外す。
 - 条件を求めない面に `If-Match` が付いていても、書式を確かめるだけで比べない（状態の遷移は domain が今の状態で判定する）。
 - 冪等キーの指紋（上の「冪等キー」）は `If-Match` を含まない。同じキー・同じ本文で `If-Match` だけ違う送り直しは、1 回目の応答を返す（自分の書き込みの送り直しを 412 にしないため）。
-- **比べ方**：`If-Match` は `*` か、entity-tag の一覧（`EntityTagList`）。強い比較で、弱い entity-tag（`W/"…"`）はどれとも合わない。`If-None-Match` は `*` だけを受ける（`AnyEntityTag`）。書式が違えば 400 `/problems/validation-failed`（`errors` の場所は `header`）。読むのは `@itera/api-contract/requests` の `readCondition`、送るのは `conditionHeaders`（`MadeFrom`：`{ etag }` か `{ none: true }`）。どの操作が条件を要るか、記録のどこを比べるかは `packages/application` の `checkCondition`（`conditions.ts`。API とブラウザ内モックが使う）。面が `If-Match` を持つ操作の型（`ConditionalName`）と application の `ConditionalOperation` が同じことを型のテストで、PATCH の面だけが `If-Match` を持つことを `requests.test.ts` で確かめる。
+- **比べ方**：`If-Match` は `*` か、entity-tag の一覧（`EntityTagList`）。強い比較で、弱い entity-tag（`W/"…"`）はどれとも合わない。`If-None-Match` は `*` だけを受ける（`AnyEntityTag`）。書式が違えば 400 `/problems/validation-failed`（`errors` の場所は `header`）。読むのは `@itera/api-contract/requests` の `readCondition`、送るのは `@itera/api-contract/sending` の `conditionHeaders`（`MadeFrom`：`{ etag }` か `{ none: true }`）。どの操作が条件を要るか、記録のどこを比べるかは `packages/application` の `checkCondition`（`conditions.ts`。API とブラウザ内モックが使う）。面が `If-Match` を持つ操作の型（`ConditionalName`）と application の `ConditionalOperation` が同じことを型のテストで、PATCH の面だけが `If-Match` を持つことを `requests.test.ts` で確かめる。
 - **順序**：RFC 9110 §13.2.1 のとおり、条件を除いた要求の応答が本文を処理する前に 2xx・412 以外になるなら、条件より先に答える。400（形と書式）・401・403・413 → 冪等キーの照合（#320。自分の書き込みの送り直しは 412 にせず 1 回目の応答を返す）→ 404（要求が指す記録がない。`checkCondition` は対象のない操作を通し、操作が答える）→ 428・412 → domain の 422。比べる版は、追いつき（ADR 0004 #271）の前の、読み込んだ版（利用者が読んだもの）。412 でも 428 でも何も書かない。
 - **応答の `ETag`**：値を置き換える書き込みが通ったら、記録のその後の etag を `ETag` ヘッダーで返す（`headers.yaml` の `RecordETag`。記録を消した書き込み、目標を空にしたときは返さない）。同じキーで送り直した要求にも同じ値を返す（冪等キーの記録に置く。ADR 0004「記録のテーブル」）。クライアントは、同じ記録への次の書き込みを、読み直しを待たずにこの値で送れる（同じ形の 2 つの欄を続けて保存するとき、自分の 1 回目で 2 回目が 412 にならないように。ADR 0005「エラーと送信中」）。
 - ブラウザ内モックも同じに振る舞う（ストアが保存のたびに版を進め、`checkCondition` で比べ、`ETag` を返す。ADR 0005「ブラウザ内モック」）。
@@ -284,11 +301,12 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 - `pnpm contract:generate` が、Redocly で `openapi/` を 1 ファイルにまとめ（一時ディレクトリ）、Hey API で `packages/api-contract/src/generated/` に生成する。生成物はコミットする。分けたファイルのまま Hey API に渡すと、別ファイルの path と応答の参照から中身のない型（`CreateArea = unknown` など）が出るため、まとめてから渡す。
 - `pnpm contract:check`（`pnpm check` の中）は、仕様を lint し、一時ディレクトリに生成し直して、コミットした生成物とファイルの一覧と中身が同じかを確かめる。違えば失敗する（CI でも同じ）。
 - 出力：`@hey-api/typescript`（型）、`valibot`（定義・要求・応答のスキーマ）、`@hey-api/client-fetch` と `@hey-api/sdk`（fetch のクライアント）、`@tanstack/react-query`（Query と Mutation の options）。生成の入口ファイルは作らず、次の 3 つの入口で出し分ける。
-  - `@itera/api-contract`：型と Valibot のスキーマだけ。`services/api` はこれだけを使う。
+  - `@itera/api-contract`：型と Valibot のスキーマだけ。`services/api` はこれだけを使う。Web の本番のコードは型だけを import する（値を import するとスキーマと Valibot が本番ビルドに入る。ADR 0005「本番ビルド」）。
   - `@itera/api-contract/client`：fetch のクライアント（Web）。関数は契約の operation と読み取りだけにする（一覧のテストが、関数の export を operation として数える）。
   - `@itera/api-contract/create-client`：別のクライアントを作る `createClient`・`createConfig`。Web はデータの出どころ（API、ブラウザ内モック）ごとにクライアントを作る（#272、ADR 0005「Web のクライアントとブラウザ内モック」）。
   - `@itera/api-contract/react-query`：TanStack Query の options（Web）。React に依存する。
-  - `@itera/api-contract/requests`：操作と面の振り分け（上の「経路の形」、#295）と `queryInput`。生成物ではなく手で書く。サーバー・ブラウザ内モック・Web が使う。
+  - `@itera/api-contract/sending`：操作と面の振り分けの送る側（上の「経路の形」、#295・#356）。`routes`・`requestOf`、書き込みのヘッダーを作る `idempotencyKeyHeaders`・`conditionHeaders`。Valibot とスキーマを import しない。生成物ではなく手で書く。Web が使う。
+  - `@itera/api-contract/requests`：操作と面の振り分けの両方向（`/sending` のものに、要求を読む `surfaces`・`readRequest`・`readIdempotencyKey`・`readCondition` と `queryInput` を足す）。Valibot とスキーマを使う。生成物ではなく手で書く。サーバー・ブラウザ内モックが使う。
   - `@itera/api-contract/problems`：エラーの本文（種類ごとのステータスと `title`、domain の拒否との対応、`errors` の場所の作り方。上の「エラー」、#319）。生成物ではなく手で書く。サーバー・ブラウザ内モック・Web（`failureOf` の型、テストの応答）が使う。domain には依存しない（ADR 0007）。domain の拒否の `code` は、表のキーとして契約が自分で名前を持ち、サーバーとモックが `DomainError` の `code` で引く。domain に `code` が増えると、引く側が型の検査で失敗する。
   - `@itera/api-contract/testing`：テストの道具（操作ごとの入力の例 `OPERATION_EXAMPLES` など）。テストだけが使う。
   - `services/api` から `client`・`create-client`・`react-query` の import を ESLint の `no-restricted-imports` で止める。API が React に依存しない。
@@ -297,6 +315,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
   - 境界：Valibot のプラグインの `additionalProperties` の扱いの 1 行だけ。ほかの出力は変えない。
   - 検査：生成した Valibot に `v.object({})`・`v.unknown()` があればテストが失敗し、2 つの表が `v.record` で値を検証していることもテストで確かめる（`src/generated.test.ts`）。版を上げて patch が当たらなくなったときも、ここで止まる。
   - 戻す条件：Hey API が `$ref` の値の表に `v.record` を出すようになったら、版を上げて patch を消す。
+  - 2026-10-05（#409）：依存の js-yaml の指摘を直すために版上げを確かめたが、0.99.0 より新しい安定版はなく、0.99.0 と patch のまま据え置いた。生成物と `info.version` は変わらない。js-yaml の指摘の扱いと確かめ直す時機は ADR 0004「依存の脆弱性の確かめ方」。
 - 生成物は Prettier と ESLint の対象外（`.prettierignore`、`eslint.config.js` の ignores）。正しさは `contract:check` と下のテストで確かめる。
 
 ### 契約と実装の一致
@@ -305,7 +324,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 - 一覧：生成したクライアントの operation が、`surfaces` の面、読み取りの 8 個（`getMe` を含む）、設定を作る `setSettings`（`settingsSurface`）に一致し、`operations` のすべての名前が面のどれかに行く。`@itera/application` の関数の export のうち、読み取りでも操作の道具でもないものがあれば失敗する（読み取りを足したら契約にも足す）。
 - 往復（`src/requests.test.ts`）：操作ごとの入力の例（`OPERATION_EXAMPLES`。省略できる項目の有無を含む）を `requestOf` で要求にし、面のスキーマで検証して `operation` に通すと、同じ操作と入力に戻る。面のメソッドと経路が、生成したクライアントの関数が送るものと同じ。面のスキーマのすべての項目を、どれかの操作の要求が使う。すべての経路と query の名前が kebab-case。
-- 型：各操作の入力と要求は `requests.ts` の中で生成した型に対して型検査する。出力と応答（1 つの操作だけの面は同じ型、いくつかの操作の面は各出力が応答に合い、合わせて応答の項目になる）、各読み取りの結果と応答の `view`（`undefined` は `null`）と `clock` が、型として同じ（片方への代入ができるだけでなく、余分な・欠けたキーもない）。比べる前に、両方から brand（ID・日付）と `readonly` を外す。`pnpm typecheck` で確かめる。このテストは、今は application の結果から DTO への写像が恒等であることを確かめるもので、application の形が契約の正本であることを示すものではない（契約の正本は `openapi/`）。内部の変更で型が合わなくなったら、意図した契約の変更でない限り、契約は直さずに `services/api` に写像を置く（ADR 0007「アプリケーション層の読み取りと API の DTO」）。
+- 型：各操作の入力と要求は `sending.ts` の中で（受け取った要求から作る操作の入力は `requests.ts` の中で）生成した型に対して型検査する。出力と応答（1 つの操作だけの面は同じ型、いくつかの操作の面は各出力が応答に合い、合わせて応答の項目になる）、各読み取りの結果と応答の `view`（`undefined` は `null`）と `clock` が、型として同じ（片方への代入ができるだけでなく、余分な・欠けたキーもない）。比べる前に、両方から brand（ID・日付）と `readonly` を外す。`pnpm typecheck` で確かめる。このテストは、今は application の結果から DTO への写像が恒等であることを確かめるもので、application の形が契約の正本であることを示すものではない（契約の正本は `openapi/`）。内部の変更で型が合わなくなったら、意図した契約の変更でない限り、契約は直さずに `services/api` に写像を置く（ADR 0007「アプリケーション層の読み取りと API の DTO」）。
 - fixture：PRD §12 の 12 状態で、すべての読み取り（Backlog の絞り込みごと、すべての Sprint の番号と次の週、昨日と明日）の結果を JSON にして `{ clock, view }` で包み、生成した応答のスキーマで検証する。
 - エラー：`problems.ts` が作る本文が、種類ごとに契約のスキーマを通る（`src/problems.test.ts`）。生成した型で、すべての operation のエラーの応答が `unknown` でなく Problem の型になる（`src/generated.test.ts`。Hey API 0.99.0 は `application/problem+json` の応答も `application/json` と同じく読む）。サーバーのテストは、エラーの応答の `Content-Type`・本文の `status`・そのステータスのスキーマを確かめる（`services/api/src/test-problems.ts`）。
 - ID：各種類の ID のスキーマが、`parseId` と同じものを受け付ける。型のテストは ID を文字列として比べるので、各操作の入力のどこがどの種類の ID を取るかは別に確かめる：application の入力の型から求めた種類の表（`pnpm typecheck` で型と照合）に沿って、例の入力の ID を別の種類の ID に替えると、その要求を面のスキーマが断る（`src/id-kinds.test.ts`）。
@@ -344,12 +363,17 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 列挙は 2 種類に分け、どちらなのかを仕様の `description` に書く。
 
-- **開いた列挙**：値が増えることを前提にする列挙。エラーの `type`（#319 までは `code`）。値を足すのは壊さない変更。操作の可否は列挙ではなく、記録ごとの `capabilities` の真偽値の項目にした（ADR 0007「操作の可否」、#322）。`can…` を足すのは、応答に項目を足す変更（下の「壊さない変更」）で、クライアントは知らない `can…` を読み飛ばし、その操作は出さない。
+- **開いた列挙**：値が増えることを前提にする列挙。エラーの `type`（#319 までは `code`）と、下の「分類」の列挙。値を足すのは壊さない変更。操作の可否は列挙ではなく、記録ごとの `capabilities` の真偽値の項目にした（ADR 0007「操作の可否」、#322）。`can…` を足すのは、応答に項目を足す変更（下の「壊さない変更」）で、クライアントは知らない `can…` を読み飛ばし、その操作は出さない。
   - 受け取る側（すべてのクライアントと、そこで使う生成した型と検証）は、知らない値を受理しなければならない。知らない値で、読み込み（decode）も応答の検証も失敗させない。知らない `type` は一般の失敗として扱う。知らない HTTP のステータス（#266 で足した 413 のように、後から足すもの）も、一般の失敗として扱う。
   - iOS・Android の生成した型がこれを満たすこと（知らない値を表す場合を持つか、文字列として受ける）を、生成の道具を選ぶ条件にする。満たさない道具は使わない。
   - 今の仕様は、`type` をエラーごとに `const` で書いている（domain の 3 つの種類の `RuleViolationError` だけ `enum`）。操作の 422 は `RuleViolationError`・`UserNotSetUpError`・`IdempotencyKeyReusedError` の `oneOf`（#266。3 つ目は #320）。エラーの本文の `oneOf` のように、枝が `type` の値だけで分かれ、形がどれも Problem Details（`{ type, title, status, detail }` と種類ごとの拡張）のものは、開いた列挙として扱う。枝を足すのは `type` の値を足すのと同じで、壊さない変更。開いた列挙の仕様での書き方（拡張の印、`anyOf` で文字列を足すなど）は、iOS に着手する前に生成の道具と一緒に決め、そのとき `type` も書き直す。Web が応答を実行時に検証するようにするなら、それより前に決める。
-- **閉じた列挙**：値ごとに意味が違い、知らない値では正しく表示できないもの。状態の名前、union の判別子（`base`・`kind` など）、`SprintWeek` など。値を足すのは壊す変更。判別子が閉じた列挙の union に種類（`oneOf` の枝）を足すのも同じ（エラーの本文の `oneOf` は上の開いた列挙）。
+- **閉じた列挙**：値ごとに意味が違い、知らない値では正しく表示できないもの。状態の名前、union の判別子（`base`・`kind` など）、`SprintWeek` など。応答に出る列挙では、値を足すのは壊す変更（要求の側にだけ出る列挙は、下の「要求の側にだけ出る列挙」）。判別子が閉じた列挙の union に種類（`oneOf` の枝）を足すのも同じ（エラーの本文の `oneOf` は上の開いた列挙）。
 - 閉じた列挙でも、知らない値で読み込み全体を失敗させないことが望ましい（その部分を一般の形で出すか、アプリの更新を促す）。ただし、これに頼って閉じた列挙に値を足さない。
+
+- 書き方：`enum` を持つすべてのスキーマ（入れ子の項目も含む）と、エラーの本文の `oneOf` の `description` を、`Closed enum.` か `Open enum.` で始める（周りの `description` が英語なので、語も英語にする。`x-` の拡張は使わない）。`packages/api-contract/src/enum-kinds.test.ts` が、`redocly bundle` した契約を走査して、書き漏れ（と、エラーの `type` が開いた列挙でないこと）を `pnpm test`（`pnpm check`）で失敗にする。
+- 分類：開いた列挙は、エラーの `type`（`RuleViolationError.type`）とエラーの本文の `oneOf`（`RuleViolation`）のほか、画面が値で分岐せず、知らない値を読み飛ばしても操作の可否が変わらない説明・記録の列挙。`PlanningBlocker`・`RetroBlocker`（可否は `capabilities` が決め、Blocker は理由の説明だけ。知らない理由は出さずに通す。domain には今は出していない理由もあり、値が増える）、`TaskCreatedVia`・`ActualTimeVia`（経路の記録で、表示が値に依存しない）。ほかはすべて閉じた列挙（状態の名前、union の判別子、`SprintWeek`、画面が値ごとに分岐する `CapacityStatus`・`DailySelectionOrigin`・`SprintTaskOrigin`・`CarryOverPlace`）。開いた列挙の仕様での書き方を決めるとき（iOS の前）、エラーの `type` と一緒に、これらも書き直す。
+- 要求の側にだけ出る列挙（`BacklogSlice`、`AnyEntityTag`）の「閉じた」は、知らない値を受け取るサーバーが 400 にする、という意味。古いクライアントは新しい値を送らないので、値を足すのは壊さない変更で、値を消すのが壊す変更になる。
+- 向き：応答に出る列挙で、閉じた列挙を開いた列挙に変えるのは壊す変更（受け取る側に、知らない値を受理する義務が新しく生まれ、閉じた列挙として作ったクライアントはそれを満たさない）。開いた列挙を閉じるのは、すでに寛容なクライアントを壊さない。そのため分類は、画面が値で分岐するかで決める。迷うものを閉じた列挙から始めない。
 
 ### 壊さない変更
 
@@ -363,7 +387,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 
 ### 壊す変更
 
-- 閉じた列挙に値を足す。union に種類を足す。
+- 応答に出る閉じた列挙に値を足す（要求の側にだけ出る列挙は、値を消すのが壊す変更。上の「列挙」）。union に種類を足す。
 - 要求に必須の項目を足す。要求の省略できる項目を必須にする。
 - 要求から項目を消す。要求の本文は未知のキーを 400 にするので、古いクライアントが送る項目を消すと、その要求が失敗する。
 - 応答から項目を消す。応答の必須の項目を省略できるようにする。
@@ -376,8 +400,33 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 ### 壊す変更をするとき
 
 - `info.version` の major を上げ、ADR に書く。
-- ただし最初の本番の公開（統合ブランチを main に入れて CD でデプロイするとき）までは、SemVer（§4）の major 0（初期の開発中）として扱い、壊す変更で minor を上げる。最初の本番の公開で 1.0.0 にし、その後は major を上げる（2026-10-03 司令塔の判断、#295）。#295 の経路の変更で 0.2.0、#319 のエラーの形の変更で 0.3.0、#320 の冪等キーで 0.4.0、#321 の記録ごとの版で 0.5.0、#323 の操作の可否（`BacklogItem` の `can…` を `capabilities` に移した）で 0.6.0、#330 の規則の版で 0.7.0 にした。
+- ただし最初の本番の公開（統合ブランチを main に入れて CD でデプロイするとき）までは、SemVer（§4）の major 0（初期の開発中）として扱い、壊す変更で minor を上げる。最初の本番の公開で 1.0.0 にし、その後は major を上げる（2026-10-03 司令塔の判断、#295）。#295 の経路の変更で 0.2.0、#319 のエラーの形の変更で 0.3.0、#320 の冪等キーで 0.4.0、#321 の記録ごとの版で 0.5.0、#323 の操作の可否（`BacklogItem` の `can…` を `capabilities` に移した）で 0.6.0、#330 の規則の版で 0.7.0、#346 の完了の取り消しと「すべての回を外す」の意味の変更で 0.8.0、#427 の開始前の `TodayData.day` の省略で 0.9.0 にした。
 - 版の上げ方（経路、ヘッダー、受け付ける最低の版）と、古いクライアントの扱いは、iOS に着手するまでに決める。それまでは Web だけなので、壊す変更を入れた直後は、開いたままのタブの要求が失敗しうる（400 など）。利用者が 1 人の間は、読み直しで足りる。
+
+### 機械での確かめ（Issue #367、2026-10-05）
+
+上の規則と「壊す変更をするとき」の版の上げ方を、PR ごとに CI が確かめる。見落としの防ぎが specialist:contract のレビューだけだったので、最初の本番の公開（1.0.0）の前に入れた（2026-10-05 オーナー判断）。
+
+- CI の `contract` job（`.github/workflows/check.yml`。PR のときだけ）が、PR の base の契約と、PR を base に合わせた契約（checkout した merge commit）を比べる。base は merge commit の 1 つ目の親（`HEAD^1`。checkout を `fetch-depth: 2` にして得る）で、PR が合わさった base そのものなので、PR の変更だけが差になる。base の契約は、その commit から `git archive` で `packages/api-contract/openapi/` と `redocly.yaml` を一時ディレクトリに書き出したもの。両方を head の Redocly で 1 つにまとめ（生成と同じ形）、oasdiff の `breaking`（`--flatten-allof`）で比べる。oasdiff の `<ref>:<path>` の読み込みは使わない（まとめる前の分けたファイルどうしを比べることになる）。
+- 手元では、ルートで `pnpm contract:breaking --base <git ref>`（既定は `origin/main`。統合ブランチ向けの PR では、そのブランチを渡す）。比べる相手は `--base` とこのブランチの分かれた点（`git merge-base`）で、base がその後に進んだ分を、このブランチの変更として数えない。`pnpm check` には入れない（base が要り、初回は oasdiff を落とす）。
+- oasdiff の既定の判定と、この ADR の規則の違いは、`scripts/breaking-rules.mjs` が合わせる。
+  - 開いた列挙：応答の列挙に値を足すことは、oasdiff では壊す変更（`response-property-enum-value-added`）だが、その列挙の `description` が base と head のどちらのまとめた契約でも `Open enum.` で始まるなら、壊さない変更として数える（上の「列挙」の「書き方」）。oasdiff は変更を、応答の本文からの項目の道筋（`view/items/additionalProperties/task/createdVia`、`oneOf` の枝は `$ref` か番号。枝の場所が base と head で違うと `<base での名前> -> <head での名前>`）で示し、スキーマの名前は示さないので、道具は両方の契約でその道筋をたどり（枝は、それぞれの契約での名前で引く）、着いた列挙の `description` を読む。道筋をたどれない変更は、開いた列挙とは数えず、壊す変更のまま残す。エラーの応答（4xx・5xx）の本文の `oneOf` に枝を足すこと（`response-body-one-of-added`）と、エラーの `type` の列挙に値を足すことも、壊さない変更として数える（`description` ではなく、エラーの応答であることで決める）。閉じた列挙に値を足すのは、壊す変更のまま（`description` を `Closed enum.` から `Open enum.` に変えること自体は、この道具が見つけられない。「列挙」の「向き」のとおり閉じた列挙を開くのは壊す変更なのでレビューで判断する。ただし、同じ PR で値も足すなら、base では閉じた列挙なので、壊す変更として出る）。
+  - oasdiff の `--severity-levels` で、次を壊す変更にする（上の「壊す変更」。oasdiff ではどれも警告か互換）。
+    - 要求から項目を消すこと（要求の本文は知らないキーを 400 にする）と、応答から省略できる項目を消すこと。
+    - 応答から省略できるヘッダーを消すこと（Web は応答の `ETag` を次の `If-Match` に使う）。
+    - operation の名前（`operationId`。生成したクライアントの関数と `useOperation` の名前）を変えること。
+    - `deprecated` を付けてから operation を消すこと（この ADR には、消すのを互換にする廃止の手順がない）。
+  - oasdiff が仕様だけでは決められない変更（WARN）は、数えずに一覧に出す。レビューで判断する。
+- 壊す変更があれば、`info.version` が base の版から、major が 0 の間は minor、1.0.0 からは major で上がっていることを求める。版が下がること、`MAJOR.MINOR.PATCH` の形でないことも止める。壊す変更が見つからないのに版を上げるのは止めない（形が同じで意味を変える壊す変更があるため）。
+- 見つけないもの（specialist:contract のレビューで判断する）：形が同じで意味や単位を変える変更（#346）、消した項目や operation の名前を別の意味で使い直すこと、仕様では省略できるがサーバーが条件で求めるヘッダー（#330 の `If-Match`・`If-None-Match`）、送り返す入れ子に項目を足すときの但し書き（上の「壊さない変更」）。
+- 過去の契約の変更（#279〜#347 の 11 件）で確かめた：版を上げた #295・#319・#320・#321・#323 は壊す変更あり、上げなかった #279・#338・#347 は壊す変更なしで、規則の判断と合う。#330・#346 は見つからない（上の見つけないもの）。#321・#322・#323・#346 では、`title` のない 2 つの inline の枝の中が変わったのを、枝を足したものとして壊す変更に数えた（#322 は版を上げていないので誤った警告になる）。これが上の「置き場所と書き方」の `title` の理由で、`title` があれば中の変更を比べることを確かめた。
+
+#### 警告から失敗への切り替え
+
+- 今は警告だけ（`--warn-only`）。job は通り、指摘を注釈と job の要約に出す。
+- 切り替える条件：この確かめが入った後、契約（`openapi/`）を変えた PR が 3 件続けて、確かめの結果（壊す変更の有無と版の判定）と specialist:contract のレビューの判断が食い違わないこと。食い違ったら、`breaking-rules.mjs` かこの ADR を直してから数え直す。`title` を付けた #367 の PR と、それを含む統合ブランチを main に入れる PR は数えない（base に `title` がないので、枝を消して足したものとして警告が出る）。
+- 遅くとも最初の本番の公開（1.0.0）の前に切り替える。それまでに 3 件に満たなければ、その時点の結果を見てオーナーが決める。
+- 切り替えは、`check.yml` の `--warn-only` を消し、この ADR に改訂を書く。リポジトリには必須のチェックの設定がないので、job が落ちた PR をマージしないこと（CI が通ってからマージする）で効かせる。
 
 ### 決めていないこと（iOS に着手する前に決める）
 
@@ -388,6 +437,7 @@ Spectral（`@stoplight/spectral-cli`）は使わない。lint だけなら足り
 ## 影響
 
 - `services/api`（#266）は、`@itera/api-contract` のスキーマで入力を検証し、この ADR の割り当てでエラーを返す。書き込みは `@itera/api-contract/requests` の面をすべて登録し（#295）、読み取りは `reads.ts` の登録表に足す。契約のすべての面と読み取り（`getMe` のほか）が登録されていることはテストで確かめる（#270 で全部の領域がそろい、未実装の一覧はなくなった）。
-- `apps/web`（#272）は、`@itera/api-contract/client` と `/react-query` を使い、`@tanstack/react-query` 5.104.1 を入れる。操作は `useOperation('<名前>')` で、`@itera/api-contract/requests` を通して送る（#295）。
+- `apps/web`（#272）は、`@itera/api-contract/client` と `/react-query` を使い、`@tanstack/react-query` 5.104.1 を入れる。操作は `useOperation('<名前>')` で、`@itera/api-contract/sending` を通して送る（#295。#356 で `/requests` から分けた）。
 - iOS・Android は、`openapi/` を 1 ファイルにまとめたもの（`redocly bundle`）から生成できる。セッションの Cookie と書き込みの Origin の検査（ADR 0004）は、Origin を送らないネイティブのクライアントでは 403 になるので、ネイティブの認証の方式は iOS に着手するときに決める。
 - 契約を変えるときは、`openapi/` を直し、`pnpm contract:generate` を実行して、生成物と一緒にコミットする。
+- 契約を変える PR は、CI の `contract` job が base の契約と比べる（「機械での確かめ」）。壊す変更の指摘が出たら、`info.version` を上げて改訂を書くか、変更を互換にする。

@@ -1,10 +1,11 @@
 import type { Area } from './area';
 import { capacityOf, type Capacity } from './capacity';
-import type { Occurrence } from './occurrence';
+import { occurrenceStateCounts, type Occurrence } from './occurrence';
 import { totalPlanningValues, type PlanningTotal } from './planning-value';
 import type { AreaId, OccurrenceId, SprintTaskId, TaskId } from './shared/ids';
 import type { LocalDate } from './shared/time';
 import {
+  isInConfirmedPlan,
   sprintAreaName,
   type DailySelection,
   type InterruptNote,
@@ -44,6 +45,18 @@ export interface TaskFact {
   readonly longestDeferralRun: readonly LocalDate[];
   /** Days it ended with 今日はここまで. */
   readonly pausedDates: readonly LocalDate[];
+  /**
+   * A recurring Task's occurrences in this SprintTask, by state: it is
+   * shown by them, not as done or carried over (F20). Excluded ones are
+   * not counted (F2, F14).
+   */
+  readonly occurrences?: OccurrenceCounts;
+}
+
+export interface OccurrenceCounts {
+  readonly done: number;
+  readonly skipped: number;
+  readonly missed: number;
 }
 
 export interface GoalFact {
@@ -184,7 +197,7 @@ export function retroFacts(sprint: Sprint, input: RetroFactsInput): RetroFacts {
         ? undefined
         : sprint.goals.find((g) => g.areaId === areaId);
     const inArea = facts.filter(
-      (f) => f.areaId === areaId && f.outcome !== 'removed',
+      (f) => f.areaId === areaId && isInConfirmedPlan(f),
     );
     const name =
       areaId === null ? undefined : sprintAreaName(sprint, areaId, input.areas);
@@ -215,7 +228,7 @@ export function retroFacts(sprint: Sprint, input: RetroFactsInput): RetroFacts {
   const inSprint = factOccurrenceIds(sprint);
   const occurrences = input.occurrences.filter((o) => inSprint.has(o.id));
 
-  const counted = facts.filter((f) => f.outcome !== 'removed');
+  const counted = facts.filter(isInConfirmedPlan);
   const totalOf = (list: readonly TaskFact[]) =>
     totalPlanningValues(
       list.flatMap((f) => (f.plan === undefined ? [] : [f.plan.value])),
@@ -324,7 +337,7 @@ export interface CriterionResult {
 export function criterionResult(facts: RetroFacts): CriterionResult {
   const tasks = facts.tasks.filter(
     (f) =>
-      f.outcome !== 'removed' &&
+      isInConfirmedPlan(f) &&
       !f.recurring &&
       f.plan?.value.criterionApplied === true,
   );
@@ -390,7 +403,23 @@ function taskFact(
     deferredDates: selections.filter(isDeferral).map((s) => s.date),
     longestDeferralRun: longestRun(selections),
     pausedDates: selections.filter(isPause).map((s) => s.date),
+    ...(sprintTask.occurrenceIds === undefined
+      ? {}
+      : {
+          occurrences: retroOccurrenceCounts(
+            sprintTask.occurrenceIds,
+            input.occurrences,
+          ),
+        }),
   };
+}
+
+function retroOccurrenceCounts(
+  ids: readonly OccurrenceId[],
+  occurrences: readonly Occurrence[],
+): OccurrenceCounts {
+  const { done, skipped, missed } = occurrenceStateCounts(ids, occurrences);
+  return { done, skipped, missed };
 }
 
 /** Rounds away the binary noise of a subtraction (4.7 − 4.5). */
@@ -428,20 +457,34 @@ function longestRun(
   return best;
 }
 
+/**
+ * The carriedFrom chain behind a SprintTask: each SprintTask it continues,
+ * with its Sprint, the nearest first. It stops at a SprintTask not in
+ * `sprints`, or one already met.
+ */
+export function carriedFromChain(
+  sprintTask: SprintTask,
+  sprints: readonly Sprint[],
+): readonly { readonly sprint: Sprint; readonly sprintTask: SprintTask }[] {
+  const chain: { sprint: Sprint; sprintTask: SprintTask }[] = [];
+  let from = sprintTask.carriedFrom;
+  const seen = new Set<SprintTaskId>();
+  while (from !== undefined && !seen.has(from)) {
+    seen.add(from);
+    const id = from;
+    const sprint = sprints.find((s) => s.tasks.some((t) => t.id === id));
+    const previous = sprint?.tasks.find((t) => t.id === id);
+    if (sprint === undefined || previous === undefined) break;
+    chain.push({ sprint, sprintTask: previous });
+    from = previous.carriedFrom;
+  }
+  return chain;
+}
+
 /** 持ち越し回数: the length of the carriedFrom chain behind a SprintTask. */
 export function carryCount(
   sprintTask: SprintTask,
   sprints: readonly Sprint[],
 ): number {
-  let count = 0;
-  let from = sprintTask.carriedFrom;
-  const seen = new Set<SprintTaskId>();
-  while (from !== undefined && !seen.has(from)) {
-    seen.add(from);
-    const previous = sprints.flatMap((s) => s.tasks).find((t) => t.id === from);
-    if (previous === undefined) break;
-    count += 1;
-    from = previous.carriedFrom;
-  }
-  return count;
+  return carriedFromChain(sprintTask, sprints).length;
 }

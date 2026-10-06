@@ -9,7 +9,7 @@ import type {
 import type {
   MadeFrom,
   TaskAttributeUpdate,
-} from '@itera/api-contract/requests';
+} from '@itera/api-contract/sending';
 import { Link, useLocation } from '@tanstack/react-router';
 import { Check, ChevronDown, ChevronRight } from 'lucide-react';
 import {
@@ -17,6 +17,7 @@ import {
   useEffect,
   useId,
   useImperativeHandle,
+  useLayoutEffect,
   useRef,
   useState,
   type FormEvent,
@@ -64,25 +65,23 @@ import {
   EMPTY_DURATION,
   hoursText,
   readMinutes,
+  readPositiveMinutes,
   sameDuration,
   type DurationText,
 } from '@/lib/duration-text';
-import {
-  sameWords,
-  useDraftField,
-  type VersionedDraftField,
-} from '@/lib/use-draft-field';
+import { useDraftField, type VersionedDraftField } from '@/lib/use-draft-field';
+import { readTaskTitle, sameWords } from '@/lib/value-rules';
 import { LAST_DAY_CLOSED_WORDS } from '@/lib/selection-words';
 import { formatHours } from '@/lib/time-format';
 import { startedText } from '@/lib/today-words';
 import type { BacklogView } from '@/screen-data/use-backlog';
+import { useSelectionActions } from '@/screen-data/use-selection-actions';
 import { useTaskActions } from '@/screen-data/use-task-actions';
 import { useNewAreaDialog } from './area-dialog';
 import { CarryOverText, RecurrenceText, SprintText } from './backlog-row';
 import { RecurrenceEditor, type RecurrencePending } from './recurrence-editor';
 import { UnsavedTypingLayer } from '@/lib/unsaved-typing';
 import { SubtaskList } from './subtask-list';
-import { useSelectionActions } from './use-selection-actions';
 import { useAddToToday } from './use-add-to-today';
 import { useAddToWeek } from './use-add-to-week';
 
@@ -130,11 +129,11 @@ const same: Reading = { kind: 'same' };
 function readField(key: TextKey, draft: Draft, base: Draft): Reading {
   switch (key) {
     case 'title': {
-      const title = draft.title.trim();
-      if (title === '') {
+      const title = readTaskTitle(draft.title);
+      if (title === undefined) {
         return { kind: 'error', message: 'タイトルを入力してください' };
       }
-      return title === base.title.trim()
+      return title === readTaskTitle(base.title)
         ? same
         : { kind: 'save', update: { title } };
     }
@@ -158,8 +157,8 @@ function readField(key: TextKey, draft: Draft, base: Draft): Reading {
         : { kind: 'save', update: { due: parsed.value } };
     }
     case 'estimate': {
-      const minutes = readMinutes(draft.estimate);
-      if (minutes === null || minutes === 0) {
+      const minutes = readPositiveMinutes(draft.estimate);
+      if (minutes === null) {
         return { kind: 'error', message: DURATION_ERROR };
       }
       return minutes === readMinutes(base.estimate)
@@ -361,7 +360,7 @@ function TaskDetailContent({
   const [pauseError, setPauseError] = useState<string>();
   const pauseButtonRef = useRef<HTMLButtonElement>(null);
   const pauseInputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (pausing) pauseInputRef.current?.focus();
   }, [pausing]);
   function closePause() {
@@ -595,7 +594,7 @@ function TaskDetailContent({
   // What the section offers now: it changes once an operation of it has
   // taken effect (the button pressed is gone).
   const sectionKey = `${dayOperations.map((o) => o.key).join()}${facts.today === undefined ? '' : '+open'}`;
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (focusFrom.current === undefined || focusFrom.current === sectionKey)
       return;
     focusFrom.current = undefined;
@@ -641,7 +640,7 @@ function TaskDetailContent({
   const foldRef = useRef<HTMLDivElement>(null);
   const estimateRef = useRef<HTMLInputElement>(null);
   // Opening, the Drawer finds it by `data-autofocus`; already open, this.
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (focusEstimate !== undefined) estimateRef.current?.focus();
   }, [focusEstimate]);
   // The suggestion on show (at most one is presented); what can be done
@@ -943,7 +942,7 @@ function TaskDetailContent({
           // chooses a field, so a phone does not raise its keyboard (#95).
           tabIndex={-1}
           data-autofocus={focusEstimate === undefined || undefined}
-          className="w-fit rounded-sm focus-visible:focus-ring"
+          className="w-fit max-w-full rounded-sm focus-visible:focus-ring"
         >
           {task.title}
         </DrawerTitle>

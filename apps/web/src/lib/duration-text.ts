@@ -3,6 +3,8 @@
 // written back as the screen would write it, so the person sees how it was
 // read: 90 in 分 becomes 1 and 30, 1.5 in 時間 becomes 1 and 30.
 
+import { isBlank, positiveMinutes } from './value-rules';
+
 /** The text of the two fields, kept as typed until it is read. */
 export type DurationText = { readonly hours: string; readonly minutes: string };
 
@@ -32,11 +34,21 @@ function readPart(text: string): number | null {
  * either is not a number of at least 0.
  */
 export function readMinutes(text: DurationText): number | undefined | null {
-  if (text.hours.trim() === '' && text.minutes.trim() === '') return undefined;
+  if (isBlank(text.hours) && isBlank(text.minutes)) return undefined;
   const hours = readPart(text.hours);
   const minutes = readPart(text.minutes);
   if (hours === null || minutes === null) return null;
   return Math.round(hours * 60 + minutes);
+}
+
+/**
+ * `readMinutes` for a time of at least a minute (見積もり, かかった時間,
+ * 割り込み): `null` also when the fields read as 0.
+ */
+export function readPositiveMinutes(
+  text: DurationText,
+): number | undefined | null {
+  return positiveMinutes(readMinutes(text));
 }
 
 /**

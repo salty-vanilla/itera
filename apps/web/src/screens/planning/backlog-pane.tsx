@@ -17,7 +17,7 @@ import {
   TaskMetadata,
 } from '@/components/task/task-metadata';
 import { TaskQuickAdd } from '@/components/task/task-quick-add';
-import { TaskTitleLines } from '@/components/task/task-row';
+import { revealRow, TaskTitleLines } from '@/components/task/task-row';
 import { formatDate, formatMonthDay } from '@/lib/date-format';
 import { rowKeyHandlers } from '@/lib/row-keys';
 import { cn } from '@/lib/utils';
@@ -183,7 +183,11 @@ function BacklogPane({
             {candidates.recurring.map(({ task, occurrences }) => (
               <li
                 key={task.id}
-                className="group/row flex flex-col gap-1 border-b border-border-soft py-2"
+                data-slot="task-row"
+                className={cn(
+                  'group/row relative flex flex-col gap-1 border-b border-border-soft px-2 py-2',
+                  rowHoverClass,
+                )}
                 {...rowKeyHandlers({
                   onEstimate: () => onEstimateTask(task.id),
                 })}
@@ -192,8 +196,9 @@ function BacklogPane({
                   <button
                     type="button"
                     data-row-focus
-                    className="min-w-0 text-left text-task text-ink focus-visible:focus-ring"
+                    className={titleButtonClass}
                     onClick={() => onOpenTask(task.id)}
+                    onFocus={revealRow}
                   >
                     <TaskTitleLines wrap={slim ? 'all' : 'two'}>
                       {task.title}
@@ -210,7 +215,7 @@ function BacklogPane({
                 <div
                   role="group"
                   aria-label={`${weekText(week, 'に入れる日')}：${task.title}`}
-                  className="flex flex-wrap gap-x-4 gap-y-1"
+                  className="relative z-(--layer-local) flex flex-wrap gap-x-4 gap-y-1 self-start"
                 >
                   {occurrences.map((o) => {
                     const included = o.state === 'pending';
@@ -254,6 +259,20 @@ function BacklogPane({
   );
 }
 
+// The whole row opens the Task and the ring goes round the row, as a Task
+// Row's does (#358). The box reaches 8px past the row on both sides (the
+// pane's padding), so that the ring keeps clear of the controls and the
+// text, which start at the row's edge (a repeat row is 8px in, so that its
+// hover has room around them). The controls sit above it, at `layer-local`.
+const titleButtonClass =
+  'min-w-0 text-left text-task text-ink after:absolute after:inset-y-0 after:-inset-x-2 focus-visible:outline-none focus-visible:after:focus-ring-inset';
+
+// The row's hover, as a Task Row's (DESIGN.md Hover): `surface-hover`, and a
+// chosen row keeps its `here-subtle` (a Task Row's `current` does the same).
+// The `…` below shows on the same hover, so the two go together.
+const rowHoverClass =
+  'transition-colors duration-(--duration-fast) ease-standard hover:bg-surface-hover';
+
 /** The row's `…`: shown on hover and focus from 768px, as a Task Row's is. */
 function EstimateActions({
   title,
@@ -263,7 +282,7 @@ function EstimateActions({
   onEstimate: () => void;
 }) {
   return (
-    <div className="relative z-1 flex shrink-0 medium:opacity-0 medium:group-focus-within/row:opacity-100 medium:group-hover/row:opacity-100 medium:has-[[aria-expanded=true]]:opacity-100">
+    <div className="relative z-(--layer-local) flex shrink-0 medium:opacity-0 medium:group-focus-within/row:opacity-100 medium:group-hover/row:opacity-100 medium:has-[[aria-expanded=true]]:opacity-100">
       <Menu>
         <MenuTrigger
           render={
@@ -406,16 +425,18 @@ function CandidateItem({
   }
   return (
     <li
+      data-slot="task-row"
       data-chosen={chosen || undefined}
       className={cn(
-        'group/row flex min-h-row-touch items-center gap-2 border-b border-border-soft py-1 medium:min-h-row-task',
-        chosen && 'bg-here-subtle',
+        'group/row relative flex min-h-row-touch items-center gap-2 border-b border-border-soft py-1 medium:min-h-row-task',
+        rowHoverClass,
+        chosen && 'bg-here-subtle hover:bg-here-subtle',
       )}
       {...rowKeyHandlers({ onEstimate })}
     >
       <span
         data-row-control
-        className="grid size-target-touch shrink-0 place-items-center medium:size-target-min"
+        className="relative z-(--layer-local) grid size-target-touch shrink-0 place-items-center medium:size-target-min"
       >
         <CheckboxControl
           aria-label={`${weekText(week, 'に入れる')}：${task.title}`}
@@ -428,8 +449,9 @@ function CandidateItem({
         <button
           type="button"
           onClick={onOpen}
+          onFocus={revealRow}
           data-row-focus
-          className="min-w-0 text-left text-task text-ink focus-visible:focus-ring"
+          className={titleButtonClass}
         >
           <TaskTitleLines wrap={slim ? 'all' : 'two'}>
             {task.title}

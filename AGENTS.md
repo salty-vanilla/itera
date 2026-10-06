@@ -14,7 +14,7 @@ Itera は、仕事・研究・学習・生活など複数の領域を並行す�
 | UI v0.1 モック（PDF、ローカルのみ） | 情報構造と主要フローの当たり付け。見た目の細部は決めない |
 
 - **意味・状態・用語・画面の操作の種類**はドメインモデル → PRD の順に従う。**見た目・部品・トークン・レイアウト**は DESIGN.md に従う。
-- 領域の概念は **Area** だけ（コードは `Area`、画面の語は「領域」、色トークンは `area-1`〜`area-7` / `area-none`）。領域の意味で「Domain」という語は使わない（`packages/domain` や「ドメインモデル」のドメインは別の意味）。
+- 領域の概念は **Area** だけ（コードは `Area`、画面の語は「領域」、色トークンは `area-1`〜`area-7` / `area-none`）。領域の意味で「Domain」という語は使わない（`packages/domain` や「ドメインモデル」のドメインは別の意味）。`apps/web/src` では ESLint（`eslint.config.js` の `domainSyntax`。識別子と、大文字の `Domain`・「ドメイン」を含む文言）と `pnpm lint` のファイル・ディレクトリ名の検査（`tooling/checks/names.mjs`）が止める。小文字の `domain` の文字列（`@itera/domain`、テスト名）は検査しない。層の意味の識別子（`DomainError` など）は許可リスト `DOMAIN_LAYER_NAMES` にあり、足すのは層の名前だけ。
 - 文書どうしの食い違いを見つけたら、画面やコードで辻褄を合わせない。どの文書を更新するかをユーザーに確認する（PRD §15 の方針を DESIGN.md と `docs/design/` にも当てはめる）。
 
 ## 進め方
@@ -31,7 +31,7 @@ MVP は Web のみ。PC を基準にし、スマートフォンは DESIGN.md の
 
 `packages/domain`・`apps/web`・`services/api` で作業するときは、ファイルを作る前に `.claude/rules/domain.md` / `.claude/rules/web-ui.md` / `.claude/rules/api.md` を読む。
 
-技術スタックの候補：Vite、React 19、Tailwind 4、shadcn（base-ui）、TanStack Query、Valibot、Hono、Drizzle、OpenAPI + Hey API、vitest、Playwright。導入するときに ADR で決め、バージョンを固定する。まだ入っていないものを、入っている前提で使わない。導入済みの Web 側の依存（Vite、React、Tailwind、shadcn / base-ui、lucide-react、Storybook）は ADR 0003、ルーター（TanStack Router）と fixture・記録のストアの置き場所は ADR 0005。API 側（Hono + Cloudflare Workers、D1 + Drizzle、Better Auth、wrangler）の方式と版は ADR 0004。API の契約（OpenAPI、Hey API、Valibot、TanStack Query の生成）は ADR 0006（`packages/api-contract`）。
+技術スタックの候補：Vite、React 19、Tailwind 4、shadcn（base-ui）、TanStack Query、Valibot、Hono、Drizzle、OpenAPI + Hey API、vitest、Playwright。導入するときに ADR で決め、バージョンを固定する。まだ入っていないものを、入っている前提で使わない。導入済みの Web 側の依存（Vite、React、Tailwind、shadcn / base-ui、lucide-react、Storybook）は ADR 0003、ルーター（TanStack Router）と fixture・記録のストアの置き場所は ADR 0005。API 側（Hono + Cloudflare Workers、D1 + Drizzle、Better Auth、wrangler）の方式と版は ADR 0004。API の契約（OpenAPI、Hey API、Valibot、TanStack Query の生成）は ADR 0006（`packages/api-contract`）。E2E テスト（`@playwright/test`）と Agent 用の `pnpm agent:playwright` の関係は ADR 0008。
 
 ### 未決事項の扱い
 
@@ -46,7 +46,7 @@ PRD §14「クライアントとデータの方式」に従う。規則の正本
 - コードの識別子はドメインモデルの英語名（`Task`、`SprintTask`、`DailySelection`、`Occurrence`、`PlanningValue`、`CriterionUse` など）を使う。
 - 「採用」（EstimateSuggestion → Estimate。Task の値が変わる）と「適用」（PlanningCriterion → PlanningValue。Task は変わらない）を、コードでも画面でも混ぜない。コードとモデル名は「採用」「適用」のまま、画面の語は採用が「使う」（「多めの 4時間を使う」「直して使う」）、適用が「このルールで計画する」。
 - 「持ち越し回数」「連続見送り」「Retro の事実」「計画時との差分」「昨日の続き」は保存せず、記録から派生させる。
-- 生産性スコアや点数による評価を作らない。`danger`（赤）はエラー・期限超過・確定的な容量超過（下限でも超える場合）・破壊的操作だけに使い、持ち越し・見送り・未達・超過の可能性には使わない（PRD §12、DESIGN.md Colors）。
+- 生産性スコアや点数による評価を作らない。`danger`（赤）はエラー・期限超過・確定的な容量超過（下限でも超える場合）・破壊的操作だけに使い、持ち越し・見送り・未達・超過の可能性には使わない（PRD §12、DESIGN.md Colors）。使い場所は意味の規則なので機械では検査せず、visual のレビューで見る（Issue #372）。
 - ドメインモデルの厳密さを UI の複雑さとして見せない。内部で状態を分けても、利用者に毎回分類を求めない（PRD §13）。
 
 ## コード
@@ -65,6 +65,10 @@ PRD §14「クライアントとデータの方式」に従う。規則の正本
 - `pnpm build`（`apps/web` の本番ビルド。CD が Worker の静的アセットに載せるものと同じ）
 - `pnpm design:lint`（DESIGN.md のトークンを公式の linter で検査）
 - `pnpm agent:check`（Skill の整合性）
+
+ブラウザから Worker（Web の配信・API・ローカルの D1）までを通す E2E テストは `pnpm e2e` で、`pnpm check` には入れていない（CI は別の job。ADR 0008）。
+
+契約（`packages/api-contract/openapi/`）の壊す変更と `info.version` の上げ方は `pnpm contract:breaking --base <git ref>` で確かめる。`pnpm check` には入れていない（CI は PR のときだけの別の job。ADR 0006「機械での確かめ」）。
 
 コミット時には lefthook がステージした内容を Prettier / ESLint で検査する。パッケージを足すときの約束（`vitest.config.ts` と `typecheck` script を置く、ESLint の設定はルートにだけ書く）とツールの版の決定は `docs/architecture/adr/0001-monorepo-foundation.md`。
 

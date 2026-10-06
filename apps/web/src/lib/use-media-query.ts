@@ -20,5 +20,11 @@ export function useMediaQuery(query: string, fallback = false): boolean {
   );
 }
 
-// DESIGN.md Layout › Responsive: compact is under `bp-medium` (768px).
-export const MEDIUM_UP = '(min-width: 768px)';
+// DESIGN.md Layout › Responsive: compact is under `bp-medium` (768px at the
+// default font size). The `medium:` variant of styles/globals.css (#433).
+export const MEDIUM_UP = '(width >= 48em)';
+
+// Text enlarged by the browser's font size: the `enlarged:` variant of
+// styles/globals.css (em follows the browser's font size, so this is under
+// 320px at the default and under 640px at 200%, #393).
+export const ENLARGED = '(width < 20em)';

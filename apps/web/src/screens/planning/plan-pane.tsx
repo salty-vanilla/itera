@@ -120,12 +120,12 @@ function PlanPane({
       {summary}
       {/*
         From 1920px (bp-xl) the Area blocks sit in 1 to 3 columns, as many as
-        fit: a column is at least 26rem and at least a third of the row (less
+        fit: a column is at least 22.75rem and at least a third of the row (less
         1px, so that three fit exactly). The blocks stop at three columns of
         pane-sprint. Under 1920px they are one column, as before (DESIGN.md
         Layout, Issue #81). --plan-gap is the space between the columns and rows.
       */}
-      <div className="flex flex-col gap-(--plan-gap) [--plan-gap:var(--spacing-8)] xl:grid xl:max-w-[calc(var(--spacing-pane-sprint)*3+var(--plan-gap)*2)] xl:grid-cols-[repeat(auto-fill,minmax(max(26rem,calc((100%-var(--plan-gap)*2)/3-1px)),1fr))] xl:items-start">
+      <div className="flex flex-col gap-(--plan-gap) [--plan-gap:var(--spacing-8)] xl:grid xl:max-w-[calc(var(--spacing-pane-sprint)*3+var(--plan-gap)*2)] xl:grid-cols-[repeat(auto-fill,minmax(max(22.75rem,calc((100%-var(--plan-gap)*2)/3-1px)),1fr))] xl:items-start">
         {blocks.map((block) =>
           stage === 'pick' ? (
             <section
@@ -133,13 +133,13 @@ function PlanPane({
               aria-label={block.area.name}
               className="flex flex-col gap-2"
             >
-              <h2 className="flex items-center gap-2">
+              <h2 className="flex items-center gap-2 enlarged:flex-wrap">
                 <AreaIndicator
                   name={block.area.name}
                   color={block.area.color}
                   variant="heading"
                 />
-                <span className="text-meta text-ink-muted">
+                <span className="text-meta text-ink-muted enlarged:break-keep">
                   {summaryOf(block, stage)}
                 </span>
               </h2>
@@ -347,11 +347,13 @@ function PlannedRow({
   ].filter(Boolean);
 
   const unchoose = async () => {
-    const occurrenceIds = sprintTask.occurrenceIds ?? [];
-    const done =
-      leaves === 'exclude'
-        ? await actions.excludeAllOccurrences(sprintTask.id)
-        : await actions.unchooseTasks([sprintTask.id]);
+    // A recurring Task's occurrences, as the read gives them (a Task that
+    // does not repeat has none, #346), come back on 元に戻す.
+    const { occurrenceIds } = sprintTask;
+    const excluding = leaves === 'exclude' && occurrenceIds !== undefined;
+    const done = excluding
+      ? await actions.excludeAllOccurrences(sprintTask.id)
+      : await actions.unchooseTasks([sprintTask.id]);
     if (!done) return;
     toast.show({
       kind: 'sprint-pick',
@@ -363,7 +365,7 @@ function PlannedRow({
             action: {
               label: '元に戻す',
               onClick: () =>
-                void (leaves === 'exclude'
+                void (excluding
                   ? actions.includeOccurrences(occurrenceIds)
                   : actions.chooseTasks([task.id])),
             },
@@ -406,11 +408,9 @@ function PlannedRow({
     <TaskRow
       title={task.title}
       // Flashes `here-subtle` once and fades, as the Backlog does (#86;
-      // 2.5s: ADDED_MS in planning-screen.tsx). These rows have no ground of
+      // `duration-added-flash`, kept by ADDED_MS in motion.ts). These rows have no ground of
       // their own, so the flash shows.
-      className={
-        added ? 'animate-[added-flash_2.5s_ease-in-out_forwards]' : undefined
-      }
+      className={added ? 'animate-added-flash' : undefined}
       onOpen={onOpen}
       keys={onEstimate !== undefined ? { onEstimate } : undefined}
       metadata={
@@ -435,7 +435,7 @@ function PlannedRow({
             }
           />
           {source !== undefined && (
-            <span className="text-meta whitespace-nowrap text-ink-muted">
+            <span className="text-meta nowrap-phrase text-ink-muted">
               {source}
             </span>
           )}

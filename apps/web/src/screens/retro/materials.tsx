@@ -57,7 +57,7 @@ function pinned(pin: RetroPin, data: RetroData): Pinned | undefined {
       if (t === undefined) return undefined;
       // The same words and the carry-over's icon as in the table.
       const carried = !t.recurring && t.outcome === 'carriedOver';
-      const results = resultText(t, data).split(' · ');
+      const results = resultText(t).split(' · ');
       const difference = differenceText(t);
       const values = [
         plannedLabel(t),
@@ -175,7 +175,7 @@ function Materials({
               // The toggle goes under the words when both do not fit.
               className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-b border-border-soft py-1 text-body text-ink"
             >
-              <span className="flex min-w-0 grow basis-[10rem] flex-col gap-1">
+              <span className="flex min-w-0 grow basis-[8.75rem] flex-col gap-1">
                 <span className="text-balance [word-break:auto-phrase]">
                   {lead}
                 </span>

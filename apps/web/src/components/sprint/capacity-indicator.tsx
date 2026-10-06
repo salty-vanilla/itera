@@ -1,4 +1,4 @@
-import type { MadeFrom } from '@itera/api-contract/requests';
+import type { MadeFrom } from '@itera/api-contract/sending';
 import type { Capacity, PlanningTotal } from '@itera/api-contract';
 import { Fragment, useId, useState } from 'react';
 import type { Saved } from '@/api/use-operation';
@@ -198,18 +198,37 @@ export function capacityRelationSentences(
 /**
  * Short sentences joined by 「 · 」: the line breaks only between them, so a
  * number never leaves its words, and after the 「·」, so that it never stands
- * alone on a line (#239).
+ * alone on a line (#239). A sentence with a note in 「（）」 (「計画 2時間30分
+ * （サブタスク 1件は見積もりなし）」) stays whole while it fits a line; wider
+ * than the line, it breaks only before the note, so that it never runs past
+ * 320px (#357).
  */
 function Sentences({ items }: { items: readonly string[] }) {
-  return items.map((item, i) => (
-    <Fragment key={item}>
-      {i > 0 && ' '}
-      <span className="whitespace-nowrap">
-        {item}
-        {i < items.length - 1 && ' ·'}
-      </span>
-    </Fragment>
-  ));
+  return items.map((item, i) => {
+    const last = i === items.length - 1;
+    const [value = '', ...notes] = item.split(/(?=（)/);
+    return (
+      <Fragment key={item}>
+        {i > 0 && ' '}
+        {notes.length === 0 ? (
+          <span className="nowrap-phrase">
+            {item}
+            {!last && ' ·'}
+          </span>
+        ) : (
+          <span className="inline-block max-w-full">
+            <span className="nowrap-phrase">{value}</span>
+            {notes.map((note, j) => (
+              <span key={note} className="nowrap-phrase">
+                {note}
+                {!last && j === notes.length - 1 && ' ·'}
+              </span>
+            ))}
+          </span>
+        )}
+      </Fragment>
+    );
+  });
 }
 
 /**
@@ -309,7 +328,7 @@ function CapacityStatement({
         // only after 「：」 or at 「·」.
         <span>
           {statement.text.includes('：') && (
-            <span className="whitespace-nowrap">
+            <span className="nowrap-phrase">
               {statement.text.slice(0, statement.text.indexOf('：') + 1)}
             </span>
           )}
@@ -357,16 +376,17 @@ function CapacityIndicator({
             )}
             <CapacityStatement statement={statement} />
           </div>
-          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 text-body">
-            <dt className="whitespace-nowrap text-ink-muted">計画の合計</dt>
-            <dd className="text-right text-num-m text-ink">
+          {/* With enlarged text the values go under their labels (#393). */}
+          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 text-body enlarged:grid-cols-1">
+            <dt className="nowrap-phrase text-ink-muted">計画の合計</dt>
+            <dd className="text-right text-num-m text-ink enlarged:break-keep enlarged:text-left">
               {/* The count left out is its own sentence below. */}
               {formatPlanningSum(total)}
             </dd>
             {capacity !== undefined && !editable && (
               <>
-                <dt className="whitespace-nowrap text-ink-muted">使える時間</dt>
-                <dd className="text-right text-num-m text-ink">
+                <dt className="nowrap-phrase text-ink-muted">使える時間</dt>
+                <dd className="text-right text-num-m text-ink enlarged:break-keep enlarged:text-left">
                   {formatHours(capacity.availableHours)}
                 </dd>
               </>
@@ -424,9 +444,10 @@ function Headline({
 }) {
   // One sentence per line, the numbers in one right-aligned column; the
   // words are quieter than the number, which is `danger` only when even the
-  // lower end is over.
+  // lower end is over. With enlarged text the three parts are one column
+  // (#393).
   return (
-    <p className="grid grid-cols-[auto_auto_minmax(0,1fr)] items-baseline gap-x-2 gap-y-1">
+    <p className="grid grid-cols-[auto_auto_minmax(0,1fr)] items-baseline gap-x-2 gap-y-1 enlarged:grid-cols-[minmax(0,1fr)]">
       {headline.map((part) => (
         <span key={partText(part)} className="contents">
           {part.lead !== undefined && (
@@ -439,7 +460,7 @@ function Headline({
           {part.value !== undefined && (
             <span
               className={cn(
-                'text-right text-num-l',
+                'text-right text-num-l enlarged:text-left',
                 over ? 'text-danger' : 'text-ink',
               )}
             >
@@ -449,7 +470,7 @@ function Headline({
           <span
             className={cn(
               'text-label text-ink-muted',
-              part.value === undefined && 'col-span-2',
+              part.value === undefined && 'col-span-2 enlarged:col-span-1',
             )}
           >
             {part.tail}
@@ -545,15 +566,20 @@ function CapacityBar({
       : capacity.status;
   return (
     <div aria-hidden data-slot="capacity-bar" className="relative pb-2">
-      <div className="flex h-2 w-full overflow-hidden bg-border-soft">
+      <div
+        data-slot="capacity-bar-track"
+        className="flex h-2 w-full overflow-hidden bg-border-soft"
+      >
         {areas.map((a) => (
           <div key={a.key} className="flex h-full" style={{ width: pct(a.hi) }}>
             <div
+              data-slot="capacity-bar-segment"
               className={cn('h-full', areaFill[a.color])}
               style={{ width: a.hi === 0 ? '0%' : `${(a.lo / a.hi) * 100}%` }}
             />
             {a.hi > a.lo && (
               <div
+                data-slot="capacity-bar-open"
                 className={cn(
                   // The range still open: a dashed hairline (the dashes of a
                   // value not decided yet), not a fill.
@@ -569,6 +595,7 @@ function CapacityBar({
       </div>
       {capacity !== undefined && (
         <div
+          data-slot="capacity-bar-marker"
           className="absolute -top-1 h-4 w-(--stroke-strong) bg-ink"
           style={{ left: `calc(${pct(available)} - 1px)` }}
         />

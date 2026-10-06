@@ -22,14 +22,24 @@ let response;
 try {
   response = await fetch(url, { signal: AbortSignal.timeout(20000) });
 } catch (error) {
-  console.error(`HIG fetch failed: ${error.message} ${url}`);
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`HIG fetch failed: ${message} ${url}`);
   process.exit(1);
 }
 if (!response.ok) {
   console.error(`HIG fetch failed: ${response.status} ${url}`);
   process.exit(1);
 }
-const doc = await response.json();
+/**
+ * The parts of a DocC page this script reads; the content nodes stay loose.
+ * @typedef {{
+ *   references?: Record<string, any>,
+ *   metadata?: { title?: string },
+ *   abstract?: any[],
+ *   primaryContentSections?: { content: any[] }[],
+ * }} DocCPage
+ */
+const doc = /** @type {DocCPage} */ (await response.json());
 const refs = doc.references ?? {};
 
 if (arg === '--list') {

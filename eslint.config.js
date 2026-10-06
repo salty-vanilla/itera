@@ -1,9 +1,27 @@
+import { readFileSync } from 'node:fs';
 import js from '@eslint/js';
 import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 import globals from 'globals';
 import reactHooks from 'eslint-plugin-react-hooks';
 import storybook from 'eslint-plugin-storybook';
+
+/**
+ * A relative path never leaves a package: another package is imported by its
+ * name (`@itera/...`), and pnpm's resolution does not stop `../../application`
+ * the way it stops a name the package does not depend on (ADR 0007 依存の向き).
+ * It looks at the first segment after the `../`s: the repository's top
+ * directories, or a sibling under packages/. A relative path inside the
+ * package (`../api/...`, `../lib/...`) is not stopped. Put in every block
+ * of product code below that sets `no-restricted-imports` (or the
+ * typescript-eslint one), as a later block replaces an earlier one's options.
+ */
+const relativeToOtherPackagePattern = {
+  regex:
+    '^(\\.\\./)+((packages|services|apps)/|(domain|application|api-contract)(/|$))',
+  message:
+    'Import another package by its name (@itera/...), not by a relative path (ADR 0007 依存の向き).',
+};
 
 // What services/api's production code must not import (ADR 0005, ADR 0006).
 const apiImportPatterns = [
@@ -20,6 +38,7 @@ const apiImportPatterns = [
     message: "The API takes the contract's types and schemas only (ADR 0006).",
   },
   testingImportPattern(),
+  relativeToOtherPackagePattern,
 ];
 
 /**
@@ -120,6 +139,32 @@ const webScreenDataPattern = {
   message:
     'Only the screens import src/screen-data/; api, components, lib, auth and foundations stay below them (ADR 0005 置き場所の規則).',
 };
+
+// src/screen-data/ is under the screens, so it does not import them back
+// (ADR 0005 置き場所の規則), by `@/screens` or by a relative path.
+const webScreensPattern = {
+  regex: '^(@/|(\\.\\./)+)screens(/|$)',
+  message:
+    'src/screen-data/ stays below the screens: it does not import src/screens/ (ADR 0005 置き場所の規則).',
+};
+
+// Only the browser mock builds requests (ADR 0007: the screens use the
+// types of @itera/api-contract/sending).
+const webRequestsPattern = {
+  regex: '^@itera/api-contract/requests$',
+  message:
+    'Only the browser mock (src/mock/) uses @itera/api-contract/requests; the screens use the types of @itera/api-contract/sending (ADR 0007).',
+};
+
+// What every file of apps/web outside the mock and the tests leaves
+// unimported; the blocks below add to it, since a later block replaces the
+// options of an earlier one.
+const webBasePatterns = [
+  webBetterAuthPattern,
+  testingImportPattern(),
+  webRequestsPattern,
+  relativeToOtherPackagePattern,
+];
 const WEB_LAYERS = [
   'apps/web/src/{api,components,lib,auth,foundations}/**/*.{ts,tsx}',
 ];
@@ -131,6 +176,94 @@ const WEB_NOT_SCREENS = [
   'apps/web/src/test/**',
   'apps/web/src/mock/**',
 ];
+
+// apps/web takes its colors from the tokens (DESIGN.md → tokens.css), so a
+// color written in a .ts / .tsx file is a drift from them (.claude/rules/
+// web-ui.md). Tailwind 4 makes a class out of an arbitrary value even with
+// the default theme removed, so the tokens alone do not stop `bg-[#ff0000]`.
+// `color-mix()` stays: it mixes colors that are already there (Kbd's faded
+// outline), and a hex written inside it is found by the first pattern.
+//
+// A hex of 3 or 4 digits with no letter is also an Issue number in a test's
+// name ("(#332)"), so it counts only where a value stands: at the start of
+// the text or after `[`, `:`, `;` or `=`, and not closing a parenthesis.
+const COLOR_PATTERNS = [
+  {
+    // `#rrggbb` and `#rrggbbaa`; `#rgb` and `#rgba` with a letter in them.
+    regex:
+      '(^|[^\\w&])#([0-9a-fA-F]{6}|[0-9a-fA-F]{8}|(?=[0-9]*[a-fA-F])[0-9a-fA-F]{3,4})(?![\\w-])',
+    message: 'a hex color',
+  },
+  {
+    regex: '(^|[\\[:;=]\\s*)#[0-9]{3,4}(?![\\w)-])',
+    message: 'a hex color',
+  },
+  {
+    regex: '(^|[^\\w-])(rgba?|hsla?|hwb|lab|lch|oklab|oklch)\\(',
+    message: 'a color function',
+  },
+  {
+    regex:
+      '(^|[^\\w-])color\\(\\s*(from|srgb|srgb-linear|display-p3|a98-rgb|prophoto-rgb|rec2020|xyz|xyz-d50|xyz-d65)\\b',
+    message: 'a color function',
+  },
+  {
+    // `text-[color:…]`, `text-(color:--x)` and the arbitrary property
+    // `[color:…]`. `bg-(--ink)` (a variable of a token) is not stopped.
+    regex: '(^|[\\s:])\\[color:|-[\\[(]color:',
+    message: 'a Tailwind arbitrary color',
+  },
+];
+
+/** @param {string} regex @param {string} message */
+function textSyntax(regex, message) {
+  return ['Literal', 'TemplateElement', 'JSXText'].map((type) => ({
+    selector:
+      type === 'TemplateElement'
+        ? `TemplateElement[value.raw=/${regex}/]`
+        : `${type}[value=/${regex}/]`,
+    message,
+  }));
+}
+
+const colorSyntax = COLOR_PATTERNS.flatMap(({ regex, message }) =>
+  textSyntax(
+    regex,
+    `Write ${message} with a token (DESIGN.md Colors, .claude/rules/web-ui.md), not as a value here.`,
+  ),
+);
+
+// An Area is called Area (AGENTS.md ドメインの扱い). "domain" in apps/web
+// is the domain layer: `@itera/domain`, `domain-functions`, "ドメインモデル"
+// and the names below, which wrap its errors. A name with "domain" that is
+// not one of them is stopped, so that an Area does not come back as
+// `Domain`, `domainId` and so on. Add to the list only a name of the layer.
+// In a text only the capital word `Domain` and ドメイン are stopped: a
+// lowercase `domain` is the layer, in a test's name or a path (`@itera/domain`).
+const DOMAIN_LAYER_NAMES =
+  '^(Domain(Error|Instant|LocalDate|TimeZone)|DOMAIN_PROBLEMS|domainFailure|keptByDomain)$';
+const domainSyntax = [
+  {
+    selector: `:matches(Identifier, JSXIdentifier)[name=/[Dd][Oo][Mm][Aa][Ii][Nn]/]:not([name=/${DOMAIN_LAYER_NAMES}/])`,
+    message:
+      'Call an Area an Area (AGENTS.md ドメインの扱い). A name of the domain layer goes in DOMAIN_LAYER_NAMES (eslint.config.js).',
+  },
+  ...textSyntax(
+    '\\bDomain\\b|ドメイン(?!モデル)',
+    'The word for an Area is 領域 (Area in code); not "Domain" or ドメイン (AGENTS.md ドメインの扱い).',
+  ),
+];
+
+// Where a color is itself the subject: the contrast test takes the values
+// of the tokens in and computes their ratios.
+const WEB_COLOR_VALUE_TESTS = ['apps/web/src/foundations/contrast.test.ts'];
+
+// Skills taken from upstream stay byte for byte and are not linted; the
+// skills authored in this repository (localSkills in
+// tooling/agents/sources.json) are.
+const localSkills = JSON.parse(
+  readFileSync(new URL('tooling/agents/sources.json', import.meta.url), 'utf8'),
+).localSkills.map((skill) => `!${skill.destination}`);
 
 // Keep ESLint configuration in this one file. ESLint 10 looks up the nearest
 // eslint.config.* per directory, so a nested config would replace this one
@@ -146,21 +279,23 @@ export default defineConfig(
       '.direnv/**',
       '.playwright/**',
       '.playwright-cli/**',
-      '.agents/skills/**',
+      '.agents/skills/*',
+      ...localSkills,
       'apps/web/storybook-static/**',
       'services/api/worker-configuration.d.ts',
       // Generated from the contract (ADR 0006); checked by contract:check.
       'packages/api-contract/src/generated/**',
       'services/api/.wrangler/**',
-      'playwright-report/**',
-      'test-results/**',
+      '**/playwright-report/**',
+      '**/test-results/**',
     ],
   },
   js.configs.recommended,
   tseslint.configs.recommended,
   {
-    // Repository tooling, hooks and root config files run on Node.
-    files: ['tooling/**', '.claude/**', '*.{js,mjs,ts}'],
+    // Repository tooling, hooks, skill scripts and root config files run on
+    // Node.
+    files: ['tooling/**', '.claude/**', '.agents/**', '*.{js,mjs,ts}'],
     languageOptions: { globals: globals.node },
   },
   {
@@ -184,11 +319,21 @@ export default defineConfig(
       'no-restricted-imports': [
         'error',
         {
-          patterns: [
-            webBetterAuthPattern,
-            testingImportPattern(),
-            webDomainPattern,
-          ],
+          patterns: [...webBasePatterns, webDomainPattern],
+        },
+      ],
+    },
+  },
+  {
+    // src/screen-data/ does not reach up to the screens either. It repeats
+    // the rule above for these files, for the same reason as the next block.
+    files: ['apps/web/src/screen-data/**/*.{ts,tsx}'],
+    ignores: WEB_NOT_SCREENS,
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [...webBasePatterns, webDomainPattern, webScreensPattern],
         },
       ],
     },
@@ -209,8 +354,7 @@ export default defineConfig(
         'error',
         {
           patterns: [
-            webBetterAuthPattern,
-            testingImportPattern(),
+            ...webBasePatterns,
             webDomainPattern,
             webScreenDataPattern,
           ],
@@ -226,11 +370,7 @@ export default defineConfig(
       'no-restricted-imports': [
         'error',
         {
-          patterns: [
-            webBetterAuthPattern,
-            testingImportPattern(),
-            webScreenDataPattern,
-          ],
+          patterns: [...webBasePatterns, webScreenDataPattern],
         },
       ],
     },
@@ -265,6 +405,8 @@ export default defineConfig(
         {
           patterns: [
             testingImportPattern(),
+            webRequestsPattern,
+            relativeToOtherPackagePattern,
             webScreenDataPattern,
             {
               regex: '^@itera/domain(/|$)',
@@ -288,6 +430,21 @@ export default defineConfig(
         },
       ],
     },
+  },
+  {
+    // No color written as a value, and no "Domain" for an Area, in the code
+    // of apps/web (.claude/rules/web-ui.md, AGENTS.md ドメインの扱い). Both
+    // rules go through `no-restricted-syntax`, which a later block replaces
+    // as a whole: add to the arrays above, not to another block of these files.
+    files: ['apps/web/src/**/*.{ts,tsx}'],
+    ignores: WEB_COLOR_VALUE_TESTS,
+    rules: {
+      'no-restricted-syntax': ['error', ...colorSyntax, ...domainSyntax],
+    },
+  },
+  {
+    files: WEB_COLOR_VALUE_TESTS,
+    rules: { 'no-restricted-syntax': ['error', ...domainSyntax] },
   },
   {
     files: [
@@ -317,6 +474,7 @@ export default defineConfig(
               regex: '^node:',
               message: 'packages/domain must not depend on Node.',
             },
+            relativeToOtherPackagePattern,
           ],
         },
       ],
@@ -350,6 +508,7 @@ export default defineConfig(
               regex: '^(@/|@itera/web(/|$))',
               message: 'packages/application must not depend on apps/web.',
             },
+            relativeToOtherPackagePattern,
           ],
         },
       ],
@@ -413,8 +572,8 @@ export default defineConfig(
   },
   {
     // packages/api-contract depends on packages/application by its types
-    // only: the operations' names and inputs that requests.ts carries
-    // (ADR 0006 経路の形, ADR 0007 依存の向き). Its runtime stays the
+    // only: the operations' names and inputs that sending.ts and requests.ts
+    // carry (ADR 0006 経路の形, ADR 0007 依存の向き). Its runtime stays the
     // contract's: the generated code and Valibot. testing.ts and the tests
     // run the application (examples, IDs).
     files: ['packages/api-contract/src/**/*.ts'],
@@ -440,6 +599,7 @@ export default defineConfig(
                 'The contract does not depend on packages/domain (ADR 0007 依存の向き).',
             },
             { ...testingImportPattern(), regex: '(^|/)testing$' },
+            relativeToOtherPackagePattern,
           ],
         },
       ],
@@ -453,7 +613,7 @@ export default defineConfig(
     rules: {
       'no-restricted-imports': [
         'error',
-        { patterns: [testingImportPattern()] },
+        { patterns: [testingImportPattern(), relativeToOtherPackagePattern] },
       ],
     },
   },
@@ -464,9 +624,10 @@ export default defineConfig(
     languageOptions: { globals: globals.node },
   },
   {
-    // services/api: its build and tool configs run on Node. The Worker code
-    // gets its globals from the generated worker-configuration.d.ts.
-    files: ['services/api/*.ts'],
+    // services/api: its build and tool configs and its E2E tests (Issue
+    // #370) run on Node. The Worker code gets its globals from the generated
+    // worker-configuration.d.ts.
+    files: ['services/api/*.ts', 'services/api/e2e/**/*.ts'],
     languageOptions: { globals: globals.node },
   },
   // Applies to *.stories.* and .storybook/main.* only. The cast is for the

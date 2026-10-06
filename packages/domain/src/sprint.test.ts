@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { renameArea } from './area';
-import { localDate } from './shared/time';
+import { instant, localDate } from './shared/time';
 import {
+  isCounted,
+  isInConfirmedPlan,
   nextUnconfirmedSprintStart,
+  occurrenceValue,
   projectFrom,
   sprintAreaName,
   sprintNumber,
   weekStartOf,
+  type PlanSnapshot,
+  type SprintTaskOutcome,
 } from './sprint';
 import {
   ctx,
@@ -97,5 +102,68 @@ describe('sprintNumber (F25)', () => {
     const c = sprintFixture('2026-09-28', 'planning');
     const all = [c, a, b];
     expect([a, b, c].map((s) => sprintNumber(s, all))).toEqual([1, 2, 3]);
+  });
+});
+
+describe('isInConfirmedPlan (F20, F32, #349)', () => {
+  const outcomes: readonly SprintTaskOutcome[] = [
+    'draft',
+    'planned',
+    'done',
+    'removed',
+    'carriedOver',
+  ];
+
+  it('counts planned, done and carried over; not removed or a draft', () => {
+    expect(
+      outcomes.filter((outcome) => isInConfirmedPlan({ outcome })),
+    ).toEqual(['planned', 'done', 'carriedOver']);
+  });
+
+  it('is isCounted with the carried over, in a confirmed Sprint (no drafts)', () => {
+    const confirmed = outcomes.filter((outcome) => outcome !== 'draft');
+    for (const outcome of confirmed) {
+      const task = { outcome } as Parameters<typeof isCounted>[0];
+      expect(isInConfirmedPlan(task)).toBe(
+        isCounted(task) || outcome === 'carriedOver',
+      );
+    }
+  });
+});
+
+describe('occurrenceValue (invariant 16, #349)', () => {
+  const computedAt = instant('2026-09-28T00:00:00.000Z');
+  const snapshot = (extra: Partial<PlanSnapshot>): PlanSnapshot => ({
+    value: {
+      base: 'estimate',
+      lo: 3,
+      hi: 6,
+      criterionApplied: false,
+      computedAt,
+    },
+    timeBasis: 'task',
+    ...extra,
+  });
+
+  it('a recurring SprintTask: one occurrence’s share of the planned value', () => {
+    expect(occurrenceValue(snapshot({ occurrenceCount: 3 }))).toEqual({
+      base: 'estimate',
+      lo: 1,
+      hi: 2,
+      criterionApplied: false,
+      computedAt,
+    });
+  });
+
+  it('any other value as it is', () => {
+    const single = snapshot({});
+    expect(occurrenceValue(single)).toBe(single.value);
+    const once = snapshot({ occurrenceCount: 1 });
+    expect(occurrenceValue(once)).toBe(once.value);
+    const none = snapshot({
+      value: { base: 'none', criterionApplied: false, computedAt },
+      occurrenceCount: 3,
+    });
+    expect(occurrenceValue(none)).toBe(none.value);
   });
 });

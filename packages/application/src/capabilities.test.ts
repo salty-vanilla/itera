@@ -318,16 +318,18 @@ describe('capabilities agree with the operations (#322)', () => {
         'backlog selection',
       ]),
     );
-    // A past day's completion from the Backlog is undone as the Backlog
-    // undoes it (F29, F33).
-    expect(
-      all.some(
-        (t) =>
-          t.kind === 'past selection' &&
-          t.origin === 'backlogCompletion' &&
-          (t.capabilities as DailySelectionCapabilities).canUndoComplete,
-      ),
-    ).toBe(true);
+    // A completion from the Backlog, today's or a past day's, is undone as
+    // the Backlog undoes it (F29, F33, #346).
+    for (const kind of ['today selection', 'past selection'])
+      expect([
+        kind,
+        all.some(
+          (t) =>
+            t.kind === kind &&
+            t.origin === 'backlogCompletion' &&
+            (t.capabilities as DailySelectionCapabilities).canUndoComplete,
+        ),
+      ]).toEqual([kind, true]);
   });
 
   it('answers each `can…` both ways somewhere, so that none is checked for nothing', () => {

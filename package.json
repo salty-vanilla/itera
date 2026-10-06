@@ -23,12 +23,15 @@
     "typecheck": "tsc -p tsconfig.json && pnpm -r --if-present typecheck",
     "test": "vitest run",
     "build": "pnpm --filter @itera/web build",
+    "e2e": "pnpm build && pnpm --filter @itera/api e2e",
     "copy:list": "node tooling/copy/list.mjs",
     "copy:lint": "node tooling/copy/lint.mjs",
-    "check": "pnpm agent:check && pnpm design:lint && pnpm contract:check && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm copy:lint",
+    "check": "pnpm agent:check && pnpm design:lint && pnpm contract:check && pnpm migrations:check && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm copy:lint",
     "design:lint": "designmd lint DESIGN.md",
     "contract:generate": "pnpm --filter @itera/api-contract generate",
-    "contract:check": "pnpm --filter @itera/api-contract lint:spec && pnpm --filter @itera/api-contract check:generated"
+    "migrations:check": "pnpm --filter @itera/api db:check",
+    "contract:check": "pnpm --filter @itera/api-contract lint:spec && pnpm --filter @itera/api-contract check:generated",
+    "contract:breaking": "pnpm --filter @itera/api-contract breaking"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

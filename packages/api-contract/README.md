@@ -16,12 +16,14 @@ Itera の API の契約（ADR 0006）。OpenAPI の仕様（`openapi/`）が正�
 | `src/client.ts` | `@itera/api-contract/client`：fetch のクライアント（Web）。関数は契約の operation と読み取りだけ |
 | `src/create-client.ts` | `@itera/api-contract/create-client`：別のクライアントを作る `createClient`・`createConfig`（Web がデータの出どころごとに作る） |
 | `src/react-query.ts` | `@itera/api-contract/react-query`：TanStack Query の options（Web。React に依存する） |
-| `src/requests.ts` | `@itera/api-contract/requests`：`packages/application` の操作と HTTP の面（メソッドと経路）の対応を両方向に（`requestOf`・`surfaces`）。操作ではない書き込み、利用者の設定を作る `PUT /me/settings` は `settingsSurface`。query の型の変換（`queryInput`）。書き込みの `Idempotency-Key` を作る・読む関数（`idempotencyKeyHeaders`・`readIdempotencyKey`）。サーバー・ブラウザ内モック・Web が使う |
+| `src/sending.ts` | `@itera/api-contract/sending`：`packages/application` の操作を HTTP の面の要求にする側（面のメソッドと経路 `routes`、`requestOf`）。書き込みのヘッダーを作る関数（`idempotencyKeyHeaders`・`conditionHeaders`）。契約の型だけを使い、Valibot とスキーマを import しない（Web の本番ビルドに Valibot を入れない。ADR 0005「本番ビルド」）。Web が使う |
+| `src/requests.ts` | `@itera/api-contract/requests`：操作と面の対応の両方向。`sending.ts` のものに、受け取った要求を面のスキーマで確かめて操作に戻す側（`surfaces`・`readRequest`）を足す。操作ではない書き込み、利用者の設定を作る `PUT /me/settings` は `settingsSurface`。query の型の変換（`queryInput`）。書き込みのヘッダーを読む関数（`readIdempotencyKey`・`readCondition`）。サーバー・ブラウザ内モックが使う |
 | `src/problems.ts` | `@itera/api-contract/problems`：エラーの本文（Problem Details）。種類ごとのステータスと `title`、本文を作る `problemOf`・`validationProblem`、400 の `errors` の場所（`issueAt`・`valibotIssues`）。手で書く。サーバー・ブラウザ内モック・Web が使う。種類を足したら `openapi/schemas/common.yaml` と一緒に直す |
 | `src/testing.ts` | `@itera/api-contract/testing`：テストの道具（操作ごとの入力の例など） |
 
 ## 契約を変える
 
-1. `openapi/` を直す。操作は `packages/application` の `operations` の入力・出力に、読み取りはその関数の結果に合わせる。操作を足したら、`src/requests.ts` の両方向（`surfaces` と `requestOf` の表）と、`src/testing.ts` の入力の例にも足す。
+1. `openapi/` を直す。操作は `packages/application` の `operations` の入力・出力に、読み取りはその関数の結果に合わせる。操作を足したら、両方向（`src/sending.ts` の `routes` と `requestOf` の表、`src/requests.ts` の `surfaces`）と、`src/testing.ts` の入力の例にも足す。
 2. ルートで `pnpm contract:generate` を実行し、`src/generated/` の差分も一緒にコミットする。
 3. `pnpm check` を通す。`pnpm contract:check` が仕様の lint と、生成し直した結果との差分を、テストが application との型の一致、操作と面の往復、経路と query の名前の kebab-case と動作（動詞）・資源（名詞）の段、fixture の 12 状態での応答の検証を確かめる。
+4. ルートで `pnpm contract:breaking --base <PR の base のブランチ>` を実行し、壊す変更と `info.version` の上げ方を確かめる（PR では CI の `contract` job が同じことをする。ADR 0006「機械での確かめ」）。壊す変更があれば `info.version` を上げ、ADR 0006 に改訂を書く。inline の object の枝が 2 つ以上ある `oneOf`・`anyOf` には、枝ごとに `title` を付ける（ADR 0006「置き場所と書き方」）。

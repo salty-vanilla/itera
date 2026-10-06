@@ -26,7 +26,9 @@ function AreaMark({ name, color }: { name: string; color: AreaColor }) {
       aria-hidden
       data-slot="area-mark"
       className={cn(
-        'grid size-area-badge shrink-0 place-items-center rounded-sm text-kicker text-on-area',
+        // At least a line of its letter, so that enlarged text stays in the
+        // square (#393). Select makes room for this width (#448).
+        'grid size-(--area-mark-size) shrink-0 place-items-center rounded-sm text-kicker text-on-area',
         areaBackground[color],
       )}
     >
@@ -60,6 +62,8 @@ function AreaIndicator({
       data-slot="area-indicator"
       className={cn(
         'inline-flex min-w-0 items-center gap-1',
+        // Enlarged text (#393): the name is not cut; it wraps instead.
+        'enlarged:max-w-full enlarged:shrink-0',
         variant === 'heading'
           ? 'text-subheading text-ink'
           : 'text-meta font-bold text-ink-muted',
@@ -67,7 +71,12 @@ function AreaIndicator({
       )}
     >
       <AreaMark name={name} color={color} />
-      <span className={cn('truncate', variant === 'badge' && 'sr-only')}>
+      <span
+        className={cn(
+          'truncate enlarged:whitespace-normal',
+          variant === 'badge' && 'sr-only',
+        )}
+      >
         {name}
       </span>
       {count !== undefined && (

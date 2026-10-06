@@ -651,7 +651,7 @@ export const setGoalLinkMutation = (options?: Partial<Options<SetGoalLinkData>>)
 /**
  * Leave out all of a SprintTask's occurrences
  *
- * With the last one the draft leaves the Sprint (invariant 33).
+ * With the last one the draft leaves the Sprint (invariant 33). A Task that does not repeat has no occurrences: refused (422), as it leaves by removeSprintTasks.
  */
 export const excludeAllOccurrencesMutation = (options?: Partial<Options<ExcludeAllOccurrencesData>>): UseMutationOptions<ExcludeAllOccurrencesResponse, ExcludeAllOccurrencesError, Options<ExcludeAllOccurrencesData>> => {
     const mutationOptions: UseMutationOptions<ExcludeAllOccurrencesResponse, ExcludeAllOccurrencesError, Options<ExcludeAllOccurrencesData>> = {
@@ -885,7 +885,7 @@ export const completeSelectionMutation = (options?: Partial<Options<CompleteSele
 /**
  * Take back a completion
  *
- * Today's, or a past day's (#53): then the system closes what that day left open.
+ * Today's, or a past day's (#53): then the system closes what that day left open. A completion that made the day's choice from the Backlog is taken back as undoCompleteTask does, and the choice goes with it (F29, #346).
  */
 export const undoCompleteSelectionMutation = (options?: Partial<Options<UndoCompleteSelectionData>>): UseMutationOptions<UndoCompleteSelectionResponse, UndoCompleteSelectionError, Options<UndoCompleteSelectionData>> => {
     const mutationOptions: UseMutationOptions<UndoCompleteSelectionResponse, UndoCompleteSelectionError, Options<UndoCompleteSelectionData>> = {

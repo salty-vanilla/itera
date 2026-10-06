@@ -2,8 +2,8 @@
 
 - 状態：採用
 - 日付：2026-09-27
-- 関連：Issue #25、後続 Issue #26、#30、#32、#121、#262、#263
-- 改訂：2026-09-30（認証を WorkOS AuthKit から Better Auth に変更。Issue #121）、2026-10-03（デプロイの方式、API の経路を `/api` の下に、登録を許可の一覧で絞る。Issue #32）、2026-10-03（記録のテーブル、操作と読み取りの処理、ID の形式、同時の書き込み、CSRF、Web と API の配信、使い始めの間のスキーマの変更。Issue #262）、2026-10-03（記録のテーブルの列・制約・index、読み込みと書き込み、版の確かめ方。Issue #263）、2026-10-03（Web の配信の実装とキャッシュ。Issue #280）、2026-10-03（操作と読み取りの処理の実装、Better Auth の ID、依存に Origin と時計。Issue #266）、2026-10-03（日付が変わったときの処理、追いついた日、読み取りの衝突のやり直し。Issue #271）、2026-10-04（書き込みの冪等キー。記録のテーブル、操作と読み取りの処理、同時の書き込みの既知の限界をなくす。Issue #320）、2026-10-04（記録の行ごとの版。記録のテーブルの `revision` 列と冪等キーの `etag` 列、操作と読み取りの処理の条件の確かめと `ETag`、同時の書き込み。Issue #321）、2026-10-04（繰り返しの規則の版を、規則・版・曜日の行の全体にする。Issue #330）
+- 関連：Issue #25、後続 Issue #26、#30、#32、#121、#262、#263、#368
+- 改訂：2026-09-30（認証を WorkOS AuthKit から Better Auth に変更。Issue #121）、2026-10-03（デプロイの方式、API の経路を `/api` の下に、登録を許可の一覧で絞る。Issue #32）、2026-10-03（記録のテーブル、操作と読み取りの処理、ID の形式、同時の書き込み、CSRF、Web と API の配信、使い始めの間のスキーマの変更。Issue #262）、2026-10-03（記録のテーブルの列・制約・index、読み込みと書き込み、版の確かめ方。Issue #263）、2026-10-03（Web の配信の実装とキャッシュ。Issue #280）、2026-10-03（操作と読み取りの処理の実装、Better Auth の ID、依存に Origin と時計。Issue #266）、2026-10-03（日付が変わったときの処理、追いついた日、読み取りの衝突のやり直し。Issue #271）、2026-10-04（書き込みの冪等キー。記録のテーブル、操作と読み取りの処理、同時の書き込みの既知の限界をなくす。Issue #320）、2026-10-04（記録の行ごとの版。記録のテーブルの `revision` 列と冪等キーの `etag` 列、操作と読み取りの処理の条件の確かめと `ETag`、同時の書き込み。Issue #321）、2026-10-04（繰り返しの規則の版を、規則・版・曜日の行の全体にする。Issue #330）、2026-10-05（スキーマとマイグレーションの食い違いの検査。Issue #366）、2026-10-05（依存の脆弱性の確かめ方と audit の記録。Issue #368）、2026-10-05（読み取りを足す場所を、API とモックが共有する表に。Issue #350）、2026-10-05（wrangler を 4.147.0 に上げて undici の指摘をなくす。js-yaml は修正版がない理由と確かめ直す時機。Issue #409）
 
 ## 背景
 
@@ -73,9 +73,34 @@ Better Auth の文書（Context7 と better-auth.com）と、固定した 1.7.6 
 
 - `better-auth` 1.7.6：影響する範囲は、1 件を除いてすべて 1.7.6 より前で修正済み。残る GHSA-fmh4-wcc4-5jm3（組織の招待を未検証のアカウントが受けられる。1.6.14 以降は設定で回避する）は `organization` プラグインのもので、使っていないので影響しない。
 - `@better-auth/passkey` 1.7.6：GHSA-4vcf-q4xf-f48m（他人のパスキーを削除できる）は 1.4.0 で修正済み。
-- `pnpm audit --prod` は、`better-auth` の任意の peer である drizzle-kit が使う esbuild（0.24.2 以下、開発サーバーの問題）を 1 件報告する。drizzle-kit は開発時だけ使い、Worker のバンドルには入らない。
+- `pnpm audit --prod` の記録は、2026-10-05 に確かめ直した（下の「依存の脆弱性の確かめ方」）。2026-09-30 の時点では esbuild の 1 件だけを書いた。braces（GHSA-vfj7-8cjw-p6xm）は 2026-10-02 に GitHub が審査済みのアドバイザリにしたもので、2026-09-30 の記録より後。
 
 脆弱性への対応は自分で負う（Issue #121）。プラグインは最小にし、版は完全一致で固定する。更新するときは、アドバイザリと変更履歴を確かめてから版を上げ、テスト（スキーマの照合を含む）を通す。
+
+### 依存の脆弱性の確かめ方（2026-10-05、Issue #368）
+
+版を完全一致で固定しているので、修正は版を上げるまで入らない。新しいアドバイザリに気づく仕組みと、今の指摘の扱いを次のとおり決めた。
+
+**気づく仕組み**
+
+- GitHub の Dependabot のアラートとセキュリティ更新を、リポジトリの設定で有効にした（2026-10-05）。アラートは `pnpm-lock.yaml` に対して出る。セキュリティ更新の PR は main 向けに届く。
+- `.github/dependabot.yml` は置かない。GitHub の文書によると、このファイルは任意で、なくても設定でセキュリティ更新を有効にしていれば PR は作られる。ファイルで足せるのはバージョン更新と PR の調整で、アラートは設定画面で決まりファイルには書かない。セキュリティ以外の版の更新を自動の PR に任せない方針（版の固定と ADR の版の表を人が更新する）は、ファイルがなければそのまま保たれる。
+- CI に `pnpm audit` は足さない。PR ごとに回すと、関係のない PR が新しいアドバイザリで落ちる。
+- Dependabot の PR も、ほかの版上げと同じく、アドバイザリと変更履歴を確かめ、ADR の版の表が変わるなら直し、CI を通してからマージする。
+- アラートの scope は `runtime` と表示されるが、開発時だけ使う依存（`devDependencies` の先）も含む。配信物に入るかどうかは、経路と配信物で確かめる。
+
+**今の指摘（2026-10-05）**
+
+`pnpm audit --prod` は braces と esbuild の 2 件、`pnpm audit`（開発時の依存を含む）は 5 件（js-yaml 3、braces 1、esbuild 1）を報告する（#409 で wrangler を上げた後）。#368 の時点では、ほかに undici の 10 件があり、15 件だった。#368 の時点の Dependabot の開いているアラートも同じ 15 件（`tooling/agents/pnpm-lock.yaml` の braces は開発専用で自動で却下された）。アラートは main の `pnpm-lock.yaml` に対して出るので、undici のアラートは wrangler の版上げが main に入るまで開いたまま。配信物は `apps/web/dist` と、`wrangler deploy --dry-run` で作った Worker のバンドル。どちらにも下の表の依存は入っていない（`braces`・`micromatch`・`fast-glob`・`esbuild`・`undici`・`js-yaml`・`miniflare` の名前で、出力のファイルを検索して確かめた。#409 で wrangler 4.147.0 の出力でも確かめ直した）。
+
+| 指摘 | 経路 | 影響 | 扱い |
+| --- | --- | --- | --- |
+| braces（GHSA-vfj7-8cjw-p6xm、high、3.0.3 以下、修正版なし） | apps/web > shadcn > fast-glob > micromatch > braces（shadcn の ts-morph 経由もある） | 深く入れ子にしたパターンを braces に渡すと、Node のプロセスがスタックを使い果たして落ちる（DoS）。`shadcn` は CLI で、build が読むのは `shadcn/tailwind.css`（CSS だけ）。動くのは開発者の端末の CLI だけで、配信する Worker では動かない | **受け入れる**。修正版が出れば Dependabot の PR が届く。`shadcn` を apps/web の dependencies に置く理由は ADR 0003 |
+| esbuild（GHSA-67mh-4wv8-2f99、moderate、0.24.2 以下。修正は 0.25.0） | services/api の devDependencies の drizzle-kit > @esbuild-kit/esm-loader > @esbuild-kit/core-utils > esbuild 0.18.20（`better-auth` の任意の peer 経由でも入る） | 問題は esbuild の開発サーバー（`--serve`）。drizzle-kit は設定ファイルを読む loader として esbuild を使うだけで、Itera が使うのは `drizzle-kit generate`（`db:generate` とスキーマの照合）だけ。開発サーバーは起動しない | **受け入れる**。drizzle-kit が新しい esbuild に移れば解消する |
+| undici（10 件、high 2・moderate 5・low 3、7.29.0 以下。修正は 7.29.1） | services/api の devDependencies の wrangler > miniflare > undici | 配信物には入らない。ただし CD（`deploy.yml`）は wrangler に Cloudflare の API トークンを渡して動かす。TLS の検証を回避できる指摘（high）が含まれ、wrangler のどの通信に当たるかは確かめていない | **解消した**（#409）。wrangler を 4.141.0 から 4.147.0 に上げ、miniflare（5.20261001.0-alpha）の undici が 7.29.1 になった。miniflare が undici 7.29.1 を使う最初の wrangler は 4.143.1 |
+| js-yaml（3 件、high、4.2.0。修正は 4.3.2） | packages/api-contract の devDependencies の @hey-api/openapi-ts > @hey-api/json-schema-ref-parser > js-yaml | 細工した YAML で CPU を使い切る（DoS）。OpenAPI から型を作るときに手元で動き、入力は Itera の OpenAPI の文書だけ | **未対応（修正版がない）**。@hey-api/openapi-ts の最新の安定版は 0.99.0（2026-06-22）のままで、その依存の @hey-api/json-schema-ref-parser 1.4.4 が js-yaml を 4.2.0 に完全一致で固定している。上流は js-yaml を 5.3.0 に上げた（hey-api/openapi-ts#4381。5.x は 3 件のどれにも当たらない）が、出ているのはプレリリース（`next` の 0.0.0-next-20260930190945）だけで、プレリリースには固定しない（2026-10-05 に確かめた）。0.99.0 より新しい安定版が出たら、上げて確かめ直す（`patches/` の patch の当て直しを含む。ADR 0006） |
+
+次の確かめ直しの目安は、Dependabot の PR か新しいアラートが届いたときと、依存の版を上げたとき。
 
 ### 導入した依存と版（Issue #26、#121）
 
@@ -85,7 +110,7 @@ Better Auth の文書（Context7 と better-auth.com）と、固定した 1.7.6 
 | ORM | drizzle-orm / drizzle-kit | 0.45.3 / 0.31.11 | 上の決定。drizzle-kit は SQL のマイグレーションを生成するだけで、適用は wrangler（`wrangler d1 migrations apply`）が行う |
 | 認証 | better-auth / @better-auth/passkey | 1.7.6 / 1.7.6 | 上の決定（Issue #121） |
 | テストの DB | @libsql/client（devDependencies） | 0.18.0 | Better Auth の実装を、マイグレーションを適用したメモリ DB で確かめる（Issue #121） |
-| 実行・開発 | wrangler（devDependencies） | 4.141.0 | ローカルの実行（workerd とローカルの D1）、型の生成、D1 のマイグレーションの適用 |
+| 実行・開発 | wrangler（devDependencies） | 4.147.0 | ローカルの実行（workerd とローカルの D1）、型の生成、D1 のマイグレーションの適用。4.141.0 から、undici の指摘を直すために上げた（Issue #409） |
 | 型 | TypeScript・Vitest | 6.0.3 / 5.0.2 | ADR 0001 と同じ版 |
 | 入力の検証 | valibot | 1.5.0 | 契約（ADR 0006）から生成したスキーマで、要求を検証する。`@itera/api-contract` と同じ版（Issue #266） |
 
@@ -241,7 +266,7 @@ index：利用者ごとに読むための `user_id`、子テーブルの持ち�
 7. 変わった行だけを 1 つの `batch()` で書く。同じ `batch()` の中で、利用者ごとの版を確かめて上げ（下の「同時の書き込み」）、最後に、期限を過ぎた利用者のキーの行を消してから、この書き込みのキーと応答を INSERT する。記録の書き込みとキーの記録は、どちらも書かれるか、どちらも書かれない。書く行も Activity もなければ、キーも残さない（ADR 0006「冪等キー」）。
 8. 操作の結果（作った記録の ID、操作が返す値）を返す。キーの記録に保存したものと同じステータスと本文（`answerResponse`）。値を置き換える書き込みは、記録のその後の etag を `ETag` ヘッダーで返す（7 の保存の版から作り、キーの記録にも置く。#321）。
 
-- 実装（#266）：`services/api/src/handlers/`。1・2 は経路ごとの middleware（`requireAuth`・`requireSameOrigin`）、3 は経路（`validate.ts`。契約の Valibot のスキーマに加えて、日付と日時が暦の上で実在するかを domain の関数で確かめる。query の数と真偽を宣言した型に変えるのは `@itera/api-contract/requests` の `queryInput`）、4〜8 は `flow.ts` の 1 か所にある。書き込みは、`@itera/api-contract/requests` の面（メソッドと経路）をすべて登録し、`readRequest` が選んだ `packages/application` の操作を実行する（ADR 0006「経路の形」、#295）。読み取りは `reads.ts` に、経路・パラメータのスキーマ・application の読み取りの関数を足す。契約のすべての面と読み取りが登録されていることをテストで確かめる（`registry.test.ts`）。
+- 実装（#266）：`services/api/src/handlers/`。1・2 は経路ごとの middleware（`requireAuth`・`requireSameOrigin`）、3 は経路（`validate.ts`。契約の Valibot のスキーマに加えて、日付と日時が暦の上で実在するかを domain の関数で確かめる。query の数と真偽を宣言した型に変えるのは `@itera/api-contract/requests` の `queryInput`）、4〜8 は `flow.ts` の 1 か所にある。書き込みは、`@itera/api-contract/requests` の面（メソッドと経路）をすべて登録し、`readRequest` が選んだ `packages/application` の操作を実行する（ADR 0006「経路の形」、#295）。読み取りは、`@itera/api-contract/requests` の `readSurfaces`（経路と path・query のスキーマ）と `packages/application` の `reads`（呼ぶ関数と、持っていない Sprint の 404）に足し、`reads.ts` がそれをすべて登録する。ブラウザ内モックも同じ表を使う（#350）。契約のすべての面と読み取りが表にあることは `@itera/api-contract` の `requests.test.ts`、すべてが登録されていることは `registry.test.ts` で確かめる。
 - 4 の後、利用者の設定（タイムゾーン）がなければ「今日」が決まらないので、422 `/problems/user-not-set-up` で断る（ADR 0006「エラー」）。`GET /api/me` だけは設定を読んで `null` を返し、設定を作る `PUT /api/me/settings`（#279）は 4 の代わりに設定の行だけを読んで、最初の保存（版 0 → 1）でそれを書く（`flow.setUp`。ADR 0006「利用者」）。
 - 5 の変更は、操作のときは操作の変更と同じ `batch()` で書き（追いつきが先、操作が後。Activity も同じ版に入る）、読み取りのときは派生値を計算する前に書く（#271 の範囲 2）。テストでは追いつきを差し替えて、この書き方を確かめる（`createFlow` の `catchUp`）。
 - 5 の中身（#271）：`packages/application` の `catchUp`。前の保存のときに追いついた日（`record_revision.caught_up_to`）から今日まで、実行中の Sprint の日を 1 日ずつ始め、終了日を過ぎた Sprint を Review にする。日ごとに進める理由と、毎日開いた場合との違いは ADR 0005「システムの記録」。何もすることがなければ変更も Activity もなく、何も書かない。追いつきで作る記録と Activity の日時は、処理した時点の現在時刻（注入した時計）。
@@ -310,6 +335,7 @@ PC とスマホから同じ利用者の記録を書く。後から来た書き�
 
 - マイグレーションは今までどおり drizzle-kit で生成して wrangler で適用する。記録を移す SQL は書かず、テーブルを作り直してよい。
 - 作り直す前に、戻す必要が出たときのために D1 の Time Travel の時点を控える。
+- `src/db/schema.ts` を変えてマイグレーションを生成し忘れていないことは、`pnpm check`（`pnpm migrations:check`）が確かめる（#366）。`migrations/` を一時ディレクトリに写して `drizzle-kit generate` を実行し、新しいマイグレーションが出るか、「変更なし」と報告されなければ失敗する。作業ツリーは書き換えない。列の名前変更のように drizzle-kit が対話で確かめる変更は、入力がないので失敗になる。`->>` の式の index でも誤検出は出ない。drizzle-kit の `check` はマイグレーションの履歴の整合を見るもので、スキーマとの差は見ないので使わない。
 - 終わる条件：オーナー以外が使い始めるとき、またはオーナーが残したい記録ができたと決めたとき。以後は記録を保つマイグレーションにする。
 
 ## 認証の改訂（2026-09-30、Issue #121）
@@ -336,7 +362,7 @@ Issue #121 は「Better Auth は原子的な処理に `batch()` を使う」を�
 ## 既知の制約
 
 - D1 は対話型のトランザクションを持たない（上の「トランザクション」）。Better Auth 自身の複数行の書き込みも原子的ではない（確認事項の 2）。
-- 脆弱性への対応を自分で負う。版を固定しているので、修正は版を上げるまで入らない。
+- 脆弱性への対応を自分で負う。版を固定しているので、修正は版を上げるまで入らない。気づく仕組みは Dependabot のアラートとセキュリティ更新で、CI の audit はない。修正版のない braces は、配信物に入らないので受け入れている（「依存の脆弱性の確かめ方」）。
 - Google との実際の往復（同意画面からコールバックまで）は、Google の OAuth クライアントを作るまで確かめていない。テストで確かめたのは、Google への遷移先（client ID とリダイレクト URI）の組み立てと、Google のトークンのエンドポイントを差し替えたうえでのコールバックの処理まで。
 - Google の ID トークン（氏名・メールなどを含む、Google が署名した本人確認）は暗号化されずにアカウントの行に残る（1.7.6 の `encryptOAuthTokens` の対象外）。Google の API を呼ぶ資格ではなく、Itera の ID トークンでのサインイン（`/sign-in/social` に `idToken` を渡す）も発行から 1 時間までしか受け付けない。
 - パスキーは本人確認（PIN・生体認証）を必須にしない。プラグインの中で `userVerification: "preferred"` に固定されている（1.7.6）。

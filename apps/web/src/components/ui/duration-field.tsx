@@ -165,14 +165,15 @@ function DurationField({
           {description}
         </p>
       )}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 enlarged:flex-wrap">
         <TextInput
           {...control}
           {...hoursProps}
           aria-label="時間"
           enterKeyHint="next"
           suffix="時間"
-          className="w-[7.5rem] shrink-0 medium:w-[6.5rem]"
+          columns={3}
+          className="shrink-0"
           value={value.hours}
           onChange={(e) => onChange({ ...value, hours: e.currentTarget.value })}
           onKeyDown={enter('hours')}
@@ -183,7 +184,8 @@ function DurationField({
           ref={minutesRef}
           aria-label="分"
           suffix="分"
-          className="w-[5.5rem] shrink-0 medium:w-[4.5rem]"
+          columns={2}
+          className="shrink-0"
           value={value.minutes}
           onChange={(e) =>
             onChange({ ...value, minutes: e.currentTarget.value })
