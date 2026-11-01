@@ -20,7 +20,7 @@
     "@itera/domain": "workspace:*",
     "@tanstack/react-query": "5.104.1",
     "@tanstack/react-router": "1.170.39",
-    "better-auth": "1.7.6",
+    "better-auth": "1.7.7",
     "class-variance-authority": "0.7.1",
     "cn": "0.4.0",
     "lucide-react": "1.48.0",
